@@ -545,7 +545,69 @@ Assessment duration auto-tracked from page load to submission.
 
 ---
 
+## Phase 10: Data Source Intelligence
+
+### Schema
+
+**DataSource** — Registered data sources. Fields: name, sourceType (DataSourceType enum: API, DATABASE, SURVEY, MANUAL, SATELLITE, IOT, SOCIAL_MEDIA, OTHER_SOURCE), sector, apiEndpoint, updateFrequency (daily/weekly/monthly/quarterly), coverageAreas (JSON string[]), populations (JSON string[]), indicators (JSON string[]), qualityLevel (high/medium/low), accessLevel (public/partner/restricted), isActive, reliabilityScore (0-1), lastSyncedAt, lastSyncStatus, metadata (JSON). Indexed by sector, isActive, sourceType.
+
+**DataSourceAvailability** — Availability check logs. Fields: sourceId, isAvailable, responseTime (ms), errorMessage, recordCount, checkedAt. Linked to DataSource (cascade delete).
+
+**DataQualityMetric** — Quality measurements. Fields: sourceId, indicator, qualityDimension (QualityDimension enum: COMPLETENESS, ACCURACY, CONSISTENCY, TIMELINESS, VALIDITY), score (0-1), threshold (default 0.7), isPassing, details (JSON), measuredAt. Linked to DataSource (cascade delete).
+
+### Data Intelligence Service (`src/server/services/data-intelligence.ts`)
+
+Pure-function analysis engine (no DB dependency):
+
+**Sector-Indicator Mapping** — 7 humanitarian sectors mapped to required indicators:
+- Protection (4): protection_incidents, gbv_incidents, child_protection_cases, documentation_status
+- Health (4): mortality_rates, vaccination_coverage, disease_outbreaks, mental_health_cases
+- Nutrition (3): malnutrition_rates, food_consumption_score, dietary_diversity
+- WASH (4): water_quantity, water_quality, sanitation_coverage, waterborne_diseases
+- Shelter (4): shelter_adequacy, overcrowding, structural_safety, tenure_security
+- Education (3): enrollment_rates, learning_outcomes, teacher_student_ratio
+- Livelihoods (3): income_sources, employment_rates, market_functionality
+
+**Partner Source Catalog** — 7 humanitarian data partners (UNHCR, WFP, WHO, UNICEF, OCHA, ACAPS, HDX) with sector coverage, data types, API endpoints, update frequency, quality rating, access level.
+
+**Functions:**
+- `checkDataAvailability(request, existingSources)` — Analyzes coverage per sector. Returns per-sector availability (coverage %, status, missing indicators, recommended partner sources ranked by relevance), overall confidence score.
+- `performGapAnalysis(sectors, existingSources, crisisType?)` — Identifies missing indicators with severity (critical for life-threatening indicators, escalated by crisis type), suggested collection methods, estimated costs, timeframes. Generates prioritized recommendations grouped by sector.
+
+### Data Source tRPC Router (`src/server/api/routers/data-source.ts`)
+
+- `list` — Filterable by sector, sourceType, isActive. Cursor pagination. Includes availability/metric counts.
+- `getById` — Full source with recent availability logs (20) and quality metrics (20).
+- `create` — Register new data source with all fields.
+- `update` — Partial update of any data source field.
+- `delete` — Remove data source (cascades to logs/metrics).
+- `logAvailability` — Record availability check result. Auto-updates source lastSyncedAt/lastSyncStatus.
+- `logQuality` — Record quality metric. Auto-calculates isPassing from score vs threshold.
+- `checkAvailability` — In-memory analysis: pulls active DB sources for selected sectors, runs `checkDataAvailability()`.
+- `gapAnalysis` — In-memory analysis: pulls active DB sources, runs `performGapAnalysis()`.
+- `partnerSources` — Static partner catalog, optionally filtered by sector.
+- `sectorIndicators` — Static sector-indicator mapping with counts.
+- `stats` — Aggregate: total/active sources, recent outages (24h), failing quality metrics.
+
+### Pages
+
+**Data page** (`/data`) now has three tabs:
+
+**Live Feeds tab** (existing): Feed status cards, earthquake table, ReliefWeb reports table.
+
+**Data Sources tab**:
+- Stats cards: total sources, active, recent outages (24h), failing metrics
+- Registered Sources table: name, type, sector, quality badge, frequency, active status badge, last sync date
+- Partner Source Catalog table: partner name, type, sector badges, data types, update frequency, quality badge, access level badge
+
+**Gap Analysis tab**:
+- Sector selector: toggle buttons for all 7 sectors with indicator counts
+- Data Availability card: summary stats (required/fully/partially/not available), per-sector table with coverage bar, status dot, available/total counts, missing indicator badges, primary collection needed flag
+- Gap Details table: indicator name, sector, severity badge (critical/high/medium), collection method, estimated cost, timeframe
+- Recommendations card: prioritized action cards with urgency badge, sector, and recommendation text
+
+---
+
 ## Remaining Phases
 
-- **Phase 10** — Data Source Intelligence (gap analysis, data source management, partner matching)
 - **Phase 11** — Polish (i18n with next-intl, dark mode, onboarding tour, PDF/CSV export)
