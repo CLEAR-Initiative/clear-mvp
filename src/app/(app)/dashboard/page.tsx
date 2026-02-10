@@ -1,48 +1,82 @@
+import Link from "next/link";
+import { api } from "~/trpc/server";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
-import { db } from "~/server/db";
+import { Button } from "~/components/ui/button";
+import { AlertTriangle, Plus } from "lucide-react";
 
 export default async function DashboardPage() {
-  const [crisisCount, activeCrisisCount, decisionCount, alertCount] =
+  const [stats, recentCrises, recentDecisions, activeAlerts] =
     await Promise.all([
-      db.crisis.count(),
-      db.crisis.count({ where: { status: "ACTIVE" } }),
-      db.decision.count(),
-      db.alert.count({ where: { isActive: true } }),
+      api.dashboard.stats(),
+      api.dashboard.recentCrises(),
+      api.dashboard.recentDecisions(),
+      api.dashboard.activeAlerts(),
     ]);
-
-  const recentCrises = await db.crisis.findMany({
-    take: 5,
-    orderBy: { createdAt: "desc" },
-    include: { _count: { select: { decisions: true, alerts: true } } },
-  });
-
-  const recentDecisions = await db.decision.findMany({
-    take: 5,
-    orderBy: { createdAt: "desc" },
-    include: { crisis: { select: { title: true } }, madeBy: { select: { name: true } } },
-  });
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
-          CLEAR — Crisis Learning, Early-warning, Anticipation, and Response
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">
+            CLEAR — Crisis Learning, Early-warning, Anticipation, and Response
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/crises/new">
+            <Plus className="mr-2 h-4 w-4" />
+            New Crisis
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Crises" value={crisisCount} />
-        <StatCard title="Active Crises" value={activeCrisisCount} variant="destructive" />
-        <StatCard title="Decisions Made" value={decisionCount} />
-        <StatCard title="Active Alerts" value={alertCount} variant="warning" />
+        <StatCard title="Total Crises" value={stats.totalCrises} />
+        <StatCard title="Active Crises" value={stats.activeCrises} variant="destructive" />
+        <StatCard title="Decisions Made" value={stats.totalDecisions} />
+        <StatCard title="Active Alerts" value={stats.activeAlerts} variant="warning" />
       </div>
+
+      {activeAlerts.length > 0 && (
+        <Card className="border-destructive/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Active Alerts ({activeAlerts.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {activeAlerts.slice(0, 5).map((alert) => (
+                <div
+                  key={alert.id}
+                  className="flex items-start justify-between gap-4 rounded-lg border p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm">{alert.message}</p>
+                    <Link
+                      href={`/crises/${alert.crisis.id}`}
+                      className="text-xs text-muted-foreground hover:underline"
+                    >
+                      {alert.crisis.title}
+                    </Link>
+                  </div>
+                  <SeverityBadge severity={alert.severity} />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Recent Crises</CardTitle>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/crises">View all</Link>
+            </Button>
           </CardHeader>
           <CardContent>
             {recentCrises.length === 0 ? (
@@ -50,12 +84,13 @@ export default async function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {recentCrises.map((crisis) => (
-                  <div
+                  <Link
                     key={crisis.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    href={`/crises/${crisis.id}`}
+                    className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
                   >
                     <div>
-                      <p className="font-medium text-sm">{crisis.title}</p>
+                      <p className="text-sm font-medium">{crisis.title}</p>
                       <p className="text-xs text-muted-foreground">
                         {crisis.location} &middot; {crisis._count.decisions} decisions
                       </p>
@@ -64,7 +99,7 @@ export default async function DashboardPage() {
                       <SeverityBadge severity={crisis.severity} />
                       <StatusBadge status={crisis.status} />
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -81,18 +116,19 @@ export default async function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {recentDecisions.map((decision) => (
-                  <div
+                  <Link
                     key={decision.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    href={`/crises/${decision.crisis.id}`}
+                    className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
                   >
                     <div>
-                      <p className="font-medium text-sm">{decision.title}</p>
+                      <p className="text-sm font-medium">{decision.title}</p>
                       <p className="text-xs text-muted-foreground">
                         {decision.crisis.title} &middot; by {decision.madeBy.name}
                       </p>
                     </div>
                     <Badge variant="outline">{decision.confidenceScore}%</Badge>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
