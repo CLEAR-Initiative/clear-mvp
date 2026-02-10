@@ -39,6 +39,7 @@ model User {
   crises          Crisis[]         @relation("CrisisCreator")
   surveyTemplates SurveyTemplate[] @relation("TemplateCreator")
   surveys         Survey[]         @relation("SurveyCreator")
+  feedback        Feedback[]       @relation("UserFeedback")
 
   @@unique([email])
   @@map("user")
@@ -209,6 +210,31 @@ model Evidence {
 
   @@index([auditDecisionId])
   @@map("evidence")
+}
+
+model Feedback {
+  id             String           @id @default(cuid())
+  type           FeedbackType
+  pageUrl        String
+  feedbackText   String?          @db.Text
+  rating         Int?             // 1-5
+  category       String?
+  priority       FeedbackPriority @default(MEDIUM)
+  status         FeedbackStatus   @default(NEW)
+  screenshotUrl  String?
+  sessionId      String?
+  userAgent      String?
+  deviceType     String?
+  userId         String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user User? @relation("UserFeedback", fields: [userId], references: [id])
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("feedback")
 }
 
 // =============================================================================
@@ -470,4 +496,27 @@ enum SubmissionStatus {
   IN_PROGRESS
   COMPLETED
   ABANDONED
+}
+
+enum FeedbackType {
+  BUG_REPORT
+  FEATURE_REQUEST
+  GENERAL
+  PAGE_COMMENT
+  FLOW_RATING
+}
+
+enum FeedbackPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum FeedbackStatus {
+  NEW
+  REVIEWING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
 }

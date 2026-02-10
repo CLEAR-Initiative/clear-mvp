@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "~/server/better-auth/server";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "~/components/ui/sidebar";
 import { AppSidebar } from "~/components/app-sidebar";
+import { FeedbackWidget } from "~/components/feedback-widget";
 import { Separator } from "~/components/ui/separator";
 
 export default async function AppLayout({
@@ -29,6 +30,7 @@ export default async function AppLayout({
         </header>
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </SidebarInset>
+      <FeedbackWidget />
     </SidebarProvider>
   );
 }

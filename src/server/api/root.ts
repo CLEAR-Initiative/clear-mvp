@@ -5,6 +5,8 @@ import { alertRouter } from "~/server/api/routers/alert";
 import { dashboardRouter } from "~/server/api/routers/dashboard";
 import { feedsRouter } from "~/server/api/routers/feeds";
 import { surveyRouter } from "~/server/api/routers/survey";
+import { auditRouter } from "~/server/api/routers/audit";
+import { feedbackRouter } from "~/server/api/routers/feedback";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -15,6 +17,8 @@ export const appRouter = createTRPCRouter({
   dashboard: dashboardRouter,
   feeds: feedsRouter,
   survey: surveyRouter,
+  audit: auditRouter,
+  feedback: feedbackRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -249,6 +249,24 @@ exports.Prisma.EvidenceScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.FeedbackScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  pageUrl: 'pageUrl',
+  feedbackText: 'feedbackText',
+  rating: 'rating',
+  category: 'category',
+  priority: 'priority',
+  status: 'status',
+  screenshotUrl: 'screenshotUrl',
+  sessionId: 'sessionId',
+  userAgent: 'userAgent',
+  deviceType: 'deviceType',
+  userId: 'userId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SurveyTemplateScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -451,6 +469,29 @@ exports.EvidenceType = exports.$Enums.EvidenceType = {
   OTHER: 'OTHER'
 };
 
+exports.FeedbackType = exports.$Enums.FeedbackType = {
+  BUG_REPORT: 'BUG_REPORT',
+  FEATURE_REQUEST: 'FEATURE_REQUEST',
+  GENERAL: 'GENERAL',
+  PAGE_COMMENT: 'PAGE_COMMENT',
+  FLOW_RATING: 'FLOW_RATING'
+};
+
+exports.FeedbackPriority = exports.$Enums.FeedbackPriority = {
+  LOW: 'LOW',
+  MEDIUM: 'MEDIUM',
+  HIGH: 'HIGH',
+  URGENT: 'URGENT'
+};
+
+exports.FeedbackStatus = exports.$Enums.FeedbackStatus = {
+  NEW: 'NEW',
+  REVIEWING: 'REVIEWING',
+  IN_PROGRESS: 'IN_PROGRESS',
+  RESOLVED: 'RESOLVED',
+  CLOSED: 'CLOSED'
+};
+
 exports.SurveyCategory = exports.$Enums.SurveyCategory = {
   RAPID_ASSESSMENT: 'RAPID_ASSESSMENT',
   MONITORING: 'MONITORING',
@@ -500,6 +541,7 @@ exports.Prisma.ModelName = {
   Alert: 'Alert',
   AuditDecision: 'AuditDecision',
   Evidence: 'Evidence',
+  Feedback: 'Feedback',
   SurveyTemplate: 'SurveyTemplate',
   SurveyQuestion: 'SurveyQuestion',
   Survey: 'Survey',
