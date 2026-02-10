@@ -10,6 +10,7 @@ import {
   Shield,
   Settings,
   LogOut,
+  Radio,
 } from "lucide-react";
 
 import {
@@ -29,6 +30,7 @@ import { authClient } from "~/lib/auth-client";
 const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Crises", href: "/crises", icon: AlertTriangle },
+  { title: "Data Feeds", href: "/data", icon: Radio },
   { title: "Map", href: "/map", icon: Map },
   { title: "Surveys", href: "/surveys", icon: ClipboardList },
   { title: "Audit Trail", href: "/audit", icon: Shield },
