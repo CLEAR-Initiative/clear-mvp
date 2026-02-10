@@ -249,6 +249,79 @@ exports.Prisma.EvidenceScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.SurveyTemplateScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  category: 'category',
+  estimatedDuration: 'estimatedDuration',
+  isActive: 'isActive',
+  version: 'version',
+  createdById: 'createdById',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.SurveyQuestionScalarFieldEnum = {
+  id: 'id',
+  templateId: 'templateId',
+  questionNumber: 'questionNumber',
+  questionText: 'questionText',
+  questionType: 'questionType',
+  isRequired: 'isRequired',
+  options: 'options',
+  validationRules: 'validationRules',
+  helpText: 'helpText',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.SurveyScalarFieldEnum = {
+  id: 'id',
+  templateId: 'templateId',
+  crisisId: 'crisisId',
+  title: 'title',
+  description: 'description',
+  status: 'status',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  targetResponses: 'targetResponses',
+  isAnonymous: 'isAnonymous',
+  createdById: 'createdById',
+  deployedAt: 'deployedAt',
+  completedAt: 'completedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.SurveySubmissionScalarFieldEnum = {
+  id: 'id',
+  surveyId: 'surveyId',
+  respondentId: 'respondentId',
+  status: 'status',
+  startedAt: 'startedAt',
+  submittedAt: 'submittedAt',
+  totalTimeSpent: 'totalTimeSpent',
+  location: 'location',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  isComplete: 'isComplete'
+};
+
+exports.Prisma.SurveyResponseScalarFieldEnum = {
+  id: 'id',
+  surveyId: 'surveyId',
+  submissionId: 'submissionId',
+  questionId: 'questionId',
+  responseText: 'responseText',
+  responseNumber: 'responseNumber',
+  responseBoolean: 'responseBoolean',
+  responseDate: 'responseDate',
+  responseJson: 'responseJson',
+  isSkipped: 'isSkipped',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -378,6 +451,45 @@ exports.EvidenceType = exports.$Enums.EvidenceType = {
   OTHER: 'OTHER'
 };
 
+exports.SurveyCategory = exports.$Enums.SurveyCategory = {
+  RAPID_ASSESSMENT: 'RAPID_ASSESSMENT',
+  MONITORING: 'MONITORING',
+  EVALUATION: 'EVALUATION',
+  FEEDBACK: 'FEEDBACK',
+  REGISTRATION: 'REGISTRATION',
+  NEEDS_ASSESSMENT: 'NEEDS_ASSESSMENT',
+  POST_DISTRIBUTION: 'POST_DISTRIBUTION',
+  BASELINE: 'BASELINE',
+  ENDLINE: 'ENDLINE',
+  OTHER: 'OTHER'
+};
+
+exports.QuestionType = exports.$Enums.QuestionType = {
+  TEXT: 'TEXT',
+  TEXTAREA: 'TEXTAREA',
+  NUMBER: 'NUMBER',
+  DATE: 'DATE',
+  SINGLE_CHOICE: 'SINGLE_CHOICE',
+  MULTIPLE_CHOICE: 'MULTIPLE_CHOICE',
+  SCALE: 'SCALE',
+  LOCATION: 'LOCATION',
+  BOOLEAN: 'BOOLEAN'
+};
+
+exports.SurveyStatus = exports.$Enums.SurveyStatus = {
+  DRAFT: 'DRAFT',
+  ACTIVE: 'ACTIVE',
+  PAUSED: 'PAUSED',
+  COMPLETED: 'COMPLETED',
+  ARCHIVED: 'ARCHIVED'
+};
+
+exports.SubmissionStatus = exports.$Enums.SubmissionStatus = {
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  ABANDONED: 'ABANDONED'
+};
+
 exports.Prisma.ModelName = {
   User: 'User',
   Session: 'Session',
@@ -387,7 +499,12 @@ exports.Prisma.ModelName = {
   Decision: 'Decision',
   Alert: 'Alert',
   AuditDecision: 'AuditDecision',
-  Evidence: 'Evidence'
+  Evidence: 'Evidence',
+  SurveyTemplate: 'SurveyTemplate',
+  SurveyQuestion: 'SurveyQuestion',
+  Survey: 'Survey',
+  SurveySubmission: 'SurveySubmission',
+  SurveyResponse: 'SurveyResponse'
 };
 
 /**

@@ -34,9 +34,11 @@ model User {
   accounts Account[]
 
   // CLEAR relations
-  decisions      Decision[]
-  auditDecisions AuditDecision[]
-  crises         Crisis[]        @relation("CrisisCreator")
+  decisions       Decision[]
+  auditDecisions  AuditDecision[]
+  crises          Crisis[]         @relation("CrisisCreator")
+  surveyTemplates SurveyTemplate[] @relation("TemplateCreator")
+  surveys         Survey[]         @relation("SurveyCreator")
 
   @@unique([email])
   @@map("user")
@@ -109,6 +111,7 @@ model Crisis {
   createdBy User       @relation("CrisisCreator", fields: [createdById], references: [id])
   decisions Decision[]
   alerts    Alert[]
+  surveys   Survey[]
 
   @@index([status])
   @@index([type])
@@ -206,6 +209,124 @@ model Evidence {
 
   @@index([auditDecisionId])
   @@map("evidence")
+}
+
+// =============================================================================
+// SURVEY SYSTEM
+// =============================================================================
+
+model SurveyTemplate {
+  id                String         @id @default(cuid())
+  name              String
+  description       String?        @db.Text
+  category          SurveyCategory
+  estimatedDuration Int? // minutes
+  isActive          Boolean        @default(true)
+  version           String         @default("1.0")
+  createdById       String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  createdBy User             @relation("TemplateCreator", fields: [createdById], references: [id])
+  questions SurveyQuestion[]
+  surveys   Survey[]
+
+  @@index([category])
+  @@index([isActive])
+  @@map("survey_template")
+}
+
+model SurveyQuestion {
+  id              String       @id @default(cuid())
+  templateId      String
+  questionNumber  Int
+  questionText    String       @db.Text
+  questionType    QuestionType
+  isRequired      Boolean      @default(false)
+  options         Json? // For choice-based questions: string[]
+  validationRules Json? // { min, max, regex, etc. }
+  helpText        String?      @db.Text
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  template  SurveyTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  responses SurveyResponse[]
+
+  @@unique([templateId, questionNumber])
+  @@index([templateId])
+  @@map("survey_question")
+}
+
+model Survey {
+  id              String       @id @default(cuid())
+  templateId      String
+  crisisId        String?
+  title           String
+  description     String?      @db.Text
+  status          SurveyStatus @default(DRAFT)
+  startDate       DateTime?
+  endDate         DateTime?
+  targetResponses Int?
+  isAnonymous     Boolean      @default(true)
+  createdById     String
+  deployedAt      DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  template    SurveyTemplate     @relation(fields: [templateId], references: [id])
+  crisis      Crisis?            @relation(fields: [crisisId], references: [id])
+  createdBy   User               @relation("SurveyCreator", fields: [createdById], references: [id])
+  submissions SurveySubmission[]
+
+  @@index([templateId])
+  @@index([crisisId])
+  @@index([status])
+  @@map("survey")
+}
+
+model SurveySubmission {
+  id             String           @id @default(cuid())
+  surveyId       String
+  respondentId   String?
+  status         SubmissionStatus @default(IN_PROGRESS)
+  startedAt      DateTime         @default(now())
+  submittedAt    DateTime?
+  totalTimeSpent Int? // seconds
+  location       String?
+  latitude       Float?
+  longitude      Float?
+  isComplete     Boolean          @default(false)
+
+  survey    Survey           @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  responses SurveyResponse[]
+
+  @@index([surveyId])
+  @@index([status])
+  @@index([isComplete])
+  @@map("survey_submission")
+}
+
+model SurveyResponse {
+  id              String    @id @default(cuid())
+  surveyId        String
+  submissionId    String
+  questionId      String
+  responseText    String?   @db.Text
+  responseNumber  Float?
+  responseBoolean Boolean?
+  responseDate    DateTime?
+  responseJson    Json? // For complex responses (multi-select, etc.)
+  isSkipped       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  submission SurveySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question   SurveyQuestion   @relation(fields: [questionId], references: [id])
+
+  @@unique([submissionId, questionId])
+  @@index([surveyId])
+  @@index([submissionId])
+  @@map("survey_response")
 }
 
 // =============================================================================
@@ -310,4 +431,43 @@ enum EvidenceType {
   AUDIO
   VIDEO
   OTHER
+}
+
+enum SurveyCategory {
+  RAPID_ASSESSMENT
+  MONITORING
+  EVALUATION
+  FEEDBACK
+  REGISTRATION
+  NEEDS_ASSESSMENT
+  POST_DISTRIBUTION
+  BASELINE
+  ENDLINE
+  OTHER
+}
+
+enum QuestionType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  DATE
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  SCALE
+  LOCATION
+  BOOLEAN
+}
+
+enum SurveyStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum SubmissionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
 }
