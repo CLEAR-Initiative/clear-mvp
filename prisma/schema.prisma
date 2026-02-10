@@ -40,6 +40,8 @@ model User {
   surveyTemplates SurveyTemplate[] @relation("TemplateCreator")
   surveys         Survey[]         @relation("SurveyCreator")
   feedback        Feedback[]       @relation("UserFeedback")
+  referralsSent   Referral[]       @relation("ReferralSender")
+  referralsReceived Referral[]     @relation("ReferralReceiver")
 
   @@unique([email])
   @@map("user")
@@ -519,4 +521,129 @@ enum FeedbackStatus {
   IN_PROGRESS
   RESOLVED
   CLOSED
+}
+
+// =============================================================================
+// SECURE REFERRAL SYSTEM
+// =============================================================================
+
+enum OrganizationType {
+  UN_AGENCY
+  INGO
+  LOCAL_NGO
+  GOVERNMENT
+  RED_CROSS_CRESCENT
+  COMMUNITY_BASED
+  PRIVATE_SECTOR
+  OTHER_ORG
+}
+
+enum ReferralType {
+  INDIVIDUAL_CASE
+  FAMILY_CASE
+  GROUP_REFERRAL
+  EMERGENCY_TRANSFER
+  INFORMATION_SHARING
+}
+
+enum ReferralStatus {
+  DRAFT
+  SENT
+  RECEIVED
+  ACCEPTED
+  IN_PROGRESS_REFERRAL
+  COMPLETED
+  REJECTED
+  CANCELLED
+  EXPIRED
+}
+
+enum ReferralUrgency {
+  ROUTINE
+  PRIORITY
+  URGENT
+  EMERGENCY
+}
+
+enum ConsentType {
+  DATA_SHARING
+  SERVICE_PROVISION
+  CROSS_BORDER_TRANSFER
+  THIRD_PARTY_DISCLOSURE
+}
+
+model PartnerOrganization {
+  id               String           @id @default(cuid())
+  name             String
+  organizationType OrganizationType
+  sector           String?          // e.g., "Protection", "Health", "WASH"
+  contactEmail     String?
+  contactPhone     String?
+  serviceTypes     Json             @default("[]") // string[] of services offered
+  operationalAreas Json             @default("[]") // string[] of operating regions
+  isVerified       Boolean          @default(false)
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  referralsFrom Referral[] @relation("ReferralFromOrg")
+  referralsTo   Referral[] @relation("ReferralToOrg")
+
+  @@index([organizationType])
+  @@index([isActive])
+  @@map("partner_organization")
+}
+
+model Referral {
+  id                 String          @id @default(cuid())
+  referralType       ReferralType
+  urgency            ReferralUrgency @default(ROUTINE)
+  status             ReferralStatus  @default(DRAFT)
+  fromOrganizationId String
+  toOrganizationId   String
+  serviceRequested   String          @db.Text
+  beneficiaryData    String          @db.Text // AES-256-GCM encrypted JSON
+  encryptionIv       String          // initialization vector (hex)
+  encryptionSalt     String          // PBKDF2 salt (hex)
+  encryptionTag      String          // GCM auth tag (hex)
+  notes              String?         @db.Text
+  sentById           String
+  receivedById       String?
+  sentAt             DateTime?
+  receivedAt         DateTime?
+  completedAt        DateTime?
+  expiresAt          DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  fromOrganization PartnerOrganization @relation("ReferralFromOrg", fields: [fromOrganizationId], references: [id])
+  toOrganization   PartnerOrganization @relation("ReferralToOrg", fields: [toOrganizationId], references: [id])
+  sentBy           User                @relation("ReferralSender", fields: [sentById], references: [id])
+  receivedBy       User?               @relation("ReferralReceiver", fields: [receivedById], references: [id])
+  consents         ReferralConsent[]
+
+  @@index([status])
+  @@index([fromOrganizationId])
+  @@index([toOrganizationId])
+  @@index([sentById])
+  @@index([createdAt])
+  @@map("referral")
+}
+
+model ReferralConsent {
+  id               String      @id @default(cuid())
+  referralId       String
+  consentType      ConsentType
+  isGranted        Boolean     @default(false)
+  grantedBy        String?     // name of person granting consent
+  consentText      String?     @db.Text
+  digitalSignature String?     // base64 signature data
+  grantedAt        DateTime?
+  expiresAt        DateTime?
+  createdAt        DateTime    @default(now())
+
+  referral Referral @relation(fields: [referralId], references: [id], onDelete: Cascade)
+
+  @@index([referralId])
+  @@map("referral_consent")
 }

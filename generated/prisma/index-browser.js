@@ -340,6 +340,57 @@ exports.Prisma.SurveyResponseScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.PartnerOrganizationScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  organizationType: 'organizationType',
+  sector: 'sector',
+  contactEmail: 'contactEmail',
+  contactPhone: 'contactPhone',
+  serviceTypes: 'serviceTypes',
+  operationalAreas: 'operationalAreas',
+  isVerified: 'isVerified',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ReferralScalarFieldEnum = {
+  id: 'id',
+  referralType: 'referralType',
+  urgency: 'urgency',
+  status: 'status',
+  fromOrganizationId: 'fromOrganizationId',
+  toOrganizationId: 'toOrganizationId',
+  serviceRequested: 'serviceRequested',
+  beneficiaryData: 'beneficiaryData',
+  encryptionIv: 'encryptionIv',
+  encryptionSalt: 'encryptionSalt',
+  encryptionTag: 'encryptionTag',
+  notes: 'notes',
+  sentById: 'sentById',
+  receivedById: 'receivedById',
+  sentAt: 'sentAt',
+  receivedAt: 'receivedAt',
+  completedAt: 'completedAt',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ReferralConsentScalarFieldEnum = {
+  id: 'id',
+  referralId: 'referralId',
+  consentType: 'consentType',
+  isGranted: 'isGranted',
+  grantedBy: 'grantedBy',
+  consentText: 'consentText',
+  digitalSignature: 'digitalSignature',
+  grantedAt: 'grantedAt',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -531,6 +582,51 @@ exports.SubmissionStatus = exports.$Enums.SubmissionStatus = {
   ABANDONED: 'ABANDONED'
 };
 
+exports.OrganizationType = exports.$Enums.OrganizationType = {
+  UN_AGENCY: 'UN_AGENCY',
+  INGO: 'INGO',
+  LOCAL_NGO: 'LOCAL_NGO',
+  GOVERNMENT: 'GOVERNMENT',
+  RED_CROSS_CRESCENT: 'RED_CROSS_CRESCENT',
+  COMMUNITY_BASED: 'COMMUNITY_BASED',
+  PRIVATE_SECTOR: 'PRIVATE_SECTOR',
+  OTHER_ORG: 'OTHER_ORG'
+};
+
+exports.ReferralType = exports.$Enums.ReferralType = {
+  INDIVIDUAL_CASE: 'INDIVIDUAL_CASE',
+  FAMILY_CASE: 'FAMILY_CASE',
+  GROUP_REFERRAL: 'GROUP_REFERRAL',
+  EMERGENCY_TRANSFER: 'EMERGENCY_TRANSFER',
+  INFORMATION_SHARING: 'INFORMATION_SHARING'
+};
+
+exports.ReferralUrgency = exports.$Enums.ReferralUrgency = {
+  ROUTINE: 'ROUTINE',
+  PRIORITY: 'PRIORITY',
+  URGENT: 'URGENT',
+  EMERGENCY: 'EMERGENCY'
+};
+
+exports.ReferralStatus = exports.$Enums.ReferralStatus = {
+  DRAFT: 'DRAFT',
+  SENT: 'SENT',
+  RECEIVED: 'RECEIVED',
+  ACCEPTED: 'ACCEPTED',
+  IN_PROGRESS_REFERRAL: 'IN_PROGRESS_REFERRAL',
+  COMPLETED: 'COMPLETED',
+  REJECTED: 'REJECTED',
+  CANCELLED: 'CANCELLED',
+  EXPIRED: 'EXPIRED'
+};
+
+exports.ConsentType = exports.$Enums.ConsentType = {
+  DATA_SHARING: 'DATA_SHARING',
+  SERVICE_PROVISION: 'SERVICE_PROVISION',
+  CROSS_BORDER_TRANSFER: 'CROSS_BORDER_TRANSFER',
+  THIRD_PARTY_DISCLOSURE: 'THIRD_PARTY_DISCLOSURE'
+};
+
 exports.Prisma.ModelName = {
   User: 'User',
   Session: 'Session',
@@ -546,7 +642,10 @@ exports.Prisma.ModelName = {
   SurveyQuestion: 'SurveyQuestion',
   Survey: 'Survey',
   SurveySubmission: 'SurveySubmission',
-  SurveyResponse: 'SurveyResponse'
+  SurveyResponse: 'SurveyResponse',
+  PartnerOrganization: 'PartnerOrganization',
+  Referral: 'Referral',
+  ReferralConsent: 'ReferralConsent'
 };
 
 /**
