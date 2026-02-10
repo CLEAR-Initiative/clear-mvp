@@ -108,6 +108,16 @@ export type Referral = $Result.DefaultSelection<Prisma.$ReferralPayload>
  * 
  */
 export type ReferralConsent = $Result.DefaultSelection<Prisma.$ReferralConsentPayload>
+/**
+ * Model QuickProfile
+ * 
+ */
+export type QuickProfile = $Result.DefaultSelection<Prisma.$QuickProfilePayload>
+/**
+ * Model VulnerabilityScore
+ * 
+ */
+export type VulnerabilityScore = $Result.DefaultSelection<Prisma.$VulnerabilityScorePayload>
 
 /**
  * Enums
@@ -404,6 +414,27 @@ export const ConsentType: {
 
 export type ConsentType = (typeof ConsentType)[keyof typeof ConsentType]
 
+
+export const PrimaryNeedType: {
+  FOOD: 'FOOD',
+  SHELTER: 'SHELTER',
+  WASH: 'WASH',
+  HEALTH: 'HEALTH',
+  PROTECTION: 'PROTECTION'
+};
+
+export type PrimaryNeedType = (typeof PrimaryNeedType)[keyof typeof PrimaryNeedType]
+
+
+export const RiskCategory: {
+  CRITICAL: 'CRITICAL',
+  HIGH: 'HIGH',
+  MEDIUM_RISK: 'MEDIUM_RISK',
+  LOW_RISK: 'LOW_RISK'
+};
+
+export type RiskCategory = (typeof RiskCategory)[keyof typeof RiskCategory]
+
 }
 
 export type UserRole = $Enums.UserRole
@@ -509,6 +540,14 @@ export const ReferralUrgency: typeof $Enums.ReferralUrgency
 export type ConsentType = $Enums.ConsentType
 
 export const ConsentType: typeof $Enums.ConsentType
+
+export type PrimaryNeedType = $Enums.PrimaryNeedType
+
+export const PrimaryNeedType: typeof $Enums.PrimaryNeedType
+
+export type RiskCategory = $Enums.RiskCategory
+
+export const RiskCategory: typeof $Enums.RiskCategory
 
 /**
  * ##  Prisma Client ʲˢ
@@ -817,6 +856,26 @@ export class PrismaClient<
     * ```
     */
   get referralConsent(): Prisma.ReferralConsentDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.quickProfile`: Exposes CRUD operations for the **QuickProfile** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more QuickProfiles
+    * const quickProfiles = await prisma.quickProfile.findMany()
+    * ```
+    */
+  get quickProfile(): Prisma.QuickProfileDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.vulnerabilityScore`: Exposes CRUD operations for the **VulnerabilityScore** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more VulnerabilityScores
+    * const vulnerabilityScores = await prisma.vulnerabilityScore.findMany()
+    * ```
+    */
+  get vulnerabilityScore(): Prisma.VulnerabilityScoreDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -1276,7 +1335,9 @@ export namespace Prisma {
     KoboDeployment: 'KoboDeployment',
     PartnerOrganization: 'PartnerOrganization',
     Referral: 'Referral',
-    ReferralConsent: 'ReferralConsent'
+    ReferralConsent: 'ReferralConsent',
+    QuickProfile: 'QuickProfile',
+    VulnerabilityScore: 'VulnerabilityScore'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -1295,7 +1356,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "session" | "account" | "verification" | "crisis" | "decision" | "alert" | "auditDecision" | "evidence" | "feedback" | "surveyTemplate" | "surveyQuestion" | "survey" | "surveySubmission" | "surveyResponse" | "koboDeployment" | "partnerOrganization" | "referral" | "referralConsent"
+      modelProps: "user" | "session" | "account" | "verification" | "crisis" | "decision" | "alert" | "auditDecision" | "evidence" | "feedback" | "surveyTemplate" | "surveyQuestion" | "survey" | "surveySubmission" | "surveyResponse" | "koboDeployment" | "partnerOrganization" | "referral" | "referralConsent" | "quickProfile" | "vulnerabilityScore"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -2705,6 +2766,154 @@ export namespace Prisma {
           }
         }
       }
+      QuickProfile: {
+        payload: Prisma.$QuickProfilePayload<ExtArgs>
+        fields: Prisma.QuickProfileFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.QuickProfileFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuickProfilePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.QuickProfileFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuickProfilePayload>
+          }
+          findFirst: {
+            args: Prisma.QuickProfileFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuickProfilePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.QuickProfileFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuickProfilePayload>
+          }
+          findMany: {
+            args: Prisma.QuickProfileFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuickProfilePayload>[]
+          }
+          create: {
+            args: Prisma.QuickProfileCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuickProfilePayload>
+          }
+          createMany: {
+            args: Prisma.QuickProfileCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.QuickProfileCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuickProfilePayload>[]
+          }
+          delete: {
+            args: Prisma.QuickProfileDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuickProfilePayload>
+          }
+          update: {
+            args: Prisma.QuickProfileUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuickProfilePayload>
+          }
+          deleteMany: {
+            args: Prisma.QuickProfileDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.QuickProfileUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.QuickProfileUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuickProfilePayload>[]
+          }
+          upsert: {
+            args: Prisma.QuickProfileUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuickProfilePayload>
+          }
+          aggregate: {
+            args: Prisma.QuickProfileAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateQuickProfile>
+          }
+          groupBy: {
+            args: Prisma.QuickProfileGroupByArgs<ExtArgs>
+            result: $Utils.Optional<QuickProfileGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.QuickProfileCountArgs<ExtArgs>
+            result: $Utils.Optional<QuickProfileCountAggregateOutputType> | number
+          }
+        }
+      }
+      VulnerabilityScore: {
+        payload: Prisma.$VulnerabilityScorePayload<ExtArgs>
+        fields: Prisma.VulnerabilityScoreFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.VulnerabilityScoreFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$VulnerabilityScorePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.VulnerabilityScoreFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$VulnerabilityScorePayload>
+          }
+          findFirst: {
+            args: Prisma.VulnerabilityScoreFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$VulnerabilityScorePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.VulnerabilityScoreFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$VulnerabilityScorePayload>
+          }
+          findMany: {
+            args: Prisma.VulnerabilityScoreFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$VulnerabilityScorePayload>[]
+          }
+          create: {
+            args: Prisma.VulnerabilityScoreCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$VulnerabilityScorePayload>
+          }
+          createMany: {
+            args: Prisma.VulnerabilityScoreCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.VulnerabilityScoreCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$VulnerabilityScorePayload>[]
+          }
+          delete: {
+            args: Prisma.VulnerabilityScoreDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$VulnerabilityScorePayload>
+          }
+          update: {
+            args: Prisma.VulnerabilityScoreUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$VulnerabilityScorePayload>
+          }
+          deleteMany: {
+            args: Prisma.VulnerabilityScoreDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.VulnerabilityScoreUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.VulnerabilityScoreUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$VulnerabilityScorePayload>[]
+          }
+          upsert: {
+            args: Prisma.VulnerabilityScoreUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$VulnerabilityScorePayload>
+          }
+          aggregate: {
+            args: Prisma.VulnerabilityScoreAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateVulnerabilityScore>
+          }
+          groupBy: {
+            args: Prisma.VulnerabilityScoreGroupByArgs<ExtArgs>
+            result: $Utils.Optional<VulnerabilityScoreGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.VulnerabilityScoreCountArgs<ExtArgs>
+            result: $Utils.Optional<VulnerabilityScoreCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -2820,6 +3029,8 @@ export namespace Prisma {
     partnerOrganization?: PartnerOrganizationOmit
     referral?: ReferralOmit
     referralConsent?: ReferralConsentOmit
+    quickProfile?: QuickProfileOmit
+    vulnerabilityScore?: VulnerabilityScoreOmit
   }
 
   /* Types for Logging */
@@ -2910,6 +3121,7 @@ export namespace Prisma {
     feedback: number
     referralsSent: number
     referralsReceived: number
+    quickProfiles: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -2923,6 +3135,7 @@ export namespace Prisma {
     feedback?: boolean | UserCountOutputTypeCountFeedbackArgs
     referralsSent?: boolean | UserCountOutputTypeCountReferralsSentArgs
     referralsReceived?: boolean | UserCountOutputTypeCountReferralsReceivedArgs
+    quickProfiles?: boolean | UserCountOutputTypeCountQuickProfilesArgs
   }
 
   // Custom InputTypes
@@ -3004,6 +3217,13 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountReferralsReceivedArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ReferralWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountQuickProfilesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: QuickProfileWhereInput
   }
 
 
@@ -3518,6 +3738,7 @@ export namespace Prisma {
     feedback?: boolean | User$feedbackArgs<ExtArgs>
     referralsSent?: boolean | User$referralsSentArgs<ExtArgs>
     referralsReceived?: boolean | User$referralsReceivedArgs<ExtArgs>
+    quickProfiles?: boolean | User$quickProfilesArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -3572,6 +3793,7 @@ export namespace Prisma {
     feedback?: boolean | User$feedbackArgs<ExtArgs>
     referralsSent?: boolean | User$referralsSentArgs<ExtArgs>
     referralsReceived?: boolean | User$referralsReceivedArgs<ExtArgs>
+    quickProfiles?: boolean | User$quickProfilesArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -3590,6 +3812,7 @@ export namespace Prisma {
       feedback: Prisma.$FeedbackPayload<ExtArgs>[]
       referralsSent: Prisma.$ReferralPayload<ExtArgs>[]
       referralsReceived: Prisma.$ReferralPayload<ExtArgs>[]
+      quickProfiles: Prisma.$QuickProfilePayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -4006,6 +4229,7 @@ export namespace Prisma {
     feedback<T extends User$feedbackArgs<ExtArgs> = {}>(args?: Subset<T, User$feedbackArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FeedbackPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     referralsSent<T extends User$referralsSentArgs<ExtArgs> = {}>(args?: Subset<T, User$referralsSentArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReferralPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     referralsReceived<T extends User$referralsReceivedArgs<ExtArgs> = {}>(args?: Subset<T, User$referralsReceivedArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReferralPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    quickProfiles<T extends User$quickProfilesArgs<ExtArgs> = {}>(args?: Subset<T, User$quickProfilesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuickProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4670,6 +4894,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: ReferralScalarFieldEnum | ReferralScalarFieldEnum[]
+  }
+
+  /**
+   * User.quickProfiles
+   */
+  export type User$quickProfilesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuickProfile
+     */
+    select?: QuickProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the QuickProfile
+     */
+    omit?: QuickProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuickProfileInclude<ExtArgs> | null
+    where?: QuickProfileWhereInput
+    orderBy?: QuickProfileOrderByWithRelationInput | QuickProfileOrderByWithRelationInput[]
+    cursor?: QuickProfileWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: QuickProfileScalarFieldEnum | QuickProfileScalarFieldEnum[]
   }
 
   /**
@@ -26157,6 +26405,2581 @@ export namespace Prisma {
 
 
   /**
+   * Model QuickProfile
+   */
+
+  export type AggregateQuickProfile = {
+    _count: QuickProfileCountAggregateOutputType | null
+    _avg: QuickProfileAvgAggregateOutputType | null
+    _sum: QuickProfileSumAggregateOutputType | null
+    _min: QuickProfileMinAggregateOutputType | null
+    _max: QuickProfileMaxAggregateOutputType | null
+  }
+
+  export type QuickProfileAvgAggregateOutputType = {
+    householdSize: number | null
+    pwdCount: number | null
+    elderlyCount: number | null
+    serviceDistance: number | null
+    latitude: number | null
+    longitude: number | null
+    vulnerabilityScore: number | null
+    priorityRank: number | null
+    assessmentDuration: number | null
+  }
+
+  export type QuickProfileSumAggregateOutputType = {
+    householdSize: number | null
+    pwdCount: number | null
+    elderlyCount: number | null
+    serviceDistance: number | null
+    latitude: number | null
+    longitude: number | null
+    vulnerabilityScore: number | null
+    priorityRank: number | null
+    assessmentDuration: number | null
+  }
+
+  export type QuickProfileMinAggregateOutputType = {
+    id: string | null
+    siteId: string | null
+    householdSize: number | null
+    femaleHeaded: boolean | null
+    hasVulnerable: boolean | null
+    pwdCount: number | null
+    elderlyCount: number | null
+    childHeaded: boolean | null
+    primaryNeed: $Enums.PrimaryNeedType | null
+    serviceDistance: number | null
+    gbvRisk: boolean | null
+    latitude: number | null
+    longitude: number | null
+    vulnerabilityScore: number | null
+    riskCategory: $Enums.RiskCategory | null
+    priorityRank: number | null
+    assessmentDuration: number | null
+    assessedById: string | null
+    assessedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type QuickProfileMaxAggregateOutputType = {
+    id: string | null
+    siteId: string | null
+    householdSize: number | null
+    femaleHeaded: boolean | null
+    hasVulnerable: boolean | null
+    pwdCount: number | null
+    elderlyCount: number | null
+    childHeaded: boolean | null
+    primaryNeed: $Enums.PrimaryNeedType | null
+    serviceDistance: number | null
+    gbvRisk: boolean | null
+    latitude: number | null
+    longitude: number | null
+    vulnerabilityScore: number | null
+    riskCategory: $Enums.RiskCategory | null
+    priorityRank: number | null
+    assessmentDuration: number | null
+    assessedById: string | null
+    assessedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type QuickProfileCountAggregateOutputType = {
+    id: number
+    siteId: number
+    householdSize: number
+    femaleHeaded: number
+    hasVulnerable: number
+    pwdCount: number
+    elderlyCount: number
+    childHeaded: number
+    primaryNeed: number
+    serviceDistance: number
+    gbvRisk: number
+    latitude: number
+    longitude: number
+    vulnerabilityScore: number
+    riskCategory: number
+    priorityRank: number
+    assessmentDuration: number
+    assessedById: number
+    assessedAt: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type QuickProfileAvgAggregateInputType = {
+    householdSize?: true
+    pwdCount?: true
+    elderlyCount?: true
+    serviceDistance?: true
+    latitude?: true
+    longitude?: true
+    vulnerabilityScore?: true
+    priorityRank?: true
+    assessmentDuration?: true
+  }
+
+  export type QuickProfileSumAggregateInputType = {
+    householdSize?: true
+    pwdCount?: true
+    elderlyCount?: true
+    serviceDistance?: true
+    latitude?: true
+    longitude?: true
+    vulnerabilityScore?: true
+    priorityRank?: true
+    assessmentDuration?: true
+  }
+
+  export type QuickProfileMinAggregateInputType = {
+    id?: true
+    siteId?: true
+    householdSize?: true
+    femaleHeaded?: true
+    hasVulnerable?: true
+    pwdCount?: true
+    elderlyCount?: true
+    childHeaded?: true
+    primaryNeed?: true
+    serviceDistance?: true
+    gbvRisk?: true
+    latitude?: true
+    longitude?: true
+    vulnerabilityScore?: true
+    riskCategory?: true
+    priorityRank?: true
+    assessmentDuration?: true
+    assessedById?: true
+    assessedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type QuickProfileMaxAggregateInputType = {
+    id?: true
+    siteId?: true
+    householdSize?: true
+    femaleHeaded?: true
+    hasVulnerable?: true
+    pwdCount?: true
+    elderlyCount?: true
+    childHeaded?: true
+    primaryNeed?: true
+    serviceDistance?: true
+    gbvRisk?: true
+    latitude?: true
+    longitude?: true
+    vulnerabilityScore?: true
+    riskCategory?: true
+    priorityRank?: true
+    assessmentDuration?: true
+    assessedById?: true
+    assessedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type QuickProfileCountAggregateInputType = {
+    id?: true
+    siteId?: true
+    householdSize?: true
+    femaleHeaded?: true
+    hasVulnerable?: true
+    pwdCount?: true
+    elderlyCount?: true
+    childHeaded?: true
+    primaryNeed?: true
+    serviceDistance?: true
+    gbvRisk?: true
+    latitude?: true
+    longitude?: true
+    vulnerabilityScore?: true
+    riskCategory?: true
+    priorityRank?: true
+    assessmentDuration?: true
+    assessedById?: true
+    assessedAt?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type QuickProfileAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which QuickProfile to aggregate.
+     */
+    where?: QuickProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of QuickProfiles to fetch.
+     */
+    orderBy?: QuickProfileOrderByWithRelationInput | QuickProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: QuickProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` QuickProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` QuickProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned QuickProfiles
+    **/
+    _count?: true | QuickProfileCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: QuickProfileAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: QuickProfileSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: QuickProfileMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: QuickProfileMaxAggregateInputType
+  }
+
+  export type GetQuickProfileAggregateType<T extends QuickProfileAggregateArgs> = {
+        [P in keyof T & keyof AggregateQuickProfile]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateQuickProfile[P]>
+      : GetScalarType<T[P], AggregateQuickProfile[P]>
+  }
+
+
+
+
+  export type QuickProfileGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: QuickProfileWhereInput
+    orderBy?: QuickProfileOrderByWithAggregationInput | QuickProfileOrderByWithAggregationInput[]
+    by: QuickProfileScalarFieldEnum[] | QuickProfileScalarFieldEnum
+    having?: QuickProfileScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: QuickProfileCountAggregateInputType | true
+    _avg?: QuickProfileAvgAggregateInputType
+    _sum?: QuickProfileSumAggregateInputType
+    _min?: QuickProfileMinAggregateInputType
+    _max?: QuickProfileMaxAggregateInputType
+  }
+
+  export type QuickProfileGroupByOutputType = {
+    id: string
+    siteId: string | null
+    householdSize: number
+    femaleHeaded: boolean
+    hasVulnerable: boolean
+    pwdCount: number
+    elderlyCount: number
+    childHeaded: boolean
+    primaryNeed: $Enums.PrimaryNeedType
+    serviceDistance: number | null
+    gbvRisk: boolean
+    latitude: number | null
+    longitude: number | null
+    vulnerabilityScore: number
+    riskCategory: $Enums.RiskCategory
+    priorityRank: number
+    assessmentDuration: number | null
+    assessedById: string
+    assessedAt: Date
+    createdAt: Date
+    updatedAt: Date
+    _count: QuickProfileCountAggregateOutputType | null
+    _avg: QuickProfileAvgAggregateOutputType | null
+    _sum: QuickProfileSumAggregateOutputType | null
+    _min: QuickProfileMinAggregateOutputType | null
+    _max: QuickProfileMaxAggregateOutputType | null
+  }
+
+  type GetQuickProfileGroupByPayload<T extends QuickProfileGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<QuickProfileGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof QuickProfileGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], QuickProfileGroupByOutputType[P]>
+            : GetScalarType<T[P], QuickProfileGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type QuickProfileSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    siteId?: boolean
+    householdSize?: boolean
+    femaleHeaded?: boolean
+    hasVulnerable?: boolean
+    pwdCount?: boolean
+    elderlyCount?: boolean
+    childHeaded?: boolean
+    primaryNeed?: boolean
+    serviceDistance?: boolean
+    gbvRisk?: boolean
+    latitude?: boolean
+    longitude?: boolean
+    vulnerabilityScore?: boolean
+    riskCategory?: boolean
+    priorityRank?: boolean
+    assessmentDuration?: boolean
+    assessedById?: boolean
+    assessedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    assessedBy?: boolean | UserDefaultArgs<ExtArgs>
+    vulnerabilityDetail?: boolean | QuickProfile$vulnerabilityDetailArgs<ExtArgs>
+  }, ExtArgs["result"]["quickProfile"]>
+
+  export type QuickProfileSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    siteId?: boolean
+    householdSize?: boolean
+    femaleHeaded?: boolean
+    hasVulnerable?: boolean
+    pwdCount?: boolean
+    elderlyCount?: boolean
+    childHeaded?: boolean
+    primaryNeed?: boolean
+    serviceDistance?: boolean
+    gbvRisk?: boolean
+    latitude?: boolean
+    longitude?: boolean
+    vulnerabilityScore?: boolean
+    riskCategory?: boolean
+    priorityRank?: boolean
+    assessmentDuration?: boolean
+    assessedById?: boolean
+    assessedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    assessedBy?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["quickProfile"]>
+
+  export type QuickProfileSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    siteId?: boolean
+    householdSize?: boolean
+    femaleHeaded?: boolean
+    hasVulnerable?: boolean
+    pwdCount?: boolean
+    elderlyCount?: boolean
+    childHeaded?: boolean
+    primaryNeed?: boolean
+    serviceDistance?: boolean
+    gbvRisk?: boolean
+    latitude?: boolean
+    longitude?: boolean
+    vulnerabilityScore?: boolean
+    riskCategory?: boolean
+    priorityRank?: boolean
+    assessmentDuration?: boolean
+    assessedById?: boolean
+    assessedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    assessedBy?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["quickProfile"]>
+
+  export type QuickProfileSelectScalar = {
+    id?: boolean
+    siteId?: boolean
+    householdSize?: boolean
+    femaleHeaded?: boolean
+    hasVulnerable?: boolean
+    pwdCount?: boolean
+    elderlyCount?: boolean
+    childHeaded?: boolean
+    primaryNeed?: boolean
+    serviceDistance?: boolean
+    gbvRisk?: boolean
+    latitude?: boolean
+    longitude?: boolean
+    vulnerabilityScore?: boolean
+    riskCategory?: boolean
+    priorityRank?: boolean
+    assessmentDuration?: boolean
+    assessedById?: boolean
+    assessedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type QuickProfileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "siteId" | "householdSize" | "femaleHeaded" | "hasVulnerable" | "pwdCount" | "elderlyCount" | "childHeaded" | "primaryNeed" | "serviceDistance" | "gbvRisk" | "latitude" | "longitude" | "vulnerabilityScore" | "riskCategory" | "priorityRank" | "assessmentDuration" | "assessedById" | "assessedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["quickProfile"]>
+  export type QuickProfileInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    assessedBy?: boolean | UserDefaultArgs<ExtArgs>
+    vulnerabilityDetail?: boolean | QuickProfile$vulnerabilityDetailArgs<ExtArgs>
+  }
+  export type QuickProfileIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    assessedBy?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type QuickProfileIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    assessedBy?: boolean | UserDefaultArgs<ExtArgs>
+  }
+
+  export type $QuickProfilePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "QuickProfile"
+    objects: {
+      assessedBy: Prisma.$UserPayload<ExtArgs>
+      vulnerabilityDetail: Prisma.$VulnerabilityScorePayload<ExtArgs> | null
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      siteId: string | null
+      householdSize: number
+      femaleHeaded: boolean
+      hasVulnerable: boolean
+      pwdCount: number
+      elderlyCount: number
+      childHeaded: boolean
+      primaryNeed: $Enums.PrimaryNeedType
+      serviceDistance: number | null
+      gbvRisk: boolean
+      latitude: number | null
+      longitude: number | null
+      vulnerabilityScore: number
+      riskCategory: $Enums.RiskCategory
+      priorityRank: number
+      assessmentDuration: number | null
+      assessedById: string
+      assessedAt: Date
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["quickProfile"]>
+    composites: {}
+  }
+
+  type QuickProfileGetPayload<S extends boolean | null | undefined | QuickProfileDefaultArgs> = $Result.GetResult<Prisma.$QuickProfilePayload, S>
+
+  type QuickProfileCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<QuickProfileFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: QuickProfileCountAggregateInputType | true
+    }
+
+  export interface QuickProfileDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['QuickProfile'], meta: { name: 'QuickProfile' } }
+    /**
+     * Find zero or one QuickProfile that matches the filter.
+     * @param {QuickProfileFindUniqueArgs} args - Arguments to find a QuickProfile
+     * @example
+     * // Get one QuickProfile
+     * const quickProfile = await prisma.quickProfile.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends QuickProfileFindUniqueArgs>(args: SelectSubset<T, QuickProfileFindUniqueArgs<ExtArgs>>): Prisma__QuickProfileClient<$Result.GetResult<Prisma.$QuickProfilePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one QuickProfile that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {QuickProfileFindUniqueOrThrowArgs} args - Arguments to find a QuickProfile
+     * @example
+     * // Get one QuickProfile
+     * const quickProfile = await prisma.quickProfile.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends QuickProfileFindUniqueOrThrowArgs>(args: SelectSubset<T, QuickProfileFindUniqueOrThrowArgs<ExtArgs>>): Prisma__QuickProfileClient<$Result.GetResult<Prisma.$QuickProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first QuickProfile that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuickProfileFindFirstArgs} args - Arguments to find a QuickProfile
+     * @example
+     * // Get one QuickProfile
+     * const quickProfile = await prisma.quickProfile.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends QuickProfileFindFirstArgs>(args?: SelectSubset<T, QuickProfileFindFirstArgs<ExtArgs>>): Prisma__QuickProfileClient<$Result.GetResult<Prisma.$QuickProfilePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first QuickProfile that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuickProfileFindFirstOrThrowArgs} args - Arguments to find a QuickProfile
+     * @example
+     * // Get one QuickProfile
+     * const quickProfile = await prisma.quickProfile.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends QuickProfileFindFirstOrThrowArgs>(args?: SelectSubset<T, QuickProfileFindFirstOrThrowArgs<ExtArgs>>): Prisma__QuickProfileClient<$Result.GetResult<Prisma.$QuickProfilePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more QuickProfiles that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuickProfileFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all QuickProfiles
+     * const quickProfiles = await prisma.quickProfile.findMany()
+     * 
+     * // Get first 10 QuickProfiles
+     * const quickProfiles = await prisma.quickProfile.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const quickProfileWithIdOnly = await prisma.quickProfile.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends QuickProfileFindManyArgs>(args?: SelectSubset<T, QuickProfileFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuickProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a QuickProfile.
+     * @param {QuickProfileCreateArgs} args - Arguments to create a QuickProfile.
+     * @example
+     * // Create one QuickProfile
+     * const QuickProfile = await prisma.quickProfile.create({
+     *   data: {
+     *     // ... data to create a QuickProfile
+     *   }
+     * })
+     * 
+     */
+    create<T extends QuickProfileCreateArgs>(args: SelectSubset<T, QuickProfileCreateArgs<ExtArgs>>): Prisma__QuickProfileClient<$Result.GetResult<Prisma.$QuickProfilePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many QuickProfiles.
+     * @param {QuickProfileCreateManyArgs} args - Arguments to create many QuickProfiles.
+     * @example
+     * // Create many QuickProfiles
+     * const quickProfile = await prisma.quickProfile.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends QuickProfileCreateManyArgs>(args?: SelectSubset<T, QuickProfileCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many QuickProfiles and returns the data saved in the database.
+     * @param {QuickProfileCreateManyAndReturnArgs} args - Arguments to create many QuickProfiles.
+     * @example
+     * // Create many QuickProfiles
+     * const quickProfile = await prisma.quickProfile.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many QuickProfiles and only return the `id`
+     * const quickProfileWithIdOnly = await prisma.quickProfile.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends QuickProfileCreateManyAndReturnArgs>(args?: SelectSubset<T, QuickProfileCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuickProfilePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a QuickProfile.
+     * @param {QuickProfileDeleteArgs} args - Arguments to delete one QuickProfile.
+     * @example
+     * // Delete one QuickProfile
+     * const QuickProfile = await prisma.quickProfile.delete({
+     *   where: {
+     *     // ... filter to delete one QuickProfile
+     *   }
+     * })
+     * 
+     */
+    delete<T extends QuickProfileDeleteArgs>(args: SelectSubset<T, QuickProfileDeleteArgs<ExtArgs>>): Prisma__QuickProfileClient<$Result.GetResult<Prisma.$QuickProfilePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one QuickProfile.
+     * @param {QuickProfileUpdateArgs} args - Arguments to update one QuickProfile.
+     * @example
+     * // Update one QuickProfile
+     * const quickProfile = await prisma.quickProfile.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends QuickProfileUpdateArgs>(args: SelectSubset<T, QuickProfileUpdateArgs<ExtArgs>>): Prisma__QuickProfileClient<$Result.GetResult<Prisma.$QuickProfilePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more QuickProfiles.
+     * @param {QuickProfileDeleteManyArgs} args - Arguments to filter QuickProfiles to delete.
+     * @example
+     * // Delete a few QuickProfiles
+     * const { count } = await prisma.quickProfile.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends QuickProfileDeleteManyArgs>(args?: SelectSubset<T, QuickProfileDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more QuickProfiles.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuickProfileUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many QuickProfiles
+     * const quickProfile = await prisma.quickProfile.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends QuickProfileUpdateManyArgs>(args: SelectSubset<T, QuickProfileUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more QuickProfiles and returns the data updated in the database.
+     * @param {QuickProfileUpdateManyAndReturnArgs} args - Arguments to update many QuickProfiles.
+     * @example
+     * // Update many QuickProfiles
+     * const quickProfile = await prisma.quickProfile.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more QuickProfiles and only return the `id`
+     * const quickProfileWithIdOnly = await prisma.quickProfile.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends QuickProfileUpdateManyAndReturnArgs>(args: SelectSubset<T, QuickProfileUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuickProfilePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one QuickProfile.
+     * @param {QuickProfileUpsertArgs} args - Arguments to update or create a QuickProfile.
+     * @example
+     * // Update or create a QuickProfile
+     * const quickProfile = await prisma.quickProfile.upsert({
+     *   create: {
+     *     // ... data to create a QuickProfile
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the QuickProfile we want to update
+     *   }
+     * })
+     */
+    upsert<T extends QuickProfileUpsertArgs>(args: SelectSubset<T, QuickProfileUpsertArgs<ExtArgs>>): Prisma__QuickProfileClient<$Result.GetResult<Prisma.$QuickProfilePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of QuickProfiles.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuickProfileCountArgs} args - Arguments to filter QuickProfiles to count.
+     * @example
+     * // Count the number of QuickProfiles
+     * const count = await prisma.quickProfile.count({
+     *   where: {
+     *     // ... the filter for the QuickProfiles we want to count
+     *   }
+     * })
+    **/
+    count<T extends QuickProfileCountArgs>(
+      args?: Subset<T, QuickProfileCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], QuickProfileCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a QuickProfile.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuickProfileAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends QuickProfileAggregateArgs>(args: Subset<T, QuickProfileAggregateArgs>): Prisma.PrismaPromise<GetQuickProfileAggregateType<T>>
+
+    /**
+     * Group by QuickProfile.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuickProfileGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends QuickProfileGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: QuickProfileGroupByArgs['orderBy'] }
+        : { orderBy?: QuickProfileGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, QuickProfileGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetQuickProfileGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the QuickProfile model
+   */
+  readonly fields: QuickProfileFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for QuickProfile.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__QuickProfileClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    assessedBy<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    vulnerabilityDetail<T extends QuickProfile$vulnerabilityDetailArgs<ExtArgs> = {}>(args?: Subset<T, QuickProfile$vulnerabilityDetailArgs<ExtArgs>>): Prisma__VulnerabilityScoreClient<$Result.GetResult<Prisma.$VulnerabilityScorePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the QuickProfile model
+   */
+  interface QuickProfileFieldRefs {
+    readonly id: FieldRef<"QuickProfile", 'String'>
+    readonly siteId: FieldRef<"QuickProfile", 'String'>
+    readonly householdSize: FieldRef<"QuickProfile", 'Int'>
+    readonly femaleHeaded: FieldRef<"QuickProfile", 'Boolean'>
+    readonly hasVulnerable: FieldRef<"QuickProfile", 'Boolean'>
+    readonly pwdCount: FieldRef<"QuickProfile", 'Int'>
+    readonly elderlyCount: FieldRef<"QuickProfile", 'Int'>
+    readonly childHeaded: FieldRef<"QuickProfile", 'Boolean'>
+    readonly primaryNeed: FieldRef<"QuickProfile", 'PrimaryNeedType'>
+    readonly serviceDistance: FieldRef<"QuickProfile", 'Float'>
+    readonly gbvRisk: FieldRef<"QuickProfile", 'Boolean'>
+    readonly latitude: FieldRef<"QuickProfile", 'Float'>
+    readonly longitude: FieldRef<"QuickProfile", 'Float'>
+    readonly vulnerabilityScore: FieldRef<"QuickProfile", 'Int'>
+    readonly riskCategory: FieldRef<"QuickProfile", 'RiskCategory'>
+    readonly priorityRank: FieldRef<"QuickProfile", 'Int'>
+    readonly assessmentDuration: FieldRef<"QuickProfile", 'Int'>
+    readonly assessedById: FieldRef<"QuickProfile", 'String'>
+    readonly assessedAt: FieldRef<"QuickProfile", 'DateTime'>
+    readonly createdAt: FieldRef<"QuickProfile", 'DateTime'>
+    readonly updatedAt: FieldRef<"QuickProfile", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * QuickProfile findUnique
+   */
+  export type QuickProfileFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuickProfile
+     */
+    select?: QuickProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the QuickProfile
+     */
+    omit?: QuickProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuickProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which QuickProfile to fetch.
+     */
+    where: QuickProfileWhereUniqueInput
+  }
+
+  /**
+   * QuickProfile findUniqueOrThrow
+   */
+  export type QuickProfileFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuickProfile
+     */
+    select?: QuickProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the QuickProfile
+     */
+    omit?: QuickProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuickProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which QuickProfile to fetch.
+     */
+    where: QuickProfileWhereUniqueInput
+  }
+
+  /**
+   * QuickProfile findFirst
+   */
+  export type QuickProfileFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuickProfile
+     */
+    select?: QuickProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the QuickProfile
+     */
+    omit?: QuickProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuickProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which QuickProfile to fetch.
+     */
+    where?: QuickProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of QuickProfiles to fetch.
+     */
+    orderBy?: QuickProfileOrderByWithRelationInput | QuickProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for QuickProfiles.
+     */
+    cursor?: QuickProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` QuickProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` QuickProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of QuickProfiles.
+     */
+    distinct?: QuickProfileScalarFieldEnum | QuickProfileScalarFieldEnum[]
+  }
+
+  /**
+   * QuickProfile findFirstOrThrow
+   */
+  export type QuickProfileFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuickProfile
+     */
+    select?: QuickProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the QuickProfile
+     */
+    omit?: QuickProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuickProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which QuickProfile to fetch.
+     */
+    where?: QuickProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of QuickProfiles to fetch.
+     */
+    orderBy?: QuickProfileOrderByWithRelationInput | QuickProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for QuickProfiles.
+     */
+    cursor?: QuickProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` QuickProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` QuickProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of QuickProfiles.
+     */
+    distinct?: QuickProfileScalarFieldEnum | QuickProfileScalarFieldEnum[]
+  }
+
+  /**
+   * QuickProfile findMany
+   */
+  export type QuickProfileFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuickProfile
+     */
+    select?: QuickProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the QuickProfile
+     */
+    omit?: QuickProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuickProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which QuickProfiles to fetch.
+     */
+    where?: QuickProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of QuickProfiles to fetch.
+     */
+    orderBy?: QuickProfileOrderByWithRelationInput | QuickProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing QuickProfiles.
+     */
+    cursor?: QuickProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` QuickProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` QuickProfiles.
+     */
+    skip?: number
+    distinct?: QuickProfileScalarFieldEnum | QuickProfileScalarFieldEnum[]
+  }
+
+  /**
+   * QuickProfile create
+   */
+  export type QuickProfileCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuickProfile
+     */
+    select?: QuickProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the QuickProfile
+     */
+    omit?: QuickProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuickProfileInclude<ExtArgs> | null
+    /**
+     * The data needed to create a QuickProfile.
+     */
+    data: XOR<QuickProfileCreateInput, QuickProfileUncheckedCreateInput>
+  }
+
+  /**
+   * QuickProfile createMany
+   */
+  export type QuickProfileCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many QuickProfiles.
+     */
+    data: QuickProfileCreateManyInput | QuickProfileCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * QuickProfile createManyAndReturn
+   */
+  export type QuickProfileCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuickProfile
+     */
+    select?: QuickProfileSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the QuickProfile
+     */
+    omit?: QuickProfileOmit<ExtArgs> | null
+    /**
+     * The data used to create many QuickProfiles.
+     */
+    data: QuickProfileCreateManyInput | QuickProfileCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuickProfileIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * QuickProfile update
+   */
+  export type QuickProfileUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuickProfile
+     */
+    select?: QuickProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the QuickProfile
+     */
+    omit?: QuickProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuickProfileInclude<ExtArgs> | null
+    /**
+     * The data needed to update a QuickProfile.
+     */
+    data: XOR<QuickProfileUpdateInput, QuickProfileUncheckedUpdateInput>
+    /**
+     * Choose, which QuickProfile to update.
+     */
+    where: QuickProfileWhereUniqueInput
+  }
+
+  /**
+   * QuickProfile updateMany
+   */
+  export type QuickProfileUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update QuickProfiles.
+     */
+    data: XOR<QuickProfileUpdateManyMutationInput, QuickProfileUncheckedUpdateManyInput>
+    /**
+     * Filter which QuickProfiles to update
+     */
+    where?: QuickProfileWhereInput
+    /**
+     * Limit how many QuickProfiles to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * QuickProfile updateManyAndReturn
+   */
+  export type QuickProfileUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuickProfile
+     */
+    select?: QuickProfileSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the QuickProfile
+     */
+    omit?: QuickProfileOmit<ExtArgs> | null
+    /**
+     * The data used to update QuickProfiles.
+     */
+    data: XOR<QuickProfileUpdateManyMutationInput, QuickProfileUncheckedUpdateManyInput>
+    /**
+     * Filter which QuickProfiles to update
+     */
+    where?: QuickProfileWhereInput
+    /**
+     * Limit how many QuickProfiles to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuickProfileIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * QuickProfile upsert
+   */
+  export type QuickProfileUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuickProfile
+     */
+    select?: QuickProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the QuickProfile
+     */
+    omit?: QuickProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuickProfileInclude<ExtArgs> | null
+    /**
+     * The filter to search for the QuickProfile to update in case it exists.
+     */
+    where: QuickProfileWhereUniqueInput
+    /**
+     * In case the QuickProfile found by the `where` argument doesn't exist, create a new QuickProfile with this data.
+     */
+    create: XOR<QuickProfileCreateInput, QuickProfileUncheckedCreateInput>
+    /**
+     * In case the QuickProfile was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<QuickProfileUpdateInput, QuickProfileUncheckedUpdateInput>
+  }
+
+  /**
+   * QuickProfile delete
+   */
+  export type QuickProfileDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuickProfile
+     */
+    select?: QuickProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the QuickProfile
+     */
+    omit?: QuickProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuickProfileInclude<ExtArgs> | null
+    /**
+     * Filter which QuickProfile to delete.
+     */
+    where: QuickProfileWhereUniqueInput
+  }
+
+  /**
+   * QuickProfile deleteMany
+   */
+  export type QuickProfileDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which QuickProfiles to delete
+     */
+    where?: QuickProfileWhereInput
+    /**
+     * Limit how many QuickProfiles to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * QuickProfile.vulnerabilityDetail
+   */
+  export type QuickProfile$vulnerabilityDetailArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the VulnerabilityScore
+     */
+    select?: VulnerabilityScoreSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the VulnerabilityScore
+     */
+    omit?: VulnerabilityScoreOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: VulnerabilityScoreInclude<ExtArgs> | null
+    where?: VulnerabilityScoreWhereInput
+  }
+
+  /**
+   * QuickProfile without action
+   */
+  export type QuickProfileDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuickProfile
+     */
+    select?: QuickProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the QuickProfile
+     */
+    omit?: QuickProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuickProfileInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model VulnerabilityScore
+   */
+
+  export type AggregateVulnerabilityScore = {
+    _count: VulnerabilityScoreCountAggregateOutputType | null
+    _avg: VulnerabilityScoreAvgAggregateOutputType | null
+    _sum: VulnerabilityScoreSumAggregateOutputType | null
+    _min: VulnerabilityScoreMinAggregateOutputType | null
+    _max: VulnerabilityScoreMaxAggregateOutputType | null
+  }
+
+  export type VulnerabilityScoreAvgAggregateOutputType = {
+    totalScore: number | null
+    priorityRank: number | null
+    femaleHeadedScore: number | null
+    vulnerableMembersScore: number | null
+    householdSizeScore: number | null
+    primaryNeedScore: number | null
+    serviceDistanceScore: number | null
+    gbvRiskScore: number | null
+  }
+
+  export type VulnerabilityScoreSumAggregateOutputType = {
+    totalScore: number | null
+    priorityRank: number | null
+    femaleHeadedScore: number | null
+    vulnerableMembersScore: number | null
+    householdSizeScore: number | null
+    primaryNeedScore: number | null
+    serviceDistanceScore: number | null
+    gbvRiskScore: number | null
+  }
+
+  export type VulnerabilityScoreMinAggregateOutputType = {
+    id: string | null
+    quickProfileId: string | null
+    totalScore: number | null
+    riskCategory: $Enums.RiskCategory | null
+    priorityRank: number | null
+    femaleHeadedScore: number | null
+    vulnerableMembersScore: number | null
+    householdSizeScore: number | null
+    primaryNeedScore: number | null
+    serviceDistanceScore: number | null
+    gbvRiskScore: number | null
+    calculatedAt: Date | null
+  }
+
+  export type VulnerabilityScoreMaxAggregateOutputType = {
+    id: string | null
+    quickProfileId: string | null
+    totalScore: number | null
+    riskCategory: $Enums.RiskCategory | null
+    priorityRank: number | null
+    femaleHeadedScore: number | null
+    vulnerableMembersScore: number | null
+    householdSizeScore: number | null
+    primaryNeedScore: number | null
+    serviceDistanceScore: number | null
+    gbvRiskScore: number | null
+    calculatedAt: Date | null
+  }
+
+  export type VulnerabilityScoreCountAggregateOutputType = {
+    id: number
+    quickProfileId: number
+    totalScore: number
+    riskCategory: number
+    priorityRank: number
+    femaleHeadedScore: number
+    vulnerableMembersScore: number
+    householdSizeScore: number
+    primaryNeedScore: number
+    serviceDistanceScore: number
+    gbvRiskScore: number
+    eligiblePrograms: number
+    calculatedAt: number
+    _all: number
+  }
+
+
+  export type VulnerabilityScoreAvgAggregateInputType = {
+    totalScore?: true
+    priorityRank?: true
+    femaleHeadedScore?: true
+    vulnerableMembersScore?: true
+    householdSizeScore?: true
+    primaryNeedScore?: true
+    serviceDistanceScore?: true
+    gbvRiskScore?: true
+  }
+
+  export type VulnerabilityScoreSumAggregateInputType = {
+    totalScore?: true
+    priorityRank?: true
+    femaleHeadedScore?: true
+    vulnerableMembersScore?: true
+    householdSizeScore?: true
+    primaryNeedScore?: true
+    serviceDistanceScore?: true
+    gbvRiskScore?: true
+  }
+
+  export type VulnerabilityScoreMinAggregateInputType = {
+    id?: true
+    quickProfileId?: true
+    totalScore?: true
+    riskCategory?: true
+    priorityRank?: true
+    femaleHeadedScore?: true
+    vulnerableMembersScore?: true
+    householdSizeScore?: true
+    primaryNeedScore?: true
+    serviceDistanceScore?: true
+    gbvRiskScore?: true
+    calculatedAt?: true
+  }
+
+  export type VulnerabilityScoreMaxAggregateInputType = {
+    id?: true
+    quickProfileId?: true
+    totalScore?: true
+    riskCategory?: true
+    priorityRank?: true
+    femaleHeadedScore?: true
+    vulnerableMembersScore?: true
+    householdSizeScore?: true
+    primaryNeedScore?: true
+    serviceDistanceScore?: true
+    gbvRiskScore?: true
+    calculatedAt?: true
+  }
+
+  export type VulnerabilityScoreCountAggregateInputType = {
+    id?: true
+    quickProfileId?: true
+    totalScore?: true
+    riskCategory?: true
+    priorityRank?: true
+    femaleHeadedScore?: true
+    vulnerableMembersScore?: true
+    householdSizeScore?: true
+    primaryNeedScore?: true
+    serviceDistanceScore?: true
+    gbvRiskScore?: true
+    eligiblePrograms?: true
+    calculatedAt?: true
+    _all?: true
+  }
+
+  export type VulnerabilityScoreAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which VulnerabilityScore to aggregate.
+     */
+    where?: VulnerabilityScoreWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of VulnerabilityScores to fetch.
+     */
+    orderBy?: VulnerabilityScoreOrderByWithRelationInput | VulnerabilityScoreOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: VulnerabilityScoreWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` VulnerabilityScores from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` VulnerabilityScores.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned VulnerabilityScores
+    **/
+    _count?: true | VulnerabilityScoreCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: VulnerabilityScoreAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: VulnerabilityScoreSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: VulnerabilityScoreMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: VulnerabilityScoreMaxAggregateInputType
+  }
+
+  export type GetVulnerabilityScoreAggregateType<T extends VulnerabilityScoreAggregateArgs> = {
+        [P in keyof T & keyof AggregateVulnerabilityScore]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateVulnerabilityScore[P]>
+      : GetScalarType<T[P], AggregateVulnerabilityScore[P]>
+  }
+
+
+
+
+  export type VulnerabilityScoreGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: VulnerabilityScoreWhereInput
+    orderBy?: VulnerabilityScoreOrderByWithAggregationInput | VulnerabilityScoreOrderByWithAggregationInput[]
+    by: VulnerabilityScoreScalarFieldEnum[] | VulnerabilityScoreScalarFieldEnum
+    having?: VulnerabilityScoreScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: VulnerabilityScoreCountAggregateInputType | true
+    _avg?: VulnerabilityScoreAvgAggregateInputType
+    _sum?: VulnerabilityScoreSumAggregateInputType
+    _min?: VulnerabilityScoreMinAggregateInputType
+    _max?: VulnerabilityScoreMaxAggregateInputType
+  }
+
+  export type VulnerabilityScoreGroupByOutputType = {
+    id: string
+    quickProfileId: string
+    totalScore: number
+    riskCategory: $Enums.RiskCategory
+    priorityRank: number
+    femaleHeadedScore: number
+    vulnerableMembersScore: number
+    householdSizeScore: number
+    primaryNeedScore: number
+    serviceDistanceScore: number
+    gbvRiskScore: number
+    eligiblePrograms: JsonValue
+    calculatedAt: Date
+    _count: VulnerabilityScoreCountAggregateOutputType | null
+    _avg: VulnerabilityScoreAvgAggregateOutputType | null
+    _sum: VulnerabilityScoreSumAggregateOutputType | null
+    _min: VulnerabilityScoreMinAggregateOutputType | null
+    _max: VulnerabilityScoreMaxAggregateOutputType | null
+  }
+
+  type GetVulnerabilityScoreGroupByPayload<T extends VulnerabilityScoreGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<VulnerabilityScoreGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof VulnerabilityScoreGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], VulnerabilityScoreGroupByOutputType[P]>
+            : GetScalarType<T[P], VulnerabilityScoreGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type VulnerabilityScoreSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    quickProfileId?: boolean
+    totalScore?: boolean
+    riskCategory?: boolean
+    priorityRank?: boolean
+    femaleHeadedScore?: boolean
+    vulnerableMembersScore?: boolean
+    householdSizeScore?: boolean
+    primaryNeedScore?: boolean
+    serviceDistanceScore?: boolean
+    gbvRiskScore?: boolean
+    eligiblePrograms?: boolean
+    calculatedAt?: boolean
+    quickProfile?: boolean | QuickProfileDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["vulnerabilityScore"]>
+
+  export type VulnerabilityScoreSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    quickProfileId?: boolean
+    totalScore?: boolean
+    riskCategory?: boolean
+    priorityRank?: boolean
+    femaleHeadedScore?: boolean
+    vulnerableMembersScore?: boolean
+    householdSizeScore?: boolean
+    primaryNeedScore?: boolean
+    serviceDistanceScore?: boolean
+    gbvRiskScore?: boolean
+    eligiblePrograms?: boolean
+    calculatedAt?: boolean
+    quickProfile?: boolean | QuickProfileDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["vulnerabilityScore"]>
+
+  export type VulnerabilityScoreSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    quickProfileId?: boolean
+    totalScore?: boolean
+    riskCategory?: boolean
+    priorityRank?: boolean
+    femaleHeadedScore?: boolean
+    vulnerableMembersScore?: boolean
+    householdSizeScore?: boolean
+    primaryNeedScore?: boolean
+    serviceDistanceScore?: boolean
+    gbvRiskScore?: boolean
+    eligiblePrograms?: boolean
+    calculatedAt?: boolean
+    quickProfile?: boolean | QuickProfileDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["vulnerabilityScore"]>
+
+  export type VulnerabilityScoreSelectScalar = {
+    id?: boolean
+    quickProfileId?: boolean
+    totalScore?: boolean
+    riskCategory?: boolean
+    priorityRank?: boolean
+    femaleHeadedScore?: boolean
+    vulnerableMembersScore?: boolean
+    householdSizeScore?: boolean
+    primaryNeedScore?: boolean
+    serviceDistanceScore?: boolean
+    gbvRiskScore?: boolean
+    eligiblePrograms?: boolean
+    calculatedAt?: boolean
+  }
+
+  export type VulnerabilityScoreOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "quickProfileId" | "totalScore" | "riskCategory" | "priorityRank" | "femaleHeadedScore" | "vulnerableMembersScore" | "householdSizeScore" | "primaryNeedScore" | "serviceDistanceScore" | "gbvRiskScore" | "eligiblePrograms" | "calculatedAt", ExtArgs["result"]["vulnerabilityScore"]>
+  export type VulnerabilityScoreInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    quickProfile?: boolean | QuickProfileDefaultArgs<ExtArgs>
+  }
+  export type VulnerabilityScoreIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    quickProfile?: boolean | QuickProfileDefaultArgs<ExtArgs>
+  }
+  export type VulnerabilityScoreIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    quickProfile?: boolean | QuickProfileDefaultArgs<ExtArgs>
+  }
+
+  export type $VulnerabilityScorePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "VulnerabilityScore"
+    objects: {
+      quickProfile: Prisma.$QuickProfilePayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      quickProfileId: string
+      totalScore: number
+      riskCategory: $Enums.RiskCategory
+      priorityRank: number
+      femaleHeadedScore: number
+      vulnerableMembersScore: number
+      householdSizeScore: number
+      primaryNeedScore: number
+      serviceDistanceScore: number
+      gbvRiskScore: number
+      eligiblePrograms: Prisma.JsonValue
+      calculatedAt: Date
+    }, ExtArgs["result"]["vulnerabilityScore"]>
+    composites: {}
+  }
+
+  type VulnerabilityScoreGetPayload<S extends boolean | null | undefined | VulnerabilityScoreDefaultArgs> = $Result.GetResult<Prisma.$VulnerabilityScorePayload, S>
+
+  type VulnerabilityScoreCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<VulnerabilityScoreFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: VulnerabilityScoreCountAggregateInputType | true
+    }
+
+  export interface VulnerabilityScoreDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['VulnerabilityScore'], meta: { name: 'VulnerabilityScore' } }
+    /**
+     * Find zero or one VulnerabilityScore that matches the filter.
+     * @param {VulnerabilityScoreFindUniqueArgs} args - Arguments to find a VulnerabilityScore
+     * @example
+     * // Get one VulnerabilityScore
+     * const vulnerabilityScore = await prisma.vulnerabilityScore.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends VulnerabilityScoreFindUniqueArgs>(args: SelectSubset<T, VulnerabilityScoreFindUniqueArgs<ExtArgs>>): Prisma__VulnerabilityScoreClient<$Result.GetResult<Prisma.$VulnerabilityScorePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one VulnerabilityScore that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {VulnerabilityScoreFindUniqueOrThrowArgs} args - Arguments to find a VulnerabilityScore
+     * @example
+     * // Get one VulnerabilityScore
+     * const vulnerabilityScore = await prisma.vulnerabilityScore.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends VulnerabilityScoreFindUniqueOrThrowArgs>(args: SelectSubset<T, VulnerabilityScoreFindUniqueOrThrowArgs<ExtArgs>>): Prisma__VulnerabilityScoreClient<$Result.GetResult<Prisma.$VulnerabilityScorePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first VulnerabilityScore that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {VulnerabilityScoreFindFirstArgs} args - Arguments to find a VulnerabilityScore
+     * @example
+     * // Get one VulnerabilityScore
+     * const vulnerabilityScore = await prisma.vulnerabilityScore.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends VulnerabilityScoreFindFirstArgs>(args?: SelectSubset<T, VulnerabilityScoreFindFirstArgs<ExtArgs>>): Prisma__VulnerabilityScoreClient<$Result.GetResult<Prisma.$VulnerabilityScorePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first VulnerabilityScore that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {VulnerabilityScoreFindFirstOrThrowArgs} args - Arguments to find a VulnerabilityScore
+     * @example
+     * // Get one VulnerabilityScore
+     * const vulnerabilityScore = await prisma.vulnerabilityScore.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends VulnerabilityScoreFindFirstOrThrowArgs>(args?: SelectSubset<T, VulnerabilityScoreFindFirstOrThrowArgs<ExtArgs>>): Prisma__VulnerabilityScoreClient<$Result.GetResult<Prisma.$VulnerabilityScorePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more VulnerabilityScores that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {VulnerabilityScoreFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all VulnerabilityScores
+     * const vulnerabilityScores = await prisma.vulnerabilityScore.findMany()
+     * 
+     * // Get first 10 VulnerabilityScores
+     * const vulnerabilityScores = await prisma.vulnerabilityScore.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const vulnerabilityScoreWithIdOnly = await prisma.vulnerabilityScore.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends VulnerabilityScoreFindManyArgs>(args?: SelectSubset<T, VulnerabilityScoreFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$VulnerabilityScorePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a VulnerabilityScore.
+     * @param {VulnerabilityScoreCreateArgs} args - Arguments to create a VulnerabilityScore.
+     * @example
+     * // Create one VulnerabilityScore
+     * const VulnerabilityScore = await prisma.vulnerabilityScore.create({
+     *   data: {
+     *     // ... data to create a VulnerabilityScore
+     *   }
+     * })
+     * 
+     */
+    create<T extends VulnerabilityScoreCreateArgs>(args: SelectSubset<T, VulnerabilityScoreCreateArgs<ExtArgs>>): Prisma__VulnerabilityScoreClient<$Result.GetResult<Prisma.$VulnerabilityScorePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many VulnerabilityScores.
+     * @param {VulnerabilityScoreCreateManyArgs} args - Arguments to create many VulnerabilityScores.
+     * @example
+     * // Create many VulnerabilityScores
+     * const vulnerabilityScore = await prisma.vulnerabilityScore.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends VulnerabilityScoreCreateManyArgs>(args?: SelectSubset<T, VulnerabilityScoreCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many VulnerabilityScores and returns the data saved in the database.
+     * @param {VulnerabilityScoreCreateManyAndReturnArgs} args - Arguments to create many VulnerabilityScores.
+     * @example
+     * // Create many VulnerabilityScores
+     * const vulnerabilityScore = await prisma.vulnerabilityScore.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many VulnerabilityScores and only return the `id`
+     * const vulnerabilityScoreWithIdOnly = await prisma.vulnerabilityScore.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends VulnerabilityScoreCreateManyAndReturnArgs>(args?: SelectSubset<T, VulnerabilityScoreCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$VulnerabilityScorePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a VulnerabilityScore.
+     * @param {VulnerabilityScoreDeleteArgs} args - Arguments to delete one VulnerabilityScore.
+     * @example
+     * // Delete one VulnerabilityScore
+     * const VulnerabilityScore = await prisma.vulnerabilityScore.delete({
+     *   where: {
+     *     // ... filter to delete one VulnerabilityScore
+     *   }
+     * })
+     * 
+     */
+    delete<T extends VulnerabilityScoreDeleteArgs>(args: SelectSubset<T, VulnerabilityScoreDeleteArgs<ExtArgs>>): Prisma__VulnerabilityScoreClient<$Result.GetResult<Prisma.$VulnerabilityScorePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one VulnerabilityScore.
+     * @param {VulnerabilityScoreUpdateArgs} args - Arguments to update one VulnerabilityScore.
+     * @example
+     * // Update one VulnerabilityScore
+     * const vulnerabilityScore = await prisma.vulnerabilityScore.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends VulnerabilityScoreUpdateArgs>(args: SelectSubset<T, VulnerabilityScoreUpdateArgs<ExtArgs>>): Prisma__VulnerabilityScoreClient<$Result.GetResult<Prisma.$VulnerabilityScorePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more VulnerabilityScores.
+     * @param {VulnerabilityScoreDeleteManyArgs} args - Arguments to filter VulnerabilityScores to delete.
+     * @example
+     * // Delete a few VulnerabilityScores
+     * const { count } = await prisma.vulnerabilityScore.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends VulnerabilityScoreDeleteManyArgs>(args?: SelectSubset<T, VulnerabilityScoreDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more VulnerabilityScores.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {VulnerabilityScoreUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many VulnerabilityScores
+     * const vulnerabilityScore = await prisma.vulnerabilityScore.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends VulnerabilityScoreUpdateManyArgs>(args: SelectSubset<T, VulnerabilityScoreUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more VulnerabilityScores and returns the data updated in the database.
+     * @param {VulnerabilityScoreUpdateManyAndReturnArgs} args - Arguments to update many VulnerabilityScores.
+     * @example
+     * // Update many VulnerabilityScores
+     * const vulnerabilityScore = await prisma.vulnerabilityScore.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more VulnerabilityScores and only return the `id`
+     * const vulnerabilityScoreWithIdOnly = await prisma.vulnerabilityScore.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends VulnerabilityScoreUpdateManyAndReturnArgs>(args: SelectSubset<T, VulnerabilityScoreUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$VulnerabilityScorePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one VulnerabilityScore.
+     * @param {VulnerabilityScoreUpsertArgs} args - Arguments to update or create a VulnerabilityScore.
+     * @example
+     * // Update or create a VulnerabilityScore
+     * const vulnerabilityScore = await prisma.vulnerabilityScore.upsert({
+     *   create: {
+     *     // ... data to create a VulnerabilityScore
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the VulnerabilityScore we want to update
+     *   }
+     * })
+     */
+    upsert<T extends VulnerabilityScoreUpsertArgs>(args: SelectSubset<T, VulnerabilityScoreUpsertArgs<ExtArgs>>): Prisma__VulnerabilityScoreClient<$Result.GetResult<Prisma.$VulnerabilityScorePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of VulnerabilityScores.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {VulnerabilityScoreCountArgs} args - Arguments to filter VulnerabilityScores to count.
+     * @example
+     * // Count the number of VulnerabilityScores
+     * const count = await prisma.vulnerabilityScore.count({
+     *   where: {
+     *     // ... the filter for the VulnerabilityScores we want to count
+     *   }
+     * })
+    **/
+    count<T extends VulnerabilityScoreCountArgs>(
+      args?: Subset<T, VulnerabilityScoreCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], VulnerabilityScoreCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a VulnerabilityScore.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {VulnerabilityScoreAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends VulnerabilityScoreAggregateArgs>(args: Subset<T, VulnerabilityScoreAggregateArgs>): Prisma.PrismaPromise<GetVulnerabilityScoreAggregateType<T>>
+
+    /**
+     * Group by VulnerabilityScore.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {VulnerabilityScoreGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends VulnerabilityScoreGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: VulnerabilityScoreGroupByArgs['orderBy'] }
+        : { orderBy?: VulnerabilityScoreGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, VulnerabilityScoreGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetVulnerabilityScoreGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the VulnerabilityScore model
+   */
+  readonly fields: VulnerabilityScoreFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for VulnerabilityScore.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__VulnerabilityScoreClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    quickProfile<T extends QuickProfileDefaultArgs<ExtArgs> = {}>(args?: Subset<T, QuickProfileDefaultArgs<ExtArgs>>): Prisma__QuickProfileClient<$Result.GetResult<Prisma.$QuickProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the VulnerabilityScore model
+   */
+  interface VulnerabilityScoreFieldRefs {
+    readonly id: FieldRef<"VulnerabilityScore", 'String'>
+    readonly quickProfileId: FieldRef<"VulnerabilityScore", 'String'>
+    readonly totalScore: FieldRef<"VulnerabilityScore", 'Int'>
+    readonly riskCategory: FieldRef<"VulnerabilityScore", 'RiskCategory'>
+    readonly priorityRank: FieldRef<"VulnerabilityScore", 'Int'>
+    readonly femaleHeadedScore: FieldRef<"VulnerabilityScore", 'Int'>
+    readonly vulnerableMembersScore: FieldRef<"VulnerabilityScore", 'Int'>
+    readonly householdSizeScore: FieldRef<"VulnerabilityScore", 'Int'>
+    readonly primaryNeedScore: FieldRef<"VulnerabilityScore", 'Int'>
+    readonly serviceDistanceScore: FieldRef<"VulnerabilityScore", 'Int'>
+    readonly gbvRiskScore: FieldRef<"VulnerabilityScore", 'Int'>
+    readonly eligiblePrograms: FieldRef<"VulnerabilityScore", 'Json'>
+    readonly calculatedAt: FieldRef<"VulnerabilityScore", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * VulnerabilityScore findUnique
+   */
+  export type VulnerabilityScoreFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the VulnerabilityScore
+     */
+    select?: VulnerabilityScoreSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the VulnerabilityScore
+     */
+    omit?: VulnerabilityScoreOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: VulnerabilityScoreInclude<ExtArgs> | null
+    /**
+     * Filter, which VulnerabilityScore to fetch.
+     */
+    where: VulnerabilityScoreWhereUniqueInput
+  }
+
+  /**
+   * VulnerabilityScore findUniqueOrThrow
+   */
+  export type VulnerabilityScoreFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the VulnerabilityScore
+     */
+    select?: VulnerabilityScoreSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the VulnerabilityScore
+     */
+    omit?: VulnerabilityScoreOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: VulnerabilityScoreInclude<ExtArgs> | null
+    /**
+     * Filter, which VulnerabilityScore to fetch.
+     */
+    where: VulnerabilityScoreWhereUniqueInput
+  }
+
+  /**
+   * VulnerabilityScore findFirst
+   */
+  export type VulnerabilityScoreFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the VulnerabilityScore
+     */
+    select?: VulnerabilityScoreSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the VulnerabilityScore
+     */
+    omit?: VulnerabilityScoreOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: VulnerabilityScoreInclude<ExtArgs> | null
+    /**
+     * Filter, which VulnerabilityScore to fetch.
+     */
+    where?: VulnerabilityScoreWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of VulnerabilityScores to fetch.
+     */
+    orderBy?: VulnerabilityScoreOrderByWithRelationInput | VulnerabilityScoreOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for VulnerabilityScores.
+     */
+    cursor?: VulnerabilityScoreWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` VulnerabilityScores from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` VulnerabilityScores.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of VulnerabilityScores.
+     */
+    distinct?: VulnerabilityScoreScalarFieldEnum | VulnerabilityScoreScalarFieldEnum[]
+  }
+
+  /**
+   * VulnerabilityScore findFirstOrThrow
+   */
+  export type VulnerabilityScoreFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the VulnerabilityScore
+     */
+    select?: VulnerabilityScoreSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the VulnerabilityScore
+     */
+    omit?: VulnerabilityScoreOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: VulnerabilityScoreInclude<ExtArgs> | null
+    /**
+     * Filter, which VulnerabilityScore to fetch.
+     */
+    where?: VulnerabilityScoreWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of VulnerabilityScores to fetch.
+     */
+    orderBy?: VulnerabilityScoreOrderByWithRelationInput | VulnerabilityScoreOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for VulnerabilityScores.
+     */
+    cursor?: VulnerabilityScoreWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` VulnerabilityScores from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` VulnerabilityScores.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of VulnerabilityScores.
+     */
+    distinct?: VulnerabilityScoreScalarFieldEnum | VulnerabilityScoreScalarFieldEnum[]
+  }
+
+  /**
+   * VulnerabilityScore findMany
+   */
+  export type VulnerabilityScoreFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the VulnerabilityScore
+     */
+    select?: VulnerabilityScoreSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the VulnerabilityScore
+     */
+    omit?: VulnerabilityScoreOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: VulnerabilityScoreInclude<ExtArgs> | null
+    /**
+     * Filter, which VulnerabilityScores to fetch.
+     */
+    where?: VulnerabilityScoreWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of VulnerabilityScores to fetch.
+     */
+    orderBy?: VulnerabilityScoreOrderByWithRelationInput | VulnerabilityScoreOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing VulnerabilityScores.
+     */
+    cursor?: VulnerabilityScoreWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` VulnerabilityScores from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` VulnerabilityScores.
+     */
+    skip?: number
+    distinct?: VulnerabilityScoreScalarFieldEnum | VulnerabilityScoreScalarFieldEnum[]
+  }
+
+  /**
+   * VulnerabilityScore create
+   */
+  export type VulnerabilityScoreCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the VulnerabilityScore
+     */
+    select?: VulnerabilityScoreSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the VulnerabilityScore
+     */
+    omit?: VulnerabilityScoreOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: VulnerabilityScoreInclude<ExtArgs> | null
+    /**
+     * The data needed to create a VulnerabilityScore.
+     */
+    data: XOR<VulnerabilityScoreCreateInput, VulnerabilityScoreUncheckedCreateInput>
+  }
+
+  /**
+   * VulnerabilityScore createMany
+   */
+  export type VulnerabilityScoreCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many VulnerabilityScores.
+     */
+    data: VulnerabilityScoreCreateManyInput | VulnerabilityScoreCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * VulnerabilityScore createManyAndReturn
+   */
+  export type VulnerabilityScoreCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the VulnerabilityScore
+     */
+    select?: VulnerabilityScoreSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the VulnerabilityScore
+     */
+    omit?: VulnerabilityScoreOmit<ExtArgs> | null
+    /**
+     * The data used to create many VulnerabilityScores.
+     */
+    data: VulnerabilityScoreCreateManyInput | VulnerabilityScoreCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: VulnerabilityScoreIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * VulnerabilityScore update
+   */
+  export type VulnerabilityScoreUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the VulnerabilityScore
+     */
+    select?: VulnerabilityScoreSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the VulnerabilityScore
+     */
+    omit?: VulnerabilityScoreOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: VulnerabilityScoreInclude<ExtArgs> | null
+    /**
+     * The data needed to update a VulnerabilityScore.
+     */
+    data: XOR<VulnerabilityScoreUpdateInput, VulnerabilityScoreUncheckedUpdateInput>
+    /**
+     * Choose, which VulnerabilityScore to update.
+     */
+    where: VulnerabilityScoreWhereUniqueInput
+  }
+
+  /**
+   * VulnerabilityScore updateMany
+   */
+  export type VulnerabilityScoreUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update VulnerabilityScores.
+     */
+    data: XOR<VulnerabilityScoreUpdateManyMutationInput, VulnerabilityScoreUncheckedUpdateManyInput>
+    /**
+     * Filter which VulnerabilityScores to update
+     */
+    where?: VulnerabilityScoreWhereInput
+    /**
+     * Limit how many VulnerabilityScores to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * VulnerabilityScore updateManyAndReturn
+   */
+  export type VulnerabilityScoreUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the VulnerabilityScore
+     */
+    select?: VulnerabilityScoreSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the VulnerabilityScore
+     */
+    omit?: VulnerabilityScoreOmit<ExtArgs> | null
+    /**
+     * The data used to update VulnerabilityScores.
+     */
+    data: XOR<VulnerabilityScoreUpdateManyMutationInput, VulnerabilityScoreUncheckedUpdateManyInput>
+    /**
+     * Filter which VulnerabilityScores to update
+     */
+    where?: VulnerabilityScoreWhereInput
+    /**
+     * Limit how many VulnerabilityScores to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: VulnerabilityScoreIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * VulnerabilityScore upsert
+   */
+  export type VulnerabilityScoreUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the VulnerabilityScore
+     */
+    select?: VulnerabilityScoreSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the VulnerabilityScore
+     */
+    omit?: VulnerabilityScoreOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: VulnerabilityScoreInclude<ExtArgs> | null
+    /**
+     * The filter to search for the VulnerabilityScore to update in case it exists.
+     */
+    where: VulnerabilityScoreWhereUniqueInput
+    /**
+     * In case the VulnerabilityScore found by the `where` argument doesn't exist, create a new VulnerabilityScore with this data.
+     */
+    create: XOR<VulnerabilityScoreCreateInput, VulnerabilityScoreUncheckedCreateInput>
+    /**
+     * In case the VulnerabilityScore was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<VulnerabilityScoreUpdateInput, VulnerabilityScoreUncheckedUpdateInput>
+  }
+
+  /**
+   * VulnerabilityScore delete
+   */
+  export type VulnerabilityScoreDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the VulnerabilityScore
+     */
+    select?: VulnerabilityScoreSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the VulnerabilityScore
+     */
+    omit?: VulnerabilityScoreOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: VulnerabilityScoreInclude<ExtArgs> | null
+    /**
+     * Filter which VulnerabilityScore to delete.
+     */
+    where: VulnerabilityScoreWhereUniqueInput
+  }
+
+  /**
+   * VulnerabilityScore deleteMany
+   */
+  export type VulnerabilityScoreDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which VulnerabilityScores to delete
+     */
+    where?: VulnerabilityScoreWhereInput
+    /**
+     * Limit how many VulnerabilityScores to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * VulnerabilityScore without action
+   */
+  export type VulnerabilityScoreDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the VulnerabilityScore
+     */
+    select?: VulnerabilityScoreSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the VulnerabilityScore
+     */
+    omit?: VulnerabilityScoreOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: VulnerabilityScoreInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -26509,6 +29332,52 @@ export namespace Prisma {
   };
 
   export type ReferralConsentScalarFieldEnum = (typeof ReferralConsentScalarFieldEnum)[keyof typeof ReferralConsentScalarFieldEnum]
+
+
+  export const QuickProfileScalarFieldEnum: {
+    id: 'id',
+    siteId: 'siteId',
+    householdSize: 'householdSize',
+    femaleHeaded: 'femaleHeaded',
+    hasVulnerable: 'hasVulnerable',
+    pwdCount: 'pwdCount',
+    elderlyCount: 'elderlyCount',
+    childHeaded: 'childHeaded',
+    primaryNeed: 'primaryNeed',
+    serviceDistance: 'serviceDistance',
+    gbvRisk: 'gbvRisk',
+    latitude: 'latitude',
+    longitude: 'longitude',
+    vulnerabilityScore: 'vulnerabilityScore',
+    riskCategory: 'riskCategory',
+    priorityRank: 'priorityRank',
+    assessmentDuration: 'assessmentDuration',
+    assessedById: 'assessedById',
+    assessedAt: 'assessedAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type QuickProfileScalarFieldEnum = (typeof QuickProfileScalarFieldEnum)[keyof typeof QuickProfileScalarFieldEnum]
+
+
+  export const VulnerabilityScoreScalarFieldEnum: {
+    id: 'id',
+    quickProfileId: 'quickProfileId',
+    totalScore: 'totalScore',
+    riskCategory: 'riskCategory',
+    priorityRank: 'priorityRank',
+    femaleHeadedScore: 'femaleHeadedScore',
+    vulnerableMembersScore: 'vulnerableMembersScore',
+    householdSizeScore: 'householdSizeScore',
+    primaryNeedScore: 'primaryNeedScore',
+    serviceDistanceScore: 'serviceDistanceScore',
+    gbvRiskScore: 'gbvRiskScore',
+    eligiblePrograms: 'eligiblePrograms',
+    calculatedAt: 'calculatedAt'
+  };
+
+  export type VulnerabilityScoreScalarFieldEnum = (typeof VulnerabilityScoreScalarFieldEnum)[keyof typeof VulnerabilityScoreScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -27003,6 +29872,34 @@ export namespace Prisma {
    */
   export type ListEnumConsentTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ConsentType[]'>
     
+
+
+  /**
+   * Reference to a field of type 'PrimaryNeedType'
+   */
+  export type EnumPrimaryNeedTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PrimaryNeedType'>
+    
+
+
+  /**
+   * Reference to a field of type 'PrimaryNeedType[]'
+   */
+  export type ListEnumPrimaryNeedTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PrimaryNeedType[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'RiskCategory'
+   */
+  export type EnumRiskCategoryFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RiskCategory'>
+    
+
+
+  /**
+   * Reference to a field of type 'RiskCategory[]'
+   */
+  export type ListEnumRiskCategoryFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RiskCategory[]'>
+    
   /**
    * Deep Input Types
    */
@@ -27032,6 +29929,7 @@ export namespace Prisma {
     feedback?: FeedbackListRelationFilter
     referralsSent?: ReferralListRelationFilter
     referralsReceived?: ReferralListRelationFilter
+    quickProfiles?: QuickProfileListRelationFilter
   }
 
   export type UserOrderByWithRelationInput = {
@@ -27055,6 +29953,7 @@ export namespace Prisma {
     feedback?: FeedbackOrderByRelationAggregateInput
     referralsSent?: ReferralOrderByRelationAggregateInput
     referralsReceived?: ReferralOrderByRelationAggregateInput
+    quickProfiles?: QuickProfileOrderByRelationAggregateInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -27081,6 +29980,7 @@ export namespace Prisma {
     feedback?: FeedbackListRelationFilter
     referralsSent?: ReferralListRelationFilter
     referralsReceived?: ReferralListRelationFilter
+    quickProfiles?: QuickProfileListRelationFilter
   }, "id" | "email">
 
   export type UserOrderByWithAggregationInput = {
@@ -28818,6 +31718,243 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"ReferralConsent"> | Date | string
   }
 
+  export type QuickProfileWhereInput = {
+    AND?: QuickProfileWhereInput | QuickProfileWhereInput[]
+    OR?: QuickProfileWhereInput[]
+    NOT?: QuickProfileWhereInput | QuickProfileWhereInput[]
+    id?: StringFilter<"QuickProfile"> | string
+    siteId?: StringNullableFilter<"QuickProfile"> | string | null
+    householdSize?: IntFilter<"QuickProfile"> | number
+    femaleHeaded?: BoolFilter<"QuickProfile"> | boolean
+    hasVulnerable?: BoolFilter<"QuickProfile"> | boolean
+    pwdCount?: IntFilter<"QuickProfile"> | number
+    elderlyCount?: IntFilter<"QuickProfile"> | number
+    childHeaded?: BoolFilter<"QuickProfile"> | boolean
+    primaryNeed?: EnumPrimaryNeedTypeFilter<"QuickProfile"> | $Enums.PrimaryNeedType
+    serviceDistance?: FloatNullableFilter<"QuickProfile"> | number | null
+    gbvRisk?: BoolFilter<"QuickProfile"> | boolean
+    latitude?: FloatNullableFilter<"QuickProfile"> | number | null
+    longitude?: FloatNullableFilter<"QuickProfile"> | number | null
+    vulnerabilityScore?: IntFilter<"QuickProfile"> | number
+    riskCategory?: EnumRiskCategoryFilter<"QuickProfile"> | $Enums.RiskCategory
+    priorityRank?: IntFilter<"QuickProfile"> | number
+    assessmentDuration?: IntNullableFilter<"QuickProfile"> | number | null
+    assessedById?: StringFilter<"QuickProfile"> | string
+    assessedAt?: DateTimeFilter<"QuickProfile"> | Date | string
+    createdAt?: DateTimeFilter<"QuickProfile"> | Date | string
+    updatedAt?: DateTimeFilter<"QuickProfile"> | Date | string
+    assessedBy?: XOR<UserScalarRelationFilter, UserWhereInput>
+    vulnerabilityDetail?: XOR<VulnerabilityScoreNullableScalarRelationFilter, VulnerabilityScoreWhereInput> | null
+  }
+
+  export type QuickProfileOrderByWithRelationInput = {
+    id?: SortOrder
+    siteId?: SortOrderInput | SortOrder
+    householdSize?: SortOrder
+    femaleHeaded?: SortOrder
+    hasVulnerable?: SortOrder
+    pwdCount?: SortOrder
+    elderlyCount?: SortOrder
+    childHeaded?: SortOrder
+    primaryNeed?: SortOrder
+    serviceDistance?: SortOrderInput | SortOrder
+    gbvRisk?: SortOrder
+    latitude?: SortOrderInput | SortOrder
+    longitude?: SortOrderInput | SortOrder
+    vulnerabilityScore?: SortOrder
+    riskCategory?: SortOrder
+    priorityRank?: SortOrder
+    assessmentDuration?: SortOrderInput | SortOrder
+    assessedById?: SortOrder
+    assessedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    assessedBy?: UserOrderByWithRelationInput
+    vulnerabilityDetail?: VulnerabilityScoreOrderByWithRelationInput
+  }
+
+  export type QuickProfileWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: QuickProfileWhereInput | QuickProfileWhereInput[]
+    OR?: QuickProfileWhereInput[]
+    NOT?: QuickProfileWhereInput | QuickProfileWhereInput[]
+    siteId?: StringNullableFilter<"QuickProfile"> | string | null
+    householdSize?: IntFilter<"QuickProfile"> | number
+    femaleHeaded?: BoolFilter<"QuickProfile"> | boolean
+    hasVulnerable?: BoolFilter<"QuickProfile"> | boolean
+    pwdCount?: IntFilter<"QuickProfile"> | number
+    elderlyCount?: IntFilter<"QuickProfile"> | number
+    childHeaded?: BoolFilter<"QuickProfile"> | boolean
+    primaryNeed?: EnumPrimaryNeedTypeFilter<"QuickProfile"> | $Enums.PrimaryNeedType
+    serviceDistance?: FloatNullableFilter<"QuickProfile"> | number | null
+    gbvRisk?: BoolFilter<"QuickProfile"> | boolean
+    latitude?: FloatNullableFilter<"QuickProfile"> | number | null
+    longitude?: FloatNullableFilter<"QuickProfile"> | number | null
+    vulnerabilityScore?: IntFilter<"QuickProfile"> | number
+    riskCategory?: EnumRiskCategoryFilter<"QuickProfile"> | $Enums.RiskCategory
+    priorityRank?: IntFilter<"QuickProfile"> | number
+    assessmentDuration?: IntNullableFilter<"QuickProfile"> | number | null
+    assessedById?: StringFilter<"QuickProfile"> | string
+    assessedAt?: DateTimeFilter<"QuickProfile"> | Date | string
+    createdAt?: DateTimeFilter<"QuickProfile"> | Date | string
+    updatedAt?: DateTimeFilter<"QuickProfile"> | Date | string
+    assessedBy?: XOR<UserScalarRelationFilter, UserWhereInput>
+    vulnerabilityDetail?: XOR<VulnerabilityScoreNullableScalarRelationFilter, VulnerabilityScoreWhereInput> | null
+  }, "id">
+
+  export type QuickProfileOrderByWithAggregationInput = {
+    id?: SortOrder
+    siteId?: SortOrderInput | SortOrder
+    householdSize?: SortOrder
+    femaleHeaded?: SortOrder
+    hasVulnerable?: SortOrder
+    pwdCount?: SortOrder
+    elderlyCount?: SortOrder
+    childHeaded?: SortOrder
+    primaryNeed?: SortOrder
+    serviceDistance?: SortOrderInput | SortOrder
+    gbvRisk?: SortOrder
+    latitude?: SortOrderInput | SortOrder
+    longitude?: SortOrderInput | SortOrder
+    vulnerabilityScore?: SortOrder
+    riskCategory?: SortOrder
+    priorityRank?: SortOrder
+    assessmentDuration?: SortOrderInput | SortOrder
+    assessedById?: SortOrder
+    assessedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: QuickProfileCountOrderByAggregateInput
+    _avg?: QuickProfileAvgOrderByAggregateInput
+    _max?: QuickProfileMaxOrderByAggregateInput
+    _min?: QuickProfileMinOrderByAggregateInput
+    _sum?: QuickProfileSumOrderByAggregateInput
+  }
+
+  export type QuickProfileScalarWhereWithAggregatesInput = {
+    AND?: QuickProfileScalarWhereWithAggregatesInput | QuickProfileScalarWhereWithAggregatesInput[]
+    OR?: QuickProfileScalarWhereWithAggregatesInput[]
+    NOT?: QuickProfileScalarWhereWithAggregatesInput | QuickProfileScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"QuickProfile"> | string
+    siteId?: StringNullableWithAggregatesFilter<"QuickProfile"> | string | null
+    householdSize?: IntWithAggregatesFilter<"QuickProfile"> | number
+    femaleHeaded?: BoolWithAggregatesFilter<"QuickProfile"> | boolean
+    hasVulnerable?: BoolWithAggregatesFilter<"QuickProfile"> | boolean
+    pwdCount?: IntWithAggregatesFilter<"QuickProfile"> | number
+    elderlyCount?: IntWithAggregatesFilter<"QuickProfile"> | number
+    childHeaded?: BoolWithAggregatesFilter<"QuickProfile"> | boolean
+    primaryNeed?: EnumPrimaryNeedTypeWithAggregatesFilter<"QuickProfile"> | $Enums.PrimaryNeedType
+    serviceDistance?: FloatNullableWithAggregatesFilter<"QuickProfile"> | number | null
+    gbvRisk?: BoolWithAggregatesFilter<"QuickProfile"> | boolean
+    latitude?: FloatNullableWithAggregatesFilter<"QuickProfile"> | number | null
+    longitude?: FloatNullableWithAggregatesFilter<"QuickProfile"> | number | null
+    vulnerabilityScore?: IntWithAggregatesFilter<"QuickProfile"> | number
+    riskCategory?: EnumRiskCategoryWithAggregatesFilter<"QuickProfile"> | $Enums.RiskCategory
+    priorityRank?: IntWithAggregatesFilter<"QuickProfile"> | number
+    assessmentDuration?: IntNullableWithAggregatesFilter<"QuickProfile"> | number | null
+    assessedById?: StringWithAggregatesFilter<"QuickProfile"> | string
+    assessedAt?: DateTimeWithAggregatesFilter<"QuickProfile"> | Date | string
+    createdAt?: DateTimeWithAggregatesFilter<"QuickProfile"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"QuickProfile"> | Date | string
+  }
+
+  export type VulnerabilityScoreWhereInput = {
+    AND?: VulnerabilityScoreWhereInput | VulnerabilityScoreWhereInput[]
+    OR?: VulnerabilityScoreWhereInput[]
+    NOT?: VulnerabilityScoreWhereInput | VulnerabilityScoreWhereInput[]
+    id?: StringFilter<"VulnerabilityScore"> | string
+    quickProfileId?: StringFilter<"VulnerabilityScore"> | string
+    totalScore?: IntFilter<"VulnerabilityScore"> | number
+    riskCategory?: EnumRiskCategoryFilter<"VulnerabilityScore"> | $Enums.RiskCategory
+    priorityRank?: IntFilter<"VulnerabilityScore"> | number
+    femaleHeadedScore?: IntFilter<"VulnerabilityScore"> | number
+    vulnerableMembersScore?: IntFilter<"VulnerabilityScore"> | number
+    householdSizeScore?: IntFilter<"VulnerabilityScore"> | number
+    primaryNeedScore?: IntFilter<"VulnerabilityScore"> | number
+    serviceDistanceScore?: IntFilter<"VulnerabilityScore"> | number
+    gbvRiskScore?: IntFilter<"VulnerabilityScore"> | number
+    eligiblePrograms?: JsonFilter<"VulnerabilityScore">
+    calculatedAt?: DateTimeFilter<"VulnerabilityScore"> | Date | string
+    quickProfile?: XOR<QuickProfileScalarRelationFilter, QuickProfileWhereInput>
+  }
+
+  export type VulnerabilityScoreOrderByWithRelationInput = {
+    id?: SortOrder
+    quickProfileId?: SortOrder
+    totalScore?: SortOrder
+    riskCategory?: SortOrder
+    priorityRank?: SortOrder
+    femaleHeadedScore?: SortOrder
+    vulnerableMembersScore?: SortOrder
+    householdSizeScore?: SortOrder
+    primaryNeedScore?: SortOrder
+    serviceDistanceScore?: SortOrder
+    gbvRiskScore?: SortOrder
+    eligiblePrograms?: SortOrder
+    calculatedAt?: SortOrder
+    quickProfile?: QuickProfileOrderByWithRelationInput
+  }
+
+  export type VulnerabilityScoreWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    quickProfileId?: string
+    AND?: VulnerabilityScoreWhereInput | VulnerabilityScoreWhereInput[]
+    OR?: VulnerabilityScoreWhereInput[]
+    NOT?: VulnerabilityScoreWhereInput | VulnerabilityScoreWhereInput[]
+    totalScore?: IntFilter<"VulnerabilityScore"> | number
+    riskCategory?: EnumRiskCategoryFilter<"VulnerabilityScore"> | $Enums.RiskCategory
+    priorityRank?: IntFilter<"VulnerabilityScore"> | number
+    femaleHeadedScore?: IntFilter<"VulnerabilityScore"> | number
+    vulnerableMembersScore?: IntFilter<"VulnerabilityScore"> | number
+    householdSizeScore?: IntFilter<"VulnerabilityScore"> | number
+    primaryNeedScore?: IntFilter<"VulnerabilityScore"> | number
+    serviceDistanceScore?: IntFilter<"VulnerabilityScore"> | number
+    gbvRiskScore?: IntFilter<"VulnerabilityScore"> | number
+    eligiblePrograms?: JsonFilter<"VulnerabilityScore">
+    calculatedAt?: DateTimeFilter<"VulnerabilityScore"> | Date | string
+    quickProfile?: XOR<QuickProfileScalarRelationFilter, QuickProfileWhereInput>
+  }, "id" | "quickProfileId">
+
+  export type VulnerabilityScoreOrderByWithAggregationInput = {
+    id?: SortOrder
+    quickProfileId?: SortOrder
+    totalScore?: SortOrder
+    riskCategory?: SortOrder
+    priorityRank?: SortOrder
+    femaleHeadedScore?: SortOrder
+    vulnerableMembersScore?: SortOrder
+    householdSizeScore?: SortOrder
+    primaryNeedScore?: SortOrder
+    serviceDistanceScore?: SortOrder
+    gbvRiskScore?: SortOrder
+    eligiblePrograms?: SortOrder
+    calculatedAt?: SortOrder
+    _count?: VulnerabilityScoreCountOrderByAggregateInput
+    _avg?: VulnerabilityScoreAvgOrderByAggregateInput
+    _max?: VulnerabilityScoreMaxOrderByAggregateInput
+    _min?: VulnerabilityScoreMinOrderByAggregateInput
+    _sum?: VulnerabilityScoreSumOrderByAggregateInput
+  }
+
+  export type VulnerabilityScoreScalarWhereWithAggregatesInput = {
+    AND?: VulnerabilityScoreScalarWhereWithAggregatesInput | VulnerabilityScoreScalarWhereWithAggregatesInput[]
+    OR?: VulnerabilityScoreScalarWhereWithAggregatesInput[]
+    NOT?: VulnerabilityScoreScalarWhereWithAggregatesInput | VulnerabilityScoreScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"VulnerabilityScore"> | string
+    quickProfileId?: StringWithAggregatesFilter<"VulnerabilityScore"> | string
+    totalScore?: IntWithAggregatesFilter<"VulnerabilityScore"> | number
+    riskCategory?: EnumRiskCategoryWithAggregatesFilter<"VulnerabilityScore"> | $Enums.RiskCategory
+    priorityRank?: IntWithAggregatesFilter<"VulnerabilityScore"> | number
+    femaleHeadedScore?: IntWithAggregatesFilter<"VulnerabilityScore"> | number
+    vulnerableMembersScore?: IntWithAggregatesFilter<"VulnerabilityScore"> | number
+    householdSizeScore?: IntWithAggregatesFilter<"VulnerabilityScore"> | number
+    primaryNeedScore?: IntWithAggregatesFilter<"VulnerabilityScore"> | number
+    serviceDistanceScore?: IntWithAggregatesFilter<"VulnerabilityScore"> | number
+    gbvRiskScore?: IntWithAggregatesFilter<"VulnerabilityScore"> | number
+    eligiblePrograms?: JsonWithAggregatesFilter<"VulnerabilityScore">
+    calculatedAt?: DateTimeWithAggregatesFilter<"VulnerabilityScore"> | Date | string
+  }
+
   export type UserCreateInput = {
     id: string
     name: string
@@ -28839,6 +31976,7 @@ export namespace Prisma {
     feedback?: FeedbackCreateNestedManyWithoutUserInput
     referralsSent?: ReferralCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -28862,6 +32000,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedCreateNestedManyWithoutUserInput
     referralsSent?: ReferralUncheckedCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralUncheckedCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileUncheckedCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserUpdateInput = {
@@ -28885,6 +32024,7 @@ export namespace Prisma {
     feedback?: FeedbackUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -28908,6 +32048,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUncheckedUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUncheckedUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUncheckedUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -30875,6 +34016,288 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type QuickProfileCreateInput = {
+    id?: string
+    siteId?: string | null
+    householdSize: number
+    femaleHeaded?: boolean
+    hasVulnerable?: boolean
+    pwdCount?: number
+    elderlyCount?: number
+    childHeaded?: boolean
+    primaryNeed: $Enums.PrimaryNeedType
+    serviceDistance?: number | null
+    gbvRisk?: boolean
+    latitude?: number | null
+    longitude?: number | null
+    vulnerabilityScore?: number
+    riskCategory?: $Enums.RiskCategory
+    priorityRank?: number
+    assessmentDuration?: number | null
+    assessedAt?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    assessedBy: UserCreateNestedOneWithoutQuickProfilesInput
+    vulnerabilityDetail?: VulnerabilityScoreCreateNestedOneWithoutQuickProfileInput
+  }
+
+  export type QuickProfileUncheckedCreateInput = {
+    id?: string
+    siteId?: string | null
+    householdSize: number
+    femaleHeaded?: boolean
+    hasVulnerable?: boolean
+    pwdCount?: number
+    elderlyCount?: number
+    childHeaded?: boolean
+    primaryNeed: $Enums.PrimaryNeedType
+    serviceDistance?: number | null
+    gbvRisk?: boolean
+    latitude?: number | null
+    longitude?: number | null
+    vulnerabilityScore?: number
+    riskCategory?: $Enums.RiskCategory
+    priorityRank?: number
+    assessmentDuration?: number | null
+    assessedById: string
+    assessedAt?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    vulnerabilityDetail?: VulnerabilityScoreUncheckedCreateNestedOneWithoutQuickProfileInput
+  }
+
+  export type QuickProfileUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    householdSize?: IntFieldUpdateOperationsInput | number
+    femaleHeaded?: BoolFieldUpdateOperationsInput | boolean
+    hasVulnerable?: BoolFieldUpdateOperationsInput | boolean
+    pwdCount?: IntFieldUpdateOperationsInput | number
+    elderlyCount?: IntFieldUpdateOperationsInput | number
+    childHeaded?: BoolFieldUpdateOperationsInput | boolean
+    primaryNeed?: EnumPrimaryNeedTypeFieldUpdateOperationsInput | $Enums.PrimaryNeedType
+    serviceDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    gbvRisk?: BoolFieldUpdateOperationsInput | boolean
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    vulnerabilityScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    assessmentDuration?: NullableIntFieldUpdateOperationsInput | number | null
+    assessedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assessedBy?: UserUpdateOneRequiredWithoutQuickProfilesNestedInput
+    vulnerabilityDetail?: VulnerabilityScoreUpdateOneWithoutQuickProfileNestedInput
+  }
+
+  export type QuickProfileUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    householdSize?: IntFieldUpdateOperationsInput | number
+    femaleHeaded?: BoolFieldUpdateOperationsInput | boolean
+    hasVulnerable?: BoolFieldUpdateOperationsInput | boolean
+    pwdCount?: IntFieldUpdateOperationsInput | number
+    elderlyCount?: IntFieldUpdateOperationsInput | number
+    childHeaded?: BoolFieldUpdateOperationsInput | boolean
+    primaryNeed?: EnumPrimaryNeedTypeFieldUpdateOperationsInput | $Enums.PrimaryNeedType
+    serviceDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    gbvRisk?: BoolFieldUpdateOperationsInput | boolean
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    vulnerabilityScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    assessmentDuration?: NullableIntFieldUpdateOperationsInput | number | null
+    assessedById?: StringFieldUpdateOperationsInput | string
+    assessedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    vulnerabilityDetail?: VulnerabilityScoreUncheckedUpdateOneWithoutQuickProfileNestedInput
+  }
+
+  export type QuickProfileCreateManyInput = {
+    id?: string
+    siteId?: string | null
+    householdSize: number
+    femaleHeaded?: boolean
+    hasVulnerable?: boolean
+    pwdCount?: number
+    elderlyCount?: number
+    childHeaded?: boolean
+    primaryNeed: $Enums.PrimaryNeedType
+    serviceDistance?: number | null
+    gbvRisk?: boolean
+    latitude?: number | null
+    longitude?: number | null
+    vulnerabilityScore?: number
+    riskCategory?: $Enums.RiskCategory
+    priorityRank?: number
+    assessmentDuration?: number | null
+    assessedById: string
+    assessedAt?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type QuickProfileUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    householdSize?: IntFieldUpdateOperationsInput | number
+    femaleHeaded?: BoolFieldUpdateOperationsInput | boolean
+    hasVulnerable?: BoolFieldUpdateOperationsInput | boolean
+    pwdCount?: IntFieldUpdateOperationsInput | number
+    elderlyCount?: IntFieldUpdateOperationsInput | number
+    childHeaded?: BoolFieldUpdateOperationsInput | boolean
+    primaryNeed?: EnumPrimaryNeedTypeFieldUpdateOperationsInput | $Enums.PrimaryNeedType
+    serviceDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    gbvRisk?: BoolFieldUpdateOperationsInput | boolean
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    vulnerabilityScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    assessmentDuration?: NullableIntFieldUpdateOperationsInput | number | null
+    assessedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuickProfileUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    householdSize?: IntFieldUpdateOperationsInput | number
+    femaleHeaded?: BoolFieldUpdateOperationsInput | boolean
+    hasVulnerable?: BoolFieldUpdateOperationsInput | boolean
+    pwdCount?: IntFieldUpdateOperationsInput | number
+    elderlyCount?: IntFieldUpdateOperationsInput | number
+    childHeaded?: BoolFieldUpdateOperationsInput | boolean
+    primaryNeed?: EnumPrimaryNeedTypeFieldUpdateOperationsInput | $Enums.PrimaryNeedType
+    serviceDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    gbvRisk?: BoolFieldUpdateOperationsInput | boolean
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    vulnerabilityScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    assessmentDuration?: NullableIntFieldUpdateOperationsInput | number | null
+    assessedById?: StringFieldUpdateOperationsInput | string
+    assessedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type VulnerabilityScoreCreateInput = {
+    id?: string
+    totalScore: number
+    riskCategory: $Enums.RiskCategory
+    priorityRank: number
+    femaleHeadedScore?: number
+    vulnerableMembersScore?: number
+    householdSizeScore?: number
+    primaryNeedScore?: number
+    serviceDistanceScore?: number
+    gbvRiskScore?: number
+    eligiblePrograms?: JsonNullValueInput | InputJsonValue
+    calculatedAt?: Date | string
+    quickProfile: QuickProfileCreateNestedOneWithoutVulnerabilityDetailInput
+  }
+
+  export type VulnerabilityScoreUncheckedCreateInput = {
+    id?: string
+    quickProfileId: string
+    totalScore: number
+    riskCategory: $Enums.RiskCategory
+    priorityRank: number
+    femaleHeadedScore?: number
+    vulnerableMembersScore?: number
+    householdSizeScore?: number
+    primaryNeedScore?: number
+    serviceDistanceScore?: number
+    gbvRiskScore?: number
+    eligiblePrograms?: JsonNullValueInput | InputJsonValue
+    calculatedAt?: Date | string
+  }
+
+  export type VulnerabilityScoreUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    totalScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    femaleHeadedScore?: IntFieldUpdateOperationsInput | number
+    vulnerableMembersScore?: IntFieldUpdateOperationsInput | number
+    householdSizeScore?: IntFieldUpdateOperationsInput | number
+    primaryNeedScore?: IntFieldUpdateOperationsInput | number
+    serviceDistanceScore?: IntFieldUpdateOperationsInput | number
+    gbvRiskScore?: IntFieldUpdateOperationsInput | number
+    eligiblePrograms?: JsonNullValueInput | InputJsonValue
+    calculatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    quickProfile?: QuickProfileUpdateOneRequiredWithoutVulnerabilityDetailNestedInput
+  }
+
+  export type VulnerabilityScoreUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    quickProfileId?: StringFieldUpdateOperationsInput | string
+    totalScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    femaleHeadedScore?: IntFieldUpdateOperationsInput | number
+    vulnerableMembersScore?: IntFieldUpdateOperationsInput | number
+    householdSizeScore?: IntFieldUpdateOperationsInput | number
+    primaryNeedScore?: IntFieldUpdateOperationsInput | number
+    serviceDistanceScore?: IntFieldUpdateOperationsInput | number
+    gbvRiskScore?: IntFieldUpdateOperationsInput | number
+    eligiblePrograms?: JsonNullValueInput | InputJsonValue
+    calculatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type VulnerabilityScoreCreateManyInput = {
+    id?: string
+    quickProfileId: string
+    totalScore: number
+    riskCategory: $Enums.RiskCategory
+    priorityRank: number
+    femaleHeadedScore?: number
+    vulnerableMembersScore?: number
+    householdSizeScore?: number
+    primaryNeedScore?: number
+    serviceDistanceScore?: number
+    gbvRiskScore?: number
+    eligiblePrograms?: JsonNullValueInput | InputJsonValue
+    calculatedAt?: Date | string
+  }
+
+  export type VulnerabilityScoreUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    totalScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    femaleHeadedScore?: IntFieldUpdateOperationsInput | number
+    vulnerableMembersScore?: IntFieldUpdateOperationsInput | number
+    householdSizeScore?: IntFieldUpdateOperationsInput | number
+    primaryNeedScore?: IntFieldUpdateOperationsInput | number
+    serviceDistanceScore?: IntFieldUpdateOperationsInput | number
+    gbvRiskScore?: IntFieldUpdateOperationsInput | number
+    eligiblePrograms?: JsonNullValueInput | InputJsonValue
+    calculatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type VulnerabilityScoreUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    quickProfileId?: StringFieldUpdateOperationsInput | string
+    totalScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    femaleHeadedScore?: IntFieldUpdateOperationsInput | number
+    vulnerableMembersScore?: IntFieldUpdateOperationsInput | number
+    householdSizeScore?: IntFieldUpdateOperationsInput | number
+    primaryNeedScore?: IntFieldUpdateOperationsInput | number
+    serviceDistanceScore?: IntFieldUpdateOperationsInput | number
+    gbvRiskScore?: IntFieldUpdateOperationsInput | number
+    eligiblePrograms?: JsonNullValueInput | InputJsonValue
+    calculatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -30982,6 +34405,12 @@ export namespace Prisma {
     none?: ReferralWhereInput
   }
 
+  export type QuickProfileListRelationFilter = {
+    every?: QuickProfileWhereInput
+    some?: QuickProfileWhereInput
+    none?: QuickProfileWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -31020,6 +34449,10 @@ export namespace Prisma {
   }
 
   export type ReferralOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type QuickProfileOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -32800,6 +36233,214 @@ export namespace Prisma {
     _max?: NestedEnumConsentTypeFilter<$PrismaModel>
   }
 
+  export type EnumPrimaryNeedTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.PrimaryNeedType | EnumPrimaryNeedTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.PrimaryNeedType[] | ListEnumPrimaryNeedTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.PrimaryNeedType[] | ListEnumPrimaryNeedTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumPrimaryNeedTypeFilter<$PrismaModel> | $Enums.PrimaryNeedType
+  }
+
+  export type EnumRiskCategoryFilter<$PrismaModel = never> = {
+    equals?: $Enums.RiskCategory | EnumRiskCategoryFieldRefInput<$PrismaModel>
+    in?: $Enums.RiskCategory[] | ListEnumRiskCategoryFieldRefInput<$PrismaModel>
+    notIn?: $Enums.RiskCategory[] | ListEnumRiskCategoryFieldRefInput<$PrismaModel>
+    not?: NestedEnumRiskCategoryFilter<$PrismaModel> | $Enums.RiskCategory
+  }
+
+  export type VulnerabilityScoreNullableScalarRelationFilter = {
+    is?: VulnerabilityScoreWhereInput | null
+    isNot?: VulnerabilityScoreWhereInput | null
+  }
+
+  export type QuickProfileCountOrderByAggregateInput = {
+    id?: SortOrder
+    siteId?: SortOrder
+    householdSize?: SortOrder
+    femaleHeaded?: SortOrder
+    hasVulnerable?: SortOrder
+    pwdCount?: SortOrder
+    elderlyCount?: SortOrder
+    childHeaded?: SortOrder
+    primaryNeed?: SortOrder
+    serviceDistance?: SortOrder
+    gbvRisk?: SortOrder
+    latitude?: SortOrder
+    longitude?: SortOrder
+    vulnerabilityScore?: SortOrder
+    riskCategory?: SortOrder
+    priorityRank?: SortOrder
+    assessmentDuration?: SortOrder
+    assessedById?: SortOrder
+    assessedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type QuickProfileAvgOrderByAggregateInput = {
+    householdSize?: SortOrder
+    pwdCount?: SortOrder
+    elderlyCount?: SortOrder
+    serviceDistance?: SortOrder
+    latitude?: SortOrder
+    longitude?: SortOrder
+    vulnerabilityScore?: SortOrder
+    priorityRank?: SortOrder
+    assessmentDuration?: SortOrder
+  }
+
+  export type QuickProfileMaxOrderByAggregateInput = {
+    id?: SortOrder
+    siteId?: SortOrder
+    householdSize?: SortOrder
+    femaleHeaded?: SortOrder
+    hasVulnerable?: SortOrder
+    pwdCount?: SortOrder
+    elderlyCount?: SortOrder
+    childHeaded?: SortOrder
+    primaryNeed?: SortOrder
+    serviceDistance?: SortOrder
+    gbvRisk?: SortOrder
+    latitude?: SortOrder
+    longitude?: SortOrder
+    vulnerabilityScore?: SortOrder
+    riskCategory?: SortOrder
+    priorityRank?: SortOrder
+    assessmentDuration?: SortOrder
+    assessedById?: SortOrder
+    assessedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type QuickProfileMinOrderByAggregateInput = {
+    id?: SortOrder
+    siteId?: SortOrder
+    householdSize?: SortOrder
+    femaleHeaded?: SortOrder
+    hasVulnerable?: SortOrder
+    pwdCount?: SortOrder
+    elderlyCount?: SortOrder
+    childHeaded?: SortOrder
+    primaryNeed?: SortOrder
+    serviceDistance?: SortOrder
+    gbvRisk?: SortOrder
+    latitude?: SortOrder
+    longitude?: SortOrder
+    vulnerabilityScore?: SortOrder
+    riskCategory?: SortOrder
+    priorityRank?: SortOrder
+    assessmentDuration?: SortOrder
+    assessedById?: SortOrder
+    assessedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type QuickProfileSumOrderByAggregateInput = {
+    householdSize?: SortOrder
+    pwdCount?: SortOrder
+    elderlyCount?: SortOrder
+    serviceDistance?: SortOrder
+    latitude?: SortOrder
+    longitude?: SortOrder
+    vulnerabilityScore?: SortOrder
+    priorityRank?: SortOrder
+    assessmentDuration?: SortOrder
+  }
+
+  export type EnumPrimaryNeedTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.PrimaryNeedType | EnumPrimaryNeedTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.PrimaryNeedType[] | ListEnumPrimaryNeedTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.PrimaryNeedType[] | ListEnumPrimaryNeedTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumPrimaryNeedTypeWithAggregatesFilter<$PrismaModel> | $Enums.PrimaryNeedType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumPrimaryNeedTypeFilter<$PrismaModel>
+    _max?: NestedEnumPrimaryNeedTypeFilter<$PrismaModel>
+  }
+
+  export type EnumRiskCategoryWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.RiskCategory | EnumRiskCategoryFieldRefInput<$PrismaModel>
+    in?: $Enums.RiskCategory[] | ListEnumRiskCategoryFieldRefInput<$PrismaModel>
+    notIn?: $Enums.RiskCategory[] | ListEnumRiskCategoryFieldRefInput<$PrismaModel>
+    not?: NestedEnumRiskCategoryWithAggregatesFilter<$PrismaModel> | $Enums.RiskCategory
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumRiskCategoryFilter<$PrismaModel>
+    _max?: NestedEnumRiskCategoryFilter<$PrismaModel>
+  }
+
+  export type QuickProfileScalarRelationFilter = {
+    is?: QuickProfileWhereInput
+    isNot?: QuickProfileWhereInput
+  }
+
+  export type VulnerabilityScoreCountOrderByAggregateInput = {
+    id?: SortOrder
+    quickProfileId?: SortOrder
+    totalScore?: SortOrder
+    riskCategory?: SortOrder
+    priorityRank?: SortOrder
+    femaleHeadedScore?: SortOrder
+    vulnerableMembersScore?: SortOrder
+    householdSizeScore?: SortOrder
+    primaryNeedScore?: SortOrder
+    serviceDistanceScore?: SortOrder
+    gbvRiskScore?: SortOrder
+    eligiblePrograms?: SortOrder
+    calculatedAt?: SortOrder
+  }
+
+  export type VulnerabilityScoreAvgOrderByAggregateInput = {
+    totalScore?: SortOrder
+    priorityRank?: SortOrder
+    femaleHeadedScore?: SortOrder
+    vulnerableMembersScore?: SortOrder
+    householdSizeScore?: SortOrder
+    primaryNeedScore?: SortOrder
+    serviceDistanceScore?: SortOrder
+    gbvRiskScore?: SortOrder
+  }
+
+  export type VulnerabilityScoreMaxOrderByAggregateInput = {
+    id?: SortOrder
+    quickProfileId?: SortOrder
+    totalScore?: SortOrder
+    riskCategory?: SortOrder
+    priorityRank?: SortOrder
+    femaleHeadedScore?: SortOrder
+    vulnerableMembersScore?: SortOrder
+    householdSizeScore?: SortOrder
+    primaryNeedScore?: SortOrder
+    serviceDistanceScore?: SortOrder
+    gbvRiskScore?: SortOrder
+    calculatedAt?: SortOrder
+  }
+
+  export type VulnerabilityScoreMinOrderByAggregateInput = {
+    id?: SortOrder
+    quickProfileId?: SortOrder
+    totalScore?: SortOrder
+    riskCategory?: SortOrder
+    priorityRank?: SortOrder
+    femaleHeadedScore?: SortOrder
+    vulnerableMembersScore?: SortOrder
+    householdSizeScore?: SortOrder
+    primaryNeedScore?: SortOrder
+    serviceDistanceScore?: SortOrder
+    gbvRiskScore?: SortOrder
+    calculatedAt?: SortOrder
+  }
+
+  export type VulnerabilityScoreSumOrderByAggregateInput = {
+    totalScore?: SortOrder
+    priorityRank?: SortOrder
+    femaleHeadedScore?: SortOrder
+    vulnerableMembersScore?: SortOrder
+    householdSizeScore?: SortOrder
+    primaryNeedScore?: SortOrder
+    serviceDistanceScore?: SortOrder
+    gbvRiskScore?: SortOrder
+  }
+
   export type SessionCreateNestedManyWithoutUserInput = {
     create?: XOR<SessionCreateWithoutUserInput, SessionUncheckedCreateWithoutUserInput> | SessionCreateWithoutUserInput[] | SessionUncheckedCreateWithoutUserInput[]
     connectOrCreate?: SessionCreateOrConnectWithoutUserInput | SessionCreateOrConnectWithoutUserInput[]
@@ -32870,6 +36511,13 @@ export namespace Prisma {
     connect?: ReferralWhereUniqueInput | ReferralWhereUniqueInput[]
   }
 
+  export type QuickProfileCreateNestedManyWithoutAssessedByInput = {
+    create?: XOR<QuickProfileCreateWithoutAssessedByInput, QuickProfileUncheckedCreateWithoutAssessedByInput> | QuickProfileCreateWithoutAssessedByInput[] | QuickProfileUncheckedCreateWithoutAssessedByInput[]
+    connectOrCreate?: QuickProfileCreateOrConnectWithoutAssessedByInput | QuickProfileCreateOrConnectWithoutAssessedByInput[]
+    createMany?: QuickProfileCreateManyAssessedByInputEnvelope
+    connect?: QuickProfileWhereUniqueInput | QuickProfileWhereUniqueInput[]
+  }
+
   export type SessionUncheckedCreateNestedManyWithoutUserInput = {
     create?: XOR<SessionCreateWithoutUserInput, SessionUncheckedCreateWithoutUserInput> | SessionCreateWithoutUserInput[] | SessionUncheckedCreateWithoutUserInput[]
     connectOrCreate?: SessionCreateOrConnectWithoutUserInput | SessionCreateOrConnectWithoutUserInput[]
@@ -32938,6 +36586,13 @@ export namespace Prisma {
     connectOrCreate?: ReferralCreateOrConnectWithoutReceivedByInput | ReferralCreateOrConnectWithoutReceivedByInput[]
     createMany?: ReferralCreateManyReceivedByInputEnvelope
     connect?: ReferralWhereUniqueInput | ReferralWhereUniqueInput[]
+  }
+
+  export type QuickProfileUncheckedCreateNestedManyWithoutAssessedByInput = {
+    create?: XOR<QuickProfileCreateWithoutAssessedByInput, QuickProfileUncheckedCreateWithoutAssessedByInput> | QuickProfileCreateWithoutAssessedByInput[] | QuickProfileUncheckedCreateWithoutAssessedByInput[]
+    connectOrCreate?: QuickProfileCreateOrConnectWithoutAssessedByInput | QuickProfileCreateOrConnectWithoutAssessedByInput[]
+    createMany?: QuickProfileCreateManyAssessedByInputEnvelope
+    connect?: QuickProfileWhereUniqueInput | QuickProfileWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -33100,6 +36755,20 @@ export namespace Prisma {
     deleteMany?: ReferralScalarWhereInput | ReferralScalarWhereInput[]
   }
 
+  export type QuickProfileUpdateManyWithoutAssessedByNestedInput = {
+    create?: XOR<QuickProfileCreateWithoutAssessedByInput, QuickProfileUncheckedCreateWithoutAssessedByInput> | QuickProfileCreateWithoutAssessedByInput[] | QuickProfileUncheckedCreateWithoutAssessedByInput[]
+    connectOrCreate?: QuickProfileCreateOrConnectWithoutAssessedByInput | QuickProfileCreateOrConnectWithoutAssessedByInput[]
+    upsert?: QuickProfileUpsertWithWhereUniqueWithoutAssessedByInput | QuickProfileUpsertWithWhereUniqueWithoutAssessedByInput[]
+    createMany?: QuickProfileCreateManyAssessedByInputEnvelope
+    set?: QuickProfileWhereUniqueInput | QuickProfileWhereUniqueInput[]
+    disconnect?: QuickProfileWhereUniqueInput | QuickProfileWhereUniqueInput[]
+    delete?: QuickProfileWhereUniqueInput | QuickProfileWhereUniqueInput[]
+    connect?: QuickProfileWhereUniqueInput | QuickProfileWhereUniqueInput[]
+    update?: QuickProfileUpdateWithWhereUniqueWithoutAssessedByInput | QuickProfileUpdateWithWhereUniqueWithoutAssessedByInput[]
+    updateMany?: QuickProfileUpdateManyWithWhereWithoutAssessedByInput | QuickProfileUpdateManyWithWhereWithoutAssessedByInput[]
+    deleteMany?: QuickProfileScalarWhereInput | QuickProfileScalarWhereInput[]
+  }
+
   export type SessionUncheckedUpdateManyWithoutUserNestedInput = {
     create?: XOR<SessionCreateWithoutUserInput, SessionUncheckedCreateWithoutUserInput> | SessionCreateWithoutUserInput[] | SessionUncheckedCreateWithoutUserInput[]
     connectOrCreate?: SessionCreateOrConnectWithoutUserInput | SessionCreateOrConnectWithoutUserInput[]
@@ -33238,6 +36907,20 @@ export namespace Prisma {
     update?: ReferralUpdateWithWhereUniqueWithoutReceivedByInput | ReferralUpdateWithWhereUniqueWithoutReceivedByInput[]
     updateMany?: ReferralUpdateManyWithWhereWithoutReceivedByInput | ReferralUpdateManyWithWhereWithoutReceivedByInput[]
     deleteMany?: ReferralScalarWhereInput | ReferralScalarWhereInput[]
+  }
+
+  export type QuickProfileUncheckedUpdateManyWithoutAssessedByNestedInput = {
+    create?: XOR<QuickProfileCreateWithoutAssessedByInput, QuickProfileUncheckedCreateWithoutAssessedByInput> | QuickProfileCreateWithoutAssessedByInput[] | QuickProfileUncheckedCreateWithoutAssessedByInput[]
+    connectOrCreate?: QuickProfileCreateOrConnectWithoutAssessedByInput | QuickProfileCreateOrConnectWithoutAssessedByInput[]
+    upsert?: QuickProfileUpsertWithWhereUniqueWithoutAssessedByInput | QuickProfileUpsertWithWhereUniqueWithoutAssessedByInput[]
+    createMany?: QuickProfileCreateManyAssessedByInputEnvelope
+    set?: QuickProfileWhereUniqueInput | QuickProfileWhereUniqueInput[]
+    disconnect?: QuickProfileWhereUniqueInput | QuickProfileWhereUniqueInput[]
+    delete?: QuickProfileWhereUniqueInput | QuickProfileWhereUniqueInput[]
+    connect?: QuickProfileWhereUniqueInput | QuickProfileWhereUniqueInput[]
+    update?: QuickProfileUpdateWithWhereUniqueWithoutAssessedByInput | QuickProfileUpdateWithWhereUniqueWithoutAssessedByInput[]
+    updateMany?: QuickProfileUpdateManyWithWhereWithoutAssessedByInput | QuickProfileUpdateManyWithWhereWithoutAssessedByInput[]
+    deleteMany?: QuickProfileScalarWhereInput | QuickProfileScalarWhereInput[]
   }
 
   export type UserCreateNestedOneWithoutSessionsInput = {
@@ -34246,6 +37929,74 @@ export namespace Prisma {
     update?: XOR<XOR<ReferralUpdateToOneWithWhereWithoutConsentsInput, ReferralUpdateWithoutConsentsInput>, ReferralUncheckedUpdateWithoutConsentsInput>
   }
 
+  export type UserCreateNestedOneWithoutQuickProfilesInput = {
+    create?: XOR<UserCreateWithoutQuickProfilesInput, UserUncheckedCreateWithoutQuickProfilesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutQuickProfilesInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type VulnerabilityScoreCreateNestedOneWithoutQuickProfileInput = {
+    create?: XOR<VulnerabilityScoreCreateWithoutQuickProfileInput, VulnerabilityScoreUncheckedCreateWithoutQuickProfileInput>
+    connectOrCreate?: VulnerabilityScoreCreateOrConnectWithoutQuickProfileInput
+    connect?: VulnerabilityScoreWhereUniqueInput
+  }
+
+  export type VulnerabilityScoreUncheckedCreateNestedOneWithoutQuickProfileInput = {
+    create?: XOR<VulnerabilityScoreCreateWithoutQuickProfileInput, VulnerabilityScoreUncheckedCreateWithoutQuickProfileInput>
+    connectOrCreate?: VulnerabilityScoreCreateOrConnectWithoutQuickProfileInput
+    connect?: VulnerabilityScoreWhereUniqueInput
+  }
+
+  export type EnumPrimaryNeedTypeFieldUpdateOperationsInput = {
+    set?: $Enums.PrimaryNeedType
+  }
+
+  export type EnumRiskCategoryFieldUpdateOperationsInput = {
+    set?: $Enums.RiskCategory
+  }
+
+  export type UserUpdateOneRequiredWithoutQuickProfilesNestedInput = {
+    create?: XOR<UserCreateWithoutQuickProfilesInput, UserUncheckedCreateWithoutQuickProfilesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutQuickProfilesInput
+    upsert?: UserUpsertWithoutQuickProfilesInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutQuickProfilesInput, UserUpdateWithoutQuickProfilesInput>, UserUncheckedUpdateWithoutQuickProfilesInput>
+  }
+
+  export type VulnerabilityScoreUpdateOneWithoutQuickProfileNestedInput = {
+    create?: XOR<VulnerabilityScoreCreateWithoutQuickProfileInput, VulnerabilityScoreUncheckedCreateWithoutQuickProfileInput>
+    connectOrCreate?: VulnerabilityScoreCreateOrConnectWithoutQuickProfileInput
+    upsert?: VulnerabilityScoreUpsertWithoutQuickProfileInput
+    disconnect?: VulnerabilityScoreWhereInput | boolean
+    delete?: VulnerabilityScoreWhereInput | boolean
+    connect?: VulnerabilityScoreWhereUniqueInput
+    update?: XOR<XOR<VulnerabilityScoreUpdateToOneWithWhereWithoutQuickProfileInput, VulnerabilityScoreUpdateWithoutQuickProfileInput>, VulnerabilityScoreUncheckedUpdateWithoutQuickProfileInput>
+  }
+
+  export type VulnerabilityScoreUncheckedUpdateOneWithoutQuickProfileNestedInput = {
+    create?: XOR<VulnerabilityScoreCreateWithoutQuickProfileInput, VulnerabilityScoreUncheckedCreateWithoutQuickProfileInput>
+    connectOrCreate?: VulnerabilityScoreCreateOrConnectWithoutQuickProfileInput
+    upsert?: VulnerabilityScoreUpsertWithoutQuickProfileInput
+    disconnect?: VulnerabilityScoreWhereInput | boolean
+    delete?: VulnerabilityScoreWhereInput | boolean
+    connect?: VulnerabilityScoreWhereUniqueInput
+    update?: XOR<XOR<VulnerabilityScoreUpdateToOneWithWhereWithoutQuickProfileInput, VulnerabilityScoreUpdateWithoutQuickProfileInput>, VulnerabilityScoreUncheckedUpdateWithoutQuickProfileInput>
+  }
+
+  export type QuickProfileCreateNestedOneWithoutVulnerabilityDetailInput = {
+    create?: XOR<QuickProfileCreateWithoutVulnerabilityDetailInput, QuickProfileUncheckedCreateWithoutVulnerabilityDetailInput>
+    connectOrCreate?: QuickProfileCreateOrConnectWithoutVulnerabilityDetailInput
+    connect?: QuickProfileWhereUniqueInput
+  }
+
+  export type QuickProfileUpdateOneRequiredWithoutVulnerabilityDetailNestedInput = {
+    create?: XOR<QuickProfileCreateWithoutVulnerabilityDetailInput, QuickProfileUncheckedCreateWithoutVulnerabilityDetailInput>
+    connectOrCreate?: QuickProfileCreateOrConnectWithoutVulnerabilityDetailInput
+    upsert?: QuickProfileUpsertWithoutVulnerabilityDetailInput
+    connect?: QuickProfileWhereUniqueInput
+    update?: XOR<XOR<QuickProfileUpdateToOneWithWhereWithoutVulnerabilityDetailInput, QuickProfileUpdateWithoutVulnerabilityDetailInput>, QuickProfileUncheckedUpdateWithoutVulnerabilityDetailInput>
+  }
+
   export type NestedStringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -34964,6 +38715,40 @@ export namespace Prisma {
     _max?: NestedEnumConsentTypeFilter<$PrismaModel>
   }
 
+  export type NestedEnumPrimaryNeedTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.PrimaryNeedType | EnumPrimaryNeedTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.PrimaryNeedType[] | ListEnumPrimaryNeedTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.PrimaryNeedType[] | ListEnumPrimaryNeedTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumPrimaryNeedTypeFilter<$PrismaModel> | $Enums.PrimaryNeedType
+  }
+
+  export type NestedEnumRiskCategoryFilter<$PrismaModel = never> = {
+    equals?: $Enums.RiskCategory | EnumRiskCategoryFieldRefInput<$PrismaModel>
+    in?: $Enums.RiskCategory[] | ListEnumRiskCategoryFieldRefInput<$PrismaModel>
+    notIn?: $Enums.RiskCategory[] | ListEnumRiskCategoryFieldRefInput<$PrismaModel>
+    not?: NestedEnumRiskCategoryFilter<$PrismaModel> | $Enums.RiskCategory
+  }
+
+  export type NestedEnumPrimaryNeedTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.PrimaryNeedType | EnumPrimaryNeedTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.PrimaryNeedType[] | ListEnumPrimaryNeedTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.PrimaryNeedType[] | ListEnumPrimaryNeedTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumPrimaryNeedTypeWithAggregatesFilter<$PrismaModel> | $Enums.PrimaryNeedType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumPrimaryNeedTypeFilter<$PrismaModel>
+    _max?: NestedEnumPrimaryNeedTypeFilter<$PrismaModel>
+  }
+
+  export type NestedEnumRiskCategoryWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.RiskCategory | EnumRiskCategoryFieldRefInput<$PrismaModel>
+    in?: $Enums.RiskCategory[] | ListEnumRiskCategoryFieldRefInput<$PrismaModel>
+    notIn?: $Enums.RiskCategory[] | ListEnumRiskCategoryFieldRefInput<$PrismaModel>
+    not?: NestedEnumRiskCategoryWithAggregatesFilter<$PrismaModel> | $Enums.RiskCategory
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumRiskCategoryFilter<$PrismaModel>
+    _max?: NestedEnumRiskCategoryFilter<$PrismaModel>
+  }
+
   export type SessionCreateWithoutUserInput = {
     id: string
     expiresAt: Date | string
@@ -35422,6 +39207,64 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type QuickProfileCreateWithoutAssessedByInput = {
+    id?: string
+    siteId?: string | null
+    householdSize: number
+    femaleHeaded?: boolean
+    hasVulnerable?: boolean
+    pwdCount?: number
+    elderlyCount?: number
+    childHeaded?: boolean
+    primaryNeed: $Enums.PrimaryNeedType
+    serviceDistance?: number | null
+    gbvRisk?: boolean
+    latitude?: number | null
+    longitude?: number | null
+    vulnerabilityScore?: number
+    riskCategory?: $Enums.RiskCategory
+    priorityRank?: number
+    assessmentDuration?: number | null
+    assessedAt?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    vulnerabilityDetail?: VulnerabilityScoreCreateNestedOneWithoutQuickProfileInput
+  }
+
+  export type QuickProfileUncheckedCreateWithoutAssessedByInput = {
+    id?: string
+    siteId?: string | null
+    householdSize: number
+    femaleHeaded?: boolean
+    hasVulnerable?: boolean
+    pwdCount?: number
+    elderlyCount?: number
+    childHeaded?: boolean
+    primaryNeed: $Enums.PrimaryNeedType
+    serviceDistance?: number | null
+    gbvRisk?: boolean
+    latitude?: number | null
+    longitude?: number | null
+    vulnerabilityScore?: number
+    riskCategory?: $Enums.RiskCategory
+    priorityRank?: number
+    assessmentDuration?: number | null
+    assessedAt?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    vulnerabilityDetail?: VulnerabilityScoreUncheckedCreateNestedOneWithoutQuickProfileInput
+  }
+
+  export type QuickProfileCreateOrConnectWithoutAssessedByInput = {
+    where: QuickProfileWhereUniqueInput
+    create: XOR<QuickProfileCreateWithoutAssessedByInput, QuickProfileUncheckedCreateWithoutAssessedByInput>
+  }
+
+  export type QuickProfileCreateManyAssessedByInputEnvelope = {
+    data: QuickProfileCreateManyAssessedByInput | QuickProfileCreateManyAssessedByInput[]
+    skipDuplicates?: boolean
+  }
+
   export type SessionUpsertWithWhereUniqueWithoutUserInput = {
     where: SessionWhereUniqueInput
     update: XOR<SessionUpdateWithoutUserInput, SessionUncheckedUpdateWithoutUserInput>
@@ -35765,6 +39608,49 @@ export namespace Prisma {
     data: XOR<ReferralUpdateManyMutationInput, ReferralUncheckedUpdateManyWithoutReceivedByInput>
   }
 
+  export type QuickProfileUpsertWithWhereUniqueWithoutAssessedByInput = {
+    where: QuickProfileWhereUniqueInput
+    update: XOR<QuickProfileUpdateWithoutAssessedByInput, QuickProfileUncheckedUpdateWithoutAssessedByInput>
+    create: XOR<QuickProfileCreateWithoutAssessedByInput, QuickProfileUncheckedCreateWithoutAssessedByInput>
+  }
+
+  export type QuickProfileUpdateWithWhereUniqueWithoutAssessedByInput = {
+    where: QuickProfileWhereUniqueInput
+    data: XOR<QuickProfileUpdateWithoutAssessedByInput, QuickProfileUncheckedUpdateWithoutAssessedByInput>
+  }
+
+  export type QuickProfileUpdateManyWithWhereWithoutAssessedByInput = {
+    where: QuickProfileScalarWhereInput
+    data: XOR<QuickProfileUpdateManyMutationInput, QuickProfileUncheckedUpdateManyWithoutAssessedByInput>
+  }
+
+  export type QuickProfileScalarWhereInput = {
+    AND?: QuickProfileScalarWhereInput | QuickProfileScalarWhereInput[]
+    OR?: QuickProfileScalarWhereInput[]
+    NOT?: QuickProfileScalarWhereInput | QuickProfileScalarWhereInput[]
+    id?: StringFilter<"QuickProfile"> | string
+    siteId?: StringNullableFilter<"QuickProfile"> | string | null
+    householdSize?: IntFilter<"QuickProfile"> | number
+    femaleHeaded?: BoolFilter<"QuickProfile"> | boolean
+    hasVulnerable?: BoolFilter<"QuickProfile"> | boolean
+    pwdCount?: IntFilter<"QuickProfile"> | number
+    elderlyCount?: IntFilter<"QuickProfile"> | number
+    childHeaded?: BoolFilter<"QuickProfile"> | boolean
+    primaryNeed?: EnumPrimaryNeedTypeFilter<"QuickProfile"> | $Enums.PrimaryNeedType
+    serviceDistance?: FloatNullableFilter<"QuickProfile"> | number | null
+    gbvRisk?: BoolFilter<"QuickProfile"> | boolean
+    latitude?: FloatNullableFilter<"QuickProfile"> | number | null
+    longitude?: FloatNullableFilter<"QuickProfile"> | number | null
+    vulnerabilityScore?: IntFilter<"QuickProfile"> | number
+    riskCategory?: EnumRiskCategoryFilter<"QuickProfile"> | $Enums.RiskCategory
+    priorityRank?: IntFilter<"QuickProfile"> | number
+    assessmentDuration?: IntNullableFilter<"QuickProfile"> | number | null
+    assessedById?: StringFilter<"QuickProfile"> | string
+    assessedAt?: DateTimeFilter<"QuickProfile"> | Date | string
+    createdAt?: DateTimeFilter<"QuickProfile"> | Date | string
+    updatedAt?: DateTimeFilter<"QuickProfile"> | Date | string
+  }
+
   export type UserCreateWithoutSessionsInput = {
     id: string
     name: string
@@ -35785,6 +39671,7 @@ export namespace Prisma {
     feedback?: FeedbackCreateNestedManyWithoutUserInput
     referralsSent?: ReferralCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserUncheckedCreateWithoutSessionsInput = {
@@ -35807,6 +39694,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedCreateNestedManyWithoutUserInput
     referralsSent?: ReferralUncheckedCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralUncheckedCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileUncheckedCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserCreateOrConnectWithoutSessionsInput = {
@@ -35845,6 +39733,7 @@ export namespace Prisma {
     feedback?: FeedbackUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -35867,6 +39756,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUncheckedUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUncheckedUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUncheckedUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserCreateWithoutAccountsInput = {
@@ -35889,6 +39779,7 @@ export namespace Prisma {
     feedback?: FeedbackCreateNestedManyWithoutUserInput
     referralsSent?: ReferralCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserUncheckedCreateWithoutAccountsInput = {
@@ -35911,6 +39802,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedCreateNestedManyWithoutUserInput
     referralsSent?: ReferralUncheckedCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralUncheckedCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileUncheckedCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserCreateOrConnectWithoutAccountsInput = {
@@ -35949,6 +39841,7 @@ export namespace Prisma {
     feedback?: FeedbackUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -35971,6 +39864,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUncheckedUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUncheckedUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUncheckedUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserCreateWithoutCrisesInput = {
@@ -35993,6 +39887,7 @@ export namespace Prisma {
     feedback?: FeedbackCreateNestedManyWithoutUserInput
     referralsSent?: ReferralCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserUncheckedCreateWithoutCrisesInput = {
@@ -36015,6 +39910,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedCreateNestedManyWithoutUserInput
     referralsSent?: ReferralUncheckedCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralUncheckedCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileUncheckedCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserCreateOrConnectWithoutCrisesInput = {
@@ -36173,6 +40069,7 @@ export namespace Prisma {
     feedback?: FeedbackUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutCrisesInput = {
@@ -36195,6 +40092,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUncheckedUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUncheckedUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUncheckedUpdateManyWithoutAssessedByNestedInput
   }
 
   export type DecisionUpsertWithWhereUniqueWithoutCrisisInput = {
@@ -36320,6 +40218,7 @@ export namespace Prisma {
     feedback?: FeedbackCreateNestedManyWithoutUserInput
     referralsSent?: ReferralCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserUncheckedCreateWithoutDecisionsInput = {
@@ -36342,6 +40241,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedCreateNestedManyWithoutUserInput
     referralsSent?: ReferralUncheckedCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralUncheckedCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileUncheckedCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserCreateOrConnectWithoutDecisionsInput = {
@@ -36427,6 +40327,7 @@ export namespace Prisma {
     feedback?: FeedbackUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutDecisionsInput = {
@@ -36449,6 +40350,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUncheckedUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUncheckedUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUncheckedUpdateManyWithoutAssessedByNestedInput
   }
 
   export type CrisisCreateWithoutAlertsInput = {
@@ -36559,6 +40461,7 @@ export namespace Prisma {
     feedback?: FeedbackCreateNestedManyWithoutUserInput
     referralsSent?: ReferralCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserUncheckedCreateWithoutAuditDecisionsInput = {
@@ -36581,6 +40484,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedCreateNestedManyWithoutUserInput
     referralsSent?: ReferralUncheckedCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralUncheckedCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileUncheckedCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserCreateOrConnectWithoutAuditDecisionsInput = {
@@ -36649,6 +40553,7 @@ export namespace Prisma {
     feedback?: FeedbackUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAuditDecisionsInput = {
@@ -36671,6 +40576,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUncheckedUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUncheckedUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUncheckedUpdateManyWithoutAssessedByNestedInput
   }
 
   export type EvidenceUpsertWithWhereUniqueWithoutAuditDecisionInput = {
@@ -36835,6 +40741,7 @@ export namespace Prisma {
     surveys?: SurveyCreateNestedManyWithoutCreatedByInput
     referralsSent?: ReferralCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserUncheckedCreateWithoutFeedbackInput = {
@@ -36857,6 +40764,7 @@ export namespace Prisma {
     surveys?: SurveyUncheckedCreateNestedManyWithoutCreatedByInput
     referralsSent?: ReferralUncheckedCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralUncheckedCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileUncheckedCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserCreateOrConnectWithoutFeedbackInput = {
@@ -36895,6 +40803,7 @@ export namespace Prisma {
     surveys?: SurveyUpdateManyWithoutCreatedByNestedInput
     referralsSent?: ReferralUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutFeedbackInput = {
@@ -36917,6 +40826,7 @@ export namespace Prisma {
     surveys?: SurveyUncheckedUpdateManyWithoutCreatedByNestedInput
     referralsSent?: ReferralUncheckedUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUncheckedUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUncheckedUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserCreateWithoutSurveyTemplatesInput = {
@@ -36939,6 +40849,7 @@ export namespace Prisma {
     feedback?: FeedbackCreateNestedManyWithoutUserInput
     referralsSent?: ReferralCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserUncheckedCreateWithoutSurveyTemplatesInput = {
@@ -36961,6 +40872,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedCreateNestedManyWithoutUserInput
     referralsSent?: ReferralUncheckedCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralUncheckedCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileUncheckedCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserCreateOrConnectWithoutSurveyTemplatesInput = {
@@ -37085,6 +40997,7 @@ export namespace Prisma {
     feedback?: FeedbackUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSurveyTemplatesInput = {
@@ -37107,6 +41020,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUncheckedUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUncheckedUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUncheckedUpdateManyWithoutAssessedByNestedInput
   }
 
   export type SurveyQuestionUpsertWithWhereUniqueWithoutTemplateInput = {
@@ -37393,6 +41307,7 @@ export namespace Prisma {
     feedback?: FeedbackCreateNestedManyWithoutUserInput
     referralsSent?: ReferralCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserUncheckedCreateWithoutSurveysInput = {
@@ -37415,6 +41330,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedCreateNestedManyWithoutUserInput
     referralsSent?: ReferralUncheckedCreateNestedManyWithoutSentByInput
     referralsReceived?: ReferralUncheckedCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileUncheckedCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserCreateOrConnectWithoutSurveysInput = {
@@ -37613,6 +41529,7 @@ export namespace Prisma {
     feedback?: FeedbackUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSurveysInput = {
@@ -37635,6 +41552,7 @@ export namespace Prisma {
     feedback?: FeedbackUncheckedUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUncheckedUpdateManyWithoutSentByNestedInput
     referralsReceived?: ReferralUncheckedUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUncheckedUpdateManyWithoutAssessedByNestedInput
   }
 
   export type SurveySubmissionUpsertWithWhereUniqueWithoutSurveyInput = {
@@ -38321,6 +42239,7 @@ export namespace Prisma {
     surveys?: SurveyCreateNestedManyWithoutCreatedByInput
     feedback?: FeedbackCreateNestedManyWithoutUserInput
     referralsReceived?: ReferralCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserUncheckedCreateWithoutReferralsSentInput = {
@@ -38343,6 +42262,7 @@ export namespace Prisma {
     surveys?: SurveyUncheckedCreateNestedManyWithoutCreatedByInput
     feedback?: FeedbackUncheckedCreateNestedManyWithoutUserInput
     referralsReceived?: ReferralUncheckedCreateNestedManyWithoutReceivedByInput
+    quickProfiles?: QuickProfileUncheckedCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserCreateOrConnectWithoutReferralsSentInput = {
@@ -38370,6 +42290,7 @@ export namespace Prisma {
     surveys?: SurveyCreateNestedManyWithoutCreatedByInput
     feedback?: FeedbackCreateNestedManyWithoutUserInput
     referralsSent?: ReferralCreateNestedManyWithoutSentByInput
+    quickProfiles?: QuickProfileCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserUncheckedCreateWithoutReferralsReceivedInput = {
@@ -38392,6 +42313,7 @@ export namespace Prisma {
     surveys?: SurveyUncheckedCreateNestedManyWithoutCreatedByInput
     feedback?: FeedbackUncheckedCreateNestedManyWithoutUserInput
     referralsSent?: ReferralUncheckedCreateNestedManyWithoutSentByInput
+    quickProfiles?: QuickProfileUncheckedCreateNestedManyWithoutAssessedByInput
   }
 
   export type UserCreateOrConnectWithoutReferralsReceivedInput = {
@@ -38550,6 +42472,7 @@ export namespace Prisma {
     surveys?: SurveyUpdateManyWithoutCreatedByNestedInput
     feedback?: FeedbackUpdateManyWithoutUserNestedInput
     referralsReceived?: ReferralUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutReferralsSentInput = {
@@ -38572,6 +42495,7 @@ export namespace Prisma {
     surveys?: SurveyUncheckedUpdateManyWithoutCreatedByNestedInput
     feedback?: FeedbackUncheckedUpdateManyWithoutUserNestedInput
     referralsReceived?: ReferralUncheckedUpdateManyWithoutReceivedByNestedInput
+    quickProfiles?: QuickProfileUncheckedUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserUpsertWithoutReferralsReceivedInput = {
@@ -38605,6 +42529,7 @@ export namespace Prisma {
     surveys?: SurveyUpdateManyWithoutCreatedByNestedInput
     feedback?: FeedbackUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUpdateManyWithoutSentByNestedInput
+    quickProfiles?: QuickProfileUpdateManyWithoutAssessedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutReferralsReceivedInput = {
@@ -38627,6 +42552,7 @@ export namespace Prisma {
     surveys?: SurveyUncheckedUpdateManyWithoutCreatedByNestedInput
     feedback?: FeedbackUncheckedUpdateManyWithoutUserNestedInput
     referralsSent?: ReferralUncheckedUpdateManyWithoutSentByNestedInput
+    quickProfiles?: QuickProfileUncheckedUpdateManyWithoutAssessedByNestedInput
   }
 
   export type ReferralConsentUpsertWithWhereUniqueWithoutReferralInput = {
@@ -38765,6 +42691,302 @@ export namespace Prisma {
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UserCreateWithoutQuickProfilesInput = {
+    id: string
+    name: string
+    email: string
+    emailVerified?: boolean
+    image?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    role?: $Enums.UserRole
+    organization?: string | null
+    country?: string | null
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    accounts?: AccountCreateNestedManyWithoutUserInput
+    decisions?: DecisionCreateNestedManyWithoutMadeByInput
+    auditDecisions?: AuditDecisionCreateNestedManyWithoutCreatedByInput
+    crises?: CrisisCreateNestedManyWithoutCreatedByInput
+    surveyTemplates?: SurveyTemplateCreateNestedManyWithoutCreatedByInput
+    surveys?: SurveyCreateNestedManyWithoutCreatedByInput
+    feedback?: FeedbackCreateNestedManyWithoutUserInput
+    referralsSent?: ReferralCreateNestedManyWithoutSentByInput
+    referralsReceived?: ReferralCreateNestedManyWithoutReceivedByInput
+  }
+
+  export type UserUncheckedCreateWithoutQuickProfilesInput = {
+    id: string
+    name: string
+    email: string
+    emailVerified?: boolean
+    image?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    role?: $Enums.UserRole
+    organization?: string | null
+    country?: string | null
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
+    decisions?: DecisionUncheckedCreateNestedManyWithoutMadeByInput
+    auditDecisions?: AuditDecisionUncheckedCreateNestedManyWithoutCreatedByInput
+    crises?: CrisisUncheckedCreateNestedManyWithoutCreatedByInput
+    surveyTemplates?: SurveyTemplateUncheckedCreateNestedManyWithoutCreatedByInput
+    surveys?: SurveyUncheckedCreateNestedManyWithoutCreatedByInput
+    feedback?: FeedbackUncheckedCreateNestedManyWithoutUserInput
+    referralsSent?: ReferralUncheckedCreateNestedManyWithoutSentByInput
+    referralsReceived?: ReferralUncheckedCreateNestedManyWithoutReceivedByInput
+  }
+
+  export type UserCreateOrConnectWithoutQuickProfilesInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutQuickProfilesInput, UserUncheckedCreateWithoutQuickProfilesInput>
+  }
+
+  export type VulnerabilityScoreCreateWithoutQuickProfileInput = {
+    id?: string
+    totalScore: number
+    riskCategory: $Enums.RiskCategory
+    priorityRank: number
+    femaleHeadedScore?: number
+    vulnerableMembersScore?: number
+    householdSizeScore?: number
+    primaryNeedScore?: number
+    serviceDistanceScore?: number
+    gbvRiskScore?: number
+    eligiblePrograms?: JsonNullValueInput | InputJsonValue
+    calculatedAt?: Date | string
+  }
+
+  export type VulnerabilityScoreUncheckedCreateWithoutQuickProfileInput = {
+    id?: string
+    totalScore: number
+    riskCategory: $Enums.RiskCategory
+    priorityRank: number
+    femaleHeadedScore?: number
+    vulnerableMembersScore?: number
+    householdSizeScore?: number
+    primaryNeedScore?: number
+    serviceDistanceScore?: number
+    gbvRiskScore?: number
+    eligiblePrograms?: JsonNullValueInput | InputJsonValue
+    calculatedAt?: Date | string
+  }
+
+  export type VulnerabilityScoreCreateOrConnectWithoutQuickProfileInput = {
+    where: VulnerabilityScoreWhereUniqueInput
+    create: XOR<VulnerabilityScoreCreateWithoutQuickProfileInput, VulnerabilityScoreUncheckedCreateWithoutQuickProfileInput>
+  }
+
+  export type UserUpsertWithoutQuickProfilesInput = {
+    update: XOR<UserUpdateWithoutQuickProfilesInput, UserUncheckedUpdateWithoutQuickProfilesInput>
+    create: XOR<UserCreateWithoutQuickProfilesInput, UserUncheckedCreateWithoutQuickProfilesInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutQuickProfilesInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutQuickProfilesInput, UserUncheckedUpdateWithoutQuickProfilesInput>
+  }
+
+  export type UserUpdateWithoutQuickProfilesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    image?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    organization?: NullableStringFieldUpdateOperationsInput | string | null
+    country?: NullableStringFieldUpdateOperationsInput | string | null
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    accounts?: AccountUpdateManyWithoutUserNestedInput
+    decisions?: DecisionUpdateManyWithoutMadeByNestedInput
+    auditDecisions?: AuditDecisionUpdateManyWithoutCreatedByNestedInput
+    crises?: CrisisUpdateManyWithoutCreatedByNestedInput
+    surveyTemplates?: SurveyTemplateUpdateManyWithoutCreatedByNestedInput
+    surveys?: SurveyUpdateManyWithoutCreatedByNestedInput
+    feedback?: FeedbackUpdateManyWithoutUserNestedInput
+    referralsSent?: ReferralUpdateManyWithoutSentByNestedInput
+    referralsReceived?: ReferralUpdateManyWithoutReceivedByNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutQuickProfilesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    image?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    organization?: NullableStringFieldUpdateOperationsInput | string | null
+    country?: NullableStringFieldUpdateOperationsInput | string | null
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
+    decisions?: DecisionUncheckedUpdateManyWithoutMadeByNestedInput
+    auditDecisions?: AuditDecisionUncheckedUpdateManyWithoutCreatedByNestedInput
+    crises?: CrisisUncheckedUpdateManyWithoutCreatedByNestedInput
+    surveyTemplates?: SurveyTemplateUncheckedUpdateManyWithoutCreatedByNestedInput
+    surveys?: SurveyUncheckedUpdateManyWithoutCreatedByNestedInput
+    feedback?: FeedbackUncheckedUpdateManyWithoutUserNestedInput
+    referralsSent?: ReferralUncheckedUpdateManyWithoutSentByNestedInput
+    referralsReceived?: ReferralUncheckedUpdateManyWithoutReceivedByNestedInput
+  }
+
+  export type VulnerabilityScoreUpsertWithoutQuickProfileInput = {
+    update: XOR<VulnerabilityScoreUpdateWithoutQuickProfileInput, VulnerabilityScoreUncheckedUpdateWithoutQuickProfileInput>
+    create: XOR<VulnerabilityScoreCreateWithoutQuickProfileInput, VulnerabilityScoreUncheckedCreateWithoutQuickProfileInput>
+    where?: VulnerabilityScoreWhereInput
+  }
+
+  export type VulnerabilityScoreUpdateToOneWithWhereWithoutQuickProfileInput = {
+    where?: VulnerabilityScoreWhereInput
+    data: XOR<VulnerabilityScoreUpdateWithoutQuickProfileInput, VulnerabilityScoreUncheckedUpdateWithoutQuickProfileInput>
+  }
+
+  export type VulnerabilityScoreUpdateWithoutQuickProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    totalScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    femaleHeadedScore?: IntFieldUpdateOperationsInput | number
+    vulnerableMembersScore?: IntFieldUpdateOperationsInput | number
+    householdSizeScore?: IntFieldUpdateOperationsInput | number
+    primaryNeedScore?: IntFieldUpdateOperationsInput | number
+    serviceDistanceScore?: IntFieldUpdateOperationsInput | number
+    gbvRiskScore?: IntFieldUpdateOperationsInput | number
+    eligiblePrograms?: JsonNullValueInput | InputJsonValue
+    calculatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type VulnerabilityScoreUncheckedUpdateWithoutQuickProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    totalScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    femaleHeadedScore?: IntFieldUpdateOperationsInput | number
+    vulnerableMembersScore?: IntFieldUpdateOperationsInput | number
+    householdSizeScore?: IntFieldUpdateOperationsInput | number
+    primaryNeedScore?: IntFieldUpdateOperationsInput | number
+    serviceDistanceScore?: IntFieldUpdateOperationsInput | number
+    gbvRiskScore?: IntFieldUpdateOperationsInput | number
+    eligiblePrograms?: JsonNullValueInput | InputJsonValue
+    calculatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuickProfileCreateWithoutVulnerabilityDetailInput = {
+    id?: string
+    siteId?: string | null
+    householdSize: number
+    femaleHeaded?: boolean
+    hasVulnerable?: boolean
+    pwdCount?: number
+    elderlyCount?: number
+    childHeaded?: boolean
+    primaryNeed: $Enums.PrimaryNeedType
+    serviceDistance?: number | null
+    gbvRisk?: boolean
+    latitude?: number | null
+    longitude?: number | null
+    vulnerabilityScore?: number
+    riskCategory?: $Enums.RiskCategory
+    priorityRank?: number
+    assessmentDuration?: number | null
+    assessedAt?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    assessedBy: UserCreateNestedOneWithoutQuickProfilesInput
+  }
+
+  export type QuickProfileUncheckedCreateWithoutVulnerabilityDetailInput = {
+    id?: string
+    siteId?: string | null
+    householdSize: number
+    femaleHeaded?: boolean
+    hasVulnerable?: boolean
+    pwdCount?: number
+    elderlyCount?: number
+    childHeaded?: boolean
+    primaryNeed: $Enums.PrimaryNeedType
+    serviceDistance?: number | null
+    gbvRisk?: boolean
+    latitude?: number | null
+    longitude?: number | null
+    vulnerabilityScore?: number
+    riskCategory?: $Enums.RiskCategory
+    priorityRank?: number
+    assessmentDuration?: number | null
+    assessedById: string
+    assessedAt?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type QuickProfileCreateOrConnectWithoutVulnerabilityDetailInput = {
+    where: QuickProfileWhereUniqueInput
+    create: XOR<QuickProfileCreateWithoutVulnerabilityDetailInput, QuickProfileUncheckedCreateWithoutVulnerabilityDetailInput>
+  }
+
+  export type QuickProfileUpsertWithoutVulnerabilityDetailInput = {
+    update: XOR<QuickProfileUpdateWithoutVulnerabilityDetailInput, QuickProfileUncheckedUpdateWithoutVulnerabilityDetailInput>
+    create: XOR<QuickProfileCreateWithoutVulnerabilityDetailInput, QuickProfileUncheckedCreateWithoutVulnerabilityDetailInput>
+    where?: QuickProfileWhereInput
+  }
+
+  export type QuickProfileUpdateToOneWithWhereWithoutVulnerabilityDetailInput = {
+    where?: QuickProfileWhereInput
+    data: XOR<QuickProfileUpdateWithoutVulnerabilityDetailInput, QuickProfileUncheckedUpdateWithoutVulnerabilityDetailInput>
+  }
+
+  export type QuickProfileUpdateWithoutVulnerabilityDetailInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    householdSize?: IntFieldUpdateOperationsInput | number
+    femaleHeaded?: BoolFieldUpdateOperationsInput | boolean
+    hasVulnerable?: BoolFieldUpdateOperationsInput | boolean
+    pwdCount?: IntFieldUpdateOperationsInput | number
+    elderlyCount?: IntFieldUpdateOperationsInput | number
+    childHeaded?: BoolFieldUpdateOperationsInput | boolean
+    primaryNeed?: EnumPrimaryNeedTypeFieldUpdateOperationsInput | $Enums.PrimaryNeedType
+    serviceDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    gbvRisk?: BoolFieldUpdateOperationsInput | boolean
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    vulnerabilityScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    assessmentDuration?: NullableIntFieldUpdateOperationsInput | number | null
+    assessedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assessedBy?: UserUpdateOneRequiredWithoutQuickProfilesNestedInput
+  }
+
+  export type QuickProfileUncheckedUpdateWithoutVulnerabilityDetailInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    householdSize?: IntFieldUpdateOperationsInput | number
+    femaleHeaded?: BoolFieldUpdateOperationsInput | boolean
+    hasVulnerable?: BoolFieldUpdateOperationsInput | boolean
+    pwdCount?: IntFieldUpdateOperationsInput | number
+    elderlyCount?: IntFieldUpdateOperationsInput | number
+    childHeaded?: BoolFieldUpdateOperationsInput | boolean
+    primaryNeed?: EnumPrimaryNeedTypeFieldUpdateOperationsInput | $Enums.PrimaryNeedType
+    serviceDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    gbvRisk?: BoolFieldUpdateOperationsInput | boolean
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    vulnerabilityScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    assessmentDuration?: NullableIntFieldUpdateOperationsInput | number | null
+    assessedById?: StringFieldUpdateOperationsInput | string
+    assessedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -38934,6 +43156,29 @@ export namespace Prisma {
     receivedAt?: Date | string | null
     completedAt?: Date | string | null
     expiresAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type QuickProfileCreateManyAssessedByInput = {
+    id?: string
+    siteId?: string | null
+    householdSize: number
+    femaleHeaded?: boolean
+    hasVulnerable?: boolean
+    pwdCount?: number
+    elderlyCount?: number
+    childHeaded?: boolean
+    primaryNeed: $Enums.PrimaryNeedType
+    serviceDistance?: number | null
+    gbvRisk?: boolean
+    latitude?: number | null
+    longitude?: number | null
+    vulnerabilityScore?: number
+    riskCategory?: $Enums.RiskCategory
+    priorityRank?: number
+    assessmentDuration?: number | null
+    assessedAt?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -39461,6 +43706,77 @@ export namespace Prisma {
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuickProfileUpdateWithoutAssessedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    householdSize?: IntFieldUpdateOperationsInput | number
+    femaleHeaded?: BoolFieldUpdateOperationsInput | boolean
+    hasVulnerable?: BoolFieldUpdateOperationsInput | boolean
+    pwdCount?: IntFieldUpdateOperationsInput | number
+    elderlyCount?: IntFieldUpdateOperationsInput | number
+    childHeaded?: BoolFieldUpdateOperationsInput | boolean
+    primaryNeed?: EnumPrimaryNeedTypeFieldUpdateOperationsInput | $Enums.PrimaryNeedType
+    serviceDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    gbvRisk?: BoolFieldUpdateOperationsInput | boolean
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    vulnerabilityScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    assessmentDuration?: NullableIntFieldUpdateOperationsInput | number | null
+    assessedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    vulnerabilityDetail?: VulnerabilityScoreUpdateOneWithoutQuickProfileNestedInput
+  }
+
+  export type QuickProfileUncheckedUpdateWithoutAssessedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    householdSize?: IntFieldUpdateOperationsInput | number
+    femaleHeaded?: BoolFieldUpdateOperationsInput | boolean
+    hasVulnerable?: BoolFieldUpdateOperationsInput | boolean
+    pwdCount?: IntFieldUpdateOperationsInput | number
+    elderlyCount?: IntFieldUpdateOperationsInput | number
+    childHeaded?: BoolFieldUpdateOperationsInput | boolean
+    primaryNeed?: EnumPrimaryNeedTypeFieldUpdateOperationsInput | $Enums.PrimaryNeedType
+    serviceDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    gbvRisk?: BoolFieldUpdateOperationsInput | boolean
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    vulnerabilityScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    assessmentDuration?: NullableIntFieldUpdateOperationsInput | number | null
+    assessedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    vulnerabilityDetail?: VulnerabilityScoreUncheckedUpdateOneWithoutQuickProfileNestedInput
+  }
+
+  export type QuickProfileUncheckedUpdateManyWithoutAssessedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    siteId?: NullableStringFieldUpdateOperationsInput | string | null
+    householdSize?: IntFieldUpdateOperationsInput | number
+    femaleHeaded?: BoolFieldUpdateOperationsInput | boolean
+    hasVulnerable?: BoolFieldUpdateOperationsInput | boolean
+    pwdCount?: IntFieldUpdateOperationsInput | number
+    elderlyCount?: IntFieldUpdateOperationsInput | number
+    childHeaded?: BoolFieldUpdateOperationsInput | boolean
+    primaryNeed?: EnumPrimaryNeedTypeFieldUpdateOperationsInput | $Enums.PrimaryNeedType
+    serviceDistance?: NullableFloatFieldUpdateOperationsInput | number | null
+    gbvRisk?: BoolFieldUpdateOperationsInput | boolean
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    vulnerabilityScore?: IntFieldUpdateOperationsInput | number
+    riskCategory?: EnumRiskCategoryFieldUpdateOperationsInput | $Enums.RiskCategory
+    priorityRank?: IntFieldUpdateOperationsInput | number
+    assessmentDuration?: NullableIntFieldUpdateOperationsInput | number | null
+    assessedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

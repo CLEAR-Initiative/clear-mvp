@@ -9,6 +9,7 @@ import { auditRouter } from "~/server/api/routers/audit";
 import { feedbackRouter } from "~/server/api/routers/feedback";
 import { referralRouter } from "~/server/api/routers/referral";
 import { koboRouter } from "~/server/api/routers/kobo";
+import { assessmentRouter } from "~/server/api/routers/assessment";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -23,6 +24,7 @@ export const appRouter = createTRPCRouter({
   feedback: feedbackRouter,
   referral: referralRouter,
   kobo: koboRouter,
+  assessment: assessmentRouter,
 });
 
 export type AppRouter = typeof appRouter;

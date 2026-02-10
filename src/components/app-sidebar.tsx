@@ -12,6 +12,7 @@ import {
   LogOut,
   Radio,
   FileKey,
+  HeartPulse,
 } from "lucide-react";
 
 import {
@@ -34,6 +35,7 @@ const navItems = [
   { title: "Data Feeds", href: "/data", icon: Radio },
   { title: "Map", href: "/map", icon: Map },
   { title: "Surveys", href: "/surveys", icon: ClipboardList },
+  { title: "Assessments", href: "/assessments", icon: HeartPulse },
   { title: "Referrals", href: "/referrals", icon: FileKey },
   { title: "Audit Trail", href: "/audit", icon: Shield },
   { title: "Settings", href: "/settings", icon: Settings },

@@ -405,6 +405,46 @@ exports.Prisma.ReferralConsentScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.QuickProfileScalarFieldEnum = {
+  id: 'id',
+  siteId: 'siteId',
+  householdSize: 'householdSize',
+  femaleHeaded: 'femaleHeaded',
+  hasVulnerable: 'hasVulnerable',
+  pwdCount: 'pwdCount',
+  elderlyCount: 'elderlyCount',
+  childHeaded: 'childHeaded',
+  primaryNeed: 'primaryNeed',
+  serviceDistance: 'serviceDistance',
+  gbvRisk: 'gbvRisk',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  vulnerabilityScore: 'vulnerabilityScore',
+  riskCategory: 'riskCategory',
+  priorityRank: 'priorityRank',
+  assessmentDuration: 'assessmentDuration',
+  assessedById: 'assessedById',
+  assessedAt: 'assessedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.VulnerabilityScoreScalarFieldEnum = {
+  id: 'id',
+  quickProfileId: 'quickProfileId',
+  totalScore: 'totalScore',
+  riskCategory: 'riskCategory',
+  priorityRank: 'priorityRank',
+  femaleHeadedScore: 'femaleHeadedScore',
+  vulnerableMembersScore: 'vulnerableMembersScore',
+  householdSizeScore: 'householdSizeScore',
+  primaryNeedScore: 'primaryNeedScore',
+  serviceDistanceScore: 'serviceDistanceScore',
+  gbvRiskScore: 'gbvRiskScore',
+  eligiblePrograms: 'eligiblePrograms',
+  calculatedAt: 'calculatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -648,6 +688,21 @@ exports.ConsentType = exports.$Enums.ConsentType = {
   THIRD_PARTY_DISCLOSURE: 'THIRD_PARTY_DISCLOSURE'
 };
 
+exports.PrimaryNeedType = exports.$Enums.PrimaryNeedType = {
+  FOOD: 'FOOD',
+  SHELTER: 'SHELTER',
+  WASH: 'WASH',
+  HEALTH: 'HEALTH',
+  PROTECTION: 'PROTECTION'
+};
+
+exports.RiskCategory = exports.$Enums.RiskCategory = {
+  CRITICAL: 'CRITICAL',
+  HIGH: 'HIGH',
+  MEDIUM_RISK: 'MEDIUM_RISK',
+  LOW_RISK: 'LOW_RISK'
+};
+
 exports.Prisma.ModelName = {
   User: 'User',
   Session: 'Session',
@@ -667,7 +722,9 @@ exports.Prisma.ModelName = {
   KoboDeployment: 'KoboDeployment',
   PartnerOrganization: 'PartnerOrganization',
   Referral: 'Referral',
-  ReferralConsent: 'ReferralConsent'
+  ReferralConsent: 'ReferralConsent',
+  QuickProfile: 'QuickProfile',
+  VulnerabilityScore: 'VulnerabilityScore'
 };
 
 /**

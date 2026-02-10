@@ -42,6 +42,7 @@ model User {
   feedback          Feedback[]       @relation("UserFeedback")
   referralsSent     Referral[]       @relation("ReferralSender")
   referralsReceived Referral[]       @relation("ReferralReceiver")
+  quickProfiles     QuickProfile[]   @relation("ProfileAssessor")
 
   @@unique([email])
   @@map("user")
@@ -679,4 +680,75 @@ model ReferralConsent {
 
   @@index([referralId])
   @@map("referral_consent")
+}
+
+// =============================================================================
+// VULNERABILITY ASSESSMENT
+// =============================================================================
+
+enum PrimaryNeedType {
+  FOOD
+  SHELTER
+  WASH
+  HEALTH
+  PROTECTION
+}
+
+enum RiskCategory {
+  CRITICAL
+  HIGH
+  MEDIUM_RISK
+  LOW_RISK
+}
+
+model QuickProfile {
+  id                 String          @id @default(cuid())
+  siteId             String?
+  householdSize      Int
+  femaleHeaded       Boolean         @default(false)
+  hasVulnerable      Boolean         @default(false)
+  pwdCount           Int             @default(0) // persons with disabilities
+  elderlyCount       Int             @default(0)
+  childHeaded        Boolean         @default(false)
+  primaryNeed        PrimaryNeedType
+  serviceDistance    Float? // km to nearest services
+  gbvRisk            Boolean         @default(false)
+  latitude           Float?
+  longitude          Float?
+  vulnerabilityScore Int             @default(0) // 0-100
+  riskCategory       RiskCategory    @default(LOW_RISK)
+  priorityRank       Int             @default(5) // 1-5, 1=highest
+  assessmentDuration Int? // seconds
+  assessedById       String
+  assessedAt         DateTime        @default(now())
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  assessedBy          User                @relation("ProfileAssessor", fields: [assessedById], references: [id])
+  vulnerabilityDetail VulnerabilityScore?
+
+  @@index([riskCategory])
+  @@index([assessedById])
+  @@index([assessedAt])
+  @@map("quick_profile")
+}
+
+model VulnerabilityScore {
+  id                     String       @id @default(cuid())
+  quickProfileId         String       @unique
+  totalScore             Int // 0-100
+  riskCategory           RiskCategory
+  priorityRank           Int // 1-5
+  femaleHeadedScore      Int          @default(0)
+  vulnerableMembersScore Int          @default(0)
+  householdSizeScore     Int          @default(0)
+  primaryNeedScore       Int          @default(0)
+  serviceDistanceScore   Int          @default(0)
+  gbvRiskScore           Int          @default(0)
+  eligiblePrograms       Json         @default("[]") // string[]
+  calculatedAt           DateTime     @default(now())
+
+  quickProfile QuickProfile @relation(fields: [quickProfileId], references: [id], onDelete: Cascade)
+
+  @@map("vulnerability_score")
 }
