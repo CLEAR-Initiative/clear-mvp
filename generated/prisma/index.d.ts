@@ -89,6 +89,11 @@ export type SurveySubmission = $Result.DefaultSelection<Prisma.$SurveySubmission
  */
 export type SurveyResponse = $Result.DefaultSelection<Prisma.$SurveyResponsePayload>
 /**
+ * Model KoboDeployment
+ * 
+ */
+export type KoboDeployment = $Result.DefaultSelection<Prisma.$KoboDeploymentPayload>
+/**
  * Model PartnerOrganization
  * 
  */
@@ -330,6 +335,16 @@ export const FeedbackStatus: {
 export type FeedbackStatus = (typeof FeedbackStatus)[keyof typeof FeedbackStatus]
 
 
+export const KoboSyncStatus: {
+  PENDING: 'PENDING',
+  SYNCING: 'SYNCING',
+  SYNCED: 'SYNCED',
+  FAILED: 'FAILED'
+};
+
+export type KoboSyncStatus = (typeof KoboSyncStatus)[keyof typeof KoboSyncStatus]
+
+
 export const OrganizationType: {
   UN_AGENCY: 'UN_AGENCY',
   INGO: 'INGO',
@@ -470,6 +485,10 @@ export const FeedbackPriority: typeof $Enums.FeedbackPriority
 export type FeedbackStatus = $Enums.FeedbackStatus
 
 export const FeedbackStatus: typeof $Enums.FeedbackStatus
+
+export type KoboSyncStatus = $Enums.KoboSyncStatus
+
+export const KoboSyncStatus: typeof $Enums.KoboSyncStatus
 
 export type OrganizationType = $Enums.OrganizationType
 
@@ -758,6 +777,16 @@ export class PrismaClient<
     * ```
     */
   get surveyResponse(): Prisma.SurveyResponseDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.koboDeployment`: Exposes CRUD operations for the **KoboDeployment** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more KoboDeployments
+    * const koboDeployments = await prisma.koboDeployment.findMany()
+    * ```
+    */
+  get koboDeployment(): Prisma.KoboDeploymentDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.partnerOrganization`: Exposes CRUD operations for the **PartnerOrganization** model.
@@ -1244,6 +1273,7 @@ export namespace Prisma {
     Survey: 'Survey',
     SurveySubmission: 'SurveySubmission',
     SurveyResponse: 'SurveyResponse',
+    KoboDeployment: 'KoboDeployment',
     PartnerOrganization: 'PartnerOrganization',
     Referral: 'Referral',
     ReferralConsent: 'ReferralConsent'
@@ -1265,7 +1295,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "session" | "account" | "verification" | "crisis" | "decision" | "alert" | "auditDecision" | "evidence" | "feedback" | "surveyTemplate" | "surveyQuestion" | "survey" | "surveySubmission" | "surveyResponse" | "partnerOrganization" | "referral" | "referralConsent"
+      modelProps: "user" | "session" | "account" | "verification" | "crisis" | "decision" | "alert" | "auditDecision" | "evidence" | "feedback" | "surveyTemplate" | "surveyQuestion" | "survey" | "surveySubmission" | "surveyResponse" | "koboDeployment" | "partnerOrganization" | "referral" | "referralConsent"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -2379,6 +2409,80 @@ export namespace Prisma {
           }
         }
       }
+      KoboDeployment: {
+        payload: Prisma.$KoboDeploymentPayload<ExtArgs>
+        fields: Prisma.KoboDeploymentFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.KoboDeploymentFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KoboDeploymentPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.KoboDeploymentFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KoboDeploymentPayload>
+          }
+          findFirst: {
+            args: Prisma.KoboDeploymentFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KoboDeploymentPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.KoboDeploymentFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KoboDeploymentPayload>
+          }
+          findMany: {
+            args: Prisma.KoboDeploymentFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KoboDeploymentPayload>[]
+          }
+          create: {
+            args: Prisma.KoboDeploymentCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KoboDeploymentPayload>
+          }
+          createMany: {
+            args: Prisma.KoboDeploymentCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.KoboDeploymentCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KoboDeploymentPayload>[]
+          }
+          delete: {
+            args: Prisma.KoboDeploymentDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KoboDeploymentPayload>
+          }
+          update: {
+            args: Prisma.KoboDeploymentUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KoboDeploymentPayload>
+          }
+          deleteMany: {
+            args: Prisma.KoboDeploymentDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.KoboDeploymentUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.KoboDeploymentUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KoboDeploymentPayload>[]
+          }
+          upsert: {
+            args: Prisma.KoboDeploymentUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KoboDeploymentPayload>
+          }
+          aggregate: {
+            args: Prisma.KoboDeploymentAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateKoboDeployment>
+          }
+          groupBy: {
+            args: Prisma.KoboDeploymentGroupByArgs<ExtArgs>
+            result: $Utils.Optional<KoboDeploymentGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.KoboDeploymentCountArgs<ExtArgs>
+            result: $Utils.Optional<KoboDeploymentCountAggregateOutputType> | number
+          }
+        }
+      }
       PartnerOrganization: {
         payload: Prisma.$PartnerOrganizationPayload<ExtArgs>
         fields: Prisma.PartnerOrganizationFieldRefs
@@ -2712,6 +2816,7 @@ export namespace Prisma {
     survey?: SurveyOmit
     surveySubmission?: SurveySubmissionOmit
     surveyResponse?: SurveyResponseOmit
+    koboDeployment?: KoboDeploymentOmit
     partnerOrganization?: PartnerOrganizationOmit
     referral?: ReferralOmit
     referralConsent?: ReferralConsentOmit
@@ -3059,10 +3164,12 @@ export namespace Prisma {
 
   export type SurveyCountOutputType = {
     submissions: number
+    koboDeployments: number
   }
 
   export type SurveyCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     submissions?: boolean | SurveyCountOutputTypeCountSubmissionsArgs
+    koboDeployments?: boolean | SurveyCountOutputTypeCountKoboDeploymentsArgs
   }
 
   // Custom InputTypes
@@ -3081,6 +3188,13 @@ export namespace Prisma {
    */
   export type SurveyCountOutputTypeCountSubmissionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: SurveySubmissionWhereInput
+  }
+
+  /**
+   * SurveyCountOutputType without action
+   */
+  export type SurveyCountOutputTypeCountKoboDeploymentsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: KoboDeploymentWhereInput
   }
 
 
@@ -17827,6 +17941,7 @@ export namespace Prisma {
     crisis?: boolean | Survey$crisisArgs<ExtArgs>
     createdBy?: boolean | UserDefaultArgs<ExtArgs>
     submissions?: boolean | Survey$submissionsArgs<ExtArgs>
+    koboDeployments?: boolean | Survey$koboDeploymentsArgs<ExtArgs>
     _count?: boolean | SurveyCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["survey"]>
 
@@ -17896,6 +18011,7 @@ export namespace Prisma {
     crisis?: boolean | Survey$crisisArgs<ExtArgs>
     createdBy?: boolean | UserDefaultArgs<ExtArgs>
     submissions?: boolean | Survey$submissionsArgs<ExtArgs>
+    koboDeployments?: boolean | Survey$koboDeploymentsArgs<ExtArgs>
     _count?: boolean | SurveyCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type SurveyIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -17916,6 +18032,7 @@ export namespace Prisma {
       crisis: Prisma.$CrisisPayload<ExtArgs> | null
       createdBy: Prisma.$UserPayload<ExtArgs>
       submissions: Prisma.$SurveySubmissionPayload<ExtArgs>[]
+      koboDeployments: Prisma.$KoboDeploymentPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -18331,6 +18448,7 @@ export namespace Prisma {
     crisis<T extends Survey$crisisArgs<ExtArgs> = {}>(args?: Subset<T, Survey$crisisArgs<ExtArgs>>): Prisma__CrisisClient<$Result.GetResult<Prisma.$CrisisPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     createdBy<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     submissions<T extends Survey$submissionsArgs<ExtArgs> = {}>(args?: Subset<T, Survey$submissionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SurveySubmissionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    koboDeployments<T extends Survey$koboDeploymentsArgs<ExtArgs> = {}>(args?: Subset<T, Survey$koboDeploymentsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$KoboDeploymentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -18811,6 +18929,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: SurveySubmissionScalarFieldEnum | SurveySubmissionScalarFieldEnum[]
+  }
+
+  /**
+   * Survey.koboDeployments
+   */
+  export type Survey$koboDeploymentsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KoboDeployment
+     */
+    select?: KoboDeploymentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KoboDeployment
+     */
+    omit?: KoboDeploymentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KoboDeploymentInclude<ExtArgs> | null
+    where?: KoboDeploymentWhereInput
+    orderBy?: KoboDeploymentOrderByWithRelationInput | KoboDeploymentOrderByWithRelationInput[]
+    cursor?: KoboDeploymentWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: KoboDeploymentScalarFieldEnum | KoboDeploymentScalarFieldEnum[]
   }
 
   /**
@@ -21211,6 +21353,1176 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: SurveyResponseInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model KoboDeployment
+   */
+
+  export type AggregateKoboDeployment = {
+    _count: KoboDeploymentCountAggregateOutputType | null
+    _avg: KoboDeploymentAvgAggregateOutputType | null
+    _sum: KoboDeploymentSumAggregateOutputType | null
+    _min: KoboDeploymentMinAggregateOutputType | null
+    _max: KoboDeploymentMaxAggregateOutputType | null
+  }
+
+  export type KoboDeploymentAvgAggregateOutputType = {
+    submissionCount: number | null
+  }
+
+  export type KoboDeploymentSumAggregateOutputType = {
+    submissionCount: number | null
+  }
+
+  export type KoboDeploymentMinAggregateOutputType = {
+    id: string | null
+    surveyId: string | null
+    koboAssetUid: string | null
+    koboFormTitle: string | null
+    deploymentUrl: string | null
+    lastSyncedAt: Date | null
+    syncStatus: $Enums.KoboSyncStatus | null
+    syncError: string | null
+    submissionCount: number | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type KoboDeploymentMaxAggregateOutputType = {
+    id: string | null
+    surveyId: string | null
+    koboAssetUid: string | null
+    koboFormTitle: string | null
+    deploymentUrl: string | null
+    lastSyncedAt: Date | null
+    syncStatus: $Enums.KoboSyncStatus | null
+    syncError: string | null
+    submissionCount: number | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type KoboDeploymentCountAggregateOutputType = {
+    id: number
+    surveyId: number
+    koboAssetUid: number
+    koboFormTitle: number
+    deploymentUrl: number
+    lastSyncedAt: number
+    syncStatus: number
+    syncError: number
+    submissionCount: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type KoboDeploymentAvgAggregateInputType = {
+    submissionCount?: true
+  }
+
+  export type KoboDeploymentSumAggregateInputType = {
+    submissionCount?: true
+  }
+
+  export type KoboDeploymentMinAggregateInputType = {
+    id?: true
+    surveyId?: true
+    koboAssetUid?: true
+    koboFormTitle?: true
+    deploymentUrl?: true
+    lastSyncedAt?: true
+    syncStatus?: true
+    syncError?: true
+    submissionCount?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type KoboDeploymentMaxAggregateInputType = {
+    id?: true
+    surveyId?: true
+    koboAssetUid?: true
+    koboFormTitle?: true
+    deploymentUrl?: true
+    lastSyncedAt?: true
+    syncStatus?: true
+    syncError?: true
+    submissionCount?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type KoboDeploymentCountAggregateInputType = {
+    id?: true
+    surveyId?: true
+    koboAssetUid?: true
+    koboFormTitle?: true
+    deploymentUrl?: true
+    lastSyncedAt?: true
+    syncStatus?: true
+    syncError?: true
+    submissionCount?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type KoboDeploymentAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which KoboDeployment to aggregate.
+     */
+    where?: KoboDeploymentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of KoboDeployments to fetch.
+     */
+    orderBy?: KoboDeploymentOrderByWithRelationInput | KoboDeploymentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: KoboDeploymentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` KoboDeployments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` KoboDeployments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned KoboDeployments
+    **/
+    _count?: true | KoboDeploymentCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: KoboDeploymentAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: KoboDeploymentSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: KoboDeploymentMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: KoboDeploymentMaxAggregateInputType
+  }
+
+  export type GetKoboDeploymentAggregateType<T extends KoboDeploymentAggregateArgs> = {
+        [P in keyof T & keyof AggregateKoboDeployment]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateKoboDeployment[P]>
+      : GetScalarType<T[P], AggregateKoboDeployment[P]>
+  }
+
+
+
+
+  export type KoboDeploymentGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: KoboDeploymentWhereInput
+    orderBy?: KoboDeploymentOrderByWithAggregationInput | KoboDeploymentOrderByWithAggregationInput[]
+    by: KoboDeploymentScalarFieldEnum[] | KoboDeploymentScalarFieldEnum
+    having?: KoboDeploymentScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: KoboDeploymentCountAggregateInputType | true
+    _avg?: KoboDeploymentAvgAggregateInputType
+    _sum?: KoboDeploymentSumAggregateInputType
+    _min?: KoboDeploymentMinAggregateInputType
+    _max?: KoboDeploymentMaxAggregateInputType
+  }
+
+  export type KoboDeploymentGroupByOutputType = {
+    id: string
+    surveyId: string
+    koboAssetUid: string
+    koboFormTitle: string
+    deploymentUrl: string | null
+    lastSyncedAt: Date | null
+    syncStatus: $Enums.KoboSyncStatus
+    syncError: string | null
+    submissionCount: number
+    createdAt: Date
+    updatedAt: Date
+    _count: KoboDeploymentCountAggregateOutputType | null
+    _avg: KoboDeploymentAvgAggregateOutputType | null
+    _sum: KoboDeploymentSumAggregateOutputType | null
+    _min: KoboDeploymentMinAggregateOutputType | null
+    _max: KoboDeploymentMaxAggregateOutputType | null
+  }
+
+  type GetKoboDeploymentGroupByPayload<T extends KoboDeploymentGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<KoboDeploymentGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof KoboDeploymentGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], KoboDeploymentGroupByOutputType[P]>
+            : GetScalarType<T[P], KoboDeploymentGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type KoboDeploymentSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    surveyId?: boolean
+    koboAssetUid?: boolean
+    koboFormTitle?: boolean
+    deploymentUrl?: boolean
+    lastSyncedAt?: boolean
+    syncStatus?: boolean
+    syncError?: boolean
+    submissionCount?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    survey?: boolean | SurveyDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["koboDeployment"]>
+
+  export type KoboDeploymentSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    surveyId?: boolean
+    koboAssetUid?: boolean
+    koboFormTitle?: boolean
+    deploymentUrl?: boolean
+    lastSyncedAt?: boolean
+    syncStatus?: boolean
+    syncError?: boolean
+    submissionCount?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    survey?: boolean | SurveyDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["koboDeployment"]>
+
+  export type KoboDeploymentSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    surveyId?: boolean
+    koboAssetUid?: boolean
+    koboFormTitle?: boolean
+    deploymentUrl?: boolean
+    lastSyncedAt?: boolean
+    syncStatus?: boolean
+    syncError?: boolean
+    submissionCount?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    survey?: boolean | SurveyDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["koboDeployment"]>
+
+  export type KoboDeploymentSelectScalar = {
+    id?: boolean
+    surveyId?: boolean
+    koboAssetUid?: boolean
+    koboFormTitle?: boolean
+    deploymentUrl?: boolean
+    lastSyncedAt?: boolean
+    syncStatus?: boolean
+    syncError?: boolean
+    submissionCount?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type KoboDeploymentOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "surveyId" | "koboAssetUid" | "koboFormTitle" | "deploymentUrl" | "lastSyncedAt" | "syncStatus" | "syncError" | "submissionCount" | "createdAt" | "updatedAt", ExtArgs["result"]["koboDeployment"]>
+  export type KoboDeploymentInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    survey?: boolean | SurveyDefaultArgs<ExtArgs>
+  }
+  export type KoboDeploymentIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    survey?: boolean | SurveyDefaultArgs<ExtArgs>
+  }
+  export type KoboDeploymentIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    survey?: boolean | SurveyDefaultArgs<ExtArgs>
+  }
+
+  export type $KoboDeploymentPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "KoboDeployment"
+    objects: {
+      survey: Prisma.$SurveyPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      surveyId: string
+      koboAssetUid: string
+      koboFormTitle: string
+      deploymentUrl: string | null
+      lastSyncedAt: Date | null
+      syncStatus: $Enums.KoboSyncStatus
+      syncError: string | null
+      submissionCount: number
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["koboDeployment"]>
+    composites: {}
+  }
+
+  type KoboDeploymentGetPayload<S extends boolean | null | undefined | KoboDeploymentDefaultArgs> = $Result.GetResult<Prisma.$KoboDeploymentPayload, S>
+
+  type KoboDeploymentCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<KoboDeploymentFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: KoboDeploymentCountAggregateInputType | true
+    }
+
+  export interface KoboDeploymentDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['KoboDeployment'], meta: { name: 'KoboDeployment' } }
+    /**
+     * Find zero or one KoboDeployment that matches the filter.
+     * @param {KoboDeploymentFindUniqueArgs} args - Arguments to find a KoboDeployment
+     * @example
+     * // Get one KoboDeployment
+     * const koboDeployment = await prisma.koboDeployment.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends KoboDeploymentFindUniqueArgs>(args: SelectSubset<T, KoboDeploymentFindUniqueArgs<ExtArgs>>): Prisma__KoboDeploymentClient<$Result.GetResult<Prisma.$KoboDeploymentPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one KoboDeployment that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {KoboDeploymentFindUniqueOrThrowArgs} args - Arguments to find a KoboDeployment
+     * @example
+     * // Get one KoboDeployment
+     * const koboDeployment = await prisma.koboDeployment.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends KoboDeploymentFindUniqueOrThrowArgs>(args: SelectSubset<T, KoboDeploymentFindUniqueOrThrowArgs<ExtArgs>>): Prisma__KoboDeploymentClient<$Result.GetResult<Prisma.$KoboDeploymentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first KoboDeployment that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KoboDeploymentFindFirstArgs} args - Arguments to find a KoboDeployment
+     * @example
+     * // Get one KoboDeployment
+     * const koboDeployment = await prisma.koboDeployment.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends KoboDeploymentFindFirstArgs>(args?: SelectSubset<T, KoboDeploymentFindFirstArgs<ExtArgs>>): Prisma__KoboDeploymentClient<$Result.GetResult<Prisma.$KoboDeploymentPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first KoboDeployment that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KoboDeploymentFindFirstOrThrowArgs} args - Arguments to find a KoboDeployment
+     * @example
+     * // Get one KoboDeployment
+     * const koboDeployment = await prisma.koboDeployment.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends KoboDeploymentFindFirstOrThrowArgs>(args?: SelectSubset<T, KoboDeploymentFindFirstOrThrowArgs<ExtArgs>>): Prisma__KoboDeploymentClient<$Result.GetResult<Prisma.$KoboDeploymentPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more KoboDeployments that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KoboDeploymentFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all KoboDeployments
+     * const koboDeployments = await prisma.koboDeployment.findMany()
+     * 
+     * // Get first 10 KoboDeployments
+     * const koboDeployments = await prisma.koboDeployment.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const koboDeploymentWithIdOnly = await prisma.koboDeployment.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends KoboDeploymentFindManyArgs>(args?: SelectSubset<T, KoboDeploymentFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$KoboDeploymentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a KoboDeployment.
+     * @param {KoboDeploymentCreateArgs} args - Arguments to create a KoboDeployment.
+     * @example
+     * // Create one KoboDeployment
+     * const KoboDeployment = await prisma.koboDeployment.create({
+     *   data: {
+     *     // ... data to create a KoboDeployment
+     *   }
+     * })
+     * 
+     */
+    create<T extends KoboDeploymentCreateArgs>(args: SelectSubset<T, KoboDeploymentCreateArgs<ExtArgs>>): Prisma__KoboDeploymentClient<$Result.GetResult<Prisma.$KoboDeploymentPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many KoboDeployments.
+     * @param {KoboDeploymentCreateManyArgs} args - Arguments to create many KoboDeployments.
+     * @example
+     * // Create many KoboDeployments
+     * const koboDeployment = await prisma.koboDeployment.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends KoboDeploymentCreateManyArgs>(args?: SelectSubset<T, KoboDeploymentCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many KoboDeployments and returns the data saved in the database.
+     * @param {KoboDeploymentCreateManyAndReturnArgs} args - Arguments to create many KoboDeployments.
+     * @example
+     * // Create many KoboDeployments
+     * const koboDeployment = await prisma.koboDeployment.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many KoboDeployments and only return the `id`
+     * const koboDeploymentWithIdOnly = await prisma.koboDeployment.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends KoboDeploymentCreateManyAndReturnArgs>(args?: SelectSubset<T, KoboDeploymentCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$KoboDeploymentPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a KoboDeployment.
+     * @param {KoboDeploymentDeleteArgs} args - Arguments to delete one KoboDeployment.
+     * @example
+     * // Delete one KoboDeployment
+     * const KoboDeployment = await prisma.koboDeployment.delete({
+     *   where: {
+     *     // ... filter to delete one KoboDeployment
+     *   }
+     * })
+     * 
+     */
+    delete<T extends KoboDeploymentDeleteArgs>(args: SelectSubset<T, KoboDeploymentDeleteArgs<ExtArgs>>): Prisma__KoboDeploymentClient<$Result.GetResult<Prisma.$KoboDeploymentPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one KoboDeployment.
+     * @param {KoboDeploymentUpdateArgs} args - Arguments to update one KoboDeployment.
+     * @example
+     * // Update one KoboDeployment
+     * const koboDeployment = await prisma.koboDeployment.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends KoboDeploymentUpdateArgs>(args: SelectSubset<T, KoboDeploymentUpdateArgs<ExtArgs>>): Prisma__KoboDeploymentClient<$Result.GetResult<Prisma.$KoboDeploymentPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more KoboDeployments.
+     * @param {KoboDeploymentDeleteManyArgs} args - Arguments to filter KoboDeployments to delete.
+     * @example
+     * // Delete a few KoboDeployments
+     * const { count } = await prisma.koboDeployment.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends KoboDeploymentDeleteManyArgs>(args?: SelectSubset<T, KoboDeploymentDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more KoboDeployments.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KoboDeploymentUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many KoboDeployments
+     * const koboDeployment = await prisma.koboDeployment.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends KoboDeploymentUpdateManyArgs>(args: SelectSubset<T, KoboDeploymentUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more KoboDeployments and returns the data updated in the database.
+     * @param {KoboDeploymentUpdateManyAndReturnArgs} args - Arguments to update many KoboDeployments.
+     * @example
+     * // Update many KoboDeployments
+     * const koboDeployment = await prisma.koboDeployment.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more KoboDeployments and only return the `id`
+     * const koboDeploymentWithIdOnly = await prisma.koboDeployment.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends KoboDeploymentUpdateManyAndReturnArgs>(args: SelectSubset<T, KoboDeploymentUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$KoboDeploymentPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one KoboDeployment.
+     * @param {KoboDeploymentUpsertArgs} args - Arguments to update or create a KoboDeployment.
+     * @example
+     * // Update or create a KoboDeployment
+     * const koboDeployment = await prisma.koboDeployment.upsert({
+     *   create: {
+     *     // ... data to create a KoboDeployment
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the KoboDeployment we want to update
+     *   }
+     * })
+     */
+    upsert<T extends KoboDeploymentUpsertArgs>(args: SelectSubset<T, KoboDeploymentUpsertArgs<ExtArgs>>): Prisma__KoboDeploymentClient<$Result.GetResult<Prisma.$KoboDeploymentPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of KoboDeployments.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KoboDeploymentCountArgs} args - Arguments to filter KoboDeployments to count.
+     * @example
+     * // Count the number of KoboDeployments
+     * const count = await prisma.koboDeployment.count({
+     *   where: {
+     *     // ... the filter for the KoboDeployments we want to count
+     *   }
+     * })
+    **/
+    count<T extends KoboDeploymentCountArgs>(
+      args?: Subset<T, KoboDeploymentCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], KoboDeploymentCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a KoboDeployment.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KoboDeploymentAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends KoboDeploymentAggregateArgs>(args: Subset<T, KoboDeploymentAggregateArgs>): Prisma.PrismaPromise<GetKoboDeploymentAggregateType<T>>
+
+    /**
+     * Group by KoboDeployment.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KoboDeploymentGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends KoboDeploymentGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: KoboDeploymentGroupByArgs['orderBy'] }
+        : { orderBy?: KoboDeploymentGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, KoboDeploymentGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetKoboDeploymentGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the KoboDeployment model
+   */
+  readonly fields: KoboDeploymentFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for KoboDeployment.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__KoboDeploymentClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    survey<T extends SurveyDefaultArgs<ExtArgs> = {}>(args?: Subset<T, SurveyDefaultArgs<ExtArgs>>): Prisma__SurveyClient<$Result.GetResult<Prisma.$SurveyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the KoboDeployment model
+   */
+  interface KoboDeploymentFieldRefs {
+    readonly id: FieldRef<"KoboDeployment", 'String'>
+    readonly surveyId: FieldRef<"KoboDeployment", 'String'>
+    readonly koboAssetUid: FieldRef<"KoboDeployment", 'String'>
+    readonly koboFormTitle: FieldRef<"KoboDeployment", 'String'>
+    readonly deploymentUrl: FieldRef<"KoboDeployment", 'String'>
+    readonly lastSyncedAt: FieldRef<"KoboDeployment", 'DateTime'>
+    readonly syncStatus: FieldRef<"KoboDeployment", 'KoboSyncStatus'>
+    readonly syncError: FieldRef<"KoboDeployment", 'String'>
+    readonly submissionCount: FieldRef<"KoboDeployment", 'Int'>
+    readonly createdAt: FieldRef<"KoboDeployment", 'DateTime'>
+    readonly updatedAt: FieldRef<"KoboDeployment", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * KoboDeployment findUnique
+   */
+  export type KoboDeploymentFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KoboDeployment
+     */
+    select?: KoboDeploymentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KoboDeployment
+     */
+    omit?: KoboDeploymentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KoboDeploymentInclude<ExtArgs> | null
+    /**
+     * Filter, which KoboDeployment to fetch.
+     */
+    where: KoboDeploymentWhereUniqueInput
+  }
+
+  /**
+   * KoboDeployment findUniqueOrThrow
+   */
+  export type KoboDeploymentFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KoboDeployment
+     */
+    select?: KoboDeploymentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KoboDeployment
+     */
+    omit?: KoboDeploymentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KoboDeploymentInclude<ExtArgs> | null
+    /**
+     * Filter, which KoboDeployment to fetch.
+     */
+    where: KoboDeploymentWhereUniqueInput
+  }
+
+  /**
+   * KoboDeployment findFirst
+   */
+  export type KoboDeploymentFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KoboDeployment
+     */
+    select?: KoboDeploymentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KoboDeployment
+     */
+    omit?: KoboDeploymentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KoboDeploymentInclude<ExtArgs> | null
+    /**
+     * Filter, which KoboDeployment to fetch.
+     */
+    where?: KoboDeploymentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of KoboDeployments to fetch.
+     */
+    orderBy?: KoboDeploymentOrderByWithRelationInput | KoboDeploymentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for KoboDeployments.
+     */
+    cursor?: KoboDeploymentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` KoboDeployments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` KoboDeployments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of KoboDeployments.
+     */
+    distinct?: KoboDeploymentScalarFieldEnum | KoboDeploymentScalarFieldEnum[]
+  }
+
+  /**
+   * KoboDeployment findFirstOrThrow
+   */
+  export type KoboDeploymentFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KoboDeployment
+     */
+    select?: KoboDeploymentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KoboDeployment
+     */
+    omit?: KoboDeploymentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KoboDeploymentInclude<ExtArgs> | null
+    /**
+     * Filter, which KoboDeployment to fetch.
+     */
+    where?: KoboDeploymentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of KoboDeployments to fetch.
+     */
+    orderBy?: KoboDeploymentOrderByWithRelationInput | KoboDeploymentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for KoboDeployments.
+     */
+    cursor?: KoboDeploymentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` KoboDeployments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` KoboDeployments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of KoboDeployments.
+     */
+    distinct?: KoboDeploymentScalarFieldEnum | KoboDeploymentScalarFieldEnum[]
+  }
+
+  /**
+   * KoboDeployment findMany
+   */
+  export type KoboDeploymentFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KoboDeployment
+     */
+    select?: KoboDeploymentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KoboDeployment
+     */
+    omit?: KoboDeploymentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KoboDeploymentInclude<ExtArgs> | null
+    /**
+     * Filter, which KoboDeployments to fetch.
+     */
+    where?: KoboDeploymentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of KoboDeployments to fetch.
+     */
+    orderBy?: KoboDeploymentOrderByWithRelationInput | KoboDeploymentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing KoboDeployments.
+     */
+    cursor?: KoboDeploymentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` KoboDeployments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` KoboDeployments.
+     */
+    skip?: number
+    distinct?: KoboDeploymentScalarFieldEnum | KoboDeploymentScalarFieldEnum[]
+  }
+
+  /**
+   * KoboDeployment create
+   */
+  export type KoboDeploymentCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KoboDeployment
+     */
+    select?: KoboDeploymentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KoboDeployment
+     */
+    omit?: KoboDeploymentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KoboDeploymentInclude<ExtArgs> | null
+    /**
+     * The data needed to create a KoboDeployment.
+     */
+    data: XOR<KoboDeploymentCreateInput, KoboDeploymentUncheckedCreateInput>
+  }
+
+  /**
+   * KoboDeployment createMany
+   */
+  export type KoboDeploymentCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many KoboDeployments.
+     */
+    data: KoboDeploymentCreateManyInput | KoboDeploymentCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * KoboDeployment createManyAndReturn
+   */
+  export type KoboDeploymentCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KoboDeployment
+     */
+    select?: KoboDeploymentSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the KoboDeployment
+     */
+    omit?: KoboDeploymentOmit<ExtArgs> | null
+    /**
+     * The data used to create many KoboDeployments.
+     */
+    data: KoboDeploymentCreateManyInput | KoboDeploymentCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KoboDeploymentIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * KoboDeployment update
+   */
+  export type KoboDeploymentUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KoboDeployment
+     */
+    select?: KoboDeploymentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KoboDeployment
+     */
+    omit?: KoboDeploymentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KoboDeploymentInclude<ExtArgs> | null
+    /**
+     * The data needed to update a KoboDeployment.
+     */
+    data: XOR<KoboDeploymentUpdateInput, KoboDeploymentUncheckedUpdateInput>
+    /**
+     * Choose, which KoboDeployment to update.
+     */
+    where: KoboDeploymentWhereUniqueInput
+  }
+
+  /**
+   * KoboDeployment updateMany
+   */
+  export type KoboDeploymentUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update KoboDeployments.
+     */
+    data: XOR<KoboDeploymentUpdateManyMutationInput, KoboDeploymentUncheckedUpdateManyInput>
+    /**
+     * Filter which KoboDeployments to update
+     */
+    where?: KoboDeploymentWhereInput
+    /**
+     * Limit how many KoboDeployments to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * KoboDeployment updateManyAndReturn
+   */
+  export type KoboDeploymentUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KoboDeployment
+     */
+    select?: KoboDeploymentSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the KoboDeployment
+     */
+    omit?: KoboDeploymentOmit<ExtArgs> | null
+    /**
+     * The data used to update KoboDeployments.
+     */
+    data: XOR<KoboDeploymentUpdateManyMutationInput, KoboDeploymentUncheckedUpdateManyInput>
+    /**
+     * Filter which KoboDeployments to update
+     */
+    where?: KoboDeploymentWhereInput
+    /**
+     * Limit how many KoboDeployments to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KoboDeploymentIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * KoboDeployment upsert
+   */
+  export type KoboDeploymentUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KoboDeployment
+     */
+    select?: KoboDeploymentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KoboDeployment
+     */
+    omit?: KoboDeploymentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KoboDeploymentInclude<ExtArgs> | null
+    /**
+     * The filter to search for the KoboDeployment to update in case it exists.
+     */
+    where: KoboDeploymentWhereUniqueInput
+    /**
+     * In case the KoboDeployment found by the `where` argument doesn't exist, create a new KoboDeployment with this data.
+     */
+    create: XOR<KoboDeploymentCreateInput, KoboDeploymentUncheckedCreateInput>
+    /**
+     * In case the KoboDeployment was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<KoboDeploymentUpdateInput, KoboDeploymentUncheckedUpdateInput>
+  }
+
+  /**
+   * KoboDeployment delete
+   */
+  export type KoboDeploymentDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KoboDeployment
+     */
+    select?: KoboDeploymentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KoboDeployment
+     */
+    omit?: KoboDeploymentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KoboDeploymentInclude<ExtArgs> | null
+    /**
+     * Filter which KoboDeployment to delete.
+     */
+    where: KoboDeploymentWhereUniqueInput
+  }
+
+  /**
+   * KoboDeployment deleteMany
+   */
+  export type KoboDeploymentDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which KoboDeployments to delete
+     */
+    where?: KoboDeploymentWhereInput
+    /**
+     * Limit how many KoboDeployments to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * KoboDeployment without action
+   */
+  export type KoboDeploymentDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KoboDeployment
+     */
+    select?: KoboDeploymentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KoboDeployment
+     */
+    omit?: KoboDeploymentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KoboDeploymentInclude<ExtArgs> | null
   }
 
 
@@ -25122,6 +26434,23 @@ export namespace Prisma {
   export type SurveyResponseScalarFieldEnum = (typeof SurveyResponseScalarFieldEnum)[keyof typeof SurveyResponseScalarFieldEnum]
 
 
+  export const KoboDeploymentScalarFieldEnum: {
+    id: 'id',
+    surveyId: 'surveyId',
+    koboAssetUid: 'koboAssetUid',
+    koboFormTitle: 'koboFormTitle',
+    deploymentUrl: 'deploymentUrl',
+    lastSyncedAt: 'lastSyncedAt',
+    syncStatus: 'syncStatus',
+    syncError: 'syncError',
+    submissionCount: 'submissionCount',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type KoboDeploymentScalarFieldEnum = (typeof KoboDeploymentScalarFieldEnum)[keyof typeof KoboDeploymentScalarFieldEnum]
+
+
   export const PartnerOrganizationScalarFieldEnum: {
     id: 'id',
     name: 'name',
@@ -25589,6 +26918,20 @@ export namespace Prisma {
    * Reference to a field of type 'SubmissionStatus[]'
    */
   export type ListEnumSubmissionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubmissionStatus[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'KoboSyncStatus'
+   */
+  export type EnumKoboSyncStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'KoboSyncStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'KoboSyncStatus[]'
+   */
+  export type ListEnumKoboSyncStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'KoboSyncStatus[]'>
     
 
 
@@ -26796,6 +28139,7 @@ export namespace Prisma {
     crisis?: XOR<CrisisNullableScalarRelationFilter, CrisisWhereInput> | null
     createdBy?: XOR<UserScalarRelationFilter, UserWhereInput>
     submissions?: SurveySubmissionListRelationFilter
+    koboDeployments?: KoboDeploymentListRelationFilter
   }
 
   export type SurveyOrderByWithRelationInput = {
@@ -26818,6 +28162,7 @@ export namespace Prisma {
     crisis?: CrisisOrderByWithRelationInput
     createdBy?: UserOrderByWithRelationInput
     submissions?: SurveySubmissionOrderByRelationAggregateInput
+    koboDeployments?: KoboDeploymentOrderByRelationAggregateInput
   }
 
   export type SurveyWhereUniqueInput = Prisma.AtLeast<{
@@ -26843,6 +28188,7 @@ export namespace Prisma {
     crisis?: XOR<CrisisNullableScalarRelationFilter, CrisisWhereInput> | null
     createdBy?: XOR<UserScalarRelationFilter, UserWhereInput>
     submissions?: SurveySubmissionListRelationFilter
+    koboDeployments?: KoboDeploymentListRelationFilter
   }, "id">
 
   export type SurveyOrderByWithAggregationInput = {
@@ -27068,6 +28414,93 @@ export namespace Prisma {
     responseJson?: JsonNullableWithAggregatesFilter<"SurveyResponse">
     isSkipped?: BoolWithAggregatesFilter<"SurveyResponse"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"SurveyResponse"> | Date | string
+  }
+
+  export type KoboDeploymentWhereInput = {
+    AND?: KoboDeploymentWhereInput | KoboDeploymentWhereInput[]
+    OR?: KoboDeploymentWhereInput[]
+    NOT?: KoboDeploymentWhereInput | KoboDeploymentWhereInput[]
+    id?: StringFilter<"KoboDeployment"> | string
+    surveyId?: StringFilter<"KoboDeployment"> | string
+    koboAssetUid?: StringFilter<"KoboDeployment"> | string
+    koboFormTitle?: StringFilter<"KoboDeployment"> | string
+    deploymentUrl?: StringNullableFilter<"KoboDeployment"> | string | null
+    lastSyncedAt?: DateTimeNullableFilter<"KoboDeployment"> | Date | string | null
+    syncStatus?: EnumKoboSyncStatusFilter<"KoboDeployment"> | $Enums.KoboSyncStatus
+    syncError?: StringNullableFilter<"KoboDeployment"> | string | null
+    submissionCount?: IntFilter<"KoboDeployment"> | number
+    createdAt?: DateTimeFilter<"KoboDeployment"> | Date | string
+    updatedAt?: DateTimeFilter<"KoboDeployment"> | Date | string
+    survey?: XOR<SurveyScalarRelationFilter, SurveyWhereInput>
+  }
+
+  export type KoboDeploymentOrderByWithRelationInput = {
+    id?: SortOrder
+    surveyId?: SortOrder
+    koboAssetUid?: SortOrder
+    koboFormTitle?: SortOrder
+    deploymentUrl?: SortOrderInput | SortOrder
+    lastSyncedAt?: SortOrderInput | SortOrder
+    syncStatus?: SortOrder
+    syncError?: SortOrderInput | SortOrder
+    submissionCount?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    survey?: SurveyOrderByWithRelationInput
+  }
+
+  export type KoboDeploymentWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    koboAssetUid?: string
+    AND?: KoboDeploymentWhereInput | KoboDeploymentWhereInput[]
+    OR?: KoboDeploymentWhereInput[]
+    NOT?: KoboDeploymentWhereInput | KoboDeploymentWhereInput[]
+    surveyId?: StringFilter<"KoboDeployment"> | string
+    koboFormTitle?: StringFilter<"KoboDeployment"> | string
+    deploymentUrl?: StringNullableFilter<"KoboDeployment"> | string | null
+    lastSyncedAt?: DateTimeNullableFilter<"KoboDeployment"> | Date | string | null
+    syncStatus?: EnumKoboSyncStatusFilter<"KoboDeployment"> | $Enums.KoboSyncStatus
+    syncError?: StringNullableFilter<"KoboDeployment"> | string | null
+    submissionCount?: IntFilter<"KoboDeployment"> | number
+    createdAt?: DateTimeFilter<"KoboDeployment"> | Date | string
+    updatedAt?: DateTimeFilter<"KoboDeployment"> | Date | string
+    survey?: XOR<SurveyScalarRelationFilter, SurveyWhereInput>
+  }, "id" | "koboAssetUid">
+
+  export type KoboDeploymentOrderByWithAggregationInput = {
+    id?: SortOrder
+    surveyId?: SortOrder
+    koboAssetUid?: SortOrder
+    koboFormTitle?: SortOrder
+    deploymentUrl?: SortOrderInput | SortOrder
+    lastSyncedAt?: SortOrderInput | SortOrder
+    syncStatus?: SortOrder
+    syncError?: SortOrderInput | SortOrder
+    submissionCount?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: KoboDeploymentCountOrderByAggregateInput
+    _avg?: KoboDeploymentAvgOrderByAggregateInput
+    _max?: KoboDeploymentMaxOrderByAggregateInput
+    _min?: KoboDeploymentMinOrderByAggregateInput
+    _sum?: KoboDeploymentSumOrderByAggregateInput
+  }
+
+  export type KoboDeploymentScalarWhereWithAggregatesInput = {
+    AND?: KoboDeploymentScalarWhereWithAggregatesInput | KoboDeploymentScalarWhereWithAggregatesInput[]
+    OR?: KoboDeploymentScalarWhereWithAggregatesInput[]
+    NOT?: KoboDeploymentScalarWhereWithAggregatesInput | KoboDeploymentScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"KoboDeployment"> | string
+    surveyId?: StringWithAggregatesFilter<"KoboDeployment"> | string
+    koboAssetUid?: StringWithAggregatesFilter<"KoboDeployment"> | string
+    koboFormTitle?: StringWithAggregatesFilter<"KoboDeployment"> | string
+    deploymentUrl?: StringNullableWithAggregatesFilter<"KoboDeployment"> | string | null
+    lastSyncedAt?: DateTimeNullableWithAggregatesFilter<"KoboDeployment"> | Date | string | null
+    syncStatus?: EnumKoboSyncStatusWithAggregatesFilter<"KoboDeployment"> | $Enums.KoboSyncStatus
+    syncError?: StringNullableWithAggregatesFilter<"KoboDeployment"> | string | null
+    submissionCount?: IntWithAggregatesFilter<"KoboDeployment"> | number
+    createdAt?: DateTimeWithAggregatesFilter<"KoboDeployment"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"KoboDeployment"> | Date | string
   }
 
   export type PartnerOrganizationWhereInput = {
@@ -28670,6 +30103,7 @@ export namespace Prisma {
     crisis?: CrisisCreateNestedOneWithoutSurveysInput
     createdBy: UserCreateNestedOneWithoutSurveysInput
     submissions?: SurveySubmissionCreateNestedManyWithoutSurveyInput
+    koboDeployments?: KoboDeploymentCreateNestedManyWithoutSurveyInput
   }
 
   export type SurveyUncheckedCreateInput = {
@@ -28689,6 +30123,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     submissions?: SurveySubmissionUncheckedCreateNestedManyWithoutSurveyInput
+    koboDeployments?: KoboDeploymentUncheckedCreateNestedManyWithoutSurveyInput
   }
 
   export type SurveyUpdateInput = {
@@ -28708,6 +30143,7 @@ export namespace Prisma {
     crisis?: CrisisUpdateOneWithoutSurveysNestedInput
     createdBy?: UserUpdateOneRequiredWithoutSurveysNestedInput
     submissions?: SurveySubmissionUpdateManyWithoutSurveyNestedInput
+    koboDeployments?: KoboDeploymentUpdateManyWithoutSurveyNestedInput
   }
 
   export type SurveyUncheckedUpdateInput = {
@@ -28727,6 +30163,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     submissions?: SurveySubmissionUncheckedUpdateManyWithoutSurveyNestedInput
+    koboDeployments?: KoboDeploymentUncheckedUpdateManyWithoutSurveyNestedInput
   }
 
   export type SurveyCreateManyInput = {
@@ -28975,6 +30412,103 @@ export namespace Prisma {
     responseJson?: NullableJsonNullValueInput | InputJsonValue
     isSkipped?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type KoboDeploymentCreateInput = {
+    id?: string
+    koboAssetUid: string
+    koboFormTitle: string
+    deploymentUrl?: string | null
+    lastSyncedAt?: Date | string | null
+    syncStatus?: $Enums.KoboSyncStatus
+    syncError?: string | null
+    submissionCount?: number
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    survey: SurveyCreateNestedOneWithoutKoboDeploymentsInput
+  }
+
+  export type KoboDeploymentUncheckedCreateInput = {
+    id?: string
+    surveyId: string
+    koboAssetUid: string
+    koboFormTitle: string
+    deploymentUrl?: string | null
+    lastSyncedAt?: Date | string | null
+    syncStatus?: $Enums.KoboSyncStatus
+    syncError?: string | null
+    submissionCount?: number
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type KoboDeploymentUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    koboAssetUid?: StringFieldUpdateOperationsInput | string
+    koboFormTitle?: StringFieldUpdateOperationsInput | string
+    deploymentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: EnumKoboSyncStatusFieldUpdateOperationsInput | $Enums.KoboSyncStatus
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    submissionCount?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    survey?: SurveyUpdateOneRequiredWithoutKoboDeploymentsNestedInput
+  }
+
+  export type KoboDeploymentUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    surveyId?: StringFieldUpdateOperationsInput | string
+    koboAssetUid?: StringFieldUpdateOperationsInput | string
+    koboFormTitle?: StringFieldUpdateOperationsInput | string
+    deploymentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: EnumKoboSyncStatusFieldUpdateOperationsInput | $Enums.KoboSyncStatus
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    submissionCount?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type KoboDeploymentCreateManyInput = {
+    id?: string
+    surveyId: string
+    koboAssetUid: string
+    koboFormTitle: string
+    deploymentUrl?: string | null
+    lastSyncedAt?: Date | string | null
+    syncStatus?: $Enums.KoboSyncStatus
+    syncError?: string | null
+    submissionCount?: number
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type KoboDeploymentUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    koboAssetUid?: StringFieldUpdateOperationsInput | string
+    koboFormTitle?: StringFieldUpdateOperationsInput | string
+    deploymentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: EnumKoboSyncStatusFieldUpdateOperationsInput | $Enums.KoboSyncStatus
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    submissionCount?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type KoboDeploymentUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    surveyId?: StringFieldUpdateOperationsInput | string
+    koboAssetUid?: StringFieldUpdateOperationsInput | string
+    koboFormTitle?: StringFieldUpdateOperationsInput | string
+    deploymentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: EnumKoboSyncStatusFieldUpdateOperationsInput | $Enums.KoboSyncStatus
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    submissionCount?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type PartnerOrganizationCreateInput = {
@@ -30707,7 +32241,17 @@ export namespace Prisma {
     none?: SurveySubmissionWhereInput
   }
 
+  export type KoboDeploymentListRelationFilter = {
+    every?: KoboDeploymentWhereInput
+    some?: KoboDeploymentWhereInput
+    none?: KoboDeploymentWhereInput
+  }
+
   export type SurveySubmissionOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type KoboDeploymentOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -30933,6 +32477,73 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedBoolNullableFilter<$PrismaModel>
     _max?: NestedBoolNullableFilter<$PrismaModel>
+  }
+
+  export type EnumKoboSyncStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.KoboSyncStatus | EnumKoboSyncStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.KoboSyncStatus[] | ListEnumKoboSyncStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.KoboSyncStatus[] | ListEnumKoboSyncStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumKoboSyncStatusFilter<$PrismaModel> | $Enums.KoboSyncStatus
+  }
+
+  export type KoboDeploymentCountOrderByAggregateInput = {
+    id?: SortOrder
+    surveyId?: SortOrder
+    koboAssetUid?: SortOrder
+    koboFormTitle?: SortOrder
+    deploymentUrl?: SortOrder
+    lastSyncedAt?: SortOrder
+    syncStatus?: SortOrder
+    syncError?: SortOrder
+    submissionCount?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type KoboDeploymentAvgOrderByAggregateInput = {
+    submissionCount?: SortOrder
+  }
+
+  export type KoboDeploymentMaxOrderByAggregateInput = {
+    id?: SortOrder
+    surveyId?: SortOrder
+    koboAssetUid?: SortOrder
+    koboFormTitle?: SortOrder
+    deploymentUrl?: SortOrder
+    lastSyncedAt?: SortOrder
+    syncStatus?: SortOrder
+    syncError?: SortOrder
+    submissionCount?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type KoboDeploymentMinOrderByAggregateInput = {
+    id?: SortOrder
+    surveyId?: SortOrder
+    koboAssetUid?: SortOrder
+    koboFormTitle?: SortOrder
+    deploymentUrl?: SortOrder
+    lastSyncedAt?: SortOrder
+    syncStatus?: SortOrder
+    syncError?: SortOrder
+    submissionCount?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type KoboDeploymentSumOrderByAggregateInput = {
+    submissionCount?: SortOrder
+  }
+
+  export type EnumKoboSyncStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.KoboSyncStatus | EnumKoboSyncStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.KoboSyncStatus[] | ListEnumKoboSyncStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.KoboSyncStatus[] | ListEnumKoboSyncStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumKoboSyncStatusWithAggregatesFilter<$PrismaModel> | $Enums.KoboSyncStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumKoboSyncStatusFilter<$PrismaModel>
+    _max?: NestedEnumKoboSyncStatusFilter<$PrismaModel>
   }
 
   export type EnumOrganizationTypeFilter<$PrismaModel = never> = {
@@ -32200,11 +33811,25 @@ export namespace Prisma {
     connect?: SurveySubmissionWhereUniqueInput | SurveySubmissionWhereUniqueInput[]
   }
 
+  export type KoboDeploymentCreateNestedManyWithoutSurveyInput = {
+    create?: XOR<KoboDeploymentCreateWithoutSurveyInput, KoboDeploymentUncheckedCreateWithoutSurveyInput> | KoboDeploymentCreateWithoutSurveyInput[] | KoboDeploymentUncheckedCreateWithoutSurveyInput[]
+    connectOrCreate?: KoboDeploymentCreateOrConnectWithoutSurveyInput | KoboDeploymentCreateOrConnectWithoutSurveyInput[]
+    createMany?: KoboDeploymentCreateManySurveyInputEnvelope
+    connect?: KoboDeploymentWhereUniqueInput | KoboDeploymentWhereUniqueInput[]
+  }
+
   export type SurveySubmissionUncheckedCreateNestedManyWithoutSurveyInput = {
     create?: XOR<SurveySubmissionCreateWithoutSurveyInput, SurveySubmissionUncheckedCreateWithoutSurveyInput> | SurveySubmissionCreateWithoutSurveyInput[] | SurveySubmissionUncheckedCreateWithoutSurveyInput[]
     connectOrCreate?: SurveySubmissionCreateOrConnectWithoutSurveyInput | SurveySubmissionCreateOrConnectWithoutSurveyInput[]
     createMany?: SurveySubmissionCreateManySurveyInputEnvelope
     connect?: SurveySubmissionWhereUniqueInput | SurveySubmissionWhereUniqueInput[]
+  }
+
+  export type KoboDeploymentUncheckedCreateNestedManyWithoutSurveyInput = {
+    create?: XOR<KoboDeploymentCreateWithoutSurveyInput, KoboDeploymentUncheckedCreateWithoutSurveyInput> | KoboDeploymentCreateWithoutSurveyInput[] | KoboDeploymentUncheckedCreateWithoutSurveyInput[]
+    connectOrCreate?: KoboDeploymentCreateOrConnectWithoutSurveyInput | KoboDeploymentCreateOrConnectWithoutSurveyInput[]
+    createMany?: KoboDeploymentCreateManySurveyInputEnvelope
+    connect?: KoboDeploymentWhereUniqueInput | KoboDeploymentWhereUniqueInput[]
   }
 
   export type EnumSurveyStatusFieldUpdateOperationsInput = {
@@ -32251,6 +33876,20 @@ export namespace Prisma {
     deleteMany?: SurveySubmissionScalarWhereInput | SurveySubmissionScalarWhereInput[]
   }
 
+  export type KoboDeploymentUpdateManyWithoutSurveyNestedInput = {
+    create?: XOR<KoboDeploymentCreateWithoutSurveyInput, KoboDeploymentUncheckedCreateWithoutSurveyInput> | KoboDeploymentCreateWithoutSurveyInput[] | KoboDeploymentUncheckedCreateWithoutSurveyInput[]
+    connectOrCreate?: KoboDeploymentCreateOrConnectWithoutSurveyInput | KoboDeploymentCreateOrConnectWithoutSurveyInput[]
+    upsert?: KoboDeploymentUpsertWithWhereUniqueWithoutSurveyInput | KoboDeploymentUpsertWithWhereUniqueWithoutSurveyInput[]
+    createMany?: KoboDeploymentCreateManySurveyInputEnvelope
+    set?: KoboDeploymentWhereUniqueInput | KoboDeploymentWhereUniqueInput[]
+    disconnect?: KoboDeploymentWhereUniqueInput | KoboDeploymentWhereUniqueInput[]
+    delete?: KoboDeploymentWhereUniqueInput | KoboDeploymentWhereUniqueInput[]
+    connect?: KoboDeploymentWhereUniqueInput | KoboDeploymentWhereUniqueInput[]
+    update?: KoboDeploymentUpdateWithWhereUniqueWithoutSurveyInput | KoboDeploymentUpdateWithWhereUniqueWithoutSurveyInput[]
+    updateMany?: KoboDeploymentUpdateManyWithWhereWithoutSurveyInput | KoboDeploymentUpdateManyWithWhereWithoutSurveyInput[]
+    deleteMany?: KoboDeploymentScalarWhereInput | KoboDeploymentScalarWhereInput[]
+  }
+
   export type SurveySubmissionUncheckedUpdateManyWithoutSurveyNestedInput = {
     create?: XOR<SurveySubmissionCreateWithoutSurveyInput, SurveySubmissionUncheckedCreateWithoutSurveyInput> | SurveySubmissionCreateWithoutSurveyInput[] | SurveySubmissionUncheckedCreateWithoutSurveyInput[]
     connectOrCreate?: SurveySubmissionCreateOrConnectWithoutSurveyInput | SurveySubmissionCreateOrConnectWithoutSurveyInput[]
@@ -32263,6 +33902,20 @@ export namespace Prisma {
     update?: SurveySubmissionUpdateWithWhereUniqueWithoutSurveyInput | SurveySubmissionUpdateWithWhereUniqueWithoutSurveyInput[]
     updateMany?: SurveySubmissionUpdateManyWithWhereWithoutSurveyInput | SurveySubmissionUpdateManyWithWhereWithoutSurveyInput[]
     deleteMany?: SurveySubmissionScalarWhereInput | SurveySubmissionScalarWhereInput[]
+  }
+
+  export type KoboDeploymentUncheckedUpdateManyWithoutSurveyNestedInput = {
+    create?: XOR<KoboDeploymentCreateWithoutSurveyInput, KoboDeploymentUncheckedCreateWithoutSurveyInput> | KoboDeploymentCreateWithoutSurveyInput[] | KoboDeploymentUncheckedCreateWithoutSurveyInput[]
+    connectOrCreate?: KoboDeploymentCreateOrConnectWithoutSurveyInput | KoboDeploymentCreateOrConnectWithoutSurveyInput[]
+    upsert?: KoboDeploymentUpsertWithWhereUniqueWithoutSurveyInput | KoboDeploymentUpsertWithWhereUniqueWithoutSurveyInput[]
+    createMany?: KoboDeploymentCreateManySurveyInputEnvelope
+    set?: KoboDeploymentWhereUniqueInput | KoboDeploymentWhereUniqueInput[]
+    disconnect?: KoboDeploymentWhereUniqueInput | KoboDeploymentWhereUniqueInput[]
+    delete?: KoboDeploymentWhereUniqueInput | KoboDeploymentWhereUniqueInput[]
+    connect?: KoboDeploymentWhereUniqueInput | KoboDeploymentWhereUniqueInput[]
+    update?: KoboDeploymentUpdateWithWhereUniqueWithoutSurveyInput | KoboDeploymentUpdateWithWhereUniqueWithoutSurveyInput[]
+    updateMany?: KoboDeploymentUpdateManyWithWhereWithoutSurveyInput | KoboDeploymentUpdateManyWithWhereWithoutSurveyInput[]
+    deleteMany?: KoboDeploymentScalarWhereInput | KoboDeploymentScalarWhereInput[]
   }
 
   export type SurveyCreateNestedOneWithoutSubmissionsInput = {
@@ -32355,6 +34008,24 @@ export namespace Prisma {
     upsert?: SurveyQuestionUpsertWithoutResponsesInput
     connect?: SurveyQuestionWhereUniqueInput
     update?: XOR<XOR<SurveyQuestionUpdateToOneWithWhereWithoutResponsesInput, SurveyQuestionUpdateWithoutResponsesInput>, SurveyQuestionUncheckedUpdateWithoutResponsesInput>
+  }
+
+  export type SurveyCreateNestedOneWithoutKoboDeploymentsInput = {
+    create?: XOR<SurveyCreateWithoutKoboDeploymentsInput, SurveyUncheckedCreateWithoutKoboDeploymentsInput>
+    connectOrCreate?: SurveyCreateOrConnectWithoutKoboDeploymentsInput
+    connect?: SurveyWhereUniqueInput
+  }
+
+  export type EnumKoboSyncStatusFieldUpdateOperationsInput = {
+    set?: $Enums.KoboSyncStatus
+  }
+
+  export type SurveyUpdateOneRequiredWithoutKoboDeploymentsNestedInput = {
+    create?: XOR<SurveyCreateWithoutKoboDeploymentsInput, SurveyUncheckedCreateWithoutKoboDeploymentsInput>
+    connectOrCreate?: SurveyCreateOrConnectWithoutKoboDeploymentsInput
+    upsert?: SurveyUpsertWithoutKoboDeploymentsInput
+    connect?: SurveyWhereUniqueInput
+    update?: XOR<XOR<SurveyUpdateToOneWithWhereWithoutKoboDeploymentsInput, SurveyUpdateWithoutKoboDeploymentsInput>, SurveyUncheckedUpdateWithoutKoboDeploymentsInput>
   }
 
   export type ReferralCreateNestedManyWithoutFromOrganizationInput = {
@@ -33191,6 +34862,23 @@ export namespace Prisma {
     _max?: NestedBoolNullableFilter<$PrismaModel>
   }
 
+  export type NestedEnumKoboSyncStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.KoboSyncStatus | EnumKoboSyncStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.KoboSyncStatus[] | ListEnumKoboSyncStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.KoboSyncStatus[] | ListEnumKoboSyncStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumKoboSyncStatusFilter<$PrismaModel> | $Enums.KoboSyncStatus
+  }
+
+  export type NestedEnumKoboSyncStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.KoboSyncStatus | EnumKoboSyncStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.KoboSyncStatus[] | ListEnumKoboSyncStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.KoboSyncStatus[] | ListEnumKoboSyncStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumKoboSyncStatusWithAggregatesFilter<$PrismaModel> | $Enums.KoboSyncStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumKoboSyncStatusFilter<$PrismaModel>
+    _max?: NestedEnumKoboSyncStatusFilter<$PrismaModel>
+  }
+
   export type NestedEnumOrganizationTypeFilter<$PrismaModel = never> = {
     equals?: $Enums.OrganizationType | EnumOrganizationTypeFieldRefInput<$PrismaModel>
     in?: $Enums.OrganizationType[] | ListEnumOrganizationTypeFieldRefInput<$PrismaModel>
@@ -33546,6 +35234,7 @@ export namespace Prisma {
     template: SurveyTemplateCreateNestedOneWithoutSurveysInput
     crisis?: CrisisCreateNestedOneWithoutSurveysInput
     submissions?: SurveySubmissionCreateNestedManyWithoutSurveyInput
+    koboDeployments?: KoboDeploymentCreateNestedManyWithoutSurveyInput
   }
 
   export type SurveyUncheckedCreateWithoutCreatedByInput = {
@@ -33564,6 +35253,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     submissions?: SurveySubmissionUncheckedCreateNestedManyWithoutSurveyInput
+    koboDeployments?: KoboDeploymentUncheckedCreateNestedManyWithoutSurveyInput
   }
 
   export type SurveyCreateOrConnectWithoutCreatedByInput = {
@@ -34420,6 +36110,7 @@ export namespace Prisma {
     template: SurveyTemplateCreateNestedOneWithoutSurveysInput
     createdBy: UserCreateNestedOneWithoutSurveysInput
     submissions?: SurveySubmissionCreateNestedManyWithoutSurveyInput
+    koboDeployments?: KoboDeploymentCreateNestedManyWithoutSurveyInput
   }
 
   export type SurveyUncheckedCreateWithoutCrisisInput = {
@@ -34438,6 +36129,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     submissions?: SurveySubmissionUncheckedCreateNestedManyWithoutSurveyInput
+    koboDeployments?: KoboDeploymentUncheckedCreateNestedManyWithoutSurveyInput
   }
 
   export type SurveyCreateOrConnectWithoutCrisisInput = {
@@ -35330,6 +37022,7 @@ export namespace Prisma {
     crisis?: CrisisCreateNestedOneWithoutSurveysInput
     createdBy: UserCreateNestedOneWithoutSurveysInput
     submissions?: SurveySubmissionCreateNestedManyWithoutSurveyInput
+    koboDeployments?: KoboDeploymentCreateNestedManyWithoutSurveyInput
   }
 
   export type SurveyUncheckedCreateWithoutTemplateInput = {
@@ -35348,6 +37041,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     submissions?: SurveySubmissionUncheckedCreateNestedManyWithoutSurveyInput
+    koboDeployments?: KoboDeploymentUncheckedCreateNestedManyWithoutSurveyInput
   }
 
   export type SurveyCreateOrConnectWithoutTemplateInput = {
@@ -35766,6 +37460,42 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type KoboDeploymentCreateWithoutSurveyInput = {
+    id?: string
+    koboAssetUid: string
+    koboFormTitle: string
+    deploymentUrl?: string | null
+    lastSyncedAt?: Date | string | null
+    syncStatus?: $Enums.KoboSyncStatus
+    syncError?: string | null
+    submissionCount?: number
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type KoboDeploymentUncheckedCreateWithoutSurveyInput = {
+    id?: string
+    koboAssetUid: string
+    koboFormTitle: string
+    deploymentUrl?: string | null
+    lastSyncedAt?: Date | string | null
+    syncStatus?: $Enums.KoboSyncStatus
+    syncError?: string | null
+    submissionCount?: number
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type KoboDeploymentCreateOrConnectWithoutSurveyInput = {
+    where: KoboDeploymentWhereUniqueInput
+    create: XOR<KoboDeploymentCreateWithoutSurveyInput, KoboDeploymentUncheckedCreateWithoutSurveyInput>
+  }
+
+  export type KoboDeploymentCreateManySurveyInputEnvelope = {
+    data: KoboDeploymentCreateManySurveyInput | KoboDeploymentCreateManySurveyInput[]
+    skipDuplicates?: boolean
+  }
+
   export type SurveyTemplateUpsertWithoutSurveysInput = {
     update: XOR<SurveyTemplateUpdateWithoutSurveysInput, SurveyTemplateUncheckedUpdateWithoutSurveysInput>
     create: XOR<SurveyTemplateCreateWithoutSurveysInput, SurveyTemplateUncheckedCreateWithoutSurveysInput>
@@ -35940,6 +37670,39 @@ export namespace Prisma {
     isComplete?: BoolFilter<"SurveySubmission"> | boolean
   }
 
+  export type KoboDeploymentUpsertWithWhereUniqueWithoutSurveyInput = {
+    where: KoboDeploymentWhereUniqueInput
+    update: XOR<KoboDeploymentUpdateWithoutSurveyInput, KoboDeploymentUncheckedUpdateWithoutSurveyInput>
+    create: XOR<KoboDeploymentCreateWithoutSurveyInput, KoboDeploymentUncheckedCreateWithoutSurveyInput>
+  }
+
+  export type KoboDeploymentUpdateWithWhereUniqueWithoutSurveyInput = {
+    where: KoboDeploymentWhereUniqueInput
+    data: XOR<KoboDeploymentUpdateWithoutSurveyInput, KoboDeploymentUncheckedUpdateWithoutSurveyInput>
+  }
+
+  export type KoboDeploymentUpdateManyWithWhereWithoutSurveyInput = {
+    where: KoboDeploymentScalarWhereInput
+    data: XOR<KoboDeploymentUpdateManyMutationInput, KoboDeploymentUncheckedUpdateManyWithoutSurveyInput>
+  }
+
+  export type KoboDeploymentScalarWhereInput = {
+    AND?: KoboDeploymentScalarWhereInput | KoboDeploymentScalarWhereInput[]
+    OR?: KoboDeploymentScalarWhereInput[]
+    NOT?: KoboDeploymentScalarWhereInput | KoboDeploymentScalarWhereInput[]
+    id?: StringFilter<"KoboDeployment"> | string
+    surveyId?: StringFilter<"KoboDeployment"> | string
+    koboAssetUid?: StringFilter<"KoboDeployment"> | string
+    koboFormTitle?: StringFilter<"KoboDeployment"> | string
+    deploymentUrl?: StringNullableFilter<"KoboDeployment"> | string | null
+    lastSyncedAt?: DateTimeNullableFilter<"KoboDeployment"> | Date | string | null
+    syncStatus?: EnumKoboSyncStatusFilter<"KoboDeployment"> | $Enums.KoboSyncStatus
+    syncError?: StringNullableFilter<"KoboDeployment"> | string | null
+    submissionCount?: IntFilter<"KoboDeployment"> | number
+    createdAt?: DateTimeFilter<"KoboDeployment"> | Date | string
+    updatedAt?: DateTimeFilter<"KoboDeployment"> | Date | string
+  }
+
   export type SurveyCreateWithoutSubmissionsInput = {
     id?: string
     title: string
@@ -35956,6 +37719,7 @@ export namespace Prisma {
     template: SurveyTemplateCreateNestedOneWithoutSurveysInput
     crisis?: CrisisCreateNestedOneWithoutSurveysInput
     createdBy: UserCreateNestedOneWithoutSurveysInput
+    koboDeployments?: KoboDeploymentCreateNestedManyWithoutSurveyInput
   }
 
   export type SurveyUncheckedCreateWithoutSubmissionsInput = {
@@ -35974,6 +37738,7 @@ export namespace Prisma {
     completedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    koboDeployments?: KoboDeploymentUncheckedCreateNestedManyWithoutSurveyInput
   }
 
   export type SurveyCreateOrConnectWithoutSubmissionsInput = {
@@ -36044,6 +37809,7 @@ export namespace Prisma {
     template?: SurveyTemplateUpdateOneRequiredWithoutSurveysNestedInput
     crisis?: CrisisUpdateOneWithoutSurveysNestedInput
     createdBy?: UserUpdateOneRequiredWithoutSurveysNestedInput
+    koboDeployments?: KoboDeploymentUpdateManyWithoutSurveyNestedInput
   }
 
   export type SurveyUncheckedUpdateWithoutSubmissionsInput = {
@@ -36062,6 +37828,7 @@ export namespace Prisma {
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    koboDeployments?: KoboDeploymentUncheckedUpdateManyWithoutSurveyNestedInput
   }
 
   export type SurveyResponseUpsertWithWhereUniqueWithoutSubmissionInput = {
@@ -36222,6 +37989,98 @@ export namespace Prisma {
     helpText?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type SurveyCreateWithoutKoboDeploymentsInput = {
+    id?: string
+    title: string
+    description?: string | null
+    status?: $Enums.SurveyStatus
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    targetResponses?: number | null
+    isAnonymous?: boolean
+    deployedAt?: Date | string | null
+    completedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    template: SurveyTemplateCreateNestedOneWithoutSurveysInput
+    crisis?: CrisisCreateNestedOneWithoutSurveysInput
+    createdBy: UserCreateNestedOneWithoutSurveysInput
+    submissions?: SurveySubmissionCreateNestedManyWithoutSurveyInput
+  }
+
+  export type SurveyUncheckedCreateWithoutKoboDeploymentsInput = {
+    id?: string
+    templateId: string
+    crisisId?: string | null
+    title: string
+    description?: string | null
+    status?: $Enums.SurveyStatus
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    targetResponses?: number | null
+    isAnonymous?: boolean
+    createdById: string
+    deployedAt?: Date | string | null
+    completedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    submissions?: SurveySubmissionUncheckedCreateNestedManyWithoutSurveyInput
+  }
+
+  export type SurveyCreateOrConnectWithoutKoboDeploymentsInput = {
+    where: SurveyWhereUniqueInput
+    create: XOR<SurveyCreateWithoutKoboDeploymentsInput, SurveyUncheckedCreateWithoutKoboDeploymentsInput>
+  }
+
+  export type SurveyUpsertWithoutKoboDeploymentsInput = {
+    update: XOR<SurveyUpdateWithoutKoboDeploymentsInput, SurveyUncheckedUpdateWithoutKoboDeploymentsInput>
+    create: XOR<SurveyCreateWithoutKoboDeploymentsInput, SurveyUncheckedCreateWithoutKoboDeploymentsInput>
+    where?: SurveyWhereInput
+  }
+
+  export type SurveyUpdateToOneWithWhereWithoutKoboDeploymentsInput = {
+    where?: SurveyWhereInput
+    data: XOR<SurveyUpdateWithoutKoboDeploymentsInput, SurveyUncheckedUpdateWithoutKoboDeploymentsInput>
+  }
+
+  export type SurveyUpdateWithoutKoboDeploymentsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumSurveyStatusFieldUpdateOperationsInput | $Enums.SurveyStatus
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    targetResponses?: NullableIntFieldUpdateOperationsInput | number | null
+    isAnonymous?: BoolFieldUpdateOperationsInput | boolean
+    deployedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    template?: SurveyTemplateUpdateOneRequiredWithoutSurveysNestedInput
+    crisis?: CrisisUpdateOneWithoutSurveysNestedInput
+    createdBy?: UserUpdateOneRequiredWithoutSurveysNestedInput
+    submissions?: SurveySubmissionUpdateManyWithoutSurveyNestedInput
+  }
+
+  export type SurveyUncheckedUpdateWithoutKoboDeploymentsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    templateId?: StringFieldUpdateOperationsInput | string
+    crisisId?: NullableStringFieldUpdateOperationsInput | string | null
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumSurveyStatusFieldUpdateOperationsInput | $Enums.SurveyStatus
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    targetResponses?: NullableIntFieldUpdateOperationsInput | number | null
+    isAnonymous?: BoolFieldUpdateOperationsInput | boolean
+    createdById?: StringFieldUpdateOperationsInput | string
+    deployedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    submissions?: SurveySubmissionUncheckedUpdateManyWithoutSurveyNestedInput
   }
 
   export type ReferralCreateWithoutFromOrganizationInput = {
@@ -37380,6 +39239,7 @@ export namespace Prisma {
     template?: SurveyTemplateUpdateOneRequiredWithoutSurveysNestedInput
     crisis?: CrisisUpdateOneWithoutSurveysNestedInput
     submissions?: SurveySubmissionUpdateManyWithoutSurveyNestedInput
+    koboDeployments?: KoboDeploymentUpdateManyWithoutSurveyNestedInput
   }
 
   export type SurveyUncheckedUpdateWithoutCreatedByInput = {
@@ -37398,6 +39258,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     submissions?: SurveySubmissionUncheckedUpdateManyWithoutSurveyNestedInput
+    koboDeployments?: KoboDeploymentUncheckedUpdateManyWithoutSurveyNestedInput
   }
 
   export type SurveyUncheckedUpdateManyWithoutCreatedByInput = {
@@ -37741,6 +39602,7 @@ export namespace Prisma {
     template?: SurveyTemplateUpdateOneRequiredWithoutSurveysNestedInput
     createdBy?: UserUpdateOneRequiredWithoutSurveysNestedInput
     submissions?: SurveySubmissionUpdateManyWithoutSurveyNestedInput
+    koboDeployments?: KoboDeploymentUpdateManyWithoutSurveyNestedInput
   }
 
   export type SurveyUncheckedUpdateWithoutCrisisInput = {
@@ -37759,6 +39621,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     submissions?: SurveySubmissionUncheckedUpdateManyWithoutSurveyNestedInput
+    koboDeployments?: KoboDeploymentUncheckedUpdateManyWithoutSurveyNestedInput
   }
 
   export type SurveyUncheckedUpdateManyWithoutCrisisInput = {
@@ -37905,6 +39768,7 @@ export namespace Prisma {
     crisis?: CrisisUpdateOneWithoutSurveysNestedInput
     createdBy?: UserUpdateOneRequiredWithoutSurveysNestedInput
     submissions?: SurveySubmissionUpdateManyWithoutSurveyNestedInput
+    koboDeployments?: KoboDeploymentUpdateManyWithoutSurveyNestedInput
   }
 
   export type SurveyUncheckedUpdateWithoutTemplateInput = {
@@ -37923,6 +39787,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     submissions?: SurveySubmissionUncheckedUpdateManyWithoutSurveyNestedInput
+    koboDeployments?: KoboDeploymentUncheckedUpdateManyWithoutSurveyNestedInput
   }
 
   export type SurveyUncheckedUpdateManyWithoutTemplateInput = {
@@ -38007,6 +39872,19 @@ export namespace Prisma {
     isComplete?: boolean
   }
 
+  export type KoboDeploymentCreateManySurveyInput = {
+    id?: string
+    koboAssetUid: string
+    koboFormTitle: string
+    deploymentUrl?: string | null
+    lastSyncedAt?: Date | string | null
+    syncStatus?: $Enums.KoboSyncStatus
+    syncError?: string | null
+    submissionCount?: number
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
   export type SurveySubmissionUpdateWithoutSurveyInput = {
     id?: StringFieldUpdateOperationsInput | string
     respondentId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -38046,6 +39924,45 @@ export namespace Prisma {
     latitude?: NullableFloatFieldUpdateOperationsInput | number | null
     longitude?: NullableFloatFieldUpdateOperationsInput | number | null
     isComplete?: BoolFieldUpdateOperationsInput | boolean
+  }
+
+  export type KoboDeploymentUpdateWithoutSurveyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    koboAssetUid?: StringFieldUpdateOperationsInput | string
+    koboFormTitle?: StringFieldUpdateOperationsInput | string
+    deploymentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: EnumKoboSyncStatusFieldUpdateOperationsInput | $Enums.KoboSyncStatus
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    submissionCount?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type KoboDeploymentUncheckedUpdateWithoutSurveyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    koboAssetUid?: StringFieldUpdateOperationsInput | string
+    koboFormTitle?: StringFieldUpdateOperationsInput | string
+    deploymentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: EnumKoboSyncStatusFieldUpdateOperationsInput | $Enums.KoboSyncStatus
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    submissionCount?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type KoboDeploymentUncheckedUpdateManyWithoutSurveyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    koboAssetUid?: StringFieldUpdateOperationsInput | string
+    koboFormTitle?: StringFieldUpdateOperationsInput | string
+    deploymentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: EnumKoboSyncStatusFieldUpdateOperationsInput | $Enums.KoboSyncStatus
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    submissionCount?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type SurveyResponseCreateManySubmissionInput = {

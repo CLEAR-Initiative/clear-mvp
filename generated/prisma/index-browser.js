@@ -340,6 +340,20 @@ exports.Prisma.SurveyResponseScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.KoboDeploymentScalarFieldEnum = {
+  id: 'id',
+  surveyId: 'surveyId',
+  koboAssetUid: 'koboAssetUid',
+  koboFormTitle: 'koboFormTitle',
+  deploymentUrl: 'deploymentUrl',
+  lastSyncedAt: 'lastSyncedAt',
+  syncStatus: 'syncStatus',
+  syncError: 'syncError',
+  submissionCount: 'submissionCount',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.PartnerOrganizationScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -582,6 +596,13 @@ exports.SubmissionStatus = exports.$Enums.SubmissionStatus = {
   ABANDONED: 'ABANDONED'
 };
 
+exports.KoboSyncStatus = exports.$Enums.KoboSyncStatus = {
+  PENDING: 'PENDING',
+  SYNCING: 'SYNCING',
+  SYNCED: 'SYNCED',
+  FAILED: 'FAILED'
+};
+
 exports.OrganizationType = exports.$Enums.OrganizationType = {
   UN_AGENCY: 'UN_AGENCY',
   INGO: 'INGO',
@@ -643,6 +664,7 @@ exports.Prisma.ModelName = {
   Survey: 'Survey',
   SurveySubmission: 'SurveySubmission',
   SurveyResponse: 'SurveyResponse',
+  KoboDeployment: 'KoboDeployment',
   PartnerOrganization: 'PartnerOrganization',
   Referral: 'Referral',
   ReferralConsent: 'ReferralConsent'

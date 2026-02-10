@@ -302,10 +302,11 @@ model Survey {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
-  template    SurveyTemplate     @relation(fields: [templateId], references: [id])
-  crisis      Crisis?            @relation(fields: [crisisId], references: [id])
-  createdBy   User               @relation("SurveyCreator", fields: [createdById], references: [id])
-  submissions SurveySubmission[]
+  template        SurveyTemplate     @relation(fields: [templateId], references: [id])
+  crisis          Crisis?            @relation(fields: [crisisId], references: [id])
+  createdBy       User               @relation("SurveyCreator", fields: [createdById], references: [id])
+  submissions     SurveySubmission[]
+  koboDeployments KoboDeployment[]
 
   @@index([templateId])
   @@index([crisisId])
@@ -521,6 +522,38 @@ enum FeedbackStatus {
   IN_PROGRESS
   RESOLVED
   CLOSED
+}
+
+// =============================================================================
+// KOBOTOOLBOX INTEGRATION
+// =============================================================================
+
+enum KoboSyncStatus {
+  PENDING
+  SYNCING
+  SYNCED
+  FAILED
+}
+
+model KoboDeployment {
+  id              String         @id @default(cuid())
+  surveyId        String
+  koboAssetUid    String // KoBo asset UID
+  koboFormTitle   String
+  deploymentUrl   String? // Enketo web form URL
+  lastSyncedAt    DateTime?
+  syncStatus      KoboSyncStatus @default(PENDING)
+  syncError       String?
+  submissionCount Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  @@unique([koboAssetUid])
+  @@index([surveyId])
+  @@index([syncStatus])
+  @@map("kobo_deployment")
 }
 
 // =============================================================================

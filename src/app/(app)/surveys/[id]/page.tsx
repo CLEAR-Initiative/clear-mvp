@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { DeploySurveyButton } from "./_components/deploy-survey-button";
+import { KoboExportButton } from "./_components/kobo-export-button";
 
 export const metadata = { title: "Survey Template — CLEAR" };
 
@@ -100,6 +101,11 @@ export default async function SurveyTemplateDetailPage({
             <Link href={`/surveys/${id}/preview`}>Preview</Link>
           </Button>
           <DeploySurveyButton templateId={id} templateName={template.name} />
+          {template.surveys.length > 0 && (
+            <KoboExportButton
+              surveyIds={template.surveys.map((s) => ({ id: s.id, title: s.title }))}
+            />
+          )}
         </div>
       </div>
 
