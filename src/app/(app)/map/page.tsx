@@ -1,15 +1,26 @@
-export default function MapPage() {
+import { api } from "~/trpc/server";
+import { MapView } from "./_components/map-view";
+
+export const metadata = { title: "Crisis Map — CLEAR" };
+
+export default async function MapPage() {
+  const { items } = await api.crisis.list({ limit: 100 });
+
+  const crises = items.map((c) => ({
+    id: c.id,
+    title: c.title,
+    location: c.location,
+    latitude: c.latitude,
+    longitude: c.longitude,
+    severity: c.severity,
+    type: c.type,
+    status: c.status,
+    affectedPopulation: c.affectedPopulation,
+  }));
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Crisis Map</h1>
-        <p className="text-muted-foreground">
-          Geospatial crisis visualization.
-        </p>
-      </div>
-      <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-        Crisis mapping coming in Phase 4.
-      </div>
+    <div className="h-[calc(100vh-2rem)]">
+      <MapView crises={crises} />
     </div>
   );
 }
