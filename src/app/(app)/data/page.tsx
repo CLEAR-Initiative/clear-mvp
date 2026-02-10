@@ -15,10 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { DataPageTabs } from "./_components/data-page-tabs";
+import { DataSourcesPanel } from "./_components/data-sources-panel";
+import { GapAnalysisPanel } from "./_components/gap-analysis-panel";
 
-export const metadata = { title: "Data Feeds — CLEAR" };
+export const metadata = { title: "Data — CLEAR" };
 
-export default async function DataFeedsPage() {
+export default async function DataPage() {
   const [feedStatus, earthquakes, reports] = await Promise.all([
     api.feeds.status(),
     api.feeds.earthquakes({ minMagnitude: 4.5, period: "week" }),
@@ -28,12 +31,40 @@ export default async function DataFeedsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Live Data Feeds</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Data</h1>
         <p className="text-muted-foreground">
-          Real-time external data sources for crisis monitoring
+          Live feeds, registered data sources, and gap analysis
         </p>
       </div>
 
+      <DataPageTabs
+        feedsContent={
+          <FeedsContent
+            feedStatus={feedStatus}
+            earthquakes={earthquakes}
+            reports={reports}
+          />
+        }
+        sourcesContent={<DataSourcesPanel />}
+        gapContent={<GapAnalysisPanel />}
+      />
+    </div>
+  );
+}
+
+/* ── Feed Status Cards + Tables (extracted from previous page) ──────── */
+
+function FeedsContent({
+  feedStatus,
+  earthquakes,
+  reports,
+}: {
+  feedStatus: Awaited<ReturnType<typeof api.feeds.status>>;
+  earthquakes: Awaited<ReturnType<typeof api.feeds.earthquakes>>;
+  reports: Awaited<ReturnType<typeof api.feeds.reliefweb>>;
+}) {
+  return (
+    <>
       {/* Feed Status Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         {feedStatus.map((feed) => (
@@ -180,7 +211,7 @@ export default async function DataFeedsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }
 

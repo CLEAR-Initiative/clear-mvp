@@ -445,6 +445,49 @@ exports.Prisma.VulnerabilityScoreScalarFieldEnum = {
   calculatedAt: 'calculatedAt'
 };
 
+exports.Prisma.DataSourceScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  sourceType: 'sourceType',
+  sector: 'sector',
+  apiEndpoint: 'apiEndpoint',
+  updateFrequency: 'updateFrequency',
+  coverageAreas: 'coverageAreas',
+  populations: 'populations',
+  indicators: 'indicators',
+  qualityLevel: 'qualityLevel',
+  accessLevel: 'accessLevel',
+  isActive: 'isActive',
+  reliabilityScore: 'reliabilityScore',
+  lastSyncedAt: 'lastSyncedAt',
+  lastSyncStatus: 'lastSyncStatus',
+  metadata: 'metadata',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.DataSourceAvailabilityScalarFieldEnum = {
+  id: 'id',
+  sourceId: 'sourceId',
+  isAvailable: 'isAvailable',
+  responseTime: 'responseTime',
+  errorMessage: 'errorMessage',
+  recordCount: 'recordCount',
+  checkedAt: 'checkedAt'
+};
+
+exports.Prisma.DataQualityMetricScalarFieldEnum = {
+  id: 'id',
+  sourceId: 'sourceId',
+  indicator: 'indicator',
+  qualityDimension: 'qualityDimension',
+  score: 'score',
+  threshold: 'threshold',
+  isPassing: 'isPassing',
+  details: 'details',
+  measuredAt: 'measuredAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -703,6 +746,25 @@ exports.RiskCategory = exports.$Enums.RiskCategory = {
   LOW_RISK: 'LOW_RISK'
 };
 
+exports.DataSourceType = exports.$Enums.DataSourceType = {
+  API: 'API',
+  DATABASE: 'DATABASE',
+  SURVEY: 'SURVEY',
+  MANUAL: 'MANUAL',
+  SATELLITE: 'SATELLITE',
+  IOT: 'IOT',
+  SOCIAL_MEDIA: 'SOCIAL_MEDIA',
+  OTHER_SOURCE: 'OTHER_SOURCE'
+};
+
+exports.QualityDimension = exports.$Enums.QualityDimension = {
+  COMPLETENESS: 'COMPLETENESS',
+  ACCURACY: 'ACCURACY',
+  CONSISTENCY: 'CONSISTENCY',
+  TIMELINESS: 'TIMELINESS',
+  VALIDITY: 'VALIDITY'
+};
+
 exports.Prisma.ModelName = {
   User: 'User',
   Session: 'Session',
@@ -724,7 +786,10 @@ exports.Prisma.ModelName = {
   Referral: 'Referral',
   ReferralConsent: 'ReferralConsent',
   QuickProfile: 'QuickProfile',
-  VulnerabilityScore: 'VulnerabilityScore'
+  VulnerabilityScore: 'VulnerabilityScore',
+  DataSource: 'DataSource',
+  DataSourceAvailability: 'DataSourceAvailability',
+  DataQualityMetric: 'DataQualityMetric'
 };
 
 /**

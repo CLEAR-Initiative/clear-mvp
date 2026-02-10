@@ -118,6 +118,21 @@ export type QuickProfile = $Result.DefaultSelection<Prisma.$QuickProfilePayload>
  * 
  */
 export type VulnerabilityScore = $Result.DefaultSelection<Prisma.$VulnerabilityScorePayload>
+/**
+ * Model DataSource
+ * 
+ */
+export type DataSource = $Result.DefaultSelection<Prisma.$DataSourcePayload>
+/**
+ * Model DataSourceAvailability
+ * 
+ */
+export type DataSourceAvailability = $Result.DefaultSelection<Prisma.$DataSourceAvailabilityPayload>
+/**
+ * Model DataQualityMetric
+ * 
+ */
+export type DataQualityMetric = $Result.DefaultSelection<Prisma.$DataQualityMetricPayload>
 
 /**
  * Enums
@@ -435,6 +450,31 @@ export const RiskCategory: {
 
 export type RiskCategory = (typeof RiskCategory)[keyof typeof RiskCategory]
 
+
+export const DataSourceType: {
+  API: 'API',
+  DATABASE: 'DATABASE',
+  SURVEY: 'SURVEY',
+  MANUAL: 'MANUAL',
+  SATELLITE: 'SATELLITE',
+  IOT: 'IOT',
+  SOCIAL_MEDIA: 'SOCIAL_MEDIA',
+  OTHER_SOURCE: 'OTHER_SOURCE'
+};
+
+export type DataSourceType = (typeof DataSourceType)[keyof typeof DataSourceType]
+
+
+export const QualityDimension: {
+  COMPLETENESS: 'COMPLETENESS',
+  ACCURACY: 'ACCURACY',
+  CONSISTENCY: 'CONSISTENCY',
+  TIMELINESS: 'TIMELINESS',
+  VALIDITY: 'VALIDITY'
+};
+
+export type QualityDimension = (typeof QualityDimension)[keyof typeof QualityDimension]
+
 }
 
 export type UserRole = $Enums.UserRole
@@ -548,6 +588,14 @@ export const PrimaryNeedType: typeof $Enums.PrimaryNeedType
 export type RiskCategory = $Enums.RiskCategory
 
 export const RiskCategory: typeof $Enums.RiskCategory
+
+export type DataSourceType = $Enums.DataSourceType
+
+export const DataSourceType: typeof $Enums.DataSourceType
+
+export type QualityDimension = $Enums.QualityDimension
+
+export const QualityDimension: typeof $Enums.QualityDimension
 
 /**
  * ##  Prisma Client ʲˢ
@@ -876,6 +924,36 @@ export class PrismaClient<
     * ```
     */
   get vulnerabilityScore(): Prisma.VulnerabilityScoreDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.dataSource`: Exposes CRUD operations for the **DataSource** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DataSources
+    * const dataSources = await prisma.dataSource.findMany()
+    * ```
+    */
+  get dataSource(): Prisma.DataSourceDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.dataSourceAvailability`: Exposes CRUD operations for the **DataSourceAvailability** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DataSourceAvailabilities
+    * const dataSourceAvailabilities = await prisma.dataSourceAvailability.findMany()
+    * ```
+    */
+  get dataSourceAvailability(): Prisma.DataSourceAvailabilityDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.dataQualityMetric`: Exposes CRUD operations for the **DataQualityMetric** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DataQualityMetrics
+    * const dataQualityMetrics = await prisma.dataQualityMetric.findMany()
+    * ```
+    */
+  get dataQualityMetric(): Prisma.DataQualityMetricDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -1337,7 +1415,10 @@ export namespace Prisma {
     Referral: 'Referral',
     ReferralConsent: 'ReferralConsent',
     QuickProfile: 'QuickProfile',
-    VulnerabilityScore: 'VulnerabilityScore'
+    VulnerabilityScore: 'VulnerabilityScore',
+    DataSource: 'DataSource',
+    DataSourceAvailability: 'DataSourceAvailability',
+    DataQualityMetric: 'DataQualityMetric'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -1356,7 +1437,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "session" | "account" | "verification" | "crisis" | "decision" | "alert" | "auditDecision" | "evidence" | "feedback" | "surveyTemplate" | "surveyQuestion" | "survey" | "surveySubmission" | "surveyResponse" | "koboDeployment" | "partnerOrganization" | "referral" | "referralConsent" | "quickProfile" | "vulnerabilityScore"
+      modelProps: "user" | "session" | "account" | "verification" | "crisis" | "decision" | "alert" | "auditDecision" | "evidence" | "feedback" | "surveyTemplate" | "surveyQuestion" | "survey" | "surveySubmission" | "surveyResponse" | "koboDeployment" | "partnerOrganization" | "referral" | "referralConsent" | "quickProfile" | "vulnerabilityScore" | "dataSource" | "dataSourceAvailability" | "dataQualityMetric"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -2914,6 +2995,228 @@ export namespace Prisma {
           }
         }
       }
+      DataSource: {
+        payload: Prisma.$DataSourcePayload<ExtArgs>
+        fields: Prisma.DataSourceFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DataSourceFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourcePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DataSourceFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourcePayload>
+          }
+          findFirst: {
+            args: Prisma.DataSourceFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourcePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DataSourceFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourcePayload>
+          }
+          findMany: {
+            args: Prisma.DataSourceFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourcePayload>[]
+          }
+          create: {
+            args: Prisma.DataSourceCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourcePayload>
+          }
+          createMany: {
+            args: Prisma.DataSourceCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.DataSourceCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourcePayload>[]
+          }
+          delete: {
+            args: Prisma.DataSourceDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourcePayload>
+          }
+          update: {
+            args: Prisma.DataSourceUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourcePayload>
+          }
+          deleteMany: {
+            args: Prisma.DataSourceDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DataSourceUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.DataSourceUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourcePayload>[]
+          }
+          upsert: {
+            args: Prisma.DataSourceUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourcePayload>
+          }
+          aggregate: {
+            args: Prisma.DataSourceAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDataSource>
+          }
+          groupBy: {
+            args: Prisma.DataSourceGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DataSourceGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DataSourceCountArgs<ExtArgs>
+            result: $Utils.Optional<DataSourceCountAggregateOutputType> | number
+          }
+        }
+      }
+      DataSourceAvailability: {
+        payload: Prisma.$DataSourceAvailabilityPayload<ExtArgs>
+        fields: Prisma.DataSourceAvailabilityFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DataSourceAvailabilityFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourceAvailabilityPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DataSourceAvailabilityFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourceAvailabilityPayload>
+          }
+          findFirst: {
+            args: Prisma.DataSourceAvailabilityFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourceAvailabilityPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DataSourceAvailabilityFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourceAvailabilityPayload>
+          }
+          findMany: {
+            args: Prisma.DataSourceAvailabilityFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourceAvailabilityPayload>[]
+          }
+          create: {
+            args: Prisma.DataSourceAvailabilityCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourceAvailabilityPayload>
+          }
+          createMany: {
+            args: Prisma.DataSourceAvailabilityCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.DataSourceAvailabilityCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourceAvailabilityPayload>[]
+          }
+          delete: {
+            args: Prisma.DataSourceAvailabilityDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourceAvailabilityPayload>
+          }
+          update: {
+            args: Prisma.DataSourceAvailabilityUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourceAvailabilityPayload>
+          }
+          deleteMany: {
+            args: Prisma.DataSourceAvailabilityDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DataSourceAvailabilityUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.DataSourceAvailabilityUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourceAvailabilityPayload>[]
+          }
+          upsert: {
+            args: Prisma.DataSourceAvailabilityUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataSourceAvailabilityPayload>
+          }
+          aggregate: {
+            args: Prisma.DataSourceAvailabilityAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDataSourceAvailability>
+          }
+          groupBy: {
+            args: Prisma.DataSourceAvailabilityGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DataSourceAvailabilityGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DataSourceAvailabilityCountArgs<ExtArgs>
+            result: $Utils.Optional<DataSourceAvailabilityCountAggregateOutputType> | number
+          }
+        }
+      }
+      DataQualityMetric: {
+        payload: Prisma.$DataQualityMetricPayload<ExtArgs>
+        fields: Prisma.DataQualityMetricFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DataQualityMetricFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataQualityMetricPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DataQualityMetricFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataQualityMetricPayload>
+          }
+          findFirst: {
+            args: Prisma.DataQualityMetricFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataQualityMetricPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DataQualityMetricFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataQualityMetricPayload>
+          }
+          findMany: {
+            args: Prisma.DataQualityMetricFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataQualityMetricPayload>[]
+          }
+          create: {
+            args: Prisma.DataQualityMetricCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataQualityMetricPayload>
+          }
+          createMany: {
+            args: Prisma.DataQualityMetricCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.DataQualityMetricCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataQualityMetricPayload>[]
+          }
+          delete: {
+            args: Prisma.DataQualityMetricDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataQualityMetricPayload>
+          }
+          update: {
+            args: Prisma.DataQualityMetricUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataQualityMetricPayload>
+          }
+          deleteMany: {
+            args: Prisma.DataQualityMetricDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DataQualityMetricUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.DataQualityMetricUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataQualityMetricPayload>[]
+          }
+          upsert: {
+            args: Prisma.DataQualityMetricUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DataQualityMetricPayload>
+          }
+          aggregate: {
+            args: Prisma.DataQualityMetricAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDataQualityMetric>
+          }
+          groupBy: {
+            args: Prisma.DataQualityMetricGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DataQualityMetricGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DataQualityMetricCountArgs<ExtArgs>
+            result: $Utils.Optional<DataQualityMetricCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -3031,6 +3334,9 @@ export namespace Prisma {
     referralConsent?: ReferralConsentOmit
     quickProfile?: QuickProfileOmit
     vulnerabilityScore?: VulnerabilityScoreOmit
+    dataSource?: DataSourceOmit
+    dataSourceAvailability?: DataSourceAvailabilityOmit
+    dataQualityMetric?: DataQualityMetricOmit
   }
 
   /* Types for Logging */
@@ -3517,6 +3823,46 @@ export namespace Prisma {
    */
   export type ReferralCountOutputTypeCountConsentsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ReferralConsentWhereInput
+  }
+
+
+  /**
+   * Count Type DataSourceCountOutputType
+   */
+
+  export type DataSourceCountOutputType = {
+    availabilityLogs: number
+    qualityMetrics: number
+  }
+
+  export type DataSourceCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    availabilityLogs?: boolean | DataSourceCountOutputTypeCountAvailabilityLogsArgs
+    qualityMetrics?: boolean | DataSourceCountOutputTypeCountQualityMetricsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * DataSourceCountOutputType without action
+   */
+  export type DataSourceCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceCountOutputType
+     */
+    select?: DataSourceCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * DataSourceCountOutputType without action
+   */
+  export type DataSourceCountOutputTypeCountAvailabilityLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DataSourceAvailabilityWhereInput
+  }
+
+  /**
+   * DataSourceCountOutputType without action
+   */
+  export type DataSourceCountOutputTypeCountQualityMetricsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DataQualityMetricWhereInput
   }
 
 
@@ -28980,6 +29326,3557 @@ export namespace Prisma {
 
 
   /**
+   * Model DataSource
+   */
+
+  export type AggregateDataSource = {
+    _count: DataSourceCountAggregateOutputType | null
+    _avg: DataSourceAvgAggregateOutputType | null
+    _sum: DataSourceSumAggregateOutputType | null
+    _min: DataSourceMinAggregateOutputType | null
+    _max: DataSourceMaxAggregateOutputType | null
+  }
+
+  export type DataSourceAvgAggregateOutputType = {
+    reliabilityScore: number | null
+  }
+
+  export type DataSourceSumAggregateOutputType = {
+    reliabilityScore: number | null
+  }
+
+  export type DataSourceMinAggregateOutputType = {
+    id: string | null
+    name: string | null
+    sourceType: $Enums.DataSourceType | null
+    sector: string | null
+    apiEndpoint: string | null
+    updateFrequency: string | null
+    qualityLevel: string | null
+    accessLevel: string | null
+    isActive: boolean | null
+    reliabilityScore: number | null
+    lastSyncedAt: Date | null
+    lastSyncStatus: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DataSourceMaxAggregateOutputType = {
+    id: string | null
+    name: string | null
+    sourceType: $Enums.DataSourceType | null
+    sector: string | null
+    apiEndpoint: string | null
+    updateFrequency: string | null
+    qualityLevel: string | null
+    accessLevel: string | null
+    isActive: boolean | null
+    reliabilityScore: number | null
+    lastSyncedAt: Date | null
+    lastSyncStatus: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DataSourceCountAggregateOutputType = {
+    id: number
+    name: number
+    sourceType: number
+    sector: number
+    apiEndpoint: number
+    updateFrequency: number
+    coverageAreas: number
+    populations: number
+    indicators: number
+    qualityLevel: number
+    accessLevel: number
+    isActive: number
+    reliabilityScore: number
+    lastSyncedAt: number
+    lastSyncStatus: number
+    metadata: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type DataSourceAvgAggregateInputType = {
+    reliabilityScore?: true
+  }
+
+  export type DataSourceSumAggregateInputType = {
+    reliabilityScore?: true
+  }
+
+  export type DataSourceMinAggregateInputType = {
+    id?: true
+    name?: true
+    sourceType?: true
+    sector?: true
+    apiEndpoint?: true
+    updateFrequency?: true
+    qualityLevel?: true
+    accessLevel?: true
+    isActive?: true
+    reliabilityScore?: true
+    lastSyncedAt?: true
+    lastSyncStatus?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DataSourceMaxAggregateInputType = {
+    id?: true
+    name?: true
+    sourceType?: true
+    sector?: true
+    apiEndpoint?: true
+    updateFrequency?: true
+    qualityLevel?: true
+    accessLevel?: true
+    isActive?: true
+    reliabilityScore?: true
+    lastSyncedAt?: true
+    lastSyncStatus?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DataSourceCountAggregateInputType = {
+    id?: true
+    name?: true
+    sourceType?: true
+    sector?: true
+    apiEndpoint?: true
+    updateFrequency?: true
+    coverageAreas?: true
+    populations?: true
+    indicators?: true
+    qualityLevel?: true
+    accessLevel?: true
+    isActive?: true
+    reliabilityScore?: true
+    lastSyncedAt?: true
+    lastSyncStatus?: true
+    metadata?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type DataSourceAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DataSource to aggregate.
+     */
+    where?: DataSourceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DataSources to fetch.
+     */
+    orderBy?: DataSourceOrderByWithRelationInput | DataSourceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: DataSourceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DataSources from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DataSources.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned DataSources
+    **/
+    _count?: true | DataSourceCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: DataSourceAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: DataSourceSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: DataSourceMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: DataSourceMaxAggregateInputType
+  }
+
+  export type GetDataSourceAggregateType<T extends DataSourceAggregateArgs> = {
+        [P in keyof T & keyof AggregateDataSource]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDataSource[P]>
+      : GetScalarType<T[P], AggregateDataSource[P]>
+  }
+
+
+
+
+  export type DataSourceGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DataSourceWhereInput
+    orderBy?: DataSourceOrderByWithAggregationInput | DataSourceOrderByWithAggregationInput[]
+    by: DataSourceScalarFieldEnum[] | DataSourceScalarFieldEnum
+    having?: DataSourceScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DataSourceCountAggregateInputType | true
+    _avg?: DataSourceAvgAggregateInputType
+    _sum?: DataSourceSumAggregateInputType
+    _min?: DataSourceMinAggregateInputType
+    _max?: DataSourceMaxAggregateInputType
+  }
+
+  export type DataSourceGroupByOutputType = {
+    id: string
+    name: string
+    sourceType: $Enums.DataSourceType
+    sector: string
+    apiEndpoint: string | null
+    updateFrequency: string
+    coverageAreas: JsonValue
+    populations: JsonValue
+    indicators: JsonValue
+    qualityLevel: string
+    accessLevel: string
+    isActive: boolean
+    reliabilityScore: number
+    lastSyncedAt: Date | null
+    lastSyncStatus: string | null
+    metadata: JsonValue | null
+    createdAt: Date
+    updatedAt: Date
+    _count: DataSourceCountAggregateOutputType | null
+    _avg: DataSourceAvgAggregateOutputType | null
+    _sum: DataSourceSumAggregateOutputType | null
+    _min: DataSourceMinAggregateOutputType | null
+    _max: DataSourceMaxAggregateOutputType | null
+  }
+
+  type GetDataSourceGroupByPayload<T extends DataSourceGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DataSourceGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DataSourceGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DataSourceGroupByOutputType[P]>
+            : GetScalarType<T[P], DataSourceGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DataSourceSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    sourceType?: boolean
+    sector?: boolean
+    apiEndpoint?: boolean
+    updateFrequency?: boolean
+    coverageAreas?: boolean
+    populations?: boolean
+    indicators?: boolean
+    qualityLevel?: boolean
+    accessLevel?: boolean
+    isActive?: boolean
+    reliabilityScore?: boolean
+    lastSyncedAt?: boolean
+    lastSyncStatus?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    availabilityLogs?: boolean | DataSource$availabilityLogsArgs<ExtArgs>
+    qualityMetrics?: boolean | DataSource$qualityMetricsArgs<ExtArgs>
+    _count?: boolean | DataSourceCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["dataSource"]>
+
+  export type DataSourceSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    sourceType?: boolean
+    sector?: boolean
+    apiEndpoint?: boolean
+    updateFrequency?: boolean
+    coverageAreas?: boolean
+    populations?: boolean
+    indicators?: boolean
+    qualityLevel?: boolean
+    accessLevel?: boolean
+    isActive?: boolean
+    reliabilityScore?: boolean
+    lastSyncedAt?: boolean
+    lastSyncStatus?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["dataSource"]>
+
+  export type DataSourceSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    sourceType?: boolean
+    sector?: boolean
+    apiEndpoint?: boolean
+    updateFrequency?: boolean
+    coverageAreas?: boolean
+    populations?: boolean
+    indicators?: boolean
+    qualityLevel?: boolean
+    accessLevel?: boolean
+    isActive?: boolean
+    reliabilityScore?: boolean
+    lastSyncedAt?: boolean
+    lastSyncStatus?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["dataSource"]>
+
+  export type DataSourceSelectScalar = {
+    id?: boolean
+    name?: boolean
+    sourceType?: boolean
+    sector?: boolean
+    apiEndpoint?: boolean
+    updateFrequency?: boolean
+    coverageAreas?: boolean
+    populations?: boolean
+    indicators?: boolean
+    qualityLevel?: boolean
+    accessLevel?: boolean
+    isActive?: boolean
+    reliabilityScore?: boolean
+    lastSyncedAt?: boolean
+    lastSyncStatus?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type DataSourceOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "sourceType" | "sector" | "apiEndpoint" | "updateFrequency" | "coverageAreas" | "populations" | "indicators" | "qualityLevel" | "accessLevel" | "isActive" | "reliabilityScore" | "lastSyncedAt" | "lastSyncStatus" | "metadata" | "createdAt" | "updatedAt", ExtArgs["result"]["dataSource"]>
+  export type DataSourceInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    availabilityLogs?: boolean | DataSource$availabilityLogsArgs<ExtArgs>
+    qualityMetrics?: boolean | DataSource$qualityMetricsArgs<ExtArgs>
+    _count?: boolean | DataSourceCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type DataSourceIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+  export type DataSourceIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+
+  export type $DataSourcePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "DataSource"
+    objects: {
+      availabilityLogs: Prisma.$DataSourceAvailabilityPayload<ExtArgs>[]
+      qualityMetrics: Prisma.$DataQualityMetricPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      name: string
+      sourceType: $Enums.DataSourceType
+      sector: string
+      apiEndpoint: string | null
+      updateFrequency: string
+      coverageAreas: Prisma.JsonValue
+      populations: Prisma.JsonValue
+      indicators: Prisma.JsonValue
+      qualityLevel: string
+      accessLevel: string
+      isActive: boolean
+      reliabilityScore: number
+      lastSyncedAt: Date | null
+      lastSyncStatus: string | null
+      metadata: Prisma.JsonValue | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["dataSource"]>
+    composites: {}
+  }
+
+  type DataSourceGetPayload<S extends boolean | null | undefined | DataSourceDefaultArgs> = $Result.GetResult<Prisma.$DataSourcePayload, S>
+
+  type DataSourceCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DataSourceFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DataSourceCountAggregateInputType | true
+    }
+
+  export interface DataSourceDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DataSource'], meta: { name: 'DataSource' } }
+    /**
+     * Find zero or one DataSource that matches the filter.
+     * @param {DataSourceFindUniqueArgs} args - Arguments to find a DataSource
+     * @example
+     * // Get one DataSource
+     * const dataSource = await prisma.dataSource.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DataSourceFindUniqueArgs>(args: SelectSubset<T, DataSourceFindUniqueArgs<ExtArgs>>): Prisma__DataSourceClient<$Result.GetResult<Prisma.$DataSourcePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one DataSource that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {DataSourceFindUniqueOrThrowArgs} args - Arguments to find a DataSource
+     * @example
+     * // Get one DataSource
+     * const dataSource = await prisma.dataSource.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DataSourceFindUniqueOrThrowArgs>(args: SelectSubset<T, DataSourceFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DataSourceClient<$Result.GetResult<Prisma.$DataSourcePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DataSource that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceFindFirstArgs} args - Arguments to find a DataSource
+     * @example
+     * // Get one DataSource
+     * const dataSource = await prisma.dataSource.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DataSourceFindFirstArgs>(args?: SelectSubset<T, DataSourceFindFirstArgs<ExtArgs>>): Prisma__DataSourceClient<$Result.GetResult<Prisma.$DataSourcePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DataSource that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceFindFirstOrThrowArgs} args - Arguments to find a DataSource
+     * @example
+     * // Get one DataSource
+     * const dataSource = await prisma.dataSource.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DataSourceFindFirstOrThrowArgs>(args?: SelectSubset<T, DataSourceFindFirstOrThrowArgs<ExtArgs>>): Prisma__DataSourceClient<$Result.GetResult<Prisma.$DataSourcePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more DataSources that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all DataSources
+     * const dataSources = await prisma.dataSource.findMany()
+     * 
+     * // Get first 10 DataSources
+     * const dataSources = await prisma.dataSource.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const dataSourceWithIdOnly = await prisma.dataSource.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends DataSourceFindManyArgs>(args?: SelectSubset<T, DataSourceFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DataSourcePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a DataSource.
+     * @param {DataSourceCreateArgs} args - Arguments to create a DataSource.
+     * @example
+     * // Create one DataSource
+     * const DataSource = await prisma.dataSource.create({
+     *   data: {
+     *     // ... data to create a DataSource
+     *   }
+     * })
+     * 
+     */
+    create<T extends DataSourceCreateArgs>(args: SelectSubset<T, DataSourceCreateArgs<ExtArgs>>): Prisma__DataSourceClient<$Result.GetResult<Prisma.$DataSourcePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many DataSources.
+     * @param {DataSourceCreateManyArgs} args - Arguments to create many DataSources.
+     * @example
+     * // Create many DataSources
+     * const dataSource = await prisma.dataSource.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends DataSourceCreateManyArgs>(args?: SelectSubset<T, DataSourceCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many DataSources and returns the data saved in the database.
+     * @param {DataSourceCreateManyAndReturnArgs} args - Arguments to create many DataSources.
+     * @example
+     * // Create many DataSources
+     * const dataSource = await prisma.dataSource.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many DataSources and only return the `id`
+     * const dataSourceWithIdOnly = await prisma.dataSource.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends DataSourceCreateManyAndReturnArgs>(args?: SelectSubset<T, DataSourceCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DataSourcePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a DataSource.
+     * @param {DataSourceDeleteArgs} args - Arguments to delete one DataSource.
+     * @example
+     * // Delete one DataSource
+     * const DataSource = await prisma.dataSource.delete({
+     *   where: {
+     *     // ... filter to delete one DataSource
+     *   }
+     * })
+     * 
+     */
+    delete<T extends DataSourceDeleteArgs>(args: SelectSubset<T, DataSourceDeleteArgs<ExtArgs>>): Prisma__DataSourceClient<$Result.GetResult<Prisma.$DataSourcePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one DataSource.
+     * @param {DataSourceUpdateArgs} args - Arguments to update one DataSource.
+     * @example
+     * // Update one DataSource
+     * const dataSource = await prisma.dataSource.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends DataSourceUpdateArgs>(args: SelectSubset<T, DataSourceUpdateArgs<ExtArgs>>): Prisma__DataSourceClient<$Result.GetResult<Prisma.$DataSourcePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more DataSources.
+     * @param {DataSourceDeleteManyArgs} args - Arguments to filter DataSources to delete.
+     * @example
+     * // Delete a few DataSources
+     * const { count } = await prisma.dataSource.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends DataSourceDeleteManyArgs>(args?: SelectSubset<T, DataSourceDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DataSources.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many DataSources
+     * const dataSource = await prisma.dataSource.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends DataSourceUpdateManyArgs>(args: SelectSubset<T, DataSourceUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DataSources and returns the data updated in the database.
+     * @param {DataSourceUpdateManyAndReturnArgs} args - Arguments to update many DataSources.
+     * @example
+     * // Update many DataSources
+     * const dataSource = await prisma.dataSource.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more DataSources and only return the `id`
+     * const dataSourceWithIdOnly = await prisma.dataSource.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends DataSourceUpdateManyAndReturnArgs>(args: SelectSubset<T, DataSourceUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DataSourcePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one DataSource.
+     * @param {DataSourceUpsertArgs} args - Arguments to update or create a DataSource.
+     * @example
+     * // Update or create a DataSource
+     * const dataSource = await prisma.dataSource.upsert({
+     *   create: {
+     *     // ... data to create a DataSource
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the DataSource we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DataSourceUpsertArgs>(args: SelectSubset<T, DataSourceUpsertArgs<ExtArgs>>): Prisma__DataSourceClient<$Result.GetResult<Prisma.$DataSourcePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of DataSources.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceCountArgs} args - Arguments to filter DataSources to count.
+     * @example
+     * // Count the number of DataSources
+     * const count = await prisma.dataSource.count({
+     *   where: {
+     *     // ... the filter for the DataSources we want to count
+     *   }
+     * })
+    **/
+    count<T extends DataSourceCountArgs>(
+      args?: Subset<T, DataSourceCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DataSourceCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a DataSource.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DataSourceAggregateArgs>(args: Subset<T, DataSourceAggregateArgs>): Prisma.PrismaPromise<GetDataSourceAggregateType<T>>
+
+    /**
+     * Group by DataSource.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends DataSourceGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DataSourceGroupByArgs['orderBy'] }
+        : { orderBy?: DataSourceGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DataSourceGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDataSourceGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the DataSource model
+   */
+  readonly fields: DataSourceFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for DataSource.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DataSourceClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    availabilityLogs<T extends DataSource$availabilityLogsArgs<ExtArgs> = {}>(args?: Subset<T, DataSource$availabilityLogsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DataSourceAvailabilityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    qualityMetrics<T extends DataSource$qualityMetricsArgs<ExtArgs> = {}>(args?: Subset<T, DataSource$qualityMetricsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DataQualityMetricPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the DataSource model
+   */
+  interface DataSourceFieldRefs {
+    readonly id: FieldRef<"DataSource", 'String'>
+    readonly name: FieldRef<"DataSource", 'String'>
+    readonly sourceType: FieldRef<"DataSource", 'DataSourceType'>
+    readonly sector: FieldRef<"DataSource", 'String'>
+    readonly apiEndpoint: FieldRef<"DataSource", 'String'>
+    readonly updateFrequency: FieldRef<"DataSource", 'String'>
+    readonly coverageAreas: FieldRef<"DataSource", 'Json'>
+    readonly populations: FieldRef<"DataSource", 'Json'>
+    readonly indicators: FieldRef<"DataSource", 'Json'>
+    readonly qualityLevel: FieldRef<"DataSource", 'String'>
+    readonly accessLevel: FieldRef<"DataSource", 'String'>
+    readonly isActive: FieldRef<"DataSource", 'Boolean'>
+    readonly reliabilityScore: FieldRef<"DataSource", 'Float'>
+    readonly lastSyncedAt: FieldRef<"DataSource", 'DateTime'>
+    readonly lastSyncStatus: FieldRef<"DataSource", 'String'>
+    readonly metadata: FieldRef<"DataSource", 'Json'>
+    readonly createdAt: FieldRef<"DataSource", 'DateTime'>
+    readonly updatedAt: FieldRef<"DataSource", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * DataSource findUnique
+   */
+  export type DataSourceFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSource
+     */
+    select?: DataSourceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSource
+     */
+    omit?: DataSourceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceInclude<ExtArgs> | null
+    /**
+     * Filter, which DataSource to fetch.
+     */
+    where: DataSourceWhereUniqueInput
+  }
+
+  /**
+   * DataSource findUniqueOrThrow
+   */
+  export type DataSourceFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSource
+     */
+    select?: DataSourceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSource
+     */
+    omit?: DataSourceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceInclude<ExtArgs> | null
+    /**
+     * Filter, which DataSource to fetch.
+     */
+    where: DataSourceWhereUniqueInput
+  }
+
+  /**
+   * DataSource findFirst
+   */
+  export type DataSourceFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSource
+     */
+    select?: DataSourceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSource
+     */
+    omit?: DataSourceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceInclude<ExtArgs> | null
+    /**
+     * Filter, which DataSource to fetch.
+     */
+    where?: DataSourceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DataSources to fetch.
+     */
+    orderBy?: DataSourceOrderByWithRelationInput | DataSourceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DataSources.
+     */
+    cursor?: DataSourceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DataSources from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DataSources.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DataSources.
+     */
+    distinct?: DataSourceScalarFieldEnum | DataSourceScalarFieldEnum[]
+  }
+
+  /**
+   * DataSource findFirstOrThrow
+   */
+  export type DataSourceFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSource
+     */
+    select?: DataSourceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSource
+     */
+    omit?: DataSourceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceInclude<ExtArgs> | null
+    /**
+     * Filter, which DataSource to fetch.
+     */
+    where?: DataSourceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DataSources to fetch.
+     */
+    orderBy?: DataSourceOrderByWithRelationInput | DataSourceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DataSources.
+     */
+    cursor?: DataSourceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DataSources from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DataSources.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DataSources.
+     */
+    distinct?: DataSourceScalarFieldEnum | DataSourceScalarFieldEnum[]
+  }
+
+  /**
+   * DataSource findMany
+   */
+  export type DataSourceFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSource
+     */
+    select?: DataSourceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSource
+     */
+    omit?: DataSourceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceInclude<ExtArgs> | null
+    /**
+     * Filter, which DataSources to fetch.
+     */
+    where?: DataSourceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DataSources to fetch.
+     */
+    orderBy?: DataSourceOrderByWithRelationInput | DataSourceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing DataSources.
+     */
+    cursor?: DataSourceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DataSources from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DataSources.
+     */
+    skip?: number
+    distinct?: DataSourceScalarFieldEnum | DataSourceScalarFieldEnum[]
+  }
+
+  /**
+   * DataSource create
+   */
+  export type DataSourceCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSource
+     */
+    select?: DataSourceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSource
+     */
+    omit?: DataSourceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceInclude<ExtArgs> | null
+    /**
+     * The data needed to create a DataSource.
+     */
+    data: XOR<DataSourceCreateInput, DataSourceUncheckedCreateInput>
+  }
+
+  /**
+   * DataSource createMany
+   */
+  export type DataSourceCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many DataSources.
+     */
+    data: DataSourceCreateManyInput | DataSourceCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DataSource createManyAndReturn
+   */
+  export type DataSourceCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSource
+     */
+    select?: DataSourceSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSource
+     */
+    omit?: DataSourceOmit<ExtArgs> | null
+    /**
+     * The data used to create many DataSources.
+     */
+    data: DataSourceCreateManyInput | DataSourceCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DataSource update
+   */
+  export type DataSourceUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSource
+     */
+    select?: DataSourceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSource
+     */
+    omit?: DataSourceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceInclude<ExtArgs> | null
+    /**
+     * The data needed to update a DataSource.
+     */
+    data: XOR<DataSourceUpdateInput, DataSourceUncheckedUpdateInput>
+    /**
+     * Choose, which DataSource to update.
+     */
+    where: DataSourceWhereUniqueInput
+  }
+
+  /**
+   * DataSource updateMany
+   */
+  export type DataSourceUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update DataSources.
+     */
+    data: XOR<DataSourceUpdateManyMutationInput, DataSourceUncheckedUpdateManyInput>
+    /**
+     * Filter which DataSources to update
+     */
+    where?: DataSourceWhereInput
+    /**
+     * Limit how many DataSources to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * DataSource updateManyAndReturn
+   */
+  export type DataSourceUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSource
+     */
+    select?: DataSourceSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSource
+     */
+    omit?: DataSourceOmit<ExtArgs> | null
+    /**
+     * The data used to update DataSources.
+     */
+    data: XOR<DataSourceUpdateManyMutationInput, DataSourceUncheckedUpdateManyInput>
+    /**
+     * Filter which DataSources to update
+     */
+    where?: DataSourceWhereInput
+    /**
+     * Limit how many DataSources to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * DataSource upsert
+   */
+  export type DataSourceUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSource
+     */
+    select?: DataSourceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSource
+     */
+    omit?: DataSourceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceInclude<ExtArgs> | null
+    /**
+     * The filter to search for the DataSource to update in case it exists.
+     */
+    where: DataSourceWhereUniqueInput
+    /**
+     * In case the DataSource found by the `where` argument doesn't exist, create a new DataSource with this data.
+     */
+    create: XOR<DataSourceCreateInput, DataSourceUncheckedCreateInput>
+    /**
+     * In case the DataSource was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DataSourceUpdateInput, DataSourceUncheckedUpdateInput>
+  }
+
+  /**
+   * DataSource delete
+   */
+  export type DataSourceDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSource
+     */
+    select?: DataSourceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSource
+     */
+    omit?: DataSourceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceInclude<ExtArgs> | null
+    /**
+     * Filter which DataSource to delete.
+     */
+    where: DataSourceWhereUniqueInput
+  }
+
+  /**
+   * DataSource deleteMany
+   */
+  export type DataSourceDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DataSources to delete
+     */
+    where?: DataSourceWhereInput
+    /**
+     * Limit how many DataSources to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * DataSource.availabilityLogs
+   */
+  export type DataSource$availabilityLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceAvailability
+     */
+    select?: DataSourceAvailabilitySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSourceAvailability
+     */
+    omit?: DataSourceAvailabilityOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceAvailabilityInclude<ExtArgs> | null
+    where?: DataSourceAvailabilityWhereInput
+    orderBy?: DataSourceAvailabilityOrderByWithRelationInput | DataSourceAvailabilityOrderByWithRelationInput[]
+    cursor?: DataSourceAvailabilityWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DataSourceAvailabilityScalarFieldEnum | DataSourceAvailabilityScalarFieldEnum[]
+  }
+
+  /**
+   * DataSource.qualityMetrics
+   */
+  export type DataSource$qualityMetricsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataQualityMetric
+     */
+    select?: DataQualityMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataQualityMetric
+     */
+    omit?: DataQualityMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataQualityMetricInclude<ExtArgs> | null
+    where?: DataQualityMetricWhereInput
+    orderBy?: DataQualityMetricOrderByWithRelationInput | DataQualityMetricOrderByWithRelationInput[]
+    cursor?: DataQualityMetricWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DataQualityMetricScalarFieldEnum | DataQualityMetricScalarFieldEnum[]
+  }
+
+  /**
+   * DataSource without action
+   */
+  export type DataSourceDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSource
+     */
+    select?: DataSourceSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSource
+     */
+    omit?: DataSourceOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model DataSourceAvailability
+   */
+
+  export type AggregateDataSourceAvailability = {
+    _count: DataSourceAvailabilityCountAggregateOutputType | null
+    _avg: DataSourceAvailabilityAvgAggregateOutputType | null
+    _sum: DataSourceAvailabilitySumAggregateOutputType | null
+    _min: DataSourceAvailabilityMinAggregateOutputType | null
+    _max: DataSourceAvailabilityMaxAggregateOutputType | null
+  }
+
+  export type DataSourceAvailabilityAvgAggregateOutputType = {
+    responseTime: number | null
+    recordCount: number | null
+  }
+
+  export type DataSourceAvailabilitySumAggregateOutputType = {
+    responseTime: number | null
+    recordCount: number | null
+  }
+
+  export type DataSourceAvailabilityMinAggregateOutputType = {
+    id: string | null
+    sourceId: string | null
+    isAvailable: boolean | null
+    responseTime: number | null
+    errorMessage: string | null
+    recordCount: number | null
+    checkedAt: Date | null
+  }
+
+  export type DataSourceAvailabilityMaxAggregateOutputType = {
+    id: string | null
+    sourceId: string | null
+    isAvailable: boolean | null
+    responseTime: number | null
+    errorMessage: string | null
+    recordCount: number | null
+    checkedAt: Date | null
+  }
+
+  export type DataSourceAvailabilityCountAggregateOutputType = {
+    id: number
+    sourceId: number
+    isAvailable: number
+    responseTime: number
+    errorMessage: number
+    recordCount: number
+    checkedAt: number
+    _all: number
+  }
+
+
+  export type DataSourceAvailabilityAvgAggregateInputType = {
+    responseTime?: true
+    recordCount?: true
+  }
+
+  export type DataSourceAvailabilitySumAggregateInputType = {
+    responseTime?: true
+    recordCount?: true
+  }
+
+  export type DataSourceAvailabilityMinAggregateInputType = {
+    id?: true
+    sourceId?: true
+    isAvailable?: true
+    responseTime?: true
+    errorMessage?: true
+    recordCount?: true
+    checkedAt?: true
+  }
+
+  export type DataSourceAvailabilityMaxAggregateInputType = {
+    id?: true
+    sourceId?: true
+    isAvailable?: true
+    responseTime?: true
+    errorMessage?: true
+    recordCount?: true
+    checkedAt?: true
+  }
+
+  export type DataSourceAvailabilityCountAggregateInputType = {
+    id?: true
+    sourceId?: true
+    isAvailable?: true
+    responseTime?: true
+    errorMessage?: true
+    recordCount?: true
+    checkedAt?: true
+    _all?: true
+  }
+
+  export type DataSourceAvailabilityAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DataSourceAvailability to aggregate.
+     */
+    where?: DataSourceAvailabilityWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DataSourceAvailabilities to fetch.
+     */
+    orderBy?: DataSourceAvailabilityOrderByWithRelationInput | DataSourceAvailabilityOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: DataSourceAvailabilityWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DataSourceAvailabilities from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DataSourceAvailabilities.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned DataSourceAvailabilities
+    **/
+    _count?: true | DataSourceAvailabilityCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: DataSourceAvailabilityAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: DataSourceAvailabilitySumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: DataSourceAvailabilityMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: DataSourceAvailabilityMaxAggregateInputType
+  }
+
+  export type GetDataSourceAvailabilityAggregateType<T extends DataSourceAvailabilityAggregateArgs> = {
+        [P in keyof T & keyof AggregateDataSourceAvailability]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDataSourceAvailability[P]>
+      : GetScalarType<T[P], AggregateDataSourceAvailability[P]>
+  }
+
+
+
+
+  export type DataSourceAvailabilityGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DataSourceAvailabilityWhereInput
+    orderBy?: DataSourceAvailabilityOrderByWithAggregationInput | DataSourceAvailabilityOrderByWithAggregationInput[]
+    by: DataSourceAvailabilityScalarFieldEnum[] | DataSourceAvailabilityScalarFieldEnum
+    having?: DataSourceAvailabilityScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DataSourceAvailabilityCountAggregateInputType | true
+    _avg?: DataSourceAvailabilityAvgAggregateInputType
+    _sum?: DataSourceAvailabilitySumAggregateInputType
+    _min?: DataSourceAvailabilityMinAggregateInputType
+    _max?: DataSourceAvailabilityMaxAggregateInputType
+  }
+
+  export type DataSourceAvailabilityGroupByOutputType = {
+    id: string
+    sourceId: string
+    isAvailable: boolean
+    responseTime: number | null
+    errorMessage: string | null
+    recordCount: number | null
+    checkedAt: Date
+    _count: DataSourceAvailabilityCountAggregateOutputType | null
+    _avg: DataSourceAvailabilityAvgAggregateOutputType | null
+    _sum: DataSourceAvailabilitySumAggregateOutputType | null
+    _min: DataSourceAvailabilityMinAggregateOutputType | null
+    _max: DataSourceAvailabilityMaxAggregateOutputType | null
+  }
+
+  type GetDataSourceAvailabilityGroupByPayload<T extends DataSourceAvailabilityGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DataSourceAvailabilityGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DataSourceAvailabilityGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DataSourceAvailabilityGroupByOutputType[P]>
+            : GetScalarType<T[P], DataSourceAvailabilityGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DataSourceAvailabilitySelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    sourceId?: boolean
+    isAvailable?: boolean
+    responseTime?: boolean
+    errorMessage?: boolean
+    recordCount?: boolean
+    checkedAt?: boolean
+    source?: boolean | DataSourceDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["dataSourceAvailability"]>
+
+  export type DataSourceAvailabilitySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    sourceId?: boolean
+    isAvailable?: boolean
+    responseTime?: boolean
+    errorMessage?: boolean
+    recordCount?: boolean
+    checkedAt?: boolean
+    source?: boolean | DataSourceDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["dataSourceAvailability"]>
+
+  export type DataSourceAvailabilitySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    sourceId?: boolean
+    isAvailable?: boolean
+    responseTime?: boolean
+    errorMessage?: boolean
+    recordCount?: boolean
+    checkedAt?: boolean
+    source?: boolean | DataSourceDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["dataSourceAvailability"]>
+
+  export type DataSourceAvailabilitySelectScalar = {
+    id?: boolean
+    sourceId?: boolean
+    isAvailable?: boolean
+    responseTime?: boolean
+    errorMessage?: boolean
+    recordCount?: boolean
+    checkedAt?: boolean
+  }
+
+  export type DataSourceAvailabilityOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "sourceId" | "isAvailable" | "responseTime" | "errorMessage" | "recordCount" | "checkedAt", ExtArgs["result"]["dataSourceAvailability"]>
+  export type DataSourceAvailabilityInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    source?: boolean | DataSourceDefaultArgs<ExtArgs>
+  }
+  export type DataSourceAvailabilityIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    source?: boolean | DataSourceDefaultArgs<ExtArgs>
+  }
+  export type DataSourceAvailabilityIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    source?: boolean | DataSourceDefaultArgs<ExtArgs>
+  }
+
+  export type $DataSourceAvailabilityPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "DataSourceAvailability"
+    objects: {
+      source: Prisma.$DataSourcePayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      sourceId: string
+      isAvailable: boolean
+      responseTime: number | null
+      errorMessage: string | null
+      recordCount: number | null
+      checkedAt: Date
+    }, ExtArgs["result"]["dataSourceAvailability"]>
+    composites: {}
+  }
+
+  type DataSourceAvailabilityGetPayload<S extends boolean | null | undefined | DataSourceAvailabilityDefaultArgs> = $Result.GetResult<Prisma.$DataSourceAvailabilityPayload, S>
+
+  type DataSourceAvailabilityCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DataSourceAvailabilityFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DataSourceAvailabilityCountAggregateInputType | true
+    }
+
+  export interface DataSourceAvailabilityDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DataSourceAvailability'], meta: { name: 'DataSourceAvailability' } }
+    /**
+     * Find zero or one DataSourceAvailability that matches the filter.
+     * @param {DataSourceAvailabilityFindUniqueArgs} args - Arguments to find a DataSourceAvailability
+     * @example
+     * // Get one DataSourceAvailability
+     * const dataSourceAvailability = await prisma.dataSourceAvailability.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DataSourceAvailabilityFindUniqueArgs>(args: SelectSubset<T, DataSourceAvailabilityFindUniqueArgs<ExtArgs>>): Prisma__DataSourceAvailabilityClient<$Result.GetResult<Prisma.$DataSourceAvailabilityPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one DataSourceAvailability that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {DataSourceAvailabilityFindUniqueOrThrowArgs} args - Arguments to find a DataSourceAvailability
+     * @example
+     * // Get one DataSourceAvailability
+     * const dataSourceAvailability = await prisma.dataSourceAvailability.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DataSourceAvailabilityFindUniqueOrThrowArgs>(args: SelectSubset<T, DataSourceAvailabilityFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DataSourceAvailabilityClient<$Result.GetResult<Prisma.$DataSourceAvailabilityPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DataSourceAvailability that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceAvailabilityFindFirstArgs} args - Arguments to find a DataSourceAvailability
+     * @example
+     * // Get one DataSourceAvailability
+     * const dataSourceAvailability = await prisma.dataSourceAvailability.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DataSourceAvailabilityFindFirstArgs>(args?: SelectSubset<T, DataSourceAvailabilityFindFirstArgs<ExtArgs>>): Prisma__DataSourceAvailabilityClient<$Result.GetResult<Prisma.$DataSourceAvailabilityPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DataSourceAvailability that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceAvailabilityFindFirstOrThrowArgs} args - Arguments to find a DataSourceAvailability
+     * @example
+     * // Get one DataSourceAvailability
+     * const dataSourceAvailability = await prisma.dataSourceAvailability.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DataSourceAvailabilityFindFirstOrThrowArgs>(args?: SelectSubset<T, DataSourceAvailabilityFindFirstOrThrowArgs<ExtArgs>>): Prisma__DataSourceAvailabilityClient<$Result.GetResult<Prisma.$DataSourceAvailabilityPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more DataSourceAvailabilities that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceAvailabilityFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all DataSourceAvailabilities
+     * const dataSourceAvailabilities = await prisma.dataSourceAvailability.findMany()
+     * 
+     * // Get first 10 DataSourceAvailabilities
+     * const dataSourceAvailabilities = await prisma.dataSourceAvailability.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const dataSourceAvailabilityWithIdOnly = await prisma.dataSourceAvailability.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends DataSourceAvailabilityFindManyArgs>(args?: SelectSubset<T, DataSourceAvailabilityFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DataSourceAvailabilityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a DataSourceAvailability.
+     * @param {DataSourceAvailabilityCreateArgs} args - Arguments to create a DataSourceAvailability.
+     * @example
+     * // Create one DataSourceAvailability
+     * const DataSourceAvailability = await prisma.dataSourceAvailability.create({
+     *   data: {
+     *     // ... data to create a DataSourceAvailability
+     *   }
+     * })
+     * 
+     */
+    create<T extends DataSourceAvailabilityCreateArgs>(args: SelectSubset<T, DataSourceAvailabilityCreateArgs<ExtArgs>>): Prisma__DataSourceAvailabilityClient<$Result.GetResult<Prisma.$DataSourceAvailabilityPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many DataSourceAvailabilities.
+     * @param {DataSourceAvailabilityCreateManyArgs} args - Arguments to create many DataSourceAvailabilities.
+     * @example
+     * // Create many DataSourceAvailabilities
+     * const dataSourceAvailability = await prisma.dataSourceAvailability.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends DataSourceAvailabilityCreateManyArgs>(args?: SelectSubset<T, DataSourceAvailabilityCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many DataSourceAvailabilities and returns the data saved in the database.
+     * @param {DataSourceAvailabilityCreateManyAndReturnArgs} args - Arguments to create many DataSourceAvailabilities.
+     * @example
+     * // Create many DataSourceAvailabilities
+     * const dataSourceAvailability = await prisma.dataSourceAvailability.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many DataSourceAvailabilities and only return the `id`
+     * const dataSourceAvailabilityWithIdOnly = await prisma.dataSourceAvailability.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends DataSourceAvailabilityCreateManyAndReturnArgs>(args?: SelectSubset<T, DataSourceAvailabilityCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DataSourceAvailabilityPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a DataSourceAvailability.
+     * @param {DataSourceAvailabilityDeleteArgs} args - Arguments to delete one DataSourceAvailability.
+     * @example
+     * // Delete one DataSourceAvailability
+     * const DataSourceAvailability = await prisma.dataSourceAvailability.delete({
+     *   where: {
+     *     // ... filter to delete one DataSourceAvailability
+     *   }
+     * })
+     * 
+     */
+    delete<T extends DataSourceAvailabilityDeleteArgs>(args: SelectSubset<T, DataSourceAvailabilityDeleteArgs<ExtArgs>>): Prisma__DataSourceAvailabilityClient<$Result.GetResult<Prisma.$DataSourceAvailabilityPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one DataSourceAvailability.
+     * @param {DataSourceAvailabilityUpdateArgs} args - Arguments to update one DataSourceAvailability.
+     * @example
+     * // Update one DataSourceAvailability
+     * const dataSourceAvailability = await prisma.dataSourceAvailability.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends DataSourceAvailabilityUpdateArgs>(args: SelectSubset<T, DataSourceAvailabilityUpdateArgs<ExtArgs>>): Prisma__DataSourceAvailabilityClient<$Result.GetResult<Prisma.$DataSourceAvailabilityPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more DataSourceAvailabilities.
+     * @param {DataSourceAvailabilityDeleteManyArgs} args - Arguments to filter DataSourceAvailabilities to delete.
+     * @example
+     * // Delete a few DataSourceAvailabilities
+     * const { count } = await prisma.dataSourceAvailability.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends DataSourceAvailabilityDeleteManyArgs>(args?: SelectSubset<T, DataSourceAvailabilityDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DataSourceAvailabilities.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceAvailabilityUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many DataSourceAvailabilities
+     * const dataSourceAvailability = await prisma.dataSourceAvailability.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends DataSourceAvailabilityUpdateManyArgs>(args: SelectSubset<T, DataSourceAvailabilityUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DataSourceAvailabilities and returns the data updated in the database.
+     * @param {DataSourceAvailabilityUpdateManyAndReturnArgs} args - Arguments to update many DataSourceAvailabilities.
+     * @example
+     * // Update many DataSourceAvailabilities
+     * const dataSourceAvailability = await prisma.dataSourceAvailability.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more DataSourceAvailabilities and only return the `id`
+     * const dataSourceAvailabilityWithIdOnly = await prisma.dataSourceAvailability.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends DataSourceAvailabilityUpdateManyAndReturnArgs>(args: SelectSubset<T, DataSourceAvailabilityUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DataSourceAvailabilityPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one DataSourceAvailability.
+     * @param {DataSourceAvailabilityUpsertArgs} args - Arguments to update or create a DataSourceAvailability.
+     * @example
+     * // Update or create a DataSourceAvailability
+     * const dataSourceAvailability = await prisma.dataSourceAvailability.upsert({
+     *   create: {
+     *     // ... data to create a DataSourceAvailability
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the DataSourceAvailability we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DataSourceAvailabilityUpsertArgs>(args: SelectSubset<T, DataSourceAvailabilityUpsertArgs<ExtArgs>>): Prisma__DataSourceAvailabilityClient<$Result.GetResult<Prisma.$DataSourceAvailabilityPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of DataSourceAvailabilities.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceAvailabilityCountArgs} args - Arguments to filter DataSourceAvailabilities to count.
+     * @example
+     * // Count the number of DataSourceAvailabilities
+     * const count = await prisma.dataSourceAvailability.count({
+     *   where: {
+     *     // ... the filter for the DataSourceAvailabilities we want to count
+     *   }
+     * })
+    **/
+    count<T extends DataSourceAvailabilityCountArgs>(
+      args?: Subset<T, DataSourceAvailabilityCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DataSourceAvailabilityCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a DataSourceAvailability.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceAvailabilityAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DataSourceAvailabilityAggregateArgs>(args: Subset<T, DataSourceAvailabilityAggregateArgs>): Prisma.PrismaPromise<GetDataSourceAvailabilityAggregateType<T>>
+
+    /**
+     * Group by DataSourceAvailability.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataSourceAvailabilityGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends DataSourceAvailabilityGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DataSourceAvailabilityGroupByArgs['orderBy'] }
+        : { orderBy?: DataSourceAvailabilityGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DataSourceAvailabilityGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDataSourceAvailabilityGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the DataSourceAvailability model
+   */
+  readonly fields: DataSourceAvailabilityFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for DataSourceAvailability.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DataSourceAvailabilityClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    source<T extends DataSourceDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DataSourceDefaultArgs<ExtArgs>>): Prisma__DataSourceClient<$Result.GetResult<Prisma.$DataSourcePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the DataSourceAvailability model
+   */
+  interface DataSourceAvailabilityFieldRefs {
+    readonly id: FieldRef<"DataSourceAvailability", 'String'>
+    readonly sourceId: FieldRef<"DataSourceAvailability", 'String'>
+    readonly isAvailable: FieldRef<"DataSourceAvailability", 'Boolean'>
+    readonly responseTime: FieldRef<"DataSourceAvailability", 'Int'>
+    readonly errorMessage: FieldRef<"DataSourceAvailability", 'String'>
+    readonly recordCount: FieldRef<"DataSourceAvailability", 'Int'>
+    readonly checkedAt: FieldRef<"DataSourceAvailability", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * DataSourceAvailability findUnique
+   */
+  export type DataSourceAvailabilityFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceAvailability
+     */
+    select?: DataSourceAvailabilitySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSourceAvailability
+     */
+    omit?: DataSourceAvailabilityOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceAvailabilityInclude<ExtArgs> | null
+    /**
+     * Filter, which DataSourceAvailability to fetch.
+     */
+    where: DataSourceAvailabilityWhereUniqueInput
+  }
+
+  /**
+   * DataSourceAvailability findUniqueOrThrow
+   */
+  export type DataSourceAvailabilityFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceAvailability
+     */
+    select?: DataSourceAvailabilitySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSourceAvailability
+     */
+    omit?: DataSourceAvailabilityOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceAvailabilityInclude<ExtArgs> | null
+    /**
+     * Filter, which DataSourceAvailability to fetch.
+     */
+    where: DataSourceAvailabilityWhereUniqueInput
+  }
+
+  /**
+   * DataSourceAvailability findFirst
+   */
+  export type DataSourceAvailabilityFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceAvailability
+     */
+    select?: DataSourceAvailabilitySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSourceAvailability
+     */
+    omit?: DataSourceAvailabilityOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceAvailabilityInclude<ExtArgs> | null
+    /**
+     * Filter, which DataSourceAvailability to fetch.
+     */
+    where?: DataSourceAvailabilityWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DataSourceAvailabilities to fetch.
+     */
+    orderBy?: DataSourceAvailabilityOrderByWithRelationInput | DataSourceAvailabilityOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DataSourceAvailabilities.
+     */
+    cursor?: DataSourceAvailabilityWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DataSourceAvailabilities from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DataSourceAvailabilities.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DataSourceAvailabilities.
+     */
+    distinct?: DataSourceAvailabilityScalarFieldEnum | DataSourceAvailabilityScalarFieldEnum[]
+  }
+
+  /**
+   * DataSourceAvailability findFirstOrThrow
+   */
+  export type DataSourceAvailabilityFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceAvailability
+     */
+    select?: DataSourceAvailabilitySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSourceAvailability
+     */
+    omit?: DataSourceAvailabilityOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceAvailabilityInclude<ExtArgs> | null
+    /**
+     * Filter, which DataSourceAvailability to fetch.
+     */
+    where?: DataSourceAvailabilityWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DataSourceAvailabilities to fetch.
+     */
+    orderBy?: DataSourceAvailabilityOrderByWithRelationInput | DataSourceAvailabilityOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DataSourceAvailabilities.
+     */
+    cursor?: DataSourceAvailabilityWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DataSourceAvailabilities from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DataSourceAvailabilities.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DataSourceAvailabilities.
+     */
+    distinct?: DataSourceAvailabilityScalarFieldEnum | DataSourceAvailabilityScalarFieldEnum[]
+  }
+
+  /**
+   * DataSourceAvailability findMany
+   */
+  export type DataSourceAvailabilityFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceAvailability
+     */
+    select?: DataSourceAvailabilitySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSourceAvailability
+     */
+    omit?: DataSourceAvailabilityOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceAvailabilityInclude<ExtArgs> | null
+    /**
+     * Filter, which DataSourceAvailabilities to fetch.
+     */
+    where?: DataSourceAvailabilityWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DataSourceAvailabilities to fetch.
+     */
+    orderBy?: DataSourceAvailabilityOrderByWithRelationInput | DataSourceAvailabilityOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing DataSourceAvailabilities.
+     */
+    cursor?: DataSourceAvailabilityWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DataSourceAvailabilities from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DataSourceAvailabilities.
+     */
+    skip?: number
+    distinct?: DataSourceAvailabilityScalarFieldEnum | DataSourceAvailabilityScalarFieldEnum[]
+  }
+
+  /**
+   * DataSourceAvailability create
+   */
+  export type DataSourceAvailabilityCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceAvailability
+     */
+    select?: DataSourceAvailabilitySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSourceAvailability
+     */
+    omit?: DataSourceAvailabilityOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceAvailabilityInclude<ExtArgs> | null
+    /**
+     * The data needed to create a DataSourceAvailability.
+     */
+    data: XOR<DataSourceAvailabilityCreateInput, DataSourceAvailabilityUncheckedCreateInput>
+  }
+
+  /**
+   * DataSourceAvailability createMany
+   */
+  export type DataSourceAvailabilityCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many DataSourceAvailabilities.
+     */
+    data: DataSourceAvailabilityCreateManyInput | DataSourceAvailabilityCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DataSourceAvailability createManyAndReturn
+   */
+  export type DataSourceAvailabilityCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceAvailability
+     */
+    select?: DataSourceAvailabilitySelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSourceAvailability
+     */
+    omit?: DataSourceAvailabilityOmit<ExtArgs> | null
+    /**
+     * The data used to create many DataSourceAvailabilities.
+     */
+    data: DataSourceAvailabilityCreateManyInput | DataSourceAvailabilityCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceAvailabilityIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DataSourceAvailability update
+   */
+  export type DataSourceAvailabilityUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceAvailability
+     */
+    select?: DataSourceAvailabilitySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSourceAvailability
+     */
+    omit?: DataSourceAvailabilityOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceAvailabilityInclude<ExtArgs> | null
+    /**
+     * The data needed to update a DataSourceAvailability.
+     */
+    data: XOR<DataSourceAvailabilityUpdateInput, DataSourceAvailabilityUncheckedUpdateInput>
+    /**
+     * Choose, which DataSourceAvailability to update.
+     */
+    where: DataSourceAvailabilityWhereUniqueInput
+  }
+
+  /**
+   * DataSourceAvailability updateMany
+   */
+  export type DataSourceAvailabilityUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update DataSourceAvailabilities.
+     */
+    data: XOR<DataSourceAvailabilityUpdateManyMutationInput, DataSourceAvailabilityUncheckedUpdateManyInput>
+    /**
+     * Filter which DataSourceAvailabilities to update
+     */
+    where?: DataSourceAvailabilityWhereInput
+    /**
+     * Limit how many DataSourceAvailabilities to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * DataSourceAvailability updateManyAndReturn
+   */
+  export type DataSourceAvailabilityUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceAvailability
+     */
+    select?: DataSourceAvailabilitySelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSourceAvailability
+     */
+    omit?: DataSourceAvailabilityOmit<ExtArgs> | null
+    /**
+     * The data used to update DataSourceAvailabilities.
+     */
+    data: XOR<DataSourceAvailabilityUpdateManyMutationInput, DataSourceAvailabilityUncheckedUpdateManyInput>
+    /**
+     * Filter which DataSourceAvailabilities to update
+     */
+    where?: DataSourceAvailabilityWhereInput
+    /**
+     * Limit how many DataSourceAvailabilities to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceAvailabilityIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DataSourceAvailability upsert
+   */
+  export type DataSourceAvailabilityUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceAvailability
+     */
+    select?: DataSourceAvailabilitySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSourceAvailability
+     */
+    omit?: DataSourceAvailabilityOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceAvailabilityInclude<ExtArgs> | null
+    /**
+     * The filter to search for the DataSourceAvailability to update in case it exists.
+     */
+    where: DataSourceAvailabilityWhereUniqueInput
+    /**
+     * In case the DataSourceAvailability found by the `where` argument doesn't exist, create a new DataSourceAvailability with this data.
+     */
+    create: XOR<DataSourceAvailabilityCreateInput, DataSourceAvailabilityUncheckedCreateInput>
+    /**
+     * In case the DataSourceAvailability was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DataSourceAvailabilityUpdateInput, DataSourceAvailabilityUncheckedUpdateInput>
+  }
+
+  /**
+   * DataSourceAvailability delete
+   */
+  export type DataSourceAvailabilityDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceAvailability
+     */
+    select?: DataSourceAvailabilitySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSourceAvailability
+     */
+    omit?: DataSourceAvailabilityOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceAvailabilityInclude<ExtArgs> | null
+    /**
+     * Filter which DataSourceAvailability to delete.
+     */
+    where: DataSourceAvailabilityWhereUniqueInput
+  }
+
+  /**
+   * DataSourceAvailability deleteMany
+   */
+  export type DataSourceAvailabilityDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DataSourceAvailabilities to delete
+     */
+    where?: DataSourceAvailabilityWhereInput
+    /**
+     * Limit how many DataSourceAvailabilities to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * DataSourceAvailability without action
+   */
+  export type DataSourceAvailabilityDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataSourceAvailability
+     */
+    select?: DataSourceAvailabilitySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataSourceAvailability
+     */
+    omit?: DataSourceAvailabilityOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataSourceAvailabilityInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model DataQualityMetric
+   */
+
+  export type AggregateDataQualityMetric = {
+    _count: DataQualityMetricCountAggregateOutputType | null
+    _avg: DataQualityMetricAvgAggregateOutputType | null
+    _sum: DataQualityMetricSumAggregateOutputType | null
+    _min: DataQualityMetricMinAggregateOutputType | null
+    _max: DataQualityMetricMaxAggregateOutputType | null
+  }
+
+  export type DataQualityMetricAvgAggregateOutputType = {
+    score: number | null
+    threshold: number | null
+  }
+
+  export type DataQualityMetricSumAggregateOutputType = {
+    score: number | null
+    threshold: number | null
+  }
+
+  export type DataQualityMetricMinAggregateOutputType = {
+    id: string | null
+    sourceId: string | null
+    indicator: string | null
+    qualityDimension: $Enums.QualityDimension | null
+    score: number | null
+    threshold: number | null
+    isPassing: boolean | null
+    measuredAt: Date | null
+  }
+
+  export type DataQualityMetricMaxAggregateOutputType = {
+    id: string | null
+    sourceId: string | null
+    indicator: string | null
+    qualityDimension: $Enums.QualityDimension | null
+    score: number | null
+    threshold: number | null
+    isPassing: boolean | null
+    measuredAt: Date | null
+  }
+
+  export type DataQualityMetricCountAggregateOutputType = {
+    id: number
+    sourceId: number
+    indicator: number
+    qualityDimension: number
+    score: number
+    threshold: number
+    isPassing: number
+    details: number
+    measuredAt: number
+    _all: number
+  }
+
+
+  export type DataQualityMetricAvgAggregateInputType = {
+    score?: true
+    threshold?: true
+  }
+
+  export type DataQualityMetricSumAggregateInputType = {
+    score?: true
+    threshold?: true
+  }
+
+  export type DataQualityMetricMinAggregateInputType = {
+    id?: true
+    sourceId?: true
+    indicator?: true
+    qualityDimension?: true
+    score?: true
+    threshold?: true
+    isPassing?: true
+    measuredAt?: true
+  }
+
+  export type DataQualityMetricMaxAggregateInputType = {
+    id?: true
+    sourceId?: true
+    indicator?: true
+    qualityDimension?: true
+    score?: true
+    threshold?: true
+    isPassing?: true
+    measuredAt?: true
+  }
+
+  export type DataQualityMetricCountAggregateInputType = {
+    id?: true
+    sourceId?: true
+    indicator?: true
+    qualityDimension?: true
+    score?: true
+    threshold?: true
+    isPassing?: true
+    details?: true
+    measuredAt?: true
+    _all?: true
+  }
+
+  export type DataQualityMetricAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DataQualityMetric to aggregate.
+     */
+    where?: DataQualityMetricWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DataQualityMetrics to fetch.
+     */
+    orderBy?: DataQualityMetricOrderByWithRelationInput | DataQualityMetricOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: DataQualityMetricWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DataQualityMetrics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DataQualityMetrics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned DataQualityMetrics
+    **/
+    _count?: true | DataQualityMetricCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: DataQualityMetricAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: DataQualityMetricSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: DataQualityMetricMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: DataQualityMetricMaxAggregateInputType
+  }
+
+  export type GetDataQualityMetricAggregateType<T extends DataQualityMetricAggregateArgs> = {
+        [P in keyof T & keyof AggregateDataQualityMetric]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDataQualityMetric[P]>
+      : GetScalarType<T[P], AggregateDataQualityMetric[P]>
+  }
+
+
+
+
+  export type DataQualityMetricGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DataQualityMetricWhereInput
+    orderBy?: DataQualityMetricOrderByWithAggregationInput | DataQualityMetricOrderByWithAggregationInput[]
+    by: DataQualityMetricScalarFieldEnum[] | DataQualityMetricScalarFieldEnum
+    having?: DataQualityMetricScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DataQualityMetricCountAggregateInputType | true
+    _avg?: DataQualityMetricAvgAggregateInputType
+    _sum?: DataQualityMetricSumAggregateInputType
+    _min?: DataQualityMetricMinAggregateInputType
+    _max?: DataQualityMetricMaxAggregateInputType
+  }
+
+  export type DataQualityMetricGroupByOutputType = {
+    id: string
+    sourceId: string
+    indicator: string
+    qualityDimension: $Enums.QualityDimension
+    score: number
+    threshold: number
+    isPassing: boolean
+    details: JsonValue | null
+    measuredAt: Date
+    _count: DataQualityMetricCountAggregateOutputType | null
+    _avg: DataQualityMetricAvgAggregateOutputType | null
+    _sum: DataQualityMetricSumAggregateOutputType | null
+    _min: DataQualityMetricMinAggregateOutputType | null
+    _max: DataQualityMetricMaxAggregateOutputType | null
+  }
+
+  type GetDataQualityMetricGroupByPayload<T extends DataQualityMetricGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DataQualityMetricGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DataQualityMetricGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DataQualityMetricGroupByOutputType[P]>
+            : GetScalarType<T[P], DataQualityMetricGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DataQualityMetricSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    sourceId?: boolean
+    indicator?: boolean
+    qualityDimension?: boolean
+    score?: boolean
+    threshold?: boolean
+    isPassing?: boolean
+    details?: boolean
+    measuredAt?: boolean
+    source?: boolean | DataSourceDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["dataQualityMetric"]>
+
+  export type DataQualityMetricSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    sourceId?: boolean
+    indicator?: boolean
+    qualityDimension?: boolean
+    score?: boolean
+    threshold?: boolean
+    isPassing?: boolean
+    details?: boolean
+    measuredAt?: boolean
+    source?: boolean | DataSourceDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["dataQualityMetric"]>
+
+  export type DataQualityMetricSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    sourceId?: boolean
+    indicator?: boolean
+    qualityDimension?: boolean
+    score?: boolean
+    threshold?: boolean
+    isPassing?: boolean
+    details?: boolean
+    measuredAt?: boolean
+    source?: boolean | DataSourceDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["dataQualityMetric"]>
+
+  export type DataQualityMetricSelectScalar = {
+    id?: boolean
+    sourceId?: boolean
+    indicator?: boolean
+    qualityDimension?: boolean
+    score?: boolean
+    threshold?: boolean
+    isPassing?: boolean
+    details?: boolean
+    measuredAt?: boolean
+  }
+
+  export type DataQualityMetricOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "sourceId" | "indicator" | "qualityDimension" | "score" | "threshold" | "isPassing" | "details" | "measuredAt", ExtArgs["result"]["dataQualityMetric"]>
+  export type DataQualityMetricInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    source?: boolean | DataSourceDefaultArgs<ExtArgs>
+  }
+  export type DataQualityMetricIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    source?: boolean | DataSourceDefaultArgs<ExtArgs>
+  }
+  export type DataQualityMetricIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    source?: boolean | DataSourceDefaultArgs<ExtArgs>
+  }
+
+  export type $DataQualityMetricPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "DataQualityMetric"
+    objects: {
+      source: Prisma.$DataSourcePayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      sourceId: string
+      indicator: string
+      qualityDimension: $Enums.QualityDimension
+      score: number
+      threshold: number
+      isPassing: boolean
+      details: Prisma.JsonValue | null
+      measuredAt: Date
+    }, ExtArgs["result"]["dataQualityMetric"]>
+    composites: {}
+  }
+
+  type DataQualityMetricGetPayload<S extends boolean | null | undefined | DataQualityMetricDefaultArgs> = $Result.GetResult<Prisma.$DataQualityMetricPayload, S>
+
+  type DataQualityMetricCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DataQualityMetricFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DataQualityMetricCountAggregateInputType | true
+    }
+
+  export interface DataQualityMetricDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DataQualityMetric'], meta: { name: 'DataQualityMetric' } }
+    /**
+     * Find zero or one DataQualityMetric that matches the filter.
+     * @param {DataQualityMetricFindUniqueArgs} args - Arguments to find a DataQualityMetric
+     * @example
+     * // Get one DataQualityMetric
+     * const dataQualityMetric = await prisma.dataQualityMetric.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DataQualityMetricFindUniqueArgs>(args: SelectSubset<T, DataQualityMetricFindUniqueArgs<ExtArgs>>): Prisma__DataQualityMetricClient<$Result.GetResult<Prisma.$DataQualityMetricPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one DataQualityMetric that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {DataQualityMetricFindUniqueOrThrowArgs} args - Arguments to find a DataQualityMetric
+     * @example
+     * // Get one DataQualityMetric
+     * const dataQualityMetric = await prisma.dataQualityMetric.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DataQualityMetricFindUniqueOrThrowArgs>(args: SelectSubset<T, DataQualityMetricFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DataQualityMetricClient<$Result.GetResult<Prisma.$DataQualityMetricPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DataQualityMetric that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataQualityMetricFindFirstArgs} args - Arguments to find a DataQualityMetric
+     * @example
+     * // Get one DataQualityMetric
+     * const dataQualityMetric = await prisma.dataQualityMetric.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DataQualityMetricFindFirstArgs>(args?: SelectSubset<T, DataQualityMetricFindFirstArgs<ExtArgs>>): Prisma__DataQualityMetricClient<$Result.GetResult<Prisma.$DataQualityMetricPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DataQualityMetric that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataQualityMetricFindFirstOrThrowArgs} args - Arguments to find a DataQualityMetric
+     * @example
+     * // Get one DataQualityMetric
+     * const dataQualityMetric = await prisma.dataQualityMetric.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DataQualityMetricFindFirstOrThrowArgs>(args?: SelectSubset<T, DataQualityMetricFindFirstOrThrowArgs<ExtArgs>>): Prisma__DataQualityMetricClient<$Result.GetResult<Prisma.$DataQualityMetricPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more DataQualityMetrics that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataQualityMetricFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all DataQualityMetrics
+     * const dataQualityMetrics = await prisma.dataQualityMetric.findMany()
+     * 
+     * // Get first 10 DataQualityMetrics
+     * const dataQualityMetrics = await prisma.dataQualityMetric.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const dataQualityMetricWithIdOnly = await prisma.dataQualityMetric.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends DataQualityMetricFindManyArgs>(args?: SelectSubset<T, DataQualityMetricFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DataQualityMetricPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a DataQualityMetric.
+     * @param {DataQualityMetricCreateArgs} args - Arguments to create a DataQualityMetric.
+     * @example
+     * // Create one DataQualityMetric
+     * const DataQualityMetric = await prisma.dataQualityMetric.create({
+     *   data: {
+     *     // ... data to create a DataQualityMetric
+     *   }
+     * })
+     * 
+     */
+    create<T extends DataQualityMetricCreateArgs>(args: SelectSubset<T, DataQualityMetricCreateArgs<ExtArgs>>): Prisma__DataQualityMetricClient<$Result.GetResult<Prisma.$DataQualityMetricPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many DataQualityMetrics.
+     * @param {DataQualityMetricCreateManyArgs} args - Arguments to create many DataQualityMetrics.
+     * @example
+     * // Create many DataQualityMetrics
+     * const dataQualityMetric = await prisma.dataQualityMetric.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends DataQualityMetricCreateManyArgs>(args?: SelectSubset<T, DataQualityMetricCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many DataQualityMetrics and returns the data saved in the database.
+     * @param {DataQualityMetricCreateManyAndReturnArgs} args - Arguments to create many DataQualityMetrics.
+     * @example
+     * // Create many DataQualityMetrics
+     * const dataQualityMetric = await prisma.dataQualityMetric.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many DataQualityMetrics and only return the `id`
+     * const dataQualityMetricWithIdOnly = await prisma.dataQualityMetric.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends DataQualityMetricCreateManyAndReturnArgs>(args?: SelectSubset<T, DataQualityMetricCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DataQualityMetricPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a DataQualityMetric.
+     * @param {DataQualityMetricDeleteArgs} args - Arguments to delete one DataQualityMetric.
+     * @example
+     * // Delete one DataQualityMetric
+     * const DataQualityMetric = await prisma.dataQualityMetric.delete({
+     *   where: {
+     *     // ... filter to delete one DataQualityMetric
+     *   }
+     * })
+     * 
+     */
+    delete<T extends DataQualityMetricDeleteArgs>(args: SelectSubset<T, DataQualityMetricDeleteArgs<ExtArgs>>): Prisma__DataQualityMetricClient<$Result.GetResult<Prisma.$DataQualityMetricPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one DataQualityMetric.
+     * @param {DataQualityMetricUpdateArgs} args - Arguments to update one DataQualityMetric.
+     * @example
+     * // Update one DataQualityMetric
+     * const dataQualityMetric = await prisma.dataQualityMetric.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends DataQualityMetricUpdateArgs>(args: SelectSubset<T, DataQualityMetricUpdateArgs<ExtArgs>>): Prisma__DataQualityMetricClient<$Result.GetResult<Prisma.$DataQualityMetricPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more DataQualityMetrics.
+     * @param {DataQualityMetricDeleteManyArgs} args - Arguments to filter DataQualityMetrics to delete.
+     * @example
+     * // Delete a few DataQualityMetrics
+     * const { count } = await prisma.dataQualityMetric.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends DataQualityMetricDeleteManyArgs>(args?: SelectSubset<T, DataQualityMetricDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DataQualityMetrics.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataQualityMetricUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many DataQualityMetrics
+     * const dataQualityMetric = await prisma.dataQualityMetric.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends DataQualityMetricUpdateManyArgs>(args: SelectSubset<T, DataQualityMetricUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DataQualityMetrics and returns the data updated in the database.
+     * @param {DataQualityMetricUpdateManyAndReturnArgs} args - Arguments to update many DataQualityMetrics.
+     * @example
+     * // Update many DataQualityMetrics
+     * const dataQualityMetric = await prisma.dataQualityMetric.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more DataQualityMetrics and only return the `id`
+     * const dataQualityMetricWithIdOnly = await prisma.dataQualityMetric.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends DataQualityMetricUpdateManyAndReturnArgs>(args: SelectSubset<T, DataQualityMetricUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DataQualityMetricPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one DataQualityMetric.
+     * @param {DataQualityMetricUpsertArgs} args - Arguments to update or create a DataQualityMetric.
+     * @example
+     * // Update or create a DataQualityMetric
+     * const dataQualityMetric = await prisma.dataQualityMetric.upsert({
+     *   create: {
+     *     // ... data to create a DataQualityMetric
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the DataQualityMetric we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DataQualityMetricUpsertArgs>(args: SelectSubset<T, DataQualityMetricUpsertArgs<ExtArgs>>): Prisma__DataQualityMetricClient<$Result.GetResult<Prisma.$DataQualityMetricPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of DataQualityMetrics.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataQualityMetricCountArgs} args - Arguments to filter DataQualityMetrics to count.
+     * @example
+     * // Count the number of DataQualityMetrics
+     * const count = await prisma.dataQualityMetric.count({
+     *   where: {
+     *     // ... the filter for the DataQualityMetrics we want to count
+     *   }
+     * })
+    **/
+    count<T extends DataQualityMetricCountArgs>(
+      args?: Subset<T, DataQualityMetricCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DataQualityMetricCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a DataQualityMetric.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataQualityMetricAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DataQualityMetricAggregateArgs>(args: Subset<T, DataQualityMetricAggregateArgs>): Prisma.PrismaPromise<GetDataQualityMetricAggregateType<T>>
+
+    /**
+     * Group by DataQualityMetric.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DataQualityMetricGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends DataQualityMetricGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DataQualityMetricGroupByArgs['orderBy'] }
+        : { orderBy?: DataQualityMetricGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DataQualityMetricGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDataQualityMetricGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the DataQualityMetric model
+   */
+  readonly fields: DataQualityMetricFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for DataQualityMetric.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DataQualityMetricClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    source<T extends DataSourceDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DataSourceDefaultArgs<ExtArgs>>): Prisma__DataSourceClient<$Result.GetResult<Prisma.$DataSourcePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the DataQualityMetric model
+   */
+  interface DataQualityMetricFieldRefs {
+    readonly id: FieldRef<"DataQualityMetric", 'String'>
+    readonly sourceId: FieldRef<"DataQualityMetric", 'String'>
+    readonly indicator: FieldRef<"DataQualityMetric", 'String'>
+    readonly qualityDimension: FieldRef<"DataQualityMetric", 'QualityDimension'>
+    readonly score: FieldRef<"DataQualityMetric", 'Float'>
+    readonly threshold: FieldRef<"DataQualityMetric", 'Float'>
+    readonly isPassing: FieldRef<"DataQualityMetric", 'Boolean'>
+    readonly details: FieldRef<"DataQualityMetric", 'Json'>
+    readonly measuredAt: FieldRef<"DataQualityMetric", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * DataQualityMetric findUnique
+   */
+  export type DataQualityMetricFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataQualityMetric
+     */
+    select?: DataQualityMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataQualityMetric
+     */
+    omit?: DataQualityMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataQualityMetricInclude<ExtArgs> | null
+    /**
+     * Filter, which DataQualityMetric to fetch.
+     */
+    where: DataQualityMetricWhereUniqueInput
+  }
+
+  /**
+   * DataQualityMetric findUniqueOrThrow
+   */
+  export type DataQualityMetricFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataQualityMetric
+     */
+    select?: DataQualityMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataQualityMetric
+     */
+    omit?: DataQualityMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataQualityMetricInclude<ExtArgs> | null
+    /**
+     * Filter, which DataQualityMetric to fetch.
+     */
+    where: DataQualityMetricWhereUniqueInput
+  }
+
+  /**
+   * DataQualityMetric findFirst
+   */
+  export type DataQualityMetricFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataQualityMetric
+     */
+    select?: DataQualityMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataQualityMetric
+     */
+    omit?: DataQualityMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataQualityMetricInclude<ExtArgs> | null
+    /**
+     * Filter, which DataQualityMetric to fetch.
+     */
+    where?: DataQualityMetricWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DataQualityMetrics to fetch.
+     */
+    orderBy?: DataQualityMetricOrderByWithRelationInput | DataQualityMetricOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DataQualityMetrics.
+     */
+    cursor?: DataQualityMetricWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DataQualityMetrics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DataQualityMetrics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DataQualityMetrics.
+     */
+    distinct?: DataQualityMetricScalarFieldEnum | DataQualityMetricScalarFieldEnum[]
+  }
+
+  /**
+   * DataQualityMetric findFirstOrThrow
+   */
+  export type DataQualityMetricFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataQualityMetric
+     */
+    select?: DataQualityMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataQualityMetric
+     */
+    omit?: DataQualityMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataQualityMetricInclude<ExtArgs> | null
+    /**
+     * Filter, which DataQualityMetric to fetch.
+     */
+    where?: DataQualityMetricWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DataQualityMetrics to fetch.
+     */
+    orderBy?: DataQualityMetricOrderByWithRelationInput | DataQualityMetricOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DataQualityMetrics.
+     */
+    cursor?: DataQualityMetricWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DataQualityMetrics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DataQualityMetrics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DataQualityMetrics.
+     */
+    distinct?: DataQualityMetricScalarFieldEnum | DataQualityMetricScalarFieldEnum[]
+  }
+
+  /**
+   * DataQualityMetric findMany
+   */
+  export type DataQualityMetricFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataQualityMetric
+     */
+    select?: DataQualityMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataQualityMetric
+     */
+    omit?: DataQualityMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataQualityMetricInclude<ExtArgs> | null
+    /**
+     * Filter, which DataQualityMetrics to fetch.
+     */
+    where?: DataQualityMetricWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DataQualityMetrics to fetch.
+     */
+    orderBy?: DataQualityMetricOrderByWithRelationInput | DataQualityMetricOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing DataQualityMetrics.
+     */
+    cursor?: DataQualityMetricWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DataQualityMetrics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DataQualityMetrics.
+     */
+    skip?: number
+    distinct?: DataQualityMetricScalarFieldEnum | DataQualityMetricScalarFieldEnum[]
+  }
+
+  /**
+   * DataQualityMetric create
+   */
+  export type DataQualityMetricCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataQualityMetric
+     */
+    select?: DataQualityMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataQualityMetric
+     */
+    omit?: DataQualityMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataQualityMetricInclude<ExtArgs> | null
+    /**
+     * The data needed to create a DataQualityMetric.
+     */
+    data: XOR<DataQualityMetricCreateInput, DataQualityMetricUncheckedCreateInput>
+  }
+
+  /**
+   * DataQualityMetric createMany
+   */
+  export type DataQualityMetricCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many DataQualityMetrics.
+     */
+    data: DataQualityMetricCreateManyInput | DataQualityMetricCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DataQualityMetric createManyAndReturn
+   */
+  export type DataQualityMetricCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataQualityMetric
+     */
+    select?: DataQualityMetricSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataQualityMetric
+     */
+    omit?: DataQualityMetricOmit<ExtArgs> | null
+    /**
+     * The data used to create many DataQualityMetrics.
+     */
+    data: DataQualityMetricCreateManyInput | DataQualityMetricCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataQualityMetricIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DataQualityMetric update
+   */
+  export type DataQualityMetricUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataQualityMetric
+     */
+    select?: DataQualityMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataQualityMetric
+     */
+    omit?: DataQualityMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataQualityMetricInclude<ExtArgs> | null
+    /**
+     * The data needed to update a DataQualityMetric.
+     */
+    data: XOR<DataQualityMetricUpdateInput, DataQualityMetricUncheckedUpdateInput>
+    /**
+     * Choose, which DataQualityMetric to update.
+     */
+    where: DataQualityMetricWhereUniqueInput
+  }
+
+  /**
+   * DataQualityMetric updateMany
+   */
+  export type DataQualityMetricUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update DataQualityMetrics.
+     */
+    data: XOR<DataQualityMetricUpdateManyMutationInput, DataQualityMetricUncheckedUpdateManyInput>
+    /**
+     * Filter which DataQualityMetrics to update
+     */
+    where?: DataQualityMetricWhereInput
+    /**
+     * Limit how many DataQualityMetrics to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * DataQualityMetric updateManyAndReturn
+   */
+  export type DataQualityMetricUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataQualityMetric
+     */
+    select?: DataQualityMetricSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataQualityMetric
+     */
+    omit?: DataQualityMetricOmit<ExtArgs> | null
+    /**
+     * The data used to update DataQualityMetrics.
+     */
+    data: XOR<DataQualityMetricUpdateManyMutationInput, DataQualityMetricUncheckedUpdateManyInput>
+    /**
+     * Filter which DataQualityMetrics to update
+     */
+    where?: DataQualityMetricWhereInput
+    /**
+     * Limit how many DataQualityMetrics to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataQualityMetricIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DataQualityMetric upsert
+   */
+  export type DataQualityMetricUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataQualityMetric
+     */
+    select?: DataQualityMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataQualityMetric
+     */
+    omit?: DataQualityMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataQualityMetricInclude<ExtArgs> | null
+    /**
+     * The filter to search for the DataQualityMetric to update in case it exists.
+     */
+    where: DataQualityMetricWhereUniqueInput
+    /**
+     * In case the DataQualityMetric found by the `where` argument doesn't exist, create a new DataQualityMetric with this data.
+     */
+    create: XOR<DataQualityMetricCreateInput, DataQualityMetricUncheckedCreateInput>
+    /**
+     * In case the DataQualityMetric was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DataQualityMetricUpdateInput, DataQualityMetricUncheckedUpdateInput>
+  }
+
+  /**
+   * DataQualityMetric delete
+   */
+  export type DataQualityMetricDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataQualityMetric
+     */
+    select?: DataQualityMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataQualityMetric
+     */
+    omit?: DataQualityMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataQualityMetricInclude<ExtArgs> | null
+    /**
+     * Filter which DataQualityMetric to delete.
+     */
+    where: DataQualityMetricWhereUniqueInput
+  }
+
+  /**
+   * DataQualityMetric deleteMany
+   */
+  export type DataQualityMetricDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DataQualityMetrics to delete
+     */
+    where?: DataQualityMetricWhereInput
+    /**
+     * Limit how many DataQualityMetrics to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * DataQualityMetric without action
+   */
+  export type DataQualityMetricDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DataQualityMetric
+     */
+    select?: DataQualityMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DataQualityMetric
+     */
+    omit?: DataQualityMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DataQualityMetricInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -29378,6 +33275,58 @@ export namespace Prisma {
   };
 
   export type VulnerabilityScoreScalarFieldEnum = (typeof VulnerabilityScoreScalarFieldEnum)[keyof typeof VulnerabilityScoreScalarFieldEnum]
+
+
+  export const DataSourceScalarFieldEnum: {
+    id: 'id',
+    name: 'name',
+    sourceType: 'sourceType',
+    sector: 'sector',
+    apiEndpoint: 'apiEndpoint',
+    updateFrequency: 'updateFrequency',
+    coverageAreas: 'coverageAreas',
+    populations: 'populations',
+    indicators: 'indicators',
+    qualityLevel: 'qualityLevel',
+    accessLevel: 'accessLevel',
+    isActive: 'isActive',
+    reliabilityScore: 'reliabilityScore',
+    lastSyncedAt: 'lastSyncedAt',
+    lastSyncStatus: 'lastSyncStatus',
+    metadata: 'metadata',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type DataSourceScalarFieldEnum = (typeof DataSourceScalarFieldEnum)[keyof typeof DataSourceScalarFieldEnum]
+
+
+  export const DataSourceAvailabilityScalarFieldEnum: {
+    id: 'id',
+    sourceId: 'sourceId',
+    isAvailable: 'isAvailable',
+    responseTime: 'responseTime',
+    errorMessage: 'errorMessage',
+    recordCount: 'recordCount',
+    checkedAt: 'checkedAt'
+  };
+
+  export type DataSourceAvailabilityScalarFieldEnum = (typeof DataSourceAvailabilityScalarFieldEnum)[keyof typeof DataSourceAvailabilityScalarFieldEnum]
+
+
+  export const DataQualityMetricScalarFieldEnum: {
+    id: 'id',
+    sourceId: 'sourceId',
+    indicator: 'indicator',
+    qualityDimension: 'qualityDimension',
+    score: 'score',
+    threshold: 'threshold',
+    isPassing: 'isPassing',
+    details: 'details',
+    measuredAt: 'measuredAt'
+  };
+
+  export type DataQualityMetricScalarFieldEnum = (typeof DataQualityMetricScalarFieldEnum)[keyof typeof DataQualityMetricScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -29899,6 +33848,34 @@ export namespace Prisma {
    * Reference to a field of type 'RiskCategory[]'
    */
   export type ListEnumRiskCategoryFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RiskCategory[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'DataSourceType'
+   */
+  export type EnumDataSourceTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DataSourceType'>
+    
+
+
+  /**
+   * Reference to a field of type 'DataSourceType[]'
+   */
+  export type ListEnumDataSourceTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DataSourceType[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'QualityDimension'
+   */
+  export type EnumQualityDimensionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QualityDimension'>
+    
+
+
+  /**
+   * Reference to a field of type 'QualityDimension[]'
+   */
+  export type ListEnumQualityDimensionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QualityDimension[]'>
     
   /**
    * Deep Input Types
@@ -31953,6 +35930,275 @@ export namespace Prisma {
     gbvRiskScore?: IntWithAggregatesFilter<"VulnerabilityScore"> | number
     eligiblePrograms?: JsonWithAggregatesFilter<"VulnerabilityScore">
     calculatedAt?: DateTimeWithAggregatesFilter<"VulnerabilityScore"> | Date | string
+  }
+
+  export type DataSourceWhereInput = {
+    AND?: DataSourceWhereInput | DataSourceWhereInput[]
+    OR?: DataSourceWhereInput[]
+    NOT?: DataSourceWhereInput | DataSourceWhereInput[]
+    id?: StringFilter<"DataSource"> | string
+    name?: StringFilter<"DataSource"> | string
+    sourceType?: EnumDataSourceTypeFilter<"DataSource"> | $Enums.DataSourceType
+    sector?: StringFilter<"DataSource"> | string
+    apiEndpoint?: StringNullableFilter<"DataSource"> | string | null
+    updateFrequency?: StringFilter<"DataSource"> | string
+    coverageAreas?: JsonFilter<"DataSource">
+    populations?: JsonFilter<"DataSource">
+    indicators?: JsonFilter<"DataSource">
+    qualityLevel?: StringFilter<"DataSource"> | string
+    accessLevel?: StringFilter<"DataSource"> | string
+    isActive?: BoolFilter<"DataSource"> | boolean
+    reliabilityScore?: FloatFilter<"DataSource"> | number
+    lastSyncedAt?: DateTimeNullableFilter<"DataSource"> | Date | string | null
+    lastSyncStatus?: StringNullableFilter<"DataSource"> | string | null
+    metadata?: JsonNullableFilter<"DataSource">
+    createdAt?: DateTimeFilter<"DataSource"> | Date | string
+    updatedAt?: DateTimeFilter<"DataSource"> | Date | string
+    availabilityLogs?: DataSourceAvailabilityListRelationFilter
+    qualityMetrics?: DataQualityMetricListRelationFilter
+  }
+
+  export type DataSourceOrderByWithRelationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    sourceType?: SortOrder
+    sector?: SortOrder
+    apiEndpoint?: SortOrderInput | SortOrder
+    updateFrequency?: SortOrder
+    coverageAreas?: SortOrder
+    populations?: SortOrder
+    indicators?: SortOrder
+    qualityLevel?: SortOrder
+    accessLevel?: SortOrder
+    isActive?: SortOrder
+    reliabilityScore?: SortOrder
+    lastSyncedAt?: SortOrderInput | SortOrder
+    lastSyncStatus?: SortOrderInput | SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    availabilityLogs?: DataSourceAvailabilityOrderByRelationAggregateInput
+    qualityMetrics?: DataQualityMetricOrderByRelationAggregateInput
+  }
+
+  export type DataSourceWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: DataSourceWhereInput | DataSourceWhereInput[]
+    OR?: DataSourceWhereInput[]
+    NOT?: DataSourceWhereInput | DataSourceWhereInput[]
+    name?: StringFilter<"DataSource"> | string
+    sourceType?: EnumDataSourceTypeFilter<"DataSource"> | $Enums.DataSourceType
+    sector?: StringFilter<"DataSource"> | string
+    apiEndpoint?: StringNullableFilter<"DataSource"> | string | null
+    updateFrequency?: StringFilter<"DataSource"> | string
+    coverageAreas?: JsonFilter<"DataSource">
+    populations?: JsonFilter<"DataSource">
+    indicators?: JsonFilter<"DataSource">
+    qualityLevel?: StringFilter<"DataSource"> | string
+    accessLevel?: StringFilter<"DataSource"> | string
+    isActive?: BoolFilter<"DataSource"> | boolean
+    reliabilityScore?: FloatFilter<"DataSource"> | number
+    lastSyncedAt?: DateTimeNullableFilter<"DataSource"> | Date | string | null
+    lastSyncStatus?: StringNullableFilter<"DataSource"> | string | null
+    metadata?: JsonNullableFilter<"DataSource">
+    createdAt?: DateTimeFilter<"DataSource"> | Date | string
+    updatedAt?: DateTimeFilter<"DataSource"> | Date | string
+    availabilityLogs?: DataSourceAvailabilityListRelationFilter
+    qualityMetrics?: DataQualityMetricListRelationFilter
+  }, "id">
+
+  export type DataSourceOrderByWithAggregationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    sourceType?: SortOrder
+    sector?: SortOrder
+    apiEndpoint?: SortOrderInput | SortOrder
+    updateFrequency?: SortOrder
+    coverageAreas?: SortOrder
+    populations?: SortOrder
+    indicators?: SortOrder
+    qualityLevel?: SortOrder
+    accessLevel?: SortOrder
+    isActive?: SortOrder
+    reliabilityScore?: SortOrder
+    lastSyncedAt?: SortOrderInput | SortOrder
+    lastSyncStatus?: SortOrderInput | SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: DataSourceCountOrderByAggregateInput
+    _avg?: DataSourceAvgOrderByAggregateInput
+    _max?: DataSourceMaxOrderByAggregateInput
+    _min?: DataSourceMinOrderByAggregateInput
+    _sum?: DataSourceSumOrderByAggregateInput
+  }
+
+  export type DataSourceScalarWhereWithAggregatesInput = {
+    AND?: DataSourceScalarWhereWithAggregatesInput | DataSourceScalarWhereWithAggregatesInput[]
+    OR?: DataSourceScalarWhereWithAggregatesInput[]
+    NOT?: DataSourceScalarWhereWithAggregatesInput | DataSourceScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"DataSource"> | string
+    name?: StringWithAggregatesFilter<"DataSource"> | string
+    sourceType?: EnumDataSourceTypeWithAggregatesFilter<"DataSource"> | $Enums.DataSourceType
+    sector?: StringWithAggregatesFilter<"DataSource"> | string
+    apiEndpoint?: StringNullableWithAggregatesFilter<"DataSource"> | string | null
+    updateFrequency?: StringWithAggregatesFilter<"DataSource"> | string
+    coverageAreas?: JsonWithAggregatesFilter<"DataSource">
+    populations?: JsonWithAggregatesFilter<"DataSource">
+    indicators?: JsonWithAggregatesFilter<"DataSource">
+    qualityLevel?: StringWithAggregatesFilter<"DataSource"> | string
+    accessLevel?: StringWithAggregatesFilter<"DataSource"> | string
+    isActive?: BoolWithAggregatesFilter<"DataSource"> | boolean
+    reliabilityScore?: FloatWithAggregatesFilter<"DataSource"> | number
+    lastSyncedAt?: DateTimeNullableWithAggregatesFilter<"DataSource"> | Date | string | null
+    lastSyncStatus?: StringNullableWithAggregatesFilter<"DataSource"> | string | null
+    metadata?: JsonNullableWithAggregatesFilter<"DataSource">
+    createdAt?: DateTimeWithAggregatesFilter<"DataSource"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"DataSource"> | Date | string
+  }
+
+  export type DataSourceAvailabilityWhereInput = {
+    AND?: DataSourceAvailabilityWhereInput | DataSourceAvailabilityWhereInput[]
+    OR?: DataSourceAvailabilityWhereInput[]
+    NOT?: DataSourceAvailabilityWhereInput | DataSourceAvailabilityWhereInput[]
+    id?: StringFilter<"DataSourceAvailability"> | string
+    sourceId?: StringFilter<"DataSourceAvailability"> | string
+    isAvailable?: BoolFilter<"DataSourceAvailability"> | boolean
+    responseTime?: IntNullableFilter<"DataSourceAvailability"> | number | null
+    errorMessage?: StringNullableFilter<"DataSourceAvailability"> | string | null
+    recordCount?: IntNullableFilter<"DataSourceAvailability"> | number | null
+    checkedAt?: DateTimeFilter<"DataSourceAvailability"> | Date | string
+    source?: XOR<DataSourceScalarRelationFilter, DataSourceWhereInput>
+  }
+
+  export type DataSourceAvailabilityOrderByWithRelationInput = {
+    id?: SortOrder
+    sourceId?: SortOrder
+    isAvailable?: SortOrder
+    responseTime?: SortOrderInput | SortOrder
+    errorMessage?: SortOrderInput | SortOrder
+    recordCount?: SortOrderInput | SortOrder
+    checkedAt?: SortOrder
+    source?: DataSourceOrderByWithRelationInput
+  }
+
+  export type DataSourceAvailabilityWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: DataSourceAvailabilityWhereInput | DataSourceAvailabilityWhereInput[]
+    OR?: DataSourceAvailabilityWhereInput[]
+    NOT?: DataSourceAvailabilityWhereInput | DataSourceAvailabilityWhereInput[]
+    sourceId?: StringFilter<"DataSourceAvailability"> | string
+    isAvailable?: BoolFilter<"DataSourceAvailability"> | boolean
+    responseTime?: IntNullableFilter<"DataSourceAvailability"> | number | null
+    errorMessage?: StringNullableFilter<"DataSourceAvailability"> | string | null
+    recordCount?: IntNullableFilter<"DataSourceAvailability"> | number | null
+    checkedAt?: DateTimeFilter<"DataSourceAvailability"> | Date | string
+    source?: XOR<DataSourceScalarRelationFilter, DataSourceWhereInput>
+  }, "id">
+
+  export type DataSourceAvailabilityOrderByWithAggregationInput = {
+    id?: SortOrder
+    sourceId?: SortOrder
+    isAvailable?: SortOrder
+    responseTime?: SortOrderInput | SortOrder
+    errorMessage?: SortOrderInput | SortOrder
+    recordCount?: SortOrderInput | SortOrder
+    checkedAt?: SortOrder
+    _count?: DataSourceAvailabilityCountOrderByAggregateInput
+    _avg?: DataSourceAvailabilityAvgOrderByAggregateInput
+    _max?: DataSourceAvailabilityMaxOrderByAggregateInput
+    _min?: DataSourceAvailabilityMinOrderByAggregateInput
+    _sum?: DataSourceAvailabilitySumOrderByAggregateInput
+  }
+
+  export type DataSourceAvailabilityScalarWhereWithAggregatesInput = {
+    AND?: DataSourceAvailabilityScalarWhereWithAggregatesInput | DataSourceAvailabilityScalarWhereWithAggregatesInput[]
+    OR?: DataSourceAvailabilityScalarWhereWithAggregatesInput[]
+    NOT?: DataSourceAvailabilityScalarWhereWithAggregatesInput | DataSourceAvailabilityScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"DataSourceAvailability"> | string
+    sourceId?: StringWithAggregatesFilter<"DataSourceAvailability"> | string
+    isAvailable?: BoolWithAggregatesFilter<"DataSourceAvailability"> | boolean
+    responseTime?: IntNullableWithAggregatesFilter<"DataSourceAvailability"> | number | null
+    errorMessage?: StringNullableWithAggregatesFilter<"DataSourceAvailability"> | string | null
+    recordCount?: IntNullableWithAggregatesFilter<"DataSourceAvailability"> | number | null
+    checkedAt?: DateTimeWithAggregatesFilter<"DataSourceAvailability"> | Date | string
+  }
+
+  export type DataQualityMetricWhereInput = {
+    AND?: DataQualityMetricWhereInput | DataQualityMetricWhereInput[]
+    OR?: DataQualityMetricWhereInput[]
+    NOT?: DataQualityMetricWhereInput | DataQualityMetricWhereInput[]
+    id?: StringFilter<"DataQualityMetric"> | string
+    sourceId?: StringFilter<"DataQualityMetric"> | string
+    indicator?: StringFilter<"DataQualityMetric"> | string
+    qualityDimension?: EnumQualityDimensionFilter<"DataQualityMetric"> | $Enums.QualityDimension
+    score?: FloatFilter<"DataQualityMetric"> | number
+    threshold?: FloatFilter<"DataQualityMetric"> | number
+    isPassing?: BoolFilter<"DataQualityMetric"> | boolean
+    details?: JsonNullableFilter<"DataQualityMetric">
+    measuredAt?: DateTimeFilter<"DataQualityMetric"> | Date | string
+    source?: XOR<DataSourceScalarRelationFilter, DataSourceWhereInput>
+  }
+
+  export type DataQualityMetricOrderByWithRelationInput = {
+    id?: SortOrder
+    sourceId?: SortOrder
+    indicator?: SortOrder
+    qualityDimension?: SortOrder
+    score?: SortOrder
+    threshold?: SortOrder
+    isPassing?: SortOrder
+    details?: SortOrderInput | SortOrder
+    measuredAt?: SortOrder
+    source?: DataSourceOrderByWithRelationInput
+  }
+
+  export type DataQualityMetricWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: DataQualityMetricWhereInput | DataQualityMetricWhereInput[]
+    OR?: DataQualityMetricWhereInput[]
+    NOT?: DataQualityMetricWhereInput | DataQualityMetricWhereInput[]
+    sourceId?: StringFilter<"DataQualityMetric"> | string
+    indicator?: StringFilter<"DataQualityMetric"> | string
+    qualityDimension?: EnumQualityDimensionFilter<"DataQualityMetric"> | $Enums.QualityDimension
+    score?: FloatFilter<"DataQualityMetric"> | number
+    threshold?: FloatFilter<"DataQualityMetric"> | number
+    isPassing?: BoolFilter<"DataQualityMetric"> | boolean
+    details?: JsonNullableFilter<"DataQualityMetric">
+    measuredAt?: DateTimeFilter<"DataQualityMetric"> | Date | string
+    source?: XOR<DataSourceScalarRelationFilter, DataSourceWhereInput>
+  }, "id">
+
+  export type DataQualityMetricOrderByWithAggregationInput = {
+    id?: SortOrder
+    sourceId?: SortOrder
+    indicator?: SortOrder
+    qualityDimension?: SortOrder
+    score?: SortOrder
+    threshold?: SortOrder
+    isPassing?: SortOrder
+    details?: SortOrderInput | SortOrder
+    measuredAt?: SortOrder
+    _count?: DataQualityMetricCountOrderByAggregateInput
+    _avg?: DataQualityMetricAvgOrderByAggregateInput
+    _max?: DataQualityMetricMaxOrderByAggregateInput
+    _min?: DataQualityMetricMinOrderByAggregateInput
+    _sum?: DataQualityMetricSumOrderByAggregateInput
+  }
+
+  export type DataQualityMetricScalarWhereWithAggregatesInput = {
+    AND?: DataQualityMetricScalarWhereWithAggregatesInput | DataQualityMetricScalarWhereWithAggregatesInput[]
+    OR?: DataQualityMetricScalarWhereWithAggregatesInput[]
+    NOT?: DataQualityMetricScalarWhereWithAggregatesInput | DataQualityMetricScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"DataQualityMetric"> | string
+    sourceId?: StringWithAggregatesFilter<"DataQualityMetric"> | string
+    indicator?: StringWithAggregatesFilter<"DataQualityMetric"> | string
+    qualityDimension?: EnumQualityDimensionWithAggregatesFilter<"DataQualityMetric"> | $Enums.QualityDimension
+    score?: FloatWithAggregatesFilter<"DataQualityMetric"> | number
+    threshold?: FloatWithAggregatesFilter<"DataQualityMetric"> | number
+    isPassing?: BoolWithAggregatesFilter<"DataQualityMetric"> | boolean
+    details?: JsonNullableWithAggregatesFilter<"DataQualityMetric">
+    measuredAt?: DateTimeWithAggregatesFilter<"DataQualityMetric"> | Date | string
   }
 
   export type UserCreateInput = {
@@ -34298,6 +38544,313 @@ export namespace Prisma {
     calculatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type DataSourceCreateInput = {
+    id?: string
+    name: string
+    sourceType: $Enums.DataSourceType
+    sector: string
+    apiEndpoint?: string | null
+    updateFrequency?: string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: string
+    accessLevel?: string
+    isActive?: boolean
+    reliabilityScore?: number
+    lastSyncedAt?: Date | string | null
+    lastSyncStatus?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    availabilityLogs?: DataSourceAvailabilityCreateNestedManyWithoutSourceInput
+    qualityMetrics?: DataQualityMetricCreateNestedManyWithoutSourceInput
+  }
+
+  export type DataSourceUncheckedCreateInput = {
+    id?: string
+    name: string
+    sourceType: $Enums.DataSourceType
+    sector: string
+    apiEndpoint?: string | null
+    updateFrequency?: string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: string
+    accessLevel?: string
+    isActive?: boolean
+    reliabilityScore?: number
+    lastSyncedAt?: Date | string | null
+    lastSyncStatus?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    availabilityLogs?: DataSourceAvailabilityUncheckedCreateNestedManyWithoutSourceInput
+    qualityMetrics?: DataQualityMetricUncheckedCreateNestedManyWithoutSourceInput
+  }
+
+  export type DataSourceUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    sourceType?: EnumDataSourceTypeFieldUpdateOperationsInput | $Enums.DataSourceType
+    sector?: StringFieldUpdateOperationsInput | string
+    apiEndpoint?: NullableStringFieldUpdateOperationsInput | string | null
+    updateFrequency?: StringFieldUpdateOperationsInput | string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: StringFieldUpdateOperationsInput | string
+    accessLevel?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    reliabilityScore?: FloatFieldUpdateOperationsInput | number
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastSyncStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    availabilityLogs?: DataSourceAvailabilityUpdateManyWithoutSourceNestedInput
+    qualityMetrics?: DataQualityMetricUpdateManyWithoutSourceNestedInput
+  }
+
+  export type DataSourceUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    sourceType?: EnumDataSourceTypeFieldUpdateOperationsInput | $Enums.DataSourceType
+    sector?: StringFieldUpdateOperationsInput | string
+    apiEndpoint?: NullableStringFieldUpdateOperationsInput | string | null
+    updateFrequency?: StringFieldUpdateOperationsInput | string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: StringFieldUpdateOperationsInput | string
+    accessLevel?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    reliabilityScore?: FloatFieldUpdateOperationsInput | number
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastSyncStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    availabilityLogs?: DataSourceAvailabilityUncheckedUpdateManyWithoutSourceNestedInput
+    qualityMetrics?: DataQualityMetricUncheckedUpdateManyWithoutSourceNestedInput
+  }
+
+  export type DataSourceCreateManyInput = {
+    id?: string
+    name: string
+    sourceType: $Enums.DataSourceType
+    sector: string
+    apiEndpoint?: string | null
+    updateFrequency?: string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: string
+    accessLevel?: string
+    isActive?: boolean
+    reliabilityScore?: number
+    lastSyncedAt?: Date | string | null
+    lastSyncStatus?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DataSourceUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    sourceType?: EnumDataSourceTypeFieldUpdateOperationsInput | $Enums.DataSourceType
+    sector?: StringFieldUpdateOperationsInput | string
+    apiEndpoint?: NullableStringFieldUpdateOperationsInput | string | null
+    updateFrequency?: StringFieldUpdateOperationsInput | string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: StringFieldUpdateOperationsInput | string
+    accessLevel?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    reliabilityScore?: FloatFieldUpdateOperationsInput | number
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastSyncStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DataSourceUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    sourceType?: EnumDataSourceTypeFieldUpdateOperationsInput | $Enums.DataSourceType
+    sector?: StringFieldUpdateOperationsInput | string
+    apiEndpoint?: NullableStringFieldUpdateOperationsInput | string | null
+    updateFrequency?: StringFieldUpdateOperationsInput | string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: StringFieldUpdateOperationsInput | string
+    accessLevel?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    reliabilityScore?: FloatFieldUpdateOperationsInput | number
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastSyncStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DataSourceAvailabilityCreateInput = {
+    id?: string
+    isAvailable: boolean
+    responseTime?: number | null
+    errorMessage?: string | null
+    recordCount?: number | null
+    checkedAt?: Date | string
+    source: DataSourceCreateNestedOneWithoutAvailabilityLogsInput
+  }
+
+  export type DataSourceAvailabilityUncheckedCreateInput = {
+    id?: string
+    sourceId: string
+    isAvailable: boolean
+    responseTime?: number | null
+    errorMessage?: string | null
+    recordCount?: number | null
+    checkedAt?: Date | string
+  }
+
+  export type DataSourceAvailabilityUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    isAvailable?: BoolFieldUpdateOperationsInput | boolean
+    responseTime?: NullableIntFieldUpdateOperationsInput | number | null
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    recordCount?: NullableIntFieldUpdateOperationsInput | number | null
+    checkedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    source?: DataSourceUpdateOneRequiredWithoutAvailabilityLogsNestedInput
+  }
+
+  export type DataSourceAvailabilityUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceId?: StringFieldUpdateOperationsInput | string
+    isAvailable?: BoolFieldUpdateOperationsInput | boolean
+    responseTime?: NullableIntFieldUpdateOperationsInput | number | null
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    recordCount?: NullableIntFieldUpdateOperationsInput | number | null
+    checkedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DataSourceAvailabilityCreateManyInput = {
+    id?: string
+    sourceId: string
+    isAvailable: boolean
+    responseTime?: number | null
+    errorMessage?: string | null
+    recordCount?: number | null
+    checkedAt?: Date | string
+  }
+
+  export type DataSourceAvailabilityUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    isAvailable?: BoolFieldUpdateOperationsInput | boolean
+    responseTime?: NullableIntFieldUpdateOperationsInput | number | null
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    recordCount?: NullableIntFieldUpdateOperationsInput | number | null
+    checkedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DataSourceAvailabilityUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceId?: StringFieldUpdateOperationsInput | string
+    isAvailable?: BoolFieldUpdateOperationsInput | boolean
+    responseTime?: NullableIntFieldUpdateOperationsInput | number | null
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    recordCount?: NullableIntFieldUpdateOperationsInput | number | null
+    checkedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DataQualityMetricCreateInput = {
+    id?: string
+    indicator: string
+    qualityDimension: $Enums.QualityDimension
+    score: number
+    threshold?: number
+    isPassing?: boolean
+    details?: NullableJsonNullValueInput | InputJsonValue
+    measuredAt?: Date | string
+    source: DataSourceCreateNestedOneWithoutQualityMetricsInput
+  }
+
+  export type DataQualityMetricUncheckedCreateInput = {
+    id?: string
+    sourceId: string
+    indicator: string
+    qualityDimension: $Enums.QualityDimension
+    score: number
+    threshold?: number
+    isPassing?: boolean
+    details?: NullableJsonNullValueInput | InputJsonValue
+    measuredAt?: Date | string
+  }
+
+  export type DataQualityMetricUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    qualityDimension?: EnumQualityDimensionFieldUpdateOperationsInput | $Enums.QualityDimension
+    score?: FloatFieldUpdateOperationsInput | number
+    threshold?: FloatFieldUpdateOperationsInput | number
+    isPassing?: BoolFieldUpdateOperationsInput | boolean
+    details?: NullableJsonNullValueInput | InputJsonValue
+    measuredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    source?: DataSourceUpdateOneRequiredWithoutQualityMetricsNestedInput
+  }
+
+  export type DataQualityMetricUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceId?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    qualityDimension?: EnumQualityDimensionFieldUpdateOperationsInput | $Enums.QualityDimension
+    score?: FloatFieldUpdateOperationsInput | number
+    threshold?: FloatFieldUpdateOperationsInput | number
+    isPassing?: BoolFieldUpdateOperationsInput | boolean
+    details?: NullableJsonNullValueInput | InputJsonValue
+    measuredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DataQualityMetricCreateManyInput = {
+    id?: string
+    sourceId: string
+    indicator: string
+    qualityDimension: $Enums.QualityDimension
+    score: number
+    threshold?: number
+    isPassing?: boolean
+    details?: NullableJsonNullValueInput | InputJsonValue
+    measuredAt?: Date | string
+  }
+
+  export type DataQualityMetricUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    qualityDimension?: EnumQualityDimensionFieldUpdateOperationsInput | $Enums.QualityDimension
+    score?: FloatFieldUpdateOperationsInput | number
+    threshold?: FloatFieldUpdateOperationsInput | number
+    isPassing?: BoolFieldUpdateOperationsInput | boolean
+    details?: NullableJsonNullValueInput | InputJsonValue
+    measuredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DataQualityMetricUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceId?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    qualityDimension?: EnumQualityDimensionFieldUpdateOperationsInput | $Enums.QualityDimension
+    score?: FloatFieldUpdateOperationsInput | number
+    threshold?: FloatFieldUpdateOperationsInput | number
+    isPassing?: BoolFieldUpdateOperationsInput | boolean
+    details?: NullableJsonNullValueInput | InputJsonValue
+    measuredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -36441,6 +40994,239 @@ export namespace Prisma {
     gbvRiskScore?: SortOrder
   }
 
+  export type EnumDataSourceTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.DataSourceType | EnumDataSourceTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.DataSourceType[] | ListEnumDataSourceTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DataSourceType[] | ListEnumDataSourceTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumDataSourceTypeFilter<$PrismaModel> | $Enums.DataSourceType
+  }
+
+  export type FloatFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatFilter<$PrismaModel> | number
+  }
+
+  export type DataSourceAvailabilityListRelationFilter = {
+    every?: DataSourceAvailabilityWhereInput
+    some?: DataSourceAvailabilityWhereInput
+    none?: DataSourceAvailabilityWhereInput
+  }
+
+  export type DataQualityMetricListRelationFilter = {
+    every?: DataQualityMetricWhereInput
+    some?: DataQualityMetricWhereInput
+    none?: DataQualityMetricWhereInput
+  }
+
+  export type DataSourceAvailabilityOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type DataQualityMetricOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type DataSourceCountOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    sourceType?: SortOrder
+    sector?: SortOrder
+    apiEndpoint?: SortOrder
+    updateFrequency?: SortOrder
+    coverageAreas?: SortOrder
+    populations?: SortOrder
+    indicators?: SortOrder
+    qualityLevel?: SortOrder
+    accessLevel?: SortOrder
+    isActive?: SortOrder
+    reliabilityScore?: SortOrder
+    lastSyncedAt?: SortOrder
+    lastSyncStatus?: SortOrder
+    metadata?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DataSourceAvgOrderByAggregateInput = {
+    reliabilityScore?: SortOrder
+  }
+
+  export type DataSourceMaxOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    sourceType?: SortOrder
+    sector?: SortOrder
+    apiEndpoint?: SortOrder
+    updateFrequency?: SortOrder
+    qualityLevel?: SortOrder
+    accessLevel?: SortOrder
+    isActive?: SortOrder
+    reliabilityScore?: SortOrder
+    lastSyncedAt?: SortOrder
+    lastSyncStatus?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DataSourceMinOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    sourceType?: SortOrder
+    sector?: SortOrder
+    apiEndpoint?: SortOrder
+    updateFrequency?: SortOrder
+    qualityLevel?: SortOrder
+    accessLevel?: SortOrder
+    isActive?: SortOrder
+    reliabilityScore?: SortOrder
+    lastSyncedAt?: SortOrder
+    lastSyncStatus?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DataSourceSumOrderByAggregateInput = {
+    reliabilityScore?: SortOrder
+  }
+
+  export type EnumDataSourceTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DataSourceType | EnumDataSourceTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.DataSourceType[] | ListEnumDataSourceTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DataSourceType[] | ListEnumDataSourceTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumDataSourceTypeWithAggregatesFilter<$PrismaModel> | $Enums.DataSourceType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDataSourceTypeFilter<$PrismaModel>
+    _max?: NestedEnumDataSourceTypeFilter<$PrismaModel>
+  }
+
+  export type FloatWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedFloatFilter<$PrismaModel>
+    _min?: NestedFloatFilter<$PrismaModel>
+    _max?: NestedFloatFilter<$PrismaModel>
+  }
+
+  export type DataSourceScalarRelationFilter = {
+    is?: DataSourceWhereInput
+    isNot?: DataSourceWhereInput
+  }
+
+  export type DataSourceAvailabilityCountOrderByAggregateInput = {
+    id?: SortOrder
+    sourceId?: SortOrder
+    isAvailable?: SortOrder
+    responseTime?: SortOrder
+    errorMessage?: SortOrder
+    recordCount?: SortOrder
+    checkedAt?: SortOrder
+  }
+
+  export type DataSourceAvailabilityAvgOrderByAggregateInput = {
+    responseTime?: SortOrder
+    recordCount?: SortOrder
+  }
+
+  export type DataSourceAvailabilityMaxOrderByAggregateInput = {
+    id?: SortOrder
+    sourceId?: SortOrder
+    isAvailable?: SortOrder
+    responseTime?: SortOrder
+    errorMessage?: SortOrder
+    recordCount?: SortOrder
+    checkedAt?: SortOrder
+  }
+
+  export type DataSourceAvailabilityMinOrderByAggregateInput = {
+    id?: SortOrder
+    sourceId?: SortOrder
+    isAvailable?: SortOrder
+    responseTime?: SortOrder
+    errorMessage?: SortOrder
+    recordCount?: SortOrder
+    checkedAt?: SortOrder
+  }
+
+  export type DataSourceAvailabilitySumOrderByAggregateInput = {
+    responseTime?: SortOrder
+    recordCount?: SortOrder
+  }
+
+  export type EnumQualityDimensionFilter<$PrismaModel = never> = {
+    equals?: $Enums.QualityDimension | EnumQualityDimensionFieldRefInput<$PrismaModel>
+    in?: $Enums.QualityDimension[] | ListEnumQualityDimensionFieldRefInput<$PrismaModel>
+    notIn?: $Enums.QualityDimension[] | ListEnumQualityDimensionFieldRefInput<$PrismaModel>
+    not?: NestedEnumQualityDimensionFilter<$PrismaModel> | $Enums.QualityDimension
+  }
+
+  export type DataQualityMetricCountOrderByAggregateInput = {
+    id?: SortOrder
+    sourceId?: SortOrder
+    indicator?: SortOrder
+    qualityDimension?: SortOrder
+    score?: SortOrder
+    threshold?: SortOrder
+    isPassing?: SortOrder
+    details?: SortOrder
+    measuredAt?: SortOrder
+  }
+
+  export type DataQualityMetricAvgOrderByAggregateInput = {
+    score?: SortOrder
+    threshold?: SortOrder
+  }
+
+  export type DataQualityMetricMaxOrderByAggregateInput = {
+    id?: SortOrder
+    sourceId?: SortOrder
+    indicator?: SortOrder
+    qualityDimension?: SortOrder
+    score?: SortOrder
+    threshold?: SortOrder
+    isPassing?: SortOrder
+    measuredAt?: SortOrder
+  }
+
+  export type DataQualityMetricMinOrderByAggregateInput = {
+    id?: SortOrder
+    sourceId?: SortOrder
+    indicator?: SortOrder
+    qualityDimension?: SortOrder
+    score?: SortOrder
+    threshold?: SortOrder
+    isPassing?: SortOrder
+    measuredAt?: SortOrder
+  }
+
+  export type DataQualityMetricSumOrderByAggregateInput = {
+    score?: SortOrder
+    threshold?: SortOrder
+  }
+
+  export type EnumQualityDimensionWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.QualityDimension | EnumQualityDimensionFieldRefInput<$PrismaModel>
+    in?: $Enums.QualityDimension[] | ListEnumQualityDimensionFieldRefInput<$PrismaModel>
+    notIn?: $Enums.QualityDimension[] | ListEnumQualityDimensionFieldRefInput<$PrismaModel>
+    not?: NestedEnumQualityDimensionWithAggregatesFilter<$PrismaModel> | $Enums.QualityDimension
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumQualityDimensionFilter<$PrismaModel>
+    _max?: NestedEnumQualityDimensionFilter<$PrismaModel>
+  }
+
   export type SessionCreateNestedManyWithoutUserInput = {
     create?: XOR<SessionCreateWithoutUserInput, SessionUncheckedCreateWithoutUserInput> | SessionCreateWithoutUserInput[] | SessionUncheckedCreateWithoutUserInput[]
     connectOrCreate?: SessionCreateOrConnectWithoutUserInput | SessionCreateOrConnectWithoutUserInput[]
@@ -37997,6 +42783,134 @@ export namespace Prisma {
     update?: XOR<XOR<QuickProfileUpdateToOneWithWhereWithoutVulnerabilityDetailInput, QuickProfileUpdateWithoutVulnerabilityDetailInput>, QuickProfileUncheckedUpdateWithoutVulnerabilityDetailInput>
   }
 
+  export type DataSourceAvailabilityCreateNestedManyWithoutSourceInput = {
+    create?: XOR<DataSourceAvailabilityCreateWithoutSourceInput, DataSourceAvailabilityUncheckedCreateWithoutSourceInput> | DataSourceAvailabilityCreateWithoutSourceInput[] | DataSourceAvailabilityUncheckedCreateWithoutSourceInput[]
+    connectOrCreate?: DataSourceAvailabilityCreateOrConnectWithoutSourceInput | DataSourceAvailabilityCreateOrConnectWithoutSourceInput[]
+    createMany?: DataSourceAvailabilityCreateManySourceInputEnvelope
+    connect?: DataSourceAvailabilityWhereUniqueInput | DataSourceAvailabilityWhereUniqueInput[]
+  }
+
+  export type DataQualityMetricCreateNestedManyWithoutSourceInput = {
+    create?: XOR<DataQualityMetricCreateWithoutSourceInput, DataQualityMetricUncheckedCreateWithoutSourceInput> | DataQualityMetricCreateWithoutSourceInput[] | DataQualityMetricUncheckedCreateWithoutSourceInput[]
+    connectOrCreate?: DataQualityMetricCreateOrConnectWithoutSourceInput | DataQualityMetricCreateOrConnectWithoutSourceInput[]
+    createMany?: DataQualityMetricCreateManySourceInputEnvelope
+    connect?: DataQualityMetricWhereUniqueInput | DataQualityMetricWhereUniqueInput[]
+  }
+
+  export type DataSourceAvailabilityUncheckedCreateNestedManyWithoutSourceInput = {
+    create?: XOR<DataSourceAvailabilityCreateWithoutSourceInput, DataSourceAvailabilityUncheckedCreateWithoutSourceInput> | DataSourceAvailabilityCreateWithoutSourceInput[] | DataSourceAvailabilityUncheckedCreateWithoutSourceInput[]
+    connectOrCreate?: DataSourceAvailabilityCreateOrConnectWithoutSourceInput | DataSourceAvailabilityCreateOrConnectWithoutSourceInput[]
+    createMany?: DataSourceAvailabilityCreateManySourceInputEnvelope
+    connect?: DataSourceAvailabilityWhereUniqueInput | DataSourceAvailabilityWhereUniqueInput[]
+  }
+
+  export type DataQualityMetricUncheckedCreateNestedManyWithoutSourceInput = {
+    create?: XOR<DataQualityMetricCreateWithoutSourceInput, DataQualityMetricUncheckedCreateWithoutSourceInput> | DataQualityMetricCreateWithoutSourceInput[] | DataQualityMetricUncheckedCreateWithoutSourceInput[]
+    connectOrCreate?: DataQualityMetricCreateOrConnectWithoutSourceInput | DataQualityMetricCreateOrConnectWithoutSourceInput[]
+    createMany?: DataQualityMetricCreateManySourceInputEnvelope
+    connect?: DataQualityMetricWhereUniqueInput | DataQualityMetricWhereUniqueInput[]
+  }
+
+  export type EnumDataSourceTypeFieldUpdateOperationsInput = {
+    set?: $Enums.DataSourceType
+  }
+
+  export type FloatFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
+  export type DataSourceAvailabilityUpdateManyWithoutSourceNestedInput = {
+    create?: XOR<DataSourceAvailabilityCreateWithoutSourceInput, DataSourceAvailabilityUncheckedCreateWithoutSourceInput> | DataSourceAvailabilityCreateWithoutSourceInput[] | DataSourceAvailabilityUncheckedCreateWithoutSourceInput[]
+    connectOrCreate?: DataSourceAvailabilityCreateOrConnectWithoutSourceInput | DataSourceAvailabilityCreateOrConnectWithoutSourceInput[]
+    upsert?: DataSourceAvailabilityUpsertWithWhereUniqueWithoutSourceInput | DataSourceAvailabilityUpsertWithWhereUniqueWithoutSourceInput[]
+    createMany?: DataSourceAvailabilityCreateManySourceInputEnvelope
+    set?: DataSourceAvailabilityWhereUniqueInput | DataSourceAvailabilityWhereUniqueInput[]
+    disconnect?: DataSourceAvailabilityWhereUniqueInput | DataSourceAvailabilityWhereUniqueInput[]
+    delete?: DataSourceAvailabilityWhereUniqueInput | DataSourceAvailabilityWhereUniqueInput[]
+    connect?: DataSourceAvailabilityWhereUniqueInput | DataSourceAvailabilityWhereUniqueInput[]
+    update?: DataSourceAvailabilityUpdateWithWhereUniqueWithoutSourceInput | DataSourceAvailabilityUpdateWithWhereUniqueWithoutSourceInput[]
+    updateMany?: DataSourceAvailabilityUpdateManyWithWhereWithoutSourceInput | DataSourceAvailabilityUpdateManyWithWhereWithoutSourceInput[]
+    deleteMany?: DataSourceAvailabilityScalarWhereInput | DataSourceAvailabilityScalarWhereInput[]
+  }
+
+  export type DataQualityMetricUpdateManyWithoutSourceNestedInput = {
+    create?: XOR<DataQualityMetricCreateWithoutSourceInput, DataQualityMetricUncheckedCreateWithoutSourceInput> | DataQualityMetricCreateWithoutSourceInput[] | DataQualityMetricUncheckedCreateWithoutSourceInput[]
+    connectOrCreate?: DataQualityMetricCreateOrConnectWithoutSourceInput | DataQualityMetricCreateOrConnectWithoutSourceInput[]
+    upsert?: DataQualityMetricUpsertWithWhereUniqueWithoutSourceInput | DataQualityMetricUpsertWithWhereUniqueWithoutSourceInput[]
+    createMany?: DataQualityMetricCreateManySourceInputEnvelope
+    set?: DataQualityMetricWhereUniqueInput | DataQualityMetricWhereUniqueInput[]
+    disconnect?: DataQualityMetricWhereUniqueInput | DataQualityMetricWhereUniqueInput[]
+    delete?: DataQualityMetricWhereUniqueInput | DataQualityMetricWhereUniqueInput[]
+    connect?: DataQualityMetricWhereUniqueInput | DataQualityMetricWhereUniqueInput[]
+    update?: DataQualityMetricUpdateWithWhereUniqueWithoutSourceInput | DataQualityMetricUpdateWithWhereUniqueWithoutSourceInput[]
+    updateMany?: DataQualityMetricUpdateManyWithWhereWithoutSourceInput | DataQualityMetricUpdateManyWithWhereWithoutSourceInput[]
+    deleteMany?: DataQualityMetricScalarWhereInput | DataQualityMetricScalarWhereInput[]
+  }
+
+  export type DataSourceAvailabilityUncheckedUpdateManyWithoutSourceNestedInput = {
+    create?: XOR<DataSourceAvailabilityCreateWithoutSourceInput, DataSourceAvailabilityUncheckedCreateWithoutSourceInput> | DataSourceAvailabilityCreateWithoutSourceInput[] | DataSourceAvailabilityUncheckedCreateWithoutSourceInput[]
+    connectOrCreate?: DataSourceAvailabilityCreateOrConnectWithoutSourceInput | DataSourceAvailabilityCreateOrConnectWithoutSourceInput[]
+    upsert?: DataSourceAvailabilityUpsertWithWhereUniqueWithoutSourceInput | DataSourceAvailabilityUpsertWithWhereUniqueWithoutSourceInput[]
+    createMany?: DataSourceAvailabilityCreateManySourceInputEnvelope
+    set?: DataSourceAvailabilityWhereUniqueInput | DataSourceAvailabilityWhereUniqueInput[]
+    disconnect?: DataSourceAvailabilityWhereUniqueInput | DataSourceAvailabilityWhereUniqueInput[]
+    delete?: DataSourceAvailabilityWhereUniqueInput | DataSourceAvailabilityWhereUniqueInput[]
+    connect?: DataSourceAvailabilityWhereUniqueInput | DataSourceAvailabilityWhereUniqueInput[]
+    update?: DataSourceAvailabilityUpdateWithWhereUniqueWithoutSourceInput | DataSourceAvailabilityUpdateWithWhereUniqueWithoutSourceInput[]
+    updateMany?: DataSourceAvailabilityUpdateManyWithWhereWithoutSourceInput | DataSourceAvailabilityUpdateManyWithWhereWithoutSourceInput[]
+    deleteMany?: DataSourceAvailabilityScalarWhereInput | DataSourceAvailabilityScalarWhereInput[]
+  }
+
+  export type DataQualityMetricUncheckedUpdateManyWithoutSourceNestedInput = {
+    create?: XOR<DataQualityMetricCreateWithoutSourceInput, DataQualityMetricUncheckedCreateWithoutSourceInput> | DataQualityMetricCreateWithoutSourceInput[] | DataQualityMetricUncheckedCreateWithoutSourceInput[]
+    connectOrCreate?: DataQualityMetricCreateOrConnectWithoutSourceInput | DataQualityMetricCreateOrConnectWithoutSourceInput[]
+    upsert?: DataQualityMetricUpsertWithWhereUniqueWithoutSourceInput | DataQualityMetricUpsertWithWhereUniqueWithoutSourceInput[]
+    createMany?: DataQualityMetricCreateManySourceInputEnvelope
+    set?: DataQualityMetricWhereUniqueInput | DataQualityMetricWhereUniqueInput[]
+    disconnect?: DataQualityMetricWhereUniqueInput | DataQualityMetricWhereUniqueInput[]
+    delete?: DataQualityMetricWhereUniqueInput | DataQualityMetricWhereUniqueInput[]
+    connect?: DataQualityMetricWhereUniqueInput | DataQualityMetricWhereUniqueInput[]
+    update?: DataQualityMetricUpdateWithWhereUniqueWithoutSourceInput | DataQualityMetricUpdateWithWhereUniqueWithoutSourceInput[]
+    updateMany?: DataQualityMetricUpdateManyWithWhereWithoutSourceInput | DataQualityMetricUpdateManyWithWhereWithoutSourceInput[]
+    deleteMany?: DataQualityMetricScalarWhereInput | DataQualityMetricScalarWhereInput[]
+  }
+
+  export type DataSourceCreateNestedOneWithoutAvailabilityLogsInput = {
+    create?: XOR<DataSourceCreateWithoutAvailabilityLogsInput, DataSourceUncheckedCreateWithoutAvailabilityLogsInput>
+    connectOrCreate?: DataSourceCreateOrConnectWithoutAvailabilityLogsInput
+    connect?: DataSourceWhereUniqueInput
+  }
+
+  export type DataSourceUpdateOneRequiredWithoutAvailabilityLogsNestedInput = {
+    create?: XOR<DataSourceCreateWithoutAvailabilityLogsInput, DataSourceUncheckedCreateWithoutAvailabilityLogsInput>
+    connectOrCreate?: DataSourceCreateOrConnectWithoutAvailabilityLogsInput
+    upsert?: DataSourceUpsertWithoutAvailabilityLogsInput
+    connect?: DataSourceWhereUniqueInput
+    update?: XOR<XOR<DataSourceUpdateToOneWithWhereWithoutAvailabilityLogsInput, DataSourceUpdateWithoutAvailabilityLogsInput>, DataSourceUncheckedUpdateWithoutAvailabilityLogsInput>
+  }
+
+  export type DataSourceCreateNestedOneWithoutQualityMetricsInput = {
+    create?: XOR<DataSourceCreateWithoutQualityMetricsInput, DataSourceUncheckedCreateWithoutQualityMetricsInput>
+    connectOrCreate?: DataSourceCreateOrConnectWithoutQualityMetricsInput
+    connect?: DataSourceWhereUniqueInput
+  }
+
+  export type EnumQualityDimensionFieldUpdateOperationsInput = {
+    set?: $Enums.QualityDimension
+  }
+
+  export type DataSourceUpdateOneRequiredWithoutQualityMetricsNestedInput = {
+    create?: XOR<DataSourceCreateWithoutQualityMetricsInput, DataSourceUncheckedCreateWithoutQualityMetricsInput>
+    connectOrCreate?: DataSourceCreateOrConnectWithoutQualityMetricsInput
+    upsert?: DataSourceUpsertWithoutQualityMetricsInput
+    connect?: DataSourceWhereUniqueInput
+    update?: XOR<XOR<DataSourceUpdateToOneWithWhereWithoutQualityMetricsInput, DataSourceUpdateWithoutQualityMetricsInput>, DataSourceUncheckedUpdateWithoutQualityMetricsInput>
+  }
+
   export type NestedStringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -38747,6 +43661,56 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumRiskCategoryFilter<$PrismaModel>
     _max?: NestedEnumRiskCategoryFilter<$PrismaModel>
+  }
+
+  export type NestedEnumDataSourceTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.DataSourceType | EnumDataSourceTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.DataSourceType[] | ListEnumDataSourceTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DataSourceType[] | ListEnumDataSourceTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumDataSourceTypeFilter<$PrismaModel> | $Enums.DataSourceType
+  }
+
+  export type NestedEnumDataSourceTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DataSourceType | EnumDataSourceTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.DataSourceType[] | ListEnumDataSourceTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DataSourceType[] | ListEnumDataSourceTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumDataSourceTypeWithAggregatesFilter<$PrismaModel> | $Enums.DataSourceType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDataSourceTypeFilter<$PrismaModel>
+    _max?: NestedEnumDataSourceTypeFilter<$PrismaModel>
+  }
+
+  export type NestedFloatWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedFloatFilter<$PrismaModel>
+    _min?: NestedFloatFilter<$PrismaModel>
+    _max?: NestedFloatFilter<$PrismaModel>
+  }
+
+  export type NestedEnumQualityDimensionFilter<$PrismaModel = never> = {
+    equals?: $Enums.QualityDimension | EnumQualityDimensionFieldRefInput<$PrismaModel>
+    in?: $Enums.QualityDimension[] | ListEnumQualityDimensionFieldRefInput<$PrismaModel>
+    notIn?: $Enums.QualityDimension[] | ListEnumQualityDimensionFieldRefInput<$PrismaModel>
+    not?: NestedEnumQualityDimensionFilter<$PrismaModel> | $Enums.QualityDimension
+  }
+
+  export type NestedEnumQualityDimensionWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.QualityDimension | EnumQualityDimensionFieldRefInput<$PrismaModel>
+    in?: $Enums.QualityDimension[] | ListEnumQualityDimensionFieldRefInput<$PrismaModel>
+    notIn?: $Enums.QualityDimension[] | ListEnumQualityDimensionFieldRefInput<$PrismaModel>
+    not?: NestedEnumQualityDimensionWithAggregatesFilter<$PrismaModel> | $Enums.QualityDimension
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumQualityDimensionFilter<$PrismaModel>
+    _max?: NestedEnumQualityDimensionFilter<$PrismaModel>
   }
 
   export type SessionCreateWithoutUserInput = {
@@ -42991,6 +47955,334 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type DataSourceAvailabilityCreateWithoutSourceInput = {
+    id?: string
+    isAvailable: boolean
+    responseTime?: number | null
+    errorMessage?: string | null
+    recordCount?: number | null
+    checkedAt?: Date | string
+  }
+
+  export type DataSourceAvailabilityUncheckedCreateWithoutSourceInput = {
+    id?: string
+    isAvailable: boolean
+    responseTime?: number | null
+    errorMessage?: string | null
+    recordCount?: number | null
+    checkedAt?: Date | string
+  }
+
+  export type DataSourceAvailabilityCreateOrConnectWithoutSourceInput = {
+    where: DataSourceAvailabilityWhereUniqueInput
+    create: XOR<DataSourceAvailabilityCreateWithoutSourceInput, DataSourceAvailabilityUncheckedCreateWithoutSourceInput>
+  }
+
+  export type DataSourceAvailabilityCreateManySourceInputEnvelope = {
+    data: DataSourceAvailabilityCreateManySourceInput | DataSourceAvailabilityCreateManySourceInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DataQualityMetricCreateWithoutSourceInput = {
+    id?: string
+    indicator: string
+    qualityDimension: $Enums.QualityDimension
+    score: number
+    threshold?: number
+    isPassing?: boolean
+    details?: NullableJsonNullValueInput | InputJsonValue
+    measuredAt?: Date | string
+  }
+
+  export type DataQualityMetricUncheckedCreateWithoutSourceInput = {
+    id?: string
+    indicator: string
+    qualityDimension: $Enums.QualityDimension
+    score: number
+    threshold?: number
+    isPassing?: boolean
+    details?: NullableJsonNullValueInput | InputJsonValue
+    measuredAt?: Date | string
+  }
+
+  export type DataQualityMetricCreateOrConnectWithoutSourceInput = {
+    where: DataQualityMetricWhereUniqueInput
+    create: XOR<DataQualityMetricCreateWithoutSourceInput, DataQualityMetricUncheckedCreateWithoutSourceInput>
+  }
+
+  export type DataQualityMetricCreateManySourceInputEnvelope = {
+    data: DataQualityMetricCreateManySourceInput | DataQualityMetricCreateManySourceInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DataSourceAvailabilityUpsertWithWhereUniqueWithoutSourceInput = {
+    where: DataSourceAvailabilityWhereUniqueInput
+    update: XOR<DataSourceAvailabilityUpdateWithoutSourceInput, DataSourceAvailabilityUncheckedUpdateWithoutSourceInput>
+    create: XOR<DataSourceAvailabilityCreateWithoutSourceInput, DataSourceAvailabilityUncheckedCreateWithoutSourceInput>
+  }
+
+  export type DataSourceAvailabilityUpdateWithWhereUniqueWithoutSourceInput = {
+    where: DataSourceAvailabilityWhereUniqueInput
+    data: XOR<DataSourceAvailabilityUpdateWithoutSourceInput, DataSourceAvailabilityUncheckedUpdateWithoutSourceInput>
+  }
+
+  export type DataSourceAvailabilityUpdateManyWithWhereWithoutSourceInput = {
+    where: DataSourceAvailabilityScalarWhereInput
+    data: XOR<DataSourceAvailabilityUpdateManyMutationInput, DataSourceAvailabilityUncheckedUpdateManyWithoutSourceInput>
+  }
+
+  export type DataSourceAvailabilityScalarWhereInput = {
+    AND?: DataSourceAvailabilityScalarWhereInput | DataSourceAvailabilityScalarWhereInput[]
+    OR?: DataSourceAvailabilityScalarWhereInput[]
+    NOT?: DataSourceAvailabilityScalarWhereInput | DataSourceAvailabilityScalarWhereInput[]
+    id?: StringFilter<"DataSourceAvailability"> | string
+    sourceId?: StringFilter<"DataSourceAvailability"> | string
+    isAvailable?: BoolFilter<"DataSourceAvailability"> | boolean
+    responseTime?: IntNullableFilter<"DataSourceAvailability"> | number | null
+    errorMessage?: StringNullableFilter<"DataSourceAvailability"> | string | null
+    recordCount?: IntNullableFilter<"DataSourceAvailability"> | number | null
+    checkedAt?: DateTimeFilter<"DataSourceAvailability"> | Date | string
+  }
+
+  export type DataQualityMetricUpsertWithWhereUniqueWithoutSourceInput = {
+    where: DataQualityMetricWhereUniqueInput
+    update: XOR<DataQualityMetricUpdateWithoutSourceInput, DataQualityMetricUncheckedUpdateWithoutSourceInput>
+    create: XOR<DataQualityMetricCreateWithoutSourceInput, DataQualityMetricUncheckedCreateWithoutSourceInput>
+  }
+
+  export type DataQualityMetricUpdateWithWhereUniqueWithoutSourceInput = {
+    where: DataQualityMetricWhereUniqueInput
+    data: XOR<DataQualityMetricUpdateWithoutSourceInput, DataQualityMetricUncheckedUpdateWithoutSourceInput>
+  }
+
+  export type DataQualityMetricUpdateManyWithWhereWithoutSourceInput = {
+    where: DataQualityMetricScalarWhereInput
+    data: XOR<DataQualityMetricUpdateManyMutationInput, DataQualityMetricUncheckedUpdateManyWithoutSourceInput>
+  }
+
+  export type DataQualityMetricScalarWhereInput = {
+    AND?: DataQualityMetricScalarWhereInput | DataQualityMetricScalarWhereInput[]
+    OR?: DataQualityMetricScalarWhereInput[]
+    NOT?: DataQualityMetricScalarWhereInput | DataQualityMetricScalarWhereInput[]
+    id?: StringFilter<"DataQualityMetric"> | string
+    sourceId?: StringFilter<"DataQualityMetric"> | string
+    indicator?: StringFilter<"DataQualityMetric"> | string
+    qualityDimension?: EnumQualityDimensionFilter<"DataQualityMetric"> | $Enums.QualityDimension
+    score?: FloatFilter<"DataQualityMetric"> | number
+    threshold?: FloatFilter<"DataQualityMetric"> | number
+    isPassing?: BoolFilter<"DataQualityMetric"> | boolean
+    details?: JsonNullableFilter<"DataQualityMetric">
+    measuredAt?: DateTimeFilter<"DataQualityMetric"> | Date | string
+  }
+
+  export type DataSourceCreateWithoutAvailabilityLogsInput = {
+    id?: string
+    name: string
+    sourceType: $Enums.DataSourceType
+    sector: string
+    apiEndpoint?: string | null
+    updateFrequency?: string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: string
+    accessLevel?: string
+    isActive?: boolean
+    reliabilityScore?: number
+    lastSyncedAt?: Date | string | null
+    lastSyncStatus?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    qualityMetrics?: DataQualityMetricCreateNestedManyWithoutSourceInput
+  }
+
+  export type DataSourceUncheckedCreateWithoutAvailabilityLogsInput = {
+    id?: string
+    name: string
+    sourceType: $Enums.DataSourceType
+    sector: string
+    apiEndpoint?: string | null
+    updateFrequency?: string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: string
+    accessLevel?: string
+    isActive?: boolean
+    reliabilityScore?: number
+    lastSyncedAt?: Date | string | null
+    lastSyncStatus?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    qualityMetrics?: DataQualityMetricUncheckedCreateNestedManyWithoutSourceInput
+  }
+
+  export type DataSourceCreateOrConnectWithoutAvailabilityLogsInput = {
+    where: DataSourceWhereUniqueInput
+    create: XOR<DataSourceCreateWithoutAvailabilityLogsInput, DataSourceUncheckedCreateWithoutAvailabilityLogsInput>
+  }
+
+  export type DataSourceUpsertWithoutAvailabilityLogsInput = {
+    update: XOR<DataSourceUpdateWithoutAvailabilityLogsInput, DataSourceUncheckedUpdateWithoutAvailabilityLogsInput>
+    create: XOR<DataSourceCreateWithoutAvailabilityLogsInput, DataSourceUncheckedCreateWithoutAvailabilityLogsInput>
+    where?: DataSourceWhereInput
+  }
+
+  export type DataSourceUpdateToOneWithWhereWithoutAvailabilityLogsInput = {
+    where?: DataSourceWhereInput
+    data: XOR<DataSourceUpdateWithoutAvailabilityLogsInput, DataSourceUncheckedUpdateWithoutAvailabilityLogsInput>
+  }
+
+  export type DataSourceUpdateWithoutAvailabilityLogsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    sourceType?: EnumDataSourceTypeFieldUpdateOperationsInput | $Enums.DataSourceType
+    sector?: StringFieldUpdateOperationsInput | string
+    apiEndpoint?: NullableStringFieldUpdateOperationsInput | string | null
+    updateFrequency?: StringFieldUpdateOperationsInput | string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: StringFieldUpdateOperationsInput | string
+    accessLevel?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    reliabilityScore?: FloatFieldUpdateOperationsInput | number
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastSyncStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    qualityMetrics?: DataQualityMetricUpdateManyWithoutSourceNestedInput
+  }
+
+  export type DataSourceUncheckedUpdateWithoutAvailabilityLogsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    sourceType?: EnumDataSourceTypeFieldUpdateOperationsInput | $Enums.DataSourceType
+    sector?: StringFieldUpdateOperationsInput | string
+    apiEndpoint?: NullableStringFieldUpdateOperationsInput | string | null
+    updateFrequency?: StringFieldUpdateOperationsInput | string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: StringFieldUpdateOperationsInput | string
+    accessLevel?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    reliabilityScore?: FloatFieldUpdateOperationsInput | number
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastSyncStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    qualityMetrics?: DataQualityMetricUncheckedUpdateManyWithoutSourceNestedInput
+  }
+
+  export type DataSourceCreateWithoutQualityMetricsInput = {
+    id?: string
+    name: string
+    sourceType: $Enums.DataSourceType
+    sector: string
+    apiEndpoint?: string | null
+    updateFrequency?: string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: string
+    accessLevel?: string
+    isActive?: boolean
+    reliabilityScore?: number
+    lastSyncedAt?: Date | string | null
+    lastSyncStatus?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    availabilityLogs?: DataSourceAvailabilityCreateNestedManyWithoutSourceInput
+  }
+
+  export type DataSourceUncheckedCreateWithoutQualityMetricsInput = {
+    id?: string
+    name: string
+    sourceType: $Enums.DataSourceType
+    sector: string
+    apiEndpoint?: string | null
+    updateFrequency?: string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: string
+    accessLevel?: string
+    isActive?: boolean
+    reliabilityScore?: number
+    lastSyncedAt?: Date | string | null
+    lastSyncStatus?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    availabilityLogs?: DataSourceAvailabilityUncheckedCreateNestedManyWithoutSourceInput
+  }
+
+  export type DataSourceCreateOrConnectWithoutQualityMetricsInput = {
+    where: DataSourceWhereUniqueInput
+    create: XOR<DataSourceCreateWithoutQualityMetricsInput, DataSourceUncheckedCreateWithoutQualityMetricsInput>
+  }
+
+  export type DataSourceUpsertWithoutQualityMetricsInput = {
+    update: XOR<DataSourceUpdateWithoutQualityMetricsInput, DataSourceUncheckedUpdateWithoutQualityMetricsInput>
+    create: XOR<DataSourceCreateWithoutQualityMetricsInput, DataSourceUncheckedCreateWithoutQualityMetricsInput>
+    where?: DataSourceWhereInput
+  }
+
+  export type DataSourceUpdateToOneWithWhereWithoutQualityMetricsInput = {
+    where?: DataSourceWhereInput
+    data: XOR<DataSourceUpdateWithoutQualityMetricsInput, DataSourceUncheckedUpdateWithoutQualityMetricsInput>
+  }
+
+  export type DataSourceUpdateWithoutQualityMetricsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    sourceType?: EnumDataSourceTypeFieldUpdateOperationsInput | $Enums.DataSourceType
+    sector?: StringFieldUpdateOperationsInput | string
+    apiEndpoint?: NullableStringFieldUpdateOperationsInput | string | null
+    updateFrequency?: StringFieldUpdateOperationsInput | string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: StringFieldUpdateOperationsInput | string
+    accessLevel?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    reliabilityScore?: FloatFieldUpdateOperationsInput | number
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastSyncStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    availabilityLogs?: DataSourceAvailabilityUpdateManyWithoutSourceNestedInput
+  }
+
+  export type DataSourceUncheckedUpdateWithoutQualityMetricsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    sourceType?: EnumDataSourceTypeFieldUpdateOperationsInput | $Enums.DataSourceType
+    sector?: StringFieldUpdateOperationsInput | string
+    apiEndpoint?: NullableStringFieldUpdateOperationsInput | string | null
+    updateFrequency?: StringFieldUpdateOperationsInput | string
+    coverageAreas?: JsonNullValueInput | InputJsonValue
+    populations?: JsonNullValueInput | InputJsonValue
+    indicators?: JsonNullValueInput | InputJsonValue
+    qualityLevel?: StringFieldUpdateOperationsInput | string
+    accessLevel?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    reliabilityScore?: FloatFieldUpdateOperationsInput | number
+    lastSyncedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastSyncStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    availabilityLogs?: DataSourceAvailabilityUncheckedUpdateManyWithoutSourceNestedInput
+  }
+
   export type SessionCreateManyUserInput = {
     id: string
     expiresAt: Date | string
@@ -44559,6 +49851,86 @@ export namespace Prisma {
     grantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DataSourceAvailabilityCreateManySourceInput = {
+    id?: string
+    isAvailable: boolean
+    responseTime?: number | null
+    errorMessage?: string | null
+    recordCount?: number | null
+    checkedAt?: Date | string
+  }
+
+  export type DataQualityMetricCreateManySourceInput = {
+    id?: string
+    indicator: string
+    qualityDimension: $Enums.QualityDimension
+    score: number
+    threshold?: number
+    isPassing?: boolean
+    details?: NullableJsonNullValueInput | InputJsonValue
+    measuredAt?: Date | string
+  }
+
+  export type DataSourceAvailabilityUpdateWithoutSourceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    isAvailable?: BoolFieldUpdateOperationsInput | boolean
+    responseTime?: NullableIntFieldUpdateOperationsInput | number | null
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    recordCount?: NullableIntFieldUpdateOperationsInput | number | null
+    checkedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DataSourceAvailabilityUncheckedUpdateWithoutSourceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    isAvailable?: BoolFieldUpdateOperationsInput | boolean
+    responseTime?: NullableIntFieldUpdateOperationsInput | number | null
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    recordCount?: NullableIntFieldUpdateOperationsInput | number | null
+    checkedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DataSourceAvailabilityUncheckedUpdateManyWithoutSourceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    isAvailable?: BoolFieldUpdateOperationsInput | boolean
+    responseTime?: NullableIntFieldUpdateOperationsInput | number | null
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    recordCount?: NullableIntFieldUpdateOperationsInput | number | null
+    checkedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DataQualityMetricUpdateWithoutSourceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    qualityDimension?: EnumQualityDimensionFieldUpdateOperationsInput | $Enums.QualityDimension
+    score?: FloatFieldUpdateOperationsInput | number
+    threshold?: FloatFieldUpdateOperationsInput | number
+    isPassing?: BoolFieldUpdateOperationsInput | boolean
+    details?: NullableJsonNullValueInput | InputJsonValue
+    measuredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DataQualityMetricUncheckedUpdateWithoutSourceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    qualityDimension?: EnumQualityDimensionFieldUpdateOperationsInput | $Enums.QualityDimension
+    score?: FloatFieldUpdateOperationsInput | number
+    threshold?: FloatFieldUpdateOperationsInput | number
+    isPassing?: BoolFieldUpdateOperationsInput | boolean
+    details?: NullableJsonNullValueInput | InputJsonValue
+    measuredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DataQualityMetricUncheckedUpdateManyWithoutSourceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    qualityDimension?: EnumQualityDimensionFieldUpdateOperationsInput | $Enums.QualityDimension
+    score?: FloatFieldUpdateOperationsInput | number
+    threshold?: FloatFieldUpdateOperationsInput | number
+    isPassing?: BoolFieldUpdateOperationsInput | boolean
+    details?: NullableJsonNullValueInput | InputJsonValue
+    measuredAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
 

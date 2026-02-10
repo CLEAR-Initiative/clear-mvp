@@ -752,3 +752,89 @@ model VulnerabilityScore {
 
   @@map("vulnerability_score")
 }
+
+// =============================================================================
+// DATA SOURCE INTELLIGENCE
+// =============================================================================
+
+enum DataSourceType {
+  API
+  DATABASE
+  SURVEY
+  MANUAL
+  SATELLITE
+  IOT
+  SOCIAL_MEDIA
+  OTHER_SOURCE
+}
+
+enum QualityDimension {
+  COMPLETENESS
+  ACCURACY
+  CONSISTENCY
+  TIMELINESS
+  VALIDITY
+}
+
+model DataSource {
+  id               String         @id @default(cuid())
+  name             String
+  sourceType       DataSourceType
+  sector           String         // protection, health, nutrition, wash, shelter, education, livelihoods
+  apiEndpoint      String?
+  updateFrequency  String         @default("monthly") // daily, weekly, monthly, quarterly
+  coverageAreas    Json           @default("[]") // string[] geographic areas
+  populations      Json           @default("[]") // string[] target populations
+  indicators       Json           @default("[]") // string[] available indicators
+  qualityLevel     String         @default("medium") // high, medium, low
+  accessLevel      String         @default("public")  // public, partner, restricted
+  isActive         Boolean        @default(true)
+  reliabilityScore Float          @default(0.5) // 0-1
+  lastSyncedAt     DateTime?
+  lastSyncStatus   String?
+  metadata         Json?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  availabilityLogs DataSourceAvailability[]
+  qualityMetrics   DataQualityMetric[]
+
+  @@index([sector])
+  @@index([isActive])
+  @@index([sourceType])
+  @@map("data_source")
+}
+
+model DataSourceAvailability {
+  id           String   @id @default(cuid())
+  sourceId     String
+  isAvailable  Boolean
+  responseTime Int?     // milliseconds
+  errorMessage String?
+  recordCount  Int?
+  checkedAt    DateTime @default(now())
+
+  source DataSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId])
+  @@index([checkedAt])
+  @@map("data_source_availability")
+}
+
+model DataQualityMetric {
+  id               String           @id @default(cuid())
+  sourceId         String
+  indicator        String
+  qualityDimension QualityDimension
+  score            Float            // 0-1
+  threshold        Float            @default(0.7)
+  isPassing        Boolean          @default(true)
+  details          Json?
+  measuredAt       DateTime         @default(now())
+
+  source DataSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId])
+  @@index([qualityDimension])
+  @@map("data_quality_metric")
+}
