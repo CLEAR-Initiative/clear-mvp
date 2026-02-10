@@ -1,43 +1,42 @@
-// Prisma schema for Better Auth
-// learn more: https://better-auth.com/docs/concepts/database
+// Prisma schema for CLEAR — Crisis Learning, Early-warning, Anticipation, and Response
+// Built on Better Auth + T3 Stack
 
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
-// NOTE: When using mysql or sqlserver, uncomment the //@db.Text annotations in model Account below
-// Further reading:
-// https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  createdBy   User   @relation(fields: [createdById], references: [id])
-  createdById String
-
-  @@index([name])
-}
+// =============================================================================
+// BETTER AUTH MODELS (managed by Better Auth)
+// =============================================================================
 
 model User {
   id            String    @id
-  name          String //@db.Text
+  name          String
   email         String
   emailVerified Boolean   @default(false)
-  image         String? //@db.Text
+  image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  posts         Post[]
+
+  // CLEAR-specific fields
+  role         UserRole  @default(OTHER)
+  organization String?
+  country      String?
+
+  // Better Auth relations
+  sessions Session[]
+  accounts Account[]
+
+  // CLEAR relations
+  decisions      Decision[]
+  auditDecisions AuditDecision[]
+  crises         Crisis[]        @relation("CrisisCreator")
 
   @@unique([email])
   @@map("user")
@@ -49,8 +48,8 @@ model Session {
   token     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  ipAddress String? //@db.Text
-  userAgent String? //@db.Text
+  ipAddress String?
+  userAgent String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -60,17 +59,17 @@ model Session {
 
 model Account {
   id                    String    @id
-  accountId             String //@db.Text
-  providerId            String //@db.Text
+  accountId             String
+  providerId            String
   userId                String
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken           String? //@db.Text
-  refreshToken          String? //@db.Text
-  idToken               String? //@db.Text
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
   accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
-  scope                 String? //@db.Text
-  password              String? //@db.Text
+  scope                 String?
+  password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -79,11 +78,236 @@ model Account {
 
 model Verification {
   id         String   @id
-  identifier String //@db.Text
-  value      String //@db.Text
+  identifier String
+  value      String
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
 
   @@map("verification")
+}
+
+// =============================================================================
+// CORE DOMAIN MODELS
+// =============================================================================
+
+model Crisis {
+  id                 String       @id @default(cuid())
+  title              String
+  type               CrisisType
+  severity           CrisisSeverity
+  location           String
+  latitude           Float?
+  longitude          Float?
+  description        String?      @db.Text
+  affectedPopulation Int          @default(0)
+  status             CrisisStatus @default(ACTIVE)
+  createdById        String
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  createdBy User       @relation("CrisisCreator", fields: [createdById], references: [id])
+  decisions Decision[]
+  alerts    Alert[]
+
+  @@index([status])
+  @@index([type])
+  @@index([severity])
+  @@index([createdAt])
+  @@map("crisis")
+}
+
+model Decision {
+  id              String         @id @default(cuid())
+  crisisId        String
+  title           String
+  decisionText    String         @db.Text
+  rationale       String?        @db.Text
+  confidenceScore Int            @default(50)
+  optionA         String?
+  optionB         String?
+  optionC         String?
+  selectedOption  SelectedOption
+  outcome         String?        @db.Text
+  madeById        String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  crisis  Crisis @relation(fields: [crisisId], references: [id], onDelete: Cascade)
+  madeBy  User   @relation(fields: [madeById], references: [id])
+
+  @@index([crisisId])
+  @@index([madeById])
+  @@index([createdAt])
+  @@map("decision")
+}
+
+model Alert {
+  id         String    @id @default(cuid())
+  crisisId   String
+  type       AlertType
+  severity   AlertSeverity
+  message    String
+  isActive   Boolean   @default(true)
+  triggeredAt DateTime @default(now())
+  resolvedAt DateTime?
+
+  crisis Crisis @relation(fields: [crisisId], references: [id], onDelete: Cascade)
+
+  @@index([crisisId])
+  @@index([isActive])
+  @@index([severity])
+  @@map("alert")
+}
+
+model AuditDecision {
+  id                 String            @id @default(cuid())
+  title              String
+  type               AuditDecisionType
+  decisionMade       String            @db.Text
+  rationale          String            @db.Text
+  riskLevel          RiskLevel
+  informationSources Json
+  stakeholders       Json
+  alternatives       String?           @db.Text
+  locationLat        Float?
+  locationLng        Float?
+  locationAddress    String?
+  deviceId           String            @default("unknown")
+  status             AuditStatus       @default(DRAFT)
+  syncStatus         SyncStatus        @default(PENDING)
+  tags               Json              @default("[]")
+  priority           Priority          @default(NORMAL)
+  cryptoHash         String?
+  createdById        String
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  createdBy User       @relation(fields: [createdById], references: [id])
+  evidence  Evidence[]
+
+  @@index([createdById])
+  @@index([status])
+  @@index([createdAt])
+  @@map("audit_decision")
+}
+
+model Evidence {
+  id              String       @id @default(cuid())
+  auditDecisionId String
+  type            EvidenceType
+  filename        String
+  size            Int
+  hash            String?
+  metadata        Json?
+  createdAt       DateTime     @default(now())
+
+  auditDecision AuditDecision @relation(fields: [auditDecisionId], references: [id], onDelete: Cascade)
+
+  @@index([auditDecisionId])
+  @@map("evidence")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum UserRole {
+  FIELD_COORDINATOR
+  PROGRAM_MANAGER
+  COUNTRY_DIRECTOR
+  HUMANITARIAN_COORDINATOR
+  LOGISTICS_OFFICER
+  ADMIN
+  OTHER
+}
+
+enum CrisisType {
+  NATURAL_DISASTER
+  CONFLICT
+  EPIDEMIC
+  FAMINE
+  REFUGEE_CRISIS
+  ECONOMIC_CRISIS
+  OTHER
+}
+
+enum CrisisSeverity {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum CrisisStatus {
+  ACTIVE
+  MONITORING
+  RESOLVED
+  ARCHIVED
+}
+
+enum SelectedOption {
+  OPTION_A
+  OPTION_B
+  OPTION_C
+  OTHER
+}
+
+enum AlertType {
+  THRESHOLD_EXCEEDED
+  NEW_CRISIS_DETECTED
+  DATA_ANOMALY
+  SYSTEM_HEALTH
+  OTHER
+}
+
+enum AlertSeverity {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum AuditDecisionType {
+  SECURITY_RESPONSE
+  RESOURCE_ALLOCATION
+  BENEFICIARY_SELECTION
+  PROGRAM_MODIFICATION
+  PARTNER_MANAGEMENT
+  OTHER
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum AuditStatus {
+  DRAFT
+  SUBMITTED
+  SYNCED
+  ARCHIVED
+}
+
+enum SyncStatus {
+  SYNCED
+  PENDING
+  CONFLICT
+  FAILED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum EvidenceType {
+  DOCUMENT
+  IMAGE
+  AUDIO
+  VIDEO
+  OTHER
 }
