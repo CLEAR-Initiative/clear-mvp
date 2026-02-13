@@ -14,9 +14,11 @@ export interface DjangoLocation {
   id: number;
   name: string;
   geo_id: string;
-  admin_level: number;
+  admin_level: number | { code: string; name: string };
   latitude?: number;
   longitude?: number;
+  /** GeoJSON point — returned by public API as `{ coordinates: [lng, lat] }` */
+  point?: { coordinates: [number, number] };
 }
 
 export interface DjangoDataSource {

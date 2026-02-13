@@ -1,256 +1,390 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   Box,
   Text,
-  Card,
   Group,
-  Badge,
+  Select,
   Button,
   TextInput,
+  ActionIcon,
+  Stack,
+  Loader,
 } from "@mantine/core";
 import {
-  IconDownload,
   IconSearch,
-  IconPlus,
-  IconMinus,
-  IconMapPin,
-  IconGrid3x3,
+  IconDownload,
+  IconPlayerSkipBack,
+  IconPlayerPlay,
+  IconPlayerSkipForward,
 } from "@tabler/icons-react";
-import Link from "next/link";
+import type { MapMarker } from "~/components/map/crisis-map";
+import { api } from "~/trpc/react";
+import {
+  type CrisisMarker,
+  fallbackLayers,
+  fallbackCrisisTypes,
+  buildLayersFromShockTypes,
+  buildCrisisTypeOptions,
+  alertsToMarkers,
+  deriveCountryOptions,
+  deriveRegionOptions,
+} from "./_components/map-markers-data";
+import { countryConfig } from "~/lib/constants/country-config";
+import { MapLayersPanel } from "./_components/map-layers-panel";
+import { MapLegendPanel } from "./_components/map-legend-panel";
+import { MapMarkerDetail } from "./_components/map-marker-detail";
 
-const crises = [
-  { id: "cholera", name: "Cholera Outbreak", region: "Somali Region", detail: "247 cases", severity: "Critical", severityColor: "#DC2626", severityBg: "#FEE2E2", dotColor: "#DC2626", pulse: true },
-  { id: "flooding", name: "Flooding Risk", region: "Oromia Region", detail: "36h warning", severity: "High", severityColor: "#F59E0B", severityBg: "#FEF3C7", dotColor: "#F59E0B", pulse: false },
-  { id: "drought", name: "Drought Monitoring", region: "Afar Region", detail: "Early warning", severity: "Medium", severityColor: "#D97706", severityBg: "#FEF3C7", dotColor: "#D97706", pulse: false },
+const CrisisMap = dynamic(
+  () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
+  { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
+);
+
+/* ========== Timeline data ========== */
+const timelineMonths = [
+  { label: "Sep", hasEvent: false },
+  { label: "Oct", hasEvent: true },
+  { label: "Nov", hasEvent: true },
+  { label: "Dec", hasEvent: false },
+  { label: "Jan", hasEvent: false },
+  { label: "Feb", hasEvent: false },
 ];
 
-const legend = [
-  { color: "#DC2626", label: "Critical - Immediate action" },
-  { color: "#F59E0B", label: "High - Urgent attention" },
-  { color: "#D97706", label: "Medium - Monitoring" },
-  { color: "#059669", label: "Response team location" },
-  { color: "#2563EB", label: "Resource/logistics hub" },
-];
+/* ========== Label styles ========== */
+const LABEL_STYLE = { fontSize: 10, letterSpacing: "0.05em" } as const;
+const INPUT_STYLE = {
+  fontWeight: 600,
+  fontSize: 13,
+  border: "1px solid #E5E5E5",
+} as const;
 
-const quickStats = [
-  { label: "Active Crises", value: "3", color: "#DC2626" },
-  { label: "Teams Deployed", value: "12", color: "#059669" },
-  { label: "Regions Affected", value: "3", color: "#171717" },
-];
+function FilterLabel({ children }: { children: string }) {
+  return (
+    <Text size="xs" c="#737373" tt="uppercase" style={LABEL_STYLE}>
+      {children}
+    </Text>
+  );
+}
 
 export default function MapPage() {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<unknown>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
+  /* ---- Fetch real data from Django backend ---- */
+  const alertsQuery = api.alerts.getAlerts.useQuery({
+    activeOnly: true,
+    pageSize: 100,
+  });
+  const shockTypesQuery = api.alerts.getShockTypes.useQuery();
 
-  useEffect(() => {
-    if (!mapContainer.current) return;
-    if (mapRef.current) return;
+  const allAlerts = alertsQuery.data?.alerts ?? [];
+  const shockTypes = shockTypesQuery.data?.shock_types ?? [];
 
-    // Load Mapbox GL CSS
-    const link = document.createElement("link");
-    link.href = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css";
-    link.rel = "stylesheet";
-    document.head.appendChild(link);
+  /* ---- Derive layers and crisis type options from API data ---- */
+  const layers = useMemo(
+    () =>
+      shockTypes.length > 0
+        ? buildLayersFromShockTypes(shockTypes)
+        : fallbackLayers,
+    [shockTypes],
+  );
 
-    // Load Mapbox GL JS
-    const script = document.createElement("script");
-    script.src = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js";
-    script.onload = () => {
-      const mapboxgl = (window as unknown as Record<string, unknown>)["mapboxgl"] as {
-        accessToken: string;
-        Map: new (opts: Record<string, unknown>) => {
-          on: (event: string, cb: () => void) => void;
-          zoomIn: () => void;
-          zoomOut: () => void;
-          flyTo: (opts: Record<string, unknown>) => void;
-        };
-        Marker: new (el: HTMLElement) => {
-          setLngLat: (coords: number[]) => { setPopup: (popup: unknown) => { addTo: (map: unknown) => void } };
-        };
-        Popup: new (opts: Record<string, unknown>) => {
-          setHTML: (html: string) => unknown;
-        };
-      };
+  const crisisTypeOptions = useMemo(
+    () =>
+      shockTypes.length > 0
+        ? buildCrisisTypeOptions(shockTypes)
+        : fallbackCrisisTypes,
+    [shockTypes],
+  );
 
-      mapboxgl.accessToken = "pk.eyJ1Ijoic2FtZnJvbnMiLCJhIjoiY20wcXprNHFmMDM5dDJpb3A3czEyYXU2OCJ9.z7lv5-q6CZW8Xq59kn1bYA";
+  /* ---- Transform alerts to map markers ---- */
+  const allMarkers: CrisisMarker[] = useMemo(
+    () => alertsToMarkers(allAlerts),
+    [allAlerts],
+  );
 
-      const map = new mapboxgl.Map({
-        container: mapContainer.current!,
-        style: "mapbox://styles/mapbox/light-v11",
-        center: [40.5, 8.5],
-        zoom: 5.5,
-      });
+  /* ---- Filter state ---- */
+  const [selectedCountry, setSelectedCountry] = useState("All Countries");
+  const [selectedRegion, setSelectedRegion] = useState("All Regions");
+  const [selectedShockType, setSelectedShockType] = useState("All Types");
+  const [activeLayers, setActiveLayers] = useState<string[]>(() =>
+    layers.map((l) => l.id),
+  );
+  const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(
+    null,
+  );
+  const [activeMonth, setActiveMonth] = useState(5);
 
-      mapRef.current = map;
+  /* ---- Derive country/region options from markers ---- */
+  const countryOptions = useMemo(
+    () => deriveCountryOptions(allMarkers),
+    [allMarkers],
+  );
+  const regionOptions = useMemo(
+    () => deriveRegionOptions(allMarkers, selectedCountry),
+    [allMarkers, selectedCountry],
+  );
 
-      map.on("load", () => {
-        setMapLoaded(true);
+  /* ---- Map center: use countryConfig when a country is selected ---- */
+  const mapCenter: [number, number] = useMemo(() => {
+    if (selectedCountry !== "All Countries") {
+      const cfg = countryConfig[selectedCountry];
+      if (cfg) return cfg.center;
+    }
+    if (allMarkers.length === 0) return [30.0, 15.5];
+    const avgLng =
+      allMarkers.reduce((sum, m) => sum + m.lng, 0) / allMarkers.length;
+    const avgLat =
+      allMarkers.reduce((sum, m) => sum + m.lat, 0) / allMarkers.length;
+    return [avgLng, avgLat];
+  }, [allMarkers, selectedCountry]);
 
-        // Add crisis markers
-        const markerData = [
-          { coords: [42.79, 9.35], color: "#DC2626", name: "Cholera - Jijiga", info: "158 cases" },
-          { coords: [44.2, 6.73], color: "#DC2626", name: "Cholera - Kebridehar", info: "89 cases" },
-          { coords: [39.76, 7.0], color: "#F59E0B", name: "Flood Risk - Bale", info: "36h warning" },
-          { coords: [40.0, 11.5], color: "#D97706", name: "Drought - Afar", info: "Early warning" },
-          { coords: [42.5, 9.2], color: "#059669", name: "WASH Team Alpha", info: "6 members" },
-          { coords: [44.0, 6.5], color: "#059669", name: "Health Team Bravo", info: "5 members" },
-        ];
+  const mapZoom = useMemo(() => {
+    if (selectedCountry !== "All Countries") {
+      const cfg = countryConfig[selectedCountry];
+      if (cfg) return cfg.zoom;
+    }
+    return 5;
+  }, [selectedCountry]);
 
-        markerData.forEach((m) => {
-          const el = document.createElement("div");
-          el.style.cssText = `width: 14px; height: 14px; background: ${m.color}; cursor: pointer;`;
+  /* ---- Filtered markers ---- */
+  const currentMarkers: MapMarker[] = useMemo(() => {
+    return allMarkers.filter((m) => {
+      // Country filter
+      if (selectedCountry !== "All Countries" && m.country !== selectedCountry)
+        return false;
 
-          const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(
-            `<div style="font-family: Inter, sans-serif;"><div style="font-weight: 600; font-size: 13px;">${m.name}</div><div style="font-size: 12px; color: #6B7280;">${m.info}</div></div>`
-          );
+      // Region filter
+      if (selectedRegion !== "All Regions" && m.region !== selectedRegion)
+        return false;
 
-          new mapboxgl.Marker(el)
-            .setLngLat(m.coords)
-            .setPopup(popup as unknown as undefined)
-            .addTo(map);
-        });
-      });
-    };
-    document.body.appendChild(script);
+      // Layer filter (type is shock_type.id as string)
+      const markerType = m.type ?? "";
+      if (!activeLayers.includes(markerType)) return false;
 
-    return () => {
-      link.remove();
-      script.remove();
-    };
-  }, []);
+      // Crisis type filter by name
+      if (
+        selectedShockType !== "All Types" &&
+        m.shockTypeName !== selectedShockType
+      )
+        return false;
 
-  const handleZoomIn = () => {
-    const map = mapRef.current as { zoomIn: () => void } | null;
-    map?.zoomIn();
+      return true;
+    });
+  }, [
+    allMarkers,
+    selectedCountry,
+    selectedRegion,
+    activeLayers,
+    selectedShockType,
+  ]);
+
+  /* ---- Handlers ---- */
+  const handleCountryChange = (value: string | null) => {
+    setSelectedCountry(value ?? "All Countries");
+    setSelectedRegion("All Regions");
+    setSelectedMarker(null);
   };
-  const handleZoomOut = () => {
-    const map = mapRef.current as { zoomOut: () => void } | null;
-    map?.zoomOut();
+
+  const handleRegionChange = (value: string | null) => {
+    setSelectedRegion(value ?? "All Regions");
+    setSelectedMarker(null);
   };
-  const handleResetView = () => {
-    const map = mapRef.current as { flyTo: (opts: Record<string, unknown>) => void } | null;
-    map?.flyTo({ center: [40.5, 8.5], zoom: 5.5 });
+
+  const handleShockTypeChange = (value: string | null) => {
+    setSelectedShockType(value ?? "All Types");
   };
+
+  const toggleLayer = (layerId: string) => {
+    setActiveLayers((prev) =>
+      prev.includes(layerId)
+        ? prev.filter((l) => l !== layerId)
+        : [...prev, layerId],
+    );
+  };
+
+  const handleMarkerClick = (marker: MapMarker) => {
+    const full = allMarkers.find((m) => m.id === marker.id);
+    setSelectedMarker(full ?? null);
+  };
+
+  const isLoading = alertsQuery.isLoading || shockTypesQuery.isLoading;
 
   return (
-    <Box style={{ position: "relative", height: "100vh", overflow: "hidden" }}>
-      {/* Map Header Overlay */}
+    <Box
+      style={{
+        position: "relative",
+        height: "calc(100vh - 60px)",
+        overflow: "hidden",
+      }}
+    >
+      {/* ===== Filter Header Overlay ===== */}
       <Box
+        className="absolute top-0 left-0 right-0 z-10"
+        px={16}
+        py={12}
         style={{
-          position: "absolute", top: 0, left: 0, right: 0, zIndex: 100,
-          padding: "16px 24px",
-          background: "linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,0))",
-          display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+          background:
+            "linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(255,255,255,0))",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          pointerEvents: "none",
         }}
       >
-        <Box>
-          <Text fw={600} c="#171717" style={{ fontSize: 16 }}>Crisis Map</Text>
-          <Text size="xs" c="#A3A3A3" mt={4}>Ethiopia \u2022 Real-time situational awareness</Text>
-        </Box>
-        <Group gap={8}>
+        <Group gap={12} style={{ pointerEvents: "auto" }}>
+          <Select
+            size="xs"
+            value={selectedCountry}
+            onChange={handleCountryChange}
+            data={countryOptions}
+            style={{ minWidth: 140 }}
+            styles={{ input: INPUT_STYLE }}
+            label={<FilterLabel>Country</FilterLabel>}
+          />
+          <Select
+            size="xs"
+            value={selectedRegion}
+            onChange={handleRegionChange}
+            data={regionOptions}
+            style={{ minWidth: 140 }}
+            styles={{ input: INPUT_STYLE }}
+            label={<FilterLabel>Region</FilterLabel>}
+          />
+          <Select
+            size="xs"
+            value={selectedShockType}
+            onChange={handleShockTypeChange}
+            data={crisisTypeOptions}
+            style={{ minWidth: 160 }}
+            styles={{ input: INPUT_STYLE }}
+            label={<FilterLabel>Crisis Type</FilterLabel>}
+          />
+          {isLoading && <Loader size={14} mt={20} />}
+        </Group>
+        <Group gap={8} style={{ pointerEvents: "auto" }}>
           <TextInput
             placeholder="Search locations..."
             size="xs"
             leftSection={<IconSearch size={14} />}
-            style={{ width: 250 }}
+            style={{ width: 220 }}
             styles={{ input: { boxShadow: "0 2px 4px rgba(0,0,0,0.1)" } }}
           />
-          <Button variant="outline" color="gray" size="xs" leftSection={<IconDownload size={14} />}
-            style={{ background: "white", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", fontSize: 13 }}>
+          <Button
+            variant="outline"
+            color="gray"
+            size="xs"
+            leftSection={<IconDownload size={14} />}
+            style={{
+              background: "white",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              fontSize: 13,
+            }}
+          >
             Export
           </Button>
         </Group>
       </Box>
 
-      {/* Full Screen Map */}
-      <div ref={mapContainer} style={{ height: "100vh", width: "100%" }} />
+      {/* ===== Mapbox Map ===== */}
+      <CrisisMap
+        markers={currentMarkers}
+        center={mapCenter}
+        zoom={mapZoom}
+        className="w-full h-full"
+        onMarkerClick={handleMarkerClick}
+      />
 
-      {/* Quick Stats (Top Right under header) */}
-      <Box style={{ position: "absolute", top: 80, right: 24, zIndex: 100, display: "flex", gap: 12 }}>
-        {quickStats.map((s) => (
-          <Box key={s.label} style={{ background: "white", padding: "12px 16px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-            <Text c="#737373" fw={600} tt="uppercase" style={{ fontSize: 11, letterSpacing: "0.5px" }}>{s.label}</Text>
-            <Text fw={700} c={s.color} style={{ fontSize: 28 }}>{s.value}</Text>
-          </Box>
-        ))}
-      </Box>
+      {/* ===== Layers Panel ===== */}
+      <MapLayersPanel
+        layers={layers}
+        activeLayers={activeLayers}
+        onToggleLayer={toggleLayer}
+      />
 
-      {/* Map Controls (Right side) */}
-      <Box style={{ position: "absolute", top: "50%", right: 24, transform: "translateY(-50%)", zIndex: 100, display: "flex", flexDirection: "column", gap: 8 }}>
-        <Button variant="outline" color="gray" size="xs" style={{ width: 40, height: 40, padding: 0, background: "white", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
-          onClick={handleZoomIn}>
-          <IconPlus size={20} />
-        </Button>
-        <Button variant="outline" color="gray" size="xs" style={{ width: 40, height: 40, padding: 0, background: "white", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
-          onClick={handleZoomOut}>
-          <IconMinus size={20} />
-        </Button>
-        <Box style={{ height: 8 }} />
-        <Button variant="outline" color="gray" size="xs" style={{ width: 40, height: 40, padding: 0, background: "white", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
-          onClick={handleResetView}>
-          <IconMapPin size={20} />
-        </Button>
-        <Button variant="outline" color="gray" size="xs" style={{ width: 40, height: 40, padding: 0, background: "white", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
-          <IconGrid3x3 size={20} />
-        </Button>
-      </Box>
+      {/* ===== Legend Panel ===== */}
+      <MapLegendPanel layers={layers} />
 
-      {/* Active Crises Panel (Bottom Left) */}
-      <Box style={{ position: "absolute", bottom: 24, left: 24, zIndex: 100, width: 320 }}>
-        <Card p={0} style={{ boxShadow: "0 4px 12px rgba(0,0,0,0.15)", border: "1px solid #E5E5E5" }}>
-          <Box px={16} py={12}>
-            <Text fw={600} size="sm">Active Crises</Text>
-          </Box>
-          {crises.map((crisis, i) => (
-            <Link key={crisis.id} href={`/crisis/${crisis.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+      {/* ===== Selected Marker Detail ===== */}
+      {selectedMarker && (
+        <MapMarkerDetail
+          marker={selectedMarker}
+          onClose={() => setSelectedMarker(null)}
+        />
+      )}
+
+      {/* ===== Timeline Bar ===== */}
+      <Box
+        className="absolute bottom-0 left-0 right-0 z-10 bg-white border-t border-[#E5E5E5]"
+        px={16}
+        py={12}
+      >
+        <Group justify="space-between" mb={8}>
+          <Text
+            size="xs"
+            fw={700}
+            c="#737373"
+            tt="uppercase"
+            style={{ letterSpacing: "0.05em", fontSize: 11 }}
+          >
+            Timeline
+          </Text>
+          <Group gap={8}>
+            <ActionIcon variant="light" color="gray" size="sm">
+              <IconPlayerSkipBack size={12} />
+            </ActionIcon>
+            <ActionIcon
+              variant="filled"
+              size="sm"
+              style={{ background: "#E85D3D" }}
+            >
+              <IconPlayerPlay size={12} />
+            </ActionIcon>
+            <ActionIcon variant="light" color="gray" size="sm">
+              <IconPlayerSkipForward size={12} />
+            </ActionIcon>
+          </Group>
+        </Group>
+        <Group justify="space-between" className="relative" h={40}>
+          <Box className="absolute top-1/2 left-0 right-0 h-1 bg-[#E5E5E5] -translate-y-1/2" />
+          {timelineMonths.map((month, i) => (
+            <Stack
+              key={month.label}
+              align="center"
+              gap={4}
+              className="cursor-pointer z-[1]"
+              onClick={() => setActiveMonth(i)}
+            >
               <Box
-                px={16} py={12}
-                className={`hover:bg-[#F9FAFB] ${i < crises.length - 1 ? "border-b border-[#E5E5E5]" : ""}`}
+                w={i === activeMonth ? 14 : 8}
+                h={i === activeMonth ? 14 : 8}
+                style={{
+                  backgroundColor:
+                    i === activeMonth
+                      ? "#E85D3D"
+                      : month.hasEvent
+                        ? "#D97706"
+                        : "#E5E5E5",
+                  marginTop: i === activeMonth ? 12 : 16,
+                }}
+              />
+              <Text
+                size="xs"
+                fw={i === activeMonth ? 600 : 400}
+                c={i === activeMonth ? "#171717" : "#737373"}
+                style={{ fontSize: 9 }}
               >
-                <Group gap={12}>
-                  <Box style={{
-                    width: 10, height: 10, background: crisis.dotColor,
-                    animation: crisis.pulse ? "pulse 2s infinite" : undefined,
-                  }} />
-                  <Box style={{ flex: 1 }}>
-                    <Text fw={600} size="sm" c="#171717">{crisis.name}</Text>
-                    <Text size="xs" c="#A3A3A3">{crisis.region} \u2022 {crisis.detail}</Text>
-                  </Box>
-                  <Badge size="xs" style={{ background: crisis.severityBg, color: crisis.severityColor, fontSize: 10 }}>
-                    {crisis.severity}
-                  </Badge>
-                </Group>
-              </Box>
-            </Link>
+                {month.label}
+              </Text>
+            </Stack>
           ))}
-        </Card>
+        </Group>
       </Box>
 
-      {/* Legend (Bottom Right) */}
-      <Box style={{ position: "absolute", bottom: 24, right: 24, zIndex: 100 }}>
-        <Card p={0} style={{ boxShadow: "0 4px 12px rgba(0,0,0,0.15)", border: "1px solid #E5E5E5", width: 200 }}>
-          <Box px={16} py={12}>
-            <Text fw={600} size="sm">Legend</Text>
-          </Box>
-          <Box px={16} py={12}>
-            {legend.map((item) => (
-              <Group key={item.label} gap={8} mb={8}>
-                <Box style={{ width: 16, height: 16, background: item.color }} />
-                <Text size="xs">{item.label}</Text>
-              </Group>
-            ))}
-          </Box>
-        </Card>
-      </Box>
-
-      {/* Pulse animation */}
+      {/* Pulse animation for critical markers */}
       <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
+        @keyframes pulse-dot {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+          50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
         }
       `}</style>
     </Box>
