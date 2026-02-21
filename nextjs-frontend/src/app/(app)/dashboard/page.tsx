@@ -69,9 +69,6 @@ export default function DashboardPage() {
   const pipelineStatsQuery = api.pipeline.getStatistics.useQuery(undefined, {
     // Don't throw error if endpoint doesn't exist yet - UI handles undefined gracefully
     retry: false,
-    onError: (error) => {
-      console.warn("Pipeline statistics endpoint not available:", error.message);
-    },
   });
   const llmMutation = api.llm.query.useMutation();
 
