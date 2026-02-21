@@ -25,11 +25,13 @@ function alertsToMarkers(alerts: DjangoAlert[]): MapMarker[] {
   const markers: MapMarker[] = [];
   for (const alert of alerts) {
     for (const loc of alert.locations) {
-      if (loc.latitude != null && loc.longitude != null) {
+      const lng = loc.longitude ?? loc.point?.coordinates[0];
+      const lat = loc.latitude ?? loc.point?.coordinates[1];
+      if (lat != null && lng != null) {
         markers.push({
           id: alert.id * 100 + loc.id,
-          lng: loc.longitude,
-          lat: loc.latitude,
+          lng,
+          lat,
           title: alert.title,
           severity: mapSeverity(alert.severity),
           type: alert.shock_type?.name,
@@ -53,23 +55,6 @@ function alertsToCrises(alerts: DjangoAlert[]): CrisisItem[] {
   });
 }
 
-/* Static fallback markers for countries without location coordinates in DB */
-const fallbackMarkers: Record<string, MapMarker[]> = {
-  Sudan: [
-    { id: 101, lng: 32.53, lat: 15.5, title: "Active Conflict - Khartoum", severity: "critical", type: "Conflict", description: "2.5M affected \u2022 Khartoum" },
-    { id: 102, lng: 25.35, lat: 13.63, title: "Armed Clashes - El Fasher", severity: "critical", type: "Conflict", description: "450k affected \u2022 North Darfur" },
-    { id: 103, lng: 23.47, lat: 12.91, title: "IDP Camp - Zalingei", severity: "critical", type: "Displacement", description: "180k displaced \u2022 Central Darfur" },
-    { id: 104, lng: 22.45, lat: 13.45, title: "Famine Risk - West Darfur", severity: "critical", type: "Food Security", description: "IPC Phase 5 \u2022 890k affected" },
-    { id: 105, lng: 37.22, lat: 19.62, title: "Cholera - Port Sudan", severity: "critical", type: "Health", description: "1,847 cases \u2022 Red Sea" },
-    { id: 106, lng: 32.5, lat: 13.16, title: "Flood Risk - White Nile", severity: "medium", type: "Natural Disaster", description: "Seasonal \u2022 White Nile" },
-  ],
-  Ethiopia: [
-    { id: 1, lng: 42.79, lat: 9.35, title: "Cholera Outbreak", severity: "critical", type: "Health", description: "247 cases \u2022 Somali Region" },
-    { id: 3, lng: 39.76, lat: 7.0, title: "Flood Risk", severity: "high", type: "Natural Disaster", description: "36h warning \u2022 Oromia" },
-    { id: 4, lng: 40.0, lat: 11.5, title: "Drought Zone", severity: "medium", type: "Natural Disaster", description: "Monitoring \u2022 Afar" },
-  ],
-};
-
 /* ========== Main Page ========== */
 export default function DashboardPage() {
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
@@ -81,7 +66,13 @@ export default function DashboardPage() {
   // tRPC queries
   const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true });
   const statsQuery = api.alerts.getStats.useQuery();
-  const pipelineStatsQuery = api.pipeline.getStatistics.useQuery();
+  const pipelineStatsQuery = api.pipeline.getStatistics.useQuery(undefined, {
+    // Don't throw error if endpoint doesn't exist yet - UI handles undefined gracefully
+    retry: false,
+    onError: (error) => {
+      console.warn("Pipeline statistics endpoint not available:", error.message);
+    },
+  });
   const llmMutation = api.llm.query.useMutation();
 
   const allAlerts = alertsQuery.data?.alerts ?? [];
@@ -115,11 +106,11 @@ export default function DashboardPage() {
     });
   }, [allAlerts, selectedCountry, selectedRegion, config?.regions]);
 
-  // Derive markers and crises from country-filtered API data, fall back to static
+  // Derive markers and crises from country-filtered API data
   const apiMarkers = useMemo(() => alertsToMarkers(countryAlerts), [countryAlerts]);
   const apiCrises = useMemo(() => alertsToCrises(countryAlerts), [countryAlerts]);
-  const currentMarkers = useMemo(() => apiMarkers.length > 0 ? apiMarkers : (fallbackMarkers[selectedCountry] ?? []), [apiMarkers, selectedCountry]);
-  const currentCrises = useMemo(() => apiCrises.length > 0 ? apiCrises : [], [apiCrises]);
+  const currentMarkers = useMemo(() => apiMarkers, [apiMarkers]);
+  const currentCrises = useMemo(() => apiCrises, [apiCrises]);
 
   // Generate AI analysis when country changes
   useEffect(() => {
@@ -199,7 +190,7 @@ export default function DashboardPage() {
         countryAlerts={countryAlerts}
         currentCrises={currentCrises}
         overview={overview}
-        pipelineStats={pipelineStatsQuery.data?.statistics}
+        pipelineStats={pipelineStatsQuery.data}
         aiAnalysis={aiAnalysis}
         llmMutation={{ isPending: llmMutation.isPending, isError: llmMutation.isError }}
         nrcCountryInfo={nrcCountryInfo}

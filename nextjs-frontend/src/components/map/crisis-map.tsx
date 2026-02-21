@@ -153,9 +153,18 @@ export function CrisisMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // FlyTo when center/zoom props change
+  // FlyTo when center/zoom props change (compare values, not array references)
+  const prevCenter = useRef(center);
+  const prevZoom = useRef(zoom);
   useEffect(() => {
     if (!map.current || !loaded) return;
+    if (
+      prevCenter.current[0] === center[0] &&
+      prevCenter.current[1] === center[1] &&
+      prevZoom.current === zoom
+    ) return;
+    prevCenter.current = center;
+    prevZoom.current = zoom;
     map.current.flyTo({
       center,
       zoom,
@@ -176,7 +185,10 @@ export function CrisisMap({
       const isTeam = markerData.type?.toLowerCase() === "team";
       const size = isTeam ? 28 : (severitySizes[markerData.severity] ?? 24);
       const typeLower = markerData.type?.toLowerCase() ?? "";
-      const markerColor = typeColors[typeLower] ?? severityColors[markerData.severity] ?? "#737373";
+      // Use severity color for crisis markers so low=green, medium=yellow, high=orange, critical=red
+      const markerColor = isTeam
+        ? (typeColors[typeLower] ?? "#059669")
+        : (severityColors[markerData.severity] ?? "#737373");
       const icon = typeIcons[typeLower] ?? "!";
 
       const el = document.createElement("div");
@@ -189,7 +201,6 @@ export function CrisisMap({
       el.style.fontWeight = "700";
       el.style.fontSize = "10px";
       el.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
-      el.style.position = "relative";
 
       if (isTeam) {
         // Team markers: circle, solid color fill, white border
@@ -229,26 +240,8 @@ export function CrisisMap({
       el.addEventListener("mouseenter", () => { tooltip.style.opacity = "1"; });
       el.addEventListener("mouseleave", () => { tooltip.style.opacity = "0"; });
 
-      const popupHtml =
-        markerData.popup ??
-        `<div style="font-family: Inter, sans-serif; min-width: 180px; padding: 8px;">
-          <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">${markerData.title}</div>
-          ${markerData.severity ? `<div style="display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #E5E5E5;"><span style="color: #737373;">Severity</span><span style="font-weight: 600; color: ${severityColor}; text-transform: uppercase;">${markerData.severity}</span></div>` : ""}
-          ${markerData.type ? `<div style="display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #E5E5E5;"><span style="color: #737373;">Type</span><span style="font-weight: 600; text-transform: capitalize;">${markerData.type.replace(/_/g, " ")}</span></div>` : ""}
-          ${markerData.description ? `<div style="font-size: 12px; color: #525252; margin-top: 8px;">${markerData.description}</div>` : ""}
-          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #E5E5E5; font-size: 11px; color: #6B7280;">Click for full details \u2192</div>
-        </div>`;
-
-      const popup = new mapboxgl.Popup({
-        offset: 25,
-        closeButton: true,
-        closeOnClick: false,
-        maxWidth: "280px",
-      }).setHTML(popupHtml);
-
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([markerData.lng, markerData.lat])
-        .setPopup(popup)
         .addTo(map.current);
 
       el.addEventListener("click", () => {

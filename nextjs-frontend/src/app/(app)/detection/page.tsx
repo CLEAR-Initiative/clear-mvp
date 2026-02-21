@@ -92,7 +92,7 @@ export default function DetectionPage() {
 
   const overview = statsQuery.data?.stats?.overview;
   const sources = sourcesQuery.data?.sources ?? [];
-  const pipelineStats = pipelineStatsQuery.data?.statistics;
+  const pipelineStats = pipelineStatsQuery.data;
   const detectors = detectorsQuery.data?.detectors ?? [];
   const historyAlerts = historyQuery.data?.alerts ?? [];
 
@@ -101,11 +101,13 @@ export default function DetectionPage() {
     const markers: MapMarker[] = [];
     for (const alert of alerts as DjangoAlert[]) {
       for (const loc of alert.locations) {
-        if (loc.latitude != null && loc.longitude != null) {
+        const lng = loc.longitude ?? loc.point?.coordinates[0];
+        const lat = loc.latitude ?? loc.point?.coordinates[1];
+        if (lat != null && lng != null) {
           markers.push({
             id: alert.id * 100 + loc.id,
-            lng: loc.longitude,
-            lat: loc.latitude,
+            lng,
+            lat,
             title: alert.title,
             severity: mapSeverity(alert.severity),
             type: alert.shock_type?.name,
@@ -156,7 +158,7 @@ export default function DetectionPage() {
     },
     {
       label: "Events Today",
-      value: pipelineStats ? formatNumber(pipelineStats.data.recent_24h) : "\u2014",
+      value: pipelineStats ? formatNumber(pipelineStats.overall.recent_data_count) : "\u2014",
     },
     {
       label: "Recent 7 Days",

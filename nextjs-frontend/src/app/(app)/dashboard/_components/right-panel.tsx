@@ -229,11 +229,11 @@ export function RightPanel({
             </Group>
             <SimpleGrid cols={3} spacing={8} mb={8}>
               <Box p={8} style={{ background: "white", border: "1px solid #F0F0F0", textAlign: "center" }}>
-                <Text fw={700} c="#E85D3D" style={{ fontSize: 14 }}>{ps?.sources.total ?? "\u2014"}</Text>
+                <Text fw={700} c="#E85D3D" style={{ fontSize: 14 }}>{ps?.overall.total_sources ?? "\u2014"}</Text>
                 <Text c="#737373" tt="uppercase" style={{ fontSize: 8 }}>Sources</Text>
               </Box>
               <Box p={8} style={{ background: "white", border: "1px solid #F0F0F0", textAlign: "center" }}>
-                <Text fw={700} c="#E85D3D" style={{ fontSize: 14 }}>{ps ? `${(ps.data.total_records / 1000).toFixed(1)}k` : "\u2014"}</Text>
+                <Text fw={700} c="#E85D3D" style={{ fontSize: 14 }}>{ps ? `${(ps.overall.total_data_records / 1000).toFixed(1)}k` : "\u2014"}</Text>
                 <Text c="#737373" tt="uppercase" style={{ fontSize: 8 }}>Records</Text>
               </Box>
               <Box p={8} style={{ background: "white", border: "1px solid #F0F0F0", textAlign: "center" }}>

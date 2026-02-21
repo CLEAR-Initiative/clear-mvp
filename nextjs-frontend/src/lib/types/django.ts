@@ -113,26 +113,29 @@ export interface DjangoPipelineSourcesResponse {
 }
 
 export interface DjangoPipelineStatistics {
-  sources: {
-    total: number;
-    active: number;
-    by_type: Record<string, number>;
+  success: boolean;
+  period: {
+    start_date: string;
+    end_date: string;
+    days: number;
   };
-  variables: {
-    total: number;
-    by_type: Record<string, number>;
+  overall: {
+    total_sources: number;
+    total_variables: number;
+    total_data_records: number;
+    recent_data_count: number;
   };
-  data: {
-    total_records: number;
-    recent_24h: number;
-    recent_7d: number;
+  by_source: Record<string, { variables: number; data_records: number }>;
+  by_type: Record<string, { variables: number; data_records: number }>;
+  tasks: {
+    total_tasks: number;
+    total_success: number;
+    total_failures: number;
+    avg_duration: number;
   };
 }
 
-export interface DjangoPipelineStatisticsResponse {
-  success: boolean;
-  statistics: DjangoPipelineStatistics;
-}
+export type DjangoPipelineStatisticsResponse = DjangoPipelineStatistics;
 
 // -- Alert Framework --
 

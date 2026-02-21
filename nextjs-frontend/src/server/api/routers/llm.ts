@@ -1,11 +1,10 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { djangoFetch, LLM_TIMEOUT_MS } from "~/server/api/django";
+import { djangoFetch, extractCookieHeader, LLM_TIMEOUT_MS } from "~/server/api/django";
 import type {
   LLMQueryResponse,
   LLMProvidersResponse,
 } from "~/lib/types/django";
-import { FALLBACK_LLM_PROVIDERS } from "~/lib/fallback-data";
 
 export const llmRouter = createTRPCRouter({
   query: publicProcedure
@@ -20,10 +19,11 @@ export const llmRouter = createTRPCRouter({
         cache: z.boolean().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       return djangoFetch<LLMQueryResponse>("/llm/api/query/", {
         method: "POST",
         timeoutMs: LLM_TIMEOUT_MS,
+        headers: extractCookieHeader(ctx.headers),
         body: JSON.stringify({
           prompt: input.prompt,
           system: input.system,
@@ -37,13 +37,10 @@ export const llmRouter = createTRPCRouter({
       });
     }),
 
-  getProviderStatus: publicProcedure.query(async () => {
-    try {
-      return await djangoFetch<LLMProvidersResponse>(
-        "/llm/api/providers/status/",
-      );
-    } catch {
-      return FALLBACK_LLM_PROVIDERS;
-    }
+  getProviderStatus: publicProcedure.query(async ({ ctx }) => {
+    return await djangoFetch<LLMProvidersResponse>(
+      "/llm/api/providers/status/",
+      { headers: extractCookieHeader(ctx.headers) },
+    );
   }),
 });

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { djangoFetch } from "~/server/api/django";
+import { djangoFetch, extractCookieHeader } from "~/server/api/django";
 
 interface DjangoUser {
   id: number;
@@ -40,24 +40,25 @@ export const authRouter = createTRPCRouter({
         password: z.string().min(1, "Password is required"),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       return djangoFetch<LoginResponse>("/users/api/auth/login/", {
         method: "POST",
+        headers: extractCookieHeader(ctx.headers),
         body: JSON.stringify(input),
       });
     }),
 
-  logout: publicProcedure.mutation(async () => {
+  logout: publicProcedure.mutation(async ({ ctx }) => {
     return djangoFetch<{ success: boolean }>("/users/api/auth/logout/", {
       method: "POST",
+      headers: extractCookieHeader(ctx.headers),
     });
   }),
 
   me: publicProcedure.query(async ({ ctx }) => {
-    const cookie = ctx.headers.get("cookie") ?? "";
     try {
       return await djangoFetch<MeResponse>("/users/api/auth/me/", {
-        headers: { Cookie: cookie },
+        headers: extractCookieHeader(ctx.headers),
       });
     } catch {
       return { authenticated: false } as MeResponse;
@@ -72,12 +73,11 @@ export const authRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const cookie = ctx.headers.get("cookie") ?? "";
       return djangoFetch<ChangePasswordResponse>(
         "/users/api/auth/change-password/",
         {
           method: "POST",
-          headers: { Cookie: cookie },
+          headers: extractCookieHeader(ctx.headers),
           body: JSON.stringify(input),
         },
       );

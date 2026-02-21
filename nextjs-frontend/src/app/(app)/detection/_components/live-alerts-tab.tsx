@@ -117,7 +117,7 @@ export function LiveAlertsTab({
                   Sources
                 </Text>
                 <Text fw={700} c="#2563EB" style={{ fontSize: 20 }}>
-                  {pipelineStats?.sources.total ?? sources.length}
+                  {pipelineStats?.overall.total_sources ?? sources.length}
                 </Text>
               </Box>
               <Box>
@@ -126,7 +126,7 @@ export function LiveAlertsTab({
                 </Text>
                 <Text fw={700} c="#171717" style={{ fontSize: 20 }}>
                   {pipelineStats
-                    ? formatNumber(pipelineStats.data.total_records)
+                    ? formatNumber(pipelineStats.overall.total_data_records)
                     : "\u2014"}
                 </Text>
               </Box>

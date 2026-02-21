@@ -37,6 +37,15 @@ interface DjangoFetchOptions extends RequestInit {
   timeoutMs?: number;
 }
 
+/**
+ * Extract the Cookie header from incoming request headers
+ * so it can be forwarded to Django (preserving the user's session).
+ */
+export function extractCookieHeader(headers: Headers): Record<string, string> {
+  const cookie = headers.get("cookie");
+  return cookie ? { Cookie: cookie } : {};
+}
+
 export async function djangoFetch<T = unknown>(
   path: string,
   options?: DjangoFetchOptions,
@@ -59,7 +68,37 @@ export async function djangoFetch<T = unknown>(
     });
 
     if (!res.ok) {
-      throw new Error(`Django API error: ${res.status} ${res.statusText}`);
+      const contentType = res.headers.get("content-type");
+      let errorDetail = `${res.status} ${res.statusText}`;
+
+      // Try to get more details from the response
+      if (contentType?.includes("application/json")) {
+        try {
+          const errorData = await res.json();
+          errorDetail += `: ${JSON.stringify(errorData)}`;
+        } catch {
+          // Failed to parse error JSON, use status text
+        }
+      } else if (contentType?.includes("text/html")) {
+        const html = await res.text();
+        const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+        if (titleMatch) {
+          errorDetail += `: ${titleMatch[1]}`;
+        } else {
+          errorDetail += " (HTML error page returned)";
+        }
+      }
+
+      throw new Error(`Django API error [${path}]: ${errorDetail}`);
+    }
+
+    // Check if response is actually JSON before parsing
+    const contentType = res.headers.get("content-type");
+    if (!contentType?.includes("application/json")) {
+      throw new Error(
+        `Django API returned non-JSON response [${path}]: Content-Type is ${contentType}. ` +
+        `This endpoint may not exist or is misconfigured on the Django backend.`
+      );
     }
 
     return res.json() as Promise<T>;

@@ -6,9 +6,8 @@ import { IconDownload, IconSparkles } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { SITUATION_ANALYSIS_SYSTEM_PROMPT } from "~/lib/prompts";
 import { mapSeverity } from "~/lib/types/django";
-import { countries, dateOptions } from "~/lib/constants/country-config";
+import { countries, dateOptions, countryConfig } from "~/lib/constants/country-config";
 import { PageHeader, FilterBar } from "~/components/ui";
-import { countryRegions } from "./_components/analysis-data";
 import { ExecutiveSummary } from "./_components/executive-summary";
 import { ReportsTab } from "./_components/reports-tab";
 import { ScenariosTab } from "./_components/scenarios-tab";
@@ -90,7 +89,7 @@ export default function AnalysisPage() {
           region={selectedRegion}
           onRegionChange={setSelectedRegion}
           countries={countries}
-          regions={countryRegions[selectedCountry] ?? ["All Regions"]}
+          regions={countryConfig[selectedCountry]?.regions ?? ["All Regions"]}
           date={selectedDate}
           onDateChange={setSelectedDate}
           dateOptions={dateOptions}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import {
   Box,
@@ -24,8 +24,6 @@ import type { MapMarker } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
 import {
   type CrisisMarker,
-  fallbackLayers,
-  fallbackCrisisTypes,
   buildLayersFromShockTypes,
   buildCrisisTypeOptions,
   alertsToMarkers,
@@ -81,34 +79,43 @@ export default function MapPage() {
 
   /* ---- Derive layers and crisis type options from API data ---- */
   const layers = useMemo(
-    () =>
-      shockTypes.length > 0
-        ? buildLayersFromShockTypes(shockTypes)
-        : fallbackLayers,
+    () => buildLayersFromShockTypes(shockTypes),
     [shockTypes],
   );
 
   const crisisTypeOptions = useMemo(
-    () =>
-      shockTypes.length > 0
-        ? buildCrisisTypeOptions(shockTypes)
-        : fallbackCrisisTypes,
+    () => buildCrisisTypeOptions(shockTypes),
     [shockTypes],
   );
 
+  /* ---- Filter to current month's alerts only ---- */
+  const currentMonthAlerts = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-indexed
+    return allAlerts.filter((alert) => {
+      const d = new Date(alert.shock_date);
+      return d.getFullYear() === year && d.getMonth() === month;
+    });
+  }, [allAlerts]);
+
   /* ---- Transform alerts to map markers ---- */
   const allMarkers: CrisisMarker[] = useMemo(
-    () => alertsToMarkers(allAlerts),
-    [allAlerts],
+    () => alertsToMarkers(currentMonthAlerts),
+    [currentMonthAlerts],
   );
 
   /* ---- Filter state ---- */
   const [selectedCountry, setSelectedCountry] = useState("All Countries");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [selectedShockType, setSelectedShockType] = useState("All Types");
-  const [activeLayers, setActiveLayers] = useState<string[]>(() =>
-    layers.map((l) => l.id),
-  );
+  const [activeLayers, setActiveLayers] = useState<string[]>([]);
+  // Sync active layers when shock types load (useState initializer runs before data arrives)
+  useEffect(() => {
+    if (layers.length > 0) {
+      setActiveLayers((prev) => prev.length === 0 ? layers.map((l) => l.id) : prev);
+    }
+  }, [layers]);
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(
     null,
   );
@@ -202,10 +209,13 @@ export default function MapPage() {
     );
   };
 
-  const handleMarkerClick = (marker: MapMarker) => {
-    const full = allMarkers.find((m) => m.id === marker.id);
-    setSelectedMarker(full ?? null);
-  };
+  const handleMarkerClick = useCallback(
+    (marker: MapMarker) => {
+      const full = allMarkers.find((m) => m.id === marker.id);
+      setSelectedMarker(full ?? null);
+    },
+    [allMarkers],
+  );
 
   const isLoading = alertsQuery.isLoading || shockTypesQuery.isLoading;
 

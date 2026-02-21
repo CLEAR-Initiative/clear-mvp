@@ -28,20 +28,12 @@ export function buildLayersFromShockTypes(
   shockTypes: DjangoShockType[],
 ): LayerDef[] {
   return shockTypes.map((st) => ({
-    id: String(st.id),
+    id: st.name,
     label: st.name,
     color: st.color,
     defaultChecked: true,
   }));
 }
-
-/** Fallback static layers used when API shock types aren't available */
-export const fallbackLayers: LayerDef[] = [
-  { id: "1", label: "Disease Outbreak", color: "#DC2626", defaultChecked: true },
-  { id: "2", label: "Flood", color: "#2563EB", defaultChecked: true },
-  { id: "3", label: "Drought", color: "#D97706", defaultChecked: true },
-  { id: "4", label: "Conflict", color: "#DC2626", defaultChecked: true },
-];
 
 /* ========== Crisis types for filter dropdown ========== */
 export function buildCrisisTypeOptions(
@@ -49,14 +41,6 @@ export function buildCrisisTypeOptions(
 ): string[] {
   return ["All Types", ...shockTypes.map((st) => st.name)];
 }
-
-export const fallbackCrisisTypes = [
-  "All Types",
-  "Disease Outbreak",
-  "Flood",
-  "Drought",
-  "Conflict",
-];
 
 /* ========== geo_id prefix → country name ========== */
 const geoIdToCountry: Record<string, string> = {
@@ -73,27 +57,26 @@ const geoIdToCountry: Record<string, string> = {
 };
 
 function countryFromGeoId(geoId: string): string | undefined {
+  // Try underscore-delimited prefix first (e.g. "SD_001" → "SD")
   const prefix = geoId.split("_")[0] ?? "";
-  return geoIdToCountry[prefix];
+  if (geoIdToCountry[prefix]) return geoIdToCountry[prefix];
+  // Fallback: try first 2 characters for compact IDs (e.g. "SD13024043" → "SD")
+  return geoIdToCountry[geoId.slice(0, 2)];
 }
 
 /**
- * Reverse-lookup country from coordinates by finding the closest countryConfig center.
- * Used as fallback when geo_id doesn't map to a known country (e.g. OSM_* ids).
+ * Reverse-lookup country from coordinates using bounding-box containment.
+ * Falls back to "Unknown" when the point is outside all configured countries,
+ * preventing incorrect assignment to the nearest country center.
  */
 function countryFromCoords(lng: number, lat: number): string {
-  let best = "Unknown";
-  let bestDist = Infinity;
   for (const [name, cfg] of Object.entries(countryConfig)) {
-    const dx = cfg.center[0] - lng;
-    const dy = cfg.center[1] - lat;
-    const dist = dx * dx + dy * dy;
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = name;
+    const [lngMin, latMin, lngMax, latMax] = cfg.bbox;
+    if (lng >= lngMin && lng <= lngMax && lat >= latMin && lat <= latMax) {
+      return name;
     }
   }
-  return best;
+  return "Unknown";
 }
 
 /* ========== Transform Django alerts to map markers ========== */
@@ -124,7 +107,7 @@ export function alertsToMarkers(alerts: DjangoAlert[]): CrisisMarker[] {
         lat,
         title: alert.title,
         severity: mapSeverity(alert.severity),
-        type: String(alert.shock_type.id),
+        type: alert.shock_type.name,
         description: alert.text,
         region: loc.name,
         country,
