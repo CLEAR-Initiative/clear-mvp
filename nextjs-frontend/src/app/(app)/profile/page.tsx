@@ -9,19 +9,18 @@ import {
   Badge,
   Button,
   SimpleGrid,
-  Stack,
   Divider,
 } from "@mantine/core";
 import {
   IconUser,
-  IconMail,
-  IconBell,
-  IconShield,
   IconSettings,
   IconPencil,
   IconKey,
+  IconShield,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { NotificationPreferencesSection } from "./_components/NotificationPreferencesSection";
+import { SubscriptionSection } from "./_components/SubscriptionSection";
 
 export default function ProfilePage() {
   const { data, isLoading } = api.auth.me.useQuery();
@@ -91,7 +90,7 @@ export default function ProfilePage() {
           <Box>
             <Text size="xs" c="#737373" mb={2}>Email</Text>
             <Group gap={8}>
-              <Text size="sm" fw={500}>{user.email || "Not set"}</Text>
+              <Text size="sm" fw={500}>{user.email ?? "Not set"}</Text>
               {user.email_verified ? (
                 <Badge size="xs" color="green" variant="light">Verified</Badge>
               ) : (
@@ -130,32 +129,14 @@ export default function ProfilePage() {
         </SimpleGrid>
       </Card>
 
-      {/* Notifications Card */}
-      <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
-        <Group gap={8} mb={16}>
-          <IconBell size={18} color="#E85D3D" />
-          <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
-            Notifications
-          </Text>
-        </Group>
-        <Group justify="space-between">
-          <Box>
-            <Text size="sm" fw={500}>Email Notifications</Text>
-            <Text size="xs" c="#737373">
-              {user.email_notifications_enabled
-                ? "Enabled — you will receive email alerts"
-                : "Disabled — no email alerts will be sent"}
-            </Text>
-          </Box>
-          <Badge
-            size="sm"
-            color={user.email_notifications_enabled ? "green" : "gray"}
-            variant="light"
-          >
-            {user.email_notifications_enabled ? "On" : "Off"}
-          </Badge>
-        </Group>
-      </Card>
+      {/* Notification Preferences (connected to backend) */}
+      <NotificationPreferencesSection user={user} />
+
+      {/* Alert Subscriptions */}
+      <SubscriptionSection
+        hasMobileNumber={!!user.mobile_number}
+        smsEnabled={user.sms_notifications_enabled ?? false}
+      />
 
       <Divider my={24} />
 
@@ -173,16 +154,6 @@ export default function ProfilePage() {
           size="sm"
         >
           Change Password
-        </Button>
-        <Button
-          component={Link}
-          href="/notification-preferences"
-          variant="outline"
-          color="gray"
-          leftSection={<IconBell size={14} />}
-          size="sm"
-        >
-          Notification Settings
         </Button>
         {user.is_staff && (
           <Button

@@ -11,6 +11,8 @@ interface DjangoUser {
   is_staff: boolean;
   email_verified?: boolean;
   email_notifications_enabled?: boolean;
+  sms_notifications_enabled?: boolean;
+  mobile_number?: string;
   preferred_language?: string;
   timezone?: string;
 }
