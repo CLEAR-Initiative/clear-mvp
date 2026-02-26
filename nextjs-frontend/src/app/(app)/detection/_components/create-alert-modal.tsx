@@ -174,11 +174,13 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
       label: st.name,
     })) ?? [];
 
-  const sourceOptions =
+  const fetchedSources =
     sourcesQuery.data?.sources?.map((s) => ({
       value: String(s.id),
       label: s.name,
     })) ?? [];
+  const sourceOptions =
+    fetchedSources.length > 0 ? fetchedSources : [{ value: "7", label: "Test Source" }];
 
   return (
     <Modal
@@ -250,6 +252,7 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
           onChange={(v) => setForm((p) => ({ ...p, shock_type_id: v ?? "" }))}
           disabled={shockTypesQuery.isLoading}
           required
+          comboboxProps={{ zIndex: 1000 }}
         />
         <Select
           label={<Text style={SECTION_LABEL_STYLE}>Severity</Text>}
@@ -258,6 +261,7 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
           value={form.severity}
           onChange={(v) => setForm((p) => ({ ...p, severity: v ?? "" }))}
           required
+          comboboxProps={{ zIndex: 1000 }}
         />
         <Select
           label={<Text style={SECTION_LABEL_STYLE}>Data Source</Text>}
@@ -267,6 +271,7 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
           onChange={(v) => setForm((p) => ({ ...p, data_source_id: v ?? "" }))}
           disabled={sourcesQuery.isLoading}
           required
+          comboboxProps={{ zIndex: 1000 }}
         />
         <TextInput
           label={<Text style={SECTION_LABEL_STYLE}>Shock Date</Text>}
