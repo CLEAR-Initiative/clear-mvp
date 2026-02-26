@@ -238,10 +238,11 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
       <SimpleGrid cols={2} mb={20}>
         <Select
           label={<Text style={SECTION_LABEL_STYLE}>Shock Type</Text>}
-          placeholder="Select shock type"
+          placeholder={shockTypesQuery.isLoading ? "Loading…" : "Select shock type"}
           data={shockTypeOptions}
           value={form.shock_type_id}
           onChange={(v) => setForm((p) => ({ ...p, shock_type_id: v ?? "" }))}
+          disabled={shockTypesQuery.isLoading}
           required
         />
         <Select
@@ -254,10 +255,11 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
         />
         <Select
           label={<Text style={SECTION_LABEL_STYLE}>Data Source</Text>}
-          placeholder="Select data source"
+          placeholder={sourcesQuery.isLoading ? "Loading…" : "Select data source"}
           data={sourceOptions}
           value={form.data_source_id}
           onChange={(v) => setForm((p) => ({ ...p, data_source_id: v ?? "" }))}
+          disabled={sourcesQuery.isLoading}
           required
         />
         <TextInput
