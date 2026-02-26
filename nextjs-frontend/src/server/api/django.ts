@@ -57,10 +57,13 @@ export async function djangoFetch<T = unknown>(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+  const isDev = process.env.NODE_ENV === "development";
+
   try {
     const res = await fetch(url, {
       ...fetchOptions,
       signal: controller.signal,
+      redirect: "manual" as RequestRedirect,
       headers: {
         "Content-Type": "application/json",
         ...fetchOptions.headers,
@@ -71,21 +74,38 @@ export async function djangoFetch<T = unknown>(
       const contentType = res.headers.get("content-type");
       let errorDetail = `${res.status} ${res.statusText}`;
 
-      // Try to get more details from the response
-      if (contentType?.includes("application/json")) {
-        try {
-          const errorData = await res.json();
-          errorDetail += `: ${JSON.stringify(errorData)}`;
-        } catch {
-          // Failed to parse error JSON, use status text
+      if (res.status === 302) {
+        const location = res.headers.get("location") ?? "";
+        errorDetail += ` (redirect to ${location})`;
+        if (isDev) {
+          console.warn(
+            `[CLEAR] Django API auth redirect [${path}]: 302 → ${location}. ` +
+              "Session cookie may not be forwarded (cross-origin)."
+          );
         }
-      } else if (contentType?.includes("text/html")) {
-        const html = await res.text();
-        const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-        if (titleMatch) {
-          errorDetail += `: ${titleMatch[1]}`;
-        } else {
-          errorDetail += " (HTML error page returned)";
+      } else {
+        // Try to get more details from the response (skip for 302 - no body)
+        if (contentType?.includes("application/json")) {
+          try {
+            const errorData = await res.json();
+            errorDetail += `: ${JSON.stringify(errorData)}`;
+          } catch {
+            // Failed to parse error JSON, use status text
+          }
+        } else if (contentType?.includes("text/html")) {
+          const html = await res.text();
+          const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+          if (titleMatch) {
+            errorDetail += `: ${titleMatch[1]}`;
+          } else {
+            errorDetail += " (HTML error page returned)";
+          }
+          if (isDev) {
+            console.warn(
+              `[CLEAR] Django API returned HTML instead of JSON [${path}]: status ${res.status}. ` +
+                "Likely redirected to login page (auth required)."
+            );
+          }
         }
       }
 
@@ -95,9 +115,14 @@ export async function djangoFetch<T = unknown>(
     // Check if response is actually JSON before parsing
     const contentType = res.headers.get("content-type");
     if (!contentType?.includes("application/json")) {
+      if (isDev) {
+        console.warn(
+          `[CLEAR] Django API non-JSON [${path}]: Content-Type=${contentType}`
+        );
+      }
       throw new Error(
         `Django API returned non-JSON response [${path}]: Content-Type is ${contentType}. ` +
-        `This endpoint may not exist or is misconfigured on the Django backend.`
+          `This endpoint may not exist or is misconfigured on the Django backend.`
       );
     }
 

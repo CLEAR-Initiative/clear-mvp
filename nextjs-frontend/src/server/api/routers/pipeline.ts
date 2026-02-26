@@ -16,9 +16,15 @@ interface LocationsApiResponse {
 
 export const pipelineRouter = createTRPCRouter({
   getSources: publicProcedure.query(async ({ ctx }) => {
+    const headers = extractCookieHeader(ctx.headers);
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        `[CLEAR] getSources: cookie ${headers.Cookie ? "present" : "MISSING"} (auth required)`
+      );
+    }
     return await djangoFetch<DjangoPipelineSourcesResponse>(
       "/pipeline/api/sources/",
-      { headers: extractCookieHeader(ctx.headers) },
+      { headers },
     );
   }),
 
@@ -39,13 +45,20 @@ export const pipelineRouter = createTRPCRouter({
         .optional(),
     )
     .query(async ({ ctx, input }) => {
+      const headers = extractCookieHeader(ctx.headers);
+      if (process.env.NODE_ENV === "development") {
+        const hasCookie = !!headers.Cookie;
+        console.warn(
+          `[CLEAR] getLocations: cookie ${hasCookie ? "present" : "MISSING"} (auth required for this endpoint)`
+        );
+      }
       const qs = buildQueryString({
         admin_level: input?.adminLevel,
         page_size: input?.pageSize ?? 100,
       });
       const res = await djangoFetch<LocationsApiResponse>(
         `/location/api/locations/${qs}`,
-        { headers: extractCookieHeader(ctx.headers) },
+        { headers },
       );
       return {
         page: res.pagination.page,

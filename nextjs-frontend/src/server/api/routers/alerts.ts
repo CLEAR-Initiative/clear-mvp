@@ -78,14 +78,25 @@ export const alertsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return await djangoFetch<DjangoCreateAlertResponse>(
+      const headers = extractCookieHeader(ctx.headers);
+      if (process.env.NODE_ENV === "development") {
+        console.warn(
+          `[CLEAR] createAlert: cookie ${headers.Cookie ? "present" : "MISSING"}`
+        );
+      }
+      const result = await djangoFetch<DjangoCreateAlertResponse>(
         "/alerts/webhook/alert/create/",
         {
           method: "POST",
           body: JSON.stringify(input),
-          headers: extractCookieHeader(ctx.headers),
+          headers,
           timeoutMs: 15_000,
         },
       );
+      if (process.env.NODE_ENV === "development" && result) {
+        const alertId = (result as { alert?: { id?: number } })?.alert?.id;
+        console.warn(`[CLEAR] createAlert response: success, alert ID ${alertId ?? "?"}`);
+      }
+      return result;
     }),
 });
