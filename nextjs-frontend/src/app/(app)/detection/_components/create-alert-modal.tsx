@@ -214,7 +214,10 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
         label={<Text style={SECTION_LABEL_STYLE}>Title</Text>}
         placeholder="Alert title/headline"
         value={form.title}
-        onChange={(e) => setForm((p) => ({ ...p, title: e.currentTarget.value }))}
+        onChange={(e) => {
+          const v = e.currentTarget?.value ?? "";
+          setForm((p) => ({ ...p, title: v }));
+        }}
         mb={12}
         required
       />
@@ -223,7 +226,10 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
         label={<Text style={SECTION_LABEL_STYLE}>Text</Text>}
         placeholder="Main alert content and details"
         value={form.text}
-        onChange={(e) => setForm((p) => ({ ...p, text: e.currentTarget.value }))}
+        onChange={(e) => {
+          const v = e.currentTarget?.value ?? "";
+          setForm((p) => ({ ...p, text: v }));
+        }}
         minRows={4}
         mb={20}
         required
@@ -266,7 +272,10 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
           label={<Text style={SECTION_LABEL_STYLE}>Shock Date</Text>}
           type="date"
           value={form.shock_date}
-          onChange={(e) => setForm((p) => ({ ...p, shock_date: e.currentTarget.value }))}
+          onChange={(e) => {
+            const v = e.currentTarget?.value ?? "";
+            setForm((p) => ({ ...p, shock_date: v }));
+          }}
           required
         />
       </SimpleGrid>
@@ -282,13 +291,19 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
           label={<Text style={SECTION_LABEL_STYLE}>Valid From</Text>}
           type="datetime-local"
           value={form.valid_from}
-          onChange={(e) => setForm((p) => ({ ...p, valid_from: e.currentTarget.value }))}
+          onChange={(e) => {
+            const v = e.currentTarget?.value ?? "";
+            setForm((p) => ({ ...p, valid_from: v }));
+          }}
         />
         <TextInput
           label={<Text style={SECTION_LABEL_STYLE}>Valid Until</Text>}
           type="datetime-local"
           value={form.valid_until}
-          onChange={(e) => setForm((p) => ({ ...p, valid_until: e.currentTarget.value }))}
+          onChange={(e) => {
+            const v = e.currentTarget?.value ?? "";
+            setForm((p) => ({ ...p, valid_until: v }));
+          }}
         />
       </SimpleGrid>
 
@@ -319,6 +334,11 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
         </Button>
       </Group>
 
+      {locationsQuery.isError && (
+        <Alert color="yellow" variant="light" mb={12} styles={{ message: { fontSize: 12 } }}>
+          Could not load locations: {locationsQuery.error.message}. Ensure you are logged in.
+        </Alert>
+      )}
       {locationsQuery.isLoading ? (
         <SimpleGrid cols={3} mb={20}>
           {Array.from({ length: 9 }).map((_, i) => (

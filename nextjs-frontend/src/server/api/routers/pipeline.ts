@@ -7,6 +7,13 @@ import type {
   DjangoLocationsResponse,
 } from "~/lib/types/django";
 
+/** API returns { success, data, pagination }; we map to { locations, page, page_size, total_count } */
+interface LocationsApiResponse {
+  success: boolean;
+  data: DjangoLocationsResponse["locations"];
+  pagination: { page: number; page_size: number; total_count: number };
+}
+
 export const pipelineRouter = createTRPCRouter({
   getSources: publicProcedure.query(async ({ ctx }) => {
     return await djangoFetch<DjangoPipelineSourcesResponse>(
@@ -36,9 +43,15 @@ export const pipelineRouter = createTRPCRouter({
         admin_level: input?.adminLevel,
         page_size: input?.pageSize ?? 100,
       });
-      return await djangoFetch<DjangoLocationsResponse>(
+      const res = await djangoFetch<LocationsApiResponse>(
         `/location/api/locations/${qs}`,
         { headers: extractCookieHeader(ctx.headers) },
       );
+      return {
+        page: res.pagination.page,
+        page_size: res.pagination.page_size,
+        total_count: res.pagination.total_count,
+        locations: res.data ?? [],
+      } satisfies DjangoLocationsResponse;
     }),
 });
