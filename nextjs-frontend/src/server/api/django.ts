@@ -57,8 +57,6 @@ export async function djangoFetch<T = unknown>(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  const isDev = process.env.NODE_ENV === "development";
-
   try {
     const res = await fetch(url, {
       ...fetchOptions,
@@ -77,12 +75,6 @@ export async function djangoFetch<T = unknown>(
       if (res.status === 302) {
         const location = res.headers.get("location") ?? "";
         errorDetail += ` (redirect to ${location})`;
-        if (isDev) {
-          console.warn(
-            `[CLEAR] Django API auth redirect [${path}]: 302 → ${location}. ` +
-              "Session cookie may not be forwarded (cross-origin)."
-          );
-        }
       } else {
         // Try to get more details from the response (skip for 302 - no body)
         if (contentType?.includes("application/json")) {
@@ -100,12 +92,6 @@ export async function djangoFetch<T = unknown>(
           } else {
             errorDetail += " (HTML error page returned)";
           }
-          if (isDev) {
-            console.warn(
-              `[CLEAR] Django API returned HTML instead of JSON [${path}]: status ${res.status}. ` +
-                "Likely redirected to login page (auth required)."
-            );
-          }
         }
       }
 
@@ -115,11 +101,6 @@ export async function djangoFetch<T = unknown>(
     // Check if response is actually JSON before parsing
     const contentType = res.headers.get("content-type");
     if (!contentType?.includes("application/json")) {
-      if (isDev) {
-        console.warn(
-          `[CLEAR] Django API non-JSON [${path}]: Content-Type=${contentType}`
-        );
-      }
       throw new Error(
         `Django API returned non-JSON response [${path}]: Content-Type is ${contentType}. ` +
           `This endpoint may not exist or is misconfigured on the Django backend.`

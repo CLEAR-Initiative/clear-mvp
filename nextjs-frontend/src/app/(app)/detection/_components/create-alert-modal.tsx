@@ -91,14 +91,6 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
 
   const createMutation = api.alerts.createAlert.useMutation({
     onSuccess: (data) => {
-      const alertId = (data as { alert?: { id?: number } })?.alert?.id;
-      if (process.env.NODE_ENV === "development") {
-        console.warn(
-          "[CLEAR] Create alert success:",
-          alertId != null ? `alert ID ${alertId}` : "no ID in response",
-          data
-        );
-      }
       setSuccessMsg(data.message ?? "Alert created successfully.");
       setTimeout(() => {
         setSuccessMsg(null);
@@ -108,9 +100,6 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
       }, 1500);
     },
     onError: (err) => {
-      if (process.env.NODE_ENV === "development") {
-        console.error("[CLEAR] Create alert failed:", err.message, err);
-      }
       setErrorMsg(err.message);
     },
   });
@@ -192,15 +181,6 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
     })) ?? [];
   const sourceOptions =
     fetchedSources.length > 0 ? fetchedSources : [{ value: "7", label: "Test Source" }];
-
-  if (process.env.NODE_ENV === "development") {
-    if (sourcesQuery.isError) {
-      console.warn("[CLEAR] Sources API failed (using Test Source fallback):", sourcesQuery.error?.message);
-    }
-    if (locationsQuery.isError) {
-      console.warn("[CLEAR] Locations API failed:", locationsQuery.error?.message);
-    }
-  }
 
   return (
     <Modal
