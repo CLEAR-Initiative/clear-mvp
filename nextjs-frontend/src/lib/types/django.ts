@@ -231,6 +231,32 @@ export interface LLMProvidersResponse {
   providers: LLMProviderStatus[];
 }
 
+export interface DjangoCreateAlertResponse {
+  success: boolean;
+  message: string;
+  alert: {
+    id: number;
+    title: string;
+    shock_date: string;
+    severity: number;
+    go_no_go: boolean;
+    created_at: string;
+  };
+}
+
+export interface DjangoLocationsResponse {
+  page: number;
+  page_size: number;
+  total_count: number;
+  locations: {
+    id: number;
+    name: string;
+    geo_id: string;
+    admin_level: { code: string; name: string };
+    parent: { id: number; name: string } | null;
+  }[];
+}
+
 // -- Helpers --
 
 /** Map Django severity (1-5) to UI severity labels */

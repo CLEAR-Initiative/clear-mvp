@@ -1,8 +1,10 @@
+import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { djangoFetch, extractCookieHeader } from "~/server/api/django";
+import { djangoFetch, buildQueryString, extractCookieHeader } from "~/server/api/django";
 import type {
   DjangoPipelineSourcesResponse,
   DjangoPipelineStatisticsResponse,
+  DjangoLocationsResponse,
 } from "~/lib/types/django";
 
 export const pipelineRouter = createTRPCRouter({
@@ -19,4 +21,24 @@ export const pipelineRouter = createTRPCRouter({
       { headers: extractCookieHeader(ctx.headers) },
     );
   }),
+
+  getLocations: publicProcedure
+    .input(
+      z
+        .object({
+          adminLevel: z.string().optional(),
+          pageSize: z.number().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const qs = buildQueryString({
+        admin_level: input?.adminLevel,
+        page_size: input?.pageSize ?? 100,
+      });
+      return await djangoFetch<DjangoLocationsResponse>(
+        `/location/api/locations/${qs}`,
+        { headers: extractCookieHeader(ctx.headers) },
+      );
+    }),
 });

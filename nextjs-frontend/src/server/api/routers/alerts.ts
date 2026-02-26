@@ -6,6 +6,7 @@ import type {
   DjangoAlertDetailResponse,
   DjangoAlertStatsResponse,
   DjangoShockTypesResponse,
+  DjangoCreateAlertResponse,
 } from "~/lib/types/django";
 
 export const alertsRouter = createTRPCRouter({
@@ -61,4 +62,30 @@ export const alertsRouter = createTRPCRouter({
       { headers: extractCookieHeader(ctx.headers) },
     );
   }),
+
+  createAlert: publicProcedure
+    .input(
+      z.object({
+        title: z.string().min(1).max(255),
+        text: z.string().min(1),
+        shock_type_id: z.number(),
+        data_source_id: z.number(),
+        shock_date: z.string(),
+        severity: z.number().min(1).max(5),
+        valid_from: z.string().optional(),
+        valid_until: z.string().optional(),
+        location_ids: z.array(z.number()).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return await djangoFetch<DjangoCreateAlertResponse>(
+        "/alerts/webhook/alert/create/",
+        {
+          method: "POST",
+          body: JSON.stringify(input),
+          headers: extractCookieHeader(ctx.headers),
+          timeoutMs: 15_000,
+        },
+      );
+    }),
 });
