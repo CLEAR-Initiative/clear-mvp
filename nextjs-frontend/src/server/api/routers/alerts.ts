@@ -88,7 +88,7 @@ export const alertsRouter = createTRPCRouter({
         "/alerts/webhook/alert/create/",
         {
           method: "POST",
-          body: JSON.stringify(input),
+          body: JSON.stringify({ ...input, go_no_go: true }),
           headers,
           timeoutMs: 15_000,
         },
