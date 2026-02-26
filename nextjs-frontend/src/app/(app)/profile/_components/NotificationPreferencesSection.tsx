@@ -8,7 +8,6 @@ import {
   Group,
   Stack,
   Box,
-  TextInput,
   Button,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
@@ -28,12 +27,6 @@ export function NotificationPreferencesSection({
 }: NotificationPreferencesSectionProps) {
   const [emailEnabled, setEmailEnabled] = useState(
     user.email_notifications_enabled ?? false,
-  );
-  const [smsEnabled, setSmsEnabled] = useState(
-    user.sms_notifications_enabled ?? false,
-  );
-  const [mobileNumber, setMobileNumber] = useState(
-    user.mobile_number ?? "",
   );
   const [isSaving, setIsSaving] = useState(false);
 
@@ -61,8 +54,6 @@ export function NotificationPreferencesSection({
     setIsSaving(true);
     updateProfile.mutate({
       email_notifications_enabled: emailEnabled,
-      sms_notifications_enabled: smsEnabled,
-      mobile_number: mobileNumber,
     });
   };
 
@@ -101,8 +92,8 @@ export function NotificationPreferencesSection({
           />
         </Group>
 
-        {/* SMS toggle */}
-        <Group justify="space-between">
+        {/* SMS toggle (disabled until backend is ready) */}
+        <Group justify="space-between" style={{ opacity: 0.5 }}>
           <Box>
             <Group gap={6}>
               <IconPhone size={14} color="#737373" />
@@ -111,32 +102,15 @@ export function NotificationPreferencesSection({
               </Text>
             </Group>
             <Text size="xs" c="#737373">
-              Receive critical alerts via SMS
+              Coming soon
             </Text>
           </Box>
           <Switch
-            checked={smsEnabled}
-            onChange={(e) => setSmsEnabled(e.currentTarget.checked)}
+            checked={false}
+            disabled
             color="teal"
           />
         </Group>
-
-        {/* Mobile number input (shown when SMS enabled) */}
-        {smsEnabled && (
-          <TextInput
-            label="Mobile Number"
-            description="Enter in E.164 format (e.g. +249912345678)"
-            placeholder="+249912345678"
-            value={mobileNumber}
-            onChange={(e) => setMobileNumber(e.currentTarget.value)}
-            styles={{
-              input: {
-                border: "1px solid #E5E5E5",
-                borderRadius: 8,
-              },
-            }}
-          />
-        )}
 
         <Group justify="flex-end" mt={4}>
           <Button

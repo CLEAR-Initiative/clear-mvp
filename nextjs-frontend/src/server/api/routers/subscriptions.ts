@@ -96,6 +96,9 @@ export const subscriptionsRouter = createTRPCRouter({
   updateProfile: publicProcedure
     .input(
       z.object({
+        first_name: z.string().optional(),
+        last_name: z.string().optional(),
+        email: z.string().email().optional(),
         mobile_number: z.string().optional(),
         sms_notifications_enabled: z.boolean().optional(),
         email_notifications_enabled: z.boolean().optional(),
