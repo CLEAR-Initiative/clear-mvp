@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { Box, Tabs, Button, Group } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { mapSeverity } from "~/lib/types/django";
@@ -15,6 +16,7 @@ import { LiveAlertsTab } from "./_components/live-alerts-tab";
 import { DataSourcesTab } from "./_components/data-sources-tab";
 import { AlertRulesTab } from "./_components/alert-rules-tab";
 import { HistoryTab } from "./_components/history-tab";
+import { CreateAlertModal } from "./_components/create-alert-modal";
 
 function formatNumber(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
@@ -27,6 +29,7 @@ export default function DetectionPage() {
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [selectedDate, setSelectedDate] = useState("Feb 2026");
+  const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
 
   // tRPC queries
   const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true });
@@ -201,6 +204,7 @@ export default function DetectionPage() {
           <Button
             size="xs"
             leftSection={<IconPlus size={14} />}
+            onClick={openCreateModal}
             style={{
               background: "#E85D3D",
               borderColor: "#E85D3D",
@@ -270,6 +274,12 @@ export default function DetectionPage() {
           />
         )}
       </Box>
+
+      <CreateAlertModal
+        opened={createModalOpened}
+        onClose={closeCreateModal}
+        onSuccess={() => void alertsQuery.refetch()}
+      />
     </Box>
   );
 }
