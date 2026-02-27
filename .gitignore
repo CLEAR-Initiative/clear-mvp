@@ -1,14 +1,28 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+next-env.d.ts
+
+# prisma generated
+generated/
+
+# python
 .venv/
 __pycache__/
 logs/
 static/
 staticfiles/
-/node_modules/
-.DS_Store
-node_modules
-.next
-*/.next
-*.tsbuildinfo
-*/.env.local
+
+# env files
 .env
+.env.local
+.env*.local
+
+# vercel
 .vercel
+
+# misc
+.DS_Store
+*.tsbuildinfo

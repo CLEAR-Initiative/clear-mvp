@@ -17,6 +17,7 @@
     "@mantine/hooks": "^8.3.0",
     "@mantine/notifications": "^8.3.0",
     "@tabler/icons-react": "2.47.0",
+    "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.69.0",
     "@trpc/client": "^11.6.0",
     "@trpc/react-query": "^11.6.0",
@@ -31,15 +32,15 @@
     "zod": "^3.25.50"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@tailwindcss/postcss": "^4.0.15",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@tailwindcss/postcss": "^4.0.15",
-    "tailwindcss": "^4.0.15",
-    "postcss": "^8.5.3",
-    "typescript": "^5.8.2",
     "eslint": "^9.23.0",
     "eslint-config-next": "^15.2.3",
-    "@eslint/eslintrc": "^3.3.1"
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.0.15",
+    "typescript": "^5.8.2"
   }
 }

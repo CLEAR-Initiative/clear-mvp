@@ -1,6 +1,7 @@
 @import "@mantine/core/styles.css";
 @import "@mantine/notifications/styles.css";
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 /* ============================================
    CLEAR Prototype Design Tokens
