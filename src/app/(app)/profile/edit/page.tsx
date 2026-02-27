@@ -173,14 +173,14 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
                 label="First Name"
                 placeholder="Enter first name"
                 value={firstName}
-                onChange={(e) => setFirstName(e.currentTarget.value)}
+                onChange={(e) => { setFirstName(e.currentTarget.value); setSuccess(false); }}
                 styles={inputStyles}
               />
               <TextInput
                 label="Last Name"
                 placeholder="Enter last name"
                 value={lastName}
-                onChange={(e) => setLastName(e.currentTarget.value)}
+                onChange={(e) => { setLastName(e.currentTarget.value); setSuccess(false); }}
                 styles={inputStyles}
               />
             </Group>
@@ -190,7 +190,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
               placeholder="you@example.com"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.currentTarget.value)}
+              onChange={(e) => { setEmail(e.currentTarget.value); setSuccess(false); }}
               required
               styles={inputStyles}
             />
@@ -214,7 +214,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
             <Select
               label="Language"
               value={language}
-              onChange={(v) => setLanguage(v ?? "en")}
+              onChange={(v) => { setLanguage(v ?? "en"); setSuccess(false); }}
               data={[
                 { value: "en", label: "English" },
                 { value: "ar", label: "Arabic" },
@@ -225,7 +225,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
             <Select
               label="Timezone"
               value={tz}
-              onChange={(v) => setTz(v ?? "Africa/Khartoum")}
+              onChange={(v) => { setTz(v ?? "Africa/Khartoum"); setSuccess(false); }}
               data={[
                 { value: "Africa/Khartoum", label: "Sudan (Khartoum)" },
                 { value: "UTC", label: "UTC" },

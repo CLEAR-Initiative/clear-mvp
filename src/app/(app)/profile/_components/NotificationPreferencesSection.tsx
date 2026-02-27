@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   Text,
@@ -29,6 +29,10 @@ export function NotificationPreferencesSection({
     user.email_notifications_enabled ?? false,
   );
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setEmailEnabled(user.email_notifications_enabled ?? false);
+  }, [user.email_notifications_enabled]);
 
   const utils = api.useUtils();
   const updateProfile = api.subscriptions.updateProfile.useMutation({

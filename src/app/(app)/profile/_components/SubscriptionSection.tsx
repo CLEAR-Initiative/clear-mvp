@@ -43,7 +43,7 @@ export function SubscriptionSection({
   const [modalOpened, setModalOpened] = useState(false);
   const [editingSub, setEditingSub] = useState<DjangoSubscription | null>(null);
 
-  const { data, isLoading } = api.subscriptions.list.useQuery();
+  const { data, isLoading, isError, error } = api.subscriptions.list.useQuery();
   const utils = api.useUtils();
 
   const deleteMutation = api.subscriptions.delete.useMutation({
@@ -114,6 +114,10 @@ export function SubscriptionSection({
         {isLoading ? (
           <Text size="sm" c="#737373">
             Loading subscriptions...
+          </Text>
+        ) : isError ? (
+          <Text size="sm" c="red">
+            Failed to load subscriptions: {error?.message ?? "Unknown error"}
           </Text>
         ) : subscriptions.length === 0 ? (
           <Text size="sm" c="#737373">

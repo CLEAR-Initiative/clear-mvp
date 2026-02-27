@@ -60,14 +60,20 @@ export function SubscriptionFormModal({
 
   const utils = api.useUtils();
 
-  const { data: shockTypesData } = api.subscriptions.shockTypes.useQuery(
-    undefined,
-    { enabled: opened },
-  );
-  const { data: locationsData } = api.subscriptions.locations.useQuery(
-    undefined,
-    { enabled: opened },
-  );
+  const {
+    data: shockTypesData,
+    isLoading: shockTypesLoading,
+    isError: shockTypesError,
+    error: shockTypesErr,
+  } = api.subscriptions.shockTypes.useQuery(undefined, { enabled: opened });
+  const {
+    data: locationsData,
+    isLoading: locationsLoading,
+    isError: locationsError,
+    error: locationsErr,
+  } = api.subscriptions.locations.useQuery(undefined, { enabled: opened });
+
+  const optionsReady = !shockTypesLoading && !locationsLoading && !shockTypesError && !locationsError;
 
   const createMutation = api.subscriptions.create.useMutation({
     onSuccess: () => {
@@ -209,30 +215,46 @@ export function SubscriptionFormModal({
         </div>
 
         {/* Shock Types */}
-        <MultiSelect
-          label="Alert Types"
-          placeholder="Select shock types..."
-          data={shockTypeOptions}
-          value={selectedShockTypes}
-          onChange={setSelectedShockTypes}
-          searchable
-          styles={{
-            input: { border: "1px solid #E5E5E5", borderRadius: 8 },
-          }}
-        />
+        <div>
+          <MultiSelect
+            label="Alert Types"
+            placeholder={shockTypesLoading ? "Loading alert types..." : "Select shock types..."}
+            data={shockTypeOptions}
+            value={selectedShockTypes}
+            onChange={setSelectedShockTypes}
+            searchable
+            disabled={shockTypesLoading || shockTypesError}
+            styles={{
+              input: { border: "1px solid #E5E5E5", borderRadius: 8 },
+            }}
+          />
+          {shockTypesError && (
+            <Text size="xs" c="red" mt={4}>
+              Failed to load alert types: {shockTypesErr?.message ?? "Unknown error"}
+            </Text>
+          )}
+        </div>
 
         {/* Locations */}
-        <MultiSelect
-          label="Locations"
-          placeholder="Select locations..."
-          data={locationOptions}
-          value={selectedLocations}
-          onChange={setSelectedLocations}
-          searchable
-          styles={{
-            input: { border: "1px solid #E5E5E5", borderRadius: 8 },
-          }}
-        />
+        <div>
+          <MultiSelect
+            label="Locations"
+            placeholder={locationsLoading ? "Loading locations..." : "Select locations..."}
+            data={locationOptions}
+            value={selectedLocations}
+            onChange={setSelectedLocations}
+            searchable
+            disabled={locationsLoading || locationsError}
+            styles={{
+              input: { border: "1px solid #E5E5E5", borderRadius: 8 },
+            }}
+          />
+          {locationsError && (
+            <Text size="xs" c="red" mt={4}>
+              Failed to load locations: {locationsErr?.message ?? "Unknown error"}
+            </Text>
+          )}
+        </div>
 
         {/* Frequency */}
         <Select
@@ -256,7 +278,7 @@ export function SubscriptionFormModal({
           fullWidth
           loading={isSaving}
           onClick={handleSubmit}
-          disabled={showSmsWarning}
+          disabled={showSmsWarning || !optionsReady}
         >
           {isEdit ? "Update Subscription" : "Create Subscription"}
         </Button>

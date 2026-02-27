@@ -26,6 +26,7 @@ export default function VerifyEmailPage() {
   const router = useRouter();
   const [state, setState] = useState<VerifyState>("loading");
   const [errorMessage, setErrorMessage] = useState("");
+  const [resendMessage, setResendMessage] = useState("");
 
   const verifyMutation = api.auth.verifyEmailToken.useMutation({
     onSuccess: (data) => {
@@ -43,9 +44,10 @@ export default function VerifyEmailPage() {
 
   const resendMutation = api.auth.requestEmailVerification.useMutation({
     onSuccess: () => {
-      setErrorMessage("A new verification email has been sent. Please check your inbox.");
+      setResendMessage("A new verification email has been sent. Please check your inbox.");
     },
     onError: (err) => {
+      setResendMessage("");
       setErrorMessage(err.message);
     },
   });
@@ -163,6 +165,11 @@ export default function VerifyEmailPage() {
             <Text size="sm" c="#737373" ta="center">
               {errorMessage}
             </Text>
+            {resendMessage && (
+              <Text size="sm" c="green" ta="center" fw={500}>
+                {resendMessage}
+              </Text>
+            )}
             <Stack gap={8} w="100%" mt={8}>
               <Button
                 color="dark"
