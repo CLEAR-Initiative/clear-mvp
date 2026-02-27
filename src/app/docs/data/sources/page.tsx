@@ -8,7 +8,7 @@ export default function DataSourcesPage() {
     <DocsPage
       title="Data Sources"
       description="Register, monitor, and assess the quality of every data source your organization and partners rely on for humanitarian response."
-      badge="DATA &amp; INTELLIGENCE"
+      badge="DATA & INTELLIGENCE"
     >
       <DocsH2 id="overview">Overview</DocsH2>
       <p>

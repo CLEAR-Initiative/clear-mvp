@@ -8,7 +8,7 @@ export default function LiveDataFeedsPage() {
     <DocsPage
       title="Live Data Feeds"
       description="Monitor real-time humanitarian data from global sources — earthquakes, weather, and situational reports — without leaving the platform."
-      badge="DATA &amp; INTELLIGENCE"
+      badge="DATA & INTELLIGENCE"
     >
       <DocsH2 id="overview">Overview</DocsH2>
       <p>

@@ -8,7 +8,7 @@ export default function GapAnalysisPage() {
     <DocsPage
       title="Gap Analysis"
       description="Identify what data you are missing across humanitarian sectors, understand where the risks are greatest, and get actionable recommendations for closing the gaps."
-      badge="DATA &amp; INTELLIGENCE"
+      badge="DATA & INTELLIGENCE"
     >
       <DocsH2 id="overview">Overview</DocsH2>
       <p>

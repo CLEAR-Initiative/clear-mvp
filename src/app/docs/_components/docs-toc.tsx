@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 interface TocItem {
   id: string;
@@ -11,6 +12,7 @@ interface TocItem {
 export function DocsToc() {
   const [headings, setHeadings] = useState<TocItem[]>([]);
   const [activeId, setActiveId] = useState<string>("");
+  const pathname = usePathname();
 
   useEffect(() => {
     const article = document.querySelector("[data-docs-content]");
@@ -37,7 +39,7 @@ export function DocsToc() {
 
     elements.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, []);
+  }, [pathname]);
 
   if (headings.length === 0) return null;
 

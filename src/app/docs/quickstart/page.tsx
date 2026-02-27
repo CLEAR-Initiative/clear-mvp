@@ -28,7 +28,7 @@ export default function QuickstartPage() {
         <tbody>
           <tr>
             <td><strong>Node.js</strong></td>
-            <td>18.0 or higher</td>
+            <td>18.18.0 or higher</td>
             <td><code>node -v</code></td>
           </tr>
           <tr>
@@ -71,7 +71,7 @@ export default function QuickstartPage() {
         CLEAR repository to your machine; the second installs all dependencies
         (including Prisma, which auto-generates on <code>postinstall</code>).
       </p>
-      <pre><code>{`git clone https://github.com/your-org/clear-mvp.git
+      <pre><code>{`git clone https://github.com/CLEAR-Initiative/clear-mvp.git
 cd clear-mvp
 npm install`}</code></pre>
       <p>
