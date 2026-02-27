@@ -47,7 +47,22 @@ export default function ProfilePage() {
   return <ProfileContent user={user} />;
 }
 
-function ProfileContent({ user }: { user: NonNullable<NonNullable<ReturnType<typeof api.auth.me.useQuery>["data"]>["user"]> }) {
+interface ProfileUser {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_staff: boolean;
+  email_verified?: boolean;
+  email_notifications_enabled?: boolean;
+  sms_notifications_enabled?: boolean;
+  mobile_number?: string;
+  preferred_language?: string;
+  timezone?: string;
+}
+
+function ProfileContent({ user }: { user: ProfileUser }) {
   const utils = api.useUtils();
   const verifyEmail = api.auth.requestEmailVerification.useMutation({
     onSuccess: () => {
