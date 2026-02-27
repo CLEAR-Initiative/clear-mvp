@@ -14,14 +14,17 @@ import {
 } from "@mantine/core";
 import {
   IconUser,
-  IconMail,
-  IconBell,
-  IconShield,
   IconSettings,
   IconPencil,
   IconKey,
+  IconShield,
+  IconMailForward,
+  IconMail,
+  IconBell,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { NotificationPreferencesSection } from "./_components/NotificationPreferencesSection";
+import { SubscriptionSection } from "./_components/SubscriptionSection";
 
 export default function ProfilePage() {
   const { data, isLoading } = api.auth.me.useQuery();
@@ -43,6 +46,32 @@ export default function ProfilePage() {
   }
 
   const user = data.user;
+
+  return <ProfileContent user={user} />;
+}
+
+interface ProfileUser {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_staff: boolean;
+  email_verified?: boolean;
+  email_notifications_enabled?: boolean;
+  sms_notifications_enabled?: boolean;
+  mobile_number?: string;
+  preferred_language?: string;
+  timezone?: string;
+}
+
+function ProfileContent({ user }: { user: ProfileUser }) {
+  const utils = api.useUtils();
+  const verifyEmail = api.auth.requestEmailVerification.useMutation({
+    onSuccess: () => {
+      void utils.auth.me.invalidate();
+    },
+  });
 
   return (
     <Box p={32} style={{ maxWidth: 800 }}>
@@ -91,13 +120,38 @@ export default function ProfilePage() {
           <Box>
             <Text size="xs" c="#737373" mb={2}>Email</Text>
             <Group gap={8}>
-              <Text size="sm" fw={500}>{user.email || "Not set"}</Text>
+              <Text size="sm" fw={500}>{user.email ?? "Not set"}</Text>
               {user.email_verified ? (
                 <Badge size="xs" color="green" variant="light">Verified</Badge>
               ) : (
                 <Badge size="xs" color="red" variant="light">Unverified</Badge>
               )}
             </Group>
+            {!user.email_verified && user.email && (
+              <>
+                {verifyEmail.isSuccess && (
+                  <Text size="xs" c="green" mt={8} fw={500}>
+                    Verification email sent to {user.email}. Check your inbox.
+                  </Text>
+                )}
+                {verifyEmail.isError && (
+                  <Text size="xs" c="red" mt={4}>
+                    {verifyEmail.error.message}
+                  </Text>
+                )}
+                <Button
+                  size="xs"
+                  variant="light"
+                  color={verifyEmail.isSuccess ? "gray" : "red"}
+                  mt={8}
+                  leftSection={<IconMailForward size={14} />}
+                  loading={verifyEmail.isPending}
+                  onClick={() => verifyEmail.mutate()}
+                >
+                  {verifyEmail.isSuccess ? "Resend" : "Verify Email"}
+                </Button>
+              </>
+            )}
           </Box>
           <Box>
             <Text size="xs" c="#737373" mb={2}>Role</Text>
@@ -130,6 +184,14 @@ export default function ProfilePage() {
         </SimpleGrid>
       </Card>
 
+      {/* Notification Preferences (connected to backend) */}
+      <NotificationPreferencesSection user={user} />
+
+      {/* Alert Subscriptions */}
+      <SubscriptionSection
+        hasMobileNumber={!!user.mobile_number}
+        smsEnabled={user.sms_notifications_enabled ?? false}
+      />
       {/* Notifications Card */}
       <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
         <Group gap={8} mb={16}>

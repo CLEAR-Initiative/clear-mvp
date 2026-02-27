@@ -72,26 +72,21 @@ export async function djangoFetch<T = unknown>(
       const contentType = res.headers.get("content-type");
       let errorDetail = `${res.status} ${res.statusText}`;
 
-      if (res.status === 302) {
-        const location = res.headers.get("location") ?? "";
-        errorDetail += ` (redirect to ${location})`;
-      } else {
-        // Try to get more details from the response (skip for 302 - no body)
-        if (contentType?.includes("application/json")) {
-          try {
-            const errorData = await res.json();
-            errorDetail += `: ${JSON.stringify(errorData)}`;
-          } catch {
-            // Failed to parse error JSON, use status text
-          }
-        } else if (contentType?.includes("text/html")) {
-          const html = await res.text();
-          const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-          if (titleMatch) {
-            errorDetail += `: ${titleMatch[1]}`;
-          } else {
-            errorDetail += " (HTML error page returned)";
-          }
+      // Try to get more details from the response
+      if (contentType?.includes("application/json")) {
+        try {
+          const errorData = await res.json();
+          errorDetail += `: ${JSON.stringify(errorData)}`;
+        } catch {
+          // Failed to parse error JSON, use status text
+        }
+      } else if (contentType?.includes("text/html")) {
+        const html = await res.text();
+        const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+        if (titleMatch) {
+          errorDetail += `: ${titleMatch[1]}`;
+        } else {
+          errorDetail += " (HTML error page returned)";
         }
       }
 
@@ -103,7 +98,7 @@ export async function djangoFetch<T = unknown>(
     if (!contentType?.includes("application/json")) {
       throw new Error(
         `Django API returned non-JSON response [${path}]: Content-Type is ${contentType}. ` +
-          `This endpoint may not exist or is misconfigured on the Django backend.`
+        `This endpoint may not exist or is misconfigured on the Django backend.`
       );
     }
 

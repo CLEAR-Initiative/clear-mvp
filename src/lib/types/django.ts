@@ -94,6 +94,40 @@ export interface DjangoAlertStatsResponse {
   stats: DjangoAlertStats;
 }
 
+// -- Subscriptions --
+
+export interface DjangoSubscription {
+  id: number;
+  active: boolean;
+  method: "email" | "sms";
+  frequency: "immediate" | "daily" | "weekly" | "monthly";
+  created_at: string;
+  updated_at: string;
+  locations: { id: number; name: string; geo_id: string }[];
+  shock_types: { id: number; name: string }[];
+}
+
+export interface DjangoSubscriptionsResponse {
+  success: boolean;
+  subscriptions: DjangoSubscription[];
+}
+
+export interface DjangoSubscriptionResponse {
+  success: boolean;
+  subscription: DjangoSubscription;
+}
+
+export interface DjangoProfileUpdateResponse {
+  success: boolean;
+  profile: {
+    mobile_number: string;
+    sms_notifications_enabled: boolean;
+    email_notifications_enabled: boolean;
+    preferred_language: string;
+    timezone: string;
+  };
+}
+
 // -- Data Pipeline --
 
 export interface DjangoPipelineSource {
