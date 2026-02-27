@@ -238,8 +238,6 @@ export default function DetectionPage() {
             alerts={alerts}
             sources={sources}
             pipelineStats={pipelineStats}
-            selectedCountry={selectedCountry}
-            selectedRegion={selectedRegion}
             alertsLoading={alertsQuery.isLoading}
             mapMarkers={mapMarkers}
             mapCenter={mapCenter}

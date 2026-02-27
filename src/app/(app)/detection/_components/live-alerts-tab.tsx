@@ -66,8 +66,6 @@ interface LiveAlertsTabProps {
   alerts: DjangoAlert[];
   sources: DjangoPipelineSource[];
   pipelineStats: DjangoPipelineStatistics | undefined;
-  selectedCountry: string;
-  selectedRegion: string;
   alertsLoading: boolean;
   mapMarkers: MapMarker[];
   mapCenter: [number, number];
@@ -79,8 +77,6 @@ export function LiveAlertsTab({
   alerts,
   sources,
   pipelineStats,
-  selectedCountry,
-  selectedRegion,
   alertsLoading,
   mapMarkers,
   mapCenter,
@@ -284,16 +280,18 @@ export function LiveAlertsTab({
             style={{ flexShrink: 0 }}
           >
             <Group justify="space-between" mb={8}>
-              <Box>
+              <Group gap={8} align="center">
                 <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
-                  Active Alerts ({countLabel})
+                  Active Alerts
                 </Text>
-                <Text size="xs" c="#737373">
-                  {selectedCountry}
-                  {selectedRegion !== "All Regions" ? ` \u2014 ${selectedRegion}` : ""}{" "}
-                  \u2014 {SORT_LABELS[sortBy].toLowerCase()}
-                </Text>
-              </Box>
+                <Badge
+                  size="sm"
+                  variant="light"
+                  style={{ background: "#F5F5F5", color: "#525252", fontWeight: 600 }}
+                >
+                  {countLabel}
+                </Badge>
+              </Group>
               {alertsLoading && <Loader size="xs" />}
             </Group>
 
