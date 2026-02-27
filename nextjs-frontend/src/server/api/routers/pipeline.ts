@@ -11,7 +11,7 @@ import type {
 interface LocationsApiResponse {
   success: boolean;
   data: DjangoLocationsResponse["locations"];
-  pagination: { page: number; page_size: number; total_count: number };
+  pagination?: { page: number; page_size: number; total_count: number };
 }
 
 export const pipelineRouter = createTRPCRouter({
@@ -50,9 +50,9 @@ export const pipelineRouter = createTRPCRouter({
         { headers },
       );
       return {
-        page: res.pagination.page,
-        page_size: res.pagination.page_size,
-        total_count: res.pagination.total_count,
+        page: res.pagination?.page ?? 0,
+        page_size: res.pagination?.page_size ?? 0,
+        total_count: res.pagination?.total_count ?? 0,
         locations: res.data ?? [],
       } satisfies DjangoLocationsResponse;
     }),

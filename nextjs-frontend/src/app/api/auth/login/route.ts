@@ -28,7 +28,8 @@ export async function POST(request: NextRequest) {
   const setCookieHeaders = djangoRes.headers.getSetCookie();
   for (const cookie of setCookieHeaders) {
     const rewritten = cookie
-      .split("; ")
+      .split(";")
+      .map((part) => part.trim())
       .filter((part) => !part.toLowerCase().startsWith("domain="))
       .join("; ");
     response.headers.append("Set-Cookie", rewritten);

@@ -75,6 +75,16 @@ export const alertsRouter = createTRPCRouter({
         valid_from: z.string().optional(),
         valid_until: z.string().optional(),
         location_ids: z.array(z.number()).optional(),
+      }).superRefine((data, ctx) => {
+        if (data.valid_from && data.valid_until) {
+          if (new Date(data.valid_from) > new Date(data.valid_until)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "'valid_from' must be before 'valid_until'",
+              path: ["valid_until"],
+            });
+          }
+        }
       }),
     )
     .mutation(async ({ ctx, input }) => {

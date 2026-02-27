@@ -44,21 +44,25 @@ const SEVERITY_OPTIONS = [
   { value: "5", label: "5 — Critical" },
 ];
 
+function toLocalISOString(d: Date): string {
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
+}
+
 function today(): string {
-  return new Date().toISOString().split("T")[0]!;
+  return toLocalISOString(new Date()).split("T")[0]!;
 }
 
 function nowLocal(): string {
   const d = new Date();
   d.setSeconds(0, 0);
-  return d.toISOString().slice(0, 16);
+  return toLocalISOString(d).slice(0, 16);
 }
 
 function plusSevenDaysLocal(): string {
   const d = new Date();
   d.setDate(d.getDate() + 7);
   d.setSeconds(0, 0);
-  return d.toISOString().slice(0, 16);
+  return toLocalISOString(d).slice(0, 16);
 }
 
 const SECTION_LABEL_STYLE = {
@@ -85,9 +89,9 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const shockTypesQuery = api.alerts.getShockTypes.useQuery();
-  const sourcesQuery = api.pipeline.getSources.useQuery();
-  const locationsQuery = api.pipeline.getLocations.useQuery({ adminLevel: "1" });
+  const shockTypesQuery = api.alerts.getShockTypes.useQuery(undefined, { enabled: opened });
+  const sourcesQuery = api.pipeline.getSources.useQuery(undefined, { enabled: opened });
+  const locationsQuery = api.pipeline.getLocations.useQuery({ adminLevel: "1" }, { enabled: opened });
 
   const createMutation = api.alerts.createAlert.useMutation({
     onSuccess: (data) => {
@@ -136,6 +140,12 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
   function handleSubmit() {
     if (!isValid) return;
     setErrorMsg(null);
+    if (form.valid_from && form.valid_until) {
+      if (new Date(form.valid_from) > new Date(form.valid_until)) {
+        setErrorMsg("'Valid From' must be before 'Valid Until'.");
+        return;
+      }
+    }
     createMutation.mutate({
       title: form.title.trim(),
       text: form.text.trim(),
