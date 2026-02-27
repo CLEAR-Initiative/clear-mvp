@@ -84,4 +84,29 @@ export const authRouter = createTRPCRouter({
         },
       );
     }),
+
+  requestEmailVerification: publicProcedure.mutation(async ({ ctx }) => {
+    return djangoFetch<{ success: boolean; message?: string; error?: string }>(
+      "/users/api/auth/request-verification/",
+      {
+        method: "POST",
+        headers: extractCookieHeader(ctx.headers),
+      },
+    );
+  }),
+
+  verifyEmailToken: publicProcedure
+    .input(z.object({ token: z.string().min(1, "Token is required") }))
+    .mutation(async ({ ctx, input }) => {
+      return djangoFetch<{
+        success: boolean;
+        message?: string;
+        error?: string;
+        already_verified?: boolean;
+      }>("/users/api/auth/verify-email/", {
+        method: "POST",
+        headers: extractCookieHeader(ctx.headers),
+        body: JSON.stringify({ token: input.token }),
+      });
+    }),
 });
