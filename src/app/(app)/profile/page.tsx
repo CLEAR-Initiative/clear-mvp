@@ -9,6 +9,7 @@ import {
   Badge,
   Button,
   SimpleGrid,
+  Stack,
   Divider,
 } from "@mantine/core";
 import {
@@ -18,6 +19,8 @@ import {
   IconKey,
   IconShield,
   IconMailForward,
+  IconMail,
+  IconBell,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { NotificationPreferencesSection } from "./_components/NotificationPreferencesSection";
@@ -189,6 +192,32 @@ function ProfileContent({ user }: { user: ProfileUser }) {
         hasMobileNumber={!!user.mobile_number}
         smsEnabled={user.sms_notifications_enabled ?? false}
       />
+      {/* Notifications Card */}
+      <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
+        <Group gap={8} mb={16}>
+          <IconBell size={18} color="#E85D3D" />
+          <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
+            Notifications
+          </Text>
+        </Group>
+        <Group justify="space-between">
+          <Box>
+            <Text size="sm" fw={500}>Email Notifications</Text>
+            <Text size="xs" c="#737373">
+              {user.email_notifications_enabled
+                ? "Enabled — you will receive email alerts"
+                : "Disabled — no email alerts will be sent"}
+            </Text>
+          </Box>
+          <Badge
+            size="sm"
+            color={user.email_notifications_enabled ? "green" : "gray"}
+            variant="light"
+          >
+            {user.email_notifications_enabled ? "On" : "Off"}
+          </Badge>
+        </Group>
+      </Card>
 
       <Divider my={24} />
 
@@ -206,6 +235,16 @@ function ProfileContent({ user }: { user: ProfileUser }) {
           size="sm"
         >
           Change Password
+        </Button>
+        <Button
+          component={Link}
+          href="/notification-preferences"
+          variant="outline"
+          color="gray"
+          leftSection={<IconBell size={14} />}
+          size="sm"
+        >
+          Notification Settings
         </Button>
         {user.is_staff && (
           <Button
