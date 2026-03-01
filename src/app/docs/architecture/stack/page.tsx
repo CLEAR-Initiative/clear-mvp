@@ -6,7 +6,11 @@ import {
   InfoBox,
 } from "../../_components/docs-page";
 
-export const metadata = { title: "Tech Stack — CLEAR Docs" };
+export const metadata = {
+  title: "Tech Stack — CLEAR Docs",
+  description:
+    "A guided tour of the frameworks, libraries, and conventions that power CLEAR — Next.js 15, React 19, tRPC 11, Django, and Tailwind CSS 4.",
+};
 
 export default function TechStackPage() {
   return (
@@ -86,12 +90,11 @@ export default function TechStackPage() {
         </li>
       </ul>
       <p>
-        In both cases, <strong>Prisma types flow end-to-end</strong>. The
-        database schema defines the shape of the data, Prisma generates
-        TypeScript types from that schema, tRPC procedures return those types,
-        and React components consume them — all without a single manual type
-        definition in between. If a column is added to the database, the
-        compiler tells you everywhere that needs to change.
+        In both cases, <strong>types flow end-to-end</strong>. The Django API
+        defines the shape of the data, Zod schemas validate it at the tRPC
+        boundary, and React components consume the inferred types — all
+        without a single manual type definition in between. If an API response
+        changes shape, the compiler tells you everywhere that needs to change.
       </p>
 
       <InfoBox type="tip">
@@ -99,22 +102,19 @@ export default function TechStackPage() {
         <Link href="/docs/architecture/api">API Reference</Link>.
       </InfoBox>
 
-      <DocsH2 id="database">Database — Prisma 6 with PostgreSQL</DocsH2>
+      <DocsH2 id="database">Database — Django with PostgreSQL</DocsH2>
       <p>
-        <strong>Prisma 6</strong> serves as the ORM, providing a declarative
-        schema language, auto-generated TypeScript client, and powerful migration
-        tooling. The database itself is <strong>PostgreSQL</strong>, chosen for
-        its reliability, its rich support for JSON columns (useful for flexible
-        survey response data), and its widespread availability on managed hosting
-        platforms.
+        The <strong>Django API</strong> manages the database layer, providing
+        models, migrations, and an admin interface. The database itself is{" "}
+        <strong>PostgreSQL</strong>, chosen for its reliability, its rich
+        support for JSON columns (useful for flexible survey response data),
+        and its widespread availability on managed hosting platforms.
       </p>
       <p>
-        The Prisma schema lives at{" "}
-        <code>prisma/schema.prisma</code> and is the single source of truth for
-        the data model. Running <code>npm run db:push</code> in development
-        synchronises the database with the schema without generating migration
-        files; for production deployments, Prisma Migrate provides versioned,
-        reviewable migration scripts.
+        Django models define the data schema and serve as the single source of
+        truth. Django&apos;s built-in migration framework provides versioned,
+        reviewable migration scripts for both development and production
+        deployments.
       </p>
 
       <DocsH2 id="authentication">Authentication — Better Auth</DocsH2>
@@ -226,10 +226,10 @@ export default function TechStackPage() {
             </td>
           </tr>
           <tr>
-            <td><code>prisma/schema.prisma</code></td>
+            <td><code>src/server/api/django.ts</code></td>
             <td>
-              The Prisma database schema — the single source of truth for every
-              table, column, relation, and index in the system.
+              The Django API proxy — the <code>djangoFetch</code> helper that
+              tRPC routers use to communicate with the Django backend.
             </td>
           </tr>
         </tbody>
@@ -271,9 +271,10 @@ import { api } from "~/trpc/server";`}</code></pre>
           small and pages fast.
         </li>
         <li>
-          <strong>Type safety from database to UI.</strong> Prisma generates
-          types from the schema, tRPC propagates them through the API layer,
-          and React components consume them. No manual type duplication.
+          <strong>Type safety from API to UI.</strong> Zod schemas validate
+          data at the tRPC boundary, tRPC propagates inferred types through
+          the API layer, and React components consume them. No manual type
+          duplication.
         </li>
         <li>
           <strong>Thin routers, rich services.</strong> tRPC procedures handle

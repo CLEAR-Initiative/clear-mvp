@@ -378,9 +378,9 @@ export default function CrisesPage() {
       <InfoBox type="tip">
         For a visual overview of where your crises are concentrated
         geographically, visit the{" "}
-        <Link href="/docs/platform/map">Interactive Map</Link>. For
+        <Link href="/docs/platform/map" className="font-medium">Interactive Map</Link>. For
         dashboard-level metrics and recent activity, see the{" "}
-        <Link href="/docs/platform/dashboard">Dashboard</Link> documentation.
+        <Link href="/docs/platform/dashboard" className="font-medium">Dashboard</Link> documentation.
       </InfoBox>
     </DocsPage>
   );

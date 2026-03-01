@@ -36,8 +36,15 @@ export function DocsH2({
   children: ReactNode;
 }) {
   return (
-    <h2 id={id} className="scroll-mt-24">
+    <h2 id={id} className="group scroll-mt-24">
       {children}
+      <a
+        href={`#${id}`}
+        aria-label="Link to heading"
+        className="ml-2 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        #
+      </a>
     </h2>
   );
 }
@@ -50,8 +57,15 @@ export function DocsH3({
   children: ReactNode;
 }) {
   return (
-    <h3 id={id} className="scroll-mt-24">
+    <h3 id={id} className="group scroll-mt-24">
       {children}
+      <a
+        href={`#${id}`}
+        aria-label="Link to heading"
+        className="ml-2 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        #
+      </a>
     </h3>
   );
 }

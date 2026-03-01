@@ -262,22 +262,22 @@ export default function ExternalApisPage() {
       </p>
       <ul>
         <li>
-          <Link href="/docs/integrations/kobo">
-            <strong>KoBoToolbox Integration</strong>
+          <Link href="/docs/integrations/kobo" className="font-medium">
+            KoBoToolbox Integration
           </Link>{" "}
           — connect your mobile data collection pipeline to push surveys and
           pull responses directly through CLEAR.
         </li>
         <li>
-          <Link href="/docs/platform/crises">
-            <strong>Crisis Management</strong>
+          <Link href="/docs/platform/crises" className="font-medium">
+            Crisis Management
           </Link>{" "}
           — see how live feed data contextualizes active crises and informs
           decision-making.
         </li>
         <li>
-          <Link href="/docs/platform/dashboard">
-            <strong>Dashboard</strong>
+          <Link href="/docs/platform/dashboard" className="font-medium">
+            Dashboard
           </Link>{" "}
           — return to the operational overview where alerts from these feeds
           surface alongside crisis activity and pending decisions.
