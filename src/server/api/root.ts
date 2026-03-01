@@ -2,6 +2,7 @@ import { alertFrameworkRouter } from "~/server/api/routers/alertFramework";
 import { alertsRouter } from "~/server/api/routers/alerts";
 import { authRouter } from "~/server/api/routers/auth";
 import { dashboardRouter } from "~/server/api/routers/dashboard";
+import { featureFlagsRouter } from "~/server/api/routers/featureFlags";
 import { llmRouter } from "~/server/api/routers/llm";
 import { pipelineRouter } from "~/server/api/routers/pipeline";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
@@ -11,6 +12,7 @@ export const appRouter = createTRPCRouter({
   alerts: alertsRouter,
   auth: authRouter,
   dashboard: dashboardRouter,
+  featureFlags: featureFlagsRouter,
   llm: llmRouter,
   pipeline: pipelineRouter,
 });

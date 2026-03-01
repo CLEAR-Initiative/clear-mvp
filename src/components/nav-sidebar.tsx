@@ -21,15 +21,18 @@ import {
   IconBook,
   IconMapPin,
   IconLogout,
+  IconSettings,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { cn } from "~/lib/utils";
+import { useFeatureFlags } from "~/components/feature-flags-provider";
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
   badge?: number;
+  featureKey?: string;
 }
 
 interface NavSection {
@@ -41,18 +44,18 @@ const navSections: NavSection[] = [
   {
     title: "MAIN",
     items: [
-      { label: "Overview", href: "/dashboard", icon: IconLayoutDashboard },
-      { label: "Detection", href: "/detection", icon: IconTarget, badge: 3 },
-      { label: "Analysis", href: "/analysis", icon: IconChartPie },
-      { label: "Operations", href: "/operations", icon: IconUser, badge: 2 },
-      { label: "Cash Assistance", href: "/cash", icon: IconCurrencyDollar },
+      { label: "Overview", href: "/dashboard", icon: IconLayoutDashboard, featureKey: "dashboard" },
+      { label: "Detection", href: "/detection", icon: IconTarget, badge: 3, featureKey: "detection" },
+      { label: "Analysis", href: "/analysis", icon: IconChartPie, featureKey: "analysis" },
+      { label: "Operations", href: "/operations", icon: IconUser, badge: 2, featureKey: "operations" },
+      { label: "Cash Assistance", href: "/cash", icon: IconCurrencyDollar, featureKey: "cash_assistance" },
     ],
   },
   {
     title: "RESOURCES",
     items: [
-      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook },
-      { label: "Crisis Map", href: "/map", icon: IconMapPin },
+      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook, featureKey: "knowledge_hub" },
+      { label: "Crisis Map", href: "/map", icon: IconMapPin, featureKey: "crisis_map" },
     ],
   },
 ];
@@ -80,6 +83,7 @@ const activeCrises = [
 export function NavSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { flags } = useFeatureFlags();
   const isCrisisPage = pathname.startsWith("/crisis/");
   const [layers, setLayers] = useState<Record<string, boolean>>(
     Object.fromEntries(dataLayers.map((l) => [l.id, l.defaultChecked]))
@@ -97,6 +101,18 @@ export function NavSidebar() {
     }
     router.push("/auth/login");
   };
+
+  // Filter nav sections based on feature flags
+  const filteredSections = navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter(
+        (item) => !item.featureKey || flags[item.featureKey] !== false,
+      ),
+    }))
+    .filter((section) => section.items.length > 0);
+
+  const showDataLayers = flags.data_layers !== false;
 
   return (
     <Box
@@ -117,7 +133,7 @@ export function NavSidebar() {
 
       {/* Navigation */}
       <Box component="nav" className="flex-1 overflow-y-auto" p={12}>
-        {navSections.map((section) => (
+        {filteredSections.map((section) => (
           <Stack key={section.title} gap={0} mb={16}>
             <Text
               size="xs"
@@ -184,111 +200,113 @@ export function NavSidebar() {
       </Box>
 
       {/* Data Layers or Active Crises (context-dependent) */}
-      <Box className="border-t border-border" p={12}>
-        {isCrisisPage ? (
-          <>
-            <Text
-              size="xs"
-              fw={600}
-              c="#737373"
-              tt="uppercase"
-              px={12}
-              pt={8}
-              pb={4}
-              style={{ letterSpacing: "0.05em", fontSize: "10px" }}
-            >
-              Active Crises
-            </Text>
-            {activeCrises.map((crisis) => {
-              const isActiveCrisis = pathname === `/crisis/${crisis.id}`;
-              return (
-                <UnstyledButton
-                  key={crisis.id}
-                  component={Link}
-                  href={`/crisis/${crisis.id}`}
-                  px={12}
-                  py={10}
-                  className={cn(
-                    "flex items-center gap-2.5 text-[13px] font-medium transition-all duration-150 no-underline w-full",
-                    isActiveCrisis
-                      ? "bg-[#FEF2F0] text-[#E85D3D]"
-                      : "text-[#525252] hover:bg-[#F5F5F5] hover:text-[#171717]",
-                  )}
+      {(isCrisisPage || showDataLayers) && (
+        <Box className="border-t border-border" p={12}>
+          {isCrisisPage ? (
+            <>
+              <Text
+                size="xs"
+                fw={600}
+                c="#737373"
+                tt="uppercase"
+                px={12}
+                pt={8}
+                pb={4}
+                style={{ letterSpacing: "0.05em", fontSize: "10px" }}
+              >
+                Active Crises
+              </Text>
+              {activeCrises.map((crisis) => {
+                const isActiveCrisis = pathname === `/crisis/${crisis.id}`;
+                return (
+                  <UnstyledButton
+                    key={crisis.id}
+                    component={Link}
+                    href={`/crisis/${crisis.id}`}
+                    px={12}
+                    py={10}
+                    className={cn(
+                      "flex items-center gap-2.5 text-[13px] font-medium transition-all duration-150 no-underline w-full",
+                      isActiveCrisis
+                        ? "bg-[#FEF2F0] text-[#E85D3D]"
+                        : "text-[#525252] hover:bg-[#F5F5F5] hover:text-[#171717]",
+                    )}
+                    style={{
+                      borderLeft: `3px solid ${crisis.color}`,
+                      marginLeft: -12,
+                      paddingLeft: 21,
+                    }}
+                  >
+                    <Box
+                      w={8}
+                      h={8}
+                      style={{
+                        background: crisis.color,
+                        flexShrink: 0,
+                        animation: crisis.pulse ? "pulse-dot 2s ease-in-out infinite" : "none",
+                      }}
+                    />
+                    <Text size="sm" fw={500} style={{ fontSize: "13px" }}>
+                      {crisis.label}
+                    </Text>
+                  </UnstyledButton>
+                );
+              })}
+            </>
+          ) : (
+            <>
+              <Text
+                size="xs"
+                fw={600}
+                c="#737373"
+                tt="uppercase"
+                px={12}
+                pt={8}
+                pb={4}
+                style={{ letterSpacing: "0.05em", fontSize: "10px" }}
+              >
+                Data Layers
+              </Text>
+              {dataLayers.map((layer) => (
+                <label
+                  key={layer.id}
                   style={{
-                    borderLeft: `3px solid ${crisis.color}`,
-                    marginLeft: -12,
-                    paddingLeft: 21,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "8px 12px",
+                    fontSize: 12,
+                    cursor: "pointer",
+                    color: "#525252",
                   }}
                 >
-                  <Box
-                    w={8}
-                    h={8}
-                    style={{
-                      background: crisis.color,
-                      flexShrink: 0,
-                      animation: crisis.pulse ? "pulse-dot 2s ease-in-out infinite" : "none",
+                  <Checkbox
+                    size="xs"
+                    checked={layers[layer.id]}
+                    onChange={() => handleLayerToggle(layer.id)}
+                    styles={{
+                      input: {
+                        cursor: "pointer",
+                        accentColor: layer.color,
+                      },
                     }}
                   />
-                  <Text size="sm" fw={500} style={{ fontSize: "13px" }}>
-                    {crisis.label}
-                  </Text>
-                </UnstyledButton>
-              );
-            })}
-          </>
-        ) : (
-          <>
-            <Text
-              size="xs"
-              fw={600}
-              c="#737373"
-              tt="uppercase"
-              px={12}
-              pt={8}
-              pb={4}
-              style={{ letterSpacing: "0.05em", fontSize: "10px" }}
-            >
-              Data Layers
-            </Text>
-            {dataLayers.map((layer) => (
-              <label
-                key={layer.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 12px",
-                  fontSize: 12,
-                  cursor: "pointer",
-                  color: "#525252",
-                }}
-              >
-                <Checkbox
-                  size="xs"
-                  checked={layers[layer.id]}
-                  onChange={() => handleLayerToggle(layer.id)}
-                  styles={{
-                    input: {
-                      cursor: "pointer",
-                      accentColor: layer.color,
-                    },
-                  }}
-                />
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: layer.color,
-                    flexShrink: 0,
-                  }}
-                />
-                <Text size="xs" c="#525252">{layer.label}</Text>
-              </label>
-            ))}
-          </>
-        )}
-      </Box>
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: layer.color,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Text size="xs" c="#525252">{layer.label}</Text>
+                </label>
+              ))}
+            </>
+          )}
+        </Box>
+      )}
 
       {/* User Actions */}
       <Box className="border-t border-[#E5E5E5]" p={12}>
@@ -301,6 +319,21 @@ export function NavSidebar() {
         >
           <IconUser size={16} style={{ opacity: 0.7 }} />
           <Text size="xs" fw={500}>Profile</Text>
+        </UnstyledButton>
+        <UnstyledButton
+          component={Link}
+          href="/admin/features"
+          px={12}
+          py={8}
+          className={cn(
+            "flex items-center gap-2.5 text-[12px] transition-all duration-150 no-underline w-full",
+            pathname.startsWith("/admin")
+              ? "bg-[#FEF2F0] text-[#E85D3D]"
+              : "text-[#525252] hover:bg-[#F5F5F5]",
+          )}
+        >
+          <IconSettings size={16} style={{ opacity: 0.7 }} />
+          <Text size="xs" fw={500}>Admin</Text>
         </UnstyledButton>
         <UnstyledButton
           onClick={handleLogout}

@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Safety check: block schema changes without corresponding migrations
+if git diff --cached --name-only | grep -q "prisma/schema.prisma"; then
+  if ! git diff --cached --name-only | grep -q "prisma/migrations/"; then
+    echo "❌ BLOCKED: Prisma schema changes detected without migrations!"
+    echo ""
+    echo "You've modified prisma/schema.prisma but haven't staged any migration files."
+    echo "Run: npx prisma migrate dev --name <descriptive_name>"
+    echo "Then stage the generated migration files."
+    exit 1
+  fi
+fi
+
+# Run type checking
+bun run typecheck

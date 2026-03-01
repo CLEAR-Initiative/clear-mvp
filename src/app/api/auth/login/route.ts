@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body),
     },
   );
-
+console.log("Django login response:", djangoRes);
   const data: unknown = await djangoRes.json();
   const response = NextResponse.json(data, { status: djangoRes.status });
 

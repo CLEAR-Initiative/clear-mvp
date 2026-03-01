@@ -35,7 +35,7 @@ export default function RootLayout({
         <ColorSchemeScript defaultColorScheme="light" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <MantineProvider theme={clearTheme} defaultColorScheme="light">
+        <MantineProvider theme={clearTheme} forceColorScheme="light">
           <Notifications position="top-right" />
           <TRPCReactProvider>{children}</TRPCReactProvider>
         </MantineProvider>
