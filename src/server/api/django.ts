@@ -46,6 +46,16 @@ export function extractCookieHeader(headers: Headers): Record<string, string> {
   return cookie ? { Cookie: cookie } : {};
 }
 
+/**
+ * Extract the CSRF token from the csrftoken cookie so it can be
+ * sent as the X-CSRFToken header on Django POST/PUT/DELETE requests.
+ */
+export function extractCsrfToken(headers: Headers): Record<string, string> {
+  const cookie = headers.get("cookie") ?? "";
+  const match = cookie.match(/csrftoken=([^;]+)/);
+  return match ? { "X-CSRFToken": match[1] } : {};
+}
+
 export async function djangoFetch<T = unknown>(
   path: string,
   options?: DjangoFetchOptions,

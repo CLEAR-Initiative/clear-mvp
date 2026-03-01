@@ -14,6 +14,7 @@ export interface FeatureFlagDefinition {
   tier: 1 | 2 | 3 | 4;
   category: "core" | "main" | "resources" | "sub-feature";
   defaultEnabled: boolean;
+  route?: string;
 }
 
 export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
@@ -25,6 +26,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 1,
     category: "core",
     defaultEnabled: true,
+    route: "/dashboard",
   },
   {
     key: "auth",
@@ -33,6 +35,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 1,
     category: "core",
     defaultEnabled: true,
+    route: "/auth/login",
   },
   {
     key: "profile",
@@ -41,6 +44,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 1,
     category: "core",
     defaultEnabled: true,
+    route: "/profile",
   },
 
   // Tier 2 — High Priority
@@ -51,6 +55,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 2,
     category: "main",
     defaultEnabled: true,
+    route: "/detection",
   },
   {
     key: "crisis_map",
@@ -59,6 +64,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 2,
     category: "resources",
     defaultEnabled: true,
+    route: "/map",
   },
   {
     key: "crisis_detail",
@@ -67,6 +73,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 2,
     category: "main",
     defaultEnabled: true,
+    route: "/crisis/1",
   },
 
   // Tier 3 — Medium Priority
@@ -77,6 +84,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 3,
     category: "main",
     defaultEnabled: true,
+    route: "/analysis",
   },
   {
     key: "operations",
@@ -85,6 +93,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 3,
     category: "main",
     defaultEnabled: true,
+    route: "/operations",
   },
   {
     key: "cash_assistance",
@@ -93,6 +102,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 3,
     category: "main",
     defaultEnabled: true,
+    route: "/cash",
   },
 
   // Tier 4 — Lower Priority
@@ -103,6 +113,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 4,
     category: "resources",
     defaultEnabled: true,
+    route: "/knowledge",
   },
   {
     key: "llm_analysis",
@@ -127,6 +138,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 4,
     category: "sub-feature",
     defaultEnabled: true,
+    route: "/docs",
   },
 ];
 

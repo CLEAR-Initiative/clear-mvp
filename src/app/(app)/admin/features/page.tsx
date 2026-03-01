@@ -1,7 +1,8 @@
 "use client";
 
-import { Box, Text, Switch, Badge, Stack, Group, Card, Loader } from "@mantine/core";
-import { IconLock } from "@tabler/icons-react";
+import { Anchor, Box, Text, Switch, Badge, Stack, Group, Card, Loader } from "@mantine/core";
+import { IconLock, IconExternalLink } from "@tabler/icons-react";
+import Link from "next/link";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
 import { TIER_LABELS } from "~/lib/constants/feature-flags";
@@ -144,9 +145,22 @@ export default function AdminFeaturesPage() {
                             />
                           )}
                         </Group>
-                        <Text c="#737373" style={{ fontSize: 12 }}>
-                          {feature.description}
-                        </Text>
+                        <Group gap={8}>
+                          <Text c="#737373" style={{ fontSize: 12 }}>
+                            {feature.description}
+                          </Text>
+                          {feature.route && (
+                            <Anchor
+                              component={Link}
+                              href={feature.route}
+                              c="#A3A3A3"
+                              style={{ fontSize: 12, display: "inline-flex", alignItems: "center", gap: 3 }}
+                            >
+                              {feature.route}
+                              <IconExternalLink size={11} />
+                            </Anchor>
+                          )}
+                        </Group>
                       </Box>
                       <Switch
                         checked={feature.enabled}

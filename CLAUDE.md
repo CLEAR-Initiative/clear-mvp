@@ -30,7 +30,7 @@ Always ask the user to run migrations manually. Migrations are essential for:
 - Use Mantine components (not shadcn/ui) — the project uses `@mantine/core`
 - Use `@tabler/icons-react` for icons
 - tRPC routers proxy to Django via `djangoFetch` from `~/server/api/django`
-- Feature flags stored locally in `data/feature-flags.json` (not in database)
+- Feature flags stored in Django backend via `/feature_flags/api/flags/` (falls back to local defaults if unreachable)
 - Route groups: `(app)` for authenticated pages, `(auth)` for login
 
 ## Destructive Operations
