@@ -24,6 +24,7 @@ import {
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { cn } from "~/lib/utils";
+import { authClient } from "~/lib/auth-client";
 
 interface NavItem {
   label: string;
@@ -91,7 +92,7 @@ export function NavSidebar() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await authClient.signOut();
     } catch {
       // ignore
     }

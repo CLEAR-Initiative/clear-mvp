@@ -19,33 +19,17 @@ import {
   IconCircleCheck,
   IconInfoCircle,
 } from "@tabler/icons-react";
-import { api } from "~/trpc/react";
+import { authClient } from "~/lib/auth-client";
 
 export default function ChangePasswordPage() {
-  const [oldPassword, setOldPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword1, setNewPassword1] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const changePasswordMutation = api.auth.changePassword.useMutation({
-    onSuccess: (data) => {
-      if (data.success) {
-        setSuccess(true);
-        setError("");
-        setOldPassword("");
-        setNewPassword1("");
-        setNewPassword2("");
-      } else {
-        setError(data.error ?? "Failed to change password");
-      }
-    },
-    onError: (err) => {
-      setError(err.message ?? "An unexpected error occurred");
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess(false);
@@ -60,10 +44,28 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    changePasswordMutation.mutate({
-      old_password: oldPassword,
-      new_password: newPassword1,
-    });
+    setLoading(true);
+
+    try {
+      const { error: changeError } = await authClient.changePassword({
+        currentPassword,
+        newPassword: newPassword1,
+        revokeOtherSessions: true,
+      });
+
+      if (changeError) {
+        setError(changeError.message ?? "Failed to change password");
+      } else {
+        setSuccess(true);
+        setCurrentPassword("");
+        setNewPassword1("");
+        setNewPassword2("");
+      }
+    } catch {
+      setError("An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -120,13 +122,13 @@ export default function ChangePasswordPage() {
           </Text>
         </Group>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => void handleSubmit(e)}>
           <Stack gap={12}>
             <PasswordInput
               label="Current Password"
               placeholder="Enter your current password"
-              value={oldPassword}
-              onChange={(e) => setOldPassword(e.currentTarget.value)}
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.currentTarget.value)}
               required
               styles={{
                 label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
@@ -161,7 +163,7 @@ export default function ChangePasswordPage() {
             <Button
               type="submit"
               color="dark"
-              loading={changePasswordMutation.isPending}
+              loading={loading}
               leftSection={<IconKey size={16} />}
               mt={8}
               style={{ fontWeight: 600 }}
@@ -182,9 +184,6 @@ export default function ChangePasswordPage() {
         </Group>
         <List size="xs" spacing={4} c="#525252">
           <List.Item>At least 8 characters long</List.Item>
-          <List.Item>Cannot be entirely numeric</List.Item>
-          <List.Item>Cannot be too similar to your personal information</List.Item>
-          <List.Item>Cannot be a commonly used password</List.Item>
         </List>
       </Card>
     </Box>

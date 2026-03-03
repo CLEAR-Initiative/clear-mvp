@@ -9,19 +9,21 @@ import {
   Badge,
   Button,
   SimpleGrid,
-  Stack,
   Divider,
 } from "@mantine/core";
 import {
   IconUser,
-  IconMail,
-  IconBell,
   IconShield,
-  IconSettings,
   IconPencil,
   IconKey,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+
+const roleBadgeColor: Record<string, string> = {
+  admin: "blue",
+  analyst: "teal",
+  viewer: "gray",
+};
 
 export default function ProfilePage() {
   const { data, isLoading } = api.auth.me.useQuery();
@@ -43,6 +45,7 @@ export default function ProfilePage() {
   }
 
   const user = data.user;
+  const normalizedRole = user.role?.toLowerCase() ?? "viewer";
 
   return (
     <Box p={32} style={{ maxWidth: 800 }}>
@@ -77,22 +80,14 @@ export default function ProfilePage() {
         </Group>
         <SimpleGrid cols={2} spacing={16}>
           <Box>
-            <Text size="xs" c="#737373" mb={2}>Username</Text>
-            <Text size="sm" fw={500}>{user.username}</Text>
-          </Box>
-          <Box>
-            <Text size="xs" c="#737373" mb={2}>Full Name</Text>
-            <Text size="sm" fw={500}>
-              {user.first_name && user.last_name
-                ? `${user.first_name} ${user.last_name}`
-                : "Not set"}
-            </Text>
+            <Text size="xs" c="#737373" mb={2}>Name</Text>
+            <Text size="sm" fw={500}>{user.name || "Not set"}</Text>
           </Box>
           <Box>
             <Text size="xs" c="#737373" mb={2}>Email</Text>
             <Group gap={8}>
-              <Text size="sm" fw={500}>{user.email || "Not set"}</Text>
-              {user.email_verified ? (
+              <Text size="sm" fw={500}>{user.email}</Text>
+              {user.emailVerified ? (
                 <Badge size="xs" color="green" variant="light">Verified</Badge>
               ) : (
                 <Badge size="xs" color="red" variant="light">Unverified</Badge>
@@ -101,60 +96,17 @@ export default function ProfilePage() {
           </Box>
           <Box>
             <Text size="xs" c="#737373" mb={2}>Role</Text>
-            <Badge size="sm" color={user.is_staff ? "blue" : "gray"} variant="light">
-              {user.is_staff ? "Staff" : "User"}
+            <Badge size="sm" color={roleBadgeColor[normalizedRole] ?? "gray"} variant="light" tt="capitalize">
+              {normalizedRole}
+            </Badge>
+          </Box>
+          <Box>
+            <Text size="xs" c="#737373" mb={2}>Status</Text>
+            <Badge size="sm" color={user.isActive ? "green" : "red"} variant="light">
+              {user.isActive ? "Active" : "Inactive"}
             </Badge>
           </Box>
         </SimpleGrid>
-      </Card>
-
-      {/* Preferences Card */}
-      <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
-        <Group gap={8} mb={16}>
-          <IconSettings size={18} color="#E85D3D" />
-          <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
-            Preferences
-          </Text>
-        </Group>
-        <SimpleGrid cols={2} spacing={16}>
-          <Box>
-            <Text size="xs" c="#737373" mb={2}>Language</Text>
-            <Text size="sm" fw={500}>
-              {user.preferred_language === "ar" ? "Arabic" : "English"}
-            </Text>
-          </Box>
-          <Box>
-            <Text size="xs" c="#737373" mb={2}>Timezone</Text>
-            <Text size="sm" fw={500}>{user.timezone ?? "UTC"}</Text>
-          </Box>
-        </SimpleGrid>
-      </Card>
-
-      {/* Notifications Card */}
-      <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
-        <Group gap={8} mb={16}>
-          <IconBell size={18} color="#E85D3D" />
-          <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
-            Notifications
-          </Text>
-        </Group>
-        <Group justify="space-between">
-          <Box>
-            <Text size="sm" fw={500}>Email Notifications</Text>
-            <Text size="xs" c="#737373">
-              {user.email_notifications_enabled
-                ? "Enabled — you will receive email alerts"
-                : "Disabled — no email alerts will be sent"}
-            </Text>
-          </Box>
-          <Badge
-            size="sm"
-            color={user.email_notifications_enabled ? "green" : "gray"}
-            variant="light"
-          >
-            {user.email_notifications_enabled ? "On" : "Off"}
-          </Badge>
-        </Group>
       </Card>
 
       <Divider my={24} />
@@ -174,17 +126,7 @@ export default function ProfilePage() {
         >
           Change Password
         </Button>
-        <Button
-          component={Link}
-          href="/notification-preferences"
-          variant="outline"
-          color="gray"
-          leftSection={<IconBell size={14} />}
-          size="sm"
-        >
-          Notification Settings
-        </Button>
-        {user.is_staff && (
+        {normalizedRole === "admin" && (
           <Button
             component={Link}
             href="/admin"

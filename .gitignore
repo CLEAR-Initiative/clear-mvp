@@ -6,7 +6,9 @@ staticfiles/
 /node_modules/
 .DS_Store
 node_modules
+.next
 */.next
 */.env.local
 .env
 .vercel
+tsconfig.tsbuildinfo
