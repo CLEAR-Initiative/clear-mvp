@@ -1,85 +1,35 @@
-import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { djangoFetch, extractCookieHeader } from "~/server/api/django";
 
-interface DjangoUser {
-  id: number;
-  username: string;
+const AUTH_API_URL = process.env.NEXT_PUBLIC_AUTH_URL ?? "http://localhost:4000";
+
+interface BetterAuthUser {
+  id: string;
+  name: string;
   email: string;
-  first_name: string;
-  last_name: string;
-  is_staff: boolean;
-  email_verified?: boolean;
-  email_notifications_enabled?: boolean;
-  preferred_language?: string;
-  timezone?: string;
+  emailVerified: boolean;
+  image: string | null;
+  role: string;
+  isActive: boolean;
 }
 
-interface LoginResponse {
-  success: boolean;
-  user?: DjangoUser;
-  error?: string;
-}
-
-interface MeResponse {
-  authenticated: boolean;
-  user?: DjangoUser;
-}
-
-interface ChangePasswordResponse {
-  success: boolean;
-  message?: string;
-  error?: string;
+interface SessionResponse {
+  session: { id: string; userId: string; expiresAt: string } | null;
+  user: BetterAuthUser | null;
 }
 
 export const authRouter = createTRPCRouter({
-  login: publicProcedure
-    .input(
-      z.object({
-        username: z.string().min(1, "Username is required"),
-        password: z.string().min(1, "Password is required"),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      return djangoFetch<LoginResponse>("/users/api/auth/login/", {
-        method: "POST",
-        headers: extractCookieHeader(ctx.headers),
-        body: JSON.stringify(input),
-      });
-    }),
-
-  logout: publicProcedure.mutation(async ({ ctx }) => {
-    return djangoFetch<{ success: boolean }>("/users/api/auth/logout/", {
-      method: "POST",
-      headers: extractCookieHeader(ctx.headers),
-    });
-  }),
-
   me: publicProcedure.query(async ({ ctx }) => {
     try {
-      return await djangoFetch<MeResponse>("/users/api/auth/me/", {
-        headers: extractCookieHeader(ctx.headers),
+      const cookie = ctx.headers.get("cookie") ?? "";
+      const res = await fetch(`${AUTH_API_URL}/api/auth/get-session`, {
+        headers: { Cookie: cookie },
       });
+      if (!res.ok) return { authenticated: false, user: null };
+      const data = (await res.json()) as SessionResponse;
+      if (!data.session || !data.user) return { authenticated: false, user: null };
+      return { authenticated: true, user: data.user };
     } catch {
-      return { authenticated: false } as MeResponse;
+      return { authenticated: false, user: null };
     }
   }),
-
-  changePassword: publicProcedure
-    .input(
-      z.object({
-        old_password: z.string().min(1, "Current password is required"),
-        new_password: z.string().min(8, "Password must be at least 8 characters"),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      return djangoFetch<ChangePasswordResponse>(
-        "/users/api/auth/change-password/",
-        {
-          method: "POST",
-          headers: extractCookieHeader(ctx.headers),
-          body: JSON.stringify(input),
-        },
-      );
-    }),
 });

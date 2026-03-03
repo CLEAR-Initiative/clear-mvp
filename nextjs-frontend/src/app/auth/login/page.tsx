@@ -16,11 +16,7 @@ import {
   Divider,
 } from "@mantine/core";
 import { IconAlertCircle, IconLogin } from "@tabler/icons-react";
-
-interface LoginResponse {
-  success: boolean;
-  error?: string;
-}
+import { authClient } from "~/lib/auth-client";
 
 export default function LoginPage() {
   return (
@@ -35,7 +31,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -46,18 +42,15 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim(), password }),
+      const { error: signInError } = await authClient.signIn.email({
+        email: email.trim(),
+        password,
       });
 
-      const data = (await res.json()) as LoginResponse;
-
-      if (data.success) {
-        router.push(callbackUrl);
+      if (signInError) {
+        setError(signInError.message ?? "Login failed");
       } else {
-        setError(data.error ?? "Login failed");
+        router.push(callbackUrl);
       }
     } catch {
       setError("An unexpected error occurred");
@@ -67,12 +60,9 @@ function LoginForm() {
   };
 
   const demoUsers = [
-    "emergency_manager",
-    "head_operations",
-    "project_manager",
-    "field_coordinator",
-    "system_admin",
-    "external_viewer",
+    { label: "Admin", email: "admin@clear.dev" },
+    { label: "Analyst", email: "analyst@clear.dev" },
+    { label: "Viewer", email: "viewer@clear.dev" },
   ];
 
   return (
@@ -117,12 +107,13 @@ function LoginForm() {
           <form onSubmit={(e) => void handleSubmit(e)}>
             <Stack gap={12}>
               <TextInput
-                label="Username"
-                placeholder="Enter your username"
-                value={username}
-                onChange={(e) => setUsername(e.currentTarget.value)}
+                label="Email"
+                placeholder="Enter your email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.currentTarget.value)}
                 required
-                autoComplete="username"
+                autoComplete="email"
                 autoFocus
                 styles={{
                   label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
@@ -169,19 +160,19 @@ function LoginForm() {
           <Divider my={20} label="Demo Users" labelPosition="center" />
           <Box p={12} style={{ backgroundColor: "#F5F5F5" }}>
             <Text size="xs" c="#737373" mb={8}>
-              Available demo accounts (all use same password):
+              Available demo accounts (all use password: password123):
             </Text>
-            <SimpleGrid cols={2} spacing={4}>
+            <SimpleGrid cols={1} spacing={4}>
               {demoUsers.map((user) => (
                 <Text
-                  key={user}
+                  key={user.email}
                   size="xs"
                   fw={600}
                   c="#171717"
                   style={{ cursor: "pointer" }}
-                  onClick={() => setUsername(user)}
+                  onClick={() => setEmail(user.email)}
                 >
-                  {user}
+                  {user.label} — {user.email}
                 </Text>
               ))}
             </SimpleGrid>

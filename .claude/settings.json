@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat /Users/james/code/clear-mvp/src/app/\\\\\\(app\\\\\\)/layout.tsx)",
+      "Read(//Users/james/code/clear-apollo/**)",
+      "Bash(cat /Users/james/code/clear-mvp/src/app/\\\\\\(app\\\\\\)/profile/page.tsx)",
+      "Bash(cat /Users/james/code/clear-mvp/src/app/\\\\\\(app\\\\\\)/change-password/page.tsx)",
+      "Bash(cat /Users/james/code/clear-mvp/src/app/api/trpc/[trpc]/route.ts)",
+      "Bash(cat /Users/james/code/clear-mvp/src/app/\\\\\\(app\\\\\\)/notification-preferences/page.tsx)",
+      "Bash(cat /Users/james/code/clear-mvp/src/app/\\\\\\(app\\\\\\)/admin/features/page.tsx)",
+      "Bash(bun add better-auth)",
+      "WebFetch(domain:www.better-auth.com)"
+    ]
+  }
+}

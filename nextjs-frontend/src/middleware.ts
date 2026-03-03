@@ -4,8 +4,7 @@ import { type NextRequest, NextResponse } from "next/server";
  * Middleware to protect routes that require authentication.
  * Redirects unauthenticated users to /auth/login.
  *
- * For now this is a simple redirect based on the absence of a Django session cookie.
- * When Django is connected, the sessionid cookie will be present for logged-in users.
+ * Checks for the Better Auth session cookie set by the clear-apollo backend.
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -16,8 +15,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for Django session cookie
-  const sessionCookie = request.cookies.get("sessionid");
+  // Check for Better Auth session cookie
+  const sessionCookie = request.cookies.get("better-auth.session_token");
 
   if (!sessionCookie) {
     const loginUrl = new URL("/auth/login", request.url);
