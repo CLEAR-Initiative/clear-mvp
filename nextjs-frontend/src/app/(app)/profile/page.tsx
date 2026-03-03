@@ -45,6 +45,7 @@ export default function ProfilePage() {
   }
 
   const user = data.user;
+  const normalizedRole = user.role?.toLowerCase() ?? "viewer";
 
   return (
     <Box p={32} style={{ maxWidth: 800 }}>
@@ -95,8 +96,8 @@ export default function ProfilePage() {
           </Box>
           <Box>
             <Text size="xs" c="#737373" mb={2}>Role</Text>
-            <Badge size="sm" color={roleBadgeColor[user.role] ?? "gray"} variant="light" tt="capitalize">
-              {user.role}
+            <Badge size="sm" color={roleBadgeColor[normalizedRole] ?? "gray"} variant="light" tt="capitalize">
+              {normalizedRole}
             </Badge>
           </Box>
           <Box>
@@ -125,7 +126,7 @@ export default function ProfilePage() {
         >
           Change Password
         </Button>
-        {user.role === "admin" && (
+        {normalizedRole === "admin" && (
           <Button
             component={Link}
             href="/admin"
