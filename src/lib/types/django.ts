@@ -94,6 +94,40 @@ export interface DjangoAlertStatsResponse {
   stats: DjangoAlertStats;
 }
 
+// -- Subscriptions --
+
+export interface DjangoSubscription {
+  id: number;
+  active: boolean;
+  method: "email" | "sms";
+  frequency: "immediate" | "daily" | "weekly" | "monthly";
+  created_at: string;
+  updated_at: string;
+  locations: { id: number; name: string; geo_id: string }[];
+  shock_types: { id: number; name: string }[];
+}
+
+export interface DjangoSubscriptionsResponse {
+  success: boolean;
+  subscriptions: DjangoSubscription[];
+}
+
+export interface DjangoSubscriptionResponse {
+  success: boolean;
+  subscription: DjangoSubscription;
+}
+
+export interface DjangoProfileUpdateResponse {
+  success: boolean;
+  profile: {
+    mobile_number: string;
+    sms_notifications_enabled: boolean;
+    email_notifications_enabled: boolean;
+    preferred_language: string;
+    timezone: string;
+  };
+}
+
 // -- Data Pipeline --
 
 export interface DjangoPipelineSource {
@@ -229,6 +263,32 @@ export interface LLMProviderStatus {
 
 export interface LLMProvidersResponse {
   providers: LLMProviderStatus[];
+}
+
+export interface DjangoCreateAlertResponse {
+  success: boolean;
+  message: string;
+  alert: {
+    id: number;
+    title: string;
+    shock_date: string;
+    severity: number;
+    go_no_go: boolean;
+    created_at: string;
+  };
+}
+
+export interface DjangoLocationsResponse {
+  page: number;
+  page_size: number;
+  total_count: number;
+  locations: {
+    id: number;
+    name: string;
+    geo_id: string;
+    admin_level: { code: string; name: string };
+    parent: { id: number; name: string } | null;
+  }[];
 }
 
 // -- Helpers --

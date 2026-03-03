@@ -61,6 +61,7 @@ export async function djangoFetch<T = unknown>(
     const res = await fetch(url, {
       ...fetchOptions,
       signal: controller.signal,
+      redirect: "manual" as RequestRedirect,
       headers: {
         "Content-Type": "application/json",
         ...fetchOptions.headers,

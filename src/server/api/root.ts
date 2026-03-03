@@ -4,6 +4,7 @@ import { authRouter } from "~/server/api/routers/auth";
 import { dashboardRouter } from "~/server/api/routers/dashboard";
 import { llmRouter } from "~/server/api/routers/llm";
 import { pipelineRouter } from "~/server/api/routers/pipeline";
+import { subscriptionsRouter } from "~/server/api/routers/subscriptions";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -13,6 +14,7 @@ export const appRouter = createTRPCRouter({
   dashboard: dashboardRouter,
   llm: llmRouter,
   pipeline: pipelineRouter,
+  subscriptions: subscriptionsRouter,
 });
 
 export type AppRouter = typeof appRouter;
