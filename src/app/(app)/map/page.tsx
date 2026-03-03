@@ -67,7 +67,7 @@ function FilterLabel({ children }: { children: string }) {
 }
 
 export default function MapPage() {
-  /* ---- Fetch real data from Django backend ---- */
+  /* ---- Fetch alert data ---- */
   const alertsQuery = api.alerts.getAlerts.useQuery({
     activeOnly: true,
     pageSize: 100,

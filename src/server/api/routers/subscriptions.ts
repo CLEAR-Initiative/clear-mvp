@@ -1,24 +1,10 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { djangoFetch, extractCookieHeader } from "~/server/api/django";
-import type {
-  DjangoSubscriptionsResponse,
-  DjangoSubscriptionResponse,
-  DjangoShockTypesResponse,
-  DjangoProfileUpdateResponse,
-} from "~/lib/types/django";
-
-interface DjangoLocationsResponse {
-  success: boolean;
-  locations: { id: number; name: string; geo_id: string }[];
-}
+import type { DjangoSubscription, DjangoShockType } from "~/lib/types/django";
 
 export const subscriptionsRouter = createTRPCRouter({
-  list: publicProcedure.query(async ({ ctx }) => {
-    return await djangoFetch<DjangoSubscriptionsResponse>(
-      "/alerts/api/subscriptions/",
-      { headers: extractCookieHeader(ctx.headers) },
-    );
+  list: publicProcedure.query(async () => {
+    return { success: true, subscriptions: [] as DjangoSubscription[] };
   }),
 
   create: publicProcedure
@@ -31,15 +17,8 @@ export const subscriptionsRouter = createTRPCRouter({
         active: z.boolean().optional().default(true),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      return await djangoFetch<DjangoSubscriptionResponse>(
-        "/alerts/api/subscriptions/",
-        {
-          method: "POST",
-          headers: extractCookieHeader(ctx.headers),
-          body: JSON.stringify(input),
-        },
-      );
+    .mutation(async () => {
+      throw new Error("Subscriptions not yet connected to new backend");
     }),
 
   update: publicProcedure
@@ -47,73 +26,27 @@ export const subscriptionsRouter = createTRPCRouter({
       z.object({
         id: z.number(),
         method: z.enum(["email", "sms"]).optional(),
-        frequency: z
-          .enum(["immediate", "daily", "weekly", "monthly"])
-          .optional(),
+        frequency: z.enum(["immediate", "daily", "weekly", "monthly"]).optional(),
         location_ids: z.array(z.number()).optional(),
         shock_type_ids: z.array(z.number()).optional(),
         active: z.boolean().optional(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      const { id, ...body } = input;
-      return await djangoFetch<DjangoSubscriptionResponse>(
-        `/alerts/api/subscriptions/${id}/`,
-        {
-          method: "PUT",
-          headers: extractCookieHeader(ctx.headers),
-          body: JSON.stringify(body),
-        },
-      );
+    .mutation(async () => {
+      throw new Error("Subscriptions not yet connected to new backend");
     }),
 
   delete: publicProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      return await djangoFetch<{ success: boolean; message: string }>(
-        `/alerts/api/subscriptions/${input.id}/`,
-        {
-          method: "DELETE",
-          headers: extractCookieHeader(ctx.headers),
-        },
-      );
+    .mutation(async () => {
+      throw new Error("Subscriptions not yet connected to new backend");
     }),
 
-  shockTypes: publicProcedure.query(async ({ ctx }) => {
-    return await djangoFetch<DjangoShockTypesResponse>(
-      "/alerts/api/shock-types/",
-      { headers: extractCookieHeader(ctx.headers) },
-    );
+  shockTypes: publicProcedure.query(async () => {
+    return { success: true, shock_types: [] as DjangoShockType[] };
   }),
 
-  locations: publicProcedure.query(async ({ ctx }) => {
-    return await djangoFetch<DjangoLocationsResponse>(
-      "/location/api/locations/simple/",
-      { headers: extractCookieHeader(ctx.headers) },
-    );
+  locations: publicProcedure.query(async () => {
+    return { success: true, locations: [] as { id: number; name: string; geo_id: string }[] };
   }),
-
-  updateProfile: publicProcedure
-    .input(
-      z.object({
-        first_name: z.string().optional(),
-        last_name: z.string().optional(),
-        email: z.string().email().optional(),
-        mobile_number: z.string().optional(),
-        sms_notifications_enabled: z.boolean().optional(),
-        email_notifications_enabled: z.boolean().optional(),
-        preferred_language: z.string().optional(),
-        timezone: z.string().optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      return await djangoFetch<DjangoProfileUpdateResponse>(
-        "/users/api/profile/update/",
-        {
-          method: "PATCH",
-          headers: extractCookieHeader(ctx.headers),
-          body: JSON.stringify(input),
-        },
-      );
-    }),
 });

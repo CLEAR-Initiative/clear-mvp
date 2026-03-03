@@ -1,5 +1,3 @@
-import type { DjangoAlert } from "~/lib/types/django";
-
 /** Minimal alert shape used for prompt construction */
 export interface AlertSummary {
   title: string;
@@ -66,7 +64,7 @@ export function buildSituationAnalysisPrompt(
 /** Build a HumChat prompt enriched with current alert context */
 export function buildHumChatPrompt(
   userMessage: string,
-  alerts?: DjangoAlert[],
+  alerts?: AlertSummary[],
 ): string {
   if (!alerts?.length) return userMessage;
 
@@ -74,7 +72,7 @@ export function buildHumChatPrompt(
     .slice(0, 5)
     .map(
       (a) =>
-        `- ${a.title} (Severity: ${a.severity}/5): ${a.text.substring(0, 150)}`,
+        `- ${a.title} (Severity: ${a.severity}/5): ${(a.text ?? "").substring(0, 150)}`,
     )
     .join("\n");
 

@@ -3,7 +3,9 @@
     "allow": [
       "Bash(git rm nextjs-frontend/tsconfig.tsbuildinfo)",
       "Bash(git rm src/app/api/auth/login/route.ts)",
-      "Bash(git rm src/app/api/auth/logout/route.ts)"
+      "Bash(git rm src/app/api/auth/logout/route.ts)",
+      "Bash(git reset HEAD .env.local tsconfig.tsbuildinfo)",
+      "Bash(git stash pop)"
     ]
   }
 }
