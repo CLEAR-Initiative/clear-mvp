@@ -55,8 +55,8 @@ export default function ProfileEditPage() {
 
 interface ProfileEditFormProps {
   user: {
-    first_name: string;
-    last_name: string;
+    id: string;
+    name: string;
     email: string;
     preferred_language?: string;
     timezone?: string;
@@ -64,8 +64,8 @@ interface ProfileEditFormProps {
 }
 
 function ProfileEditForm({ user }: ProfileEditFormProps) {
-  const [firstName, setFirstName] = useState(user.first_name ?? "");
-  const [lastName, setLastName] = useState(user.last_name ?? "");
+  const [firstName, setFirstName] = useState(user.name?.split(" ")[0] ?? "");
+  const [lastName, setLastName] = useState(user.name?.split(" ").slice(1).join(" ") ?? "");
   const [email, setEmail] = useState(user.email ?? "");
   const [language, setLanguage] = useState(user.preferred_language ?? "en");
   const [tz, setTz] = useState(user.timezone ?? "Africa/Khartoum");
@@ -103,7 +103,6 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
       timezone: tz,
     });
   };
-  const user = data.user;
 
   return (
     <Box p={32} style={{ maxWidth: 600 }}>

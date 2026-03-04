@@ -17,9 +17,7 @@ import {
   IconShield,
   IconPencil,
   IconKey,
-  IconShield,
   IconMailForward,
-  IconMail,
   IconBell,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -52,19 +50,18 @@ export default function ProfilePage() {
   }
 
   const user = data.user;
-  const normalizedRole = user.role?.toLowerCase() ?? "viewer";
 
   return <ProfileContent user={user} />;
 }
 
 interface ProfileUser {
-  id: number;
-  username: string;
+  id: string;
+  name: string;
   email: string;
-  first_name: string;
-  last_name: string;
-  is_staff: boolean;
-  email_verified?: boolean;
+  emailVerified: boolean;
+  image: string | null;
+  role: string;
+  isActive: boolean;
   email_notifications_enabled?: boolean;
   sms_notifications_enabled?: boolean;
   mobile_number?: string;
@@ -73,6 +70,7 @@ interface ProfileUser {
 }
 
 function ProfileContent({ user }: { user: ProfileUser }) {
+  const normalizedRole = user.role?.toLowerCase() ?? "viewer";
   const utils = api.useUtils();
   const verifyEmail = api.auth.requestEmailVerification.useMutation({
     onSuccess: () => {
@@ -138,7 +136,7 @@ function ProfileContent({ user }: { user: ProfileUser }) {
               <Text size="sm" fw={500}>
                 {user.email ?? "Not set"}
               </Text>
-              {user.email_verified ? (
+              {user.emailVerified ? (
                 <Badge size="xs" color="green" variant="light">
                   Verified
                 </Badge>
@@ -148,7 +146,7 @@ function ProfileContent({ user }: { user: ProfileUser }) {
                 </Badge>
               )}
             </Group>
-            {!user.email_verified && user.email && (
+            {!user.emailVerified && user.email && (
               <>
                 {verifyEmail.isSuccess && (
                   <Text size="xs" c="green" mt={8} fw={500}>
