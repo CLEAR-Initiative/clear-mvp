@@ -17,14 +17,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const sessionCookie = request.cookies.get("better-auth.session_token");
+  // Better Auth uses __Secure- prefix when running on HTTPS
+  const sessionCookie =
+    request.cookies.get("__Secure-better-auth.session_token") ??
+    request.cookies.get("better-auth.session_token");
 
   if (!sessionCookie) {
     return redirectToLogin(request, pathname);
   }
 
   // Validate the session by calling the auth backend
-  const session = await verifySession(sessionCookie.value);
+  const session = await verifySession(sessionCookie.name, sessionCookie.value);
 
   if (!session) {
     return redirectToLogin(request, pathname);
@@ -45,7 +48,8 @@ function redirectToLogin(request: NextRequest, pathname: string) {
 }
 
 async function verifySession(
-  cookieValue: string
+  cookieName: string,
+  cookieValue: string,
 ): Promise<{ role: string } | null> {
   try {
     const controller = new AbortController();
@@ -54,7 +58,7 @@ async function verifySession(
     let res: Response;
     try {
       res = await fetch(`${API_URL}/api/auth/get-session`, {
-        headers: { Cookie: `better-auth.session_token=${cookieValue}` },
+        headers: { Cookie: `${cookieName}=${cookieValue}` },
         signal: controller.signal,
       });
     } finally {
