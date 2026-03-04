@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-const AUTH_API_URL = process.env.NEXT_PUBLIC_AUTH_URL ?? "http://localhost:4000";
+const API_URL = process.env.API_URL ?? "http://localhost:4000";
 const SESSION_VERIFY_TIMEOUT_MS = 3000;
 
 /**
@@ -53,7 +53,7 @@ async function verifySession(
 
     let res: Response;
     try {
-      res = await fetch(`${AUTH_API_URL}/api/auth/get-session`, {
+      res = await fetch(`${API_URL}/api/auth/get-session`, {
         headers: { Cookie: `better-auth.session_token=${cookieValue}` },
         signal: controller.signal,
       });

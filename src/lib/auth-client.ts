@@ -1,13 +1,17 @@
 import { createAuthClient } from "better-auth/react";
 
-const authUrl = process.env.NEXT_PUBLIC_AUTH_URL ?? "http://localhost:4000";
+/**
+ * Better Auth client configured to use same-origin BFF proxy.
+ * All auth requests go to /api/auth/* which is proxied server-to-server
+ * to the Apollo API — the browser never makes cross-origin calls.
+ *
+ * During SSR/build, Better Auth validates the URL format so we provide
+ * a placeholder absolute URL. The client methods (signIn, signOut, etc.)
+ * are only ever called from browser event handlers, never during SSR.
+ */
+const baseURL =
+  typeof window !== "undefined"
+    ? "/api/auth"
+    : "http://localhost/api/auth";
 
-if (process.env.NODE_ENV === "production" && !process.env.NEXT_PUBLIC_AUTH_URL) {
-  throw new Error(
-    "Missing NEXT_PUBLIC_AUTH_URL environment variable. This is required in production."
-  );
-}
-
-export const authClient = createAuthClient({
-  baseURL: authUrl,
-});
+export const authClient = createAuthClient({ baseURL });

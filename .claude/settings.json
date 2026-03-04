@@ -5,7 +5,11 @@
       "Bash(git rm src/app/api/auth/login/route.ts)",
       "Bash(git rm src/app/api/auth/logout/route.ts)",
       "Bash(git reset HEAD .env.local tsconfig.tsbuildinfo)",
-      "Bash(git stash pop)"
+      "Bash(git stash pop)",
+      "Read(//Users/james/code/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/james/code/clear-mvp/src/app/api/auth"
     ]
   }
 }

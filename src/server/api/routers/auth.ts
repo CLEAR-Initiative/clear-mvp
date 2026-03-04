@@ -1,13 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
-const AUTH_API_URL = process.env.NEXT_PUBLIC_AUTH_URL ?? "http://localhost:4000";
-
-if (process.env.NODE_ENV === "production" && !process.env.NEXT_PUBLIC_AUTH_URL) {
-  throw new Error(
-    "Missing NEXT_PUBLIC_AUTH_URL environment variable. This is required in production."
-  );
-}
+const API_URL = process.env.API_URL ?? "http://localhost:4000";
 
 const BetterAuthUserSchema = z.object({
   id: z.string(),
@@ -42,7 +36,7 @@ export const authRouter = createTRPCRouter({
 
       let res: Response;
       try {
-        res = await fetch(`${AUTH_API_URL}/api/auth/get-session`, {
+        res = await fetch(`${API_URL}/api/auth/get-session`, {
           headers: { Cookie: cookie },
           signal: controller.signal,
         });
