@@ -20,12 +20,16 @@ async function handler(
     url.searchParams.set(key, value);
   });
 
-  // Build headers to forward — strip host so the upstream sees its own host
+  // Build headers to forward — strip host so the upstream sees its own host.
+  // Set origin to the API's own origin so Better Auth's trustedOrigins check passes
+  // (this is a server-to-server call, not a browser cross-origin request).
   const headers = new Headers();
   for (const key of ["cookie", "content-type", "accept", "authorization"]) {
     const value = request.headers.get(key);
     if (value) headers.set(key, value);
   }
+  const apiOrigin = new URL(API_URL).origin;
+  headers.set("origin", apiOrigin);
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
 
@@ -54,7 +58,7 @@ async function handler(
     const message = err instanceof Error ? err.message : String(err);
     console.error("[auth-proxy]", request.method, url.toString(), message);
     return NextResponse.json(
-      { error: "Auth proxy failed", upstream: url.toString(), detail: message },
+      { error: "Auth proxy failed" },
       { status: 502 },
     );
   }
