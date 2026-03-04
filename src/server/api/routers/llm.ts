@@ -1,5 +1,14 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import {
+  djangoFetch,
+  extractCookieHeader,
+  LLM_TIMEOUT_MS,
+} from "~/server/api/django";
+import type {
+  LLMQueryResponse,
+  LLMProvidersResponse,
+} from "~/lib/types/django";
 
 export const llmRouter = createTRPCRouter({
   query: publicProcedure
@@ -14,16 +23,28 @@ export const llmRouter = createTRPCRouter({
         cache: z.boolean().optional(),
       }),
     )
-    .mutation(async () => {
-      return {
-        response: "LLM service not yet connected to new backend.",
-        provider: "none",
-        model: "none",
-        cached: false,
-      };
+    .mutation(async ({ ctx, input }) => {
+      return djangoFetch<LLMQueryResponse>("/llm/api/query/", {
+        method: "POST",
+        timeoutMs: LLM_TIMEOUT_MS,
+        headers: extractCookieHeader(ctx.headers),
+        body: JSON.stringify({
+          prompt: input.prompt,
+          system: input.system,
+          provider: input.provider,
+          model: input.model,
+          temperature: input.temperature,
+          max_tokens: input.maxTokens,
+          cache: input.cache,
+          stream: false,
+        }),
+      });
     }),
 
-  getProviderStatus: publicProcedure.query(async () => {
-    return { providers: [] };
+  getProviderStatus: publicProcedure.query(async ({ ctx }) => {
+    return await djangoFetch<LLMProvidersResponse>(
+      "/llm/api/providers/status/",
+      { headers: extractCookieHeader(ctx.headers) },
+    );
   }),
 });

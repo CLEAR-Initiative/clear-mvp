@@ -1,31 +1,37 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import type { DjangoPipelineSource, DjangoLocationsResponse } from "~/lib/types/django";
+import {
+  djangoFetch,
+  buildQueryString,
+  extractCookieHeader,
+} from "~/server/api/django";
+import type {
+  DjangoPipelineSourcesResponse,
+  DjangoPipelineStatisticsResponse,
+  DjangoLocationsResponse,
+} from "~/lib/types/django";
+
+/** API returns { success, data, pagination }; we map to { locations, page, page_size, total_count } */
+interface LocationsApiResponse {
+  success: boolean;
+  data: DjangoLocationsResponse["locations"];
+  pagination?: { page: number; page_size: number; total_count: number };
+}
 
 export const pipelineRouter = createTRPCRouter({
-  getSources: publicProcedure.query(async () => {
-    return { success: true, sources: [] as DjangoPipelineSource[] };
+  getSources: publicProcedure.query(async ({ ctx }) => {
+    const headers = extractCookieHeader(ctx.headers);
+    return await djangoFetch<DjangoPipelineSourcesResponse>(
+      "/pipeline/api/sources/",
+      { headers },
+    );
   }),
 
-  getStatistics: publicProcedure.query(async () => {
-    return {
-      success: true,
-      period: { start_date: "", end_date: "", days: 0 },
-      overall: {
-        total_sources: 0,
-        total_variables: 0,
-        total_data_records: 0,
-        recent_data_count: 0,
-      },
-      by_source: {} as Record<string, { variables: number; data_records: number }>,
-      by_type: {} as Record<string, { variables: number; data_records: number }>,
-      tasks: {
-        total_tasks: 0,
-        total_success: 0,
-        total_failures: 0,
-        avg_duration: 0,
-      },
-    };
+  getStatistics: publicProcedure.query(async ({ ctx }) => {
+    return await djangoFetch<DjangoPipelineStatisticsResponse>(
+      "/pipeline/api/statistics/",
+      { headers: extractCookieHeader(ctx.headers) },
+    );
   }),
 
   getLocations: publicProcedure
@@ -37,12 +43,21 @@ export const pipelineRouter = createTRPCRouter({
         })
         .optional(),
     )
-    .query(async () => {
+    .query(async ({ ctx, input }) => {
+      const headers = extractCookieHeader(ctx.headers);
+      const qs = buildQueryString({
+        admin_level: input?.adminLevel,
+        page_size: input?.pageSize ?? 100,
+      });
+      const res = await djangoFetch<LocationsApiResponse>(
+        `/location/api/locations/${qs}`,
+        { headers },
+      );
       return {
-        page: 0,
-        page_size: 0,
-        total_count: 0,
-        locations: [] as DjangoLocationsResponse["locations"],
-      };
+        page: res.pagination?.page ?? 0,
+        page_size: res.pagination?.page_size ?? 0,
+        total_count: res.pagination?.total_count ?? 0,
+        locations: res.data ?? [],
+      } satisfies DjangoLocationsResponse;
     }),
 });

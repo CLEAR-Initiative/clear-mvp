@@ -53,7 +53,10 @@ async function verifySession(
 ): Promise<{ role: string } | null> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), SESSION_VERIFY_TIMEOUT_MS);
+    const timeout = setTimeout(
+      () => controller.abort(),
+      SESSION_VERIFY_TIMEOUT_MS,
+    );
 
     let res: Response;
     try {

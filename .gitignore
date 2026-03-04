@@ -7,8 +7,6 @@ staticfiles/
 node_modules
 .next
 .env.local
-*/.next
-*/.env.local
 .env
 .vercel
 tsconfig.tsbuildinfo

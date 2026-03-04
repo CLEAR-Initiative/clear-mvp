@@ -1,6 +1,17 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import type { DjangoAlert, DjangoAlertStats, DjangoShockType } from "~/lib/types/django";
+import {
+  djangoFetch,
+  buildQueryString,
+  extractCookieHeader,
+} from "~/server/api/django";
+import type {
+  DjangoAlertsResponse,
+  DjangoAlertDetailResponse,
+  DjangoAlertStatsResponse,
+  DjangoShockTypesResponse,
+  DjangoCreateAlertResponse,
+} from "~/lib/types/django";
 
 export const alertsRouter = createTRPCRouter({
   getAlerts: publicProcedure
@@ -17,46 +28,87 @@ export const alertsRouter = createTRPCRouter({
         })
         .optional(),
     )
-    .query(async () => {
-      return { alerts: [] as DjangoAlert[], count: 0, total: 0, page: 1, page_size: 20, total_pages: 0 };
+    .query(async ({ ctx, input }) => {
+      const qs = buildQueryString({
+        page: input?.page,
+        page_size: input?.pageSize,
+        shock_type: input?.shockType,
+        severity: input?.severity,
+        location: input?.location,
+        active_only:
+          input?.activeOnly === true
+            ? "true"
+            : input?.activeOnly === false
+              ? "false"
+              : undefined,
+        search: input?.search,
+      });
+      return await djangoFetch<DjangoAlertsResponse>(
+        `/alerts/api/public/alerts/${qs}`,
+        { timeoutMs: 30_000, headers: extractCookieHeader(ctx.headers) },
+      );
     }),
 
   getAlert: publicProcedure
     .input(z.object({ id: z.number() }))
-    .query(async () => {
-      return { alert: null as DjangoAlert | null };
+    .query(async ({ ctx, input }) => {
+      return await djangoFetch<DjangoAlertDetailResponse>(
+        `/alerts/api/public/alert/${input.id}/`,
+        { headers: extractCookieHeader(ctx.headers) },
+      );
     }),
 
-  getStats: publicProcedure.query(async () => {
-    return {
-      success: true,
-      stats: {
-        overview: { total_alerts: 0, active_alerts: 0, recent_30_days: 0, recent_7_days: 0 },
-        by_shock_type: [] as { shock_type__name: string; count: number }[],
-        by_severity: [] as { severity: number; count: number }[],
-      } satisfies DjangoAlertStats,
-    };
+  getStats: publicProcedure.query(async ({ ctx }) => {
+    return await djangoFetch<DjangoAlertStatsResponse>(
+      "/alerts/api/public/stats/",
+      { headers: extractCookieHeader(ctx.headers) },
+    );
   }),
 
-  getShockTypes: publicProcedure.query(async () => {
-    return { success: true, shock_types: [] as DjangoShockType[] };
+  getShockTypes: publicProcedure.query(async ({ ctx }) => {
+    return await djangoFetch<DjangoShockTypesResponse>(
+      "/alerts/api/public/shock-types/",
+      { headers: extractCookieHeader(ctx.headers) },
+    );
   }),
 
   createAlert: publicProcedure
     .input(
-      z.object({
-        title: z.string().min(1).max(255),
-        text: z.string().min(1),
-        shock_type_id: z.number(),
-        data_source_id: z.number(),
-        shock_date: z.string(),
-        severity: z.number().min(1).max(5),
-        valid_from: z.string().optional(),
-        valid_until: z.string().optional(),
-        location_ids: z.array(z.number()).optional(),
-      }),
+      z
+        .object({
+          title: z.string().min(1).max(255),
+          text: z.string().min(1),
+          shock_type_id: z.number(),
+          data_source_id: z.number(),
+          shock_date: z.string(),
+          severity: z.number().min(1).max(5),
+          valid_from: z.string().optional(),
+          valid_until: z.string().optional(),
+          location_ids: z.array(z.number()).optional(),
+        })
+        .superRefine((data, ctx) => {
+          if (data.valid_from && data.valid_until) {
+            if (new Date(data.valid_from) > new Date(data.valid_until)) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "'valid_from' must be before 'valid_until'",
+                path: ["valid_until"],
+              });
+            }
+          }
+        }),
     )
-    .mutation(async (): Promise<{ success: boolean; message: string; alert: null }> => {
-      throw new Error("Alert creation not yet connected to new backend");
+    .mutation(async ({ ctx, input }) => {
+      const headers = extractCookieHeader(ctx.headers);
+      const result = await djangoFetch<DjangoCreateAlertResponse>(
+        "/alerts/webhook/alert/create/",
+        {
+          method: "POST",
+          body: JSON.stringify({ ...input, go_no_go: true }),
+          headers,
+          timeoutMs: 15_000,
+        },
+      );
+      return result;
     }),
 });
