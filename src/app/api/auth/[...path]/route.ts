@@ -20,16 +20,13 @@ async function handler(
     url.searchParams.set(key, value);
   });
 
-  // Build headers to forward — strip host so the upstream sees its own host.
-  // Set origin to the API's own origin so Better Auth's trustedOrigins check passes
-  // (this is a server-to-server call, not a browser cross-origin request).
+  // Forward the browser's origin header so Better Auth's trustedOrigins check
+  // sees the frontend origin (which is in the API's allow-list).
   const headers = new Headers();
-  for (const key of ["cookie", "content-type", "accept", "authorization"]) {
+  for (const key of ["cookie", "content-type", "accept", "authorization", "origin", "referer"]) {
     const value = request.headers.get(key);
     if (value) headers.set(key, value);
   }
-  const apiOrigin = new URL(API_URL).origin;
-  headers.set("origin", apiOrigin);
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
 
