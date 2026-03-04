@@ -6,7 +6,14 @@
       "Bash(git rm src/app/api/auth/logout/route.ts)",
       "Bash(git reset HEAD .env.local tsconfig.tsbuildinfo)",
       "Bash(git stash pop)",
-      "Read(//Users/james/code/**)"
+      "Read(//Users/james/code/**)",
+      "Bash(vercel env ls)",
+      "Bash(vercel inspect staging.clearinitiative.io)",
+      "Bash(vercel logs https://clear-8ciyy9rle-ground-zero-labs.vercel.app)",
+      "Bash(vercel env pull .env.vercel.staging --environment preview)",
+      "Bash(git -C /Users/james/code/clear-mvp status)",
+      "Bash(git -C /Users/james/code/clear-mvp log --oneline -5)",
+      "Bash(git -C /Users/james/code/clear-mvp diff src/app/api/auth/[...path]/route.ts src/app/api/graphql/route.ts)"
     ],
     "additionalDirectories": [
       "/Users/james/code/clear-mvp/src/app/api/auth"

@@ -14,25 +14,32 @@ export async function POST(request: NextRequest) {
     if (value) headers.set(key, value);
   }
 
-  const res = await fetch(`${API_URL}/graphql`, {
-    method: "POST",
-    headers,
-    body: request.body,
-    // @ts-expect-error -- Next.js fetch supports duplex for streaming request bodies
-    duplex: "half",
-  });
+  try {
+    const res = await fetch(`${API_URL}/graphql`, {
+      method: "POST",
+      headers,
+      body: request.body,
+      duplex: "half",
+    } as RequestInit);
 
-  const responseHeaders = new Headers();
-  res.headers.forEach((value, key) => {
-    const skip = ["transfer-encoding", "connection", "keep-alive"];
-    if (!skip.includes(key.toLowerCase())) {
-      responseHeaders.append(key, value);
-    }
-  });
+    const responseHeaders = new Headers();
+    res.headers.forEach((value, key) => {
+      const skip = ["transfer-encoding", "connection", "keep-alive"];
+      if (!skip.includes(key.toLowerCase())) {
+        responseHeaders.append(key, value);
+      }
+    });
 
-  return new NextResponse(res.body, {
-    status: res.status,
-    statusText: res.statusText,
-    headers: responseHeaders,
-  });
+    return new NextResponse(res.body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: responseHeaders,
+    });
+  } catch (err) {
+    console.error("[graphql-proxy]", err);
+    return NextResponse.json(
+      { error: "GraphQL proxy failed" },
+      { status: 502 },
+    );
+  }
 }

@@ -27,29 +27,36 @@ async function handler(
     if (value) headers.set(key, value);
   }
 
-  const res = await fetch(url.toString(), {
-    method: request.method,
-    headers,
-    body: request.body,
-    // @ts-expect-error -- Next.js fetch supports duplex for streaming request bodies
-    duplex: "half",
-  });
+  const hasBody = request.method !== "GET" && request.method !== "HEAD";
 
-  // Build the response, forwarding status, body, and Set-Cookie headers
-  const responseHeaders = new Headers();
-  res.headers.forEach((value, key) => {
-    // Forward all headers except hop-by-hop ones
-    const skip = ["transfer-encoding", "connection", "keep-alive"];
-    if (!skip.includes(key.toLowerCase())) {
-      responseHeaders.append(key, value);
-    }
-  });
+  try {
+    const res = await fetch(url.toString(), {
+      method: request.method,
+      headers,
+      ...(hasBody && { body: request.body, duplex: "half" }),
+    } as RequestInit);
 
-  return new NextResponse(res.body, {
-    status: res.status,
-    statusText: res.statusText,
-    headers: responseHeaders,
-  });
+    // Build the response, forwarding status, body, and Set-Cookie headers
+    const responseHeaders = new Headers();
+    res.headers.forEach((value, key) => {
+      const skip = ["transfer-encoding", "connection", "keep-alive"];
+      if (!skip.includes(key.toLowerCase())) {
+        responseHeaders.append(key, value);
+      }
+    });
+
+    return new NextResponse(res.body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: responseHeaders,
+    });
+  } catch (err) {
+    console.error("[auth-proxy]", request.method, url.toString(), err);
+    return NextResponse.json(
+      { error: "Auth proxy failed" },
+      { status: 502 },
+    );
+  }
 }
 
 export { handler as GET, handler as POST };
