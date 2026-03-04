@@ -13,7 +13,9 @@
       "Bash(vercel env pull .env.vercel.staging --environment preview)",
       "Bash(git -C /Users/james/code/clear-mvp status)",
       "Bash(git -C /Users/james/code/clear-mvp log --oneline -5)",
-      "Bash(git -C /Users/james/code/clear-mvp diff src/app/api/auth/[...path]/route.ts src/app/api/graphql/route.ts)"
+      "Bash(git -C /Users/james/code/clear-mvp diff src/app/api/auth/[...path]/route.ts src/app/api/graphql/route.ts)",
+      "Bash(vercel ls --limit 3)",
+      "Bash(vercel ls)"
     ],
     "additionalDirectories": [
       "/Users/james/code/clear-mvp/src/app/api/auth"

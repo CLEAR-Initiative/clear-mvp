@@ -51,9 +51,10 @@ async function handler(
       headers: responseHeaders,
     });
   } catch (err) {
-    console.error("[auth-proxy]", request.method, url.toString(), err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[auth-proxy]", request.method, url.toString(), message);
     return NextResponse.json(
-      { error: "Auth proxy failed" },
+      { error: "Auth proxy failed", upstream: url.toString(), detail: message },
       { status: 502 },
     );
   }
