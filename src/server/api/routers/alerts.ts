@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { djangoFetch, buildQueryString, extractCookieHeader } from "~/server/api/django";
+import {
+  djangoFetch,
+  buildQueryString,
+  extractCookieHeader,
+} from "~/server/api/django";
 import type {
   DjangoAlertsResponse,
   DjangoAlertDetailResponse,
@@ -31,7 +35,12 @@ export const alertsRouter = createTRPCRouter({
         shock_type: input?.shockType,
         severity: input?.severity,
         location: input?.location,
-        active_only: input?.activeOnly === true ? "true" : input?.activeOnly === false ? "false" : undefined,
+        active_only:
+          input?.activeOnly === true
+            ? "true"
+            : input?.activeOnly === false
+              ? "false"
+              : undefined,
         search: input?.search,
       });
       return await djangoFetch<DjangoAlertsResponse>(
@@ -65,27 +74,29 @@ export const alertsRouter = createTRPCRouter({
 
   createAlert: publicProcedure
     .input(
-      z.object({
-        title: z.string().min(1).max(255),
-        text: z.string().min(1),
-        shock_type_id: z.number(),
-        data_source_id: z.number(),
-        shock_date: z.string(),
-        severity: z.number().min(1).max(5),
-        valid_from: z.string().optional(),
-        valid_until: z.string().optional(),
-        location_ids: z.array(z.number()).optional(),
-      }).superRefine((data, ctx) => {
-        if (data.valid_from && data.valid_until) {
-          if (new Date(data.valid_from) > new Date(data.valid_until)) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: "'valid_from' must be before 'valid_until'",
-              path: ["valid_until"],
-            });
+      z
+        .object({
+          title: z.string().min(1).max(255),
+          text: z.string().min(1),
+          shock_type_id: z.number(),
+          data_source_id: z.number(),
+          shock_date: z.string(),
+          severity: z.number().min(1).max(5),
+          valid_from: z.string().optional(),
+          valid_until: z.string().optional(),
+          location_ids: z.array(z.number()).optional(),
+        })
+        .superRefine((data, ctx) => {
+          if (data.valid_from && data.valid_until) {
+            if (new Date(data.valid_from) > new Date(data.valid_until)) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "'valid_from' must be before 'valid_until'",
+                path: ["valid_until"],
+              });
+            }
           }
-        }
-      }),
+        }),
     )
     .mutation(async ({ ctx, input }) => {
       const headers = extractCookieHeader(ctx.headers);

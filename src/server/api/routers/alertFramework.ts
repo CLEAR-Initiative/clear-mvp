@@ -26,9 +26,23 @@ export const alertFrameworkRouter = createTRPCRouter({
     // We transform it to match our DjangoFrameworkStatsResponse shape
     const raw = await djangoFetch<{
       detector_stats?: { total: number; active: number };
-      detection_stats?: { total: number; pending: number; processed_today?: number; dismissed_today?: number };
+      detection_stats?: {
+        total: number;
+        pending: number;
+        processed_today?: number;
+        dismissed_today?: number;
+      };
       // Also accept the already-transformed shape
-      stats?: { detectors: { total: number; active: number }; detections: { total: number; pending: number; processed: number; dismissed: number }; alerts_generated: number };
+      stats?: {
+        detectors: { total: number; active: number };
+        detections: {
+          total: number;
+          pending: number;
+          processed: number;
+          dismissed: number;
+        };
+        alerts_generated: number;
+      };
     }>("/alert_framework/api/stats/", {
       headers: extractCookieHeader(ctx.headers),
     });

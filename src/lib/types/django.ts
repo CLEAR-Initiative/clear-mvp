@@ -1,4 +1,11 @@
-/* ========== Django API Response Types ========== */
+/**
+ * Domain types for CLEAR platform.
+ *
+ * NOTE: These types were originally modeled after the Django API responses.
+ * The Django backend has been removed. These types are retained (with their
+ * original names) so existing UI components continue to compile. They will
+ * be replaced as each domain feature is rebuilt on the new backend.
+ */
 
 // -- Alerts --
 
@@ -17,7 +24,6 @@ export interface DjangoLocation {
   admin_level: number | { code: string; name: string };
   latitude?: number;
   longitude?: number;
-  /** GeoJSON point — returned by public API as `{ coordinates: [lng, lat] }` */
   point?: { coordinates: [number, number] };
 }
 
@@ -33,7 +39,7 @@ export interface DjangoAlert {
   title: string;
   text: string;
   shock_type: DjangoShockType;
-  severity: number; // 1-5
+  severity: number;
   shock_date: string;
   valid_from?: string;
   valid_until?: string;
@@ -244,8 +250,8 @@ export interface LLMQueryResponse {
   response: string;
   provider: string;
   model: string;
-  response_time_ms: number;
-  cache_hit: boolean;
+  response_time_ms?: number;
+  cache_hit?: boolean;
   metadata?: Record<string, unknown>;
 }
 
@@ -293,7 +299,7 @@ export interface DjangoLocationsResponse {
 
 // -- Helpers --
 
-/** Map Django severity (1-5) to UI severity labels */
+/** Map severity (1-5) to UI severity labels */
 export function mapSeverity(severity: number): "critical" | "high" | "medium" | "low" {
   if (severity >= 5) return "critical";
   if (severity >= 4) return "high";
@@ -301,7 +307,7 @@ export function mapSeverity(severity: number): "critical" | "high" | "medium" | 
   return "low";
 }
 
-/** Map Django severity to display color */
+/** Map severity to display color */
 export function severityColor(severity: number): string {
   if (severity >= 5) return "#DC2626";
   if (severity >= 4) return "#D97706";

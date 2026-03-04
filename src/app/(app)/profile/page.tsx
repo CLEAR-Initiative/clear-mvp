@@ -9,12 +9,12 @@ import {
   Badge,
   Button,
   SimpleGrid,
-  Stack,
   Divider,
 } from "@mantine/core";
 import {
   IconUser,
   IconSettings,
+  IconShield,
   IconPencil,
   IconKey,
   IconShield,
@@ -25,6 +25,12 @@ import {
 import { api } from "~/trpc/react";
 import { NotificationPreferencesSection } from "./_components/NotificationPreferencesSection";
 import { SubscriptionSection } from "./_components/SubscriptionSection";
+
+const roleBadgeColor: Record<string, string> = {
+  admin: "blue",
+  analyst: "teal",
+  viewer: "gray",
+};
 
 export default function ProfilePage() {
   const { data, isLoading } = api.auth.me.useQuery();
@@ -46,6 +52,7 @@ export default function ProfilePage() {
   }
 
   const user = data.user;
+  const normalizedRole = user.role?.toLowerCase() ?? "viewer";
 
   return <ProfileContent user={user} />;
 }
@@ -90,7 +97,12 @@ function ProfileContent({ user }: { user: ProfileUser }) {
           variant="outline"
           color="gray"
           leftSection={<IconPencil size={16} />}
-          style={{ fontWeight: 600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}
+          style={{
+            fontWeight: 600,
+            fontSize: 12,
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+          }}
         >
           Edit Profile
         </Button>
@@ -100,31 +112,40 @@ function ProfileContent({ user }: { user: ProfileUser }) {
       <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
         <Group gap={8} mb={16}>
           <IconUser size={18} color="#E85D3D" />
-          <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
+          <Text
+            fw={700}
+            size="sm"
+            tt="uppercase"
+            style={{ letterSpacing: "0.05em", fontSize: 11 }}
+          >
             Account Information
           </Text>
         </Group>
         <SimpleGrid cols={2} spacing={16}>
           <Box>
-            <Text size="xs" c="#737373" mb={2}>Username</Text>
-            <Text size="sm" fw={500}>{user.username}</Text>
-          </Box>
-          <Box>
-            <Text size="xs" c="#737373" mb={2}>Full Name</Text>
+            <Text size="xs" c="#737373" mb={2}>
+              Name
+            </Text>
             <Text size="sm" fw={500}>
-              {user.first_name && user.last_name
-                ? `${user.first_name} ${user.last_name}`
-                : "Not set"}
+              {user.name || "Not set"}
             </Text>
           </Box>
           <Box>
-            <Text size="xs" c="#737373" mb={2}>Email</Text>
+            <Text size="xs" c="#737373" mb={2}>
+              Email
+            </Text>
             <Group gap={8}>
-              <Text size="sm" fw={500}>{user.email ?? "Not set"}</Text>
+              <Text size="sm" fw={500}>
+                {user.email ?? "Not set"}
+              </Text>
               {user.email_verified ? (
-                <Badge size="xs" color="green" variant="light">Verified</Badge>
+                <Badge size="xs" color="green" variant="light">
+                  Verified
+                </Badge>
               ) : (
-                <Badge size="xs" color="red" variant="light">Unverified</Badge>
+                <Badge size="xs" color="red" variant="light">
+                  Unverified
+                </Badge>
               )}
             </Group>
             {!user.email_verified && user.email && (
@@ -154,9 +175,28 @@ function ProfileContent({ user }: { user: ProfileUser }) {
             )}
           </Box>
           <Box>
-            <Text size="xs" c="#737373" mb={2}>Role</Text>
-            <Badge size="sm" color={user.is_staff ? "blue" : "gray"} variant="light">
-              {user.is_staff ? "Staff" : "User"}
+            <Text size="xs" c="#737373" mb={2}>
+              Role
+            </Text>
+            <Badge
+              size="sm"
+              color={roleBadgeColor[normalizedRole] ?? "gray"}
+              variant="light"
+              tt="capitalize"
+            >
+              {normalizedRole}
+            </Badge>
+          </Box>
+          <Box>
+            <Text size="xs" c="#737373" mb={2}>
+              Status
+            </Text>
+            <Badge
+              size="sm"
+              color={user.isActive ? "green" : "red"}
+              variant="light"
+            >
+              {user.isActive ? "Active" : "Inactive"}
             </Badge>
           </Box>
         </SimpleGrid>
@@ -166,20 +206,31 @@ function ProfileContent({ user }: { user: ProfileUser }) {
       <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
         <Group gap={8} mb={16}>
           <IconSettings size={18} color="#E85D3D" />
-          <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
+          <Text
+            fw={700}
+            size="sm"
+            tt="uppercase"
+            style={{ letterSpacing: "0.05em", fontSize: 11 }}
+          >
             Preferences
           </Text>
         </Group>
         <SimpleGrid cols={2} spacing={16}>
           <Box>
-            <Text size="xs" c="#737373" mb={2}>Language</Text>
+            <Text size="xs" c="#737373" mb={2}>
+              Language
+            </Text>
             <Text size="sm" fw={500}>
               {user.preferred_language === "ar" ? "Arabic" : "English"}
             </Text>
           </Box>
           <Box>
-            <Text size="xs" c="#737373" mb={2}>Timezone</Text>
-            <Text size="sm" fw={500}>{user.timezone ?? "UTC"}</Text>
+            <Text size="xs" c="#737373" mb={2}>
+              Timezone
+            </Text>
+            <Text size="sm" fw={500}>
+              {user.timezone ?? "UTC"}
+            </Text>
           </Box>
         </SimpleGrid>
       </Card>
@@ -196,13 +247,20 @@ function ProfileContent({ user }: { user: ProfileUser }) {
       <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
         <Group gap={8} mb={16}>
           <IconBell size={18} color="#E85D3D" />
-          <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
+          <Text
+            fw={700}
+            size="sm"
+            tt="uppercase"
+            style={{ letterSpacing: "0.05em", fontSize: 11 }}
+          >
             Notifications
           </Text>
         </Group>
         <Group justify="space-between">
           <Box>
-            <Text size="sm" fw={500}>Email Notifications</Text>
+            <Text size="sm" fw={500}>
+              Email Notifications
+            </Text>
             <Text size="xs" c="#737373">
               {user.email_notifications_enabled
                 ? "Enabled — you will receive email alerts"
@@ -222,7 +280,13 @@ function ProfileContent({ user }: { user: ProfileUser }) {
       <Divider my={24} />
 
       {/* Quick Actions */}
-      <Text fw={700} size="sm" tt="uppercase" mb={12} style={{ letterSpacing: "0.05em", fontSize: 11 }}>
+      <Text
+        fw={700}
+        size="sm"
+        tt="uppercase"
+        mb={12}
+        style={{ letterSpacing: "0.05em", fontSize: 11 }}
+      >
         Quick Actions
       </Text>
       <Group gap={8}>
@@ -236,17 +300,7 @@ function ProfileContent({ user }: { user: ProfileUser }) {
         >
           Change Password
         </Button>
-        <Button
-          component={Link}
-          href="/notification-preferences"
-          variant="outline"
-          color="gray"
-          leftSection={<IconBell size={14} />}
-          size="sm"
-        >
-          Notification Settings
-        </Button>
-        {user.is_staff && (
+        {normalizedRole === "admin" && (
           <Button
             component={Link}
             href="/admin"

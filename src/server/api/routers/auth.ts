@@ -34,6 +34,31 @@ interface ChangePasswordResponse {
   error?: string;
 }
 
+const API_URL = process.env.API_URL ?? "http://localhost:4000";
+
+const BetterAuthUserSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  emailVerified: z.boolean(),
+  image: z.string().nullable(),
+  role: z.string(),
+  isActive: z.boolean(),
+});
+
+const SessionResponseSchema = z.object({
+  session: z
+    .object({
+      id: z.string(),
+      userId: z.string(),
+      expiresAt: z.string(),
+    })
+    .nullable(),
+  user: BetterAuthUserSchema.nullable(),
+});
+
+const SESSION_TIMEOUT_MS = 5000;
+
 export const authRouter = createTRPCRouter({
   login: publicProcedure
     .input(
@@ -59,11 +84,37 @@ export const authRouter = createTRPCRouter({
 
   me: publicProcedure.query(async ({ ctx }) => {
     try {
-      return await djangoFetch<MeResponse>("/users/api/auth/me/", {
-        headers: extractCookieHeader(ctx.headers),
-      });
-    } catch {
-      return { authenticated: false } as MeResponse;
+      const cookie = ctx.headers.get("cookie") ?? "";
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), SESSION_TIMEOUT_MS);
+
+      let res: Response;
+      try {
+        res = await fetch(`${API_URL}/api/auth/get-session`, {
+          headers: { Cookie: cookie },
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      if (!res.ok) return { authenticated: false, user: null };
+
+      const raw: unknown = await res.json();
+      const parsed = SessionResponseSchema.safeParse(raw);
+      if (!parsed.success) {
+        console.error("Invalid session response shape:", parsed.error.message);
+        return { authenticated: false, user: null };
+      }
+
+      const data = parsed.data;
+      if (!data.session || !data.user)
+        return { authenticated: false, user: null };
+      return { authenticated: true, user: data.user };
+    } catch (err) {
+      console.error("Auth session check failed:", err);
+      return { authenticated: false, user: null };
     }
   }),
 
@@ -71,7 +122,9 @@ export const authRouter = createTRPCRouter({
     .input(
       z.object({
         old_password: z.string().min(1, "Current password is required"),
-        new_password: z.string().min(8, "Password must be at least 8 characters"),
+        new_password: z
+          .string()
+          .min(8, "Password must be at least 8 characters"),
       }),
     )
     .mutation(async ({ ctx, input }) => {

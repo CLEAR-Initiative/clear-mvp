@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { djangoFetch, extractCookieHeader, LLM_TIMEOUT_MS } from "~/server/api/django";
+import {
+  djangoFetch,
+  extractCookieHeader,
+  LLM_TIMEOUT_MS,
+} from "~/server/api/django";
 import type {
   LLMQueryResponse,
   LLMProvidersResponse,

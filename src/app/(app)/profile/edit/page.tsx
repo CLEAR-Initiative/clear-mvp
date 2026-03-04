@@ -67,9 +67,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
   const [firstName, setFirstName] = useState(user.first_name ?? "");
   const [lastName, setLastName] = useState(user.last_name ?? "");
   const [email, setEmail] = useState(user.email ?? "");
-  const [language, setLanguage] = useState(
-    user.preferred_language ?? "en",
-  );
+  const [language, setLanguage] = useState(user.preferred_language ?? "en");
   const [tz, setTz] = useState(user.timezone ?? "Africa/Khartoum");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -105,6 +103,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
       timezone: tz,
     });
   };
+  const user = data.user;
 
   return (
     <Box p={32} style={{ maxWidth: 600 }}>
@@ -173,14 +172,20 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
                 label="First Name"
                 placeholder="Enter first name"
                 value={firstName}
-                onChange={(e) => { setFirstName(e.currentTarget.value); setSuccess(false); }}
+                onChange={(e) => {
+                  setFirstName(e.currentTarget.value);
+                  setSuccess(false);
+                }}
                 styles={inputStyles}
               />
               <TextInput
                 label="Last Name"
                 placeholder="Enter last name"
                 value={lastName}
-                onChange={(e) => { setLastName(e.currentTarget.value); setSuccess(false); }}
+                onChange={(e) => {
+                  setLastName(e.currentTarget.value);
+                  setSuccess(false);
+                }}
                 styles={inputStyles}
               />
             </Group>
@@ -190,7 +195,10 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
               placeholder="you@example.com"
               type="email"
               value={email}
-              onChange={(e) => { setEmail(e.currentTarget.value); setSuccess(false); }}
+              onChange={(e) => {
+                setEmail(e.currentTarget.value);
+                setSuccess(false);
+              }}
               required
               styles={inputStyles}
             />
@@ -214,7 +222,10 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
             <Select
               label="Language"
               value={language}
-              onChange={(v) => { setLanguage(v ?? "en"); setSuccess(false); }}
+              onChange={(v) => {
+                setLanguage(v ?? "en");
+                setSuccess(false);
+              }}
               data={[
                 { value: "en", label: "English" },
                 { value: "ar", label: "Arabic" },
@@ -225,7 +236,10 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
             <Select
               label="Timezone"
               value={tz}
-              onChange={(v) => { setTz(v ?? "Africa/Khartoum"); setSuccess(false); }}
+              onChange={(v) => {
+                setTz(v ?? "Africa/Khartoum");
+                setSuccess(false);
+              }}
               data={[
                 { value: "Africa/Khartoum", label: "Sudan (Khartoum)" },
                 { value: "UTC", label: "UTC" },
@@ -254,6 +268,45 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
           </Button>
         </Group>
       </form>
+      <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
+        <Group gap={8} mb={16}>
+          <IconUser size={18} color="#E85D3D" />
+          <Text
+            fw={700}
+            size="sm"
+            tt="uppercase"
+            style={{ letterSpacing: "0.05em", fontSize: 11 }}
+          >
+            Personal Information
+          </Text>
+        </Group>
+
+        <Stack gap={12}>
+          <TextInput
+            label="Name"
+            value={user.name}
+            disabled
+            styles={inputStyles}
+          />
+          <TextInput
+            label="Email"
+            value={user.email}
+            disabled
+            styles={inputStyles}
+          />
+        </Stack>
+
+        <Text size="xs" c="#737373" mt={16}>
+          Profile editing will be available once the profile update API is
+          connected.
+        </Text>
+      </Card>
+
+      <Group justify="flex-end">
+        <Button component={Link} href="/profile" variant="outline" color="gray">
+          Back
+        </Button>
+      </Group>
     </Box>
   );
 }
