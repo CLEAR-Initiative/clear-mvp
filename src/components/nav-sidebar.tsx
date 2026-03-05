@@ -16,6 +16,7 @@ import {
   IconLayoutDashboard,
   IconTarget,
   IconChartPie,
+  IconChartBar,
   IconUser,
   IconCurrencyDollar,
   IconBook,
@@ -47,6 +48,7 @@ const navSections: NavSection[] = [
       { label: "Analysis", href: "/analysis", icon: IconChartPie },
       { label: "Operations", href: "/operations", icon: IconUser, badge: 2 },
       { label: "Cash Assistance", href: "/cash", icon: IconCurrencyDollar },
+      { label: "Analytics", href: "/analytics", icon: IconChartBar },
     ],
   },
   {
