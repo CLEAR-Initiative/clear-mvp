@@ -70,7 +70,6 @@ export default function MapPage() {
   /* ---- Fetch alert data ---- */
   const alertsQuery = api.alerts.getAlerts.useQuery({
     activeOnly: true,
-    pageSize: 100,
   });
   const shockTypesQuery = api.alerts.getShockTypes.useQuery();
 
@@ -88,22 +87,15 @@ export default function MapPage() {
     [shockTypes],
   );
 
-  /* ---- Filter to current month's alerts only ---- */
-  const currentMonthAlerts = useMemo(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth(); // 0-indexed
-    return allAlerts.filter((alert) => {
-      const d = new Date(alert.shock_date);
-      return d.getFullYear() === year && d.getMonth() === month;
-    });
-  }, [allAlerts]);
-
   /* ---- Transform alerts to map markers ---- */
-  const allMarkers: CrisisMarker[] = useMemo(
-    () => alertsToMarkers(currentMonthAlerts),
-    [currentMonthAlerts],
-  );
+  const allMarkers: CrisisMarker[] = useMemo(() => {
+    const markers = alertsToMarkers(allAlerts);
+    console.log("[MapPage] allAlerts:", allAlerts.length, "allMarkers:", markers.length);
+    if (allAlerts.length > 0 && markers.length === 0) {
+      console.log("[MapPage] First alert locations:", JSON.stringify(allAlerts[0]?.locations));
+    }
+    return markers;
+  }, [allAlerts]);
 
   /* ---- Filter state ---- */
   const [selectedCountry, setSelectedCountry] = useState("All Countries");
@@ -155,7 +147,7 @@ export default function MapPage() {
 
   /* ---- Filtered markers ---- */
   const currentMarkers: MapMarker[] = useMemo(() => {
-    return allMarkers.filter((m) => {
+    const filtered = allMarkers.filter((m) => {
       // Country filter
       if (selectedCountry !== "All Countries" && m.country !== selectedCountry)
         return false;
@@ -164,9 +156,11 @@ export default function MapPage() {
       if (selectedRegion !== "All Regions" && m.region !== selectedRegion)
         return false;
 
-      // Layer filter (type is shock_type.id as string)
-      const markerType = m.type ?? "";
-      if (!activeLayers.includes(markerType)) return false;
+      // Layer filter — only apply when layers are defined (shock types loaded)
+      if (activeLayers.length > 0) {
+        const markerType = m.type ?? "";
+        if (!activeLayers.includes(markerType)) return false;
+      }
 
       // Crisis type filter by name
       if (
@@ -177,6 +171,8 @@ export default function MapPage() {
 
       return true;
     });
+    console.log("[MapPage] currentMarkers:", filtered.length, "activeLayers:", activeLayers);
+    return filtered;
   }, [
     allMarkers,
     selectedCountry,

@@ -22,7 +22,7 @@ import {
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { NotificationPreferencesSection } from "./_components/NotificationPreferencesSection";
-import { SubscriptionSection } from "./_components/SubscriptionSection";
+import { IconBellOff } from "@tabler/icons-react";
 
 const roleBadgeColor: Record<string, string> = {
   admin: "blue",
@@ -236,11 +236,19 @@ function ProfileContent({ user }: { user: ProfileUser }) {
       {/* Notification Preferences (connected to backend) */}
       <NotificationPreferencesSection user={user} />
 
-      {/* Alert Subscriptions */}
-      <SubscriptionSection
-        hasMobileNumber={!!user.mobile_number}
-        smsEnabled={user.sms_notifications_enabled ?? false}
-      />
+      {/* Alert Subscriptions — Coming Soon */}
+      <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
+        <Group gap={8} mb={8}>
+          <IconBellOff size={18} color="#A3A3A3" />
+          <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
+            Alert Subscriptions
+          </Text>
+          <Badge size="xs" color="gray" variant="light">Coming Soon</Badge>
+        </Group>
+        <Text size="sm" c="#737373">
+          Alert subscription management is being migrated. This feature will be available again shortly.
+        </Text>
+      </Card>
       {/* Notifications Card */}
       <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
         <Group gap={8} mb={16}>

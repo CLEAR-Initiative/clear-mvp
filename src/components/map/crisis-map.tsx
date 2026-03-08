@@ -175,7 +175,12 @@ export function CrisisMap({
   // Update markers
   const updateMarkers = useCallback(() => {
     const mapboxgl = mbRef.current;
-    if (!map.current || !loaded || !mapboxgl) return;
+    if (!map.current || !loaded || !mapboxgl) {
+      console.log("[CrisisMap] updateMarkers skipped: map=", !!map.current, "loaded=", loaded, "mapboxgl=", !!mapboxgl);
+      return;
+    }
+
+    console.log("[CrisisMap] updateMarkers: rendering", markers.length, "markers");
 
     // Clear existing markers
     mapMarkers.current.forEach((m: MapboxGLAny) => m.remove());
@@ -249,7 +254,9 @@ export function CrisisMap({
       });
 
       mapMarkers.current.push(marker);
+      console.log("[CrisisMap] Added marker:", markerData.title, "at", markerData.lng, markerData.lat);
     });
+    console.log("[CrisisMap] Total markers rendered:", mapMarkers.current.length);
   }, [markers, loaded, onMarkerClick]);
 
   useEffect(() => {
