@@ -2,12 +2,12 @@
 
 import { Text } from "@mantine/core";
 import Link from "next/link";
-import { mapSeverity } from "~/lib/types/django";
-import type { DjangoAlert } from "~/lib/types/django";
+import { mapSeverity } from "~/lib/types/graphql";
+import type { GqlAlert } from "~/lib/types/graphql";
 import { CardSection, DataTable, Table, SeverityBadge } from "~/components/ui";
 
 interface HistoryTabProps {
-  alerts: DjangoAlert[];
+  alerts: GqlAlert[];
   loading: boolean;
   total: number | undefined;
   count: number | undefined;
@@ -16,7 +16,7 @@ interface HistoryTabProps {
 const columns = [
   { label: "Alert" },
   { label: "Severity" },
-  { label: "Type" },
+  { label: "Status" },
   { label: "Date" },
   { label: "Location" },
 ];
@@ -59,17 +59,17 @@ export function HistoryTab({ alerts, loading, total, count }: HistoryTabProps) {
               </Table.Td>
               <Table.Td>
                 <Text c="#525252" style={{ fontSize: 13 }}>
-                  {alert.shock_type?.name ?? "\u2014"}
+                  {alert.status}
                 </Text>
               </Table.Td>
               <Table.Td>
                 <Text c="#525252" style={{ fontSize: 13 }}>
-                  {new Date(alert.shock_date).toLocaleDateString()}
+                  {new Date(alert.createdAt).toLocaleDateString()}
                 </Text>
               </Table.Td>
               <Table.Td>
                 <Text c="#525252" style={{ fontSize: 13 }}>
-                  {alert.locations?.[0]?.name ?? "\u2014"}
+                  {alert.locations?.[0]?.location.name ?? "\u2014"}
                 </Text>
               </Table.Td>
             </Table.Tr>

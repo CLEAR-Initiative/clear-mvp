@@ -35,7 +35,7 @@ export function NotificationPreferencesSection({
   }, [user.email_notifications_enabled]);
 
   const utils = api.useUtils();
-  const updateProfile = api.subscriptions.updateProfile.useMutation({
+  const updateProfile = api.auth.updateNotificationPrefs.useMutation({
     onSuccess: () => {
       notifications.show({
         title: "Saved",
@@ -57,7 +57,7 @@ export function NotificationPreferencesSection({
   const handleSave = () => {
     setIsSaving(true);
     updateProfile.mutate({
-      email_notifications_enabled: emailEnabled,
+      enableEmailNotification: emailEnabled,
     });
   };
 

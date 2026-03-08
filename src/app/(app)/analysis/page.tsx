@@ -5,7 +5,8 @@ import { Box, Button, Group, Loader, Tabs } from "@mantine/core";
 import { IconDownload, IconSparkles } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { SITUATION_ANALYSIS_SYSTEM_PROMPT } from "~/lib/prompts";
-import { mapSeverity } from "~/lib/types/django";
+import { mapSeverity } from "~/lib/types/graphql";
+import type { GqlAlert } from "~/lib/types/graphql";
 import { countries, dateOptions, countryConfig } from "~/lib/constants/country-config";
 import { PageHeader, FilterBar } from "~/components/ui";
 import { ExecutiveSummary } from "./_components/executive-summary";
@@ -34,9 +35,9 @@ export default function AnalysisPage() {
   const realSituationItems = useMemo(() => {
     if (allAlerts.length === 0) return null;
     return allAlerts.slice(0, 5).map((a) => {
-      const loc = a.locations?.[0]?.name ?? "Unknown";
+      const loc = a.locations?.[0]?.location.name ?? "Unknown";
       const sev = mapSeverity(a.severity);
-      return `${a.title} — ${loc} (${sev} severity)${a.text ? `: ${a.text.slice(0, 120)}` : ""}`;
+      return `${a.title} — ${loc} (${sev} severity)${a.description ? `: ${a.description.slice(0, 120)}` : ""}`;
     });
   }, [allAlerts]);
 
@@ -45,8 +46,10 @@ export default function AnalysisPage() {
     const critical = allAlerts.filter((a) => a.severity >= 4).length;
     const total = allAlerts.length;
     const types = [
-      ...new Set(allAlerts.map((a) => a.shock_type?.name).filter(Boolean)),
-    ];
+      ...new Set(allAlerts.flatMap((a) =>
+        a.events.flatMap((e) => e.signals.map((s) => s.detection.source?.type)),
+      ).filter(Boolean)),
+    ] as string[];
     return { critical, total, types };
   }, [allAlerts]);
 
@@ -55,7 +58,7 @@ export default function AnalysisPage() {
     const alertContext = allAlerts
       .map(
         (a) =>
-          `- ${a.title} (severity ${a.severity}/5): ${a.text?.slice(0, 150) ?? ""}`,
+          `- ${a.title} (severity ${a.severity}/5): ${a.description?.slice(0, 150) ?? ""}`,
       )
       .join("\n");
     llmMutation.mutate(

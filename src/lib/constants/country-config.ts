@@ -74,12 +74,44 @@ export const countryConfig: Record<string, CountryConfig> = {
 
 export const countries = Object.keys(countryConfig).sort();
 
-export const dateOptions = [
-  "Feb 2026",
-  "Jan 2026",
-  "Dec 2025",
-  "Nov 2025",
-  "Last 7 days",
-  "Last 30 days",
-  "Last 90 days",
-];
+/** Generate dynamic date filter options based on the current date */
+function buildDateOptions(): string[] {
+  const now = new Date();
+  const months: string[] = [];
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(`${monthNames[d.getMonth()]} ${d.getFullYear()}`);
+  }
+  return [...months, "Last 7 days", "Last 30 days", "Last 90 days"];
+}
+
+export const dateOptions = buildDateOptions();
+
+/** Parse a date filter option into a { start, end } range (UTC timestamps) */
+export function parseDateFilter(option: string): { start: Date; end: Date } {
+  const now = new Date();
+
+  // "Last N days" patterns
+  const lastDays = option.match(/^Last (\d+) days$/i);
+  if (lastDays) {
+    const days = parseInt(lastDays[1]!, 10);
+    return { start: new Date(now.getTime() - days * 24 * 60 * 60 * 1000), end: now };
+  }
+
+  // "Mon YYYY" patterns
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthMatch = option.match(/^(\w+)\s+(\d{4})$/);
+  if (monthMatch) {
+    const monthIdx = monthNames.indexOf(monthMatch[1]!);
+    const year = parseInt(monthMatch[2]!, 10);
+    if (monthIdx >= 0) {
+      const start = new Date(year, monthIdx, 1);
+      const end = new Date(year, monthIdx + 1, 0, 23, 59, 59, 999);
+      return { start, end };
+    }
+  }
+
+  // Fallback: last 30 days
+  return { start: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), end: now };
+}

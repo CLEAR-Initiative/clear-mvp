@@ -1,7 +1,6 @@
 import type { MapMarker } from "~/components/map/crisis-map";
-import type { DjangoAlert, DjangoShockType } from "~/lib/types/django";
-import { mapSeverity } from "~/lib/types/django";
-import { countryConfig } from "~/lib/constants/country-config";
+import type { GqlAlert } from "~/lib/types/graphql";
+import { mapSeverity } from "~/lib/types/graphql";
 
 export interface CrisisMarker extends MapMarker {
   region?: string;
@@ -25,7 +24,7 @@ export interface LayerDef {
 
 /** Build layer definitions from shock types returned by the API */
 export function buildLayersFromShockTypes(
-  shockTypes: DjangoShockType[],
+  shockTypes: Array<{ id: number; name: string; color: string }>,
 ): LayerDef[] {
   return shockTypes.map((st) => ({
     id: st.name,
@@ -37,87 +36,40 @@ export function buildLayersFromShockTypes(
 
 /* ========== Crisis types for filter dropdown ========== */
 export function buildCrisisTypeOptions(
-  shockTypes: DjangoShockType[],
+  shockTypes: Array<{ id: number; name: string }>,
 ): string[] {
   return ["All Types", ...shockTypes.map((st) => st.name)];
 }
 
-/* ========== geo_id prefix → country name ========== */
-const geoIdToCountry: Record<string, string> = {
-  SD: "Sudan",
-  ET: "Ethiopia",
-  SS: "South Sudan",
-  SO: "Somalia",
-  YE: "Yemen",
-  AF: "Afghanistan",
-  UA: "Ukraine",
-  IQ: "Iraq",
-  SY: "Syria",
-  CO: "Colombia",
-};
+/* ========== Transform GraphQL alerts to map markers ========== */
 
-function countryFromGeoId(geoId: string): string | undefined {
-  // Try underscore-delimited prefix first (e.g. "SD_001" → "SD")
-  const prefix = geoId.split("_")[0] ?? "";
-  if (geoIdToCountry[prefix]) return geoIdToCountry[prefix];
-  // Fallback: try first 2 characters for compact IDs (e.g. "SD13024043" → "SD")
-  return geoIdToCountry[geoId.slice(0, 2)];
-}
-
-/**
- * Reverse-lookup country from coordinates using bounding-box containment.
- * Falls back to "Unknown" when the point is outside all configured countries,
- * preventing incorrect assignment to the nearest country center.
- */
-function countryFromCoords(lng: number, lat: number): string {
-  for (const [name, cfg] of Object.entries(countryConfig)) {
-    const [lngMin, latMin, lngMax, latMax] = cfg.bbox;
-    if (lng >= lngMin && lng <= lngMax && lat >= latMin && lat <= latMax) {
-      return name;
-    }
+/** Simple numeric hash from two string ids for MapMarker.id */
+function hashId(a: string, b: string): number {
+  let h = 0;
+  for (const c of a + b) {
+    h = ((h << 5) - h + c.charCodeAt(0)) | 0;
   }
-  return "Unknown";
+  return Math.abs(h);
 }
 
-/* ========== Transform Django alerts to map markers ========== */
-export function alertsToMarkers(alerts: DjangoAlert[]): CrisisMarker[] {
+export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
-
-  alerts.forEach((alert) => {
-    alert.locations.forEach((loc, i) => {
-      // Extract coordinates: prefer point.coordinates, fallback to lat/lng fields
-      let lng: number | undefined;
-      let lat: number | undefined;
-
-      if (loc.point?.coordinates) {
-        [lng, lat] = loc.point.coordinates;
-      } else {
-        lng = loc.longitude;
-        lat = loc.latitude;
-      }
-
-      if (lng == null || lat == null) return;
-
-      // Derive country from geo_id, fallback to nearest country center
-      const country = countryFromGeoId(loc.geo_id) ?? countryFromCoords(lng, lat);
-
+  for (const alert of alerts) {
+    for (const loc of alert.locations) {
+      const { latitude, longitude } = loc.location;
+      if (latitude == null || longitude == null) continue;
       markers.push({
-        id: alert.id * 1000 + i,
-        lng,
-        lat,
+        id: hashId(alert.id, loc.id),
+        lng: longitude,
+        lat: latitude,
         title: alert.title,
         severity: mapSeverity(alert.severity),
-        type: alert.shock_type.name,
-        description: alert.text,
-        region: loc.name,
-        country,
-        shockTypeName: alert.shock_type.name,
-        dataSource: alert.data_source?.name,
-        shockDate: alert.shock_date,
+        description: alert.description,
+        region: loc.location.name,
+        status: alert.status,
       });
-    });
-  });
-
+    }
+  }
   return markers;
 }
 

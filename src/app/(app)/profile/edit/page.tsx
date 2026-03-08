@@ -65,7 +65,9 @@ interface ProfileEditFormProps {
 
 function ProfileEditForm({ user }: ProfileEditFormProps) {
   const [firstName, setFirstName] = useState(user.name?.split(" ")[0] ?? "");
-  const [lastName, setLastName] = useState(user.name?.split(" ").slice(1).join(" ") ?? "");
+  const [lastName, setLastName] = useState(
+    user.name?.split(" ").slice(1).join(" ") ?? "",
+  );
   const [email, setEmail] = useState(user.email ?? "");
   const [language, setLanguage] = useState(user.preferred_language ?? "en");
   const [tz, setTz] = useState(user.timezone ?? "Africa/Khartoum");
@@ -73,13 +75,13 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
   const [success, setSuccess] = useState(false);
 
   const utils = api.useUtils();
-  const updateProfile = api.subscriptions.updateProfile.useMutation({
+  const updateProfile = api.auth.updateProfile.useMutation({
     onSuccess: () => {
       setSuccess(true);
       setError("");
       void utils.auth.me.invalidate();
     },
-    onError: (err) => {
+    onError: (err: { message?: string }) => {
       setError(err.message ?? "An unexpected error occurred");
       setSuccess(false);
     },
@@ -90,18 +92,15 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
     setError("");
     setSuccess(false);
 
-    if (!email.trim()) {
-      setError("Email is required");
+    const fullName = [firstName.trim(), lastName.trim()]
+      .filter(Boolean)
+      .join(" ");
+    if (!fullName) {
+      setError("Name is required");
       return;
     }
 
-    updateProfile.mutate({
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      email: email.trim(),
-      preferred_language: language,
-      timezone: tz,
-    });
+    updateProfile.mutate({ name: fullName });
   };
 
   return (
@@ -267,45 +266,6 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
           </Button>
         </Group>
       </form>
-      <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
-        <Group gap={8} mb={16}>
-          <IconUser size={18} color="#E85D3D" />
-          <Text
-            fw={700}
-            size="sm"
-            tt="uppercase"
-            style={{ letterSpacing: "0.05em", fontSize: 11 }}
-          >
-            Personal Information
-          </Text>
-        </Group>
-
-        <Stack gap={12}>
-          <TextInput
-            label="Name"
-            value={user.name}
-            disabled
-            styles={inputStyles}
-          />
-          <TextInput
-            label="Email"
-            value={user.email}
-            disabled
-            styles={inputStyles}
-          />
-        </Stack>
-
-        <Text size="xs" c="#737373" mt={16}>
-          Profile editing will be available once the profile update API is
-          connected.
-        </Text>
-      </Card>
-
-      <Group justify="flex-end">
-        <Button component={Link} href="/profile" variant="outline" color="gray">
-          Back
-        </Button>
-      </Group>
     </Box>
   );
 }

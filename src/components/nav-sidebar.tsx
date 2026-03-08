@@ -31,6 +31,7 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   badge?: number;
+  disabled?: boolean;
 }
 
 interface NavSection {
@@ -44,15 +45,15 @@ const navSections: NavSection[] = [
     items: [
       { label: "Overview", href: "/dashboard", icon: IconLayoutDashboard },
       { label: "Detection", href: "/detection", icon: IconTarget, badge: 3 },
-      { label: "Analysis", href: "/analysis", icon: IconChartPie },
-      { label: "Operations", href: "/operations", icon: IconUser, badge: 2 },
-      { label: "Cash Assistance", href: "/cash", icon: IconCurrencyDollar },
+      { label: "Analysis", href: "/analysis", icon: IconChartPie, disabled: true },
+      { label: "Operations", href: "/operations", icon: IconUser, disabled: true },
+      { label: "Cash Assistance", href: "/cash", icon: IconCurrencyDollar, disabled: true },
     ],
   },
   {
     title: "RESOURCES",
     items: [
-      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook },
+      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook, disabled: true },
       { label: "Crisis Map", href: "/map", icon: IconMapPin },
     ],
   },
@@ -134,9 +135,38 @@ export function NavSidebar() {
             </Text>
             {section.items.map((item) => {
               const isActive =
-                pathname === item.href ||
-                (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                !item.disabled &&
+                (pathname === item.href ||
+                  (item.href !== "/dashboard" && pathname.startsWith(item.href)));
               const Icon = item.icon;
+
+              if (item.disabled) {
+                return (
+                  <Box
+                    key={item.href}
+                    px={12}
+                    py={10}
+                    className="flex items-center gap-2.5 text-[13px] font-medium"
+                    style={{ cursor: "not-allowed", opacity: 0.4 }}
+                  >
+                    <Group gap={10} wrap="nowrap" style={{ flex: 1 }}>
+                      <Icon size={18} style={{ opacity: 0.5, flexShrink: 0 }} />
+                      <Text size="sm" fw={500} c="#A3A3A3" style={{ fontSize: "13px" }}>
+                        {item.label}
+                      </Text>
+                      <Badge
+                        size="xs"
+                        variant="light"
+                        color="gray"
+                        ml="auto"
+                        style={{ fontSize: "9px", fontWeight: 500, padding: "0 5px" }}
+                      >
+                        Soon
+                      </Badge>
+                    </Group>
+                  </Box>
+                );
+              }
 
               return (
                 <UnstyledButton

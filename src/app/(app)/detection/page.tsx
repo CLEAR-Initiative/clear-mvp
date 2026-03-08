@@ -5,16 +5,14 @@ import { Box, Tabs, Button, Group } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { mapSeverity } from "~/lib/types/django";
-import type { DjangoAlert } from "~/lib/types/django";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { countryConfig, countries, dateOptions } from "~/lib/constants/country-config";
+import { countryConfig, countries, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
+import { alertsToMarkers } from "../map/_components/map-markers-data";
 import { PageHeader, StatsGrid, FilterBar } from "~/components/ui";
 import type { StatItem } from "~/components/ui";
 
 import { LiveAlertsTab } from "./_components/live-alerts-tab";
 import { DataSourcesTab } from "./_components/data-sources-tab";
-import { AlertRulesTab } from "./_components/alert-rules-tab";
 import { HistoryTab } from "./_components/history-tab";
 import { CreateAlertModal } from "./_components/create-alert-modal";
 
@@ -25,16 +23,15 @@ function formatNumber(n: number): string {
 
 export default function DetectionPage() {
   const [activeTab, setActiveTab] = useState<string | null>("live");
-  const [ruleStates, setRuleStates] = useState<Record<string, boolean>>({});
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
-  const [selectedDate, setSelectedDate] = useState("Feb 2026");
+  const [selectedDate, setSelectedDate] = useState(dateOptions[0] ?? "Last 30 days");
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
 
   // tRPC queries
   const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true });
   const historyQuery = api.alerts.getAlerts.useQuery(
-    { activeOnly: false, pageSize: 20 },
+    { activeOnly: false },
     { enabled: activeTab === "history" },
   );
   const statsQuery = api.alerts.getStats.useQuery();
@@ -43,12 +40,6 @@ export default function DetectionPage() {
   });
   const pipelineStatsQuery = api.pipeline.getStatistics.useQuery(undefined, {
     enabled: activeTab === "sources" || activeTab === "live",
-  });
-  const detectorsQuery = api.alertFramework.getDetectors.useQuery(undefined, {
-    enabled: activeTab === "rules",
-  });
-  const frameworkStatsQuery = api.alertFramework.getStats.useQuery(undefined, {
-    enabled: activeTab === "rules",
   });
 
   const countryConf = countryConfig[selectedCountry];
@@ -65,87 +56,56 @@ export default function DetectionPage() {
     const countryLower = selectedCountry.toLowerCase();
     const regionLower =
       selectedRegion !== "All Regions" ? selectedRegion.toLowerCase() : null;
+    const dateRange = parseDateFilter(selectedDate);
 
     return allAlerts.filter((alert) => {
+      // Date filter
+      const alertDate = new Date(alert.createdAt).getTime();
+      if (alertDate < dateRange.start.getTime() || alertDate > dateRange.end.getTime()) {
+        return false;
+      }
+
       const matchesCountry =
         alert.locations.some((loc) => {
-          const locName = loc.name.toLowerCase();
+          const locName = loc.location.name.toLowerCase();
           return (
             regions.some((r) => r !== "all regions" && locName.includes(r)) ||
             locName.includes(countryLower)
           );
         }) ||
         alert.title.toLowerCase().includes(countryLower) ||
-        (alert.text?.toLowerCase().includes(countryLower) ?? false);
+        (alert.description?.toLowerCase().includes(countryLower) ?? false);
 
       if (!matchesCountry) return false;
 
       if (regionLower) {
         return (
           alert.locations.some((loc) =>
-            loc.name.toLowerCase().includes(regionLower),
+            loc.location.name.toLowerCase().includes(regionLower),
           ) ||
           alert.title.toLowerCase().includes(regionLower) ||
-          (alert.text?.toLowerCase().includes(regionLower) ?? false)
+          (alert.description?.toLowerCase().includes(regionLower) ?? false)
         );
       }
       return true;
     });
-  }, [allAlerts, selectedCountry, selectedRegion, countryConf?.regions]);
+  }, [allAlerts, selectedCountry, selectedRegion, selectedDate, countryConf?.regions]);
 
   const overview = statsQuery.data?.stats?.overview;
   const sources = sourcesQuery.data?.sources ?? [];
   const pipelineStats = pipelineStatsQuery.data;
-  const detectors = detectorsQuery.data?.detectors ?? [];
   const historyAlerts = historyQuery.data?.alerts ?? [];
 
-  // Map markers derived from filtered alerts
-  const mapMarkers: MapMarker[] = useMemo(() => {
-    const markers: MapMarker[] = [];
-    for (const alert of alerts as DjangoAlert[]) {
-      for (const loc of alert.locations) {
-        const lng = loc.longitude ?? loc.point?.coordinates[0];
-        const lat = loc.latitude ?? loc.point?.coordinates[1];
-        if (lat != null && lng != null) {
-          markers.push({
-            id: alert.id * 100 + loc.id,
-            lng,
-            lat,
-            title: alert.title,
-            severity: mapSeverity(alert.severity),
-            type: alert.shock_type?.name,
-            description: `${loc.name} \u2022 ${alert.shock_type?.name ?? ""}`,
-          });
-        }
-      }
-    }
-    return markers;
-  }, [alerts]);
+  const mapMarkers: MapMarker[] = useMemo(
+    () => alertsToMarkers(alerts),
+    [alerts],
+  );
 
   const mapCenter = useMemo<[number, number]>(
     () => countryConf?.center ?? [30.0, 15.5],
     [countryConf?.center],
   );
   const mapZoom = useMemo(() => countryConf?.zoom ?? 5, [countryConf?.zoom]);
-
-  // Initialize rule states from detectors
-  if (detectors.length > 0 && Object.keys(ruleStates).length === 0) {
-    const initial: Record<string, boolean> = {};
-    for (const d of detectors) {
-      initial[d.name] = d.active;
-    }
-    setRuleStates(initial);
-  }
-
-  const handleToggleRule = useCallback(
-    (name: string) => {
-      setRuleStates((prev) => ({
-        ...prev,
-        [name]: !(prev[name] ?? detectors.find((d) => d.name === name)?.active),
-      }));
-    },
-    [detectors],
-  );
 
   const handleRefreshPipeline = useCallback(() => {
     void sourcesQuery.refetch();
@@ -226,7 +186,6 @@ export default function DetectionPage() {
           <Tabs.List>
             <Tabs.Tab value="live">Live Alerts</Tabs.Tab>
             <Tabs.Tab value="sources">Data Sources</Tabs.Tab>
-            <Tabs.Tab value="rules">Alert Rules</Tabs.Tab>
             <Tabs.Tab value="history">History</Tabs.Tab>
           </Tabs.List>
         </Tabs>
@@ -255,22 +214,12 @@ export default function DetectionPage() {
           />
         )}
 
-        {activeTab === "rules" && (
-          <AlertRulesTab
-            detectors={detectors}
-            frameworkStats={frameworkStatsQuery.data?.stats}
-            loading={detectorsQuery.isLoading}
-            ruleStates={ruleStates}
-            onToggleRule={handleToggleRule}
-          />
-        )}
-
         {activeTab === "history" && (
           <HistoryTab
             alerts={historyAlerts}
             loading={historyQuery.isLoading}
-            total={historyQuery.data?.total}
-            count={historyQuery.data?.count}
+            total={historyAlerts.length}
+            count={historyAlerts.length}
           />
         )}
       </Box>

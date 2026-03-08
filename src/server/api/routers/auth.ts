@@ -1,38 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { djangoFetch, extractCookieHeader } from "~/server/api/django";
-
-interface DjangoUser {
-  id: number;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  is_staff: boolean;
-  email_verified?: boolean;
-  email_notifications_enabled?: boolean;
-  sms_notifications_enabled?: boolean;
-  mobile_number?: string;
-  preferred_language?: string;
-  timezone?: string;
-}
-
-interface LoginResponse {
-  success: boolean;
-  user?: DjangoUser;
-  error?: string;
-}
-
-interface MeResponse {
-  authenticated: boolean;
-  user?: DjangoUser;
-}
-
-interface ChangePasswordResponse {
-  success: boolean;
-  message?: string;
-  error?: string;
-}
+import { graphqlFetch } from "~/server/api/graphql";
 
 const API_URL = process.env.API_URL ?? "http://localhost:4000";
 
@@ -59,29 +27,31 @@ const SessionResponseSchema = z.object({
 
 const SESSION_TIMEOUT_MS = 5000;
 
+/* ─── GraphQL mutations ─── */
+
+const REQUEST_EMAIL_VERIFICATION = `
+  mutation RequestEmailVerification {
+    requestEmailVerification
+  }
+`;
+
+const VERIFY_EMAIL = `
+  mutation VerifyEmail($token: String!) {
+    verifyEmail(token: $token)
+  }
+`;
+
+const UPDATE_PROFILE = `
+  mutation UpdateProfile($input: UpdateProfileInput!) {
+    updateProfile(input: $input) {
+      id
+      enableEmailNotification
+      enableSMSNotification
+    }
+  }
+`;
+
 export const authRouter = createTRPCRouter({
-  login: publicProcedure
-    .input(
-      z.object({
-        username: z.string().min(1, "Username is required"),
-        password: z.string().min(1, "Password is required"),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      return djangoFetch<LoginResponse>("/users/api/auth/login/", {
-        method: "POST",
-        headers: extractCookieHeader(ctx.headers),
-        body: JSON.stringify(input),
-      });
-    }),
-
-  logout: publicProcedure.mutation(async ({ ctx }) => {
-    return djangoFetch<{ success: boolean }>("/users/api/auth/logout/", {
-      method: "POST",
-      headers: extractCookieHeader(ctx.headers),
-    });
-  }),
-
   me: publicProcedure.query(async ({ ctx }) => {
     try {
       const cookie = ctx.headers.get("cookie") ?? "";
@@ -118,48 +88,60 @@ export const authRouter = createTRPCRouter({
     }
   }),
 
-  changePassword: publicProcedure
-    .input(
-      z.object({
-        old_password: z.string().min(1, "Current password is required"),
-        new_password: z
-          .string()
-          .min(8, "Password must be at least 8 characters"),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      return djangoFetch<ChangePasswordResponse>(
-        "/users/api/auth/change-password/",
-        {
-          method: "POST",
-          headers: extractCookieHeader(ctx.headers),
-          body: JSON.stringify(input),
-        },
-      );
-    }),
-
   requestEmailVerification: publicProcedure.mutation(async ({ ctx }) => {
-    return djangoFetch<{ success: boolean; message?: string; error?: string }>(
-      "/users/api/auth/request-verification/",
-      {
-        method: "POST",
-        headers: extractCookieHeader(ctx.headers),
-      },
+    const cookie = ctx.headers.get("cookie") ?? "";
+    await graphqlFetch<{ requestEmailVerification: boolean }>(
+      REQUEST_EMAIL_VERIFICATION,
+      undefined,
+      { Cookie: cookie },
     );
+    return { success: true };
   }),
 
   verifyEmailToken: publicProcedure
     .input(z.object({ token: z.string().min(1, "Token is required") }))
-    .mutation(async ({ ctx, input }) => {
-      return djangoFetch<{
-        success: boolean;
-        message?: string;
-        error?: string;
-        already_verified?: boolean;
-      }>("/users/api/auth/verify-email/", {
-        method: "POST",
-        headers: extractCookieHeader(ctx.headers),
-        body: JSON.stringify({ token: input.token }),
+    .mutation(async ({ input }) => {
+      const result = await graphqlFetch<{ verifyEmail: boolean }>(VERIFY_EMAIL, {
+        token: input.token,
       });
+      return { success: true, already_verified: !result.verifyEmail };
+    }),
+
+  updateNotificationPrefs: publicProcedure
+    .input(
+      z.object({
+        enableEmailNotification: z.boolean().optional(),
+        enableSMSNotification: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const cookie = ctx.headers.get("cookie") ?? "";
+      const data = await graphqlFetch<{
+        updateProfile: {
+          id: string;
+          enableEmailNotification: boolean;
+          enableSMSNotification: boolean;
+        };
+      }>(UPDATE_PROFILE, { input }, { Cookie: cookie });
+      return data.updateProfile;
+    }),
+
+  updateProfile: publicProcedure
+    .input(
+      z.object({
+        name: z.string().optional(),
+        phoneNumber: z.string().optional(),
+        image: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const cookie = ctx.headers.get("cookie") ?? "";
+      const data = await graphqlFetch<{
+        updateProfile: {
+          id: string;
+          name: string;
+        };
+      }>(UPDATE_PROFILE, { input }, { Cookie: cookie });
+      return data.updateProfile;
     }),
 });
