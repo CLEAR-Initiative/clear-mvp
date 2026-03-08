@@ -1,20 +1,20 @@
-import { alertFrameworkRouter } from "~/server/api/routers/alertFramework";
 import { alertsRouter } from "~/server/api/routers/alerts";
 import { authRouter } from "~/server/api/routers/auth";
-import { dashboardRouter } from "~/server/api/routers/dashboard";
+import { detectionsRouter } from "~/server/api/routers/detections";
+import { eventsRouter } from "~/server/api/routers/events";
 import { llmRouter } from "~/server/api/routers/llm";
 import { pipelineRouter } from "~/server/api/routers/pipeline";
-import { subscriptionsRouter } from "~/server/api/routers/subscriptions";
+import { signalsRouter } from "~/server/api/routers/signals";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
-  alertFramework: alertFrameworkRouter,
   alerts: alertsRouter,
   auth: authRouter,
-  dashboard: dashboardRouter,
+  detections: detectionsRouter,
+  events: eventsRouter,
   llm: llmRouter,
   pipeline: pipelineRouter,
-  subscriptions: subscriptionsRouter,
+  signals: signalsRouter,
 });
 
 export type AppRouter = typeof appRouter;

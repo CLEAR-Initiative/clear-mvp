@@ -10,7 +10,7 @@ import {
   Loader,
 } from "@mantine/core";
 import { IconChartPie, IconSparkles } from "@tabler/icons-react";
-import type { DjangoAlert, LLMQueryResponse } from "~/lib/types/django";
+import type { GqlAlert } from "~/lib/types/graphql";
 
 interface SummaryStats {
   critical: number;
@@ -25,7 +25,7 @@ interface Overview {
 }
 
 interface ExecutiveSummaryProps {
-  allAlerts: DjangoAlert[];
+  allAlerts: GqlAlert[];
   summaryStats: SummaryStats;
   overview: Overview | undefined;
   alertsDataUpdatedAt: number | undefined;
@@ -33,7 +33,7 @@ interface ExecutiveSummaryProps {
   llmMutation: {
     isPending: boolean;
     isError: boolean;
-    data: LLMQueryResponse | undefined;
+    data: { response: string; provider: string; model: string; response_time_ms?: number } | undefined;
   };
   selectedCountry: string;
 }

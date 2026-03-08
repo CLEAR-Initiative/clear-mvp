@@ -16,8 +16,9 @@ import {
   IconPointFilled,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import { mapSeverity, severityColor } from "~/lib/types/django";
-import type { DjangoAlert, DjangoPipelineSource, DjangoPipelineStatistics } from "~/lib/types/django";
+import { mapSeverity, severityColor } from "~/lib/types/graphql";
+import type { DjangoPipelineSource, DjangoPipelineStatistics } from "~/lib/types/django";
+import type { GqlAlert } from "~/lib/types/graphql";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 
@@ -41,7 +42,7 @@ function formatNumber(n: number): string {
 }
 
 interface LiveAlertsTabProps {
-  alerts: DjangoAlert[];
+  alerts: GqlAlert[];
   sources: DjangoPipelineSource[];
   pipelineStats: DjangoPipelineStatistics | undefined;
   selectedCountry: string;
@@ -248,32 +249,21 @@ export function LiveAlertsTab({
                           >
                             {severityLabels[sev]}
                           </Badge>
-                          {alert.data_source && (
-                            <Text
-                              size="xs"
-                              px={6}
-                              py={2}
-                              style={{
-                                background: `${sevColor}15`,
-                                color: sevColor,
-                                fontSize: 10,
-                              }}
-                            >
-                              {alert.data_source.name}
-                            </Text>
-                          )}
+                          <Badge size="xs" variant="light" color="gray" style={{ fontSize: 9 }}>
+                            {alert.status}
+                          </Badge>
                         </Group>
                         <Text size="xs" c="#A3A3A3">
-                          {formatTimeAgo(alert.updated_at)}
+                          {formatTimeAgo(alert.updatedAt)}
                         </Text>
                       </Group>
                       <Text fw={600} size="sm" c="#171717" mb={2}>
                         {alert.title}
                       </Text>
                       <Text size="xs" c="#737373" mb={8} lineClamp={1}>
-                        {location ? `${location.name}` : ""}{" "}
-                        {alert.shock_type
-                          ? `\u2022 ${alert.shock_type.name}`
+                        {location ? location.location.name : ""}{" "}
+                        {alert.events.length > 0
+                          ? `\u2022 ${alert.events.length} event${alert.events.length !== 1 ? "s" : ""}`
                           : ""}
                       </Text>
                       <Group gap={16}>
@@ -287,11 +277,11 @@ export function LiveAlertsTab({
                         </Text>
                         <Text size="xs" c="#737373">
                           <Text span size="xs" c="#737373">
-                            Shock date:{" "}
+                            Created:{" "}
                           </Text>
                           <Text span size="xs" fw={500} c="#171717">
                             {new Date(
-                              alert.shock_date,
+                              alert.createdAt,
                             ).toLocaleDateString()}
                           </Text>
                         </Text>
