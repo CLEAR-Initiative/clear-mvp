@@ -42,6 +42,38 @@
 
   /* Right panel width */
   --spacing-panel: 380px;
+
+  /* Typography scale
+     --fs-* prefix avoids collision with Tailwind's built-in text-* utilities
+     (Tailwind v4 would override text-sm etc. if we used --font-size-*) */
+  --fs-2xs:  9px;
+  --fs-xs:   10px;
+  --fs-sm:   11px;
+  --fs-md:   12px;
+  --fs-base: 13px;
+  --fs-lg:   14px;
+  --fs-xl:   16px;
+  --fs-2xl:  20px;
+  --fs-3xl:  24px;
+  --fs-4xl:  28px;
+
+  /* Spacing scale
+     --space-* prefix keeps these distinct from layout tokens (--spacing-sidebar etc.) */
+  --space-1:  4px;
+  --space-2:  6px;
+  --space-3:  8px;
+  --space-4:  12px;
+  --space-5:  16px;
+  --space-6:  20px;
+  --space-7:  24px;
+  --space-8:  32px;
+  --space-9:  48px;
+
+  /* Shadow scale — exact strings observed in the codebase */
+  --shadow-xs: 0 2px 4px rgba(0, 0, 0, 0.10);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.10);
 }
 
 /* Base styles */
