@@ -3,39 +3,43 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch } from "~/server/api/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
 
+const SIGNAL_FIELDS = `
+  id
+  source {
+    id
+    title
+    confidence
+    status
+    detectedAt
+    dataSource { id name type }
+    locations { id location { id name geoId level } createdAt }
+    createdAt
+    updatedAt
+  }
+`;
+
+const EVENT_FIELDS = `
+  id
+  description
+  eventType
+  severity
+  status
+  rank
+  isAlert
+  populationAffected
+  firstSignalCreatedAt
+  lastSignalCreatedAt
+  locations { id location { id name level geometry } createdAt }
+  signals { ${SIGNAL_FIELDS} }
+  primarySignal { ${SIGNAL_FIELDS} }
+  createdAt
+  updatedAt
+`;
+
 const EVENT_LIST_QUERY = `
   query Events {
     events {
-      id
-      signals {
-        id
-        detection {
-          id
-          title
-          confidence
-          status
-          detectedAt
-          source { id name type }
-          locations { id location { id name geoId level } createdAt }
-          createdAt
-          updatedAt
-        }
-      }
-      primarySignal {
-        id
-        detection {
-          id
-          title
-          confidence
-          status
-          detectedAt
-          source { id name type }
-          locations { id location { id name geoId level } createdAt }
-          createdAt
-          updatedAt
-        }
-      }
-      alerts { id title }
+      ${EVENT_FIELDS}
     }
   }
 `;
@@ -43,36 +47,7 @@ const EVENT_LIST_QUERY = `
 const EVENT_GET_QUERY = `
   query Event($id: String!) {
     event(id: $id) {
-      id
-      signals {
-        id
-        detection {
-          id
-          title
-          confidence
-          status
-          detectedAt
-          source { id name type }
-          locations { id location { id name geoId level } createdAt }
-          createdAt
-          updatedAt
-        }
-      }
-      primarySignal {
-        id
-        detection {
-          id
-          title
-          confidence
-          status
-          detectedAt
-          source { id name type }
-          locations { id location { id name geoId level } createdAt }
-          createdAt
-          updatedAt
-        }
-      }
-      alerts { id title }
+      ${EVENT_FIELDS}
     }
   }
 `;
@@ -80,16 +55,7 @@ const EVENT_GET_QUERY = `
 const CREATE_EVENT_MUTATION = `
   mutation CreateEvent($input: CreateEventInput!) {
     createEvent(input: $input) {
-      id
-      signals {
-        id
-        detection { id title }
-      }
-      primarySignal {
-        id
-        detection { id title }
-      }
-      alerts { id title }
+      ${EVENT_FIELDS}
     }
   }
 `;

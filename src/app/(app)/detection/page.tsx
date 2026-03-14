@@ -13,6 +13,7 @@ import { PageHeader, FilterBar } from "~/components/ui";
 import { KpiCards } from "./_components/kpi-cards";
 import { LiveAlertsTab } from "./_components/live-alerts-tab";
 import { HistoryTab } from "./_components/history-tab";
+import { EventsTab } from "./_components/events-tab";
 import { CreateAlertModal } from "./_components/create-alert-modal";
 
 export default function DetectionPage() {
@@ -26,6 +27,10 @@ export default function DetectionPage() {
   const historyQuery = api.alerts.getAlerts.useQuery(
     { activeOnly: false },
     { enabled: activeTab === "history" },
+  );
+  const eventsQuery = api.events.list.useQuery(
+    undefined,
+    { enabled: activeTab === "events" },
   );
 
   const countryConf = countryConfig[selectedCountry];
@@ -127,6 +132,7 @@ export default function DetectionPage() {
           <Tabs.List>
             <Tabs.Tab value="live">Live Alerts</Tabs.Tab>
             <Tabs.Tab value="history">History</Tabs.Tab>
+            <Tabs.Tab value="events">Events</Tabs.Tab>
           </Tabs.List>
         </Tabs>
 
@@ -148,6 +154,13 @@ export default function DetectionPage() {
             loading={historyQuery.isLoading}
             total={historyAlerts.length}
             count={historyAlerts.length}
+          />
+        )}
+
+        {activeTab === "events" && (
+          <EventsTab
+            events={eventsQuery.data ?? []}
+            loading={eventsQuery.isLoading}
           />
         )}
       </Box>
