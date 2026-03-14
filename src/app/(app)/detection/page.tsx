@@ -70,17 +70,18 @@ export default function DetectionPage() {
       }
       return true;
     });
-  }, [allAlerts, selectedCountry, selectedRegion, selectedDate, countryConf?.regions]);
+  }, [allAlerts, selectedCountry, selectedRegion, selectedDate]);
 
   const historyAlerts = historyQuery.data?.alerts ?? [];
 
   const mapMarkers: MapMarker[] = useMemo(() => alertsToMarkers(alerts), [alerts]);
-  const mapCenter = useMemo<[number, number]>(() => countryConf?.center ?? [30.0, 15.5], [countryConf?.center]);
-  const mapZoom = useMemo(() => countryConf?.zoom ?? 5, [countryConf?.zoom]);
+  const mapCenter = useMemo<[number, number]>(() => countryConf?.center ?? [30.0, 15.5], [selectedCountry]);
+  const mapZoom = useMemo(() => countryConf?.zoom ?? 5, [selectedCountry]);
 
   const handleAlertCreated = useCallback(() => {
     void alertsQuery.refetch();
-  }, [alertsQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <Box>
