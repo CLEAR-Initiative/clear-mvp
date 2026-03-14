@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   Box,
@@ -25,7 +26,13 @@ import {
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
+import type { MapMarker } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
+
+const CrisisMap = dynamic(
+  () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
+  { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
+);
 
 type SeverityKey = "critical" | "high" | "medium" | "low";
 type SortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
@@ -50,9 +57,18 @@ function formatTimeAgo(dateStr: string): string {
 interface EventsTabProps {
   events: GqlEvent[];
   loading: boolean;
+  mapMarkers: MapMarker[];
+  mapCenter: [number, number];
+  mapZoom: number;
 }
 
-export function EventsTab({ events, loading }: EventsTabProps) {
+export function EventsTab({
+  events,
+  loading,
+  mapMarkers,
+  mapCenter,
+  mapZoom,
+}: EventsTabProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [search, setSearch] = useState("");
   const [activeSeverities, setActiveSeverities] = useState<Set<SeverityKey>>(
@@ -61,6 +77,8 @@ export function EventsTab({ events, loading }: EventsTabProps) {
   const [activeTypes, setActiveTypes] = useState<Set<string> | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
   const [filterOpen, setFilterOpen] = useState(false);
+
+  const alertCount = events.filter((e) => e.isAlert).length;
 
   const baseEvents = useMemo(
     () => viewMode === "alerts" ? events.filter((e) => e.isAlert) : events,
@@ -132,320 +150,336 @@ export function EventsTab({ events, loading }: EventsTabProps) {
       ? String(baseEvents.length)
       : `${filtered.length}/${baseEvents.length}`;
 
-  const alertCount = events.filter((e) => e.isAlert).length;
-
   return (
-    <Box>
-      {/* View toggle + filters */}
-      <Group gap={8} mb={16} align="center">
-        <SegmentedControl
-          value={viewMode}
-          onChange={(v) => setViewMode(v as ViewMode)}
-          size="xs"
-          data={[
-            { label: `All Events (${events.length})`, value: "all" },
-            { label: `Alerts (${alertCount})`, value: "alerts" },
-          ]}
-          styles={{
-            root: { background: "#F5F5F5" },
-            label: { fontSize: 12, fontWeight: 500 },
-          }}
-        />
+    <Box style={{ display: "flex", gap: 24 }}>
+      {/* Left: Event List */}
+      <Box style={{ flex: 1, minWidth: 0 }}>
+        {/* Filter row */}
+        <Group gap={8} mb={16}>
+          <SegmentedControl
+            value={viewMode}
+            onChange={(v) => setViewMode(v as ViewMode)}
+            size="xs"
+            data={[
+              { label: `All (${events.length})`, value: "all" },
+              { label: `Alerts (${alertCount})`, value: "alerts" },
+            ]}
+            styles={{
+              root: { background: "#F5F5F5" },
+              label: { fontSize: 12, fontWeight: 500 },
+            }}
+          />
 
-        <Box style={{ flex: 1 }} />
+          <TextInput
+            placeholder="Search events..."
+            value={search}
+            onChange={(e) => setSearch(e.currentTarget.value)}
+            leftSection={<IconSearch size={14} color="#A3A3A3" />}
+            rightSection={
+              search ? (
+                <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setSearch("")}>
+                  <IconX size={12} />
+                </ActionIcon>
+              ) : null
+            }
+            size="xs"
+            style={{ flex: 1 }}
+            styles={{ input: { fontSize: 13 } }}
+          />
 
-        <TextInput
-          placeholder="Search events..."
-          value={search}
-          onChange={(e) => setSearch(e.currentTarget.value)}
-          leftSection={<IconSearch size={14} color="#A3A3A3" />}
-          rightSection={
-            search ? (
-              <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setSearch("")}>
-                <IconX size={12} />
-              </ActionIcon>
-            ) : null
-          }
-          size="xs"
-          style={{ width: 220 }}
-          styles={{ input: { fontSize: 13 } }}
-        />
-
-        {/* Filter button */}
-        <Popover
-          opened={filterOpen}
-          onChange={setFilterOpen}
-          position="bottom-end"
-          shadow="md"
-          width={240}
-        >
-          <Popover.Target>
-            <button
-              onClick={() => setFilterOpen((o) => !o)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "5px 10px",
-                borderRadius: 6,
-                border: `1px solid ${isFiltered ? "#E85D3D" : "#E5E5E5"}`,
-                background: "#fff",
-                cursor: "pointer",
-                fontSize: 12,
-                fontWeight: 500,
-                color: isFiltered ? "#E85D3D" : "#525252",
-                position: "relative",
-              }}
-            >
-              <IconFilter size={13} />
-              Filter
-              {isFiltered && (
-                <Box
-                  style={{
-                    position: "absolute",
-                    top: -3,
-                    right: -3,
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: "#E85D3D",
-                  }}
-                />
-              )}
-            </button>
-          </Popover.Target>
-          <Popover.Dropdown p={16}>
-            <Text size="xs" fw={700} c="#171717" mb={10}>Severity</Text>
-            <Group gap={6} mb={14}>
-              {(["critical", "high", "medium", "low"] as SeverityKey[]).map((sev) => {
-                const active = activeSeverities.has(sev);
-                const color = severityColor(sev === "critical" ? 5 : sev === "high" ? 4 : sev === "medium" ? 3 : 2);
-                return (
-                  <button
-                    key={sev}
-                    onClick={() => toggleSeverity(sev)}
+          {/* Filter button */}
+          <Popover
+            opened={filterOpen}
+            onChange={setFilterOpen}
+            position="bottom-start"
+            shadow="md"
+            width={240}
+          >
+            <Popover.Target>
+              <button
+                onClick={() => setFilterOpen((o) => !o)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "5px 10px",
+                  borderRadius: 6,
+                  border: `1px solid ${isFiltered ? "#E85D3D" : "#E5E5E5"}`,
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: isFiltered ? "#E85D3D" : "#525252",
+                  position: "relative",
+                }}
+              >
+                <IconFilter size={13} />
+                Filter
+                {isFiltered && (
+                  <Box
                     style={{
-                      padding: "4px 10px",
-                      borderRadius: 999,
-                      border: `1px solid ${active ? color : "#E5E5E5"}`,
-                      background: active ? `${color}15` : "#F9FAFB",
-                      color: active ? color : "#737373",
-                      fontSize: 11,
-                      fontWeight: 600,
+                      position: "absolute",
+                      top: -3,
+                      right: -3,
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      background: "#E85D3D",
+                    }}
+                  />
+                )}
+              </button>
+            </Popover.Target>
+            <Popover.Dropdown p={16}>
+              <Text size="xs" fw={700} c="#171717" mb={10}>Severity</Text>
+              <Group gap={6} mb={14}>
+                {(["critical", "high", "medium", "low"] as SeverityKey[]).map((sev) => {
+                  const active = activeSeverities.has(sev);
+                  const color = severityColor(sev === "critical" ? 5 : sev === "high" ? 4 : sev === "medium" ? 3 : 2);
+                  return (
+                    <button
+                      key={sev}
+                      onClick={() => toggleSeverity(sev)}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: 999,
+                        border: `1px solid ${active ? color : "#E5E5E5"}`,
+                        background: active ? `${color}15` : "#F9FAFB",
+                        color: active ? color : "#737373",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {sev}
+                    </button>
+                  );
+                })}
+              </Group>
+
+              {allTypes.length > 0 && (
+                <>
+                  <Divider color="#F0F0F0" mb={10} />
+                  <Text size="xs" fw={700} c="#171717" mb={8}>Event Type</Text>
+                  <Stack gap={4}>
+                    {allTypes.map((type) => {
+                      const active = activeTypes === null || activeTypes.has(type);
+                      return (
+                        <button
+                          key={type}
+                          onClick={() => toggleType(type)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "5px 10px",
+                            borderRadius: 6,
+                            border: "1px solid",
+                            borderColor: active ? "#E85D3D30" : "#E5E5E5",
+                            background: active ? "#FEF2F0" : "#F9FAFB",
+                            color: active ? "#E85D3D" : "#737373",
+                            fontSize: 12,
+                            fontWeight: 500,
+                            cursor: "pointer",
+                            textAlign: "left",
+                          }}
+                        >
+                          {type}
+                          {active && (
+                            <Box style={{ width: 6, height: 6, borderRadius: "50%", background: "#E85D3D" }} />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </Stack>
+                </>
+              )}
+
+              {isFiltered && (
+                <>
+                  <Divider color="#F0F0F0" my={10} />
+                  <button
+                    onClick={clearFilters}
+                    style={{
+                      width: "100%",
+                      padding: "6px",
+                      borderRadius: 6,
+                      border: "1px solid #E5E5E5",
+                      background: "#F9FAFB",
+                      color: "#525252",
+                      fontSize: 12,
+                      fontWeight: 500,
                       cursor: "pointer",
-                      textTransform: "capitalize",
                     }}
                   >
-                    {sev}
+                    Clear all filters
                   </button>
-                );
-              })}
-            </Group>
+                </>
+              )}
+            </Popover.Dropdown>
+          </Popover>
 
-            {allTypes.length > 0 && (
-              <>
-                <Divider color="#F0F0F0" mb={10} />
-                <Text size="xs" fw={700} c="#171717" mb={8}>Event Type</Text>
-                <Stack gap={4}>
-                  {allTypes.map((type) => {
-                    const active = activeTypes === null || activeTypes.has(type);
-                    return (
-                      <button
-                        key={type}
-                        onClick={() => toggleType(type)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "5px 10px",
-                          borderRadius: 6,
-                          border: "1px solid",
-                          borderColor: active ? "#E85D3D30" : "#E5E5E5",
-                          background: active ? "#FEF2F0" : "#F9FAFB",
-                          color: active ? "#E85D3D" : "#737373",
-                          fontSize: 12,
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          textAlign: "left",
-                        }}
-                      >
-                        {type}
-                        {active && (
-                          <Box style={{ width: 6, height: 6, borderRadius: "50%", background: "#E85D3D" }} />
-                        )}
-                      </button>
-                    );
-                  })}
-                </Stack>
-              </>
-            )}
-
-            {isFiltered && (
-              <>
-                <Divider color="#F0F0F0" my={10} />
-                <button
-                  onClick={clearFilters}
+          {/* Sort button */}
+          <Menu shadow="md" width={200} position="bottom-end">
+            <Menu.Target>
+              <button
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "5px 10px",
+                  borderRadius: 6,
+                  border: `1px solid ${sortOrder !== "sev-desc" ? "#E85D3D" : "#E5E5E5"}`,
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: sortOrder !== "sev-desc" ? "#E85D3D" : "#525252",
+                }}
+              >
+                <IconSortDescending size={13} />
+                Sort
+              </button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              {(Object.entries(SORT_LABELS) as [SortOrder, string][]).map(([key, label]) => (
+                <Menu.Item
+                  key={key}
+                  onClick={() => setSortOrder(key)}
                   style={{
-                    width: "100%",
-                    padding: "6px",
-                    borderRadius: 6,
-                    border: "1px solid #E5E5E5",
-                    background: "#F9FAFB",
-                    color: "#525252",
                     fontSize: 12,
-                    fontWeight: 500,
-                    cursor: "pointer",
+                    fontWeight: sortOrder === key ? 600 : 400,
+                    color: sortOrder === key ? "#E85D3D" : "#171717",
                   }}
                 >
-                  Clear all filters
-                </button>
-              </>
-            )}
-          </Popover.Dropdown>
-        </Popover>
+                  {label}
+                </Menu.Item>
+              ))}
+            </Menu.Dropdown>
+          </Menu>
+        </Group>
 
-        {/* Sort button */}
-        <Menu shadow="md" width={200} position="bottom-end">
-          <Menu.Target>
-            <button
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "5px 10px",
-                borderRadius: 6,
-                border: `1px solid ${sortOrder !== "sev-desc" ? "#E85D3D" : "#E5E5E5"}`,
-                background: "#fff",
-                cursor: "pointer",
-                fontSize: 12,
-                fontWeight: 500,
-                color: sortOrder !== "sev-desc" ? "#E85D3D" : "#525252",
-              }}
-            >
-              <IconSortDescending size={13} />
-              Sort
-            </button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            {(Object.entries(SORT_LABELS) as [SortOrder, string][]).map(([key, label]) => (
-              <Menu.Item
-                key={key}
-                onClick={() => setSortOrder(key)}
-                style={{
-                  fontSize: 12,
-                  fontWeight: sortOrder === key ? 600 : 400,
-                  color: sortOrder === key ? "#E85D3D" : "#171717",
-                }}
-              >
-                {label}
-              </Menu.Item>
-            ))}
-          </Menu.Dropdown>
-        </Menu>
-      </Group>
-
-      {/* Events list */}
-      <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-        <Box px={16} py={12} style={{ borderBottom: "1px solid #E5E5E5" }}>
-          <Group justify="space-between">
-            <Group gap={8}>
-              <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
-                {viewMode === "alerts" ? "Events flagged as Alerts" : "All Events"}
-              </Text>
-              <Badge
-                size="xs"
-                style={{
-                  background: isFiltered ? "#FEF2F0" : "#F5F5F5",
-                  color: isFiltered ? "#E85D3D" : "#525252",
-                  fontWeight: 600,
-                }}
-              >
-                {listCountLabel}
-              </Badge>
-            </Group>
-            {loading && <Loader size="xs" />}
-          </Group>
-        </Box>
-
-        <Box style={{ maxHeight: "calc(100vh - 460px)", overflowY: "auto" }}>
-          {filtered.length === 0 && !loading && (
-            <Box px={16} py={32} style={{ textAlign: "center" }}>
-              <Text c="#A3A3A3" size="sm">
-                {events.length === 0
-                  ? "No events found."
-                  : baseEvents.length === 0
-                  ? "No events flagged as alerts."
-                  : "No events match your filters."}
-              </Text>
-            </Box>
-          )}
-          {filtered.map((event) => {
-            const sev = mapSeverity(event.severity);
-            const sevCol = severityColor(event.severity);
-            const sevBg = severityColors[sev]?.bg ?? "#F5F5F5";
-            const location = event.locations[0];
-            const sourceName = event.signals[0]?.source?.dataSource?.name;
-            const detectedAt = event.firstSignalCreatedAt ?? event.createdAt;
-            const displayTitle = event.description ?? event.eventType;
-
-            return (
-              <Link
-                key={event.id}
-                href={`/event/${event.id}`}
-                style={{ textDecoration: "none", color: "inherit" }}
-              >
-                <Box
-                  px={16}
-                  py={12}
-                  className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
-                  style={{ display: "flex", gap: 12 }}
+        {/* Event list */}
+        <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
+          <Box px={16} py={12} style={{ borderBottom: "1px solid #E5E5E5" }}>
+            <Group justify="space-between">
+              <Group gap={8}>
+                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+                  {viewMode === "alerts" ? "Events flagged as Alerts" : "All Events"}
+                </Text>
+                <Badge
+                  size="xs"
+                  style={{
+                    background: isFiltered ? "#FEF2F0" : "#F5F5F5",
+                    color: isFiltered ? "#E85D3D" : "#525252",
+                    fontWeight: 600,
+                  }}
                 >
-                  <Box style={{ width: 3, background: sevCol, flexShrink: 0, borderRadius: 2 }} />
-                  <Box style={{ flex: 1, minWidth: 0 }}>
-                    <Group justify="space-between" mb={4}>
-                      <Group gap={6}>
-                        <Badge
-                          size="xs"
-                          style={{ background: sevBg, color: sevCol, fontWeight: 700 }}
-                        >
-                          {severityLabels[sev]}
-                        </Badge>
-                        {event.isAlert && (
-                          <Badge size="xs" variant="filled" color="red" style={{ fontSize: 10 }}>
-                            Alert
+                  {listCountLabel}
+                </Badge>
+              </Group>
+              {loading && <Loader size="xs" />}
+            </Group>
+          </Box>
+
+          <Box style={{ maxHeight: "calc(100vh - 460px)", overflowY: "auto" }}>
+            {filtered.length === 0 && !loading && (
+              <Box px={16} py={32} style={{ textAlign: "center" }}>
+                <Text c="#A3A3A3" size="sm">
+                  {events.length === 0
+                    ? "No events found."
+                    : baseEvents.length === 0
+                    ? "No events flagged as alerts."
+                    : "No events match your filters."}
+                </Text>
+              </Box>
+            )}
+            {filtered.map((event) => {
+              const sev = mapSeverity(event.severity);
+              const sevCol = severityColor(event.severity);
+              const sevBg = severityColors[sev]?.bg ?? "#F5F5F5";
+              const location = event.locations[0];
+              const sourceName = event.signals[0]?.source?.dataSource?.name;
+              const detectedAt = event.firstSignalCreatedAt ?? event.createdAt;
+              const displayTitle = event.description ?? event.eventType;
+
+              return (
+                <Link
+                  key={event.id}
+                  href={`/event/${event.id}`}
+                  style={{ textDecoration: "none", color: "inherit" }}
+                >
+                  <Box
+                    px={16}
+                    py={12}
+                    className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
+                    style={{ display: "flex", gap: 12 }}
+                  >
+                    <Box style={{ width: 3, background: sevCol, flexShrink: 0, borderRadius: 2 }} />
+                    <Box style={{ flex: 1, minWidth: 0 }}>
+                      <Group justify="space-between" mb={4}>
+                        <Group gap={6}>
+                          <Badge
+                            size="xs"
+                            style={{ background: sevBg, color: sevCol, fontWeight: 700 }}
+                          >
+                            {severityLabels[sev]}
                           </Badge>
-                        )}
-                        {sourceName && (
-                          <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>
-                            {sourceName}
-                          </Badge>
-                        )}
+                          {event.isAlert && (
+                            <Badge size="xs" variant="filled" color="red" style={{ fontSize: 10 }}>
+                              Alert
+                            </Badge>
+                          )}
+                          {sourceName && (
+                            <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>
+                              {sourceName}
+                            </Badge>
+                          )}
+                        </Group>
+                        <Text size="xs" c="#A3A3A3">{formatTimeAgo(detectedAt)}</Text>
                       </Group>
-                      <Text size="xs" c="#A3A3A3">{formatTimeAgo(detectedAt)}</Text>
-                    </Group>
-                    <Text fw={600} size="sm" c="#171717" lineClamp={1} mb={4}>
-                      {displayTitle}
-                    </Text>
-                    <Group gap={12}>
-                      {location && (
-                        <Text size="xs" c="#737373">
-                          {location.location.name}
-                        </Text>
-                      )}
-                      <Text size="xs" c="#A3A3A3">{event.eventType}</Text>
-                      <Text size="xs" c="#737373" style={{ marginLeft: "auto" }}>
-                        {event.signals.length} signal{event.signals.length !== 1 ? "s" : ""}
-                        {" "}&bull;{" "}
-                        Severity: <Text span fw={600} c="#171717">{event.severity}/5</Text>
+                      <Text fw={600} size="sm" c="#171717" lineClamp={1} mb={4}>
+                        {displayTitle}
                       </Text>
-                    </Group>
+                      <Group gap={12}>
+                        {location && (
+                          <Text size="xs" c="#737373">
+                            {location.location.name}
+                          </Text>
+                        )}
+                        <Text size="xs" c="#A3A3A3">{event.eventType}</Text>
+                        <Text size="xs" c="#737373" style={{ marginLeft: "auto" }}>
+                          {event.signals.length} signal{event.signals.length !== 1 ? "s" : ""}
+                          {" "}&bull;{" "}
+                          Severity: <Text span fw={600} c="#171717">{event.severity}/5</Text>
+                        </Text>
+                      </Group>
+                    </Box>
                   </Box>
-                </Box>
-              </Link>
-            );
-          })}
-        </Box>
-      </Card>
+                </Link>
+              );
+            })}
+          </Box>
+        </Card>
+      </Box>
+
+      {/* Right: Crisis Map */}
+      <Box style={{ width: 360, flexShrink: 0 }}>
+        <Card p={0} style={{ border: "1px solid #E5E5E5", position: "sticky", top: 24 }}>
+          <Box px={16} py={12} style={{ borderBottom: "1px solid #E5E5E5" }}>
+            <Text fw={600} c="#171717" style={{ fontSize: 14 }}>Crisis Map</Text>
+          </Box>
+          <Box style={{ height: 420 }}>
+            <CrisisMap
+              markers={mapMarkers}
+              center={mapCenter}
+              zoom={mapZoom}
+              className="w-full h-full"
+            />
+          </Box>
+        </Card>
+      </Box>
     </Box>
   );
 }

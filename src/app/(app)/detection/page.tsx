@@ -80,6 +80,11 @@ export default function DetectionPage() {
   const historyAlerts = historyQuery.data?.alerts ?? [];
 
   const mapMarkers: MapMarker[] = useMemo(() => alertsToMarkers(alerts), [alerts]);
+  const eventMapMarkers: MapMarker[] = useMemo(
+    // GqlEvent and GqlAlert share the same location/geometry structure
+    () => alertsToMarkers(eventsQuery.data as never ?? []),
+    [eventsQuery.data],
+  );
   const mapCenter = useMemo<[number, number]>(() => countryConf?.center ?? [30.0, 15.5], [selectedCountry]);
   const mapZoom = useMemo(() => countryConf?.zoom ?? 5, [selectedCountry]);
 
@@ -161,6 +166,9 @@ export default function DetectionPage() {
           <EventsTab
             events={eventsQuery.data ?? []}
             loading={eventsQuery.isLoading}
+            mapMarkers={eventMapMarkers}
+            mapCenter={mapCenter}
+            mapZoom={mapZoom}
           />
         )}
       </Box>
