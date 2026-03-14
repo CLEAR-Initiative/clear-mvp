@@ -60,24 +60,17 @@ const LABEL_STYLE = {
 /* ========== Helpers ========== */
 
 function eventDisplayTitle(event: GqlEvent): string {
-  const titles = event.signals.map((s) => s.detection.title).filter(Boolean);
-  if (titles.length === 0) return "Untitled Event";
-  if (titles.length === 1) return titles[0]!;
-  return titles.slice(0, 2).join(" + ") + (titles.length > 2 ? ` (+${titles.length - 2})` : "");
+  if (event.description) return event.description;
+  const loc = event.locations[0]?.location.name;
+  return loc ? `${event.eventType} — ${loc}` : event.eventType;
 }
 
 function eventLocations(event: GqlEvent): string {
-  const locs = new Set<string>();
-  for (const signal of event.signals) {
-    for (const dl of signal.detection.locations) {
-      locs.add(dl.location.name);
-    }
-  }
-  return Array.from(locs).slice(0, 3).join(", ") || "Unknown";
+  return event.locations.slice(0, 3).map((l) => l.location.name).join(", ") || "Unknown";
 }
 
 function signalDisplayTitle(signal: GqlSignal): string {
-  return signal.detection.title || "Untitled Signal";
+  return signal.source.title || "Untitled Signal";
 }
 
 /* ========== Event Selection Step ========== */
@@ -98,8 +91,8 @@ function EventSelectionStep({
   onNext: () => void;
 }) {
   const sorted = [...events].sort((a, b) => {
-    const aDate = Math.max(...a.signals.map((s) => new Date(s.detection.createdAt).getTime()), 0);
-    const bDate = Math.max(...b.signals.map((s) => new Date(s.detection.createdAt).getTime()), 0);
+    const aDate = new Date(a.lastSignalCreatedAt ?? a.createdAt).getTime();
+    const bDate = new Date(b.lastSignalCreatedAt ?? b.createdAt).getTime();
     return bDate - aDate;
   });
 
@@ -148,9 +141,9 @@ function EventSelectionStep({
                       {eventLocations(event)} &bull; {event.signals.length} signal{event.signals.length !== 1 ? "s" : ""}
                     </Text>
                   </Box>
-                  {event.alerts.length > 0 && (
-                    <Badge size="xs" variant="light" color="gray" style={{ fontSize: 9, flexShrink: 0 }}>
-                      In {event.alerts.length} alert{event.alerts.length !== 1 ? "s" : ""}
+                  {event.isAlert && (
+                    <Badge size="xs" variant="light" color="red" style={{ fontSize: 9, flexShrink: 0 }}>
+                      Alert
                     </Badge>
                   )}
                 </Group>
@@ -269,7 +262,7 @@ function CreateEventSubFlow({
     { enabled: showCreateSignal },
   );
   const detectionsWithoutSignals = (detectionsQuery.data ?? []).filter((d) => {
-    return !signals.some((s) => s.detection.id === d.id);
+    return !signals.some((s) => s.source.id === d.id);
   });
 
   const isCreatingManual = createDetectionMutation.isPending || createSignalMutation.isPending;
@@ -334,7 +327,7 @@ function CreateEventSubFlow({
                       {signalDisplayTitle(signal)}
                     </Text>
                     <Text c="#737373" style={{ fontSize: 10 }}>
-                      Confidence: {signal.detection.confidence != null ? `${(signal.detection.confidence * 100).toFixed(0)}%` : "N/A"}
+                      Confidence: {signal.source.confidence != null ? `${(signal.source.confidence * 100).toFixed(0)}%` : "N/A"}
                     </Text>
                   </Box>
                 </Group>

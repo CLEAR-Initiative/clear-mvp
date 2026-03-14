@@ -21,8 +21,7 @@ export interface GqlDetectionLocation {
     name: string;
     geoId: string;
     level: number;
-    latitude: number | null;
-    longitude: number | null;
+    geometry: GeoJSONPoint | null | undefined;
   };
   createdAt: string;
 }
@@ -33,14 +32,14 @@ export interface GqlDataSource {
   type: string;
 }
 
-export interface GqlDetection {
+export interface GqlSource {
   id: string;
   title: string;
   confidence: number | null;
   status: "raw" | "processed" | "ignored";
   detectedAt: string;
   rawData: unknown;
-  source: GqlDataSource | null;
+  dataSource: GqlDataSource | null;
   locations: GqlDetectionLocation[];
   createdAt: string;
   updatedAt: string;
@@ -48,16 +47,14 @@ export interface GqlDetection {
 
 export interface GqlSignal {
   id: string;
-  detection: GqlDetection;
+  source: GqlSource;
+  publishedAt: string;
+  collectedAt: string;
+  description: string | null;
   events: Array<{ id: string }>;
   primaryOf: Array<{ id: string }>;
-}
-
-export interface GqlEvent {
-  id: string;
-  signals: GqlSignal[];
-  primarySignal: GqlSignal | null;
-  alerts: Array<{ id: string; title: string }>;
+  // TODO: uncomment after Prisma migration adds these fields
+  // title?: string | null;
 }
 
 export interface GqlAlertLocation {
@@ -65,21 +62,52 @@ export interface GqlAlertLocation {
   location: {
     id: string;
     name: string;
-    latitude: number | null;
-    longitude: number | null;
+    level: number;
+    geometry: GeoJSONPoint | null | undefined;
   };
   createdAt: string;
 }
 
-export interface GqlAlert {
+export interface GqlEvent {
   id: string;
-  title: string;
-  description: string;
+  description: string | null;
+  eventType: string;
   severity: number;
   status: "draft" | "published" | "archived";
-  events: GqlEvent[];
+  rank: number;
+  isAlert: boolean;
+  populationAffected: string | null;
+  metadata: unknown;
+  signals: GqlSignal[];
+  primarySignal: GqlSignal | null;
+  firstSignalCreatedAt: string;
+  lastSignalCreatedAt: string;
+  locations: GqlAlertLocation[];
+  createdAt: string;
+  updatedAt: string;
+  // TODO: uncomment after Prisma migration adds these fields
+  // title?: string | null;
+  // types?: string[] | null;        // replaces single eventType
+  // validFrom?: string | null;
+  // validTo?: string | null;
+  // descriptionSignals?: unknown;   // JSON blob of per-signal descriptions
+}
+
+/** @deprecated Use GqlSource — the API renamed Detection to Source */
+export type GqlDetection = GqlSource;
+
+export interface GqlAlert {
+  id: string;
+  description: string | null;
+  eventType: string;
+  severity: number;
+  status: "draft" | "published" | "archived";
+  signals: GqlSignal[];
+  primarySignal: GqlSignal | null;
   locations: GqlAlertLocation[];
   metadata: unknown;
+  firstSignalCreatedAt: string;
+  lastSignalCreatedAt: string;
   createdAt: string;
   updatedAt: string;
 }

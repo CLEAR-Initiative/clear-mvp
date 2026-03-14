@@ -22,45 +22,30 @@ import type { GqlEvent, GqlAlert } from "~/lib/types/graphql";
 
 /* ========== Helpers ========== */
 
-/** Derive a display title for an event from its signals' detection titles */
+/** Derive a display title for an event */
 function eventTitle(event: GqlEvent): string {
-  const titles = event.signals
-    .map((s) => s.detection.title)
-    .filter(Boolean);
-  if (titles.length === 0) return "Untitled Event";
-  if (titles.length === 1) return titles[0]!;
-  return titles.slice(0, 2).join(" + ") + (titles.length > 2 ? ` (+${titles.length - 2})` : "");
+  if (event.description) return event.description;
+  const loc = event.locations[0]?.location.name;
+  return loc ? `${event.eventType} — ${loc}` : event.eventType;
 }
 
-/** Get the most recent detection date from an event */
+/** Get the most recent signal date from an event */
 function eventDate(event: GqlEvent): string {
-  const dates = event.signals
-    .map((s) => s.detection.detectedAt)
-    .filter(Boolean)
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-  if (dates.length === 0) return "";
-  const d = new Date(dates[0]!);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const dateStr = event.lastSignalCreatedAt ?? event.createdAt;
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-/** Get location names from event's signals' detections */
+/** Get location names from an event */
 function eventLocations(event: GqlEvent): string {
-  const locs = new Set<string>();
-  for (const signal of event.signals) {
-    for (const dl of signal.detection.locations) {
-      locs.add(dl.location.name);
-    }
-  }
-  return Array.from(locs).slice(0, 2).join(", ") || "Unknown location";
+  const locs = event.locations.slice(0, 2).map((l) => l.location.name);
+  return locs.join(", ") || "Unknown location";
 }
 
-/** Compute severity from detection confidences */
+/** Map numeric severity to display label */
 function eventSeverity(event: GqlEvent): "critical" | "high" | "medium" {
-  const maxConfidence = Math.max(
-    ...event.signals.map((s) => s.detection.confidence ?? 0),
-  );
-  if (maxConfidence >= 0.8) return "critical";
-  if (maxConfidence >= 0.5) return "high";
+  if (event.severity >= 5) return "critical";
+  if (event.severity >= 4) return "high";
   return "medium";
 }
 
@@ -261,14 +246,14 @@ export function RightPanel({
                       >
                         {event.signals.length} signal{event.signals.length !== 1 ? "s" : ""}
                       </Badge>
-                      {event.alerts.length > 0 && (
+                      {event.isAlert && (
                         <Badge
                           size="xs"
                           variant="light"
                           color="red"
                           style={{ fontSize: 9 }}
                         >
-                          In {event.alerts.length} alert{event.alerts.length !== 1 ? "s" : ""}
+                          Alert
                         </Badge>
                       )}
                     </Group>
@@ -309,7 +294,7 @@ export function RightPanel({
               >
                 <Group justify="space-between" mb={4}>
                   <Text fw={600} c="#171717" style={{ fontSize: 13 }} lineClamp={1}>
-                    {alert.title}
+                    {alert.description ?? alert.eventType}
                   </Text>
                   <Badge
                     size="xs"
@@ -333,7 +318,7 @@ export function RightPanel({
                     {alert.status}
                   </Badge>
                   <Badge size="xs" variant="light" color="gray" style={{ fontSize: 9 }}>
-                    {alert.events.length} event{alert.events.length !== 1 ? "s" : ""}
+                    {alert.signals.length} signal{alert.signals.length !== 1 ? "s" : ""}
                   </Badge>
                 </Group>
               </Box>

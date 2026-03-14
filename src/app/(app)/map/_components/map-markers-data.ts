@@ -56,15 +56,16 @@ export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
   for (const alert of alerts) {
     for (const loc of alert.locations) {
-      const { latitude, longitude } = loc.location;
-      if (latitude == null || longitude == null) continue;
+      const coords = loc.location.geometry?.coordinates;
+      if (!coords) continue;
+      const [lng, lat] = coords;
       markers.push({
         id: hashId(alert.id, loc.id),
-        lng: longitude,
-        lat: latitude,
-        title: alert.title,
+        lng,
+        lat,
+        title: alert.description ?? alert.eventType,
         severity: mapSeverity(alert.severity),
-        description: alert.description,
+        description: alert.description ?? undefined,
         region: loc.location.name,
         status: alert.status,
       });

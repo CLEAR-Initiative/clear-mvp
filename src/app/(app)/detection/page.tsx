@@ -3,23 +3,17 @@
 import { useState, useMemo, useCallback } from "react";
 import { Box, Tabs, Button, Group } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconSearch, IconPlus } from "@tabler/icons-react";
+import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { countryConfig, countries, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
 import { alertsToMarkers } from "../map/_components/map-markers-data";
-import { PageHeader, StatsGrid, FilterBar } from "~/components/ui";
-import type { StatItem } from "~/components/ui";
+import { PageHeader, FilterBar } from "~/components/ui";
 
+import { KpiCards } from "./_components/kpi-cards";
 import { LiveAlertsTab } from "./_components/live-alerts-tab";
-import { DataSourcesTab } from "./_components/data-sources-tab";
 import { HistoryTab } from "./_components/history-tab";
 import { CreateAlertModal } from "./_components/create-alert-modal";
-
-function formatNumber(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-  return String(n);
-}
 
 export default function DetectionPage() {
   const [activeTab, setActiveTab] = useState<string | null>("live");
@@ -28,42 +22,30 @@ export default function DetectionPage() {
   const [selectedDate, setSelectedDate] = useState(dateOptions[0] ?? "Last 30 days");
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
 
-  // tRPC queries
   const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true });
   const historyQuery = api.alerts.getAlerts.useQuery(
     { activeOnly: false },
     { enabled: activeTab === "history" },
   );
-  const statsQuery = api.alerts.getStats.useQuery();
-  const sourcesQuery = api.pipeline.getSources.useQuery(undefined, {
-    enabled: activeTab === "sources" || activeTab === "live",
-  });
-  const pipelineStatsQuery = api.pipeline.getStatistics.useQuery(undefined, {
-    enabled: activeTab === "sources" || activeTab === "live",
-  });
 
   const countryConf = countryConfig[selectedCountry];
 
-  // Derived data -- sorted by severity (high to low), filtered by country/region
   const allAlerts = useMemo(() => {
     const raw = alertsQuery.data?.alerts ?? [];
     return [...raw].sort((a, b) => b.severity - a.severity);
   }, [alertsQuery.data?.alerts]);
 
+  // Region + date filtered alerts passed down to KPI cards and list
   const alerts = useMemo(() => {
     if (allAlerts.length === 0) return [];
     const regions = countryConf?.regions?.map((r) => r.toLowerCase()) ?? [];
     const countryLower = selectedCountry.toLowerCase();
-    const regionLower =
-      selectedRegion !== "All Regions" ? selectedRegion.toLowerCase() : null;
+    const regionLower = selectedRegion !== "All Regions" ? selectedRegion.toLowerCase() : null;
     const dateRange = parseDateFilter(selectedDate);
 
     return allAlerts.filter((alert) => {
-      // Date filter
       const alertDate = new Date(alert.createdAt).getTime();
-      if (alertDate < dateRange.start.getTime() || alertDate > dateRange.end.getTime()) {
-        return false;
-      }
+      if (alertDate < dateRange.start.getTime() || alertDate > dateRange.end.getTime()) return false;
 
       const matchesCountry =
         alert.locations.some((loc) => {
@@ -73,8 +55,8 @@ export default function DetectionPage() {
             locName.includes(countryLower)
           );
         }) ||
-        alert.title.toLowerCase().includes(countryLower) ||
-        (alert.description?.toLowerCase().includes(countryLower) ?? false);
+        (alert.description?.toLowerCase().includes(countryLower) ?? false) ||
+        alert.eventType.toLowerCase().includes(countryLower);
 
       if (!matchesCountry) return false;
 
@@ -83,7 +65,6 @@ export default function DetectionPage() {
           alert.locations.some((loc) =>
             loc.location.name.toLowerCase().includes(regionLower),
           ) ||
-          alert.title.toLowerCase().includes(regionLower) ||
           (alert.description?.toLowerCase().includes(regionLower) ?? false)
         );
       }
@@ -91,43 +72,15 @@ export default function DetectionPage() {
     });
   }, [allAlerts, selectedCountry, selectedRegion, selectedDate, countryConf?.regions]);
 
-  const overview = statsQuery.data?.stats?.overview;
-  const sources = sourcesQuery.data?.sources ?? [];
-  const pipelineStats = pipelineStatsQuery.data;
   const historyAlerts = historyQuery.data?.alerts ?? [];
 
-  const mapMarkers: MapMarker[] = useMemo(
-    () => alertsToMarkers(alerts),
-    [alerts],
-  );
-
-  const mapCenter = useMemo<[number, number]>(
-    () => countryConf?.center ?? [30.0, 15.5],
-    [countryConf?.center],
-  );
+  const mapMarkers: MapMarker[] = useMemo(() => alertsToMarkers(alerts), [alerts]);
+  const mapCenter = useMemo<[number, number]>(() => countryConf?.center ?? [30.0, 15.5], [countryConf?.center]);
   const mapZoom = useMemo(() => countryConf?.zoom ?? 5, [countryConf?.zoom]);
 
-  const handleRefreshPipeline = useCallback(() => {
-    void sourcesQuery.refetch();
-    void pipelineStatsQuery.refetch();
-  }, [sourcesQuery, pipelineStatsQuery]);
-
-  const statCards: StatItem[] = [
-    { label: "Active Alerts", value: String(alerts.length), color: "#DC2626" },
-    {
-      label: "Data Sources Online",
-      value: `${sources.filter((s) => s.is_active).length}/${sources.length}`,
-      color: "#059669",
-    },
-    {
-      label: "Events Today",
-      value: pipelineStats ? formatNumber(pipelineStats.overall.recent_data_count) : "\u2014",
-    },
-    {
-      label: "Recent 7 Days",
-      value: String(overview?.recent_7_days ?? "\u2014"),
-    },
-  ];
+  const handleAlertCreated = useCallback(() => {
+    void alertsQuery.refetch();
+  }, [alertsQuery]);
 
   return (
     <Box>
@@ -153,23 +106,10 @@ export default function DetectionPage() {
         />
         <Group gap={8}>
           <Button
-            variant="outline"
-            color="gray"
-            size="xs"
-            leftSection={<IconSearch size={14} />}
-            style={{ fontSize: 13 }}
-          >
-            Search
-          </Button>
-          <Button
             size="xs"
             leftSection={<IconPlus size={14} />}
             onClick={openCreateModal}
-            style={{
-              background: "#E85D3D",
-              borderColor: "#E85D3D",
-              fontSize: 13,
-            }}
+            style={{ background: "#E85D3D", borderColor: "#E85D3D", fontSize: 13 }}
           >
             Create Manual Alert
           </Button>
@@ -185,32 +125,19 @@ export default function DetectionPage() {
         >
           <Tabs.List>
             <Tabs.Tab value="live">Live Alerts</Tabs.Tab>
-            <Tabs.Tab value="sources">Data Sources</Tabs.Tab>
             <Tabs.Tab value="history">History</Tabs.Tab>
           </Tabs.List>
         </Tabs>
 
-        <StatsGrid stats={statCards} />
+        <KpiCards alerts={alerts} loading={alertsQuery.isLoading} />
 
         {activeTab === "live" && (
           <LiveAlertsTab
             alerts={alerts}
-            sources={sources}
-            pipelineStats={pipelineStats}
-            selectedCountry={selectedCountry}
-            selectedRegion={selectedRegion}
             alertsLoading={alertsQuery.isLoading}
             mapMarkers={mapMarkers}
             mapCenter={mapCenter}
             mapZoom={mapZoom}
-            onRefresh={handleRefreshPipeline}
-          />
-        )}
-
-        {activeTab === "sources" && (
-          <DataSourcesTab
-            sources={sources}
-            loading={sourcesQuery.isLoading}
           />
         )}
 
@@ -227,7 +154,7 @@ export default function DetectionPage() {
       <CreateAlertModal
         opened={createModalOpened}
         onClose={closeCreateModal}
-        onSuccess={() => void alertsQuery.refetch()}
+        onSuccess={handleAlertCreated}
       />
     </Box>
   );

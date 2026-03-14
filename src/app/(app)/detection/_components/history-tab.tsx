@@ -43,14 +43,14 @@ export function HistoryTab({ alerts, loading, total, count }: HistoryTabProps) {
             <Table.Tr key={alert.id}>
               <Table.Td>
                 <Link
-                  href={`/crisis/${alert.id}`}
+                  href={`/event/${alert.id}`}
                   style={{ textDecoration: "none" }}
                 >
                   <Text
                     fw={600}
                     style={{ fontSize: 13, color: "#171717" }}
                   >
-                    {alert.title}
+                    {alert.description ?? alert.eventType}
                   </Text>
                 </Link>
               </Table.Td>

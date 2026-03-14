@@ -37,7 +37,8 @@ export default function AnalysisPage() {
     return allAlerts.slice(0, 5).map((a) => {
       const loc = a.locations?.[0]?.location.name ?? "Unknown";
       const sev = mapSeverity(a.severity);
-      return `${a.title} — ${loc} (${sev} severity)${a.description ? `: ${a.description.slice(0, 120)}` : ""}`;
+      const title = a.description ?? a.eventType;
+      return `${title} — ${loc} (${sev} severity)${a.description ? `: ${a.description.slice(0, 120)}` : ""}`;
     });
   }, [allAlerts]);
 
@@ -47,7 +48,7 @@ export default function AnalysisPage() {
     const total = allAlerts.length;
     const types = [
       ...new Set(allAlerts.flatMap((a) =>
-        a.events.flatMap((e) => e.signals.map((s) => s.detection.source?.type)),
+        a.signals.map((s) => s.source.dataSource?.type),
       ).filter(Boolean)),
     ] as string[];
     return { critical, total, types };
@@ -58,7 +59,7 @@ export default function AnalysisPage() {
     const alertContext = allAlerts
       .map(
         (a) =>
-          `- ${a.title} (severity ${a.severity}/5): ${a.description?.slice(0, 150) ?? ""}`,
+          `- ${a.description ?? a.eventType} (severity ${a.severity}/5): ${a.description?.slice(0, 150) ?? ""}`,
       )
       .join("\n");
     llmMutation.mutate(
