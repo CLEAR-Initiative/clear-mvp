@@ -17,7 +17,7 @@ import { EventsTab } from "./_components/events-tab";
 import { CreateAlertModal } from "./_components/create-alert-modal";
 
 export default function DetectionPage() {
-  const [activeTab, setActiveTab] = useState<string | null>("live");
+  const [activeTab, setActiveTab] = useState<string | null>("events");
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [selectedDate, setSelectedDate] = useState(dateOptions[0] ?? "Last 30 days");
@@ -130,9 +130,9 @@ export default function DetectionPage() {
           styles={{ tab: { fontSize: 13, fontWeight: 500 } }}
         >
           <Tabs.List>
-            <Tabs.Tab value="live">Live Alerts</Tabs.Tab>
-            <Tabs.Tab value="history">History</Tabs.Tab>
             <Tabs.Tab value="events">Events</Tabs.Tab>
+            <Tabs.Tab value="live">Alerts</Tabs.Tab>
+            <Tabs.Tab value="history">History</Tabs.Tab>
           </Tabs.List>
         </Tabs>
 
