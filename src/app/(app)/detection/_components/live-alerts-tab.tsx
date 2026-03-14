@@ -432,12 +432,12 @@ export function LiveAlertsTab({
       </Box>
 
       {/* Right: Crisis Map */}
-      <Box style={{ width: 360, flexShrink: 0 }}>
+      <Box style={{ width: 480, flexShrink: 0 }}>
         <Card p={0} style={{ border: "1px solid #E5E5E5", position: "sticky", top: 24 }}>
           <Box px={16} py={12} style={{ borderBottom: "1px solid #E5E5E5" }}>
             <Text fw={600} c="#171717" style={{ fontSize: 14 }}>Crisis Map</Text>
           </Box>
-          <Box style={{ height: 420 }}>
+          <Box style={{ height: 480 }}>
             <CrisisMap
               markers={mapMarkers}
               center={mapCenter}
