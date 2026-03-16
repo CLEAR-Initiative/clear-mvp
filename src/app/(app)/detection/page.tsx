@@ -135,7 +135,7 @@ export default function DetectionPage() {
           </Tabs.List>
         </Tabs>
 
-        <KpiCards alerts={alerts} loading={alertsQuery.isLoading} />
+        <KpiCards alerts={alerts} loading={alertsQuery.isLoading} events={eventsQuery.data ?? []} country={selectedCountry} />
 
         {activeTab === "live" && (
           <LiveAlertsTab
