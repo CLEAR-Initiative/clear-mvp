@@ -1,5 +1,5 @@
 import type { MapMarker } from "~/components/map/crisis-map";
-import type { GqlAlert } from "~/lib/types/graphql";
+import type { GqlAlert, GqlEvent } from "~/lib/types/graphql";
 import { mapSeverity } from "~/lib/types/graphql";
 
 export interface CrisisMarker extends MapMarker {
@@ -52,26 +52,29 @@ function hashId(a: string, b: string): number {
   return Math.abs(h);
 }
 
-export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
+export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
-  for (const alert of alerts) {
-    for (const loc of alert.locations) {
-      const coords = loc.location.geometry?.coordinates;
-      if (!coords) continue;
-      const [lng, lat] = coords;
-      markers.push({
-        id: hashId(alert.id, loc.id),
-        lng,
-        lat,
-        title: alert.description ?? alert.eventType,
-        severity: mapSeverity(alert.severity),
-        description: alert.description ?? undefined,
-        region: loc.location.name,
-        status: alert.status,
-      });
-    }
+  for (const event of events) {
+    const loc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+    const coords = loc?.geometry?.coordinates;
+    if (!coords) continue;
+    const [lng, lat] = coords;
+    markers.push({
+      id: hashId(event.id, loc!.id),
+      lng,
+      lat,
+      title: event.title ?? event.description ?? event.types[0] ?? "Event",
+      severity: mapSeverity(event.rank),
+      description: event.description ?? undefined,
+      region: loc!.name,
+      status: event.alerts[0]?.status,
+    });
   }
   return markers;
+}
+
+export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
+  return eventsToMarkers(alerts.map((a) => a.event));
 }
 
 /* ========== Derive filter options from markers ========== */

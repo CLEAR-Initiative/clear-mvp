@@ -78,15 +78,15 @@ export function EventsTab({
   const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
   const [filterOpen, setFilterOpen] = useState(false);
 
-  const alertCount = events.filter((e) => e.isAlert).length;
+  const alertCount = events.filter((e) => e.alerts.length > 0).length;
 
   const baseEvents = useMemo(
-    () => viewMode === "alerts" ? events.filter((e) => e.isAlert) : events,
+    () => viewMode === "alerts" ? events.filter((e) => e.alerts.length > 0) : events,
     [events, viewMode],
   );
 
   const allTypes = useMemo(
-    () => [...new Set(baseEvents.map((e) => e.eventType))].sort(),
+    () => [...new Set(baseEvents.flatMap((e) => e.types))].sort(),
     [baseEvents],
   );
 
@@ -123,23 +123,23 @@ export function EventsTab({
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let result = baseEvents.filter((e) => {
-      const sev = mapSeverity(e.severity);
+      const sev = mapSeverity(e.rank);
       if (!activeSeverities.has(sev)) return false;
-      if (activeTypes !== null && !activeTypes.has(e.eventType)) return false;
+      if (activeTypes !== null && !e.types.some((t) => activeTypes.has(t))) return false;
       if (q) {
-        const title = (e.description ?? e.eventType).toLowerCase();
-        const loc = e.locations[0]?.location.name.toLowerCase() ?? "";
+        const title = (e.title ?? e.description ?? e.types[0] ?? "").toLowerCase();
+        const loc = (e.generalLocation?.name ?? e.originLocation?.name ?? "").toLowerCase();
         if (!title.includes(q) && !loc.includes(q)) return false;
       }
       return true;
     });
 
     result = [...result].sort((a, b) => {
-      if (sortOrder === "sev-desc") return b.severity - a.severity;
-      if (sortOrder === "sev-asc")  return a.severity - b.severity;
+      if (sortOrder === "sev-desc") return b.rank - a.rank;
+      if (sortOrder === "sev-asc")  return a.rank - b.rank;
       if (sortOrder === "newest")
-        return new Date(b.firstSignalCreatedAt ?? b.createdAt).getTime() - new Date(a.firstSignalCreatedAt ?? a.createdAt).getTime();
-      return new Date(a.firstSignalCreatedAt ?? a.createdAt).getTime() - new Date(b.firstSignalCreatedAt ?? b.createdAt).getTime();
+        return new Date(b.firstSignalCreatedAt).getTime() - new Date(a.firstSignalCreatedAt).getTime();
+      return new Date(a.firstSignalCreatedAt).getTime() - new Date(b.firstSignalCreatedAt).getTime();
     });
 
     return result;
@@ -187,7 +187,6 @@ export function EventsTab({
             styles={{ input: { fontSize: 13 } }}
           />
 
-          {/* Filter button */}
           <Popover
             opened={filterOpen}
             onChange={setFilterOpen}
@@ -320,7 +319,6 @@ export function EventsTab({
             </Popover.Dropdown>
           </Popover>
 
-          {/* Sort button */}
           <Menu shadow="md" width={200} position="bottom-end">
             <Menu.Target>
               <button
@@ -396,13 +394,13 @@ export function EventsTab({
               </Box>
             )}
             {filtered.map((event) => {
-              const sev = mapSeverity(event.severity);
-              const sevCol = severityColor(event.severity);
+              const sev = mapSeverity(event.rank);
+              const sevCol = severityColor(event.rank);
               const sevBg = severityColors[sev]?.bg ?? "#F5F5F5";
-              const location = event.locations[0];
-              const sourceName = event.signals[0]?.source?.dataSource?.name;
-              const detectedAt = event.firstSignalCreatedAt ?? event.createdAt;
-              const displayTitle = event.description ?? event.eventType;
+              const location = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+              const sourceName = event.signals[0]?.source?.name;
+              const displayTitle = event.title ?? event.description ?? event.types[0] ?? "Untitled event";
+              const isAlert = event.alerts.length > 0;
 
               return (
                 <Link
@@ -426,7 +424,7 @@ export function EventsTab({
                           >
                             {severityLabels[sev]}
                           </Badge>
-                          {event.isAlert && (
+                          {isAlert && (
                             <Badge size="xs" variant="filled" color="red" style={{ fontSize: 10 }}>
                               Alert
                             </Badge>
@@ -437,22 +435,22 @@ export function EventsTab({
                             </Badge>
                           )}
                         </Group>
-                        <Text size="xs" c="#A3A3A3">{formatTimeAgo(detectedAt)}</Text>
+                        <Text size="xs" c="#A3A3A3">{formatTimeAgo(event.firstSignalCreatedAt)}</Text>
                       </Group>
                       <Text fw={600} size="sm" c="#171717" lineClamp={1} mb={4}>
                         {displayTitle}
                       </Text>
                       <Group gap={12}>
                         {location && (
-                          <Text size="xs" c="#737373">
-                            {location.location.name}
-                          </Text>
+                          <Text size="xs" c="#737373">{location.name}</Text>
                         )}
-                        <Text size="xs" c="#A3A3A3">{event.eventType}</Text>
+                        {event.types.length > 0 && (
+                          <Text size="xs" c="#A3A3A3">{event.types.join(", ")}</Text>
+                        )}
                         <Text size="xs" c="#737373" style={{ marginLeft: "auto" }}>
                           {event.signals.length} signal{event.signals.length !== 1 ? "s" : ""}
                           {" "}&bull;{" "}
-                          Severity: <Text span fw={600} c="#171717">{event.severity}/5</Text>
+                          Rank: <Text span fw={600} c="#171717">{event.rank.toFixed(1)}</Text>
                         </Text>
                       </Group>
                     </Box>

@@ -3,37 +3,37 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch } from "~/server/api/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
 
+const LOCATION_FIELDS = `
+  id name level geoId geometry
+`;
+
 const SIGNAL_FIELDS = `
   id
-  source {
-    id
-    title
-    confidence
-    status
-    detectedAt
-    dataSource { id name type }
-    locations { id location { id name geoId level } createdAt }
-    createdAt
-    updatedAt
-  }
+  source { id name type }
+  title
+  description
+  url
+  publishedAt
+  collectedAt
+  generalLocation { ${LOCATION_FIELDS} }
+  originLocation { ${LOCATION_FIELDS} }
+  destinationLocation { ${LOCATION_FIELDS} }
 `;
 
 const EVENT_FIELDS = `
   id
+  title
   description
-  eventType
-  severity
-  status
+  types
   rank
-  isAlert
-  populationAffected
   firstSignalCreatedAt
   lastSignalCreatedAt
-  locations { id location { id name level geometry } createdAt }
+  populationAffected
+  generalLocation { ${LOCATION_FIELDS} }
+  originLocation { ${LOCATION_FIELDS} }
+  destinationLocation { ${LOCATION_FIELDS} }
   signals { ${SIGNAL_FIELDS} }
-  primarySignal { ${SIGNAL_FIELDS} }
-  createdAt
-  updatedAt
+  alerts { id status }
 `;
 
 const EVENT_LIST_QUERY = `

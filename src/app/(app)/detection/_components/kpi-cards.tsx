@@ -17,10 +17,10 @@ export function KpiCards({ alerts, loading }: KpiCardsProps) {
 
   // Severity breakdown
   const counts = useMemo(() => ({
-    critical: alerts.filter((a) => a.severity >= 5).length,
-    high:     alerts.filter((a) => a.severity === 4).length,
-    medium:   alerts.filter((a) => a.severity === 3).length,
-    low:      alerts.filter((a) => a.severity <= 2).length,
+    critical: alerts.filter((a) => a.event.rank >= 5).length,
+    high:     alerts.filter((a) => a.event.rank >= 4 && a.event.rank < 5).length,
+    medium:   alerts.filter((a) => a.event.rank >= 3 && a.event.rank < 4).length,
+    low:      alerts.filter((a) => a.event.rank < 3).length,
   }), [alerts]);
 
   const total = alerts.length;
@@ -34,7 +34,7 @@ export function KpiCards({ alerts, loading }: KpiCardsProps) {
       d.setDate(now.getDate() - (days - 1 - i));
       const dayStr = d.toISOString().slice(0, 10);
       return alerts.filter(
-        (a) => (a.firstSignalCreatedAt ?? a.createdAt).slice(0, 10) === dayStr,
+        (a) => a.event.firstSignalCreatedAt.slice(0, 10) === dayStr,
       ).length;
     });
   }, [alerts, trendPeriod]);
@@ -64,7 +64,9 @@ export function KpiCards({ alerts, loading }: KpiCardsProps) {
   const typeBreakdown = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const a of alerts) {
-      counts[a.eventType] = (counts[a.eventType] ?? 0) + 1;
+      for (const t of a.event.types) {
+        counts[t] = (counts[t] ?? 0) + 1;
+      }
     }
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     const top4 = sorted.slice(0, 4);
@@ -97,12 +99,12 @@ export function KpiCards({ alerts, loading }: KpiCardsProps) {
   const escalation = useMemo(() => {
     const now = Date.now();
     const last24 = alerts.filter((a) => {
-      const age = now - new Date(a.firstSignalCreatedAt ?? a.createdAt).getTime();
-      return age < 86_400_000 && a.severity >= 5;
+      const age = now - new Date(a.event.firstSignalCreatedAt).getTime();
+      return age < 86_400_000 && a.event.rank >= 5;
     }).length;
     const prev24 = alerts.filter((a) => {
-      const age = now - new Date(a.firstSignalCreatedAt ?? a.createdAt).getTime();
-      return age >= 86_400_000 && age < 172_800_000 && a.severity >= 5;
+      const age = now - new Date(a.event.firstSignalCreatedAt).getTime();
+      return age >= 86_400_000 && age < 172_800_000 && a.event.rank >= 5;
     }).length;
     return { last24, diff: last24 - prev24 };
   }, [alerts]);

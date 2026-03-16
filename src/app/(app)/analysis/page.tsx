@@ -35,22 +35,20 @@ export default function AnalysisPage() {
   const realSituationItems = useMemo(() => {
     if (allAlerts.length === 0) return null;
     return allAlerts.slice(0, 5).map((a) => {
-      const loc = a.locations?.[0]?.location.name ?? "Unknown";
-      const sev = mapSeverity(a.severity);
-      const title = a.description ?? a.eventType;
-      return `${title} — ${loc} (${sev} severity)${a.description ? `: ${a.description.slice(0, 120)}` : ""}`;
+      const loc = (a.event.generalLocation ?? a.event.originLocation)?.name ?? "Unknown";
+      const sev = mapSeverity(a.event.rank);
+      const title = a.event.title ?? a.event.description ?? a.event.types[0] ?? "Event";
+      return `${title} — ${loc} (${sev} severity)${a.event.description ? `: ${a.event.description.slice(0, 120)}` : ""}`;
     });
   }, [allAlerts]);
 
   // Summary stats from real data
   const summaryStats = useMemo(() => {
-    const critical = allAlerts.filter((a) => a.severity >= 4).length;
+    const critical = allAlerts.filter((a) => a.event.rank >= 4).length;
     const total = allAlerts.length;
     const types = [
-      ...new Set(allAlerts.flatMap((a) =>
-        a.signals.map((s) => s.source.dataSource?.type),
-      ).filter(Boolean)),
-    ] as string[];
+      ...new Set(allAlerts.flatMap((a) => a.event.types)),
+    ];
     return { critical, total, types };
   }, [allAlerts]);
 
@@ -59,7 +57,7 @@ export default function AnalysisPage() {
     const alertContext = allAlerts
       .map(
         (a) =>
-          `- ${a.description ?? a.eventType} (severity ${a.severity}/5): ${a.description?.slice(0, 150) ?? ""}`,
+          `- ${a.event.title ?? a.event.description ?? a.event.types[0] ?? "Event"} (rank ${a.event.rank.toFixed(1)}): ${a.event.description?.slice(0, 150) ?? ""}`,
       )
       .join("\n");
     llmMutation.mutate(

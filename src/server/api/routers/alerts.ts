@@ -3,39 +3,45 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch } from "~/server/api/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
 
+const LOCATION_FIELDS = `
+  id name level geoId geometry
+`;
+
+const SIGNAL_FIELDS = `
+  id
+  source { id name type }
+  title
+  description
+  url
+  publishedAt
+  collectedAt
+  generalLocation { ${LOCATION_FIELDS} }
+  originLocation { ${LOCATION_FIELDS} }
+  destinationLocation { ${LOCATION_FIELDS} }
+`;
+
+const EVENT_FIELDS = `
+  id
+  title
+  description
+  types
+  rank
+  firstSignalCreatedAt
+  lastSignalCreatedAt
+  populationAffected
+  generalLocation { ${LOCATION_FIELDS} }
+  originLocation { ${LOCATION_FIELDS} }
+  destinationLocation { ${LOCATION_FIELDS} }
+  signals { ${SIGNAL_FIELDS} }
+  alerts { id status }
+`;
+
 const ALERTS_LIST_QUERY = `
   query Alerts($status: AlertStatus) {
     alerts(status: $status) {
       id
-      title
-      description
-      severity
       status
-      events {
-        id
-        signals {
-          id
-          detection {
-            id
-            title
-            confidence
-            status
-            detectedAt
-            source { id name type }
-            locations { id location { id name geoId level latitude longitude } createdAt }
-            createdAt
-            updatedAt
-          }
-        }
-        primarySignal {
-          id
-          detection { id title }
-        }
-      }
-      locations { id location { id name latitude longitude } createdAt }
-      metadata
-      createdAt
-      updatedAt
+      event { ${EVENT_FIELDS} }
     }
   }
 `;
@@ -44,35 +50,8 @@ const ALERT_GET_QUERY = `
   query Alert($id: String!) {
     alert(id: $id) {
       id
-      title
-      description
-      severity
       status
-      events {
-        id
-        signals {
-          id
-          detection {
-            id
-            title
-            confidence
-            status
-            detectedAt
-            source { id name type }
-            locations { id location { id name geoId level latitude longitude } createdAt }
-            createdAt
-            updatedAt
-          }
-        }
-        primarySignal {
-          id
-          detection { id title }
-        }
-      }
-      locations { id location { id name latitude longitude } createdAt }
-      metadata
-      createdAt
-      updatedAt
+      event { ${EVENT_FIELDS} }
     }
   }
 `;
@@ -81,14 +60,8 @@ const CREATE_ALERT_MUTATION = `
   mutation CreateAlert($input: CreateAlertInput!) {
     createAlert(input: $input) {
       id
-      title
-      description
-      severity
       status
-      events { id }
-      locations { id location { id name } }
-      createdAt
-      updatedAt
+      event { id title types rank }
     }
   }
 `;
@@ -109,12 +82,6 @@ export const alertsRouter = createTRPCRouter({
       const data = await graphqlFetch<{ alerts: GqlAlert[] }>(
         ALERTS_LIST_QUERY,
         status ? { status } : undefined,
-      );
-      // Debug: log alert count and first location's coordinates
-      const firstLoc = data.alerts[0]?.locations[0];
-      console.log(
-        `[alerts.getAlerts] count=${data.alerts.length}`,
-        firstLoc ? `firstLoc=${JSON.stringify(firstLoc.location)}` : "no locations",
       );
       return { alerts: data.alerts };
     }),
@@ -139,10 +106,10 @@ export const alertsRouter = createTRPCRouter({
     const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
     const recent7 = alerts.filter(
-      (a) => new Date(a.createdAt).getTime() > sevenDaysAgo,
+      (a) => new Date(a.event.firstSignalCreatedAt).getTime() > sevenDaysAgo,
     ).length;
     const recent30 = alerts.filter(
-      (a) => new Date(a.createdAt).getTime() > thirtyDaysAgo,
+      (a) => new Date(a.event.firstSignalCreatedAt).getTime() > thirtyDaysAgo,
     ).length;
 
     return {

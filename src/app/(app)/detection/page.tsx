@@ -7,7 +7,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { countryConfig, countries, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
-import { alertsToMarkers } from "../map/_components/map-markers-data";
+import { alertsToMarkers, eventsToMarkers } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar } from "~/components/ui";
 
 import { KpiCards } from "./_components/kpi-cards";
@@ -37,7 +37,7 @@ export default function DetectionPage() {
 
   const allAlerts = useMemo(() => {
     const raw = alertsQuery.data?.alerts ?? [];
-    return [...raw].sort((a, b) => b.severity - a.severity);
+    return [...raw].sort((a, b) => b.event.rank - a.event.rank);
   }, [alertsQuery.data?.alerts]);
 
   // Region + date filtered alerts passed down to KPI cards and list
@@ -49,28 +49,23 @@ export default function DetectionPage() {
     const dateRange = parseDateFilter(selectedDate);
 
     return allAlerts.filter((alert) => {
-      const alertDate = new Date(alert.createdAt).getTime();
+      const alertDate = new Date(alert.event.firstSignalCreatedAt).getTime();
       if (alertDate < dateRange.start.getTime() || alertDate > dateRange.end.getTime()) return false;
 
+      const loc = alert.event.generalLocation ?? alert.event.originLocation ?? alert.event.destinationLocation;
+      const locName = loc?.name.toLowerCase() ?? "";
       const matchesCountry =
-        alert.locations.some((loc) => {
-          const locName = loc.location.name.toLowerCase();
-          return (
-            regions.some((r) => r !== "all regions" && locName.includes(r)) ||
-            locName.includes(countryLower)
-          );
-        }) ||
-        (alert.description?.toLowerCase().includes(countryLower) ?? false) ||
-        alert.eventType.toLowerCase().includes(countryLower);
+        regions.some((r) => r !== "all regions" && locName.includes(r)) ||
+        locName.includes(countryLower) ||
+        (alert.event.description?.toLowerCase().includes(countryLower) ?? false) ||
+        alert.event.types.some((t) => t.toLowerCase().includes(countryLower));
 
       if (!matchesCountry) return false;
 
       if (regionLower) {
         return (
-          alert.locations.some((loc) =>
-            loc.location.name.toLowerCase().includes(regionLower),
-          ) ||
-          (alert.description?.toLowerCase().includes(regionLower) ?? false)
+          locName.includes(regionLower) ||
+          (alert.event.description?.toLowerCase().includes(regionLower) ?? false)
         );
       }
       return true;
@@ -81,8 +76,7 @@ export default function DetectionPage() {
 
   const mapMarkers: MapMarker[] = useMemo(() => alertsToMarkers(alerts), [alerts]);
   const eventMapMarkers: MapMarker[] = useMemo(
-    // GqlEvent and GqlAlert share the same location/geometry structure
-    () => alertsToMarkers(eventsQuery.data as never ?? []),
+    () => eventsToMarkers(eventsQuery.data ?? []),
     [eventsQuery.data],
   );
   const mapCenter = useMemo<[number, number]>(() => countryConf?.center ?? [30.0, 15.5], [selectedCountry]);

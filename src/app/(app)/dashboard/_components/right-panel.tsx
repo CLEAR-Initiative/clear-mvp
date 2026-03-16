@@ -24,28 +24,29 @@ import type { GqlEvent, GqlAlert } from "~/lib/types/graphql";
 
 /** Derive a display title for an event */
 function eventTitle(event: GqlEvent): string {
+  if (event.title) return event.title;
   if (event.description) return event.description;
-  const loc = event.locations[0]?.location.name;
-  return loc ? `${event.eventType} — ${loc}` : event.eventType;
+  const loc = (event.generalLocation ?? event.originLocation)?.name;
+  return loc ? `${event.types[0] ?? "Event"} — ${loc}` : (event.types[0] ?? "Event");
 }
 
 /** Get the most recent signal date from an event */
 function eventDate(event: GqlEvent): string {
-  const dateStr = event.lastSignalCreatedAt ?? event.createdAt;
+  const dateStr = event.lastSignalCreatedAt;
   if (!dateStr) return "";
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 /** Get location names from an event */
 function eventLocations(event: GqlEvent): string {
-  const locs = event.locations.slice(0, 2).map((l) => l.location.name);
-  return locs.join(", ") || "Unknown location";
+  const loc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+  return loc?.name ?? "Unknown location";
 }
 
-/** Map numeric severity to display label */
+/** Map numeric rank to display label */
 function eventSeverity(event: GqlEvent): "critical" | "high" | "medium" {
-  if (event.severity >= 5) return "critical";
-  if (event.severity >= 4) return "high";
+  if (event.rank >= 5) return "critical";
+  if (event.rank >= 4) return "high";
   return "medium";
 }
 
@@ -246,7 +247,7 @@ export function RightPanel({
                       >
                         {event.signals.length} signal{event.signals.length !== 1 ? "s" : ""}
                       </Badge>
-                      {event.isAlert && (
+                      {event.alerts.length > 0 && (
                         <Badge
                           size="xs"
                           variant="light"
@@ -294,7 +295,7 @@ export function RightPanel({
               >
                 <Group justify="space-between" mb={4}>
                   <Text fw={600} c="#171717" style={{ fontSize: 13 }} lineClamp={1}>
-                    {alert.description ?? alert.eventType}
+                    {alert.event.title ?? alert.event.description ?? alert.event.types[0] ?? "Alert"}
                   </Text>
                   <Badge
                     size="xs"
@@ -302,23 +303,23 @@ export function RightPanel({
                     style={{
                       fontSize: 9,
                       fontWeight: 700,
-                      backgroundColor: alert.severity >= 4 ? "#FEE2E2" : "#FEF3C7",
-                      color: alert.severity >= 4 ? "#DC2626" : "#D97706",
+                      backgroundColor: alert.event.rank >= 4 ? "#FEE2E2" : "#FEF3C7",
+                      color: alert.event.rank >= 4 ? "#DC2626" : "#D97706",
                       flexShrink: 0,
                     }}
                   >
-                    Sev {alert.severity}
+                    {alert.event.rank.toFixed(1)}
                   </Badge>
                 </Group>
                 <Text c="#737373" style={{ fontSize: 11 }} lineClamp={2}>
-                  {alert.description}
+                  {alert.event.description}
                 </Text>
                 <Group gap={4} mt={4}>
                   <Badge size="xs" variant="light" color={alert.status === "published" ? "green" : "gray"} style={{ fontSize: 9 }}>
                     {alert.status}
                   </Badge>
                   <Badge size="xs" variant="light" color="gray" style={{ fontSize: 9 }}>
-                    {alert.signals.length} signal{alert.signals.length !== 1 ? "s" : ""}
+                    {alert.event.signals.length} signal{alert.event.signals.length !== 1 ? "s" : ""}
                   </Badge>
                 </Group>
               </Box>

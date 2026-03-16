@@ -58,7 +58,7 @@ export function HistoryTab({ alerts, loading, total, count }: HistoryTabProps) {
   const [filterOpen, setFilterOpen] = useState(false);
 
   const allTypes = useMemo(
-    () => [...new Set(alerts.map((a) => a.eventType))].sort(),
+    () => [...new Set(alerts.flatMap((a) => a.event.types))].sort(),
     [alerts],
   );
 
@@ -95,23 +95,23 @@ export function HistoryTab({ alerts, loading, total, count }: HistoryTabProps) {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let result = alerts.filter((a) => {
-      const sev = mapSeverity(a.severity);
+      const sev = mapSeverity(a.event.rank);
       if (!activeSeverities.has(sev)) return false;
-      if (activeTypes !== null && !activeTypes.has(a.eventType)) return false;
+      if (activeTypes !== null && !a.event.types.some((t) => activeTypes.has(t))) return false;
       if (q) {
-        const title = (a.description ?? a.eventType).toLowerCase();
-        const loc = a.locations[0]?.location.name.toLowerCase() ?? "";
+        const title = (a.event.title ?? a.event.description ?? a.event.types[0] ?? "").toLowerCase();
+        const loc = (a.event.generalLocation?.name ?? a.event.originLocation?.name ?? "").toLowerCase();
         if (!title.includes(q) && !loc.includes(q)) return false;
       }
       return true;
     });
 
     result = [...result].sort((a, b) => {
-      if (sortOrder === "sev-desc") return b.severity - a.severity;
-      if (sortOrder === "sev-asc")  return a.severity - b.severity;
+      if (sortOrder === "sev-desc") return b.event.rank - a.event.rank;
+      if (sortOrder === "sev-asc")  return a.event.rank - b.event.rank;
       if (sortOrder === "newest")
-        return new Date(b.firstSignalCreatedAt ?? b.createdAt).getTime() - new Date(a.firstSignalCreatedAt ?? a.createdAt).getTime();
-      return new Date(a.firstSignalCreatedAt ?? a.createdAt).getTime() - new Date(b.firstSignalCreatedAt ?? b.createdAt).getTime();
+        return new Date(b.event.firstSignalCreatedAt).getTime() - new Date(a.event.firstSignalCreatedAt).getTime();
+      return new Date(a.event.firstSignalCreatedAt).getTime() - new Date(b.event.firstSignalCreatedAt).getTime();
     });
 
     return result;
@@ -126,7 +126,6 @@ export function HistoryTab({ alerts, loading, total, count }: HistoryTabProps) {
 
   return (
     <CardSection title="Alert History" subtitle={subtitle} noPadding>
-      {/* Filter row */}
       <Box px={16} pt={12}>
         <Group gap={8} mb={16}>
           <TextInput
@@ -324,13 +323,14 @@ export function HistoryTab({ alerts, loading, total, count }: HistoryTabProps) {
         loading={loading}
         emptyMessage={alerts.length === 0 ? "No alert history available" : "No alerts match your filters."}
         renderRow={(alert) => {
-          const sev = mapSeverity(alert.severity);
+          const sev = mapSeverity(alert.event.rank);
+          const location = alert.event.generalLocation ?? alert.event.originLocation ?? alert.event.destinationLocation;
           return (
             <Table.Tr key={alert.id}>
               <Table.Td>
-                <Link href={`/event/${alert.id}`} style={{ textDecoration: "none" }}>
+                <Link href={`/event/${alert.event.id}`} style={{ textDecoration: "none" }}>
                   <Text fw={600} style={{ fontSize: 13, color: "#171717" }}>
-                    {alert.description ?? alert.eventType}
+                    {alert.event.title ?? alert.event.description ?? alert.event.types[0] ?? "Untitled"}
                   </Text>
                 </Link>
               </Table.Td>
@@ -342,12 +342,12 @@ export function HistoryTab({ alerts, loading, total, count }: HistoryTabProps) {
               </Table.Td>
               <Table.Td>
                 <Text c="#525252" style={{ fontSize: 13 }}>
-                  {new Date(alert.createdAt).toLocaleDateString()}
+                  {new Date(alert.event.firstSignalCreatedAt).toLocaleDateString()}
                 </Text>
               </Table.Td>
               <Table.Td>
                 <Text c="#525252" style={{ fontSize: 13 }}>
-                  {alert.locations?.[0]?.location.name ?? "\u2014"}
+                  {location?.name ?? "\u2014"}
                 </Text>
               </Table.Td>
             </Table.Tr>

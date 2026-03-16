@@ -92,7 +92,7 @@ export default function MapPage() {
     const markers = alertsToMarkers(allAlerts);
     console.log("[MapPage] allAlerts:", allAlerts.length, "allMarkers:", markers.length);
     if (allAlerts.length > 0 && markers.length === 0) {
-      console.log("[MapPage] First alert locations:", JSON.stringify(allAlerts[0]?.locations));
+      // debug removed
     }
     return markers;
   }, [allAlerts]);

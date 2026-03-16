@@ -60,17 +60,19 @@ const LABEL_STYLE = {
 /* ========== Helpers ========== */
 
 function eventDisplayTitle(event: GqlEvent): string {
+  if (event.title) return event.title;
   if (event.description) return event.description;
-  const loc = event.locations[0]?.location.name;
-  return loc ? `${event.eventType} — ${loc}` : event.eventType;
+  const loc = (event.generalLocation ?? event.originLocation)?.name;
+  return loc ? `${event.types[0] ?? "Event"} — ${loc}` : (event.types[0] ?? "Event");
 }
 
 function eventLocations(event: GqlEvent): string {
-  return event.locations.slice(0, 3).map((l) => l.location.name).join(", ") || "Unknown";
+  const loc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+  return loc?.name ?? "Unknown";
 }
 
 function signalDisplayTitle(signal: GqlSignal): string {
-  return signal.source.title || "Untitled Signal";
+  return signal.title ?? signal.source.name ?? "Untitled Signal";
 }
 
 /* ========== Event Selection Step ========== */
@@ -91,8 +93,8 @@ function EventSelectionStep({
   onNext: () => void;
 }) {
   const sorted = [...events].sort((a, b) => {
-    const aDate = new Date(a.lastSignalCreatedAt ?? a.createdAt).getTime();
-    const bDate = new Date(b.lastSignalCreatedAt ?? b.createdAt).getTime();
+    const aDate = new Date(a.lastSignalCreatedAt).getTime();
+    const bDate = new Date(b.lastSignalCreatedAt).getTime();
     return bDate - aDate;
   });
 
@@ -141,7 +143,7 @@ function EventSelectionStep({
                       {eventLocations(event)} &bull; {event.signals.length} signal{event.signals.length !== 1 ? "s" : ""}
                     </Text>
                   </Box>
-                  {event.isAlert && (
+                  {event.alerts.length > 0 && (
                     <Badge size="xs" variant="light" color="red" style={{ fontSize: 9, flexShrink: 0 }}>
                       Alert
                     </Badge>
@@ -327,7 +329,7 @@ function CreateEventSubFlow({
                       {signalDisplayTitle(signal)}
                     </Text>
                     <Text c="#737373" style={{ fontSize: 10 }}>
-                      Confidence: {signal.source.confidence != null ? `${(signal.source.confidence * 100).toFixed(0)}%` : "N/A"}
+                      Source: {signal.source.name}
                     </Text>
                   </Box>
                 </Group>
