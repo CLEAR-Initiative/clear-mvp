@@ -29,9 +29,9 @@ const DATA_SOURCES_QUERY = `
   }
 `;
 
-const DETECTIONS_COUNT_QUERY = `
-  query Detections {
-    detections {
+const SIGNALS_COUNT_QUERY = `
+  query Signals {
+    signals {
       id
       source { id }
     }
@@ -60,20 +60,20 @@ export const pipelineRouter = createTRPCRouter({
   }),
 
   getStatistics: publicProcedure.query(async () => {
-    const [sourcesData, detectionsData] = await Promise.all([
+    const [sourcesData, signalsData] = await Promise.all([
       graphqlFetch<{ dataSources: GqlDataSourceFull[] }>(DATA_SOURCES_QUERY),
-      graphqlFetch<{ detections: Array<{ id: string; source: { id: string } | null }> }>(
-        DETECTIONS_COUNT_QUERY,
+      graphqlFetch<{ signals: Array<{ id: string; source: { id: string } | null }> }>(
+        SIGNALS_COUNT_QUERY,
       ),
     ]);
 
     const totalSources = sourcesData.dataSources.length;
-    const totalDetections = detectionsData.detections.length;
+    const totalDetections = signalsData.signals.length;
 
-    // Count detections per source type
+    // Count signals per source type
     const byType: Record<string, { variables: number; data_records: number }> = {};
     for (const ds of sourcesData.dataSources) {
-      const count = detectionsData.detections.filter(
+      const count = signalsData.signals.filter(
         (d) => d.source?.id === ds.id,
       ).length;
       byType[ds.type] = byType[ds.type] ?? { variables: 0, data_records: 0 };

@@ -20,13 +20,15 @@ async function handler(
     url.searchParams.set(key, value);
   });
 
-  // Forward the browser's origin header so Better Auth's trustedOrigins check
-  // sees the frontend origin (which is in the API's allow-list).
+  // Forward relevant headers server-to-server. Omit "origin" so Better Auth's
+  // trustedOrigins check sees the API's own origin (always trusted) rather than
+  // the browser's localhost origin, which may not be in the staging allow-list.
   const headers = new Headers();
-  for (const key of ["cookie", "content-type", "accept", "authorization", "origin", "referer"]) {
+  for (const key of ["cookie", "content-type", "accept", "authorization", "referer"]) {
     const value = request.headers.get(key);
     if (value) headers.set(key, value);
   }
+  headers.set("origin", API_URL);
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
 

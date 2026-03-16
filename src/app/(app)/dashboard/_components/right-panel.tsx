@@ -134,7 +134,7 @@ export function RightPanel({
         </Group>
         <Text size="sm" c="#E85D3D" style={{ fontSize: 13 }}>
           Humanitarian{" "}
-          <Text component="span" c="#737373">
+          <Text component="span" c="#737373" suppressHydrationWarning>
             | {new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })}
           </Text>
         </Text>
@@ -369,7 +369,9 @@ export function RightPanel({
           {" "}| EWAS Pipeline
         </Text>
         <Text size="xs" c="#A3A3A3" mt={8} style={{ fontSize: 9 }}>
-          {alertsUpdatedAt ? `Updated: ${Math.round((Date.now() - alertsUpdatedAt) / 60000)}m ago` : "Updated: —"}
+          <span suppressHydrationWarning>
+            {alertsUpdatedAt ? `Updated: ${Math.round((Date.now() - alertsUpdatedAt) / 60000)}m ago` : "Updated: —"}
+          </span>
         </Text>
       </Box>
     </Box>

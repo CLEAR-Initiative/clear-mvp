@@ -80,7 +80,6 @@ export const eventsRouter = createTRPCRouter({
     .input(
       z.object({
         signalIds: z.array(z.string()).min(1),
-        primarySignalId: z.string().optional(),
       }),
     )
     .mutation(async ({ input }) => {

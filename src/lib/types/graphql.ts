@@ -7,6 +7,11 @@ export interface GeoJSONPoint {
   coordinates: [number, number]; // [longitude, latitude]
 }
 
+export interface GeoJSONGeometry {
+  type: string; // "Point" | "Polygon" | "MultiPolygon" | etc.
+  coordinates: unknown;
+}
+
 /* ─── Shared sub-types ─── */
 
 export interface GqlDataSource {
@@ -20,7 +25,7 @@ export interface GqlLocation {
   name: string;
   level: number;
   geoId?: string | null;
-  geometry: GeoJSONPoint | null | undefined;
+  geometry: GeoJSONGeometry | null | undefined;
 }
 
 /* ─── Signal ─── */

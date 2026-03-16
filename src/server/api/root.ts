@@ -2,6 +2,7 @@ import { alertsRouter } from "~/server/api/routers/alerts";
 import { authRouter } from "~/server/api/routers/auth";
 import { detectionsRouter } from "~/server/api/routers/detections";
 import { eventsRouter } from "~/server/api/routers/events";
+import { hapiRouter } from "~/server/api/routers/hapi";
 import { informRouter } from "~/server/api/routers/inform";
 import { llmRouter } from "~/server/api/routers/llm";
 import { pipelineRouter } from "~/server/api/routers/pipeline";
@@ -13,6 +14,7 @@ export const appRouter = createTRPCRouter({
   auth: authRouter,
   detections: detectionsRouter,
   events: eventsRouter,
+  hapi: hapiRouter,
   inform: informRouter,
   llm: llmRouter,
   pipeline: pipelineRouter,

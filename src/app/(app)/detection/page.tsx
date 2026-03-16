@@ -10,7 +10,7 @@ import { countryConfig, countries, dateOptions, parseDateFilter } from "~/lib/co
 import { alertsToMarkers, eventsToMarkers } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar } from "~/components/ui";
 
-import { KpiCards } from "./_components/kpi-cards";
+import { DetectionKpiRow } from "~/components/detection/detection-kpi-row";
 import { LiveAlertsTab } from "./_components/live-alerts-tab";
 import { HistoryTab } from "./_components/history-tab";
 import { EventsTab } from "./_components/events-tab";
@@ -135,7 +135,12 @@ export default function DetectionPage() {
           </Tabs.List>
         </Tabs>
 
-        <KpiCards alerts={alerts} loading={alertsQuery.isLoading} events={eventsQuery.data ?? []} country={selectedCountry} />
+        <DetectionKpiRow
+          country={selectedCountry}
+          alerts={alerts}
+          events={eventsQuery.data ?? []}
+          onNavigateToAlerts={() => setActiveTab("live")}
+        />
 
         {activeTab === "live" && (
           <LiveAlertsTab

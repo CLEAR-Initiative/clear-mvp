@@ -52,21 +52,32 @@ function hashId(a: string, b: string): number {
   return Math.abs(h);
 }
 
+/** Return the first location on an event that has a usable Point geometry */
+function pointLocation(event: GqlEvent) {
+  const candidates = [event.originLocation, event.destinationLocation, event.generalLocation];
+  for (const loc of candidates) {
+    if (loc?.geometry?.type === "Point") {
+      const [lng, lat] = loc.geometry.coordinates as [number, number];
+      if (typeof lng === "number" && typeof lat === "number") return { loc, lng, lat };
+    }
+  }
+  return null;
+}
+
 export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
   for (const event of events) {
-    const loc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
-    const coords = loc?.geometry?.coordinates;
-    if (!coords) continue;
-    const [lng, lat] = coords;
+    const point = pointLocation(event);
+    if (!point) continue;
+    const { loc, lng, lat } = point;
     markers.push({
-      id: hashId(event.id, loc!.id),
+      id: hashId(event.id, loc.id),
       lng,
       lat,
       title: event.title ?? event.description ?? event.types[0] ?? "Event",
       severity: mapSeverity(event.rank),
       description: event.description ?? undefined,
-      region: loc!.name,
+      region: loc.name,
       status: event.alerts[0]?.status,
     });
   }
