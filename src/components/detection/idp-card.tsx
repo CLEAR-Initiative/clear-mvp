@@ -177,8 +177,10 @@ export function IdpCard({ locationCode }: IdpCardProps) {
           <AreaChart data={trend} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id="idpFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#E85D3D" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#E85D3D" stopOpacity={0} />
+                <stop offset="0%"  stopColor="#E85D3D" stopOpacity={0.8} />
+                <stop offset="25%" stopColor="#E85D3D" stopOpacity={0.4} />
+                <stop offset="60%" stopColor="#E85D3D" stopOpacity={0.08} />
+                <stop offset="100%" stopColor="#E85D3D" stopOpacity={0} />
               </linearGradient>
             </defs>
             <RechartsTooltip content={<SparkTooltip />} />

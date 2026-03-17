@@ -110,11 +110,15 @@ export function SignalTrendCard({ alerts, events }: SignalTrendCardProps) {
           <AreaChart data={trendData} margin={{ top: 2, right: 2, bottom: 0, left: 2 }}>
             <defs>
               <linearGradient id="stGradEvents" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor="#F59E0B" stopOpacity={0.25} />
+                <stop offset="0%"   stopColor="#F59E0B" stopOpacity={0.8} />
+                <stop offset="25%"  stopColor="#F59E0B" stopOpacity={0.4} />
+                <stop offset="60%"  stopColor="#F59E0B" stopOpacity={0.08} />
                 <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="stGradAlerts" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor="#E85D3D" stopOpacity={0.35} />
+                <stop offset="0%"   stopColor="#E85D3D" stopOpacity={0.8} />
+                <stop offset="25%"  stopColor="#E85D3D" stopOpacity={0.4} />
+                <stop offset="60%"  stopColor="#E85D3D" stopOpacity={0.08} />
                 <stop offset="100%" stopColor="#E85D3D" stopOpacity={0} />
               </linearGradient>
             </defs>
