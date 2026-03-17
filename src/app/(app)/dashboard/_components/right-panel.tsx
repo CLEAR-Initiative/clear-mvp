@@ -22,45 +22,31 @@ import type { GqlEvent, GqlAlert } from "~/lib/types/graphql";
 
 /* ========== Helpers ========== */
 
-/** Derive a display title for an event from its signals' detection titles */
+/** Derive a display title for an event */
 function eventTitle(event: GqlEvent): string {
-  const titles = event.signals
-    .map((s) => s.detection.title)
-    .filter(Boolean);
-  if (titles.length === 0) return "Untitled Event";
-  if (titles.length === 1) return titles[0]!;
-  return titles.slice(0, 2).join(" + ") + (titles.length > 2 ? ` (+${titles.length - 2})` : "");
+  if (event.title) return event.title;
+  if (event.description) return event.description;
+  const loc = (event.generalLocation ?? event.originLocation)?.name;
+  return loc ? `${event.types[0] ?? "Event"} — ${loc}` : (event.types[0] ?? "Event");
 }
 
-/** Get the most recent detection date from an event */
+/** Get the most recent signal date from an event */
 function eventDate(event: GqlEvent): string {
-  const dates = event.signals
-    .map((s) => s.detection.detectedAt)
-    .filter(Boolean)
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-  if (dates.length === 0) return "";
-  const d = new Date(dates[0]!);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const dateStr = event.lastSignalCreatedAt;
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-/** Get location names from event's signals' detections */
+/** Get location names from an event */
 function eventLocations(event: GqlEvent): string {
-  const locs = new Set<string>();
-  for (const signal of event.signals) {
-    for (const dl of signal.detection.locations) {
-      locs.add(dl.location.name);
-    }
-  }
-  return Array.from(locs).slice(0, 2).join(", ") || "Unknown location";
+  const loc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+  return loc?.name ?? "Unknown location";
 }
 
-/** Compute severity from detection confidences */
+/** Map numeric rank to display label */
 function eventSeverity(event: GqlEvent): "critical" | "high" | "medium" {
-  const maxConfidence = Math.max(
-    ...event.signals.map((s) => s.detection.confidence ?? 0),
-  );
-  if (maxConfidence >= 0.8) return "critical";
-  if (maxConfidence >= 0.5) return "high";
+  if (event.rank >= 5) return "critical";
+  if (event.rank >= 4) return "high";
   return "medium";
 }
 
@@ -148,7 +134,7 @@ export function RightPanel({
         </Group>
         <Text size="sm" c="#E85D3D" style={{ fontSize: 13 }}>
           Humanitarian{" "}
-          <Text component="span" c="#737373">
+          <Text component="span" c="#737373" suppressHydrationWarning>
             | {new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })}
           </Text>
         </Text>
@@ -268,7 +254,7 @@ export function RightPanel({
                           color="red"
                           style={{ fontSize: 9 }}
                         >
-                          In {event.alerts.length} alert{event.alerts.length !== 1 ? "s" : ""}
+                          Alert
                         </Badge>
                       )}
                     </Group>
@@ -309,7 +295,7 @@ export function RightPanel({
               >
                 <Group justify="space-between" mb={4}>
                   <Text fw={600} c="#171717" style={{ fontSize: 13 }} lineClamp={1}>
-                    {alert.title}
+                    {alert.event.title ?? alert.event.description ?? alert.event.types[0] ?? "Alert"}
                   </Text>
                   <Badge
                     size="xs"
@@ -317,23 +303,23 @@ export function RightPanel({
                     style={{
                       fontSize: 9,
                       fontWeight: 700,
-                      backgroundColor: alert.severity >= 4 ? "#FEE2E2" : "#FEF3C7",
-                      color: alert.severity >= 4 ? "#DC2626" : "#D97706",
+                      backgroundColor: alert.event.rank >= 4 ? "#FEE2E2" : "#FEF3C7",
+                      color: alert.event.rank >= 4 ? "#DC2626" : "#D97706",
                       flexShrink: 0,
                     }}
                   >
-                    Sev {alert.severity}
+                    {alert.event.rank.toFixed(1)}
                   </Badge>
                 </Group>
                 <Text c="#737373" style={{ fontSize: 11 }} lineClamp={2}>
-                  {alert.description}
+                  {alert.event.description}
                 </Text>
                 <Group gap={4} mt={4}>
                   <Badge size="xs" variant="light" color={alert.status === "published" ? "green" : "gray"} style={{ fontSize: 9 }}>
                     {alert.status}
                   </Badge>
                   <Badge size="xs" variant="light" color="gray" style={{ fontSize: 9 }}>
-                    {alert.events.length} event{alert.events.length !== 1 ? "s" : ""}
+                    {alert.event.signals.length} signal{alert.event.signals.length !== 1 ? "s" : ""}
                   </Badge>
                 </Group>
               </Box>
@@ -383,7 +369,9 @@ export function RightPanel({
           {" "}| EWAS Pipeline
         </Text>
         <Text size="xs" c="#A3A3A3" mt={8} style={{ fontSize: 9 }}>
-          {alertsUpdatedAt ? `Updated: ${Math.round((Date.now() - alertsUpdatedAt) / 60000)}m ago` : "Updated: —"}
+          <span suppressHydrationWarning>
+            {alertsUpdatedAt ? `Updated: ${Math.round((Date.now() - alertsUpdatedAt) / 60000)}m ago` : "Updated: —"}
+          </span>
         </Text>
       </Box>
     </Box>

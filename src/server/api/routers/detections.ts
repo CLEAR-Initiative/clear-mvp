@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch } from "~/server/api/graphql";
-import type { GqlDetection } from "~/lib/types/graphql";
+// GqlDetection was removed — Detection is now accessed via Signal.source (DataSource)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type GqlDetection = any;
 
 const DETECTION_LIST_QUERY = `
   query Detections($status: DetectionStatus) {

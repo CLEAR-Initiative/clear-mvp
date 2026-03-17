@@ -60,24 +60,19 @@ const LABEL_STYLE = {
 /* ========== Helpers ========== */
 
 function eventDisplayTitle(event: GqlEvent): string {
-  const titles = event.signals.map((s) => s.detection.title).filter(Boolean);
-  if (titles.length === 0) return "Untitled Event";
-  if (titles.length === 1) return titles[0]!;
-  return titles.slice(0, 2).join(" + ") + (titles.length > 2 ? ` (+${titles.length - 2})` : "");
+  if (event.title) return event.title;
+  if (event.description) return event.description;
+  const loc = (event.generalLocation ?? event.originLocation)?.name;
+  return loc ? `${event.types[0] ?? "Event"} — ${loc}` : (event.types[0] ?? "Event");
 }
 
 function eventLocations(event: GqlEvent): string {
-  const locs = new Set<string>();
-  for (const signal of event.signals) {
-    for (const dl of signal.detection.locations) {
-      locs.add(dl.location.name);
-    }
-  }
-  return Array.from(locs).slice(0, 3).join(", ") || "Unknown";
+  const loc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+  return loc?.name ?? "Unknown";
 }
 
 function signalDisplayTitle(signal: GqlSignal): string {
-  return signal.detection.title || "Untitled Signal";
+  return signal.title ?? signal.source.name ?? "Untitled Signal";
 }
 
 /* ========== Event Selection Step ========== */
@@ -98,8 +93,8 @@ function EventSelectionStep({
   onNext: () => void;
 }) {
   const sorted = [...events].sort((a, b) => {
-    const aDate = Math.max(...a.signals.map((s) => new Date(s.detection.createdAt).getTime()), 0);
-    const bDate = Math.max(...b.signals.map((s) => new Date(s.detection.createdAt).getTime()), 0);
+    const aDate = new Date(a.lastSignalCreatedAt).getTime();
+    const bDate = new Date(b.lastSignalCreatedAt).getTime();
     return bDate - aDate;
   });
 
@@ -149,8 +144,8 @@ function EventSelectionStep({
                     </Text>
                   </Box>
                   {event.alerts.length > 0 && (
-                    <Badge size="xs" variant="light" color="gray" style={{ fontSize: 9, flexShrink: 0 }}>
-                      In {event.alerts.length} alert{event.alerts.length !== 1 ? "s" : ""}
+                    <Badge size="xs" variant="light" color="red" style={{ fontSize: 9, flexShrink: 0 }}>
+                      Alert
                     </Badge>
                   )}
                 </Group>
@@ -194,14 +189,11 @@ function CreateEventSubFlow({
 }) {
   const signalsQuery = api.signals.list.useQuery();
   const createSignalMutation = api.signals.create.useMutation();
-  const createDetectionMutation = api.detections.create.useMutation();
   const createEventMutation = api.events.create.useMutation();
 
   const [selectedSignalIds, setSelectedSignalIds] = useState<string[]>([]);
-  const [showCreateSignal, setShowCreateSignal] = useState(false);
   const [showManualSignal, setShowManualSignal] = useState(false);
   const [manualTitle, setManualTitle] = useState("");
-  const [manualConfidence, setManualConfidence] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const signals = signalsQuery.data ?? [];
@@ -219,7 +211,6 @@ function CreateEventSubFlow({
     try {
       const result = await createEventMutation.mutateAsync({
         signalIds: selectedSignalIds,
-        primarySignalId: selectedSignalIds[0],
       });
       onCreated(result.id);
     } catch (err) {
@@ -227,52 +218,23 @@ function CreateEventSubFlow({
     }
   }
 
-  async function handleCreateSignalFromDetection(detectionId: string) {
+  async function handleCreateManualSignal() {
+    if (!manualTitle.trim()) return;
     setErrorMsg(null);
     try {
-      const newSignal = await createSignalMutation.mutateAsync({ detectionId });
+      const newSignal = await createSignalMutation.mutateAsync({
+        title: manualTitle.trim(),
+      });
       setSelectedSignalIds((prev) => [...prev, newSignal.id]);
-      setShowCreateSignal(false);
+      setManualTitle("");
+      setShowManualSignal(false);
       await signalsQuery.refetch();
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Failed to create signal");
     }
   }
 
-  async function handleCreateManualSignal() {
-    if (!manualTitle.trim()) return;
-    setErrorMsg(null);
-    try {
-      // Step 1: Create a detection with manual data
-      const detection = await createDetectionMutation.mutateAsync({
-        title: manualTitle.trim(),
-        confidence: manualConfidence ? Number(manualConfidence) / 100 : undefined,
-        status: "processed",
-      });
-      // Step 2: Create a signal from that detection
-      const newSignal = await createSignalMutation.mutateAsync({
-        detectionId: detection.id,
-      });
-      setSelectedSignalIds((prev) => [...prev, newSignal.id]);
-      setManualTitle("");
-      setManualConfidence("");
-      setShowManualSignal(false);
-      await signalsQuery.refetch();
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Failed to create manual signal");
-    }
-  }
-
-  // Detections that don't have signals yet (for "from detection" flow)
-  const detectionsQuery = api.detections.list.useQuery(
-    { status: "processed" },
-    { enabled: showCreateSignal },
-  );
-  const detectionsWithoutSignals = (detectionsQuery.data ?? []).filter((d) => {
-    return !signals.some((s) => s.detection.id === d.id);
-  });
-
-  const isCreatingManual = createDetectionMutation.isPending || createSignalMutation.isPending;
+  const isCreatingManual = createSignalMutation.isPending;
 
   return (
     <Stack gap="md">
@@ -302,7 +264,7 @@ function CreateEventSubFlow({
         <Box py={16} style={{ textAlign: "center" }}>
           <Loader size={20} />
         </Box>
-      ) : availableSignals.length === 0 && !showCreateSignal && !showManualSignal ? (
+      ) : availableSignals.length === 0 && !showManualSignal ? (
         <Alert color="yellow" variant="light">
           <Text size="sm">No available signals. Create one below.</Text>
         </Alert>
@@ -334,7 +296,7 @@ function CreateEventSubFlow({
                       {signalDisplayTitle(signal)}
                     </Text>
                     <Text c="#737373" style={{ fontSize: 10 }}>
-                      Confidence: {signal.detection.confidence != null ? `${(signal.detection.confidence * 100).toFixed(0)}%` : "N/A"}
+                      Source: {signal.source.name}
                     </Text>
                   </Box>
                 </Group>
@@ -345,7 +307,7 @@ function CreateEventSubFlow({
       )}
 
       {/* Action buttons */}
-      {!showCreateSignal && !showManualSignal && (
+      {!showManualSignal && (
         <Group gap={8}>
           <Button
             variant="outline"
@@ -355,15 +317,6 @@ function CreateEventSubFlow({
             onClick={() => setShowManualSignal(true)}
           >
             Create Manual Signal
-          </Button>
-          <Button
-            variant="outline"
-            color="gray"
-            size="xs"
-            leftSection={<IconPlus size={12} />}
-            onClick={() => setShowCreateSignal(true)}
-          >
-            From Existing Detection
           </Button>
         </Group>
       )}
@@ -383,20 +336,6 @@ function CreateEventSubFlow({
               onChange={(e) => setManualTitle(e.currentTarget.value)}
               required
             />
-            <Select
-              label={<Text style={LABEL_STYLE}>Confidence</Text>}
-              placeholder="Select confidence level"
-              data={[
-                { value: "90", label: "90% — Very High" },
-                { value: "75", label: "75% — High" },
-                { value: "50", label: "50% — Medium" },
-                { value: "25", label: "25% — Low" },
-              ]}
-              value={manualConfidence}
-              onChange={(v) => setManualConfidence(v ?? "")}
-              comboboxProps={{ zIndex: 1000 }}
-              clearable
-            />
             <Group gap={8}>
               <Button
                 size="xs"
@@ -414,56 +353,12 @@ function CreateEventSubFlow({
                 onClick={() => {
                   setShowManualSignal(false);
                   setManualTitle("");
-                  setManualConfidence("");
                 }}
               >
                 Cancel
               </Button>
             </Group>
           </Stack>
-        </Box>
-      )}
-
-      {/* Create signal from existing detection */}
-      {showCreateSignal && (
-        <Box>
-          <Divider mb={8} />
-          <Text style={LABEL_STYLE} mb={8}>
-            Select a detection to create signal from
-          </Text>
-          {detectionsQuery.isLoading ? (
-            <Loader size={16} />
-          ) : detectionsWithoutSignals.length === 0 ? (
-            <Text size="xs" c="#A3A3A3">All detections already have signals.</Text>
-          ) : (
-            <Stack gap={4} style={{ maxHeight: 160, overflowY: "auto" }}>
-              {detectionsWithoutSignals.map((det) => (
-                <Box
-                  key={det.id}
-                  p={6}
-                  className="cursor-pointer hover:bg-[#F0F0F0] transition-colors"
-                  style={{ border: "1px solid #E5E5E5", background: "#F9FAFB" }}
-                  onClick={() => void handleCreateSignalFromDetection(det.id)}
-                >
-                  <Text fw={500} style={{ fontSize: 11 }} lineClamp={1}>
-                    {det.title}
-                  </Text>
-                  <Text c="#737373" style={{ fontSize: 10 }}>
-                    {det.status} &bull; {det.confidence != null ? `${(det.confidence * 100).toFixed(0)}% confidence` : ""}
-                  </Text>
-                </Box>
-              ))}
-            </Stack>
-          )}
-          <Button
-            variant="subtle"
-            color="gray"
-            size="xs"
-            mt={8}
-            onClick={() => setShowCreateSignal(false)}
-          >
-            Cancel
-          </Button>
         </Box>
       )}
 

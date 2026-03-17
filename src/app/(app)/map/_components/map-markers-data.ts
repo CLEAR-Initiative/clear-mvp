@@ -1,5 +1,5 @@
 import type { MapMarker } from "~/components/map/crisis-map";
-import type { GqlAlert } from "~/lib/types/graphql";
+import type { GqlAlert, GqlEvent } from "~/lib/types/graphql";
 import { mapSeverity } from "~/lib/types/graphql";
 
 export interface CrisisMarker extends MapMarker {
@@ -52,25 +52,40 @@ function hashId(a: string, b: string): number {
   return Math.abs(h);
 }
 
-export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
-  const markers: CrisisMarker[] = [];
-  for (const alert of alerts) {
-    for (const loc of alert.locations) {
-      const { latitude, longitude } = loc.location;
-      if (latitude == null || longitude == null) continue;
-      markers.push({
-        id: hashId(alert.id, loc.id),
-        lng: longitude,
-        lat: latitude,
-        title: alert.title,
-        severity: mapSeverity(alert.severity),
-        description: alert.description,
-        region: loc.location.name,
-        status: alert.status,
-      });
+/** Return the first location on an event that has a usable Point geometry */
+function pointLocation(event: GqlEvent) {
+  const candidates = [event.originLocation, event.destinationLocation, event.generalLocation];
+  for (const loc of candidates) {
+    if (loc?.geometry?.type === "Point") {
+      const [lng, lat] = loc.geometry.coordinates as [number, number];
+      if (typeof lng === "number" && typeof lat === "number") return { loc, lng, lat };
     }
   }
+  return null;
+}
+
+export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
+  const markers: CrisisMarker[] = [];
+  for (const event of events) {
+    const point = pointLocation(event);
+    if (!point) continue;
+    const { loc, lng, lat } = point;
+    markers.push({
+      id: hashId(event.id, loc.id),
+      lng,
+      lat,
+      title: event.title ?? event.description ?? event.types[0] ?? "Event",
+      severity: mapSeverity(event.rank),
+      description: event.description ?? undefined,
+      region: loc.name,
+      status: event.alerts[0]?.status,
+    });
+  }
   return markers;
+}
+
+export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
+  return eventsToMarkers(alerts.map((a) => a.event));
 }
 
 /* ========== Derive filter options from markers ========== */

@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CLEAR – Detection (Prototype)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #F9FAFB;
+      color: #171717;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ─────────────────────────────── */
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: #111111;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 20px 0;
+    }
+    .sidebar-brand {
+      padding: 0 18px 20px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    .sidebar-brand .logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: #E85D3D;
+      letter-spacing: -0.5px;
+    }
+    .sidebar-brand .sub {
+      font-size: 11px;
+      color: #666;
+      margin-top: 2px;
+    }
+    .sidebar-section {
+      padding: 16px 18px 4px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #555;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 18px;
+      font-size: 13px;
+      color: #999;
+      cursor: pointer;
+      text-decoration: none;
+      border-left: 2px solid transparent;
+    }
+    .sidebar-item:hover { background: #1a1a1a; color: #ddd; }
+    .sidebar-item.active {
+      color: #fff;
+      background: #1e1e1e;
+      border-left-color: #E85D3D;
+    }
+    .sidebar-item .badge {
+      margin-left: auto;
+      background: #E85D3D22;
+      color: #E85D3D;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+    .sidebar-icon { width: 16px; height: 16px; opacity: 0.7; }
+    .sidebar-item.active .sidebar-icon { opacity: 1; }
+    .sidebar-bottom { margin-top: auto; border-top: 1px solid #2a2a2a; padding-top: 12px; }
+
+    /* ── Main ────────────────────────────────── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Page header ─────────────────────────── */
+    .page-header {
+      background: #fff;
+      border-bottom: 1px solid #E5E5E5;
+      padding: 14px 24px;
+    }
+    .breadcrumb {
+      font-size: 11px;
+      color: #A3A3A3;
+      margin-bottom: 6px;
+    }
+    .breadcrumb span { color: #737373; }
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .page-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #171717;
+      letter-spacing: -0.3px;
+    }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      font-family: inherit;
+    }
+    .btn-primary { background: #E85D3D; color: #fff; border-color: #E85D3D; }
+    .btn-primary:hover { background: #d44e30; }
+    .btn-ghost { background: transparent; color: #525252; border-color: #E5E5E5; }
+    .btn-ghost:hover { background: #F5F5F5; }
+
+    /* ── Status strip ────────────────────────── */
+    .status-strip {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #525252;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 4px;
+    }
+    .status-item + .status-item { border-left: 1px solid #E5E5E5; }
+    .status-item:first-child { padding-left: 0; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-red { background: #DC2626; }
+    .dot-amber { background: #D97706; }
+    .dot-green { background: #059669; }
+    .status-num { font-weight: 700; color: #171717; }
+    .status-num.red { color: #DC2626; }
+    .status-num.amber { color: #D97706; }
+    .status-num.green { color: #059669; }
+    .status-num.blue { color: #2563EB; }
+
+    /* ── Tabs ────────────────────────────────── */
+    .content-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+    }
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid #E5E5E5; margin-bottom: 20px; }
+    .tab {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #737373;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      user-select: none;
+    }
+    .tab:hover { color: #171717; }
+    .tab.active { color: #171717; border-bottom-color: #171717; }
+
+    /* ── Two-col layout ──────────────────────── */
+    .two-col {
+      display: flex;
+      gap: 20px;
+      height: calc(100vh - 210px);
+    }
+    .col-alerts { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .col-map { width: 340px; flex-shrink: 0; }
+
+    /* ── Card ────────────────────────────────── */
+    .card {
+      background: #fff;
+      border: 1px solid #E5E5E5;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #E5E5E5;
+      flex-shrink: 0;
+    }
+    .card-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #171717;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .count-badge {
+      background: #F5F5F5;
+      color: #525252;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 10px;
+    }
+    .count-badge.filtered { background: #FFF0ED; color: #E85D3D; }
+
+    /* ── Toolbar ─────────────────────────────── */
+    .toolbar { display: flex; gap: 6px; align-items: center; }
+    .search-input {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: #F5F5F5;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      padding: 5px 10px;
+      transition: border-color 0.15s;
+    }
+    .search-input:focus-within { border-color: #E5E5E5; background: #fff; }
+    .search-input svg { color: #A3A3A3; flex-shrink: 0; }
+    .search-input input {
+      border: none;
+      background: transparent;
+      font-size: 12px;
+      color: #171717;
+      font-family: inherit;
+      outline: none;
+      width: 100%;
+    }
+    .search-input input::placeholder { color: #A3A3A3; }
+    .icon-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #E5E5E5;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      color: #525252;
+      flex-shrink: 0;
+      position: relative;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .icon-btn:hover { background: #F5F5F5; }
+    .icon-btn.active { border-color: #E85D3D; }
+    .icon-btn .indicator {
+      position: absolute;
+      top: 3px; right: 3px;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #E85D3D;
+      border: 1px solid #fff;
+    }
+
+    /* ── Dropdown ────────────────────────────── */
+    .dropdown-wrap { position: relative; }
+    .dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      background: #fff;
+      border: 1px solid #E5E5E5;
+      border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      z-index: 100;
+      min-width: 200px;
+      padding: 10px;
+    }
+    .dropdown.open { display: block; }
+    .dropdown-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #A3A3A3;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .dropdown-divider { border: none; border-top: 1px solid #F0F0F0; margin: 8px 0; }
+    .sev-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 2px; }
+    .sev-chip {
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 3px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      user-select: none;
+      transition: opacity 0.15s;
+    }
+    .sev-chip.critical { background: #FEE2E2; color: #DC2626; border-color: #DC262640; }
+    .sev-chip.high { background: #FEF3C7; color: #D97706; border-color: #D9770640; }
+    .sev-chip.medium { background: #FEF3C7; color: #D97706; border-color: #D9770640; }
+    .sev-chip.low { background: #ECFDF5; color: #059669; border-color: #05966940; }
+    .sev-chip:not(.on) { background: #F5F5F5; color: #A3A3A3; border-color: #E5E5E5; }
+    .type-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+      color: #525252;
+      cursor: pointer;
+    }
+    .type-row:hover { background: #F5F5F5; }
+    .type-row.on { color: #171717; font-weight: 500; }
+    .sort-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      color: #525252;
+      cursor: pointer;
+    }
+    .sort-row:hover { background: #F5F5F5; }
+    .sort-row.on { color: #171717; font-weight: 500; }
+    .check-icon { color: #E85D3D; font-size: 12px; }
+    .clear-btn {
+      width: 100%;
+      text-align: center;
+      font-size: 11px;
+      color: #E85D3D;
+      font-weight: 500;
+      padding: 4px 0 0;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: inherit;
+    }
+    .clear-btn:hover { text-decoration: underline; }
+
+    /* ── Alert list ──────────────────────────── */
+    .alert-list { overflow-y: auto; flex: 1; }
+    .alert-item {
+      display: flex;
+      gap: 12px;
+      padding: 11px 16px;
+      border-bottom: 1px solid #E5E5E5;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.1s;
+    }
+    .alert-item:hover { background: #F9FAFB; }
+    .alert-bar { width: 3px; flex-shrink: 0; border-radius: 2px; }
+    .alert-body { flex: 1; min-width: 0; }
+    .alert-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+    .alert-badges { display: flex; gap: 6px; align-items: center; }
+    .sev-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 3px;
+    }
+    .sev-badge.critical { background: #FEE2E2; color: #DC2626; }
+    .sev-badge.high { background: #FEF3C7; color: #D97706; }
+    .sev-badge.medium { background: #FEF3C7; color: #D97706; }
+    .sev-badge.low { background: #ECFDF5; color: #059669; }
+    .source-badge {
+      font-size: 10px;
+      color: #737373;
+      background: #F5F5F5;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+    .alert-time { font-size: 11px; color: #A3A3A3; white-space: nowrap; }
+    .alert-title { font-size: 13px; font-weight: 600; color: #171717; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .alert-meta { font-size: 11px; color: #737373; margin-bottom: 6px; }
+    .alert-details { display: flex; gap: 16px; }
+    .alert-detail { font-size: 11px; color: #737373; }
+    .alert-detail strong { color: #171717; font-weight: 500; }
+
+    /* ── Map ─────────────────────────────────── */
+    .map-card { height: 100%; display: flex; flex-direction: column; }
+    .map-placeholder {
+      flex: 1;
+      background: #E8EFD4;
+      position: relative;
+      overflow: hidden;
+    }
+    .map-bg {
+      width: 100%;
+      height: 100%;
+      background:
+        linear-gradient(160deg, #D6E8C8 0%, #C8DDB8 30%, #B8CFA8 60%, #A8BF98 100%);
+    }
+    /* Fake Sudan shape */
+    .sudan-shape {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sudan-svg { opacity: 0.25; }
+    .map-marker {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .marker-critical { background: #DC2626; }
+    .marker-high { background: #D97706; }
+    .marker-medium { background: #D97706; }
+    .marker-low { background: #059669; }
+    .map-attribution {
+      position: absolute;
+      bottom: 6px;
+      right: 8px;
+      font-size: 9px;
+      color: #888;
+      background: rgba(255,255,255,0.7);
+      padding: 1px 4px;
+      border-radius: 2px;
+    }
+
+    /* ── Empty state ─────────────────────────── */
+    .empty-state {
+      padding: 40px 16px;
+      text-align: center;
+      color: #A3A3A3;
+      font-size: 13px;
+      display: none;
+    }
+    .empty-state a { color: #E85D3D; cursor: pointer; font-size: 12px; display: block; margin-top: 4px; }
+
+    /* ── Loader dot ──────────────────────────── */
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .pulse { animation: pulse 1.5s infinite; }
+
+    /* ── Action Row ──────────────────────────── */
+    .action-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .action-row .search-input {
+      flex: 1;
+      min-width: 160px;
+      height: 32px;
+    }
+    .select-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+    .select-wrap select {
+      -webkit-appearance: none;
+      appearance: none;
+      font-size: 12px;
+      font-family: inherit;
+      font-weight: 500;
+      color: #525252;
+      border: 1px solid #E5E5E5;
+      border-radius: 4px;
+      padding: 0 28px 0 10px;
+      background: #fff;
+      cursor: pointer;
+      outline: none;
+      width: 150px;
+      height: 32px;
+    }
+    .select-wrap select:focus { border-color: #C0C0C0; }
+    .select-wrap .sel-arrow {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: #A3A3A3;
+    }
+    .action-row .icon-btn { width: 32px; height: 32px; }
+    .action-divider { width: 1px; height: 20px; background: #E5E5E5; margin: 0 2px; flex-shrink: 0; }
+
+    /* ── KPI Cards ───────────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: #fff;
+      border: 1px solid #EBEBEB;
+      border-radius: 10px;
+      padding: 18px 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .kpi-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #B0B0B0;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+
+    /* Card 1 – severity breakdown */
+    .c1-number {
+      font-size: 44px;
+      font-weight: 700;
+      color: #171717;
+      line-height: 1;
+      letter-spacing: -2px;
+      margin-bottom: 14px;
+    }
+    .sev-mini-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      margin-bottom: 14px;
+    }
+    .sev-mini-item { display: flex; flex-direction: column; gap: 2px; }
+    .sev-mini-num {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.5px;
+    }
+    .sev-mini-lbl {
+      font-size: 9px;
+      font-weight: 500;
+      color: #C0C0C0;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .sev-bar {
+      height: 3px;
+      border-radius: 2px;
+      display: flex;
+      overflow: hidden;
+      margin-top: auto;
+    }
+    .sev-bar-seg { height: 100%; }
+
+    /* Card 2 – trend */
+    .trend-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .trend-toggle {
+      display: flex;
+      background: #F5F5F5;
+      border-radius: 5px;
+      padding: 2px;
+      gap: 1px;
+    }
+    .trend-toggle-btn {
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: 3px;
+      cursor: pointer;
+      color: #A3A3A3;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .trend-toggle-btn.on {
+      background: #fff;
+      color: #171717;
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    }
+    .trend-chart { flex: 1; }
+    .trend-signal {
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+      padding: 3px 8px;
+      border-radius: 20px;
+    }
+    .trend-signal.up { background: #FEF2F2; color: #DC2626; }
+    .trend-signal.down { background: #F0FDF4; color: #059669; }
+
+    /* Card 3 – donut */
+    .donut-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+    }
+    .donut-container {
+      position: relative;
+      width: 76px;
+      height: 76px;
+      flex-shrink: 0;
+    }
+    .donut-css {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: conic-gradient(
+        #DC2626 0% 38%,
+        #E07B3A 38% 63%,
+        #2563EB 63% 83%,
+        #059669 83% 93%,
+        #E5E5E5 93% 100%
+      );
+    }
+    .donut-hole {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px; height: 60px;
+      background: #fff;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.05);
+    }
+    .donut-center-pct {
+      font-size: 14px;
+      font-weight: 700;
+      color: #171717;
+      line-height: 1;
+      letter-spacing: -0.5px;
+    }
+    .donut-center-lbl {
+      font-size: 8px;
+      color: #B0B0B0;
+      font-weight: 500;
+      margin-top: 1px;
+      letter-spacing: 0.02em;
+    }
+    .donut-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      color: #525252;
+    }
+    .legend-bar {
+      width: 3px;
+      height: 12px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .legend-name { flex: 1; }
+    .legend-pct {
+      font-weight: 700;
+      color: #171717;
+      font-size: 11px;
+      letter-spacing: -0.2px;
+    }
+
+    /* Card 4 – escalation */
+    .kpi-card.escalating { }
+    .esc-body {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .esc-number {
+      font-size: 48px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -3px;
+      color: #DC2626;
+    }
+    .esc-unit {
+      font-size: 12px;
+      font-weight: 500;
+      color: #737373;
+      line-height: 1.4;
+      letter-spacing: 0;
+    }
+    .esc-compare {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      margin-top: auto;
+      background: #FEF2F2;
+      color: #DC2626;
+      padding: 3px 8px;
+      border-radius: 20px;
+      align-self: flex-start;
+    }
+    .esc-compare.better {
+      background: #F0FDF4;
+      color: #059669;
+    }
+
+    /* ── Prototype label ─────────────────────── */
+    .proto-label {
+      position: fixed;
+      top: 10px;
+      right: 14px;
+      background: #E85D3D;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 10px;
+      letter-spacing: 0.05em;
+      z-index: 999;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="proto-label">PROTOTYPE</div>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo">CLEAR</div>
+    <div class="sub">Sudan Response Dashboard</div>
+  </div>
+
+  <div class="sidebar-section">Main</div>
+  <a class="sidebar-item" href="#">
+    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Overview
+  </a>
+  <a class="sidebar-item active" href="#">
+    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    Detection
+    <span class="badge">47</span>
+  </a>
+  <a class="sidebar-item" href="#">
+    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Analysis
+  </a>
+  <a class="sidebar-item" href="#">
+    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Operations
+    <span class="badge">2</span>
+  </a>
+  <a class="sidebar-item" href="#">
+    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Cash Assistance
+  </a>
+
+  <div class="sidebar-section">Resources</div>
+  <a class="sidebar-item" href="#">
+    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    Knowledge Hub
+  </a>
+  <a class="sidebar-item" href="#">
+    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    Crisis Map
+  </a>
+
+  <div class="sidebar-bottom">
+    <a class="sidebar-item" href="#">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profile
+    </a>
+    <a class="sidebar-item" href="#">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign Out
+    </a>
+  </div>
+</nav>
+
+<!-- Main -->
+<div class="main">
+  <div class="page-header">
+    <div class="breadcrumb">CLEAR <span>› Detection</span></div>
+    <div class="header-row">
+      <div>
+        <div class="page-title">Crisis Detection</div>
+        <div class="status-strip">
+          <div class="status-item" style="padding-left:0">
+            <span class="status-dot dot-green"></span>
+            Pipeline connected
+          </div>
+          <div class="status-item" style="color:#A3A3A3">Last sync 2 min ago</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-area">
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+
+      <!-- Card 1: Active Alerts + Severity Breakdown -->
+      <div class="kpi-card">
+        <div class="kpi-label">Active Alerts</div>
+        <div class="c1-number" id="kpi-total">47</div>
+        <div class="sev-mini-grid">
+          <div class="sev-mini-item">
+            <div class="sev-mini-num" style="color:#DC2626" id="kpi-c">5</div>
+            <div class="sev-mini-lbl">critical</div>
+          </div>
+          <div class="sev-mini-item">
+            <div class="sev-mini-num" style="color:#D97706" id="kpi-h">9</div>
+            <div class="sev-mini-lbl">high</div>
+          </div>
+          <div class="sev-mini-item">
+            <div class="sev-mini-num" style="color:#C0C0C0" id="kpi-m">15</div>
+            <div class="sev-mini-lbl">medium</div>
+          </div>
+          <div class="sev-mini-item">
+            <div class="sev-mini-num" style="color:#C0C0C0" id="kpi-l">18</div>
+            <div class="sev-mini-lbl">low</div>
+          </div>
+        </div>
+        <div class="sev-bar">
+          <div class="sev-bar-seg" id="bar-c" style="width:10.6%; background:#DC2626"></div>
+          <div class="sev-bar-seg" id="bar-h" style="width:19.1%; background:#D97706"></div>
+          <div class="sev-bar-seg" id="bar-m" style="width:31.9%; background:#E5E5E5"></div>
+          <div class="sev-bar-seg" id="bar-l" style="width:38.3%; background:#F0F0F0"></div>
+        </div>
+      </div>
+
+      <!-- Card 2: 7-Day Trend -->
+      <div class="kpi-card">
+        <div class="trend-header">
+          <div class="kpi-label" style="margin-bottom:0">Critical &amp; High</div>
+          <div class="trend-toggle">
+            <button class="trend-toggle-btn on" onclick="this.closest('.trend-toggle').querySelectorAll('button').forEach(b=>b.classList.remove('on')); this.classList.add('on')">7d</button>
+            <button class="trend-toggle-btn" onclick="this.closest('.trend-toggle').querySelectorAll('button').forEach(b=>b.classList.remove('on')); this.classList.add('on')">30d</button>
+          </div>
+        </div>
+        <div class="trend-chart">
+          <svg viewBox="0 0 200 48" width="100%" height="48" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#DC2626" stop-opacity="0.28"/>
+                <stop offset="70%" stop-color="#DC2626" stop-opacity="0.06"/>
+                <stop offset="100%" stop-color="#DC2626" stop-opacity="0"/>
+              </linearGradient>
+              <filter id="lineGlow">
+                <feGaussianBlur stdDeviation="1.5" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <!-- Glow area fill -->
+            <polygon
+              id="trend-area"
+              points="0,44 33,22 67,29 100,7 133,14 167,2 200,2 200,48 0,48"
+              fill="url(#trendGrad)"
+            />
+            <!-- Sharp line with glow filter -->
+            <polyline
+              id="trend-line"
+              points="0,44 33,22 67,29 100,7 133,14 167,2 200,2"
+              fill="none"
+              stroke="#DC2626"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              filter="url(#lineGlow)"
+            />
+            <!-- Last point highlight -->
+            <circle cx="200" cy="2" r="3" fill="#DC2626" stroke="#fff" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div>
+          <span class="trend-signal up">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+            Escalating
+          </span>
+        </div>
+      </div>
+
+      <!-- Card 3: Alert Types Donut -->
+      <div class="kpi-card">
+        <div class="kpi-label">Alert Types</div>
+        <div class="donut-wrap">
+          <div class="donut-container">
+            <div class="donut-css"></div>
+            <div class="donut-hole">
+              <div class="donut-center-pct">38%</div>
+              <div class="donut-center-lbl">conflict</div>
+            </div>
+          </div>
+          <div class="donut-legend">
+            <div class="legend-row"><span class="legend-bar" style="background:#DC2626"></span><span class="legend-name">Conflict</span><span class="legend-pct">38%</span></div>
+            <div class="legend-row"><span class="legend-bar" style="background:#E07B3A"></span><span class="legend-name">Displacement</span><span class="legend-pct">25%</span></div>
+            <div class="legend-row"><span class="legend-bar" style="background:#2563EB"></span><span class="legend-name">Food Crisis</span><span class="legend-pct">20%</span></div>
+            <div class="legend-row"><span class="legend-bar" style="background:#059669"></span><span class="legend-name">Flood</span><span class="legend-pct">10%</span></div>
+            <div class="legend-row"><span class="legend-bar" style="background:#E5E5E5"></span><span class="legend-name" style="color:#B0B0B0">Other</span><span class="legend-pct" style="color:#B0B0B0">7%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Escalation Signal -->
+      <div class="kpi-card escalating">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <div class="kpi-label" style="margin-bottom:0">Last 24 Hours</div>
+          <span id="esc-badge" style="font-size:9px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; background:#FEE2E2; color:#DC2626; padding:2px 7px; border-radius:10px;">↑ Worsening</span>
+        </div>
+        <div class="esc-body">
+          <div class="esc-number" id="esc-num">+5</div>
+          <div class="esc-unit">new critical<br>alerts today</div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="esc-compare" id="esc-diff">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+          3 more than yesterday
+        </div>
+      </div>
+
+    </div><!-- /kpi-grid -->
+
+    <!-- Action Row -->
+    <div class="action-row">
+      <!-- Search -->
+      <div class="search-input">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="search-input" placeholder="Search alerts…" oninput="applyFilters()" />
+      </div>
+
+      <!-- Region -->
+      <div class="select-wrap">
+        <select id="region-select" onchange="applyRegion()">
+          <option>All Regions</option>
+          <option>Khartoum</option>
+          <option>Darfur</option>
+          <option>Kassala</option>
+          <option>Sennar</option>
+          <option>Red Sea State</option>
+        </select>
+        <svg class="sel-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+
+      <!-- Filter -->
+      <div class="dropdown-wrap">
+        <div class="icon-btn" id="filter-btn" onclick="toggleDropdown('filter-dd', 'filter-btn')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </div>
+        <div class="dropdown" id="filter-dd">
+          <div class="dropdown-label">Severity</div>
+          <div class="sev-chips">
+            <div class="sev-chip critical on" onclick="toggleChip(this,'critical')">Critical</div>
+            <div class="sev-chip high on" onclick="toggleChip(this,'high')">High</div>
+            <div class="sev-chip medium on" onclick="toggleChip(this,'medium')">Medium</div>
+            <div class="sev-chip low on" onclick="toggleChip(this,'low')">Low</div>
+          </div>
+          <hr class="dropdown-divider" />
+          <div class="dropdown-label">Shock Type</div>
+          <div class="type-row on" onclick="toggleType(this)">Conflict<span class="check-icon">✓</span></div>
+          <div class="type-row on" onclick="toggleType(this)">Displacement<span class="check-icon">✓</span></div>
+          <div class="type-row on" onclick="toggleType(this)">Flood<span class="check-icon">✓</span></div>
+          <div class="type-row on" onclick="toggleType(this)">Food Crisis<span class="check-icon">✓</span></div>
+          <div class="type-row on" onclick="toggleType(this)">Disease<span class="check-icon">✓</span></div>
+          <hr class="dropdown-divider" />
+          <button class="clear-btn" onclick="clearFilters()">Clear filters</button>
+        </div>
+      </div>
+
+      <!-- Sort -->
+      <div class="dropdown-wrap">
+        <div class="icon-btn" id="sort-btn" onclick="toggleDropdown('sort-dd', 'sort-btn')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </div>
+        <div class="dropdown" id="sort-dd">
+          <div class="sort-row on" onclick="setSort(this)">Severity: High → Low <span class="check-icon">✓</span></div>
+          <div class="sort-row" onclick="setSort(this)">Severity: Low → High</div>
+          <div class="sort-row" onclick="setSort(this)">Newest first</div>
+          <div class="sort-row" onclick="setSort(this)">Oldest first</div>
+        </div>
+      </div>
+
+      <div class="action-divider"></div>
+
+      <!-- Create Alert -->
+      <button class="btn btn-primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Create Manual Alert
+      </button>
+    </div><!-- /action-row -->
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this, 'live')">Live Alerts</div>
+      <div class="tab" onclick="switchTab(this, 'history')">Alert History</div>
+    </div>
+
+    <!-- Live Alerts Tab -->
+    <div id="tab-live" class="two-col">
+
+      <!-- Alerts column -->
+      <div class="col-alerts">
+        <div class="card" style="display:flex; flex-direction:column; height:100%;">
+          <div class="card-header" style="padding:12px 16px;">
+            <div class="card-title">
+              Active Alerts
+              <span class="count-badge" id="count-badge">47</span>
+            </div>
+          </div>
+
+          <!-- Alert list -->
+          <div class="alert-list" id="alert-list">
+
+            <a class="alert-item" href="#" data-sev="critical" data-type="Conflict" data-region="Khartoum">
+              <div class="alert-bar" style="background:#DC2626"></div>
+              <div class="alert-body">
+                <div class="alert-top">
+                  <div class="alert-badges">
+                    <span class="sev-badge critical">Critical</span>
+                    <span class="source-badge">ACLED</span>
+                  </div>
+                  <span class="alert-time">4h ago</span>
+                </div>
+                <div class="alert-title">Conflict escalation reported in Khartoum North</div>
+                <div class="alert-meta">Khartoum • Conflict</div>
+                <div class="alert-details">
+                  <span class="alert-detail">Severity: <strong>5/5</strong></span>
+                  <span class="alert-detail">Shock date: <strong>27.2.2026</strong></span>
+                </div>
+              </div>
+            </a>
+
+            <a class="alert-item" href="#" data-sev="critical" data-type="Displacement" data-region="Darfur">
+              <div class="alert-bar" style="background:#DC2626"></div>
+              <div class="alert-body">
+                <div class="alert-top">
+                  <div class="alert-badges">
+                    <span class="sev-badge critical">Critical</span>
+                    <span class="source-badge">UNHCR Feed</span>
+                  </div>
+                  <span class="alert-time">6h ago</span>
+                </div>
+                <div class="alert-title">Mass displacement event: 40,000+ people fleeing West Darfur</div>
+                <div class="alert-meta">El Geneina • Displacement</div>
+                <div class="alert-details">
+                  <span class="alert-detail">Severity: <strong>5/5</strong></span>
+                  <span class="alert-detail">Shock date: <strong>26.2.2026</strong></span>
+                </div>
+              </div>
+            </a>
+
+            <a class="alert-item" href="#" data-sev="critical" data-type="Food Crisis" data-region="Darfur">
+              <div class="alert-bar" style="background:#DC2626"></div>
+              <div class="alert-body">
+                <div class="alert-top">
+                  <div class="alert-badges">
+                    <span class="sev-badge critical">Critical</span>
+                    <span class="source-badge">IPC</span>
+                  </div>
+                  <span class="alert-time">8h ago</span>
+                </div>
+                <div class="alert-title">IPC Phase 5 — Famine conditions confirmed in North Darfur</div>
+                <div class="alert-meta">El Fasher • Food Crisis</div>
+                <div class="alert-details">
+                  <span class="alert-detail">Severity: <strong>5/5</strong></span>
+                  <span class="alert-detail">Shock date: <strong>25.2.2026</strong></span>
+                </div>
+              </div>
+            </a>
+
+            <a class="alert-item" href="#" data-sev="high" data-type="Flood" data-region="Sennar">
+              <div class="alert-bar" style="background:#D97706"></div>
+              <div class="alert-body">
+                <div class="alert-top">
+                  <div class="alert-badges">
+                    <span class="sev-badge high">High</span>
+                    <span class="source-badge">GLOFAS</span>
+                  </div>
+                  <span class="alert-time">12h ago</span>
+                </div>
+                <div class="alert-title">Flood warning: Blue Nile projected to exceed danger level</div>
+                <div class="alert-meta">Sennar • Flood</div>
+                <div class="alert-details">
+                  <span class="alert-detail">Severity: <strong>4/5</strong></span>
+                  <span class="alert-detail">Shock date: <strong>28.2.2026</strong></span>
+                </div>
+              </div>
+            </a>
+
+            <a class="alert-item" href="#" data-sev="high" data-type="Food Crisis" data-region="Kassala">
+              <div class="alert-bar" style="background:#D97706"></div>
+              <div class="alert-body">
+                <div class="alert-top">
+                  <div class="alert-badges">
+                    <span class="sev-badge high">High</span>
+                    <span class="source-badge">WFP</span>
+                  </div>
+                  <span class="alert-time">1d ago</span>
+                </div>
+                <div class="alert-title">Acute food insecurity spike — Kassala border crossing blocked</div>
+                <div class="alert-meta">Kassala • Food Crisis</div>
+                <div class="alert-details">
+                  <span class="alert-detail">Severity: <strong>4/5</strong></span>
+                  <span class="alert-detail">Shock date: <strong>26.2.2026</strong></span>
+                </div>
+              </div>
+            </a>
+
+            <a class="alert-item" href="#" data-sev="high" data-type="Conflict" data-region="Red Sea State">
+              <div class="alert-bar" style="background:#D97706"></div>
+              <div class="alert-body">
+                <div class="alert-top">
+                  <div class="alert-badges">
+                    <span class="sev-badge high">High</span>
+                    <span class="source-badge">ACLED</span>
+                  </div>
+                  <span class="alert-time">1d ago</span>
+                </div>
+                <div class="alert-title">Armed clashes near humanitarian corridor — Port Sudan road</div>
+                <div class="alert-meta">Red Sea State • Conflict</div>
+                <div class="alert-details">
+                  <span class="alert-detail">Severity: <strong>4/5</strong></span>
+                  <span class="alert-detail">Shock date: <strong>26.2.2026</strong></span>
+                </div>
+              </div>
+            </a>
+
+            <a class="alert-item" href="#" data-sev="medium" data-type="Disease" data-region="Darfur">
+              <div class="alert-bar" style="background:#D97706"></div>
+              <div class="alert-body">
+                <div class="alert-top">
+                  <div class="alert-badges">
+                    <span class="sev-badge medium">Medium</span>
+                    <span class="source-badge">WHO</span>
+                  </div>
+                  <span class="alert-time">2d ago</span>
+                </div>
+                <div class="alert-title">Cholera outbreak risk rising — displacement camp, El Fasher</div>
+                <div class="alert-meta">El Fasher • Disease</div>
+                <div class="alert-details">
+                  <span class="alert-detail">Severity: <strong>3/5</strong></span>
+                  <span class="alert-detail">Shock date: <strong>25.2.2026</strong></span>
+                </div>
+              </div>
+            </a>
+
+            <a class="alert-item" href="#" data-sev="low" data-type="Displacement" data-region="Kassala">
+              <div class="alert-bar" style="background:#059669"></div>
+              <div class="alert-body">
+                <div class="alert-top">
+                  <div class="alert-badges">
+                    <span class="sev-badge low">Low</span>
+                    <span class="source-badge">DTM</span>
+                  </div>
+                  <span class="alert-time">3d ago</span>
+                </div>
+                <div class="alert-title">New IDP site identified: Gedaref — population estimate 2,300</div>
+                <div class="alert-meta">Gedaref • Displacement</div>
+                <div class="alert-details">
+                  <span class="alert-detail">Severity: <strong>2/5</strong></span>
+                  <span class="alert-detail">Shock date: <strong>24.2.2026</strong></span>
+                </div>
+              </div>
+            </a>
+
+          </div>
+
+          <!-- Empty state (hidden by default) -->
+          <div class="empty-state" id="empty-state">
+            No alerts match your filters.
+            <a onclick="clearAll()">Clear all</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map column -->
+      <div class="col-map">
+        <div class="card map-card">
+          <div class="card-header" style="border-bottom:1px solid #E5E5E5;">
+            <div class="card-title">Crisis Map</div>
+          </div>
+          <div class="map-placeholder">
+            <div class="map-bg"></div>
+            <!-- Fake markers -->
+            <div class="map-marker marker-critical" style="top:38%;left:42%" title="Khartoum — Critical">!</div>
+            <div class="map-marker marker-critical" style="top:55%;left:22%" title="El Geneina — Critical">!</div>
+            <div class="map-marker marker-critical" style="top:48%;left:30%" title="El Fasher — Critical">!</div>
+            <div class="map-marker marker-high" style="top:62%;left:50%" title="Sennar — High">4</div>
+            <div class="map-marker marker-high" style="top:45%;left:68%" title="Kassala — High">4</div>
+            <div class="map-marker marker-high" style="top:32%;left:72%" title="Port Sudan — High">4</div>
+            <div class="map-marker marker-medium" style="top:50%;left:29%" title="El Fasher — Medium">3</div>
+            <div class="map-marker marker-low" style="top:58%;left:58%" title="Gedaref — Low">2</div>
+            <div class="map-attribution">© Mapbox © OpenStreetMap</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /two-col -->
+
+    <!-- Placeholder tabs -->
+    <div id="tab-sources" style="display:none; color:#737373; font-size:13px; padding:40px 0; text-align:center;">Data Sources tab — not shown in prototype</div>
+    <div id="tab-rules" style="display:none; color:#737373; font-size:13px; padding:40px 0; text-align:center;">Alert Rules tab — not shown in prototype</div>
+    <div id="tab-history" style="display:none; color:#737373; font-size:13px; padding:40px 0; text-align:center;">History tab — not shown in prototype</div>
+
+  </div><!-- /content-area -->
+</div><!-- /main -->
+
+<script>
+  // ── Region data ────────────────────────────────────────
+  // trend: 7 SVG y-values (0=top/high, 48=bottom/low) over 7 days
+  const regionData = {
+    'All Regions': {
+      total:47, c:5, h:9, m:15, l:18,
+      trend:[44,22,29,7,14,2,2],
+      escNum:'+5', escDiff:'3 more than yesterday', escWorse:true
+    },
+    'Khartoum': {
+      total:12, c:3, h:4, m:3, l:2,
+      trend:[40,30,22,14,8,4,2],
+      escNum:'+3', escDiff:'2 more than yesterday', escWorse:true
+    },
+    'Darfur': {
+      total:18, c:2, h:3, m:8, l:5,
+      trend:[46,38,32,26,20,14,10],
+      escNum:'+2', escDiff:'1 more than yesterday', escWorse:true
+    },
+    'Kassala': {
+      total:6, c:0, h:1, m:3, l:2,
+      trend:[48,46,44,42,40,38,36],
+      escNum:'+0', escDiff:'no change from yesterday', escWorse:false
+    },
+    'Sennar': {
+      total:5, c:0, h:1, m:2, l:2,
+      trend:[48,44,40,36,32,28,26],
+      escNum:'+1', escDiff:'same as yesterday', escWorse:false
+    },
+    'Red Sea State': {
+      total:6, c:0, h:1, m:2, l:3,
+      trend:[48,46,44,42,38,36,34],
+      escNum:'+1', escDiff:'no change from yesterday', escWorse:false
+    }
+  };
+
+  // ── Helpers ────────────────────────────────────────────
+  function dataToPoly(pts) {
+    const xs = [0, 33, 67, 100, 133, 167, 200];
+    return pts.map((y, i) => `${xs[i]},${y}`).join(' ');
+  }
+
+  // ── Apply region ───────────────────────────────────────
+  function applyRegion() {
+    const region = document.getElementById('region-select').value;
+    const d = regionData[region] || regionData['All Regions'];
+
+    // KPI card 1 – active alerts + severity breakdown
+    document.getElementById('kpi-total').textContent = d.total;
+    document.getElementById('kpi-c').textContent = d.c;
+    document.getElementById('kpi-h').textContent = d.h;
+    document.getElementById('kpi-m').textContent = d.m;
+    document.getElementById('kpi-l').textContent = d.l;
+    const t = d.total || 1;
+    document.getElementById('bar-c').style.width = (d.c / t * 100).toFixed(1) + '%';
+    document.getElementById('bar-h').style.width = (d.h / t * 100).toFixed(1) + '%';
+    document.getElementById('bar-m').style.width = (d.m / t * 100).toFixed(1) + '%';
+    document.getElementById('bar-l').style.width = (d.l / t * 100).toFixed(1) + '%';
+
+    // KPI card 2 – trend sparkline
+    const linePoints = dataToPoly(d.trend);
+    const lastY = d.trend[d.trend.length - 1];
+    document.getElementById('trend-line').setAttribute('points', linePoints);
+    document.getElementById('trend-area').setAttribute('points', linePoints + ' 200,48 0,48');
+    const dot = document.querySelector('.trend-chart circle');
+    if (dot) { dot.setAttribute('cx', 200); dot.setAttribute('cy', lastY); }
+
+    // KPI card 4 – escalation signal
+    document.getElementById('esc-num').textContent = d.escNum;
+    const upArrow = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>';
+    const downArrow = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>';
+    const escDiffEl = document.getElementById('esc-diff');
+    escDiffEl.innerHTML = (d.escWorse ? upArrow : downArrow) + ' ' + d.escDiff;
+    escDiffEl.className = 'esc-compare' + (d.escWorse ? '' : ' better');
+    const badge = document.getElementById('esc-badge');
+    badge.textContent = d.escWorse ? '↑ Worsening' : '→ Stable';
+    badge.style.background = d.escWorse ? '#FEE2E2' : '#F0FDF4';
+    badge.style.color = d.escWorse ? '#DC2626' : '#059669';
+
+    // Re-apply list filters (handles region filtering too)
+    applyFilters();
+  }
+
+  // ── Tab switching ──────────────────────────────────────
+  function switchTab(el, id) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tab-live').style.display = id === 'live' ? 'flex' : 'none';
+    document.getElementById('tab-history').style.display = id === 'history' ? 'block' : 'none';
+  }
+
+  // ── Dropdowns ──────────────────────────────────────────
+  function toggleDropdown(ddId, btnId) {
+    const dd = document.getElementById(ddId);
+    const isOpen = dd.classList.contains('open');
+    document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
+    document.querySelectorAll('.icon-btn').forEach(b => b.classList.remove('active'));
+    if (!isOpen) {
+      dd.classList.add('open');
+      document.getElementById(btnId).classList.add('active');
+    }
+  }
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.dropdown-wrap')) {
+      document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
+      document.querySelectorAll('.icon-btn').forEach(b => {
+        if (!b.querySelector('.indicator')) b.classList.remove('active');
+      });
+    }
+  });
+
+  // ── Severity chips ─────────────────────────────────────
+  function toggleChip(chip) {
+    chip.classList.toggle('on');
+    applyFilters();
+    updateFilterIndicator();
+  }
+
+  // ── Shock type rows ────────────────────────────────────
+  function toggleType(row) {
+    row.classList.toggle('on');
+    const check = row.querySelector('.check-icon');
+    if (check) check.style.display = row.classList.contains('on') ? '' : 'none';
+    applyFilters();
+    updateFilterIndicator();
+  }
+
+  // ── Sort ───────────────────────────────────────────────
+  function setSort(row) {
+    document.querySelectorAll('.sort-row').forEach(r => {
+      r.classList.remove('on');
+      const c = r.querySelector('.check-icon');
+      if (c) c.remove();
+    });
+    row.classList.add('on');
+    const check = document.createElement('span');
+    check.className = 'check-icon';
+    check.textContent = '✓';
+    row.appendChild(check);
+    const btn = document.getElementById('sort-btn');
+    btn.style.borderColor = row.textContent.includes('High → Low') ? '' : '#E85D3D';
+  }
+
+  // ── Clear ──────────────────────────────────────────────
+  function clearFilters() {
+    document.querySelectorAll('.sev-chip').forEach(c => c.classList.add('on'));
+    document.querySelectorAll('.type-row').forEach(r => {
+      r.classList.add('on');
+      const c = r.querySelector('.check-icon');
+      if (c) c.style.display = '';
+    });
+    applyFilters();
+    updateFilterIndicator();
+  }
+  function clearAll() {
+    clearFilters();
+    document.getElementById('search-input').value = '';
+    applyFilters();
+  }
+
+  // ── Filter logic ───────────────────────────────────────
+  function applyFilters() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    const region = document.getElementById('region-select').value;
+    const activeSevs = Array.from(document.querySelectorAll('.sev-chip.on')).map(c => c.classList[1]);
+    const activeTypes = Array.from(document.querySelectorAll('.type-row.on')).map(r => r.textContent.trim().replace('✓','').trim());
+
+    const items = document.querySelectorAll('.alert-item');
+    let shown = 0;
+    items.forEach(item => {
+      const sev = item.dataset.sev;
+      const type = item.dataset.type;
+      const itemRegion = item.dataset.region || '';
+      const text = item.textContent.toLowerCase();
+      const matchSev = activeSevs.includes(sev);
+      const matchType = activeTypes.includes(type);
+      const matchQ = !q || text.includes(q);
+      const matchRegion = region === 'All Regions' || itemRegion === region;
+      const visible = matchSev && matchType && matchQ && matchRegion;
+      item.style.display = visible ? '' : 'none';
+      if (visible) shown++;
+    });
+
+    const total = items.length;
+    const badge = document.getElementById('count-badge');
+    const empty = document.getElementById('empty-state');
+    const list = document.getElementById('alert-list');
+
+    if (shown === 0) {
+      list.style.display = 'none';
+      empty.style.display = 'block';
+    } else {
+      list.style.display = '';
+      empty.style.display = 'none';
+    }
+
+    const isFiltered = shown < total || q.length > 0 || region !== 'All Regions';
+    badge.textContent = isFiltered ? `${shown}/${total}` : String(total);
+    badge.className = 'count-badge' + (isFiltered ? ' filtered' : '');
+  }
+
+  function updateFilterIndicator() {
+    const allSevOn = document.querySelectorAll('.sev-chip:not(.on)').length === 0;
+    const allTypesOn = document.querySelectorAll('.type-row:not(.on)').length === 0;
+    const btn = document.getElementById('filter-btn');
+    const existing = btn.querySelector('.indicator');
+    const hasFilter = !allSevOn || !allTypesOn;
+    if (hasFilter && !existing) {
+      const dot = document.createElement('div');
+      dot.className = 'indicator';
+      btn.appendChild(dot);
+      btn.style.borderColor = '#E85D3D';
+    } else if (!hasFilter && existing) {
+      existing.remove();
+      btn.style.borderColor = '';
+    }
+  }
+</script>
+</body>
+</html>
