@@ -12,10 +12,6 @@ interface CoverageRingsCardProps {
   onNavigateToAlerts?: () => void;
 }
 
-// ── SVG geometry ──────────────────────────────────────────────────────────────
-// Angles: 0° = right (3 o'clock), 90° = up (12 o'clock), 180° = left (9 o'clock)
-// SVG coords: x = cx + r·cos(θ),  y = cy − r·sin(θ)
-
 const CX = 90, CY = 94;
 const RING_R   = 68;
 const STROKE_W = 9;
@@ -34,46 +30,38 @@ function arcD(fromDeg: number, toDeg: number): string {
   return `M ${f(x1)} ${f(y1)} A ${RING_R} ${RING_R} 0 ${large} 1 ${f(x2)} ${f(y2)}`;
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
-
 export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: CoverageRingsCardProps) {
   void events;
   const totalAlerts = alerts.length;
-  // TODO: replace with real analysis-status field when tracked
   const analysed  = Math.min(1, totalAlerts);
   const uncovered = totalAlerts - analysed;
   const coveragePct = totalAlerts > 0 ? Math.round((analysed / totalAlerts) * 100) : 0;
 
-  // alpha = angle where green fill ends; 180° at 0%, 0° at 100%
   const fraction  = coveragePct / 100;
   const alpha     = 180 - fraction * 180;
-
-  // Clamp slightly so SVG arc never degenerates (start === end)
   const greenEnd  = Math.max(0.5, Math.min(179.5, alpha));
   const hasGreen  = fraction > 0.005;
 
   return (
     <Box style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B7280", marginBottom: 12 }}>
+      <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A3A3A3", marginBottom: 12 }}>
         Analysis Coverage
       </Text>
 
       <Box style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-
-        {/* ── Gauge ── */}
         <Box style={{ width: "100%", maxWidth: 196 }}>
           <svg viewBox="0 0 180 98" width="100%" style={{ overflow: "visible" }}>
 
-            {/* Track — full half-ring, muted red = "uncovered" */}
+            {/* Track — full half-ring, muted red = uncovered */}
             <path
               d={arcD(180, 0)}
               fill="none"
-              stroke="rgba(239,68,68,0.22)"
+              stroke="rgba(239,68,68,0.18)"
               strokeWidth={STROKE_W}
               strokeLinecap="round"
             />
 
-            {/* Fill — covered portion in green, drawn on top of track */}
+            {/* Fill — covered portion */}
             {hasGreen && (
               <path
                 d={arcD(180, greenEnd)}
@@ -84,11 +72,11 @@ export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: Covera
               />
             )}
 
-            {/* ── Centre labels ── */}
+            {/* Centre labels */}
             <text
               x={CX} y={CY - 24}
               textAnchor="middle" dominantBaseline="middle"
-              fill="#F9FAFB" fontSize="21" fontWeight="800"
+              fill="#171717" fontSize="21" fontWeight="800"
               fontFamily="system-ui, -apple-system, sans-serif"
             >
               {coveragePct}%
@@ -96,7 +84,7 @@ export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: Covera
             <text
               x={CX} y={CY - 10}
               textAnchor="middle" dominantBaseline="middle"
-              fill="#6B7280" fontSize="8" fontWeight="600" letterSpacing="0.1em"
+              fill="#A3A3A3" fontSize="8" fontWeight="600" letterSpacing="0.1em"
               fontFamily="system-ui, -apple-system, sans-serif"
             >
               COVERED
@@ -104,27 +92,27 @@ export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: Covera
           </svg>
         </Box>
 
-        {/* ── Stats ── */}
+        {/* Stats */}
         <Group justify="center" gap={20} mt={16}>
           {[
-            { dot: "#22C55E",              value: analysed,    label: "Analysed"   },
-            { dot: "rgba(239,68,68,0.7)",  value: uncovered,   label: "Unanalysed" },
-            { dot: "#F59E0B",              value: totalAlerts, label: "Alerts"     },
+            { dot: "#22C55E",             value: analysed,    label: "Analysed"   },
+            { dot: "rgba(239,68,68,0.6)", value: uncovered,   label: "Unanalysed" },
+            { dot: "#F59E0B",             value: totalAlerts, label: "Alerts"     },
           ].map(({ dot, value, label }) => (
             <Box key={label} style={{ textAlign: "center" }}>
               <Group gap={4} justify="center" mb={2}>
                 <Box style={{ width: 6, height: 6, borderRadius: "50%", background: dot, flexShrink: 0 }} />
-                <Text style={{ fontSize: 17, fontWeight: 700, color: "#F9FAFB", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+                <Text style={{ fontSize: 17, fontWeight: 700, color: "#171717", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
                   {value}
                 </Text>
               </Group>
-              <Text style={{ fontSize: 10, color: "#6B7280" }}>{label}</Text>
+              <Text style={{ fontSize: 10, color: "#A3A3A3" }}>{label}</Text>
             </Box>
           ))}
         </Group>
       </Box>
 
-      {/* ── Action line ── */}
+      {/* Action line */}
       <Box
         onClick={uncovered > 0 ? onNavigateToAlerts : undefined}
         style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 5, cursor: uncovered > 0 ? "pointer" : "default" }}

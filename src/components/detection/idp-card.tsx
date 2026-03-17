@@ -48,11 +48,12 @@ function SparkTooltip({ active, payload, label }: SparkTooltipProps) {
   if (!active || !payload?.[0]) return null;
   return (
     <Box style={{
-      background: "#1F2937", border: "1px solid rgba(255,255,255,0.08)",
+      background: "#FFFFFF", border: "1px solid #E5E5E5",
       borderRadius: 6, padding: "6px 10px",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
     }}>
-      <Text style={{ color: "#9CA3AF", fontSize: 10 }}>{label != null ? formatMonth(label) : ""}</Text>
-      <Text style={{ color: "#F9FAFB", fontSize: 12, fontWeight: 700 }}>
+      <Text style={{ color: "#A3A3A3", fontSize: 10 }}>{label != null ? formatMonth(label) : ""}</Text>
+      <Text style={{ color: "#171717", fontSize: 12, fontWeight: 700 }}>
         {payload[0].value !== undefined ? formatCount(payload[0].value) : ""}
       </Text>
     </Box>
@@ -70,7 +71,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
   );
 
   const cardLabel = (
-    <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B7280", marginBottom: 16 }}>
+    <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A3A3A3", marginBottom: 16 }}>
       IDP Displacement
     </Text>
   );
@@ -99,7 +100,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
             onClick={() => void query.refetch()}
             style={{
               fontSize: 10, fontWeight: 600, color: "#6B7280",
-              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+              background: "#F5F5F5", border: "1px solid #E5E5E5",
               borderRadius: 5, padding: "4px 10px", cursor: "pointer",
               display: "flex", alignItems: "center", gap: 4,
             }}
@@ -118,13 +119,13 @@ export function IdpCard({ locationCode }: IdpCardProps) {
       <Box style={{ height: "100%", display: "flex", flexDirection: "column" }}>
         {cardLabel}
         <Box style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, textAlign: "center" }}>
-          <Text style={{ fontSize: 22, color: "rgba(255,255,255,0.12)" }}>&#8862;</Text>
-          <Text style={{ fontSize: 13, color: "#9CA3AF", fontWeight: 600 }}>No displacement data</Text>
-          <Text style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.4 }}>
+          <Text style={{ fontSize: 22, color: "rgba(0,0,0,0.1)" }}>&#8862;</Text>
+          <Text style={{ fontSize: 13, color: "#525252", fontWeight: 600 }}>No displacement data</Text>
+          <Text style={{ fontSize: 11, color: "#737373", lineHeight: 1.4 }}>
             {locationCode} is not tracked in IOM DTM
           </Text>
           {/* TODO: show UNHCR fallback estimate when API access is available */}
-          <Text style={{ fontSize: 10, color: "#4B5563", fontStyle: "italic", marginTop: 4 }}>
+          <Text style={{ fontSize: 10, color: "#A3A3A3", fontStyle: "italic", marginTop: 4 }}>
             Coverage varies by country
           </Text>
         </Box>
@@ -143,12 +144,12 @@ export function IdpCard({ locationCode }: IdpCardProps) {
       <Group justify="space-between" align="flex-start" mb={4}>
         <Box>
           <Text style={{
-            fontSize: 34, fontWeight: 800, color: "#F9FAFB", lineHeight: 1,
+            fontSize: 34, fontWeight: 800, color: "#171717", lineHeight: 1,
             fontVariantNumeric: "tabular-nums", letterSpacing: "-0.03em",
           }}>
             {formatCount(current)}
           </Text>
-          <Text style={{ fontSize: 11, color: "#6B7280", marginTop: 3 }}>
+          <Text style={{ fontSize: 11, color: "#737373", marginTop: 3 }}>
             Internally Displaced &middot; {locationName}
           </Text>
         </Box>
@@ -165,7 +166,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
             }}>
               {delta >= 0 ? "+" : ""}{formatCount(Math.abs(delta))}
             </Text>
-            <Text style={{ fontSize: 9, color: "#6B7280" }}>vs last month</Text>
+            <Text style={{ fontSize: 9, color: "#737373" }}>vs last month</Text>
           </Box>
         )}
       </Group>
@@ -194,7 +195,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
       <Group justify="space-between" align="center" mt={10}>
         <Group gap={5} align="center">
           <Box style={{ width: 6, height: 6, borderRadius: "50%", background: dot }} />
-          <Text style={{ fontSize: 9, color: "#6B7280" }}>
+          <Text style={{ fontSize: 9, color: "#A3A3A3" }}>
             IOM DTM via HAPI &middot; {formatMonth(lastUpdated)}
           </Text>
         </Group>
@@ -210,7 +211,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
           multiline
           withArrow
         >
-          <Box style={{ cursor: "help", color: "#4B5563", display: "flex" }}>
+          <Box style={{ cursor: "help", color: "#A3A3A3", display: "flex" }}>
             <IconInfoCircle size={13} />
           </Box>
         </Tooltip>

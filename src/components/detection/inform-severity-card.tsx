@@ -14,7 +14,7 @@ const INFORM_COLORS = {
 
 function ScoreBar({ value, max = 10, color }: { value: number; max?: number; color: string }) {
   return (
-    <Box style={{ height: 3, background: "rgba(255,255,255,0.1)", borderRadius: 2, overflow: "hidden" }}>
+    <Box style={{ height: 3, background: "#F0F0F0", borderRadius: 2, overflow: "hidden" }}>
       <Box style={{ height: "100%", width: `${(value / max) * 100}%`, background: color, borderRadius: 2 }} />
     </Box>
   );
@@ -32,8 +32,8 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
 
   const cardLabel = (
     <Group gap={6} mb={16}>
-      <Box style={{ color: "#6B7280" }}><IconChartBar size={13} /></Box>
-      <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B7280" }}>
+      <Box style={{ color: "#A3A3A3" }}><IconChartBar size={13} /></Box>
+      <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A3A3A3" }}>
         INFORM Severity
       </Text>
     </Group>
@@ -59,7 +59,7 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
       <Box style={{ height: "100%", display: "flex", flexDirection: "column" }}>
         {cardLabel}
         <Box style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ fontSize: 11, color: "#6B7280" }}>No data for {country}</Text>
+          <Text style={{ fontSize: 11, color: "#737373" }}>No data for {country}</Text>
         </Box>
       </Box>
     );
@@ -92,7 +92,7 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
         </Box>
       </Group>
 
-      <Text style={{ fontSize: 10, color: "#9CA3AF", fontWeight: 500, marginBottom: 14, lineHeight: 1.3 }}
+      <Text style={{ fontSize: 10, color: "#737373", fontWeight: 500, marginBottom: 14, lineHeight: 1.3 }}
         lineClamp={2}>
         {inform.crisisName}
       </Text>
@@ -106,8 +106,8 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
         ].map(({ label, value }) => (
           <Box key={label}>
             <Group justify="space-between" mb={3}>
-              <Text style={{ fontSize: 10, color: "#6B7280", fontWeight: 500 }}>{label}</Text>
-              <Text style={{ fontSize: 10, fontWeight: 700, color: "#E5E7EB", fontVariantNumeric: "tabular-nums" }}>
+              <Text style={{ fontSize: 10, color: "#737373", fontWeight: 500 }}>{label}</Text>
+              <Text style={{ fontSize: 10, fontWeight: 700, color: "#525252", fontVariantNumeric: "tabular-nums" }}>
                 {value.toFixed(1)}
               </Text>
             </Group>
@@ -118,7 +118,7 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
 
       {/* footer */}
       <Group justify="space-between" mt={12} align="center">
-        <Text style={{ fontSize: 9, color: "#4B5563" }}>
+        <Text style={{ fontSize: 9, color: "#A3A3A3" }}>
           Updated {inform.lastUpdated}
         </Text>
         <Text style={{ fontSize: 9, color: "#4B5563", fontWeight: 600 }}>

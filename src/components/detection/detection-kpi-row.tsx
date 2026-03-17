@@ -20,11 +20,12 @@ const ISO3: Record<string, string> = {
 };
 
 const CARD: React.CSSProperties = {
-  background: "#111827",
-  border: "1px solid rgba(255,255,255,0.06)",
+  background: "#ffffff",
+  border: "1px solid #E5E5E5",
   borderRadius: 12,
   minHeight: 180,
   padding: 20,
+  boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03)",
 };
 
 interface DetectionKpiRowProps {
