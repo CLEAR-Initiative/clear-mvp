@@ -1,7 +1,8 @@
 "use client";
 
-import { Box, Text, Group, Skeleton, Tooltip } from "@mantine/core";
-import { IconWifiOff, IconInfoCircle, IconRefresh } from "@tabler/icons-react";
+import { Box, Text, Group, Skeleton, Modal, Anchor, List } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
+import { IconWifiOff, IconInfoCircle, IconRefresh, IconExternalLink } from "@tabler/icons-react";
 import {
   AreaChart,
   Area,
@@ -69,6 +70,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
     { locationCode },
     { staleTime: 1000 * 60 * 60, retry: 1 },
   );
+  const [infoOpened, { open: openInfo, close: closeInfo }] = useDisclosure(false);
 
   const cardLabel = (
     <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A3A3A3", marginBottom: 16 }}>
@@ -201,23 +203,63 @@ export function IdpCard({ locationCode }: IdpCardProps) {
             IOM DTM via HAPI &middot; {formatMonth(lastUpdated)}
           </Text>
         </Group>
-        <Tooltip
-          label={
-            <Box style={{ maxWidth: 200 }}>
-              <Text size="xs" mb={4}>Conflict-induced displacement only.</Text>
-              <Text size="xs" mb={4}>Flood and disaster displacement not included -- not tracked in IOM DTM for this country.</Text>
-              <Text size="xs">Data covers IOM DTM monitoring footprint only -- may be incomplete.</Text>
-            </Box>
-          }
-          position="top-end"
-          multiline
-          withArrow
+        <Box
+          onClick={openInfo}
+          style={{ cursor: "pointer", color: "#A3A3A3", display: "flex", transition: "color 0.15s" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#525252")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "#A3A3A3")}
         >
-          <Box style={{ cursor: "help", color: "#A3A3A3", display: "flex" }}>
-            <IconInfoCircle size={13} />
-          </Box>
-        </Tooltip>
+          <IconInfoCircle size={13} />
+        </Box>
       </Group>
+
+      <Modal
+        opened={infoOpened}
+        onClose={closeInfo}
+        title="IDP Displacement: Methodology"
+        size="md"
+        styles={{
+          title: { fontSize: 14, fontWeight: 700, color: "#171717" },
+          body: { paddingTop: 4 },
+        }}
+      >
+        <Text style={{ fontSize: 13, color: "#525252", marginBottom: 12, lineHeight: 1.6 }}>
+          This card shows the total number of <strong>conflict-induced internally displaced persons (IDPs)</strong> tracked
+          by IOM&apos;s Displacement Tracking Matrix (DTM) for the selected country. The figure reflects the latest
+          available snapshot, not a cumulative total.
+        </Text>
+
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>What the numbers mean</Text>
+        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
+          <List.Item><strong>Current count</strong>: most recent IDP figure from IOM DTM for the country.</List.Item>
+          <List.Item><strong>Month-over-month delta</strong>: change in reported IDPs compared to the previous month&apos;s data point.</List.Item>
+          <List.Item><strong>Trend sparkline</strong>: historical monthly IDP counts showing displacement trajectory.</List.Item>
+          <List.Item><strong>Freshness dot</strong>: green if updated within 30 days, amber within 90 days, red if older.</List.Item>
+        </List>
+
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>Limitations</Text>
+        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
+          <List.Item>Flood and disaster displacement is <strong>not included</strong>. IOM DTM in this context tracks conflict-induced displacement only.</List.Item>
+          <List.Item>Coverage is limited to IOM DTM&apos;s monitoring footprint, which may not capture all displacement situations within a country.</List.Item>
+          <List.Item>Data may lag 4 to 8 weeks behind real-world conditions depending on the country operation.</List.Item>
+        </List>
+
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>Source</Text>
+        <Group gap={6} align="center">
+          <Anchor
+            href="https://hapi.humdata.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 12, color: "#E85D3D" }}
+          >
+            HAPI: Humanitarian API (humdata.org)
+          </Anchor>
+          <IconExternalLink size={11} color="#E85D3D" />
+        </Group>
+        <Text style={{ fontSize: 11, color: "#A3A3A3", marginTop: 4 }}>
+          HAPI aggregates IOM DTM data alongside other humanitarian datasets under OCHA&apos;s stewardship.
+        </Text>
+      </Modal>
     </Box>
   );
 }

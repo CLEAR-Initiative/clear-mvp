@@ -1,7 +1,8 @@
 "use client";
 
-import { Box, Text, Group, Skeleton } from "@mantine/core";
-import { IconChartBar } from "@tabler/icons-react";
+import { Box, Text, Group, Skeleton, Modal, Anchor, List } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
+import { IconChartBar, IconInfoCircle, IconExternalLink } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 
 const INFORM_COLORS = {
@@ -29,6 +30,7 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
     { country },
     { staleTime: 1000 * 60 * 60 * 12 },
   );
+  const [infoOpened, { open: openInfo, close: closeInfo }] = useDisclosure(false);
 
   const cardLabel = (
     <Group gap={6} mb={16}>
@@ -121,10 +123,89 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
         <Text style={{ fontSize: 9, color: "#A3A3A3" }}>
           Updated {inform.lastUpdated}
         </Text>
-        <Text style={{ fontSize: 9, color: "#4B5563", fontWeight: 600 }}>
-          ACAPS · {inform.month}
-        </Text>
+        <Group gap={6} align="center">
+          <Text style={{ fontSize: 9, color: "#A3A3A3", fontWeight: 600 }}>
+            ACAPS · {inform.month}
+          </Text>
+          <Box
+            onClick={openInfo}
+            style={{ cursor: "pointer", color: "#A3A3A3", display: "flex", transition: "color 0.15s" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#525252")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#A3A3A3")}
+          >
+            <IconInfoCircle size={13} />
+          </Box>
+        </Group>
       </Group>
+
+      <Modal
+        opened={infoOpened}
+        onClose={closeInfo}
+        title="INFORM Severity Index: Methodology"
+        size="md"
+        styles={{
+          title: { fontSize: 14, fontWeight: 700, color: "#171717" },
+          body: { paddingTop: 4 },
+        }}
+      >
+        <Text style={{ fontSize: 13, color: "#525252", marginBottom: 12, lineHeight: 1.6 }}>
+          The <strong>INFORM Severity Index</strong> is a joint product of the EU Joint Research Centre (JRC), ACAPS,
+          and OCHA. JRC owns the methodology; ACAPS collects the data and produces the monthly scores; OCHA coordinates
+          the initiative. As of the February 2026 release (Version 2026 methodology), scores use a continuous scale of{" "}
+          <strong>0 to 10</strong>, rescaled from the previous 0 to 5 range for consistency with other INFORM products.
+          Scores are grouped into five severity categories. Only countries with an active humanitarian crisis are included.
+        </Text>
+
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>Score dimensions (each 0 to 10)</Text>
+        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
+          <List.Item><strong>Impact</strong>: scale and depth of humanitarian needs, including people affected, displacement, and mortality.</List.Item>
+          <List.Item><strong>Conditions of affected people</strong>: living standards, food security, health, water and sanitation, and protection environment.</List.Item>
+          <List.Item><strong>Complexity</strong>: factors constraining response such as conflict intensity, access restrictions, and political instability.</List.Item>
+        </List>
+
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>Severity categories</Text>
+        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
+          <List.Item><strong>1 / Low</strong></List.Item>
+          <List.Item><strong>2 / Medium</strong></List.Item>
+          <List.Item><strong>3 / High</strong></List.Item>
+          <List.Item><strong>4 / Very High</strong></List.Item>
+          <List.Item><strong>5 / Extremely High</strong></List.Item>
+        </List>
+
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>Limitations</Text>
+        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
+          <List.Item>Scores reflect ACAPS analytical judgement and may lag 4 to 8 weeks behind rapidly evolving situations.</List.Item>
+          <List.Item>The index covers active humanitarian crises only. Countries without an active crisis are not included.</List.Item>
+        </List>
+
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>Source</Text>
+        <Group gap={6} align="center" mb={6}>
+          <Anchor
+            href="https://drmkc.jrc.ec.europa.eu/inform-index/INFORM-Severity"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 12, color: "#E85D3D" }}
+          >
+            INFORM Severity Index (JRC/EU canonical portal)
+          </Anchor>
+          <IconExternalLink size={11} color="#E85D3D" />
+        </Group>
+        <Group gap={6} align="center">
+          <Anchor
+            href="https://www.acaps.org/en/thematics/all-topics/inform-severity-index"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 12, color: "#E85D3D" }}
+          >
+            ACAPS INFORM Severity Index (data and API)
+          </Anchor>
+          <IconExternalLink size={11} color="#E85D3D" />
+        </Group>
+        <Text style={{ fontSize: 11, color: "#A3A3A3", marginTop: 6 }}>
+          Data is fetched from the ACAPS API, which is identical to the JRC-published monthly dataset. The JRC portal
+          may lag by one release; ACAPS and HDX are authoritative for the latest scores. Updated monthly.
+        </Text>
+      </Modal>
     </Box>
   );
 }
