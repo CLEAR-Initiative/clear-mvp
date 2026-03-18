@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Box, Text, Badge, UnstyledButton, Tooltip } from "@mantine/core";
+import { Box, Text, Badge, UnstyledButton, Tooltip, Menu } from "@mantine/core";
 import {
   IconLayoutDashboard,
   IconTarget,
@@ -14,6 +14,7 @@ import {
   IconMapPin,
   IconLogout,
   IconSettings,
+  IconDoorExit,
   IconChevronLeft,
   IconChevronRight,
 } from "@tabler/icons-react";
@@ -55,8 +56,8 @@ const navSections: NavSection[] = [
   },
 ];
 
-const EXPANDED_W = 240;
-const COLLAPSED_W = 64;
+const EXPANDED_W  = 240;
+const COLLAPSED_W = 80;
 const TRANSITION  = "200ms ease";
 
 export function NavSidebar() {
@@ -81,18 +82,18 @@ export function NavSidebar() {
     <Box
       component="aside"
       style={{
-        width:      collapsed ? COLLAPSED_W : EXPANDED_W,
-        minWidth:   collapsed ? COLLAPSED_W : EXPANDED_W,
-        height:     "100vh",
-        position:   "sticky",
-        top:        0,
-        display:    "flex",
+        width:         collapsed ? COLLAPSED_W : EXPANDED_W,
+        minWidth:      collapsed ? COLLAPSED_W : EXPANDED_W,
+        height:        "100vh",
+        position:      "sticky",
+        top:           0,
+        display:       "flex",
         flexDirection: "column",
-        background: colors.bgWhite,
-        borderRight: `1px solid ${colors.border}`,
-        transition: `width ${TRANSITION}, min-width ${TRANSITION}`,
-        overflow:   "hidden",
-        flexShrink: 0,
+        background:    colors.bgWhite,
+        borderRight:   `1px solid ${colors.border}`,
+        transition:    `width ${TRANSITION}, min-width ${TRANSITION}`,
+        overflow:      "hidden",
+        flexShrink:    0,
       }}
     >
       {/* ── Logo + toggle ─────────────────────────────────────── */}
@@ -101,23 +102,25 @@ export function NavSidebar() {
           height:         64,
           borderBottom:   `1px solid ${colors.border}`,
           display:        "flex",
-          alignItems:     "center",
+          alignItems:     "flex-start",
           justifyContent: "space-between",
-          padding:        `0 ${spacingPx[4]}px`,
+          padding:        spacingPx[5],
           flexShrink:     0,
           background:     colors.bgWhite,
         }}
       >
-        <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[3] }}>
+        <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[5], overflow: "hidden", width: collapsed ? 32 : 150, flexShrink: 0, transition: `width ${TRANSITION}` }}>
           {/* Logo stays visible in both states */}
           <NrcLogoMark size={32} />
           <Text
-            fw={500}
+            fw={700}
             style={{
               fontSize:      fontSizesPx.xl,
               letterSpacing: "0.0em",
               userSelect:    "none",
               color:         colors.textPrimary,
+              fontFamily:    "Calibri, 'Trebuchet MS', sans-serif",
+              marginTop:     7,
               ...labelStyle,
             }}
           >
@@ -137,6 +140,7 @@ export function NavSidebar() {
               borderRadius:   6,
               color:          colors.textMuted,
               flexShrink:     0,
+              marginTop:      5,
             }}
             className="hover:bg-[#F5F5F5] transition-colors"
           >
@@ -148,10 +152,10 @@ export function NavSidebar() {
       {/* ── Navigation ────────────────────────────────────────── */}
       <Box
         component="nav"
-        style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: `${spacingPx[3]}px ${spacingPx[2]}px` }}
+        style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: `${spacingPx[3]}px ${spacingPx[3]}px` }}
       >
         {navSections.map((section) => (
-          <Box key={section.title} mb={spacingPx[3]}>
+          <Box key={section.title} mb={spacingPx[5]}>
             {/* Section label — always in DOM, fades out */}
             <Box style={{ height: 28, display: "flex", alignItems: "flex-end", paddingBottom: 4 }}>
               <Text
@@ -182,8 +186,8 @@ export function NavSidebar() {
                   style={{
                     display:        "flex",
                     alignItems:     "center",
-                    gap:            spacingPx[3],
-                    padding:        spacingPx[3],
+                    gap:            spacingPx[4],
+                    padding:        `${spacingPx[4]}px ${spacingPx[3]}px`,
                     borderRadius:   6,
                     position:       "relative",
                     cursor:         item.disabled ? "not-allowed" : "pointer",
@@ -197,11 +201,11 @@ export function NavSidebar() {
                   className={cn(!item.disabled && !isActive && "hover:bg-[#F5F5F5] hover:!text-[#171717]")}
                   component="div"
                 >
-                  <Icon size={18} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
+                  <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
 
                   <Text
                     fw={isActive ? 600 : 500}
-                    style={{ fontSize: fontSizesPx.base, flex: 1, ...labelStyle }}
+                    style={{ fontSize: fontSizesPx.lg, flex: 1, ...labelStyle }}
                   >
                     {item.label}
                   </Text>
@@ -261,7 +265,17 @@ export function NavSidebar() {
       </Box>
 
       {/* ── Bottom actions ────────────────────────────────────── */}
-      <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[2], flexShrink: 0 }}>
+      <Box
+        style={{
+          borderTop:  `1px solid ${colors.border}`,
+          padding:    spacingPx[3],
+          flexShrink: 0,
+          display:    "flex",
+          alignItems: "center",
+          gap:        spacingPx[2],
+        }}
+      >
+        {/* Settings — takes remaining width */}
         {(() => {
           const isActive = pathname === "/profile";
           const inner = (
@@ -273,7 +287,7 @@ export function NavSidebar() {
                 alignItems:     "center",
                 gap:            spacingPx[3],
                 padding:        spacingPx[3],
-                width:          "100%",
+                flex:           1,
                 borderRadius:   6,
                 textDecoration: "none",
                 background:     isActive ? colors.accentLight : "transparent",
@@ -282,35 +296,65 @@ export function NavSidebar() {
               }}
               className="hover:bg-[#F5F5F5] transition-colors"
             >
-              <IconSettings size={16} style={{ opacity: 0.7, flexShrink: 0 }} />
-              <Text fw={500} style={{ fontSize: fontSizesPx.sm, ...labelStyle }}>Settings</Text>
+              <IconSettings size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
+              <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Settings</Text>
             </UnstyledButton>
           );
           return collapsed ? <Tooltip label="Settings" position="right" withArrow>{inner}</Tooltip> : inner;
         })()}
 
-        {(() => {
-          const inner = (
-            <UnstyledButton
+        {/* Exit menu */}
+        <Menu position="top-end" withArrow offset={6}>
+          <Menu.Target>
+            {collapsed ? (
+              <Tooltip label="Sign out" position="right" withArrow>
+                <UnstyledButton
+                  style={{
+                    width:          36,
+                    height:         36,
+                    display:        "flex",
+                    alignItems:     "center",
+                    justifyContent: "center",
+                    borderRadius:   6,
+                    color:          colors.textMuted,
+                    flexShrink:     0,
+                    transition:     "background 150ms",
+                  }}
+                  className="hover:bg-[#F5F5F5] transition-colors"
+                >
+                  <IconDoorExit size={18} />
+                </UnstyledButton>
+              </Tooltip>
+            ) : (
+              <UnstyledButton
+                style={{
+                  width:          36,
+                  height:         36,
+                  display:        "flex",
+                  alignItems:     "center",
+                  justifyContent: "center",
+                  borderRadius:   6,
+                  color:          colors.textMuted,
+                  flexShrink:     0,
+                  transition:     "background 150ms",
+                }}
+                className="hover:bg-[#F5F5F5] transition-colors"
+              >
+                <IconDoorExit size={18} />
+              </UnstyledButton>
+            )}
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item
+              leftSection={<IconLogout size={14} />}
+              color="red"
               onClick={handleLogout}
-              style={{
-                display:       "flex",
-                alignItems:    "center",
-                gap:           spacingPx[3],
-                padding:       spacingPx[3],
-                width:         "100%",
-                borderRadius:  6,
-                color:         colors.critical,
-                transition:    "background 150ms",
-              }}
-              className="hover:bg-[#FEE2E2] transition-colors"
+              style={{ fontSize: fontSizesPx.base }}
             >
-              <IconLogout size={16} style={{ opacity: 0.7, flexShrink: 0 }} />
-              <Text fw={500} style={{ fontSize: fontSizesPx.sm, color: colors.critical, ...labelStyle }}>Sign Out</Text>
-            </UnstyledButton>
-          );
-          return collapsed ? <Tooltip label="Sign out" position="right" withArrow>{inner}</Tooltip> : inner;
-        })()}
+              Sign out
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
       </Box>
     </Box>
   );
