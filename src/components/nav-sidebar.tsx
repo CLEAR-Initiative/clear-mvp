@@ -277,7 +277,7 @@ export function NavSidebar() {
           const inner = (
             <UnstyledButton
               component={Link}
-              href="/admin/features"
+              href="/admin"
               style={{
                 display:        "flex",
                 alignItems:     "center",
