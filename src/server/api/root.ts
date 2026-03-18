@@ -1,4 +1,5 @@
 import { alertsRouter } from "~/server/api/routers/alerts";
+import { featureFlagsRouter } from "~/server/api/routers/featureFlags";
 import { authRouter } from "~/server/api/routers/auth";
 import { detectionsRouter } from "~/server/api/routers/detections";
 import { eventsRouter } from "~/server/api/routers/events";
@@ -19,6 +20,7 @@ export const appRouter = createTRPCRouter({
   llm: llmRouter,
   pipeline: pipelineRouter,
   signals: signalsRouter,
+  featureFlags: featureFlagsRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -15,6 +15,7 @@ import {
   IconLogout,
   IconSettings,
   IconDoorExit,
+  IconShieldCog,
   IconChevronLeft,
   IconChevronRight,
 } from "@tabler/icons-react";
@@ -177,7 +178,7 @@ export function NavSidebar() {
               const isActive =
                 !item.disabled &&
                 (pathname === item.href ||
-                  (item.href !== "/dashboard" && pathname.startsWith(item.href)));
+                  (item.href !== "/dashboard" && pathname.startsWith(item.href + "/")));
               const Icon = item.icon;
 
               const row = (
@@ -252,29 +253,55 @@ export function NavSidebar() {
                 </Box>
               );
 
+              const linked = item.disabled ? row : (
+                <Link key={item.href} href={item.href} style={{ textDecoration: "none", display: "block", color: "inherit" }}>
+                  {row}
+                </Link>
+              );
+
               return collapsed ? (
                 <Tooltip key={item.href} label={item.disabled ? `${item.label} (soon)` : item.label} position="right" withArrow>
-                  {row}
+                  {linked}
                 </Tooltip>
-              ) : (
-                <Box key={item.href}>{row}</Box>
-              );
+              ) : linked;
             })}
           </Box>
         ))}
       </Box>
 
       {/* ── Bottom actions ────────────────────────────────────── */}
-      <Box
-        style={{
-          borderTop:  `1px solid ${colors.border}`,
-          padding:    spacingPx[3],
-          flexShrink: 0,
-          display:    "flex",
-          alignItems: "center",
-          gap:        spacingPx[2],
-        }}
-      >
+      <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3], flexShrink: 0 }}>
+        {/* Admin */}
+        {(() => {
+          const isActive = pathname.startsWith("/admin");
+          const inner = (
+            <UnstyledButton
+              component={Link}
+              href="/admin/features"
+              style={{
+                display:        "flex",
+                alignItems:     "center",
+                gap:            spacingPx[3],
+                padding:        spacingPx[3],
+                width:          "100%",
+                borderRadius:   6,
+                textDecoration: "none",
+                background:     isActive ? colors.accentLight : "transparent",
+                color:          isActive ? colors.accent : colors.textSecondary,
+                transition:     "background 150ms",
+                marginBottom:   spacingPx[1],
+              }}
+              className="hover:bg-[#F5F5F5] transition-colors"
+            >
+              <IconShieldCog size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
+              <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Admin</Text>
+            </UnstyledButton>
+          );
+          return collapsed ? <Tooltip label="Admin" position="right" withArrow>{inner}</Tooltip> : inner;
+        })()}
+
+        {/* Settings + exit row */}
+        <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[2] }}>
         {/* Settings — takes remaining width */}
         {(() => {
           const isActive = pathname === "/profile";
@@ -355,6 +382,7 @@ export function NavSidebar() {
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
+        </Box>
       </Box>
     </Box>
   );
