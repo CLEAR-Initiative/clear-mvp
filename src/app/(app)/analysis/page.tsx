@@ -37,7 +37,7 @@ export default function AnalysisPage() {
     return allAlerts.slice(0, 5).map((a) => {
       const loc = (a.event.generalLocation ?? a.event.originLocation)?.name ?? "Unknown";
       const sev = mapSeverity(a.event.rank);
-      const title = a.event.title ?? a.event.description ?? a.event.types[0] ?? "Event";
+      const title = a.event.title ?? a.event.types[0] ?? "Event";
       return `${title} — ${loc} (${sev} severity)${a.event.description ? `: ${a.event.description.slice(0, 120)}` : ""}`;
     });
   }, [allAlerts]);
@@ -57,7 +57,7 @@ export default function AnalysisPage() {
     const alertContext = allAlerts
       .map(
         (a) =>
-          `- ${a.event.title ?? a.event.description ?? a.event.types[0] ?? "Event"} (rank ${a.event.rank.toFixed(1)}): ${a.event.description?.slice(0, 150) ?? ""}`,
+          `- ${a.event.title ?? a.event.types[0] ?? "Event"} (rank ${a.event.rank.toFixed(1)}): ${a.event.description?.slice(0, 150) ?? ""}`,
       )
       .join("\n");
     llmMutation.mutate(

@@ -18,6 +18,8 @@ export interface GqlDataSource {
   id: string;
   name: string;
   type: string;
+  baseUrl?: string | null;
+  infoUrl?: string | null;
 }
 
 export interface GqlLocation {
@@ -42,6 +44,26 @@ export interface GqlSignal {
   destinationLocation: GqlLocation | null;
   generalLocation: GqlLocation | null;
   events: Array<{ id: string }>;
+}
+
+/** Signal detail — richer events list returned by the `signal(id)` query */
+export interface GqlSignalDetail extends Omit<GqlSignal, "events"> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rawData: Record<string, any>;
+  events: Array<{
+    id: string;
+    title: string | null;
+    types: string[];
+    rank: number;
+    firstSignalCreatedAt: string;
+    signals: Array<{
+      id: string;
+      title: string | null;
+      description: string | null;
+      publishedAt: string;
+      source: { id: string; name: string; type: string };
+    }>;
+  }>;
 }
 
 /* ─── Event ─── */

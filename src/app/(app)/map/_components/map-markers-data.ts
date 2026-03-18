@@ -1,5 +1,5 @@
 import type { MapMarker } from "~/components/map/crisis-map";
-import type { GqlAlert, GqlEvent } from "~/lib/types/graphql";
+import type { GqlAlert, GqlEvent, GqlSignal } from "~/lib/types/graphql";
 import { mapSeverity } from "~/lib/types/graphql";
 
 export interface CrisisMarker extends MapMarker {
@@ -74,7 +74,7 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
       id: hashId(event.id, loc.id),
       lng,
       lat,
-      title: event.title ?? event.description ?? event.types[0] ?? "Event",
+      title: event.title ?? event.types[0] ?? "Event",
       severity: mapSeverity(event.rank),
       description: event.description ?? undefined,
       region: loc.name,
@@ -86,6 +86,32 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
 
 export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
   return eventsToMarkers(alerts.map((a) => a.event));
+}
+
+export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
+  const markers: CrisisMarker[] = [];
+  for (const signal of signals) {
+    const candidates = [signal.generalLocation, signal.originLocation, signal.destinationLocation];
+    for (const loc of candidates) {
+      if (loc?.geometry?.type === "Point") {
+        const [lng, lat] = loc.geometry.coordinates as [number, number];
+        if (typeof lng === "number" && typeof lat === "number") {
+          markers.push({
+            id: hashId(signal.id, loc.id),
+            lng,
+            lat,
+            title: signal.title ?? signal.source.name ?? "Signal",
+            severity: "medium",
+            description: signal.description ?? undefined,
+            region: loc.name,
+            dataSource: signal.source.name,
+          });
+          break;
+        }
+      }
+    }
+  }
+  return markers;
 }
 
 /* ========== Derive filter options from markers ========== */

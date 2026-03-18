@@ -7,17 +7,18 @@ import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { countryConfig, countries, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
-import { alertsToMarkers, eventsToMarkers } from "../map/_components/map-markers-data";
+import { alertsToMarkers, eventsToMarkers, signalsToMarkers } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar } from "~/components/ui";
 
 import { DetectionKpiRow } from "~/components/detection/detection-kpi-row";
 import { LiveAlertsTab } from "./_components/live-alerts-tab";
 import { HistoryTab } from "./_components/history-tab";
 import { EventsTab } from "./_components/events-tab";
+import { SignalsTab } from "./_components/signals-tab";
 import { CreateAlertModal } from "./_components/create-alert-modal";
 
 export default function DetectionPage() {
-  const [activeTab, setActiveTab] = useState<string | null>("events");
+  const [activeTab, setActiveTab] = useState<string | null>("live");
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [selectedDate, setSelectedDate] = useState(dateOptions[0] ?? "Last 30 days");
@@ -31,6 +32,10 @@ export default function DetectionPage() {
   const eventsQuery = api.events.list.useQuery(
     undefined,
     { enabled: activeTab === "events" },
+  );
+  const signalsQuery = api.signals.list.useQuery(
+    undefined,
+    { enabled: activeTab === "signals" },
   );
 
   const countryConf = countryConfig[selectedCountry];
@@ -78,6 +83,10 @@ export default function DetectionPage() {
   const eventMapMarkers: MapMarker[] = useMemo(
     () => eventsToMarkers(eventsQuery.data ?? []),
     [eventsQuery.data],
+  );
+  const signalMapMarkers: MapMarker[] = useMemo(
+    () => signalsToMarkers(signalsQuery.data ?? []),
+    [signalsQuery.data],
   );
   const mapCenter = useMemo<[number, number]>(() => countryConf?.center ?? [30.0, 15.5], [selectedCountry]);
   const mapZoom = useMemo(() => countryConf?.zoom ?? 5, [selectedCountry]);
@@ -129,8 +138,9 @@ export default function DetectionPage() {
           styles={{ tab: { fontSize: 13, fontWeight: 500 } }}
         >
           <Tabs.List>
-            <Tabs.Tab value="events">Events</Tabs.Tab>
             <Tabs.Tab value="live">Alerts</Tabs.Tab>
+            <Tabs.Tab value="events">Events</Tabs.Tab>
+            <Tabs.Tab value="signals">Signals</Tabs.Tab>
             <Tabs.Tab value="history">History</Tabs.Tab>
           </Tabs.List>
         </Tabs>
@@ -147,6 +157,16 @@ export default function DetectionPage() {
             alerts={alerts}
             alertsLoading={alertsQuery.isLoading}
             mapMarkers={mapMarkers}
+            mapCenter={mapCenter}
+            mapZoom={mapZoom}
+          />
+        )}
+
+        {activeTab === "signals" && (
+          <SignalsTab
+            signals={signalsQuery.data ?? []}
+            loading={signalsQuery.isLoading}
+            mapMarkers={signalMapMarkers}
             mapCenter={mapCenter}
             mapZoom={mapZoom}
           />
