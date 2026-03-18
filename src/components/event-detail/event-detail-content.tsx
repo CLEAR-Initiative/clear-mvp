@@ -36,6 +36,10 @@ import {
   IconCircleOff,
   IconHistory,
   IconMapPinOff,
+  IconRadar,
+  IconUsers,
+  IconShieldExclamation,
+  IconWorld,
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
@@ -329,6 +333,9 @@ export function EventDetailContent({
   // TODO: after Prisma migration: use `event.types` (string[]) directly
   const eventTypes: string[] = event.types.length > 0 ? event.types : [eventType];
 
+  const signalCount = event.signals.length;
+  const sourceCount = new Set(event.signals.map((s) => s.source.name)).size;
+
   return (
     <Box>
       {/* Back nav */}
@@ -417,71 +424,19 @@ export function EventDetailContent({
           </Group>
         </Group>
 
-        {/* Severity + type pills */}
+        {/* Type pills */}
         <Group gap={6} mb={14} wrap="wrap">
-          <Badge
-            size="sm"
-            radius="xl"
-            style={{
-              background: sevBg,
-              color: sevColor,
-              fontWeight: 700,
-              border: `1px solid ${sevColor}30`,
-            }}
-          >
-            {severityLabels[sev]} {eventRank}/5
-          </Badge>
           {eventTypes.map((t) => (
             <Badge
               key={t}
               size="sm"
               radius="xl"
               variant="outline"
-              style={{
-                color: "#525252",
-                borderColor: "#52525240",
-                fontWeight: 500,
-              }}
+              style={{ color: "#525252", borderColor: "#52525240", fontWeight: 500 }}
             >
               {t}
             </Badge>
           ))}
-        </Group>
-
-        {/* Source strip */}
-        <Group gap={6} mb={12} wrap="wrap">
-          <Text size="xs" c="#525252" fw={500}>
-            {MOCK.primary_source_label}
-          </Text>
-          <Text size="xs" c="#D4D4D4">
-            ·
-          </Text>
-          <Text size="xs" c="#737373">
-            via {MOCK.intermediary}
-          </Text>
-          <Text size="xs" c="#D4D4D4">
-            ·
-          </Text>
-          <a
-            href={MOCK.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              fontSize: 12,
-              fontWeight: 500,
-              color: "#E85D3D",
-              textDecoration: "none",
-            }}
-          >
-            <IconExternalLink size={12} />
-            View original
-          </a>
-          <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>
-            (mock data currently)
-          </Text>
         </Group>
 
         {/* Meta */}
@@ -496,18 +451,154 @@ export function EventDetailContent({
           )}
           <Group gap={4}>
             <IconCalendar size={13} color="#737373" />
-            <Text size="xs" c="#525252">
-              {formatDate(detectedAt)}
-            </Text>
+            <Text size="xs" c="#525252">{formatDate(detectedAt)}</Text>
           </Group>
           <Group gap={4}>
             <IconClock size={13} color="#A3A3A3" />
-            <Text size="xs" c="#A3A3A3">
-              {formatTimeAgo(detectedAt)}
+            <Text size="xs" c="#A3A3A3">{formatTimeAgo(detectedAt)}</Text>
+          </Group>
+          <Box style={{ width: 1, height: 12, background: "#E5E5E5", alignSelf: "center" }} />
+          <Group gap={4}>
+            <IconRadar size={13} color="#737373" />
+            <Text size="xs" c="#525252" fw={500}>
+              {signalCount} signal{signalCount !== 1 ? "s" : ""}
             </Text>
           </Group>
+          {sourceCount > 0 && (
+            <Group gap={4}>
+              <IconDatabase size={13} color="#737373" />
+              <Text size="xs" c="#525252">
+                {sourceCount} source{sourceCount !== 1 ? "s" : ""}
+              </Text>
+            </Group>
+          )}
         </Group>
       </Box>
+
+      {/* KPI strip */}
+      {!isCompact && (
+        <Box
+          px={24}
+          py={16}
+          style={{ background: "#FAFAFA", borderBottom: "1px solid #E5E5E5" }}
+        >
+          <Group gap={12}>
+
+            {/* Population Affected */}
+            <Box
+              p={16}
+              style={{
+                flex: 1,
+                background: "#FFF",
+                border: "1px solid #E5E5E5",
+                borderRadius: 8,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              <Box
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: "#FEF2F0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <IconUsers size={18} color="#E85D3D" />
+              </Box>
+              <Box>
+                <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                  {event.populationAffected ?? "N/A"}
+                </Text>
+                <Text size="xs" c="#737373" mt={2}>Population affected</Text>
+              </Box>
+            </Box>
+
+            {/* Population in Area */}
+            <Box
+              p={16}
+              style={{
+                flex: 1,
+                background: "#FFF",
+                border: "1px solid #E5E5E5",
+                borderRadius: 8,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              <Box
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: "#EFF6FF",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <IconWorld size={18} color="#2563EB" />
+              </Box>
+              <Box>
+                <Group gap={6} align="baseline">
+                  <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                    ~2.1M
+                  </Text>
+                  <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>(mock)</Text>
+                </Group>
+                <Text size="xs" c="#737373" mt={2}>Population in affected area</Text>
+              </Box>
+            </Box>
+
+            {/* Vulnerability */}
+            <Box
+              p={16}
+              style={{
+                flex: 1,
+                background: "#FFF",
+                border: "1px solid #E5E5E5",
+                borderRadius: 8,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              <Box
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: "#FEF3C7",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <IconShieldExclamation size={18} color="#D97706" />
+              </Box>
+              <Box>
+                <Group gap={6} align="baseline">
+                  <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                    7.5
+                  </Text>
+                  <Text size="xs" c="#D97706" fw={600}>High</Text>
+                  <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>(mock)</Text>
+                </Group>
+                <Text size="xs" c="#737373" mt={2}>INFORM vulnerability / 10</Text>
+              </Box>
+            </Box>
+
+          </Group>
+        </Box>
+      )}
 
       {/* Body */}
       <Box
@@ -705,12 +796,90 @@ export function EventDetailContent({
             </Box>
           </Card>
 
-          {/* Related Signals */}
+          {/* Source Signals */}
+          <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
+            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+              <Group justify="space-between">
+                <Group gap={8}>
+                  <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+                    Signals ({event.signals.length})
+                  </Text>
+                  <Text size="xs" c="#A3A3A3" style={{ fontWeight: 400 }}>
+                    Source intelligence that triggered this event
+                  </Text>
+                </Group>
+              </Group>
+            </Box>
+            <Box>
+              {event.signals.length === 0 && (
+                <Box px={16} py={24} style={{ textAlign: "center" }}>
+                  <Text c="#A3A3A3" size="sm">No signals attached</Text>
+                </Box>
+              )}
+              {event.signals.map((sig) => {
+                const sigLocation = sig.generalLocation ?? sig.originLocation ?? sig.destinationLocation;
+                const sigTitle =
+                  sig.title ??
+                  (sig.description ? sig.description.slice(0, 100) + (sig.description.length > 100 ? "…" : "") : `Signal ${sig.id}`);
+                return (
+                  <Link
+                    key={sig.id}
+                    href={`/signal/${sig.id}`}
+                    style={{ textDecoration: "none", color: "inherit" }}
+                  >
+                    <Box
+                      px={16}
+                      py={12}
+                      className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
+                      style={{ display: "flex", gap: 12 }}
+                    >
+                      <Box style={{ width: 3, background: "#737373", flexShrink: 0, borderRadius: 2 }} />
+                      <Box style={{ flex: 1, minWidth: 0 }}>
+                        <Group justify="space-between" mb={4}>
+                          <Group gap={6}>
+                            <Badge size="xs" style={{ background: "#F5F5F5", color: "#525252", fontWeight: 600 }}>
+                              {sig.source.name}
+                            </Badge>
+                            <Badge size="xs" variant="outline" style={{ color: "#737373", borderColor: "#73737340", fontSize: 10 }}>
+                              {sig.source.type}
+                            </Badge>
+                          </Group>
+                          <Group gap={8}>
+                            {sig.url && (
+                              <a
+                                href={sig.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "#E85D3D", textDecoration: "none" }}
+                              >
+                                <IconExternalLink size={11} />
+                                Source
+                              </a>
+                            )}
+                            <Text size="xs" c="#A3A3A3">{formatTimeAgo(sig.publishedAt)}</Text>
+                          </Group>
+                        </Group>
+                        <Text fw={500} size="sm" c="#171717" lineClamp={2} style={{ lineHeight: 1.4 }} mb={sigLocation ? 2 : 0}>
+                          {sigTitle}
+                        </Text>
+                        {sigLocation && (
+                          <Text size="xs" c="#737373">{sigLocation.name}</Text>
+                        )}
+                      </Box>
+                    </Box>
+                  </Link>
+                );
+              })}
+            </Box>
+          </Card>
+
+          {/* Related Events */}
           <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
             <Box px={16} py={12} className="border-b border-[#E5E5E5]">
               <Group justify="space-between">
                 <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
-                  Related Signals
+                  Related Events
                 </Text>
                 {relatedLoading && <Loader size={14} />}
               </Group>
@@ -718,17 +887,14 @@ export function EventDetailContent({
             <Box>
               {relatedEvents.length === 0 && !relatedLoading && (
                 <Box px={16} py={24} style={{ textAlign: "center" }}>
-                  <Text c="#A3A3A3" size="sm">
-                    No related signals found
-                  </Text>
+                  <Text c="#A3A3A3" size="sm">No related events found</Text>
                 </Box>
               )}
               {relatedEvents.slice(0, 5).map((related) => {
                 const relSev = mapSeverity(related.rank);
                 const relColor = severityColor(related.rank);
                 const relBg = severityColors[relSev]?.bg ?? "#F5F5F5";
-                const relTitle =
-                  related.title ?? related.description ?? related.types[0] ?? "";
+                const relTitle = related.title ?? related.description ?? related.types[0] ?? "";
                 return (
                   <Link
                     key={related.id}
@@ -741,37 +907,15 @@ export function EventDetailContent({
                       className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
                       style={{ display: "flex", gap: 12 }}
                     >
-                      <Box
-                        style={{
-                          width: 3,
-                          background: relColor,
-                          flexShrink: 0,
-                          borderRadius: 2,
-                        }}
-                      />
+                      <Box style={{ width: 3, background: relColor, flexShrink: 0, borderRadius: 2 }} />
                       <Box style={{ flex: 1, minWidth: 0 }}>
                         <Group justify="space-between" mb={2}>
-                          <Badge
-                            size="xs"
-                            style={{
-                              background: relBg,
-                              color: relColor,
-                              fontWeight: 600,
-                            }}
-                          >
+                          <Badge size="xs" style={{ background: relBg, color: relColor, fontWeight: 600 }}>
                             {severityLabels[relSev]}
                           </Badge>
-                          <Text size="xs" c="#A3A3A3">
-                            {formatTimeAgo(related.lastSignalCreatedAt)}
-                          </Text>
+                          <Text size="xs" c="#A3A3A3">{formatTimeAgo(related.lastSignalCreatedAt)}</Text>
                         </Group>
-                        <Text
-                          size="sm"
-                          fw={500}
-                          c="#171717"
-                          lineClamp={2}
-                          style={{ lineHeight: 1.4 }}
-                        >
+                        <Text size="sm" fw={500} c="#171717" lineClamp={2} style={{ lineHeight: 1.4 }}>
                           {relTitle}
                         </Text>
                       </Box>
