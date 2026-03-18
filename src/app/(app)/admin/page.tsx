@@ -34,10 +34,10 @@ const border = `1px solid ${colors.border}`;
 /* ─── Features tab ────────────────────────────────────────────── */
 
 const tierColors: Record<number, string> = {
-  1: "#525252",
-  2: "#059669",
-  3: "#D97706",
-  4: "#DC2626",
+  1: colors.textSecondary,
+  2: colors.success,
+  3: colors.warning,
+  4: colors.critical,
 };
 
 const tierBadgeColors: Record<number, string> = {
@@ -66,8 +66,8 @@ function FeaturesPanel() {
 
   const stats: StatItem[] = [
     { label: "Total Features", value: String(features.length) },
-    { label: "Enabled", value: String(enabledCount), color: "#059669" },
-    { label: "Disabled", value: String(disabledCount), color: "#DC2626" },
+    { label: "Enabled", value: String(enabledCount), color: colors.success },
+    { label: "Disabled", value: String(disabledCount), color: colors.critical },
   ];
 
   const tiers = [1, 2, 3, 4] as const;
@@ -121,7 +121,7 @@ function FeaturesPanel() {
                     justify="space-between"
                     wrap="nowrap"
                     style={{
-                      borderBottom: i < group.features.length - 1 ? `1px solid #F0F0F0` : undefined,
+                      borderBottom: i < group.features.length - 1 ? border : undefined,
                       opacity: isCore ? 0.7 : 1,
                     }}
                   >
@@ -205,8 +205,8 @@ function UsersPanel() {
 
   const stats: StatItem[] = [
     { label: "Total Users",   value: String(users.length) },
-    { label: "Admins",        value: String(adminCount),  color: "#E85D3D" },
-    { label: "Active",        value: String(activeCount), color: "#059669" },
+    { label: "Admins",        value: String(adminCount),  color: colors.accent },
+    { label: "Active",        value: String(activeCount), color: colors.success },
   ];
 
   return (
@@ -254,7 +254,7 @@ function UsersPanel() {
                         src={user.image}
                         size={32}
                         radius="xl"
-                        color="orange"
+                        color="accent"
                       >
                         {user.name?.[0]?.toUpperCase() ?? "?"}
                       </Avatar>
@@ -312,7 +312,7 @@ export default function AdminPage() {
       />
 
       <Tabs
-        defaultValue="features"
+        defaultValue="users"
         style={{ flex: 1, display: "flex", flexDirection: "column" }}
       >
         <Tabs.List
@@ -324,27 +324,27 @@ export default function AdminPage() {
           }}
         >
           <Tabs.Tab
-            value="features"
-            leftSection={<IconToggleLeft size={16} />}
-            style={{ fontSize: fontSizesPx.base }}
-          >
-            Features
-          </Tabs.Tab>
-          <Tabs.Tab
             value="users"
             leftSection={<IconUsers size={16} />}
             style={{ fontSize: fontSizesPx.base }}
           >
             Users
           </Tabs.Tab>
+          <Tabs.Tab
+            value="features"
+            leftSection={<IconToggleLeft size={16} />}
+            style={{ fontSize: fontSizesPx.base }}
+          >
+            Features
+          </Tabs.Tab>
         </Tabs.List>
-
-        <Tabs.Panel value="features" style={{ flex: 1, overflowY: "auto" }}>
-          <FeaturesPanel />
-        </Tabs.Panel>
 
         <Tabs.Panel value="users" style={{ flex: 1, overflowY: "auto" }}>
           <UsersPanel />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="features" style={{ flex: 1, overflowY: "auto" }}>
+          <FeaturesPanel />
         </Tabs.Panel>
       </Tabs>
     </Box>

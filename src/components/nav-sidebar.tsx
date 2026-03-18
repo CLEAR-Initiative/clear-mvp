@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter, useSelectedLayoutSegments } from "next/navigation";
 import { Box, Text, Badge, UnstyledButton, Tooltip, Menu } from "@mantine/core";
 import {
   IconLayoutDashboard,
@@ -23,6 +23,7 @@ import { cn } from "~/lib/utils";
 import { authClient } from "~/lib/auth-client";
 import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
+import { api } from "~/trpc/react";
 
 interface NavItem {
   label: string;
@@ -63,8 +64,11 @@ const TRANSITION  = "200ms ease";
 
 export function NavSidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const pathname = usePathname();
-  const router   = useRouter();
+  const segments = useSelectedLayoutSegments();
+  const activeSegment = segments[0] ?? "";
+  const router = useRouter();
+  const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
+  const isAdmin = authData?.user?.role === "admin";
 
   const handleLogout = async () => {
     try { await authClient.signOut(); } catch { /* ignore */ }
@@ -175,10 +179,8 @@ export function NavSidebar() {
             </Box>
 
             {section.items.map((item) => {
-              const isActive =
-                !item.disabled &&
-                (pathname === item.href ||
-                  (item.href !== "/dashboard" && pathname.startsWith(item.href + "/")));
+              const itemSegment = item.href.replace(/^\//, "");
+              const isActive = !item.disabled && activeSegment === itemSegment;
               const Icon = item.icon;
 
               const row = (
@@ -195,7 +197,7 @@ export function NavSidebar() {
                     opacity:        item.disabled ? 0.45 : 1,
                     background:     isActive ? colors.accentLight : "transparent",
                     borderLeft:     isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
-                    transition:     "background 150ms, color 150ms",
+                    transition:     "none",
                     textDecoration: "none",
                     color:          isActive ? colors.accent : colors.textSecondary,
                   }}
@@ -271,9 +273,9 @@ export function NavSidebar() {
 
       {/* ── Bottom actions ────────────────────────────────────── */}
       <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3], flexShrink: 0 }}>
-        {/* Admin */}
-        {(() => {
-          const isActive = pathname.startsWith("/admin");
+        {/* Admin — only visible to admin role */}
+        {isAdmin && (() => {
+          const isActive = activeSegment === "admin";
           const inner = (
             <UnstyledButton
               component={Link}
@@ -304,7 +306,7 @@ export function NavSidebar() {
         <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[2] }}>
         {/* Settings — takes remaining width */}
         {(() => {
-          const isActive = pathname === "/profile";
+          const isActive = activeSegment === "profile";
           const inner = (
             <UnstyledButton
               component={Link}
