@@ -85,6 +85,7 @@ export function EventDetailDrawer({
               color="gray"
               size="sm"
               onClick={() => {
+                if (eventId == null) return;
                 onClose();
                 router.push(`/event/${eventId}`);
               }}
