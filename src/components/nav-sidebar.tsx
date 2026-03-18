@@ -2,16 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  Box,
-  Text,
-  Badge,
-  Checkbox,
-  UnstyledButton,
-  Group,
-  Stack,
-} from "@mantine/core";
+import { usePathname, useRouter } from "next/navigation";
+import { Box, Text, Badge, UnstyledButton, Tooltip } from "@mantine/core";
 import {
   IconLayoutDashboard,
   IconTarget,
@@ -21,10 +13,14 @@ import {
   IconBook,
   IconMapPin,
   IconLogout,
+  IconSettings,
+  IconChevronLeft,
+  IconChevronRight,
 } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
 import { cn } from "~/lib/utils";
 import { authClient } from "~/lib/auth-client";
+import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
+import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 
 interface NavItem {
   label: string;
@@ -43,93 +39,136 @@ const navSections: NavSection[] = [
   {
     title: "MAIN",
     items: [
-      { label: "Overview", href: "/dashboard", icon: IconLayoutDashboard },
-      { label: "Detection", href: "/detection", icon: IconTarget, badge: 3 },
-      { label: "Analysis", href: "/analysis", icon: IconChartPie, disabled: true },
-      { label: "Operations", href: "/operations", icon: IconUser, disabled: true },
-      { label: "Cash Assistance", href: "/cash", icon: IconCurrencyDollar, disabled: true },
+      { label: "Overview",        href: "/dashboard",  icon: IconLayoutDashboard },
+      { label: "Detection",       href: "/detection",  icon: IconTarget, badge: 3 },
+      { label: "Analysis",        href: "/analysis",   icon: IconChartPie,       disabled: true },
+      { label: "Operations",      href: "/operations", icon: IconUser,           disabled: true },
+      { label: "Cash Assistance", href: "/cash",       icon: IconCurrencyDollar, disabled: true },
     ],
   },
   {
     title: "RESOURCES",
     items: [
-      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook, disabled: true },
-      { label: "Crisis Map", href: "/map", icon: IconMapPin },
+      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook,   disabled: true },
+      { label: "Crisis Map",    href: "/map",       icon: IconMapPin },
     ],
   },
 ];
 
-interface DataLayer {
-  id: string;
-  label: string;
-  color: string;
-  defaultChecked: boolean;
-}
-
-const dataLayers: DataLayer[] = [
-  { id: "layer-cholera", label: "Cholera Cases", color: "#DC2626", defaultChecked: true },
-  { id: "layer-flood", label: "Flood Risk", color: "#D97706", defaultChecked: true },
-  { id: "layer-drought", label: "Drought Zones", color: "#D97706", defaultChecked: false },
-  { id: "layer-response", label: "Response Teams", color: "#059669", defaultChecked: true },
-];
-
-const activeCrises = [
-  { id: "1", label: "Cholera Outbreak", color: "#DC2626", pulse: true },
-  { id: "2", label: "Flooding Risk", color: "#D97706", pulse: false },
-  { id: "3", label: "Drought Monitoring", color: "#D97706", pulse: false },
-];
+const EXPANDED_W = 240;
+const COLLAPSED_W = 64;
+const TRANSITION  = "200ms ease";
 
 export function NavSidebar() {
+  const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
-  const isCrisisPage = pathname.startsWith("/crisis/");
-  const [layers, setLayers] = useState<Record<string, boolean>>(
-    Object.fromEntries(dataLayers.map((l) => [l.id, l.defaultChecked]))
-  );
-
-  const handleLayerToggle = (id: string) => {
-    setLayers((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+  const router   = useRouter();
 
   const handleLogout = async () => {
-    try {
-      await authClient.signOut();
-    } catch {
-      // ignore
-    }
+    try { await authClient.signOut(); } catch { /* ignore */ }
     router.push("/auth/login");
+  };
+
+  // Text labels: fade out instantly on collapse, fade in after drawer has widened
+  const labelStyle: React.CSSProperties = {
+    opacity:    collapsed ? 0 : 1,
+    transition: collapsed ? "opacity 80ms ease" : "opacity 100ms ease 160ms",
+    whiteSpace: "nowrap",
+    overflow:   "hidden",
   };
 
   return (
     <Box
       component="aside"
-      w={240}
-      className="shrink-0 flex flex-col bg-white border-r border-border"
-      style={{ height: "100vh" }}
+      style={{
+        width:      collapsed ? COLLAPSED_W : EXPANDED_W,
+        minWidth:   collapsed ? COLLAPSED_W : EXPANDED_W,
+        height:     "100vh",
+        position:   "sticky",
+        top:        0,
+        display:    "flex",
+        flexDirection: "column",
+        background: colors.bgWhite,
+        borderRight: `1px solid ${colors.border}`,
+        transition: `width ${TRANSITION}, min-width ${TRANSITION}`,
+        overflow:   "hidden",
+        flexShrink: 0,
+      }}
     >
-      {/* Logo */}
-      <Box px={20} py={20} className="border-b border-border">
-        <Text fw={700} size="xl" c="#E85D3D" style={{ letterSpacing: "-0.025em" }}>
-          CLEAR
-        </Text>
+      {/* ── Logo + toggle ─────────────────────────────────────── */}
+      <Box
+        style={{
+          height:         64,
+          borderBottom:   `1px solid ${colors.border}`,
+          display:        "flex",
+          alignItems:     "center",
+          justifyContent: "space-between",
+          padding:        `0 ${spacingPx[4]}px`,
+          flexShrink:     0,
+          background:     colors.bgWhite,
+        }}
+      >
+        <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[3] }}>
+          {/* Logo stays visible in both states */}
+          <NrcLogoMark size={32} />
+          <Text
+            fw={500}
+            style={{
+              fontSize:      fontSizesPx.xl,
+              letterSpacing: "0.0em",
+              userSelect:    "none",
+              color:         colors.textPrimary,
+              ...labelStyle,
+            }}
+          >
+            CLEAR
+          </Text>
+        </Box>
+
+        <Tooltip label={collapsed ? "Expand" : "Collapse"} position="right" withArrow>
+          <UnstyledButton
+            onClick={() => setCollapsed((v) => !v)}
+            style={{
+              width:          28,
+              height:         28,
+              display:        "flex",
+              alignItems:     "center",
+              justifyContent: "center",
+              borderRadius:   6,
+              color:          colors.textMuted,
+              flexShrink:     0,
+            }}
+            className="hover:bg-[#F5F5F5] transition-colors"
+          >
+            {collapsed ? <IconChevronRight size={16} /> : <IconChevronLeft size={16} />}
+          </UnstyledButton>
+        </Tooltip>
       </Box>
 
-      {/* Navigation */}
-      <Box component="nav" className="flex-1 overflow-y-auto" p={12}>
+      {/* ── Navigation ────────────────────────────────────────── */}
+      <Box
+        component="nav"
+        style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: `${spacingPx[3]}px ${spacingPx[2]}px` }}
+      >
         {navSections.map((section) => (
-          <Stack key={section.title} gap={0} mb={16}>
-            <Text
-              size="xs"
-              fw={600}
-              c="#737373"
-              tt="uppercase"
-              px={12}
-              pt={8}
-              pb={4}
-              style={{ letterSpacing: "0.05em", fontSize: "10px" }}
-            >
-              {section.title}
-            </Text>
+          <Box key={section.title} mb={spacingPx[3]}>
+            {/* Section label — always in DOM, fades out */}
+            <Box style={{ height: 28, display: "flex", alignItems: "flex-end", paddingBottom: 4 }}>
+              <Text
+                fw={600}
+                tt="uppercase"
+                px={spacingPx[3]}
+                style={{
+                  letterSpacing: "0.07em",
+                  fontSize:      fontSizesPx["2xs"],
+                  color:         colors.textMuted,
+                  ...labelStyle,
+                }}
+              >
+                {section.title}
+              </Text>
+            </Box>
+
             {section.items.map((item) => {
               const isActive =
                 !item.disabled &&
@@ -137,208 +176,141 @@ export function NavSidebar() {
                   (item.href !== "/dashboard" && pathname.startsWith(item.href)));
               const Icon = item.icon;
 
-              if (item.disabled) {
-                return (
-                  <Box
-                    key={item.href}
-                    px={12}
-                    py={10}
-                    className="flex items-center gap-2.5 text-[13px] font-medium"
-                    style={{ cursor: "not-allowed", opacity: 0.4 }}
-                  >
-                    <Group gap={10} wrap="nowrap" style={{ flex: 1 }}>
-                      <Icon size={18} style={{ opacity: 0.5, flexShrink: 0 }} />
-                      <Text size="sm" fw={500} c="#A3A3A3" style={{ fontSize: "13px" }}>
-                        {item.label}
-                      </Text>
-                      <Badge
-                        size="xs"
-                        variant="light"
-                        color="gray"
-                        ml="auto"
-                        style={{ fontSize: "9px", fontWeight: 500, padding: "0 5px" }}
-                      >
-                        Soon
-                      </Badge>
-                    </Group>
-                  </Box>
-                );
-              }
-
-              return (
-                <UnstyledButton
+              const row = (
+                <Box
                   key={item.href}
-                  component={Link}
-                  href={item.href}
-                  px={12}
-                  py={10}
-                  className={cn(
-                    "flex items-center gap-2.5 text-[13px] font-medium transition-all duration-150 no-underline",
-                    isActive
-                      ? "bg-[#FEF2F0] text-[#E85D3D]"
-                      : "text-[#525252] hover:bg-[#F5F5F5] hover:text-[#171717]",
-                  )}
+                  style={{
+                    display:        "flex",
+                    alignItems:     "center",
+                    gap:            spacingPx[3],
+                    padding:        spacingPx[3],
+                    borderRadius:   6,
+                    position:       "relative",
+                    cursor:         item.disabled ? "not-allowed" : "pointer",
+                    opacity:        item.disabled ? 0.45 : 1,
+                    background:     isActive ? colors.accentLight : "transparent",
+                    borderLeft:     isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
+                    transition:     "background 150ms, color 150ms",
+                    textDecoration: "none",
+                    color:          isActive ? colors.accent : colors.textSecondary,
+                  }}
+                  className={cn(!item.disabled && !isActive && "hover:bg-[#F5F5F5] hover:!text-[#171717]")}
+                  component="div"
                 >
-                  <Group gap={10} wrap="nowrap" style={{ flex: 1 }}>
-                    <Icon
-                      size={18}
-                      style={{ opacity: isActive ? 1 : 0.7, flexShrink: 0 }}
+                  <Icon size={18} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
+
+                  <Text
+                    fw={isActive ? 600 : 500}
+                    style={{ fontSize: fontSizesPx.base, flex: 1, ...labelStyle }}
+                  >
+                    {item.label}
+                  </Text>
+
+                  {item.disabled && (
+                    <Badge
+                      size="xs"
+                      variant="light"
+                      color="gray"
+                      style={{ fontSize: fontSizesPx["2xs"], fontWeight: 500, padding: "0 5px", flexShrink: 0, ...labelStyle }}
+                    >
+                      Soon
+                    </Badge>
+                  )}
+
+                  {!item.disabled && item.badge !== undefined && (
+                    <Badge
+                      size="xs"
+                      color="red"
+                      variant="filled"
+                      style={{ fontSize: fontSizesPx.xs, fontWeight: 600, minWidth: 18, padding: "0 6px", flexShrink: 0, ...labelStyle }}
+                    >
+                      {item.badge}
+                    </Badge>
+                  )}
+
+                  {/* Dot badge visible only when collapsed */}
+                  {!item.disabled && item.badge !== undefined && (
+                    <Box
+                      style={{
+                        position:      "absolute",
+                        top:           6,
+                        right:         8,
+                        width:         7,
+                        height:        7,
+                        borderRadius:  "50%",
+                        background:    colors.critical,
+                        opacity:       collapsed ? 1 : 0,
+                        transition:    collapsed ? "opacity 80ms ease" : "opacity 100ms ease 160ms",
+                        pointerEvents: "none",
+                      }}
                     />
-                    <Text size="sm" fw={500} style={{ fontSize: "13px" }}>
-                      {item.label}
-                    </Text>
-                    {item.badge !== undefined && (
-                      <Badge
-                        size="xs"
-                        color="red"
-                        variant="filled"
-                        ml="auto"
-                        style={{
-                          fontSize: "10px",
-                          fontWeight: 600,
-                          minWidth: 18,
-                          padding: "0 6px",
-                        }}
-                      >
-                        {item.badge}
-                      </Badge>
-                    )}
-                  </Group>
-                </UnstyledButton>
+                  )}
+                </Box>
+              );
+
+              return collapsed ? (
+                <Tooltip key={item.href} label={item.disabled ? `${item.label} (soon)` : item.label} position="right" withArrow>
+                  {row}
+                </Tooltip>
+              ) : (
+                <Box key={item.href}>{row}</Box>
               );
             })}
-          </Stack>
+          </Box>
         ))}
       </Box>
 
-      {/* Data Layers or Active Crises (context-dependent) */}
-      <Box className="border-t border-border" p={12}>
-        {isCrisisPage ? (
-          <>
-            <Text
-              size="xs"
-              fw={600}
-              c="#737373"
-              tt="uppercase"
-              px={12}
-              pt={8}
-              pb={4}
-              style={{ letterSpacing: "0.05em", fontSize: "10px" }}
+      {/* ── Bottom actions ────────────────────────────────────── */}
+      <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[2], flexShrink: 0 }}>
+        {(() => {
+          const isActive = pathname === "/profile";
+          const inner = (
+            <UnstyledButton
+              component={Link}
+              href="/profile"
+              style={{
+                display:        "flex",
+                alignItems:     "center",
+                gap:            spacingPx[3],
+                padding:        spacingPx[3],
+                width:          "100%",
+                borderRadius:   6,
+                textDecoration: "none",
+                background:     isActive ? colors.accentLight : "transparent",
+                color:          isActive ? colors.accent : colors.textSecondary,
+                transition:     "background 150ms",
+              }}
+              className="hover:bg-[#F5F5F5] transition-colors"
             >
-              Active Crises
-            </Text>
-            {activeCrises.map((crisis) => {
-              const isActiveCrisis = pathname === `/crisis/${crisis.id}`;
-              return (
-                <UnstyledButton
-                  key={crisis.id}
-                  component={Link}
-                  href={`/crisis/${crisis.id}`}
-                  px={12}
-                  py={10}
-                  className={cn(
-                    "flex items-center gap-2.5 text-[13px] font-medium transition-all duration-150 no-underline w-full",
-                    isActiveCrisis
-                      ? "bg-[#FEF2F0] text-[#E85D3D]"
-                      : "text-[#525252] hover:bg-[#F5F5F5] hover:text-[#171717]",
-                  )}
-                  style={{
-                    borderLeft: `3px solid ${crisis.color}`,
-                    marginLeft: -12,
-                    paddingLeft: 21,
-                  }}
-                >
-                  <Box
-                    w={8}
-                    h={8}
-                    style={{
-                      background: crisis.color,
-                      flexShrink: 0,
-                      animation: crisis.pulse ? "pulse-dot 2s ease-in-out infinite" : "none",
-                    }}
-                  />
-                  <Text size="sm" fw={500} style={{ fontSize: "13px" }}>
-                    {crisis.label}
-                  </Text>
-                </UnstyledButton>
-              );
-            })}
-          </>
-        ) : (
-          <>
-            <Text
-              size="xs"
-              fw={600}
-              c="#737373"
-              tt="uppercase"
-              px={12}
-              pt={8}
-              pb={4}
-              style={{ letterSpacing: "0.05em", fontSize: "10px" }}
-            >
-              Data Layers
-            </Text>
-            {dataLayers.map((layer) => (
-              <label
-                key={layer.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 12px",
-                  fontSize: 12,
-                  cursor: "pointer",
-                  color: "#525252",
-                }}
-              >
-                <Checkbox
-                  size="xs"
-                  checked={layers[layer.id]}
-                  onChange={() => handleLayerToggle(layer.id)}
-                  styles={{
-                    input: {
-                      cursor: "pointer",
-                      accentColor: layer.color,
-                    },
-                  }}
-                />
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: layer.color,
-                    flexShrink: 0,
-                  }}
-                />
-                <Text size="xs" c="#525252">{layer.label}</Text>
-              </label>
-            ))}
-          </>
-        )}
-      </Box>
+              <IconSettings size={16} style={{ opacity: 0.7, flexShrink: 0 }} />
+              <Text fw={500} style={{ fontSize: fontSizesPx.sm, ...labelStyle }}>Settings</Text>
+            </UnstyledButton>
+          );
+          return collapsed ? <Tooltip label="Settings" position="right" withArrow>{inner}</Tooltip> : inner;
+        })()}
 
-      {/* User Actions */}
-      <Box className="border-t border-[#E5E5E5]" p={12}>
-        <UnstyledButton
-          component={Link}
-          href="/profile"
-          px={12}
-          py={8}
-          className="flex items-center gap-2.5 text-[12px] text-[#525252] hover:bg-[#F5F5F5] transition-all duration-150 no-underline w-full"
-        >
-          <IconUser size={16} style={{ opacity: 0.7 }} />
-          <Text size="xs" fw={500}>Profile</Text>
-        </UnstyledButton>
-        <UnstyledButton
-          onClick={handleLogout}
-          px={12}
-          py={8}
-          className="flex items-center gap-2.5 text-[12px] text-[#DC2626] hover:bg-[#FEE2E2] transition-all duration-150 w-full"
-        >
-          <IconLogout size={16} style={{ opacity: 0.7 }} />
-          <Text size="xs" fw={500} c="#DC2626">Sign Out</Text>
-        </UnstyledButton>
+        {(() => {
+          const inner = (
+            <UnstyledButton
+              onClick={handleLogout}
+              style={{
+                display:       "flex",
+                alignItems:    "center",
+                gap:           spacingPx[3],
+                padding:       spacingPx[3],
+                width:         "100%",
+                borderRadius:  6,
+                color:         colors.critical,
+                transition:    "background 150ms",
+              }}
+              className="hover:bg-[#FEE2E2] transition-colors"
+            >
+              <IconLogout size={16} style={{ opacity: 0.7, flexShrink: 0 }} />
+              <Text fw={500} style={{ fontSize: fontSizesPx.sm, color: colors.critical, ...labelStyle }}>Sign Out</Text>
+            </UnstyledButton>
+          );
+          return collapsed ? <Tooltip label="Sign out" position="right" withArrow>{inner}</Tooltip> : inner;
+        })()}
       </Box>
     </Box>
   );
