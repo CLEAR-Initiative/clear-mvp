@@ -112,9 +112,6 @@ export function NavSidebar() {
         <Text fw={700} size="xl" c="#E85D3D" style={{ letterSpacing: "-0.025em" }}>
           CLEAR
         </Text>
-        <Text c="#737373" mt={2} style={{ fontSize: 11 }}>
-          Ethiopia Response Dashboard
-        </Text>
       </Box>
 
       {/* Navigation */}
