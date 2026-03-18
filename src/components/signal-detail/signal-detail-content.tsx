@@ -225,6 +225,17 @@ export function SignalDetailContent({
     );
   }, [signal]);
 
+  const sourceSignalCount = useMemo(() => {
+    if (!signal) return 1;
+    const seen = new Set<string>([signal.id]);
+    for (const ev of signal.events) {
+      for (const s of ev.signals) {
+        if (s.source.id === signal.source.id) seen.add(s.id);
+      }
+    }
+    return seen.size;
+  }, [signal]);
+
   if (loading) {
     return (
       <Box
@@ -276,18 +287,6 @@ export function SignalDetailContent({
   const isCompact = mode === "drawer";
   const locations = signalLocations(signal);
   const primaryLocation = locations[0]?.name;
-
-  // Count signals from this source across all sibling events (+ 1 for the current signal)
-  const sourceSignalCount = useMemo(() => {
-    if (!signal) return 1;
-    const seen = new Set<string>([signal.id]);
-    for (const ev of signal.events) {
-      for (const s of ev.signals) {
-        if (s.source.id === signal.source.id) seen.add(s.id);
-      }
-    }
-    return seen.size;
-  }, [signal]);
 
   const displayTitle =
     signal.title ??
