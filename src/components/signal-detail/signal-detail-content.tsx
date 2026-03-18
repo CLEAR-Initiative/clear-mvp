@@ -40,7 +40,6 @@ import {
   IconLink,
   IconChevronDown,
   IconChevronUp,
-  IconShieldCheck,
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlSignalDetail, GqlLocation } from "~/lib/types/graphql";
@@ -278,14 +277,17 @@ export function SignalDetailContent({
   const locations = signalLocations(signal);
   const primaryLocation = locations[0]?.name;
 
-  // Mock source reliability — replace with real data when backend exposes it
-  const SOURCE_RELIABILITY: Record<string, { label: string; color: string; bg: string }> = {
-    "ACLED Conflict Data": { label: "High", color: "#059669", bg: "#ECFDF5" },
-    "HDX":                 { label: "High", color: "#059669", bg: "#ECFDF5" },
-    "ReliefWeb":           { label: "High", color: "#059669", bg: "#ECFDF5" },
-    "Dataminr":            { label: "Medium", color: "#D97706", bg: "#FEF3C7" },
-  };
-  const reliability = SOURCE_RELIABILITY[signal.source.name] ?? { label: "Unverified", color: "#737373", bg: "#F5F5F5" };
+  // Count signals from this source across all sibling events (+ 1 for the current signal)
+  const sourceSignalCount = useMemo(() => {
+    if (!signal) return 1;
+    const seen = new Set<string>([signal.id]);
+    for (const ev of signal.events) {
+      for (const s of ev.signals) {
+        if (s.source.id === signal.source.id) seen.add(s.id);
+      }
+    }
+    return seen.size;
+  }, [signal]);
 
   const displayTitle =
     signal.title ??
@@ -550,24 +552,18 @@ export function SignalDetailContent({
                 p={12}
                 style={{ background: "#F9FAFB", border: "1px solid #E5E5E5", borderRadius: 6 }}
               >
-                <Text size="xs" fw={700} c="#A3A3A3" mb={4} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Source Reliability
+                <Text size="xs" fw={700} c="#A3A3A3" mb={6} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Source Activity
                 </Text>
-                <Group gap={6} align="center">
-                  <IconShieldCheck size={14} color={reliability.color} />
-                  <Badge
-                    size="sm"
-                    style={{
-                      background: reliability.bg,
-                      color: reliability.color,
-                      fontWeight: 600,
-                      border: `1px solid ${reliability.color}30`,
-                    }}
-                  >
-                    {reliability.label}
-                  </Badge>
-                  <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>(mock)</Text>
+                <Group gap={6} align="baseline">
+                  <Text fw={700} c="#171717" style={{ fontSize: 18, lineHeight: 1 }}>
+                    {sourceSignalCount}
+                  </Text>
+                  <Text size="xs" c="#525252">
+                    signal{sourceSignalCount !== 1 ? "s" : ""} from {signal.source.name}
+                  </Text>
                 </Group>
+                <Text size="xs" c="#A3A3A3" mt={4}>in current detection context</Text>
               </Box>
               {signal.source.infoUrl && (
                 <Box

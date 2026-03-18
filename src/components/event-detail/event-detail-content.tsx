@@ -557,7 +557,7 @@ export function EventDetailContent({
               </Box>
             </Box>
 
-            {/* Vulnerability */}
+            {/* Placeholder */}
             <Box
               p={16}
               style={{
@@ -585,14 +585,10 @@ export function EventDetailContent({
                 <IconShieldExclamation size={18} color="#D97706" />
               </Box>
               <Box>
-                <Group gap={6} align="baseline">
-                  <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                    7.5
-                  </Text>
-                  <Text size="xs" c="#D97706" fw={600}>High</Text>
-                  <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>(mock)</Text>
-                </Group>
-                <Text size="xs" c="#737373" mt={2}>INFORM vulnerability / 10</Text>
+                <Text fw={700} c="#A3A3A3" style={{ fontSize: 15, lineHeight: 1.3 }}>
+                  Placeholder
+                </Text>
+                <Text size="xs" c="#A3A3A3" mt={2}>Coming soon</Text>
               </Box>
             </Box>
 
