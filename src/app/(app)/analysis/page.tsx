@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Box, Button, Group, Loader, Tabs } from "@mantine/core";
 import { IconDownload, IconSparkles } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
 import { SITUATION_ANALYSIS_SYSTEM_PROMPT } from "~/lib/prompts";
 import { mapSeverity } from "~/lib/types/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
@@ -24,8 +25,9 @@ export default function AnalysisPage() {
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [selectedDate, setSelectedDate] = useState("Feb 2026");
 
-  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true });
-  const statsQuery = api.alerts.getStats.useQuery();
+  const { activeTeamId } = useTeam();
+  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId });
+  const statsQuery = api.alerts.getStats.useQuery({ teamId: activeTeamId });
   const llmMutation = api.llm.query.useMutation();
 
   const allAlerts = alertsQuery.data?.alerts ?? [];

@@ -37,8 +37,8 @@ const EVENT_FIELDS = `
 `;
 
 const EVENT_LIST_QUERY = `
-  query Events {
-    events {
+  query Events($teamId: String) {
+    events(teamId: $teamId) {
       ${EVENT_FIELDS}
     }
   }
@@ -61,10 +61,15 @@ const CREATE_EVENT_MUTATION = `
 `;
 
 export const eventsRouter = createTRPCRouter({
-  list: publicProcedure.query(async () => {
-    const data = await graphqlFetch<{ events: GqlEvent[] }>(EVENT_LIST_QUERY);
-    return data.events;
-  }),
+  list: publicProcedure
+    .input(z.object({ teamId: z.string().nullish() }).optional())
+    .query(async ({ input }) => {
+      const data = await graphqlFetch<{ events: GqlEvent[] }>(
+        EVENT_LIST_QUERY,
+        input?.teamId ? { teamId: input.teamId } : undefined,
+      );
+      return data.events;
+    }),
 
   get: publicProcedure
     .input(z.object({ id: z.string() }))

@@ -5,6 +5,7 @@ import { Box, Tabs, Button, Group } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { countryConfig, countries, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
 import { alertsToMarkers, eventsToMarkers, signalsToMarkers } from "../map/_components/map-markers-data";
@@ -24,17 +25,18 @@ export default function DetectionPage() {
   const [selectedDate, setSelectedDate] = useState(dateOptions[0] ?? "Last 30 days");
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
 
-  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true });
+  const { activeTeamId } = useTeam();
+  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId });
   const historyQuery = api.alerts.getAlerts.useQuery(
-    { activeOnly: false },
+    { activeOnly: false, teamId: activeTeamId },
     { enabled: activeTab === "history" },
   );
   const eventsQuery = api.events.list.useQuery(
-    undefined,
+    { teamId: activeTeamId },
     { enabled: activeTab === "events" },
   );
   const signalsQuery = api.signals.list.useQuery(
-    undefined,
+    { teamId: activeTeamId },
     { enabled: activeTab === "signals" },
   );
 

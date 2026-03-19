@@ -37,8 +37,8 @@ const EVENT_FIELDS = `
 `;
 
 const ALERTS_LIST_QUERY = `
-  query Alerts($status: AlertStatus) {
-    alerts(status: $status) {
+  query Alerts($status: AlertStatus, $teamId: String) {
+    alerts(status: $status, teamId: $teamId) {
       id
       status
       event { ${EVENT_FIELDS} }
@@ -73,6 +73,7 @@ export const alertsRouter = createTRPCRouter({
         .object({
           status: z.enum(["draft", "published", "archived"]).optional(),
           activeOnly: z.boolean().optional(),
+          teamId: z.string().nullish(),
         })
         .optional(),
     )
@@ -81,7 +82,7 @@ export const alertsRouter = createTRPCRouter({
         input?.activeOnly === true ? "published" : input?.status;
       const data = await graphqlFetch<{ alerts: GqlAlert[] }>(
         ALERTS_LIST_QUERY,
-        status ? { status } : undefined,
+        { ...(status ? { status } : {}), ...(input?.teamId ? { teamId: input.teamId } : {}) },
       );
       return { alerts: data.alerts };
     }),
@@ -96,9 +97,12 @@ export const alertsRouter = createTRPCRouter({
       return { alert: data.alert };
     }),
 
-  getStats: publicProcedure.query(async () => {
+  getStats: publicProcedure
+    .input(z.object({ teamId: z.string().nullish() }).optional())
+    .query(async ({ input }) => {
     const data = await graphqlFetch<{ alerts: GqlAlert[] }>(
       ALERTS_LIST_QUERY,
+      input?.teamId ? { teamId: input.teamId } : undefined,
     );
     const alerts = data.alerts;
     const published = alerts.filter((a) => a.status === "published");
