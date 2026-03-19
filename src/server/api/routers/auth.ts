@@ -144,4 +144,18 @@ export const authRouter = createTRPCRouter({
       }>(UPDATE_PROFILE, { input }, { Cookie: cookie });
       return data.updateProfile;
     }),
+
+  listUsers: publicProcedure.query(async () => {
+    const GRAPHQL_API_KEY = process.env.GRAPHQL_API_KEY ?? "";
+    try {
+      const data = await graphqlFetch<{ users: z.infer<typeof BetterAuthUserSchema>[] }>(
+        `{ users { id email name role isActive emailVerified image } }`,
+        undefined,
+        { "x-api-key": GRAPHQL_API_KEY },
+      );
+      return { users: data.users ?? [], error: null as string | null };
+    } catch {
+      return { users: [] as z.infer<typeof BetterAuthUserSchema>[], error: "Failed to fetch users" as string | null };
+    }
+  }),
 });

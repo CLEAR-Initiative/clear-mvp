@@ -1,6 +1,6 @@
 /* ─── GraphQL entity types matching the Apollo Server schema ─── */
 
-/* ─── GeoJSON types ─── */
+/* ─── GeoJSON ─── */
 
 export interface GeoJSONPoint {
   type: "Point";
@@ -8,96 +8,107 @@ export interface GeoJSONPoint {
 }
 
 export interface GeoJSONGeometry {
-  type: string;
+  type: string; // "Point" | "Polygon" | "MultiPolygon" | etc.
   coordinates: unknown;
 }
 
-/* ─── Location ─── */
-
-export interface GqlDetectionLocation {
-  id: string;
-  location: {
-    id: string;
-    name: string;
-    geoId: string;
-    level: number;
-    latitude: number | null;
-    longitude: number | null;
-  };
-  createdAt: string;
-}
+/* ─── Shared sub-types ─── */
 
 export interface GqlDataSource {
   id: string;
   name: string;
   type: string;
+  baseUrl?: string | null;
+  infoUrl?: string | null;
 }
 
-export interface GqlDetection {
+export interface GqlLocation {
   id: string;
-  title: string;
-  confidence: number | null;
-  status: "raw" | "processed" | "ignored";
-  detectedAt: string;
-  rawData: unknown;
-  source: GqlDataSource | null;
-  locations: GqlDetectionLocation[];
-  createdAt: string;
-  updatedAt: string;
+  name: string;
+  level: number;
+  geoId?: string | null;
+  geometry: GeoJSONGeometry | null | undefined;
 }
+
+/* ─── Signal ─── */
 
 export interface GqlSignal {
   id: string;
-  detection: GqlDetection;
+  source: GqlDataSource;
+  title: string | null;
+  description: string | null;
+  url: string | null;
+  publishedAt: string;
+  collectedAt: string;
+  originLocation: GqlLocation | null;
+  destinationLocation: GqlLocation | null;
+  generalLocation: GqlLocation | null;
   events: Array<{ id: string }>;
-  primaryOf: Array<{ id: string }>;
 }
+
+/** Signal detail — richer events list returned by the `signal(id)` query */
+export interface GqlSignalDetail extends Omit<GqlSignal, "events"> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rawData: Record<string, any>;
+  events: Array<{
+    id: string;
+    title: string | null;
+    types: string[];
+    rank: number;
+    firstSignalCreatedAt: string;
+    signals: Array<{
+      id: string;
+      title: string | null;
+      description: string | null;
+      publishedAt: string;
+      source: { id: string; name: string; type: string };
+    }>;
+  }>;
+}
+
+/* ─── Event ─── */
 
 export interface GqlEvent {
   id: string;
+  title: string | null;
+  description: string | null;
+  /** Free-text category tags e.g. "WASH", "Conflict", "Displacement" */
+  types: string[];
+  /** Relative urgency score — used as severity proxy until a dedicated field is added */
+  rank: number;
+  firstSignalCreatedAt: string;
+  lastSignalCreatedAt: string;
+  populationAffected: string | null;
+  originLocation: GqlLocation | null;
+  destinationLocation: GqlLocation | null;
+  generalLocation: GqlLocation | null;
   signals: GqlSignal[];
-  primarySignal: GqlSignal | null;
-  alerts: Array<{ id: string; title: string }>;
+  /** Non-empty = this event has been flagged as an alert */
+  alerts: Array<{ id: string; status: string }>;
 }
 
-export interface GqlAlertLocation {
-  id: string;
-  location: {
-    id: string;
-    name: string;
-    latitude: number | null;
-    longitude: number | null;
-  };
-  createdAt: string;
-}
+/* ─── Alert ─── */
 
 export interface GqlAlert {
   id: string;
-  title: string;
-  description: string;
-  severity: number;
+  event: GqlEvent;
   status: "draft" | "published" | "archived";
-  events: GqlEvent[];
-  locations: GqlAlertLocation[];
-  metadata: unknown;
-  createdAt: string;
-  updatedAt: string;
 }
 
 /* ─── Severity helpers ─── */
 
-/** Map severity (1-5) to UI severity labels */
-export function mapSeverity(severity: number): "critical" | "high" | "medium" | "low" {
-  if (severity >= 5) return "critical";
-  if (severity >= 4) return "high";
-  if (severity >= 3) return "medium";
+/** Map rank/severity score to a UI severity bucket */
+export function mapSeverity(rank: number): "critical" | "high" | "medium" | "low" {
+  if (rank >= 5) return "critical";
+  if (rank >= 4) return "high";
+  if (rank >= 3) return "medium";
   return "low";
 }
 
-/** Map severity to display color */
-export function severityColor(severity: number): string {
-  if (severity >= 5) return "#DC2626";
-  if (severity >= 4) return "#D97706";
-  if (severity >= 3) return "#F59E0B";
+/** Map rank/severity score to a display colour */
+export function severityColor(rank: number): string {
+  if (rank >= 5) return "#DC2626";
+  if (rank >= 4) return "#D97706";
+  if (rank >= 3) return "#F59E0B";
   return "#059669";
 }

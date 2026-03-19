@@ -11,6 +11,7 @@ import {
   Badge,
   Loader,
   TextInput,
+  SegmentedControl,
   Popover,
   Menu,
   ActionIcon,
@@ -24,7 +25,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
-import type { GqlAlert } from "~/lib/types/graphql";
+import type { GqlEvent } from "~/lib/types/graphql";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 
@@ -35,6 +36,7 @@ const CrisisMap = dynamic(
 
 type SeverityKey = "critical" | "high" | "medium" | "low";
 type SortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
+type ViewMode = "all" | "alerts";
 
 const SORT_LABELS: Record<SortOrder, string> = {
   "sev-desc": "Severity: High to Low",
@@ -52,21 +54,22 @@ function formatTimeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-interface LiveAlertsTabProps {
-  alerts: GqlAlert[];
-  alertsLoading: boolean;
+interface EventsTabProps {
+  events: GqlEvent[];
+  loading: boolean;
   mapMarkers: MapMarker[];
   mapCenter: [number, number];
   mapZoom: number;
 }
 
-export function LiveAlertsTab({
-  alerts,
-  alertsLoading,
+export function EventsTab({
+  events,
+  loading,
   mapMarkers,
   mapCenter,
   mapZoom,
-}: LiveAlertsTabProps) {
+}: EventsTabProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [search, setSearch] = useState("");
   const [activeSeverities, setActiveSeverities] = useState<Set<SeverityKey>>(
     new Set(["critical", "high", "medium", "low"]),
@@ -75,9 +78,16 @@ export function LiveAlertsTab({
   const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
   const [filterOpen, setFilterOpen] = useState(false);
 
+  const alertCount = events.filter((e) => e.alerts.length > 0).length;
+
+  const baseEvents = useMemo(
+    () => viewMode === "alerts" ? events.filter((e) => e.alerts.length > 0) : events,
+    [events, viewMode],
+  );
+
   const allTypes = useMemo(
-    () => [...new Set(alerts.flatMap((a) => a.event.types))].sort(),
-    [alerts],
+    () => [...new Set(baseEvents.flatMap((e) => e.types))].sort(),
+    [baseEvents],
   );
 
   function toggleSeverity(sev: SeverityKey) {
@@ -112,41 +122,56 @@ export function LiveAlertsTab({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let result = alerts.filter((a) => {
-      const sev = mapSeverity(a.event.rank);
+    let result = baseEvents.filter((e) => {
+      const sev = mapSeverity(e.rank);
       if (!activeSeverities.has(sev)) return false;
-      if (activeTypes !== null && !a.event.types.some((t) => activeTypes.has(t))) return false;
+      if (activeTypes !== null && !e.types.some((t) => activeTypes.has(t))) return false;
       if (q) {
-        const title = (a.event.title ?? a.event.description ?? a.event.types[0] ?? "").toLowerCase();
-        const loc = (a.event.generalLocation?.name ?? a.event.originLocation?.name ?? "").toLowerCase();
+        const title = (e.title ?? e.description ?? e.types[0] ?? "").toLowerCase();
+        const loc = (e.generalLocation?.name ?? e.originLocation?.name ?? "").toLowerCase();
         if (!title.includes(q) && !loc.includes(q)) return false;
       }
       return true;
     });
 
     result = [...result].sort((a, b) => {
-      if (sortOrder === "sev-desc") return b.event.rank - a.event.rank;
-      if (sortOrder === "sev-asc")  return a.event.rank - b.event.rank;
+      if (sortOrder === "sev-desc") return b.rank - a.rank;
+      if (sortOrder === "sev-asc")  return a.rank - b.rank;
       if (sortOrder === "newest")
-        return new Date(b.event.firstSignalCreatedAt).getTime() - new Date(a.event.firstSignalCreatedAt).getTime();
-      return new Date(a.event.firstSignalCreatedAt).getTime() - new Date(b.event.firstSignalCreatedAt).getTime();
+        return new Date(b.firstSignalCreatedAt).getTime() - new Date(a.firstSignalCreatedAt).getTime();
+      return new Date(a.firstSignalCreatedAt).getTime() - new Date(b.firstSignalCreatedAt).getTime();
     });
 
     return result;
-  }, [alerts, search, activeSeverities, activeTypes, sortOrder]);
+  }, [baseEvents, search, activeSeverities, activeTypes, sortOrder]);
 
   const listCountLabel =
-    filtered.length === alerts.length
-      ? String(alerts.length)
-      : `${filtered.length}/${alerts.length}`;
+    filtered.length === baseEvents.length
+      ? String(baseEvents.length)
+      : `${filtered.length}/${baseEvents.length}`;
 
   return (
     <Box style={{ display: "flex", gap: 24 }}>
-      {/* Left: Alert List */}
+      {/* Left: Event List */}
       <Box style={{ flex: 1, minWidth: 0 }}>
+        {/* Filter row */}
         <Group gap={8} mb={16}>
+          <SegmentedControl
+            value={viewMode}
+            onChange={(v) => setViewMode(v as ViewMode)}
+            size="xs"
+            data={[
+              { label: `All (${events.length})`, value: "all" },
+              { label: `Alerts (${alertCount})`, value: "alerts" },
+            ]}
+            styles={{
+              root: { background: "#F5F5F5" },
+              label: { fontSize: 12, fontWeight: 500 },
+            }}
+          />
+
           <TextInput
-            placeholder="Search alerts..."
+            placeholder="Search events..."
             value={search}
             onChange={(e) => setSearch(e.currentTarget.value)}
             leftSection={<IconSearch size={14} color="#A3A3A3" />}
@@ -333,11 +358,14 @@ export function LiveAlertsTab({
           </Menu>
         </Group>
 
+        {/* Event list */}
         <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
           <Box px={16} py={12} style={{ borderBottom: "1px solid #E5E5E5" }}>
             <Group justify="space-between">
               <Group gap={8}>
-                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>Active Alerts</Text>
+                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+                  {viewMode === "alerts" ? "Events flagged as Alerts" : "All Events"}
+                </Text>
                 <Badge
                   size="xs"
                   style={{
@@ -349,30 +377,35 @@ export function LiveAlertsTab({
                   {listCountLabel}
                 </Badge>
               </Group>
-              {alertsLoading && <Loader size="xs" />}
+              {loading && <Loader size="xs" />}
             </Group>
           </Box>
 
           <Box style={{ maxHeight: "calc(100vh - 460px)", overflowY: "auto" }}>
-            {filtered.length === 0 && !alertsLoading && (
+            {filtered.length === 0 && !loading && (
               <Box px={16} py={32} style={{ textAlign: "center" }}>
                 <Text c="#A3A3A3" size="sm">
-                  {alerts.length === 0 ? "No active alerts at this time." : "No alerts match your filters."}
+                  {events.length === 0
+                    ? "No events found."
+                    : baseEvents.length === 0
+                    ? "No events flagged as alerts."
+                    : "No events match your filters."}
                 </Text>
               </Box>
             )}
-            {filtered.map((alert) => {
-              const sev = mapSeverity(alert.event.rank);
-              const sevCol = severityColor(alert.event.rank);
+            {filtered.map((event) => {
+              const sev = mapSeverity(event.rank);
+              const sevCol = severityColor(event.rank);
               const sevBg = severityColors[sev]?.bg ?? "#F5F5F5";
-              const location = alert.event.generalLocation ?? alert.event.originLocation ?? alert.event.destinationLocation;
-              const sourceName = alert.event.signals[0]?.source?.name;
-              const displayTitle = alert.event.title ?? alert.event.description ?? alert.event.types[0] ?? "Untitled alert";
+              const location = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+              const sourceName = event.signals[0]?.source?.name;
+              const displayTitle = event.title ?? event.description ?? event.types[0] ?? "Untitled event";
+              const isAlert = event.alerts.length > 0;
 
               return (
                 <Link
-                  key={alert.id}
-                  href={`/event/${alert.event.id}`}
+                  key={event.id}
+                  href={`/event/${event.id}`}
                   style={{ textDecoration: "none", color: "inherit" }}
                 >
                   <Box
@@ -385,16 +418,24 @@ export function LiveAlertsTab({
                     <Box style={{ flex: 1, minWidth: 0 }}>
                       <Group justify="space-between" mb={4}>
                         <Group gap={6}>
-                          <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 700 }}>
+                          <Badge
+                            size="xs"
+                            style={{ background: sevBg, color: sevCol, fontWeight: 700 }}
+                          >
                             {severityLabels[sev]}
                           </Badge>
+                          {isAlert && (
+                            <Badge size="xs" variant="filled" color="red" style={{ fontSize: 10 }}>
+                              Alert
+                            </Badge>
+                          )}
                           {sourceName && (
                             <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>
                               {sourceName}
                             </Badge>
                           )}
                         </Group>
-                        <Text size="xs" c="#A3A3A3">{formatTimeAgo(alert.event.firstSignalCreatedAt)}</Text>
+                        <Text size="xs" c="#A3A3A3">{formatTimeAgo(event.firstSignalCreatedAt)}</Text>
                       </Group>
                       <Text fw={600} size="sm" c="#171717" lineClamp={1} mb={4}>
                         {displayTitle}
@@ -403,11 +444,13 @@ export function LiveAlertsTab({
                         {location && (
                           <Text size="xs" c="#737373">{location.name}</Text>
                         )}
-                        {alert.event.types.length > 0 && (
-                          <Text size="xs" c="#A3A3A3">{alert.event.types.join(", ")}</Text>
+                        {event.types.length > 0 && (
+                          <Text size="xs" c="#A3A3A3">{event.types.join(", ")}</Text>
                         )}
                         <Text size="xs" c="#737373" style={{ marginLeft: "auto" }}>
-                          Rank: <Text span fw={600} c="#171717">{alert.event.rank.toFixed(1)}</Text>
+                          {event.signals.length} signal{event.signals.length !== 1 ? "s" : ""}
+                          {" "}&bull;{" "}
+                          Rank: <Text span fw={600} c="#171717">{event.rank.toFixed(1)}</Text>
                         </Text>
                       </Group>
                     </Box>
