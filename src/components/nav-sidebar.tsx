@@ -18,12 +18,15 @@ import {
   IconShieldCog,
   IconChevronLeft,
   IconChevronRight,
+  IconBuilding,
+  IconSelector,
 } from "@tabler/icons-react";
 import { cn } from "~/lib/utils";
 import { authClient } from "~/lib/auth-client";
 import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
 
 interface NavItem {
   label: string;
@@ -56,11 +59,69 @@ const navSections: NavSection[] = [
       { label: "Crisis Map",    href: "/map",       icon: IconMapPin },
     ],
   },
+  {
+    title: "SETTINGS",
+    items: [
+      { label: "Organisation", href: "/settings/org", icon: IconBuilding },
+    ],
+  },
 ];
 
 const EXPANDED_W  = 240;
 const COLLAPSED_W = 80;
 const TRANSITION  = "200ms ease";
+
+function TeamSwitcher({ collapsed, labelStyle }: { collapsed: boolean; labelStyle: React.CSSProperties }) {
+  const { activeTeam, teams, switchTeam } = useTeam();
+
+  if (!teams?.length) return null;
+
+  return (
+    <Box style={{ borderBottom: `1px solid ${colors.border}`, flexShrink: 0 }}>
+      <Menu width={220} position="bottom-start">
+        <Menu.Target>
+          <UnstyledButton
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: spacingPx[3],
+              padding: `${spacingPx[3]}px ${spacingPx[5]}px`,
+              width: "100%",
+            }}
+            className="hover:bg-[#F5F5F5] transition-colors"
+          >
+            <IconBuilding size={18} style={{ flexShrink: 0, opacity: 0.6 }} />
+            <Box style={{ flex: 1, minWidth: 0, ...labelStyle }}>
+              <Text size="xs" fw={600} truncate="end">
+                {activeTeam?.name ?? "Select team"}
+              </Text>
+              <Text size="xs" c="dimmed" truncate="end">
+                {activeTeam?.organisation.name}
+              </Text>
+            </Box>
+            <IconSelector size={14} style={{ opacity: 0.5, flexShrink: 0, ...labelStyle }} />
+          </UnstyledButton>
+        </Menu.Target>
+        <Menu.Dropdown>
+          {teams.map((team) => (
+            <Menu.Item
+              key={team.id}
+              onClick={() => switchTeam(team.id)}
+              bg={team.id === activeTeam?.id ? colors.accentLight : undefined}
+            >
+              <Text size="sm" fw={500}>{team.name}</Text>
+              <Text size="xs" c="dimmed">{team.organisation.name}</Text>
+            </Menu.Item>
+          ))}
+          <Menu.Divider />
+          <Menu.Item component={Link} href="/settings/org">
+            Manage organisations
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+    </Box>
+  );
+}
 
 export function NavSidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -153,6 +214,9 @@ export function NavSidebar() {
           </UnstyledButton>
         </Tooltip>
       </Box>
+
+      {/* ── Team switcher ──────────────────────────────────────── */}
+      <TeamSwitcher collapsed={collapsed} labelStyle={labelStyle} />
 
       {/* ── Navigation ────────────────────────────────────────── */}
       <Box
