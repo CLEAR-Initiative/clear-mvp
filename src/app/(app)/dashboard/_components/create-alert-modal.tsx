@@ -20,6 +20,7 @@ import {
 } from "@mantine/core";
 import { IconAlertTriangle, IconPlus, IconArrowLeft } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
 import type { GqlEvent, GqlSignal } from "~/lib/types/graphql";
 
 /* ========== Types ========== */
@@ -187,7 +188,8 @@ function CreateEventSubFlow({
   onBack: () => void;
   onCreated: (eventId: string) => void;
 }) {
-  const signalsQuery = api.signals.list.useQuery();
+  const { activeTeamId } = useTeam();
+  const signalsQuery = api.signals.list.useQuery({ teamId: activeTeamId });
   const createSignalMutation = api.signals.create.useMutation();
   const createEventMutation = api.events.create.useMutation();
 
@@ -513,7 +515,8 @@ export function CreateAlertModal({ opened, onClose }: CreateAlertModalProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const eventsQuery = api.events.list.useQuery(undefined, { enabled: opened });
+  const { activeTeamId } = useTeam();
+  const eventsQuery = api.events.list.useQuery({ teamId: activeTeamId }, { enabled: opened });
   const createAlertMutation = api.alerts.createAlert.useMutation();
   const utils = api.useUtils();
 

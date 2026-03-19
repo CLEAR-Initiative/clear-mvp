@@ -22,6 +22,7 @@ import {
 } from "@tabler/icons-react";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
 import {
   type CrisisMarker,
   buildLayersFromShockTypes,
@@ -68,8 +69,10 @@ function FilterLabel({ children }: { children: string }) {
 
 export default function MapPage() {
   /* ---- Fetch alert data ---- */
+  const { activeTeamId } = useTeam();
   const alertsQuery = api.alerts.getAlerts.useQuery({
     activeOnly: true,
+    teamId: activeTeamId,
   });
   const shockTypesQuery = api.alerts.getShockTypes.useQuery();
 

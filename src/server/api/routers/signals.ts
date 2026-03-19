@@ -8,8 +8,8 @@ const LOCATION_FIELDS = `id name level geoId geometry`;
 const SOURCE_FIELDS = `id name type baseUrl infoUrl`;
 
 const SIGNAL_LIST_QUERY = `
-  query Signals {
-    signals {
+  query Signals($teamId: String) {
+    signals(teamId: $teamId) {
       id
       source { ${SOURCE_FIELDS} }
       title
@@ -70,10 +70,15 @@ const CREATE_SIGNAL_MUTATION = `
 `;
 
 export const signalsRouter = createTRPCRouter({
-  list: publicProcedure.query(async () => {
-    const data = await graphqlFetch<{ signals: GqlSignal[] }>(SIGNAL_LIST_QUERY);
-    return data.signals;
-  }),
+  list: publicProcedure
+    .input(z.object({ teamId: z.string().nullish() }).optional())
+    .query(async ({ input }) => {
+      const data = await graphqlFetch<{ signals: GqlSignal[] }>(
+        SIGNAL_LIST_QUERY,
+        input?.teamId ? { teamId: input.teamId } : undefined,
+      );
+      return data.signals;
+    }),
 
   get: publicProcedure
     .input(z.object({ id: z.string() }))
