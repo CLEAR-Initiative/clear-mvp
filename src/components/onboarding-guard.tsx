@@ -10,7 +10,7 @@ export function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!isLoading && teams && teams.length === 0 && pathname !== "/onboarding") {
+    if (!isLoading && (!teams || teams.length === 0) && pathname !== "/onboarding") {
       router.replace("/onboarding");
     }
   }, [isLoading, teams, pathname, router]);

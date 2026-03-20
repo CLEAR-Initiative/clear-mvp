@@ -63,7 +63,7 @@ function LoginForm() {
         if (signUpError) {
           setError(signUpError.message ?? "Sign up failed");
         } else {
-          router.push(callbackUrl);
+          router.push("/onboarding");
         }
       } else {
         const { error: signInError } = await authClient.signIn.email({
