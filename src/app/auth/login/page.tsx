@@ -36,6 +36,8 @@ function LoginForm() {
       ? rawCallback
       : "/dashboard";
 
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -47,15 +49,32 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const { error: signInError } = await authClient.signIn.email({
-        email: email.trim(),
-        password,
-      });
-
-      if (signInError) {
-        setError(signInError.message ?? "Login failed");
+      if (mode === "signup") {
+        if (!name.trim()) {
+          setError("Name is required");
+          setLoading(false);
+          return;
+        }
+        const { error: signUpError } = await authClient.signUp.email({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+        });
+        if (signUpError) {
+          setError(signUpError.message ?? "Sign up failed");
+        } else {
+          router.push(callbackUrl);
+        }
       } else {
-        router.push(callbackUrl);
+        const { error: signInError } = await authClient.signIn.email({
+          email: email.trim(),
+          password,
+        });
+        if (signInError) {
+          setError(signInError.message ?? "Login failed");
+        } else {
+          router.push(callbackUrl);
+        }
       }
     } catch {
       setError("An unexpected error occurred");
@@ -88,7 +107,7 @@ function LoginForm() {
               CLEAR
             </Text>
             <Text size="lg" fw={600} c="#171717">
-              Sign In
+              {mode === "login" ? "Sign In" : "Create Account"}
             </Text>
             <Text size="sm" c="#737373">
               Crisis Early Warning & Response
@@ -108,9 +127,25 @@ function LoginForm() {
             </Alert>
           )}
 
-          {/* Login Form */}
+          {/* Auth Form */}
           <form onSubmit={(e) => void handleSubmit(e)}>
             <Stack gap={12}>
+              {mode === "signup" && (
+                <TextInput
+                  label="Full Name"
+                  placeholder="Enter your name"
+                  value={name}
+                  onChange={(e) => setName(e.currentTarget.value)}
+                  required
+                  autoComplete="name"
+                  autoFocus
+                  styles={{
+                    label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
+                    input: { borderColor: "#E5E5E5", fontSize: 14 },
+                  }}
+                />
+              )}
+
               <TextInput
                 label="Email"
                 placeholder="Enter your email"
@@ -119,7 +154,7 @@ function LoginForm() {
                 onChange={(e) => setEmail(e.currentTarget.value)}
                 required
                 autoComplete="email"
-                autoFocus
+                autoFocus={mode === "login"}
                 styles={{
                   label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
                   input: { borderColor: "#E5E5E5", fontSize: 14 },
@@ -128,24 +163,26 @@ function LoginForm() {
 
               <PasswordInput
                 label="Password"
-                placeholder="Enter your password"
+                placeholder={mode === "signup" ? "Choose a password (min 8 chars)" : "Enter your password"}
                 value={password}
                 onChange={(e) => setPassword(e.currentTarget.value)}
                 required
-                autoComplete="current-password"
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 styles={{
                   label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
                   input: { borderColor: "#E5E5E5", fontSize: 14 },
                 }}
               />
 
-              <Checkbox
-                label="Remember me"
-                size="sm"
-                styles={{
-                  label: { fontSize: 13, color: "#525252" },
-                }}
-              />
+              {mode === "login" && (
+                <Checkbox
+                  label="Remember me"
+                  size="sm"
+                  styles={{
+                    label: { fontSize: 13, color: "#525252" },
+                  }}
+                />
+              )}
 
               <Button
                 type="submit"
@@ -156,10 +193,27 @@ function LoginForm() {
                 mt={8}
                 style={{ fontWeight: 600, fontSize: 14 }}
               >
-                Sign In
+                {mode === "login" ? "Sign In" : "Create Account"}
               </Button>
             </Stack>
           </form>
+
+          {/* Toggle login/signup */}
+          <Text ta="center" size="sm" c="#737373" mt={16}>
+            {mode === "login" ? (
+              <>Don&apos;t have an account?{" "}
+                <Text component="span" c="#E85D3D" fw={600} style={{ cursor: "pointer" }} onClick={() => { setMode("signup"); setError(""); }}>
+                  Sign up
+                </Text>
+              </>
+            ) : (
+              <>Already have an account?{" "}
+                <Text component="span" c="#E85D3D" fw={600} style={{ cursor: "pointer" }} onClick={() => { setMode("login"); setError(""); }}>
+                  Sign in
+                </Text>
+              </>
+            )}
+          </Text>
 
           {/* Demo Users */}
           <Divider my={20} label="Demo Users" labelPosition="center" />
