@@ -19,10 +19,12 @@
       "Bash(ls -la /Users/james/code/clear-mvp/src/app/\\\\\\(app\\\\\\)/onboarding/)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k\\) for k in d.get\\(''''exports'''',{}\\)]\")",
       "Bash(cat /Users/james/code/clear-mvp/src/app/\\\\\\(app\\\\\\)/onboarding/page.tsx)",
-      "Bash(ls -la /Users/james/code/clear-mvp/src/app/\\\\\\(app\\\\\\)/)"
+      "Bash(ls -la /Users/james/code/clear-mvp/src/app/\\\\\\(app\\\\\\)/)",
+      "Bash(vercel --version)"
     ],
     "additionalDirectories": [
-      "/Users/james/code/clear-mvp/src/app/api/auth"
+      "/Users/james/code/clear-mvp/src/app/api/auth",
+      "/Users/james/code/clear-mvp"
     ]
   }
 }

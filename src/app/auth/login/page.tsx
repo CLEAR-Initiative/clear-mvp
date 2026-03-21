@@ -63,7 +63,13 @@ function LoginForm() {
         if (signUpError) {
           setError(signUpError.message ?? "Sign up failed");
         } else {
-          router.push("/onboarding");
+          // Verify session was actually created before redirecting
+          const session = await authClient.getSession();
+          if (session?.data) {
+            router.push("/onboarding");
+          } else {
+            setError("Account creation failed. Please try again.");
+          }
         }
       } else {
         const { error: signInError } = await authClient.signIn.email({

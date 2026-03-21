@@ -1,4 +1,4 @@
-const GRAPHQL_URL = process.env.GRAPHQL_URL ?? "http://localhost:4000/graphql";
+import { GRAPHQL_URL } from "~/server/env";
 
 interface GraphQLResponse<T> {
   data: T;

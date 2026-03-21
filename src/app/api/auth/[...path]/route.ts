@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-
-const API_URL = process.env.API_URL ?? "http://localhost:4000";
+import { API_URL } from "~/server/env";
 
 /**
  * BFF proxy for Better Auth requests.
@@ -57,8 +56,8 @@ async function handler(
     const message = err instanceof Error ? err.message : String(err);
     console.error("[auth-proxy]", request.method, url.toString(), message);
     return NextResponse.json(
-      { error: "Auth proxy failed" },
-      { status: 502 },
+      { message: "Auth proxy failed", code: "PROXY_ERROR" },
+      { status: 500 },
     );
   }
 }
