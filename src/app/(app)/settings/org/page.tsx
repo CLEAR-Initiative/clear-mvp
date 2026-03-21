@@ -9,6 +9,7 @@ import {
   Button,
   Group,
   Loader,
+  Modal,
   Select,
   Stack,
   Table,
@@ -16,6 +17,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 
@@ -26,14 +28,20 @@ function slugify(value: string) {
     .replace(/^-|-$/g, "");
 }
 
+const CAN_CREATE_ORG_ROLES = ["admin", "org_admin"];
+
 export default function OrgSettingsPage() {
   const orgsQuery = api.teams.myOrganisations.useQuery();
+  const authQuery = api.auth.me.useQuery();
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
 
   const orgs = orgsQuery.data ?? [];
   const activeOrg = orgs.find((o) => o.id === selectedOrgId) ?? orgs[0] ?? null;
+  const userRole = authQuery.data?.user?.role ?? "";
+  const canCreateOrg = CAN_CREATE_ORG_ROLES.includes(userRole);
 
-  if (orgsQuery.isLoading) {
+  if (orgsQuery.isLoading || authQuery.isLoading) {
     return (
       <Box p="xl" ta="center">
         <Loader size="sm" />
@@ -44,16 +52,29 @@ export default function OrgSettingsPage() {
   if (!activeOrg) {
     return (
       <Box p="xl">
-        <Text c="dimmed">You don&apos;t belong to any organisations yet.</Text>
+        <Text c="dimmed" mb="md">You don&apos;t belong to any organisations yet.</Text>
+        {canCreateOrg && (
+          <>
+            <Button leftSection={<IconPlus size={16} />} onClick={openCreateModal}>
+              Create Organisation
+            </Button>
+            <CreateOrgModal opened={createModalOpened} onClose={closeCreateModal} />
+          </>
+        )}
       </Box>
     );
   }
 
   return (
     <Box p="xl" maw={900} mx="auto">
-      <Title order={2} mb="lg">
-        Organisation Settings
-      </Title>
+      <Group justify="space-between" mb="lg">
+        <Title order={2}>Organisation Settings</Title>
+        {canCreateOrg && (
+          <Button variant="light" leftSection={<IconPlus size={16} />} onClick={openCreateModal}>
+            New Organisation
+          </Button>
+        )}
+      </Group>
 
       {orgs.length > 1 && (
         <Select
@@ -66,13 +87,66 @@ export default function OrgSettingsPage() {
         />
       )}
 
-      <OrgDetail orgId={activeOrg.id} />
+      <OrgDetail orgId={activeOrg.id} userRole={userRole} />
+      <CreateOrgModal opened={createModalOpened} onClose={closeCreateModal} />
     </Box>
   );
 }
 
-function OrgDetail({ orgId }: { orgId: string }) {
+/* ─── Create Organisation Modal ────────────────────────────── */
+function CreateOrgModal({ opened, onClose }: { opened: boolean; onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const createOrg = api.teams.createOrganisation.useMutation();
+  const utils = api.useUtils();
+
+  async function handleCreate() {
+    if (!name || !slug) return;
+    await createOrg.mutateAsync({ name, slug });
+    setName("");
+    setSlug("");
+    onClose();
+    void utils.teams.myOrganisations.invalidate();
+  }
+
+  return (
+    <Modal opened={opened} onClose={onClose} title="Create Organisation" centered size="sm">
+      <Stack gap="sm">
+        <TextInput
+          label="Name"
+          placeholder="e.g. ACME Relief"
+          value={name}
+          onChange={(e) => {
+            setName(e.currentTarget.value);
+            setSlug(slugify(e.currentTarget.value));
+          }}
+          required
+        />
+        <TextInput
+          label="Slug"
+          placeholder="acme-relief"
+          value={slug}
+          onChange={(e) => setSlug(e.currentTarget.value)}
+          required
+        />
+        {createOrg.error && (
+          <Text c="red" size="sm">{createOrg.error.message}</Text>
+        )}
+        <Group justify="flex-end" mt="sm">
+          <Button variant="subtle" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleCreate} loading={createOrg.isPending} disabled={!name || !slug}>
+            Create
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
+  );
+}
+
+/* ─── Org Detail ───────────────────────────────────────────── */
+function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
   const orgQuery = api.teams.organisation.useQuery({ id: orgId });
+  const usersQuery = api.auth.listUsers.useQuery(undefined, { staleTime: 60_000 });
   const updateOrg = api.teams.updateOrganisation.useMutation();
   const addMember = api.teams.addOrgMember.useMutation();
   const removeMember = api.teams.removeOrgMember.useMutation();
@@ -82,7 +156,7 @@ function OrgDetail({ orgId }: { orgId: string }) {
   const [editName, setEditName] = useState("");
   const [editSlug, setEditSlug] = useState("");
   const [editing, setEditing] = useState(false);
-  const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [newMemberRole, setNewMemberRole] = useState<string>("member");
   const [creatingTeam, setCreatingTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
@@ -95,8 +169,17 @@ function OrgDetail({ orgId }: { orgId: string }) {
     return <Loader size="sm" />;
   }
 
-  const currentUserMember = org.members?.find(() => true); // TODO: match by current user ID
-  const canEdit = true; // TODO: check role from currentUserMember
+  // User can edit if they're a global admin/org_admin, or an org-level owner/admin
+  const isGlobalPrivileged = userRole === "admin" || userRole === "org_admin";
+  const currentOrgMember = org.members?.find(() => true); // TODO: match by current user ID when available
+  const isOrgOwnerOrAdmin = currentOrgMember?.role === "owner" || currentOrgMember?.role === "admin";
+  const canEdit = isGlobalPrivileged || isOrgOwnerOrAdmin;
+
+  // Build user options for the member selector, excluding existing members
+  const existingMemberIds = new Set(org.members?.map((m) => m.user.id) ?? []);
+  const userOptions = (usersQuery.data?.users ?? [])
+    .filter((u) => !existingMemberIds.has(u.id) && u.isActive)
+    .map((u) => ({ value: u.id, label: `${u.name} (${u.email})` }));
 
   function startEditing() {
     if (!org) return;
@@ -113,14 +196,13 @@ function OrgDetail({ orgId }: { orgId: string }) {
   }
 
   async function handleAddMember() {
-    if (!newMemberEmail) return;
-    // The API expects userId; in a real implementation you'd resolve email → userId
+    if (!selectedUserId) return;
     await addMember.mutateAsync({
       orgId,
-      userId: newMemberEmail,
+      userId: selectedUserId,
       role: newMemberRole,
     });
-    setNewMemberEmail("");
+    setSelectedUserId(null);
     void utils.teams.organisation.invalidate({ id: orgId });
   }
 
@@ -231,11 +313,15 @@ function OrgDetail({ orgId }: { orgId: string }) {
         </Table>
         {canEdit && (
           <Group mt="sm" gap="sm">
-            <TextInput
-              placeholder="User ID or email"
-              value={newMemberEmail}
-              onChange={(e) => setNewMemberEmail(e.currentTarget.value)}
+            <Select
+              placeholder="Select user to add"
+              data={userOptions}
+              value={selectedUserId}
+              onChange={setSelectedUserId}
+              searchable
               size="xs"
+              w={280}
+              nothingFoundMessage="No users available"
             />
             <Select
               data={["owner", "admin", "member"]}
@@ -249,6 +335,7 @@ function OrgDetail({ orgId }: { orgId: string }) {
               leftSection={<IconPlus size={14} />}
               onClick={handleAddMember}
               loading={addMember.isPending}
+              disabled={!selectedUserId}
             >
               Add
             </Button>

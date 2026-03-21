@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, orgAdminProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type {
   Organisation,
@@ -208,7 +208,7 @@ export const teamsRouter = createTRPCRouter({
 
   // ── Mutations ────────────────────────────────────────────
 
-  createOrganisation: protectedProcedure
+  createOrganisation: orgAdminProcedure
     .input(z.object({ name: z.string(), slug: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ createOrganisation: Organisation }>(

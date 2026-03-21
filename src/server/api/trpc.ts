@@ -84,3 +84,20 @@ const enforceAuth = t.middleware(async ({ ctx, next }) => {
 });
 
 export const protectedProcedure = t.procedure.use(enforceAuth);
+
+/**
+ * Org-admin procedure — requires admin or org_admin role.
+ * Use for actions like creating organisations.
+ */
+const enforceOrgAdmin = t.middleware(async ({ ctx, next }) => {
+  const user = (ctx as { user?: SessionUser }).user;
+  if (!user || (user.role !== "admin" && user.role !== "org_admin")) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You need Organisation Admin privileges for this action",
+    });
+  }
+  return next({ ctx });
+});
+
+export const orgAdminProcedure = t.procedure.use(enforceAuth).use(enforceOrgAdmin);
