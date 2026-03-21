@@ -85,7 +85,7 @@ const UPDATE_ORGANISATION = `
 `;
 
 const ADD_ORG_MEMBER = `
-  mutation AddOrgMember($orgId: String!, $userId: String!, $role: String) {
+  mutation AddOrgMember($orgId: String!, $userId: String!, $role: OrgMemberRole) {
     addOrgMember(orgId: $orgId, userId: $userId, role: $role) {
       id user { id name email } role
     }
