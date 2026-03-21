@@ -71,6 +71,10 @@ export const authRouter = createTRPCRouter({
       if (!res.ok) return { authenticated: false, user: null };
 
       const raw: unknown = await res.json();
+
+      // Apollo API returns null for unauthenticated requests
+      if (raw === null) return { authenticated: false, user: null };
+
       const parsed = SessionResponseSchema.safeParse(raw);
       if (!parsed.success) {
         console.error("Invalid session response shape:", parsed.error.message);
