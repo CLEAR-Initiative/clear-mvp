@@ -114,7 +114,7 @@ export function RightPanel({
   onCreateAlert,
 }: RightPanelProps) {
   return (
-    <Box component="aside" className="bg-white border-l border-[#E5E5E5] overflow-y-auto flex flex-col">
+    <Box component="aside" className="bg-white sm:border-l border-t sm:border-t-0 border-[#E5E5E5] overflow-y-auto flex flex-col">
       {/* Panel header */}
       <Box px={24} py={24} className="border-b border-[#E5E5E5] bg-[#F9FAFB]">
         <Group justify="space-between" align="flex-start" mb={4}>

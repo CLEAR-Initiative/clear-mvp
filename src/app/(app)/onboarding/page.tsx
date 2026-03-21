@@ -15,6 +15,7 @@ import {
   Title,
 } from "@mantine/core";
 import { api } from "~/trpc/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTeam } from "~/providers/team-provider";
 import type { TeamLocation } from "~/lib/types/teams";
 
@@ -27,6 +28,7 @@ function slugify(value: string) {
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { switchTeam } = useTeam();
   const [active, setActive] = useState(0);
 
@@ -78,10 +80,12 @@ export default function OnboardingPage() {
     setActive(3);
   }
 
-  function handleFinish() {
+  async function handleFinish() {
     if (teamId) {
       switchTeam(teamId);
     }
+    // Invalidate myTeams cache so OnboardingGuard sees the new team
+    await queryClient.invalidateQueries({ queryKey: [["teams", "myTeams"]] });
     router.push("/dashboard");
   }
 

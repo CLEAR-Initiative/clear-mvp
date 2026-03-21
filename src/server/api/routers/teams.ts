@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { graphqlFetch } from "~/server/api/graphql";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type {
   Organisation,
   OrgMember,
@@ -8,12 +8,6 @@ import type {
   TeamMember,
   TeamLocation,
 } from "~/lib/types/teams";
-
-/** Extract cookie header from tRPC context for authenticated GraphQL calls. */
-function cookieHeaders(ctx: { headers: Headers }): Record<string, string> {
-  const cookie = ctx.headers.get("cookie");
-  return cookie ? { Cookie: cookie } : {};
-}
 
 // ── Query fragments ────────────────────────────────────────
 
@@ -161,7 +155,7 @@ const SET_DEFAULT_TEAM = `
 export const teamsRouter = createTRPCRouter({
   // ── Queries ──────────────────────────────────────────────
 
-  myOrganisations: publicProcedure.query(async ({ ctx }) => {
+  myOrganisations: protectedProcedure.query(async ({ ctx }) => {
     const data = await graphqlFetch<{ myOrganisations: Organisation[] }>(
       MY_ORGANISATIONS_QUERY,
       {},
@@ -170,7 +164,7 @@ export const teamsRouter = createTRPCRouter({
     return data.myOrganisations;
   }),
 
-  myTeams: publicProcedure.query(async ({ ctx }) => {
+  myTeams: protectedProcedure.query(async ({ ctx }) => {
     const data = await graphqlFetch<{ myTeams: Team[] }>(
       MY_TEAMS_QUERY,
       {},
@@ -179,7 +173,7 @@ export const teamsRouter = createTRPCRouter({
     return data.myTeams;
   }),
 
-  organisation: publicProcedure
+  organisation: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ organisation: Organisation }>(
@@ -190,7 +184,7 @@ export const teamsRouter = createTRPCRouter({
       return data.organisation;
     }),
 
-  team: publicProcedure
+  team: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ team: Team }>(
@@ -201,7 +195,7 @@ export const teamsRouter = createTRPCRouter({
       return data.team;
     }),
 
-  locations: publicProcedure
+  locations: protectedProcedure
     .input(z.object({ level: z.number().optional() }).optional())
     .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ locations: TeamLocation[] }>(
@@ -214,7 +208,7 @@ export const teamsRouter = createTRPCRouter({
 
   // ── Mutations ────────────────────────────────────────────
 
-  createOrganisation: publicProcedure
+  createOrganisation: protectedProcedure
     .input(z.object({ name: z.string(), slug: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ createOrganisation: Organisation }>(
@@ -225,7 +219,7 @@ export const teamsRouter = createTRPCRouter({
       return data.createOrganisation;
     }),
 
-  updateOrganisation: publicProcedure
+  updateOrganisation: protectedProcedure
     .input(z.object({ id: z.string(), name: z.string().optional(), slug: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const { id, ...fields } = input;
@@ -237,7 +231,7 @@ export const teamsRouter = createTRPCRouter({
       return data.updateOrganisation;
     }),
 
-  addOrgMember: publicProcedure
+  addOrgMember: protectedProcedure
     .input(z.object({ orgId: z.string(), userId: z.string(), role: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ addOrgMember: OrgMember }>(
@@ -248,7 +242,7 @@ export const teamsRouter = createTRPCRouter({
       return data.addOrgMember;
     }),
 
-  removeOrgMember: publicProcedure
+  removeOrgMember: protectedProcedure
     .input(z.object({ orgId: z.string(), userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ removeOrgMember: boolean }>(
@@ -259,7 +253,7 @@ export const teamsRouter = createTRPCRouter({
       return data.removeOrgMember;
     }),
 
-  createTeam: publicProcedure
+  createTeam: protectedProcedure
     .input(z.object({
       organisationId: z.string(),
       name: z.string(),
@@ -275,7 +269,7 @@ export const teamsRouter = createTRPCRouter({
       return data.createTeam;
     }),
 
-  updateTeam: publicProcedure
+  updateTeam: protectedProcedure
     .input(z.object({
       id: z.string(),
       name: z.string().optional(),
@@ -292,7 +286,7 @@ export const teamsRouter = createTRPCRouter({
       return data.updateTeam;
     }),
 
-  deleteTeam: publicProcedure
+  deleteTeam: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ deleteTeam: boolean }>(
@@ -303,7 +297,7 @@ export const teamsRouter = createTRPCRouter({
       return data.deleteTeam;
     }),
 
-  addTeamMember: publicProcedure
+  addTeamMember: protectedProcedure
     .input(z.object({ teamId: z.string(), userId: z.string(), role: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ addTeamMember: TeamMember }>(
@@ -314,7 +308,7 @@ export const teamsRouter = createTRPCRouter({
       return data.addTeamMember;
     }),
 
-  removeTeamMember: publicProcedure
+  removeTeamMember: protectedProcedure
     .input(z.object({ teamId: z.string(), userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ removeTeamMember: boolean }>(
@@ -325,7 +319,7 @@ export const teamsRouter = createTRPCRouter({
       return data.removeTeamMember;
     }),
 
-  updateTeamMemberRole: publicProcedure
+  updateTeamMemberRole: protectedProcedure
     .input(z.object({ teamId: z.string(), userId: z.string(), role: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ updateTeamMemberRole: TeamMember }>(
@@ -336,7 +330,7 @@ export const teamsRouter = createTRPCRouter({
       return data.updateTeamMemberRole;
     }),
 
-  setTeamLocations: publicProcedure
+  setTeamLocations: protectedProcedure
     .input(z.object({ teamId: z.string(), locationIds: z.array(z.string()) }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ setTeamLocations: Team }>(
@@ -347,7 +341,7 @@ export const teamsRouter = createTRPCRouter({
       return data.setTeamLocations;
     }),
 
-  setDefaultTeam: publicProcedure
+  setDefaultTeam: protectedProcedure
     .input(z.object({ teamId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ setDefaultTeam: Team }>(

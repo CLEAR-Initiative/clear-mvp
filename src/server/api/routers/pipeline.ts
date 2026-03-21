@@ -1,5 +1,5 @@
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { graphqlFetch } from "~/server/api/graphql";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 
 /* ─── GraphQL types for data sources ─── */
 
@@ -39,9 +39,11 @@ const SIGNALS_COUNT_QUERY = `
 `;
 
 export const pipelineRouter = createTRPCRouter({
-  getSources: publicProcedure.query(async () => {
+  getSources: protectedProcedure.query(async ({ ctx }) => {
     const data = await graphqlFetch<{ dataSources: GqlDataSourceFull[] }>(
       DATA_SOURCES_QUERY,
+      undefined,
+      cookieHeaders(ctx),
     );
     // Map to shape expected by consumers (DjangoPipelineSource-compatible)
     return {
@@ -59,11 +61,14 @@ export const pipelineRouter = createTRPCRouter({
     };
   }),
 
-  getStatistics: publicProcedure.query(async () => {
+  getStatistics: protectedProcedure.query(async ({ ctx }) => {
+    const hdrs = cookieHeaders(ctx);
     const [sourcesData, signalsData] = await Promise.all([
-      graphqlFetch<{ dataSources: GqlDataSourceFull[] }>(DATA_SOURCES_QUERY),
+      graphqlFetch<{ dataSources: GqlDataSourceFull[] }>(DATA_SOURCES_QUERY, undefined, hdrs),
       graphqlFetch<{ signals: Array<{ id: string; source: { id: string } | null }> }>(
         SIGNALS_COUNT_QUERY,
+        undefined,
+        hdrs,
       ),
     ]);
 

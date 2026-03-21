@@ -57,7 +57,7 @@ export default function DashboardPage() {
   const regionOptions = config?.regions ?? ["All Regions"];
 
   return (
-    <Box className="flex-1 grid grid-cols-[1fr_380px]" style={{ height: "100vh" }}>
+    <Box className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_380px]" style={{ minHeight: "100vh" }}>
       <MapSection
         selectedCountry={selectedCountry}
         selectedRegion={selectedRegion}

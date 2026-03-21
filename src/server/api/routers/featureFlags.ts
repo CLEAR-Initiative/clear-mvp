@@ -2,8 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch } from "~/server/api/graphql";
 import { FEATURE_FLAGS, getDefaultFlags } from "~/lib/constants/feature-flags";
-
-const GRAPHQL_API_KEY = process.env.GRAPHQL_API_KEY ?? "";
+import { GRAPHQL_API_KEY } from "~/server/env";
 
 interface GqlFeatureFlag {
   key: string;

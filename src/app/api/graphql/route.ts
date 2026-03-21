@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-
-const API_URL = process.env.API_URL ?? "http://localhost:4000";
+import { API_URL } from "~/server/env";
 
 /**
  * BFF proxy for GraphQL requests.

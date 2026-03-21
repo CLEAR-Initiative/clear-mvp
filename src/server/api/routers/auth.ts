@@ -1,8 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch } from "~/server/api/graphql";
-
-const API_URL = process.env.API_URL ?? "http://localhost:4000";
+import { API_URL, GRAPHQL_API_KEY } from "~/server/env";
 
 const BetterAuthUserSchema = z.object({
   id: z.string(),
@@ -72,6 +71,10 @@ export const authRouter = createTRPCRouter({
       if (!res.ok) return { authenticated: false, user: null };
 
       const raw: unknown = await res.json();
+
+      // Apollo API returns null for unauthenticated requests
+      if (raw === null) return { authenticated: false, user: null };
+
       const parsed = SessionResponseSchema.safeParse(raw);
       if (!parsed.success) {
         console.error("Invalid session response shape:", parsed.error.message);
@@ -146,7 +149,6 @@ export const authRouter = createTRPCRouter({
     }),
 
   listUsers: publicProcedure.query(async () => {
-    const GRAPHQL_API_KEY = process.env.GRAPHQL_API_KEY ?? "";
     try {
       const data = await graphqlFetch<{ users: z.infer<typeof BetterAuthUserSchema>[] }>(
         `{ users { id email name role isActive emailVerified image } }`,
