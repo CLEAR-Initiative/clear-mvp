@@ -40,3 +40,9 @@ export async function graphqlFetch<T>(
 
   return json.data;
 }
+
+/** Extract cookie header from tRPC context for authenticated GraphQL calls. */
+export function cookieHeaders(ctx: { headers: Headers }): Record<string, string> {
+  const cookie = ctx.headers.get("cookie");
+  return cookie ? { Cookie: cookie } : {};
+}

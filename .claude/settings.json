@@ -24,7 +24,8 @@
       "Bash(vercel logs:*)",
       "Bash(vercel env:*)",
       "Bash(vercel ls:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(grep -n \"Cookie\" /Users/james/code/clear-mvp/src/server/api/routers/*.ts)"
     ],
     "additionalDirectories": [
       "/Users/james/code/clear-mvp/src/app/api/auth",

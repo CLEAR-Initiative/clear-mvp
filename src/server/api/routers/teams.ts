@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { graphqlFetch } from "~/server/api/graphql";
+import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type {
   Organisation,
   OrgMember,
@@ -8,12 +8,6 @@ import type {
   TeamMember,
   TeamLocation,
 } from "~/lib/types/teams";
-
-/** Extract cookie header from tRPC context for authenticated GraphQL calls. */
-function cookieHeaders(ctx: { headers: Headers }): Record<string, string> {
-  const cookie = ctx.headers.get("cookie");
-  return cookie ? { Cookie: cookie } : {};
-}
 
 // ── Query fragments ────────────────────────────────────────
 
