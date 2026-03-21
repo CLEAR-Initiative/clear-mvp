@@ -7,7 +7,7 @@ const STORAGE_KEY = "clear-active-team-id";
 
 export function useActiveTeam() {
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
-  const { data: teams, isLoading } = api.teams.myTeams.useQuery();
+  const { data: teams, isLoading, isError } = api.teams.myTeams.useQuery();
   const setDefault = api.teams.setDefaultTeam.useMutation();
 
   // Load from localStorage on mount
@@ -38,5 +38,5 @@ export function useActiveTeam() {
 
   const activeTeam = teams?.find((t) => t.id === activeTeamId) ?? null;
 
-  return { activeTeamId, activeTeam, teams, isLoading, switchTeam };
+  return { activeTeamId, activeTeam, teams, isLoading, isError, switchTeam };
 }
