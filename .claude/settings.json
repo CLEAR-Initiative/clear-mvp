@@ -23,7 +23,8 @@
       "Bash(vercel --version)",
       "Bash(vercel logs:*)",
       "Bash(vercel env:*)",
-      "Bash(vercel ls:*)"
+      "Bash(vercel ls:*)",
+      "Bash(git add:*)"
     ],
     "additionalDirectories": [
       "/Users/james/code/clear-mvp/src/app/api/auth",
