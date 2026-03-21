@@ -1,6 +1,6 @@
 # Bead 003: Organization Settings Page for Org Admins
 
-## Status: open
+## Status: done
 
 ## Summary
 Give `org_admin` users a full Organization Settings page where they can edit org details, manage teams, and invite users.

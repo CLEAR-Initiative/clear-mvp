@@ -1,6 +1,6 @@
 # Bead 002: Restrict Organization Creation to Org Admins
 
-## Status: open
+## Status: done
 
 ## Summary
 Only users with `org_admin` (or `admin`) role should be able to create an Organization. Remove or hide the create-org flow for regular users.
