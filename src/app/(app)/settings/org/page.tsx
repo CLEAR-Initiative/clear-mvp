@@ -19,6 +19,13 @@ import {
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export default function OrgSettingsPage() {
   const orgsQuery = api.teams.myOrganisations.useQuery();
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
@@ -69,6 +76,7 @@ function OrgDetail({ orgId }: { orgId: string }) {
   const updateOrg = api.teams.updateOrganisation.useMutation();
   const addMember = api.teams.addOrgMember.useMutation();
   const removeMember = api.teams.removeOrgMember.useMutation();
+  const createTeam = api.teams.createTeam.useMutation();
   const utils = api.useUtils();
 
   const [editName, setEditName] = useState("");
@@ -76,6 +84,10 @@ function OrgDetail({ orgId }: { orgId: string }) {
   const [editing, setEditing] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState<string>("member");
+  const [creatingTeam, setCreatingTeam] = useState(false);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [newTeamSlug, setNewTeamSlug] = useState("");
+  const [newTeamDescription, setNewTeamDescription] = useState("");
 
   const org = orgQuery.data;
 
@@ -115,6 +127,22 @@ function OrgDetail({ orgId }: { orgId: string }) {
   async function handleRemoveMember(userId: string) {
     await removeMember.mutateAsync({ orgId, userId });
     void utils.teams.organisation.invalidate({ id: orgId });
+  }
+
+  async function handleCreateTeam() {
+    if (!newTeamName || !newTeamSlug) return;
+    await createTeam.mutateAsync({
+      organisationId: orgId,
+      name: newTeamName,
+      slug: newTeamSlug,
+      description: newTeamDescription || undefined,
+    });
+    setNewTeamName("");
+    setNewTeamSlug("");
+    setNewTeamDescription("");
+    setCreatingTeam(false);
+    void utils.teams.organisation.invalidate({ id: orgId });
+    void utils.teams.myTeams.invalidate();
   }
 
   return (
@@ -232,6 +260,16 @@ function OrgDetail({ orgId }: { orgId: string }) {
       <Box>
         <Group justify="space-between" mb="sm">
           <Title order={4}>Teams</Title>
+          {canEdit && !creatingTeam && (
+            <Button
+              variant="subtle"
+              size="xs"
+              leftSection={<IconPlus size={14} />}
+              onClick={() => setCreatingTeam(true)}
+            >
+              Add Team
+            </Button>
+          )}
         </Group>
         <Stack gap="xs">
           {org.teams?.map((t) => (
@@ -254,6 +292,62 @@ function OrgDetail({ orgId }: { orgId: string }) {
               </Button>
             </Group>
           ))}
+          {creatingTeam && (
+            <Box p="xs" style={{ border: "1px solid #E5E5E5", borderRadius: 6 }}>
+              <Stack gap="sm">
+                <TextInput
+                  label="Team name"
+                  placeholder="e.g. Sudan Response"
+                  value={newTeamName}
+                  onChange={(e) => {
+                    setNewTeamName(e.currentTarget.value);
+                    setNewTeamSlug(slugify(e.currentTarget.value));
+                  }}
+                  required
+                />
+                <TextInput
+                  label="Slug"
+                  placeholder="sudan-response"
+                  value={newTeamSlug}
+                  onChange={(e) => setNewTeamSlug(e.currentTarget.value)}
+                  required
+                />
+                <TextInput
+                  label="Description (optional)"
+                  placeholder="What does this team monitor?"
+                  value={newTeamDescription}
+                  onChange={(e) => setNewTeamDescription(e.currentTarget.value)}
+                />
+                {createTeam.error && (
+                  <Text c="red" size="sm">
+                    {createTeam.error.message}
+                  </Text>
+                )}
+                <Group justify="flex-end">
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    onClick={() => {
+                      setCreatingTeam(false);
+                      setNewTeamName("");
+                      setNewTeamSlug("");
+                      setNewTeamDescription("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="xs"
+                    onClick={handleCreateTeam}
+                    loading={createTeam.isPending}
+                    disabled={!newTeamName || !newTeamSlug}
+                  >
+                    Create Team
+                  </Button>
+                </Group>
+              </Stack>
+            </Box>
+          )}
         </Stack>
       </Box>
     </Stack>
