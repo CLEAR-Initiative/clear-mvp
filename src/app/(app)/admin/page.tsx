@@ -70,17 +70,19 @@ type PendingAction =
   | { type: "delete"; user: GqlUser };
 
 const ROLES = [
-  { value: "field",   label: "Field" },
-  { value: "analyst", label: "Analyst" },
-  { value: "admin",   label: "Admin" },
+  { value: "field",     label: "Field" },
+  { value: "analyst",   label: "Analyst" },
+  { value: "org_admin", label: "Org Admin" },
+  { value: "admin",     label: "Admin" },
 ];
 
 const roleColor: Record<string, string> = {
-  admin:   "orange",
-  analyst: "blue",
-  field:   "green",
-  viewer:  "gray",
-  user:    "gray",
+  admin:     "orange",
+  org_admin: "grape",
+  analyst:   "blue",
+  field:     "green",
+  viewer:    "gray",
+  user:      "gray",
 };
 
 /* ─── Hold-to-confirm button ──────────────────────────────── */
@@ -312,7 +314,7 @@ function UsersPanel() {
     );
   }
 
-  const adminCount  = localUsers.filter((u) => u.role === "admin").length;
+  const adminCount  = localUsers.filter((u) => u.role === "admin" || u.role === "org_admin").length;
   const activeCount = localUsers.filter((u) => u.isActive).length;
 
   const stats: StatItem[] = [
@@ -417,6 +419,8 @@ function UsersPanel() {
                           fontSize: fontSizesPx.sm,
                           textTransform: "capitalize",
                           color: roleColor[user.role] === "orange"
+                            ? colors.accent
+                            : roleColor[user.role] === "grape"
                             ? colors.accent
                             : roleColor[user.role] === "blue"
                             ? colors.info
