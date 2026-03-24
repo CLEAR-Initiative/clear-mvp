@@ -10,6 +10,7 @@ import { pipelineRouter } from "~/server/api/routers/pipeline";
 import { signalsRouter } from "~/server/api/routers/signals";
 import { teamsRouter } from "~/server/api/routers/teams";
 import { locationsRouter } from "~/server/api/routers/locations";
+import { invitationsRouter } from "~/server/api/routers/invitations";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -20,6 +21,7 @@ export const appRouter = createTRPCRouter({
   hapi: hapiRouter,
   inform: informRouter,
   llm: llmRouter,
+  invitations: invitationsRouter,
   locations: locationsRouter,
   pipeline: pipelineRouter,
   signals: signalsRouter,

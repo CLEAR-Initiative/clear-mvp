@@ -84,6 +84,12 @@ const UPDATE_ORGANISATION = `
   }
 `;
 
+const DELETE_ORGANISATION = `
+  mutation DeleteOrganisation($id: String!) {
+    deleteOrganisation(id: $id)
+  }
+`;
+
 const ADD_ORG_MEMBER = `
   mutation AddOrgMember($orgId: String!, $userId: String!, $role: OrgMemberRole) {
     addOrgMember(orgId: $orgId, userId: $userId, role: $role) {
@@ -229,6 +235,17 @@ export const teamsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.updateOrganisation;
+    }),
+
+  deleteOrganisation: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ deleteOrganisation: boolean }>(
+        DELETE_ORGANISATION,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.deleteOrganisation;
     }),
 
   addOrgMember: protectedProcedure
