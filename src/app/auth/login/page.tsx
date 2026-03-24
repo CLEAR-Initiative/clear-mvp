@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   Box,
   Card,
@@ -14,6 +15,8 @@ import {
   Stack,
   SimpleGrid,
   Divider,
+  Anchor,
+  Group,
 } from "@mantine/core";
 import { IconAlertCircle, IconLogin } from "@tabler/icons-react";
 import { authClient } from "~/lib/auth-client";
@@ -30,14 +33,11 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawCallback = searchParams.get("callbackUrl") ?? "/dashboard";
-  // Sanitize callbackUrl: only allow relative paths to prevent open-redirect
   const callbackUrl =
     rawCallback.startsWith("/") && !rawCallback.startsWith("//")
       ? rawCallback
       : "/dashboard";
 
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -49,38 +49,14 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      if (mode === "signup") {
-        if (!name.trim()) {
-          setError("Name is required");
-          setLoading(false);
-          return;
-        }
-        const { error: signUpError } = await authClient.signUp.email({
-          name: name.trim(),
-          email: email.trim(),
-          password,
-        });
-        if (signUpError) {
-          setError(signUpError.message ?? "Sign up failed");
-        } else {
-          // Verify session was actually created before redirecting
-          const session = await authClient.getSession();
-          if (session?.data) {
-            router.push("/onboarding");
-          } else {
-            setError("Account creation failed. Please try again.");
-          }
-        }
+      const { error: signInError } = await authClient.signIn.email({
+        email: email.trim(),
+        password,
+      });
+      if (signInError) {
+        setError(signInError.message ?? "Login failed");
       } else {
-        const { error: signInError } = await authClient.signIn.email({
-          email: email.trim(),
-          password,
-        });
-        if (signInError) {
-          setError(signInError.message ?? "Login failed");
-        } else {
-          router.push(callbackUrl);
-        }
+        router.push(callbackUrl);
       }
     } catch {
       setError("An unexpected error occurred");
@@ -113,7 +89,7 @@ function LoginForm() {
               CLEAR
             </Text>
             <Text size="lg" fw={600} c="#171717">
-              {mode === "login" ? "Sign In" : "Create Account"}
+              Sign In
             </Text>
             <Text size="sm" c="#737373">
               Crisis Early Warning & Response
@@ -133,25 +109,9 @@ function LoginForm() {
             </Alert>
           )}
 
-          {/* Auth Form */}
+          {/* Login Form */}
           <form onSubmit={(e) => void handleSubmit(e)}>
             <Stack gap={12}>
-              {mode === "signup" && (
-                <TextInput
-                  label="Full Name"
-                  placeholder="Enter your name"
-                  value={name}
-                  onChange={(e) => setName(e.currentTarget.value)}
-                  required
-                  autoComplete="name"
-                  autoFocus
-                  styles={{
-                    label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                    input: { borderColor: "#E5E5E5", fontSize: 14 },
-                  }}
-                />
-              )}
-
               <TextInput
                 label="Email"
                 placeholder="Enter your email"
@@ -160,7 +120,7 @@ function LoginForm() {
                 onChange={(e) => setEmail(e.currentTarget.value)}
                 required
                 autoComplete="email"
-                autoFocus={mode === "login"}
+                autoFocus
                 styles={{
                   label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
                   input: { borderColor: "#E5E5E5", fontSize: 14 },
@@ -169,26 +129,33 @@ function LoginForm() {
 
               <PasswordInput
                 label="Password"
-                placeholder={mode === "signup" ? "Choose a password (min 8 chars)" : "Enter your password"}
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.currentTarget.value)}
                 required
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                autoComplete="current-password"
                 styles={{
                   label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
                   input: { borderColor: "#E5E5E5", fontSize: 14 },
                 }}
               />
 
-              {mode === "login" && (
+              <Group justify="space-between">
                 <Checkbox
                   label="Remember me"
                   size="sm"
-                  styles={{
-                    label: { fontSize: 13, color: "#525252" },
-                  }}
+                  styles={{ label: { fontSize: 13, color: "#525252" } }}
                 />
-              )}
+                <Anchor
+                  component={Link}
+                  href="/auth/forgot-password"
+                  size="sm"
+                  c="#E85D3D"
+                  fw={500}
+                >
+                  Forgot password?
+                </Anchor>
+              </Group>
 
               <Button
                 type="submit"
@@ -199,27 +166,10 @@ function LoginForm() {
                 mt={8}
                 style={{ fontWeight: 600, fontSize: 14 }}
               >
-                {mode === "login" ? "Sign In" : "Create Account"}
+                Sign In
               </Button>
             </Stack>
           </form>
-
-          {/* Toggle login/signup */}
-          <Text ta="center" size="sm" c="#737373" mt={16}>
-            {mode === "login" ? (
-              <>Don&apos;t have an account?{" "}
-                <Text component="span" c="#E85D3D" fw={600} style={{ cursor: "pointer" }} onClick={() => { setMode("signup"); setError(""); }}>
-                  Sign up
-                </Text>
-              </>
-            ) : (
-              <>Already have an account?{" "}
-                <Text component="span" c="#E85D3D" fw={600} style={{ cursor: "pointer" }} onClick={() => { setMode("login"); setError(""); }}>
-                  Sign in
-                </Text>
-              </>
-            )}
-          </Text>
 
           {/* Demo Users */}
           <Divider my={20} label="Demo Users" labelPosition="center" />

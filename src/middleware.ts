@@ -12,7 +12,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes that don't require auth
-  const publicPaths = ["/auth/login", "/auth/logout", "/api/"];
+  const publicPaths = ["/auth/login", "/auth/logout", "/auth/forgot-password", "/auth/reset-password", "/accept-invite", "/api/"];
   if (publicPaths.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }

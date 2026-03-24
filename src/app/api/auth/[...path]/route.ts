@@ -11,6 +11,15 @@ async function handler(
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path } = await params;
+
+  // Block open signup — users must be invited
+  if (path.join("/") === "sign-up/email") {
+    return NextResponse.json(
+      { code: "SIGNUP_DISABLED", message: "Open signup is disabled. You must be invited." },
+      { status: 403 },
+    );
+  }
+
   const upstream = `${API_URL}/api/auth/${path.join("/")}`;
 
   // Forward query string if present
