@@ -1,0 +1,100 @@
+"use client";
+
+import { useMemo } from "react";
+import { api } from "~/trpc/react";
+import { countryConfig } from "~/lib/constants/country-config";
+
+interface LocationNode {
+  id: string;
+  name: string;
+  level: number;
+  ancestorIds: string[];
+  parent: { id: string; name: string } | null;
+}
+
+interface CountryTree {
+  id: string;
+  name: string;
+  states: Array<{
+    id: string;
+    name: string;
+    districts: Array<{ id: string; name: string }>;
+  }>;
+}
+
+/**
+ * Hook that provides location data from the API for filter dropdowns.
+ * Falls back to hardcoded country-config while loading.
+ */
+export function useLocations() {
+  const treeQuery = api.locations.tree.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 min cache
+    refetchOnWindowFocus: false,
+  });
+
+  const tree: CountryTree[] = treeQuery.data ?? [];
+
+  /** Country names for the dropdown */
+  const countries = useMemo(() => {
+    if (tree.length > 0) return tree.map((c) => c.name).sort();
+    // Fallback to hardcoded while loading
+    return Object.keys(countryConfig).sort();
+  }, [tree]);
+
+  /** Get state/region names for a country */
+  const getRegions = useMemo(() => {
+    return (countryName: string): string[] => {
+      const country = tree.find((c) => c.name === countryName);
+      if (country) {
+        return ["All Regions", ...country.states.map((s) => s.name).sort()];
+      }
+      // Fallback
+      return countryConfig[countryName]?.regions ?? ["All Regions"];
+    };
+  }, [tree]);
+
+  /** Get district names for a state within a country */
+  const getDistricts = useMemo(() => {
+    return (countryName: string, stateName: string): string[] => {
+      const country = tree.find((c) => c.name === countryName);
+      if (!country) return ["All Districts"];
+      const state = country.states.find((s) => s.name === stateName);
+      if (!state) return ["All Districts"];
+      return ["All Districts", ...state.districts.map((d) => d.name).sort()];
+    };
+  }, [tree]);
+
+  /** Get location ID by name (for API queries) */
+  const getLocationId = useMemo(() => {
+    return (name: string): string | null => {
+      for (const country of tree) {
+        if (country.name === name) return country.id;
+        for (const state of country.states) {
+          if (state.name === name) return state.id;
+          for (const district of state.districts) {
+            if (district.name === name) return district.id;
+          }
+        }
+      }
+      return null;
+    };
+  }, [tree]);
+
+  /** Map center for a country (from hardcoded config for now) */
+  const getCenter = (countryName: string): [number, number] =>
+    countryConfig[countryName]?.center ?? [30.0, 15.5];
+
+  const getZoom = (countryName: string): number =>
+    countryConfig[countryName]?.zoom ?? 5;
+
+  return {
+    countries,
+    getRegions,
+    getDistricts,
+    getLocationId,
+    getCenter,
+    getZoom,
+    isLoading: treeQuery.isLoading,
+    tree,
+  };
+}

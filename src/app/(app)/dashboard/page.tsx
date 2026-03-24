@@ -5,6 +5,7 @@ import { Box } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
 import { countryConfig, countries } from "~/lib/constants/country-config";
 import { alertsToMarkers } from "../map/_components/map-markers-data";
 import { MapSection } from "./_components/map-section";
@@ -19,10 +20,11 @@ export default function DashboardPage() {
   const [activeMonth, setActiveMonth] = useState(2);
   const [createAlertOpened, createAlertHandlers] = useDisclosure(false);
 
-  // tRPC queries — GraphQL-backed
-  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true });
-  const statsQuery = api.alerts.getStats.useQuery();
-  const eventsQuery = api.events.list.useQuery();
+  // Team-scoped tRPC queries — GraphQL-backed
+  const { activeTeamId } = useTeam();
+  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId });
+  const statsQuery = api.alerts.getStats.useQuery({ teamId: activeTeamId });
+  const eventsQuery = api.events.list.useQuery({ teamId: activeTeamId });
   const pipelineStatsQuery = api.pipeline.getStatistics.useQuery(undefined, {
     retry: false,
   });
@@ -55,7 +57,7 @@ export default function DashboardPage() {
   const regionOptions = config?.regions ?? ["All Regions"];
 
   return (
-    <Box className="flex-1 grid grid-cols-[1fr_380px]" style={{ height: "100vh" }}>
+    <Box className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_380px]" style={{ minHeight: "100vh" }}>
       <MapSection
         selectedCountry={selectedCountry}
         selectedRegion={selectedRegion}

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { graphqlFetch } from "~/server/api/graphql";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
+import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
 
 const LOCATION_FIELDS = `
@@ -37,8 +37,8 @@ const EVENT_FIELDS = `
 `;
 
 const ALERTS_LIST_QUERY = `
-  query Alerts($status: AlertStatus) {
-    alerts(status: $status) {
+  query Alerts($status: AlertStatus, $teamId: String) {
+    alerts(status: $status, teamId: $teamId) {
       id
       status
       event { ${EVENT_FIELDS} }
@@ -67,38 +67,45 @@ const CREATE_ALERT_MUTATION = `
 `;
 
 export const alertsRouter = createTRPCRouter({
-  getAlerts: publicProcedure
+  getAlerts: protectedProcedure
     .input(
       z
         .object({
           status: z.enum(["draft", "published", "archived"]).optional(),
           activeOnly: z.boolean().optional(),
+          teamId: z.string().nullish(),
         })
         .optional(),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const status =
         input?.activeOnly === true ? "published" : input?.status;
       const data = await graphqlFetch<{ alerts: GqlAlert[] }>(
         ALERTS_LIST_QUERY,
-        status ? { status } : undefined,
+        { ...(status ? { status } : {}), ...(input?.teamId ? { teamId: input.teamId } : {}) },
+        cookieHeaders(ctx),
       );
       return { alerts: data.alerts };
     }),
 
-  getAlert: publicProcedure
+  getAlert: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ alert: GqlAlert | null }>(
         ALERT_GET_QUERY,
         { id: input.id },
+        cookieHeaders(ctx),
       );
       return { alert: data.alert };
     }),
 
-  getStats: publicProcedure.query(async () => {
+  getStats: protectedProcedure
+    .input(z.object({ teamId: z.string().nullish() }).optional())
+    .query(async ({ ctx, input }) => {
     const data = await graphqlFetch<{ alerts: GqlAlert[] }>(
       ALERTS_LIST_QUERY,
+      input?.teamId ? { teamId: input.teamId } : undefined,
+      cookieHeaders(ctx),
     );
     const alerts = data.alerts;
     const published = alerts.filter((a) => a.status === "published");
@@ -129,7 +136,7 @@ export const alertsRouter = createTRPCRouter({
     return { shock_types: [] as Array<{ id: number; name: string; icon: string; color: string }> };
   }),
 
-  createAlert: publicProcedure
+  createAlert: protectedProcedure
     .input(
       z.object({
         title: z.string().min(1),
@@ -142,10 +149,11 @@ export const alertsRouter = createTRPCRouter({
         metadata: z.record(z.unknown()).optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ createAlert: GqlAlert }>(
         CREATE_ALERT_MUTATION,
         { input },
+        cookieHeaders(ctx),
       );
       return data.createAlert;
     }),

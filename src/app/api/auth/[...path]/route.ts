@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-
-const API_URL = process.env.API_URL ?? "http://localhost:4000";
+import { API_URL } from "~/server/env";
 
 /**
  * BFF proxy for Better Auth requests.
@@ -12,6 +11,15 @@ async function handler(
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path } = await params;
+
+  // Block open signup — users must be invited
+  if (path.join("/") === "sign-up/email") {
+    return NextResponse.json(
+      { code: "SIGNUP_DISABLED", message: "Open signup is disabled. You must be invited." },
+      { status: 403 },
+    );
+  }
+
   const upstream = `${API_URL}/api/auth/${path.join("/")}`;
 
   // Forward query string if present
@@ -57,8 +65,8 @@ async function handler(
     const message = err instanceof Error ? err.message : String(err);
     console.error("[auth-proxy]", request.method, url.toString(), message);
     return NextResponse.json(
-      { error: "Auth proxy failed" },
-      { status: 502 },
+      { message: "Auth proxy failed", code: "PROXY_ERROR" },
+      { status: 500 },
     );
   }
 }

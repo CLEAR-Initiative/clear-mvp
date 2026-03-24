@@ -74,23 +74,23 @@ export function MapSection({
   regionOptions,
 }: MapSectionProps) {
   return (
-    <Box className="relative h-full">
+    <Box className="relative h-[50vh] sm:h-full">
       {/* Map header overlay */}
       <Box
-        className="absolute top-0 left-0 right-0 z-10 flex justify-between items-start"
-        px={24}
-        py={16}
+        className="absolute top-0 left-0 right-0 z-10 flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-0"
+        px={{ base: 12, sm: 24 }}
+        py={{ base: 8, sm: 16 }}
         style={{
           background: "linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(255,255,255,0))",
         }}
       >
-        <Group gap={12}>
+        <Group gap={8} wrap="wrap" style={{ flex: 1 }}>
           <Select
             size="xs"
             value={selectedCountry}
             onChange={onCountryChange}
             data={countries}
-            style={{ minWidth: 140 }}
+            style={{ minWidth: 120 }}
             styles={{
               input: { fontWeight: 600, fontSize: 13, border: "1px solid #E5E5E5" },
             }}
@@ -101,7 +101,7 @@ export function MapSection({
             value={selectedRegion}
             onChange={onRegionChange}
             data={regionOptions}
-            style={{ minWidth: 140 }}
+            style={{ minWidth: 120 }}
             styles={{
               input: { fontWeight: 600, fontSize: 13, border: "1px solid #E5E5E5" },
             }}
@@ -119,7 +119,7 @@ export function MapSection({
             </Box>
           </Box>
         </Group>
-        <Group gap={0} className="bg-white border border-[#E5E5E5] overflow-hidden">
+        <Group gap={0} className="bg-white border border-[#E5E5E5] overflow-hidden" visibleFrom="sm">
           {views.map((view) => (
             <UnstyledButton
               key={view.key}
@@ -149,11 +149,12 @@ export function MapSection({
         className="w-full h-full"
       />
 
-      {/* Map Legend */}
+      {/* Map Legend — hidden on mobile to avoid overlap, visible sm+ */}
       <Box
         className="absolute bottom-[100px] left-4 bg-white border border-[#E5E5E5] z-10"
         p={16}
         style={{ minWidth: 150 }}
+        visibleFrom="sm"
       >
         <Text size="xs" fw={700} c="#737373" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 10 }} mb={12}>
           {activeView === "nrc-global" ? "NRC Regions" : "Legend"}
@@ -184,8 +185,8 @@ export function MapSection({
         )}
       </Box>
 
-      {/* Time Slider */}
-      <Box className="absolute bottom-4 left-4 right-4 bg-white border border-[#E5E5E5] z-10" p={16}>
+      {/* Time Slider — hidden on mobile to avoid overlap with bottom nav */}
+      <Box className="absolute bottom-4 left-4 right-4 bg-white border border-[#E5E5E5] z-10" p={16} visibleFrom="sm">
         <Group justify="space-between" mb={12}>
           <Text size="xs" fw={700} c="#737373" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
             Timeline

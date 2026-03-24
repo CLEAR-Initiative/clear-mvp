@@ -5,8 +5,10 @@ import { Box, Tabs, Button, Group } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { countryConfig, countries, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
+import { dateOptions, parseDateFilter } from "~/lib/constants/country-config";
+import { useLocations } from "~/hooks/use-locations";
 import { alertsToMarkers, eventsToMarkers, signalsToMarkers } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar } from "~/components/ui";
 
@@ -24,21 +26,23 @@ export default function DetectionPage() {
   const [selectedDate, setSelectedDate] = useState(dateOptions[0] ?? "Last 30 days");
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
 
-  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true });
+  const { activeTeamId } = useTeam();
+  const { countries, getRegions, getCenter, getZoom } = useLocations();
+  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId });
   const historyQuery = api.alerts.getAlerts.useQuery(
-    { activeOnly: false },
+    { activeOnly: false, teamId: activeTeamId },
     { enabled: activeTab === "history" },
   );
   const eventsQuery = api.events.list.useQuery(
-    undefined,
+    { teamId: activeTeamId },
     { enabled: activeTab === "events" },
   );
   const signalsQuery = api.signals.list.useQuery(
-    undefined,
+    { teamId: activeTeamId },
     { enabled: activeTab === "signals" },
   );
 
-  const countryConf = countryConfig[selectedCountry];
+  const regions = getRegions(selectedCountry);
 
   const allAlerts = useMemo(() => {
     const raw = alertsQuery.data?.alerts ?? [];
@@ -48,7 +52,7 @@ export default function DetectionPage() {
   // Region + date filtered alerts passed down to KPI cards and list
   const alerts = useMemo(() => {
     if (allAlerts.length === 0) return [];
-    const regions = countryConf?.regions?.map((r) => r.toLowerCase()) ?? [];
+    const regionNames = regions.map((r) => r.toLowerCase());
     const countryLower = selectedCountry.toLowerCase();
     const regionLower = selectedRegion !== "All Regions" ? selectedRegion.toLowerCase() : null;
     const dateRange = parseDateFilter(selectedDate);
@@ -60,7 +64,7 @@ export default function DetectionPage() {
       const loc = alert.event.generalLocation ?? alert.event.originLocation ?? alert.event.destinationLocation;
       const locName = loc?.name.toLowerCase() ?? "";
       const matchesCountry =
-        regions.some((r) => r !== "all regions" && locName.includes(r)) ||
+        regionNames.some((r) => r !== "all regions" && locName.includes(r)) ||
         locName.includes(countryLower) ||
         (alert.event.description?.toLowerCase().includes(countryLower) ?? false) ||
         alert.event.types.some((t) => t.toLowerCase().includes(countryLower));
@@ -75,7 +79,7 @@ export default function DetectionPage() {
       }
       return true;
     });
-  }, [allAlerts, selectedCountry, selectedRegion, selectedDate]);
+  }, [allAlerts, regions, selectedCountry, selectedRegion, selectedDate]);
 
   const historyAlerts = historyQuery.data?.alerts ?? [];
 
@@ -88,8 +92,8 @@ export default function DetectionPage() {
     () => signalsToMarkers(signalsQuery.data ?? []),
     [signalsQuery.data],
   );
-  const mapCenter = useMemo<[number, number]>(() => countryConf?.center ?? [30.0, 15.5], [selectedCountry]);
-  const mapZoom = useMemo(() => countryConf?.zoom ?? 5, [selectedCountry]);
+  const mapCenter = useMemo<[number, number]>(() => getCenter(selectedCountry), [selectedCountry]);
+  const mapZoom = useMemo(() => getZoom(selectedCountry), [selectedCountry]);
 
   const handleAlertCreated = useCallback(() => {
     void alertsQuery.refetch();
@@ -113,7 +117,7 @@ export default function DetectionPage() {
           region={selectedRegion}
           onRegionChange={setSelectedRegion}
           countries={countries}
-          regions={countryConf?.regions ?? ["All Regions"]}
+          regions={regions}
           date={selectedDate}
           onDateChange={setSelectedDate}
           dateOptions={dateOptions}

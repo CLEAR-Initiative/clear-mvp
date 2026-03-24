@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   Box,
   Card,
@@ -14,6 +15,8 @@ import {
   Stack,
   SimpleGrid,
   Divider,
+  Anchor,
+  Group,
 } from "@mantine/core";
 import { IconAlertCircle, IconLogin } from "@tabler/icons-react";
 import { authClient } from "~/lib/auth-client";
@@ -30,7 +33,6 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawCallback = searchParams.get("callbackUrl") ?? "/dashboard";
-  // Sanitize callbackUrl: only allow relative paths to prevent open-redirect
   const callbackUrl =
     rawCallback.startsWith("/") && !rawCallback.startsWith("//")
       ? rawCallback
@@ -51,7 +53,6 @@ function LoginForm() {
         email: email.trim(),
         password,
       });
-
       if (signInError) {
         setError(signInError.message ?? "Login failed");
       } else {
@@ -139,13 +140,22 @@ function LoginForm() {
                 }}
               />
 
-              <Checkbox
-                label="Remember me"
-                size="sm"
-                styles={{
-                  label: { fontSize: 13, color: "#525252" },
-                }}
-              />
+              <Group justify="space-between">
+                <Checkbox
+                  label="Remember me"
+                  size="sm"
+                  styles={{ label: { fontSize: 13, color: "#525252" } }}
+                />
+                <Anchor
+                  component={Link}
+                  href="/auth/forgot-password"
+                  size="sm"
+                  c="#E85D3D"
+                  fw={500}
+                >
+                  Forgot password?
+                </Anchor>
+              </Group>
 
               <Button
                 type="submit"

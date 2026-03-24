@@ -22,15 +22,14 @@ import {
 } from "@tabler/icons-react";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
 import {
   type CrisisMarker,
   buildLayersFromShockTypes,
   buildCrisisTypeOptions,
   alertsToMarkers,
-  deriveCountryOptions,
-  deriveRegionOptions,
 } from "./_components/map-markers-data";
-import { countryConfig } from "~/lib/constants/country-config";
+import { useLocations } from "~/hooks/use-locations";
 import { MapLayersPanel } from "./_components/map-layers-panel";
 import { MapLegendPanel } from "./_components/map-legend-panel";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
@@ -68,8 +67,11 @@ function FilterLabel({ children }: { children: string }) {
 
 export default function MapPage() {
   /* ---- Fetch alert data ---- */
+  const { activeTeamId } = useTeam();
+  const { countries: apiCountries, getRegions, getCenter, getZoom } = useLocations();
   const alertsQuery = api.alerts.getAlerts.useQuery({
     activeOnly: true,
+    teamId: activeTeamId,
   });
   const shockTypesQuery = api.alerts.getShockTypes.useQuery();
 
@@ -113,21 +115,20 @@ export default function MapPage() {
   );
   const [activeMonth, setActiveMonth] = useState(5);
 
-  /* ---- Derive country/region options from markers ---- */
+  /* ---- Derive country/region options from API locations ---- */
   const countryOptions = useMemo(
-    () => deriveCountryOptions(allMarkers),
-    [allMarkers],
+    () => ["All Countries", ...apiCountries],
+    [apiCountries],
   );
   const regionOptions = useMemo(
-    () => deriveRegionOptions(allMarkers, selectedCountry),
-    [allMarkers, selectedCountry],
+    () => selectedCountry !== "All Countries" ? getRegions(selectedCountry) : ["All Regions"],
+    [selectedCountry, getRegions],
   );
 
-  /* ---- Map center: use countryConfig when a country is selected ---- */
+  /* ---- Map center ---- */
   const mapCenter: [number, number] = useMemo(() => {
     if (selectedCountry !== "All Countries") {
-      const cfg = countryConfig[selectedCountry];
-      if (cfg) return cfg.center;
+      return getCenter(selectedCountry);
     }
     if (allMarkers.length === 0) return [30.0, 15.5];
     const avgLng =
@@ -139,8 +140,7 @@ export default function MapPage() {
 
   const mapZoom = useMemo(() => {
     if (selectedCountry !== "All Countries") {
-      const cfg = countryConfig[selectedCountry];
-      if (cfg) return cfg.zoom;
+      return getZoom(selectedCountry);
     }
     return 5;
   }, [selectedCountry]);

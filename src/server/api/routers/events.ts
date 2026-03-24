@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { graphqlFetch } from "~/server/api/graphql";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
 
 const LOCATION_FIELDS = `
@@ -37,8 +37,8 @@ const EVENT_FIELDS = `
 `;
 
 const EVENT_LIST_QUERY = `
-  query Events {
-    events {
+  query Events($teamId: String) {
+    events(teamId: $teamId) {
       ${EVENT_FIELDS}
     }
   }
@@ -61,31 +61,39 @@ const CREATE_EVENT_MUTATION = `
 `;
 
 export const eventsRouter = createTRPCRouter({
-  list: publicProcedure.query(async () => {
-    const data = await graphqlFetch<{ events: GqlEvent[] }>(EVENT_LIST_QUERY);
-    return data.events;
-  }),
+  list: protectedProcedure
+    .input(z.object({ teamId: z.string().nullish() }).optional())
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ events: GqlEvent[] }>(
+        EVENT_LIST_QUERY,
+        input?.teamId ? { teamId: input.teamId } : undefined,
+        cookieHeaders(ctx),
+      );
+      return data.events;
+    }),
 
-  get: publicProcedure
+  get: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ event: GqlEvent | null }>(
         EVENT_GET_QUERY,
         { id: input.id },
+        cookieHeaders(ctx),
       );
       return data.event;
     }),
 
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         signalIds: z.array(z.string()).min(1),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ createEvent: GqlEvent }>(
         CREATE_EVENT_MUTATION,
         { input },
+        cookieHeaders(ctx),
       );
       return data.createEvent;
     }),

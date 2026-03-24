@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { graphqlFetch } from "~/server/api/graphql";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlSignal, GqlSignalDetail } from "~/lib/types/graphql";
 
 const LOCATION_FIELDS = `id name level geoId geometry`;
@@ -8,8 +8,8 @@ const LOCATION_FIELDS = `id name level geoId geometry`;
 const SOURCE_FIELDS = `id name type baseUrl infoUrl`;
 
 const SIGNAL_LIST_QUERY = `
-  query Signals {
-    signals {
+  query Signals($teamId: String) {
+    signals(teamId: $teamId) {
       id
       source { ${SOURCE_FIELDS} }
       title
@@ -70,22 +70,29 @@ const CREATE_SIGNAL_MUTATION = `
 `;
 
 export const signalsRouter = createTRPCRouter({
-  list: publicProcedure.query(async () => {
-    const data = await graphqlFetch<{ signals: GqlSignal[] }>(SIGNAL_LIST_QUERY);
-    return data.signals;
-  }),
+  list: protectedProcedure
+    .input(z.object({ teamId: z.string().nullish() }).optional())
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ signals: GqlSignal[] }>(
+        SIGNAL_LIST_QUERY,
+        input?.teamId ? { teamId: input.teamId } : undefined,
+        cookieHeaders(ctx),
+      );
+      return data.signals;
+    }),
 
-  get: publicProcedure
+  get: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ signal: GqlSignalDetail | null }>(
         SIGNAL_GET_QUERY,
         { id: input.id },
+        cookieHeaders(ctx),
       );
       return data.signal;
     }),
 
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         sourceId: z.string().optional(),
@@ -99,10 +106,11 @@ export const signalsRouter = createTRPCRouter({
         destinationId: z.string().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ createSignal: GqlSignal }>(
         CREATE_SIGNAL_MUTATION,
         { input },
+        cookieHeaders(ctx),
       );
       return data.createSignal;
     }),

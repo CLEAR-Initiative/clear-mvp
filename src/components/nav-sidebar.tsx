@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSelectedLayoutSegments } from "next/navigation";
-import { Box, Text, Badge, UnstyledButton, Tooltip, Menu } from "@mantine/core";
+import { Box, Text, Badge, UnstyledButton, Tooltip, Menu, Drawer } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import {
   IconLayoutDashboard,
   IconTarget,
@@ -18,12 +19,16 @@ import {
   IconShieldCog,
   IconChevronLeft,
   IconChevronRight,
+  IconBuilding,
+  IconSelector,
+  IconMenu2,
 } from "@tabler/icons-react";
 import { cn } from "~/lib/utils";
 import { authClient } from "~/lib/auth-client";
 import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
 
 interface NavItem {
   label: string;
@@ -56,14 +61,73 @@ const navSections: NavSection[] = [
       { label: "Crisis Map",    href: "/map",       icon: IconMapPin },
     ],
   },
+  {
+    title: "SETTINGS",
+    items: [
+      { label: "Organisation", href: "/settings/org", icon: IconBuilding },
+    ],
+  },
 ];
 
 const EXPANDED_W  = 240;
 const COLLAPSED_W = 80;
 const TRANSITION  = "200ms ease";
 
+function TeamSwitcher({ collapsed, labelStyle }: { collapsed: boolean; labelStyle: React.CSSProperties }) {
+  const { activeTeam, teams, switchTeam } = useTeam();
+
+  if (!teams?.length) return null;
+
+  return (
+    <Box style={{ borderBottom: `1px solid ${colors.border}`, flexShrink: 0 }}>
+      <Menu width={220} position="bottom-start">
+        <Menu.Target>
+          <UnstyledButton
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: spacingPx[3],
+              padding: `${spacingPx[3]}px ${spacingPx[5]}px`,
+              width: "100%",
+            }}
+            className="hover:bg-[#F5F5F5] transition-colors"
+          >
+            <IconBuilding size={18} style={{ flexShrink: 0, opacity: 0.6 }} />
+            <Box style={{ flex: 1, minWidth: 0, ...labelStyle }}>
+              <Text size="xs" fw={600} truncate="end">
+                {activeTeam?.name ?? "Select team"}
+              </Text>
+              <Text size="xs" c="dimmed" truncate="end">
+                {activeTeam?.organisation.name}
+              </Text>
+            </Box>
+            <IconSelector size={14} style={{ opacity: 0.5, flexShrink: 0, ...labelStyle }} />
+          </UnstyledButton>
+        </Menu.Target>
+        <Menu.Dropdown>
+          {teams.map((team) => (
+            <Menu.Item
+              key={team.id}
+              onClick={() => switchTeam(team.id)}
+              bg={team.id === activeTeam?.id ? colors.accentLight : undefined}
+            >
+              <Text size="sm" fw={500}>{team.name}</Text>
+              <Text size="xs" c="dimmed">{team.organisation.name}</Text>
+            </Menu.Item>
+          ))}
+          <Menu.Divider />
+          <Menu.Item component={Link} href="/settings/org">
+            Manage organisations
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+    </Box>
+  );
+}
+
 export function NavSidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, { open: openMobile, close: closeMobile }] = useDisclosure(false);
   const segments = useSelectedLayoutSegments();
   const activeSegment = segments[0] ?? "";
   const router = useRouter();
@@ -84,8 +148,132 @@ export function NavSidebar() {
   };
 
   return (
+    <>
+    {/* Mobile hamburger button */}
+    <Box
+      hiddenFrom="sm"
+      style={{
+        position: "fixed",
+        top: 12,
+        left: 12,
+        zIndex: 200,
+      }}
+    >
+      <UnstyledButton
+        onClick={openMobile}
+        style={{
+          width: 40,
+          height: 40,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 8,
+          background: colors.bgWhite,
+          border: `1px solid ${colors.border}`,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+        }}
+      >
+        <IconMenu2 size={22} style={{ color: colors.textSecondary }} />
+      </UnstyledButton>
+    </Box>
+
+    {/* Mobile drawer */}
+    <Drawer
+      opened={mobileOpen}
+      onClose={closeMobile}
+      size="280px"
+      withCloseButton={false}
+      hiddenFrom="sm"
+      styles={{
+        body: { padding: 0, height: "100%", display: "flex", flexDirection: "column" },
+        content: { background: colors.bgWhite },
+      }}
+    >
+      {/* Mobile drawer header */}
+      <Box style={{ height: 64, borderBottom: `1px solid ${colors.border}`, display: "flex", alignItems: "center", padding: spacingPx[5], gap: spacingPx[5] }}>
+        <NrcLogoMark size={32} />
+        <Text fw={700} style={{ fontSize: fontSizesPx.xl, color: colors.textPrimary, fontFamily: "Calibri, 'Trebuchet MS', sans-serif" }}>CLEAR</Text>
+      </Box>
+
+      {/* Mobile team switcher */}
+      <TeamSwitcher collapsed={false} labelStyle={{ opacity: 1, whiteSpace: "nowrap", overflow: "hidden" }} />
+
+      {/* Mobile drawer nav */}
+      <Box component="nav" style={{ flex: 1, overflowY: "auto", padding: spacingPx[3] }}>
+        {navSections.map((section) => (
+          <Box key={section.title} mb={spacingPx[5]}>
+            <Box style={{ height: 28, display: "flex", alignItems: "flex-end", paddingBottom: 4 }}>
+              <Text fw={600} tt="uppercase" px={spacingPx[3]} style={{ letterSpacing: "0.07em", fontSize: fontSizesPx["2xs"], color: colors.textMuted }}>
+                {section.title}
+              </Text>
+            </Box>
+            {section.items.map((item) => {
+              const itemSegment = item.href.replace(/^\//, "");
+              const isActive = !item.disabled && activeSegment === itemSegment;
+              const Icon = item.icon;
+              const content = (
+                <Box
+                  key={item.href}
+                  style={{
+                    display: "flex", alignItems: "center", gap: spacingPx[4],
+                    padding: `${spacingPx[4]}px ${spacingPx[3]}px`, borderRadius: 6,
+                    cursor: item.disabled ? "not-allowed" : "pointer",
+                    opacity: item.disabled ? 0.45 : 1,
+                    background: isActive ? colors.accentLight : "transparent",
+                    borderLeft: isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
+                    color: isActive ? colors.accent : colors.textSecondary,
+                    minHeight: 44,
+                  }}
+                  component="div"
+                >
+                  <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
+                  <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{item.label}</Text>
+                  {item.disabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>Soon</Badge>}
+                  {!item.disabled && item.badge !== undefined && (
+                    <Badge size="xs" color="red" variant="filled" style={{ fontSize: fontSizesPx.xs, fontWeight: 600 }}>{item.badge}</Badge>
+                  )}
+                </Box>
+              );
+              return item.disabled ? content : (
+                <Link key={item.href} href={item.href} onClick={closeMobile} style={{ textDecoration: "none", display: "block", color: "inherit" }}>
+                  {content}
+                </Link>
+              );
+            })}
+          </Box>
+        ))}
+      </Box>
+
+      {/* Mobile drawer footer */}
+      <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3] }}>
+        {isAdmin && (
+          <UnstyledButton component={Link} href="/admin" onClick={closeMobile}
+            style={{ display: "flex", alignItems: "center", gap: spacingPx[3], padding: spacingPx[3], width: "100%", borderRadius: 6, color: colors.textSecondary, minHeight: 44 }}
+          >
+            <IconShieldCog size={18} style={{ opacity: 0.7 }} />
+            <Text fw={500} style={{ fontSize: fontSizesPx.lg }}>Admin</Text>
+          </UnstyledButton>
+        )}
+        <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[2] }}>
+          <UnstyledButton component={Link} href="/profile" onClick={closeMobile}
+            style={{ display: "flex", alignItems: "center", gap: spacingPx[3], padding: spacingPx[3], flex: 1, borderRadius: 6, color: colors.textSecondary, minHeight: 44 }}
+          >
+            <IconSettings size={18} style={{ opacity: 0.7 }} />
+            <Text fw={500} style={{ fontSize: fontSizesPx.lg }}>Settings</Text>
+          </UnstyledButton>
+          <UnstyledButton onClick={handleLogout}
+            style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, color: colors.textMuted }}
+          >
+            <IconLogout size={18} />
+          </UnstyledButton>
+        </Box>
+      </Box>
+    </Drawer>
+
+    {/* Desktop sidebar */}
     <Box
       component="aside"
+      visibleFrom="sm"
       style={{
         width:         collapsed ? COLLAPSED_W : EXPANDED_W,
         minWidth:      collapsed ? COLLAPSED_W : EXPANDED_W,
@@ -153,6 +341,9 @@ export function NavSidebar() {
           </UnstyledButton>
         </Tooltip>
       </Box>
+
+      {/* ── Team switcher ──────────────────────────────────────── */}
+      <TeamSwitcher collapsed={collapsed} labelStyle={labelStyle} />
 
       {/* ── Navigation ────────────────────────────────────────── */}
       <Box
@@ -387,5 +578,6 @@ export function NavSidebar() {
         </Box>
       </Box>
     </Box>
+    </>
   );
 }

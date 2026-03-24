@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { graphqlFetch } from "~/server/api/graphql";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 // GqlDetection was removed — Detection is now accessed via Signal.source (DataSource)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type GqlDetection = any;
@@ -40,7 +40,7 @@ const CREATE_DETECTION_MUTATION = `
 `;
 
 export const detectionsRouter = createTRPCRouter({
-  list: publicProcedure
+  list: protectedProcedure
     .input(
       z
         .object({
@@ -48,15 +48,16 @@ export const detectionsRouter = createTRPCRouter({
         })
         .optional(),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ detections: GqlDetection[] }>(
         DETECTION_LIST_QUERY,
         input?.status ? { status: input.status } : undefined,
+        cookieHeaders(ctx),
       );
       return data.detections;
     }),
 
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         title: z.string().min(1),
@@ -66,10 +67,11 @@ export const detectionsRouter = createTRPCRouter({
         locationIds: z.array(z.string()).optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ createDetection: GqlDetection }>(
         CREATE_DETECTION_MUTATION,
         { input },
+        cookieHeaders(ctx),
       );
       return data.createDetection;
     }),

@@ -27,6 +27,7 @@ export interface GqlLocation {
   name: string;
   level: number;
   geoId?: string | null;
+  ancestorIds?: string[];
   geometry: GeoJSONGeometry | null | undefined;
 }
 
