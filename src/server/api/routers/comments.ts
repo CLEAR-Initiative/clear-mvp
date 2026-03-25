@@ -29,6 +29,24 @@ const SIGNAL_COMMENTS_QUERY = `
   }
 `;
 
+const ADD_COMMENT_MUTATION = `
+  mutation AddComment($input: AddCommentInput!) {
+    addComment(input: $input) { ${COMMENT_FIELDS} }
+  }
+`;
+
+const REPLY_TO_COMMENT_MUTATION = `
+  mutation ReplyToComment($input: ReplyToCommentInput!) {
+    replyToComment(input: $input) { ${COMMENT_FIELDS} }
+  }
+`;
+
+const DELETE_COMMENT_MUTATION = `
+  mutation DeleteComment($id: String!) {
+    deleteComment(id: $id)
+  }
+`;
+
 export const commentsRouter = createTRPCRouter({
   list: protectedProcedure
     .input(z.object({
@@ -51,5 +69,51 @@ export const commentsRouter = createTRPCRouter({
         );
         return data.signal?.comments ?? [];
       }
+    }),
+
+  add: protectedProcedure
+    .input(z.object({
+      entityId: z.string(),
+      entityType: z.enum(["event", "signal"]),
+      comment: z.string().min(1),
+      tagUserIds: z.array(z.string()).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const gqlInput = {
+        comment: input.comment,
+        tagUserIds: input.tagUserIds,
+        ...(input.entityType === "event" ? { eventId: input.entityId } : { signalId: input.entityId }),
+      };
+      const data = await graphqlFetch<{ addComment: GqlUserComment }>(
+        ADD_COMMENT_MUTATION,
+        { input: gqlInput },
+        cookieHeaders(ctx),
+      );
+      return data.addComment;
+    }),
+
+  reply: protectedProcedure
+    .input(z.object({
+      repliedToCommentId: z.string(),
+      comment: z.string().min(1),
+      tagUserIds: z.array(z.string()).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ replyToComment: GqlUserComment }>(
+        REPLY_TO_COMMENT_MUTATION,
+        { input },
+        cookieHeaders(ctx),
+      );
+      return data.replyToComment;
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await graphqlFetch<{ deleteComment: boolean }>(
+        DELETE_COMMENT_MUTATION,
+        { id: input.id },
+        cookieHeaders(ctx),
+      );
     }),
 });
