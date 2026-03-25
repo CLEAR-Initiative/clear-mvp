@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Modal,
   TextInput,
@@ -32,6 +32,7 @@ interface SignalFormData {
   title: string;
   description: string;
   locationId: string;
+  sourceId: string;
 }
 
 interface SelectedFile {
@@ -72,19 +73,23 @@ function DetailsStep({
   onNext,
   locationOptions,
   locationsLoading,
+  sourceOptions,
+  sourcesLoading,
 }: {
   form: SignalFormData;
   setForm: React.Dispatch<React.SetStateAction<SignalFormData>>;
   onNext: () => void;
   locationOptions: { value: string; label: string }[];
   locationsLoading: boolean;
+  sourceOptions: { value: string; label: string }[];
+  sourcesLoading: boolean;
 }) {
-  const isValid = form.title.trim().length > 0;
+  const isValid = form.title.trim().length > 0 && form.sourceId.length > 0;
 
   return (
     <Stack gap="md">
       <TextInput
-        label={<Text style={LABEL_STYLE}>Title *</Text>}
+        label={<Text style={LABEL_STYLE}>Title</Text>}
         placeholder="e.g., Flooding reported in Kassala State"
         value={form.title}
         onChange={(e) => { const v = e.currentTarget.value; setForm((p) => ({ ...p, title: v })); }}
@@ -100,6 +105,18 @@ function DetailsStep({
         minRows={3}
         autosize
         maxRows={6}
+      />
+
+      <Select
+        label={<Text style={LABEL_STYLE}>Source</Text>}
+        placeholder={sourcesLoading ? "Loading sources…" : "Select a source…"}
+        data={sourceOptions}
+        value={form.sourceId || null}
+        onChange={(v) => setForm((p) => ({ ...p, sourceId: v ?? "" }))}
+        disabled={sourcesLoading}
+        required
+        comboboxProps={{ zIndex: 1000 }}
+        nothingFoundMessage="No sources available"
       />
 
       <Select
@@ -302,12 +319,13 @@ const STEP_TITLES: Record<Step, string> = {
 
 export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
   const [step, setStep] = useState<Step>("details");
-  const [form, setForm] = useState<SignalFormData>({ title: "", description: "", locationId: "" });
+  const [form, setForm] = useState<SignalFormData>({ title: "", description: "", locationId: "", sourceId: "" });
   const [files, setFiles] = useState<SelectedFile[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { activeTeamId } = useTeam();
   const locationsQuery = api.locations.list.useQuery(undefined, { enabled: opened, staleTime: 1000 * 60 * 10 });
+  const sourcesQuery = api.signals.sources.useQuery(undefined, { enabled: opened, staleTime: 1000 * 60 * 10 });
   const createSignal = api.signals.create.useMutation();
   const utils = api.useUtils();
 
@@ -316,9 +334,26 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
     label: loc.parent ? `${loc.name} (${loc.parent.name})` : loc.name,
   }));
 
+  const sourceOptions = (sourcesQuery.data ?? []).map((s) => ({
+    value: s.id,
+    label: s.name,
+  }));
+
+  // Auto-select source: prefer "user"/"manual"/"field" source, fall back to gdacs, then first available
+  useEffect(() => {
+    if (!sourcesQuery.data || form.sourceId) return;
+    const sources = sourcesQuery.data;
+    const preferred = sources.find((s) =>
+      /user|manual|field/i.test(s.name) || /user|manual|field/i.test(s.type),
+    );
+    const gdacs = sources.find((s) => /gdacs/i.test(s.name) || /gdacs/i.test(s.type));
+    const auto = preferred ?? gdacs ?? sources[0];
+    if (auto) setForm((p) => ({ ...p, sourceId: auto.id }));
+  }, [sourcesQuery.data, form.sourceId]);
+
   function reset() {
     setStep("details");
-    setForm({ title: "", description: "", locationId: "" });
+    setForm({ title: "", description: "", locationId: "", sourceId: "" });
     setFiles([]);
     setErrorMsg(null);
   }
@@ -343,6 +378,7 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
     setErrorMsg(null);
     try {
       await createSignal.mutateAsync({
+        sourceId: form.sourceId,
         title: form.title.trim(),
         description: form.description.trim() || undefined,
         locationId: form.locationId || undefined,
@@ -388,6 +424,8 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
           onNext={() => setStep("media")}
           locationOptions={locationOptions}
           locationsLoading={locationsQuery.isLoading}
+          sourceOptions={sourceOptions}
+          sourcesLoading={sourcesQuery.isLoading}
         />
       )}
 
