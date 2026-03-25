@@ -36,6 +36,7 @@ interface NavItem {
   icon: React.ElementType;
   badge?: number;
   disabled?: boolean;
+  demo?: boolean;
 }
 
 interface NavSection {
@@ -49,15 +50,15 @@ const navSections: NavSection[] = [
     items: [
       { label: "Overview",        href: "/dashboard",  icon: IconLayoutDashboard },
       { label: "Detection",       href: "/detection",  icon: IconTarget, badge: 3 },
-      { label: "Analysis",        href: "/analysis",   icon: IconChartPie,       disabled: true },
-      { label: "Operations",      href: "/operations", icon: IconUser,           disabled: true },
-      { label: "Cash Assistance", href: "/cash",       icon: IconCurrencyDollar, disabled: true },
+      { label: "Analysis",        href: "/analysis",   icon: IconChartPie,       demo: true },
+      { label: "Operations",      href: "/operations", icon: IconUser,           demo: true },
+      { label: "Cash Assistance", href: "/cash",       icon: IconCurrencyDollar, demo: true },
     ],
   },
   {
     title: "RESOURCES",
     items: [
-      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook,   disabled: true },
+      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook, demo: true },
       { label: "Crisis Map",    href: "/map",       icon: IconMapPin },
     ],
   },
@@ -229,6 +230,7 @@ export function NavSidebar() {
                   <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
                   <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{item.label}</Text>
                   {item.disabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>Soon</Badge>}
+                  {!item.disabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>Demo</Badge>}
                   {!item.disabled && item.badge !== undefined && (
                     <Badge size="xs" color="red" variant="filled" style={{ fontSize: fontSizesPx.xs, fontWeight: 600 }}>{item.badge}</Badge>
                   )}
@@ -412,6 +414,17 @@ export function NavSidebar() {
                       style={{ fontSize: fontSizesPx["2xs"], fontWeight: 500, padding: "0 5px", flexShrink: 0, ...labelStyle }}
                     >
                       Soon
+                    </Badge>
+                  )}
+
+                  {!item.disabled && item.demo && (
+                    <Badge
+                      size="xs"
+                      variant="light"
+                      color="accent"
+                      style={{ fontSize: fontSizesPx["2xs"], fontWeight: 500, padding: "0 5px", flexShrink: 0, ...labelStyle }}
+                    >
+                      Demo
                     </Badge>
                   )}
 
