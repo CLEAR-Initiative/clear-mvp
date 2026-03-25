@@ -42,7 +42,7 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
 
   async function handleHelpful() {
     try {
-      await addFeedback.mutateAsync({ entityId, entityType, rating: 1 });
+      await addFeedback.mutateAsync({ entityId, entityType, rating: 5 });
       setHelpfulSubmitted(true);
     } catch (err) {
       console.error("Failed to submit feedback", err);
@@ -55,7 +55,7 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
       await addFeedback.mutateAsync({
         entityId,
         entityType,
-        rating: 0,
+        rating: 1,
         text: parts.join(" | ") || undefined,
       });
       setModalSubmitted(true);

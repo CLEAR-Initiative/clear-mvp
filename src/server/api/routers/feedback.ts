@@ -24,7 +24,7 @@ export const feedbackRouter = createTRPCRouter({
     .input(z.object({
       entityId: z.string(),
       entityType: z.enum(["event", "signal"]),
-      rating: z.number().int(),
+      rating: z.number().int().min(1).max(5),
       text: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
