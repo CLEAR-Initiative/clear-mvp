@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -11,11 +11,7 @@ import {
   Card,
   Stack,
   Loader,
-  Textarea,
   Button,
-  Avatar,
-  Divider,
-  Modal,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -28,14 +24,6 @@ import {
   IconCalendar,
   IconDatabase,
   IconExternalLink,
-  IconSend,
-  IconMessageCircle,
-  IconThumbUp,
-  IconThumbDown,
-  IconCircleCheck,
-  IconCircleOff,
-  IconHistory,
-  IconMapPinOff,
   IconRadar,
   IconUsers,
   IconShieldExclamation,
@@ -44,6 +32,7 @@ import {
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { CommentsSection } from "~/components/comments-section";
+import { FeedbackSection } from "~/components/feedback-section";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
 
@@ -170,63 +159,8 @@ export function EventDetailContent({
   relatedEvents = [],
   relatedLoading = false,
 }: EventDetailContentProps) {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalSubmitted, setModalSubmitted] = useState(false);
-  const [helpfulSubmitted, setHelpfulSubmitted] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [modalComment, setModalComment] = useState("");
-  const [feedbackPending, setFeedbackPending] = useState(false);
-
-  // submitFeedback is a no-op stub until the backend exposes this mutation.
-  // TODO: wire to api.alerts.submitFeedback once Masae exposes the mutation
-  const submitFeedback = {
-    mutateAsync: async (_args: { alertId: string; comment: string }) => {
-      // no-op stub
-    },
-    isPending: feedbackPending,
-  };
-
   // TODO: after Prisma migration use event.title directly; remove this fallback
   // TODO: after Prisma migration use event.types (list) instead of eventType
-  const issueTags = [
-    { id: "not_relevant", label: "Not relevant", icon: IconCircleOff },
-    { id: "already_known", label: "Already known", icon: IconHistory },
-    { id: "wrong_area", label: "Wrong area", icon: IconMapPinOff },
-    { id: "inaccurate", label: "Inaccurate", icon: IconAlertTriangle },
-  ];
-
-  function toggleTag(id: string) {
-    setSelectedTags((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
-    );
-  }
-
-  async function handleHelpful() {
-    if (!event) return;
-    setFeedbackPending(true);
-    try {
-      await submitFeedback.mutateAsync({ alertId: event.id, comment: "helpful" });
-      setHelpfulSubmitted(true);
-    } catch (err) {
-      console.error("Failed to submit feedback", err);
-    } finally {
-      setFeedbackPending(false);
-    }
-  }
-
-  async function handleSubmitIssues() {
-    if (!event) return;
-    const parts = [selectedTags.join(", "), modalComment.trim()].filter(Boolean);
-    setFeedbackPending(true);
-    try {
-      await submitFeedback.mutateAsync({ alertId: event.id, comment: parts.join(" | ") });
-      setModalSubmitted(true);
-    } catch (err) {
-      console.error("Failed to submit feedback", err);
-    } finally {
-      setFeedbackPending(false);
-    }
-  }
 
   const mapMarkers = useMemo<MapMarker[]>(() => {
     if (!event) return [];
@@ -872,71 +806,7 @@ export function EventDetailContent({
 
               {/* Was this event helpful? */}
               <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-                <Box px={16} py={10} className="border-b border-[#E5E5E5]">
-                  <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
-                    Was this event helpful?
-                  </Text>
-                </Box>
-                <Box p={16}>
-                  {helpfulSubmitted ? (
-                    <Group gap={6} justify="center">
-                      <IconCircleCheck
-                        size={15}
-                        color="#059669"
-                        style={{ strokeWidth: 1.5 }}
-                      />
-                      <Text size="xs" c="#059669" fw={500}>
-                        Thanks for the feedback!
-                      </Text>
-                    </Group>
-                  ) : (
-                    <Group gap={8}>
-                      <button
-                        onClick={() => {
-                          setModalOpen(true);
-                          setModalSubmitted(false);
-                          setSelectedTags([]);
-                          setModalComment("");
-                        }}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
-                        style={{
-                          background: "#FEE2E2",
-                          color: "#B91C1C",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.background = "#FECACA")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.background = "#FEE2E2")
-                        }
-                      >
-                        <IconThumbDown size={13} />
-                        Issues
-                      </button>
-                      <button
-                        onClick={handleHelpful}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
-                        style={{
-                          background: "#D1FAE5",
-                          color: "#065F46",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.background = "#A7F3D0")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.background = "#D1FAE5")
-                        }
-                      >
-                        <IconThumbUp size={13} />
-                        Helpful
-                      </button>
-                    </Group>
-                  )}
-                </Box>
+                <FeedbackSection entityId={event.id} entityType="event" />
               </Card>
 
               {/* Actions */}
@@ -1105,121 +975,6 @@ export function EventDetailContent({
         )}
       </Box>
 
-      {/* Issues feedback modal */}
-      <Modal
-        opened={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={modalSubmitted ? undefined : "What was the issue?"}
-        size="sm"
-        centered
-        styles={{
-          header: { paddingBottom: 8 },
-          body: { paddingTop: modalSubmitted ? 0 : 8 },
-        }}
-      >
-        {modalSubmitted ? (
-          <Stack align="center" gap={12} py={32}>
-            <IconCircleCheck
-              size={52}
-              color="#059669"
-              style={{ strokeWidth: 1.5 }}
-            />
-            <Text fw={700} size="lg" c="#171717">
-              Thank you!
-            </Text>
-            <Text size="sm" c="#737373" ta="center" maw={260}>
-              Your feedback helps improve alert quality for the whole team.
-            </Text>
-            <Button
-              variant="subtle"
-              color="gray"
-              size="sm"
-              mt={8}
-              onClick={() => setModalOpen(false)}
-            >
-              Close
-            </Button>
-          </Stack>
-        ) : (
-          <Stack gap={16}>
-            <Text size="sm" c="#737373">
-              Select all issues that apply - this helps us improve the detection
-              pipeline.
-            </Text>
-
-            <Stack gap={8}>
-              {issueTags.map(({ id, label, icon: Icon }) => {
-                const active = selectedTags.includes(id);
-                return (
-                  <button
-                    key={id}
-                    onClick={() => toggleTag(id)}
-                    className="transition-colors"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 7,
-                      width: "100%",
-                      borderRadius: 999,
-                      padding: "9px 16px",
-                      fontSize: 13,
-                      fontWeight: 500,
-                      background: active ? "#FEE2E2" : "#F5F5F5",
-                      color: active ? "#B91C1C" : "#525252",
-                      border: active ? "1px solid #FECACA" : "1px solid #E5E5E5",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <Icon size={14} strokeWidth={1.75} />
-                    {label}
-                  </button>
-                );
-              })}
-            </Stack>
-
-            <Divider color="#F5F5F5" />
-
-            <Textarea
-              label="Additional comments (optional)"
-              placeholder="Anything else we should know about this alert…"
-              value={modalComment}
-              onChange={(e) => setModalComment(e.currentTarget.value)}
-              minRows={3}
-              maxLength={1000}
-              size="sm"
-              styles={{
-                label: {
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "#171717",
-                  marginBottom: 6,
-                },
-              }}
-            />
-
-            <Group justify="flex-end">
-              <Button
-                variant="subtle"
-                color="gray"
-                size="sm"
-                onClick={() => setModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                disabled={selectedTags.length === 0 && !modalComment.trim()}
-                loading={feedbackPending}
-                onClick={handleSubmitIssues}
-                style={{ background: "#E85D3D", borderColor: "#E85D3D" }}
-              >
-                Send Feedback
-              </Button>
-            </Group>
-          </Stack>
-        )}
-      </Modal>
     </Box>
   );
 }
