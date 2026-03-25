@@ -43,6 +43,7 @@ import {
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlSignalDetail, GqlLocation } from "~/lib/types/graphql";
+import { CommentsSection } from "~/components/comments-section";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
 
@@ -51,26 +52,6 @@ const CrisisMap = dynamic(
   { ssr: false, loading: () => <Box w="100%" h={180} bg="#F5F5F5" /> },
 );
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-// Remove when backend delivers Comments and Feedback mutations.
-const MOCK_COMMENTS = [
-  {
-    id: 1,
-    initials: "U1",
-    author: "User 1",
-    role: "Placeholder role",
-    timeAgo: "2h ago",
-    text: "This is a placeholder comment to show the commentary feature.",
-  },
-  {
-    id: 2,
-    initials: "U2",
-    author: "User 2",
-    role: "Placeholder role",
-    timeAgo: "1h ago",
-    text: "Placeholder content as well.",
-  },
-];
 // ─────────────────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
@@ -121,7 +102,6 @@ export function SignalDetailContent({
   loading,
   mode,
 }: SignalDetailContentProps) {
-  const [comment, setComment] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [modalSubmitted, setModalSubmitted] = useState(false);
   const [helpfulSubmitted, setHelpfulSubmitted] = useState(false);
@@ -588,90 +568,7 @@ export function SignalDetailContent({
 
           {/* Discussion */}
           <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
-              <Group gap={8}>
-                <IconMessageCircle size={14} color="#525252" />
-                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
-                  Discussion
-                </Text>
-                <Badge size="xs" variant="light" color="gray" style={{ fontWeight: 600 }}>
-                  {MOCK_COMMENTS.length}
-                </Badge>
-                <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>
-                  (mock data currently)
-                </Text>
-              </Group>
-            </Box>
-            <Box>
-              {MOCK_COMMENTS.map((c, i) => (
-                <Box
-                  key={c.id}
-                  px={16}
-                  py={12}
-                  style={{
-                    borderBottom:
-                      i < MOCK_COMMENTS.length - 1 ? "1px solid #F5F5F5" : undefined,
-                  }}
-                >
-                  <Group align="flex-start" gap={10}>
-                    <Avatar
-                      size={30}
-                      radius="xl"
-                      style={{
-                        background: "#FEF2F0",
-                        color: "#E85D3D",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {c.initials}
-                    </Avatar>
-                    <Box style={{ flex: 1 }}>
-                      <Group gap={8} mb={4}>
-                        <Text size="xs" fw={600} c="#171717">{c.author}</Text>
-                        <Text size="xs" c="#A3A3A3">{c.role}</Text>
-                        <Text size="xs" c="#A3A3A3" style={{ marginLeft: "auto" }}>
-                          {c.timeAgo}
-                        </Text>
-                      </Group>
-                      <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
-                        {c.text}
-                      </Text>
-                    </Box>
-                  </Group>
-                </Box>
-              ))}
-
-              {/* Comment input */}
-              <Box px={16} py={12} style={{ borderTop: "1px solid #F5F5F5" }}>
-                <Textarea
-                  placeholder="Add a comment…"
-                  value={comment}
-                  onChange={(e) => setComment(e.currentTarget.value)}
-                  minRows={2}
-                  size="xs"
-                  styles={{ input: { fontSize: 13 } }}
-                  mb={8}
-                />
-                <Group justify="flex-end">
-                  <Button
-                    size="xs"
-                    leftSection={<IconSend size={12} />}
-                    disabled
-                    title="Comments coming soon"
-                    style={{
-                      background: "#E85D3D",
-                      borderColor: "#E85D3D",
-                      fontSize: 12,
-                      opacity: 0.5,
-                    }}
-                  >
-                    Post
-                  </Button>
-                </Group>
-              </Box>
-            </Box>
+            <CommentsSection entityId={signal.id} entityType="signal" />
           </Card>
 
           {/* Part of Events + Similar Signals — two columns */}
