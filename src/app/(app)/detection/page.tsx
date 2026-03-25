@@ -17,7 +17,7 @@ import { LiveAlertsTab } from "./_components/live-alerts-tab";
 import { HistoryTab } from "./_components/history-tab";
 import { EventsTab } from "./_components/events-tab";
 import { SignalsTab } from "./_components/signals-tab";
-import { CreateAlertModal } from "./_components/create-alert-modal";
+import { CreateSignalModal } from "~/components/create-signal-modal";
 
 export default function DetectionPage() {
   const [activeTab, setActiveTab] = useState<string | null>("live");
@@ -129,7 +129,7 @@ export default function DetectionPage() {
             onClick={openCreateModal}
             style={{ background: "#E85D3D", borderColor: "#E85D3D", fontSize: 13 }}
           >
-            Create Manual Alert
+            Create Signal
           </Button>
         </Group>
       </PageHeader>
@@ -196,10 +196,9 @@ export default function DetectionPage() {
         )}
       </Box>
 
-      <CreateAlertModal
+      <CreateSignalModal
         opened={createModalOpened}
         onClose={closeCreateModal}
-        onSuccess={handleAlertCreated}
       />
     </Box>
   );
