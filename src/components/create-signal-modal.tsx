@@ -87,7 +87,7 @@ function DetailsStep({
         label={<Text style={LABEL_STYLE}>Title *</Text>}
         placeholder="e.g., Flooding reported in Kassala State"
         value={form.title}
-        onChange={(e) => setForm((p) => ({ ...p, title: e.currentTarget.value }))}
+        onChange={(e) => { const v = e.currentTarget.value; setForm((p) => ({ ...p, title: v })); }}
         required
         autoFocus
       />
@@ -96,7 +96,7 @@ function DetailsStep({
         label={<Text style={LABEL_STYLE}>Description</Text>}
         placeholder="Describe what was observed, source, and any relevant context…"
         value={form.description}
-        onChange={(e) => setForm((p) => ({ ...p, description: e.currentTarget.value }))}
+        onChange={(e) => { const v = e.currentTarget.value; setForm((p) => ({ ...p, description: v })); }}
         minRows={3}
         autosize
         maxRows={6}
