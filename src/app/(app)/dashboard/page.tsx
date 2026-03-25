@@ -10,7 +10,7 @@ import { countryConfig, countries } from "~/lib/constants/country-config";
 import { alertsToMarkers } from "../map/_components/map-markers-data";
 import { MapSection } from "./_components/map-section";
 import { RightPanel } from "./_components/right-panel";
-import { CreateAlertModal } from "./_components/create-alert-modal";
+import { CreateSignalModal } from "~/components/create-signal-modal";
 
 /* ========== Main Page ========== */
 export default function DashboardPage() {
@@ -85,7 +85,7 @@ export default function DashboardPage() {
         pipelineStats={pipelineStatsQuery.data as { overall: { total_sources: number; total_data_records: number } } | undefined}
         onCreateAlert={createAlertHandlers.open}
       />
-      <CreateAlertModal
+      <CreateSignalModal
         opened={createAlertOpened}
         onClose={createAlertHandlers.close}
       />

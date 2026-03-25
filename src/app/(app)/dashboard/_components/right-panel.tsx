@@ -357,7 +357,7 @@ export function RightPanel({
             cursor: "pointer",
           }}
         >
-          Create Alert
+          Create Signal
         </Button>
       </Group>
 
