@@ -16,7 +16,72 @@ import { ColorSchemeToggle } from "~/components/ui/color-scheme-toggle";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
-type Step = "form" | "submitting" | "success";
+type Step = "form" | "submitting" | "success" | "queued";
+
+/* ── IndexedDB offline queue ────────────────────────────────── */
+
+type QueuedPayload = {
+  sourceId: string;
+  title?: string;
+  description?: string;
+  locationId?: string;
+  media?: { name: string; type: string; data: string }[];
+};
+
+const DB_NAME = "clear-observe";
+const DB_STORE = "pending-signals";
+
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(DB_STORE, { autoIncrement: true });
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbQueue(payload: QueuedPayload): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, "readwrite");
+    tx.objectStore(DB_STORE).add(payload);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbGetPending(): Promise<{ key: IDBValidKey; data: QueuedPayload }[]> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const results: { key: IDBValidKey; data: QueuedPayload }[] = [];
+    const req = db.transaction(DB_STORE, "readonly").objectStore(DB_STORE).openCursor();
+    req.onsuccess = (e) => {
+      const cur = (e.target as IDBRequest<IDBCursorWithValue>).result;
+      if (cur) { results.push({ key: cur.key, data: cur.value as QueuedPayload }); cur.continue(); }
+      else resolve(results);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbRemove(key: IDBValidKey): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, "readwrite");
+    tx.objectStore(DB_STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function toBase64(file: File): Promise<{ name: string; type: string; data: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve({ name: file.name, type: file.type, data: reader.result as string });
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 interface FormState {
   description: string;
@@ -365,7 +430,7 @@ function MediaField({
 
 /* ── Success ────────────────────────────────────────────────── */
 
-function SuccessScreen({ onAnother }: { onAnother: () => void }) {
+function SuccessScreen({ onAnother, queued }: { onAnother: () => void; queued?: boolean }) {
   return (
     <div
       style={{
@@ -379,12 +444,19 @@ function SuccessScreen({ onAnother }: { onAnother: () => void }) {
         textAlign: "center",
       }}
     >
-      <IconCircleCheck size={64} color="var(--color-success)" className="observe-success-icon" style={{ strokeWidth: 1.5, marginBottom: 20 }} />
+      <IconCircleCheck
+        size={64}
+        color={queued ? "var(--color-warning)" : "var(--color-success)"}
+        className="observe-success-icon"
+        style={{ strokeWidth: 1.5, marginBottom: 20 }}
+      />
       <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text-primary)", margin: "0 0 8px", letterSpacing: "-0.02em" }}>
-        Signal submitted
+        {queued ? "Saved for later" : "Signal submitted"}
       </h2>
-      <p style={{ fontSize: 14, color: "var(--color-text-muted)", margin: "0 0 32px", maxWidth: 240 }}>
-        Your observation is now visible to your team in CLEAR.
+      <p style={{ fontSize: 14, color: "var(--color-text-muted)", margin: "0 0 32px", maxWidth: 260 }}>
+        {queued
+          ? "No connection — your signal is queued and will be sent automatically when you\u2019re back online."
+          : "Your observation is now visible to your team in CLEAR."}
       </p>
       <button
         onClick={onAnother}
@@ -410,11 +482,16 @@ export default function ObservePage() {
   const [step, setStep] = useState<Step>("form");
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const locationsQuery = api.locations.list.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   const sourcesQuery = api.signals.sources.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   const createSignal = api.signals.create.useMutation();
   const utils = api.useUtils();
+
+  // Keep a stable ref to the mutate fn so drainQueue never captures a stale closure
+  const mutateFnRef = useRef(createSignal.mutateAsync);
+  useEffect(() => { mutateFnRef.current = createSignal.mutateAsync; });
 
   const locationOptions = (locationsQuery.data ?? []).map((loc) => ({
     value: loc.id,
@@ -430,24 +507,71 @@ export default function ObservePage() {
     if (auto) setForm((p) => ({ ...p, sourceId: auto.id }));
   }, [sourcesQuery.data, form.sourceId]);
 
+  const drainQueue = useCallback(async () => {
+    if (!navigator.onLine) return;
+    const pending = await dbGetPending();
+    for (const { key, data } of pending) {
+      try {
+        await mutateFnRef.current(data);
+        await dbRemove(key);
+        void utils.signals.list.invalidate();
+        setPendingCount((n) => Math.max(0, n - 1));
+      } catch {
+        break; // still offline, stop trying
+      }
+    }
+  }, [utils]);
+
+  // On mount: load pending count + drain if online; also listen for reconnect
+  useEffect(() => {
+    void dbGetPending().then((p) => setPendingCount(p.length));
+    void drainQueue();
+    window.addEventListener("online", drainQueue);
+    return () => window.removeEventListener("online", drainQueue);
+  }, [drainQueue]);
+
   const canSubmit = form.description.trim().length > 0 && form.sourceId.length > 0;
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
     setError(null);
     setStep("submitting");
+
+    const media = await Promise.all(form.media.map((m) => toBase64(m.file)));
+    const payload: QueuedPayload = {
+      sourceId: form.sourceId,
+      title: form.title.trim() || undefined,
+      description: form.description.trim(),
+      locationId: form.locationId || undefined,
+      media: media.length > 0 ? media : undefined,
+    };
+
+    if (!navigator.onLine) {
+      await dbQueue(payload);
+      setPendingCount((n) => n + 1);
+      setStep("queued");
+      return;
+    }
+
     try {
-      await createSignal.mutateAsync({
-        sourceId: form.sourceId,
-        title: form.title.trim() || undefined,
-        description: form.description.trim(),
-        locationId: form.locationId || undefined,
-      });
+      await createSignal.mutateAsync(payload);
       void utils.signals.list.invalidate();
       setStep("success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit. Please try again.");
-      setStep("form");
+      // Network error → queue for later
+      const isNetworkError = err instanceof Error && (
+        err.message.toLowerCase().includes("fetch") ||
+        err.message.toLowerCase().includes("network") ||
+        err.message.toLowerCase().includes("failed")
+      );
+      if (isNetworkError) {
+        await dbQueue(payload);
+        setPendingCount((n) => n + 1);
+        setStep("queued");
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to submit. Please try again.");
+        setStep("form");
+      }
     }
   }, [canSubmit, createSignal, form, utils]);
 
@@ -459,6 +583,7 @@ export default function ObservePage() {
   }
 
   if (step === "success") return <SuccessScreen onAnother={reset} />;
+  if (step === "queued") return <SuccessScreen onAnother={reset} queued />;
 
   const isSubmitting = step === "submitting";
 
@@ -506,7 +631,19 @@ export default function ObservePage() {
         <span style={{ fontSize: 14, fontWeight: 300, color: "var(--color-text-secondary)", letterSpacing: "0.01em" }}>
           Field Signals
         </span>
-        <div style={{ marginLeft: "auto" }}>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          {pendingCount > 0 && (
+            <span style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: "var(--color-warning)",
+              background: "var(--color-warning-light)",
+              padding: "2px 7px",
+              borderRadius: 10,
+            }}>
+              {pendingCount} queued
+            </span>
+          )}
           <ColorSchemeToggle />
         </div>
       </div>

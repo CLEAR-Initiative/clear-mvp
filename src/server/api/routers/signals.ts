@@ -119,13 +119,15 @@ export const signalsRouter = createTRPCRouter({
         locationId: z.string().optional(),
         originId: z.string().optional(),
         destinationId: z.string().optional(),
+        media: z.array(z.object({ name: z.string(), type: z.string(), data: z.string() })).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const { media, ...rest } = input;
       const gqlInput = {
-        ...input,
+        ...rest,
         publishedAt: input.publishedAt ?? new Date().toISOString(),
-        rawData: { title: input.title, description: input.description },
+        rawData: { title: input.title, description: input.description, media: media ?? [] },
       };
       const data = await graphqlFetch<{ createSignal: GqlSignal }>(
         CREATE_SIGNAL_MUTATION,
