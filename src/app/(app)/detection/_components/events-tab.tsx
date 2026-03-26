@@ -26,7 +26,7 @@ import {
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
-import type { MapMarker } from "~/components/map/crisis-map";
+import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 
 const CrisisMap = dynamic(
@@ -58,6 +58,7 @@ interface EventsTabProps {
   events: GqlEvent[];
   loading: boolean;
   mapMarkers: MapMarker[];
+  mapRegions?: MapRegion[];
   mapCenter: [number, number];
   mapZoom: number;
 }
@@ -66,6 +67,7 @@ export function EventsTab({
   events,
   loading,
   mapMarkers,
+  mapRegions,
   mapCenter,
   mapZoom,
 }: EventsTabProps) {
@@ -471,6 +473,7 @@ export function EventsTab({
           <Box style={{ height: 480 }}>
             <CrisisMap
               markers={mapMarkers}
+              regions={mapRegions}
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"

@@ -9,7 +9,7 @@ import { useTeam } from "~/providers/team-provider";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { dateOptions, parseDateFilter } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
-import { alertsToMarkers, eventsToMarkers, signalsToMarkers } from "../map/_components/map-markers-data";
+import { alertsToMarkers, alertsToRegions, eventsToMarkers, eventsToRegions, signalsToMarkers } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar } from "~/components/ui";
 
 import { DetectionKpiRow } from "~/components/detection/detection-kpi-row";
@@ -17,7 +17,7 @@ import { LiveAlertsTab } from "./_components/live-alerts-tab";
 import { HistoryTab } from "./_components/history-tab";
 import { EventsTab } from "./_components/events-tab";
 import { SignalsTab } from "./_components/signals-tab";
-import { CreateAlertModal } from "./_components/create-alert-modal";
+import { CreateSignalModal } from "~/components/create-signal-modal";
 
 export default function DetectionPage() {
   const [activeTab, setActiveTab] = useState<string | null>("live");
@@ -27,7 +27,7 @@ export default function DetectionPage() {
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
 
   const { activeTeamId } = useTeam();
-  const { countries, getRegions, getCenter, getZoom } = useLocations();
+  const { countries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
   const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId });
   const historyQuery = api.alerts.getAlerts.useQuery(
     { activeOnly: false, teamId: activeTeamId },
@@ -49,48 +49,96 @@ export default function DetectionPage() {
     return [...raw].sort((a, b) => b.event.rank - a.event.rank);
   }, [alertsQuery.data?.alerts]);
 
-  // Region + date filtered alerts passed down to KPI cards and list
+  // Resolve selected location for filtering
+  const selectedLocationId = useMemo(() => {
+    if (selectedRegion !== "All Regions") return getLocationId(selectedRegion);
+    return getLocationId(selectedCountry);
+  }, [selectedCountry, selectedRegion, getLocationId]);
+
+  const selectedLocationName = useMemo(() => {
+    return selectedRegion !== "All Regions" ? selectedRegion : selectedCountry;
+  }, [selectedCountry, selectedRegion]);
+
+  /** Check if any location in the list matches the selected location (by ID hierarchy or name fallback).
+   *  Items with NO location data at all are always included. */
+  const matchesLocationFilter = useMemo(() => {
+    if (!selectedLocationId && !selectedLocationName) return () => true;
+    return (locs: Array<{ id: string; name: string; ancestorIds?: string[] } | null | undefined>) => {
+      // If item has no location data at all, include it (don't filter out)
+      const hasAnyLocation = locs.some((loc) => loc != null);
+      if (!hasAnyLocation) return true;
+
+      return locs.some((loc) => {
+        if (!loc) return false;
+        // Match by ID or ancestorIds
+        if (selectedLocationId) {
+          if (loc.id === selectedLocationId) return true;
+          if (loc.ancestorIds && loc.ancestorIds.length > 0 && loc.ancestorIds.includes(selectedLocationId)) return true;
+        }
+        // Fallback: name matching
+        const locNameLower = loc.name.toLowerCase();
+        const selectedLower = selectedLocationName.toLowerCase();
+        return locNameLower.includes(selectedLower) || selectedLower.includes(locNameLower);
+      });
+    };
+  }, [selectedLocationId, selectedLocationName]);
+
+  // Filter alerts by location + date range
   const alerts = useMemo(() => {
     if (allAlerts.length === 0) return [];
-    const regionNames = regions.map((r) => r.toLowerCase());
-    const countryLower = selectedCountry.toLowerCase();
-    const regionLower = selectedRegion !== "All Regions" ? selectedRegion.toLowerCase() : null;
     const dateRange = parseDateFilter(selectedDate);
 
     return allAlerts.filter((alert) => {
+      // Date filter
       const alertDate = new Date(alert.event.firstSignalCreatedAt).getTime();
       if (alertDate < dateRange.start.getTime() || alertDate > dateRange.end.getTime()) return false;
 
-      const loc = alert.event.generalLocation ?? alert.event.originLocation ?? alert.event.destinationLocation;
-      const locName = loc?.name.toLowerCase() ?? "";
-      const matchesCountry =
-        regionNames.some((r) => r !== "all regions" && locName.includes(r)) ||
-        locName.includes(countryLower) ||
-        (alert.event.description?.toLowerCase().includes(countryLower) ?? false) ||
-        alert.event.types.some((t) => t.toLowerCase().includes(countryLower));
+      // Location filter
+      const locs = [
+        alert.event.generalLocation,
+        alert.event.originLocation,
+        alert.event.destinationLocation,
+      ];
+      if (!matchesLocationFilter(locs)) return false;
 
-      if (!matchesCountry) return false;
-
-      if (regionLower) {
-        return (
-          locName.includes(regionLower) ||
-          (alert.event.description?.toLowerCase().includes(regionLower) ?? false)
-        );
-      }
       return true;
     });
-  }, [allAlerts, regions, selectedCountry, selectedRegion, selectedDate]);
+  }, [allAlerts, matchesLocationFilter, selectedDate]);
 
   const historyAlerts = historyQuery.data?.alerts ?? [];
 
+  // Filter events by location + date
+  const filteredEvents = useMemo(() => {
+    const events = eventsQuery.data ?? [];
+    const dateRange = parseDateFilter(selectedDate);
+    return events.filter((e) => {
+      const eventDate = new Date(e.firstSignalCreatedAt).getTime();
+      if (eventDate < dateRange.start.getTime() || eventDate > dateRange.end.getTime()) return false;
+      return matchesLocationFilter([e.generalLocation, e.originLocation, e.destinationLocation]);
+    });
+  }, [eventsQuery.data, matchesLocationFilter, selectedDate]);
+
+  // Filter signals by location + date
+  const filteredSignals = useMemo(() => {
+    const signals = signalsQuery.data ?? [];
+    const dateRange = parseDateFilter(selectedDate);
+    return signals.filter((s) => {
+      const sigDate = new Date(s.publishedAt).getTime();
+      if (sigDate < dateRange.start.getTime() || sigDate > dateRange.end.getTime()) return false;
+      return matchesLocationFilter([s.generalLocation, s.originLocation, s.destinationLocation]);
+    });
+  }, [signalsQuery.data, matchesLocationFilter, selectedDate]);
+
   const mapMarkers: MapMarker[] = useMemo(() => alertsToMarkers(alerts), [alerts]);
+  const mapRegions = useMemo(() => alertsToRegions(alerts), [alerts]);
   const eventMapMarkers: MapMarker[] = useMemo(
-    () => eventsToMarkers(eventsQuery.data ?? []),
-    [eventsQuery.data],
+    () => eventsToMarkers(filteredEvents),
+    [filteredEvents],
   );
+  const eventMapRegions = useMemo(() => eventsToRegions(filteredEvents), [filteredEvents]);
   const signalMapMarkers: MapMarker[] = useMemo(
-    () => signalsToMarkers(signalsQuery.data ?? []),
-    [signalsQuery.data],
+    () => signalsToMarkers(filteredSignals),
+    [filteredSignals],
   );
   const mapCenter = useMemo<[number, number]>(() => getCenter(selectedCountry), [selectedCountry]);
   const mapZoom = useMemo(() => getZoom(selectedCountry), [selectedCountry]);
@@ -129,7 +177,7 @@ export default function DetectionPage() {
             onClick={openCreateModal}
             style={{ background: "#E85D3D", borderColor: "#E85D3D", fontSize: 13 }}
           >
-            Create Manual Alert
+            Create Signal
           </Button>
         </Group>
       </PageHeader>
@@ -152,7 +200,7 @@ export default function DetectionPage() {
         <DetectionKpiRow
           country={selectedCountry}
           alerts={alerts}
-          events={eventsQuery.data ?? []}
+          events={filteredEvents}
           onNavigateToAlerts={() => setActiveTab("live")}
         />
 
@@ -161,6 +209,7 @@ export default function DetectionPage() {
             alerts={alerts}
             alertsLoading={alertsQuery.isLoading}
             mapMarkers={mapMarkers}
+            mapRegions={mapRegions}
             mapCenter={mapCenter}
             mapZoom={mapZoom}
           />
@@ -168,7 +217,7 @@ export default function DetectionPage() {
 
         {activeTab === "signals" && (
           <SignalsTab
-            signals={signalsQuery.data ?? []}
+            signals={filteredSignals}
             loading={signalsQuery.isLoading}
             mapMarkers={signalMapMarkers}
             mapCenter={mapCenter}
@@ -187,19 +236,19 @@ export default function DetectionPage() {
 
         {activeTab === "events" && (
           <EventsTab
-            events={eventsQuery.data ?? []}
+            events={filteredEvents}
             loading={eventsQuery.isLoading}
             mapMarkers={eventMapMarkers}
+            mapRegions={eventMapRegions}
             mapCenter={mapCenter}
             mapZoom={mapZoom}
           />
         )}
       </Box>
 
-      <CreateAlertModal
+      <CreateSignalModal
         opened={createModalOpened}
         onClose={closeCreateModal}
-        onSuccess={handleAlertCreated}
       />
     </Box>
   );

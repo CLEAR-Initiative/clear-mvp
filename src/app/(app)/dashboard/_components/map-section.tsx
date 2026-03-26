@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { MapMarker } from "~/components/map/crisis-map";
+import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import {
   Box,
   Text,
@@ -50,6 +50,7 @@ interface MapSectionProps {
   activeView: string;
   onViewChange: (view: string) => void;
   currentMarkers: MapMarker[];
+  currentRegions?: MapRegion[];
   mapCenter: [number, number];
   mapZoom: number;
   activeMonth: number;
@@ -66,6 +67,7 @@ export function MapSection({
   activeView,
   onViewChange,
   currentMarkers,
+  currentRegions,
   mapCenter,
   mapZoom,
   activeMonth,
@@ -144,6 +146,7 @@ export function MapSection({
       {/* Mapbox map */}
       <CrisisMap
         markers={activeView === "nrc-global" ? [] : currentMarkers}
+        regions={activeView === "nrc-global" ? [] : currentRegions}
         center={mapCenter}
         zoom={mapZoom}
         className="w-full h-full"

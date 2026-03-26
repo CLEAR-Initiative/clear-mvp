@@ -28,6 +28,7 @@ import {
   buildLayersFromShockTypes,
   buildCrisisTypeOptions,
   alertsToMarkers,
+  alertsToRegions,
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
 import { MapLayersPanel } from "./_components/map-layers-panel";
@@ -68,7 +69,7 @@ function FilterLabel({ children }: { children: string }) {
 export default function MapPage() {
   /* ---- Fetch alert data ---- */
   const { activeTeamId } = useTeam();
-  const { countries: apiCountries, getRegions, getCenter, getZoom } = useLocations();
+  const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
   const alertsQuery = api.alerts.getAlerts.useQuery({
     activeOnly: true,
     teamId: activeTeamId,
@@ -89,15 +90,15 @@ export default function MapPage() {
     [shockTypes],
   );
 
-  /* ---- Transform alerts to map markers ---- */
-  const allMarkers: CrisisMarker[] = useMemo(() => {
-    const markers = alertsToMarkers(allAlerts);
-    console.log("[MapPage] allAlerts:", allAlerts.length, "allMarkers:", markers.length);
-    if (allAlerts.length > 0 && markers.length === 0) {
-      // debug removed
-    }
-    return markers;
-  }, [allAlerts]);
+  /* ---- Transform alerts to map markers + regions ---- */
+  const allMarkers: CrisisMarker[] = useMemo(
+    () => alertsToMarkers(allAlerts),
+    [allAlerts],
+  );
+  const allRegions = useMemo(
+    () => alertsToRegions(allAlerts),
+    [allAlerts],
+  );
 
   /* ---- Filter state ---- */
   const [selectedCountry, setSelectedCountry] = useState("All Countries");
@@ -145,16 +146,38 @@ export default function MapPage() {
     return 5;
   }, [selectedCountry]);
 
+  /* ---- Resolve selected location for filtering ---- */
+  const selectedLocationId = useMemo(() => {
+    if (selectedRegion !== "All Regions") return getLocationId(selectedRegion);
+    if (selectedCountry !== "All Countries") return getLocationId(selectedCountry);
+    return null;
+  }, [selectedCountry, selectedRegion, getLocationId]);
+
+  const selectedLocationName = useMemo(() => {
+    if (selectedRegion !== "All Regions") return selectedRegion;
+    if (selectedCountry !== "All Countries") return selectedCountry;
+    return null;
+  }, [selectedCountry, selectedRegion]);
+
   /* ---- Filtered markers ---- */
   const currentMarkers: MapMarker[] = useMemo(() => {
     const filtered = allMarkers.filter((m) => {
-      // Country filter
-      if (selectedCountry !== "All Countries" && m.country !== selectedCountry)
-        return false;
-
-      // Region filter
-      if (selectedRegion !== "All Regions" && m.region !== selectedRegion)
-        return false;
+      // Location filter (hierarchy + name fallback)
+      if (selectedLocationId ?? selectedLocationName) {
+        let matchesLocation = false;
+        // Try ID-based hierarchy match
+        if (selectedLocationId) {
+          if (m.locationId === selectedLocationId) matchesLocation = true;
+          else if (m.ancestorIds && m.ancestorIds.length > 0 && m.ancestorIds.includes(selectedLocationId)) matchesLocation = true;
+        }
+        // Fallback: name match on region
+        if (!matchesLocation && selectedLocationName && m.region) {
+          const regionLower = m.region.toLowerCase();
+          const selectedLower = selectedLocationName.toLowerCase();
+          matchesLocation = regionLower.includes(selectedLower) || selectedLower.includes(regionLower);
+        }
+        if (!matchesLocation) return false;
+      }
 
       // Layer filter — only apply when layers are defined (shock types loaded)
       if (activeLayers.length > 0) {
@@ -171,12 +194,11 @@ export default function MapPage() {
 
       return true;
     });
-    console.log("[MapPage] currentMarkers:", filtered.length, "activeLayers:", activeLayers);
     return filtered;
   }, [
     allMarkers,
-    selectedCountry,
-    selectedRegion,
+    selectedLocationId,
+    selectedLocationName,
     activeLayers,
     selectedShockType,
   ]);
@@ -294,6 +316,7 @@ export default function MapPage() {
       {/* ===== Mapbox Map ===== */}
       <CrisisMap
         markers={currentMarkers}
+        regions={allRegions}
         center={mapCenter}
         zoom={mapZoom}
         className="w-full h-full"

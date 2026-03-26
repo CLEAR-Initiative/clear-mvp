@@ -190,16 +190,19 @@ function CreateEventSubFlow({
 }) {
   const { activeTeamId } = useTeam();
   const signalsQuery = api.signals.list.useQuery({ teamId: activeTeamId });
+  const sourcesQuery = api.signals.sources.useQuery();
   const createSignalMutation = api.signals.create.useMutation();
   const createEventMutation = api.events.create.useMutation();
 
   const [selectedSignalIds, setSelectedSignalIds] = useState<string[]>([]);
   const [showManualSignal, setShowManualSignal] = useState(false);
   const [manualTitle, setManualTitle] = useState("");
+  const [manualSourceId, setManualSourceId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const signals = signalsQuery.data ?? [];
   const availableSignals = signals.filter((s) => s.events.length === 0);
+  const sourceOptions = (sourcesQuery.data ?? []).map((s) => ({ value: s.id, label: s.name }));
 
   function toggleSignal(id: string) {
     setSelectedSignalIds((prev) =>
@@ -221,10 +224,11 @@ function CreateEventSubFlow({
   }
 
   async function handleCreateManualSignal() {
-    if (!manualTitle.trim()) return;
+    if (!manualTitle.trim() || !manualSourceId) return;
     setErrorMsg(null);
     try {
       const newSignal = await createSignalMutation.mutateAsync({
+        sourceId: manualSourceId,
         title: manualTitle.trim(),
       });
       setSelectedSignalIds((prev) => [...prev, newSignal.id]);
@@ -331,6 +335,14 @@ function CreateEventSubFlow({
             Create Manual Signal
           </Text>
           <Stack gap={8}>
+            <Select
+              label={<Text style={LABEL_STYLE}>Data Source</Text>}
+              placeholder="Select data source"
+              data={sourceOptions}
+              value={manualSourceId}
+              onChange={setManualSourceId}
+              required
+            />
             <TextInput
               label={<Text style={LABEL_STYLE}>Title</Text>}
               placeholder="e.g., Cholera outbreak in El Fasher"
@@ -342,7 +354,7 @@ function CreateEventSubFlow({
               <Button
                 size="xs"
                 onClick={() => void handleCreateManualSignal()}
-                disabled={!manualTitle.trim() || isCreatingManual}
+                disabled={!manualTitle.trim() || !manualSourceId || isCreatingManual}
                 loading={isCreatingManual}
                 style={{ background: manualTitle.trim() ? "#E85D3D" : undefined }}
               >
