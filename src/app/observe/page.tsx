@@ -12,6 +12,7 @@ import {
   IconVideo,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { ColorSchemeToggle } from "~/components/ui/color-scheme-toggle";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -505,6 +506,9 @@ export default function ObservePage() {
         <span style={{ fontSize: 14, fontWeight: 300, color: "var(--color-text-secondary)", letterSpacing: "0.01em" }}>
           Field Signals
         </span>
+        <div style={{ marginLeft: "auto" }}>
+          <ColorSchemeToggle />
+        </div>
       </div>
 
       {/* Scrollable form body */}

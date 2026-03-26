@@ -38,10 +38,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <ColorSchemeScript defaultColorScheme="light" />
+        <ColorSchemeScript defaultColorScheme="auto" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <MantineProvider theme={clearTheme} defaultColorScheme="light">
+        <MantineProvider theme={clearTheme} defaultColorScheme="auto">
           <Notifications position="top-right" />
           <TRPCReactProvider>{children}</TRPCReactProvider>
         </MantineProvider>
