@@ -199,6 +199,40 @@ body {
   40% { transform: translateY(-4px); }
 }
 
+/* ── Observe PWA ────────────────────────────────────────────── */
+
+.observe-input:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.observe-btn-submit:hover:not(:disabled) {
+  background: var(--color-accent-hover) !important;
+}
+
+.observe-btn-submit:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.observe-btn-clear:hover:not(:disabled) {
+  background: var(--color-bg-muted) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.observe-locate:hover:not(:disabled) {
+  background: var(--color-accent-hover) !important;
+}
+
+@keyframes observe-pop {
+  0%   { opacity: 0; transform: scale(0.7); }
+  70%  { transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.observe-success-icon {
+  animation: observe-pop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
 /* Hide Next.js dev overlay toast (build indicator + error bubble) */
 nextjs-portal {
   display: none !important;

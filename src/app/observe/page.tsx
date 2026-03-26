@@ -46,24 +46,26 @@ function formatCoords(lat: number, lng: number) {
 const FIELD_LABEL: React.CSSProperties = {
   display: "block",
   fontSize: 11,
-  fontWeight: 700,
+  fontWeight: 500,
   textTransform: "uppercase",
-  letterSpacing: "0.07em",
+  letterSpacing: "0.08em",
   color: "var(--color-text-muted)",
-  marginBottom: 6,
+  marginBottom: 8,
 };
 
 const INPUT: React.CSSProperties = {
   width: "100%",
-  padding: "10px 12px",
-  border: "1px solid var(--color-border)",
-  fontSize: 14,
+  padding: "10px 0",
+  border: "none",
+  borderBottom: "1px solid var(--color-border)",
+  fontSize: 15,
   outline: "none",
   fontFamily: "inherit",
   color: "var(--color-text-primary)",
-  background: "var(--color-bg-white)",
+  background: "transparent",
   boxSizing: "border-box",
   borderRadius: 0,
+  transition: "border-color 150ms",
 };
 
 /* ── Location field ─────────────────────────────────────────── */
@@ -124,18 +126,19 @@ function LocationField({
           onClick={() => !hasLocation && setOpen((v) => !v)}
           style={{
             flex: 1,
-            padding: "10px 12px",
-            border: "1px solid var(--color-border)",
-            borderRight: "none",
-            fontSize: 14,
+            padding: "10px 0",
+            border: "none",
+            borderBottom: `1px solid ${hasLocation ? "var(--color-success)" : "var(--color-border)"}`,
+            fontSize: 15,
             color: hasLocation ? "var(--color-text-primary)" : "var(--color-text-muted)",
-            background: hasLocation ? "var(--color-success-light)" : "var(--color-bg-white)",
+            background: "transparent",
             cursor: hasLocation ? "default" : "pointer",
             display: "flex",
             alignItems: "center",
             gap: 8,
             minWidth: 0,
             overflow: "hidden",
+            transition: "border-color 150ms",
           }}
         >
           {hasLocation && <IconMapPin size={14} color="var(--color-success)" style={{ flexShrink: 0 }} />}
@@ -145,7 +148,7 @@ function LocationField({
           {hasLocation && (
             <button
               onClick={clear}
-              style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--color-text-muted)", flexShrink: 0, display: "flex" }}
+              style={{ marginLeft: "auto", marginRight: 8, background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--color-text-muted)", flexShrink: 0, display: "flex" }}
             >
               <IconX size={13} />
             </button>
@@ -157,8 +160,9 @@ function LocationField({
           onClick={captureGPS}
           disabled={gpsLoading}
           title="Use my location"
+          className="observe-locate"
           style={{
-            width: 42,
+            width: 40,
             flexShrink: 0,
             background: "var(--color-accent)",
             border: "1px solid var(--color-accent)",
@@ -167,6 +171,7 @@ function LocationField({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            transition: "background 150ms",
           }}
         >
           {gpsLoading
@@ -197,7 +202,8 @@ function LocationField({
             value={search}
             autoFocus
             onChange={(e) => setSearch(e.target.value)}
-            style={{ ...INPUT, borderBottom: "1px solid var(--color-border)", borderLeft: "none", borderRight: "none", borderTop: "none" }}
+            className="observe-input"
+            style={{ ...INPUT, padding: "10px 12px", borderBottom: "1px solid var(--color-border)" }}
           />
           {filtered.map((opt) => (
             <button
@@ -372,7 +378,7 @@ function SuccessScreen({ onAnother }: { onAnother: () => void }) {
         textAlign: "center",
       }}
     >
-      <IconCircleCheck size={56} color="var(--color-success)" style={{ strokeWidth: 1.5, marginBottom: 20 }} />
+      <IconCircleCheck size={64} color="var(--color-success)" className="observe-success-icon" style={{ strokeWidth: 1.5, marginBottom: 20 }} />
       <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text-primary)", margin: "0 0 8px", letterSpacing: "-0.02em" }}>
         Signal submitted
       </h2>
@@ -467,13 +473,16 @@ export default function ObservePage() {
         overflow: "hidden",
       }}
     >
+      {/* Accent top bar */}
+      <div style={{ height: 3, background: "var(--color-accent)", flexShrink: 0 }} />
+
       {/* Top bar */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: 8,
-          padding: "0 16px",
+          padding: "0 20px",
           height: 52,
           background: "var(--color-bg-white)",
           borderBottom: "1px solid var(--color-border)",
@@ -492,40 +501,33 @@ export default function ObservePage() {
         >
           CLEAR
         </span>
+        <span style={{ color: "var(--color-border-dark)", fontSize: 16, margin: "0 2px" }}>|</span>
+        <span style={{ fontSize: 14, fontWeight: 300, color: "var(--color-text-secondary)", letterSpacing: "0.01em" }}>
+          Field Signals
+        </span>
       </div>
 
       {/* Scrollable form body */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 0" }}>
-
-        {/* Page heading */}
-        <h1
-          style={{
-            margin: "0 0 16px",
-            fontSize: 15,
-            fontWeight: 700,
-            color: "var(--color-text-primary)",
-            letterSpacing: "-0.01em",
-            lineHeight: 1.3,
-            textAlign: "center",
-          }}
-        >
-          Submit a field signal to your team
-        </h1>
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 0" }}>
 
         {/* Card */}
         <div
           style={{
             background: "var(--color-bg-white)",
-            border: "1px solid var(--color-border)",
-            padding: 16,
+            boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 2px 12px rgba(0,0,0,0.04)",
+            padding: "20px 20px 24px",
             display: "flex",
             flexDirection: "column",
-            gap: 16,
+            gap: 20,
           }}
         >
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--color-accent)" }}>
-            What did you observe?
-          </p>
+          {/* Section label with accent bar */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 3, height: 16, background: "var(--color-accent)", flexShrink: 0 }} />
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-secondary)" }}>
+              What did you observe?
+            </p>
+          </div>
 
           {/* Title */}
           <div>
@@ -535,6 +537,7 @@ export default function ObservePage() {
               placeholder="Short headline…"
               value={form.title}
               onChange={(e) => { const v = e.currentTarget.value; setForm((p) => ({ ...p, title: v })); }}
+              className="observe-input"
               style={INPUT}
             />
           </div>
@@ -549,7 +552,8 @@ export default function ObservePage() {
               value={form.description}
               onChange={(e) => { const v = e.currentTarget.value; setForm((p) => ({ ...p, description: v })); }}
               rows={4}
-              style={{ ...INPUT, resize: "none", lineHeight: 1.5 }}
+              className="observe-input"
+              style={{ ...INPUT, resize: "none", lineHeight: 1.6 }}
             />
           </div>
 
@@ -587,7 +591,7 @@ export default function ObservePage() {
       {/* Fixed submit bar */}
       <div
         style={{
-          padding: "10px 16px 16px",
+          padding: "12px 20px 20px",
           background: "var(--color-bg-white)",
           borderTop: "1px solid var(--color-border)",
           flexShrink: 0,
@@ -598,8 +602,9 @@ export default function ObservePage() {
         <button
           onClick={reset}
           disabled={isSubmitting}
+          className="observe-btn-clear"
           style={{
-            padding: "14px 16px",
+            padding: "14px 18px",
             background: "none",
             border: "1px solid var(--color-border-dark)",
             fontSize: 13,
@@ -608,6 +613,7 @@ export default function ObservePage() {
             cursor: isSubmitting ? "default" : "pointer",
             flexShrink: 0,
             letterSpacing: "0.01em",
+            transition: "background 150ms, color 150ms",
           }}
         >
           Clear
@@ -615,6 +621,7 @@ export default function ObservePage() {
         <button
           onClick={() => void handleSubmit()}
           disabled={!canSubmit || isSubmitting}
+          className="observe-btn-submit"
           style={{
             flex: 1,
             padding: 14,
@@ -628,7 +635,7 @@ export default function ObservePage() {
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            transition: "background 150ms",
+            transition: "background 150ms, transform 100ms",
             letterSpacing: "0.01em",
           }}
         >
