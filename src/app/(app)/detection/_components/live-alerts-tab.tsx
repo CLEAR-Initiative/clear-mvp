@@ -25,7 +25,7 @@ import {
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
-import type { MapMarker } from "~/components/map/crisis-map";
+import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 
 const CrisisMap = dynamic(
@@ -56,6 +56,7 @@ interface LiveAlertsTabProps {
   alerts: GqlAlert[];
   alertsLoading: boolean;
   mapMarkers: MapMarker[];
+  mapRegions?: MapRegion[];
   mapCenter: [number, number];
   mapZoom: number;
 }
@@ -64,6 +65,7 @@ export function LiveAlertsTab({
   alerts,
   alertsLoading,
   mapMarkers,
+  mapRegions,
   mapCenter,
   mapZoom,
 }: LiveAlertsTabProps) {
@@ -428,6 +430,7 @@ export function LiveAlertsTab({
           <Box style={{ height: 480 }}>
             <CrisisMap
               markers={mapMarkers}
+              regions={mapRegions}
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"

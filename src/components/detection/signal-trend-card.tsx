@@ -105,7 +105,7 @@ export function SignalTrendCard({ alerts, events }: SignalTrendCardProps) {
       </Group>
 
       {/* ── Trend chart ── */}
-      <Box style={{ flex: 1, minHeight: 0 }}>
+      <Box style={{ flex: 1, minHeight: 60 }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={trendData} margin={{ top: 2, right: 2, bottom: 0, left: 2 }}>
             <defs>

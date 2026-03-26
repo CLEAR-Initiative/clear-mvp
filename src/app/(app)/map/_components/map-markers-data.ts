@@ -1,10 +1,14 @@
-import type { MapMarker } from "~/components/map/crisis-map";
+import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import type { GqlAlert, GqlEvent, GqlSignal } from "~/lib/types/graphql";
 import { mapSeverity } from "~/lib/types/graphql";
 
 export interface CrisisMarker extends MapMarker {
   region?: string;
   country?: string;
+  /** Location ID for hierarchy-based filtering */
+  locationId?: string;
+  /** Ancestor location IDs (for hierarchy filtering) */
+  ancestorIds?: string[];
   affectedPopulation?: number;
   cases?: number;
   status?: string;
@@ -78,6 +82,8 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
       severity: mapSeverity(event.rank),
       description: event.description ?? undefined,
       region: loc.name,
+      locationId: loc.id,
+      ancestorIds: loc.ancestorIds ?? [],
       status: event.alerts[0]?.status,
     });
   }
@@ -104,6 +110,8 @@ export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
             severity: "medium",
             description: signal.description ?? undefined,
             region: loc.name,
+            locationId: loc.id,
+            ancestorIds: loc.ancestorIds ?? [],
             dataSource: signal.source.name,
           });
           break;
@@ -112,6 +120,59 @@ export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
     }
   }
   return markers;
+}
+
+/* ========== Extract polygon regions from events ========== */
+
+/** Check if a geometry is a polygon type (Polygon or MultiPolygon) */
+function isPolygonGeometry(geo: { type: string } | null | undefined): boolean {
+  return geo?.type === "Polygon" || geo?.type === "MultiPolygon";
+}
+
+/**
+ * Extract polygon regions from events whose location has a Polygon/MultiPolygon geometry.
+ * Each region includes the signal points belonging to that event.
+ */
+export function eventsToRegions(events: GqlEvent[]): MapRegion[] {
+  const regions: MapRegion[] = [];
+  for (const event of events) {
+    // Find a polygon geometry on the event's locations
+    const candidates = [event.generalLocation, event.originLocation, event.destinationLocation];
+    const polyLoc = candidates.find((loc) => loc?.geometry && isPolygonGeometry(loc.geometry));
+    if (!polyLoc?.geometry) continue;
+
+    // Collect signal point locations
+    const signalPoints: Array<{ lng: number; lat: number; title: string }> = [];
+    for (const signal of event.signals) {
+      const sigCandidates = [signal.generalLocation, signal.originLocation, signal.destinationLocation];
+      for (const loc of sigCandidates) {
+        if (loc?.geometry?.type === "Point") {
+          const [lng, lat] = loc.geometry.coordinates as [number, number];
+          if (typeof lng === "number" && typeof lat === "number") {
+            signalPoints.push({
+              lng,
+              lat,
+              title: signal.title ?? signal.source.name ?? "Signal",
+            });
+            break;
+          }
+        }
+      }
+    }
+
+    regions.push({
+      id: event.id,
+      geometry: polyLoc.geometry as { type: string; coordinates: unknown },
+      severity: mapSeverity(event.rank),
+      title: event.title ?? event.types[0] ?? "Event",
+      signalPoints,
+    });
+  }
+  return regions;
+}
+
+export function alertsToRegions(alerts: GqlAlert[]): MapRegion[] {
+  return eventsToRegions(alerts.map((a) => a.event));
 }
 
 /* ========== Derive filter options from markers ========== */
