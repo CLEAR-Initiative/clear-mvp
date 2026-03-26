@@ -3,7 +3,7 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlSignal, GqlSignalDetail } from "~/lib/types/graphql";
 
-const LOCATION_FIELDS = `id name level geoId geometry`;
+const LOCATION_FIELDS = `id name level geoId ancestorIds geometry`;
 
 const SOURCE_FIELDS = `id name type baseUrl infoUrl`;
 
@@ -57,6 +57,12 @@ const SIGNAL_GET_QUERY = `
   }
 `;
 
+const DATA_SOURCES_QUERY = `
+  query DataSources {
+    dataSources { id name type isActive }
+  }
+`;
+
 const CREATE_SIGNAL_MUTATION = `
   mutation CreateSignal($input: CreateSignalInput!) {
     createSignal(input: $input) {
@@ -92,10 +98,19 @@ export const signalsRouter = createTRPCRouter({
       return data.signal;
     }),
 
+  sources: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{ dataSources: { id: string; name: string; type: string; isActive: boolean }[] }>(
+      DATA_SOURCES_QUERY,
+      undefined,
+      cookieHeaders(ctx),
+    );
+    return data.dataSources;
+  }),
+
   create: protectedProcedure
     .input(
       z.object({
-        sourceId: z.string().optional(),
+        sourceId: z.string(),
         title: z.string().optional(),
         description: z.string().optional(),
         url: z.string().optional(),
@@ -107,9 +122,14 @@ export const signalsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const gqlInput = {
+        ...input,
+        publishedAt: input.publishedAt ?? new Date().toISOString(),
+        rawData: { title: input.title, description: input.description },
+      };
       const data = await graphqlFetch<{ createSignal: GqlSignal }>(
         CREATE_SIGNAL_MUTATION,
-        { input },
+        { input: gqlInput },
         cookieHeaders(ctx),
       );
       return data.createSignal;

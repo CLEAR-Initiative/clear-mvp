@@ -13,8 +13,20 @@ export interface MapMarker {
   popup?: string;
 }
 
+export interface MapRegion {
+  id: string;
+  /** GeoJSON geometry (Polygon or MultiPolygon) */
+  geometry: { type: string; coordinates: unknown };
+  severity: "critical" | "high" | "medium" | "low";
+  title: string;
+  /** Signal points within this region */
+  signalPoints?: Array<{ lng: number; lat: number; title: string }>;
+}
+
 interface CrisisMapProps {
   markers?: MapMarker[];
+  /** Polygon/MultiPolygon regions to render on the map */
+  regions?: MapRegion[];
   center?: [number, number];
   zoom?: number;
   className?: string;
@@ -103,6 +115,7 @@ type MapboxGLAny = any;
 
 export function CrisisMap({
   markers = [],
+  regions = [],
   center = [40.5, 8.5],
   zoom = 5.5,
   className,
@@ -175,12 +188,7 @@ export function CrisisMap({
   // Update markers
   const updateMarkers = useCallback(() => {
     const mapboxgl = mbRef.current;
-    if (!map.current || !loaded || !mapboxgl) {
-      console.log("[CrisisMap] updateMarkers skipped: map=", !!map.current, "loaded=", loaded, "mapboxgl=", !!mapboxgl);
-      return;
-    }
-
-    console.log("[CrisisMap] updateMarkers: rendering", markers.length, "markers");
+    if (!map.current || !loaded || !mapboxgl) return;
 
     // Clear existing markers
     mapMarkers.current.forEach((m: MapboxGLAny) => m.remove());
@@ -254,14 +262,127 @@ export function CrisisMap({
       });
 
       mapMarkers.current.push(marker);
-      console.log("[CrisisMap] Added marker:", markerData.title, "at", markerData.lng, markerData.lat);
     });
-    console.log("[CrisisMap] Total markers rendered:", mapMarkers.current.length);
   }, [markers, loaded, onMarkerClick]);
 
   useEffect(() => {
     updateMarkers();
   }, [updateMarkers]);
+
+  // Render polygon regions + their signal points
+  const regionLayerIds = useRef<string[]>([]);
+  const regionMarkerRefs = useRef<MapboxGLAny[]>([]);
+
+  useEffect(() => {
+    if (!map.current || !loaded || !mbRef.current) return;
+    const mapboxgl = mbRef.current;
+    const m = map.current;
+
+    // Clean up previous region layers and sources
+    for (const layerId of regionLayerIds.current) {
+      try {
+        if (m.getLayer(layerId)) m.removeLayer(layerId);
+        if (m.getLayer(`${layerId}-outline`)) m.removeLayer(`${layerId}-outline`);
+        if (m.getSource(layerId)) m.removeSource(layerId);
+      } catch { /* map style not loaded yet */ }
+    }
+    regionLayerIds.current = [];
+
+    // Clean up previous signal point markers within regions
+    for (const rm of regionMarkerRefs.current) rm.remove();
+    regionMarkerRefs.current = [];
+
+    // Add regions
+    regions.forEach((region, idx) => {
+      const sourceId = `region-${region.id}-${idx}`;
+      const color = severityColors[region.severity] ?? "#6E7F9B";
+
+      m.addSource(sourceId, {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          properties: { title: region.title },
+          geometry: region.geometry,
+        },
+      });
+
+      // Fill layer (semi-transparent)
+      m.addLayer({
+        id: sourceId,
+        type: "fill",
+        source: sourceId,
+        paint: {
+          "fill-color": color,
+          "fill-opacity": 0.15,
+        },
+      });
+
+      // Outline layer
+      m.addLayer({
+        id: `${sourceId}-outline`,
+        type: "line",
+        source: sourceId,
+        paint: {
+          "line-color": color,
+          "line-width": 2,
+          "line-opacity": 0.6,
+        },
+      });
+
+      regionLayerIds.current.push(sourceId);
+
+      // Add signal point markers within this region
+      if (region.signalPoints) {
+        for (const pt of region.signalPoints) {
+          const el = document.createElement("div");
+          el.style.width = "10px";
+          el.style.height = "10px";
+          el.style.borderRadius = "50%";
+          el.style.backgroundColor = color;
+          el.style.border = "2px solid white";
+          el.style.boxShadow = "0 1px 4px rgba(0,0,0,0.2)";
+          el.style.cursor = "pointer";
+
+          // Tooltip
+          const tip = document.createElement("div");
+          tip.style.cssText = `
+            position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+            background: white; border: 1px solid #e5e7eb; padding: 4px 8px;
+            white-space: nowrap; font-size: 10px; font-weight: 500;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 4px;
+            pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 100;
+          `;
+          tip.textContent = pt.title;
+          el.appendChild(tip);
+          el.addEventListener("mouseenter", () => { tip.style.opacity = "1"; });
+          el.addEventListener("mouseleave", () => { tip.style.opacity = "0"; });
+
+          const marker = new mapboxgl.Marker({ element: el })
+            .setLngLat([pt.lng, pt.lat])
+            .addTo(m);
+          regionMarkerRefs.current.push(marker);
+        }
+      }
+    });
+
+    return () => {
+      // Guard: map may already be destroyed on unmount
+      if (map.current) {
+        for (const layerId of regionLayerIds.current) {
+          try {
+            if (map.current.getLayer(layerId)) map.current.removeLayer(layerId);
+            if (map.current.getLayer(`${layerId}-outline`)) map.current.removeLayer(`${layerId}-outline`);
+            if (map.current.getSource(layerId)) map.current.removeSource(layerId);
+          } catch { /* map already removed */ }
+        }
+      }
+      regionLayerIds.current = [];
+      for (const rm of regionMarkerRefs.current) {
+        try { rm.remove(); } catch { /* already removed */ }
+      }
+      regionMarkerRefs.current = [];
+    };
+  }, [regions, loaded]);
 
   if (!MAPBOX_TOKEN) {
     return (

@@ -11,11 +11,7 @@ import {
   Card,
   Stack,
   Loader,
-  Textarea,
   Button,
-  Avatar,
-  Divider,
-  Modal,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -28,14 +24,6 @@ import {
   IconCalendar,
   IconDatabase,
   IconExternalLink,
-  IconSend,
-  IconMessageCircle,
-  IconThumbUp,
-  IconThumbDown,
-  IconCircleCheck,
-  IconCircleOff,
-  IconHistory,
-  IconMapPinOff,
   IconRadar,
   IconLink,
   IconChevronDown,
@@ -43,6 +31,8 @@ import {
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlSignalDetail, GqlLocation } from "~/lib/types/graphql";
+import { CommentsSection } from "~/components/comments-section";
+import { FeedbackSection } from "~/components/feedback-section";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
 
@@ -51,26 +41,6 @@ const CrisisMap = dynamic(
   { ssr: false, loading: () => <Box w="100%" h={180} bg="#F5F5F5" /> },
 );
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-// Remove when backend delivers Comments and Feedback mutations.
-const MOCK_COMMENTS = [
-  {
-    id: 1,
-    initials: "U1",
-    author: "User 1",
-    role: "Placeholder role",
-    timeAgo: "2h ago",
-    text: "This is a placeholder comment to show the commentary feature.",
-  },
-  {
-    id: 2,
-    initials: "U2",
-    author: "User 2",
-    role: "Placeholder role",
-    timeAgo: "1h ago",
-    text: "Placeholder content as well.",
-  },
-];
 // ─────────────────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
@@ -121,64 +91,9 @@ export function SignalDetailContent({
   loading,
   mode,
 }: SignalDetailContentProps) {
-  const [comment, setComment] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalSubmitted, setModalSubmitted] = useState(false);
-  const [helpfulSubmitted, setHelpfulSubmitted] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [modalComment, setModalComment] = useState("");
-  const [feedbackPending, setFeedbackPending] = useState(false);
   const [rawExpanded, setRawExpanded] = useState(false);
 
   const toggleRaw = useCallback(() => setRawExpanded((v) => !v), []);
-
-  // submitFeedback stub — wire to real mutation once backend exposes it
-  const submitFeedback = {
-    mutateAsync: async (_args: { signalId: string; comment: string }) => {
-      // no-op stub
-    },
-    isPending: feedbackPending,
-  };
-
-  const issueTags = [
-    { id: "not_relevant", label: "Not relevant", icon: IconCircleOff },
-    { id: "already_known", label: "Already known", icon: IconHistory },
-    { id: "wrong_area", label: "Wrong area", icon: IconMapPinOff },
-    { id: "inaccurate", label: "Inaccurate", icon: IconAlertTriangle },
-  ];
-
-  function toggleTag(id: string) {
-    setSelectedTags((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
-    );
-  }
-
-  async function handleHelpful() {
-    if (!signal) return;
-    setFeedbackPending(true);
-    try {
-      await submitFeedback.mutateAsync({ signalId: signal.id, comment: "helpful" });
-      setHelpfulSubmitted(true);
-    } catch (err) {
-      console.error("Failed to submit feedback", err);
-    } finally {
-      setFeedbackPending(false);
-    }
-  }
-
-  async function handleSubmitIssues() {
-    if (!signal) return;
-    const parts = [selectedTags.join(", "), modalComment.trim()].filter(Boolean);
-    setFeedbackPending(true);
-    try {
-      await submitFeedback.mutateAsync({ signalId: signal.id, comment: parts.join(" | ") });
-      setModalSubmitted(true);
-    } catch (err) {
-      console.error("Failed to submit feedback", err);
-    } finally {
-      setFeedbackPending(false);
-    }
-  }
 
   const mapMarkers = useMemo<MapMarker[]>(() => {
     if (!signal) return [];
@@ -588,90 +503,7 @@ export function SignalDetailContent({
 
           {/* Discussion */}
           <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
-              <Group gap={8}>
-                <IconMessageCircle size={14} color="#525252" />
-                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
-                  Discussion
-                </Text>
-                <Badge size="xs" variant="light" color="gray" style={{ fontWeight: 600 }}>
-                  {MOCK_COMMENTS.length}
-                </Badge>
-                <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>
-                  (mock data currently)
-                </Text>
-              </Group>
-            </Box>
-            <Box>
-              {MOCK_COMMENTS.map((c, i) => (
-                <Box
-                  key={c.id}
-                  px={16}
-                  py={12}
-                  style={{
-                    borderBottom:
-                      i < MOCK_COMMENTS.length - 1 ? "1px solid #F5F5F5" : undefined,
-                  }}
-                >
-                  <Group align="flex-start" gap={10}>
-                    <Avatar
-                      size={30}
-                      radius="xl"
-                      style={{
-                        background: "#FEF2F0",
-                        color: "#E85D3D",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {c.initials}
-                    </Avatar>
-                    <Box style={{ flex: 1 }}>
-                      <Group gap={8} mb={4}>
-                        <Text size="xs" fw={600} c="#171717">{c.author}</Text>
-                        <Text size="xs" c="#A3A3A3">{c.role}</Text>
-                        <Text size="xs" c="#A3A3A3" style={{ marginLeft: "auto" }}>
-                          {c.timeAgo}
-                        </Text>
-                      </Group>
-                      <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
-                        {c.text}
-                      </Text>
-                    </Box>
-                  </Group>
-                </Box>
-              ))}
-
-              {/* Comment input */}
-              <Box px={16} py={12} style={{ borderTop: "1px solid #F5F5F5" }}>
-                <Textarea
-                  placeholder="Add a comment…"
-                  value={comment}
-                  onChange={(e) => setComment(e.currentTarget.value)}
-                  minRows={2}
-                  size="xs"
-                  styles={{ input: { fontSize: 13 } }}
-                  mb={8}
-                />
-                <Group justify="flex-end">
-                  <Button
-                    size="xs"
-                    leftSection={<IconSend size={12} />}
-                    disabled
-                    title="Comments coming soon"
-                    style={{
-                      background: "#E85D3D",
-                      borderColor: "#E85D3D",
-                      fontSize: 12,
-                      opacity: 0.5,
-                    }}
-                  >
-                    Post
-                  </Button>
-                </Group>
-              </Box>
-            </Box>
+            <CommentsSection entityId={signal.id} entityType="signal" />
           </Card>
 
           {/* Part of Events + Similar Signals — two columns */}
@@ -832,59 +664,7 @@ export function SignalDetailContent({
 
               {/* Was this signal helpful? */}
               <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-                <Box px={16} py={10} className="border-b border-[#E5E5E5]">
-                  <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
-                    Was this signal helpful?
-                  </Text>
-                </Box>
-                <Box p={16}>
-                  {helpfulSubmitted ? (
-                    <Group gap={6} justify="center">
-                      <IconCircleCheck size={15} color="#059669" style={{ strokeWidth: 1.5 }} />
-                      <Text size="xs" c="#059669" fw={500}>
-                        Thanks for the feedback!
-                      </Text>
-                    </Group>
-                  ) : (
-                    <Group gap={8}>
-                      <button
-                        onClick={() => {
-                          setModalOpen(true);
-                          setModalSubmitted(false);
-                          setSelectedTags([]);
-                          setModalComment("");
-                        }}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
-                        style={{
-                          background: "#FEE2E2",
-                          color: "#B91C1C",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = "#FECACA")}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = "#FEE2E2")}
-                      >
-                        <IconThumbDown size={13} />
-                        Issues
-                      </button>
-                      <button
-                        onClick={handleHelpful}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
-                        style={{
-                          background: "#D1FAE5",
-                          color: "#065F46",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = "#A7F3D0")}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = "#D1FAE5")}
-                      >
-                        <IconThumbUp size={13} />
-                        Helpful
-                      </button>
-                    </Group>
-                  )}
-                </Box>
+                <FeedbackSection entityId={signal.id} entityType="signal" />
               </Card>
 
               {/* Actions */}
@@ -995,103 +775,6 @@ export function SignalDetailContent({
         )}
       </Box>
 
-      {/* Issues feedback modal */}
-      <Modal
-        opened={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={modalSubmitted ? undefined : "What was the issue?"}
-        size="sm"
-        centered
-        styles={{
-          header: { paddingBottom: 8 },
-          body: { paddingTop: modalSubmitted ? 0 : 8 },
-        }}
-      >
-        {modalSubmitted ? (
-          <Stack align="center" gap={12} py={32}>
-            <IconCircleCheck size={52} color="#059669" style={{ strokeWidth: 1.5 }} />
-            <Text fw={700} size="lg" c="#171717">Thank you!</Text>
-            <Text size="sm" c="#737373" ta="center" maw={260}>
-              Your feedback helps improve signal quality for the whole team.
-            </Text>
-            <Button variant="subtle" color="gray" size="sm" mt={8} onClick={() => setModalOpen(false)}>
-              Close
-            </Button>
-          </Stack>
-        ) : (
-          <Stack gap={16}>
-            <Text size="sm" c="#737373">
-              Select all issues that apply - this helps us improve the detection pipeline.
-            </Text>
-
-            <Stack gap={8}>
-              {issueTags.map(({ id, label, icon: Icon }) => {
-                const active = selectedTags.includes(id);
-                return (
-                  <button
-                    key={id}
-                    onClick={() => toggleTag(id)}
-                    className="transition-colors"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 7,
-                      width: "100%",
-                      borderRadius: 999,
-                      padding: "9px 16px",
-                      fontSize: 13,
-                      fontWeight: 500,
-                      background: active ? "#FEE2E2" : "#F5F5F5",
-                      color: active ? "#B91C1C" : "#525252",
-                      border: active ? "1px solid #FECACA" : "1px solid #E5E5E5",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <Icon size={14} strokeWidth={1.75} />
-                    {label}
-                  </button>
-                );
-              })}
-            </Stack>
-
-            <Divider color="#F5F5F5" />
-
-            <Textarea
-              label="Additional comments (optional)"
-              placeholder="Anything else we should know about this signal…"
-              value={modalComment}
-              onChange={(e) => setModalComment(e.currentTarget.value)}
-              minRows={3}
-              maxLength={1000}
-              size="sm"
-              styles={{
-                label: {
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "#171717",
-                  marginBottom: 6,
-                },
-              }}
-            />
-
-            <Group justify="flex-end">
-              <Button variant="subtle" color="gray" size="sm" onClick={() => setModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                disabled={selectedTags.length === 0 && !modalComment.trim()}
-                loading={feedbackPending}
-                onClick={handleSubmitIssues}
-                style={{ background: "#E85D3D", borderColor: "#E85D3D" }}
-              >
-                Send Feedback
-              </Button>
-            </Group>
-          </Stack>
-        )}
-      </Modal>
     </Box>
   );
 }

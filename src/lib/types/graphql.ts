@@ -88,6 +88,24 @@ export interface GqlEvent {
   alerts: Array<{ id: string; status: string }>;
 }
 
+/* ─── Comments ─── */
+
+export interface GqlCommentUser {
+  id: string;
+  name: string | null;
+  image: string | null;
+}
+
+export interface GqlUserComment {
+  id: string;
+  comment: string;
+  createdAt: string;
+  isCommentReply: boolean;
+  repliedToCommentId: string | null;
+  user: GqlCommentUser;
+  tags: Array<{ user: GqlCommentUser }>;
+}
+
 /* ─── Alert ─── */
 
 export interface GqlAlert {
