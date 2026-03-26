@@ -114,6 +114,12 @@ body {
   background: var(--color-text-muted);
 }
 
+/* Spinner */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Pulsing animation for critical alerts */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
