@@ -25,7 +25,6 @@ type QueuedPayload = {
   title?: string;
   description?: string;
   locationId?: string;
-  media?: { name: string; type: string; data: string }[];
 };
 
 const DB_NAME = "clear-observe";
@@ -74,14 +73,6 @@ async function dbRemove(key: IDBValidKey): Promise<void> {
   });
 }
 
-function toBase64(file: File): Promise<{ name: string; type: string; data: string }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve({ name: file.name, type: file.type, data: reader.result as string });
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
 
 interface FormState {
   description: string;
@@ -537,13 +528,11 @@ export default function ObservePage() {
     setError(null);
     setStep("submitting");
 
-    const media = await Promise.all(form.media.map((m) => toBase64(m.file)));
     const payload: QueuedPayload = {
       sourceId: form.sourceId,
       title: form.title.trim() || undefined,
       description: form.description.trim(),
       locationId: form.locationId || undefined,
-      media: media.length > 0 ? media : undefined,
     };
 
     if (!navigator.onLine) {
