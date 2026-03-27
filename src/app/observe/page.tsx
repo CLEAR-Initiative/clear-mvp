@@ -7,9 +7,8 @@ import {
   IconX,
   IconCircleCheck,
   IconLoader2,
-  IconPlus,
   IconPhoto,
-  IconVideo,
+  IconSend,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { ColorSchemeToggle } from "~/components/ui/color-scheme-toggle";
@@ -73,353 +72,11 @@ async function dbRemove(key: IDBValidKey): Promise<void> {
   });
 }
 
-
-interface FormState {
-  description: string;
-  title: string;
-  sourceId: string;
-  locationId: string;
-  locationLabel: string;
-  lat: number | null;
-  lng: number | null;
-  media: { file: File; id: string; preview: string }[];
-}
-
-const EMPTY_FORM: FormState = {
-  description: "",
-  title: "",
-  sourceId: "",
-  locationId: "",
-  locationLabel: "",
-  lat: null,
-  lng: null,
-  media: [],
-};
-
 function formatCoords(lat: number, lng: number) {
-  return `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? "N" : "S"}, ${Math.abs(lng).toFixed(4)}° ${lng >= 0 ? "E" : "W"}`;
+  return `${Math.abs(lat).toFixed(3)}° ${lat >= 0 ? "N" : "S"}, ${Math.abs(lng).toFixed(3)}° ${lng >= 0 ? "E" : "W"}`;
 }
 
-const FIELD_LABEL: React.CSSProperties = {
-  display: "block",
-  fontSize: 11,
-  fontWeight: 500,
-  textTransform: "uppercase",
-  letterSpacing: "0.08em",
-  color: "var(--color-text-muted)",
-  marginBottom: 8,
-};
-
-const INPUT: React.CSSProperties = {
-  width: "100%",
-  padding: "10px 0",
-  border: "none",
-  borderBottom: "1px solid var(--color-border)",
-  fontSize: 15,
-  outline: "none",
-  fontFamily: "inherit",
-  color: "var(--color-text-primary)",
-  background: "transparent",
-  boxSizing: "border-box",
-  borderRadius: 0,
-  transition: "border-color 150ms",
-};
-
-/* ── Location field ─────────────────────────────────────────── */
-
-function LocationField({
-  form,
-  setForm,
-  locationOptions,
-  locationsLoading,
-}: {
-  form: FormState;
-  setForm: React.Dispatch<React.SetStateAction<FormState>>;
-  locationOptions: { value: string; label: string }[];
-  locationsLoading: boolean;
-}) {
-  const [gpsLoading, setGpsLoading] = useState(false);
-  const [search, setSearch] = useState("");
-  const [open, setOpen] = useState(false);
-  const hasLocation = form.lat !== null || !!form.locationId;
-
-  function captureGPS() {
-    if (!navigator.geolocation) return;
-    setGpsLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setGpsLoading(false);
-        setForm((p) => ({
-          ...p,
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          locationLabel: formatCoords(pos.coords.latitude, pos.coords.longitude),
-          locationId: "",
-        }));
-        setOpen(false);
-      },
-      () => setGpsLoading(false),
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-  }
-
-  function clear(e: React.MouseEvent) {
-    e.stopPropagation();
-    setForm((p) => ({ ...p, lat: null, lng: null, locationId: "", locationLabel: "" }));
-    setSearch("");
-  }
-
-  const filtered = locationOptions
-    .filter((o) => o.label.toLowerCase().includes(search.toLowerCase()))
-    .slice(0, 6);
-
-  return (
-    <div style={{ position: "relative" }}>
-      <label style={FIELD_LABEL}>Location</label>
-
-      {/* Input row */}
-      <div style={{ display: "flex" }}>
-        <div
-          onClick={() => !hasLocation && setOpen((v) => !v)}
-          style={{
-            flex: 1,
-            padding: "10px 0",
-            border: "none",
-            borderBottom: `1px solid ${hasLocation ? "var(--color-success)" : "var(--color-border)"}`,
-            fontSize: 15,
-            color: hasLocation ? "var(--color-text-primary)" : "var(--color-text-muted)",
-            background: "transparent",
-            cursor: hasLocation ? "default" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            minWidth: 0,
-            overflow: "hidden",
-            transition: "border-color 150ms",
-          }}
-        >
-          {hasLocation && <IconMapPin size={14} color="var(--color-success)" style={{ flexShrink: 0 }} />}
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {hasLocation ? form.locationLabel : locationsLoading ? "Loading…" : "Select location"}
-          </span>
-          {hasLocation && (
-            <button
-              onClick={clear}
-              style={{ marginLeft: "auto", marginRight: 8, background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--color-text-muted)", flexShrink: 0, display: "flex" }}
-            >
-              <IconX size={13} />
-            </button>
-          )}
-        </div>
-
-        {/* Locate me button */}
-        <button
-          onClick={captureGPS}
-          disabled={gpsLoading}
-          title="Use my location"
-          className="observe-locate"
-          style={{
-            width: 40,
-            flexShrink: 0,
-            background: "var(--color-accent)",
-            border: "1px solid var(--color-accent)",
-            color: "white",
-            cursor: gpsLoading ? "default" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "background 150ms",
-          }}
-        >
-          {gpsLoading
-            ? <IconLoader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-            : <IconMapPin size={16} />
-          }
-        </button>
-      </div>
-
-      {/* Dropdown */}
-      {open && !hasLocation && (
-        <div
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            zIndex: 50,
-            background: "var(--color-bg-white)",
-            border: "1px solid var(--color-border)",
-            borderTop: "none",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-          }}
-        >
-          <input
-            type="text"
-            placeholder="Search…"
-            value={search}
-            autoFocus
-            onChange={(e) => setSearch(e.target.value)}
-            className="observe-input"
-            style={{ ...INPUT, padding: "10px 12px", borderBottom: "1px solid var(--color-border)" }}
-          />
-          {filtered.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => {
-                setForm((p) => ({ ...p, locationId: opt.value, locationLabel: opt.label, lat: null, lng: null }));
-                setOpen(false);
-                setSearch("");
-              }}
-              style={{
-                display: "block",
-                width: "100%",
-                textAlign: "left",
-                padding: "10px 12px",
-                fontSize: 13,
-                background: "none",
-                border: "none",
-                borderBottom: "1px solid var(--color-border)",
-                cursor: "pointer",
-                color: "var(--color-text-primary)",
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-          {filtered.length === 0 && (
-            <div style={{ padding: "10px 12px", fontSize: 13, color: "var(--color-text-muted)" }}>No results</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Media gallery ──────────────────────────────────────────── */
-
-function MediaField({
-  form,
-  setForm,
-}: {
-  form: FormState;
-  setForm: React.Dispatch<React.SetStateAction<FormState>>;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  function handleFiles(files: FileList | null) {
-    if (!files) return;
-    const incoming = Array.from(files).map((file) => ({
-      file,
-      id: `${file.name}-${file.size}-${Date.now()}`,
-      preview: URL.createObjectURL(file),
-    }));
-    setForm((p) => ({ ...p, media: [...p.media, ...incoming] }));
-  }
-
-  function remove(id: string) {
-    setForm((p) => {
-      const item = p.media.find((m) => m.id === id);
-      if (item) URL.revokeObjectURL(item.preview);
-      return { ...p, media: p.media.filter((m) => m.id !== id) };
-    });
-  }
-
-  const hasMedia = form.media.length > 0;
-
-  return (
-    <div>
-      <label style={FIELD_LABEL}>Media</label>
-
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {/* Thumbnails */}
-        {form.media.map(({ id, file, preview }) => (
-          <div
-            key={id}
-            style={{
-              position: "relative",
-              width: 72,
-              height: 72,
-              flexShrink: 0,
-              border: "1px solid var(--color-border)",
-              overflow: "hidden",
-            }}
-          >
-            {file.type.startsWith("video/") ? (
-              <div style={{ width: "100%", height: "100%", background: "var(--color-text-primary)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <IconVideo size={24} color="white" />
-              </div>
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            )}
-            <button
-              onClick={() => remove(id)}
-              style={{
-                position: "absolute",
-                top: 3,
-                right: 3,
-                background: "rgba(0,0,0,0.55)",
-                border: "none",
-                borderRadius: "50%",
-                width: 20,
-                height: 20,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                color: "white",
-                padding: 0,
-              }}
-            >
-              <IconX size={11} />
-            </button>
-          </div>
-        ))}
-
-        {/* Add button */}
-        <button
-          onClick={() => inputRef.current?.click()}
-          style={{
-            width: hasMedia ? 72 : "100%",
-            height: hasMedia ? 72 : 52,
-            border: "1.5px dashed var(--color-border-dark)",
-            background: "var(--color-bg-muted)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            cursor: "pointer",
-            color: "var(--color-text-muted)",
-            flexShrink: 0,
-            fontSize: 13,
-            fontWeight: 500,
-          }}
-        >
-          <IconPlus size={hasMedia ? 18 : 14} />
-          {!hasMedia && (
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <IconPhoto size={14} />
-              <span>Add photo / video</span>
-              <IconVideo size={14} />
-            </span>
-          )}
-        </button>
-      </div>
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*,video/*"
-        capture="environment"
-        multiple
-        style={{ display: "none" }}
-        onChange={(e) => handleFiles(e.target.files)}
-      />
-    </div>
-  );
-}
-
-/* ── Success ────────────────────────────────────────────────── */
+/* ── Success screen ─────────────────────────────────────────── */
 
 function SuccessScreen({ onAnother, queued }: { onAnother: () => void; queued?: boolean }) {
   return (
@@ -430,35 +87,36 @@ function SuccessScreen({ onAnother, queued }: { onAnother: () => void; queued?: 
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: 32,
+        padding: 40,
         background: "var(--color-bg-white)",
         textAlign: "center",
       }}
     >
       <IconCircleCheck
-        size={64}
+        size={72}
         color={queued ? "var(--color-warning)" : "var(--color-success)"}
         className="observe-success-icon"
-        style={{ strokeWidth: 1.5, marginBottom: 20 }}
+        style={{ strokeWidth: 1.5, marginBottom: 24 }}
       />
-      <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text-primary)", margin: "0 0 8px", letterSpacing: "-0.02em" }}>
+      <h2 style={{ fontSize: 26, fontWeight: 700, color: "var(--color-text-primary)", margin: "0 0 10px", letterSpacing: "-0.02em" }}>
         {queued ? "Saved for later" : "Signal submitted"}
       </h2>
-      <p style={{ fontSize: 14, color: "var(--color-text-muted)", margin: "0 0 32px", maxWidth: 260 }}>
+      <p style={{ fontSize: 16, color: "var(--color-text-muted)", margin: "0 0 36px", maxWidth: 260, lineHeight: 1.5 }}>
         {queued
-          ? "No connection — your signal is queued and will be sent automatically when you\u2019re back online."
+          ? "No connection \u2014 your signal is queued and will be sent automatically when you\u2019re back online."
           : "Your observation is now visible to your team in CLEAR."}
       </p>
       <button
         onClick={onAnother}
         style={{
-          padding: "12px 28px",
+          padding: "16px 32px",
           background: "var(--color-accent)",
           color: "white",
           border: "none",
-          fontSize: 14,
+          fontSize: 16,
           fontWeight: 600,
           cursor: "pointer",
+          borderRadius: 2,
         }}
       >
         Submit another
@@ -471,32 +129,34 @@ function SuccessScreen({ onAnother, queued }: { onAnother: () => void; queued?: 
 
 export default function ObservePage() {
   const [step, setStep] = useState<Step>("form");
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [title, setTitle] = useState("");
+  const [text, setText] = useState("");
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [locationLabel, setLocationLabel] = useState("");
+  const [media, setMedia] = useState<{ file: File; id: string; preview: string }[]>([]);
+  const [sourceId, setSourceId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
+  const [gpsLoading, setGpsLoading] = useState(false);
 
-  const locationsQuery = api.locations.list.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
-  const sourcesQuery = api.signals.sources.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
+  const mediaInputRef = useRef<HTMLInputElement>(null);
   const createSignal = api.signals.create.useMutation();
+  const sourcesQuery = api.signals.sources.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   const utils = api.useUtils();
 
-  // Keep a stable ref to the mutate fn so drainQueue never captures a stale closure
   const mutateFnRef = useRef(createSignal.mutateAsync);
   useEffect(() => { mutateFnRef.current = createSignal.mutateAsync; });
 
-  const locationOptions = (locationsQuery.data ?? []).map((loc) => ({
-    value: loc.id,
-    label: loc.parent ? `${loc.name} (${loc.parent.name})` : loc.name,
-  }));
-
+  // Auto-select source
   useEffect(() => {
-    if (!sourcesQuery.data || form.sourceId) return;
+    if (!sourcesQuery.data || sourceId) return;
     const sources = sourcesQuery.data;
     const preferred = sources.find((s) => /user|manual|field/i.test(s.name) || /user|manual|field/i.test(s.type));
     const gdacs = sources.find((s) => /gdacs/i.test(s.name));
     const auto = preferred ?? gdacs ?? sources[0];
-    if (auto) setForm((p) => ({ ...p, sourceId: auto.id }));
-  }, [sourcesQuery.data, form.sourceId]);
+    if (auto) setSourceId(auto.id);
+  }, [sourcesQuery.data, sourceId]);
 
   const drainQueue = useCallback(async () => {
     if (!navigator.onLine) return;
@@ -508,12 +168,11 @@ export default function ObservePage() {
         void utils.signals.list.invalidate();
         setPendingCount((n) => Math.max(0, n - 1));
       } catch {
-        break; // still offline, stop trying
+        break;
       }
     }
   }, [utils]);
 
-  // On mount: load pending count + drain if online; also listen for reconnect
   useEffect(() => {
     void dbGetPending().then((p) => setPendingCount(p.length));
     void drainQueue();
@@ -521,18 +180,62 @@ export default function ObservePage() {
     return () => window.removeEventListener("online", drainQueue);
   }, [drainQueue]);
 
-  const canSubmit = form.description.trim().length > 0 && form.sourceId.length > 0;
+  function captureGPS() {
+    if (!navigator.geolocation || gpsLoading) return;
+    // Toggle off if already captured
+    if (lat !== null) {
+      setLat(null);
+      setLng(null);
+      setLocationLabel("");
+      return;
+    }
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(pos.coords.latitude);
+        setLng(pos.coords.longitude);
+        setLocationLabel(formatCoords(pos.coords.latitude, pos.coords.longitude));
+        setGpsLoading(false);
+      },
+      () => {
+        setError("Could not get location. Check permissions.");
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }
+
+  function handleFiles(files: FileList | null) {
+    if (!files) return;
+    const incoming = Array.from(files).map((file) => ({
+      file,
+      id: `${file.name}-${file.size}-${Date.now()}`,
+      preview: URL.createObjectURL(file),
+    }));
+    setMedia((p) => [...p, ...incoming]);
+  }
+
+  function removeMedia(id: string) {
+    setMedia((p) => {
+      const item = p.find((m) => m.id === id);
+      if (item) URL.revokeObjectURL(item.preview);
+      return p.filter((m) => m.id !== id);
+    });
+  }
+
+  const canSubmit = text.trim().length > 0 && sourceId.length > 0;
+  const isSubmitting = step === "submitting";
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
     setError(null);
     setStep("submitting");
 
+    const description = text.trim();
     const payload: QueuedPayload = {
-      sourceId: form.sourceId,
-      title: form.title.trim() || undefined,
-      description: form.description.trim(),
-      locationId: form.locationId || undefined,
+      sourceId,
+      title: title.trim() || undefined,
+      description,
     };
 
     if (!navigator.onLine) {
@@ -547,7 +250,6 @@ export default function ObservePage() {
       void utils.signals.list.invalidate();
       setStep("success");
     } catch (err) {
-      // Network error → queue for later
       const isNetworkError = err instanceof Error && (
         err.message.toLowerCase().includes("fetch") ||
         err.message.toLowerCase().includes("network") ||
@@ -562,11 +264,16 @@ export default function ObservePage() {
         setStep("form");
       }
     }
-  }, [canSubmit, createSignal, form, utils]);
+  }, [canSubmit, createSignal, text, sourceId, utils]);
 
   function reset() {
-    form.media.forEach((m) => URL.revokeObjectURL(m.preview));
-    setForm(EMPTY_FORM);
+    media.forEach((m) => URL.revokeObjectURL(m.preview));
+    setTitle("");
+    setText("");
+    setLat(null);
+    setLng(null);
+    setLocationLabel("");
+    setMedia([]);
     setError(null);
     setStep("form");
   }
@@ -574,18 +281,18 @@ export default function ObservePage() {
   if (step === "success") return <SuccessScreen onAnother={reset} />;
   if (step === "queued") return <SuccessScreen onAnother={reset} queued />;
 
-  const isSubmitting = step === "submitting";
+  const hasLocation = lat !== null;
+  const hasMedia = media.length > 0;
 
   return (
     <div
       style={{
         height: "100dvh",
-        background: "var(--color-bg-primary)",
+        background: "var(--color-bg-white)",
         display: "flex",
         flexDirection: "column",
         maxWidth: 480,
         margin: "0 auto",
-        overflow: "hidden",
       }}
     >
       {/* Accent top bar */}
@@ -596,18 +303,18 @@ export default function ObservePage() {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 8,
+          gap: 10,
           padding: "0 20px",
-          height: 52,
+          height: 58,
           background: "var(--color-bg-white)",
           borderBottom: "1px solid var(--color-border)",
           flexShrink: 0,
         }}
       >
-        <Image src="/nrc-logo-square.svg" alt="NRC" width={30} height={30} />
+        <Image src="/nrc-logo-square.svg" alt="NRC" width={34} height={34} />
         <span
           style={{
-            fontSize: 20,
+            fontSize: 22,
             fontWeight: 700,
             color: "var(--color-text-primary)",
             letterSpacing: "-0.02em",
@@ -616,8 +323,8 @@ export default function ObservePage() {
         >
           CLEAR
         </span>
-        <span style={{ color: "var(--color-border-dark)", fontSize: 16, margin: "0 2px" }}>|</span>
-        <span style={{ fontSize: 14, fontWeight: 300, color: "var(--color-text-secondary)", letterSpacing: "0.01em" }}>
+        <span style={{ color: "var(--color-border-dark)", fontSize: 17, margin: "0 2px" }}>|</span>
+        <span style={{ fontSize: 15, fontWeight: 300, color: "var(--color-text-secondary)", letterSpacing: "0.01em" }}>
           Field Signals
         </span>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
@@ -637,147 +344,242 @@ export default function ObservePage() {
         </div>
       </div>
 
-      {/* Scrollable form body */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 0" }}>
+      {/* Compose area */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-        {/* Card */}
-        <div
-          style={{
-            background: "var(--color-bg-white)",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 2px 12px rgba(0,0,0,0.04)",
-            padding: "20px 20px 24px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 20,
-          }}
-        >
-          {/* Section label with accent bar */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 3, height: 16, background: "var(--color-accent)", flexShrink: 0 }} />
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-secondary)" }}>
-              What did you observe?
-            </p>
-          </div>
+        {/* Chips + textarea */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 0" }}>
+
+          {/* Attachment chips */}
+          {(hasLocation || hasMedia) && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+
+              {hasLocation && (
+                <div style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "var(--color-accent-light)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: 20,
+                  padding: "6px 8px 6px 10px",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: "var(--color-accent)",
+                }}>
+                  <IconMapPin size={13} strokeWidth={2.5} />
+                  <span>{locationLabel}</span>
+                  <button
+                    onClick={() => { setLat(null); setLng(null); setLocationLabel(""); }}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0 0 2px", color: "inherit", display: "flex", alignItems: "center" }}
+                  >
+                    <IconX size={12} />
+                  </button>
+                </div>
+              )}
+
+              {media.map(({ id, file, preview }) => (
+                <div key={id} style={{ position: "relative", width: 52, height: 52, borderRadius: 8, overflow: "hidden", border: "1px solid var(--color-border)", flexShrink: 0 }}>
+                  {file.type.startsWith("video/") ? (
+                    <div style={{ width: "100%", height: "100%", background: "var(--color-bg-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <IconPhoto size={20} color="var(--color-text-muted)" />
+                    </div>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={preview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  )}
+                  <button
+                    onClick={() => removeMedia(id)}
+                    style={{ position: "absolute", top: 3, right: 3, background: "rgba(0,0,0,0.6)", border: "none", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white", padding: 0 }}
+                  >
+                    <IconX size={10} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Title */}
-          <div>
-            <label style={FIELD_LABEL}>Title</label>
-            <input
-              type="text"
-              placeholder="Short headline…"
-              value={form.title}
-              onChange={(e) => { const v = e.currentTarget.value; setForm((p) => ({ ...p, title: v })); }}
-              className="observe-input"
-              style={INPUT}
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label style={FIELD_LABEL}>
-              Description <span style={{ color: "var(--color-accent)" }}>*</span>
-            </label>
-            <textarea
-              placeholder="Describe what you saw — location, people affected, conditions…"
-              value={form.description}
-              onChange={(e) => { const v = e.currentTarget.value; setForm((p) => ({ ...p, description: v })); }}
-              rows={4}
-              className="observe-input"
-              style={{ ...INPUT, resize: "none", lineHeight: 1.6 }}
-            />
-          </div>
-
-          {/* Location */}
-          <LocationField
-            form={form}
-            setForm={setForm}
-            locationOptions={locationOptions}
-            locationsLoading={locationsQuery.isLoading}
+          <input
+            type="text"
+            autoFocus
+            placeholder="Title"
+            value={title}
+            onChange={(e) => { const v = e.currentTarget.value; setTitle(v); }}
+            style={{
+              width: "100%",
+              border: "none",
+              outline: "none",
+              fontSize: 24,
+              fontWeight: 700,
+              letterSpacing: "-0.02em",
+              color: "var(--color-text-primary)",
+              background: "transparent",
+              fontFamily: "inherit",
+              boxSizing: "border-box",
+              marginBottom: 14,
+            }}
           />
 
-          {/* Media */}
-          <MediaField form={form} setForm={setForm} />
+          {/* Divider */}
+          <div style={{ height: 1, background: "var(--color-border)", marginBottom: 16 }} />
+
+          {/* Description */}
+          <textarea
+            placeholder="What did you observe?"
+            value={text}
+            onChange={(e) => { const v = e.currentTarget.value; setText(v); }}
+            style={{
+              width: "100%",
+              minHeight: 180,
+              border: "none",
+              outline: "none",
+              fontSize: 19,
+              lineHeight: 1.65,
+              color: "var(--color-text-primary)",
+              background: "transparent",
+              resize: "none",
+              fontFamily: "inherit",
+              boxSizing: "border-box",
+            }}
+          />
+
+          {/* Error */}
+          {error && (
+            <div style={{
+              marginTop: 8,
+              padding: "10px 14px",
+              background: "var(--color-critical-light)",
+              color: "var(--color-critical)",
+              fontSize: 14,
+              borderRadius: 4,
+            }}>
+              {error}
+            </div>
+          )}
+
+          <div style={{ height: 80 }} />
         </div>
 
-        {/* Error */}
-        {error && (
-          <div
-            style={{
-              marginTop: 12,
-              padding: "10px 12px",
-              background: "var(--color-critical-light)",
-              border: "1px solid #FECACA",
-              color: "var(--color-critical)",
-              fontSize: 13,
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        <div style={{ height: 80 }} />
-      </div>
-
-      {/* Fixed submit bar */}
-      <div
-        style={{
-          padding: "12px 20px 20px",
-          background: "var(--color-bg-white)",
-          borderTop: "1px solid var(--color-border)",
-          flexShrink: 0,
-          display: "flex",
-          gap: 8,
-        }}
-      >
-        <button
-          onClick={reset}
-          disabled={isSubmitting}
-          className="observe-btn-clear"
+        {/* Action bar */}
+        <div
           style={{
-            padding: "14px 18px",
-            background: "none",
-            border: "1px solid var(--color-border-dark)",
-            fontSize: 13,
-            fontWeight: 600,
-            color: "var(--color-text-muted)",
-            cursor: isSubmitting ? "default" : "pointer",
+            padding: "10px 16px 28px",
+            background: "var(--color-bg-white)",
+            borderTop: "1px solid var(--color-border)",
             flexShrink: 0,
-            letterSpacing: "0.01em",
-            transition: "background 150ms, color 150ms",
-          }}
-        >
-          Clear
-        </button>
-        <button
-          onClick={() => void handleSubmit()}
-          disabled={!canSubmit || isSubmitting}
-          className="observe-btn-submit"
-          style={{
-            flex: 1,
-            padding: 14,
-            background: canSubmit && !isSubmitting ? "var(--color-accent)" : "var(--color-border-dark)",
-            color: "white",
-            border: "none",
-            fontSize: 14,
-            fontWeight: 700,
-            cursor: canSubmit && !isSubmitting ? "pointer" : "default",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            transition: "background 150ms, transform 100ms",
-            letterSpacing: "0.01em",
+            gap: 4,
           }}
         >
-          {isSubmitting ? (
-            <>
-              <IconLoader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-              Submitting…
-            </>
-          ) : (
-            "Submit signal"
-          )}
-        </button>
+          {/* Location */}
+          <button
+            onClick={captureGPS}
+            disabled={gpsLoading}
+            title={hasLocation ? "Clear location" : "Capture location"}
+            className="observe-locate"
+            style={{
+              width: 46,
+              height: 46,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: hasLocation ? "var(--color-accent-light)" : "transparent",
+              border: "none",
+              borderRadius: "50%",
+              color: hasLocation ? "var(--color-accent)" : "var(--color-text-muted)",
+              cursor: gpsLoading ? "default" : "pointer",
+              transition: "background 150ms, color 150ms",
+              flexShrink: 0,
+            }}
+          >
+            {gpsLoading
+              ? <IconLoader2 size={22} style={{ animation: "spin 1s linear infinite" }} />
+              : <IconMapPin size={22} />
+            }
+          </button>
+
+          {/* Media */}
+          <button
+            onClick={() => mediaInputRef.current?.click()}
+            title="Add photo or video"
+            style={{
+              width: 46,
+              height: 46,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: hasMedia ? "var(--color-accent-light)" : "transparent",
+              border: "none",
+              borderRadius: "50%",
+              color: hasMedia ? "var(--color-accent)" : "var(--color-text-muted)",
+              cursor: "pointer",
+              transition: "background 150ms, color 150ms",
+              position: "relative",
+              flexShrink: 0,
+            }}
+          >
+            <IconPhoto size={22} />
+            {hasMedia && (
+              <span style={{
+                position: "absolute",
+                top: 7,
+                right: 7,
+                width: 14,
+                height: 14,
+                borderRadius: "50%",
+                background: "var(--color-accent)",
+                color: "white",
+                fontSize: 9,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                lineHeight: 1,
+              }}>
+                {media.length}
+              </span>
+            )}
+          </button>
+
+          <div style={{ flex: 1 }} />
+
+          {/* Send */}
+          <button
+            onClick={() => void handleSubmit()}
+            disabled={!canSubmit || isSubmitting}
+            style={{
+              width: 50,
+              height: 50,
+              borderRadius: "50%",
+              background: canSubmit && !isSubmitting ? "var(--color-accent)" : "var(--color-border-dark)",
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: canSubmit && !isSubmitting ? "pointer" : "default",
+              transition: "background 200ms, transform 100ms",
+              color: "white",
+              flexShrink: 0,
+            }}
+          >
+            {isSubmitting
+              ? <IconLoader2 size={22} style={{ animation: "spin 1s linear infinite" }} />
+              : <IconSend size={20} style={{ transform: "translateX(1px)" }} />
+            }
+          </button>
+
+          <input
+            ref={mediaInputRef}
+            type="file"
+            accept="image/*,video/*"
+            capture="environment"
+            multiple
+            style={{ display: "none" }}
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+        </div>
       </div>
     </div>
   );

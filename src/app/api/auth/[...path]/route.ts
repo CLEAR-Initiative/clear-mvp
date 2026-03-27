@@ -50,11 +50,20 @@ async function handler(
     // Build the response, forwarding status, body, and Set-Cookie headers
     const responseHeaders = new Headers();
     res.headers.forEach((value, key) => {
-      const skip = ["transfer-encoding", "connection", "keep-alive"];
+      const skip = ["transfer-encoding", "connection", "keep-alive", "set-cookie"];
       if (!skip.includes(key.toLowerCase())) {
         responseHeaders.append(key, value);
       }
     });
+
+    // Patch session cookies: add Max-Age if missing so iOS PWA doesn't clear them on app close
+    const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+    const setCookies = res.headers.getSetCookie?.() ?? [];
+    for (const cookie of setCookies) {
+      const lower = cookie.toLowerCase();
+      const hasExpiry = lower.includes("max-age=") || lower.includes("expires=");
+      responseHeaders.append("set-cookie", hasExpiry ? cookie : `${cookie}; Max-Age=${SESSION_MAX_AGE}`);
+    }
 
     return new NextResponse(res.body, {
       status: res.status,
