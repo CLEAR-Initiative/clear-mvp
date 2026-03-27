@@ -434,7 +434,7 @@ export default function ObservePage() {
       await dbQueue(payload);
       setPendingCount((n) => n + 1);
       setTimeout(() => {
-        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "queued", text: "Got it \u2014 your signal has been saved locally. We\u2019ll send it to your team automatically once you\u2019re back online." });
+        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "queued", text: "Got it. Your signal has been saved locally and will be sent to your team automatically once you are back online." });
         setSubmitting(false);
       }, 1200);
       return;
@@ -443,7 +443,7 @@ export default function ObservePage() {
     try {
       await createSignal.mutateAsync(payload);
       void utils.signals.list.invalidate();
-      pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "success", text: "Signal received \u2014 a new entry has been added to your team\u2019s signal list." });
+      pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "success", text: "Signal received. A new entry has been added to your team's signal list." });
     } catch (err) {
       const isNetworkError = err instanceof Error && (
         err.message.toLowerCase().includes("fetch") ||
@@ -453,9 +453,9 @@ export default function ObservePage() {
       if (isNetworkError) {
         await dbQueue(payload);
         setPendingCount((n) => n + 1);
-        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "queued", text: "Got it \u2014 your signal has been saved locally. We\u2019ll send it to your team automatically once you\u2019re back online." });
+        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "queued", text: "Got it. Your signal has been saved locally and will be sent to your team automatically once you are back online." });
       } else {
-        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "error", text: "Something went wrong \u2014 your signal wasn\u2019t submitted. Please try again." });
+        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "error", text: "Something went wrong and your signal was not submitted. Please try again." });
       }
     }
 
@@ -607,7 +607,7 @@ export default function ObservePage() {
         </div>
       </div>
 
-      <input ref={mediaInputRef} type="file" accept="image/*,video/*" capture="environment" multiple style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
+      <input ref={mediaInputRef} type="file" accept="image/*,video/*" multiple style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
 
       </> /* end submit tab */}
     </div>
