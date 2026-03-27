@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import Image from "next/image";
 import {
   IconMapPin,
@@ -12,6 +12,7 @@ import {
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { ColorSchemeToggle } from "~/components/ui/color-scheme-toggle";
+import type { GqlSignal } from "~/lib/types/graphql";
 
 /* ── IndexedDB offline queue ────────────────────────────────── */
 
@@ -81,6 +82,7 @@ interface ChatMessage {
   locationLabel?: string;
   media?: { id: string; preview: string; isVideo: boolean }[];
   text?: string;
+  content?: ReactNode;
   variant?: MessageVariant;
 }
 
@@ -134,7 +136,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
           fontSize: 15,
           lineHeight: 1.5,
         }}>
-          {msg.text}
+          {msg.content ?? msg.text}
         </div>
       </div>
     );
@@ -182,17 +184,99 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 
+/* ── Signals list ───────────────────────────────────────────── */
+
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function SignalCard({ signal }: { signal: GqlSignal }) {
+  const location = signal.generalLocation ?? signal.originLocation;
+  const hasEvents = signal.events.length > 0;
+
+  return (
+    <div style={{ background: "var(--color-bg-white)", borderRadius: 10, padding: "14px 16px", marginBottom: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 8px rgba(0,0,0,0.04)" }}>
+
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-accent)", background: "var(--color-accent-light)", padding: "2px 8px", borderRadius: 10 }}>
+          {signal.source.name}
+        </span>
+        <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{timeAgo(signal.publishedAt)}</span>
+      </div>
+
+      {signal.title && <div style={{ fontWeight: 700, fontSize: 15, color: "var(--color-text-primary)", marginBottom: 4, lineHeight: 1.35 }}>{signal.title}</div>}
+      {signal.description && <div style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.45, marginBottom: location ?? hasEvents ? 8 : 0 }}>{signal.description.length > 120 ? signal.description.slice(0, 120) + "…" : signal.description}</div>}
+      {(location ?? hasEvents) && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
+          {location && <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--color-text-muted)", fontSize: 12 }}><IconMapPin size={11} strokeWidth={2.5} /><span>{location.name}</span></div>}
+          {hasEvents && <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-info)", background: "var(--color-info-light)", padding: "2px 7px", borderRadius: 8 }}>{signal.events.length} event{signal.events.length !== 1 ? "s" : ""}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SignalsList() {
+  const signalsQuery = api.signals.list.useQuery(undefined, { staleTime: 1000 * 60 });
+
+  if (signalsQuery.isLoading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, color: "var(--color-text-muted)", fontSize: 14 }}>
+        <IconLoader2 size={20} style={{ animation: "spin 1s linear infinite", marginRight: 8 }} />
+        Loading signals…
+      </div>
+    );
+  }
+
+  const signals = (signalsQuery.data ?? []).slice().sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+
+  if (signals.length === 0) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, color: "var(--color-text-muted)", fontSize: 14, gap: 8 }}>
+        <IconPhoto size={32} strokeWidth={1.5} />
+        No signals yet
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 24px" }}>
+      {signals.map((s) => <SignalCard key={s.id} signal={s} />)}
+    </div>
+  );
+}
+
 /* ── Main page ──────────────────────────────────────────────── */
 
-const WELCOME: ChatMessage = {
-  id: "welcome",
-  kind: "received",
-  variant: "welcome",
-  text: "Ready to receive your field signals. Type what you observed — first line is the title, the rest is your description. Use @ to tag a location, or tap the pin to capture your coordinates.",
-};
+function makeWelcome(): ChatMessage {
+  const iconChip: React.CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: 6, background: "rgba(255,255,255,0.15)", verticalAlign: "middle", margin: "0 2px", flexShrink: 0 };
+  return {
+    id: "welcome",
+    kind: "received",
+    variant: "welcome",
+    content: (
+      <div style={{ fontSize: 14, lineHeight: 1.55 }}>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>To submit a signal:</div>
+        <ul style={{ margin: 0, paddingLeft: 0, display: "flex", flexDirection: "column", gap: 8, listStyle: "none" }}>
+          <li style={{ display: "flex", gap: 8 }}><span>•</span><span>The 1st line of your message will be the <strong>title</strong>, the rest is the <strong>description</strong>. Use Enter to go to a new line.</span></li>
+          <li style={{ display: "flex", gap: 8 }}><span>•</span><span>Use <strong>@</strong> to tag a location, or tap <span style={iconChip}><IconMapPin size={13} strokeWidth={2.5} /></span> to let the app locate you.</span></li>
+          <li style={{ display: "flex", gap: 8 }}><span>•</span><span>Attach images or videos with the <span style={iconChip}><IconPhoto size={13} strokeWidth={2.5} /></span> button.</span></li>
+        </ul>
+      </div>
+    ),
+  };
+}
 
 export default function ObservePage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
+  const [activeTab, setActiveTab] = useState<"submit" | "signals">("submit");
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [makeWelcome()]);
   const [draft, setDraft] = useState("");
   const [draftMedia, setDraftMedia] = useState<{ file: File; id: string; preview: string; isVideo: boolean }[]>([]);
   const [locationId, setLocationId] = useState("");
@@ -305,10 +389,11 @@ export default function ObservePage() {
     });
   }
 
-  const lines = draft.split("\n");
+  const cleanDraft = draft.replace(/@[\w\s]*$/, "").trimEnd();
+  const lines = cleanDraft.split("\n");
   const titleLine = lines[0]?.trim() ?? "";
   const bodyLines = lines.slice(1).join("\n").trim();
-  const canSubmit = draft.trim().length > 0 && sourceId.length > 0 && !submitting;
+  const canSubmit = cleanDraft.trim().length > 0 && sourceId.length > 0 && !submitting;
 
   function pushReply(msg: ChatMessage) {
     setMessages((prev) => [...prev.filter((m) => m.kind !== "typing"), msg]);
@@ -383,9 +468,6 @@ export default function ObservePage() {
   return (
     <div style={{ height: "100dvh", background: "var(--color-bg-primary)", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto" }}>
 
-      {/* Accent bar */}
-      <div style={{ height: 3, background: "var(--color-accent)", flexShrink: 0 }} />
-
       {/* Top bar */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 20px", height: 58, background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)", flexShrink: 0 }}>
         <Image src="/nrc-logo-square.svg" alt="NRC" width={34} height={34} />
@@ -401,6 +483,35 @@ export default function ObservePage() {
           <ColorSchemeToggle />
         </div>
       </div>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 6, padding: "6px 16px", background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)", flexShrink: 0 }}>
+        {(["submit", "signals"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              padding: "4px 20px",
+              borderRadius: 20,
+              border: "none",
+              background: activeTab === tab ? "var(--color-accent)" : "transparent",
+              color: activeTab === tab ? "white" : "var(--color-text-muted)",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "background 150ms, color 150ms",
+            }}
+          >
+            {tab === "submit" ? "Submit" : "Signals"}
+          </button>
+        ))}
+      </div>
+
+      {/* Signals list tab */}
+      {activeTab === "signals" && <SignalsList />}
+
+      {/* Submit tab */}
+      {activeTab === "submit" && <>
 
       {/* Messages */}
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 0" }}>
@@ -476,15 +587,14 @@ export default function ObservePage() {
             ref={textareaRef}
             placeholder="What did you observe?"
             value={draft}
-            onChange={(e) => handleDraftChange(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && window.innerWidth > 640) {
-                e.preventDefault();
-                void handleSubmit();
-              }
+            onChange={(e) => {
+              handleDraftChange(e.currentTarget.value);
+              e.currentTarget.style.height = "auto";
+              e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
             }}
+            onKeyDown={undefined}
             rows={1}
-            style={{ flex: 1, border: "1.5px solid var(--color-border)", borderRadius: 20, padding: "10px 16px", fontSize: 16, lineHeight: 1.5, outline: "none", fontFamily: "inherit", color: "var(--color-text-primary)", background: "var(--color-bg-primary)", resize: "none", maxHeight: 140, overflowY: "auto", boxSizing: "border-box", transition: "border-color 150ms" }}
+            style={{ flex: 1, border: "1.5px solid var(--color-border)", borderRadius: 20, padding: "10px 16px", fontSize: 16, lineHeight: 1.5, outline: "none", fontFamily: "inherit", color: "var(--color-text-primary)", background: "var(--color-bg-primary)", resize: "none", maxHeight: 240, overflowY: "auto", boxSizing: "border-box", transition: "border-color 150ms" }}
             className="observe-input"
           />
 
@@ -498,6 +608,8 @@ export default function ObservePage() {
       </div>
 
       <input ref={mediaInputRef} type="file" accept="image/*,video/*" capture="environment" multiple style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
+
+      </> /* end submit tab */}
     </div>
   );
 }
