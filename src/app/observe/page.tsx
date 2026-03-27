@@ -302,9 +302,10 @@ export default function ObservePage() {
   useEffect(() => {
     if (!sourcesQuery.data || sourceId) return;
     const sources = sourcesQuery.data;
-    const preferred = sources.find((s) => /user|manual|field/i.test(s.name) || /user|manual|field/i.test(s.type));
-    const gdacs = sources.find((s) => /gdacs/i.test(s.name));
-    const auto = preferred ?? gdacs ?? sources[0];
+    const auto =
+      sources.find((s) => s.name === "field_officer") ??
+      sources.find((s) => /user|manual|field/i.test(s.name) || /user|manual|field/i.test(s.type)) ??
+      sources[0];
     if (auto) setSourceId(auto.id);
   }, [sourcesQuery.data, sourceId]);
 
