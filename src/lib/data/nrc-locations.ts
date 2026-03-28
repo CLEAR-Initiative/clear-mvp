@@ -632,11 +632,14 @@ export const nrcStatistics = {
 // Countries with full crisis pin data
 export const CRISIS_COUNTRIES = new Set(["Sudan", "Ethiopia"]);
 
+export type CrisisPinType = "conflict" | "cholera" | "flood" | "drought" | "famine" | "team";
+
 export interface CrisisPin {
   id: string;
   name: string;
   coordinates: [number, number];
   severity: "critical" | "high" | "medium" | "response";
+  type: CrisisPinType;
   trend?: string;
   region?: string;
   cases?: number;
@@ -646,23 +649,23 @@ export interface CrisisPin {
 }
 
 export const sudanCrisisPins: CrisisPin[] = [
-  { id: "conflict-1", name: "Active Conflict - Khartoum", coordinates: [32.53, 15.5], severity: "critical", trend: "Ongoing", region: "Khartoum", affectedPopulation: 2500000 },
-  { id: "conflict-2", name: "Armed Clashes - El Fasher", coordinates: [25.35, 13.63], severity: "critical", trend: "Escalating", region: "North Darfur", affectedPopulation: 450000 },
-  { id: "displacement-1", name: "IDP Camp - Zalingei", coordinates: [23.47, 12.91], severity: "critical", trend: "180k displaced", region: "Central Darfur", affectedPopulation: 180000 },
-  { id: "food-1", name: "Famine Risk - West Darfur", coordinates: [22.45, 13.45], severity: "critical", trend: "IPC Phase 5", region: "West Darfur", affectedPopulation: 890000 },
-  { id: "cholera-1", name: "Cholera Outbreak - Port Sudan", coordinates: [37.22, 19.62], severity: "critical", cases: 1847, trend: "+89 in 24h", region: "Red Sea" },
-  { id: "flooding-1", name: "Flood Risk - White Nile", coordinates: [32.5, 13.16], severity: "medium", trend: "Seasonal", region: "White Nile" },
-  { id: "team-1", name: "UNHCR Emergency Team", coordinates: [36.2, 15.3], severity: "response", status: "Active", members: 12, region: "Kassala" },
-  { id: "team-2", name: "WFP Distribution Team", coordinates: [23.0, 13.2], severity: "response", status: "Active", members: 8, region: "West Darfur" },
+  { id: "conflict-1", type: "conflict", name: "Active Conflict - Khartoum", coordinates: [32.53, 15.5], severity: "critical", trend: "Ongoing", region: "Khartoum", affectedPopulation: 2500000 },
+  { id: "conflict-2", type: "conflict", name: "Armed Clashes - El Fasher", coordinates: [25.35, 13.63], severity: "critical", trend: "Escalating", region: "North Darfur", affectedPopulation: 450000 },
+  { id: "displacement-1", type: "conflict", name: "IDP Camp - Zalingei", coordinates: [23.47, 12.91], severity: "critical", trend: "180k displaced", region: "Central Darfur", affectedPopulation: 180000 },
+  { id: "food-1", type: "famine", name: "Famine Risk - West Darfur", coordinates: [22.45, 13.45], severity: "critical", trend: "IPC Phase 5", region: "West Darfur", affectedPopulation: 890000 },
+  { id: "cholera-1", type: "cholera", name: "Cholera Outbreak - Port Sudan", coordinates: [37.22, 19.62], severity: "critical", cases: 1847, trend: "+89 in 24h", region: "Red Sea" },
+  { id: "flooding-1", type: "flood", name: "Flood Risk - White Nile", coordinates: [32.5, 13.16], severity: "medium", trend: "Seasonal", region: "White Nile" },
+  { id: "team-1", type: "team", name: "UNHCR Emergency Team", coordinates: [36.2, 15.3], severity: "response", status: "Active", members: 12, region: "Kassala" },
+  { id: "team-2", type: "team", name: "WFP Distribution Team", coordinates: [23.0, 13.2], severity: "response", status: "Active", members: 8, region: "West Darfur" },
 ];
 
 export const ethiopiaCrisisPins: CrisisPin[] = [
-  { id: "cholera", name: "Cholera Outbreak", coordinates: [42.79, 9.35], severity: "critical", cases: 247, trend: "+34 in 24h", region: "Somali" },
-  { id: "cholera-2", name: "Cholera Spread", coordinates: [44.2, 6.73], severity: "critical", cases: 89, trend: "+12 in 24h", region: "Somali" },
-  { id: "flooding", name: "Flood Risk", coordinates: [39.76, 7.0], severity: "high", trend: "36h warning", region: "Oromia" },
-  { id: "drought", name: "Drought Zone", coordinates: [40.0, 11.5], severity: "medium", trend: "Monitoring", region: "Afar" },
-  { id: "team-1", name: "WASH Team Alpha", coordinates: [42.5, 9.2], severity: "response", status: "Active", members: 6, region: "Somali" },
-  { id: "team-2", name: "Health Team Bravo", coordinates: [44.0, 6.5], severity: "response", status: "Active", members: 5, region: "Somali" },
+  { id: "cholera", type: "cholera", name: "Cholera Outbreak", coordinates: [42.79, 9.35], severity: "critical", cases: 247, trend: "+34 in 24h", region: "Somali" },
+  { id: "cholera-2", type: "cholera", name: "Cholera Spread", coordinates: [44.2, 6.73], severity: "critical", cases: 89, trend: "+12 in 24h", region: "Somali" },
+  { id: "flooding", type: "flood", name: "Flood Risk", coordinates: [39.76, 7.0], severity: "high", trend: "36h warning", region: "Oromia" },
+  { id: "drought", type: "drought", name: "Drought Zone", coordinates: [40.0, 11.5], severity: "medium", trend: "Monitoring", region: "Afar" },
+  { id: "team-1", type: "team", name: "WASH Team Alpha", coordinates: [42.5, 9.2], severity: "response", status: "Active", members: 6, region: "Somali" },
+  { id: "team-2", type: "team", name: "Health Team Bravo", coordinates: [44.0, 6.5], severity: "response", status: "Active", members: 5, region: "Somali" },
 ];
 
 export const getCrisisPins = (country: string): CrisisPin[] => {

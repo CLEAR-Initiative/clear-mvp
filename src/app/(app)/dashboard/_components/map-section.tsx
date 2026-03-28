@@ -63,11 +63,15 @@ const views = [
 
 /* ========== Marker helpers ========== */
 
-const crisisColors: Record<string, string> = {
-  critical: "#DC2626",
-  high: "#F59E0B",
-  medium: "#D97706",
-  response: "#059669",
+// Color by event TYPE (what it is), not severity (how bad it is).
+// Severity is still communicated via pulse animation (critical) and popup badges.
+const typeColors: Record<string, string> = {
+  conflict:    "#DC2626", // red
+  famine:      "#DC2626", // red — famine is conflict-adjacent in severity
+  cholera:     "#F59E0B", // amber — disease outbreak
+  flood:       "#2563EB", // blue — water/flood
+  drought:     "#D97706", // dark amber — land/earth
+  team:        "#059669", // green — response teams
 };
 
 function addCrisisMarkersToMap(
@@ -80,7 +84,7 @@ function addCrisisMarkersToMap(
   markersRef.current = [];
 
   pins.forEach((pin) => {
-    const color = crisisColors[pin.severity] ?? "#DC2626";
+    const color = typeColors[pin.type] ?? typeColors[pin.severity] ?? "#DC2626";
     const el = document.createElement("div");
     el.style.cssText = `
       width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
@@ -451,13 +455,21 @@ export function MapSection({
         ) : (
           <Stack gap={6}>
             {[
-              { label: "Critical", color: "#DC2626" },
-              { label: "High", color: "#F59E0B" },
-              { label: "Medium", color: "#D97706" },
-              { label: "Teams", color: "#059669" },
+              { label: "Conflict / Famine", color: "#DC2626" },
+              { label: "Cholera / Disease", color: "#F59E0B" },
+              { label: "Flood Risk",        color: "#2563EB" },
+              { label: "Drought Zone",      color: "#D97706" },
+              { label: "Response Teams",    color: "#059669", round: true },
             ].map((item) => (
               <Group key={item.label} gap={8}>
-                <Box w={10} h={10} style={{ backgroundColor: item.color }} />
+                <Box
+                  w={10} h={10}
+                  style={{
+                    backgroundColor: item.color,
+                    borderRadius: item.round ? "50%" : 0,
+                    flexShrink: 0,
+                  }}
+                />
                 <Text style={{ fontSize: 10 }}>{item.label}</Text>
               </Group>
             ))}
