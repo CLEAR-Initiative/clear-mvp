@@ -1,0 +1,20 @@
+# .coderabbit.yaml — CLEAR Initiative standard
+language: en-US
+
+reviews:
+  auto_review:
+    enabled: true
+    base_branches:
+      - dev
+      - staging
+
+  request_changes_workflow: true
+  review_status: true
+
+  path_filters:
+    - "!bun.lockb"
+    - "!**/generated/**"
+    - "!**/*.gen.ts"
+
+chat:
+  auto_reply: true
