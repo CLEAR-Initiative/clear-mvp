@@ -48,6 +48,7 @@ const countriesByRegion = getCountriesByRegion();
 
 /* ========== Activity Items (static) ========== */
 
+// TODO(demo): hardcoded — replace with real activity feed from API
 const recentActivity = [
   { time: "15 min ago", title: "Alert acknowledged", description: "Cholera outbreak alert reviewed by Dr. Melese A.", type: "alert" },
   { time: "42 min ago", title: "Team check-in", description: "WASH Team Alpha reported safe arrival in Jijiga", type: "team" },
@@ -66,6 +67,7 @@ const activityDotColors: Record<string, string> = {
 
 /* ========== Mock EWAS data ========== */
 
+// TODO(demo): fallback values shown when the live pipeline API is unavailable
 const mockEWASSourcesOnline = 12;
 const mockEWASCriticalAlerts = 5;
 
@@ -131,6 +133,7 @@ export function RightPanel({
             </Badge>
           ) : null}
         </Group>
+        {/* TODO(demo): "Feb 2026" date is hardcoded — should reflect the active timeline month */}
         <Text size="sm" c="#E85D3D" style={{ fontSize: 13 }}>
           {hasCrisisData ? (
             <>
@@ -158,6 +161,7 @@ export function RightPanel({
       <SimpleGrid cols={3} spacing={8} px={24} py={16} className="bg-[#F9FAFB] border-b border-[#E5E5E5]">
         {hasCrisisData ? (
           <>
+            {/* TODO(demo): trend arrows (+1, +3, +2) and "At Risk" figures are hardcoded — wire to real KPI API */}
             <Stack align="center" gap={0}>
               <Text size="xl" fw={700} c="#DC2626" lh={1}>{crisisPins.length}</Text>
               <Text size="xs" c="#737373" tt="uppercase" style={{ letterSpacing: "0.03em", fontSize: 10 }}>Active Crises</Text>
@@ -362,6 +366,7 @@ export function RightPanel({
         title={hasCrisisData ? "AI Situation Analysis" : "Location Overview"}
         defaultOpen={hasCrisisData}
       >
+        {/* TODO(demo): AI analysis text is hardcoded per-country — replace with live LLM-generated summaries from the analysis API */}
         {hasCrisisData ? (
           <Box>
             <Box
@@ -526,6 +531,7 @@ export function RightPanel({
                   </Group>
                 </Box>
               ))}
+              {/* TODO(demo): hardcoded additional team entry — remove when real deployment data is available */}
               <Box py={8} px={12} style={{ background: "#FFFBEB", borderLeft: "2px solid #F59E0B" }}>
                 <Group justify="space-between">
                   <Group gap={8}>
@@ -545,6 +551,7 @@ export function RightPanel({
             </Stack>
 
             {/* Critical Resources */}
+            {/* TODO(demo): resource stock percentages are hardcoded — replace with real logistics/stock data from operations API */}
             <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
               Critical Resources
             </Text>
@@ -663,7 +670,7 @@ export function RightPanel({
           {[
             { value: String(nrcStatistics.totalCountries), label: "Countries" },
             { value: String(nrcStatistics.regionCount), label: "Regions" },
-            { value: "~16.5k", label: "Staff" },
+            { value: "~16.5k", label: "Staff" }, // TODO(demo): hardcoded — pull from NRC org data
           ].map((s) => (
             <Box key={s.label} p={8} style={{ textAlign: "center", background: "#F9FAFB" }}>
               <Text fw={700} c="#E85D3D" style={{ fontSize: 18, lineHeight: 1 }}>{s.value}</Text>
@@ -918,7 +925,7 @@ export function RightPanel({
         </Button>
       </Group>
 
-      {/* Data source footer */}
+      {/* Data source footer — TODO(demo): sources and "Updated" timestamp are hardcoded; derive from active pipeline metadata */}
       <Box px={24} py={16} className="border-t border-[#E5E5E5] bg-[#F5F5F5]">
         <Text size="xs" c="#737373" style={{ fontSize: 11 }}>
           Data:{" "}

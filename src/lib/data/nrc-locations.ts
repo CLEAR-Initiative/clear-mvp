@@ -1,6 +1,11 @@
 /**
  * NRC (Norwegian Refugee Council) Operating Locations
  * Ported from ARCHIVE-CLEAR-v1/apps/client/src/data/nrcLocations.ts
+ *
+ * TODO(demo): This is static reference data used for the demo dashboard.
+ * - Office locations (nrcLocations) should eventually come from an NRC directory API.
+ * - Crisis pins (sudanCrisisPins, ethiopiaCrisisPins) are hardcoded demo data;
+ *   replace with real crisis events from the Django backend / detection pipeline.
  */
 
 export interface NRCLocation {

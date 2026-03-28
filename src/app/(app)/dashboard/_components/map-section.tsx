@@ -43,6 +43,8 @@ function loadMapboxGL(): Promise<any> {
 
 /* ========== Timeline ========== */
 
+// TODO(demo): months, range, and hasEvent flags are hardcoded — replace with dynamic date range
+// derived from the active crisis data or a configurable time window
 const timelineMonths = [
   { label: "Sep", hasEvent: false },
   { label: "Oct", hasEvent: true },
@@ -387,7 +389,7 @@ export function MapSection({
                 minWidth: 100,
               }}
             >
-              Feb 2026
+              Feb 2026 {/* TODO(demo): hardcoded date — tie to activeMonth state */}
             </Box>
           </Box>
         </Group>
