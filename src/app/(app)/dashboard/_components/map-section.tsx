@@ -63,15 +63,23 @@ const views = [
 
 /* ========== Marker helpers ========== */
 
-// Color by event TYPE (what it is), not severity (how bad it is).
-// Severity is still communicated via pulse animation (critical) and popup badges.
-const typeColors: Record<string, string> = {
-  conflict:    "#DC2626", // red
-  famine:      "#DC2626", // red — famine is conflict-adjacent in severity
-  cholera:     "#F59E0B", // amber — disease outbreak
-  flood:       "#2563EB", // blue — water/flood
-  drought:     "#D97706", // dark amber — land/earth
-  team:        "#059669", // green — response teams
+// Color encodes SEVERITY (how urgent), icon encodes TYPE (what it is).
+// Together they give both dimensions at a glance.
+const severityColors: Record<string, string> = {
+  critical: "#DC2626",
+  high:     "#F59E0B",
+  medium:   "#D97706",
+  response: "#059669",
+};
+
+const typeIcons: Record<string, string> = {
+  crisis:   "!",   // general crisis/emergency
+  conflict: "✕",   // armed conflict / displacement
+  famine:   "△",   // food insecurity / famine
+  cholera:  "+",   // disease outbreak (medical cross)
+  flood:    "≈",   // flooding / water
+  drought:  "◌",   // drought / dry zone
+  team:     "●",   // response teams
 };
 
 function addCrisisMarkersToMap(
@@ -84,7 +92,8 @@ function addCrisisMarkersToMap(
   markersRef.current = [];
 
   pins.forEach((pin) => {
-    const color = typeColors[pin.type] ?? typeColors[pin.severity] ?? "#DC2626";
+    const color = severityColors[pin.severity] ?? "#DC2626";
+    const icon = typeIcons[pin.type] ?? "!";
     const el = document.createElement("div");
     el.style.cssText = `
       width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
@@ -92,7 +101,7 @@ function addCrisisMarkersToMap(
       box-shadow: 0 2px 8px rgba(0,0,0,0.3); cursor: pointer; background: ${color};
       ${pin.severity === "critical" ? "animation: marker-pulse 1.5s infinite;" : ""}
     `;
-    el.innerHTML = pin.severity === "response" ? "●" : "!";
+    el.innerHTML = icon;
 
     const isCritical = pin.severity === "critical";
     const rows: string[] = [];
@@ -427,7 +436,7 @@ export function MapSection({
       {/* Legend */}
       <Box
         className="absolute z-10 bg-white border border-[#E5E5E5]"
-        style={{ bottom: 100, left: 16, minWidth: 150, padding: 12 }}
+        style={{ bottom: 100, left: 16, minWidth: 160, padding: 12 }}
         visibleFrom="sm"
       >
         <Text fw={700} tt="uppercase" c="#737373" style={{ letterSpacing: "0.05em", fontSize: 10, marginBottom: 8 }}>
@@ -453,23 +462,31 @@ export function MapSection({
             ))}
           </Stack>
         ) : (
-          <Stack gap={6}>
+          <Stack gap={4}>
+            <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 9, letterSpacing: "0.05em" }}>Severity</Text>
             {[
-              { label: "Conflict / Famine", color: "#DC2626" },
-              { label: "Cholera / Disease", color: "#F59E0B" },
-              { label: "Flood Risk",        color: "#2563EB" },
-              { label: "Drought Zone",      color: "#D97706" },
-              { label: "Response Teams",    color: "#059669", round: true },
+              { label: "Critical", color: "#DC2626" },
+              { label: "High",     color: "#F59E0B" },
+              { label: "Medium",   color: "#D97706" },
+              { label: "Teams",    color: "#059669" },
             ].map((item) => (
-              <Group key={item.label} gap={8}>
-                <Box
-                  w={10} h={10}
-                  style={{
-                    backgroundColor: item.color,
-                    borderRadius: item.round ? "50%" : 0,
-                    flexShrink: 0,
-                  }}
-                />
+              <Group key={item.label} gap={6}>
+                <Box w={10} h={10} style={{ backgroundColor: item.color, flexShrink: 0 }} />
+                <Text style={{ fontSize: 10 }}>{item.label}</Text>
+              </Group>
+            ))}
+            <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 9, letterSpacing: "0.05em", marginTop: 6 }}>Event Type</Text>
+            {[
+              { icon: "!",  label: "Crisis" },
+              { icon: "✕",  label: "Conflict" },
+              { icon: "△",  label: "Famine" },
+              { icon: "+",  label: "Disease" },
+              { icon: "≈",  label: "Flood" },
+              { icon: "◌",  label: "Drought" },
+              { icon: "●",  label: "Response" },
+            ].map((item) => (
+              <Group key={item.label} gap={6}>
+                <Text fw={700} c="#525252" style={{ fontSize: 11, width: 12, textAlign: "center", flexShrink: 0 }}>{item.icon}</Text>
                 <Text style={{ fontSize: 10 }}>{item.label}</Text>
               </Group>
             ))}

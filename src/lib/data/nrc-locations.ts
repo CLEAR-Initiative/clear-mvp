@@ -632,7 +632,7 @@ export const nrcStatistics = {
 // Countries with full crisis pin data
 export const CRISIS_COUNTRIES = new Set(["Sudan", "Ethiopia"]);
 
-export type CrisisPinType = "conflict" | "cholera" | "flood" | "drought" | "famine" | "team";
+export type CrisisPinType = "crisis" | "conflict" | "cholera" | "flood" | "drought" | "famine" | "team";
 
 export interface CrisisPin {
   id: string;
