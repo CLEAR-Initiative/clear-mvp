@@ -649,6 +649,8 @@ export interface CrisisPin {
 }
 
 export const sudanCrisisPins: CrisisPin[] = [
+  // TODO(demo): static crisis pins — replace with live data from crisis detection API
+  { id: "crisis-1", type: "crisis", name: "Multi-Hazard Crisis - Sudan", coordinates: [30.2, 15.6], severity: "critical", trend: "Deteriorating", region: "Khartoum", affectedPopulation: 7800000 },
   { id: "conflict-1", type: "conflict", name: "Active Conflict - Khartoum", coordinates: [32.53, 15.5], severity: "critical", trend: "Ongoing", region: "Khartoum", affectedPopulation: 2500000 },
   { id: "conflict-2", type: "conflict", name: "Armed Clashes - El Fasher", coordinates: [25.35, 13.63], severity: "critical", trend: "Escalating", region: "North Darfur", affectedPopulation: 450000 },
   { id: "displacement-1", type: "conflict", name: "IDP Camp - Zalingei", coordinates: [23.47, 12.91], severity: "critical", trend: "180k displaced", region: "Central Darfur", affectedPopulation: 180000 },

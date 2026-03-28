@@ -1,8 +1,21 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Box, Text, Group, Stack, ActionIcon, UnstyledButton, Select } from "@mantine/core";
-import { IconPlayerSkipBack, IconPlayerPlay, IconPlayerSkipForward } from "@tabler/icons-react";
+import {
+  IconPlayerSkipBack,
+  IconPlayerPlay,
+  IconPlayerSkipForward,
+  IconAlertCircle,
+  IconSword,
+  IconGrain,
+  IconVirus,
+  IconDroplets,
+  IconSun,
+  IconUsers,
+  IconChevronUp,
+  IconChevronDown,
+} from "@tabler/icons-react";
 import { cn } from "~/lib/utils";
 import {
   getOperationalLocations,
@@ -72,14 +85,23 @@ const severityColors: Record<string, string> = {
   response: "#059669",
 };
 
+// SVG icon strings for Mapbox DOM markers (set as innerHTML).
+// Each is a 16×16 white icon on a transparent background, viewBox 0 0 24 24.
 const typeIcons: Record<string, string> = {
-  crisis:   "!",   // general crisis/emergency
-  conflict: "✕",   // armed conflict / displacement
-  famine:   "△",   // food insecurity / famine
-  cholera:  "+",   // disease outbreak (medical cross)
-  flood:    "≈",   // flooding / water
-  drought:  "◌",   // drought / dry zone
-  team:     "●",   // response teams
+  // Crisis: alert circle with exclamation (Tabler IconAlertCircle)
+  crisis: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+  // Conflict: crossed swords — simplified as an X with pointed ends
+  conflict: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/><line x1="5" y1="4" x2="6" y2="7"/><line x1="18" y1="4" x2="19" y2="7"/></svg>`,
+  // Famine: grain stalks
+  famine: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-9"/><path d="M9 8a3 3 0 0 0 3 3"/><path d="M15 8a3 3 0 0 1-3 3"/><path d="M9 4a3 3 0 0 0 3 3"/><path d="M15 4a3 3 0 0 1-3 3"/><path d="M6 20a3 3 0 0 0 3-3"/><path d="M18 20a3 3 0 0 1-3-3"/></svg>`,
+  // Cholera: medical cross (plus sign in circle)
+  cholera: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`,
+  // Flood: water drops / waves
+  flood: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12 C5 9, 7 9, 9 12 C11 15, 13 15, 15 12 C17 9, 19 9, 21 12"/><path d="M3 17 C5 14, 7 14, 9 17 C11 20, 13 20, 15 17 C17 14, 19 14, 21 17"/><path d="M12 3 L12 7"/><path d="M9 6 L12 3 L15 6"/></svg>`,
+  // Drought: sun with rays
+  drought: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="3" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21"/><line x1="3" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21" y2="12"/><line x1="6.3" y1="6.3" x2="7.8" y2="7.8"/><line x1="16.2" y1="16.2" x2="17.7" y2="17.7"/><line x1="6.3" y1="17.7" x2="7.8" y2="16.2"/><line x1="16.2" y1="7.8" x2="17.7" y2="6.3"/></svg>`,
+  // Team: person silhouettes (simplified)
+  team: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="2"/><path d="M21 21v-1a3 3 0 0 0-2-2.83"/></svg>`,
 };
 
 function addCrisisMarkersToMap(
@@ -96,9 +118,8 @@ function addCrisisMarkersToMap(
     const icon = typeIcons[pin.type] ?? "!";
     const el = document.createElement("div");
     el.style.cssText = `
-      width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700; color: white; border: 3px solid white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3); cursor: pointer; background: ${color};
+      width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      border: 2.5px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.35); cursor: pointer; background: ${color};
       ${pin.severity === "critical" ? "animation: marker-pulse 1.5s infinite;" : ""}
     `;
     el.innerHTML = icon;
@@ -227,6 +248,18 @@ export function MapSection({
   const markersRef = useRef<MapboxGLAny[]>([]);
   const nrcMarkersRef = useRef<MapboxGLAny[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(true);
+  const allTypes = ["crisis", "conflict", "famine", "cholera", "flood", "drought", "team"] as const;
+  const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set(allTypes));
+
+  const toggleType = (type: string) => {
+    setActiveTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
 
   // Store latest props in refs to avoid stale closures in effects
   const activeViewRef = useRef(activeView);
@@ -298,13 +331,14 @@ export function MapSection({
       nrcMarkersRef.current.forEach((m: MapboxGLAny) => m.remove());
       nrcMarkersRef.current = [];
       if (CRISIS_COUNTRIES.has(selectedCountry)) {
-        addCrisisMarkersToMap(mapboxgl, map.current, getCrisisPins(selectedCountry), markersRef);
+        const pins = getCrisisPins(selectedCountry).filter((p) => activeTypes.has(p.type));
+        addCrisisMarkersToMap(mapboxgl, map.current, pins, markersRef);
       } else {
         markersRef.current.forEach((m: MapboxGLAny) => m.remove());
         markersRef.current = [];
       }
     }
-  }, [loaded, selectedCountry, activeView]);
+  }, [loaded, selectedCountry, activeView, activeTypes]);
 
   useEffect(() => {
     updateMarkers();
@@ -433,64 +467,102 @@ export function MapSection({
       {/* Map */}
       <div ref={mapContainer} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
 
-      {/* Legend */}
+      {/* Legend — anchored just above the timeline, grows upward when open */}
       <Box
         className="absolute z-10 bg-white border border-[#E5E5E5]"
-        style={{ bottom: 100, left: 16, minWidth: 160, padding: 12 }}
+        style={{ bottom: 104, left: 16, minWidth: 168 }}
         visibleFrom="sm"
       >
-        <Text fw={700} tt="uppercase" c="#737373" style={{ letterSpacing: "0.05em", fontSize: 10, marginBottom: 8 }}>
-          {activeView === "nrc-global" ? "NRC Regions" : "Legend"}
-        </Text>
-        {activeView === "nrc-global" ? (
-          <Stack gap={6}>
-            {(
-              [
-                ["East Africa and Yemen", "E. Africa & Yemen"],
-                ["Central and West Africa", "Central & W. Africa"],
-                ["Southern Africa", "Southern Africa"],
-                ["Middle East", "Middle East"],
-                ["Asia", "Asia"],
-                ["Europe", "Europe"],
-                ["Americas", "Americas"],
-              ] as [keyof typeof regionColors, string][]
-            ).map(([key, label]) => (
-              <Group key={key} gap={8}>
-                <Box w={10} h={10} style={{ backgroundColor: regionColors[key], borderRadius: "50%" }} />
-                <Text style={{ fontSize: 10 }}>{label}</Text>
-              </Group>
-            ))}
-          </Stack>
-        ) : (
-          <Stack gap={4}>
-            <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 9, letterSpacing: "0.05em" }}>Severity</Text>
-            {[
-              { label: "Critical", color: "#DC2626" },
-              { label: "High",     color: "#F59E0B" },
-              { label: "Medium",   color: "#D97706" },
-              { label: "Teams",    color: "#059669" },
-            ].map((item) => (
-              <Group key={item.label} gap={6}>
-                <Box w={10} h={10} style={{ backgroundColor: item.color, flexShrink: 0 }} />
-                <Text style={{ fontSize: 10 }}>{item.label}</Text>
-              </Group>
-            ))}
-            <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 9, letterSpacing: "0.05em", marginTop: 6 }}>Event Type</Text>
-            {[
-              { icon: "!",  label: "Crisis" },
-              { icon: "✕",  label: "Conflict" },
-              { icon: "△",  label: "Famine" },
-              { icon: "+",  label: "Disease" },
-              { icon: "≈",  label: "Flood" },
-              { icon: "◌",  label: "Drought" },
-              { icon: "●",  label: "Response" },
-            ].map((item) => (
-              <Group key={item.label} gap={6}>
-                <Text fw={700} c="#525252" style={{ fontSize: 11, width: 12, textAlign: "center", flexShrink: 0 }}>{item.icon}</Text>
-                <Text style={{ fontSize: 10 }}>{item.label}</Text>
-              </Group>
-            ))}
-          </Stack>
+        {/* Header — always visible, click to collapse/expand */}
+        <UnstyledButton
+          onClick={() => setLegendOpen((o) => !o)}
+          style={{
+            width: "100%",
+            padding: "7px 10px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderBottom: legendOpen ? "1px solid #E5E5E5" : "none",
+          }}
+        >
+          <Text fw={700} tt="uppercase" c="#737373" style={{ letterSpacing: "0.05em", fontSize: 10 }}>
+            {activeView === "nrc-global" ? "NRC Regions" : "Legend"}
+          </Text>
+          {legendOpen ? <IconChevronDown size={12} color="#737373" /> : <IconChevronUp size={12} color="#737373" />}
+        </UnstyledButton>
+
+        {legendOpen && (
+          <Box style={{ padding: "10px 10px 10px" }}>
+            {activeView === "nrc-global" ? (
+              <Stack gap={6}>
+                {(
+                  [
+                    ["East Africa and Yemen", "E. Africa & Yemen"],
+                    ["Central and West Africa", "Central & W. Africa"],
+                    ["Southern Africa", "Southern Africa"],
+                    ["Middle East", "Middle East"],
+                    ["Asia", "Asia"],
+                    ["Europe", "Europe"],
+                    ["Americas", "Americas"],
+                  ] as [keyof typeof regionColors, string][]
+                ).map(([key, label]) => (
+                  <Group key={key} gap={8}>
+                    <Box w={10} h={10} style={{ backgroundColor: regionColors[key], borderRadius: "50%", flexShrink: 0 }} />
+                    <Text style={{ fontSize: 10 }}>{label}</Text>
+                  </Group>
+                ))}
+              </Stack>
+            ) : (
+              <Stack gap={3}>
+                <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 9, letterSpacing: "0.05em", marginBottom: 2 }}>Severity</Text>
+                {[
+                  { label: "Critical", color: "#DC2626" },
+                  { label: "High",     color: "#F59E0B" },
+                  { label: "Medium",   color: "#D97706" },
+                  { label: "Teams",    color: "#059669" },
+                ].map((item) => (
+                  <Group key={item.label} gap={6}>
+                    <Box w={10} h={10} style={{ backgroundColor: item.color, flexShrink: 0 }} />
+                    <Text style={{ fontSize: 10 }}>{item.label}</Text>
+                  </Group>
+                ))}
+
+                <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 9, letterSpacing: "0.05em", marginTop: 6, marginBottom: 2 }}>Event Type</Text>
+                {(
+                  [
+                    { IconComponent: IconAlertCircle, label: "Crisis",   type: "crisis"   },
+                    { IconComponent: IconSword,        label: "Conflict", type: "conflict" },
+                    { IconComponent: IconGrain,        label: "Famine",   type: "famine"   },
+                    { IconComponent: IconVirus,        label: "Disease",  type: "cholera"  },
+                    { IconComponent: IconDroplets,     label: "Flood",    type: "flood"    },
+                    { IconComponent: IconSun,          label: "Drought",  type: "drought"  },
+                    { IconComponent: IconUsers,        label: "Response", type: "team"     },
+                  ] as { IconComponent: React.ComponentType<{ size: number; color: string }>; label: string; type: string }[]
+                ).map(({ IconComponent, label, type }) => {
+                  const active = activeTypes.has(type);
+                  return (
+                    <UnstyledButton
+                      key={label}
+                      onClick={() => toggleType(type)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        opacity: active ? 1 : 0.35,
+                        cursor: "pointer",
+                        padding: "1px 0",
+                      }}
+                    >
+                      <IconComponent size={12} color={active ? "#525252" : "#A0A0A0"} />
+                      <Text style={{ fontSize: 10, textDecoration: active ? "none" : "line-through", color: active ? "#171717" : "#A0A0A0" }}>
+                        {label}
+                      </Text>
+                    </UnstyledButton>
+                  );
+                })}
+              </Stack>
+            )}
+          </Box>
         )}
       </Box>
 
