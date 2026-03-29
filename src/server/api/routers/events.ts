@@ -12,6 +12,7 @@ const SIGNAL_FIELDS = `
   source { id name type }
   title
   description
+  severity
   url
   publishedAt
   collectedAt
@@ -25,6 +26,7 @@ const EVENT_FIELDS = `
   title
   description
   types
+  severity
   rank
   firstSignalCreatedAt
   lastSignalCreatedAt

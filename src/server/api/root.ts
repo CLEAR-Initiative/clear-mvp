@@ -13,6 +13,7 @@ import { signalsRouter } from "~/server/api/routers/signals";
 import { teamsRouter } from "~/server/api/routers/teams";
 import { locationsRouter } from "~/server/api/routers/locations";
 import { invitationsRouter } from "~/server/api/routers/invitations";
+import { subscriptionsRouter } from "~/server/api/routers/subscriptions";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -31,6 +32,7 @@ export const appRouter = createTRPCRouter({
   signals: signalsRouter,
   teams: teamsRouter,
   featureFlags: featureFlagsRouter,
+  subscriptions: subscriptionsRouter,
 });
 
 export type AppRouter = typeof appRouter;

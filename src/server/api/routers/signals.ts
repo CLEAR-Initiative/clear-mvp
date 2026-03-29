@@ -14,6 +14,7 @@ const SIGNAL_LIST_QUERY = `
       source { ${SOURCE_FIELDS} }
       title
       description
+      severity
       url
       publishedAt
       collectedAt
@@ -33,6 +34,7 @@ const SIGNAL_GET_QUERY = `
       rawData
       title
       description
+      severity
       url
       publishedAt
       collectedAt
