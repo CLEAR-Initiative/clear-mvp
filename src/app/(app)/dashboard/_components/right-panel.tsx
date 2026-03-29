@@ -13,13 +13,26 @@ import {
 } from "@mantine/core";
 import {
   IconBolt,
-  IconDatabase,
-  IconRefresh,
   IconGlobe,
   IconMapPin,
   IconChevronDown,
   IconFileText,
+  IconSword,
+  IconDroplets,
+  IconSun,
+  IconVirus,
+  IconUsers,
+  IconMountain,
+  IconWind,
+  IconGrain,
+  IconBuilding,
+  IconNetwork,
+  IconShield,
+  IconTrendingDown,
+  IconAlertCircle,
 } from "@tabler/icons-react";
+import type { ComponentType } from "react";
+import { api } from "~/trpc/react";
 import { cn } from "~/lib/utils";
 import { CollapsibleSection } from "~/components/ui/collapsible-section";
 import {
@@ -32,6 +45,44 @@ import {
   type NRCRegion,
   nrcOperationDescriptions,
 } from "~/lib/data/nrc-locations";
+
+/* ========== INFORM Risk icon map ========== */
+
+// Maps INFORM indicator ID prefixes to representative Tabler icons
+const INDICATOR_ICONS: Record<string, ComponentType<{ size: number; color: string }>> = {
+  "HA.HUM":     IconSword,
+  "HA.NAT.FL":  IconDroplets,
+  "HA.NAT.DR":  IconSun,
+  "HA.NAT.EQ":  IconMountain,
+  "HA.NAT.TC":  IconWind,
+  "HA.VECT":    IconVirus,
+  "HA.ZOON":    IconVirus,
+  "HA.FWB":     IconGrain,
+  "VU.VGR.UP":  IconUsers,
+  "VU.SEV.PD":  IconTrendingDown,
+  "VU.SEV.INQ": IconTrendingDown,
+  "VU.SEV.AD":  IconGrain,
+  "CC.INS.GOV": IconBuilding,
+  "CC.INS.DRR": IconShield,
+  "CC.INF.PHY": IconNetwork,
+  "CC.INF.COM": IconNetwork,
+  "CC.INF.AHC": IconAlertCircle,
+};
+
+function getIndicatorIcon(id: string): ComponentType<{ size: number; color: string }> {
+  // Exact match first, then prefix match (e.g. "HA.NAT" matches "HA.NAT.FL")
+  return (
+    INDICATOR_ICONS[id] ??
+    Object.entries(INDICATOR_ICONS).find(([k]) => id.startsWith(k))?.[1] ??
+    IconAlertCircle
+  );
+}
+
+function riskScoreColor(score: number): string {
+  if (score >= 7) return "#DC2626";
+  if (score >= 5) return "#F59E0B";
+  return "#059669";
+}
 
 /* ========== Helpers ========== */
 
@@ -78,9 +129,6 @@ interface RightPanelProps {
   onCountryChange: (country: string) => void;
   onViewChange: (view: string) => void;
   activeView: string;
-  pipelineStats:
-    | { overall: { total_sources: number; total_data_records: number } }
-    | undefined;
 }
 
 /* ========== Component ========== */
@@ -90,9 +138,13 @@ export function RightPanel({
   onCountryChange,
   onViewChange,
   activeView,
-  pipelineStats,
 }: RightPanelProps) {
   const [expandedNRCRegion, setExpandedNRCRegion] = useState<string | null>(null);
+
+  const riskQuery = api.inform.getRisk.useQuery(
+    { country: selectedCountry },
+    { retry: false, staleTime: 86400_000 }, // annual data, no need to refetch often
+  );
 
   const hasCrisisData = CRISIS_COUNTRIES.has(selectedCountry);
   const currentNRCLocation = nrcLocations.find((l) => l.country === selectedCountry);
@@ -157,111 +209,54 @@ export function RightPanel({
         </Text>
       </Box>
 
-      {/* Quick Stats */}
-      <SimpleGrid cols={3} spacing={8} px={24} py={16} className="bg-[#F9FAFB] border-b border-[#E5E5E5]">
-        {hasCrisisData ? (
-          <>
-            {/* TODO(demo): trend arrows (+1, +3, +2) and "At Risk" figures are hardcoded — wire to real KPI API */}
-            <Stack align="center" gap={0}>
-              <Text size="xl" fw={700} c="#DC2626" lh={1}>{crisisPins.length}</Text>
-              <Text size="xs" c="#737373" tt="uppercase" style={{ letterSpacing: "0.03em", fontSize: 10 }}>Active Crises</Text>
-              <Text size="xs" c="#DC2626" style={{ fontSize: 10 }}>&uarr; +1</Text>
-            </Stack>
-            <Stack align="center" gap={0}>
-              <Text size="xl" fw={700} c="#059669" lh={1}>{teamPins.length}</Text>
-              <Text size="xs" c="#737373" tt="uppercase" style={{ letterSpacing: "0.03em", fontSize: 10 }}>Teams</Text>
-              <Text size="xs" c="#059669" style={{ fontSize: 10 }}>&uarr; {selectedCountry === "Sudan" ? "+3" : "+2"}</Text>
-            </Stack>
-            <Stack align="center" gap={0}>
-              <Text size="xl" fw={700} c="#171717" lh={1}>{selectedCountry === "Sudan" ? "4.5M" : "45K"}</Text>
-              <Text size="xs" c="#737373" tt="uppercase" style={{ letterSpacing: "0.03em", fontSize: 10 }}>At Risk</Text>
-              <Text size="xs" c="#DC2626" style={{ fontSize: 10 }}>&uarr; {selectedCountry === "Sudan" ? "+28%" : "+12%"}</Text>
-            </Stack>
-          </>
-        ) : currentNRCLocation ? (
-          <>
-            <Stack align="center" gap={0}>
-              <Text size="xl" fw={700} c="#E85D3D" lh={1}>{currentNRCLocation.operationTypes.length}</Text>
-              <Text size="xs" c="#737373" tt="uppercase" style={{ letterSpacing: "0.03em", fontSize: 10 }}>Core Activities</Text>
-            </Stack>
-            <Stack align="center" gap={0}>
-              <Text size="xl" fw={700} c="#E85D3D" lh={1}>{currentNRCLocation.yearEstablished ?? "—"}</Text>
-              <Text size="xs" c="#737373" tt="uppercase" style={{ letterSpacing: "0.03em", fontSize: 10 }}>Est. Year</Text>
-            </Stack>
-            <Stack align="center" gap={0}>
-              <Text size="xl" fw={700} c="#059669" lh={1} style={{ fontSize: 14 }}>Active</Text>
-              <Text size="xs" c="#737373" tt="uppercase" style={{ letterSpacing: "0.03em", fontSize: 10 }}>Status</Text>
-            </Stack>
-          </>
-        ) : (
-          <>
-            <Stack align="center" gap={0}>
-              <Text size="xl" fw={700} c="#737373" lh={1}>—</Text>
-              <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10 }}>Active Crises</Text>
-            </Stack>
-            <Stack align="center" gap={0}>
-              <Text size="xl" fw={700} c="#737373" lh={1}>—</Text>
-              <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10 }}>Teams</Text>
-            </Stack>
-            <Stack align="center" gap={0}>
-              <Text size="xl" fw={700} c="#737373" lh={1}>—</Text>
-              <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10 }}>At Risk</Text>
-            </Stack>
-          </>
-        )}
-      </SimpleGrid>
-
-      {/* EWAS Pipeline Status (Sudan only) */}
-      {selectedCountry === "Sudan" && (
-        <Box
-          px={24}
-          py={16}
-          className="border-b border-[#E5E5E5]"
-          style={{ background: "linear-gradient(to right, #FEF2F0, white)" }}
-        >
-          <Group justify="space-between" mb={8}>
-            <Group gap={8}>
-              <IconDatabase size={16} color="#E85D3D" />
-              <Text fw={700} tt="uppercase" style={{ letterSpacing: "0.08em", fontSize: 11, color: "#525252" }}>
-                EWAS Sudan Pipeline
+      {/* INFORM Risk Pillars */}
+      <Box className="bg-[#F9FAFB] border-b border-[#E5E5E5]">
+        <SimpleGrid cols={3} spacing={0} px={24} pt={16} pb={12}>
+          {[
+            { label: "Hazard", score: riskQuery.data?.pillars.hazard ?? null },
+            { label: "Vulnerability", score: riskQuery.data?.pillars.vulnerability ?? null },
+            { label: "Coping Cap.", score: riskQuery.data?.pillars.coping ?? null },
+          ].map((pillar) => (
+            <Stack key={pillar.label} align="center" gap={2}>
+              <Text
+                fw={700}
+                lh={1}
+                style={{
+                  fontSize: 22,
+                  color: pillar.score !== null ? riskScoreColor(pillar.score) : "#D0D0D0",
+                }}
+              >
+                {pillar.score !== null ? pillar.score.toFixed(1) : "—"}
               </Text>
-            </Group>
-            <Group gap={6}>
-              <Box w={8} h={8} style={{ background: "#059669" }} className="animate-pulse" />
-              <Text fw={600} style={{ fontSize: 10, color: "#059669" }}>CONNECTED</Text>
-            </Group>
-          </Group>
-          <SimpleGrid cols={3} spacing={8} mb={8}>
-            <Box p={8} style={{ background: "white", border: "1px solid #F0F0F0", textAlign: "center" }}>
-              <Text fw={700} c="#E85D3D" style={{ fontSize: 14 }}>
-                {pipelineStats?.overall.total_sources ?? mockEWASSourcesOnline}
+              <Text tt="uppercase" c="#737373" style={{ letterSpacing: "0.03em", fontSize: 10 }}>
+                {pillar.label}
               </Text>
-              <Text c="#737373" tt="uppercase" style={{ fontSize: 8 }}>Sources</Text>
-            </Box>
-            <Box p={8} style={{ background: "white", border: "1px solid #F0F0F0", textAlign: "center" }}>
-              <Text fw={700} c="#E85D3D" style={{ fontSize: 14 }}>
-                {pipelineStats
-                  ? `${(pipelineStats.overall.total_data_records / 1000).toFixed(1)}k`
-                  : "55.4k"}
-              </Text>
-              <Text c="#737373" tt="uppercase" style={{ fontSize: 8 }}>Records</Text>
-            </Box>
-            <Box p={8} style={{ background: "white", border: "1px solid #F0F0F0", textAlign: "center" }}>
-              <Text fw={700} c="#DC2626" style={{ fontSize: 14 }}>{mockEWASCriticalAlerts}</Text>
-              <Text c="#737373" tt="uppercase" style={{ fontSize: 8 }}>Critical</Text>
-            </Box>
-          </SimpleGrid>
-          <Group justify="space-between">
-            <Group gap={4}>
-              <IconRefresh size={12} color="#737373" />
-              <Text c="#737373" style={{ fontSize: 10 }}>Last sync: 5 min ago</Text>
-            </Group>
-            <Text component={Link} href="/detection" c="#E85D3D" fw={500} style={{ fontSize: 10 }} className="no-underline">
-              View sources &rarr;
+            </Stack>
+          ))}
+        </SimpleGrid>
+        <Box px={24} pb={12}>
+          <Group justify="space-between" align="center">
+            <Text tt="uppercase" c="#A0A0A0" style={{ fontSize: 9, letterSpacing: "0.06em" }}>
+              INFORM Risk Overall - {riskQuery.data?.edition ?? "JRC"}
             </Text>
+            <Group gap={4} align="baseline">
+              <Text
+                fw={700}
+                style={{
+                  fontSize: 18,
+                  color: riskQuery.data?.score !== null && riskQuery.data?.score !== undefined
+                    ? riskScoreColor(riskQuery.data.score)
+                    : "#D0D0D0",
+                }}
+              >
+                {riskQuery.data?.score?.toFixed(1) ?? "—"}
+              </Text>
+              <Text c="#A0A0A0" style={{ fontSize: 10 }}>/10</Text>
+            </Group>
           </Group>
         </Box>
-      )}
+      </Box>
+
 
       {/* Active Crises OR NRC Core Activities */}
       {hasCrisisData ? (
@@ -361,78 +356,53 @@ export function RightPanel({
         </CollapsibleSection>
       ) : null}
 
-      {/* AI Situation Analysis OR Location Overview */}
+      {/* Country Risks (INFORM Risk top indicators) OR Location Overview */}
       <CollapsibleSection
-        title={hasCrisisData ? "AI Situation Analysis" : "Location Overview"}
+        title={hasCrisisData ? "Country Risks" : "Location Overview"}
         defaultOpen={hasCrisisData}
       >
-        {/* TODO(demo): AI analysis text is hardcoded per-country — replace with live LLM-generated summaries from the analysis API */}
         {hasCrisisData ? (
           <Box>
-            <Box
-              display="inline-flex"
-              style={{
-                alignItems: "center",
-                gap: 4,
-                padding: "4px 10px",
-                background: "#F3E8FF",
-                color: "#7C3AED",
-                fontSize: 9,
-                fontWeight: 700,
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-                marginBottom: 8,
-              }}
-            >
-              ✦ AI Analysis
-            </Box>
-            {selectedCountry === "Sudan" ? (
-              <>
-                <Text style={{ fontSize: 13, color: "#525252", lineHeight: 1.6 }}>
-                  <Text component="span" style={{ background: "#FEE2E2", padding: "0 4px", fontWeight: 500 }}>
-                    Armed conflict in Khartoum has displaced 2.5M people
-                  </Text>{" "}
-                  with urgent humanitarian needs across multiple sectors. Fighting has spread to Darfur
-                  regions with{" "}
-                  <Text component="span" style={{ background: "#FEF3C7", padding: "0 4px", fontWeight: 500 }}>
-                    famine conditions (IPC Phase 5)
-                  </Text>{" "}
-                  in West Darfur affecting 890,000 people.
+            {riskQuery.isLoading ? (
+              <Text c="#A0A0A0" style={{ fontSize: 12 }}>Loading risk data&hellip;</Text>
+            ) : riskQuery.data?.indicators.length ? (
+              <Stack gap={10}>
+                {riskQuery.data.indicators.slice(0, 5).map((indicator) => {
+                  const IconComponent = getIndicatorIcon(indicator.id);
+                  const color = riskScoreColor(indicator.score);
+                  return (
+                    <Box key={indicator.id}>
+                      <Group justify="space-between" mb={4}>
+                        <Group gap={6} style={{ flex: 1, minWidth: 0 }}>
+                          <IconComponent size={13} color={color} />
+                          <Text fw={500} c="#171717" style={{ fontSize: 12 }} lineClamp={1}>
+                            {indicator.name}
+                          </Text>
+                        </Group>
+                        <Text fw={700} style={{ fontSize: 12, color, flexShrink: 0 }}>
+                          {indicator.score.toFixed(1)}
+                        </Text>
+                      </Group>
+                      <Box style={{ height: 4, background: "#F0F0F0", borderRadius: 2 }}>
+                        <Box
+                          style={{
+                            height: 4,
+                            width: `${(indicator.score / 10) * 100}%`,
+                            background: color,
+                            borderRadius: 2,
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  );
+                })}
+                <Text c="#A0A0A0" style={{ fontSize: 10, marginTop: 2 }}>
+                  Source: {riskQuery.data.edition}
                 </Text>
-                <Text mt={16} style={{ fontSize: 13, color: "#525252", lineHeight: 1.6 }}>
-                  Cholera outbreak in Port Sudan requires immediate WASH intervention. 1,847 confirmed
-                  cases with limited medical supplies reaching affected areas.
-                </Text>
-              </>
+              </Stack>
             ) : (
-              <>
-                <Text style={{ fontSize: 13, color: "#525252", lineHeight: 1.6 }}>
-                  <Text component="span" style={{ background: "#FEF3C7", padding: "0 4px", fontWeight: 500 }}>
-                    Cholera outbreak requires immediate action
-                  </Text>{" "}
-                  with 46-hour intervention window remaining. Current spread pattern indicates waterborne
-                  transmission from contaminated wells in Jijiga. Response teams deployed but{" "}
-                  <Text component="span" style={{ background: "#FEF3C7", padding: "0 4px", fontWeight: 500 }}>
-                    IV fluid supplies critically low
-                  </Text>{" "}
-                  at 32% capacity.
-                </Text>
-                <Text mt={16} style={{ fontSize: 13, color: "#525252", lineHeight: 1.6 }}>
-                  Flood risk in Oromia elevated due to seasonal rainfall patterns. Pre-positioning
-                  recommended for Bale and West Arsi zones.
-                </Text>
-              </>
+              <Text c="#737373" style={{ fontSize: 13 }}>Risk data unavailable for this country.</Text>
             )}
-            <Text
-              component={Link}
-              href="/analysis"
-              c="#E85D3D"
-              fw={500}
-              style={{ fontSize: 12, display: "inline-block", marginTop: 16 }}
-              className="no-underline hover:underline"
-            >
-              View full analysis &rarr;
-            </Text>
           </Box>
         ) : currentNRCLocation ? (
           <Box>

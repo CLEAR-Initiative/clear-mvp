@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { Box } from "@mantine/core";
-import { api } from "~/trpc/react";
 import { nrcLocations, getOperationalLocations } from "~/lib/data/nrc-locations";
 import { MapSection } from "./_components/map-section";
 import { RightPanel } from "./_components/right-panel";
@@ -46,8 +45,6 @@ export default function DashboardPage() {
   const [activeView, setActiveView] = useState("single");
   const [activeMonth, setActiveMonth] = useState(2);
 
-  const pipelineStatsQuery = api.pipeline.getStatistics.useQuery(undefined, { retry: false });
-
   const countryConfig = useMemo(() => getCountryConfig(selectedCountry), [selectedCountry]);
 
   const countries = useMemo(
@@ -85,11 +82,6 @@ export default function DashboardPage() {
         onCountryChange={handleCountryChange}
         onViewChange={setActiveView}
         activeView={activeView}
-        pipelineStats={
-          pipelineStatsQuery.data as
-            | { overall: { total_sources: number; total_data_records: number } }
-            | undefined
-        }
       />
     </Box>
   );
