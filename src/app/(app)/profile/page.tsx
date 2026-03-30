@@ -17,7 +17,6 @@ import {
   IconShield,
   IconPencil,
   IconKey,
-  IconMailForward,
   IconBell,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -58,7 +57,6 @@ interface ProfileUser {
   id: string;
   name: string;
   email: string;
-  emailVerified: boolean;
   image: string | null;
   role: string;
   isActive: boolean;
@@ -71,12 +69,6 @@ interface ProfileUser {
 
 function ProfileContent({ user }: { user: ProfileUser }) {
   const normalizedRole = user.role?.toLowerCase() ?? "viewer";
-  const utils = api.useUtils();
-  const verifyEmail = api.auth.requestEmailVerification.useMutation({
-    onSuccess: () => {
-      void utils.auth.me.invalidate();
-    },
-  });
 
   return (
     <Box p={32} style={{ maxWidth: 800 }}>
@@ -132,45 +124,9 @@ function ProfileContent({ user }: { user: ProfileUser }) {
             <Text size="xs" c="#737373" mb={2}>
               Email
             </Text>
-            <Group gap={8}>
-              <Text size="sm" fw={500}>
-                {user.email ?? "Not set"}
-              </Text>
-              {user.emailVerified ? (
-                <Badge size="xs" color="green" variant="light">
-                  Verified
-                </Badge>
-              ) : (
-                <Badge size="xs" color="red" variant="light">
-                  Unverified
-                </Badge>
-              )}
-            </Group>
-            {!user.emailVerified && user.email && (
-              <>
-                {verifyEmail.isSuccess && (
-                  <Text size="xs" c="green" mt={8} fw={500}>
-                    Verification email sent to {user.email}. Check your inbox.
-                  </Text>
-                )}
-                {verifyEmail.isError && (
-                  <Text size="xs" c="red" mt={4}>
-                    {verifyEmail.error.message}
-                  </Text>
-                )}
-                <Button
-                  size="xs"
-                  variant="light"
-                  color={verifyEmail.isSuccess ? "gray" : "red"}
-                  mt={8}
-                  leftSection={<IconMailForward size={14} />}
-                  loading={verifyEmail.isPending}
-                  onClick={() => verifyEmail.mutate()}
-                >
-                  {verifyEmail.isSuccess ? "Resend" : "Verify Email"}
-                </Button>
-              </>
-            )}
+            <Text size="sm" fw={500}>
+              {user.email ?? "Not set"}
+            </Text>
           </Box>
           <Box>
             <Text size="xs" c="#737373" mb={2}>

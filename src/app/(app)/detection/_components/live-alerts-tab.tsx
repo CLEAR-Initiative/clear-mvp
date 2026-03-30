@@ -27,6 +27,7 @@ import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
+import { useDisasterTypes } from "~/hooks/use-disaster-types";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -69,6 +70,7 @@ export function LiveAlertsTab({
   mapCenter,
   mapZoom,
 }: LiveAlertsTabProps) {
+  const { getTypeNames } = useDisasterTypes();
   const [search, setSearch] = useState("");
   const [activeSeverities, setActiveSeverities] = useState<Set<SeverityKey>>(
     new Set(["critical", "high", "medium", "low"]),
@@ -406,7 +408,9 @@ export function LiveAlertsTab({
                           <Text size="xs" c="#737373">{location.name}</Text>
                         )}
                         {alert.event.types.length > 0 && (
-                          <Text size="xs" c="#A3A3A3">{alert.event.types.join(", ")}</Text>
+                          <Group gap={4}>{getTypeNames(alert.event.types).map((name) => (
+                            <Badge key={name} size="xs" variant="light" color="violet" style={{ fontSize: 9 }}>{name}</Badge>
+                          ))}</Group>
                         )}
                         <Text size="xs" c="#737373" style={{ marginLeft: "auto" }}>
                           Rank: <Text span fw={600} c="#171717">{alert.event.rank.toFixed(1)}</Text>

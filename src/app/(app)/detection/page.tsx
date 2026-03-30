@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { Box, Tabs, Button, Group } from "@mantine/core";
+import { Box, Tabs, Button, Group, Switch, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -25,20 +25,21 @@ export default function DetectionPage() {
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [selectedDate, setSelectedDate] = useState(dateOptions[0] ?? "Last 30 days");
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
+  const [includeDummy, setIncludeDummy] = useState(false);
 
   const { activeTeamId } = useTeam();
   const { countries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
-  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId });
+  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId, includeDummy });
   const historyQuery = api.alerts.getAlerts.useQuery(
-    { activeOnly: false, teamId: activeTeamId },
+    { activeOnly: false, teamId: activeTeamId, includeDummy },
     { enabled: activeTab === "history" },
   );
   const eventsQuery = api.events.list.useQuery(
-    { teamId: activeTeamId },
+    { teamId: activeTeamId, includeDummy },
     { enabled: activeTab === "events" },
   );
   const signalsQuery = api.signals.list.useQuery(
-    { teamId: activeTeamId },
+    { teamId: activeTeamId, includeDummy },
     { enabled: activeTab === "signals" },
   );
 
@@ -170,7 +171,16 @@ export default function DetectionPage() {
           onDateChange={setSelectedDate}
           dateOptions={dateOptions}
         />
-        <Group gap={8}>
+        <Group gap={12}>
+          <Group gap={6}>
+            <Switch
+              size="xs"
+              checked={includeDummy}
+              onChange={(e) => setIncludeDummy(e.currentTarget.checked)}
+              color="gray"
+            />
+            <Text size="xs" c="#737373" style={{ fontSize: 11 }}>Demo data</Text>
+          </Group>
           <Button
             size="xs"
             leftSection={<IconPlus size={14} />}

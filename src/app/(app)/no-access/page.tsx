@@ -15,8 +15,10 @@ export default function NoAccessPage() {
   const router = useRouter();
 
   const handleSignOut = async () => {
-    await authClient.signOut();
-    router.push("/auth/login");
+    try { await authClient.signOut(); } catch { /* ignore */ }
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = "/auth/login";
   };
 
   return (
