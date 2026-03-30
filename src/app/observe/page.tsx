@@ -11,7 +11,6 @@ import {
   IconVideo,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { ColorSchemeToggle } from "~/components/ui/color-scheme-toggle";
 import type { GqlSignal } from "~/lib/types/graphql";
 
 /* ── IndexedDB offline queue ────────────────────────────────── */
@@ -481,7 +480,6 @@ export default function ObservePage() {
               {pendingCount} queued
             </span>
           )}
-          <ColorSchemeToggle />
         </div>
       </div>
 

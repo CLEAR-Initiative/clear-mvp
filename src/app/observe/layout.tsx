@@ -6,5 +6,5 @@ export const metadata: Metadata = {
 };
 
 export default function ObserveLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return <div data-mantine-color-scheme="dark">{children}</div>;
 }
