@@ -312,8 +312,8 @@ function SuccessStep({ onClose }: { onClose: () => void }) {
 /* ── Main Modal ──────────────────────────────────────────────── */
 
 const STEP_TITLES: Record<Step, string> = {
-  details: "Create a Signal — Details",
-  media: "Create a Signal — Add Media",
+  details: "Create a Signal - Details",
+  media: "Create a Signal - Add Media",
   success: "Signal Created",
 };
 
@@ -339,15 +339,15 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
     label: s.name,
   }));
 
-  // Auto-select source: prefer "user"/"manual"/"field" source, fall back to gdacs, then first available
+  // Auto-select source: always prefer field_officer (trusted type required by backend)
   useEffect(() => {
     if (!sourcesQuery.data || form.sourceId) return;
     const sources = sourcesQuery.data;
-    const preferred = sources.find((s) =>
-      /user|manual|field/i.test(s.name) || /user|manual|field/i.test(s.type),
-    );
-    const gdacs = sources.find((s) => /gdacs/i.test(s.name) || /gdacs/i.test(s.type));
-    const auto = preferred ?? gdacs ?? sources[0];
+    const auto =
+      sources.find((s) => s.name === "field_officer") ??
+      sources.find((s) => s.type === "field_officer") ??
+      sources.find((s) => /partner|government/i.test(s.type)) ??
+      sources[0];
     if (auto) setForm((p) => ({ ...p, sourceId: auto.id }));
   }, [sourcesQuery.data, form.sourceId]);
 

@@ -31,6 +31,7 @@ import {
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlSignalDetail, GqlLocation } from "~/lib/types/graphql";
+import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
@@ -763,8 +764,8 @@ export function SignalDetailContent({
                         <Text size="xs" c="#737373" mb={6}>Affected Areas</Text>
                         <Group gap={6} wrap="wrap">
                           {locations.map((loc) => {
-                            const levelLabels: Record<number, string> = { 0: "Country", 1: "State", 2: "City" };
-                            const levelLabel = levelLabels[loc.level];
+                            const name = resolveLocationName(loc);
+                            if (!name) return null;
                             return (
                               <Badge
                                 key={loc.id}
@@ -778,7 +779,7 @@ export function SignalDetailContent({
                                   textTransform: "none",
                                 }}
                               >
-                                {loc.name}{levelLabel ? ` (${levelLabel})` : ""}
+                                {name}
                               </Badge>
                             );
                           })}

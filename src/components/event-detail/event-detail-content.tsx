@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Box,
   Text,
@@ -166,10 +167,12 @@ export function EventDetailContent({
   // TODO: after Prisma migration use event.title directly; remove this fallback
   // TODO: after Prisma migration use event.types (list) instead of eventType
 
+  const router = useRouter();
   const isAlready = (event?.alerts?.length ?? 0) > 0;
   const [promoted, setPromoted] = useState(false);
+  const [confirmPromote, setConfirmPromote] = useState(false);
   const promoteToAlert = api.alerts.promoteToAlert.useMutation({
-    onSuccess: () => setPromoted(true),
+    onSuccess: () => { setPromoted(true); setConfirmPromote(false); },
   });
 
   const mapMarkers = useMemo<MapMarker[]>(() => {
@@ -688,17 +691,14 @@ export function EventDetailContent({
                   sig.title ??
                   (sig.description ? sig.description.slice(0, 100) + (sig.description.length > 100 ? "…" : "") : `Signal ${sig.id}`);
                 return (
-                  <Link
+                  <Box
                     key={sig.id}
-                    href={`/signal/${sig.id}`}
-                    style={{ textDecoration: "none", color: "inherit" }}
+                    px={16}
+                    py={12}
+                    className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
+                    style={{ display: "flex", gap: 12 }}
+                    onClick={() => router.push(`/signal/${sig.id}`)}
                   >
-                    <Box
-                      px={16}
-                      py={12}
-                      className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
-                      style={{ display: "flex", gap: 12 }}
-                    >
                       <Box style={{ width: 3, background: "#737373", flexShrink: 0, borderRadius: 2 }} />
                       <Box style={{ flex: 1, minWidth: 0 }}>
                         <Group justify="space-between" mb={4}>
@@ -733,8 +733,7 @@ export function EventDetailContent({
                           <Text size="xs" c="#737373">{sigLocation.name}</Text>
                         )}
                       </Box>
-                    </Box>
-                  </Link>
+                  </Box>
                 );
               })}
             </Box>
@@ -869,31 +868,53 @@ export function EventDetailContent({
                       >
                         Alert
                       </Button>
+                    ) : confirmPromote ? (
+                      <Stack gap={6}>
+                        <Text size="xs" c="var(--color-critical)" fw={600} style={{ textAlign: "center" }}>
+                          Raise this event as an alert?
+                        </Text>
+                        <Group gap={6} grow>
+                          <Button
+                            variant="light"
+                            color="gray"
+                            size="xs"
+                            style={{ fontSize: 12 }}
+                            onClick={() => setConfirmPromote(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            variant="filled"
+                            size="xs"
+                            leftSection={promoteToAlert.isPending ? <Loader size={11} color="white" /> : <IconBellRinging size={13} />}
+                            loading={promoteToAlert.isPending}
+                            onClick={() => promoteToAlert.mutate({ eventId: event.id })}
+                            style={{ fontSize: 12, background: "var(--color-critical)", border: "none" }}
+                          >
+                            Confirm
+                          </Button>
+                        </Group>
+                        {promoteToAlert.isError && (
+                          <Text size="xs" c="var(--color-critical)" style={{ textAlign: "center" }}>
+                            Failed. Try again.
+                          </Text>
+                        )}
+                      </Stack>
                     ) : (
                       <Button
                         variant="filled"
                         size="xs"
-                        leftSection={
-                          promoteToAlert.isPending
-                            ? <Loader size={11} color="white" />
-                            : <IconBellRinging size={13} />
-                        }
+                        leftSection={<IconBellRinging size={13} />}
                         fullWidth
-                        loading={promoteToAlert.isPending}
-                        onClick={() => promoteToAlert.mutate({ eventId: event.id })}
+                        onClick={() => setConfirmPromote(true)}
                         style={{
                           fontSize: 12,
                           background: "var(--color-critical)",
                           border: "none",
                         }}
                       >
-                        {promoteToAlert.isError ? "Retry" : "Turn into Alert"}
+                        Turn into Alert
                       </Button>
-                    )}
-                    {promoteToAlert.isError && (
-                      <Text size="xs" c="var(--color-critical)" style={{ textAlign: "center" }}>
-                        Failed to create alert. Try again.
-                      </Text>
                     )}
                     <Button
                       variant="light"
