@@ -42,7 +42,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
-import { TIER_LABELS } from "~/lib/constants/feature-flags";
 import { PageHeader, StatsGrid } from "~/components/ui";
 import type { StatItem } from "~/components/ui";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
@@ -51,18 +50,6 @@ import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 const border = `1px solid ${colors.border}`;
 
 /* ─── Features tab helpers ────────────────────────────────── */
-const tierColors: Record<number, string> = {
-  1: colors.textSecondary,
-  2: colors.success,
-  3: colors.warning,
-  4: colors.critical,
-};
-const tierBadgeColors: Record<number, string> = {
-  1: "gray",
-  2: "green",
-  3: "yellow",
-  4: "red",
-};
 
 /* ─── Users tab types & constants ─────────────────────────── */
 type GqlUser = {
@@ -592,15 +579,9 @@ function UsersPanel() {
 
 /* ─── Features panel ──────────────────────────────────────── */
 function FeaturesPanel() {
-  const { data: features, isLoading } = api.featureFlags.getAll.useQuery(
-    undefined,
-    {
-      staleTime: 30_000,
-    },
-  );
-  const { toggle } = useFeatureFlags();
+  const { features, isLoading, toggle } = useFeatureFlags();
 
-  if (isLoading || !features) {
+  if (isLoading || !features.length) {
     return (
       <Box p={24} style={{ display: "flex", justifyContent: "center" }}>
         <Loader />
@@ -617,136 +598,54 @@ function FeaturesPanel() {
     { label: "Disabled", value: String(disabledCount), color: colors.critical },
   ];
 
-  const tiers = [1, 2, 3, 4] as const;
-  const grouped = tiers.map((tier) => ({
-    tier,
-    label: TIER_LABELS[tier] ?? `Tier ${tier}`,
-    features: features.filter((f) => f.tier === tier),
-  }));
-
   return (
     <Box p={24}>
       <StatsGrid stats={stats} cols={3} mb={24} />
 
-      <Stack gap={24}>
-        {grouped.map((group) => (
-          <Card key={group.tier} p={0} style={{ border, overflow: "hidden" }}>
-            <Group
-              px={20}
-              py={12}
-              justify="space-between"
-              style={{ background: colors.bgPrimary, borderBottom: border }}
-            >
-              <Group gap={10}>
-                <Box
-                  w={4}
-                  style={{
-                    alignSelf: "stretch",
-                    background: tierColors[group.tier],
-                    borderRadius: 2,
+      <Card p={0} style={{ border, overflow: "hidden" }}>
+        <Stack gap={0}>
+          {features.map((feature, i) => {
+            const isCore = feature.tier === 1;
+            return (
+              <Group
+                key={feature.key}
+                px={20}
+                py={14}
+                justify="space-between"
+                wrap="nowrap"
+                style={{
+                  borderBottom: i < features.length - 1 ? border : undefined,
+                  opacity: isCore ? 0.7 : 1,
+                }}
+              >
+                <Box style={{ flex: 1, minWidth: 0 }}>
+                  <Group gap={8} mb={2}>
+                    <Text fw={500} c={colors.textPrimary} style={{ fontSize: fontSizesPx.lg }}>
+                      {feature.label}
+                    </Text>
+                    {isCore && (
+                      <IconLock size={14} style={{ color: colors.textMuted }} />
+                    )}
+                  </Group>
+                  <Text c={colors.textSecondary} style={{ fontSize: fontSizesPx.md }}>
+                    {feature.description}
+                  </Text>
+                </Box>
+                <Switch
+                  checked={feature.enabled}
+                  disabled={isCore}
+                  onChange={(e) => toggle(feature.key, e.currentTarget.checked)}
+                  size="md"
+                  color={colors.accent}
+                  styles={{
+                    track: { cursor: isCore ? "not-allowed" : "pointer" },
                   }}
                 />
-                <Text
-                  fw={600}
-                  c={colors.textPrimary}
-                  style={{ fontSize: fontSizesPx.lg }}
-                >
-                  {group.label}
-                </Text>
-                <Badge
-                  size="sm"
-                  color={tierBadgeColors[group.tier]}
-                  variant="light"
-                >
-                  {group.features.length} features
-                </Badge>
               </Group>
-              {group.tier === 1 && (
-                <Group gap={4}>
-                  <IconLock size={14} style={{ color: colors.textMuted }} />
-                  <Text size="xs" c={colors.textMuted}>
-                    Always enabled
-                  </Text>
-                </Group>
-              )}
-            </Group>
-
-            <Stack gap={0}>
-              {group.features.map((feature, i) => {
-                const isCore = feature.tier === 1;
-                return (
-                  <Group
-                    key={feature.key}
-                    px={20}
-                    py={14}
-                    justify="space-between"
-                    wrap="nowrap"
-                    style={{
-                      borderBottom:
-                        i < group.features.length - 1 ? border : undefined,
-                      opacity: isCore ? 0.7 : 1,
-                    }}
-                  >
-                    <Box style={{ flex: 1, minWidth: 0 }}>
-                      <Group gap={8} mb={2}>
-                        <Text
-                          fw={500}
-                          c={colors.textPrimary}
-                          style={{ fontSize: fontSizesPx.lg }}
-                        >
-                          {feature.label}
-                        </Text>
-                        {isCore && (
-                          <IconLock
-                            size={14}
-                            style={{ color: colors.textMuted }}
-                          />
-                        )}
-                      </Group>
-                      <Group gap={8}>
-                        <Text
-                          c={colors.textSecondary}
-                          style={{ fontSize: fontSizesPx.md }}
-                        >
-                          {feature.description}
-                        </Text>
-                        {feature.route && (
-                          <Anchor
-                            component={Link}
-                            href={feature.route}
-                            c={colors.textMuted}
-                            style={{
-                              fontSize: fontSizesPx.sm,
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 3,
-                            }}
-                          >
-                            {feature.route}
-                            <IconExternalLink size={11} />
-                          </Anchor>
-                        )}
-                      </Group>
-                    </Box>
-                    <Switch
-                      checked={feature.enabled}
-                      disabled={isCore}
-                      onChange={(e) =>
-                        toggle(feature.key, e.currentTarget.checked)
-                      }
-                      size="md"
-                      color={colors.accent}
-                      styles={{
-                        track: { cursor: isCore ? "not-allowed" : "pointer" },
-                      }}
-                    />
-                  </Group>
-                );
-              })}
-            </Stack>
-          </Card>
-        ))}
-      </Stack>
+            );
+          })}
+        </Stack>
+      </Card>
     </Box>
   );
 }
