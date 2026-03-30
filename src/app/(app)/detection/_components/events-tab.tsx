@@ -28,6 +28,7 @@ import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
+import { useDisasterTypes } from "~/hooks/use-disaster-types";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -71,6 +72,7 @@ export function EventsTab({
   mapCenter,
   mapZoom,
 }: EventsTabProps) {
+  const { getTypeNames } = useDisasterTypes();
   const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [search, setSearch] = useState("");
   const [activeSeverities, setActiveSeverities] = useState<Set<SeverityKey>>(
@@ -447,7 +449,9 @@ export function EventsTab({
                           <Text size="xs" c="#737373">{location.name}</Text>
                         )}
                         {event.types.length > 0 && (
-                          <Text size="xs" c="#A3A3A3">{event.types.join(", ")}</Text>
+                          <Group gap={4}>{getTypeNames(event.types).map((name) => (
+                            <Badge key={name} size="xs" variant="light" color="violet" style={{ fontSize: 9 }}>{name}</Badge>
+                          ))}</Group>
                         )}
                         <Text size="xs" c="#737373" style={{ marginLeft: "auto" }}>
                           {event.signals.length} signal{event.signals.length !== 1 ? "s" : ""}

@@ -27,6 +27,7 @@ const EVENT_FIELDS = `
   description
   types
   severity
+  isDummy
   rank
   firstSignalCreatedAt
   lastSignalCreatedAt
@@ -39,8 +40,8 @@ const EVENT_FIELDS = `
 `;
 
 const ALERTS_LIST_QUERY = `
-  query Alerts($status: AlertStatus, $teamId: String) {
-    alerts(status: $status, teamId: $teamId) {
+  query Alerts($status: AlertStatus, $teamId: String, $includeDummy: Boolean) {
+    alerts(status: $status, teamId: $teamId, includeDummy: $includeDummy) {
       id
       status
       event { ${EVENT_FIELDS} }
@@ -76,6 +77,7 @@ export const alertsRouter = createTRPCRouter({
           status: z.enum(["draft", "published", "archived"]).optional(),
           activeOnly: z.boolean().optional(),
           teamId: z.string().nullish(),
+          includeDummy: z.boolean().optional(),
         })
         .optional(),
     )
@@ -84,7 +86,11 @@ export const alertsRouter = createTRPCRouter({
         input?.activeOnly === true ? "published" : input?.status;
       const data = await graphqlFetch<{ alerts: GqlAlert[] }>(
         ALERTS_LIST_QUERY,
-        { ...(status ? { status } : {}), ...(input?.teamId ? { teamId: input.teamId } : {}) },
+        {
+          ...(status ? { status } : {}),
+          ...(input?.teamId ? { teamId: input.teamId } : {}),
+          includeDummy: input?.includeDummy ?? false,
+        },
         cookieHeaders(ctx),
       );
       return { alerts: data.alerts };
