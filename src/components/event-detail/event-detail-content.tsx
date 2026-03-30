@@ -31,6 +31,8 @@ import {
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
+import { getDisasterPills } from "~/lib/disaster-types";
+import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
@@ -262,7 +264,7 @@ export function EventDetailContent({
   // TODO: after Prisma migration: use `event.title` directly (remove fallback below)
   const displayTitle =
     // event.title ??  // uncomment after Prisma migration
-    event.title ?? (primaryLocation ? `${eventType} — ${primaryLocation}` : eventType);
+    event.title ?? (primaryLocation ? `${eventType} - ${primaryLocation}` : eventType);
 
   // TODO: after Prisma migration: use `event.types` (string[]) directly
   const eventTypes: string[] = event.types.length > 0 ? event.types : [eventType];
@@ -322,7 +324,7 @@ export function EventDetailContent({
           borderLeft: `4px solid ${sevColor}`,
         }}
       >
-        {/* Title row — title left, active status right, both top-aligned */}
+        {/* Title row - title left, active status right, both top-aligned */}
         <Group
           justify="space-between"
           align="flex-start"
@@ -360,16 +362,23 @@ export function EventDetailContent({
 
         {/* Type pills */}
         <Group gap={6} mb={14} wrap="wrap">
-          {eventTypes.map((t) => (
-            <Badge
-              key={t}
-              size="sm"
-              radius="xl"
-              variant="outline"
-              style={{ color: "#525252", borderColor: "#52525240", fontWeight: 500 }}
+          {getDisasterPills(eventTypes).map((pill) => (
+            <span
+              key={pill.label}
+              style={{
+                display: "inline-block",
+                padding: "2px 10px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 600,
+                color: pill.color,
+                background: pill.bg,
+                letterSpacing: "0.01em",
+                whiteSpace: "nowrap",
+              }}
             >
-              {t}
-            </Badge>
+              {pill.label}
+            </span>
           ))}
         </Group>
 
@@ -379,7 +388,7 @@ export function EventDetailContent({
             <Group gap={4}>
               <IconMapPin size={13} color="#737373" />
               <Text size="xs" c="#525252" fw={500}>
-                {locations.map((l) => l.name).join(", ")}
+                {locations.map((l) => resolveLocationName(l)).filter(Boolean).join(", ")}
               </Text>
             </Group>
           )}

@@ -26,6 +26,8 @@ import {
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
+import { getDisasterPills, getDisasterLabel } from "~/lib/disaster-types";
+import { resolveLocationName } from "~/lib/location";
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 
@@ -38,83 +40,6 @@ type SeverityKey = "critical" | "high" | "medium" | "low";
 type SortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
 type ViewMode = "all" | "alerts";
 
-/* ---- Disaster type pills ---- */
-
-interface DisasterPill {
-  label: string;
-  color: string;
-  bg: string;
-}
-
-// Maps raw disasterType strings to a display label + class group.
-// Types sharing the same class are deduped to a single pill.
-const DISASTER_META: Record<string, { label: string; classKey?: string }> = {
-  "extreme temperature":           { label: "Extreme Temp" },
-  "cold wave":                     { label: "Cold Wave" },
-  "heat wave":                     { label: "Heat Wave" },
-  "complex emergency":             { label: "Complex Emerg." },
-  "drought":                       { label: "Drought" },
-  "earthquake":                    { label: "Earthquake" },
-  "epidemic":                      { label: "Epidemic" },
-  "extratropical cyclone":         { label: "Extratrop. Cyclone" },
-  "fire":                          { label: "Fire" },
-  "flood":                         { label: "Flood" },
-  "land slide":                    { label: "Landslide" },
-  "technological disaster":        { label: "Tech. Disaster" },
-  "tornado":                       { label: "Tornado" },
-  "tsunami":                       { label: "Tsunami" },
-  "volcano":                       { label: "Volcano" },
-  "wild fire":                     { label: "Wildfire" },
-  "other":                         { label: "Other" },
-  "political violence":            { label: "Conflict", classKey: "conflict" },
-  "battles":                       { label: "Conflict", classKey: "conflict" },
-  "protests":                      { label: "Conflict", classKey: "conflict" },
-  "riots":                         { label: "Conflict", classKey: "conflict" },
-  "explosions or remote violence": { label: "Conflict", classKey: "conflict" },
-  "violence against civilians":    { label: "Conflict", classKey: "conflict" },
-  "economic crisis":               { label: "Econ. Crisis" },
-  "famine":                        { label: "Famine" },
-};
-
-const CLASS_STYLE: Record<string, { color: string; bg: string }> = {
-  conflict: { color: "var(--color-critical)", bg: "var(--color-critical-light)" },
-};
-
-const CATEGORY_STYLE: Record<string, { color: string; bg: string }> = {
-  drought:              { color: "var(--color-warning)", bg: "var(--color-warning-light)" },
-  flood:                { color: "var(--color-info)",    bg: "var(--color-info-light)" },
-  earthquake:           { color: "var(--color-warning)", bg: "var(--color-warning-light)" },
-  epidemic:             { color: "var(--color-success)", bg: "var(--color-success-light)" },
-  famine:               { color: "var(--color-warning)", bg: "var(--color-warning-light)" },
-  "economic crisis":    { color: "var(--color-warning)", bg: "var(--color-warning-light)" },
-  "complex emergency":  { color: "var(--color-warning)", bg: "var(--color-warning-light)" },
-  "wild fire":          { color: "var(--color-warning)", bg: "var(--color-warning-light)" },
-  tsunami:              { color: "var(--color-info)",    bg: "var(--color-info-light)" },
-  "extratropical cyclone": { color: "var(--color-info)", bg: "var(--color-info-light)" },
-  tornado:              { color: "var(--color-info)",    bg: "var(--color-info-light)" },
-  fire:                 { color: "var(--color-warning)", bg: "var(--color-warning-light)" },
-  volcano:              { color: "var(--color-warning)", bg: "var(--color-warning-light)" },
-  "land slide":         { color: "var(--color-warning)", bg: "var(--color-warning-light)" },
-};
-
-function getDisasterPills(types: string[]): DisasterPill[] {
-  const seen = new Set<string>();
-  const pills: DisasterPill[] = [];
-  for (const raw of types) {
-    const lower = raw.toLowerCase();
-    const meta = DISASTER_META[lower];
-    const key = meta?.classKey ?? lower;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const label = meta?.label ?? (raw.length > 14 ? raw.slice(0, 13) + "." : raw);
-    const style =
-      (meta?.classKey ? CLASS_STYLE[meta.classKey] : null) ??
-      CATEGORY_STYLE[lower] ??
-      { color: "var(--color-text-secondary)", bg: "var(--color-bg-muted)" };
-    pills.push({ label, ...style });
-  }
-  return pills;
-}
 
 const SORT_LABELS: Record<SortOrder, string> = {
   "sev-desc": "Severity: High to Low",
@@ -364,7 +289,7 @@ export function EventsTab({
                             textAlign: "left",
                           }}
                         >
-                          {DISASTER_META[type.toLowerCase()]?.label ?? type}
+                          {getDisasterLabel(type)}
                           {active && (
                             <Box style={{ width: 6, height: 6, borderRadius: "50%", background: "#E85D3D" }} />
                           )}
@@ -521,8 +446,8 @@ export function EventsTab({
                         {displayTitle}
                       </Text>
                       <Group gap={6} wrap="wrap">
-                        {location && (
-                          <Text size="xs" c="#737373">{location.name}</Text>
+                        {resolveLocationName(location) && (
+                          <Text size="xs" c="#737373">{resolveLocationName(location)}</Text>
                         )}
                         {getDisasterPills(event.types).map((pill) => (
                           <span
