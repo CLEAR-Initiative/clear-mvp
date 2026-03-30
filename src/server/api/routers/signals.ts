@@ -3,7 +3,7 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlSignal, GqlSignalDetail } from "~/lib/types/graphql";
 
-const LOCATION_FIELDS = `id name level geoId ancestorIds geometry`;
+const LOCATION_FIELDS = `id name level geoId ancestorIds geometry ancestors { id name level }`;
 
 const SOURCE_FIELDS = `id name type baseUrl infoUrl`;
 

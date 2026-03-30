@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -28,9 +28,13 @@ import {
   IconUsers,
   IconShieldExclamation,
   IconWorld,
+  IconBellRinging,
 } from "@tabler/icons-react";
+import { api } from "~/trpc/react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
+import { getDisasterPills } from "~/lib/disaster-types";
+import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
@@ -162,6 +166,12 @@ export function EventDetailContent({
   // TODO: after Prisma migration use event.title directly; remove this fallback
   // TODO: after Prisma migration use event.types (list) instead of eventType
 
+  const isAlready = (event?.alerts?.length ?? 0) > 0;
+  const [promoted, setPromoted] = useState(false);
+  const promoteToAlert = api.alerts.promoteToAlert.useMutation({
+    onSuccess: () => setPromoted(true),
+  });
+
   const mapMarkers = useMemo<MapMarker[]>(() => {
     if (!event) return [];
     const markers: MapMarker[] = [];
@@ -262,7 +272,7 @@ export function EventDetailContent({
   // TODO: after Prisma migration: use `event.title` directly (remove fallback below)
   const displayTitle =
     // event.title ??  // uncomment after Prisma migration
-    event.title ?? (primaryLocation ? `${eventType} — ${primaryLocation}` : eventType);
+    event.title ?? (primaryLocation ? `${eventType} - ${primaryLocation}` : eventType);
 
   // TODO: after Prisma migration: use `event.types` (string[]) directly
   const eventTypes: string[] = event.types.length > 0 ? event.types : [eventType];
@@ -317,12 +327,29 @@ export function EventDetailContent({
         pt={isCompact ? 16 : 20}
         pb={isCompact ? 16 : 20}
         style={{
-          background: "#FFF",
+          background: isAlready || promoted ? "var(--color-critical-light)" : "#FFF",
           borderBottom: "1px solid #E5E5E5",
           borderLeft: `4px solid ${sevColor}`,
         }}
       >
-        {/* Title row — title left, active status right, both top-aligned */}
+        {/* Severity badge */}
+        <Group gap={6} mb={10}>
+          <span style={{
+            display: "inline-block",
+            padding: "2px 10px",
+            borderRadius: 999,
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            background: sev === "critical" ? "var(--color-critical-light)" : sev === "low" ? "var(--color-success-light)" : "var(--color-warning-light)",
+            color: sev === "critical" ? "var(--color-critical)" : sev === "low" ? "var(--color-success)" : "var(--color-warning)",
+          }}>
+            {severityLabels[sev]}
+          </span>
+        </Group>
+
+        {/* Title row - title left, active status right, both top-aligned */}
         <Group
           justify="space-between"
           align="flex-start"
@@ -360,16 +387,23 @@ export function EventDetailContent({
 
         {/* Type pills */}
         <Group gap={6} mb={14} wrap="wrap">
-          {eventTypes.map((t) => (
-            <Badge
-              key={t}
-              size="sm"
-              radius="xl"
-              variant="outline"
-              style={{ color: "#525252", borderColor: "#52525240", fontWeight: 500 }}
+          {getDisasterPills(eventTypes).map((pill) => (
+            <span
+              key={pill.label}
+              style={{
+                display: "inline-block",
+                padding: "2px 10px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 600,
+                color: pill.color,
+                background: pill.bg,
+                letterSpacing: "0.01em",
+                whiteSpace: "nowrap",
+              }}
             >
-              {t}
-            </Badge>
+              {pill.label}
+            </span>
           ))}
         </Group>
 
@@ -379,7 +413,7 @@ export function EventDetailContent({
             <Group gap={4}>
               <IconMapPin size={13} color="#737373" />
               <Text size="xs" c="#525252" fw={500}>
-                {locations.map((l) => l.name).join(", ")}
+                {locations.map((l) => resolveLocationName(l)).filter(Boolean).join(", ")}
               </Text>
             </Group>
           )}
@@ -818,6 +852,49 @@ export function EventDetailContent({
                 </Box>
                 <Box p={16}>
                   <Stack gap={8}>
+                    {isAlready || promoted ? (
+                      <Button
+                        variant="filled"
+                        size="xs"
+                        leftSection={<IconBellRinging size={13} />}
+                        fullWidth
+                        disabled
+                        style={{
+                          fontSize: 12,
+                          background: "var(--color-critical-light)",
+                          color: "var(--color-critical)",
+                          border: "1px solid color-mix(in srgb, var(--color-critical) 20%, transparent)",
+                          cursor: "default",
+                        }}
+                      >
+                        Alert
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="filled"
+                        size="xs"
+                        leftSection={
+                          promoteToAlert.isPending
+                            ? <Loader size={11} color="white" />
+                            : <IconBellRinging size={13} />
+                        }
+                        fullWidth
+                        loading={promoteToAlert.isPending}
+                        onClick={() => promoteToAlert.mutate({ eventId: event.id })}
+                        style={{
+                          fontSize: 12,
+                          background: "var(--color-critical)",
+                          border: "none",
+                        }}
+                      >
+                        {promoteToAlert.isError ? "Retry" : "Turn into Alert"}
+                      </Button>
+                    )}
+                    {promoteToAlert.isError && (
+                      <Text size="xs" c="var(--color-critical)" style={{ textAlign: "center" }}>
+                        Failed to create alert. Try again.
+                      </Text>
+                    )}
                     <Button
                       variant="light"
                       color="gray"
@@ -922,8 +999,8 @@ export function EventDetailContent({
                         </Text>
                         <Group gap={6} wrap="wrap">
                           {locations.map((loc) => {
-                            const levelLabels: Record<number, string> = { 0: "Country", 1: "State", 2: "City" };
-                            const levelLabel = levelLabels[loc.level];
+                            const name = resolveLocationName(loc);
+                            if (!name) return null;
                             return (
                               <Badge
                                 key={loc.id}
@@ -937,8 +1014,7 @@ export function EventDetailContent({
                                   textTransform: "none",
                                 }}
                               >
-                                {loc.name}
-                                {levelLabel ? ` (${levelLabel})` : ""}
+                                {name}
                               </Badge>
                             );
                           })}

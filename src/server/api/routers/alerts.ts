@@ -5,6 +5,7 @@ import type { GqlAlert } from "~/lib/types/graphql";
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry
+  ancestors { id name level }
 `;
 
 const SIGNAL_FIELDS = `
@@ -140,7 +141,7 @@ export const alertsRouter = createTRPCRouter({
   }),
 
   getShockTypes: publicProcedure.query(() => {
-    // Shock types are a Django concept — stub for backward compat
+    // Shock types are a Django concept - stub for backward compat
     return { shock_types: [] as Array<{ id: number; name: string; icon: string; color: string }> };
   }),
 
@@ -161,6 +162,17 @@ export const alertsRouter = createTRPCRouter({
       const data = await graphqlFetch<{ createAlert: GqlAlert }>(
         CREATE_ALERT_MUTATION,
         { input },
+        cookieHeaders(ctx),
+      );
+      return data.createAlert;
+    }),
+
+  promoteToAlert: protectedProcedure
+    .input(z.object({ eventId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ createAlert: GqlAlert }>(
+        CREATE_ALERT_MUTATION,
+        { input: { eventId: input.eventId, status: "published" } },
         cookieHeaders(ctx),
       );
       return data.createAlert;

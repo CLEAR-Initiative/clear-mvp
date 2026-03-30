@@ -202,11 +202,12 @@ export function SignalDetailContent({
   const isCompact = mode === "drawer";
   const locations = signalLocations(signal);
   const primaryLocation = locations[0]?.name;
+  const sev = mapSeverity(signal.severity ?? 0);
 
   const displayTitle =
     signal.title ??
     (signal.description ? signal.description.slice(0, 120) + (signal.description.length > 120 ? "…" : "") : null) ??
-    (primaryLocation ? `Signal — ${primaryLocation}` : "Signal");
+    (primaryLocation ? `Signal - ${primaryLocation}` : "Signal");
 
   const sourceTypeLabel = signal.source.type
     ? signal.source.type.charAt(0).toUpperCase() + signal.source.type.slice(1).toLowerCase()
@@ -266,6 +267,23 @@ export function SignalDetailContent({
           borderLeft: "4px solid #737373",
         }}
       >
+        {/* Severity badge */}
+        <Group gap={6} mb={10}>
+          <span style={{
+            display: "inline-block",
+            padding: "2px 10px",
+            borderRadius: 999,
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            background: sev === "critical" ? "var(--color-critical-light)" : sev === "low" ? "var(--color-success-light)" : "var(--color-warning-light)",
+            color: sev === "critical" ? "var(--color-critical)" : sev === "low" ? "var(--color-success)" : "var(--color-warning)",
+          }}>
+            {severityLabels[sev]}
+          </span>
+        </Group>
+
         {/* Title row */}
         <Group
           justify="space-between"
@@ -506,7 +524,7 @@ export function SignalDetailContent({
             <CommentsSection entityId={signal.id} entityType="signal" />
           </Card>
 
-          {/* Part of Events + Similar Signals — two columns */}
+          {/* Part of Events + Similar Signals - two columns */}
           <Box style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
 
             {/* Part of Events */}

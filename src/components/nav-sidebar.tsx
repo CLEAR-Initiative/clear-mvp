@@ -29,11 +29,13 @@ import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
+import { useFeatureFlags } from "~/components/feature-flags-provider";
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
+  featureKey?: string;
   badge?: number;
   disabled?: boolean;
   demo?: boolean;
@@ -48,18 +50,18 @@ const navSections: NavSection[] = [
   {
     title: "MAIN",
     items: [
-      { label: "Overview",        href: "/dashboard",  icon: IconLayoutDashboard },
-      { label: "Detection",       href: "/detection",  icon: IconTarget, badge: 3 },
-      { label: "Analysis",        href: "/analysis",   icon: IconChartPie,       demo: true },
-      { label: "Operations",      href: "/operations", icon: IconUser,           demo: true },
-      { label: "Cash Assistance", href: "/cash",       icon: IconCurrencyDollar, demo: true },
+      { label: "Overview",        href: "/dashboard",  icon: IconLayoutDashboard, featureKey: "overview" },
+      { label: "Detection",       href: "/detection",  icon: IconTarget,          featureKey: "detection",       badge: 3 },
+      { label: "Analysis",        href: "/analysis",   icon: IconChartPie,        featureKey: "analysis",        demo: true },
+      { label: "Operations",      href: "/operations", icon: IconUser,            featureKey: "operations",      demo: true },
+      { label: "Cash Assistance", href: "/cash",       icon: IconCurrencyDollar,  featureKey: "cash_assistance", demo: true },
     ],
   },
   {
     title: "RESOURCES",
     items: [
-      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook, demo: true },
-      { label: "Crisis Map",    href: "/map",       icon: IconMapPin },
+      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook,    featureKey: "knowledge_hub", demo: true },
+      { label: "Crisis Map",    href: "/map",       icon: IconMapPin,  featureKey: "crisis_map" },
     ],
   },
   {
@@ -134,6 +136,7 @@ export function NavSidebar() {
   const router = useRouter();
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const isAdmin = authData?.user?.role === "admin";
+  const { flags } = useFeatureFlags();
 
   const handleLogout = async () => {
     try { await authClient.signOut(); } catch { /* ignore */ }
@@ -204,14 +207,19 @@ export function NavSidebar() {
 
       {/* Mobile drawer nav */}
       <Box component="nav" style={{ flex: 1, overflowY: "auto", padding: spacingPx[3] }}>
-        {navSections.map((section) => (
+        {navSections.map((section) => {
+          const visibleItems = section.items.filter((item) =>
+            item.featureKey ? (flags[item.featureKey] ?? true) : true
+          );
+          if (visibleItems.length === 0) return null;
+          return (
           <Box key={section.title} mb={spacingPx[5]}>
             <Box style={{ height: 28, display: "flex", alignItems: "flex-end", paddingBottom: 4 }}>
               <Text fw={600} tt="uppercase" px={spacingPx[3]} style={{ letterSpacing: "0.07em", fontSize: fontSizesPx["2xs"], color: colors.textMuted }}>
                 {section.title}
               </Text>
             </Box>
-            {section.items.map((item) => {
+            {visibleItems.map((item) => {
               const itemSegment = item.href.replace(/^\//, "");
               const isActive = !item.disabled && activeSegment === itemSegment;
               const Icon = item.icon;
@@ -246,7 +254,8 @@ export function NavSidebar() {
               );
             })}
           </Box>
-        ))}
+          );
+        })}
       </Box>
 
       {/* Mobile drawer footer */}
@@ -355,9 +364,14 @@ export function NavSidebar() {
         component="nav"
         style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: `${spacingPx[3]}px ${spacingPx[3]}px` }}
       >
-        {navSections.map((section) => (
+        {navSections.map((section) => {
+          const visibleItems = section.items.filter((item) =>
+            item.featureKey ? (flags[item.featureKey] ?? true) : true
+          );
+          if (visibleItems.length === 0) return null;
+          return (
           <Box key={section.title} mb={spacingPx[5]}>
-            {/* Section label — always in DOM, fades out */}
+            {/* Section label - always in DOM, fades out */}
             <Box style={{ height: 28, display: "flex", alignItems: "flex-end", paddingBottom: 4 }}>
               <Text
                 fw={600}
@@ -374,7 +388,7 @@ export function NavSidebar() {
               </Text>
             </Box>
 
-            {section.items.map((item) => {
+            {visibleItems.map((item) => {
               const itemSegment = item.href.replace(/^\//, "");
               const isActive = !item.disabled && activeSegment === itemSegment;
               const Icon = item.icon;
@@ -475,10 +489,11 @@ export function NavSidebar() {
               ) : linked;
             })}
           </Box>
-        ))}
+          );
+        })}
       </Box>
 
-      {/* ── Bottom actions ────────────────────────────────────── */}
+      {/* Bottom actions */}
       <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3], flexShrink: 0 }}>
         {/* Admin — only visible to admin role */}
         {isAdmin && (() => {

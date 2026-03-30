@@ -36,11 +36,11 @@ export default function DetectionPage() {
   );
   const eventsQuery = api.events.list.useQuery(
     { teamId: activeTeamId, includeDummy },
-    { enabled: activeTab === "events" },
+    { enabled: activeTab === "events" || activeTab === "history" },
   );
   const signalsQuery = api.signals.list.useQuery(
     { teamId: activeTeamId, includeDummy },
-    { enabled: activeTab === "signals" },
+    { enabled: activeTab === "signals" || activeTab === "history" },
   );
 
   const regions = getRegions(selectedCountry);
@@ -238,9 +238,9 @@ export default function DetectionPage() {
         {activeTab === "history" && (
           <HistoryTab
             alerts={historyAlerts}
-            loading={historyQuery.isLoading}
-            total={historyAlerts.length}
-            count={historyAlerts.length}
+            events={filteredEvents}
+            signals={filteredSignals}
+            loading={historyQuery.isLoading || eventsQuery.isLoading || signalsQuery.isLoading}
           />
         )}
 
