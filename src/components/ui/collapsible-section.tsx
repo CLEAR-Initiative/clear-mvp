@@ -31,8 +31,8 @@ export function CollapsibleSection({ title, defaultOpen = false, children }: Col
           className={cn(
             "border flex items-center justify-center",
             open
-              ? "bg-[#171717] text-white border-[#171717]"
-              : "border-[#E5E5E5] text-[#737373]",
+              ? "border-transparent text-[#171717]"
+              : "border-transparent text-[#737373]",
           )}
           style={{ fontSize: 14 }}
         >

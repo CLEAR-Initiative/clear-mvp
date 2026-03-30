@@ -1,7 +1,7 @@
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 
-/* ─── GraphQL types for data sources ─── */
+/* --- GraphQL types --- */
 
 interface GqlDataSourceFull {
   id: string;
@@ -29,11 +29,11 @@ const DATA_SOURCES_QUERY = `
   }
 `;
 
-const SIGNALS_COUNT_QUERY = `
-  query Signals {
+const SIGNALS_STATS_QUERY = `
+  query SignalsStats {
     signals {
-      id
-      source { id }
+      source { id name }
+      collectedAt
     }
   }
 `;
@@ -45,7 +45,6 @@ export const pipelineRouter = createTRPCRouter({
       undefined,
       cookieHeaders(ctx),
     );
-    // Map to shape expected by consumers (DjangoPipelineSource-compatible)
     return {
       success: true,
       sources: data.dataSources.map((ds) => ({
@@ -65,51 +64,41 @@ export const pipelineRouter = createTRPCRouter({
     const hdrs = cookieHeaders(ctx);
     const [sourcesData, signalsData] = await Promise.all([
       graphqlFetch<{ dataSources: GqlDataSourceFull[] }>(DATA_SOURCES_QUERY, undefined, hdrs),
-      graphqlFetch<{ signals: Array<{ id: string; source: { id: string } | null }> }>(
-        SIGNALS_COUNT_QUERY,
+      graphqlFetch<{ signals: Array<{ source: { id: string; name: string } | null; collectedAt: string }> }>(
+        SIGNALS_STATS_QUERY,
         undefined,
         hdrs,
       ),
     ]);
 
-    const totalSources = sourcesData.dataSources.length;
-    const totalDetections = signalsData.signals.length;
+    // Per-source: count + latest collectedAt
+    const bySource: Record<string, { signal_count: number; latest_signal_at: string | null }> = {};
 
-    // Count signals per source type
-    const byType: Record<string, { variables: number; data_records: number }> = {};
-    for (const ds of sourcesData.dataSources) {
-      const count = signalsData.signals.filter(
-        (d) => d.source?.id === ds.id,
-      ).length;
-      byType[ds.type] = byType[ds.type] ?? { variables: 0, data_records: 0 };
-      byType[ds.type]!.data_records += count;
+    for (const sig of signalsData.signals) {
+      const name = sig.source?.name;
+      if (!name) continue;
+      const entry = bySource[name] ?? { signal_count: 0, latest_signal_at: null };
+      entry.signal_count += 1;
+      if (!entry.latest_signal_at || sig.collectedAt > entry.latest_signal_at) {
+        entry.latest_signal_at = sig.collectedAt;
+      }
+      bySource[name] = entry;
     }
 
-    // Count recent detections (last 24h)
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-    const recentCount = totalDetections; // All detections as proxy for recent data
+    // Ensure every registered source appears (even those with no signals yet)
+    for (const ds of sourcesData.dataSources) {
+      if (!bySource[ds.name]) {
+        bySource[ds.name] = { signal_count: 0, latest_signal_at: null };
+      }
+    }
 
     return {
       success: true,
-      period: {
-        start_date: new Date(oneDayAgo).toISOString(),
-        end_date: new Date().toISOString(),
-        days: 1,
-      },
       overall: {
-        total_sources: totalSources,
-        total_variables: 0,
-        total_data_records: totalDetections,
-        recent_data_count: recentCount,
+        total_sources: sourcesData.dataSources.length,
+        total_signals: signalsData.signals.length,
       },
-      by_source: {},
-      by_type: byType,
-      tasks: {
-        total_tasks: 0,
-        total_success: 0,
-        total_failures: 0,
-        avg_duration: 0,
-      },
+      by_source: bySource,
     };
   }),
 });
