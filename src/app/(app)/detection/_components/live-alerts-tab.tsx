@@ -25,6 +25,8 @@ import {
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
+import { getDisasterPills, getDisasterLabel } from "~/lib/disaster-types";
+import { resolveLocationName } from "~/lib/location";
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 
@@ -74,11 +76,17 @@ export function LiveAlertsTab({
     new Set(["critical", "high", "medium", "low"]),
   );
   const [activeTypes, setActiveTypes] = useState<Set<string> | null>(null);
+  const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
   const [filterOpen, setFilterOpen] = useState(false);
 
   const allTypes = useMemo(
     () => [...new Set(alerts.flatMap((a) => a.event.types))].sort(),
+    [alerts],
+  );
+
+  const allSources = useMemo(
+    () => [...new Set(alerts.flatMap((a) => a.event.signals.map((s) => s.source.name)))].sort(),
     [alerts],
   );
 
@@ -99,10 +107,20 @@ export function LiveAlertsTab({
     });
   }
 
+  function toggleSource(src: string) {
+    setActiveSources((prev) => {
+      const base = prev ?? new Set(allSources);
+      const next = new Set(base);
+      next.has(src) ? next.delete(src) : next.add(src);
+      return next.size === allSources.length ? null : next;
+    });
+  }
+
   function clearFilters() {
     setSearch("");
     setActiveSeverities(new Set(["critical", "high", "medium", "low"]));
     setActiveTypes(null);
+    setActiveSources(null);
     setSortOrder("sev-desc");
   }
 
@@ -110,6 +128,7 @@ export function LiveAlertsTab({
     search.trim() !== "" ||
     activeSeverities.size < 4 ||
     activeTypes !== null ||
+    activeSources !== null ||
     sortOrder !== "sev-desc";
 
   const filtered = useMemo(() => {
@@ -118,6 +137,7 @@ export function LiveAlertsTab({
       const sev = mapSeverity(a.event.rank);
       if (!activeSeverities.has(sev)) return false;
       if (activeTypes !== null && !a.event.types.some((t) => activeTypes.has(t))) return false;
+      if (activeSources !== null && !a.event.signals.some((s) => activeSources.has(s.source.name))) return false;
       if (q) {
         const title = (a.event.title ?? a.event.description ?? a.event.types[0] ?? "").toLowerCase();
         const loc = (a.event.generalLocation?.name ?? a.event.originLocation?.name ?? "").toLowerCase();
@@ -135,7 +155,7 @@ export function LiveAlertsTab({
     });
 
     return result;
-  }, [alerts, search, activeSeverities, activeTypes, sortOrder]);
+  }, [alerts, search, activeSeverities, activeTypes, activeSources, sortOrder]);
 
   const listCountLabel =
     filtered.length === alerts.length
@@ -144,14 +164,30 @@ export function LiveAlertsTab({
 
   return (
     <Box style={{ display: "flex", gap: 24 }}>
-      {/* Left: Alert List */}
+      {/* Left: Alert list */}
       <Box style={{ flex: 1, minWidth: 0 }}>
-        <Group gap={8} mb={16}>
+        {/* Toolbar row */}
+        <Group gap={8} mb={12} align="center" style={{ minHeight: 32 }}>
+          <Group gap={6} style={{ flexShrink: 0 }}>
+            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Alerts</Text>
+            <Badge
+              size="xs"
+              style={{
+                background: isFiltered ? "var(--color-accent-light)" : "var(--color-bg-muted)",
+                color: isFiltered ? "var(--color-accent)" : "var(--color-text-secondary)",
+                fontWeight: 600,
+              }}
+            >
+              {listCountLabel}
+            </Badge>
+            {alertsLoading && <Loader size="xs" />}
+          </Group>
+
           <TextInput
             placeholder="Search alerts..."
             value={search}
             onChange={(e) => setSearch(e.currentTarget.value)}
-            leftSection={<IconSearch size={14} color="#A3A3A3" />}
+            leftSection={<IconSearch size={14} color="var(--color-text-muted)" />}
             rightSection={
               search ? (
                 <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setSearch("")}>
@@ -167,7 +203,7 @@ export function LiveAlertsTab({
           <Popover
             opened={filterOpen}
             onChange={setFilterOpen}
-            position="bottom-start"
+            position="bottom-end"
             shadow="md"
             width={240}
           >
@@ -177,20 +213,19 @@ export function LiveAlertsTab({
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 6,
-                  padding: "5px 10px",
+                  justifyContent: "center",
+                  width: 30,
+                  height: 30,
                   borderRadius: 6,
-                  border: `1px solid ${isFiltered ? "#E85D3D" : "#E5E5E5"}`,
-                  background: "#fff",
+                  border: `1px solid ${isFiltered ? "var(--color-accent)" : "var(--color-border)"}`,
+                  background: "var(--color-bg-white)",
                   cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: isFiltered ? "#E85D3D" : "#525252",
+                  color: isFiltered ? "var(--color-accent)" : "var(--color-text-secondary)",
                   position: "relative",
+                  flexShrink: 0,
                 }}
               >
                 <IconFilter size={13} />
-                Filter
                 {isFiltered && (
                   <Box
                     style={{
@@ -200,14 +235,14 @@ export function LiveAlertsTab({
                       width: 7,
                       height: 7,
                       borderRadius: "50%",
-                      background: "#E85D3D",
+                      background: "var(--color-accent)",
                     }}
                   />
                 )}
               </button>
             </Popover.Target>
             <Popover.Dropdown p={16}>
-              <Text size="xs" fw={700} c="#171717" mb={10}>Severity</Text>
+              <Text size="xs" fw={700} c="var(--color-text-primary)" mb={10}>Severity</Text>
               <Group gap={6} mb={14}>
                 {(["critical", "high", "medium", "low"] as SeverityKey[]).map((sev) => {
                   const active = activeSeverities.has(sev);
@@ -219,9 +254,9 @@ export function LiveAlertsTab({
                       style={{
                         padding: "4px 10px",
                         borderRadius: 999,
-                        border: `1px solid ${active ? color : "#E5E5E5"}`,
-                        background: active ? `${color}15` : "#F9FAFB",
-                        color: active ? color : "#737373",
+                        border: `1px solid ${active ? color : "var(--color-border)"}`,
+                        background: active ? `${color}15` : "var(--color-bg-muted)",
+                        color: active ? color : "var(--color-text-muted)",
                         fontSize: 11,
                         fontWeight: 600,
                         cursor: "pointer",
@@ -236,9 +271,9 @@ export function LiveAlertsTab({
 
               {allTypes.length > 0 && (
                 <>
-                  <Divider color="#F0F0F0" mb={10} />
-                  <Text size="xs" fw={700} c="#171717" mb={8}>Event Type</Text>
-                  <Stack gap={4}>
+                  <Divider color="var(--color-border)" mb={10} />
+                  <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Event Type</Text>
+                  <Stack gap={4} mb={4}>
                     {allTypes.map((type) => {
                       const active = activeTypes === null || activeTypes.has(type);
                       return (
@@ -252,18 +287,56 @@ export function LiveAlertsTab({
                             padding: "5px 10px",
                             borderRadius: 6,
                             border: "1px solid",
-                            borderColor: active ? "#E85D3D30" : "#E5E5E5",
-                            background: active ? "#FEF2F0" : "#F9FAFB",
-                            color: active ? "#E85D3D" : "#737373",
+                            borderColor: active ? "color-mix(in srgb, var(--color-accent) 20%, transparent)" : "var(--color-border)",
+                            background: active ? "var(--color-accent-light)" : "var(--color-bg-muted)",
+                            color: active ? "var(--color-accent)" : "var(--color-text-muted)",
                             fontSize: 12,
                             fontWeight: 500,
                             cursor: "pointer",
                             textAlign: "left",
                           }}
                         >
-                          {type}
+                          {getDisasterLabel(type)}
                           {active && (
-                            <Box style={{ width: 6, height: 6, borderRadius: "50%", background: "#E85D3D" }} />
+                            <Box style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-accent)" }} />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </Stack>
+                </>
+              )}
+
+              {allSources.length > 0 && (
+                <>
+                  <Divider color="var(--color-border)" mb={10} mt={10} />
+                  <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Source</Text>
+                  <Stack gap={4}>
+                    {allSources.map((src) => {
+                      const active = activeSources === null || activeSources.has(src);
+                      return (
+                        <button
+                          key={src}
+                          onClick={() => toggleSource(src)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "5px 10px",
+                            borderRadius: 6,
+                            border: "1px solid",
+                            borderColor: active ? "color-mix(in srgb, var(--color-accent) 20%, transparent)" : "var(--color-border)",
+                            background: active ? "var(--color-accent-light)" : "var(--color-bg-muted)",
+                            color: active ? "var(--color-accent)" : "var(--color-text-muted)",
+                            fontSize: 12,
+                            fontWeight: 500,
+                            cursor: "pointer",
+                            textAlign: "left",
+                          }}
+                        >
+                          {src}
+                          {active && (
+                            <Box style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-accent)" }} />
                           )}
                         </button>
                       );
@@ -274,16 +347,16 @@ export function LiveAlertsTab({
 
               {isFiltered && (
                 <>
-                  <Divider color="#F0F0F0" my={10} />
+                  <Divider color="var(--color-border)" my={10} />
                   <button
                     onClick={clearFilters}
                     style={{
                       width: "100%",
                       padding: "6px",
                       borderRadius: 6,
-                      border: "1px solid #E5E5E5",
-                      background: "#F9FAFB",
-                      color: "#525252",
+                      border: "1px solid var(--color-border)",
+                      background: "var(--color-bg-muted)",
+                      color: "var(--color-text-secondary)",
                       fontSize: 12,
                       fontWeight: 500,
                       cursor: "pointer",
@@ -302,19 +375,18 @@ export function LiveAlertsTab({
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 6,
-                  padding: "5px 10px",
+                  justifyContent: "center",
+                  width: 30,
+                  height: 30,
                   borderRadius: 6,
-                  border: `1px solid ${sortOrder !== "sev-desc" ? "#E85D3D" : "#E5E5E5"}`,
-                  background: "#fff",
+                  border: `1px solid ${sortOrder !== "sev-desc" ? "var(--color-accent)" : "var(--color-border)"}`,
+                  background: "var(--color-bg-white)",
                   cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: sortOrder !== "sev-desc" ? "#E85D3D" : "#525252",
+                  color: sortOrder !== "sev-desc" ? "var(--color-accent)" : "var(--color-text-secondary)",
+                  flexShrink: 0,
                 }}
               >
                 <IconSortDescending size={13} />
-                Sort
               </button>
             </Menu.Target>
             <Menu.Dropdown>
@@ -325,7 +397,7 @@ export function LiveAlertsTab({
                   style={{
                     fontSize: 12,
                     fontWeight: sortOrder === key ? 600 : 400,
-                    color: sortOrder === key ? "#E85D3D" : "#171717",
+                    color: sortOrder === key ? "var(--color-accent)" : "var(--color-text-primary)",
                   }}
                 >
                   {label}
@@ -335,30 +407,12 @@ export function LiveAlertsTab({
           </Menu>
         </Group>
 
-        <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-          <Box px={16} py={12} style={{ borderBottom: "1px solid #E5E5E5" }}>
-            <Group justify="space-between">
-              <Group gap={8}>
-                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>Active Alerts</Text>
-                <Badge
-                  size="xs"
-                  style={{
-                    background: isFiltered ? "#FEF2F0" : "#F5F5F5",
-                    color: isFiltered ? "#E85D3D" : "#525252",
-                    fontWeight: 600,
-                  }}
-                >
-                  {listCountLabel}
-                </Badge>
-              </Group>
-              {alertsLoading && <Loader size="xs" />}
-            </Group>
-          </Box>
-
-          <Box style={{ maxHeight: "calc(100vh - 460px)", overflowY: "auto" }}>
+        {/* Alert list - no card header */}
+        <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+          <Box style={{ maxHeight: "calc(100vh - 420px)", overflowY: "auto" }}>
             {filtered.length === 0 && !alertsLoading && (
               <Box px={16} py={32} style={{ textAlign: "center" }}>
-                <Text c="#A3A3A3" size="sm">
+                <Text c="var(--color-text-muted)" size="sm">
                   {alerts.length === 0 ? "No active alerts at this time." : "No alerts match your filters."}
                 </Text>
               </Box>
@@ -366,7 +420,7 @@ export function LiveAlertsTab({
             {filtered.map((alert) => {
               const sev = mapSeverity(alert.event.rank);
               const sevCol = severityColor(alert.event.rank);
-              const sevBg = severityColors[sev]?.bg ?? "#F5F5F5";
+              const sevBg = severityColors[sev]?.bg ?? "var(--color-bg-muted)";
               const location = alert.event.generalLocation ?? alert.event.originLocation ?? alert.event.destinationLocation;
               const sourceName = alert.event.signals[0]?.source?.name;
               const displayTitle = alert.event.title ?? alert.event.description ?? alert.event.types[0] ?? "Untitled alert";
@@ -396,20 +450,35 @@ export function LiveAlertsTab({
                             </Badge>
                           )}
                         </Group>
-                        <Text size="xs" c="#A3A3A3">{formatTimeAgo(alert.event.firstSignalCreatedAt)}</Text>
+                        <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(alert.event.firstSignalCreatedAt)}</Text>
                       </Group>
-                      <Text fw={600} size="sm" c="#171717" lineClamp={1} mb={4}>
+                      <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>
                         {displayTitle}
                       </Text>
-                      <Group gap={12}>
-                        {location && (
-                          <Text size="xs" c="#737373">{location.name}</Text>
+                      <Group gap={6} wrap="wrap">
+                        {resolveLocationName(location) && (
+                          <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
                         )}
-                        {alert.event.types.length > 0 && (
-                          <Text size="xs" c="#A3A3A3">{alert.event.types.join(", ")}</Text>
-                        )}
-                        <Text size="xs" c="#737373" style={{ marginLeft: "auto" }}>
-                          Rank: <Text span fw={600} c="#171717">{alert.event.rank.toFixed(1)}</Text>
+                        {getDisasterPills(alert.event.types).map((pill) => (
+                          <span
+                            key={pill.label}
+                            style={{
+                              display: "inline-block",
+                              padding: "1px 7px",
+                              borderRadius: 999,
+                              fontSize: 10,
+                              fontWeight: 600,
+                              color: pill.color,
+                              background: pill.bg,
+                              letterSpacing: "0.01em",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {pill.label}
+                          </span>
+                        ))}
+                        <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>
+                          Rank: <Text span fw={600} c="var(--color-text-primary)">{alert.event.rank.toFixed(1)}</Text>
                         </Text>
                       </Group>
                     </Box>
@@ -423,11 +492,12 @@ export function LiveAlertsTab({
 
       {/* Right: Crisis Map */}
       <Box style={{ width: 480, flexShrink: 0 }}>
-        <Card p={0} style={{ border: "1px solid #E5E5E5", position: "sticky", top: 24 }}>
-          <Box px={16} py={12} style={{ borderBottom: "1px solid #E5E5E5" }}>
-            <Text fw={600} c="#171717" style={{ fontSize: 14 }}>Crisis Map</Text>
-          </Box>
-          <Box style={{ height: 480 }}>
+        {/* Label row - aligns with toolbar */}
+        <Group mb={12} align="center" style={{ minHeight: 32 }}>
+          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Crisis Map</Text>
+        </Group>
+        <Card p={0} style={{ border: "1px solid var(--color-border)", position: "sticky", top: 24 }}>
+          <Box style={{ height: 524 }}>
             <CrisisMap
               markers={mapMarkers}
               regions={mapRegions}
