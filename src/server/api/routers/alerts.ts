@@ -5,6 +5,7 @@ import type { GqlAlert } from "~/lib/types/graphql";
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry
+  ancestors { id name level }
 `;
 
 const SIGNAL_FIELDS = `
@@ -134,7 +135,7 @@ export const alertsRouter = createTRPCRouter({
   }),
 
   getShockTypes: publicProcedure.query(() => {
-    // Shock types are a Django concept — stub for backward compat
+    // Shock types are a Django concept - stub for backward compat
     return { shock_types: [] as Array<{ id: number; name: string; icon: string; color: string }> };
   }),
 

@@ -29,6 +29,7 @@ export interface GqlLocation {
   geoId?: string | null;
   ancestorIds?: string[];
   geometry: GeoJSONGeometry | null | undefined;
+  ancestors?: Array<{ id: string; name: string; level: number }>;
 }
 
 /* ─── Signal ─── */
@@ -48,7 +49,7 @@ export interface GqlSignal {
   events: Array<{ id: string }>;
 }
 
-/** Signal detail — richer events list returned by the `signal(id)` query */
+/** Signal detail - richer events list returned by the `signal(id)` query */
 export interface GqlSignalDetail extends Omit<GqlSignal, "events"> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rawData: Record<string, any>;

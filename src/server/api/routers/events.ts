@@ -5,6 +5,7 @@ import type { GqlEvent } from "~/lib/types/graphql";
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry
+  ancestors { id name level }
 `;
 
 const SIGNAL_FIELDS = `
