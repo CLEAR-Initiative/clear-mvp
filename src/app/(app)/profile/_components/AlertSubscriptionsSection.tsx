@@ -17,6 +17,8 @@ import {
 import { notifications } from "@mantine/notifications";
 import { IconBellRinging, IconPlus, IconTrash, IconCheck } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { getDisasterLabel } from "~/lib/disaster-types";
+import { severityLabels } from "~/lib/constants/severity";
 
 const FREQUENCY_LABELS: Record<string, string> = {
   immediately: "Immediately",
@@ -34,6 +36,7 @@ export function AlertSubscriptionsSection() {
   const [showForm, setShowForm] = useState(false);
   const [formLocationIds, setFormLocationIds] = useState<string[]>([]);
   const [formAlertTypes, setFormAlertTypes] = useState<string[]>([]);
+  const [formSeverities, setFormSeverities] = useState<string[]>(["critical", "high"]);
   const [formFrequency, setFormFrequency] = useState<string | null>("immediately");
 
   const subscribeMutation = api.subscriptions.subscribe.useMutation({
@@ -43,6 +46,7 @@ export function AlertSubscriptionsSection() {
       setShowForm(false);
       setFormLocationIds([]);
       setFormAlertTypes([]);
+      setFormSeverities(["critical", "high"]);
     },
     onError: (err) => {
       notifications.show({ title: "Error", message: err.message, color: "red" });
@@ -66,29 +70,42 @@ export function AlertSubscriptionsSection() {
   const disasterTypes = disasterTypesQuery.data ?? [];
   const locations = locationsQuery.data ?? [];
 
-  const locationOptions = locations
-    .filter((l) => l.level <= 2)
-    .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
-    .map((l) => ({
-      value: l.id,
-      label: `${"  ".repeat(l.level)}${l.name}`,
-    }));
+  const LEVEL_GROUP: Record<number, string> = {
+    0: "Country",
+    1: "State",
+    2: "District",
+  };
 
-  const alertTypeOptions = disasterTypes.map((dt) => ({
-    value: dt.glideNumber,
-    label: `${dt.disasterType} (${dt.glideNumber.toUpperCase()})`,
-  }));
+  const locationOptions = [0, 1, 2].flatMap((level) => {
+    const items = locations
+      .filter((l) => l.level === level)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((l) => ({ value: l.id, label: l.name }));
+    return items.length > 0 ? [{ group: LEVEL_GROUP[level]!, items }] : [];
+  });
+
+  const alertTypeOptions = [
+    { value: "__all__", label: "All Types" },
+    ...disasterTypes.map((dt) => ({
+      value: dt.glideNumber,
+      label: `${getDisasterLabel(dt.glideNumber)} (${dt.glideNumber.toUpperCase()})`,
+    })),
+  ];
 
   const handleSubscribe = async () => {
     if (formLocationIds.length === 0 || formAlertTypes.length === 0 || !formFrequency) return;
 
-    // Create one subscription per location × alert type combination
+    const resolvedTypes = formAlertTypes.includes("__all__")
+      ? disasterTypes.map((dt) => dt.glideNumber)
+      : formAlertTypes;
+
     for (const locationId of formLocationIds) {
-      for (const alertType of formAlertTypes) {
+      for (const alertType of resolvedTypes) {
         try {
           await subscribeMutation.mutateAsync({
             locationId,
             alertType,
+            severity: formSeverities.length > 0 ? formSeverities : undefined,
             channel: "email" as const,
             frequency: formFrequency as "immediately" | "daily" | "weekly" | "monthly",
           });
@@ -148,6 +165,7 @@ export function AlertSubscriptionsSection() {
               searchable
               size="xs"
               maxDropdownHeight={200}
+              styles={{ groupLabel: { paddingTop: 12, paddingBottom: 4 } }}
             />
             <MultiSelect
               label="Alert Types"
@@ -158,6 +176,19 @@ export function AlertSubscriptionsSection() {
               searchable
               size="xs"
               maxDropdownHeight={200}
+            />
+            <MultiSelect
+              label="Minimum Severity"
+              placeholder="Select severity levels"
+              data={[
+                { value: "critical", label: severityLabels.critical! },
+                { value: "high", label: severityLabels.high! },
+                { value: "medium", label: severityLabels.medium! },
+                { value: "low", label: severityLabels.low! },
+              ]}
+              value={formSeverities}
+              onChange={setFormSeverities}
+              size="xs"
             />
             <Select
               label="Frequency"

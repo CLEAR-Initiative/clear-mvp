@@ -85,6 +85,7 @@ export const subscriptionsRouter = createTRPCRouter({
       z.object({
         locationId: z.string(),
         alertType: z.string(),
+        severity: z.array(z.string()).optional(),
         channel: z.enum(["email", "sms"]),
         frequency: z.enum(["immediately", "daily", "weekly", "monthly"]),
       }),
