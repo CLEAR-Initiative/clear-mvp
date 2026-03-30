@@ -14,9 +14,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CLEAR — Crisis Learning, Early-warning, Anticipation & Response",
+  title: "CLEAR: Crisis Learning, Early-warning, Anticipation & Response",
   description: "Humanitarian decision-support platform",
   manifest: "/manifest.json",
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
