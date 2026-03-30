@@ -25,6 +25,7 @@ import {
   IconBell,
   IconBuilding,
   IconCheck,
+  IconMailForward,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
@@ -63,6 +64,7 @@ interface ProfileUser {
   id: string;
   name: string;
   email: string;
+  emailVerified: boolean;
   image: string | null;
   role: string;
   isActive: boolean;
@@ -198,6 +200,7 @@ function OrganizationSection() {
 function ProfileContent({ user }: { user: ProfileUser }) {
   const [activeTab, setActiveTab] = useState<string | null>("account");
   const normalizedRole = user.role?.toLowerCase() ?? "viewer";
+  const verifyEmail = api.auth.requestEmailVerification.useMutation();
 
   return (
     <Box p={32} style={{ maxWidth: 800 }}>

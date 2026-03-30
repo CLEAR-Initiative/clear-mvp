@@ -38,6 +38,7 @@ const CrisisMap = dynamic(
 
 type SeverityKey = "critical" | "high" | "medium" | "low";
 type SortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
+type ViewMode = "all" | "map";
 
 const SORT_LABELS: Record<SortOrder, string> = {
   "sev-desc": "Severity: High to Low",
