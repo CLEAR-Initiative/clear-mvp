@@ -28,6 +28,7 @@ const EVENT_FIELDS = `
   description
   types
   severity
+  isDummy
   rank
   firstSignalCreatedAt
   lastSignalCreatedAt
@@ -40,8 +41,8 @@ const EVENT_FIELDS = `
 `;
 
 const EVENT_LIST_QUERY = `
-  query Events($teamId: String) {
-    events(teamId: $teamId) {
+  query Events($teamId: String, $includeDummy: Boolean) {
+    events(teamId: $teamId, includeDummy: $includeDummy) {
       ${EVENT_FIELDS}
     }
   }
@@ -65,11 +66,14 @@ const CREATE_EVENT_MUTATION = `
 
 export const eventsRouter = createTRPCRouter({
   list: protectedProcedure
-    .input(z.object({ teamId: z.string().nullish() }).optional())
+    .input(z.object({ teamId: z.string().nullish(), includeDummy: z.boolean().optional() }).optional())
     .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ events: GqlEvent[] }>(
         EVENT_LIST_QUERY,
-        input?.teamId ? { teamId: input.teamId } : undefined,
+        {
+          ...(input?.teamId ? { teamId: input.teamId } : {}),
+          includeDummy: input?.includeDummy ?? false,
+        },
         cookieHeaders(ctx),
       );
       return data.events;

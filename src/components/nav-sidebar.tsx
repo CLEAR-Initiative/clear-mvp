@@ -140,7 +140,10 @@ export function NavSidebar() {
 
   const handleLogout = async () => {
     try { await authClient.signOut(); } catch { /* ignore */ }
-    router.push("/auth/login");
+    localStorage.clear();
+    sessionStorage.clear();
+    // Hard redirect to clear all in-memory state and let the server handle cookie cleanup
+    window.location.href = "/auth/login";
   };
 
   // Text labels: fade out instantly on collapse, fade in after drawer has widened

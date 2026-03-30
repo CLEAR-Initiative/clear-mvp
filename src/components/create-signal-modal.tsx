@@ -326,7 +326,7 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
   const { activeTeamId } = useTeam();
   const locationsQuery = api.locations.list.useQuery(undefined, { enabled: opened, staleTime: 1000 * 60 * 10 });
   const sourcesQuery = api.signals.sources.useQuery(undefined, { enabled: opened, staleTime: 1000 * 60 * 10 });
-  const createSignal = api.signals.create.useMutation();
+  const createSignal = api.signals.createManual.useMutation();
   const utils = api.useUtils();
 
   const locationOptions = (locationsQuery.data ?? []).map((loc) => ({
@@ -377,11 +377,29 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
   async function handleSubmit() {
     setErrorMsg(null);
     try {
+      // Upload files to S3 if any
+      let mediaUrls: string[] = [];
+      if (files.length > 0) {
+        const formData = new FormData();
+        files.forEach(({ file }) => formData.append("files", file));
+
+        const uploadResp = await fetch("/api/proxy/upload", {
+          method: "POST",
+          body: formData,
+        });
+        if (!uploadResp.ok) {
+          throw new Error("File upload failed");
+        }
+        const uploadData = (await uploadResp.json()) as { urls: string[] };
+        mediaUrls = uploadData.urls;
+      }
+
       await createSignal.mutateAsync({
         sourceId: form.sourceId,
         title: form.title.trim(),
-        description: form.description.trim() || undefined,
+        description: form.description.trim() || form.title.trim(),
         locationId: form.locationId || undefined,
+        mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
       });
       void utils.signals.list.invalidate({ teamId: activeTeamId ?? undefined });
       setStep("success");

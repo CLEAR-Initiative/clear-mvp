@@ -8,8 +8,8 @@ const LOCATION_FIELDS = `id name level geoId ancestorIds geometry ancestors { id
 const SOURCE_FIELDS = `id name type baseUrl infoUrl`;
 
 const SIGNAL_LIST_QUERY = `
-  query Signals($teamId: String) {
-    signals(teamId: $teamId) {
+  query Signals($teamId: String, $includeDummy: Boolean) {
+    signals(teamId: $teamId, includeDummy: $includeDummy) {
       id
       source { ${SOURCE_FIELDS} }
       title
@@ -72,6 +72,22 @@ const CREATE_SIGNAL_MUTATION = `
       source { id name type }
       title
       description
+      severity
+      media
+      events { id }
+    }
+  }
+`;
+
+const CREATE_MANUAL_SIGNAL_MUTATION = `
+  mutation CreateManualSignal($input: CreateManualSignalInput!) {
+    createManualSignal(input: $input) {
+      id
+      source { id name type }
+      title
+      description
+      severity
+      media
       events { id }
     }
   }
@@ -79,11 +95,14 @@ const CREATE_SIGNAL_MUTATION = `
 
 export const signalsRouter = createTRPCRouter({
   list: protectedProcedure
-    .input(z.object({ teamId: z.string().nullish() }).optional())
+    .input(z.object({ teamId: z.string().nullish(), includeDummy: z.boolean().optional() }).optional())
     .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ signals: GqlSignal[] }>(
         SIGNAL_LIST_QUERY,
-        input?.teamId ? { teamId: input.teamId } : undefined,
+        {
+          ...(input?.teamId ? { teamId: input.teamId } : {}),
+          includeDummy: input?.includeDummy ?? false,
+        },
         cookieHeaders(ctx),
       );
       return data.signals;
@@ -109,6 +128,7 @@ export const signalsRouter = createTRPCRouter({
     return data.dataSources;
   }),
 
+  /** Pipeline-facing signal creation (used internally, not from UI) */
   create: protectedProcedure
     .input(
       z.object({
@@ -116,11 +136,13 @@ export const signalsRouter = createTRPCRouter({
         title: z.string().optional(),
         description: z.string().optional(),
         url: z.string().optional(),
+        severity: z.number().optional(),
         publishedAt: z.string().optional(),
         collectedAt: z.string().optional(),
         locationId: z.string().optional(),
         originId: z.string().optional(),
         destinationId: z.string().optional(),
+        media: z.array(z.string()).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -135,5 +157,32 @@ export const signalsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.createSignal;
+    }),
+
+  /** Manual signal creation from UI — triggers pipeline processing + auto-escalation */
+  createManual: protectedProcedure
+    .input(
+      z.object({
+        sourceId: z.string(),
+        title: z.string().min(1),
+        description: z.string().min(1),
+        severity: z.number().min(1).max(5).optional(),
+        url: z.string().optional(),
+        /** Media URLs (pre-uploaded via /api/proxy/upload) */
+        mediaUrls: z.array(z.string()).optional(),
+        locationId: z.string().optional(),
+        originId: z.string().optional(),
+        destinationId: z.string().optional(),
+        lat: z.number().optional(),
+        lng: z.number().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ createManualSignal: GqlSignal }>(
+        CREATE_MANUAL_SIGNAL_MUTATION,
+        { input },
+        cookieHeaders(ctx),
+      );
+      return data.createManualSignal;
     }),
 });

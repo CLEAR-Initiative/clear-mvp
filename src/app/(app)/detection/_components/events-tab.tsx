@@ -29,6 +29,7 @@ import { getDisasterPills, getDisasterLabel } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
+import { useDisasterTypes } from "~/hooks/use-disaster-types";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -71,6 +72,8 @@ export function EventsTab({
   mapCenter,
   mapZoom,
 }: EventsTabProps) {
+  const { getTypeNames } = useDisasterTypes();
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [search, setSearch] = useState("");
   const [activeSeverities, setActiveSeverities] = useState<Set<SeverityKey>>(
     new Set(["critical", "high", "medium", "low"]),
@@ -464,9 +467,14 @@ export function EventsTab({
                       <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>
                         {displayTitle}
                       </Text>
-                      <Group gap={6} wrap="wrap">
+                      <Group gap={12}>
                         {resolveLocationName(location) && (
                           <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
+                        )}
+                        {event.types.length > 0 && (
+                          <Group gap={4}>{getTypeNames(event.types).map((name) => (
+                            <Badge key={name} size="xs" variant="light" color="violet" style={{ fontSize: 9 }}>{name}</Badge>
+                          ))}</Group>
                         )}
                         {getDisasterPills(event.types).map((pill) => (
                           <span

@@ -22,7 +22,6 @@ import {
   IconShield,
   IconPencil,
   IconKey,
-  IconMailForward,
   IconBell,
   IconBuilding,
   IconCheck,
@@ -64,7 +63,6 @@ interface ProfileUser {
   id: string;
   name: string;
   email: string;
-  emailVerified: boolean;
   image: string | null;
   role: string;
   isActive: boolean;
@@ -200,12 +198,6 @@ function OrganizationSection() {
 function ProfileContent({ user }: { user: ProfileUser }) {
   const [activeTab, setActiveTab] = useState<string | null>("account");
   const normalizedRole = user.role?.toLowerCase() ?? "viewer";
-  const utils = api.useUtils();
-  const verifyEmail = api.auth.requestEmailVerification.useMutation({
-    onSuccess: () => {
-      void utils.auth.me.invalidate();
-    },
-  });
 
   return (
     <Box p={32} style={{ maxWidth: 800 }}>

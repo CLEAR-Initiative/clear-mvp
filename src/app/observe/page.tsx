@@ -17,9 +17,10 @@ import type { GqlSignal } from "~/lib/types/graphql";
 
 type QueuedPayload = {
   sourceId: string;
-  title?: string;
-  description?: string;
+  title: string;
+  description: string;
   locationId?: string;
+  mediaUrls?: string[];
 };
 
 const DB_NAME = "clear-observe";
@@ -290,7 +291,7 @@ export default function ObservePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
-  const createSignal = api.signals.create.useMutation();
+  const createSignal = api.signals.createManual.useMutation();
   const sourcesQuery = api.signals.sources.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   const locationsQuery = api.locations.list.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   const utils = api.useUtils();
@@ -425,8 +426,8 @@ export default function ObservePage() {
 
     const payload: QueuedPayload = {
       sourceId,
-      title: titleLine || undefined,
-      description: bodyLines || titleLine || undefined,
+      title: titleLine || "Field observation",
+      description: bodyLines || titleLine || "Field observation",
       locationId: locationId || undefined,
     };
 
@@ -441,7 +442,23 @@ export default function ObservePage() {
     }
 
     try {
-      await createSignal.mutateAsync(payload);
+      // Upload media files if any
+      let mediaUrls: string[] | undefined;
+      if (draftMedia.length > 0) {
+        const formData = new FormData();
+        for (const m of draftMedia) {
+          if (m.file) formData.append("files", m.file);
+        }
+        if (formData.has("files")) {
+          const uploadResp = await fetch("/api/proxy/upload", { method: "POST", body: formData });
+          if (uploadResp.ok) {
+            const uploadData = (await uploadResp.json()) as { urls: string[] };
+            mediaUrls = uploadData.urls;
+          }
+        }
+      }
+
+      await createSignal.mutateAsync({ ...payload, mediaUrls });
       void utils.signals.list.invalidate();
       pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "success", text: "Signal received. A new entry has been added to your team's signal list." });
     } catch (err) {

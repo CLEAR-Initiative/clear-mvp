@@ -9,6 +9,7 @@ import {
   Box,
   Button,
   Badge,
+  MultiSelect,
   Select,
   ActionIcon,
   Loader,
@@ -24,11 +25,6 @@ const FREQUENCY_LABELS: Record<string, string> = {
   monthly: "Monthly digest",
 };
 
-const CHANNEL_LABELS: Record<string, string> = {
-  email: "Email",
-  sms: "SMS",
-};
-
 export function AlertSubscriptionsSection() {
   const utils = api.useUtils();
   const subsQuery = api.subscriptions.list.useQuery();
@@ -36,18 +32,17 @@ export function AlertSubscriptionsSection() {
   const locationsQuery = api.subscriptions.locations.useQuery();
 
   const [showForm, setShowForm] = useState(false);
-  const [formLocationId, setFormLocationId] = useState<string | null>(null);
-  const [formAlertType, setFormAlertType] = useState<string | null>(null);
-  const [formChannel, setFormChannel] = useState<string | null>("email");
+  const [formLocationIds, setFormLocationIds] = useState<string[]>([]);
+  const [formAlertTypes, setFormAlertTypes] = useState<string[]>([]);
   const [formFrequency, setFormFrequency] = useState<string | null>("immediately");
 
   const subscribeMutation = api.subscriptions.subscribe.useMutation({
     onSuccess: () => {
-      notifications.show({ title: "Subscribed", message: "Alert subscription created.", color: "green" });
+      notifications.show({ title: "Subscribed", message: "Alert subscriptions created.", color: "green" });
       void utils.subscriptions.list.invalidate();
       setShowForm(false);
-      setFormLocationId(null);
-      setFormAlertType(null);
+      setFormLocationIds([]);
+      setFormAlertTypes([]);
     },
     onError: (err) => {
       notifications.show({ title: "Error", message: err.message, color: "red" });
@@ -72,7 +67,7 @@ export function AlertSubscriptionsSection() {
   const locations = locationsQuery.data ?? [];
 
   const locationOptions = locations
-    .filter((l) => l.level <= 2) // country, state, district
+    .filter((l) => l.level <= 2)
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
     .map((l) => ({
       value: l.id,
@@ -84,15 +79,33 @@ export function AlertSubscriptionsSection() {
     label: `${dt.disasterType} (${dt.glideNumber.toUpperCase()})`,
   }));
 
-  const handleSubscribe = () => {
-    if (!formLocationId || !formAlertType || !formChannel || !formFrequency) return;
-    subscribeMutation.mutate({
-      locationId: formLocationId,
-      alertType: formAlertType,
-      channel: formChannel as "email" | "sms",
-      frequency: formFrequency as "immediately" | "daily" | "weekly" | "monthly",
-    });
+  const handleSubscribe = async () => {
+    if (formLocationIds.length === 0 || formAlertTypes.length === 0 || !formFrequency) return;
+
+    // Create one subscription per location × alert type combination
+    for (const locationId of formLocationIds) {
+      for (const alertType of formAlertTypes) {
+        try {
+          await subscribeMutation.mutateAsync({
+            locationId,
+            alertType,
+            channel: "email" as const,
+            frequency: formFrequency as "immediately" | "daily" | "weekly" | "monthly",
+          });
+        } catch {
+          // Error already shown by onError handler
+        }
+      }
+    }
   };
+
+  // Group subscriptions by location for display
+  const groupedByLocation = subscriptions.reduce<Record<string, typeof subscriptions>>((acc, sub) => {
+    const locName = sub.location.name;
+    if (!acc[locName]) acc[locName] = [];
+    acc[locName].push(sub);
+    return acc;
+  }, {});
 
   return (
     <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
@@ -126,48 +139,38 @@ export function AlertSubscriptionsSection() {
             New Subscription
           </Text>
           <Stack gap={8}>
-            <Select
-              label="Location"
-              placeholder="Select location"
+            <MultiSelect
+              label="Locations"
+              placeholder="Select one or more locations"
               data={locationOptions}
-              value={formLocationId}
-              onChange={setFormLocationId}
+              value={formLocationIds}
+              onChange={setFormLocationIds}
               searchable
               size="xs"
+              maxDropdownHeight={200}
+            />
+            <MultiSelect
+              label="Alert Types"
+              placeholder="Select one or more disaster types"
+              data={alertTypeOptions}
+              value={formAlertTypes}
+              onChange={setFormAlertTypes}
+              searchable
+              size="xs"
+              maxDropdownHeight={200}
             />
             <Select
-              label="Alert Type"
-              placeholder="Select disaster type"
-              data={alertTypeOptions}
-              value={formAlertType}
-              onChange={setFormAlertType}
-              searchable
+              label="Frequency"
+              data={[
+                { value: "immediately", label: "Immediately" },
+                { value: "daily", label: "Daily digest" },
+                { value: "weekly", label: "Weekly digest" },
+                { value: "monthly", label: "Monthly digest" },
+              ]}
+              value={formFrequency}
+              onChange={setFormFrequency}
               size="xs"
             />
-            <Group grow>
-              <Select
-                label="Channel"
-                data={[
-                  { value: "email", label: "Email" },
-                  { value: "sms", label: "SMS" },
-                ]}
-                value={formChannel}
-                onChange={setFormChannel}
-                size="xs"
-              />
-              <Select
-                label="Frequency"
-                data={[
-                  { value: "immediately", label: "Immediately" },
-                  { value: "daily", label: "Daily digest" },
-                  { value: "weekly", label: "Weekly digest" },
-                  { value: "monthly", label: "Monthly digest" },
-                ]}
-                value={formFrequency}
-                onChange={setFormFrequency}
-                size="xs"
-              />
-            </Group>
             <Group gap={8} justify="flex-end">
               <Button size="xs" variant="subtle" color="gray" onClick={() => setShowForm(false)}>
                 Cancel
@@ -177,10 +180,10 @@ export function AlertSubscriptionsSection() {
                 color="dark"
                 leftSection={<IconCheck size={12} />}
                 loading={subscribeMutation.isPending}
-                disabled={!formLocationId || !formAlertType}
-                onClick={handleSubscribe}
+                disabled={formLocationIds.length === 0 || formAlertTypes.length === 0}
+                onClick={() => void handleSubscribe()}
               >
-                Subscribe
+                Subscribe ({formLocationIds.length} × {formAlertTypes.length})
               </Button>
             </Group>
           </Stack>
@@ -197,46 +200,52 @@ export function AlertSubscriptionsSection() {
           No alert subscriptions yet. Click &quot;Add&quot; to subscribe to alerts for specific locations and types.
         </Text>
       ) : (
-        <Stack gap={8}>
-          {subscriptions.map((sub) => (
-            <Group
-              key={sub.id}
-              justify="space-between"
-              p={8}
-              style={{
-                border: "1px solid #E5E5E5",
-                background: sub.active ? "#fff" : "#F5F5F5",
-                opacity: sub.active ? 1 : 0.6,
-              }}
-            >
-              <Box>
-                <Group gap={6}>
-                  <Text size="sm" fw={500}>{sub.location.name}</Text>
-                  <Badge size="xs" variant="light" color="blue">{sub.alertType.toUpperCase()}</Badge>
-                </Group>
-                <Text size="xs" c="#737373">
-                  {CHANNEL_LABELS[sub.channel] ?? sub.channel} · {FREQUENCY_LABELS[sub.frequency] ?? sub.frequency}
-                </Text>
-              </Box>
-              <Group gap={4}>
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  color={sub.active ? "gray" : "teal"}
-                  onClick={() => toggleMutation.mutate({ id: sub.id, active: !sub.active })}
-                >
-                  {sub.active ? "Pause" : "Resume"}
-                </Button>
-                <ActionIcon
-                  size="sm"
-                  variant="subtle"
-                  color="red"
-                  onClick={() => unsubscribeMutation.mutate({ id: sub.id })}
-                >
-                  <IconTrash size={14} />
-                </ActionIcon>
-              </Group>
-            </Group>
+        <Stack gap={12}>
+          {Object.entries(groupedByLocation).map(([locName, subs]) => (
+            <Box key={locName}>
+              <Text size="xs" fw={600} c="#525252" mb={4}>{locName}</Text>
+              <Stack gap={4}>
+                {subs.map((sub) => (
+                  <Group
+                    key={sub.id}
+                    justify="space-between"
+                    px={8}
+                    py={6}
+                    style={{
+                      border: "1px solid #E5E5E5",
+                      background: sub.active ? "#fff" : "#F5F5F5",
+                      opacity: sub.active ? 1 : 0.6,
+                    }}
+                  >
+                    <Group gap={6}>
+                      <Badge size="xs" variant="light" color="blue">{sub.alertType.toUpperCase()}</Badge>
+                      <Text size="xs" c="#737373">
+                        {FREQUENCY_LABELS[sub.frequency] ?? sub.frequency}
+                      </Text>
+                    </Group>
+                    <Group gap={4}>
+                      <Button
+                        size="compact-xs"
+                        variant="subtle"
+                        color={sub.active ? "gray" : "teal"}
+                        onClick={() => toggleMutation.mutate({ id: sub.id, active: !sub.active })}
+                        style={{ fontSize: 10 }}
+                      >
+                        {sub.active ? "Pause" : "Resume"}
+                      </Button>
+                      <ActionIcon
+                        size="xs"
+                        variant="subtle"
+                        color="red"
+                        onClick={() => unsubscribeMutation.mutate({ id: sub.id })}
+                      >
+                        <IconTrash size={12} />
+                      </ActionIcon>
+                    </Group>
+                  </Group>
+                ))}
+              </Stack>
+            </Box>
           ))}
         </Stack>
       )}
