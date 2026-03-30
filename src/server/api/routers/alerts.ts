@@ -160,4 +160,15 @@ export const alertsRouter = createTRPCRouter({
       );
       return data.createAlert;
     }),
+
+  promoteToAlert: protectedProcedure
+    .input(z.object({ eventId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ createAlert: GqlAlert }>(
+        CREATE_ALERT_MUTATION,
+        { input: { eventId: input.eventId, status: "published" } },
+        cookieHeaders(ctx),
+      );
+      return data.createAlert;
+    }),
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -28,7 +28,9 @@ import {
   IconUsers,
   IconShieldExclamation,
   IconWorld,
+  IconBellRinging,
 } from "@tabler/icons-react";
+import { api } from "~/trpc/react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { getDisasterPills } from "~/lib/disaster-types";
@@ -163,6 +165,12 @@ export function EventDetailContent({
 }: EventDetailContentProps) {
   // TODO: after Prisma migration use event.title directly; remove this fallback
   // TODO: after Prisma migration use event.types (list) instead of eventType
+
+  const isAlready = (event?.alerts?.length ?? 0) > 0;
+  const [promoted, setPromoted] = useState(false);
+  const promoteToAlert = api.alerts.promoteToAlert.useMutation({
+    onSuccess: () => setPromoted(true),
+  });
 
   const mapMarkers = useMemo<MapMarker[]>(() => {
     if (!event) return [];
@@ -319,11 +327,28 @@ export function EventDetailContent({
         pt={isCompact ? 16 : 20}
         pb={isCompact ? 16 : 20}
         style={{
-          background: "#FFF",
+          background: isAlready || promoted ? "var(--color-critical-light)" : "#FFF",
           borderBottom: "1px solid #E5E5E5",
           borderLeft: `4px solid ${sevColor}`,
         }}
       >
+        {/* Severity badge */}
+        <Group gap={6} mb={10}>
+          <span style={{
+            display: "inline-block",
+            padding: "2px 10px",
+            borderRadius: 999,
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            background: sev === "critical" ? "var(--color-critical-light)" : sev === "low" ? "var(--color-success-light)" : "var(--color-warning-light)",
+            color: sev === "critical" ? "var(--color-critical)" : sev === "low" ? "var(--color-success)" : "var(--color-warning)",
+          }}>
+            {severityLabels[sev]}
+          </span>
+        </Group>
+
         {/* Title row - title left, active status right, both top-aligned */}
         <Group
           justify="space-between"
@@ -827,6 +852,49 @@ export function EventDetailContent({
                 </Box>
                 <Box p={16}>
                   <Stack gap={8}>
+                    {isAlready || promoted ? (
+                      <Button
+                        variant="filled"
+                        size="xs"
+                        leftSection={<IconBellRinging size={13} />}
+                        fullWidth
+                        disabled
+                        style={{
+                          fontSize: 12,
+                          background: "var(--color-critical-light)",
+                          color: "var(--color-critical)",
+                          border: "1px solid color-mix(in srgb, var(--color-critical) 20%, transparent)",
+                          cursor: "default",
+                        }}
+                      >
+                        Alert
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="filled"
+                        size="xs"
+                        leftSection={
+                          promoteToAlert.isPending
+                            ? <Loader size={11} color="white" />
+                            : <IconBellRinging size={13} />
+                        }
+                        fullWidth
+                        loading={promoteToAlert.isPending}
+                        onClick={() => promoteToAlert.mutate({ eventId: event.id })}
+                        style={{
+                          fontSize: 12,
+                          background: "var(--color-critical)",
+                          border: "none",
+                        }}
+                      >
+                        {promoteToAlert.isError ? "Retry" : "Turn into Alert"}
+                      </Button>
+                    )}
+                    {promoteToAlert.isError && (
+                      <Text size="xs" c="var(--color-critical)" style={{ textAlign: "center" }}>
+                        Failed to create alert. Try again.
+                      </Text>
+                    )}
                     <Button
                       variant="light"
                       color="gray"
@@ -931,8 +999,8 @@ export function EventDetailContent({
                         </Text>
                         <Group gap={6} wrap="wrap">
                           {locations.map((loc) => {
-                            const levelLabels: Record<number, string> = { 0: "Country", 1: "State", 2: "City" };
-                            const levelLabel = levelLabels[loc.level];
+                            const name = resolveLocationName(loc);
+                            if (!name) return null;
                             return (
                               <Badge
                                 key={loc.id}
@@ -946,8 +1014,7 @@ export function EventDetailContent({
                                   textTransform: "none",
                                 }}
                               >
-                                {loc.name}
-                                {levelLabel ? ` (${levelLabel})` : ""}
+                                {name}
                               </Badge>
                             );
                           })}
