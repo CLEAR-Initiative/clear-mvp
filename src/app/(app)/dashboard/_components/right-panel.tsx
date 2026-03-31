@@ -99,7 +99,7 @@ const countriesByRegion = getCountriesByRegion();
 
 /* ========== Activity Items (static) ========== */
 
-// TODO(demo): hardcoded — replace with real activity feed from API
+// TODO(demo): hardcoded - replace with real activity feed from API
 const recentActivity = [
   { time: "15 min ago", title: "Alert acknowledged", description: "Cholera outbreak alert reviewed by Dr. Melese A.", type: "alert" },
   { time: "42 min ago", title: "Team check-in", description: "WASH Team Alpha reported safe arrival in Jijiga", type: "team" },
@@ -185,7 +185,7 @@ export function RightPanel({
             </Badge>
           ) : null}
         </Group>
-        {/* TODO(demo): "Feb 2026" date is hardcoded — should reflect the active timeline month */}
+        {/* TODO(demo): "Feb 2026" date is hardcoded - should reflect the active timeline month */}
         <Text size="sm" c="#E85D3D" style={{ fontSize: 13 }}>
           {hasCrisisData ? (
             <>
@@ -211,7 +211,7 @@ export function RightPanel({
 
       {/* INFORM Risk Pillars */}
       <Box className="bg-[#F9FAFB] border-b border-[#E5E5E5]">
-        <SimpleGrid cols={3} spacing={0} px={24} pt={16} pb={12}>
+        <Box px={24} pt={16} pb={12} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }}>
           {[
             { label: "Hazard", score: riskQuery.data?.pillars.hazard ?? null },
             { label: "Vulnerability", score: riskQuery.data?.pillars.vulnerability ?? null },
@@ -226,14 +226,14 @@ export function RightPanel({
                   color: pillar.score !== null ? riskScoreColor(pillar.score) : "#D0D0D0",
                 }}
               >
-                {pillar.score !== null ? pillar.score.toFixed(1) : "—"}
+                {pillar.score !== null ? pillar.score.toFixed(1) : "-"}
               </Text>
               <Text tt="uppercase" c="#737373" style={{ letterSpacing: "0.03em", fontSize: 10 }}>
                 {pillar.label}
               </Text>
             </Stack>
           ))}
-        </SimpleGrid>
+        </Box>
         <Box px={24} pb={12}>
           <Group justify="space-between" align="center">
             <Text tt="uppercase" c="#A0A0A0" style={{ fontSize: 9, letterSpacing: "0.06em" }}>
@@ -249,7 +249,7 @@ export function RightPanel({
                     : "#D0D0D0",
                 }}
               >
-                {riskQuery.data?.score?.toFixed(1) ?? "—"}
+                {riskQuery.data?.score?.toFixed(1) ?? "-"}
               </Text>
               <Text c="#A0A0A0" style={{ fontSize: 10 }}>/10</Text>
             </Group>
@@ -501,7 +501,7 @@ export function RightPanel({
                   </Group>
                 </Box>
               ))}
-              {/* TODO(demo): hardcoded additional team entry — remove when real deployment data is available */}
+              {/* TODO(demo): hardcoded additional team entry - remove when real deployment data is available */}
               <Box py={8} px={12} style={{ background: "#FFFBEB", borderLeft: "2px solid #F59E0B" }}>
                 <Group justify="space-between">
                   <Group gap={8}>
@@ -521,7 +521,7 @@ export function RightPanel({
             </Stack>
 
             {/* Critical Resources */}
-            {/* TODO(demo): resource stock percentages are hardcoded — replace with real logistics/stock data from operations API */}
+            {/* TODO(demo): resource stock percentages are hardcoded - replace with real logistics/stock data from operations API */}
             <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
               Critical Resources
             </Text>
@@ -640,7 +640,7 @@ export function RightPanel({
           {[
             { value: String(nrcStatistics.totalCountries), label: "Countries" },
             { value: String(nrcStatistics.regionCount), label: "Regions" },
-            { value: "~16.5k", label: "Staff" }, // TODO(demo): hardcoded — pull from NRC org data
+            { value: "~16.5k", label: "Staff" }, // TODO(demo): hardcoded - pull from NRC org data
           ].map((s) => (
             <Box key={s.label} p={8} style={{ textAlign: "center", background: "#F9FAFB" }}>
               <Text fw={700} c="#E85D3D" style={{ fontSize: 18, lineHeight: 1 }}>{s.value}</Text>
@@ -895,7 +895,7 @@ export function RightPanel({
         </Button>
       </Group>
 
-      {/* Data source footer — TODO(demo): sources and "Updated" timestamp are hardcoded; derive from active pipeline metadata */}
+      {/* Data source footer - TODO(demo): sources and "Updated" timestamp are hardcoded; derive from active pipeline metadata */}
       <Box px={24} py={16} className="border-t border-[#E5E5E5] bg-[#F5F5F5]">
         <Text size="xs" c="#737373" style={{ fontSize: 11 }}>
           Data:{" "}
