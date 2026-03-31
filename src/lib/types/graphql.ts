@@ -43,6 +43,7 @@ export interface GqlSignal {
   url: string | null;
   publishedAt: string;
   collectedAt: string;
+  media?: string[] | null;
   originLocation: GqlLocation | null;
   destinationLocation: GqlLocation | null;
   generalLocation: GqlLocation | null;
