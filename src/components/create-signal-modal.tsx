@@ -377,8 +377,8 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
   async function handleSubmit() {
     setErrorMsg(null);
     try {
-      // Upload files to S3 if any
-      let mediaUrls: string[] = [];
+      // Upload files to S3 if any — returns S3 keys (presigned URLs generated at read time)
+      let mediaKeys: string[] = [];
       if (files.length > 0) {
         const formData = new FormData();
         files.forEach(({ file }) => formData.append("files", file));
@@ -390,8 +390,8 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
         if (!uploadResp.ok) {
           throw new Error("File upload failed");
         }
-        const uploadData = (await uploadResp.json()) as { urls: string[] };
-        mediaUrls = uploadData.urls;
+        const uploadData = (await uploadResp.json()) as { keys: string[] };
+        mediaKeys = uploadData.keys;
       }
 
       await createSignal.mutateAsync({
@@ -399,7 +399,7 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
         title: form.title.trim(),
         description: form.description.trim() || form.title.trim(),
         locationId: form.locationId || undefined,
-        mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
+        mediaUrls: mediaKeys.length > 0 ? mediaKeys : undefined,
       });
       void utils.signals.list.invalidate({ teamId: activeTeamId ?? undefined });
       setStep("success");

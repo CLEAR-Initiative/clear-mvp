@@ -442,8 +442,8 @@ export default function ObservePage() {
     }
 
     try {
-      // Upload media files if any
-      let mediaUrls: string[] | undefined;
+      // Upload media files if any — returns S3 keys (presigned URLs generated at read time)
+      let mediaKeys: string[] | undefined;
       if (draftMedia.length > 0) {
         const formData = new FormData();
         for (const m of draftMedia) {
@@ -452,13 +452,13 @@ export default function ObservePage() {
         if (formData.has("files")) {
           const uploadResp = await fetch("/api/proxy/upload", { method: "POST", body: formData });
           if (uploadResp.ok) {
-            const uploadData = (await uploadResp.json()) as { urls: string[] };
-            mediaUrls = uploadData.urls;
+            const uploadData = (await uploadResp.json()) as { keys: string[] };
+            mediaKeys = uploadData.keys;
           }
         }
       }
 
-      await createSignal.mutateAsync({ ...payload, mediaUrls });
+      await createSignal.mutateAsync({ ...payload, mediaUrls: mediaKeys });
       void utils.signals.list.invalidate();
       pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "success", text: "Signal received. A new entry has been added to your team's signal list." });
     } catch (err) {
