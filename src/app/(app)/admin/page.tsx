@@ -9,6 +9,7 @@ import {
   Box,
   Button,
   Card,
+  Divider,
   Group,
   Loader,
   Modal,
@@ -23,6 +24,7 @@ import {
 import {
   IconAlertCircle,
   IconBuilding,
+  IconDatabase,
   IconExternalLink,
   IconLock,
   IconMail,
@@ -40,7 +42,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
-import { TIER_LABELS } from "~/lib/constants/feature-flags";
 import { PageHeader, StatsGrid } from "~/components/ui";
 import type { StatItem } from "~/components/ui";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
@@ -49,18 +50,6 @@ import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 const border = `1px solid ${colors.border}`;
 
 /* ─── Features tab helpers ────────────────────────────────── */
-const tierColors: Record<number, string> = {
-  1: colors.textSecondary,
-  2: colors.success,
-  3: colors.warning,
-  4: colors.critical,
-};
-const tierBadgeColors: Record<number, string> = {
-  1: "gray",
-  2: "green",
-  3: "yellow",
-  4: "red",
-};
 
 /* ─── Users tab types & constants ─────────────────────────── */
 type GqlUser = {
@@ -71,6 +60,8 @@ type GqlUser = {
   image: string | null;
   role: string;
   isActive: boolean;
+  organisations?: { id: string; organisationId: string; role: string }[];
+  teamMemberships?: { id: string; role: string }[];
 };
 
 type FilterMode = "all" | "pending";
@@ -279,9 +270,25 @@ function UsersPanel() {
   const { data, isLoading } = api.auth.listUsers.useQuery(undefined, {
     staleTime: 30_000,
   });
+  const { data: orgsData } = api.auth.listOrganisations.useQuery(undefined, {
+    staleTime: 60_000,
+  });
+  const orgNameMap = Object.fromEntries(
+    (orgsData?.organisations ?? []).map((o) => [o.id, o.name]),
+  );
+  // membershipId (TeamMember.id) → team name, built from org→team→member hierarchy
+  const teamNameByMembershipId = Object.fromEntries(
+    (orgsData?.organisations ?? []).flatMap((o) =>
+      (o.teams ?? []).flatMap((t) =>
+        (t.members ?? []).map((m) => [m.id, t.name]),
+      ),
+    ),
+  );
 
   const [localUsers, setLocalUsers] = useState<GqlUser[]>([]);
   const [filter, setFilter] = useState<FilterMode>("all");
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(
     null,
   );
@@ -292,8 +299,20 @@ function UsersPanel() {
     if (data?.users) setLocalUsers(data.users as GqlUser[]);
   }, [data]);
 
-  const filteredUsers =
-    filter === "pending" ? localUsers.filter((u) => !u.isActive) : localUsers;
+  // Org teams for the cascading team filter
+  const selectedOrg = (orgsData?.organisations ?? []).find((o) => o.id === selectedOrgId);
+  const orgTeamOptions = (selectedOrg?.teams ?? []).map((t) => ({ value: t.id, label: t.name }));
+  // Set of membership IDs belonging to the selected team
+  const selectedTeamMembershipIds = selectedTeamId
+    ? new Set((selectedOrg?.teams ?? []).find((t) => t.id === selectedTeamId)?.members.map((m) => m.id) ?? [])
+    : null;
+
+  const filteredUsers = localUsers.filter((u) => {
+    if (filter === "pending" && u.isActive) return false;
+    if (selectedOrgId && !u.organisations?.some((o) => o.organisationId === selectedOrgId)) return false;
+    if (selectedTeamMembershipIds && !u.teamMemberships?.some((m) => selectedTeamMembershipIds.has(m.id))) return false;
+    return true;
+  });
 
   const pendingCount = localUsers.filter((u) => !u.isActive).length;
 
@@ -412,6 +431,30 @@ function UsersPanel() {
                 },
               }}
             />
+            <Select
+              placeholder="All orgs"
+              data={(orgsData?.organisations ?? []).map((o) => ({ value: o.id, label: o.name }))}
+              value={selectedOrgId}
+              onChange={(v) => { setSelectedOrgId(v); setSelectedTeamId(null); }}
+              size="xs"
+              variant="unstyled"
+              clearable
+              style={{ width: 130 }}
+              styles={{ input: { fontWeight: 600, fontSize: fontSizesPx.lg, color: colors.textPrimary } }}
+            />
+            {selectedOrgId && orgTeamOptions.length > 0 && (
+              <Select
+                placeholder="All teams"
+                data={orgTeamOptions}
+                value={selectedTeamId}
+                onChange={setSelectedTeamId}
+                size="xs"
+                variant="unstyled"
+                clearable
+                style={{ width: 130 }}
+                styles={{ input: { fontWeight: 600, fontSize: fontSizesPx.lg, color: colors.textPrimary } }}
+              />
+            )}
             <Badge
               size="sm"
               variant="light"
@@ -428,7 +471,7 @@ function UsersPanel() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr style={{ background: colors.bgPrimary }}>
-              {(["User", "Role", "Email", "Status", ""] as const).map((h) => (
+              {(["User", "Role", "Email", "Org", "Team", "Status", ""] as const).map((h) => (
                 <Table.Th
                   key={h}
                   style={{
@@ -448,7 +491,7 @@ function UsersPanel() {
           <Table.Tbody>
             {filteredUsers.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={5}>
+                <Table.Td colSpan={7}>
                   <Text
                     c={colors.textMuted}
                     ta="center"
@@ -497,7 +540,7 @@ function UsersPanel() {
                     </Group>
                   </Table.Td>
 
-                  {/* Role — dropdown */}
+                  {/* Role - dropdown */}
                   <Table.Td>
                     <Select
                       value={pendingRoles[user.id] ?? user.role}
@@ -535,6 +578,38 @@ function UsersPanel() {
                     >
                       {user.email}
                     </Text>
+                  </Table.Td>
+
+                  {/* Org */}
+                  <Table.Td>
+                    {user.organisations && user.organisations.length > 0 ? (
+                      <Stack gap={2}>
+                        {user.organisations.map((o) => (
+                          <Text key={o.id} style={{ fontSize: fontSizesPx.sm, color: colors.textSecondary }}>
+                            {orgNameMap[o.organisationId] ?? o.organisationId.slice(0, 8)}
+                            <Text span c={colors.textMuted} style={{ fontSize: fontSizesPx.xs }}> ({o.role})</Text>
+                          </Text>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Text style={{ fontSize: fontSizesPx.sm, color: colors.textMuted }}>-</Text>
+                    )}
+                  </Table.Td>
+
+                  {/* Team */}
+                  <Table.Td>
+                    {user.teamMemberships && user.teamMemberships.length > 0 ? (
+                      <Stack gap={2}>
+                        {user.teamMemberships.map((m) => (
+                          <Text key={m.id} style={{ fontSize: fontSizesPx.sm, color: colors.textSecondary }}>
+                            {teamNameByMembershipId[m.id] ?? "-"}
+                            <Text span c={colors.textMuted} style={{ fontSize: fontSizesPx.xs }}> ({m.role})</Text>
+                          </Text>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Text style={{ fontSize: fontSizesPx.sm, color: colors.textMuted }}>-</Text>
+                    )}
                   </Table.Td>
 
                   {/* Status + Activate */}
@@ -590,15 +665,9 @@ function UsersPanel() {
 
 /* ─── Features panel ──────────────────────────────────────── */
 function FeaturesPanel() {
-  const { data: features, isLoading } = api.featureFlags.getAll.useQuery(
-    undefined,
-    {
-      staleTime: 30_000,
-    },
-  );
-  const { toggle } = useFeatureFlags();
+  const { features, isLoading, toggle } = useFeatureFlags();
 
-  if (isLoading || !features) {
+  if (isLoading || !features.length) {
     return (
       <Box p={24} style={{ display: "flex", justifyContent: "center" }}>
         <Loader />
@@ -615,136 +684,54 @@ function FeaturesPanel() {
     { label: "Disabled", value: String(disabledCount), color: colors.critical },
   ];
 
-  const tiers = [1, 2, 3, 4] as const;
-  const grouped = tiers.map((tier) => ({
-    tier,
-    label: TIER_LABELS[tier] ?? `Tier ${tier}`,
-    features: features.filter((f) => f.tier === tier),
-  }));
-
   return (
     <Box p={24}>
       <StatsGrid stats={stats} cols={3} mb={24} />
 
-      <Stack gap={24}>
-        {grouped.map((group) => (
-          <Card key={group.tier} p={0} style={{ border, overflow: "hidden" }}>
-            <Group
-              px={20}
-              py={12}
-              justify="space-between"
-              style={{ background: colors.bgPrimary, borderBottom: border }}
-            >
-              <Group gap={10}>
-                <Box
-                  w={4}
-                  style={{
-                    alignSelf: "stretch",
-                    background: tierColors[group.tier],
-                    borderRadius: 2,
+      <Card p={0} style={{ border, overflow: "hidden" }}>
+        <Stack gap={0}>
+          {features.map((feature, i) => {
+            const isCore = feature.tier === 1;
+            return (
+              <Group
+                key={feature.key}
+                px={20}
+                py={14}
+                justify="space-between"
+                wrap="nowrap"
+                style={{
+                  borderBottom: i < features.length - 1 ? border : undefined,
+                  opacity: isCore ? 0.7 : 1,
+                }}
+              >
+                <Box style={{ flex: 1, minWidth: 0 }}>
+                  <Group gap={8} mb={2}>
+                    <Text fw={500} c={colors.textPrimary} style={{ fontSize: fontSizesPx.lg }}>
+                      {feature.label}
+                    </Text>
+                    {isCore && (
+                      <IconLock size={14} style={{ color: colors.textMuted }} />
+                    )}
+                  </Group>
+                  <Text c={colors.textSecondary} style={{ fontSize: fontSizesPx.md }}>
+                    {feature.description}
+                  </Text>
+                </Box>
+                <Switch
+                  checked={feature.enabled}
+                  disabled={isCore}
+                  onChange={(e) => toggle(feature.key, e.currentTarget.checked)}
+                  size="md"
+                  color={colors.accent}
+                  styles={{
+                    track: { cursor: isCore ? "not-allowed" : "pointer" },
                   }}
                 />
-                <Text
-                  fw={600}
-                  c={colors.textPrimary}
-                  style={{ fontSize: fontSizesPx.lg }}
-                >
-                  {group.label}
-                </Text>
-                <Badge
-                  size="sm"
-                  color={tierBadgeColors[group.tier]}
-                  variant="light"
-                >
-                  {group.features.length} features
-                </Badge>
               </Group>
-              {group.tier === 1 && (
-                <Group gap={4}>
-                  <IconLock size={14} style={{ color: colors.textMuted }} />
-                  <Text size="xs" c={colors.textMuted}>
-                    Always enabled
-                  </Text>
-                </Group>
-              )}
-            </Group>
-
-            <Stack gap={0}>
-              {group.features.map((feature, i) => {
-                const isCore = feature.tier === 1;
-                return (
-                  <Group
-                    key={feature.key}
-                    px={20}
-                    py={14}
-                    justify="space-between"
-                    wrap="nowrap"
-                    style={{
-                      borderBottom:
-                        i < group.features.length - 1 ? border : undefined,
-                      opacity: isCore ? 0.7 : 1,
-                    }}
-                  >
-                    <Box style={{ flex: 1, minWidth: 0 }}>
-                      <Group gap={8} mb={2}>
-                        <Text
-                          fw={500}
-                          c={colors.textPrimary}
-                          style={{ fontSize: fontSizesPx.lg }}
-                        >
-                          {feature.label}
-                        </Text>
-                        {isCore && (
-                          <IconLock
-                            size={14}
-                            style={{ color: colors.textMuted }}
-                          />
-                        )}
-                      </Group>
-                      <Group gap={8}>
-                        <Text
-                          c={colors.textSecondary}
-                          style={{ fontSize: fontSizesPx.md }}
-                        >
-                          {feature.description}
-                        </Text>
-                        {feature.route && (
-                          <Anchor
-                            component={Link}
-                            href={feature.route}
-                            c={colors.textMuted}
-                            style={{
-                              fontSize: fontSizesPx.sm,
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 3,
-                            }}
-                          >
-                            {feature.route}
-                            <IconExternalLink size={11} />
-                          </Anchor>
-                        )}
-                      </Group>
-                    </Box>
-                    <Switch
-                      checked={feature.enabled}
-                      disabled={isCore}
-                      onChange={(e) =>
-                        toggle(feature.key, e.currentTarget.checked)
-                      }
-                      size="md"
-                      color={colors.accent}
-                      styles={{
-                        track: { cursor: isCore ? "not-allowed" : "pointer" },
-                      }}
-                    />
-                  </Group>
-                );
-              })}
-            </Stack>
-          </Card>
-        ))}
-      </Stack>
+            );
+          })}
+        </Stack>
+      </Card>
     </Box>
   );
 }
@@ -1685,7 +1672,7 @@ function InvitationsPanel() {
                             color: colors.textMuted,
                           }}
                         >
-                          —
+                          -
                         </Text>
                       )}
                     </Table.Td>
@@ -1813,7 +1800,7 @@ function InvitationsPanel() {
             value={inviteTeamId}
             onChange={setInviteTeamId}
             data={teamOptions}
-            placeholder="No team — org only"
+            placeholder="No team - org only"
             clearable
             styles={{
               label: {
@@ -1882,6 +1869,325 @@ function InvitationsPanel() {
   );
 }
 
+/* ─── Data tab ────────────────────────────────────────────── */
+
+interface SourceDef {
+  key?: string;          // matches name in pipeline.getSources; absent for direct-query sources
+  name: string;
+  provider: string;
+  providerUrl?: string;
+  description: string;
+  cadence: string;
+  type: "api" | "manual" | "direct";
+}
+
+interface DataGroup {
+  id: string;
+  label: string;
+  description: string;
+  sources: SourceDef[];
+}
+
+const DATA_GROUPS: DataGroup[] = [
+  {
+    id: "early-warning",
+    label: "Early Warning & Signals",
+    description: "Real-time and near-real-time event detection feeds",
+    sources: [
+      {
+        key: "dataminr",
+        name: "Dataminr",
+        provider: "Dataminr Inc.",
+        providerUrl: "https://www.dataminr.com",
+        description: "Real-time AI-powered alerts from public data: social media, news, and public sources. Primary active signal source.",
+        cadence: "Real-time",
+        type: "api",
+      },
+      {
+        key: "acled",
+        name: "ACLED",
+        provider: "Armed Conflict Location & Event Data Project",
+        providerUrl: "https://acleddata.com",
+        description: "Disaggregated conflict event data: dates, locations, actors, fatalities. Covers political violence and protests globally.",
+        cadence: "Weekly",
+        type: "api",
+      },
+      {
+        key: "gdacs",
+        name: "GDACS",
+        provider: "EU Joint Research Centre / UNOCHA",
+        providerUrl: "https://gdacs.org",
+        description: "Global disaster alerts: earthquakes, floods, cyclones, volcanoes, droughts. Near-real-time automated alerts.",
+        cadence: "Real-time",
+        type: "api",
+      },
+    ],
+  },
+  {
+    id: "displacement",
+    label: "Displacement & Population Movement",
+    description: "IDP tracking and population flow data",
+    sources: [
+      {
+        name: "IOM DTM",
+        provider: "IOM / OCHA HDX",
+        providerUrl: "https://dtm.iom.int",
+        description: "IOM Displacement Tracking Matrix. Conflict-induced IDP figures accessed via HDX HAPI. Disaster displacement not included - covered by IDMC separately.",
+        cadence: "Monthly",
+        type: "direct",
+      },
+    ],
+  },
+  {
+    id: "risk",
+    label: "Risk & Vulnerability Indices",
+    description: "Composite index scores for country-level risk assessment",
+    sources: [
+      {
+        name: "INFORM Risk",
+        provider: "JRC / European Commission",
+        providerUrl: "https://drmkc.jrc.ec.europa.eu/inform-index",
+        description: "Annual composite risk index: Hazard & Exposure, Vulnerability, Coping Capacity. 264 indicators per country at sub-composite level.",
+        cadence: "Annual",
+        type: "direct",
+      },
+      {
+        name: "INFORM Severity",
+        provider: "ACAPS",
+        providerUrl: "https://www.acaps.org",
+        description: "Monthly crisis severity index. Covers impact, conditions of affected people, and complexity. Aggregated country-level score via ACAPS API.",
+        cadence: "Monthly",
+        type: "direct",
+      },
+    ],
+  },
+  {
+    id: "field",
+    label: "Field Intelligence",
+    description: "Human-generated reports from field officers, partners, and government sources",
+    sources: [
+      {
+        key: "field_officer",
+        name: "Field Officer Reports",
+        provider: "NRC Internal",
+        description: "Direct signal submissions from NRC field officers via the Observe mobile app. Includes low-connectivity offline support.",
+        cadence: "Ad hoc",
+        type: "manual",
+      },
+      {
+        key: "partner",
+        name: "Partner Reports",
+        provider: "NRC Partners",
+        description: "Signals submitted by partner organisations through the platform.",
+        cadence: "Ad hoc",
+        type: "manual",
+      },
+      {
+        key: "government",
+        name: "Government Sources",
+        provider: "Government Agencies",
+        description: "Signals sourced from or attributed to government authorities.",
+        cadence: "Ad hoc",
+        type: "manual",
+      },
+    ],
+  },
+];
+
+function freshnessLabel(isoDate: string | null | undefined): string {
+  if (!isoDate) return "No data yet";
+  const diff = Date.now() - new Date(isoDate).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
+}
+
+function DataSourceCard({
+  source,
+  signalCount,
+  latestAt,
+  maxCount,
+  isActive,
+}: {
+  source: SourceDef;
+  signalCount: number | null;
+  latestAt: string | null;
+  maxCount: number;
+  isActive: boolean | null;
+}) {
+  const typeBadgeColor = source.type === "api" ? "blue" : source.type === "direct" ? "violet" : "gray";
+  const typeLabel = source.type === "api" ? "Pipeline API" : source.type === "direct" ? "Direct Query" : "Manual Entry";
+  const barWidth = signalCount && maxCount > 0 ? Math.max((signalCount / maxCount) * 100, 2) : 0;
+
+  return (
+    <Card p="md" radius={0} style={{ background: colors.bgWhite }}>
+      <Group justify="space-between" align="flex-start" wrap="nowrap">
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Group gap={8} mb={4} align="center">
+            <Text fw={600} style={{ fontSize: fontSizesPx.base }}>{source.name}</Text>
+            <Badge size="xs" color={typeBadgeColor} variant="light" radius="sm">{typeLabel}</Badge>
+            {isActive === false && (
+              <Badge size="xs" color="gray" variant="outline" radius="sm">Inactive</Badge>
+            )}
+          </Group>
+          <Text c={colors.textSecondary} style={{ fontSize: fontSizesPx.sm }} mb={6}>
+            {source.description}
+          </Text>
+          <Group gap={16}>
+            <Text style={{ fontSize: fontSizesPx.xs, color: colors.textSecondary }}>
+              Provider: <span style={{ color: colors.textPrimary }}>{source.provider}</span>
+            </Text>
+            <Text style={{ fontSize: fontSizesPx.xs, color: colors.textSecondary }}>
+              Cadence: <span style={{ color: colors.textPrimary }}>{source.cadence}</span>
+            </Text>
+            {source.providerUrl && (
+              <Anchor href={source.providerUrl} target="_blank"
+                style={{ fontSize: fontSizesPx.xs, color: colors.accent }}>
+                <Group gap={4} align="center">
+                  <IconExternalLink size={11} />
+                  docs
+                </Group>
+              </Anchor>
+            )}
+          </Group>
+        </Box>
+
+        <Box style={{ width: 130, flexShrink: 0, textAlign: "right" }}>
+          {signalCount !== null ? (
+            <>
+              <Text fw={700} style={{ fontSize: 20, color: signalCount > 0 ? colors.textPrimary : colors.textSecondary }}>
+                {signalCount}
+              </Text>
+              <Text style={{ fontSize: fontSizesPx.xs, color: colors.textSecondary }} mb={2}>
+                signals
+              </Text>
+              <Box style={{ height: 4, background: colors.border, borderRadius: 2 }} mb={6}>
+                <Box style={{
+                  height: "100%",
+                  width: `${barWidth}%`,
+                  background: signalCount > 0 ? colors.accent : colors.border,
+                  borderRadius: 2,
+                  transition: "width 0.4s ease",
+                }} />
+              </Box>
+              <Text style={{ fontSize: fontSizesPx.xs, color: latestAt ? colors.textSecondary : colors.border }}>
+                {freshnessLabel(latestAt)}
+              </Text>
+            </>
+          ) : (
+            <Text style={{ fontSize: fontSizesPx.xs, color: colors.textSecondary }}>
+              {source.type === "direct" ? "Direct query" : "No signals yet"}
+            </Text>
+          )}
+        </Box>
+      </Group>
+    </Card>
+  );
+}
+
+function DataPanel() {
+  const [demoEnabled, setDemoEnabled] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("clear_demo_data") !== "false";
+  });
+
+  const sourcesQuery = api.pipeline.getSources.useQuery(undefined, { staleTime: 60_000, retry: false });
+  const statsQuery = api.pipeline.getStatistics.useQuery(undefined, { staleTime: 60_000, retry: false });
+
+  const handleDemoToggle = (val: boolean) => {
+    setDemoEnabled(val);
+    localStorage.setItem("clear_demo_data", String(val));
+  };
+
+  // isActive per source name from getSources
+  const activeMap = new Map<string, boolean>();
+  for (const s of sourcesQuery.data?.sources ?? []) {
+    activeMap.set(s.name, s.is_active);
+  }
+
+  // signal_count + latest_signal_at per source name from getStatistics
+  const bySource = statsQuery.data?.by_source ?? {};
+
+  const maxSignals = Math.max(
+    ...DATA_GROUPS.flatMap((g) =>
+      g.sources.map((s) => (s.key ? (bySource[s.key]?.signal_count ?? 0) : 0))
+    ),
+    1,
+  );
+
+  const isLoading = sourcesQuery.isLoading || statsQuery.isLoading;
+
+  return (
+    <Box p={spacingPx[7]}>
+      <Stack gap="xl">
+        {/* Demo Data card */}
+        <Card p="md" radius={0} style={{
+          border: `1px solid ${colors.border}`,
+          background: demoEnabled ? "#FFFBF5" : colors.bgWhite,
+        }}>
+          <Group justify="space-between" align="center">
+            <Box>
+              <Group gap={8} mb={4}>
+                <Text fw={600} style={{ fontSize: fontSizesPx.base }}>Demo Data</Text>
+                <Badge size="xs" color="orange" variant="light" radius="sm">Dev only</Badge>
+              </Group>
+              <Text c={colors.textSecondary} style={{ fontSize: fontSizesPx.sm }}>
+                Hardcoded demo markers, crisis pins, and sample statistics overlaid on the dashboard. Disable to show only live data.
+              </Text>
+            </Box>
+            <Switch
+              checked={demoEnabled}
+              onChange={(e) => handleDemoToggle(e.currentTarget.checked)}
+              color="orange"
+              size="md"
+            />
+          </Group>
+        </Card>
+
+        {isLoading && (
+          <Group justify="center" py="xl">
+            <Loader size="sm" />
+            <Text c={colors.textSecondary} style={{ fontSize: fontSizesPx.sm }}>Loading source data...</Text>
+          </Group>
+        )}
+
+        {/* Source groups */}
+        {!isLoading && DATA_GROUPS.map((group) => (
+          <Box key={group.id}>
+            <Text tt="uppercase" fw={700} mb={2}
+              style={{ fontSize: fontSizesPx.xs, letterSpacing: "0.08em", color: colors.textSecondary }}>
+              {group.label}
+            </Text>
+            <Text mb={8} style={{ fontSize: fontSizesPx.sm, color: colors.textSecondary }}>
+              {group.description}
+            </Text>
+            <Box style={{ border: `1px solid ${colors.border}` }}>
+              {group.sources.map((source, idx) => (
+                <Box key={source.key ?? source.name}>
+                  {idx > 0 && <Divider />}
+                  <DataSourceCard
+                    source={source}
+                    signalCount={source.key ? (bySource[source.key]?.signal_count ?? 0) : null}
+                    latestAt={source.key ? (bySource[source.key]?.latest_signal_at ?? null) : null}
+                    maxCount={maxSignals}
+                    isActive={source.key ? (activeMap.get(source.key) ?? null) : null}
+                  />
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        ))}
+      </Stack>
+    </Box>
+  );
+}
+
 /* ─── Page ────────────────────────────────────────────────── */
 export default function AdminPage() {
   return (
@@ -1931,6 +2237,13 @@ export default function AdminPage() {
           >
             Features
           </Tabs.Tab>
+          <Tabs.Tab
+            value="data"
+            leftSection={<IconDatabase size={16} />}
+            style={{ fontSize: fontSizesPx.base }}
+          >
+            Data
+          </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="users" style={{ flex: 1, overflowY: "auto" }}>
@@ -1947,6 +2260,9 @@ export default function AdminPage() {
         </Tabs.Panel>
         <Tabs.Panel value="features" style={{ flex: 1, overflowY: "auto" }}>
           <FeaturesPanel />
+        </Tabs.Panel>
+        <Tabs.Panel value="data" style={{ flex: 1, overflowY: "auto" }}>
+          <DataPanel />
         </Tabs.Panel>
       </Tabs>
     </Box>

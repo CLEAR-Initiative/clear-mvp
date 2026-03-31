@@ -1,6 +1,7 @@
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import type { GqlAlert, GqlEvent, GqlSignal } from "~/lib/types/graphql";
 import { mapSeverity } from "~/lib/types/graphql";
+import { resolveLocationName } from "~/lib/location";
 
 export interface CrisisMarker extends MapMarker {
   region?: string;
@@ -79,9 +80,9 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
       lng,
       lat,
       title: event.title ?? event.types[0] ?? "Event",
-      severity: mapSeverity(event.rank),
+      severity: mapSeverity(event.rank, event.severity),
       description: event.description ?? undefined,
-      region: loc.name,
+      region: resolveLocationName(loc) ?? undefined,
       locationId: loc.id,
       ancestorIds: loc.ancestorIds ?? [],
       status: event.alerts[0]?.status,
@@ -107,9 +108,9 @@ export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
             lng,
             lat,
             title: signal.title ?? signal.source.name ?? "Signal",
-            severity: "medium",
+            severity: signal.severity ? mapSeverity(signal.severity) : "medium",
             description: signal.description ?? undefined,
-            region: loc.name,
+            region: resolveLocationName(loc) ?? undefined,
             locationId: loc.id,
             ancestorIds: loc.ancestorIds ?? [],
             dataSource: signal.source.name,
@@ -163,7 +164,7 @@ export function eventsToRegions(events: GqlEvent[]): MapRegion[] {
     regions.push({
       id: event.id,
       geometry: polyLoc.geometry as { type: string; coordinates: unknown },
-      severity: mapSeverity(event.rank),
+      severity: mapSeverity(event.rank, event.severity),
       title: event.title ?? event.types[0] ?? "Event",
       signalPoints,
     });

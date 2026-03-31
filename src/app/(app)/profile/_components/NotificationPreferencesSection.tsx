@@ -16,7 +16,6 @@ import { api } from "~/trpc/react";
 
 interface NotificationPreferencesSectionProps {
   user: {
-    email_verified?: boolean;
     email_notifications_enabled?: boolean;
   };
 }
@@ -24,7 +23,6 @@ interface NotificationPreferencesSectionProps {
 export function NotificationPreferencesSection({
   user,
 }: NotificationPreferencesSectionProps) {
-  const emailVerified = user.email_verified ?? false;
   const [emailEnabled, setEmailEnabled] = useState(
     user.email_notifications_enabled ?? false,
   );
@@ -80,21 +78,18 @@ export function NotificationPreferencesSection({
         <Group justify="space-between">
           <Box>
             <Group gap={6}>
-              <IconMail size={14} color={emailVerified ? "#737373" : "#E85D3D"} />
+              <IconMail size={14} color="#737373" />
               <Text size="sm" fw={500}>
                 Email Notifications
               </Text>
             </Group>
-            <Text size="xs" c={emailVerified ? "#737373" : "#E85D3D"}>
-              {emailVerified
-                ? "Receive crisis alerts and digests via email"
-                : "Verify your email first to receive notifications"}
+            <Text size="xs" c="#737373">
+              Receive crisis alerts and digests via email
             </Text>
           </Box>
           <Switch
             checked={emailEnabled}
             onChange={(e) => setEmailEnabled(e.currentTarget.checked)}
-            disabled={!emailVerified}
             color="teal"
           />
         </Group>
@@ -119,18 +114,16 @@ export function NotificationPreferencesSection({
           />
         </Group>
 
-        {emailVerified && (
-          <Group justify="flex-end" mt={4}>
-            <Button
-              size="xs"
-              color="dark"
-              loading={isSaving}
-              onClick={handleSave}
-            >
-              Save Preferences
-            </Button>
-          </Group>
-        )}
+        <Group justify="flex-end" mt={4}>
+          <Button
+            size="xs"
+            color="dark"
+            loading={isSaving}
+            onClick={handleSave}
+          >
+            Save Preferences
+          </Button>
+        </Group>
       </Stack>
     </Card>
   );

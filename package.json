@@ -13,6 +13,7 @@
     "check": "next lint && tsc --noEmit"
   },
   "dependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@mantine/core": "^8.3.0",
     "@mantine/hooks": "^8.3.0",
     "@mantine/notifications": "^8.3.0",
@@ -22,6 +23,7 @@
     "@trpc/react-query": "^11.6.0",
     "@trpc/server": "^11.6.0",
     "better-auth": "^1.5.2",
+    "clear-nextjs-frontend": ".",
     "clsx": "^2.1.1",
     "next": "^15.2.3",
     "react": "^19.0.0",

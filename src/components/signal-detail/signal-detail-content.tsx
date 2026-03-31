@@ -31,6 +31,7 @@ import {
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlSignalDetail, GqlLocation } from "~/lib/types/graphql";
+import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
@@ -202,11 +203,12 @@ export function SignalDetailContent({
   const isCompact = mode === "drawer";
   const locations = signalLocations(signal);
   const primaryLocation = locations[0]?.name;
+  const sev = mapSeverity(signal.severity ?? 0);
 
   const displayTitle =
     signal.title ??
     (signal.description ? signal.description.slice(0, 120) + (signal.description.length > 120 ? "…" : "") : null) ??
-    (primaryLocation ? `Signal — ${primaryLocation}` : "Signal");
+    (primaryLocation ? `Signal - ${primaryLocation}` : "Signal");
 
   const sourceTypeLabel = signal.source.type
     ? signal.source.type.charAt(0).toUpperCase() + signal.source.type.slice(1).toLowerCase()
@@ -266,6 +268,23 @@ export function SignalDetailContent({
           borderLeft: "4px solid #737373",
         }}
       >
+        {/* Severity badge */}
+        <Group gap={6} mb={10}>
+          <span style={{
+            display: "inline-block",
+            padding: "2px 10px",
+            borderRadius: 999,
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            background: sev === "critical" ? "var(--color-critical-light)" : sev === "low" ? "var(--color-success-light)" : "var(--color-warning-light)",
+            color: sev === "critical" ? "var(--color-critical)" : sev === "low" ? "var(--color-success)" : "var(--color-warning)",
+          }}>
+            {severityLabels[sev]}
+          </span>
+        </Group>
+
         {/* Title row */}
         <Group
           justify="space-between"
@@ -506,7 +525,7 @@ export function SignalDetailContent({
             <CommentsSection entityId={signal.id} entityType="signal" />
           </Card>
 
-          {/* Part of Events + Similar Signals — two columns */}
+          {/* Part of Events + Similar Signals - two columns */}
           <Box style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
 
             {/* Part of Events */}
@@ -745,8 +764,8 @@ export function SignalDetailContent({
                         <Text size="xs" c="#737373" mb={6}>Affected Areas</Text>
                         <Group gap={6} wrap="wrap">
                           {locations.map((loc) => {
-                            const levelLabels: Record<number, string> = { 0: "Country", 1: "State", 2: "City" };
-                            const levelLabel = levelLabels[loc.level];
+                            const name = resolveLocationName(loc);
+                            if (!name) return null;
                             return (
                               <Badge
                                 key={loc.id}
@@ -760,7 +779,7 @@ export function SignalDetailContent({
                                   textTransform: "none",
                                 }}
                               >
-                                {loc.name}{levelLabel ? ` (${levelLabel})` : ""}
+                                {name}
                               </Badge>
                             );
                           })}

@@ -1,10 +1,10 @@
 /**
- * Feature flag registry — single source of truth.
+ * Feature flag registry — nav items only.
  *
  * Tier 1 = Core (always on, non-toggleable)
- * Tier 2 = High priority (likely to keep on)
+ * Tier 2 = High priority
  * Tier 3 = Medium priority
- * Tier 4 = Lower priority (most likely to toggle off)
+ * Tier 4 = Lower priority
  */
 
 export interface FeatureFlagDefinition {
@@ -12,7 +12,6 @@ export interface FeatureFlagDefinition {
   label: string;
   description: string;
   tier: 1 | 2 | 3 | 4;
-  category: "core" | "main" | "resources" | "sub-feature";
   defaultEnabled: boolean;
   route?: string;
 }
@@ -20,60 +19,30 @@ export interface FeatureFlagDefinition {
 export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
   // Tier 1 — Core (always on)
   {
-    key: "dashboard",
-    label: "Dashboard",
-    description: "Main overview page with crisis stats and alerts",
+    key: "overview",
+    label: "Overview",
+    description: "Main dashboard with crisis stats and alerts",
     tier: 1,
-    category: "core",
     defaultEnabled: true,
     route: "/dashboard",
-  },
-  {
-    key: "auth",
-    label: "Authentication",
-    description: "Login, logout, and session management",
-    tier: 1,
-    category: "core",
-    defaultEnabled: true,
-    route: "/auth/login",
-  },
-  {
-    key: "profile",
-    label: "Profile",
-    description: "User profile and account settings",
-    tier: 1,
-    category: "core",
-    defaultEnabled: true,
-    route: "/profile",
   },
 
   // Tier 2 — High Priority
   {
     key: "detection",
-    label: "Detection & Alerts",
+    label: "Detection",
     description: "Live alerts, data sources, alert rules, and history",
     tier: 2,
-    category: "main",
     defaultEnabled: true,
     route: "/detection",
   },
   {
     key: "crisis_map",
     label: "Crisis Map",
-    description: "Interactive Mapbox map with crisis markers",
+    description: "Interactive map with crisis markers and data layers",
     tier: 2,
-    category: "resources",
     defaultEnabled: true,
     route: "/map",
-  },
-  {
-    key: "crisis_detail",
-    label: "Crisis Detail",
-    description: "Individual crisis pages with timeline and response data",
-    tier: 2,
-    category: "main",
-    defaultEnabled: true,
-    route: "/crisis/1",
   },
 
   // Tier 3 — Medium Priority
@@ -82,7 +51,6 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     label: "Analysis",
     description: "Situation reports, scenario planning, and impact assessment",
     tier: 3,
-    category: "main",
     defaultEnabled: true,
     route: "/analysis",
   },
@@ -91,7 +59,6 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     label: "Operations",
     description: "Active operations, response strategy, and resource coordination",
     tier: 3,
-    category: "main",
     defaultEnabled: true,
     route: "/operations",
   },
@@ -100,7 +67,6 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     label: "Cash Assistance",
     description: "Cash mapping, assessment, and distribution management",
     tier: 3,
-    category: "main",
     defaultEnabled: true,
     route: "/cash",
   },
@@ -111,34 +77,8 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     label: "Knowledge Hub",
     description: "Document library, contacts panel, and HumChat",
     tier: 4,
-    category: "resources",
     defaultEnabled: true,
     route: "/knowledge",
-  },
-  {
-    key: "llm_analysis",
-    label: "AI/LLM Analysis",
-    description: "AI-powered situation analysis and insights generation",
-    tier: 4,
-    category: "sub-feature",
-    defaultEnabled: true,
-  },
-  {
-    key: "data_layers",
-    label: "Data Layers",
-    description: "Sidebar data layer toggles (cholera, flood, drought, response)",
-    tier: 4,
-    category: "sub-feature",
-    defaultEnabled: true,
-  },
-  {
-    key: "public_docs",
-    label: "Public Docs",
-    description: "Public documentation site at /docs",
-    tier: 4,
-    category: "sub-feature",
-    defaultEnabled: true,
-    route: "/docs",
   },
 ];
 

@@ -18,34 +18,43 @@ export const countryRegions: Record<string, string[]> = Object.fromEntries(
 /* ========== Situation Reports ========== */
 export const situationReports = [
   {
-    title: "Cholera Outbreak Analysis",
-    meta: "Somali Region \u2022 Critical severity",
+    title: "Armed Conflict Displacement Crisis",
+    meta: "Khartoum North, Sudan",
     severity: "Critical",
     severityColor: "#DC2626",
     severityBg: "#FEE2E2",
     markerColor: "#DC2626",
     description:
-      "Detailed epidemiological analysis with 72-hour projection. Recommends immediate WASH intervention.",
+      "Armed clashes in Khartoum North driving secondary displacement from Omdurman reaching critical levels. Bridge crossing points intermittently closed, health facilities non-functional in affected areas.",
+    types: ["pv", "ce"],
+    eventCount: 4,
+    needs: ["shelter", "health", "protection"],
   },
   {
-    title: "Flood Risk Assessment",
-    meta: "Oromia Region \u2022 High severity",
+    title: "Humanitarian Corridor Blockade - El Fasher",
+    meta: "North Darfur, Sudan",
     severity: "High",
     severityColor: "#F59E0B",
     severityBg: "#FEF3C7",
     markerColor: "#F59E0B",
     description:
-      "Weather pattern analysis indicates elevated flooding risk. Pre-positioning recommended.",
+      "Blockade of humanitarian access routes preventing aid delivery to 280,000 affected civilians in North Darfur. Food insecurity approaching famine thresholds in isolated localities.",
+    types: ["fa", "ce"],
+    eventCount: 2,
+    needs: ["food security", "wash"],
   },
   {
-    title: "Drought Monitoring Update",
-    meta: "Afar Region \u2022 Medium severity",
+    title: "Flash Flood - White Nile State",
+    meta: "White Nile, Sudan",
     severity: "Medium",
     severityColor: "#D97706",
     severityBg: "#FEF3C7",
     markerColor: "#D97706",
     description:
-      "Long-term drought indicators show gradual deterioration. Early action window available.",
+      "Flash flooding displacing rural communities along White Nile corridors. Water contamination risk elevated, agricultural damage reported across multiple localities.",
+    types: ["fl"],
+    eventCount: 1,
+    needs: ["wash", "shelter"],
   },
 ];
 

@@ -5,6 +5,7 @@ import type { GqlAlert } from "~/lib/types/graphql";
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry
+  ancestors { id name level }
 `;
 
 const SIGNAL_FIELDS = `
@@ -12,6 +13,7 @@ const SIGNAL_FIELDS = `
   source { id name type }
   title
   description
+  severity
   url
   publishedAt
   collectedAt
@@ -25,6 +27,8 @@ const EVENT_FIELDS = `
   title
   description
   types
+  severity
+  isDummy
   rank
   firstSignalCreatedAt
   lastSignalCreatedAt
@@ -37,8 +41,8 @@ const EVENT_FIELDS = `
 `;
 
 const ALERTS_LIST_QUERY = `
-  query Alerts($status: AlertStatus, $teamId: String) {
-    alerts(status: $status, teamId: $teamId) {
+  query Alerts($status: AlertStatus, $teamId: String, $includeDummy: Boolean) {
+    alerts(status: $status, teamId: $teamId, includeDummy: $includeDummy) {
       id
       status
       event { ${EVENT_FIELDS} }
@@ -74,6 +78,7 @@ export const alertsRouter = createTRPCRouter({
           status: z.enum(["draft", "published", "archived"]).optional(),
           activeOnly: z.boolean().optional(),
           teamId: z.string().nullish(),
+          includeDummy: z.boolean().optional(),
         })
         .optional(),
     )
@@ -82,7 +87,11 @@ export const alertsRouter = createTRPCRouter({
         input?.activeOnly === true ? "published" : input?.status;
       const data = await graphqlFetch<{ alerts: GqlAlert[] }>(
         ALERTS_LIST_QUERY,
-        { ...(status ? { status } : {}), ...(input?.teamId ? { teamId: input.teamId } : {}) },
+        {
+          ...(status ? { status } : {}),
+          ...(input?.teamId ? { teamId: input.teamId } : {}),
+          includeDummy: input?.includeDummy ?? false,
+        },
         cookieHeaders(ctx),
       );
       return { alerts: data.alerts };
@@ -132,7 +141,7 @@ export const alertsRouter = createTRPCRouter({
   }),
 
   getShockTypes: publicProcedure.query(() => {
-    // Shock types are a Django concept — stub for backward compat
+    // Shock types are a Django concept - stub for backward compat
     return { shock_types: [] as Array<{ id: number; name: string; icon: string; color: string }> };
   }),
 
@@ -153,6 +162,17 @@ export const alertsRouter = createTRPCRouter({
       const data = await graphqlFetch<{ createAlert: GqlAlert }>(
         CREATE_ALERT_MUTATION,
         { input },
+        cookieHeaders(ctx),
+      );
+      return data.createAlert;
+    }),
+
+  promoteToAlert: protectedProcedure
+    .input(z.object({ eventId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ createAlert: GqlAlert }>(
+        CREATE_ALERT_MUTATION,
+        { input: { eventId: input.eventId, status: "published" } },
         cookieHeaders(ctx),
       );
       return data.createAlert;

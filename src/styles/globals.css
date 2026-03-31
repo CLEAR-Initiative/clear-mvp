@@ -76,6 +76,49 @@
   --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.10);
 }
 
+/* ============================================
+   Dark mode token overrides
+   Mantine sets [data-mantine-color-scheme="dark"] on <html>.
+   Every component using var(--color-*) gets dark mode for free.
+   ============================================ */
+
+[data-mantine-color-scheme="dark"] {
+  /* Background */
+  --color-bg-primary: #111111;
+  --color-bg-white:   #1A1A1A;
+  --color-bg-muted:   #222222;
+
+  /* Borders */
+  --color-border:      #2D2D2D;
+  --color-border-dark: #3D3D3D;
+
+  /* Text */
+  --color-text-primary:   #F0F0F0;
+  --color-text-secondary: #A3A3A3;
+  --color-text-muted:     #737373;
+
+  /* Brand / Accent — keep orange, adjust light variant */
+  --color-accent:       #E85D3D;
+  --color-accent-light: #2D1A12;
+  --color-accent-hover: #D14D2D;
+
+  /* Severity */
+  --color-critical:       #F87171;
+  --color-critical-light: #2D1212;
+  --color-warning:        #FBBF24;
+  --color-warning-light:  #2D2010;
+  --color-success:        #34D399;
+  --color-success-light:  #0D2D1E;
+  --color-info:           #60A5FA;
+  --color-info-light:     #0D1F3D;
+
+  /* Shadows — stronger in dark to maintain depth */
+  --shadow-xs: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
 /* Base styles */
 body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -112,6 +155,12 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-muted);
+}
+
+/* Spinner */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Pulsing animation for critical alerts */
@@ -191,6 +240,40 @@ body {
 @keyframes bounce {
   0%, 80%, 100% { transform: translateY(0); }
   40% { transform: translateY(-4px); }
+}
+
+/* ── Observe PWA ────────────────────────────────────────────── */
+
+.observe-input:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.observe-btn-submit:hover:not(:disabled) {
+  background: var(--color-accent-hover) !important;
+}
+
+.observe-btn-submit:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.observe-btn-clear:hover:not(:disabled) {
+  background: var(--color-bg-muted) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.observe-locate:hover:not(:disabled) {
+  background: var(--color-accent-hover) !important;
+}
+
+@keyframes observe-pop {
+  0%   { opacity: 0; transform: scale(0.7); }
+  70%  { transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.observe-success-icon {
+  animation: observe-pop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 /* Hide Next.js dev overlay toast (build indicator + error bubble) */

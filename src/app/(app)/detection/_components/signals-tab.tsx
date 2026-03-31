@@ -11,11 +11,15 @@ import {
   Badge,
   Loader,
   TextInput,
+  Popover,
   Menu,
   ActionIcon,
+  Divider,
+  Stack,
 } from "@mantine/core";
 import {
   IconSearch,
+  IconFilter,
   IconSortDescending,
   IconX,
   IconExternalLink,
@@ -69,18 +73,36 @@ export function SignalsTab({
   mapZoom,
 }: SignalsTabProps) {
   const [search, setSearch] = useState("");
-  const [activeSource, setActiveSource] = useState<string | null>(null);
+  const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const allSources = useMemo(
     () => [...new Set(signals.map((s) => s.source.name))].sort(),
     [signals],
   );
 
+  function toggleSource(src: string) {
+    setActiveSources((prev) => {
+      const base = prev ?? new Set(allSources);
+      const next = new Set(base);
+      next.has(src) ? next.delete(src) : next.add(src);
+      return next.size === allSources.length ? null : next;
+    });
+  }
+
+  function clearFilters() {
+    setSearch("");
+    setActiveSources(null);
+    setSortOrder("newest");
+  }
+
+  const isFiltered = search.trim() !== "" || activeSources !== null || sortOrder !== "newest";
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let result = signals.filter((s) => {
-      if (activeSource !== null && s.source.name !== activeSource) return false;
+      if (activeSources !== null && !activeSources.has(s.source.name)) return false;
       if (q) {
         const title = (s.title ?? s.description ?? "").toLowerCase();
         const loc = (s.generalLocation?.name ?? s.originLocation?.name ?? "").toLowerCase();
@@ -99,26 +121,39 @@ export function SignalsTab({
     });
 
     return result;
-  }, [signals, search, activeSource, sortOrder]);
+  }, [signals, search, activeSources, sortOrder]);
 
   const listCountLabel =
     filtered.length === signals.length
       ? String(signals.length)
       : `${filtered.length}/${signals.length}`;
 
-  const isFiltered = search.trim() !== "" || activeSource !== null || sortOrder !== "newest";
-
   return (
     <Box style={{ display: "flex", gap: 24 }}>
       {/* Left: Signal list */}
       <Box style={{ flex: 1, minWidth: 0 }}>
-        {/* Filter row */}
-        <Group gap={8} mb={16}>
+        {/* Toolbar row */}
+        <Group gap={8} mb={12} align="center" style={{ minHeight: 32 }}>
+          <Group gap={6} style={{ flexShrink: 0 }}>
+            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Signals</Text>
+            <Badge
+              size="xs"
+              style={{
+                background: isFiltered ? "var(--color-accent-light)" : "var(--color-bg-muted)",
+                color: isFiltered ? "var(--color-accent)" : "var(--color-text-secondary)",
+                fontWeight: 600,
+              }}
+            >
+              {listCountLabel}
+            </Badge>
+            {loading && <Loader size="xs" />}
+          </Group>
+
           <TextInput
             placeholder="Search signals..."
             value={search}
             onChange={(e) => setSearch(e.currentTarget.value)}
-            leftSection={<IconSearch size={14} color="#A3A3A3" />}
+            leftSection={<IconSearch size={14} color="var(--color-text-muted)" />}
             rightSection={
               search ? (
                 <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setSearch("")}>
@@ -131,44 +166,108 @@ export function SignalsTab({
             styles={{ input: { fontSize: 13 } }}
           />
 
-          {/* Source filter pills */}
-          {allSources.length > 0 && (
-            <Group gap={4}>
+          <Popover
+            opened={filterOpen}
+            onChange={setFilterOpen}
+            position="bottom-end"
+            shadow="md"
+            width={220}
+          >
+            <Popover.Target>
               <button
-                onClick={() => setActiveSource(null)}
+                onClick={() => setFilterOpen((o) => !o)}
                 style={{
-                  padding: "4px 10px",
-                  borderRadius: 999,
-                  border: `1px solid ${activeSource === null ? "#E85D3D" : "#E5E5E5"}`,
-                  background: activeSource === null ? "#FEF2F0" : "#F9FAFB",
-                  color: activeSource === null ? "#E85D3D" : "#737373",
-                  fontSize: 11,
-                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 30,
+                  height: 30,
+                  borderRadius: 6,
+                  border: `1px solid ${isFiltered ? "var(--color-accent)" : "var(--color-border)"}`,
+                  background: "var(--color-bg-white)",
                   cursor: "pointer",
+                  color: isFiltered ? "var(--color-accent)" : "var(--color-text-secondary)",
+                  position: "relative",
+                  flexShrink: 0,
                 }}
               >
-                All
+                <IconFilter size={13} />
+                {isFiltered && (
+                  <Box
+                    style={{
+                      position: "absolute",
+                      top: -3,
+                      right: -3,
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      background: "var(--color-accent)",
+                    }}
+                  />
+                )}
               </button>
-              {allSources.map((src) => (
-                <button
-                  key={src}
-                  onClick={() => setActiveSource(activeSource === src ? null : src)}
-                  style={{
-                    padding: "4px 10px",
-                    borderRadius: 999,
-                    border: `1px solid ${activeSource === src ? "#E85D3D" : "#E5E5E5"}`,
-                    background: activeSource === src ? "#FEF2F0" : "#F9FAFB",
-                    color: activeSource === src ? "#E85D3D" : "#737373",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  {src}
-                </button>
-              ))}
-            </Group>
-          )}
+            </Popover.Target>
+            <Popover.Dropdown p={16}>
+              {allSources.length > 0 && (
+                <>
+                  <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Source</Text>
+                  <Stack gap={4}>
+                    {allSources.map((src) => {
+                      const active = activeSources === null || activeSources.has(src);
+                      return (
+                        <button
+                          key={src}
+                          onClick={() => toggleSource(src)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "5px 10px",
+                            borderRadius: 6,
+                            border: "1px solid",
+                            borderColor: active ? "color-mix(in srgb, var(--color-accent) 20%, transparent)" : "var(--color-border)",
+                            background: active ? "var(--color-accent-light)" : "var(--color-bg-muted)",
+                            color: active ? "var(--color-accent)" : "var(--color-text-muted)",
+                            fontSize: 12,
+                            fontWeight: 500,
+                            cursor: "pointer",
+                            textAlign: "left",
+                          }}
+                        >
+                          {src}
+                          {active && (
+                            <Box style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-accent)" }} />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </Stack>
+                </>
+              )}
+
+              {isFiltered && (
+                <>
+                  <Divider color="var(--color-border)" my={10} />
+                  <button
+                    onClick={clearFilters}
+                    style={{
+                      width: "100%",
+                      padding: "6px",
+                      borderRadius: 6,
+                      border: "1px solid var(--color-border)",
+                      background: "var(--color-bg-muted)",
+                      color: "var(--color-text-secondary)",
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Clear all filters
+                  </button>
+                </>
+              )}
+            </Popover.Dropdown>
+          </Popover>
 
           <Menu shadow="md" width={200} position="bottom-end">
             <Menu.Target>
@@ -176,19 +275,18 @@ export function SignalsTab({
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 6,
-                  padding: "5px 10px",
+                  justifyContent: "center",
+                  width: 30,
+                  height: 30,
                   borderRadius: 6,
-                  border: `1px solid ${sortOrder !== "newest" ? "#E85D3D" : "#E5E5E5"}`,
-                  background: "#fff",
+                  border: `1px solid ${sortOrder !== "newest" ? "var(--color-accent)" : "var(--color-border)"}`,
+                  background: "var(--color-bg-white)",
                   cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: sortOrder !== "newest" ? "#E85D3D" : "#525252",
+                  color: sortOrder !== "newest" ? "var(--color-accent)" : "var(--color-text-secondary)",
+                  flexShrink: 0,
                 }}
               >
                 <IconSortDescending size={13} />
-                Sort
               </button>
             </Menu.Target>
             <Menu.Dropdown>
@@ -199,7 +297,7 @@ export function SignalsTab({
                   style={{
                     fontSize: 12,
                     fontWeight: sortOrder === key ? 600 : 400,
-                    color: sortOrder === key ? "#E85D3D" : "#171717",
+                    color: sortOrder === key ? "var(--color-accent)" : "var(--color-text-primary)",
                   }}
                 >
                   {label}
@@ -209,33 +307,12 @@ export function SignalsTab({
           </Menu>
         </Group>
 
-        {/* Signal list */}
-        <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-          <Box px={16} py={12} style={{ borderBottom: "1px solid #E5E5E5" }}>
-            <Group justify="space-between">
-              <Group gap={8}>
-                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
-                  All Signals
-                </Text>
-                <Badge
-                  size="xs"
-                  style={{
-                    background: isFiltered ? "#FEF2F0" : "#F5F5F5",
-                    color: isFiltered ? "#E85D3D" : "#525252",
-                    fontWeight: 600,
-                  }}
-                >
-                  {listCountLabel}
-                </Badge>
-              </Group>
-              {loading && <Loader size="xs" />}
-            </Group>
-          </Box>
-
-          <Box style={{ maxHeight: "calc(100vh - 460px)", overflowY: "auto" }}>
+        {/* Signal list - no card header */}
+        <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+          <Box style={{ maxHeight: "calc(100vh - 420px)", overflowY: "auto" }}>
             {filtered.length === 0 && !loading && (
               <Box px={16} py={32} style={{ textAlign: "center" }}>
-                <Text c="#A3A3A3" size="sm">
+                <Text c="var(--color-text-muted)" size="sm">
                   {signals.length === 0 ? "No signals found." : "No signals match your filters."}
                 </Text>
               </Box>
@@ -246,7 +323,7 @@ export function SignalsTab({
               const displayTitle =
                 signal.title ??
                 (signal.description
-                  ? signal.description.slice(0, 120) + (signal.description.length > 120 ? "…" : "")
+                  ? signal.description.slice(0, 120) + (signal.description.length > 120 ? "..." : "")
                   : "Untitled signal");
 
               return (
@@ -264,7 +341,7 @@ export function SignalsTab({
                     <Box
                       style={{
                         width: 3,
-                        background: "#737373",
+                        background: "var(--color-text-muted)",
                         flexShrink: 0,
                         borderRadius: 2,
                       }}
@@ -275,8 +352,8 @@ export function SignalsTab({
                           <Badge
                             size="xs"
                             style={{
-                              background: "#F5F5F5",
-                              color: "#525252",
+                              background: "var(--color-bg-muted)",
+                              color: "var(--color-text-secondary)",
                               fontWeight: 600,
                             }}
                           >
@@ -285,23 +362,23 @@ export function SignalsTab({
                           <Badge
                             size="xs"
                             variant="outline"
-                            style={{ color: "#737373", borderColor: "#73737340", fontSize: 10 }}
+                            style={{ color: "var(--color-text-muted)", borderColor: "var(--color-border-dark)", fontSize: 10 }}
                           >
                             {signal.source.type}
                           </Badge>
                         </Group>
-                        <Text size="xs" c="#A3A3A3">
+                        <Text size="xs" c="var(--color-text-muted)">
                           {formatTimeAgo(signal.publishedAt)}
                         </Text>
                       </Group>
-                      <Text fw={600} size="sm" c="#171717" lineClamp={2} mb={4} style={{ lineHeight: 1.4 }}>
+                      <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={2} mb={4} style={{ lineHeight: 1.4 }}>
                         {displayTitle}
                       </Text>
                       <Group gap={12}>
                         {location && (
-                          <Text size="xs" c="#737373">{location.name}</Text>
+                          <Text size="xs" c="var(--color-text-muted)">{location.name}</Text>
                         )}
-                        <Text size="xs" c="#A3A3A3" style={{ marginLeft: "auto" }}>
+                        <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>
                           {formatDate(signal.publishedAt)}
                         </Text>
                         {signal.url && (
@@ -315,7 +392,7 @@ export function SignalsTab({
                               alignItems: "center",
                               gap: 3,
                               fontSize: 11,
-                              color: "#E85D3D",
+                              color: "var(--color-accent)",
                               textDecoration: "none",
                             }}
                           >
@@ -335,11 +412,12 @@ export function SignalsTab({
 
       {/* Right: Crisis Map */}
       <Box style={{ width: 480, flexShrink: 0 }}>
-        <Card p={0} style={{ border: "1px solid #E5E5E5", position: "sticky", top: 24 }}>
-          <Box px={16} py={12} style={{ borderBottom: "1px solid #E5E5E5" }}>
-            <Text fw={600} c="#171717" style={{ fontSize: 14 }}>Crisis Map</Text>
-          </Box>
-          <Box style={{ height: 480 }}>
+        {/* Label row - aligns with toolbar */}
+        <Group mb={12} align="center" style={{ minHeight: 32 }}>
+          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Crisis Map</Text>
+        </Group>
+        <Card p={0} style={{ border: "1px solid var(--color-border)", position: "sticky", top: 24 }}>
+          <Box style={{ height: 524 }}>
             <CrisisMap
               markers={mapMarkers}
               center={mapCenter}

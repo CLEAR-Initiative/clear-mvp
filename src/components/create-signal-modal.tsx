@@ -312,8 +312,8 @@ function SuccessStep({ onClose }: { onClose: () => void }) {
 /* ── Main Modal ──────────────────────────────────────────────── */
 
 const STEP_TITLES: Record<Step, string> = {
-  details: "Create a Signal — Details",
-  media: "Create a Signal — Add Media",
+  details: "Create a Signal - Details",
+  media: "Create a Signal - Add Media",
   success: "Signal Created",
 };
 
@@ -326,7 +326,7 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
   const { activeTeamId } = useTeam();
   const locationsQuery = api.locations.list.useQuery(undefined, { enabled: opened, staleTime: 1000 * 60 * 10 });
   const sourcesQuery = api.signals.sources.useQuery(undefined, { enabled: opened, staleTime: 1000 * 60 * 10 });
-  const createSignal = api.signals.create.useMutation();
+  const createSignal = api.signals.createManual.useMutation();
   const utils = api.useUtils();
 
   const locationOptions = (locationsQuery.data ?? []).map((loc) => ({
@@ -339,15 +339,15 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
     label: s.name,
   }));
 
-  // Auto-select source: prefer "user"/"manual"/"field" source, fall back to gdacs, then first available
+  // Auto-select source: always prefer field_officer (trusted type required by backend)
   useEffect(() => {
     if (!sourcesQuery.data || form.sourceId) return;
     const sources = sourcesQuery.data;
-    const preferred = sources.find((s) =>
-      /user|manual|field/i.test(s.name) || /user|manual|field/i.test(s.type),
-    );
-    const gdacs = sources.find((s) => /gdacs/i.test(s.name) || /gdacs/i.test(s.type));
-    const auto = preferred ?? gdacs ?? sources[0];
+    const auto =
+      sources.find((s) => s.name === "field_officer") ??
+      sources.find((s) => s.type === "field_officer") ??
+      sources.find((s) => /partner|government/i.test(s.type)) ??
+      sources[0];
     if (auto) setForm((p) => ({ ...p, sourceId: auto.id }));
   }, [sourcesQuery.data, form.sourceId]);
 
@@ -377,11 +377,29 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
   async function handleSubmit() {
     setErrorMsg(null);
     try {
+      // Upload files to S3 if any — returns S3 keys (presigned URLs generated at read time)
+      let mediaKeys: string[] = [];
+      if (files.length > 0) {
+        const formData = new FormData();
+        files.forEach(({ file }) => formData.append("files", file));
+
+        const uploadResp = await fetch("/api/proxy/upload", {
+          method: "POST",
+          body: formData,
+        });
+        if (!uploadResp.ok) {
+          throw new Error("File upload failed");
+        }
+        const uploadData = (await uploadResp.json()) as { keys: string[] };
+        mediaKeys = uploadData.keys;
+      }
+
       await createSignal.mutateAsync({
         sourceId: form.sourceId,
         title: form.title.trim(),
-        description: form.description.trim() || undefined,
+        description: form.description.trim() || form.title.trim(),
         locationId: form.locationId || undefined,
+        mediaUrls: mediaKeys.length > 0 ? mediaKeys : undefined,
       });
       void utils.signals.list.invalidate({ teamId: activeTeamId ?? undefined });
       setStep("success");

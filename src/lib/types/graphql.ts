@@ -29,6 +29,7 @@ export interface GqlLocation {
   geoId?: string | null;
   ancestorIds?: string[];
   geometry: GeoJSONGeometry | null | undefined;
+  ancestors?: Array<{ id: string; name: string; level: number }>;
 }
 
 /* ─── Signal ─── */
@@ -38,6 +39,7 @@ export interface GqlSignal {
   source: GqlDataSource;
   title: string | null;
   description: string | null;
+  severity: number | null;
   url: string | null;
   publishedAt: string;
   collectedAt: string;
@@ -47,7 +49,7 @@ export interface GqlSignal {
   events: Array<{ id: string }>;
 }
 
-/** Signal detail — richer events list returned by the `signal(id)` query */
+/** Signal detail - richer events list returned by the `signal(id)` query */
 export interface GqlSignalDetail extends Omit<GqlSignal, "events"> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rawData: Record<string, any>;
@@ -75,7 +77,9 @@ export interface GqlEvent {
   description: string | null;
   /** Free-text category tags e.g. "WASH", "Conflict", "Displacement" */
   types: string[];
-  /** Relative urgency score — used as severity proxy until a dedicated field is added */
+  /** Severity score 1-5 from pipeline classification */
+  severity: number | null;
+  /** Relative urgency score (0-1) */
   rank: number;
   firstSignalCreatedAt: string;
   lastSignalCreatedAt: string;
@@ -116,18 +120,21 @@ export interface GqlAlert {
 
 /* ─── Severity helpers ─── */
 
-/** Map rank/severity score to a UI severity bucket */
-export function mapSeverity(rank: number): "critical" | "high" | "medium" | "low" {
-  if (rank >= 5) return "critical";
-  if (rank >= 4) return "high";
-  if (rank >= 3) return "medium";
+/** Map severity (1-5) or rank to a UI severity bucket.
+ *  Prefers the explicit severity field; falls back to rank * 5. */
+export function mapSeverity(rankOrSeverity: number, severity?: number | null): "critical" | "high" | "medium" | "low" {
+  const s = severity ?? rankOrSeverity;
+  if (s >= 5) return "critical";
+  if (s >= 4) return "high";
+  if (s >= 3) return "medium";
   return "low";
 }
 
-/** Map rank/severity score to a display colour */
-export function severityColor(rank: number): string {
-  if (rank >= 5) return "#DC2626";
-  if (rank >= 4) return "#D97706";
-  if (rank >= 3) return "#F59E0B";
+/** Map severity (1-5) or rank to a display colour */
+export function severityColor(rankOrSeverity: number, severity?: number | null): string {
+  const s = severity ?? rankOrSeverity;
+  if (s >= 5) return "#DC2626";
+  if (s >= 4) return "#D97706";
+  if (s >= 3) return "#F59E0B";
   return "#059669";
 }
