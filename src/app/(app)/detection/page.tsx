@@ -36,7 +36,6 @@ export default function DetectionPage() {
   );
   const eventsQuery = api.events.list.useQuery(
     { teamId: activeTeamId, includeDummy },
-    { enabled: activeTab === "events" || activeTab === "history" },
   );
   const signalsQuery = api.signals.list.useQuery(
     { teamId: activeTeamId, includeDummy },
