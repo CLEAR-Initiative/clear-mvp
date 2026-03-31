@@ -91,9 +91,11 @@ export const subscriptionsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { severity: _severity, ...gqlInput } = input;
       const data = await graphqlFetch<{ subscribeToAlerts: GqlAlertSubscription }>(
         SUBSCRIBE_MUTATION,
-        { input },
+        { input: gqlInput },
         cookieHeaders(ctx),
       );
       return data.subscribeToAlerts;
