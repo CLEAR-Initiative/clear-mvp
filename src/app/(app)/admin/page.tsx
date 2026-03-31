@@ -60,6 +60,8 @@ type GqlUser = {
   image: string | null;
   role: string;
   isActive: boolean;
+  organisations?: { id: string; organisationId: string; role: string }[];
+  teamMemberships?: { id: string; role: string }[];
 };
 
 type FilterMode = "all" | "pending";
@@ -268,9 +270,25 @@ function UsersPanel() {
   const { data, isLoading } = api.auth.listUsers.useQuery(undefined, {
     staleTime: 30_000,
   });
+  const { data: orgsData } = api.auth.listOrganisations.useQuery(undefined, {
+    staleTime: 60_000,
+  });
+  const orgNameMap = Object.fromEntries(
+    (orgsData?.organisations ?? []).map((o) => [o.id, o.name]),
+  );
+  // membershipId (TeamMember.id) → team name, built from org→team→member hierarchy
+  const teamNameByMembershipId = Object.fromEntries(
+    (orgsData?.organisations ?? []).flatMap((o) =>
+      (o.teams ?? []).flatMap((t) =>
+        (t.members ?? []).map((m) => [m.id, t.name]),
+      ),
+    ),
+  );
 
   const [localUsers, setLocalUsers] = useState<GqlUser[]>([]);
   const [filter, setFilter] = useState<FilterMode>("all");
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(
     null,
   );
@@ -281,8 +299,20 @@ function UsersPanel() {
     if (data?.users) setLocalUsers(data.users as GqlUser[]);
   }, [data]);
 
-  const filteredUsers =
-    filter === "pending" ? localUsers.filter((u) => !u.isActive) : localUsers;
+  // Org teams for the cascading team filter
+  const selectedOrg = (orgsData?.organisations ?? []).find((o) => o.id === selectedOrgId);
+  const orgTeamOptions = (selectedOrg?.teams ?? []).map((t) => ({ value: t.id, label: t.name }));
+  // Set of membership IDs belonging to the selected team
+  const selectedTeamMembershipIds = selectedTeamId
+    ? new Set((selectedOrg?.teams ?? []).find((t) => t.id === selectedTeamId)?.members.map((m) => m.id) ?? [])
+    : null;
+
+  const filteredUsers = localUsers.filter((u) => {
+    if (filter === "pending" && u.isActive) return false;
+    if (selectedOrgId && !u.organisations?.some((o) => o.organisationId === selectedOrgId)) return false;
+    if (selectedTeamMembershipIds && !u.teamMemberships?.some((m) => selectedTeamMembershipIds.has(m.id))) return false;
+    return true;
+  });
 
   const pendingCount = localUsers.filter((u) => !u.isActive).length;
 
@@ -401,6 +431,30 @@ function UsersPanel() {
                 },
               }}
             />
+            <Select
+              placeholder="All orgs"
+              data={(orgsData?.organisations ?? []).map((o) => ({ value: o.id, label: o.name }))}
+              value={selectedOrgId}
+              onChange={(v) => { setSelectedOrgId(v); setSelectedTeamId(null); }}
+              size="xs"
+              variant="unstyled"
+              clearable
+              style={{ width: 130 }}
+              styles={{ input: { fontWeight: 600, fontSize: fontSizesPx.lg, color: colors.textPrimary } }}
+            />
+            {selectedOrgId && orgTeamOptions.length > 0 && (
+              <Select
+                placeholder="All teams"
+                data={orgTeamOptions}
+                value={selectedTeamId}
+                onChange={setSelectedTeamId}
+                size="xs"
+                variant="unstyled"
+                clearable
+                style={{ width: 130 }}
+                styles={{ input: { fontWeight: 600, fontSize: fontSizesPx.lg, color: colors.textPrimary } }}
+              />
+            )}
             <Badge
               size="sm"
               variant="light"
@@ -417,7 +471,7 @@ function UsersPanel() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr style={{ background: colors.bgPrimary }}>
-              {(["User", "Role", "Email", "Status", ""] as const).map((h) => (
+              {(["User", "Role", "Email", "Org", "Team", "Status", ""] as const).map((h) => (
                 <Table.Th
                   key={h}
                   style={{
@@ -437,7 +491,7 @@ function UsersPanel() {
           <Table.Tbody>
             {filteredUsers.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={5}>
+                <Table.Td colSpan={7}>
                   <Text
                     c={colors.textMuted}
                     ta="center"
@@ -524,6 +578,38 @@ function UsersPanel() {
                     >
                       {user.email}
                     </Text>
+                  </Table.Td>
+
+                  {/* Org */}
+                  <Table.Td>
+                    {user.organisations && user.organisations.length > 0 ? (
+                      <Stack gap={2}>
+                        {user.organisations.map((o) => (
+                          <Text key={o.id} style={{ fontSize: fontSizesPx.sm, color: colors.textSecondary }}>
+                            {orgNameMap[o.organisationId] ?? o.organisationId.slice(0, 8)}
+                            <Text span c={colors.textMuted} style={{ fontSize: fontSizesPx.xs }}> ({o.role})</Text>
+                          </Text>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Text style={{ fontSize: fontSizesPx.sm, color: colors.textMuted }}>-</Text>
+                    )}
+                  </Table.Td>
+
+                  {/* Team */}
+                  <Table.Td>
+                    {user.teamMemberships && user.teamMemberships.length > 0 ? (
+                      <Stack gap={2}>
+                        {user.teamMemberships.map((m) => (
+                          <Text key={m.id} style={{ fontSize: fontSizesPx.sm, color: colors.textSecondary }}>
+                            {teamNameByMembershipId[m.id] ?? "-"}
+                            <Text span c={colors.textMuted} style={{ fontSize: fontSizesPx.xs }}> ({m.role})</Text>
+                          </Text>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Text style={{ fontSize: fontSizesPx.sm, color: colors.textMuted }}>-</Text>
+                    )}
                   </Table.Td>
 
                   {/* Status + Activate */}
