@@ -25,15 +25,14 @@ import {
   IconHome2,
   IconAlertTriangle,
   IconLayersIntersect,
-  IconShieldExclamation,
-  IconHeartHandshake,
-  IconDroplet,
-  IconBread,
-  IconBook2,
+  IconTrendingUp,
+  IconTrendingDown,
+  IconMinus,
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { getDisasterPills } from "~/lib/disaster-types";
+import { IASC_CLUSTERS } from "~/lib/constants/iasc-clusters";
 import type { MockSituation, MockSituationEvent, MockSituationNeed } from "~/lib/mocks/situations";
 import type { MapMarker } from "~/components/map/crisis-map";
 
@@ -78,16 +77,20 @@ function formatCount(n: number): string {
   return n.toLocaleString();
 }
 
-/** Icon lookup for well-known humanitarian need labels. */
-function needIcon(label: string) {
-  const key = label.toLowerCase();
-  if (key.includes("shelter")) return IconHome2;
-  if (key.includes("health")) return IconHeartHandshake;
-  if (key.includes("wash") || key.includes("water")) return IconDroplet;
-  if (key.includes("food")) return IconBread;
-  if (key.includes("protection")) return IconShieldExclamation;
-  if (key.includes("education")) return IconBook2;
-  return IconAlertTriangle;
+/** Rank needs by severity * PiN so the most pressing sit at the top. */
+function rankNeeds(needs: MockSituationNeed[]): MockSituationNeed[] {
+  return [...needs].sort((a, b) => {
+    const aScore = a.severity * (a.peopleInNeed ?? 1);
+    const bScore = b.severity * (b.peopleInNeed ?? 1);
+    return bScore - aScore;
+  });
+}
+
+function TrendIcon({ trend }: { trend?: "up" | "flat" | "down" }) {
+  if (trend === "up") return <IconTrendingUp size={12} color="var(--color-critical)" />;
+  if (trend === "down") return <IconTrendingDown size={12} color="var(--color-success)" />;
+  if (trend === "flat") return <IconMinus size={12} color="var(--color-text-muted)" />;
+  return null;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -347,9 +350,9 @@ export function SituationDetailContent({
                     <Badge
                       size="xs"
                       style={{
-                        background: "#F3E8FF",
-                        color: "#7C3AED",
-                        border: "1px solid #7C3AED25",
+                        background: "var(--color-ai-light)",
+                        color: "var(--color-ai)",
+                        border: "1px solid var(--color-ai-border)",
                         fontWeight: 600,
                       }}
                     >
@@ -490,24 +493,9 @@ export function SituationDetailContent({
             </Box>
           </Box>
 
-          {/* Humanitarian needs row */}
+          {/* Top humanitarian needs */}
           <Box px={isCompact ? 16 : 24} pb={isCompact ? 16 : 24}>
-            <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-              <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                  Top humanitarian needs
-                </Text>
-              </Box>
-              <Group gap={0} p={0} wrap="nowrap" style={{ overflowX: "auto" }}>
-                {situation.needs.map((need, idx) => (
-                  <NeedChip
-                    key={need.label}
-                    need={need}
-                    isLast={idx === situation.needs.length - 1}
-                  />
-                ))}
-              </Group>
-            </Card>
+            <TopNeedsCard needs={rankNeeds(situation.needs).slice(0, 5)} />
           </Box>
 
           {/* Comments placeholder (full comments wiring requires backend `situation` entityType) */}
@@ -575,24 +563,49 @@ function KpiCard({
   );
 }
 
-function NeedChip({ need, isLast }: { need: MockSituationNeed; isLast: boolean }) {
-  const Icon = needIcon(need.label);
-  const colors = severityColors[need.severity] ?? severityColors.medium!;
+function TopNeedsCard({ needs }: { needs: MockSituationNeed[] }) {
+  return (
+    <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+      <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
+        <Group justify="space-between">
+          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
+            Top humanitarian needs
+          </Text>
+          <Text size="xs" c="var(--color-text-muted)">
+            IASC clusters · ranked by severity &amp; PiN
+          </Text>
+        </Group>
+      </Box>
+      <Stack gap={0}>
+        {needs.map((need, idx) => (
+          <NeedRow key={need.cluster} need={need} isLast={idx === needs.length - 1} />
+        ))}
+      </Stack>
+    </Card>
+  );
+}
+
+function NeedRow({ need, isLast }: { need: MockSituationNeed; isLast: boolean }) {
+  const cluster = IASC_CLUSTERS[need.cluster];
+  const sev = mapSeverity(need.severity);
+  const colors = severityColors[sev] ?? severityColors.medium!;
+  const ClusterIcon = cluster.icon;
+  const coverage =
+    need.peopleInNeed && need.peopleTargeted
+      ? Math.round((need.peopleTargeted / need.peopleInNeed) * 100)
+      : null;
+
   return (
     <Box
       px={16}
       py={14}
-      style={{
-        flex: "1 0 auto",
-        minWidth: 140,
-        borderRight: isLast ? undefined : "1px solid var(--color-border)",
-      }}
+      style={{ borderBottom: isLast ? undefined : "1px solid var(--color-border)" }}
     >
-      <Group gap={10} wrap="nowrap" align="center">
+      <Group gap={12} wrap="nowrap" align="center">
         <Box
           style={{
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
             borderRadius: 8,
             background: colors.bg,
             color: colors.text,
@@ -602,23 +615,63 @@ function NeedChip({ need, isLast }: { need: MockSituationNeed; isLast: boolean }
             flexShrink: 0,
           }}
         >
-          <Icon size={16} />
+          <ClusterIcon size={18} />
         </Box>
-        <Box style={{ minWidth: 0 }}>
-          <Text fw={600} size="sm" c="var(--color-text-primary)">
-            {need.label}
-          </Text>
-          <Text size="xs" c={colors.text} fw={500} style={{ textTransform: "capitalize" }}>
-            {severityLabels[need.severity]}
-          </Text>
+
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Group gap={8} wrap="nowrap" align="center" mb={2}>
+            <Text fw={600} size="sm" c="var(--color-text-primary)">
+              {cluster.shortLabel ?? cluster.label}
+            </Text>
+            <SeverityPill severity={sev} />
+            <TrendIcon trend={need.trend} />
+          </Group>
+          {need.detail && (
+            <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.4 }}>
+              {need.detail}
+            </Text>
+          )}
+        </Box>
+
+        {/* PiN + coverage (right-aligned, stable width) */}
+        <Box style={{ textAlign: "right", flexShrink: 0, minWidth: 110 }}>
+          {need.peopleInNeed !== undefined ? (
+            <>
+              <Text fw={700} size="sm" c="var(--color-text-primary)" style={{ letterSpacing: "-0.01em" }}>
+                {formatCount(need.peopleInNeed)}
+              </Text>
+              <Text size="xs" c="var(--color-text-muted)">
+                in need
+                {coverage !== null ? ` · ${coverage}% covered` : ""}
+              </Text>
+            </>
+          ) : (
+            <Text size="xs" c="var(--color-text-muted)">No PiN estimate</Text>
+          )}
         </Box>
       </Group>
-      {need.detail && (
-        <Text size="xs" c="var(--color-text-muted)" mt={6} style={{ lineHeight: 1.4 }}>
-          {need.detail}
-        </Text>
-      )}
     </Box>
+  );
+}
+
+function SeverityPill({ severity }: { severity: "critical" | "high" | "medium" | "low" }) {
+  const colors = severityColors[severity] ?? severityColors.medium!;
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "1px 8px",
+        borderRadius: 999,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+        background: colors.bg,
+        color: colors.text,
+      }}
+    >
+      {severityLabels[severity]}
+    </span>
   );
 }
 
@@ -755,73 +808,19 @@ function EventsTimeline({ events }: { events: MockSituationEvent[] }) {
 }
 
 function NeedsAssessmentPanel({ situation }: { situation: MockSituation }) {
+  const ranked = rankNeeds(situation.needs);
   return (
     <Box p={24}>
       <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
         <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
           <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-            Needs assessment
+            Needs assessment (all clusters)
           </Text>
         </Box>
-        <Stack gap={0} p={0}>
-          {situation.needs.map((need, idx) => {
-            const colors = severityColors[need.severity] ?? severityColors.medium!;
-            const Icon = needIcon(need.label);
-            const isLast = idx === situation.needs.length - 1;
-            return (
-              <Box
-                key={need.label}
-                px={16}
-                py={14}
-                style={{ borderBottom: isLast ? undefined : "1px solid var(--color-border)" }}
-              >
-                <Group gap={12} align="flex-start">
-                  <Box
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 8,
-                      background: colors.bg,
-                      color: colors.text,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Icon size={18} />
-                  </Box>
-                  <Box style={{ flex: 1 }}>
-                    <Group justify="space-between">
-                      <Text fw={600} c="var(--color-text-primary)">
-                        {need.label}
-                      </Text>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "1px 8px",
-                          borderRadius: 999,
-                          fontSize: 10,
-                          fontWeight: 700,
-                          letterSpacing: "0.04em",
-                          textTransform: "uppercase",
-                          background: colors.bg,
-                          color: colors.text,
-                        }}
-                      >
-                        {severityLabels[need.severity]}
-                      </span>
-                    </Group>
-                    {need.detail && (
-                      <Text size="sm" c="var(--color-text-secondary)" mt={4} style={{ lineHeight: 1.5 }}>
-                        {need.detail}
-                      </Text>
-                    )}
-                  </Box>
-                </Group>
-              </Box>
-            );
-          })}
+        <Stack gap={0}>
+          {ranked.map((need, idx) => (
+            <NeedRow key={need.cluster} need={need} isLast={idx === ranked.length - 1} />
+          ))}
         </Stack>
       </Card>
     </Box>

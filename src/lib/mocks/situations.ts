@@ -5,7 +5,12 @@
  * (id, severity, location, summary, needs + a title) joined with related
  * events via `event_to_situation`. Replace with real tRPC/GraphQL when
  * the backend ships the type.
+ *
+ * Needs follow IASC cluster codes + JIAF-style 1-5 severity (matching the
+ * platform's existing event/signal severity scale).
  */
+
+import type { IASCClusterCode } from "~/lib/constants/iasc-clusters";
 
 export interface MockSituationEvent {
   id: string;
@@ -19,12 +24,16 @@ export interface MockSituationEvent {
   location?: string;
 }
 
+/** A single cluster-level need for a situation. Mirrors HNO row shape. */
 export interface MockSituationNeed {
-  /** Short label, e.g. "Shelter". */
-  label: string;
-  /** Severity bucket for colour-coding. */
-  severity: "critical" | "high" | "medium" | "low";
-  /** Optional free-text detail. */
+  cluster: IASCClusterCode;
+  /** 1-5, same scale as event/signal severity. */
+  severity: number;
+  /** People in Need (PiN). */
+  peopleInNeed?: number;
+  /** Subset of PiN the response plan aims to reach. */
+  peopleTargeted?: number;
+  trend?: "up" | "flat" | "down";
   detail?: string;
 }
 
@@ -67,12 +76,12 @@ export const MOCK_SITUATIONS: MockSituation[] = [
     peopleDisplaced: 78_500,
     households: 15_700,
     needs: [
-      { label: "Shelter", severity: "critical", detail: "Emergency shelter for 15k+ households" },
-      { label: "Health", severity: "critical", detail: "3 hospitals damaged, medical supplies depleted" },
-      { label: "WASH", severity: "high", detail: "Primary water points offline" },
-      { label: "Food", severity: "high", detail: "Supply corridor cut" },
-      { label: "Protection", severity: "high" },
-      { label: "Education", severity: "medium" },
+      { cluster: "SHL", severity: 5, peopleInNeed: 127_000, peopleTargeted: 45_000, trend: "up",   detail: "Emergency shelter for 15k+ households" },
+      { cluster: "HLT", severity: 5, peopleInNeed: 180_000, peopleTargeted: 72_000, trend: "up",   detail: "3 hospitals damaged, medical supplies depleted" },
+      { cluster: "WSH", severity: 4, peopleInNeed: 180_000, peopleTargeted: 90_000, trend: "up",   detail: "Primary water points offline" },
+      { cluster: "FSL", severity: 4, peopleInNeed: 220_000, peopleTargeted: 80_000, trend: "up",   detail: "Supply corridor cut" },
+      { cluster: "PRO", severity: 4, peopleInNeed: 140_000, trend: "flat" },
+      { cluster: "EDU", severity: 3, peopleInNeed:  58_000, trend: "flat" },
     ],
     events: [
       {
