@@ -30,11 +30,23 @@ import {
   IconMinus,
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
+import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { getDisasterPills } from "~/lib/disaster-types";
-import { IASC_CLUSTERS } from "~/lib/constants/iasc-clusters";
-import type { MockSituation, MockSituationEvent, MockSituationNeed } from "~/lib/mocks/situations";
+import { resolveLocationName } from "~/lib/location";
+import { IASC_CLUSTERS, type IASCClusterCode } from "~/lib/constants/iasc-clusters";
+import type { GqlSituation } from "~/server/api/routers/situations";
 import type { MapMarker } from "~/components/map/crisis-map";
+
+/** Humanitarian need row - parsed from a situation's free-form `needs` JSON. */
+interface ClusterNeed {
+  cluster: IASCClusterCode;
+  severity: number;
+  peopleInNeed?: number;
+  peopleTargeted?: number;
+  trend?: "up" | "flat" | "down";
+  detail?: string;
+}
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -78,12 +90,62 @@ function formatCount(n: number): string {
 }
 
 /** Rank needs by severity * PiN so the most pressing sit at the top. */
-function rankNeeds(needs: MockSituationNeed[]): MockSituationNeed[] {
+function rankNeeds(needs: ClusterNeed[]): ClusterNeed[] {
   return [...needs].sort((a, b) => {
     const aScore = a.severity * (a.peopleInNeed ?? 1);
     const bScore = b.severity * (b.peopleInNeed ?? 1);
     return bScore - aScore;
   });
+}
+
+/**
+ * Parse the backend's free-form `needs` JSON into a typed ClusterNeed[].
+ * Invalid entries are silently dropped so a partially-bad payload still
+ * renders what it can.
+ */
+function parseNeeds(json: unknown): ClusterNeed[] {
+  if (!Array.isArray(json)) return [];
+  const valid: ClusterNeed[] = [];
+  for (const item of json) {
+    if (typeof item !== "object" || item === null) continue;
+    const rec = item as Record<string, unknown>;
+    if (typeof rec.cluster !== "string" || !(rec.cluster in IASC_CLUSTERS)) continue;
+    if (typeof rec.severity !== "number") continue;
+    valid.push({
+      cluster: rec.cluster as IASCClusterCode,
+      severity: rec.severity,
+      peopleInNeed: typeof rec.peopleInNeed === "number" ? rec.peopleInNeed : undefined,
+      peopleTargeted: typeof rec.peopleTargeted === "number" ? rec.peopleTargeted : undefined,
+      trend:
+        rec.trend === "up" || rec.trend === "flat" || rec.trend === "down" ? rec.trend : undefined,
+      detail: typeof rec.detail === "string" ? rec.detail : undefined,
+    });
+  }
+  return valid;
+}
+
+/** BigInt field comes back from GraphQL as a string (or null). */
+function bigIntStrToNumber(s: string | null | undefined): number | null {
+  if (s === null || s === undefined) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Extract [lng, lat] from a GqlLocation's Point geometry, if present. */
+function locationCoords(location: GqlLocation | null | undefined): [number, number] | null {
+  const geom = location?.geometry as
+    | { type?: string; coordinates?: unknown }
+    | null
+    | undefined;
+  if (!geom || geom.type !== "Point" || !Array.isArray(geom.coordinates)) return null;
+  const [lng, lat] = geom.coordinates as unknown as number[];
+  if (typeof lng !== "number" || typeof lat !== "number") return null;
+  return [lng, lat];
+}
+
+/** Pick the best representative location for an event. */
+function pickEventLocation(event: GqlEvent): GqlLocation | null {
+  return event.generalLocation ?? event.originLocation ?? event.destinationLocation ?? null;
 }
 
 function TrendIcon({ trend }: { trend?: "up" | "flat" | "down" }) {
@@ -96,10 +158,10 @@ function TrendIcon({ trend }: { trend?: "up" | "flat" | "down" }) {
 // ── Component ────────────────────────────────────────────────────────────────
 
 interface SituationDetailContentProps {
-  situation: MockSituation | null | undefined;
+  situation: GqlSituation | null | undefined;
   loading: boolean;
   mode: "page" | "drawer";
-  relatedSituations?: MockSituation[];
+  relatedSituations?: GqlSituation[];
 }
 
 export function SituationDetailContent({
@@ -112,37 +174,50 @@ export function SituationDetailContent({
   const [leftPanelTab, setLeftPanelTab] = useState<string | null>("events");
   const [layers, setLayers] = useState({ events: true, roads: false, population: false });
 
+  const needs = useMemo(() => parseNeeds(situation?.needs), [situation?.needs]);
+  const events = situation?.events ?? [];
+
+  // Pick a primary coordinate for the map centre. Prefer the situation's own
+  // generalLocation, fall back to the first event with a resolvable location,
+  // finally default to a Sudan-wide view.
+  const primaryCoords = useMemo<[number, number]>(() => {
+    const fromSituation = locationCoords(situation?.generalLocation);
+    if (fromSituation) return fromSituation;
+    for (const e of events) {
+      const c = locationCoords(pickEventLocation(e));
+      if (c) return c;
+    }
+    return [30, 14];
+  }, [situation, events]);
+
   const mapMarkers = useMemo<MapMarker[]>(() => {
     if (!situation) return [];
-    const [lng, lat] = situation.location.coordinates;
-    // Primary situation marker plus a marker per event (jittered around the centre).
     const markers: MapMarker[] = [
       {
         id: 0,
-        lng,
-        lat,
-        title: situation.title,
+        lng: primaryCoords[0],
+        lat: primaryCoords[1],
+        title: situation.title ?? "Situation",
         severity: mapSeverity(situation.severity),
-        description: situation.location.name,
+        description: resolveLocationName(situation.generalLocation) ?? undefined,
       },
     ];
     if (layers.events) {
-      situation.events.forEach((e, idx) => {
-        // Deterministic jitter so the markers don't overlap the centre pin.
-        const angle = (idx / situation.events.length) * Math.PI * 2;
+      events.forEach((e, idx) => {
+        const c = locationCoords(pickEventLocation(e)) ?? primaryCoords;
         markers.push({
           id: idx + 1,
-          lng: lng + Math.cos(angle) * 0.25,
-          lat: lat + Math.sin(angle) * 0.25,
-          title: e.title,
-          severity: mapSeverity(e.severity),
-          description: e.location ?? situation.location.name,
-          type: e.type,
+          lng: c[0],
+          lat: c[1],
+          title: e.title ?? e.types[0] ?? "Event",
+          severity: mapSeverity(e.rank, e.severity),
+          description: resolveLocationName(pickEventLocation(e)) ?? undefined,
+          type: e.types[0],
         });
       });
     }
     return markers;
-  }, [situation, layers.events]);
+  }, [situation, events, layers.events, primaryCoords]);
 
   if (loading) {
     return (
@@ -182,10 +257,24 @@ export function SituationDetailContent({
   const sev = mapSeverity(situation.severity);
   const isCompact = mode === "drawer";
 
-  // Events sorted newest first. Mock data is already pre-sorted but guard anyway.
-  const eventsNewestFirst = [...situation.events].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-  );
+  const title = situation.title ?? "Untitled situation";
+  const locationName = resolveLocationName(situation.generalLocation);
+  const populationAffected = bigIntStrToNumber(situation.populationAffected);
+  const populationInArea = bigIntStrToNumber(situation.populationInArea);
+
+  const updatedAt: string | null = events.reduce<string | null>((latest, e) => {
+    const d = e.lastSignalCreatedAt || e.firstSignalCreatedAt;
+    if (!d) return latest;
+    if (!latest) return d;
+    return new Date(d).getTime() > new Date(latest).getTime() ? d : latest;
+  }, null);
+
+  // Events sorted newest first using their lastSignalCreatedAt timestamp.
+  const eventsNewestFirst = [...events].sort((a, b) => {
+    const dateA = new Date(a.lastSignalCreatedAt || a.firstSignalCreatedAt).getTime();
+    const dateB = new Date(b.lastSignalCreatedAt || b.firstSignalCreatedAt).getTime();
+    return dateB - dateA;
+  });
 
   return (
     <Box>
@@ -219,7 +308,10 @@ export function SituationDetailContent({
                   size="xs"
                   w={220}
                   placeholder="Switch situation"
-                  data={relatedSituations.map((s) => ({ value: s.id, label: s.title }))}
+                  data={relatedSituations.map((s) => ({
+                    value: s.id,
+                    label: s.title ?? "Untitled situation",
+                  }))}
                   value={null}
                   onChange={(val) => {
                     if (val) window.location.href = `/situation/${val}`;
@@ -283,27 +375,31 @@ export function SituationDetailContent({
             c="var(--color-text-primary)"
             style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3, flex: 1 }}
           >
-            {situation.title}
+            {title}
           </Text>
         </Group>
 
         <Group gap={16} wrap="wrap">
-          <Group gap={4}>
-            <IconMapPin size={13} color="var(--color-text-muted)" />
-            <Text size="xs" c="var(--color-text-secondary)" fw={500}>
-              {situation.location.name}
-            </Text>
-          </Group>
-          <Group gap={4}>
-            <IconCalendar size={13} color="var(--color-text-muted)" />
-            <Text size="xs" c="var(--color-text-secondary)">
-              Updated {formatDate(situation.updatedAt)}
-            </Text>
-          </Group>
+          {locationName && (
+            <Group gap={4}>
+              <IconMapPin size={13} color="var(--color-text-muted)" />
+              <Text size="xs" c="var(--color-text-secondary)" fw={500}>
+                {locationName}
+              </Text>
+            </Group>
+          )}
+          {updatedAt && (
+            <Group gap={4}>
+              <IconCalendar size={13} color="var(--color-text-muted)" />
+              <Text size="xs" c="var(--color-text-secondary)">
+                Updated {formatDate(updatedAt)}
+              </Text>
+            </Group>
+          )}
           <Group gap={4}>
             <IconLayersIntersect size={13} color="var(--color-text-muted)" />
             <Text size="xs" c="var(--color-text-secondary)" fw={500}>
-              {situation.events.length} event{situation.events.length !== 1 ? "s" : ""}
+              {events.length} event{events.length !== 1 ? "s" : ""}
             </Text>
           </Group>
         </Group>
@@ -325,7 +421,7 @@ export function SituationDetailContent({
       )}
 
       {activeTab === "needs" ? (
-        <NeedsAssessmentPanel situation={situation} />
+        <NeedsAssessmentPanel needs={needs} />
       ) : (
         <>
           {/* Body: two-column */}
@@ -362,11 +458,7 @@ export function SituationDetailContent({
                 </Box>
                 <Stack gap={12} p={16}>
                   <Text size="sm" c="var(--color-text-primary)" style={{ lineHeight: 1.6 }}>
-                    {situation.summary}
-                  </Text>
-                  <Box style={{ height: 1, background: "var(--color-border)" }} />
-                  <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
-                    {situation.description}
+                    {situation.summary ?? "No summary available yet."}
                   </Text>
                 </Stack>
               </Card>
@@ -417,19 +509,19 @@ export function SituationDetailContent({
                 <KpiCard
                   icon={<IconUsers size={18} color="var(--color-accent)" />}
                   iconBg="var(--color-accent-light)"
-                  value={formatCount(situation.peopleAffected)}
+                  value={populationAffected !== null ? formatCount(populationAffected) : "-"}
                   label="People affected"
                 />
                 <KpiCard
                   icon={<IconUsersGroup size={18} color="var(--color-info)" />}
                   iconBg="var(--color-info-light)"
-                  value={formatCount(situation.peopleDisplaced)}
-                  label="People displaced"
+                  value={populationInArea !== null ? formatCount(populationInArea) : "-"}
+                  label="Population in area"
                 />
                 <KpiCard
                   icon={<IconHome2 size={18} color="var(--color-warning)" />}
                   iconBg="var(--color-warning-light)"
-                  value={situation.households ? formatCount(situation.households) : "-"}
+                  value="-"
                   label="Households"
                 />
               </Group>
@@ -447,7 +539,7 @@ export function SituationDetailContent({
               >
                 <CrisisMap
                   markers={mapMarkers}
-                  center={situation.location.coordinates}
+                  center={primaryCoords}
                   zoom={6}
                   className="w-full h-full"
                 />
@@ -495,7 +587,7 @@ export function SituationDetailContent({
 
           {/* Top humanitarian needs */}
           <Box px={isCompact ? 16 : 24} pb={isCompact ? 16 : 24}>
-            <TopNeedsCard needs={rankNeeds(situation.needs).slice(0, 5)} />
+            <TopNeedsCard needs={rankNeeds(needs).slice(0, 5)} />
           </Box>
 
           {/* Comments placeholder (full comments wiring requires backend `situation` entityType) */}
@@ -563,7 +655,7 @@ function KpiCard({
   );
 }
 
-function TopNeedsCard({ needs }: { needs: MockSituationNeed[] }) {
+function TopNeedsCard({ needs }: { needs: ClusterNeed[] }) {
   return (
     <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
       <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
@@ -585,7 +677,7 @@ function TopNeedsCard({ needs }: { needs: MockSituationNeed[] }) {
   );
 }
 
-function NeedRow({ need, isLast }: { need: MockSituationNeed; isLast: boolean }) {
+function NeedRow({ need, isLast }: { need: ClusterNeed; isLast: boolean }) {
   const cluster = IASC_CLUSTERS[need.cluster];
   const sev = mapSeverity(need.severity);
   const colors = severityColors[sev] ?? severityColors.medium!;
@@ -675,7 +767,7 @@ function SeverityPill({ severity }: { severity: "critical" | "high" | "medium" |
   );
 }
 
-function EventsTimeline({ events }: { events: MockSituationEvent[] }) {
+function EventsTimeline({ events }: { events: GqlEvent[] }) {
   if (events.length === 0) {
     return (
       <Box p={24} style={{ textAlign: "center" }}>
@@ -688,9 +780,13 @@ function EventsTimeline({ events }: { events: MockSituationEvent[] }) {
   return (
     <Box p={0}>
       {events.map((event, idx) => {
-        const sev = mapSeverity(event.severity);
-        const dotColor = severityColor(event.severity);
+        const sev = mapSeverity(event.rank, event.severity);
+        const dotColor = severityColor(event.rank, event.severity);
         const isLast = idx === events.length - 1;
+        const date = event.lastSignalCreatedAt || event.firstSignalCreatedAt;
+        const displayTitle = event.title ?? event.types[0] ?? "Event";
+        const primaryType = event.types[0];
+        const locationLabel = resolveLocationName(pickEventLocation(event));
         return (
           <Link
             key={event.id}
@@ -745,29 +841,32 @@ function EventsTimeline({ events }: { events: MockSituationEvent[] }) {
               <Box style={{ flex: 1, minWidth: 0 }}>
                 <Group justify="space-between" wrap="nowrap" gap={8} mb={4}>
                   <Text fw={600} size="sm" c="var(--color-text-primary)" style={{ flex: 1 }}>
-                    {event.title}
+                    {displayTitle}
                   </Text>
-                  <Text size="xs" c="var(--color-text-muted)" style={{ flexShrink: 0 }}>
-                    {formatTimeAgo(event.date)}
-                  </Text>
+                  {date && (
+                    <Text size="xs" c="var(--color-text-muted)" style={{ flexShrink: 0 }}>
+                      {formatTimeAgo(date)}
+                    </Text>
+                  )}
                 </Group>
                 <Group gap={6} mb={6} wrap="wrap">
-                  {getDisasterPills([event.type]).map((pill) => (
-                    <span
-                      key={pill.label}
-                      style={{
-                        display: "inline-block",
-                        padding: "1px 8px",
-                        borderRadius: 999,
-                        fontSize: 10,
-                        fontWeight: 600,
-                        color: pill.color,
-                        background: pill.bg,
-                      }}
-                    >
-                      {pill.label}
-                    </span>
-                  ))}
+                  {primaryType &&
+                    getDisasterPills([primaryType]).map((pill) => (
+                      <span
+                        key={pill.label}
+                        style={{
+                          display: "inline-block",
+                          padding: "1px 8px",
+                          borderRadius: 999,
+                          fontSize: 10,
+                          fontWeight: 600,
+                          color: pill.color,
+                          background: pill.bg,
+                        }}
+                      >
+                        {pill.label}
+                      </span>
+                    ))}
                   <span
                     style={{
                       display: "inline-block",
@@ -783,21 +882,25 @@ function EventsTimeline({ events }: { events: MockSituationEvent[] }) {
                   >
                     {severityLabels[sev]}
                   </span>
-                  {event.location && (
+                  {locationLabel && (
                     <Group gap={3}>
                       <IconMapPin size={11} color="var(--color-text-muted)" />
                       <Text size="xs" c="var(--color-text-muted)">
-                        {event.location}
+                        {locationLabel}
                       </Text>
                     </Group>
                   )}
-                  <Text size="xs" c="var(--color-text-muted)">
-                    {formatDateTime(event.date)}
-                  </Text>
+                  {date && (
+                    <Text size="xs" c="var(--color-text-muted)">
+                      {formatDateTime(date)}
+                    </Text>
+                  )}
                 </Group>
-                <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }}>
-                  {event.summary}
-                </Text>
+                {event.description && (
+                  <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }}>
+                    {event.description}
+                  </Text>
+                )}
               </Box>
             </Box>
           </Link>
@@ -807,8 +910,17 @@ function EventsTimeline({ events }: { events: MockSituationEvent[] }) {
   );
 }
 
-function NeedsAssessmentPanel({ situation }: { situation: MockSituation }) {
-  const ranked = rankNeeds(situation.needs);
+function NeedsAssessmentPanel({ needs }: { needs: ClusterNeed[] }) {
+  const ranked = rankNeeds(needs);
+  if (ranked.length === 0) {
+    return (
+      <Box p={24} style={{ textAlign: "center" }}>
+        <Text size="sm" c="var(--color-text-muted)">
+          No needs recorded for this situation yet.
+        </Text>
+      </Box>
+    );
+  }
   return (
     <Box p={24}>
       <Card p={0} style={{ border: "1px solid var(--color-border)" }}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { use } from "react";
-import { getMockSituation, MOCK_SITUATIONS } from "~/lib/mocks/situations";
+import { api } from "~/trpc/react";
 import { SituationDetailContent } from "~/components/situation-detail/situation-detail-content";
 
 export default function SituationDetailPage({
@@ -11,15 +11,23 @@ export default function SituationDetailPage({
 }) {
   const { id } = use(params);
 
-  // TODO: replace with api.situations.get.useQuery({ id }) once backend ships.
-  const situation = getMockSituation(id);
+  const situationQuery = api.situations.get.useQuery(
+    { id },
+    { enabled: !!id },
+  );
+
+  const relatedQuery = api.situations.list.useQuery(undefined, {
+    enabled: !!situationQuery.data,
+  });
+
+  const related = (relatedQuery.data ?? []).filter((s) => s.id !== id);
 
   return (
     <SituationDetailContent
-      situation={situation}
-      loading={false}
+      situation={situationQuery.data ?? null}
+      loading={situationQuery.isLoading}
       mode="page"
-      relatedSituations={MOCK_SITUATIONS.filter((s) => s.id !== id)}
+      relatedSituations={related}
     />
   );
 }
