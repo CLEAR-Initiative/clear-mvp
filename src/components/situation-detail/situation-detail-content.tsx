@@ -37,6 +37,7 @@ import { resolveLocationName } from "~/lib/location";
 import { IASC_CLUSTERS, type IASCClusterCode } from "~/lib/constants/iasc-clusters";
 import type { GqlSituation } from "~/server/api/routers/situations";
 import type { MapMarker } from "~/components/map/crisis-map";
+import { CommentsSection } from "~/components/comments-section";
 
 /** Humanitarian need row - parsed from a situation's free-form `needs` JSON. */
 interface ClusterNeed {
@@ -97,6 +98,22 @@ function rankNeeds(needs: ClusterNeed[]): ClusterNeed[] {
     return bScore - aScore;
   });
 }
+
+/**
+ * Demo needs used as a placeholder visual while the backend has no real
+ * IASC-cluster needs payloads populated yet. Shown when parseNeeds()
+ * returns an empty array so the UI doesn't look broken.
+ *
+ * TODO: remove once the pipeline starts writing real `needs` JSON.
+ */
+const DEMO_NEEDS: ClusterNeed[] = [
+  { cluster: "SHL", severity: 5, peopleInNeed: 127_000, peopleTargeted: 45_000, trend: "up", detail: "Emergency shelter for 15k+ households" },
+  { cluster: "HLT", severity: 5, peopleInNeed: 180_000, peopleTargeted: 72_000, trend: "up", detail: "3 hospitals damaged, medical supplies depleted" },
+  { cluster: "WSH", severity: 4, peopleInNeed: 180_000, peopleTargeted: 90_000, trend: "up", detail: "Primary water points offline" },
+  { cluster: "FSL", severity: 4, peopleInNeed: 220_000, peopleTargeted: 80_000, trend: "up", detail: "Supply corridor cut" },
+  { cluster: "PRO", severity: 4, peopleInNeed: 140_000, trend: "flat" },
+  { cluster: "EDU", severity: 3, peopleInNeed: 58_000, trend: "flat" },
+];
 
 /**
  * Parse the backend's free-form `needs` JSON into a typed ClusterNeed[].
@@ -174,7 +191,10 @@ export function SituationDetailContent({
   const [leftPanelTab, setLeftPanelTab] = useState<string | null>("events");
   const [layers, setLayers] = useState({ events: true, roads: false, population: false });
 
-  const needs = useMemo(() => parseNeeds(situation?.needs), [situation?.needs]);
+  const parsedNeeds = useMemo(() => parseNeeds(situation?.needs), [situation?.needs]);
+  // Fall back to demo data when the backend hasn't populated needs yet.
+  const needs = parsedNeeds.length > 0 ? parsedNeeds : DEMO_NEEDS;
+  const needsAreDemo = parsedNeeds.length === 0;
   const events = situation?.events ?? [];
 
   // Pick a primary coordinate for the map centre. Prefer the situation's own
@@ -197,7 +217,7 @@ export function SituationDetailContent({
         id: 0,
         lng: primaryCoords[0],
         lat: primaryCoords[1],
-        title: situation.title ?? "Situation",
+        title: situation.title ?? "Crisis",
         severity: mapSeverity(situation.severity),
         description: resolveLocationName(situation.generalLocation) ?? undefined,
       },
@@ -231,9 +251,9 @@ export function SituationDetailContent({
     return (
       <Box p={48} style={{ textAlign: "center" }}>
         <IconAlertTriangle size={40} color="var(--color-warning)" style={{ margin: "0 auto 16px" }} />
-        <Text fw={600} size="lg">Situation not found</Text>
+        <Text fw={600} size="lg">Crisis not found</Text>
         <Text size="sm" c="var(--color-text-muted)" mt={8}>
-          This situation may have been removed or the ID is invalid.
+          This crisis may have been removed or the ID is invalid.
         </Text>
         {mode === "page" && (
           <Link
@@ -257,7 +277,7 @@ export function SituationDetailContent({
   const sev = mapSeverity(situation.severity);
   const isCompact = mode === "drawer";
 
-  const title = situation.title ?? "Untitled situation";
+  const title = situation.title ?? "Untitled crisis";
   const locationName = resolveLocationName(situation.generalLocation);
   const populationAffected = bigIntStrToNumber(situation.populationAffected);
   const populationInArea = bigIntStrToNumber(situation.populationInArea);
@@ -295,7 +315,7 @@ export function SituationDetailContent({
               </Group>
             </Link>
             <Group gap={12}>
-              <Link href={`/map?situation=${situation.id}`} style={{ textDecoration: "none" }}>
+              <Link href={`/map?crisis=${situation.id}`} style={{ textDecoration: "none" }}>
                 <Group gap={4} className="hover:opacity-70" style={{ cursor: "pointer" }}>
                   <IconMap size={14} color="var(--color-accent)" />
                   <Text size="xs" c="var(--color-accent)" fw={500}>
@@ -307,14 +327,14 @@ export function SituationDetailContent({
                 <Select
                   size="xs"
                   w={220}
-                  placeholder="Switch situation"
+                  placeholder="Switch crisis"
                   data={relatedSituations.map((s) => ({
                     value: s.id,
-                    label: s.title ?? "Untitled situation",
+                    label: s.title ?? "Untitled crisis",
                   }))}
                   value={null}
                   onChange={(val) => {
-                    if (val) window.location.href = `/situation/${val}`;
+                    if (val) window.location.href = `/crisis/${val}`;
                   }}
                 />
               )}
@@ -365,7 +385,7 @@ export function SituationDetailContent({
             variant="light"
             style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)" }}
           >
-            Situation
+            Crisis
           </Badge>
         </Group>
 
@@ -421,7 +441,7 @@ export function SituationDetailContent({
       )}
 
       {activeTab === "needs" ? (
-        <NeedsAssessmentPanel needs={needs} />
+        <NeedsAssessmentPanel needs={needs} isDemo={needsAreDemo} />
       ) : (
         <>
           {/* Body: two-column */}
@@ -587,12 +607,15 @@ export function SituationDetailContent({
 
           {/* Top humanitarian needs */}
           <Box px={isCompact ? 16 : 24} pb={isCompact ? 16 : 24}>
-            <TopNeedsCard needs={rankNeeds(needs).slice(0, 5)} />
+            <TopNeedsCard needs={rankNeeds(needs).slice(0, 5)} isDemo={needsAreDemo} />
           </Box>
 
-          {/* Comments placeholder (full comments wiring requires backend `situation` entityType) */}
+          {/* Discussion - reads from backend; compose is disabled until the
+              AddCommentInput mutation accepts a situationId. */}
           <Box px={isCompact ? 16 : 24} pb={isCompact ? 24 : 32}>
-            <CommentsPlaceholder />
+            <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+              <CommentsSection entityId={situation.id} entityType="situation" />
+            </Card>
           </Box>
         </>
       )}
@@ -655,14 +678,37 @@ function KpiCard({
   );
 }
 
-function TopNeedsCard({ needs }: { needs: ClusterNeed[] }) {
+function DemoBadge() {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "1px 8px",
+        borderRadius: 999,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+        background: "var(--color-bg-muted)",
+        color: "var(--color-text-muted)",
+      }}
+    >
+      Sample
+    </span>
+  );
+}
+
+function TopNeedsCard({ needs, isDemo }: { needs: ClusterNeed[]; isDemo?: boolean }) {
   return (
     <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
       <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
-        <Group justify="space-between">
-          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-            Top humanitarian needs
-          </Text>
+        <Group justify="space-between" wrap="nowrap">
+          <Group gap={8}>
+            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
+              Top humanitarian needs
+            </Text>
+            {isDemo && <DemoBadge />}
+          </Group>
           <Text size="xs" c="var(--color-text-muted)">
             IASC clusters · ranked by severity &amp; PiN
           </Text>
@@ -772,7 +818,7 @@ function EventsTimeline({ events }: { events: GqlEvent[] }) {
     return (
       <Box p={24} style={{ textAlign: "center" }}>
         <Text size="sm" c="var(--color-text-muted)">
-          No events linked to this situation.
+          No events linked to this crisis.
         </Text>
       </Box>
     );
@@ -966,13 +1012,13 @@ function TimelineRow({
   );
 }
 
-function NeedsAssessmentPanel({ needs }: { needs: ClusterNeed[] }) {
+function NeedsAssessmentPanel({ needs, isDemo }: { needs: ClusterNeed[]; isDemo?: boolean }) {
   const ranked = rankNeeds(needs);
   if (ranked.length === 0) {
     return (
       <Box p={24} style={{ textAlign: "center" }}>
         <Text size="sm" c="var(--color-text-muted)">
-          No needs recorded for this situation yet.
+          No needs recorded for this crisis yet.
         </Text>
       </Box>
     );
@@ -981,9 +1027,12 @@ function NeedsAssessmentPanel({ needs }: { needs: ClusterNeed[] }) {
     <Box p={24}>
       <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
         <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
-          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-            Needs assessment (all clusters)
-          </Text>
+          <Group gap={8}>
+            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
+              Needs assessment (all clusters)
+            </Text>
+            {isDemo && <DemoBadge />}
+          </Group>
         </Box>
         <Stack gap={0}>
           {ranked.map((need, idx) => (
@@ -995,27 +1044,3 @@ function NeedsAssessmentPanel({ needs }: { needs: ClusterNeed[] }) {
   );
 }
 
-/**
- * Visual-only comments placeholder. The real `CommentsSection` component
- * requires `entityType: "event" | "signal"` on the backend - we'll switch
- * to it once the backend accepts `"situation"`.
- */
-function CommentsPlaceholder() {
-  return (
-    <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-      <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
-        <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-          Comments
-        </Text>
-      </Box>
-      <Box p={24} style={{ textAlign: "center" }}>
-        <Text size="sm" c="var(--color-text-muted)">
-          Discussion on this situation will appear here.
-        </Text>
-        <Text size="xs" c="var(--color-text-muted)" mt={4}>
-          (Pending backend support for situation comments.)
-        </Text>
-      </Box>
-    </Card>
-  );
-}

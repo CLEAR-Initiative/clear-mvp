@@ -58,7 +58,7 @@ export function AddToCrisisButton({
         message: "Pipeline will generate the title and summary shortly.",
       });
       await utils.situations.list.invalidate();
-      router.push(`/situation/${situation.id}`);
+      router.push(`/crisis/${situation.id}`);
     },
     onError: (err) => {
       notifications.show({
