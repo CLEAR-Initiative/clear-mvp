@@ -778,134 +778,190 @@ function EventsTimeline({ events }: { events: GqlEvent[] }) {
     );
   }
   return (
-    <Box p={0}>
-      {events.map((event, idx) => {
-        const sev = mapSeverity(event.rank, event.severity);
-        const dotColor = severityColor(event.rank, event.severity);
-        const isLast = idx === events.length - 1;
-        const date = event.lastSignalCreatedAt || event.firstSignalCreatedAt;
-        const displayTitle = event.title ?? event.types[0] ?? "Event";
-        const primaryType = event.types[0];
-        const locationLabel = resolveLocationName(pickEventLocation(event));
-        return (
-          <Link
-            key={event.id}
-            href={`/event/${event.id}`}
-            style={{ textDecoration: "none", color: "inherit" }}
+    <Box py={12} px={4}>
+      {events.map((event, idx) => (
+        <TimelineRow
+          key={event.id}
+          event={event}
+          isFirst={idx === 0}
+          isLast={idx === events.length - 1}
+        />
+      ))}
+    </Box>
+  );
+}
+
+function TimelineRow({
+  event,
+  isFirst,
+  isLast,
+}: {
+  event: GqlEvent;
+  isFirst: boolean;
+  isLast: boolean;
+}) {
+  const sev = mapSeverity(event.rank, event.severity);
+  const dotColor = severityColor(event.rank, event.severity);
+  const dateStr = event.lastSignalCreatedAt || event.firstSignalCreatedAt;
+  const displayTitle = event.title ?? event.types[0] ?? "Event";
+  const primaryType = event.types[0];
+  const locationLabel = resolveLocationName(pickEventLocation(event));
+
+  const dateObj = dateStr ? new Date(dateStr) : null;
+  const dateMonthDay = dateObj
+    ? dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : "";
+  const dateYear = dateObj ? dateObj.getFullYear() : null;
+  const nowYear = new Date().getFullYear();
+
+  return (
+    <Box
+      style={{
+        display: "grid",
+        gridTemplateColumns: "72px 24px 1fr",
+        alignItems: "stretch",
+        columnGap: 10,
+      }}
+    >
+      {/* Date column - vertically centred to align with the rail dot. */}
+      <Box
+        style={{
+          textAlign: "right",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
+      >
+        <Text fw={600} size="xs" c="var(--color-text-primary)" style={{ lineHeight: 1.2 }}>
+          {dateMonthDay}
+        </Text>
+        {dateYear && dateYear !== nowYear && (
+          <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.2 }}>
+            {dateYear}
+          </Text>
+        )}
+      </Box>
+
+      {/* Rail column */}
+      <Box style={{ position: "relative" }}>
+        {/* Upper line (hidden on first) */}
+        <Box
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: 0,
+            bottom: "50%",
+            width: 2,
+            transform: "translateX(-50%)",
+            background: isFirst ? "transparent" : "var(--color-border)",
+          }}
+        />
+        {/* Lower line (hidden on last) */}
+        <Box
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            bottom: 0,
+            width: 2,
+            transform: "translateX(-50%)",
+            background: isLast ? "transparent" : "var(--color-border)",
+          }}
+        />
+        {/* Dot */}
+        <Box
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 12,
+            height: 12,
+            borderRadius: "50%",
+            background: dotColor,
+            border: "2px solid var(--color-bg-white)",
+            boxShadow: "0 0 0 1px var(--color-border)",
+            zIndex: 1,
+          }}
+        />
+      </Box>
+
+      {/* Card column */}
+      <Box py={6}>
+        <Link
+          href={`/event/${event.id}`}
+          style={{ textDecoration: "none", color: "inherit" }}
+        >
+          <Box
+            className="hover:bg-[var(--color-bg-muted)]"
+            style={{
+              border: "1px solid var(--color-border)",
+              borderRadius: 8,
+              padding: "10px 12px",
+              background: "var(--color-bg-white)",
+              cursor: "pointer",
+              transition: "box-shadow 120ms ease-out",
+            }}
           >
-            <Box
-              px={16}
-              py={14}
-              className="hover:bg-[var(--color-bg-muted)]"
-              style={{
-                borderBottom: isLast ? undefined : "1px solid var(--color-border)",
-                cursor: "pointer",
-                display: "flex",
-                gap: 12,
-                position: "relative",
-              }}
+            {/* Row 1: title */}
+            <Text
+              fw={600}
+              size="sm"
+              c="var(--color-text-primary)"
+              truncate
+              mb={4}
+              style={{ lineHeight: 1.3 }}
             >
-              {/* Timeline rail */}
-              <Box
+              {displayTitle}
+            </Text>
+            {/* Row 2: severity + type + location */}
+            <Group gap={6} wrap="nowrap" align="center" style={{ overflow: "hidden" }}>
+              <span
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
+                  display: "inline-block",
+                  padding: "1px 8px",
+                  borderRadius: 999,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  background: severityColors[sev]?.bg,
+                  color: severityColors[sev]?.text,
                   flexShrink: 0,
-                  width: 12,
-                  position: "relative",
                 }}
               >
-                <Box
-                  style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    background: dotColor,
-                    marginTop: 4,
-                    zIndex: 1,
-                  }}
-                />
-                {!isLast && (
-                  <Box
-                    style={{
-                      position: "absolute",
-                      top: 14,
-                      bottom: -14,
-                      width: 2,
-                      background: "var(--color-border)",
-                    }}
-                  />
-                )}
-              </Box>
-              <Box style={{ flex: 1, minWidth: 0 }}>
-                <Group justify="space-between" wrap="nowrap" gap={8} mb={4}>
-                  <Text fw={600} size="sm" c="var(--color-text-primary)" style={{ flex: 1 }}>
-                    {displayTitle}
-                  </Text>
-                  {date && (
-                    <Text size="xs" c="var(--color-text-muted)" style={{ flexShrink: 0 }}>
-                      {formatTimeAgo(date)}
-                    </Text>
-                  )}
-                </Group>
-                <Group gap={6} mb={6} wrap="wrap">
-                  {primaryType &&
-                    getDisasterPills([primaryType]).map((pill) => (
-                      <span
-                        key={pill.label}
-                        style={{
-                          display: "inline-block",
-                          padding: "1px 8px",
-                          borderRadius: 999,
-                          fontSize: 10,
-                          fontWeight: 600,
-                          color: pill.color,
-                          background: pill.bg,
-                        }}
-                      >
-                        {pill.label}
-                      </span>
-                    ))}
+                {severityLabels[sev]}
+              </span>
+              {primaryType &&
+                getDisasterPills([primaryType]).map((pill) => (
                   <span
+                    key={pill.label}
                     style={{
                       display: "inline-block",
                       padding: "1px 8px",
                       borderRadius: 999,
                       fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: "0.04em",
-                      textTransform: "uppercase",
-                      background: severityColors[sev]?.bg,
-                      color: severityColors[sev]?.text,
+                      fontWeight: 600,
+                      color: pill.color,
+                      background: pill.bg,
+                      flexShrink: 0,
                     }}
                   >
-                    {severityLabels[sev]}
+                    {pill.label}
                   </span>
-                  {locationLabel && (
-                    <Group gap={3}>
-                      <IconMapPin size={11} color="var(--color-text-muted)" />
-                      <Text size="xs" c="var(--color-text-muted)">
-                        {locationLabel}
-                      </Text>
-                    </Group>
-                  )}
-                  {date && (
-                    <Text size="xs" c="var(--color-text-muted)">
-                      {formatDateTime(date)}
-                    </Text>
-                  )}
-                </Group>
-                {event.description && (
-                  <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }}>
-                    {event.description}
+                ))}
+              {locationLabel && (
+                <Group gap={3} wrap="nowrap" style={{ minWidth: 0 }}>
+                  <IconMapPin size={11} color="var(--color-text-muted)" />
+                  <Text size="xs" c="var(--color-text-muted)" truncate>
+                    {locationLabel}
                   </Text>
-                )}
-              </Box>
-            </Box>
-          </Link>
-        );
-      })}
+                </Group>
+              )}
+            </Group>
+          </Box>
+        </Link>
+      </Box>
     </Box>
   );
 }
