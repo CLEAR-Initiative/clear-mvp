@@ -931,7 +931,6 @@ export function EventDetailContent({
                     </Button>
                     <AddToCrisisButton
                       eventId={event.id}
-                      defaultTitle={displayTitle}
                       defaultSeverity={
                         event.severity ?? Math.round((event.rank ?? 0) * 5)
                       }
