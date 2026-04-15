@@ -524,6 +524,8 @@ export function EventsTab({
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"
+              focusCountryPCode="SD"
+              focusCountryName="Sudan"
             />
           </Box>
         </Card>

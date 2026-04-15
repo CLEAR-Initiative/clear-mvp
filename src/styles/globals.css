@@ -69,7 +69,7 @@
   --space-8:  32px;
   --space-9:  48px;
 
-  /* Shadow scale — exact strings observed in the codebase */
+  /* Shadow scale - exact strings observed in the codebase */
   --shadow-xs: 0 2px 4px rgba(0, 0, 0, 0.10);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.12);
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -97,7 +97,7 @@
   --color-text-secondary: #A3A3A3;
   --color-text-muted:     #737373;
 
-  /* Brand / Accent — keep orange, adjust light variant */
+  /* Brand / Accent - keep orange, adjust light variant */
   --color-accent:       #E85D3D;
   --color-accent-light: #2D1A12;
   --color-accent-hover: #D14D2D;
@@ -112,7 +112,7 @@
   --color-info:           #60A5FA;
   --color-info-light:     #0D1F3D;
 
-  /* Shadows — stronger in dark to maintain depth */
+  /* Shadows - stronger in dark to maintain depth */
   --shadow-xs: 0 2px 4px rgba(0, 0, 0, 0.4);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.6);
@@ -128,7 +128,7 @@ body {
   font-size: 14px;
 }
 
-/* Mapbox overrides — ensure map fills container */
+/* Mapbox overrides - ensure map fills container */
 .mapboxgl-map {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -173,11 +173,34 @@ body {
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
+/* Crisis map - pulsing halo for critical severity markers.
+   Rendered as a box-shadow expanding outward so the DOM stays flat
+   (no extra child elements that could shift during zoom). */
+@keyframes crisis-marker-pulse {
+  0%   { box-shadow: 0 2px 6px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.04),
+                     0 0 0 0 rgba(220,38,38,0.45); }
+  70%  { box-shadow: 0 2px 6px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.04),
+                     0 0 0 20px rgba(220,38,38,0); }
+  100% { box-shadow: 0 2px 6px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.04),
+                     0 0 0 0 rgba(220,38,38,0); }
+}
+
+.crisis-marker.sev-critical {
+  animation: crisis-marker-pulse 2s ease-out infinite;
+}
+
+.crisis-marker {
+  transition: transform 120ms ease-out;
+}
+.crisis-marker:hover {
+  transform: scale(1.1);
+}
+
 /* ============================================
    Reusable Component Styles
    ============================================ */
 
-/* Section label — used for form/data section headers */
+/* Section label - used for form/data section headers */
 .section-label {
   font-size: 11px;
   text-transform: uppercase;

@@ -179,7 +179,7 @@ export default function MapPage() {
         if (!matchesLocation) return false;
       }
 
-      // Layer filter — only apply when layers are defined (shock types loaded)
+      // Layer filter - only apply when layers are defined (shock types loaded)
       if (activeLayers.length > 0) {
         const markerType = m.type ?? "";
         if (!activeLayers.includes(markerType)) return false;
@@ -321,6 +321,8 @@ export default function MapPage() {
         zoom={mapZoom}
         className="w-full h-full"
         onMarkerClick={handleMarkerClick}
+        focusCountryPCode="SD"
+        focusCountryName="Sudan"
       />
 
       {/* ===== Layers Panel ===== */}
