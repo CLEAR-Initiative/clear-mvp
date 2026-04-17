@@ -29,6 +29,14 @@ const SIGNAL_COMMENTS_QUERY = `
   }
 `;
 
+const SITUATION_COMMENTS_QUERY = `
+  query SituationComments($id: String!) {
+    situation(id: $id) {
+      comments { ${COMMENT_FIELDS} }
+    }
+  }
+`;
+
 const ADD_COMMENT_MUTATION = `
   mutation AddComment($input: AddCommentInput!) {
     addComment(input: $input) { ${COMMENT_FIELDS} }
@@ -51,7 +59,7 @@ export const commentsRouter = createTRPCRouter({
   list: protectedProcedure
     .input(z.object({
       entityId: z.string(),
-      entityType: z.enum(["event", "signal"]),
+      entityType: z.enum(["event", "signal", "situation"]),
     }))
     .query(async ({ ctx, input }) => {
       if (input.entityType === "event") {
@@ -61,28 +69,41 @@ export const commentsRouter = createTRPCRouter({
           cookieHeaders(ctx),
         );
         return data.event?.comments ?? [];
-      } else {
-        const data = await graphqlFetch<{ signal: { comments: GqlUserComment[] } | null }>(
-          SIGNAL_COMMENTS_QUERY,
+      }
+      if (input.entityType === "situation") {
+        const data = await graphqlFetch<{ situation: { comments: GqlUserComment[] } | null }>(
+          SITUATION_COMMENTS_QUERY,
           { id: input.entityId },
           cookieHeaders(ctx),
         );
-        return data.signal?.comments ?? [];
+        return data.situation?.comments ?? [];
       }
+      const data = await graphqlFetch<{ signal: { comments: GqlUserComment[] } | null }>(
+        SIGNAL_COMMENTS_QUERY,
+        { id: input.entityId },
+        cookieHeaders(ctx),
+      );
+      return data.signal?.comments ?? [];
     }),
 
   add: protectedProcedure
     .input(z.object({
       entityId: z.string(),
-      entityType: z.enum(["event", "signal"]),
+      entityType: z.enum(["event", "signal", "situation"]),
       comment: z.string().min(1),
       tagUserIds: z.array(z.string()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const idField =
+        input.entityType === "event"
+          ? { eventId: input.entityId }
+          : input.entityType === "signal"
+            ? { signalId: input.entityId }
+            : { situationId: input.entityId };
       const gqlInput = {
         comment: input.comment,
         tagUserIds: input.tagUserIds,
-        ...(input.entityType === "event" ? { eventId: input.entityId } : { signalId: input.entityId }),
+        ...idField,
       };
       const data = await graphqlFetch<{ addComment: GqlUserComment }>(
         ADD_COMMENT_MUTATION,

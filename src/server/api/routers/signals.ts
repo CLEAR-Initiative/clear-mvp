@@ -38,6 +38,7 @@ const SIGNAL_GET_QUERY = `
       url
       publishedAt
       collectedAt
+      media
       generalLocation { ${LOCATION_FIELDS} }
       originLocation { ${LOCATION_FIELDS} }
       destinationLocation { ${LOCATION_FIELDS} }

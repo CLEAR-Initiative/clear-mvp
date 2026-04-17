@@ -411,7 +411,7 @@ export function LiveAlertsTab({
 
         {/* Alert list - no card header */}
         <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-          <Box style={{ maxHeight: "calc(100vh - 420px)", overflowY: "auto" }}>
+          <Box style={{ maxHeight: 524, overflowY: "auto" }}>
             {filtered.length === 0 && !alertsLoading && (
               <Box px={16} py={32} style={{ textAlign: "center" }}>
                 <Text c="var(--color-text-muted)" size="sm">
@@ -511,6 +511,8 @@ export function LiveAlertsTab({
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"
+              focusCountryPCode="SD"
+              focusCountryName="Sudan"
             />
           </Box>
         </Card>

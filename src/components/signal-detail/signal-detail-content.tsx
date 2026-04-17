@@ -28,6 +28,8 @@ import {
   IconLink,
   IconChevronDown,
   IconChevronUp,
+  IconPhoto,
+  IconFile,
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlSignalDetail, GqlLocation } from "~/lib/types/graphql";
@@ -79,6 +81,64 @@ function signalLocations(signal: GqlSignalDetail): GqlLocation[] {
   if (signal.originLocation) locs.push(signal.originLocation);
   if (signal.destinationLocation) locs.push(signal.destinationLocation);
   return locs;
+}
+
+function MediaThumbnail({ url, filename }: { url: string; filename: string }) {
+  const [failed, setFailed] = useState(false);
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={filename}
+      style={{ textDecoration: "none" }}
+    >
+      <Box
+        style={{
+          width: 100,
+          height: 100,
+          border: "1px solid var(--color-border)",
+          borderRadius: 6,
+          overflow: "hidden",
+          background: "var(--color-bg-muted)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+        }}
+        className="hover:opacity-80"
+      >
+        {failed ? (
+          <>
+            <IconFile size={28} color="var(--color-text-muted)" />
+            <Text
+              size="xs"
+              c="var(--color-text-muted)"
+              mt={4}
+              style={{
+                maxWidth: 88,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                textAlign: "center",
+              }}
+            >
+              {filename}
+            </Text>
+          </>
+        ) : (
+          <img
+            src={url}
+            alt={filename}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            onError={() => setFailed(true)}
+          />
+        )}
+      </Box>
+    </a>
+  );
 }
 
 interface SignalDetailContentProps {
@@ -519,6 +579,34 @@ export function SignalDetailContent({
               )}
             </Box>
           </Card>
+
+          {/* Media */}
+          {signal.media && signal.media.length > 0 && (
+            <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
+              <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+                <Group gap={8}>
+                  <IconPhoto size={14} color="var(--color-text-secondary)" />
+                  <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
+                    Media ({signal.media.length})
+                  </Text>
+                </Group>
+              </Box>
+              <Box p={16}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {signal.media.map((url, idx) => {
+                    const filename = url.split("/").pop()?.split("?")[0] ?? `file-${idx + 1}`;
+                    return (
+                      <MediaThumbnail
+                        key={idx}
+                        url={url}
+                        filename={filename}
+                      />
+                    );
+                  })}
+                </div>
+              </Box>
+            </Card>
+          )}
 
           {/* Discussion */}
           <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>

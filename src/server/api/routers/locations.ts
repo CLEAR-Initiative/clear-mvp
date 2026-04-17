@@ -10,6 +10,11 @@ interface GqlLocationNode {
   parent: { id: string; name: string } | null;
 }
 
+interface GqlLocationWithGeometry extends GqlLocationNode {
+  pCode: string | null;
+  geometry: unknown; // GeoJSON Point | Polygon | MultiPolygon
+}
+
 const LOCATIONS_QUERY = `
   query Locations($level: Int) {
     locations(level: $level) {
@@ -18,6 +23,20 @@ const LOCATIONS_QUERY = `
       level
       ancestorIds
       parent { id name }
+    }
+  }
+`;
+
+const LOCATIONS_WITH_GEOMETRY_QUERY = `
+  query LocationsWithGeometry($level: Int) {
+    locations(level: $level) {
+      id
+      name
+      level
+      ancestorIds
+      parent { id name }
+      pCode
+      geometry
     }
   }
 `;
@@ -33,6 +52,35 @@ export const locationsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.locations;
+    }),
+
+  /**
+   * Resolve a country (level 0) by its ISO / humanitarian P-Code, with a
+   * name-based fallback. P-Code may be null on many installs, so `pCode`
+   * acts as the preferred hint and `name` as the reliable fallback.
+   */
+  getCountryByPCode: protectedProcedure
+    .input(z.object({ pCode: z.string().optional(), name: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ locations: GqlLocationWithGeometry[] }>(
+        LOCATIONS_WITH_GEOMETRY_QUERY,
+        { level: 0 },
+        cookieHeaders(ctx),
+      );
+
+      const byPCode = input.pCode
+        ? data.locations.find(
+            (l) => l.pCode?.toUpperCase() === input.pCode!.toUpperCase(),
+          )
+        : undefined;
+      if (byPCode) return byPCode;
+
+      const byName = input.name
+        ? data.locations.find(
+            (l) => l.name.toLowerCase() === input.name!.toLowerCase(),
+          )
+        : undefined;
+      return byName ?? null;
     }),
 
   /** Get hierarchical location tree: countries → states → districts */

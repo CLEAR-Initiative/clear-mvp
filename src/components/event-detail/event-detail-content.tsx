@@ -38,6 +38,7 @@ import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
+import { AddToCrisisButton } from "~/components/event-detail/add-to-crisis-button";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
 
@@ -928,26 +929,12 @@ export function EventDetailContent({
                     >
                       Bookmark
                     </Button>
-                    <Button
-                      variant="light"
-                      color="gray"
-                      size="xs"
-                      leftSection={<IconLayoutGridAdd size={12} />}
-                      fullWidth
-                      disabled
-                      style={{ fontSize: 12 }}
-                    >
-                      Add to Crisis
-                      <Text
-                        component="span"
-                        size="10px"
-                        c="#A3A3A3"
-                        ml={6}
-                        style={{ fontWeight: 400 }}
-                      >
-                        coming soon
-                      </Text>
-                    </Button>
+                    <AddToCrisisButton
+                      eventId={event.id}
+                      defaultSeverity={
+                        event.severity ?? Math.round((event.rank ?? 0) * 5)
+                      }
+                    />
                   </Stack>
                 </Box>
               </Card>
