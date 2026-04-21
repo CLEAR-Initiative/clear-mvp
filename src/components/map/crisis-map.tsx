@@ -94,6 +94,71 @@ function loadMapboxGL(): Promise<any> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type MapboxGLAny = any;
 
+// ── Donut cluster helpers ────────────────────────────────────────────────────
+
+const SEVERITY_ORDER = ["critical", "high", "medium", "low"] as const;
+
+function arcSegment(
+  cx: number, cy: number,
+  outerR: number, innerR: number,
+  startAngle: number, endAngle: number,
+  color: string,
+): string {
+  const x1 = cx + outerR * Math.cos(startAngle), y1 = cy + outerR * Math.sin(startAngle);
+  const x2 = cx + outerR * Math.cos(endAngle),   y2 = cy + outerR * Math.sin(endAngle);
+  const x3 = cx + innerR * Math.cos(endAngle),   y3 = cy + innerR * Math.sin(endAngle);
+  const x4 = cx + innerR * Math.cos(startAngle), y4 = cy + innerR * Math.sin(startAngle);
+  const large = endAngle - startAngle > Math.PI ? 1 : 0;
+  return `<path d="M ${x1} ${y1} A ${outerR} ${outerR} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${innerR} ${innerR} 0 ${large} 0 ${x4} ${y4} Z" fill="${color}"/>`;
+}
+
+function buildDonutEl(props: Record<string, number>): HTMLDivElement {
+  const total = props.point_count ?? 0;
+  const size  = total < 10 ? 40 : total < 50 ? 46 : total < 200 ? 52 : 58;
+  const outerR = size / 2 - 2;
+  const innerR = outerR * 0.58;
+  const cx = size / 2, cy = size / 2;
+
+  const segments = SEVERITY_ORDER
+    .map((s) => ({ color: severityColors[s], count: Math.max(0, props[s] ?? 0) }))
+    .filter((s) => s.count > 0);
+
+  const denom = segments.reduce((sum, s) => sum + s.count, 0) || 1;
+
+  let arcs = "";
+  if (segments.length === 1) {
+    // Full 360° arc is degenerate in SVG - draw plain circles instead.
+    arcs = `<circle cx="${cx}" cy="${cy}" r="${outerR}" fill="${segments[0].color}"/>
+            <circle cx="${cx}" cy="${cy}" r="${innerR}" fill="white"/>`;
+  } else {
+    let angle = -Math.PI / 2;
+    for (const seg of segments) {
+      const sweep = (seg.count / denom) * 2 * Math.PI;
+      arcs += arcSegment(cx, cy, outerR, innerR, angle, angle + sweep, seg.color);
+      angle += sweep;
+    }
+  }
+
+  const fontSize = size < 44 ? 11 : size < 50 ? 12 : 13;
+  const label = total > 999 ? "999+" : String(total);
+
+  const el = document.createElement("div");
+  el.style.cssText = `cursor:pointer;width:${size}px;height:${size}px;filter:drop-shadow(0 2px 5px rgba(0,0,0,0.22));`;
+  el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    ${arcs}
+    <circle cx="${cx}" cy="${cy}" r="${outerR + 1.5}" fill="none" stroke="white" stroke-width="3" opacity="0.9"/>
+    <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="#1F2937" font-weight="700" font-size="${fontSize}" font-family="system-ui,-apple-system,sans-serif">${label}</text>
+  </svg>`;
+  return el;
+}
+
+function buildPointEl(severity: string): HTMLDivElement {
+  const color = severityColors[severity] ?? "#737373";
+  const size  = severity === "critical" ? 18 : severity === "high" ? 16 : 14;
+  const el = document.createElement("div");
+  el.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);cursor:pointer;`;
+  return el;
+}
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -116,6 +181,8 @@ export function CrisisMap({
   const mbRef = useRef<MapboxGLAny>(null);
   const onMarkerClickRef = useRef(onMarkerClick);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
+  const clusterDomMarkers = useRef<Map<string, MapboxGLAny>>(new Map());
+  const markersDataRef = useRef<MapMarker[]>(markers);
   const [loaded, setLoaded] = useState(false);
   // Tracks Mapbox built-in admin-1 layer IDs we've mutated so we can reset them.
   const admin1LayerIds = useRef<string[]>([]);
@@ -391,73 +458,52 @@ export function CrisisMap({
     map.current.flyTo({ center, zoom, duration: 1500 });
   }, [center, zoom, loaded, focusCountry]);
 
-  // ── Markers (GeoJSON cluster source) ────────────────────────────────────
+  // ── Markers (donut cluster DOM markers) ─────────────────────────────────
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
+    const mb = mbRef.current;
     const SOURCE = "crisis-markers";
-    const CLUSTER_LAYER = "cluster-circles";
-    const CLUSTER_RING = "cluster-ring";
-    const CLUSTER_COUNT = "cluster-count";
-    const POINT_LAYER = "unclustered-point";
+    const CLUSTER_GHOST = "cluster-ghost";
+    const POINT_GHOST = "point-ghost";
 
-    const removeAll = () => {
-      for (const id of [CLUSTER_COUNT, CLUSTER_LAYER, CLUSTER_RING, POINT_LAYER]) {
+    // Keep markersDataRef current for click handlers that close over it.
+    markersDataRef.current = markers;
+
+    const clearDomMarkers = () => {
+      for (const mk of clusterDomMarkers.current.values()) {
+        try { mk.remove(); } catch { /* ignore */ }
+      }
+      clusterDomMarkers.current.clear();
+    };
+
+    const removeLayers = () => {
+      for (const id of [CLUSTER_GHOST, POINT_GHOST]) {
         try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
       }
       try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
     };
 
-    const handleClusterClick = (e: MapboxGLAny) => {
-      const feats = m.queryRenderedFeatures(e.point, { layers: [CLUSTER_LAYER] });
-      if (!feats.length) return;
-      const clusterId = feats[0].properties.cluster_id;
-      (m.getSource(SOURCE) as MapboxGLAny).getClusterExpansionZoom(clusterId, (err: unknown, zoom: number) => {
-        if (err) return;
-        m.easeTo({ center: feats[0].geometry.coordinates, zoom: zoom + 0.5, duration: 500 });
-      });
-    };
-
-    const handlePointClick = (e: MapboxGLAny) => {
-      const feats = m.queryRenderedFeatures(e.point, { layers: [POINT_LAYER] });
-      if (!feats.length) return;
-      const props = feats[0].properties as Record<string, unknown>;
-      const coords = feats[0].geometry.coordinates as number[];
-      onMarkerClickRef.current?.({
-        id: props.id as number,
-        lng: coords[0],
-        lat: coords[1],
-        title: props.title as string,
-        severity: props.severity as MapMarker["severity"],
-        type: props.type as string | undefined,
-        description: props.description as string | undefined,
-      });
-    };
-
-    const setCursorPointer = () => { m.getCanvas().style.cursor = "pointer"; };
-    const resetCursor = () => { m.getCanvas().style.cursor = ""; };
-
-    removeAll();
-
-    const features = markers.map((marker) => ({
-      type: "Feature" as const,
-      properties: {
-        id: marker.id,
-        title: marker.title,
-        severity: marker.severity,
-        type: marker.type ?? "",
-        description: marker.description ?? "",
-        is_critical: marker.severity === "critical" ? 1 : 0,
-        is_high:     marker.severity === "high"     ? 1 : 0,
-        is_medium:   marker.severity === "medium"   ? 1 : 0,
-        is_low:      marker.severity === "low"      ? 1 : 0,
-      },
-      geometry: { type: "Point" as const, coordinates: [marker.lng, marker.lat] },
-    }));
+    clearDomMarkers();
+    removeLayers();
 
     m.addSource(SOURCE, {
       type: "geojson",
-      data: { type: "FeatureCollection", features },
+      data: {
+        type: "FeatureCollection",
+        features: markers.map((mk) => ({
+          type: "Feature" as const,
+          properties: {
+            id: mk.id, title: mk.title, severity: mk.severity,
+            type: mk.type ?? "", description: mk.description ?? "",
+            is_critical: mk.severity === "critical" ? 1 : 0,
+            is_high:     mk.severity === "high"     ? 1 : 0,
+            is_medium:   mk.severity === "medium"   ? 1 : 0,
+            is_low:      mk.severity === "low"      ? 1 : 0,
+          },
+          geometry: { type: "Point" as const, coordinates: [mk.lng, mk.lat] },
+        })),
+      },
       cluster: true,
       clusterMaxZoom: 9,
       clusterRadius: 48,
@@ -469,112 +515,74 @@ export function CrisisMap({
       },
     });
 
-    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
-    const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
-
-    // Dominant severity color for clusters (worst-first priority).
-    const clusterColor: MapboxGLAny = ["case",
-      [">", ["get", "critical"], 0], severityColors.critical,
-      [">", ["get", "high"],     0], severityColors.high,
-      [">", ["get", "medium"],   0], severityColors.medium,
-      severityColors.low,
-    ];
-
-    // Cluster radius scales with point count.
-    const clusterRadius: MapboxGLAny = ["step", ["get", "point_count"],
-      18,   // < 5
-      5,  22, // 5-19
-      20, 26, // 20-49
-      50, 30, // 50+
-    ];
-
-    // Subtle outer ring to visually distinguish clusters from individual points.
-    m.addLayer({
-      id: CLUSTER_RING,
-      type: "circle",
-      source: SOURCE,
+    // Ghost layers (opacity 0) - required for queryRenderedFeatures to return
+    // cluster and point features so we can drive custom DOM donut markers.
+    m.addLayer({ id: CLUSTER_GHOST, type: "circle", source: SOURCE,
       filter: ["has", "point_count"],
-      paint: {
-        "circle-color": "rgba(0,0,0,0)",
-        "circle-radius": ["step", ["get", "point_count"], 23, 5, 27, 20, 31, 50, 35],
-        "circle-stroke-width": 2,
-        "circle-stroke-color": clusterColor,
-        "circle-stroke-opacity": 0.35,
-        "circle-opacity": 0,
-      },
-    }, beforeId);
-
-    m.addLayer({
-      id: CLUSTER_LAYER,
-      type: "circle",
-      source: SOURCE,
-      filter: ["has", "point_count"],
-      paint: {
-        "circle-color": clusterColor,
-        "circle-radius": clusterRadius,
-        "circle-stroke-width": 2.5,
-        "circle-stroke-color": "#FFFFFF",
-        "circle-stroke-opacity": 0.95,
-        "circle-opacity": 0.93,
-      },
-    }, beforeId);
-
-    m.addLayer({
-      id: CLUSTER_COUNT,
-      type: "symbol",
-      source: SOURCE,
-      filter: ["has", "point_count"],
-      layout: {
-        "text-field": "{point_count_abbreviated}",
-        "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
-        "text-size": 12,
-      },
-      paint: { "text-color": "#FFFFFF" },
-    });
-
-    // Individual (unclustered) points.
-    const pointColor: MapboxGLAny = ["case",
-      ["==", ["get", "severity"], "critical"], severityColors.critical,
-      ["==", ["get", "severity"], "high"],     severityColors.high,
-      ["==", ["get", "severity"], "medium"],   severityColors.medium,
-      severityColors.low,
-    ];
-
-    m.addLayer({
-      id: POINT_LAYER,
-      type: "circle",
-      source: SOURCE,
+      paint: { "circle-radius": 1, "circle-opacity": 0, "circle-stroke-opacity": 0 } });
+    m.addLayer({ id: POINT_GHOST, type: "circle", source: SOURCE,
       filter: ["!", ["has", "point_count"]],
-      paint: {
-        "circle-color": pointColor,
-        "circle-radius": ["case",
-          ["==", ["get", "severity"], "critical"], 9,
-          ["==", ["get", "severity"], "high"],     8,
-          ["==", ["get", "severity"], "medium"],   7,
-          6,
-        ],
-        "circle-stroke-width": 2,
-        "circle-stroke-color": "#FFFFFF",
-        "circle-stroke-opacity": 0.95,
-        "circle-opacity": 0.95,
-      },
-    }, beforeId);
+      paint: { "circle-radius": 1, "circle-opacity": 0, "circle-stroke-opacity": 0 } });
 
-    m.on("click", CLUSTER_LAYER, handleClusterClick);
-    m.on("click", POINT_LAYER, handlePointClick);
-    m.on("mouseenter", CLUSTER_LAYER, setCursorPointer);
-    m.on("mouseleave", CLUSTER_LAYER, resetCursor);
-    m.on("mouseenter", POINT_LAYER, setCursorPointer);
-    m.on("mouseleave", POINT_LAYER, resetCursor);
+    const update = () => {
+      clearDomMarkers();
+
+      const clusterFeats = m.queryRenderedFeatures({ layers: [CLUSTER_GHOST] }) as MapboxGLAny[];
+      const pointFeats   = m.queryRenderedFeatures({ layers: [POINT_GHOST] })   as MapboxGLAny[];
+
+      for (const feat of clusterFeats) {
+        const coords = feat.geometry.coordinates as [number, number];
+        const props  = feat.properties as Record<string, number>;
+        const cid    = props.cluster_id;
+        const el     = buildDonutEl(props);
+        el.addEventListener("click", () => {
+          (m.getSource(SOURCE) as MapboxGLAny).getClusterExpansionZoom(cid, (err: unknown, z: number) => {
+            if (err) return;
+            m.easeTo({ center: coords, zoom: z + 0.5, duration: 500 });
+          });
+        });
+        clusterDomMarkers.current.set(
+          `c-${cid}`,
+          new mb.Marker({ element: el, anchor: "center" }).setLngLat(coords).addTo(m),
+        );
+      }
+
+      for (const feat of pointFeats) {
+        const coords = feat.geometry.coordinates as [number, number];
+        const props  = feat.properties as Record<string, unknown>;
+        const el     = buildPointEl(props.severity as string);
+        el.addEventListener("click", () => {
+          const found = markersDataRef.current.find((mk) => mk.id === (props.id as number));
+          if (found) onMarkerClickRef.current?.(found);
+        });
+        clusterDomMarkers.current.set(
+          `p-${props.id}`,
+          new mb.Marker({ element: el, anchor: "center" }).setLngLat(coords).addTo(m),
+        );
+      }
+    };
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const debounced = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(update, 60);
+    };
+
+    // sourcedata fires when cluster tiles finish computing - this drives the
+    // initial render and any post-load updates.
+    const onSourceData = (e: MapboxGLAny) => {
+      if (e.sourceId === SOURCE && e.isSourceLoaded) debounced();
+    };
+
+    m.on("moveend", debounced);
+    m.on("sourcedata", onSourceData);
 
     return () => {
-      removeAll();
-      m.off("click", CLUSTER_LAYER, handleClusterClick);
-      m.off("click", POINT_LAYER, handlePointClick);
-      m.off("mouseenter", CLUSTER_LAYER, setCursorPointer);
-      m.off("mouseleave", CLUSTER_LAYER, resetCursor);
-      m.off("mouseenter", POINT_LAYER, setCursorPointer);
-      m.off("mouseleave", POINT_LAYER, resetCursor);
+      if (timer) clearTimeout(timer);
+      clearDomMarkers();
+      removeLayers();
+      m.off("moveend", debounced);
+      m.off("sourcedata", onSourceData);
     };
   }, [markers, loaded]);
 
