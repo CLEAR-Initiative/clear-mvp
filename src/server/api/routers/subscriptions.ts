@@ -41,6 +41,19 @@ const SUBSCRIBE_MUTATION = `
   }
 `;
 
+const SUBSCRIBE_BATCH_MUTATION = `
+  mutation SubscribeToAlertsBatch($input: SubscribeToAlertsBatchInput!) {
+    subscribeToAlertsBatch(input: $input) {
+      id
+      alertType
+      active
+      channel
+      frequency
+      location { id name level }
+    }
+  }
+`;
+
 const UPDATE_SUBSCRIPTION_MUTATION = `
   mutation UpdateAlertSubscription($id: String!, $input: UpdateAlertSubscriptionInput!) {
     updateAlertSubscription(id: $id, input: $input) {
@@ -99,6 +112,26 @@ export const subscriptionsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.subscribeToAlerts;
+    }),
+
+  /** Subscribe to every (location × alertType) pair in a single API call. */
+  subscribeBatch: protectedProcedure
+    .input(
+      z.object({
+        locationIds: z.array(z.string()).min(1),
+        alertTypes: z.array(z.string()).min(1),
+        channel: z.enum(["email", "sms"]),
+        frequency: z.enum(["immediately", "daily", "weekly", "monthly"]),
+        minSeverity: z.number().int().min(1).max(5).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ subscribeToAlertsBatch: GqlAlertSubscription[] }>(
+        SUBSCRIBE_BATCH_MUTATION,
+        { input },
+        cookieHeaders(ctx),
+      );
+      return data.subscribeToAlertsBatch;
     }),
 
   update: protectedProcedure

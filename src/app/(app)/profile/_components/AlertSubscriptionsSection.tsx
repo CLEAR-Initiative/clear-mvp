@@ -39,9 +39,13 @@ export function AlertSubscriptionsSection() {
   const [formSeverities, setFormSeverities] = useState<string[]>(["critical", "high"]);
   const [formFrequency, setFormFrequency] = useState<string | null>("immediately");
 
-  const subscribeMutation = api.subscriptions.subscribe.useMutation({
-    onSuccess: () => {
-      notifications.show({ title: "Subscribed", message: "Alert subscriptions created.", color: "green" });
+  const subscribeBatchMutation = api.subscriptions.subscribeBatch.useMutation({
+    onSuccess: (created) => {
+      notifications.show({
+        title: "Subscribed",
+        message: `Created ${created.length} subscription${created.length === 1 ? "" : "s"}.`,
+        color: "green",
+      });
       void utils.subscriptions.list.invalidate();
       setShowForm(false);
       setFormLocationIds([]);
@@ -99,20 +103,29 @@ export function AlertSubscriptionsSection() {
       ? disasterTypes.map((dt) => dt.glideNumber)
       : formAlertTypes;
 
-    for (const locationId of formLocationIds) {
-      for (const alertType of resolvedTypes) {
-        try {
-          await subscribeMutation.mutateAsync({
-            locationId,
-            alertType,
-            severity: formSeverities.length > 0 ? formSeverities : undefined,
-            channel: "email" as const,
-            frequency: formFrequency as "immediately" | "daily" | "weekly" | "monthly",
-          });
-        } catch {
-          // Error already shown by onError handler
-        }
-      }
+    // Map string severity labels to the lowest integer minSeverity among selections
+    // critical=5, high=4, medium=3, low=2. If multiple selected, use the lowest
+    // threshold so more events match. Default to high (4).
+    const SEVERITY_TO_INT: Record<string, number> = {
+      critical: 5,
+      high: 4,
+      medium: 3,
+      low: 2,
+    };
+    const minSeverity = formSeverities.length > 0
+      ? Math.min(...formSeverities.map((s) => SEVERITY_TO_INT[s] ?? 4))
+      : 4;
+
+    try {
+      await subscribeBatchMutation.mutateAsync({
+        locationIds: formLocationIds,
+        alertTypes: resolvedTypes,
+        channel: "email" as const,
+        frequency: formFrequency as "immediately" | "daily" | "weekly" | "monthly",
+        minSeverity,
+      });
+    } catch {
+      // Error already shown by onError handler
     }
   };
 
@@ -210,7 +223,7 @@ export function AlertSubscriptionsSection() {
                 size="xs"
                 color="dark"
                 leftSection={<IconCheck size={12} />}
-                loading={subscribeMutation.isPending}
+                loading={subscribeBatchMutation.isPending}
                 disabled={formLocationIds.length === 0 || formAlertTypes.length === 0}
                 onClick={() => void handleSubscribe()}
               >
