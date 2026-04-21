@@ -507,8 +507,8 @@ export function CrisisMap({
       },
       cluster: true,
       clusterMinPoints: 5,
-      clusterMaxZoom: 9,
-      clusterRadius: 48,
+      clusterMaxZoom: 8,
+      clusterRadius: 30,
       clusterProperties: {
         critical: ["+", ["get", "is_critical"]],
         high:     ["+", ["get", "is_high"]],
