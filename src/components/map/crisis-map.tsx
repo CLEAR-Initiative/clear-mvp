@@ -506,6 +506,7 @@ export function CrisisMap({
         })),
       },
       cluster: true,
+      clusterMinPoints: 5,
       clusterMaxZoom: 9,
       clusterRadius: 48,
       clusterProperties: {
