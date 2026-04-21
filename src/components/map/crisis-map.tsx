@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { geometryBounds } from "~/lib/geo/country-mask";
-import { getMarkerIcon } from "~/lib/geo/marker-icons";
 
 export interface MapMarker {
   id: number;
@@ -67,12 +66,6 @@ const severityColors: Record<string, string> = {
   low: "#059669",
 };
 
-const severitySizes: Record<string, number> = {
-  critical: 36,
-  high: 30,
-  medium: 26,
-  low: 24,
-};
 
 /**
  * Load mapbox-gl from CDN to avoid webpack JSON.parse optimisation crash.
@@ -101,52 +94,6 @@ function loadMapboxGL(): Promise<any> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type MapboxGLAny = any;
 
-// ── Marker DOM builder ───────────────────────────────────────────────────────
-
-/**
- * Single-element marker. Halo is rendered via box-shadow + animation so
- * the DOM tree stays flat and layout can't shift during zoom. The title
- * attribute provides a native tooltip; the visual design is tidied up
- * elsewhere to keep marker positioning pixel-stable.
- */
-function buildMarkerEl(marker: MapMarker): HTMLDivElement {
-  const isTeam = marker.type?.toLowerCase() === "team";
-  const size = isTeam ? 28 : (severitySizes[marker.severity] ?? 26);
-  const color = severityColors[marker.severity] ?? "#737373";
-  const icon = getMarkerIcon(marker.type);
-
-  const el = document.createElement("div");
-  el.className = `crisis-marker sev-${marker.severity}`;
-  el.title = `${marker.title} - ${marker.severity.toUpperCase()} severity`;
-  el.style.cssText = `
-    width: ${size}px;
-    height: ${size}px;
-    box-sizing: border-box;
-    border-radius: 50%;
-    background: ${color};
-    border: 2px solid #FFFFFF;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.04);
-    color: #FFFFFF;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-    margin: 0;
-    overflow: visible;
-  `;
-  el.innerHTML = icon;
-  const svg = el.querySelector("svg");
-  if (svg) {
-    const iconSize = Math.round(size * 0.55);
-    svg.setAttribute("width", String(iconSize));
-    svg.setAttribute("height", String(iconSize));
-    svg.style.display = "block";
-    svg.style.pointerEvents = "none";
-  }
-
-  return el;
-}
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -166,8 +113,9 @@ export function CrisisMap({
 }: CrisisMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxGLAny>(null);
-  const mapMarkers = useRef<MapboxGLAny[]>([]);
   const mbRef = useRef<MapboxGLAny>(null);
+  const onMarkerClickRef = useRef(onMarkerClick);
+  useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   const [loaded, setLoaded] = useState(false);
   // Tracks Mapbox built-in admin-1 layer IDs we've mutated so we can reset them.
   const admin1LayerIds = useRef<string[]>([]);
@@ -443,25 +391,192 @@ export function CrisisMap({
     map.current.flyTo({ center, zoom, duration: 1500 });
   }, [center, zoom, loaded, focusCountry]);
 
-  // ── Markers ─────────────────────────────────────────────────────────────
-  const updateMarkers = useCallback(() => {
-    const mapboxgl = mbRef.current;
-    if (!map.current || !loaded || !mapboxgl) return;
+  // ── Markers (GeoJSON cluster source) ────────────────────────────────────
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const SOURCE = "crisis-markers";
+    const CLUSTER_LAYER = "cluster-circles";
+    const CLUSTER_RING = "cluster-ring";
+    const CLUSTER_COUNT = "cluster-count";
+    const POINT_LAYER = "unclustered-point";
 
-    mapMarkers.current.forEach((m: MapboxGLAny) => m.remove());
-    mapMarkers.current = [];
+    const removeAll = () => {
+      for (const id of [CLUSTER_COUNT, CLUSTER_LAYER, CLUSTER_RING, POINT_LAYER]) {
+        try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
+      }
+      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
+    };
 
-    for (const markerData of markers) {
-      const el = buildMarkerEl(markerData);
-      el.addEventListener("click", () => onMarkerClick?.(markerData));
-      const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
-        .setLngLat([markerData.lng, markerData.lat])
-        .addTo(map.current);
-      mapMarkers.current.push(marker);
-    }
-  }, [markers, loaded, onMarkerClick]);
+    const handleClusterClick = (e: MapboxGLAny) => {
+      const feats = m.queryRenderedFeatures(e.point, { layers: [CLUSTER_LAYER] });
+      if (!feats.length) return;
+      const clusterId = feats[0].properties.cluster_id;
+      (m.getSource(SOURCE) as MapboxGLAny).getClusterExpansionZoom(clusterId, (err: unknown, zoom: number) => {
+        if (err) return;
+        m.easeTo({ center: feats[0].geometry.coordinates, zoom: zoom + 0.5, duration: 500 });
+      });
+    };
 
-  useEffect(() => { updateMarkers(); }, [updateMarkers]);
+    const handlePointClick = (e: MapboxGLAny) => {
+      const feats = m.queryRenderedFeatures(e.point, { layers: [POINT_LAYER] });
+      if (!feats.length) return;
+      const props = feats[0].properties as Record<string, unknown>;
+      const coords = feats[0].geometry.coordinates as number[];
+      onMarkerClickRef.current?.({
+        id: props.id as number,
+        lng: coords[0],
+        lat: coords[1],
+        title: props.title as string,
+        severity: props.severity as MapMarker["severity"],
+        type: props.type as string | undefined,
+        description: props.description as string | undefined,
+      });
+    };
+
+    const setCursorPointer = () => { m.getCanvas().style.cursor = "pointer"; };
+    const resetCursor = () => { m.getCanvas().style.cursor = ""; };
+
+    removeAll();
+
+    const features = markers.map((marker) => ({
+      type: "Feature" as const,
+      properties: {
+        id: marker.id,
+        title: marker.title,
+        severity: marker.severity,
+        type: marker.type ?? "",
+        description: marker.description ?? "",
+        is_critical: marker.severity === "critical" ? 1 : 0,
+        is_high:     marker.severity === "high"     ? 1 : 0,
+        is_medium:   marker.severity === "medium"   ? 1 : 0,
+        is_low:      marker.severity === "low"      ? 1 : 0,
+      },
+      geometry: { type: "Point" as const, coordinates: [marker.lng, marker.lat] },
+    }));
+
+    m.addSource(SOURCE, {
+      type: "geojson",
+      data: { type: "FeatureCollection", features },
+      cluster: true,
+      clusterMaxZoom: 9,
+      clusterRadius: 48,
+      clusterProperties: {
+        critical: ["+", ["get", "is_critical"]],
+        high:     ["+", ["get", "is_high"]],
+        medium:   ["+", ["get", "is_medium"]],
+        low:      ["+", ["get", "is_low"]],
+      },
+    });
+
+    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+    const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
+
+    // Dominant severity color for clusters (worst-first priority).
+    const clusterColor: MapboxGLAny = ["case",
+      [">", ["get", "critical"], 0], severityColors.critical,
+      [">", ["get", "high"],     0], severityColors.high,
+      [">", ["get", "medium"],   0], severityColors.medium,
+      severityColors.low,
+    ];
+
+    // Cluster radius scales with point count.
+    const clusterRadius: MapboxGLAny = ["step", ["get", "point_count"],
+      18,   // < 5
+      5,  22, // 5-19
+      20, 26, // 20-49
+      50, 30, // 50+
+    ];
+
+    // Subtle outer ring to visually distinguish clusters from individual points.
+    m.addLayer({
+      id: CLUSTER_RING,
+      type: "circle",
+      source: SOURCE,
+      filter: ["has", "point_count"],
+      paint: {
+        "circle-color": "rgba(0,0,0,0)",
+        "circle-radius": ["step", ["get", "point_count"], 23, 5, 27, 20, 31, 50, 35],
+        "circle-stroke-width": 2,
+        "circle-stroke-color": clusterColor,
+        "circle-stroke-opacity": 0.35,
+        "circle-opacity": 0,
+      },
+    }, beforeId);
+
+    m.addLayer({
+      id: CLUSTER_LAYER,
+      type: "circle",
+      source: SOURCE,
+      filter: ["has", "point_count"],
+      paint: {
+        "circle-color": clusterColor,
+        "circle-radius": clusterRadius,
+        "circle-stroke-width": 2.5,
+        "circle-stroke-color": "#FFFFFF",
+        "circle-stroke-opacity": 0.95,
+        "circle-opacity": 0.93,
+      },
+    }, beforeId);
+
+    m.addLayer({
+      id: CLUSTER_COUNT,
+      type: "symbol",
+      source: SOURCE,
+      filter: ["has", "point_count"],
+      layout: {
+        "text-field": "{point_count_abbreviated}",
+        "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+        "text-size": 12,
+      },
+      paint: { "text-color": "#FFFFFF" },
+    });
+
+    // Individual (unclustered) points.
+    const pointColor: MapboxGLAny = ["case",
+      ["==", ["get", "severity"], "critical"], severityColors.critical,
+      ["==", ["get", "severity"], "high"],     severityColors.high,
+      ["==", ["get", "severity"], "medium"],   severityColors.medium,
+      severityColors.low,
+    ];
+
+    m.addLayer({
+      id: POINT_LAYER,
+      type: "circle",
+      source: SOURCE,
+      filter: ["!", ["has", "point_count"]],
+      paint: {
+        "circle-color": pointColor,
+        "circle-radius": ["case",
+          ["==", ["get", "severity"], "critical"], 9,
+          ["==", ["get", "severity"], "high"],     8,
+          ["==", ["get", "severity"], "medium"],   7,
+          6,
+        ],
+        "circle-stroke-width": 2,
+        "circle-stroke-color": "#FFFFFF",
+        "circle-stroke-opacity": 0.95,
+        "circle-opacity": 0.95,
+      },
+    }, beforeId);
+
+    m.on("click", CLUSTER_LAYER, handleClusterClick);
+    m.on("click", POINT_LAYER, handlePointClick);
+    m.on("mouseenter", CLUSTER_LAYER, setCursorPointer);
+    m.on("mouseleave", CLUSTER_LAYER, resetCursor);
+    m.on("mouseenter", POINT_LAYER, setCursorPointer);
+    m.on("mouseleave", POINT_LAYER, resetCursor);
+
+    return () => {
+      removeAll();
+      m.off("click", CLUSTER_LAYER, handleClusterClick);
+      m.off("click", POINT_LAYER, handlePointClick);
+      m.off("mouseenter", CLUSTER_LAYER, setCursorPointer);
+      m.off("mouseleave", CLUSTER_LAYER, resetCursor);
+      m.off("mouseenter", POINT_LAYER, setCursorPointer);
+      m.off("mouseleave", POINT_LAYER, resetCursor);
+    };
+  }, [markers, loaded]);
 
   // ── Admin boundary polygons (A1 / A2 from backend) ─────────────────────
   useEffect(() => {
