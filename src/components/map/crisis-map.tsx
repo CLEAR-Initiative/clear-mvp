@@ -637,17 +637,20 @@ export function CrisisMap({
         source: SOURCE,
         paint: {
           "fill-color": [
-            "interpolate", ["linear"], ["get", "population"],
-            0,        "#EFF3FF",
-            50000,    "#C6DBEF",
-            200000,   "#9ECAE1",
-            500000,   "#6BAED6",
-            1000000,  "#3182BD",
-            2000000,  "#08519C",
+            "case",
+            ["==", ["get", "population"], 0],
+            "#E5E5E5", // no-data districts: neutral gray
+            [
+              "interpolate", ["linear"], ["get", "population"],
+              1,        "#EFF3FF",
+              50000,    "#C6DBEF",
+              200000,   "#9ECAE1",
+              500000,   "#6BAED6",
+              1000000,  "#3182BD",
+              2000000,  "#08519C",
+            ],
           ],
-          "fill-opacity": [
-            "case", ["==", ["get", "population"], 0], 0, 0.55,
-          ],
+          "fill-opacity": 0.55,
         },
       }, beforeId);
 

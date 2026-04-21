@@ -111,6 +111,21 @@ export const locationsRouter = createTRPCRouter({
       return data.location;
     }),
 
+  /** Fetch A2 district boundaries with population for the choropleth layer. */
+  getPopulationBoundaries: protectedProcedure
+    .input(z.object({ countryId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ locations: GqlLocationWithGeometry[] }>(
+        LOCATIONS_WITH_GEOMETRY_QUERY,
+        { level: 2 },
+        cookieHeaders(ctx),
+      );
+      const all = data.locations;
+      return input.countryId
+        ? all.filter((l) => l.ancestorIds.includes(input.countryId!))
+        : all;
+    }),
+
   /**
    * Fetch admin boundary polygons for a given hierarchy level (1 = states, 2 = districts).
    * Optionally scoped to a country by its location ID.

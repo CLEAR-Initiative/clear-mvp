@@ -118,8 +118,8 @@ export default function MapPage() {
   const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
   // Population layer: A2 districts with population, lazy-loaded when first enabled.
-  const populationQuery = api.locations.getAdminBoundaries.useQuery(
-    { level: 2, countryId: sudanId ?? undefined },
+  const populationQuery = api.locations.getPopulationBoundaries.useQuery(
+    { countryId: sudanId ?? undefined },
     { enabled: showPopulation && !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
   const populationBoundaries = useMemo(
