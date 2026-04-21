@@ -7,14 +7,8 @@ import {
   Text,
   Group,
   Select,
-  Button,
-  TextInput,
   Loader,
 } from "@mantine/core";
-import {
-  IconSearch,
-  IconDownload,
-} from "@tabler/icons-react";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
@@ -308,28 +302,6 @@ export default function MapPage() {
             label={<FilterLabel>Crisis Type</FilterLabel>}
           />
           {isLoading && <Loader size={14} mt={20} />}
-        </Group>
-        <Group gap={8} style={{ pointerEvents: "auto" }}>
-          <TextInput
-            placeholder="Search locations..."
-            size="xs"
-            leftSection={<IconSearch size={14} />}
-            style={{ width: 220 }}
-            styles={{ input: { boxShadow: "0 2px 4px rgba(0,0,0,0.1)" } }}
-          />
-          <Button
-            variant="outline"
-            color="gray"
-            size="xs"
-            leftSection={<IconDownload size={14} />}
-            style={{
-              background: "white",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-              fontSize: 13,
-            }}
-          >
-            Export
-          </Button>
         </Group>
       </Box>
 
