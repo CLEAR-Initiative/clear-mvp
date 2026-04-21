@@ -26,6 +26,12 @@ export interface MapRegion {
   signalPoints?: Array<{ lng: number; lat: number; title: string }>;
 }
 
+interface AdminBoundary {
+  id: string;
+  name: string;
+  geometry: unknown;
+}
+
 interface CrisisMapProps {
   markers?: MapMarker[];
   /** Polygon/MultiPolygon regions to render on the map. */
@@ -44,6 +50,12 @@ interface CrisisMapProps {
   focusCountryPCode?: string;
   /** Country name used as a fallback when `pCode` doesn't resolve. */
   focusCountryName?: string;
+  /** Admin boundary polygons to render (A1 states or A2 districts). */
+  adminBoundaries?: AdminBoundary[];
+  /** Level of admin boundaries being rendered - controls visual styling. */
+  adminBoundaryLevel?: 1 | 2;
+  /** GeoJSON geometry to fit the map bounds to (e.g. a selected region). */
+  fitBoundsGeometry?: unknown;
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -148,12 +160,17 @@ export function CrisisMap({
   interactive = true,
   focusCountryPCode,
   focusCountryName,
+  adminBoundaries,
+  adminBoundaryLevel,
+  fitBoundsGeometry,
 }: CrisisMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxGLAny>(null);
   const mapMarkers = useRef<MapboxGLAny[]>([]);
   const mbRef = useRef<MapboxGLAny>(null);
   const [loaded, setLoaded] = useState(false);
+  // Tracks Mapbox built-in admin-1 layer IDs we've mutated so we can reset them.
+  const admin1LayerIds = useRef<string[]>([]);
 
   // Fetch the focus country's geometry (only when requested).
   const focusQuery = api.locations.getCountryByPCode.useQuery(
@@ -192,10 +209,6 @@ export function CrisisMap({
         new mapboxgl.NavigationControl({ showCompass: false }),
         "bottom-right",
       );
-      map.current.addControl(
-        new mapboxgl.AttributionControl({ compact: true }),
-        "bottom-left",
-      );
     });
 
     return () => {
@@ -221,14 +234,15 @@ export function CrisisMap({
     const COUNTRY_SOURCE = "mapbox-countries";
 
     const cleanup = () => {
-      for (const id of [
-        "focus-mask-fill",
-        "focus-highlight-fill",
-        "focus-border-line",
-      ]) {
+      for (const id of ["focus-mask-fill", "focus-highlight-fill", "focus-border-line"]) {
         try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
       }
       try { if (m.getSource(COUNTRY_SOURCE)) m.removeSource(COUNTRY_SOURCE); } catch { /* ignore */ }
+      // Reset any Mapbox built-in admin-1 layers we mutated back to hidden.
+      for (const id of admin1LayerIds.current) {
+        try { m.setLayoutProperty(id, "visibility", "none"); } catch { /* ignore */ }
+      }
+      admin1LayerIds.current = [];
     };
 
     cleanup();
@@ -270,7 +284,7 @@ export function CrisisMap({
       fillBeforeId,
     );
 
-    // Deeper neutral slate across the focus country.
+    // Blue tint across the focus country.
     m.addLayer(
       {
         id: "focus-highlight-fill",
@@ -279,8 +293,8 @@ export function CrisisMap({
         "source-layer": "country_boundaries",
         filter: ["==", ["get", "iso_3166_1"], focusIso],
         paint: {
-          "fill-color": "#94A3B8",
-          "fill-opacity": 0.45,
+          "fill-color": "#1E40AF",
+          "fill-opacity": 0.35,
         },
       },
       fillBeforeId,
@@ -295,7 +309,7 @@ export function CrisisMap({
         "source-layer": "country_boundaries",
         filter: ["==", ["get", "iso_3166_1"], focusIso],
         paint: {
-          "line-color": "#334155",
+          "line-color": "#1D4ED8",
           "line-width": 1.25,
           "line-opacity": 0.85,
         },
@@ -315,25 +329,33 @@ export function CrisisMap({
     for (const layer of allLayers) {
       const id = layer.id.toLowerCase();
 
-      // Admin-1 (state) lines - filter to focus country + boost visibility.
+      // Admin-1 state lines: always visit and explicitly control visibility.
+      // Mapbox base style may show these at the current zoom, so we must
+      // explicitly hide them unless we want the A1 fallback.
       if (
         layer.type === "line" &&
         id.includes("admin") &&
         (id.includes("-1-") || id.endsWith("-1"))
       ) {
-        try {
-          m.setFilter(layer.id, [
-            "all",
-            ["==", ["get", "admin_level"], 1],
-            ["==", ["get", "maritime"], "false"],
-            ["==", ["get", "iso_3166_1"], focusIso],
-          ]);
-          m.setLayerZoomRange(layer.id, 0, 24);
-          m.setPaintProperty(layer.id, "line-color", "#475569");
-          m.setPaintProperty(layer.id, "line-width", 1.4);
-          m.setPaintProperty(layer.id, "line-opacity", 0.85);
-          m.setPaintProperty(layer.id, "line-dasharray", [3, 2]);
-        } catch { /* ignore */ }
+        admin1LayerIds.current.push(layer.id);
+        if (adminBoundaryLevel === 1 && (!adminBoundaries || adminBoundaries.length === 0)) {
+          try {
+            m.setFilter(layer.id, [
+              "all",
+              ["==", ["get", "admin_level"], 1],
+              ["==", ["get", "maritime"], "false"],
+              ["==", ["get", "iso_3166_1"], focusIso],
+            ]);
+            m.setLayerZoomRange(layer.id, 0, 24);
+            m.setPaintProperty(layer.id, "line-color", "#475569");
+            m.setPaintProperty(layer.id, "line-width", 1.4);
+            m.setPaintProperty(layer.id, "line-opacity", 0.85);
+            m.setPaintProperty(layer.id, "line-dasharray", [3, 2]);
+            m.setLayoutProperty(layer.id, "visibility", "visible");
+          } catch { /* ignore */ }
+        } else {
+          try { m.setLayoutProperty(layer.id, "visibility", "none"); } catch { /* ignore */ }
+        }
       }
 
       // Settlement labels - relax the filterrank threshold from <=2 to <=4
@@ -379,18 +401,30 @@ export function CrisisMap({
     }
 
     return cleanup;
-  }, [focusIso, loaded]);
+  }, [focusIso, loaded, adminBoundaries, adminBoundaryLevel]);
 
   // Fit bounds to the focus country once its backend bbox is available.
+  // Skips when fitBoundsGeometry is set (a more specific region is focused).
   useEffect(() => {
-    if (!map.current || !loaded || !focusCountry) return;
+    if (!map.current || !loaded || !focusCountry || fitBoundsGeometry) return;
     const bounds = geometryBounds(focusCountry.geometry as never);
     if (!bounds) return;
     map.current.fitBounds(
       [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
       { padding: 40, duration: 800 },
     );
-  }, [focusCountry, loaded]);
+  }, [focusCountry, loaded, fitBoundsGeometry]);
+
+  // Fit bounds to a specific geometry (e.g. selected region).
+  useEffect(() => {
+    if (!map.current || !loaded || !fitBoundsGeometry) return;
+    const bounds = geometryBounds(fitBoundsGeometry as never);
+    if (!bounds) return;
+    map.current.fitBounds(
+      [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
+      { padding: 60, duration: 800 },
+    );
+  }, [fitBoundsGeometry, loaded]);
 
   // ── FlyTo on center/zoom prop change ────────────────────────────────────
   const prevCenter = useRef(center);
@@ -428,6 +462,44 @@ export function CrisisMap({
   }, [markers, loaded, onMarkerClick]);
 
   useEffect(() => { updateMarkers(); }, [updateMarkers]);
+
+  // ── Admin boundary polygons (A1 / A2 from backend) ─────────────────────
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const ADMIN_SOURCE = "admin-boundaries";
+
+    const cleanup = () => {
+      try { if (m.getLayer("admin-boundaries-line")) m.removeLayer("admin-boundaries-line"); } catch { /* ignore */ }
+      try { if (m.getSource(ADMIN_SOURCE)) m.removeSource(ADMIN_SOURCE); } catch { /* ignore */ }
+    };
+
+    cleanup();
+
+    const features = (adminBoundaries ?? [])
+      .filter((b) => b.geometry != null)
+      .map((b) => ({ type: "Feature" as const, properties: { name: b.name, id: b.id }, geometry: b.geometry }));
+
+    if (features.length === 0) return;
+
+    const isA2 = adminBoundaryLevel === 2;
+    const lineColor = isA2 ? "#3B82F6" : "#1D4ED8";
+    const lineWidth = isA2 ? 1 : 1.5;
+
+    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+    const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
+
+    try {
+      m.addSource(ADMIN_SOURCE, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features },
+      });
+      m.addLayer({ id: "admin-boundaries-line", type: "line", source: ADMIN_SOURCE,
+        paint: { "line-color": lineColor, "line-width": lineWidth, "line-opacity": 0.85, "line-dasharray": [4, 2] } }, beforeId);
+    } catch { /* ignore */ }
+
+    return cleanup;
+  }, [adminBoundaries, adminBoundaryLevel, loaded]);
 
   // ── Regions (heatmap from signalPoints if present, else feathered fill) ─
   const regionLayerIds = useRef<string[]>([]);

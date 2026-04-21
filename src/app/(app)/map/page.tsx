@@ -34,6 +34,7 @@ import { useLocations } from "~/hooks/use-locations";
 import { MapLayersPanel } from "./_components/map-layers-panel";
 import { MapLegendPanel } from "./_components/map-legend-panel";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
+import { MapSettingsPopover, type BoundaryLevel } from "./_components/map-settings-popover";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -115,6 +116,41 @@ export default function MapPage() {
     null,
   );
   const [activeMonth, setActiveMonth] = useState(5);
+  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
+
+  // Resolve Sudan's location ID for scoping admin boundary queries.
+  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
+
+  const a1Query = api.locations.getAdminBoundaries.useQuery(
+    { level: 1, countryId: sudanId ?? undefined },
+    { enabled: boundaryLevel === "A1" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const a2Query = api.locations.getAdminBoundaries.useQuery(
+    { level: 2, countryId: sudanId ?? undefined },
+    { enabled: boundaryLevel === "A2" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+
+  const adminBoundaries = useMemo(() => {
+    if (boundaryLevel === "A1") return a1Query.data ?? [];
+    if (boundaryLevel === "A2") return a2Query.data ?? [];
+    return [];
+  }, [boundaryLevel, a1Query.data, a2Query.data]);
+
+  const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
+
+  // Region zoom: fetch selected region geometry and fit map to it.
+  const selectedRegionId = useMemo(
+    () => (selectedRegion !== "All Regions" ? getLocationId(selectedRegion) : null),
+    [selectedRegion, getLocationId],
+  );
+  const regionQuery = api.locations.getById.useQuery(
+    { id: selectedRegionId! },
+    { enabled: !!selectedRegionId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const fitBoundsGeometry = useMemo(
+    () => (selectedRegion !== "All Regions" ? (regionQuery.data?.geometry ?? null) : null),
+    [selectedRegion, regionQuery.data],
+  );
 
   /* ---- Derive country/region options from API locations ---- */
   const countryOptions = useMemo(
@@ -323,6 +359,9 @@ export default function MapPage() {
         onMarkerClick={handleMarkerClick}
         focusCountryPCode="SD"
         focusCountryName="Sudan"
+        adminBoundaries={adminBoundaries}
+        adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+        fitBoundsGeometry={fitBoundsGeometry}
       />
 
       {/* ===== Layers Panel ===== */}
@@ -331,6 +370,14 @@ export default function MapPage() {
         activeLayers={activeLayers}
         onToggleLayer={toggleLayer}
       />
+
+      {/* ===== Map Settings (bottom-left) ===== */}
+      <Box className="absolute z-10" style={{ bottom: 88, left: 16 }}>
+        <MapSettingsPopover
+          boundaryLevel={boundaryLevel}
+          onBoundaryLevelChange={setBoundaryLevel}
+        />
+      </Box>
 
       {/* ===== Legend Panel ===== */}
       <MapLegendPanel layers={layers} />

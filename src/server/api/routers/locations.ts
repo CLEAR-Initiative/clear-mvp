@@ -41,6 +41,20 @@ const LOCATIONS_WITH_GEOMETRY_QUERY = `
   }
 `;
 
+const LOCATION_BY_ID_QUERY = `
+  query LocationById($id: String!) {
+    location(id: $id) {
+      id
+      name
+      level
+      ancestorIds
+      parent { id name }
+      pCode
+      geometry
+    }
+  }
+`;
+
 export const locationsRouter = createTRPCRouter({
   /** Fetch all locations, optionally filtered by level */
   list: protectedProcedure
@@ -81,6 +95,36 @@ export const locationsRouter = createTRPCRouter({
           )
         : undefined;
       return byName ?? null;
+    }),
+
+  /** Get a single location by ID, including geometry. */
+  getById: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ location: GqlLocationWithGeometry | null }>(
+        LOCATION_BY_ID_QUERY,
+        { id: input.id },
+        cookieHeaders(ctx),
+      );
+      return data.location;
+    }),
+
+  /**
+   * Fetch admin boundary polygons for a given hierarchy level (1 = states, 2 = districts).
+   * Optionally scoped to a country by its location ID.
+   */
+  getAdminBoundaries: protectedProcedure
+    .input(z.object({ level: z.number(), countryId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ locations: GqlLocationWithGeometry[] }>(
+        LOCATIONS_WITH_GEOMETRY_QUERY,
+        { level: input.level },
+        cookieHeaders(ctx),
+      );
+      if (input.countryId) {
+        return data.locations.filter((l) => l.ancestorIds.includes(input.countryId!));
+      }
+      return data.locations;
     }),
 
   /** Get hierarchical location tree: countries → states → districts */

@@ -26,6 +26,7 @@ import {
 } from "@tabler/icons-react";
 import type { GqlSignal } from "~/lib/types/graphql";
 import type { MapMarker } from "~/components/map/crisis-map";
+import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -63,6 +64,11 @@ interface SignalsTabProps {
   mapMarkers: MapMarker[];
   mapCenter: [number, number];
   mapZoom: number;
+  fitBoundsGeometry?: unknown;
+  adminBoundaries?: Array<{ id: string; name: string; geometry: unknown }>;
+  adminBoundaryLevel?: 1 | 2;
+  boundaryLevel?: BoundaryLevel;
+  onBoundaryLevelChange?: (level: BoundaryLevel) => void;
 }
 
 export function SignalsTab({
@@ -71,6 +77,11 @@ export function SignalsTab({
   mapMarkers,
   mapCenter,
   mapZoom,
+  fitBoundsGeometry,
+  adminBoundaries,
+  adminBoundaryLevel,
+  boundaryLevel = "A1",
+  onBoundaryLevelChange,
 }: SignalsTabProps) {
   const [search, setSearch] = useState("");
   const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
@@ -412,9 +423,11 @@ export function SignalsTab({
 
       {/* Right: Crisis Map */}
       <Box style={{ width: 480, flexShrink: 0 }}>
-        {/* Label row - aligns with toolbar */}
-        <Group mb={12} align="center" style={{ minHeight: 32 }}>
+        <Group mb={12} justify="space-between" align="center" style={{ minHeight: 32 }}>
           <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Crisis Map</Text>
+          {onBoundaryLevelChange && (
+            <MapSettingsPopover boundaryLevel={boundaryLevel} onBoundaryLevelChange={onBoundaryLevelChange} />
+          )}
         </Group>
         <Card p={0} style={{ border: "1px solid var(--color-border)", position: "sticky", top: 24 }}>
           <Box style={{ height: 524 }}>
@@ -425,6 +438,9 @@ export function SignalsTab({
               className="w-full h-full"
               focusCountryPCode="SD"
               focusCountryName="Sudan"
+              fitBoundsGeometry={fitBoundsGeometry}
+              adminBoundaries={adminBoundaries}
+              adminBoundaryLevel={adminBoundaryLevel}
             />
           </Box>
         </Card>

@@ -25,6 +25,7 @@ import {
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
+import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { getDisasterPills, getDisasterLabel } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
@@ -62,6 +63,11 @@ interface LiveAlertsTabProps {
   mapRegions?: MapRegion[];
   mapCenter: [number, number];
   mapZoom: number;
+  fitBoundsGeometry?: unknown;
+  adminBoundaries?: Array<{ id: string; name: string; geometry: unknown }>;
+  adminBoundaryLevel?: 1 | 2;
+  boundaryLevel?: BoundaryLevel;
+  onBoundaryLevelChange?: (level: BoundaryLevel) => void;
 }
 
 export function LiveAlertsTab({
@@ -71,6 +77,11 @@ export function LiveAlertsTab({
   mapRegions,
   mapCenter,
   mapZoom,
+  fitBoundsGeometry,
+  adminBoundaries,
+  adminBoundaryLevel,
+  boundaryLevel = "A1",
+  onBoundaryLevelChange,
 }: LiveAlertsTabProps) {
   const { getTypeNames } = useDisasterTypes();
   const [search, setSearch] = useState("");
@@ -499,9 +510,11 @@ export function LiveAlertsTab({
 
       {/* Right: Crisis Map */}
       <Box style={{ width: 480, flexShrink: 0 }}>
-        {/* Label row - aligns with toolbar */}
-        <Group mb={12} align="center" style={{ minHeight: 32 }}>
+        <Group mb={12} justify="space-between" align="center" style={{ minHeight: 32 }}>
           <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Crisis Map</Text>
+          {onBoundaryLevelChange && (
+            <MapSettingsPopover boundaryLevel={boundaryLevel} onBoundaryLevelChange={onBoundaryLevelChange} />
+          )}
         </Group>
         <Card p={0} style={{ border: "1px solid var(--color-border)", position: "sticky", top: 24 }}>
           <Box style={{ height: 524 }}>
@@ -513,6 +526,9 @@ export function LiveAlertsTab({
               className="w-full h-full"
               focusCountryPCode="SD"
               focusCountryName="Sudan"
+              fitBoundsGeometry={fitBoundsGeometry}
+              adminBoundaries={adminBoundaries}
+              adminBoundaryLevel={adminBoundaryLevel}
             />
           </Box>
         </Card>
