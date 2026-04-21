@@ -29,6 +29,7 @@ interface AdminBoundary {
   id: string;
   name: string;
   geometry: unknown;
+  population?: number | null;
 }
 
 interface CrisisMapProps {
@@ -55,6 +56,8 @@ interface CrisisMapProps {
   adminBoundaryLevel?: 1 | 2;
   /** GeoJSON geometry to fit the map bounds to (e.g. a selected region). */
   fitBoundsGeometry?: unknown;
+  /** A2 district boundaries with population for choropleth layer. */
+  populationBoundaries?: AdminBoundary[];
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -176,6 +179,7 @@ export function CrisisMap({
   adminBoundaries,
   adminBoundaryLevel,
   fitBoundsGeometry,
+  populationBoundaries,
 }: CrisisMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxGLAny>(null);
@@ -593,6 +597,75 @@ export function CrisisMap({
       m.off("sourcedata", onSourceData);
     };
   }, [markers, loaded]);
+
+  // ── Population choropleth (A2 districts, independent layer) ─────────────
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const SOURCE = "population-boundaries";
+    const FILL_LAYER = "population-fill";
+    const LINE_LAYER = "population-line";
+
+    const cleanup = () => {
+      try { if (m.getLayer(LINE_LAYER)) m.removeLayer(LINE_LAYER); } catch { /* ignore */ }
+      try { if (m.getLayer(FILL_LAYER)) m.removeLayer(FILL_LAYER); } catch { /* ignore */ }
+      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
+    };
+
+    cleanup();
+
+    const features = (populationBoundaries ?? [])
+      .filter((b) => b.geometry != null)
+      .map((b) => ({
+        type: "Feature" as const,
+        properties: { name: b.name, id: b.id, population: b.population ?? 0 },
+        geometry: b.geometry,
+      }));
+
+    if (features.length === 0) return;
+
+    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+    const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
+
+    try {
+      m.addSource(SOURCE, { type: "geojson", data: { type: "FeatureCollection", features } });
+
+      // Choropleth fill: light blue -> deep blue scaled by population.
+      m.addLayer({
+        id: FILL_LAYER,
+        type: "fill",
+        source: SOURCE,
+        paint: {
+          "fill-color": [
+            "interpolate", ["linear"], ["get", "population"],
+            0,        "#EFF3FF",
+            50000,    "#C6DBEF",
+            200000,   "#9ECAE1",
+            500000,   "#6BAED6",
+            1000000,  "#3182BD",
+            2000000,  "#08519C",
+          ],
+          "fill-opacity": [
+            "case", ["==", ["get", "population"], 0], 0, 0.55,
+          ],
+        },
+      }, beforeId);
+
+      // Thin district lines for readability.
+      m.addLayer({
+        id: LINE_LAYER,
+        type: "line",
+        source: SOURCE,
+        paint: {
+          "line-color": "#3182BD",
+          "line-width": 0.4,
+          "line-opacity": 0.4,
+        },
+      }, beforeId);
+    } catch { /* ignore */ }
+
+    return cleanup;
+  }, [populationBoundaries, loaded]);
 
   // ── Admin boundary polygons (A1 / A2 from backend) ─────────────────────
   useEffect(() => {

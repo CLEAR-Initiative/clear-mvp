@@ -95,6 +95,7 @@ export default function MapPage() {
     null,
   );
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
+  const [showPopulation, setShowPopulation] = useState(false);
 
   // Resolve Sudan's location ID for scoping admin boundary queries.
   const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
@@ -115,6 +116,16 @@ export default function MapPage() {
   }, [boundaryLevel, a1Query.data, a2Query.data]);
 
   const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
+
+  // Population layer: A2 districts with population, lazy-loaded when first enabled.
+  const populationQuery = api.locations.getAdminBoundaries.useQuery(
+    { level: 2, countryId: sudanId ?? undefined },
+    { enabled: showPopulation && !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const populationBoundaries = useMemo(
+    () => (showPopulation ? (populationQuery.data ?? []) : []),
+    [showPopulation, populationQuery.data],
+  );
 
   // Region zoom: fetch selected region geometry and fit map to it.
   const selectedRegionId = useMemo(
@@ -318,6 +329,7 @@ export default function MapPage() {
         adminBoundaries={adminBoundaries}
         adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
         fitBoundsGeometry={fitBoundsGeometry}
+        populationBoundaries={populationBoundaries}
       />
 
       {/* ===== Layers Panel ===== */}
@@ -332,6 +344,8 @@ export default function MapPage() {
         <MapSettingsPopover
           boundaryLevel={boundaryLevel}
           onBoundaryLevelChange={setBoundaryLevel}
+          showPopulation={showPopulation}
+          onShowPopulationChange={setShowPopulation}
         />
       </Box>
 

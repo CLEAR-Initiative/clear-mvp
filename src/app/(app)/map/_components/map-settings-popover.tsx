@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Box, Text, Group, Select, Popover } from "@mantine/core";
+import { Box, Text, Group, Select, Popover, Switch, Divider } from "@mantine/core";
 import { IconSettings } from "@tabler/icons-react";
 
 export type BoundaryLevel = "none" | "A0" | "A1" | "A2";
@@ -9,6 +9,8 @@ export type BoundaryLevel = "none" | "A0" | "A1" | "A2";
 interface MapSettingsPopoverProps {
   boundaryLevel: BoundaryLevel;
   onBoundaryLevelChange: (level: BoundaryLevel) => void;
+  showPopulation?: boolean;
+  onShowPopulationChange?: (show: boolean) => void;
 }
 
 const BOUNDARY_OPTIONS = [
@@ -18,7 +20,12 @@ const BOUNDARY_OPTIONS = [
   { value: "A2", label: "A2 - Districts" },
 ];
 
-export function MapSettingsPopover({ boundaryLevel, onBoundaryLevelChange }: MapSettingsPopoverProps) {
+export function MapSettingsPopover({
+  boundaryLevel,
+  onBoundaryLevelChange,
+  showPopulation = false,
+  onShowPopulationChange,
+}: MapSettingsPopoverProps) {
   const [opened, setOpened] = useState(false);
 
   return (
@@ -66,9 +73,7 @@ export function MapSettingsPopover({ boundaryLevel, onBoundaryLevelChange }: Map
 
         <Group justify="space-between" align="center" gap={8} wrap="nowrap">
           <Box style={{ flexShrink: 0 }}>
-            <Text size="xs" c="#525252" style={{ fontSize: 12 }}>
-              Show boundaries
-            </Text>
+            <Text size="xs" c="#525252" style={{ fontSize: 12 }}>Show boundaries</Text>
           </Box>
           <Select
             size="xs"
@@ -79,6 +84,24 @@ export function MapSettingsPopover({ boundaryLevel, onBoundaryLevelChange }: Map
             styles={{ input: { fontWeight: 600, fontSize: 12 } }}
           />
         </Group>
+
+        {onShowPopulationChange && (
+          <>
+            <Divider color="#F5F5F5" my={10} />
+            <Group justify="space-between" align="center" gap={8} wrap="nowrap">
+              <Box>
+                <Text size="xs" c="#525252" style={{ fontSize: 12 }}>Population layer</Text>
+                <Text size="xs" c="#A3A3A3" style={{ fontSize: 10 }}>A2 district resolution</Text>
+              </Box>
+              <Switch
+                size="xs"
+                checked={showPopulation}
+                onChange={(e) => onShowPopulationChange(e.currentTarget.checked)}
+                color="blue"
+              />
+            </Group>
+          </>
+        )}
       </Popover.Dropdown>
     </Popover>
   );
