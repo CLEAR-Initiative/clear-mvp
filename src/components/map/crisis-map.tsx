@@ -97,6 +97,13 @@ function loadMapboxGL(): Promise<any> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type MapboxGLAny = any;
 
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 // ── Donut cluster helpers ────────────────────────────────────────────────────
 
 const SEVERITY_ORDER = ["critical", "high", "medium", "low"] as const;
@@ -767,10 +774,10 @@ export function CrisisMap({
             "heatmap-color": [
               "interpolate", ["linear"], ["heatmap-density"],
               0,   "rgba(0,0,0,0)",
-              0.2, `${color}33`,
-              0.5, `${color}66`,
-              0.8, `${color}B3`,
-              1,   `${color}F2`,
+              0.2, hexToRgba(color, 0.2),
+              0.5, hexToRgba(color, 0.4),
+              0.8, hexToRgba(color, 0.7),
+              1,   hexToRgba(color, 0.95),
             ],
             "heatmap-radius": [
               "interpolate", ["linear"], ["zoom"],
