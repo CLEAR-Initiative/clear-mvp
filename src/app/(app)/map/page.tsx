@@ -9,16 +9,11 @@ import {
   Select,
   Button,
   TextInput,
-  ActionIcon,
-  Stack,
   Loader,
 } from "@mantine/core";
 import {
   IconSearch,
   IconDownload,
-  IconPlayerSkipBack,
-  IconPlayerPlay,
-  IconPlayerSkipForward,
 } from "@tabler/icons-react";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
@@ -40,16 +35,6 @@ const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
   { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
 );
-
-/* ========== Timeline data ========== */
-const timelineMonths = [
-  { label: "Sep", hasEvent: false },
-  { label: "Oct", hasEvent: true },
-  { label: "Nov", hasEvent: true },
-  { label: "Dec", hasEvent: false },
-  { label: "Jan", hasEvent: false },
-  { label: "Feb", hasEvent: false },
-];
 
 /* ========== Label styles ========== */
 const LABEL_STYLE = { fontSize: 10, letterSpacing: "0.05em" } as const;
@@ -115,7 +100,6 @@ export default function MapPage() {
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(
     null,
   );
-  const [activeMonth, setActiveMonth] = useState(5);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
 
   // Resolve Sudan's location ID for scoping admin boundary queries.
@@ -372,7 +356,7 @@ export default function MapPage() {
       />
 
       {/* ===== Map Settings (bottom-left) ===== */}
-      <Box className="absolute z-10" style={{ bottom: 88, left: 16 }}>
+      <Box className="absolute z-10" style={{ bottom: 16, left: 16 }}>
         <MapSettingsPopover
           boundaryLevel={boundaryLevel}
           onBoundaryLevelChange={setBoundaryLevel}
@@ -389,74 +373,6 @@ export default function MapPage() {
           onClose={() => setSelectedMarker(null)}
         />
       )}
-
-      {/* ===== Timeline Bar ===== */}
-      <Box
-        className="absolute bottom-0 left-0 right-0 z-10 bg-white border-t border-[#E5E5E5]"
-        px={16}
-        py={12}
-      >
-        <Group justify="space-between" mb={8}>
-          <Text
-            size="xs"
-            fw={700}
-            c="#737373"
-            tt="uppercase"
-            style={{ letterSpacing: "0.05em", fontSize: 11 }}
-          >
-            Timeline
-          </Text>
-          <Group gap={8}>
-            <ActionIcon variant="light" color="gray" size="sm">
-              <IconPlayerSkipBack size={12} />
-            </ActionIcon>
-            <ActionIcon
-              variant="filled"
-              size="sm"
-              style={{ background: "#E85D3D" }}
-            >
-              <IconPlayerPlay size={12} />
-            </ActionIcon>
-            <ActionIcon variant="light" color="gray" size="sm">
-              <IconPlayerSkipForward size={12} />
-            </ActionIcon>
-          </Group>
-        </Group>
-        <Group justify="space-between" className="relative" h={40}>
-          <Box className="absolute top-1/2 left-0 right-0 h-1 bg-[#E5E5E5] -translate-y-1/2" />
-          {timelineMonths.map((month, i) => (
-            <Stack
-              key={month.label}
-              align="center"
-              gap={4}
-              className="cursor-pointer z-[1]"
-              onClick={() => setActiveMonth(i)}
-            >
-              <Box
-                w={i === activeMonth ? 14 : 8}
-                h={i === activeMonth ? 14 : 8}
-                style={{
-                  backgroundColor:
-                    i === activeMonth
-                      ? "#E85D3D"
-                      : month.hasEvent
-                        ? "#D97706"
-                        : "#E5E5E5",
-                  marginTop: i === activeMonth ? 12 : 16,
-                }}
-              />
-              <Text
-                size="xs"
-                fw={i === activeMonth ? 600 : 400}
-                c={i === activeMonth ? "#171717" : "#737373"}
-                style={{ fontSize: 9 }}
-              >
-                {month.label}
-              </Text>
-            </Stack>
-          ))}
-        </Group>
-      </Box>
 
       {/* Pulse animation for critical markers */}
       <style>{`
