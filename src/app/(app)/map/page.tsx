@@ -20,7 +20,7 @@ import {
   alertsToRegions,
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
-import { MapLayersPanel } from "./_components/map-layers-panel";
+import { MapLayersPanel, type DataView } from "./_components/map-layers-panel";
 import { MapLegendPanel } from "./_components/map-legend-panel";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
 import { MapSettingsPopover, type BoundaryLevel } from "./_components/map-settings-popover";
@@ -96,6 +96,7 @@ export default function MapPage() {
   );
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
+  const [dataView, setDataView] = useState<DataView>("alert");
 
   // Resolve Sudan's location ID for scoping admin boundary queries.
   const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
@@ -337,6 +338,10 @@ export default function MapPage() {
         layers={layers}
         activeLayers={activeLayers}
         onToggleLayer={toggleLayer}
+        dataView={dataView}
+        onDataViewChange={setDataView}
+        showPopulation={showPopulation}
+        onShowPopulationChange={setShowPopulation}
       />
 
       {/* ===== Map Settings (bottom-left) ===== */}
@@ -344,8 +349,6 @@ export default function MapPage() {
         <MapSettingsPopover
           boundaryLevel={boundaryLevel}
           onBoundaryLevelChange={setBoundaryLevel}
-          showPopulation={showPopulation}
-          onShowPopulationChange={setShowPopulation}
         />
       </Box>
 
