@@ -18,10 +18,10 @@ import {
   alertsToRegions,
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
-import { MapLayersPanel, type DataView } from "./_components/map-layers-panel";
-import { MapLegendPanel } from "./_components/map-legend-panel";
+import { MapPanelBar } from "./_components/map-panel-bar";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
-import { MapSettingsPopover, type BoundaryLevel } from "./_components/map-settings-popover";
+import type { DataView } from "./_components/map-layers-panel";
+import type { BoundaryLevel } from "./_components/map-settings-popover";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -316,24 +316,16 @@ export default function MapPage() {
         populationBoundaries={populationBoundaries}
       />
 
-      {/* ===== Layers Panel ===== */}
-      <MapLayersPanel
+      {/* ===== Left Panel Bar (Layers / Legend / Config) ===== */}
+      <MapPanelBar
         dataView={dataView}
         onDataViewChange={setDataView}
         showPopulation={showPopulation}
         onShowPopulationChange={setShowPopulation}
+        eventTypes={activeEventTypes}
+        boundaryLevel={boundaryLevel}
+        onBoundaryLevelChange={setBoundaryLevel}
       />
-
-      {/* ===== Map Settings (bottom-left) ===== */}
-      <Box className="absolute z-10" style={{ bottom: 16, left: 16 }}>
-        <MapSettingsPopover
-          boundaryLevel={boundaryLevel}
-          onBoundaryLevelChange={setBoundaryLevel}
-        />
-      </Box>
-
-      {/* ===== Legend Panel ===== */}
-      <MapLegendPanel eventTypes={activeEventTypes} />
 
       {/* ===== Selected Marker Detail ===== */}
       {selectedMarker && (
