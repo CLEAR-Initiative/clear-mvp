@@ -127,9 +127,11 @@ function buildDonutEl(props: Record<string, number>): HTMLDivElement {
 
   let arcs = "";
   if (segments.length === 1) {
-    // Full 360° arc is degenerate in SVG - draw plain circles instead.
-    arcs = `<circle cx="${cx}" cy="${cy}" r="${outerR}" fill="${segments[0].color}"/>
-            <circle cx="${cx}" cy="${cy}" r="${innerR}" fill="white"/>`;
+    // Full 360° arc is degenerate in SVG - use a stroked ring so the center
+    // stays transparent (matches the multi-segment donut appearance).
+    const mid = (outerR + innerR) / 2;
+    const thickness = outerR - innerR;
+    arcs = `<circle cx="${cx}" cy="${cy}" r="${mid}" fill="none" stroke="${segments[0].color}" stroke-width="${thickness}"/>`;
   } else {
     let angle = -Math.PI / 2;
     for (const seg of segments) {
@@ -146,7 +148,6 @@ function buildDonutEl(props: Record<string, number>): HTMLDivElement {
   el.style.cssText = `cursor:pointer;width:${size}px;height:${size}px;filter:drop-shadow(0 2px 5px rgba(0,0,0,0.22));`;
   el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     ${arcs}
-    <circle cx="${cx}" cy="${cy}" r="${outerR + 1.5}" fill="none" stroke="white" stroke-width="3" opacity="0.9"/>
     <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="#1F2937" font-weight="700" font-size="${fontSize}" font-family="system-ui,-apple-system,sans-serif">${label}</text>
   </svg>`;
   return el;
