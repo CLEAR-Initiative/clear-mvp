@@ -537,9 +537,15 @@ export function CrisisMap({
         const cid    = props.cluster_id;
         const el     = buildDonutEl(props);
         el.addEventListener("click", () => {
-          (m.getSource(SOURCE) as MapboxGLAny).getClusterExpansionZoom(cid, (err: unknown, z: number) => {
-            if (err) return;
-            m.easeTo({ center: coords, zoom: z + 0.5, duration: 500 });
+          // Fetch all leaves so we can fitBounds to the full set - guarantees
+          // every member of the cluster is visible after expanding.
+          (m.getSource(SOURCE) as MapboxGLAny).getClusterLeaves(cid, Infinity, 0, (err: unknown, leaves: MapboxGLAny[]) => {
+            if (err || !leaves?.length) return;
+            const lngs = leaves.map((f: MapboxGLAny) => f.geometry.coordinates[0] as number);
+            const lats = leaves.map((f: MapboxGLAny) => f.geometry.coordinates[1] as number);
+            const sw: [number, number] = [Math.min(...lngs), Math.min(...lats)];
+            const ne: [number, number] = [Math.max(...lngs), Math.max(...lats)];
+            m.fitBounds([sw, ne], { padding: 80, maxZoom: 13, duration: 600 });
           });
         });
         clusterDomMarkers.current.set(
