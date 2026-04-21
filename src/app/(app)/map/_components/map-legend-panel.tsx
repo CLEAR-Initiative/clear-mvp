@@ -1,5 +1,4 @@
 import { Box, Text, Group, Stack } from "@mantine/core";
-import { type LayerDef } from "./map-markers-data";
 
 const SEVERITY_ITEMS = [
   { label: "Critical", color: "#DC2626" },
@@ -8,11 +7,18 @@ const SEVERITY_ITEMS = [
   { label: "Low",      color: "#059669" },
 ];
 
-interface MapLegendPanelProps {
-  layers: LayerDef[];
+interface DisasterType {
+  id: string;
+  disasterType: string;
+  disasterClass: string;
+  glideNumber: string;
 }
 
-export function MapLegendPanel({ layers }: MapLegendPanelProps) {
+interface MapLegendPanelProps {
+  eventTypes?: DisasterType[];
+}
+
+export function MapLegendPanel({ eventTypes = [] }: MapLegendPanelProps) {
   return (
     <Box
       className="absolute z-10 bg-white border border-[#E5E5E5]"
@@ -35,15 +41,17 @@ export function MapLegendPanel({ layers }: MapLegendPanelProps) {
         ))}
       </Stack>
 
-      {layers.length > 0 && (
+      {eventTypes.length > 0 && (
         <Stack gap={4} mt={10}>
           <Text fw={700} tt="uppercase" c="#A3A3A3" style={{ fontSize: 9, letterSpacing: "0.06em" }} mb={2}>
             Event Type
           </Text>
-          {layers.map((item) => (
-            <Group key={item.id} gap={8}>
-              <Box w={10} h={10} style={{ backgroundColor: item.color, flexShrink: 0 }} />
-              <Text size="xs" style={{ fontSize: 11 }}>{item.label}</Text>
+          {eventTypes.map((dt) => (
+            <Group key={dt.id} gap={8}>
+              <Text size="xs" c="#737373" style={{ fontSize: 10, fontFamily: "monospace", minWidth: 18 }}>
+                {dt.glideNumber.toUpperCase()}
+              </Text>
+              <Text size="xs" style={{ fontSize: 11, textTransform: "capitalize" }}>{dt.disasterType}</Text>
             </Group>
           ))}
         </Stack>

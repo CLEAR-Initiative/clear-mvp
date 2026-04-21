@@ -14,8 +14,6 @@ import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import {
   type CrisisMarker,
-  buildLayersFromShockTypes,
-  buildCrisisTypeOptions,
   alertsToMarkers,
   alertsToRegions,
 } from "./_components/map-markers-data";
@@ -54,20 +52,24 @@ export default function MapPage() {
     activeOnly: true,
     teamId: activeTeamId,
   });
-  const shockTypesQuery = api.alerts.getShockTypes.useQuery();
+  const disasterTypesQuery = api.alerts.getDisasterTypes.useQuery(undefined, {
+    staleTime: Infinity, refetchOnWindowFocus: false,
+  });
 
   const allAlerts = alertsQuery.data?.alerts ?? [];
-  const shockTypes = shockTypesQuery.data?.shock_types ?? [];
+  const allDisasterTypes = disasterTypesQuery.data ?? [];
 
-  /* ---- Derive layers and crisis type options from API data ---- */
-  const layers = useMemo(
-    () => buildLayersFromShockTypes(shockTypes),
-    [shockTypes],
-  );
+  /* ---- Derive active event types from alerts + disaster type lookup ---- */
+  const layers = useMemo(() => [], []);
+
+  const activeEventTypes = useMemo(() => {
+    const codes = new Set(allAlerts.flatMap((a) => a.event?.types ?? []));
+    return allDisasterTypes.filter((dt) => codes.has(dt.glideNumber));
+  }, [allAlerts, allDisasterTypes]);
 
   const crisisTypeOptions = useMemo(
-    () => buildCrisisTypeOptions(shockTypes),
-    [shockTypes],
+    () => ["All Types", ...activeEventTypes.map((dt) => dt.disasterType)],
+    [activeEventTypes],
   );
 
   /* ---- Transform alerts to map markers + regions ---- */
@@ -84,13 +86,6 @@ export default function MapPage() {
   const [selectedCountry, setSelectedCountry] = useState("All Countries");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [selectedShockType, setSelectedShockType] = useState("All Types");
-  const [activeLayers, setActiveLayers] = useState<string[]>([]);
-  // Sync active layers when shock types load (useState initializer runs before data arrives)
-  useEffect(() => {
-    if (layers.length > 0) {
-      setActiveLayers((prev) => prev.length === 0 ? layers.map((l) => l.id) : prev);
-    }
-  }, [layers]);
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(
     null,
   );
@@ -205,18 +200,14 @@ export default function MapPage() {
         if (!matchesLocation) return false;
       }
 
-      // Layer filter - only apply when layers are defined (shock types loaded)
-      if (activeLayers.length > 0) {
-        const markerType = m.type ?? "";
-        if (!activeLayers.includes(markerType)) return false;
+      // Crisis type filter by disaster type name matched against event glide codes
+      if (selectedShockType !== "All Types") {
+        const selectedCodes = allDisasterTypes
+          .filter((dt) => dt.disasterType === selectedShockType)
+          .map((dt) => dt.glideNumber);
+        const markerCodes = (m as CrisisMarker & { eventTypes?: string[] }).eventTypes ?? [];
+        if (!markerCodes.some((c) => selectedCodes.includes(c))) return false;
       }
-
-      // Crisis type filter by name
-      if (
-        selectedShockType !== "All Types" &&
-        m.shockTypeName !== selectedShockType
-      )
-        return false;
 
       return true;
     });
@@ -225,8 +216,8 @@ export default function MapPage() {
     allMarkers,
     selectedLocationId,
     selectedLocationName,
-    activeLayers,
     selectedShockType,
+    allDisasterTypes,
   ]);
 
   /* ---- Handlers ---- */
@@ -245,14 +236,6 @@ export default function MapPage() {
     setSelectedShockType(value ?? "All Types");
   };
 
-  const toggleLayer = (layerId: string) => {
-    setActiveLayers((prev) =>
-      prev.includes(layerId)
-        ? prev.filter((l) => l !== layerId)
-        : [...prev, layerId],
-    );
-  };
-
   const handleMarkerClick = useCallback(
     (marker: MapMarker) => {
       const full = allMarkers.find((m) => m.id === marker.id);
@@ -261,7 +244,7 @@ export default function MapPage() {
     [allMarkers],
   );
 
-  const isLoading = alertsQuery.isLoading || shockTypesQuery.isLoading;
+  const isLoading = alertsQuery.isLoading || disasterTypesQuery.isLoading;
 
   return (
     <Box
@@ -335,9 +318,6 @@ export default function MapPage() {
 
       {/* ===== Layers Panel ===== */}
       <MapLayersPanel
-        layers={layers}
-        activeLayers={activeLayers}
-        onToggleLayer={toggleLayer}
         dataView={dataView}
         onDataViewChange={setDataView}
         showPopulation={showPopulation}
@@ -353,7 +333,7 @@ export default function MapPage() {
       </Box>
 
       {/* ===== Legend Panel ===== */}
-      <MapLegendPanel layers={layers} />
+      <MapLegendPanel eventTypes={activeEventTypes} />
 
       {/* ===== Selected Marker Detail ===== */}
       {selectedMarker && (

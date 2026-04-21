@@ -1,13 +1,9 @@
 import { Box, Text, Stack, Checkbox, Group, Radio, Divider } from "@mantine/core";
 import { IconLayersLinked } from "@tabler/icons-react";
-import { type LayerDef } from "./map-markers-data";
 
 export type DataView = "crisis" | "alert" | "event";
 
 interface MapLayersPanelProps {
-  layers: LayerDef[];
-  activeLayers: string[];
-  onToggleLayer: (layerId: string) => void;
   dataView: DataView;
   onDataViewChange: (view: DataView) => void;
   showPopulation: boolean;
@@ -15,9 +11,6 @@ interface MapLayersPanelProps {
 }
 
 export function MapLayersPanel({
-  layers,
-  activeLayers,
-  onToggleLayer,
   dataView,
   onDataViewChange,
   showPopulation,
