@@ -61,7 +61,7 @@ export default function MapPage() {
   );
   const eventsQuery = api.alerts.getEvents.useQuery(
     { teamId: activeTeamId ?? undefined },
-    { enabled: dataView === "event" },
+    { enabled: dataView === "event" && !!activeTeamId },
   );
   const situationsQuery = api.alerts.getSituations.useQuery(
     undefined,

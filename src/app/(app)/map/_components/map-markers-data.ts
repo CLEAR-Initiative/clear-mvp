@@ -144,7 +144,7 @@ export function eventsToRegions(events: GqlEvent[]): MapRegion[] {
 
     // Collect signal point locations
     const signalPoints: Array<{ lng: number; lat: number; title: string }> = [];
-    for (const signal of event.signals) {
+    for (const signal of (event.signals ?? [])) {
       const sigCandidates = [signal.generalLocation, signal.originLocation, signal.destinationLocation];
       for (const loc of sigCandidates) {
         if (loc?.geometry?.type === "Point") {
