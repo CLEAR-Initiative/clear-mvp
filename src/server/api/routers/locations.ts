@@ -13,7 +13,7 @@ interface GqlLocationNode {
 interface GqlLocationWithGeometry extends GqlLocationNode {
   pCode: string | null;
   geometry: unknown; // GeoJSON Point | Polygon | MultiPolygon
-  population?: number | null;
+  population?: string | null;
 }
 
 const LOCATIONS_QUERY = `

@@ -29,7 +29,7 @@ interface AdminBoundary {
   id: string;
   name: string;
   geometry: unknown;
-  population?: number | null;
+  population?: string | null;
 }
 
 interface CrisisMapProps {
@@ -625,7 +625,7 @@ export function CrisisMap({
       .filter((b) => b.geometry != null)
       .map((b) => ({
         type: "Feature" as const,
-        properties: { name: b.name, id: b.id, population: b.population ?? 0 },
+        properties: { name: b.name, id: b.id, population: Number(b.population) || 0 },
         geometry: b.geometry,
       }));
 
