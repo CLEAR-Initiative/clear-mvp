@@ -181,6 +181,24 @@ export function MapPanelBar({
                       <Text size="xs" style={{ fontSize: 11 }}>{item.label}</Text>
                     </Group>
                   ))}
+                  {showPopulation && (
+                    <>
+                      <Divider color="#F5F5F5" my={4} />
+                      <SectionLabel>Population</SectionLabel>
+                      <Box
+                        style={{
+                          height: 10,
+                          borderRadius: 3,
+                          background: "linear-gradient(to right, #FFFFB2, #FECC5C, #FD8D3C, #F03B20, #BD0026, #67000D)",
+                        }}
+                        mb={2}
+                      />
+                      <Group justify="space-between">
+                        <Text size="xs" c="#737373" style={{ fontSize: 9 }}>Low</Text>
+                        <Text size="xs" c="#737373" style={{ fontSize: 9 }}>High</Text>
+                      </Group>
+                    </>
+                  )}
                   {eventTypes.length > 0 && (
                     <>
                       <Divider color="#F5F5F5" my={4} />

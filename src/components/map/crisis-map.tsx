@@ -637,7 +637,7 @@ export function CrisisMap({
     try {
       m.addSource(SOURCE, { type: "geojson", data: { type: "FeatureCollection", features } });
 
-      // Choropleth fill: light blue -> deep blue scaled by population.
+      // Choropleth fill: yellow -> orange -> red (YlOrRd) scaled by population.
       m.addLayer({
         id: FILL_LAYER,
         type: "fill",
@@ -646,18 +646,18 @@ export function CrisisMap({
           "fill-color": [
             "case",
             ["==", ["get", "population"], 0],
-            "#E5E5E5", // no-data districts: neutral gray
+            "rgba(0,0,0,0)", // no data: transparent, let basemap show through
             [
               "interpolate", ["linear"], ["get", "population"],
-              1,        "#EFF3FF",
-              50000,    "#C6DBEF",
-              200000,   "#9ECAE1",
-              500000,   "#6BAED6",
-              1000000,  "#3182BD",
-              2000000,  "#08519C",
+              1,       "#FFFFB2",
+              10000,   "#FECC5C",
+              100000,  "#FD8D3C",
+              300000,  "#F03B20",
+              600000,  "#BD0026",
+              1200000, "#67000D",
             ],
           ],
-          "fill-opacity": 0.55,
+          "fill-opacity": 0.72,
         },
       }, beforeId);
 
@@ -667,9 +667,9 @@ export function CrisisMap({
         type: "line",
         source: SOURCE,
         paint: {
-          "line-color": "#3182BD",
-          "line-width": 0.4,
-          "line-opacity": 0.4,
+          "line-color": "#C2410C",
+          "line-width": 0.5,
+          "line-opacity": 0.5,
         },
       }, beforeId);
     } catch { /* ignore */ }
