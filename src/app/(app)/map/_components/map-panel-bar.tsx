@@ -1,22 +1,21 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl,
 } from "@mantine/core";
-import {
-  IconLayersLinked, IconList, IconSettings,
-} from "@tabler/icons-react";
+import { IconLayersLinked, IconList, IconSettings } from "@tabler/icons-react";
 import type { DataView } from "./map-layers-panel";
 import type { BoundaryLevel } from "./map-settings-popover";
+export type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 
 type PanelId = "layers" | "legend" | "config";
 
 const SEVERITY_ITEMS = [
-  { label: "Critical", color: "#DC2626" },
-  { label: "High",     color: "#D97706" },
+  { label: "Critical", color: "var(--color-critical)" },
+  { label: "High",     color: "var(--color-warning)" },
   { label: "Medium",   color: "#FBBF24" },
-  { label: "Low",      color: "#059669" },
+  { label: "Low",      color: "var(--color-success)" },
 ];
 
 const BOUNDARY_OPTIONS = [
@@ -33,21 +32,11 @@ const DATA_VIEW_OPTIONS: { label: string; value: DataView }[] = [
   { label: "Event",  value: "event" },
 ];
 
-interface DisasterType {
-  id: string;
-  disasterType: string;
-  disasterClass: string;
-  glideNumber: string;
-  level1: string;
-  level2: string;
-}
-
 interface MapPanelBarProps {
   dataView: DataView;
   onDataViewChange: (v: DataView) => void;
   showPopulation: boolean;
   onShowPopulationChange: (v: boolean) => void;
-  eventTypes?: DisasterType[];
   boundaryLevel: BoundaryLevel;
   onBoundaryLevelChange: (v: BoundaryLevel) => void;
 }
@@ -64,11 +53,11 @@ function IconBtn({
       style={{
         display: "flex", alignItems: "center", justifyContent: "center",
         width: 30, height: 30,
-        border: "1px solid #E5E5E5", borderRadius: 4,
-        background: active ? "#EFF6FF" : "white",
-        color: active ? "#2563EB" : "#525252",
+        border: "1px solid var(--color-border)", borderRadius: 4,
+        background: active ? "var(--color-info-light)" : "var(--color-bg-white)",
+        color: active ? "var(--color-info)" : "var(--color-text-secondary)",
         cursor: "pointer", padding: 0,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.08)", flexShrink: 0,
+        boxShadow: "var(--shadow-xs)", flexShrink: 0,
       }}
     >
       <Icon size={15} />
@@ -79,10 +68,10 @@ function IconBtn({
 function PanelHeader({ children }: { children: string }) {
   return (
     <Text
-      fw={700} tt="uppercase" c="#737373"
+      fw={700} tt="uppercase" c="var(--color-text-muted)"
       style={{ fontSize: 10, letterSpacing: "0.05em" }}
       px={12} pt={10} pb={8}
-      className="border-b border-[#E5E5E5]"
+      className="border-b border-[var(--color-border)]"
     >
       {children}
     </Text>
@@ -91,30 +80,20 @@ function PanelHeader({ children }: { children: string }) {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <Text fw={700} tt="uppercase" c="#A3A3A3" style={{ fontSize: 9, letterSpacing: "0.06em" }} mb={6}>
+    <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em", opacity: 0.7 }} mb={6}>
       {children}
     </Text>
   );
 }
 
+
 export function MapPanelBar({
   dataView, onDataViewChange,
   showPopulation, onShowPopulationChange,
-  eventTypes = [],
   boundaryLevel, onBoundaryLevelChange,
 }: MapPanelBarProps) {
   const [active, setActive] = useState<PanelId | null>(null);
   const toggle = (id: PanelId) => setActive((prev) => (prev === id ? null : id));
-
-  // Derive unique level1 categories present in current alerts
-  const level1Categories = useMemo(() => {
-    const seen = new Set<string>();
-    return eventTypes.reduce<string[]>((acc, dt) => {
-      const cat = dt.level1 || dt.disasterClass || "other";
-      if (!seen.has(cat)) { seen.add(cat); acc.push(cat); }
-      return acc;
-    }, []);
-  }, [eventTypes]);
 
   return (
     <Box className="absolute z-10" style={{ top: 80, left: 16 }}>
@@ -130,10 +109,14 @@ export function MapPanelBar({
         {/* Panel content */}
         {active && (
           <Box
-            className="bg-white border border-[#E5E5E5]"
-            style={{ width: 240, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
+            style={{
+              width: 240,
+              background: "var(--color-bg-white)",
+              border: "1px solid var(--color-border)",
+              boxShadow: "var(--shadow-md)",
+            }}
           >
-            {/* ── Layers ── */}
+            {/* Layers */}
             {active === "layers" && (
               <>
                 <PanelHeader>Layers</PanelHeader>
@@ -145,14 +128,12 @@ export function MapPanelBar({
                     data={DATA_VIEW_OPTIONS}
                     size="xs"
                     fullWidth
-                    styles={{
-                      label: { fontSize: 11, padding: "3px 6px" },
-                    }}
+                    styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
                   />
-                  <Divider color="#F5F5F5" my={10} />
+                  <Divider color="var(--color-bg-muted)" my={10} />
                   <Group
                     gap={8} py={4} px={2}
-                    className="cursor-pointer hover:bg-[#F9FAFB] -mx-1"
+                    className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
                     onClick={() => onShowPopulationChange(!showPopulation)}
                     style={{ userSelect: "none" }}
                   >
@@ -162,13 +143,13 @@ export function MapPanelBar({
                       styles={{ input: { cursor: "pointer" } }}
                       onClick={(e) => e.stopPropagation()}
                     />
-                    <Text size="xs" c="#525252" style={{ fontSize: 12 }}>Population</Text>
+                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>Population</Text>
                   </Group>
                 </Stack>
               </>
             )}
 
-            {/* ── Legend ── */}
+            {/* Legend */}
             {active === "legend" && (
               <>
                 <PanelHeader>Legend</PanelHeader>
@@ -183,44 +164,54 @@ export function MapPanelBar({
 
                   {showPopulation && (
                     <>
-                      <Divider color="#F5F5F5" my={4} />
+                      <Divider color="var(--color-bg-muted)" my={4} />
                       <SectionLabel>Population</SectionLabel>
                       <Box
                         style={{
                           height: 10, borderRadius: 3,
-                          background: "linear-gradient(to right, #FFFFB2, #FECC5C, #FD8D3C, #F03B20, #BD0026, #67000D)",
+                          background: "linear-gradient(to right, #EFF7FF, #BDD7EE, #6AAED6, #2F8ABE, #0C5FA0, #08306B)",
                         }}
-                        mb={2}
+                        mb={4}
                       />
-                      <Group justify="space-between">
-                        <Text size="xs" c="#737373" style={{ fontSize: 9 }}>Low</Text>
-                        <Text size="xs" c="#737373" style={{ fontSize: 9 }}>High</Text>
-                      </Group>
+                      <Box style={{ position: "relative", height: 14 }}>
+                        {[
+                          { label: "0",    pct: 0 },
+                          { label: "10k",  pct: 20 },
+                          { label: "100k", pct: 40 },
+                          { label: "300k", pct: 60 },
+                          { label: "600k", pct: 80 },
+                          { label: "1.2M", pct: 100 },
+                        ].map(({ label, pct }) => (
+                          <Text
+                            key={label}
+                            size="xs"
+                            c="var(--color-text-muted)"
+                            style={{
+                              fontSize: 8,
+                              position: "absolute",
+                              left: `${pct}%`,
+                              transform: pct === 0 ? "none" : pct === 100 ? "translateX(-100%)" : "translateX(-50%)",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {label}
+                          </Text>
+                        ))}
+                      </Box>
                     </>
                   )}
 
-                  {level1Categories.length > 0 && (
-                    <>
-                      <Divider color="#F5F5F5" my={4} />
-                      <SectionLabel>Event Category</SectionLabel>
-                      {level1Categories.map((cat) => (
-                        <Text key={cat} size="xs" style={{ fontSize: 11, textTransform: "capitalize" }} c="#525252">
-                          {cat}
-                        </Text>
-                      ))}
-                    </>
-                  )}
                 </Stack>
               </>
             )}
 
-            {/* ── Config ── */}
+            {/* Config */}
             {active === "config" && (
               <>
                 <PanelHeader>Map Settings</PanelHeader>
                 <Stack gap={10} px={12} py={10}>
                   <Group justify="space-between" align="center" gap={8} wrap="nowrap">
-                    <Text size="xs" c="#525252" style={{ fontSize: 12, flexShrink: 0 }}>Boundaries</Text>
+                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12, flexShrink: 0 }}>Boundaries</Text>
                     <Select
                       size="xs"
                       value={boundaryLevel}

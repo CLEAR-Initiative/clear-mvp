@@ -9,6 +9,7 @@ import {
   Select,
   Loader,
 } from "@mantine/core";
+import { DisasterTypePicker } from "~/components/disaster-type-picker";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
@@ -22,6 +23,7 @@ import {
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
 import { MapPanelBar } from "./_components/map-panel-bar";
+import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
@@ -49,7 +51,7 @@ function FilterLabel({ children }: { children: string }) {
 
 export default function MapPage() {
   /* ---- Core state (must precede queries that depend on it) ---- */
-  const [dataView, setDataView] = useState<DataView>("none");
+  const [dataView, setDataView] = useState<DataView>("alert");
 
   /* ---- Fetch data ---- */
   const { activeTeamId } = useTeam();
@@ -67,9 +69,10 @@ export default function MapPage() {
     undefined,
     { enabled: dataView === "crisis" },
   );
-  const disasterTypesQuery = api.alerts.getDisasterTypes.useQuery(undefined, {
+  const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
     staleTime: Infinity, refetchOnWindowFocus: false,
   });
+  const hierarchy: HierarchyLevel1[] = hierarchyQuery.data ?? [];
 
   /* ---- Derive markers + regions based on active data view ---- */
   const allMarkers: CrisisMarker[] = useMemo(() => {
@@ -85,30 +88,27 @@ export default function MapPage() {
     return [];
   }, [dataView, alertsQuery.data, eventsQuery.data]);
 
-  /* ---- Disaster types for legend/filter ---- */
-  const allDisasterTypes = disasterTypesQuery.data ?? [];
 
-  const activeEventTypes = useMemo(() => {
-    const alerts = alertsQuery.data?.alerts ?? [];
-    const events = eventsQuery.data?.events ?? [];
-    const allEvents = dataView === "alert"
-      ? alerts.map((a) => a.event)
-      : dataView === "event" ? events : [];
-    const codes = new Set(allEvents.flatMap((e) => e?.types ?? []));
-    return allDisasterTypes.filter((dt) => codes.has(dt.glideNumber));
-  }, [dataView, alertsQuery.data, eventsQuery.data, allDisasterTypes]);
-
-  const crisisTypeOptions = useMemo(
-    () => ["All Types", ...activeEventTypes.map((dt) => dt.disasterType)],
-    [activeEventTypes],
-  );
 
   const layers = useMemo(() => [], []);
 
   /* ---- Filter state ---- */
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+
+  const selectedTypeCodes = useMemo((): Set<string> | null => {
+    if (selectedTypes.length === 0) return null;
+    const codes = new Set<string>();
+    for (const value of selectedTypes) {
+      const [l1Name, l2Name] = value.split("::");
+      const l1 = hierarchy.find((h) => h.name === l1Name);
+      const l2 = l1?.groups.find((g) => g.name === l2Name);
+      l2?.codes.forEach((c) => codes.add(c.toLowerCase()));
+    }
+    return codes;
+  }, [selectedTypes, hierarchy]);
+
   const [selectedCountry, setSelectedCountry] = useState("All Countries");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
-  const [selectedShockType, setSelectedShockType] = useState("All Types");
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(
     null,
   );
@@ -222,13 +222,10 @@ export default function MapPage() {
         if (!matchesLocation) return false;
       }
 
-      // Crisis type filter by disaster type name matched against event glide codes
-      if (selectedShockType !== "All Types") {
-        const selectedCodes = allDisasterTypes
-          .filter((dt) => dt.disasterType === selectedShockType)
-          .map((dt) => dt.glideNumber);
-        const markerCodes = (m as CrisisMarker & { eventTypes?: string[] }).eventTypes ?? [];
-        if (!markerCodes.some((c) => selectedCodes.includes(c))) return false;
+      // Disaster type filter via L1/L2 hierarchy picker
+      if (selectedTypeCodes !== null && selectedTypeCodes.size > 0) {
+        const markerCodes = m.eventTypes ?? [];
+        if (!markerCodes.some((c) => selectedTypeCodes.has(c))) return false;
       }
 
       return true;
@@ -238,8 +235,7 @@ export default function MapPage() {
     allMarkers,
     selectedLocationId,
     selectedLocationName,
-    selectedShockType,
-    allDisasterTypes,
+    selectedTypeCodes,
   ]);
 
   /* ---- Handlers ---- */
@@ -254,9 +250,6 @@ export default function MapPage() {
     setSelectedMarker(null);
   };
 
-  const handleShockTypeChange = (value: string | null) => {
-    setSelectedShockType(value ?? "All Types");
-  };
 
   const handleMarkerClick = useCallback(
     (marker: MapMarker) => {
@@ -309,15 +302,15 @@ export default function MapPage() {
             styles={{ input: INPUT_STYLE }}
             label={<FilterLabel>Region</FilterLabel>}
           />
-          <Select
-            size="xs"
-            value={selectedShockType}
-            onChange={handleShockTypeChange}
-            data={crisisTypeOptions}
-            style={{ minWidth: 160 }}
-            styles={{ input: INPUT_STYLE }}
-            label={<FilterLabel>Crisis Type</FilterLabel>}
-          />
+          <Box style={{ minWidth: 160 }}>
+            <DisasterTypePicker
+              label="Crisis Type"
+              hierarchy={hierarchy}
+              selected={selectedTypes}
+              onChange={setSelectedTypes}
+              size="xs"
+            />
+          </Box>
           {isLoading && <Loader size={14} mt={20} />}
         </Group>
       </Box>
@@ -344,7 +337,6 @@ export default function MapPage() {
         onDataViewChange={setDataView}
         showPopulation={showPopulation}
         onShowPopulationChange={setShowPopulation}
-        eventTypes={activeEventTypes}
         boundaryLevel={boundaryLevel}
         onBoundaryLevelChange={setBoundaryLevel}
       />

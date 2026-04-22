@@ -637,7 +637,7 @@ export function CrisisMap({
     try {
       m.addSource(SOURCE, { type: "geojson", data: { type: "FeatureCollection", features } });
 
-      // Choropleth fill: yellow -> orange -> red (YlOrRd) scaled by population.
+      // Choropleth fill: light -> dark blue scaled by population.
       m.addLayer({
         id: FILL_LAYER,
         type: "fill",
@@ -649,15 +649,15 @@ export function CrisisMap({
             "rgba(0,0,0,0)", // no data: transparent, let basemap show through
             [
               "interpolate", ["linear"], ["get", "population"],
-              1,       "#FFFFB2",
-              10000,   "#FECC5C",
-              100000,  "#FD8D3C",
-              300000,  "#F03B20",
-              600000,  "#BD0026",
-              1200000, "#67000D",
+              1,       "#EFF7FF",
+              10000,   "#BDD7EE",
+              100000,  "#6AAED6",
+              300000,  "#2F8ABE",
+              600000,  "#0C5FA0",
+              1200000, "#08306B",
             ],
           ],
-          "fill-opacity": 0.72,
+          "fill-opacity": 0.75,
         },
       }, beforeId);
 
@@ -675,6 +675,21 @@ export function CrisisMap({
     } catch { /* ignore */ }
 
     return cleanup;
+  }, [populationBoundaries, loaded]);
+
+  // ── Hide country highlight fill when population choropleth is active ─────
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    try {
+      if (m.getLayer("focus-highlight-fill")) {
+        m.setPaintProperty(
+          "focus-highlight-fill",
+          "fill-opacity",
+          (populationBoundaries ?? []).length > 0 ? 0 : 0.35,
+        );
+      }
+    } catch { /* ignore */ }
   }, [populationBoundaries, loaded]);
 
   // ── Admin boundary polygons (A1 / A2 from backend) ─────────────────────
@@ -697,8 +712,9 @@ export function CrisisMap({
     if (features.length === 0) return;
 
     const isA2 = adminBoundaryLevel === 2;
-    const lineColor = isA2 ? "#3B82F6" : "#1D4ED8";
+    const lineColor = "#1D4ED8";
     const lineWidth = isA2 ? 1 : 1.5;
+    const lineOpacity = isA2 ? 0.7 : 0.85;
 
     const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
     const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
@@ -709,7 +725,7 @@ export function CrisisMap({
         data: { type: "FeatureCollection", features },
       });
       m.addLayer({ id: "admin-boundaries-line", type: "line", source: ADMIN_SOURCE,
-        paint: { "line-color": lineColor, "line-width": lineWidth, "line-opacity": 0.85, "line-dasharray": [4, 2] } }, beforeId);
+        paint: { "line-color": lineColor, "line-width": lineWidth, "line-opacity": lineOpacity } }, beforeId);
     } catch { /* ignore */ }
 
     return cleanup;

@@ -195,6 +195,20 @@ export const alertsRouter = createTRPCRouter({
     return data.disasterTypes;
   }),
 
+  getDisasterTypeHierarchy: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{
+      disasterTypeHierarchy: Array<{
+        name: string;
+        groups: Array<{ name: string; codes: string[] }>;
+      }>;
+    }>(
+      `query { disasterTypeHierarchy { name groups { name codes } } }`,
+      undefined,
+      cookieHeaders(ctx),
+    );
+    return data.disasterTypeHierarchy;
+  }),
+
   createAlert: protectedProcedure
     .input(
       z.object({
