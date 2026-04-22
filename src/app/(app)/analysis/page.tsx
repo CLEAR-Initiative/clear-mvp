@@ -38,7 +38,7 @@ export default function AnalysisPage() {
     if (allAlerts.length === 0) return null;
     return allAlerts.slice(0, 5).map((a) => {
       const loc = (a.event.generalLocation ?? a.event.originLocation)?.name ?? "Unknown";
-      const sev = mapSeverity(a.event.rank);
+      const sev = mapSeverity(a.event.severity);
       const title = a.event.title ?? a.event.types[0] ?? "Event";
       return `${title} — ${loc} (${sev} severity)${a.event.description ? `: ${a.event.description.slice(0, 120)}` : ""}`;
     });

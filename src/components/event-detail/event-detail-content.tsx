@@ -191,7 +191,7 @@ export function EventDetailContent({
         lng,
         lat,
         title: loc.name,
-        severity: mapSeverity(event.rank),
+        severity: mapSeverity(event.severity),
         description: loc.name,
       });
     }
@@ -252,7 +252,6 @@ export function EventDetailContent({
   }
 
   // Field mappings from old schema to current GqlEvent schema
-  const eventRank = event.rank;
   const eventStatus = event.alerts[0]?.status ?? "active";
   // event.firstSignalCreatedAt replaces event.createdAt
   // event.lastSignalCreatedAt replaces event.updatedAt
@@ -261,8 +260,8 @@ export function EventDetailContent({
   // event.types[0] replaces event.eventType
   const eventType = event.types[0] ?? "";
 
-  const sevColor = severityColor(eventRank);
-  const sev = mapSeverity(eventRank);
+  const sevColor = severityColor(event.severity);
+  const sev = mapSeverity(event.severity);
   const sevBg = severityColors[sev]?.bg ?? "#F5F5F5";
   const isCompact = mode === "drawer";
 
@@ -757,8 +756,8 @@ export function EventDetailContent({
                 </Box>
               )}
               {relatedEvents.slice(0, 5).map((related) => {
-                const relSev = mapSeverity(related.rank);
-                const relColor = severityColor(related.rank);
+                const relSev = mapSeverity(related.severity);
+                const relColor = severityColor(related.severity);
                 const relBg = severityColors[relSev]?.bg ?? "#F5F5F5";
                 const relTitle = related.title ?? related.description ?? related.types[0] ?? "";
                 return (

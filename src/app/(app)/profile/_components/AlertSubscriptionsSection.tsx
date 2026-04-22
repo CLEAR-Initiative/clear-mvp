@@ -31,6 +31,7 @@ export function AlertSubscriptionsSection() {
   const utils = api.useUtils();
   const subsQuery = api.subscriptions.list.useQuery();
   const disasterTypesQuery = api.subscriptions.disasterTypes.useQuery();
+  const hierarchyQuery = api.subscriptions.disasterTypeHierarchy.useQuery();
   const locationsQuery = api.subscriptions.locations.useQuery();
 
   const [showForm, setShowForm] = useState(false);
@@ -72,7 +73,27 @@ export function AlertSubscriptionsSection() {
 
   const subscriptions = subsQuery.data ?? [];
   const disasterTypes = disasterTypesQuery.data ?? [];
+  const hierarchy = hierarchyQuery.data ?? [];
   const locations = locationsQuery.data ?? [];
+
+  // Map glide code → level-2 name for rendering subscription rows.
+  // Falls back to getDisasterLabel() if the hierarchy hasn't loaded yet.
+  const codeToTypeName: Record<string, string> = {};
+  for (const l1 of hierarchy) {
+    for (const l2 of l1.groups) {
+      for (const code of l2.codes) {
+        codeToTypeName[code.toLowerCase()] = l2.name;
+      }
+    }
+  }
+  const labelFor = (code: string): string => {
+    const name = codeToTypeName[code.toLowerCase()];
+    if (name) {
+      // Capitalise first letter of each word for display
+      return name.replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+    return getDisasterLabel(code);
+  };
 
   const LEVEL_GROUP: Record<number, string> = {
     0: "Country",
@@ -88,20 +109,87 @@ export function AlertSubscriptionsSection() {
     return items.length > 0 ? [{ group: LEVEL_GROUP[level]!, items }] : [];
   });
 
-  const alertTypeOptions = [
-    { value: "__all__", label: "All Types" },
-    ...disasterTypes.map((dt) => ({
-      value: dt.glideNumber,
-      label: `${getDisasterLabel(dt.glideNumber)} (${dt.glideNumber.toUpperCase()})`,
-    })),
-  ];
+  // Build grouped options from the hierarchy. Each dropdown group is a
+  // level-1 category; within each group we list:
+  //   - One "All <level1>" row (value "l1::<level1>") that expands to every
+  //     code under it.
+  //   - One row per level-2 group (value "l2::<level1>::<level2>") that
+  //     expands to that group's codes.
+  const alertTypeOptions = hierarchy.length > 0
+    ? [
+        { group: "Quick", items: [{ value: "__all__", label: "All Types" }] },
+        ...hierarchy.map((l1) => ({
+          group: l1.name,
+          items: [
+            { value: `l1::${l1.name}`, label: `All ${l1.name}` },
+            ...l1.groups.map((l2) => ({
+              value: `l2::${l1.name}::${l2.name}`,
+              label: l2.name,
+            })),
+          ],
+        })),
+      ]
+    : [
+        // Fallback if hierarchy query hasn't loaded yet
+        { value: "__all__", label: "All Types" },
+        ...disasterTypes.map((dt) => ({
+          value: dt.glideNumber,
+          label: `${getDisasterLabel(dt.glideNumber)} (${dt.glideNumber.toUpperCase()})`,
+        })),
+      ];
+
+  /**
+   * Expand the user's selected alert-type values to a distinct list of glide
+   * codes suitable for the `subscribeBatch` mutation.
+   *
+   * Values we may see:
+   *   - "__all__"                        → every code from the hierarchy
+   *   - "l1::<level1>"                   → every code under that level-1
+   *   - "l2::<level1>::<level2>"         → codes belonging to that level-2
+   *   - "<glideCode>"                    → legacy fallback (already a code)
+   */
+  const expandSelectionsToCodes = (selections: string[]): string[] => {
+    const codes = new Set<string>();
+    const allCodes = new Set<string>(
+      hierarchy.flatMap((l1) => l1.groups.flatMap((l2) => l2.codes)),
+    );
+
+    for (const value of selections) {
+      if (value === "__all__") {
+        allCodes.forEach((c) => codes.add(c));
+        continue;
+      }
+      if (value.startsWith("l1::")) {
+        const l1Name = value.slice(4);
+        const l1 = hierarchy.find((h) => h.name === l1Name);
+        l1?.groups.forEach((l2) => l2.codes.forEach((c) => codes.add(c)));
+        continue;
+      }
+      if (value.startsWith("l2::")) {
+        const [, l1Name, l2Name] = value.split("::");
+        const l1 = hierarchy.find((h) => h.name === l1Name);
+        const l2 = l1?.groups.find((g) => g.name === l2Name);
+        l2?.codes.forEach((c) => codes.add(c));
+        continue;
+      }
+      // Legacy: value is already a glide code
+      codes.add(value);
+    }
+    return [...codes];
+  };
 
   const handleSubscribe = async () => {
     if (formLocationIds.length === 0 || formAlertTypes.length === 0 || !formFrequency) return;
 
-    const resolvedTypes = formAlertTypes.includes("__all__")
-      ? disasterTypes.map((dt) => dt.glideNumber)
-      : formAlertTypes;
+    const resolvedTypes = expandSelectionsToCodes(formAlertTypes);
+    if (resolvedTypes.length === 0) {
+      notifications.show({
+        title: "No disaster types selected",
+        message: "Please select at least one disaster type or category.",
+        color: "red",
+      });
+      return;
+    }
 
     // Map string severity labels to the lowest integer minSeverity among selections
     // critical=5, high=4, medium=3, low=2. If multiple selected, use the lowest
@@ -262,7 +350,7 @@ export function AlertSubscriptionsSection() {
                     }}
                   >
                     <Group gap={6}>
-                      <Badge size="xs" variant="light" color="blue">{sub.alertType.toUpperCase()}</Badge>
+                      <Badge size="xs" variant="light" color="blue">{labelFor(sub.alertType)}</Badge>
                       <Text size="xs" c="#737373">
                         {FREQUENCY_LABELS[sub.frequency] ?? sub.frequency}
                       </Text>

@@ -121,19 +121,18 @@ export interface GqlAlert {
 
 /* ─── Severity helpers ─── */
 
-/** Map severity (1-5) or rank to a UI severity bucket.
- *  Prefers the explicit severity field; falls back to rank * 5. */
-export function mapSeverity(rankOrSeverity: number, severity?: number | null): "critical" | "high" | "medium" | "low" {
-  const s = severity ?? rankOrSeverity;
+/** Map severity (1-5) to a UI severity bucket. */
+export function mapSeverity(severity: number | null | undefined): "critical" | "high" | "medium" | "low" {
+  const s = severity ?? 0;
   if (s >= 5) return "critical";
   if (s >= 4) return "high";
   if (s >= 3) return "medium";
   return "low";
 }
 
-/** Map severity (1-5) or rank to a display colour */
-export function severityColor(rankOrSeverity: number, severity?: number | null): string {
-  const s = severity ?? rankOrSeverity;
+/** Map severity (1-5) to a display colour. */
+export function severityColor(severity: number | null | undefined): string {
+  const s = severity ?? 0;
   if (s >= 5) return "#DC2626";
   if (s >= 4) return "#D97706";
   if (s >= 3) return "#F59E0B";

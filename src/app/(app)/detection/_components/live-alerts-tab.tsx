@@ -136,7 +136,7 @@ export function LiveAlertsTab({
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let result = alerts.filter((a) => {
-      const sev = mapSeverity(a.event.rank);
+      const sev = mapSeverity(a.event.severity);
       if (!activeSeverities.has(sev)) return false;
       if (activeTypes !== null && !a.event.types.some((t) => activeTypes.has(t))) return false;
       if (activeSources !== null && !a.event.signals.some((s) => activeSources.has(s.source.name))) return false;
@@ -420,8 +420,8 @@ export function LiveAlertsTab({
               </Box>
             )}
             {filtered.map((alert) => {
-              const sev = mapSeverity(alert.event.rank);
-              const sevCol = severityColor(alert.event.rank);
+              const sev = mapSeverity(alert.event.severity);
+              const sevCol = severityColor(alert.event.severity);
               const sevBg = severityColors[sev]?.bg ?? "var(--color-bg-muted)";
               const location = alert.event.generalLocation ?? alert.event.originLocation ?? alert.event.destinationLocation;
               const sourceName = alert.event.signals[0]?.source?.name;

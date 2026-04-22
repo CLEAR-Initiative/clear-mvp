@@ -80,7 +80,7 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
       lng,
       lat,
       title: event.title ?? event.types[0] ?? "Event",
-      severity: mapSeverity(event.rank, event.severity),
+      severity: mapSeverity(event.severity),
       description: event.description ?? undefined,
       region: resolveLocationName(loc) ?? undefined,
       locationId: loc.id,
@@ -164,7 +164,7 @@ export function eventsToRegions(events: GqlEvent[]): MapRegion[] {
     regions.push({
       id: event.id,
       geometry: polyLoc.geometry as { type: string; coordinates: unknown },
-      severity: mapSeverity(event.rank, event.severity),
+      severity: mapSeverity(event.severity),
       title: event.title ?? event.types[0] ?? "Event",
       signalPoints,
     });

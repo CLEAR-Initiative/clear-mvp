@@ -263,7 +263,7 @@ export function SignalDetailContent({
   const isCompact = mode === "drawer";
   const locations = signalLocations(signal);
   const primaryLocation = locations[0]?.name;
-  const sev = mapSeverity(signal.severity ?? 0);
+  const sev = mapSeverity(signal.severity);
 
   const displayTitle =
     signal.title ??
@@ -632,8 +632,8 @@ export function SignalDetailContent({
                   </Box>
                 )}
                 {signal.events.map((ev) => {
-                  const relSev = mapSeverity(ev.rank);
-                  const relColor = severityColor(ev.rank);
+                  const relSev = mapSeverity(ev.severity);
+                  const relColor = severityColor(ev.severity);
                   const relBg = severityColors[relSev]?.bg ?? "#F5F5F5";
                   const relTitle = ev.title ?? ev.types[0] ?? `Event ${ev.id}`;
                   return (

@@ -47,9 +47,11 @@ function rowDate(row: HistoryRow): number {
   return new Date(row.data.publishedAt).getTime();
 }
 
+/** Returns the 1-5 severity for a history row (alerts, events, signals).
+ *  Used for both filtering and sort ordering. */
 function rowRank(row: HistoryRow): number {
-  if (row.kind === "alert") return row.data.event.rank;
-  if (row.kind === "event") return row.data.rank;
+  if (row.kind === "alert") return row.data.event.severity ?? 0;
+  if (row.kind === "event") return row.data.severity ?? 0;
   return row.data.severity ?? 0;
 }
 

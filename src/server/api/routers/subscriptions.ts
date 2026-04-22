@@ -77,6 +77,19 @@ const DISASTER_TYPES_QUERY = `
   }
 `;
 
+const DISASTER_TYPE_HIERARCHY_QUERY = `
+  query DisasterTypeHierarchy {
+    disasterTypeHierarchy {
+      name
+      groups {
+        name
+        codes
+        subTypes { id disasterType glideNumber level2 }
+      }
+    }
+  }
+`;
+
 const LOCATIONS_QUERY = `
   query Locations {
     locations { id name level }
@@ -170,6 +183,26 @@ export const subscriptionsRouter = createTRPCRouter({
       disasterTypes: Array<{ id: string; disasterType: string; glideNumber: string }>;
     }>(DISASTER_TYPES_QUERY, undefined, cookieHeaders(ctx));
     return data.disasterTypes;
+  }),
+
+  /** Fetch disaster types grouped into the 3-level hierarchy (level1 > level2 > level3) */
+  disasterTypeHierarchy: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{
+      disasterTypeHierarchy: Array<{
+        name: string;
+        groups: Array<{
+          name: string;
+          codes: string[];
+          subTypes: Array<{
+            id: string;
+            disasterType: string;
+            glideNumber: string;
+            level2: string;
+          }>;
+        }>;
+      }>;
+    }>(DISASTER_TYPE_HIERARCHY_QUERY, undefined, cookieHeaders(ctx));
+    return data.disasterTypeHierarchy;
   }),
 
   /** Fetch locations for the subscription form dropdown */

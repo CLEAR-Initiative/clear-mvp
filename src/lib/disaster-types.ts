@@ -1,31 +1,72 @@
-// Keyed by GLIDE number (what event.types contains).
+// Keyed by the code stored in event.types (GLIDE number or CLEAR id).
 // Types sharing the same classKey are deduped to a single pill.
 const DISASTER_META: Record<string, { label: string; classKey?: string }> = {
+  // ─── Natural hazards ───
   et: { label: "Extreme Temp" },
   cw: { label: "Cold Wave" },
   ht: { label: "Heat Wave" },
   ce: { label: "Complex Emerg." },
   dr: { label: "Drought" },
   eq: { label: "Earthquake" },
-  ep: { label: "Epidemic" },
   ec: { label: "Extratrop. Cyclone" },
   fr: { label: "Fire" },
+  ff: { label: "Flash Flood" },
   fl: { label: "Flood" },
+  in: { label: "Insect Infest." },
+  sl: { label: "Slide" },
   ls: { label: "Landslide" },
-  ac: { label: "Tech. Disaster" },
+  ms: { label: "Mud Slide" },
+  av: { label: "Snow Avalanche" },
+  st: { label: "Severe Storm" },
   to: { label: "Tornado" },
+  tc: { label: "Tropical Cyclone" },
+  ss: { label: "Storm Surge" },
   ts: { label: "Tsunami" },
   vo: { label: "Volcano" },
   wf: { label: "Wildfire" },
+  vw: { label: "Violent Wind" },
   ot: { label: "Other" },
-  pv: { label: "Conflict", classKey: "conflict" },
-  ba: { label: "Conflict", classKey: "conflict" },
-  pr: { label: "Conflict", classKey: "conflict" },
-  ri: { label: "Conflict", classKey: "conflict" },
-  rv: { label: "Conflict", classKey: "conflict" },
-  vc: { label: "Conflict", classKey: "conflict" },
+  // ─── Other top-level categories ───
+  ep: { label: "Epidemic" },
+  ac: { label: "Tech. Disaster" },
   fc: { label: "Econ. Crisis" },
   fa: { label: "Famine" },
+  // ─── Conflict — all deduped to a single "Conflict" pill ───
+  // Protests
+  pp: { label: "Conflict", classKey: "conflict" },
+  pi: { label: "Conflict", classKey: "conflict" },
+  pf: { label: "Conflict", classKey: "conflict" },
+  // Battles
+  ba: { label: "Conflict", classKey: "conflict" },
+  bg: { label: "Conflict", classKey: "conflict" },
+  bo: { label: "Conflict", classKey: "conflict" },
+  // Riots
+  ri: { label: "Conflict", classKey: "conflict" },
+  rd: { label: "Conflict", classKey: "conflict" },
+  // Explosions / remote violence
+  rc: { label: "Conflict", classKey: "conflict" },
+  rg: { label: "Conflict", classKey: "conflict" },
+  rs: { label: "Conflict", classKey: "conflict" },
+  rm: { label: "Conflict", classKey: "conflict" },
+  rl: { label: "Conflict", classKey: "conflict" },
+  rb: { label: "Conflict", classKey: "conflict" },
+  // Violence against civilians
+  va: { label: "Conflict", classKey: "conflict" },
+  vs: { label: "Conflict", classKey: "conflict" },
+  vd: { label: "Conflict", classKey: "conflict" },
+  // Strategic developments / political violence
+  pv: { label: "Conflict", classKey: "conflict" },
+  pa: { label: "Conflict", classKey: "conflict" },
+  pg: { label: "Conflict", classKey: "conflict" },
+  pw: { label: "Conflict", classKey: "conflict" },
+  ph: { label: "Conflict", classKey: "conflict" },
+  pl: { label: "Conflict", classKey: "conflict" },
+  pt: { label: "Conflict", classKey: "conflict" },
+  po: { label: "Conflict", classKey: "conflict" },
+  // ─── Legacy codes (pre-hierarchy) — kept so historical events still render ───
+  pr: { label: "Conflict", classKey: "conflict" }, // was umbrella "protests"
+  rv: { label: "Conflict", classKey: "conflict" }, // was umbrella "explosions"
+  vc: { label: "Conflict", classKey: "conflict" }, // was umbrella "violence against civilians"
 };
 
 const CLASS_STYLE: Record<string, { color: string; bg: string }> = {

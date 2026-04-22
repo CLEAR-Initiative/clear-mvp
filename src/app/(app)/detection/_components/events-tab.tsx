@@ -138,7 +138,7 @@ export function EventsTab({
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let result = events.filter((e) => {
-      const sev = mapSeverity(e.rank);
+      const sev = mapSeverity(e.severity);
       if (!activeSeverities.has(sev)) return false;
       if (activeTypes !== null && !e.types.some((t) => activeTypes.has(t))) return false;
       if (activeSources !== null && !e.signals.some((s) => activeSources.has(s.source.name))) return false;
@@ -422,8 +422,8 @@ export function EventsTab({
               </Box>
             )}
             {filtered.map((event) => {
-              const sev = mapSeverity(event.rank);
-              const sevCol = severityColor(event.rank);
+              const sev = mapSeverity(event.severity);
+              const sevCol = severityColor(event.severity);
               const sevBg = severityColors[sev]?.bg ?? "var(--color-bg-muted)";
               const location = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
               const sourceName = event.signals[0]?.source?.name;
