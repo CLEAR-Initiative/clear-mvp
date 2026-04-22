@@ -59,6 +59,7 @@ export interface GqlSignalDetail extends Omit<GqlSignal, "events"> {
     title: string | null;
     types: string[];
     rank: number;
+    severity: number | null;
     firstSignalCreatedAt: string;
     signals: Array<{
       id: string;
