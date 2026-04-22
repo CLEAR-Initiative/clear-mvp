@@ -16,6 +16,9 @@ import {
   type CrisisMarker,
   alertsToMarkers,
   alertsToRegions,
+  eventsToMarkers,
+  eventsToRegions,
+  situationsToMarkers,
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
 import { MapPanelBar } from "./_components/map-panel-bar";
@@ -45,42 +48,62 @@ function FilterLabel({ children }: { children: string }) {
 }
 
 export default function MapPage() {
-  /* ---- Fetch alert data ---- */
+  /* ---- Core state (must precede queries that depend on it) ---- */
+  const [dataView, setDataView] = useState<DataView>("none");
+
+  /* ---- Fetch data ---- */
   const { activeTeamId } = useTeam();
   const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
-  const alertsQuery = api.alerts.getAlerts.useQuery({
-    activeOnly: true,
-    teamId: activeTeamId,
-  });
+
+  const alertsQuery = api.alerts.getAlerts.useQuery(
+    { activeOnly: true, teamId: activeTeamId },
+    { enabled: dataView === "alert" },
+  );
+  const eventsQuery = api.alerts.getEvents.useQuery(
+    { teamId: activeTeamId ?? undefined },
+    { enabled: dataView === "event" },
+  );
+  const situationsQuery = api.alerts.getSituations.useQuery(
+    undefined,
+    { enabled: dataView === "crisis" },
+  );
   const disasterTypesQuery = api.alerts.getDisasterTypes.useQuery(undefined, {
     staleTime: Infinity, refetchOnWindowFocus: false,
   });
 
-  const allAlerts = alertsQuery.data?.alerts ?? [];
+  /* ---- Derive markers + regions based on active data view ---- */
+  const allMarkers: CrisisMarker[] = useMemo(() => {
+    if (dataView === "alert")  return alertsToMarkers(alertsQuery.data?.alerts ?? []);
+    if (dataView === "event")  return eventsToMarkers(eventsQuery.data?.events ?? []);
+    if (dataView === "crisis") return situationsToMarkers(situationsQuery.data?.situations ?? []);
+    return [];
+  }, [dataView, alertsQuery.data, eventsQuery.data, situationsQuery.data]);
+
+  const allRegions = useMemo(() => {
+    if (dataView === "alert") return alertsToRegions(alertsQuery.data?.alerts ?? []);
+    if (dataView === "event") return eventsToRegions(eventsQuery.data?.events ?? []);
+    return [];
+  }, [dataView, alertsQuery.data, eventsQuery.data]);
+
+  /* ---- Disaster types for legend/filter ---- */
   const allDisasterTypes = disasterTypesQuery.data ?? [];
 
-  /* ---- Derive active event types from alerts + disaster type lookup ---- */
-  const layers = useMemo(() => [], []);
-
   const activeEventTypes = useMemo(() => {
-    const codes = new Set(allAlerts.flatMap((a) => a.event?.types ?? []));
+    const alerts = alertsQuery.data?.alerts ?? [];
+    const events = eventsQuery.data?.events ?? [];
+    const allEvents = dataView === "alert"
+      ? alerts.map((a) => a.event)
+      : dataView === "event" ? events : [];
+    const codes = new Set(allEvents.flatMap((e) => e?.types ?? []));
     return allDisasterTypes.filter((dt) => codes.has(dt.glideNumber));
-  }, [allAlerts, allDisasterTypes]);
+  }, [dataView, alertsQuery.data, eventsQuery.data, allDisasterTypes]);
 
   const crisisTypeOptions = useMemo(
     () => ["All Types", ...activeEventTypes.map((dt) => dt.disasterType)],
     [activeEventTypes],
   );
 
-  /* ---- Transform alerts to map markers + regions ---- */
-  const allMarkers: CrisisMarker[] = useMemo(
-    () => alertsToMarkers(allAlerts),
-    [allAlerts],
-  );
-  const allRegions = useMemo(
-    () => alertsToRegions(allAlerts),
-    [allAlerts],
-  );
+  const layers = useMemo(() => [], []);
 
   /* ---- Filter state ---- */
   const [selectedCountry, setSelectedCountry] = useState("All Countries");
@@ -91,7 +114,6 @@ export default function MapPage() {
   );
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
-  const [dataView, setDataView] = useState<DataView>("none");
 
   // Resolve Sudan's location ID for scoping admin boundary queries.
   const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
@@ -244,7 +266,7 @@ export default function MapPage() {
     [allMarkers],
   );
 
-  const isLoading = alertsQuery.isLoading || disasterTypesQuery.isLoading;
+  const isLoading = alertsQuery.isLoading || eventsQuery.isLoading || situationsQuery.isLoading;
 
   return (
     <Box

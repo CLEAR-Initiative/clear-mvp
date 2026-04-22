@@ -120,6 +120,17 @@ export interface GqlAlert {
   status: "draft" | "published" | "archived";
 }
 
+/* ─── Situation ─── */
+
+export interface GqlSituation {
+  id: string;
+  title: string | null;
+  summary: string | null;
+  severity: number;
+  generalLocation: GqlLocation | null;
+  events: Array<{ id: string; types: string[] }>;
+}
+
 /* ─── Severity helpers ─── */
 
 /** Map severity (1-5) to a UI severity bucket. */

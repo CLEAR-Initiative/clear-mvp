@@ -1,5 +1,5 @@
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
-import type { GqlAlert, GqlEvent, GqlSignal } from "~/lib/types/graphql";
+import type { GqlAlert, GqlEvent, GqlSignal, GqlSituation } from "~/lib/types/graphql";
 import { mapSeverity } from "~/lib/types/graphql";
 import { resolveLocationName } from "~/lib/location";
 
@@ -174,6 +174,29 @@ export function eventsToRegions(events: GqlEvent[]): MapRegion[] {
 
 export function alertsToRegions(alerts: GqlAlert[]): MapRegion[] {
   return eventsToRegions(alerts.map((a) => a.event));
+}
+
+export function situationsToMarkers(situations: GqlSituation[]): CrisisMarker[] {
+  const markers: CrisisMarker[] = [];
+  for (const sit of situations) {
+    const loc = sit.generalLocation;
+    if (loc?.geometry?.type === "Point") {
+      const [lng, lat] = loc.geometry.coordinates as [number, number];
+      if (typeof lng === "number" && typeof lat === "number") {
+        markers.push({
+          id: Math.abs(sit.id.split("").reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)),
+          lng,
+          lat,
+          title: sit.title ?? "Situation",
+          severity: mapSeverity(sit.severity),
+          locationId: loc.id,
+          ancestorIds: loc.ancestorIds ?? [],
+          region: resolveLocationName(loc) ?? undefined,
+        });
+      }
+    }
+  }
+  return markers;
 }
 
 /* ========== Derive filter options from markers ========== */
