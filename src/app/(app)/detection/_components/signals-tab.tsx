@@ -26,6 +26,7 @@ import {
 } from "@tabler/icons-react";
 import type { GqlSignal } from "~/lib/types/graphql";
 import type { MapMarker } from "~/components/map/crisis-map";
+import type { CrisisMarker } from "~/app/(app)/map/_components/map-markers-data";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 
 const CrisisMap = dynamic(
@@ -87,6 +88,8 @@ export function SignalsTab({
   const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [hoveredMarkerId, setHoveredMarkerId] = useState<number | null>(null);
+  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
 
   const allSources = useMemo(
     () => [...new Set(signals.map((s) => s.source.name))].sort(),
@@ -347,7 +350,16 @@ export function SignalsTab({
                     px={16}
                     py={12}
                     className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
-                    style={{ display: "flex", gap: 12 }}
+                    style={{
+                      display: "flex", gap: 12,
+                      background: hoveredEventId === signal.id ? "var(--color-info-light)" : undefined,
+                      transition: "background 0.15s ease",
+                    }}
+                    onMouseEnter={() => {
+                      const m = mapMarkers.find((mk) => (mk as CrisisMarker).eventId === signal.id);
+                      setHoveredMarkerId(m?.id ?? null);
+                    }}
+                    onMouseLeave={() => setHoveredMarkerId(null)}
                   >
                     <Box
                       style={{
@@ -441,6 +453,8 @@ export function SignalsTab({
               fitBoundsGeometry={fitBoundsGeometry}
               adminBoundaries={adminBoundaries}
               adminBoundaryLevel={adminBoundaryLevel}
+              hoveredMarkerId={hoveredMarkerId}
+              onMarkerHover={(mk) => setHoveredEventId(mk ? (mk as CrisisMarker).eventId ?? null : null)}
             />
           </Box>
         </Card>

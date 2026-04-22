@@ -40,6 +40,7 @@ interface CrisisMapProps {
   zoom?: number;
   className?: string;
   onMarkerClick?: (marker: MapMarker) => void;
+  onMarkerHover?: (marker: MapMarker | null) => void;
   interactive?: boolean;
   /**
    * Country to visually emphasise (dim-mask the rest of the world, glow the
@@ -58,6 +59,8 @@ interface CrisisMapProps {
   fitBoundsGeometry?: unknown;
   /** A2 district boundaries with population for choropleth layer. */
   populationBoundaries?: AdminBoundary[];
+  /** Marker ID to highlight with a pulse (synced from list hover). */
+  hoveredMarkerId?: number | null;
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -166,9 +169,20 @@ function buildDonutEl(props: Record<string, number>): HTMLDivElement {
 function buildPointEl(severity: string): HTMLDivElement {
   const color = severityColors[severity] ?? "#737373";
   const size  = severity === "critical" ? 18 : severity === "high" ? 16 : 14;
-  const el = document.createElement("div");
-  el.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);cursor:pointer;`;
-  return el;
+  // Outer: Mapbox sets its positioning transform here - do not animate this element.
+  const outer = document.createElement("div");
+  outer.style.cssText = `width:${size}px;height:${size}px;cursor:pointer;`;
+  // Radar ping ring: expands outward in marker color, hidden until active.
+  const ring = document.createElement("div");
+  ring.className = "marker-ping-ring";
+  ring.style.cssText = `position:absolute;inset:0;border-radius:50%;border:2.5px solid ${color};opacity:0;pointer-events:none;`;
+  // Inner dot: the colored circle, safe to scale independently.
+  const inner = document.createElement("div");
+  inner.className = "marker-dot";
+  inner.style.cssText = `width:100%;height:100%;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);`;
+  outer.appendChild(ring);
+  outer.appendChild(inner);
+  return outer;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -180,6 +194,7 @@ export function CrisisMap({
   zoom = 5.5,
   className,
   onMarkerClick,
+  onMarkerHover,
   interactive = true,
   focusCountryPCode,
   focusCountryName,
@@ -187,14 +202,18 @@ export function CrisisMap({
   adminBoundaryLevel,
   fitBoundsGeometry,
   populationBoundaries,
+  hoveredMarkerId,
 }: CrisisMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxGLAny>(null);
   const mbRef = useRef<MapboxGLAny>(null);
   const onMarkerClickRef = useRef(onMarkerClick);
+  const onMarkerHoverRef = useRef(onMarkerHover);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
+  useEffect(() => { onMarkerHoverRef.current = onMarkerHover; }, [onMarkerHover]);
   const clusterDomMarkers = useRef<Map<string, MapboxGLAny>>(new Map());
   const markersDataRef = useRef<MapMarker[]>(markers);
+  const hoveredMarkerIdRef = useRef<number | null>(null);
   const [loaded, setLoaded] = useState(false);
   // Tracks Mapbox built-in admin-1 layer IDs we've mutated so we can reset them.
   const admin1LayerIds = useRef<string[]>([]);
@@ -453,6 +472,51 @@ export function CrisisMap({
     );
   }, [fitBoundsGeometry, loaded]);
 
+  // ── Region highlight: show selected region geometry, hide country fill ──
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const REGION_SOURCE = "region-highlight-source";
+    const REGION_FILL = "region-highlight-fill";
+    const REGION_LINE = "region-highlight-line";
+
+    const cleanup = () => {
+      for (const id of [REGION_FILL, REGION_LINE]) {
+        try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
+      }
+      try { if (m.getSource(REGION_SOURCE)) m.removeSource(REGION_SOURCE); } catch { /* ignore */ }
+    };
+
+    cleanup();
+
+    if (fitBoundsGeometry) {
+      // Suppress country-wide highlight while a region is focused.
+      try {
+        if (m.getLayer("focus-highlight-fill")) m.setPaintProperty("focus-highlight-fill", "fill-opacity", 0);
+      } catch { /* ignore */ }
+
+      const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+      const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
+      try {
+        m.addSource(REGION_SOURCE, {
+          type: "geojson",
+          data: { type: "Feature", geometry: fitBoundsGeometry as never, properties: {} },
+        });
+        m.addLayer({ id: REGION_FILL, type: "fill", source: REGION_SOURCE,
+          paint: { "fill-color": "#1E40AF", "fill-opacity": 0.25 } }, beforeId);
+        m.addLayer({ id: REGION_LINE, type: "line", source: REGION_SOURCE,
+          paint: { "line-color": "#1D4ED8", "line-width": 1.5, "line-opacity": 0.9 } }, beforeId);
+      } catch { /* ignore */ }
+    } else {
+      // Restore country highlight when no region is selected.
+      try {
+        if (m.getLayer("focus-highlight-fill")) m.setPaintProperty("focus-highlight-fill", "fill-opacity", 0.35);
+      } catch { /* ignore */ }
+    }
+
+    return cleanup;
+  }, [fitBoundsGeometry, loaded]);
+
   // ── FlyTo on center/zoom prop change ────────────────────────────────────
   const prevCenter = useRef(center);
   const prevZoom = useRef(zoom);
@@ -570,9 +634,20 @@ export function CrisisMap({
         const coords = feat.geometry.coordinates as [number, number];
         const props  = feat.properties as Record<string, unknown>;
         const el     = buildPointEl(props.severity as string);
+        if (hoveredMarkerIdRef.current != null && (props.id as number) === hoveredMarkerIdRef.current) {
+          el.querySelector(".marker-ping-ring")?.classList.add("active");
+          el.querySelector(".marker-dot")?.classList.add("active");
+        }
         el.addEventListener("click", () => {
           const found = markersDataRef.current.find((mk) => mk.id === (props.id as number));
           if (found) onMarkerClickRef.current?.(found);
+        });
+        el.addEventListener("mouseenter", () => {
+          const found = markersDataRef.current.find((mk) => mk.id === (props.id as number));
+          if (found) onMarkerHoverRef.current?.(found);
+        });
+        el.addEventListener("mouseleave", () => {
+          onMarkerHoverRef.current?.(null);
         });
         clusterDomMarkers.current.set(
           `p-${props.id}`,
@@ -604,6 +679,21 @@ export function CrisisMap({
       m.off("sourcedata", onSourceData);
     };
   }, [markers, loaded]);
+
+  // ── Marker hover pulse (synced from list) ────────────────────────────────
+  useEffect(() => {
+    hoveredMarkerIdRef.current = hoveredMarkerId ?? null;
+    for (const [key, mk] of clusterDomMarkers.current) {
+      if (!key.startsWith("p-")) continue;
+      const id = Number(key.slice(2));
+      const outerEl = (mk as MapboxGLAny).getElement() as HTMLElement;
+      const ring = outerEl.querySelector(".marker-ping-ring");
+      const dot  = outerEl.querySelector(".marker-dot");
+      const on = hoveredMarkerId != null && id === hoveredMarkerId;
+      ring?.classList.toggle("active", on);
+      dot?.classList.toggle("active", on);
+    }
+  }, [hoveredMarkerId]);
 
   // ── Population choropleth (A2 districts, independent layer) ─────────────
   useEffect(() => {
@@ -677,20 +767,17 @@ export function CrisisMap({
     return cleanup;
   }, [populationBoundaries, loaded]);
 
-  // ── Hide country highlight fill when population choropleth is active ─────
+  // ── Hide country highlight fill when population layer or region highlight is active ──
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
     try {
       if (m.getLayer("focus-highlight-fill")) {
-        m.setPaintProperty(
-          "focus-highlight-fill",
-          "fill-opacity",
-          (populationBoundaries ?? []).length > 0 ? 0 : 0.35,
-        );
+        const hide = (populationBoundaries ?? []).length > 0 || !!fitBoundsGeometry;
+        m.setPaintProperty("focus-highlight-fill", "fill-opacity", hide ? 0 : 0.35);
       }
     } catch { /* ignore */ }
-  }, [populationBoundaries, loaded]);
+  }, [populationBoundaries, fitBoundsGeometry, loaded]);
 
   // ── Admin boundary polygons (A1 / A2 from backend) ─────────────────────
   useEffect(() => {
@@ -870,5 +957,27 @@ export function CrisisMap({
     );
   }
 
-  return <div ref={mapContainer} className={className} />;
+  return (
+    <>
+      <style>{`
+        @keyframes marker-ping {
+          0%   { transform: scale(1);   opacity: 0.8; }
+          100% { transform: scale(4.5); opacity: 0;   }
+        }
+        @keyframes marker-dot-pulse {
+          0%   { transform: scale(1);    }
+          50%  { transform: scale(1.18); }
+          100% { transform: scale(1);    }
+        }
+        .marker-ping-ring.active {
+          animation: marker-ping 1.1s cubic-bezier(0, 0, 0.4, 1) infinite;
+        }
+        .marker-dot.active {
+          animation: marker-dot-pulse 1.1s ease-in-out infinite;
+          z-index: 10 !important;
+        }
+      `}</style>
+      <div ref={mapContainer} className={className} />
+    </>
+  );
 }

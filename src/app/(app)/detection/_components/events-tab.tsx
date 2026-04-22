@@ -28,6 +28,7 @@ import type { GqlEvent } from "~/lib/types/graphql";
 import { getDisasterPills, getDisasterLabel } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
+import type { CrisisMarker } from "~/app/(app)/map/_components/map-markers-data";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { useDisasterTypes } from "~/hooks/use-disaster-types";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
@@ -94,6 +95,8 @@ export function EventsTab({
   const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [hoveredMarkerId, setHoveredMarkerId] = useState<number | null>(null);
+  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
 
   const allTypes = useMemo(
     () => [...new Set(events.flatMap((e) => e.types))].sort(),
@@ -451,7 +454,16 @@ export function EventsTab({
                     px={16}
                     py={12}
                     className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
-                    style={{ display: "flex", gap: 12 }}
+                    style={{
+                      display: "flex", gap: 12,
+                      background: hoveredEventId === event.id ? "var(--color-info-light)" : undefined,
+                      transition: "background 0.15s ease",
+                    }}
+                    onMouseEnter={() => {
+                      const m = mapMarkers.find((mk) => (mk as CrisisMarker).eventId === event.id);
+                      setHoveredMarkerId(m?.id ?? null);
+                    }}
+                    onMouseLeave={() => setHoveredMarkerId(null)}
                   >
                     <Box style={{ width: 3, background: sevCol, flexShrink: 0, borderRadius: 2 }} />
                     <Box style={{ flex: 1, minWidth: 0 }}>
@@ -542,6 +554,8 @@ export function EventsTab({
               fitBoundsGeometry={fitBoundsGeometry}
               adminBoundaries={adminBoundaries}
               adminBoundaryLevel={adminBoundaryLevel}
+              hoveredMarkerId={hoveredMarkerId}
+              onMarkerHover={(mk) => setHoveredEventId(mk ? (mk as CrisisMarker).eventId ?? null : null)}
             />
           </Box>
         </Card>

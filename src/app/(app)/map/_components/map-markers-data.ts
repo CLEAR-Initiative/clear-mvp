@@ -12,6 +12,8 @@ export interface CrisisMarker extends MapMarker {
   ancestorIds?: string[];
   /** Disaster type glide codes (e.g. ["ba", "rv"]) - used for type filter */
   eventTypes?: string[];
+  /** Original source entity ID (event.id / signal.id) for hover syncing with the list */
+  eventId?: string;
   affectedPopulation?: number;
   cases?: number;
   status?: string;
@@ -88,6 +90,7 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
       locationId: loc.id,
       ancestorIds: loc.ancestorIds ?? [],
       eventTypes: event.types.map((t) => t.toLowerCase()),
+      eventId: event.id,
       status: event.alerts[0]?.status,
     });
   }
@@ -117,6 +120,7 @@ export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
             locationId: loc.id,
             ancestorIds: loc.ancestorIds ?? [],
             dataSource: signal.source.name,
+            eventId: signal.id,
           });
           break;
         }

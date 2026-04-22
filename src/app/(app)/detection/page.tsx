@@ -9,7 +9,7 @@ import { useTeam } from "~/providers/team-provider";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { dateOptions, parseDateFilter } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
-import { alertsToMarkers, alertsToRegions, eventsToMarkers, eventsToRegions, signalsToMarkers } from "../map/_components/map-markers-data";
+import { alertsToMarkers, alertsToRegions, eventsToMarkers, eventsToRegions, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar } from "~/components/ui";
 
 import { DetectionKpiRow } from "~/components/detection/detection-kpi-row";
@@ -42,10 +42,12 @@ export default function DetectionPage() {
     { enabled: boundaryLevel === "A2" && !!selectedCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const adminBoundaries = useMemo(() => {
+    // Hide admin boundary lines when a region is focused - the region highlight already shows the boundary.
+    if (selectedRegion !== "All Regions") return [];
     if (boundaryLevel === "A1") return a1BoundaryQuery.data ?? [];
     if (boundaryLevel === "A2") return a2BoundaryQuery.data ?? [];
     return [];
-  }, [boundaryLevel, a1BoundaryQuery.data, a2BoundaryQuery.data]);
+  }, [selectedRegion, boundaryLevel, a1BoundaryQuery.data, a2BoundaryQuery.data]);
   const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
   const selectedRegionId = useMemo(
@@ -161,16 +163,28 @@ export default function DetectionPage() {
     });
   }, [signalsQuery.data, matchesLocationFilter, selectedDate]);
 
-  const mapMarkers: MapMarker[] = useMemo(() => alertsToMarkers(alerts), [alerts]);
+  // Secondary clip: drop markers whose plotted Point location is outside the selected region.
+  // An event can pass the text filter (via generalLocation) but be plotted at originLocation
+  // coordinates that are in a different state entirely.
+  const clipToRegion = useCallback((markers: CrisisMarker[]): CrisisMarker[] => {
+    if (!selectedLocationId) return markers;
+    return markers.filter((mk) => {
+      if (!mk.locationId) return false;
+      if (mk.locationId === selectedLocationId) return true;
+      return mk.ancestorIds?.includes(selectedLocationId) ?? false;
+    });
+  }, [selectedLocationId]);
+
+  const mapMarkers: MapMarker[] = useMemo(() => clipToRegion(alertsToMarkers(alerts)), [alerts, clipToRegion]);
   const mapRegions = useMemo(() => alertsToRegions(alerts), [alerts]);
   const eventMapMarkers: MapMarker[] = useMemo(
-    () => eventsToMarkers(filteredEvents),
-    [filteredEvents],
+    () => clipToRegion(eventsToMarkers(filteredEvents)),
+    [filteredEvents, clipToRegion],
   );
   const eventMapRegions = useMemo(() => eventsToRegions(filteredEvents), [filteredEvents]);
   const signalMapMarkers: MapMarker[] = useMemo(
-    () => signalsToMarkers(filteredSignals),
-    [filteredSignals],
+    () => clipToRegion(signalsToMarkers(filteredSignals)),
+    [filteredSignals, clipToRegion],
   );
   const mapCenter = useMemo<[number, number]>(() => getCenter(selectedCountry), [selectedCountry]);
   const mapZoom = useMemo(() => getZoom(selectedCountry), [selectedCountry]);
@@ -183,7 +197,7 @@ export default function DetectionPage() {
   return (
     <Box>
       <PageHeader
-        title="Crisis Detection"
+        title="Event Detection"
         subtitle="Detection"
         breadcrumbs={["CLEAR", "Detection"]}
         loading={alertsQuery.isLoading}
