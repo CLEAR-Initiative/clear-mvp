@@ -90,8 +90,6 @@ export default function MapPage() {
 
 
 
-  const layers = useMemo(() => [], []);
-
   /* ---- Filter state ---- */
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
 

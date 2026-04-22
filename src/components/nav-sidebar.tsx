@@ -51,7 +51,7 @@ const navSections: NavSection[] = [
     title: "MAIN",
     items: [
       { label: "Overview",        href: "/dashboard",  icon: IconLayoutDashboard, featureKey: "overview" },
-      { label: "Detection",       href: "/detection",  icon: IconTarget,          featureKey: "detection",       badge: 3 },
+      { label: "Detection",       href: "/detection",  icon: IconTarget,          featureKey: "detection" },
       { label: "Analysis",        href: "/analysis",   icon: IconChartPie,        featureKey: "analysis",        demo: true },
       { label: "Operations",      href: "/operations", icon: IconUser,            featureKey: "operations",      demo: true },
       { label: "Cash Assistance", href: "/cash",       icon: IconCurrencyDollar,  featureKey: "cash_assistance", demo: true },
@@ -136,6 +136,12 @@ export function NavSidebar() {
   const router = useRouter();
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const isAdmin = authData?.user?.role === "admin";
+  const { activeTeamId } = useTeam();
+  const { data: alertStats } = api.alerts.getStats.useQuery(
+    { teamId: activeTeamId },
+    { staleTime: 60_000, refetchOnWindowFocus: false },
+  );
+  const activeAlertCount = alertStats?.stats.overview.active_alerts;
   const { flags } = useFeatureFlags();
 
   const handleLogout = async () => {
@@ -242,8 +248,8 @@ export function NavSidebar() {
                   <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{item.label}</Text>
                   {item.disabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>Soon</Badge>}
                   {!item.disabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>Demo</Badge>}
-                  {!item.disabled && item.badge !== undefined && (
-                    <Badge size="xs" color="red" variant="filled" style={{ fontSize: fontSizesPx.xs, fontWeight: 600 }}>{item.badge}</Badge>
+                  {!item.disabled && item.href === "/detection" && !!activeAlertCount && (
+                    <Badge size="xs" color="red" variant="filled" style={{ fontSize: fontSizesPx.xs, fontWeight: 600 }}>{activeAlertCount}</Badge>
                   )}
                 </Box>
               );
@@ -445,19 +451,19 @@ export function NavSidebar() {
                     </Badge>
                   )}
 
-                  {!item.disabled && item.badge !== undefined && (
+                  {!item.disabled && item.href === "/detection" && !!activeAlertCount && (
                     <Badge
                       size="xs"
                       color="red"
                       variant="filled"
                       style={{ fontSize: fontSizesPx.xs, fontWeight: 600, minWidth: 18, padding: "0 6px", flexShrink: 0, ...labelStyle }}
                     >
-                      {item.badge}
+                      {activeAlertCount}
                     </Badge>
                   )}
 
                   {/* Dot badge visible only when collapsed */}
-                  {!item.disabled && item.badge !== undefined && (
+                  {!item.disabled && item.href === "/detection" && !!activeAlertCount && (
                     <Box
                       style={{
                         position:      "absolute",
@@ -495,7 +501,7 @@ export function NavSidebar() {
 
       {/* Bottom actions */}
       <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3], flexShrink: 0 }}>
-        {/* Admin — only visible to admin role */}
+        {/* Admin - only visible to admin role */}
         {isAdmin && (() => {
           const isActive = activeSegment === "admin";
           const inner = (
@@ -526,7 +532,7 @@ export function NavSidebar() {
 
         {/* Settings + exit row */}
         <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[2] }}>
-        {/* Settings — takes remaining width */}
+        {/* Settings - takes remaining width */}
         {(() => {
           const isActive = activeSegment === "profile";
           const inner = (

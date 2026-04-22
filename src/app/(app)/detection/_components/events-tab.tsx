@@ -28,10 +28,11 @@ import type { GqlEvent } from "~/lib/types/graphql";
 import { getDisasterPills, getDisasterLabel } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
-import type { CrisisMarker } from "~/app/(app)/map/_components/map-markers-data";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { useDisasterTypes } from "~/hooks/use-disaster-types";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
+import { useMarkerHover } from "~/hooks/use-marker-hover";
+import { formatTimeAgo } from "~/lib/utils";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -40,7 +41,6 @@ const CrisisMap = dynamic(
 
 type SeverityKey = "critical" | "high" | "medium" | "low";
 type SortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
-type ViewMode = "all" | "map";
 
 const SORT_LABELS: Record<SortOrder, string> = {
   "sev-desc": "Severity: High to Low",
@@ -48,15 +48,6 @@ const SORT_LABELS: Record<SortOrder, string> = {
   "newest":   "Newest first",
   "oldest":   "Oldest first",
 };
-
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const hours = Math.floor(diff / 3_600_000);
-  if (hours < 1) return "Just now";
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 interface EventsTabProps {
   events: GqlEvent[];
@@ -70,6 +61,8 @@ interface EventsTabProps {
   adminBoundaryLevel?: 1 | 2;
   boundaryLevel?: BoundaryLevel;
   onBoundaryLevelChange?: (level: BoundaryLevel) => void;
+  focusCountryPCode?: string;
+  focusCountryName?: string;
 }
 
 export function EventsTab({
@@ -84,9 +77,10 @@ export function EventsTab({
   adminBoundaryLevel,
   boundaryLevel = "A1",
   onBoundaryLevelChange,
+  focusCountryPCode,
+  focusCountryName,
 }: EventsTabProps) {
   const { getTypeNames } = useDisasterTypes();
-  const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [search, setSearch] = useState("");
   const [activeSeverities, setActiveSeverities] = useState<Set<SeverityKey>>(
     new Set(["critical", "high", "medium", "low"]),
@@ -95,8 +89,7 @@ export function EventsTab({
   const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [hoveredMarkerId, setHoveredMarkerId] = useState<number | null>(null);
-  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
+  const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
 
   const allTypes = useMemo(
     () => [...new Set(events.flatMap((e) => e.types))].sort(),
@@ -454,16 +447,9 @@ export function EventsTab({
                     px={16}
                     py={12}
                     className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
-                    style={{
-                      display: "flex", gap: 12,
-                      background: hoveredEventId === event.id ? "var(--color-info-light)" : undefined,
-                      transition: "background 0.15s ease",
-                    }}
-                    onMouseEnter={() => {
-                      const m = mapMarkers.find((mk) => (mk as CrisisMarker).eventId === event.id);
-                      setHoveredMarkerId(m?.id ?? null);
-                    }}
-                    onMouseLeave={() => setHoveredMarkerId(null)}
+                    style={{ display: "flex", gap: 12, ...getCardProps(event.id).style }}
+                    onMouseEnter={getCardProps(event.id).onMouseEnter}
+                    onMouseLeave={getCardProps(event.id).onMouseLeave}
                   >
                     <Box style={{ width: 3, background: sevCol, flexShrink: 0, borderRadius: 2 }} />
                     <Box style={{ flex: 1, minWidth: 0 }}>
@@ -549,13 +535,13 @@ export function EventsTab({
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"
-              focusCountryPCode="SD"
-              focusCountryName="Sudan"
+              focusCountryPCode={focusCountryPCode}
+              focusCountryName={focusCountryName}
               fitBoundsGeometry={fitBoundsGeometry}
               adminBoundaries={adminBoundaries}
               adminBoundaryLevel={adminBoundaryLevel}
               hoveredMarkerId={hoveredMarkerId}
-              onMarkerHover={(mk) => setHoveredEventId(mk ? (mk as CrisisMarker).eventId ?? null : null)}
+              onMarkerHover={onMarkerHover}
             />
           </Box>
         </Card>

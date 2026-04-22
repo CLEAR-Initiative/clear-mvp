@@ -26,8 +26,9 @@ import {
 } from "@tabler/icons-react";
 import type { GqlSignal } from "~/lib/types/graphql";
 import type { MapMarker } from "~/components/map/crisis-map";
-import type { CrisisMarker } from "~/app/(app)/map/_components/map-markers-data";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
+import { useMarkerHover } from "~/hooks/use-marker-hover";
+import { formatTimeAgo } from "~/lib/utils";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -41,15 +42,6 @@ const SORT_LABELS: Record<SortOrder, string> = {
   oldest: "Oldest first",
   source: "Source name",
 };
-
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const hours = Math.floor(diff / 3_600_000);
-  if (hours < 1) return "Just now";
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -70,6 +62,8 @@ interface SignalsTabProps {
   adminBoundaryLevel?: 1 | 2;
   boundaryLevel?: BoundaryLevel;
   onBoundaryLevelChange?: (level: BoundaryLevel) => void;
+  focusCountryPCode?: string;
+  focusCountryName?: string;
 }
 
 export function SignalsTab({
@@ -83,13 +77,14 @@ export function SignalsTab({
   adminBoundaryLevel,
   boundaryLevel = "A1",
   onBoundaryLevelChange,
+  focusCountryPCode,
+  focusCountryName,
 }: SignalsTabProps) {
   const [search, setSearch] = useState("");
   const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [hoveredMarkerId, setHoveredMarkerId] = useState<number | null>(null);
-  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
+  const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
 
   const allSources = useMemo(
     () => [...new Set(signals.map((s) => s.source.name))].sort(),
@@ -350,16 +345,9 @@ export function SignalsTab({
                     px={16}
                     py={12}
                     className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
-                    style={{
-                      display: "flex", gap: 12,
-                      background: hoveredEventId === signal.id ? "var(--color-info-light)" : undefined,
-                      transition: "background 0.15s ease",
-                    }}
-                    onMouseEnter={() => {
-                      const m = mapMarkers.find((mk) => (mk as CrisisMarker).eventId === signal.id);
-                      setHoveredMarkerId(m?.id ?? null);
-                    }}
-                    onMouseLeave={() => setHoveredMarkerId(null)}
+                    style={{ display: "flex", gap: 12, ...getCardProps(signal.id).style }}
+                    onMouseEnter={getCardProps(signal.id).onMouseEnter}
+                    onMouseLeave={getCardProps(signal.id).onMouseLeave}
                   >
                     <Box
                       style={{
@@ -448,13 +436,13 @@ export function SignalsTab({
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"
-              focusCountryPCode="SD"
-              focusCountryName="Sudan"
+              focusCountryPCode={focusCountryPCode}
+              focusCountryName={focusCountryName}
               fitBoundsGeometry={fitBoundsGeometry}
               adminBoundaries={adminBoundaries}
               adminBoundaryLevel={adminBoundaryLevel}
               hoveredMarkerId={hoveredMarkerId}
-              onMarkerHover={(mk) => setHoveredEventId(mk ? (mk as CrisisMarker).eventId ?? null : null)}
+              onMarkerHover={onMarkerHover}
             />
           </Box>
         </Card>

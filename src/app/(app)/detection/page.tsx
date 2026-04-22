@@ -7,7 +7,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { dateOptions, parseDateFilter } from "~/lib/constants/country-config";
+import { countryConfig, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
 import { alertsToMarkers, alertsToRegions, eventsToMarkers, eventsToRegions, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar } from "~/components/ui";
@@ -82,6 +82,9 @@ export default function DetectionPage() {
     const raw = alertsQuery.data?.alerts ?? [];
     return [...raw].sort((a, b) => b.event.rank - a.event.rank);
   }, [alertsQuery.data?.alerts]);
+
+  const focusCountryPCode = countryConfig[selectedCountry]?.pCode;
+  const focusCountryName = selectedCountry;
 
   // Resolve selected location for filtering
   const selectedLocationId = useMemo(() => {
@@ -198,7 +201,7 @@ export default function DetectionPage() {
     <Box>
       <PageHeader
         title="Event Detection"
-        subtitle="Detection"
+        subtitle="Event Detection"
         breadcrumbs={["CLEAR", "Detection"]}
         loading={alertsQuery.isLoading}
       >
@@ -272,6 +275,8 @@ export default function DetectionPage() {
             adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
             boundaryLevel={boundaryLevel}
             onBoundaryLevelChange={setBoundaryLevel}
+            focusCountryPCode={focusCountryPCode}
+            focusCountryName={focusCountryName}
           />
         )}
 
@@ -287,6 +292,8 @@ export default function DetectionPage() {
             adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
             boundaryLevel={boundaryLevel}
             onBoundaryLevelChange={setBoundaryLevel}
+            focusCountryPCode={focusCountryPCode}
+            focusCountryName={focusCountryName}
           />
         )}
 
@@ -312,6 +319,8 @@ export default function DetectionPage() {
             adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
             boundaryLevel={boundaryLevel}
             onBoundaryLevelChange={setBoundaryLevel}
+            focusCountryPCode={focusCountryPCode}
+            focusCountryName={focusCountryName}
           />
         )}
       </Box>
