@@ -91,7 +91,7 @@ export default function MapPage() {
   );
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
-  const [dataView, setDataView] = useState<DataView>("alert");
+  const [dataView, setDataView] = useState<DataView>("none");
 
   // Resolve Sudan's location ID for scoping admin boundary queries.
   const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);

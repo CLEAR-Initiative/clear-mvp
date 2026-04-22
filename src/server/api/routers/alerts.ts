@@ -146,8 +146,8 @@ export const alertsRouter = createTRPCRouter({
   }),
 
   getDisasterTypes: protectedProcedure.query(async ({ ctx }) => {
-    const data = await graphqlFetch<{ disasterTypes: Array<{ id: string; disasterType: string; disasterClass: string; glideNumber: string }> }>(
-      `query { disasterTypes { id disasterType disasterClass glideNumber } }`,
+    const data = await graphqlFetch<{ disasterTypes: Array<{ id: string; disasterType: string; disasterClass: string; glideNumber: string; level1: string; level2: string }> }>(
+      `query { disasterTypes { id disasterType disasterClass glideNumber level1 level2 } }`,
       undefined,
       cookieHeaders(ctx),
     );

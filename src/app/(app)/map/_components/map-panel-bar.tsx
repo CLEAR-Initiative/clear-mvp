@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
-  Box, Text, Stack, Group, Radio, Checkbox, Divider, Select,
+  Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl,
 } from "@mantine/core";
 import {
   IconLayersLinked, IconList, IconSettings,
@@ -26,55 +26,49 @@ const BOUNDARY_OPTIONS = [
   { value: "A2",   label: "A2 - Districts" },
 ];
 
+const DATA_VIEW_OPTIONS: { label: string; value: DataView }[] = [
+  { label: "None",   value: "none" },
+  { label: "Crisis", value: "crisis" },
+  { label: "Alert",  value: "alert" },
+  { label: "Event",  value: "event" },
+];
+
 interface DisasterType {
   id: string;
   disasterType: string;
   disasterClass: string;
   glideNumber: string;
+  level1: string;
+  level2: string;
 }
 
 interface MapPanelBarProps {
-  /* Layers */
   dataView: DataView;
   onDataViewChange: (v: DataView) => void;
   showPopulation: boolean;
   onShowPopulationChange: (v: boolean) => void;
-  /* Legend */
   eventTypes?: DisasterType[];
-  /* Config */
   boundaryLevel: BoundaryLevel;
   onBoundaryLevelChange: (v: BoundaryLevel) => void;
 }
 
 function IconBtn({
-  icon: Icon,
-  active,
-  title,
-  onClick,
+  icon: Icon, active, title, onClick,
 }: {
-  icon: React.ElementType;
-  active: boolean;
-  title: string;
-  onClick: () => void;
+  icon: React.ElementType; active: boolean; title: string; onClick: () => void;
 }) {
   return (
     <button
       title={title}
       onClick={onClick}
       style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 30,
-        height: 30,
-        border: "1px solid #E5E5E5",
-        borderRadius: 4,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        width: 30, height: 30,
+        border: "1px solid #E5E5E5", borderRadius: 4,
         background: active ? "#EFF6FF" : "white",
         color: active ? "#2563EB" : "#525252",
-        cursor: "pointer",
-        padding: 0,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-        flexShrink: 0,
+        cursor: "pointer", padding: 0,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.08)", flexShrink: 0,
       }}
     >
       <Icon size={15} />
@@ -112,6 +106,16 @@ export function MapPanelBar({
   const [active, setActive] = useState<PanelId | null>(null);
   const toggle = (id: PanelId) => setActive((prev) => (prev === id ? null : id));
 
+  // Derive unique level1 categories present in current alerts
+  const level1Categories = useMemo(() => {
+    const seen = new Set<string>();
+    return eventTypes.reduce<string[]>((acc, dt) => {
+      const cat = dt.level1 || dt.disasterClass || "other";
+      if (!seen.has(cat)) { seen.add(cat); acc.push(cat); }
+      return acc;
+    }, []);
+  }, [eventTypes]);
+
   return (
     <Box className="absolute z-10" style={{ top: 80, left: 16 }}>
       <Group gap={4} align="flex-start" wrap="nowrap">
@@ -127,32 +131,27 @@ export function MapPanelBar({
         {active && (
           <Box
             className="bg-white border border-[#E5E5E5]"
-            style={{ width: 220, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
+            style={{ width: 240, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
           >
             {/* ── Layers ── */}
             {active === "layers" && (
               <>
                 <PanelHeader>Layers</PanelHeader>
-                <Stack gap={0} px={12} py={8}>
+                <Stack gap={0} px={12} py={10}>
                   <SectionLabel>CLEAR Data</SectionLabel>
-                  <Radio.Group value={dataView} onChange={(v) => onDataViewChange(v as DataView)}>
-                    <Stack gap={0}>
-                      {(["crisis", "alert", "event"] as const).map((view) => (
-                        <Group
-                          key={view} gap={8} py={6} px={4}
-                          className="cursor-pointer hover:bg-[#F9FAFB] -mx-1"
-                          onClick={() => onDataViewChange(view)}
-                          style={{ userSelect: "none" }}
-                        >
-                          <Radio size="xs" value={view} styles={{ radio: { cursor: "pointer" } }} onClick={(e) => e.stopPropagation()} />
-                          <Text size="xs" c="#525252" style={{ fontSize: 12, textTransform: "capitalize" }}>{view}</Text>
-                        </Group>
-                      ))}
-                    </Stack>
-                  </Radio.Group>
-                  <Divider color="#F5F5F5" my={8} />
+                  <SegmentedControl
+                    value={dataView}
+                    onChange={(v) => onDataViewChange(v as DataView)}
+                    data={DATA_VIEW_OPTIONS}
+                    size="xs"
+                    fullWidth
+                    styles={{
+                      label: { fontSize: 11, padding: "3px 6px" },
+                    }}
+                  />
+                  <Divider color="#F5F5F5" my={10} />
                   <Group
-                    gap={8} py={6} px={4}
+                    gap={8} py={4} px={2}
                     className="cursor-pointer hover:bg-[#F9FAFB] -mx-1"
                     onClick={() => onShowPopulationChange(!showPopulation)}
                     style={{ userSelect: "none" }}
@@ -181,14 +180,14 @@ export function MapPanelBar({
                       <Text size="xs" style={{ fontSize: 11 }}>{item.label}</Text>
                     </Group>
                   ))}
+
                   {showPopulation && (
                     <>
                       <Divider color="#F5F5F5" my={4} />
                       <SectionLabel>Population</SectionLabel>
                       <Box
                         style={{
-                          height: 10,
-                          borderRadius: 3,
+                          height: 10, borderRadius: 3,
                           background: "linear-gradient(to right, #FFFFB2, #FECC5C, #FD8D3C, #F03B20, #BD0026, #67000D)",
                         }}
                         mb={2}
@@ -199,17 +198,15 @@ export function MapPanelBar({
                       </Group>
                     </>
                   )}
-                  {eventTypes.length > 0 && (
+
+                  {level1Categories.length > 0 && (
                     <>
                       <Divider color="#F5F5F5" my={4} />
-                      <SectionLabel>Event Type</SectionLabel>
-                      {eventTypes.map((dt) => (
-                        <Group key={dt.id} gap={8}>
-                          <Text size="xs" c="#737373" style={{ fontSize: 10, fontFamily: "monospace", minWidth: 18 }}>
-                            {dt.glideNumber.toUpperCase()}
-                          </Text>
-                          <Text size="xs" style={{ fontSize: 11, textTransform: "capitalize" }}>{dt.disasterType}</Text>
-                        </Group>
+                      <SectionLabel>Event Category</SectionLabel>
+                      {level1Categories.map((cat) => (
+                        <Text key={cat} size="xs" style={{ fontSize: 11, textTransform: "capitalize" }} c="#525252">
+                          {cat}
+                        </Text>
                       ))}
                     </>
                   )}

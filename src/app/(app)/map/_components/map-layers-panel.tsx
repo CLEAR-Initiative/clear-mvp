@@ -1,7 +1,7 @@
 import { Box, Text, Stack, Checkbox, Group, Radio, Divider } from "@mantine/core";
 import { IconLayersLinked } from "@tabler/icons-react";
 
-export type DataView = "crisis" | "alert" | "event";
+export type DataView = "none" | "crisis" | "alert" | "event";
 
 interface MapLayersPanelProps {
   dataView: DataView;
