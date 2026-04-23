@@ -22,6 +22,11 @@ export interface GqlDataSource {
   infoUrl?: string | null;
 }
 
+export interface GqlLocationMetadata {
+  type: string;
+  data: Record<string, unknown>;
+}
+
 export interface GqlLocation {
   id: string;
   name: string;
@@ -30,7 +35,8 @@ export interface GqlLocation {
   ancestorIds?: string[];
   geometry: GeoJSONGeometry | null | undefined;
   population?: string | null;
-  ancestors?: Array<{ id: string; name: string; level: number; population?: string | null }>;
+  metadata?: GqlLocationMetadata[] | null;
+  ancestors?: Array<{ id: string; name: string; level: number; population?: string | null; metadata?: GqlLocationMetadata[] | null }>;
 }
 
 /* ─── Signal ─── */

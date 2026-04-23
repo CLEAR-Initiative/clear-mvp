@@ -240,6 +240,22 @@ export function EventDetailContent({
     return null;
   })();
 
+  // IDP per capita: find the A2 location's iom_dtm_displacement metadata.
+  const idpData = (() => {
+    const primaryLoc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+    if (!primaryLoc) return null;
+    const candidates = [primaryLoc, ...(primaryLoc.ancestors ?? [])];
+    const a2 = candidates.find((c) => c.level === 2);
+    if (!a2) return null;
+    const meta = a2.metadata?.find((m) => m.type === "iom_dtm_displacement");
+    if (!meta) return null;
+    const displaced = meta.data.population_displaced as number | undefined;
+    const population = a2.population ? Number(a2.population) : null;
+    if (!displaced) return null;
+    const ratio = population ? displaced / population : null;
+    return { displaced, population, ratio, name: a2.name };
+  })();
+
   return (
     <Box>
       {/* Back nav */}
@@ -488,7 +504,7 @@ export function EventDetailContent({
               </Box>
             </Box>
 
-            {/* Placeholder */}
+            {/* IDP per capita */}
             <Box
               p={16}
               style={{
@@ -516,10 +532,18 @@ export function EventDetailContent({
                 <IconShieldExclamation size={18} color="#D97706" />
               </Box>
               <Box>
-                <Text fw={700} c="#A3A3A3" style={{ fontSize: 15, lineHeight: 1.3 }}>
-                  Placeholder
+                <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                  {idpData?.ratio != null
+                    ? `${(idpData.ratio * 100).toFixed(1)}%`
+                    : idpData?.displaced != null
+                      ? idpData.displaced.toLocaleString()
+                      : "N/A"}
                 </Text>
-                <Text size="xs" c="#A3A3A3" mt={2}>Coming soon</Text>
+                <Text size="xs" c="#737373" mt={2}>
+                  {idpData
+                    ? `IDPs per capita in ${idpData.name} (${idpData.displaced.toLocaleString()} displaced)`
+                    : "IDP per capita"}
+                </Text>
               </Box>
             </Box>
 
