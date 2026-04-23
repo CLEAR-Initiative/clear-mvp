@@ -4,12 +4,12 @@ import { useState } from "react";
 import {
   Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl,
 } from "@mantine/core";
-import { IconLayersLinked, IconList, IconSettings } from "@tabler/icons-react";
+import { IconLayersLinked, IconList } from "@tabler/icons-react";
 import type { DataView } from "./map-layers-panel";
 import type { BoundaryLevel } from "./map-settings-popover";
 export type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 
-type PanelId = "layers" | "legend" | "config";
+type PanelId = "layers" | "legend";
 
 const SEVERITY_ITEMS = [
   { label: "Critical", color: "var(--color-critical)" },
@@ -101,9 +101,8 @@ export function MapPanelBar({
 
         {/* Icon column */}
         <Stack gap={4}>
-          <IconBtn icon={IconLayersLinked} active={active === "layers"} title="Layers"  onClick={() => toggle("layers")} />
-          <IconBtn icon={IconList}         active={active === "legend"} title="Legend"  onClick={() => toggle("legend")} />
-          <IconBtn icon={IconSettings}     active={active === "config"} title="Config"  onClick={() => toggle("config")} />
+          <IconBtn icon={IconLayersLinked} active={active === "layers"} title="Layers" onClick={() => toggle("layers")} />
+          <IconBtn icon={IconList}         active={active === "legend"} title="Legend" onClick={() => toggle("legend")} />
         </Stack>
 
         {/* Panel content */}
@@ -121,7 +120,16 @@ export function MapPanelBar({
               <>
                 <PanelHeader>Layers</PanelHeader>
                 <Stack gap={0} px={12} py={10}>
-                  <SectionLabel>CLEAR Data</SectionLabel>
+                  <SectionLabel>Boundaries</SectionLabel>
+                  <Select
+                    size="xs"
+                    value={boundaryLevel}
+                    onChange={(v) => onBoundaryLevelChange((v ?? "A1") as BoundaryLevel)}
+                    data={BOUNDARY_OPTIONS}
+                    mb={10}
+                    styles={{ input: { fontWeight: 600, fontSize: 12 } }}
+                  />
+                  <SectionLabel>Markers</SectionLabel>
                   <SegmentedControl
                     value={dataView}
                     onChange={(v) => onDataViewChange(v as DataView)}
@@ -205,25 +213,6 @@ export function MapPanelBar({
               </>
             )}
 
-            {/* Config */}
-            {active === "config" && (
-              <>
-                <PanelHeader>Map Settings</PanelHeader>
-                <Stack gap={10} px={12} py={10}>
-                  <Group justify="space-between" align="center" gap={8} wrap="nowrap">
-                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12, flexShrink: 0 }}>Boundaries</Text>
-                    <Select
-                      size="xs"
-                      value={boundaryLevel}
-                      onChange={(v) => onBoundaryLevelChange((v ?? "A1") as BoundaryLevel)}
-                      data={BOUNDARY_OPTIONS}
-                      style={{ minWidth: 120 }}
-                      styles={{ input: { fontWeight: 600, fontSize: 12 } }}
-                    />
-                  </Group>
-                </Stack>
-              </>
-            )}
           </Box>
         )}
       </Group>
