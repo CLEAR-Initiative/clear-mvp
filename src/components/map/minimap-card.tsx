@@ -58,7 +58,7 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId }: Minimap
   );
 
   return (
-    <Box p={0} style={{ border: "1px solid #E5E5E5", position: "sticky", top: 24, background: "#fff" }}>
+    <Box p={0} style={{ border: "1px solid #E5E5E5", background: "#fff" }}>
       {/* Header */}
       <Box px={16} py={10} className="border-b border-[#E5E5E5]">
         <Group justify="space-between">
@@ -76,7 +76,7 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId }: Minimap
       </Box>
 
       {/* Map area */}
-      <Box style={{ height: 180, position: "relative" }}>
+      <Box style={{ height: 216, position: "relative" }}>
         <CrisisMap
           markers={markers}
           center={center}
