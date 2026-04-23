@@ -57,10 +57,14 @@ interface CrisisMapProps {
   adminBoundaryLevel?: 1 | 2;
   /** GeoJSON geometry to fit the map bounds to (e.g. a selected region). */
   fitBoundsGeometry?: unknown;
+  /** Our own L0 geometry for the focus country highlight (overrides Mapbox tileset). */
+  focusCountryGeometry?: unknown;
   /** A2 district boundaries with population for choropleth layer. */
   populationBoundaries?: AdminBoundary[];
   /** Marker ID to highlight with a pulse (synced from list hover). */
   hoveredMarkerId?: number | null;
+  /** Suppress the automatic fitBounds-to-country when a focus country loads. Default true. */
+  fitBoundsOnFocus?: boolean;
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -201,8 +205,10 @@ export function CrisisMap({
   adminBoundaries,
   adminBoundaryLevel,
   fitBoundsGeometry,
+  focusCountryGeometry,
   populationBoundaries,
   hoveredMarkerId,
+  fitBoundsOnFocus = true,
 }: CrisisMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxGLAny>(null);
@@ -279,11 +285,14 @@ export function CrisisMap({
     const m = map.current;
     const COUNTRY_SOURCE = "mapbox-countries";
 
+    const FOCUS_GEOJSON_SOURCE = "focus-country-geojson";
+
     const cleanup = () => {
       for (const id of ["focus-mask-fill", "focus-highlight-fill", "focus-border-line"]) {
         try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
       }
       try { if (m.getSource(COUNTRY_SOURCE)) m.removeSource(COUNTRY_SOURCE); } catch { /* ignore */ }
+      try { if (m.getSource(FOCUS_GEOJSON_SOURCE)) m.removeSource(FOCUS_GEOJSON_SOURCE); } catch { /* ignore */ }
       // Reset any Mapbox built-in admin-1 layers we mutated back to hidden.
       for (const id of admin1LayerIds.current) {
         try { m.setLayoutProperty(id, "visibility", "none"); } catch { /* ignore */ }
@@ -330,38 +339,48 @@ export function CrisisMap({
       fillBeforeId,
     );
 
-    // Blue tint across the focus country.
-    m.addLayer(
-      {
-        id: "focus-highlight-fill",
-        type: "fill",
-        source: COUNTRY_SOURCE,
-        "source-layer": "country_boundaries",
-        filter: ["==", ["get", "iso_3166_1"], focusIso],
-        paint: {
-          "fill-color": "#1E40AF",
-          "fill-opacity": 0.35,
+    // Blue tint + border for the focus country.
+    // Prefer our own DB geometry (accurate OCHA boundaries) over Mapbox's tileset.
+    if (focusCountryGeometry) {
+      m.addSource(FOCUS_GEOJSON_SOURCE, {
+        type: "geojson",
+        data: { type: "Feature", geometry: focusCountryGeometry as never, properties: {} },
+      });
+      m.addLayer(
+        { id: "focus-highlight-fill", type: "fill", source: FOCUS_GEOJSON_SOURCE,
+          paint: { "fill-color": "#1E40AF", "fill-opacity": 0.35 } },
+        fillBeforeId,
+      );
+      m.addLayer(
+        { id: "focus-border-line", type: "line", source: FOCUS_GEOJSON_SOURCE,
+          paint: { "line-color": "#1D4ED8", "line-width": 1.25, "line-opacity": 0.85 } },
+        borderBeforeId,
+      );
+    } else {
+      // Fallback: use Mapbox tileset (may have inaccurate boundaries for some countries).
+      m.addLayer(
+        {
+          id: "focus-highlight-fill",
+          type: "fill",
+          source: COUNTRY_SOURCE,
+          "source-layer": "country_boundaries",
+          filter: ["==", ["get", "iso_3166_1"], focusIso],
+          paint: { "fill-color": "#1E40AF", "fill-opacity": 0.35 },
         },
-      },
-      fillBeforeId,
-    );
-
-    // Crisp country border - rendered ABOVE admin-1 lines but BELOW labels.
-    m.addLayer(
-      {
-        id: "focus-border-line",
-        type: "line",
-        source: COUNTRY_SOURCE,
-        "source-layer": "country_boundaries",
-        filter: ["==", ["get", "iso_3166_1"], focusIso],
-        paint: {
-          "line-color": "#1D4ED8",
-          "line-width": 1.25,
-          "line-opacity": 0.85,
+        fillBeforeId,
+      );
+      m.addLayer(
+        {
+          id: "focus-border-line",
+          type: "line",
+          source: COUNTRY_SOURCE,
+          "source-layer": "country_boundaries",
+          filter: ["==", ["get", "iso_3166_1"], focusIso],
+          paint: { "line-color": "#1D4ED8", "line-width": 1.25, "line-opacity": 0.85 },
         },
-      },
-      borderBeforeId,
-    );
+        borderBeforeId,
+      );
+    }
 
     // Show admin-1 (state) borders only inside the focus country, and
     // surface mid-tier settlement labels (Port Sudan, El Obeid, Nyala,
@@ -447,19 +466,19 @@ export function CrisisMap({
     }
 
     return cleanup;
-  }, [focusIso, loaded, adminBoundaries, adminBoundaryLevel]);
+  }, [focusIso, focusCountryGeometry, loaded, adminBoundaries, adminBoundaryLevel]);
 
   // Fit bounds to the focus country once its backend bbox is available.
   // Skips when fitBoundsGeometry is set (a more specific region is focused).
   useEffect(() => {
-    if (!map.current || !loaded || !focusCountry || fitBoundsGeometry) return;
+    if (!map.current || !loaded || !focusCountry || fitBoundsGeometry || !fitBoundsOnFocus) return;
     const bounds = geometryBounds(focusCountry.geometry as never);
     if (!bounds) return;
     map.current.fitBounds(
       [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
       { padding: 40, duration: 800 },
     );
-  }, [focusCountry, loaded, fitBoundsGeometry]);
+  }, [focusCountry, loaded, fitBoundsGeometry, fitBoundsOnFocus]);
 
   // Fit bounds to a specific geometry (e.g. selected region).
   useEffect(() => {

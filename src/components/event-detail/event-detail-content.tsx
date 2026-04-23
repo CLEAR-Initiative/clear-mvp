@@ -32,6 +32,7 @@ import {
   IconBellRinging,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { useLocations } from "~/hooks/use-locations";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { getDisasterPills } from "~/lib/disaster-types";
@@ -203,6 +204,14 @@ export function EventDetailContent({
     return [mapMarkers[0]!.lng, mapMarkers[0]!.lat];
   }, [mapMarkers]);
 
+  const { getLocationId } = useLocations();
+  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
+  const sudanL0Query = api.locations.getById.useQuery(
+    { id: sudanId! },
+    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
+
   if (loading) {
     return (
       <Box
@@ -270,7 +279,7 @@ export function EventDetailContent({
     event.signals?.[0]?.publishedAt ?? event.firstSignalCreatedAt;
 
   const locations = eventLocations(event);
-  const primaryLocation = locations[0]?.name;
+  const primaryLocation = resolveLocationName(locations[0]) ?? undefined;
 
   // TODO: after Prisma migration: use `event.title` directly (remove fallback below)
   const displayTitle =
@@ -424,7 +433,7 @@ export function EventDetailContent({
 
         {/* Meta */}
         <Group gap={16} wrap="wrap">
-          {locations.length > 0 && (
+          {locations.some((l) => resolveLocationName(l)) && (
             <Group gap={4}>
               <IconMapPin size={13} color="#737373" />
               <Text size="xs" c="#525252" fw={500}>
@@ -496,7 +505,11 @@ export function EventDetailContent({
               </Box>
               <Box>
                 <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {event.populationAffected ?? "N/A"}
+                  {event.populationAffected
+                    ? (Number.isNaN(Number(event.populationAffected))
+                        ? event.populationAffected
+                        : Number(event.populationAffected).toLocaleString())
+                    : "N/A"}
                 </Text>
                 <Text size="xs" c="#737373" mt={2}>Population affected</Text>
               </Box>
@@ -841,9 +854,12 @@ export function EventDetailContent({
                   <CrisisMap
                     markers={mapMarkers}
                     center={mapCenter}
-                    zoom={8}
+                    zoom={4.5}
                     className="w-full h-full"
-                    interactive={false}
+                    focusCountryPCode="SD"
+                    focusCountryName="Sudan"
+                    focusCountryGeometry={sudanGeometry}
+                    fitBoundsOnFocus={false}
                   />
                 </Box>
               </Card>
@@ -1006,7 +1022,7 @@ export function EventDetailContent({
                         pending
                       </Text>
                     </Group>
-                    {locations.length > 0 && (
+                    {locations.some((l) => resolveLocationName(l)) && (
                       <Box
                         style={{ borderTop: "1px solid #F0F0F0" }}
                         pt={8}

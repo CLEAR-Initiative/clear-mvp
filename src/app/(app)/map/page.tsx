@@ -143,6 +143,13 @@ export default function MapPage() {
     [showPopulation, populationQuery.data],
   );
 
+  // Sudan L0 geometry - used for the country highlight instead of Mapbox's inaccurate tileset.
+  const sudanL0Query = api.locations.getById.useQuery(
+    { id: sudanId! },
+    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const focusCountryGeometry = sudanL0Query.data?.geometry ?? undefined;
+
   // Region zoom: fetch selected region geometry and fit map to it.
   const selectedRegionId = useMemo(
     () => (selectedRegion !== "All Regions" ? getLocationId(selectedRegion) : null),
@@ -323,6 +330,7 @@ export default function MapPage() {
         onMarkerClick={handleMarkerClick}
         focusCountryPCode="SD"
         focusCountryName="Sudan"
+        focusCountryGeometry={focusCountryGeometry}
         adminBoundaries={adminBoundaries}
         adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
         fitBoundsGeometry={fitBoundsGeometry}
