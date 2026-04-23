@@ -10,7 +10,7 @@ import type { MapMarker } from "~/components/map/crisis-map";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box w="100%" h={180} bg="#F5F5F5" /> },
+  { ssr: false, loading: () => <Box style={{ width: "100%", aspectRatio: "4/3", background: "#F5F5F5" }} /> },
 );
 
 type BoundaryLevel = "none" | "A1" | "A2";
@@ -76,7 +76,7 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId }: Minimap
       </Box>
 
       {/* Map area */}
-      <Box style={{ height: 216, position: "relative" }}>
+      <Box style={{ aspectRatio: "4/3", position: "relative" }}>
         <CrisisMap
           markers={markers}
           center={center}
