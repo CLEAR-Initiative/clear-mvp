@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -33,6 +32,8 @@ import {
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useLocations } from "~/hooks/use-locations";
+import { MinimapCard } from "~/components/map/minimap-card";
+import type { MapMarker } from "~/components/map/crisis-map";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { getDisasterPills } from "~/lib/disaster-types";
@@ -42,11 +43,6 @@ import { FeedbackSection } from "~/components/feedback-section";
 import { AddToCrisisButton } from "~/components/event-detail/add-to-crisis-button";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
-
-const CrisisMap = dynamic(
-  () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box w="100%" h={180} bg="#F5F5F5" /> },
-);
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 // These fields don't exist in the current API response.
@@ -706,48 +702,12 @@ export function EventDetailContent({
           <Box style={{ width: 300, flexShrink: 0 }}>
             <Stack gap={20}>
               {/* Location map */}
-              <Card
-                p={0}
-                style={{
-                  border: "1px solid #E5E5E5",
-                  position: "sticky",
-                  top: 24,
-                }}
-              >
-                <Box px={16} py={10} className="border-b border-[#E5E5E5]">
-                  <Group justify="space-between">
-                    <Group gap={6}>
-                      <IconMapPin size={14} color="#525252" />
-                      <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
-                        Location
-                      </Text>
-                    </Group>
-                    <Link
-                      href={`/map?event=${event.id}`}
-                      style={{ textDecoration: "none" }}
-                    >
-                      <Group gap={4} className="hover:opacity-70">
-                        <IconMap size={12} color="#E85D3D" />
-                        <Text size="xs" c="#E85D3D" fw={500}>
-                          Full map
-                        </Text>
-                      </Group>
-                    </Link>
-                  </Group>
-                </Box>
-                <Box style={{ height: 180 }}>
-                  <CrisisMap
-                    markers={mapMarkers}
-                    center={mapCenter}
-                    zoom={4.5}
-                    className="w-full h-full"
-                    focusCountryPCode="SD"
-                    focusCountryName="Sudan"
-                    focusCountryGeometry={sudanGeometry}
-                    fitBoundsOnFocus={false}
-                  />
-                </Box>
-              </Card>
+              <MinimapCard
+                markers={mapMarkers}
+                center={mapCenter}
+                sudanGeometry={sudanGeometry}
+                sudanId={sudanId}
+              />
 
               {/* Was this event helpful? */}
               <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
