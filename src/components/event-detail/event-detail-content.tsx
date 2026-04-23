@@ -51,66 +51,6 @@ const CrisisMap = dynamic(
 // ── Mock data ─────────────────────────────────────────────────────────────────
 // These fields don't exist in the current API response.
 // Remove and replace with real fields when backend delivers them.
-const MOCK = {
-  title_is_ai: false, // Dataminr: false (source headline). ACLED: true (generated).
-  primary_source_label: "Post on X (Twitter)",
-  intermediary: "Dataminr",
-  source_url: "https://x.com/SudanDoctorsNet/status/1896152842738958399",
-  ai_summary:
-    "An attack attributed to Rapid Support Forces targeted a hospital in al-Obeid, North Kordofan, resulting in 12 casualties including five medical personnel. The incident represents an escalation of attacks on protected medical facilities amid heightened RSF activity across the region since late February 2026.",
-  original_text:
-    "Sudan Doctors Network says 12 injured, including five medical personnel, in Rapid Support Forces attack on hospital in al-Obeid, Sudan: Blog via X.",
-  intelligence_label: "Dataminr · Source analysis",
-  event_descriptions: [
-    {
-      title: "Primary Cause",
-      notes:
-        "Armed attack on a functioning medical facility attributed to Rapid Support Forces (RSF) in al-Obeid.",
-    },
-    {
-      title: "Casualties",
-      notes:
-        "12 injured, including 5 medical personnel. No fatalities reported at time of detection.",
-    },
-    {
-      title: "Event Location",
-      notes: "Al-Obeid Hospital, North Kordofan State, Sudan.",
-    },
-    {
-      title: "Actors Involved",
-      notes:
-        "Rapid Support Forces (RSF) identified as perpetrators. Sudan Doctors Network as reporting source.",
-    },
-    {
-      title: "Property Damage",
-      notes:
-        "Hospital infrastructure damaged. Facility reported as non-operational following the attack.",
-    },
-  ],
-  ratings: {
-    relevance: { value: 4.2, count: 5 },
-    timeliness: { value: 4.8, count: 5 },
-    accuracy: { value: 3.6, count: 5 },
-  },
-  comments: [
-    {
-      id: 1,
-      initials: "U1",
-      author: "User 1",
-      role: "Placeholder role",
-      timeAgo: "2h ago",
-      text: "This is a placeholder comment to show the commentary feature.",
-    },
-    {
-      id: 2,
-      initials: "U2",
-      author: "User 2",
-      role: "Placeholder role",
-      timeAgo: "1h ago",
-      text: "Placeholder content as well.",
-    },
-  ],
-};
 // ─────────────────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
@@ -626,61 +566,6 @@ export function EventDetailContent({
               <Text size="sm" c="#374151" style={{ lineHeight: 1.75 }}>
                 {event.description ?? "No summary available."}
               </Text>
-            </Box>
-          </Card>
-
-          {/* Intelligence details */}
-          <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
-              <Group justify="space-between">
-                <Group gap={8}>
-                  <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
-                    Intelligence Details
-                  </Text>
-                  <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>
-                    (mock data currently)
-                  </Text>
-                </Group>
-                <Text size="xs" c="#A3A3A3">
-                  {MOCK.intelligence_label}
-                </Text>
-              </Group>
-            </Box>
-            <Box
-              p={12}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 8,
-              }}
-            >
-              {MOCK.event_descriptions.map((item, i) => (
-                <Box
-                  key={i}
-                  p={12}
-                  style={{
-                    background: "#F9FAFB",
-                    border: "1px solid #E5E5E5",
-                    borderRadius: 6,
-                  }}
-                >
-                  <Text
-                    size="xs"
-                    fw={700}
-                    c="#A3A3A3"
-                    mb={4}
-                    style={{
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
-                    }}
-                  >
-                    {item.title}
-                  </Text>
-                  <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
-                    {item.notes}
-                  </Text>
-                </Box>
-              ))}
             </Box>
           </Card>
 
