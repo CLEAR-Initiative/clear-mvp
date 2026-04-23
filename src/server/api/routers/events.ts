@@ -4,8 +4,8 @@ import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
 
 const LOCATION_FIELDS = `
-  id name level geoId ancestorIds geometry
-  ancestors { id name level }
+  id name level geoId ancestorIds geometry population
+  ancestors { id name level population }
 `;
 
 const SIGNAL_FIELDS = `

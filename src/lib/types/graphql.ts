@@ -29,7 +29,8 @@ export interface GqlLocation {
   geoId?: string | null;
   ancestorIds?: string[];
   geometry: GeoJSONGeometry | null | undefined;
-  ancestors?: Array<{ id: string; name: string; level: number }>;
+  population?: string | null;
+  ancestors?: Array<{ id: string; name: string; level: number; population?: string | null }>;
 }
 
 /* ─── Signal ─── */

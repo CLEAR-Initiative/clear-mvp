@@ -25,6 +25,8 @@ import {
   IconExternalLink,
 } from "@tabler/icons-react";
 import type { GqlSignal } from "~/lib/types/graphql";
+import { mapSeverity, severityColor } from "~/lib/types/graphql";
+import { severityColors, severityLabels } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
@@ -327,6 +329,9 @@ export function SignalsTab({
               </Box>
             )}
             {filtered.map((signal) => {
+              const sev = mapSeverity(signal.severity ?? 0);
+              const sevCol = severityColor(signal.severity ?? 0);
+              const sevBg = severityColors[sev]?.bg ?? "var(--color-bg-muted)";
               const location =
                 signal.generalLocation ?? signal.originLocation ?? signal.destinationLocation;
               const displayTitle =
@@ -352,7 +357,7 @@ export function SignalsTab({
                     <Box
                       style={{
                         width: 3,
-                        background: "var(--color-text-muted)",
+                        background: sevCol,
                         flexShrink: 0,
                         borderRadius: 2,
                       }}
@@ -360,6 +365,16 @@ export function SignalsTab({
                     <Box style={{ flex: 1, minWidth: 0 }}>
                       <Group justify="space-between" mb={4}>
                         <Group gap={6}>
+                          <Badge
+                            size="xs"
+                            style={{
+                              background: sevBg,
+                              color: sevCol,
+                              fontWeight: 600,
+                            }}
+                          >
+                            {severityLabels[sev]}
+                          </Badge>
                           <Badge
                             size="xs"
                             style={{

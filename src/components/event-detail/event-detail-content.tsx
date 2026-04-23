@@ -283,6 +283,18 @@ export function EventDetailContent({
   const signalCount = event.signals.length;
   const sourceCount = new Set(event.signals.map((s) => s.source.name)).size;
 
+  // Resolve best available location population: prefer L2, fall back to L1, then L0.
+  const areaPopulation = (() => {
+    const primaryLoc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+    if (!primaryLoc) return null;
+    const candidates = [primaryLoc, ...(primaryLoc.ancestors ?? [])];
+    for (const level of [2, 1, 0]) {
+      const loc = candidates.find((c) => c.level === level && c.population);
+      if (loc) return { name: loc.name, value: loc.population! };
+    }
+    return null;
+  })();
+
   return (
     <Box>
       {/* Back nav */}
@@ -518,13 +530,12 @@ export function EventDetailContent({
                 <IconWorld size={18} color="#2563EB" />
               </Box>
               <Box>
-                <Group gap={6} align="baseline">
-                  <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                    ~2.1M
-                  </Text>
-                  <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>(mock)</Text>
-                </Group>
-                <Text size="xs" c="#737373" mt={2}>Population in affected area</Text>
+                <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                  {areaPopulation ? Number(areaPopulation.value).toLocaleString() : "N/A"}
+                </Text>
+                <Text size="xs" c="#737373" mt={2}>
+                  {areaPopulation ? `Population in ${areaPopulation.name}` : "Population in area"}
+                </Text>
               </Box>
             </Box>
 

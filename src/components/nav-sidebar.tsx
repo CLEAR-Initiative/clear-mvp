@@ -136,12 +136,6 @@ export function NavSidebar() {
   const router = useRouter();
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const isAdmin = authData?.user?.role === "admin";
-  const { activeTeamId } = useTeam();
-  const { data: alertStats } = api.alerts.getStats.useQuery(
-    { teamId: activeTeamId },
-    { staleTime: 60_000, refetchOnWindowFocus: false },
-  );
-  const activeAlertCount = alertStats?.stats.overview.active_alerts;
   const { flags } = useFeatureFlags();
 
   const handleLogout = async () => {
@@ -248,9 +242,6 @@ export function NavSidebar() {
                   <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{item.label}</Text>
                   {item.disabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>Soon</Badge>}
                   {!item.disabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>Demo</Badge>}
-                  {!item.disabled && item.href === "/detection" && !!activeAlertCount && (
-                    <Badge size="xs" color="red" variant="filled" style={{ fontSize: fontSizesPx.xs, fontWeight: 600 }}>{activeAlertCount}</Badge>
-                  )}
                 </Box>
               );
               return item.disabled ? content : (
@@ -451,34 +442,6 @@ export function NavSidebar() {
                     </Badge>
                   )}
 
-                  {!item.disabled && item.href === "/detection" && !!activeAlertCount && (
-                    <Badge
-                      size="xs"
-                      color="red"
-                      variant="filled"
-                      style={{ fontSize: fontSizesPx.xs, fontWeight: 600, minWidth: 18, padding: "0 6px", flexShrink: 0, ...labelStyle }}
-                    >
-                      {activeAlertCount}
-                    </Badge>
-                  )}
-
-                  {/* Dot badge visible only when collapsed */}
-                  {!item.disabled && item.href === "/detection" && !!activeAlertCount && (
-                    <Box
-                      style={{
-                        position:      "absolute",
-                        top:           6,
-                        right:         8,
-                        width:         7,
-                        height:        7,
-                        borderRadius:  "50%",
-                        background:    colors.critical,
-                        opacity:       collapsed ? 1 : 0,
-                        transition:    collapsed ? "opacity 80ms ease" : "opacity 100ms ease 160ms",
-                        pointerEvents: "none",
-                      }}
-                    />
-                  )}
                 </Box>
               );
 
