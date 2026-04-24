@@ -39,33 +39,40 @@ interface NavItem {
   badge?: number;
   disabled?: boolean;
   demo?: boolean;
+  /** Hidden entirely for non-admin users */
+  adminOnly?: boolean;
+  /** Shown but greyed out with "Coming Soon" for non-admin users */
+  comingSoonForNonAdmin?: boolean;
 }
 
 interface NavSection {
   title: string;
   items: NavItem[];
+  /** Hide the entire section for non-admin users */
+  adminOnly?: boolean;
 }
 
 const navSections: NavSection[] = [
   {
     title: "MAIN",
     items: [
-      { label: "Overview",        href: "/dashboard",  icon: IconLayoutDashboard, featureKey: "overview" },
-      { label: "Detection",       href: "/detection",  icon: IconTarget,          featureKey: "detection" },
-      { label: "Crisis Map",      href: "/map",        icon: IconMapPin,          featureKey: "crisis_map" },
-      { label: "Analysis",        href: "/analysis",   icon: IconChartPie,        featureKey: "analysis",        demo: true },
-      { label: "Operations",      href: "/operations", icon: IconUser,            featureKey: "operations",      demo: true },
-      { label: "Cash Assistance", href: "/cash",       icon: IconCurrencyDollar,  featureKey: "cash_assistance", demo: true },
+      { label: "Overview",           href: "/dashboard",  icon: IconLayoutDashboard, featureKey: "overview" },
+      { label: "Crisis Detection",   href: "/detection",  icon: IconTarget,          featureKey: "detection" },
+      { label: "Crisis Map",         href: "/map",        icon: IconMapPin,          featureKey: "crisis_map" },
+      { label: "Situation Analysis", href: "/analysis",   icon: IconChartPie,        featureKey: "analysis",        comingSoonForNonAdmin: true },
+      { label: "Operations",         href: "/operations", icon: IconUser,            featureKey: "operations",      adminOnly: true },
+      { label: "Cash Assistance",    href: "/cash",       icon: IconCurrencyDollar,  featureKey: "cash_assistance", adminOnly: true },
     ],
   },
   {
     title: "RESOURCES",
     items: [
-      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook,    featureKey: "knowledge_hub", demo: true },
+      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook, featureKey: "knowledge_hub", comingSoonForNonAdmin: true },
     ],
   },
   {
     title: "SETTINGS",
+    adminOnly: true,
     items: [
       { label: "Organisation", href: "/settings/org", icon: IconBuilding },
     ],
@@ -208,9 +215,11 @@ export function NavSidebar() {
       {/* Mobile drawer nav */}
       <Box component="nav" style={{ flex: 1, overflowY: "auto", padding: spacingPx[3] }}>
         {navSections.map((section) => {
-          const visibleItems = section.items.filter((item) =>
-            item.featureKey ? (flags[item.featureKey] ?? true) : true
-          );
+          if (section.adminOnly && !isAdmin) return null;
+          const visibleItems = section.items.filter((item) => {
+            if (item.adminOnly && !isAdmin) return false;
+            return item.featureKey ? (flags[item.featureKey] ?? true) : true;
+          });
           if (visibleItems.length === 0) return null;
           return (
           <Box key={section.title} mb={spacingPx[5]}>
@@ -220,8 +229,9 @@ export function NavSidebar() {
               </Text>
             </Box>
             {visibleItems.map((item) => {
+              const isDisabled = item.disabled || (!isAdmin && !!item.comingSoonForNonAdmin);
               const itemSegment = item.href.replace(/^\//, "");
-              const isActive = !item.disabled && activeSegment === itemSegment;
+              const isActive = !isDisabled && activeSegment === itemSegment;
               const Icon = item.icon;
               const content = (
                 <Box
@@ -229,8 +239,8 @@ export function NavSidebar() {
                   style={{
                     display: "flex", alignItems: "center", gap: spacingPx[4],
                     padding: `${spacingPx[4]}px ${spacingPx[3]}px`, borderRadius: 6,
-                    cursor: item.disabled ? "not-allowed" : "pointer",
-                    opacity: item.disabled ? 0.45 : 1,
+                    cursor: isDisabled ? "not-allowed" : "pointer",
+                    opacity: isDisabled ? 0.45 : 1,
                     background: isActive ? colors.accentLight : "transparent",
                     borderLeft: isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
                     color: isActive ? colors.accent : colors.textSecondary,
@@ -240,11 +250,11 @@ export function NavSidebar() {
                 >
                   <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
                   <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{item.label}</Text>
-                  {item.disabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>Soon</Badge>}
-                  {!item.disabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>Demo</Badge>}
+                  {isDisabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>Soon</Badge>}
+                  {!isDisabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>Demo</Badge>}
                 </Box>
               );
-              return item.disabled ? content : (
+              return isDisabled ? content : (
                 <Link key={item.href} href={item.href} onClick={closeMobile} style={{ textDecoration: "none", display: "block", color: "inherit" }}>
                   {content}
                 </Link>
@@ -362,9 +372,11 @@ export function NavSidebar() {
         style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: `${spacingPx[3]}px ${spacingPx[3]}px` }}
       >
         {navSections.map((section) => {
-          const visibleItems = section.items.filter((item) =>
-            item.featureKey ? (flags[item.featureKey] ?? true) : true
-          );
+          if (section.adminOnly && !isAdmin) return null;
+          const visibleItems = section.items.filter((item) => {
+            if (item.adminOnly && !isAdmin) return false;
+            return item.featureKey ? (flags[item.featureKey] ?? true) : true;
+          });
           if (visibleItems.length === 0) return null;
           return (
           <Box key={section.title} mb={spacingPx[5]}>
@@ -386,8 +398,9 @@ export function NavSidebar() {
             </Box>
 
             {visibleItems.map((item) => {
+              const isDisabled = item.disabled || (!isAdmin && !!item.comingSoonForNonAdmin);
               const itemSegment = item.href.replace(/^\//, "");
-              const isActive = !item.disabled && activeSegment === itemSegment;
+              const isActive = !isDisabled && activeSegment === itemSegment;
               const Icon = item.icon;
 
               const row = (
@@ -400,15 +413,15 @@ export function NavSidebar() {
                     padding:        `${spacingPx[4]}px ${spacingPx[3]}px`,
                     borderRadius:   6,
                     position:       "relative",
-                    cursor:         item.disabled ? "not-allowed" : "pointer",
-                    opacity:        item.disabled ? 0.45 : 1,
+                    cursor:         isDisabled ? "not-allowed" : "pointer",
+                    opacity:        isDisabled ? 0.45 : 1,
                     background:     isActive ? colors.accentLight : "transparent",
                     borderLeft:     isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
                     transition:     "none",
                     textDecoration: "none",
                     color:          isActive ? colors.accent : colors.textSecondary,
                   }}
-                  className={cn(!item.disabled && !isActive && "hover:bg-[#F5F5F5] hover:!text-[#171717]")}
+                  className={cn(!isDisabled && !isActive && "hover:bg-[#F5F5F5] hover:!text-[#171717]")}
                   component="div"
                 >
                   <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
@@ -420,7 +433,7 @@ export function NavSidebar() {
                     {item.label}
                   </Text>
 
-                  {item.disabled && (
+                  {isDisabled && (
                     <Badge
                       size="xs"
                       variant="light"
@@ -431,7 +444,7 @@ export function NavSidebar() {
                     </Badge>
                   )}
 
-                  {!item.disabled && item.demo && (
+                  {!isDisabled && item.demo && (
                     <Badge
                       size="xs"
                       variant="light"
@@ -445,7 +458,7 @@ export function NavSidebar() {
                 </Box>
               );
 
-              const linked = item.disabled ? row : (
+              const linked = isDisabled ? row : (
                 <Link key={item.href} href={item.href} style={{ textDecoration: "none", display: "block", color: "inherit" }}>
                   {row}
                 </Link>
