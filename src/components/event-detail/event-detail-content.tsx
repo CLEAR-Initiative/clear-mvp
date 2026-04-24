@@ -46,7 +46,6 @@ import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { AddToCrisisButton } from "~/components/event-detail/add-to-crisis-button";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
-import type { MapMarker } from "~/components/map/crisis-map";
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 // These fields don't exist in the current API response.

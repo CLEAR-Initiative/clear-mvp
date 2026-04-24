@@ -54,8 +54,8 @@ function rowRank(row: HistoryRow): number {
 }
 
 function rowSeverity(row: HistoryRow): ReturnType<typeof mapSeverity> {
-  if (row.kind === "alert") return mapSeverity(row.data.event.rank, row.data.event.severity);
-  if (row.kind === "event") return mapSeverity(row.data.rank, row.data.severity);
+  if (row.kind === "alert") return mapSeverity(row.data.event.severity);
+  if (row.kind === "event") return mapSeverity(row.data.severity);
   return mapSeverity(row.data.severity ?? 0);
 }
 

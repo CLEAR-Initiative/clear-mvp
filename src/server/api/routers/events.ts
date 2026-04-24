@@ -106,7 +106,7 @@ export const eventsRouter = createTRPCRouter({
           { teamId: input.teamId ?? undefined, includeDummy: false },
           cookieHeaders(ctx),
         ),
-        graphqlFetch<{ disasterTypes: { glideNumber: string; level2: string }[] }>(
+        graphqlFetch<{ disasterTypes: { glideNumber: string; level1: string }[] }>(
           DISASTER_TYPES_QUERY,
           {},
           cookieHeaders(ctx),
