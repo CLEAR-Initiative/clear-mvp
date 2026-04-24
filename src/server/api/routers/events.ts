@@ -59,7 +59,7 @@ const EVENT_GET_QUERY = `
 `;
 
 const DISASTER_TYPES_QUERY = `
-  query { disasterTypes { glideNumber level2 } }
+  query { disasterTypes { glideNumber level1 } }
 `;
 
 const CREATE_EVENT_MUTATION = `
@@ -116,17 +116,31 @@ export const eventsRouter = createTRPCRouter({
       const current = allEvents.find((e) => e.id === input.id);
       if (!current) return [];
 
-      const codeToL2 = new Map(typesData.disasterTypes.map((t) => [t.glideNumber, t.level2]));
+      const codeToL1 = new Map(typesData.disasterTypes.map((t) => [t.glideNumber, t.level1]));
       // Use only the primary (first) type for matching - secondary types like "ce"
       // (complex emergency) are catch-all tags applied to most events and would
       // otherwise cause false matches across unrelated disaster categories.
       const primaryCode = current.types?.[0];
-      const primaryL2 = primaryCode ? codeToL2.get(primaryCode) ?? null : null;
+      const primaryL1 = primaryCode ? codeToL1.get(primaryCode) ?? null : null;
 
+      // Resolve the best available geography anchor for the current event:
+      // prefer A2 (district), fall back to A1 (state) if A2 is absent in the data.
       const currentLoc = current.generalLocation ?? current.originLocation ?? current.destinationLocation;
-      const a2Id = currentLoc?.level === 2
-        ? currentLoc.id
-        : currentLoc?.ancestors?.find((a) => a.level === 2)?.id ?? null;
+      let geoId: string | null = null;
+      let geoLevel: number | null = null;
+      if (currentLoc) {
+        const ancestors = currentLoc.ancestors ?? [];
+        if (currentLoc.level === 2) {
+          geoId = currentLoc.id; geoLevel = 2;
+        } else if (currentLoc.level === 1) {
+          geoId = currentLoc.id; geoLevel = 1;
+        } else {
+          const a2 = ancestors.find((a) => a.level === 2);
+          const a1 = ancestors.find((a) => a.level === 1);
+          if (a2) { geoId = a2.id; geoLevel = 2; }
+          else if (a1) { geoId = a1.id; geoLevel = 1; }
+        }
+      }
 
       const currentTime = new Date(current.validFrom).getTime();
       const fiveDays = 5 * 24 * 60 * 60 * 1000;
@@ -134,14 +148,18 @@ export const eventsRouter = createTRPCRouter({
       return allEvents.filter((e) => {
         if (e.id === input.id) return false;
         if (Math.abs(new Date(e.validFrom).getTime() - currentTime) > fiveDays) return false;
-        if (primaryL2) {
-          const shared = (e.types ?? []).some((c) => codeToL2.get(c) === primaryL2);
+        if (primaryL1) {
+          const shared = (e.types ?? []).some((c) => codeToL1.get(c) === primaryL1);
           if (!shared) return false;
         }
-        if (a2Id) {
+        if (geoId && geoLevel) {
           const eLoc = e.generalLocation ?? e.originLocation ?? e.destinationLocation;
-          const eA2Id = eLoc?.level === 2 ? eLoc.id : eLoc?.ancestors?.find((a) => a.level === 2)?.id;
-          if (eA2Id !== a2Id) return false;
+          if (!eLoc) return false;
+          const eAncestors = eLoc.ancestors ?? [];
+          const eGeoId = eLoc.level === geoLevel
+            ? eLoc.id
+            : eAncestors.find((a) => a.level === geoLevel)?.id ?? null;
+          if (eGeoId !== geoId) return false;
         }
         return true;
       });
