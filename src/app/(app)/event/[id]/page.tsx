@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
 import { EventDetailContent } from "~/components/event-detail/event-detail-content";
 
 export default function EventDetailPage({
@@ -10,19 +11,16 @@ export default function EventDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { activeTeamId } = useTeam();
 
   const eventQuery = api.events.get.useQuery(
     { id },
     { enabled: !!id },
   );
 
-  const relatedQuery = api.events.list.useQuery(
-    undefined,
+  const relatedQuery = api.events.related.useQuery(
+    { id, teamId: activeTeamId },
     { enabled: !!eventQuery.data },
-  );
-
-  const relatedEvents = (relatedQuery.data ?? []).filter(
-    (e) => e.id !== id,
   );
 
   return (
@@ -30,7 +28,7 @@ export default function EventDetailPage({
       event={eventQuery.data}
       loading={eventQuery.isLoading}
       mode="page"
-      relatedEvents={relatedEvents}
+      relatedEvents={relatedQuery.data ?? []}
       relatedLoading={relatedQuery.isLoading}
     />
   );

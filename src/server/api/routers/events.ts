@@ -31,6 +31,7 @@ const EVENT_FIELDS = `
   severity
   isDummy
   rank
+  validFrom
   firstSignalCreatedAt
   lastSignalCreatedAt
   populationAffected
@@ -55,6 +56,10 @@ const EVENT_GET_QUERY = `
       ${EVENT_FIELDS}
     }
   }
+`;
+
+const DISASTER_TYPES_QUERY = `
+  query { disasterTypes { glideNumber level2 } }
 `;
 
 const CREATE_EVENT_MUTATION = `
@@ -89,6 +94,57 @@ export const eventsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.event;
+    }),
+
+  related: protectedProcedure
+    .input(z.object({ id: z.string(), teamId: z.string().nullish() }))
+    .query(async ({ ctx, input }) => {
+      const [eventsData, typesData] = await Promise.all([
+        graphqlFetch<{ events: GqlEvent[] }>(
+          EVENT_LIST_QUERY,
+          { teamId: input.teamId ?? undefined, includeDummy: false },
+          cookieHeaders(ctx),
+        ),
+        graphqlFetch<{ disasterTypes: { glideNumber: string; level2: string }[] }>(
+          DISASTER_TYPES_QUERY,
+          {},
+          cookieHeaders(ctx),
+        ),
+      ]);
+
+      const allEvents = eventsData.events;
+      const current = allEvents.find((e) => e.id === input.id);
+      if (!current) return [];
+
+      const codeToL2 = new Map(typesData.disasterTypes.map((t) => [t.glideNumber, t.level2]));
+      // Use only the primary (first) type for matching - secondary types like "ce"
+      // (complex emergency) are catch-all tags applied to most events and would
+      // otherwise cause false matches across unrelated disaster categories.
+      const primaryCode = current.types?.[0];
+      const primaryL2 = primaryCode ? codeToL2.get(primaryCode) ?? null : null;
+
+      const currentLoc = current.generalLocation ?? current.originLocation ?? current.destinationLocation;
+      const a2Id = currentLoc?.level === 2
+        ? currentLoc.id
+        : currentLoc?.ancestors?.find((a) => a.level === 2)?.id ?? null;
+
+      const currentTime = new Date(current.validFrom).getTime();
+      const fiveDays = 5 * 24 * 60 * 60 * 1000;
+
+      return allEvents.filter((e) => {
+        if (e.id === input.id) return false;
+        if (Math.abs(new Date(e.validFrom).getTime() - currentTime) > fiveDays) return false;
+        if (primaryL2) {
+          const shared = (e.types ?? []).some((c) => codeToL2.get(c) === primaryL2);
+          if (!shared) return false;
+        }
+        if (a2Id) {
+          const eLoc = e.generalLocation ?? e.originLocation ?? e.destinationLocation;
+          const eA2Id = eLoc?.level === 2 ? eLoc.id : eLoc?.ancestors?.find((a) => a.level === 2)?.id;
+          if (eA2Id !== a2Id) return false;
+        }
+        return true;
+      });
     }),
 
   create: protectedProcedure

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Drawer, Box, Group, Text, ActionIcon } from "@mantine/core";
 import { IconX, IconExternalLink } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
 import { EventDetailContent } from "./event-detail-content";
 
 interface EventDetailDrawerProps {
@@ -20,19 +21,16 @@ export function EventDetailDrawer({
 }: EventDetailDrawerProps) {
   const router = useRouter();
   const originalPathRef = useRef<string | null>(null);
+  const { activeTeamId } = useTeam();
 
   const eventQuery = api.events.get.useQuery(
     { id: eventId! },
     { enabled: eventId != null && opened },
   );
 
-  const relatedQuery = api.events.list.useQuery(
-    undefined,
+  const relatedQuery = api.events.related.useQuery(
+    { id: eventId!, teamId: activeTeamId },
     { enabled: !!eventQuery.data && opened },
-  );
-
-  const relatedEvents = (relatedQuery.data ?? []).filter(
-    (e) => e.id !== eventId,
   );
 
   // Capture original path when drawer opens; restore it when it closes or unmounts.
@@ -111,7 +109,7 @@ export function EventDetailDrawer({
           event={eventQuery.data}
           loading={eventQuery.isLoading}
           mode="drawer"
-          relatedEvents={relatedEvents}
+          relatedEvents={relatedQuery.data ?? []}
           relatedLoading={relatedQuery.isLoading}
         />
       </Box>
