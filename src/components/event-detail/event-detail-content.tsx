@@ -12,6 +12,8 @@ import {
   Stack,
   Loader,
   Button,
+  Collapse,
+  UnstyledButton,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -29,6 +31,8 @@ import {
   IconShieldExclamation,
   IconWorld,
   IconBellRinging,
+  IconChevronDown,
+  IconChevronUp,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useLocations } from "~/hooks/use-locations";
@@ -109,6 +113,7 @@ export function EventDetailContent({
   const isAlready = (event?.alerts?.length ?? 0) > 0;
   const [promoted, setPromoted] = useState(false);
   const [confirmPromote, setConfirmPromote] = useState(false);
+  const [systemDataOpen, setSystemDataOpen] = useState(false);
   const promoteToAlert = api.alerts.promoteToAlert.useMutation({
     onSuccess: () => { setPromoted(true); setConfirmPromote(false); },
   });
@@ -837,16 +842,27 @@ export function EventDetailContent({
                 </Box>
               </Card>
 
-              {/* Alert details */}
+              {/* System Data */}
               <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-                <Box px={16} py={10} className="border-b border-[#E5E5E5]">
-                  <Group gap={6}>
-                    <IconDatabase size={14} color="#525252" />
-                    <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
-                      Details
-                    </Text>
-                  </Group>
-                </Box>
+                <UnstyledButton
+                  onClick={() => setSystemDataOpen((o) => !o)}
+                  style={{ width: "100%" }}
+                >
+                  <Box px={16} py={10} className="border-b border-[#E5E5E5]">
+                    <Group gap={6} justify="space-between">
+                      <Group gap={6}>
+                        <IconDatabase size={14} color="#525252" />
+                        <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
+                          System Data
+                        </Text>
+                      </Group>
+                      {systemDataOpen
+                        ? <IconChevronUp size={13} color="#737373" />
+                        : <IconChevronDown size={13} color="#737373" />}
+                    </Group>
+                  </Box>
+                </UnstyledButton>
+                <Collapse in={systemDataOpen}>
                 <Box p={16}>
                   <Stack gap={8}>
                     <Group justify="space-between">
@@ -944,6 +960,7 @@ export function EventDetailContent({
                     </Group>
                   </Stack>
                 </Box>
+                </Collapse>
               </Card>
             </Stack>
           </Box>
