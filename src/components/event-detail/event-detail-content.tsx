@@ -240,20 +240,23 @@ export function EventDetailContent({
     return null;
   })();
 
-  // IDP per capita: find the A2 location's iom_dtm_displacement metadata.
+  // IDP per capita: find iom_dtm_displacement metadata, falling back A2 → A1 → A0.
   const idpData = (() => {
     const primaryLoc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
     if (!primaryLoc) return null;
     const candidates = [primaryLoc, ...(primaryLoc.ancestors ?? [])];
-    const a2 = candidates.find((c) => c.level === 2);
-    if (!a2) return null;
-    const meta = a2.metadata?.find((m) => m.type === "iom_dtm_displacement");
-    if (!meta) return null;
-    const displaced = meta.data.population_displaced as number | undefined;
-    const population = a2.population ? Number(a2.population) : null;
-    if (!displaced) return null;
-    const ratio = population ? displaced / population : null;
-    return { displaced, population, ratio, name: a2.name };
+    for (const level of [2, 1, 0]) {
+      const loc = candidates.find((c) => c.level === level);
+      if (!loc) continue;
+      const meta = loc.metadata?.find((m) => m.type === "iom_dtm_displacement");
+      if (!meta) continue;
+      const displaced = meta.data.population_displaced as number | undefined;
+      if (!displaced) continue;
+      const population = loc.population ? Number(loc.population) : null;
+      const ratio = population ? displaced / population : null;
+      return { displaced, population, ratio, name: loc.name };
+    }
+    return null;
   })();
 
   return (
@@ -812,7 +815,7 @@ export function EventDetailContent({
                         Turn into Alert
                       </Button>
                     )}
-                    <Button
+                    {/* <Button
                       variant="light"
                       color="gray"
                       size="xs"
@@ -823,7 +826,7 @@ export function EventDetailContent({
                       style={{ fontSize: 12 }}
                     >
                       Bookmark
-                    </Button>
+                    </Button> */}
                     <AddToCrisisButton
                       eventId={event.id}
                       defaultSeverity={

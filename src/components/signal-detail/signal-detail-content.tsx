@@ -783,7 +783,7 @@ export function SignalDetailContent({
                 </Box>
                 <Box p={16}>
                   <Stack gap={8}>
-                    <Button
+                    {/* <Button
                       variant="light"
                       color="gray"
                       size="xs"
@@ -794,7 +794,7 @@ export function SignalDetailContent({
                       style={{ fontSize: 12 }}
                     >
                       Bookmark
-                    </Button>
+                    </Button> */}
                     <Button
                       variant="light"
                       color="gray"
