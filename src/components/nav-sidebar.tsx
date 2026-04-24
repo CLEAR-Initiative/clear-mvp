@@ -52,6 +52,7 @@ const navSections: NavSection[] = [
     items: [
       { label: "Overview",        href: "/dashboard",  icon: IconLayoutDashboard, featureKey: "overview" },
       { label: "Detection",       href: "/detection",  icon: IconTarget,          featureKey: "detection" },
+      { label: "Crisis Map",      href: "/map",        icon: IconMapPin,          featureKey: "crisis_map" },
       { label: "Analysis",        href: "/analysis",   icon: IconChartPie,        featureKey: "analysis",        demo: true },
       { label: "Operations",      href: "/operations", icon: IconUser,            featureKey: "operations",      demo: true },
       { label: "Cash Assistance", href: "/cash",       icon: IconCurrencyDollar,  featureKey: "cash_assistance", demo: true },
@@ -61,7 +62,6 @@ const navSections: NavSection[] = [
     title: "RESOURCES",
     items: [
       { label: "Knowledge Hub", href: "/knowledge", icon: IconBook,    featureKey: "knowledge_hub", demo: true },
-      { label: "Crisis Map",    href: "/map",       icon: IconMapPin,  featureKey: "crisis_map" },
     ],
   },
   {
