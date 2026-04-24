@@ -47,12 +47,16 @@ function rowDate(row: HistoryRow): number {
   return new Date(row.data.publishedAt).getTime();
 }
 
-/** Returns the 1-5 severity for a history row (alerts, events, signals).
- *  Used for both filtering and sort ordering. */
 function rowRank(row: HistoryRow): number {
-  if (row.kind === "alert") return row.data.event.severity ?? 0;
-  if (row.kind === "event") return row.data.severity ?? 0;
+  if (row.kind === "alert") return row.data.event.severity ?? row.data.event.rank * 5;
+  if (row.kind === "event") return row.data.severity ?? row.data.rank * 5;
   return row.data.severity ?? 0;
+}
+
+function rowSeverity(row: HistoryRow): ReturnType<typeof mapSeverity> {
+  if (row.kind === "alert") return mapSeverity(row.data.event.rank, row.data.event.severity);
+  if (row.kind === "event") return mapSeverity(row.data.rank, row.data.severity);
+  return mapSeverity(row.data.severity ?? 0);
 }
 
 interface HistoryTabProps {
@@ -144,7 +148,7 @@ export function HistoryTab({ alerts, events, signals, loading }: HistoryTabProps
     const q = search.trim().toLowerCase();
     let result = allRows.filter((row) => {
       // Severity filter
-      const sev = mapSeverity(rowRank(row));
+      const sev = rowSeverity(row);
       if (!activeSeverities.has(sev)) return false;
 
       // Type filter - signals always pass (no type)
@@ -390,7 +394,7 @@ export function HistoryTab({ alerts, events, signals, loading }: HistoryTabProps
         loading={loading}
         emptyMessage={allRows.length === 0 ? "No history available." : "No items match your filters."}
         renderRow={(row) => {
-          const sev = mapSeverity(rowRank(row));
+          const sev = rowSeverity(row);
           const cls = CLASS_STYLES[row.kind]!;
 
           let href = "#";

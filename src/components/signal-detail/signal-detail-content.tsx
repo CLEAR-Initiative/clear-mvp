@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   Box,
@@ -38,11 +37,9 @@ import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
-
-const CrisisMap = dynamic(
-  () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box w="100%" h={180} bg="#F5F5F5" /> },
-);
+import { api } from "~/trpc/react";
+import { useLocations } from "~/hooks/use-locations";
+import { MinimapCard } from "~/components/map/minimap-card";
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -183,6 +180,14 @@ export function SignalDetailContent({
     return [mapMarkers[0]!.lng, mapMarkers[0]!.lat];
   }, [mapMarkers]);
 
+  const { getLocationId } = useLocations();
+  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
+  const sudanL0Query = api.locations.getById.useQuery(
+    { id: sudanId! },
+    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
+
   // Collect all signals from sibling events, deduplicated, excluding self
   const relatedSignals = useMemo(() => {
     if (!signal) return [];
@@ -262,8 +267,8 @@ export function SignalDetailContent({
 
   const isCompact = mode === "drawer";
   const locations = signalLocations(signal);
-  const primaryLocation = locations[0]?.name;
-  const sev = mapSeverity(signal.severity);
+  const primaryLocation = resolveLocationName(locations[0]) ?? undefined;
+  const sev = mapSeverity(signal.severity ?? 0);
 
   const displayTitle =
     signal.title ??
@@ -407,11 +412,11 @@ export function SignalDetailContent({
 
         {/* Meta */}
         <Group gap={16} wrap="wrap">
-          {locations.length > 0 && (
+          {locations.some((l) => resolveLocationName(l)) && (
             <Group gap={4}>
               <IconMapPin size={13} color="#737373" />
               <Text size="xs" c="#525252" fw={500}>
-                {locations.map((l) => l.name).join(", ")}
+                {locations.map((l) => resolveLocationName(l)).filter(Boolean).join(", ")}
               </Text>
             </Group>
           )}
@@ -632,8 +637,8 @@ export function SignalDetailContent({
                   </Box>
                 )}
                 {signal.events.map((ev) => {
-                  const relSev = mapSeverity(ev.severity);
-                  const relColor = severityColor(ev.severity);
+                  const relSev = mapSeverity(ev.rank);
+                  const relColor = severityColor(ev.rank);
                   const relBg = severityColors[relSev]?.bg ?? "#F5F5F5";
                   const relTitle = ev.title ?? ev.types[0] ?? `Event ${ev.id}`;
                   return (
@@ -735,38 +740,12 @@ export function SignalDetailContent({
             <Stack gap={20}>
               {/* Location map */}
               {mapMarkers.length > 0 && (
-                <Card
-                  p={0}
-                  style={{ border: "1px solid #E5E5E5", position: "sticky", top: 24 }}
-                >
-                  <Box px={16} py={10} className="border-b border-[#E5E5E5]">
-                    <Group justify="space-between">
-                      <Group gap={6}>
-                        <IconMapPin size={14} color="#525252" />
-                        <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
-                          Location
-                        </Text>
-                      </Group>
-                      <Link href="/map" style={{ textDecoration: "none" }}>
-                        <Group gap={4} className="hover:opacity-70">
-                          <IconMap size={12} color="#E85D3D" />
-                          <Text size="xs" c="#E85D3D" fw={500}>
-                            Full map
-                          </Text>
-                        </Group>
-                      </Link>
-                    </Group>
-                  </Box>
-                  <Box style={{ height: 180 }}>
-                    <CrisisMap
-                      markers={mapMarkers}
-                      center={mapCenter}
-                      zoom={8}
-                      className="w-full h-full"
-                      interactive={false}
-                    />
-                  </Box>
-                </Card>
+                <MinimapCard
+                  markers={mapMarkers}
+                  center={mapCenter}
+                  sudanGeometry={sudanGeometry}
+                  sudanId={sudanId}
+                />
               )}
 
               {/* Was this signal helpful? */}
@@ -847,7 +826,7 @@ export function SignalDetailContent({
                       <Text size="xs" c="#737373">Collected</Text>
                       <Text size="xs" fw={500} c="#171717">{formatDateTime(signal.collectedAt)}</Text>
                     </Group>
-                    {locations.length > 0 && (
+                    {locations.some((l) => resolveLocationName(l)) && (
                       <Box style={{ borderTop: "1px solid #F0F0F0" }} pt={8} mt={2}>
                         <Text size="xs" c="#737373" mb={6}>Affected Areas</Text>
                         <Group gap={6} wrap="wrap">

@@ -1,72 +1,72 @@
-// Keyed by the code stored in event.types (GLIDE number or CLEAR id).
+// Keyed by GLIDE number (what event.types contains).
 // Types sharing the same classKey are deduped to a single pill.
-const DISASTER_META: Record<string, { label: string; classKey?: string }> = {
-  // ─── Natural hazards ───
-  et: { label: "Extreme Temp" },
+// hidden: true suppresses the pill without falling back to raw uppercase code.
+const DISASTER_META: Record<string, { label: string; classKey?: string; hidden?: boolean }> = {
+  ce: { label: "", hidden: true },
+  // Natural hazards
+  av: { label: "Avalanche" },
   cw: { label: "Cold Wave" },
-  ht: { label: "Heat Wave" },
-  ce: { label: "Complex Emerg." },
   dr: { label: "Drought" },
-  eq: { label: "Earthquake" },
   ec: { label: "Extratrop. Cyclone" },
-  fr: { label: "Fire" },
+  eq: { label: "Earthquake" },
+  et: { label: "Extreme Temp" },
   ff: { label: "Flash Flood" },
   fl: { label: "Flood" },
-  in: { label: "Insect Infest." },
-  sl: { label: "Slide" },
+  fr: { label: "Fire" },
+  ht: { label: "Heat Wave" },
+  in: { label: "Insect Infestation" },
   ls: { label: "Landslide" },
-  ms: { label: "Mud Slide" },
-  av: { label: "Snow Avalanche" },
-  st: { label: "Severe Storm" },
-  to: { label: "Tornado" },
-  tc: { label: "Tropical Cyclone" },
+  ms: { label: "Mudslide" },
+  sl: { label: "Slide" },
   ss: { label: "Storm Surge" },
+  st: { label: "Severe Storm" },
+  tc: { label: "Tropical Cyclone" },
+  to: { label: "Tornado" },
   ts: { label: "Tsunami" },
   vo: { label: "Volcano" },
-  wf: { label: "Wildfire" },
   vw: { label: "Violent Wind" },
-  ot: { label: "Other" },
-  // ─── Other top-level categories ───
-  ep: { label: "Epidemic" },
-  ac: { label: "Tech. Disaster" },
-  fc: { label: "Econ. Crisis" },
-  fa: { label: "Famine" },
-  // ─── Conflict — all deduped to a single "Conflict" pill ───
-  // Protests
-  pp: { label: "Conflict", classKey: "conflict" },
-  pi: { label: "Conflict", classKey: "conflict" },
-  pf: { label: "Conflict", classKey: "conflict" },
-  // Battles
+  wf: { label: "Wildfire" },
+  // Conflict - battles
   ba: { label: "Conflict", classKey: "conflict" },
   bg: { label: "Conflict", classKey: "conflict" },
   bo: { label: "Conflict", classKey: "conflict" },
-  // Riots
-  ri: { label: "Conflict", classKey: "conflict" },
-  rd: { label: "Conflict", classKey: "conflict" },
-  // Explosions / remote violence
+  // Conflict - explosions / remote violence
+  rb: { label: "Conflict", classKey: "conflict" },
   rc: { label: "Conflict", classKey: "conflict" },
   rg: { label: "Conflict", classKey: "conflict" },
-  rs: { label: "Conflict", classKey: "conflict" },
-  rm: { label: "Conflict", classKey: "conflict" },
   rl: { label: "Conflict", classKey: "conflict" },
-  rb: { label: "Conflict", classKey: "conflict" },
-  // Violence against civilians
-  va: { label: "Conflict", classKey: "conflict" },
-  vs: { label: "Conflict", classKey: "conflict" },
-  vd: { label: "Conflict", classKey: "conflict" },
-  // Strategic developments / political violence
-  pv: { label: "Conflict", classKey: "conflict" },
+  rm: { label: "Conflict", classKey: "conflict" },
+  rs: { label: "Conflict", classKey: "conflict" },
+  rv: { label: "Conflict", classKey: "conflict" },
+  // Conflict - protests
+  pf: { label: "Conflict", classKey: "conflict" },
+  pi: { label: "Conflict", classKey: "conflict" },
+  pp: { label: "Conflict", classKey: "conflict" },
+  pr: { label: "Conflict", classKey: "conflict" },
+  // Conflict - riots
+  rd: { label: "Conflict", classKey: "conflict" },
+  ri: { label: "Conflict", classKey: "conflict" },
+  // Conflict - political violence / strategic
   pa: { label: "Conflict", classKey: "conflict" },
   pg: { label: "Conflict", classKey: "conflict" },
-  pw: { label: "Conflict", classKey: "conflict" },
   ph: { label: "Conflict", classKey: "conflict" },
   pl: { label: "Conflict", classKey: "conflict" },
-  pt: { label: "Conflict", classKey: "conflict" },
   po: { label: "Conflict", classKey: "conflict" },
-  // ─── Legacy codes (pre-hierarchy) — kept so historical events still render ───
-  pr: { label: "Conflict", classKey: "conflict" }, // was umbrella "protests"
-  rv: { label: "Conflict", classKey: "conflict" }, // was umbrella "explosions"
-  vc: { label: "Conflict", classKey: "conflict" }, // was umbrella "violence against civilians"
+  pt: { label: "Conflict", classKey: "conflict" },
+  pv: { label: "Conflict", classKey: "conflict" },
+  pw: { label: "Conflict", classKey: "conflict" },
+  // Conflict - violence against civilians
+  va: { label: "Conflict", classKey: "conflict" },
+  vc: { label: "Conflict", classKey: "conflict" },
+  vd: { label: "Conflict", classKey: "conflict" },
+  vs: { label: "Conflict", classKey: "conflict" },
+  // Crisis
+  fa: { label: "Famine" },
+  fc: { label: "Econ. Crisis" },
+  // Other
+  ac: { label: "Tech. Disaster" },
+  ep: { label: "Epidemic" },
+  ot: { label: "Other" },
 };
 
 const CLASS_STYLE: Record<string, { color: string; bg: string }> = {
@@ -80,7 +80,6 @@ const CATEGORY_STYLE: Record<string, { color: string; bg: string }> = {
   ep: { color: "var(--color-success)", bg: "var(--color-success-light)" },
   fa: { color: "var(--color-warning)", bg: "var(--color-warning-light)" },
   fc: { color: "var(--color-warning)", bg: "var(--color-warning-light)" },
-  ce: { color: "var(--color-warning)", bg: "var(--color-warning-light)" },
   wf: { color: "var(--color-warning)", bg: "var(--color-warning-light)" },
   ts: { color: "var(--color-info)",    bg: "var(--color-info-light)" },
   ec: { color: "var(--color-info)",    bg: "var(--color-info-light)" },
@@ -102,6 +101,7 @@ export function getDisasterPills(types: string[]): DisasterPill[] {
   for (const code of types) {
     const lower = code.toLowerCase();
     const meta = DISASTER_META[lower];
+    if (meta?.hidden) continue;
     const key = meta?.classKey ?? lower;
     if (seen.has(key)) continue;
     seen.add(key);
