@@ -31,6 +31,7 @@ import type { MapMarker } from "~/components/map/crisis-map";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
 import { formatTimeAgo } from "~/lib/utils";
+import { resolveLocationName } from "~/lib/location";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -116,7 +117,7 @@ export function SignalsTab({
       if (activeSources !== null && !activeSources.has(s.source.name)) return false;
       if (q) {
         const title = (s.title ?? s.description ?? "").toLowerCase();
-        const loc = (s.generalLocation?.name ?? s.originLocation?.name ?? "").toLowerCase();
+        const loc = (resolveLocationName(s.generalLocation ?? s.originLocation ?? s.destinationLocation) ?? "").toLowerCase();
         const src = s.source.name.toLowerCase();
         if (!title.includes(q) && !loc.includes(q) && !src.includes(q)) return false;
       }
@@ -401,8 +402,8 @@ export function SignalsTab({
                         {displayTitle}
                       </Text>
                       <Group gap={12}>
-                        {location && (
-                          <Text size="xs" c="var(--color-text-muted)">{location.name}</Text>
+                        {resolveLocationName(location) && (
+                          <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
                         )}
                         <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>
                           {formatDate(signal.publishedAt)}
