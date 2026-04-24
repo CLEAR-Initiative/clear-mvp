@@ -875,23 +875,16 @@ export function EventDetailContent({
                         {formatDate(detectedAt)}
                       </Text>
                     </Group>
-                    {/* TODO: after Prisma migration remove the italics/placeholder fallbacks below */}
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">
-                        Valid from
-                      </Text>
-                      {/* event.validFrom ? formatDate(alert.validFrom) : */}
-                      <Text size="xs" fw={500} c="#A3A3A3" fs="italic">
-                        pending
+                      <Text size="xs" c="#737373">Valid from</Text>
+                      <Text size="xs" fw={500}>
+                        {event?.validFrom ? formatDate(event.validFrom) : "-"}
                       </Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">
-                        Valid until
-                      </Text>
-                      {/* event.validTo ? formatDate(alert.validTo) : */}
-                      <Text size="xs" fw={500} c="#A3A3A3" fs="italic">
-                        pending
+                      <Text size="xs" c="#737373">Valid until</Text>
+                      <Text size="xs" fw={500}>
+                        {event?.validTo ? formatDate(event.validTo) : "-"}
                       </Text>
                     </Group>
                     {locations.some((l) => resolveLocationName(l)) && (

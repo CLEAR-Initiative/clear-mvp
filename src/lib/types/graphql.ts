@@ -91,6 +91,7 @@ export interface GqlEvent {
   /** Relative urgency score (0-1) */
   rank: number;
   validFrom: string;
+  validTo: string;
   firstSignalCreatedAt: string;
   lastSignalCreatedAt: string;
   populationAffected: string | null;

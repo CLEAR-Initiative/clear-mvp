@@ -32,6 +32,7 @@ const EVENT_FIELDS = `
   isDummy
   rank
   validFrom
+  validTo
   firstSignalCreatedAt
   lastSignalCreatedAt
   populationAffected
