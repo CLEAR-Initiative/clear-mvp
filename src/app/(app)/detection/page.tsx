@@ -7,9 +7,9 @@ import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { dateOptions, parseDateFilter } from "~/lib/constants/country-config";
+import { countryConfig, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
-import { alertsToMarkers, alertsToRegions, eventsToMarkers, eventsToRegions, signalsToMarkers } from "../map/_components/map-markers-data";
+import { alertsToMarkers, alertsToRegions, eventsToMarkers, eventsToRegions, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar } from "~/components/ui";
 
 import { DetectionKpiRow } from "~/components/detection/detection-kpi-row";
@@ -29,6 +29,40 @@ export default function DetectionPage() {
 
   const { activeTeamId } = useTeam();
   const { countries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
+
+  const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
+  const selectedCountryId = useMemo(() => getLocationId(selectedCountry), [selectedCountry, getLocationId]);
+
+  const a1BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
+    { level: 1, countryId: selectedCountryId ?? undefined },
+    { enabled: boundaryLevel === "A1" && !!selectedCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const a2BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
+    { level: 2, countryId: selectedCountryId ?? undefined },
+    { enabled: boundaryLevel === "A2" && !!selectedCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const adminBoundaries = useMemo(() => {
+    // Hide admin boundary lines when a region is focused - the region highlight already shows the boundary.
+    if (selectedRegion !== "All Regions") return [];
+    if (boundaryLevel === "A1") return a1BoundaryQuery.data ?? [];
+    if (boundaryLevel === "A2") return a2BoundaryQuery.data ?? [];
+    return [];
+  }, [selectedRegion, boundaryLevel, a1BoundaryQuery.data, a2BoundaryQuery.data]);
+  const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
+
+  const selectedRegionId = useMemo(
+    () => (selectedRegion !== "All Regions" ? getLocationId(selectedRegion) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedRegion, getLocationId],
+  );
+  const regionQuery = api.locations.getById.useQuery(
+    { id: selectedRegionId! },
+    { enabled: !!selectedRegionId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const fitBoundsGeometry = useMemo(
+    () => (selectedRegion !== "All Regions" ? (regionQuery.data?.geometry ?? null) : null),
+    [selectedRegion, regionQuery.data],
+  );
   const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId, includeDummy });
   const historyQuery = api.alerts.getAlerts.useQuery(
     { activeOnly: false, teamId: activeTeamId, includeDummy },
@@ -48,6 +82,9 @@ export default function DetectionPage() {
     const raw = alertsQuery.data?.alerts ?? [];
     return [...raw].sort((a, b) => b.event.rank - a.event.rank);
   }, [alertsQuery.data?.alerts]);
+
+  const focusCountryPCode = countryConfig[selectedCountry]?.pCode;
+  const focusCountryName = selectedCountry;
 
   // Resolve selected location for filtering
   const selectedLocationId = useMemo(() => {
@@ -129,16 +166,28 @@ export default function DetectionPage() {
     });
   }, [signalsQuery.data, matchesLocationFilter, selectedDate]);
 
-  const mapMarkers: MapMarker[] = useMemo(() => alertsToMarkers(alerts), [alerts]);
+  // Secondary clip: drop markers whose plotted Point location is outside the selected region.
+  // An event can pass the text filter (via generalLocation) but be plotted at originLocation
+  // coordinates that are in a different state entirely.
+  const clipToRegion = useCallback((markers: CrisisMarker[]): CrisisMarker[] => {
+    if (!selectedLocationId) return markers;
+    return markers.filter((mk) => {
+      if (!mk.locationId) return false;
+      if (mk.locationId === selectedLocationId) return true;
+      return mk.ancestorIds?.includes(selectedLocationId) ?? false;
+    });
+  }, [selectedLocationId]);
+
+  const mapMarkers: MapMarker[] = useMemo(() => clipToRegion(alertsToMarkers(alerts)), [alerts, clipToRegion]);
   const mapRegions = useMemo(() => alertsToRegions(alerts), [alerts]);
   const eventMapMarkers: MapMarker[] = useMemo(
-    () => eventsToMarkers(filteredEvents),
-    [filteredEvents],
+    () => clipToRegion(eventsToMarkers(filteredEvents)),
+    [filteredEvents, clipToRegion],
   );
   const eventMapRegions = useMemo(() => eventsToRegions(filteredEvents), [filteredEvents]);
   const signalMapMarkers: MapMarker[] = useMemo(
-    () => signalsToMarkers(filteredSignals),
-    [filteredSignals],
+    () => clipToRegion(signalsToMarkers(filteredSignals)),
+    [filteredSignals, clipToRegion],
   );
   const mapCenter = useMemo<[number, number]>(() => getCenter(selectedCountry), [selectedCountry]);
   const mapZoom = useMemo(() => getZoom(selectedCountry), [selectedCountry]);
@@ -151,8 +200,8 @@ export default function DetectionPage() {
   return (
     <Box>
       <PageHeader
-        title="Crisis Detection"
-        subtitle="Detection"
+        title="Event Detection"
+        subtitle="Event Detection"
         breadcrumbs={["CLEAR", "Detection"]}
         loading={alertsQuery.isLoading}
       >
@@ -221,6 +270,13 @@ export default function DetectionPage() {
             mapRegions={mapRegions}
             mapCenter={mapCenter}
             mapZoom={mapZoom}
+            fitBoundsGeometry={fitBoundsGeometry}
+            adminBoundaries={adminBoundaries}
+            adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+            boundaryLevel={boundaryLevel}
+            onBoundaryLevelChange={setBoundaryLevel}
+            focusCountryPCode={focusCountryPCode}
+            focusCountryName={focusCountryName}
           />
         )}
 
@@ -231,6 +287,13 @@ export default function DetectionPage() {
             mapMarkers={signalMapMarkers}
             mapCenter={mapCenter}
             mapZoom={mapZoom}
+            fitBoundsGeometry={fitBoundsGeometry}
+            adminBoundaries={adminBoundaries}
+            adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+            boundaryLevel={boundaryLevel}
+            onBoundaryLevelChange={setBoundaryLevel}
+            focusCountryPCode={focusCountryPCode}
+            focusCountryName={focusCountryName}
           />
         )}
 
@@ -251,6 +314,13 @@ export default function DetectionPage() {
             mapRegions={eventMapRegions}
             mapCenter={mapCenter}
             mapZoom={mapZoom}
+            fitBoundsGeometry={fitBoundsGeometry}
+            adminBoundaries={adminBoundaries}
+            adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+            boundaryLevel={boundaryLevel}
+            onBoundaryLevelChange={setBoundaryLevel}
+            focusCountryPCode={focusCountryPCode}
+            focusCountryName={focusCountryName}
           />
         )}
       </Box>

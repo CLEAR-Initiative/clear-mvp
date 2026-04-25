@@ -22,6 +22,11 @@ export interface GqlDataSource {
   infoUrl?: string | null;
 }
 
+export interface GqlLocationMetadata {
+  type: string;
+  data: Record<string, unknown>;
+}
+
 export interface GqlLocation {
   id: string;
   name: string;
@@ -29,7 +34,9 @@ export interface GqlLocation {
   geoId?: string | null;
   ancestorIds?: string[];
   geometry: GeoJSONGeometry | null | undefined;
-  ancestors?: Array<{ id: string; name: string; level: number }>;
+  population?: string | null;
+  metadata?: GqlLocationMetadata[] | null;
+  ancestors?: Array<{ id: string; name: string; level: number; population?: string | null; metadata?: GqlLocationMetadata[] | null }>;
 }
 
 /* ─── Signal ─── */
@@ -83,6 +90,8 @@ export interface GqlEvent {
   severity: number | null;
   /** Relative urgency score (0-1) */
   rank: number;
+  validFrom: string;
+  validTo: string;
   firstSignalCreatedAt: string;
   lastSignalCreatedAt: string;
   populationAffected: string | null;
@@ -118,6 +127,17 @@ export interface GqlAlert {
   id: string;
   event: GqlEvent;
   status: "draft" | "published" | "archived";
+}
+
+/* ─── Situation ─── */
+
+export interface GqlSituation {
+  id: string;
+  title: string | null;
+  summary: string | null;
+  severity: number;
+  generalLocation: GqlLocation | null;
+  events: Array<{ id: string; types: string[] }>;
 }
 
 /* ─── Severity helpers ─── */

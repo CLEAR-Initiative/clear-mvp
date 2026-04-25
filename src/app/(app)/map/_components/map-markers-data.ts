@@ -1,5 +1,5 @@
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
-import type { GqlAlert, GqlEvent, GqlSignal } from "~/lib/types/graphql";
+import type { GqlAlert, GqlEvent, GqlSignal, GqlSituation } from "~/lib/types/graphql";
 import { mapSeverity } from "~/lib/types/graphql";
 import { resolveLocationName } from "~/lib/location";
 
@@ -10,6 +10,10 @@ export interface CrisisMarker extends MapMarker {
   locationId?: string;
   /** Ancestor location IDs (for hierarchy filtering) */
   ancestorIds?: string[];
+  /** Disaster type glide codes (e.g. ["ba", "rv"]) - used for type filter */
+  eventTypes?: string[];
+  /** Original source entity ID (event.id / signal.id) for hover syncing with the list */
+  eventId?: string;
   affectedPopulation?: number;
   cases?: number;
   status?: string;
@@ -85,6 +89,8 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
       region: resolveLocationName(loc) ?? undefined,
       locationId: loc.id,
       ancestorIds: loc.ancestorIds ?? [],
+      eventTypes: event.types.map((t) => t.toLowerCase()),
+      eventId: event.id,
       status: event.alerts[0]?.status,
     });
   }
@@ -114,6 +120,7 @@ export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
             locationId: loc.id,
             ancestorIds: loc.ancestorIds ?? [],
             dataSource: signal.source.name,
+            eventId: signal.id,
           });
           break;
         }
@@ -144,7 +151,7 @@ export function eventsToRegions(events: GqlEvent[]): MapRegion[] {
 
     // Collect signal point locations
     const signalPoints: Array<{ lng: number; lat: number; title: string }> = [];
-    for (const signal of event.signals) {
+    for (const signal of (event.signals ?? [])) {
       const sigCandidates = [signal.generalLocation, signal.originLocation, signal.destinationLocation];
       for (const loc of sigCandidates) {
         if (loc?.geometry?.type === "Point") {
@@ -174,6 +181,30 @@ export function eventsToRegions(events: GqlEvent[]): MapRegion[] {
 
 export function alertsToRegions(alerts: GqlAlert[]): MapRegion[] {
   return eventsToRegions(alerts.map((a) => a.event));
+}
+
+export function situationsToMarkers(situations: GqlSituation[]): CrisisMarker[] {
+  const markers: CrisisMarker[] = [];
+  for (const sit of situations) {
+    const loc = sit.generalLocation;
+    if (loc?.geometry?.type === "Point") {
+      const [lng, lat] = loc.geometry.coordinates as [number, number];
+      if (typeof lng === "number" && typeof lat === "number") {
+        markers.push({
+          id: Math.abs(sit.id.split("").reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)),
+          lng,
+          lat,
+          title: sit.title ?? "Situation",
+          severity: mapSeverity(sit.severity),
+          locationId: loc.id,
+          ancestorIds: loc.ancestorIds ?? [],
+          eventTypes: sit.events.flatMap((e) => e.types).map((t) => t.toLowerCase()),
+          region: resolveLocationName(loc) ?? undefined,
+        });
+      }
+    }
+  }
+  return markers;
 }
 
 /* ========== Derive filter options from markers ========== */

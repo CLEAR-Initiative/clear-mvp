@@ -40,7 +40,7 @@ export default function AnalysisPage() {
       const loc = (a.event.generalLocation ?? a.event.originLocation)?.name ?? "Unknown";
       const sev = mapSeverity(a.event.severity);
       const title = a.event.title ?? a.event.types[0] ?? "Event";
-      return `${title} — ${loc} (${sev} severity)${a.event.description ? `: ${a.event.description.slice(0, 120)}` : ""}`;
+      return `${title} - ${loc} (${sev} severity)${a.event.description ? `: ${a.event.description.slice(0, 120)}` : ""}`;
     });
   }, [allAlerts]);
 

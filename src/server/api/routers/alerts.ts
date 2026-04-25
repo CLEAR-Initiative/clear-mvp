@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
-import type { GqlAlert } from "~/lib/types/graphql";
+import type { GqlAlert, GqlEvent, GqlSituation } from "~/lib/types/graphql";
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry
@@ -38,6 +38,27 @@ const EVENT_FIELDS = `
   destinationLocation { ${LOCATION_FIELDS} }
   signals { ${SIGNAL_FIELDS} }
   alerts { id status }
+`;
+
+const SITUATION_FIELDS = `
+  id
+  title
+  summary
+  severity
+  generalLocation { ${LOCATION_FIELDS} }
+  events { id types }
+`;
+
+const EVENTS_LIST_QUERY = `
+  query Events($teamId: String) {
+    events(teamId: $teamId) { ${EVENT_FIELDS} }
+  }
+`;
+
+const SITUATIONS_LIST_QUERY = `
+  query Situations {
+    situations { ${SITUATION_FIELDS} }
+  }
 `;
 
 const ALERTS_LIST_QUERY = `
@@ -140,9 +161,52 @@ export const alertsRouter = createTRPCRouter({
     };
   }),
 
+  getEvents: protectedProcedure
+    .input(z.object({ teamId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ events: GqlEvent[] }>(
+        EVENTS_LIST_QUERY,
+        { teamId: input.teamId },
+        cookieHeaders(ctx),
+      );
+      return { events: data.events };
+    }),
+
+  getSituations: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{ situations: GqlSituation[] }>(
+      SITUATIONS_LIST_QUERY,
+      undefined,
+      cookieHeaders(ctx),
+    );
+    return { situations: data.situations };
+  }),
+
   getShockTypes: publicProcedure.query(() => {
     // Shock types are a Django concept - stub for backward compat
     return { shock_types: [] as Array<{ id: number; name: string; icon: string; color: string }> };
+  }),
+
+  getDisasterTypes: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{ disasterTypes: Array<{ id: string; disasterType: string; disasterClass: string; glideNumber: string; level1: string; level2: string }> }>(
+      `query { disasterTypes { id disasterType disasterClass glideNumber level1 level2 } }`,
+      undefined,
+      cookieHeaders(ctx),
+    );
+    return data.disasterTypes;
+  }),
+
+  getDisasterTypeHierarchy: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{
+      disasterTypeHierarchy: Array<{
+        name: string;
+        groups: Array<{ name: string; codes: string[] }>;
+      }>;
+    }>(
+      `query { disasterTypeHierarchy { name groups { name codes } } }`,
+      undefined,
+      cookieHeaders(ctx),
+    );
+    return data.disasterTypeHierarchy;
   }),
 
   createAlert: protectedProcedure

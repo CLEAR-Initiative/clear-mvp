@@ -25,7 +25,13 @@ import {
   IconExternalLink,
 } from "@tabler/icons-react";
 import type { GqlSignal } from "~/lib/types/graphql";
+import { mapSeverity, severityColor } from "~/lib/types/graphql";
+import { severityColors, severityLabels } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
+import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
+import { useMarkerHover } from "~/hooks/use-marker-hover";
+import { formatTimeAgo } from "~/lib/utils";
+import { resolveLocationName } from "~/lib/location";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -39,15 +45,6 @@ const SORT_LABELS: Record<SortOrder, string> = {
   oldest: "Oldest first",
   source: "Source name",
 };
-
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const hours = Math.floor(diff / 3_600_000);
-  if (hours < 1) return "Just now";
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -63,6 +60,13 @@ interface SignalsTabProps {
   mapMarkers: MapMarker[];
   mapCenter: [number, number];
   mapZoom: number;
+  fitBoundsGeometry?: unknown;
+  adminBoundaries?: Array<{ id: string; name: string; geometry: unknown }>;
+  adminBoundaryLevel?: 1 | 2;
+  boundaryLevel?: BoundaryLevel;
+  onBoundaryLevelChange?: (level: BoundaryLevel) => void;
+  focusCountryPCode?: string;
+  focusCountryName?: string;
 }
 
 export function SignalsTab({
@@ -71,11 +75,19 @@ export function SignalsTab({
   mapMarkers,
   mapCenter,
   mapZoom,
+  fitBoundsGeometry,
+  adminBoundaries,
+  adminBoundaryLevel,
+  boundaryLevel = "A1",
+  onBoundaryLevelChange,
+  focusCountryPCode,
+  focusCountryName,
 }: SignalsTabProps) {
   const [search, setSearch] = useState("");
   const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [filterOpen, setFilterOpen] = useState(false);
+  const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
 
   const allSources = useMemo(
     () => [...new Set(signals.map((s) => s.source.name))].sort(),
@@ -105,7 +117,7 @@ export function SignalsTab({
       if (activeSources !== null && !activeSources.has(s.source.name)) return false;
       if (q) {
         const title = (s.title ?? s.description ?? "").toLowerCase();
-        const loc = (s.generalLocation?.name ?? s.originLocation?.name ?? "").toLowerCase();
+        const loc = (resolveLocationName(s.generalLocation ?? s.originLocation ?? s.destinationLocation) ?? "").toLowerCase();
         const src = s.source.name.toLowerCase();
         if (!title.includes(q) && !loc.includes(q) && !src.includes(q)) return false;
       }
@@ -318,6 +330,9 @@ export function SignalsTab({
               </Box>
             )}
             {filtered.map((signal) => {
+              const sev = mapSeverity(signal.severity ?? 0);
+              const sevCol = severityColor(signal.severity ?? 0);
+              const sevBg = severityColors[sev]?.bg ?? "var(--color-bg-muted)";
               const location =
                 signal.generalLocation ?? signal.originLocation ?? signal.destinationLocation;
               const displayTitle =
@@ -336,12 +351,14 @@ export function SignalsTab({
                     px={16}
                     py={12}
                     className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
-                    style={{ display: "flex", gap: 12 }}
+                    style={{ display: "flex", gap: 12, ...getCardProps(signal.id).style }}
+                    onMouseEnter={getCardProps(signal.id).onMouseEnter}
+                    onMouseLeave={getCardProps(signal.id).onMouseLeave}
                   >
                     <Box
                       style={{
                         width: 3,
-                        background: "var(--color-text-muted)",
+                        background: sevCol,
                         flexShrink: 0,
                         borderRadius: 2,
                       }}
@@ -349,6 +366,16 @@ export function SignalsTab({
                     <Box style={{ flex: 1, minWidth: 0 }}>
                       <Group justify="space-between" mb={4}>
                         <Group gap={6}>
+                          <Badge
+                            size="xs"
+                            style={{
+                              background: sevBg,
+                              color: sevCol,
+                              fontWeight: 600,
+                            }}
+                          >
+                            {severityLabels[sev]}
+                          </Badge>
                           <Badge
                             size="xs"
                             style={{
@@ -375,8 +402,8 @@ export function SignalsTab({
                         {displayTitle}
                       </Text>
                       <Group gap={12}>
-                        {location && (
-                          <Text size="xs" c="var(--color-text-muted)">{location.name}</Text>
+                        {resolveLocationName(location) && (
+                          <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
                         )}
                         <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>
                           {formatDate(signal.publishedAt)}
@@ -412,9 +439,11 @@ export function SignalsTab({
 
       {/* Right: Crisis Map */}
       <Box style={{ width: 480, flexShrink: 0 }}>
-        {/* Label row - aligns with toolbar */}
-        <Group mb={12} align="center" style={{ minHeight: 32 }}>
+        <Group mb={12} justify="space-between" align="center" style={{ minHeight: 32 }}>
           <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Crisis Map</Text>
+          {onBoundaryLevelChange && (
+            <MapSettingsPopover boundaryLevel={boundaryLevel} onBoundaryLevelChange={onBoundaryLevelChange} />
+          )}
         </Group>
         <Card p={0} style={{ border: "1px solid var(--color-border)", position: "sticky", top: 24 }}>
           <Box style={{ height: 524 }}>
@@ -423,8 +452,13 @@ export function SignalsTab({
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"
-              focusCountryPCode="SD"
-              focusCountryName="Sudan"
+              focusCountryPCode={focusCountryPCode}
+              focusCountryName={focusCountryName}
+              fitBoundsGeometry={fitBoundsGeometry}
+              adminBoundaries={adminBoundaries}
+              adminBoundaryLevel={adminBoundaryLevel}
+              hoveredMarkerId={hoveredMarkerId}
+              onMarkerHover={onMarkerHover}
             />
           </Box>
         </Card>

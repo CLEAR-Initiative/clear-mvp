@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -13,6 +12,8 @@ import {
   Stack,
   Loader,
   Button,
+  Collapse,
+  UnstyledButton,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -30,8 +31,13 @@ import {
   IconShieldExclamation,
   IconWorld,
   IconBellRinging,
+  IconChevronDown,
+  IconChevronUp,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { useLocations } from "~/hooks/use-locations";
+import { MinimapCard } from "~/components/map/minimap-card";
+import type { MapMarker } from "~/components/map/crisis-map";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { getDisasterPills } from "~/lib/disaster-types";
@@ -40,76 +46,10 @@ import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { AddToCrisisButton } from "~/components/event-detail/add-to-crisis-button";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
-import type { MapMarker } from "~/components/map/crisis-map";
-
-const CrisisMap = dynamic(
-  () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box w="100%" h={180} bg="#F5F5F5" /> },
-);
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 // These fields don't exist in the current API response.
 // Remove and replace with real fields when backend delivers them.
-const MOCK = {
-  title_is_ai: false, // Dataminr: false (source headline). ACLED: true (generated).
-  primary_source_label: "Post on X (Twitter)",
-  intermediary: "Dataminr",
-  source_url: "https://x.com/SudanDoctorsNet/status/1896152842738958399",
-  ai_summary:
-    "An attack attributed to Rapid Support Forces targeted a hospital in al-Obeid, North Kordofan, resulting in 12 casualties including five medical personnel. The incident represents an escalation of attacks on protected medical facilities amid heightened RSF activity across the region since late February 2026.",
-  original_text:
-    "Sudan Doctors Network says 12 injured, including five medical personnel, in Rapid Support Forces attack on hospital in al-Obeid, Sudan: Blog via X.",
-  intelligence_label: "Dataminr · Source analysis",
-  event_descriptions: [
-    {
-      title: "Primary Cause",
-      notes:
-        "Armed attack on a functioning medical facility attributed to Rapid Support Forces (RSF) in al-Obeid.",
-    },
-    {
-      title: "Casualties",
-      notes:
-        "12 injured, including 5 medical personnel. No fatalities reported at time of detection.",
-    },
-    {
-      title: "Event Location",
-      notes: "Al-Obeid Hospital, North Kordofan State, Sudan.",
-    },
-    {
-      title: "Actors Involved",
-      notes:
-        "Rapid Support Forces (RSF) identified as perpetrators. Sudan Doctors Network as reporting source.",
-    },
-    {
-      title: "Property Damage",
-      notes:
-        "Hospital infrastructure damaged. Facility reported as non-operational following the attack.",
-    },
-  ],
-  ratings: {
-    relevance: { value: 4.2, count: 5 },
-    timeliness: { value: 4.8, count: 5 },
-    accuracy: { value: 3.6, count: 5 },
-  },
-  comments: [
-    {
-      id: 1,
-      initials: "U1",
-      author: "User 1",
-      role: "Placeholder role",
-      timeAgo: "2h ago",
-      text: "This is a placeholder comment to show the commentary feature.",
-    },
-    {
-      id: 2,
-      initials: "U2",
-      author: "User 2",
-      role: "Placeholder role",
-      timeAgo: "1h ago",
-      text: "Placeholder content as well.",
-    },
-  ],
-};
 // ─────────────────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
@@ -172,6 +112,7 @@ export function EventDetailContent({
   const isAlready = (event?.alerts?.length ?? 0) > 0;
   const [promoted, setPromoted] = useState(false);
   const [confirmPromote, setConfirmPromote] = useState(false);
+  const [systemDataOpen, setSystemDataOpen] = useState(false);
   const promoteToAlert = api.alerts.promoteToAlert.useMutation({
     onSuccess: () => { setPromoted(true); setConfirmPromote(false); },
   });
@@ -202,6 +143,14 @@ export function EventDetailContent({
     if (!mapMarkers.length) return [30, 15];
     return [mapMarkers[0]!.lng, mapMarkers[0]!.lat];
   }, [mapMarkers]);
+
+  const { getLocationId } = useLocations();
+  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
+  const sudanL0Query = api.locations.getById.useQuery(
+    { id: sudanId! },
+    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
 
   if (loading) {
     return (
@@ -270,7 +219,7 @@ export function EventDetailContent({
     event.signals?.[0]?.publishedAt ?? event.firstSignalCreatedAt;
 
   const locations = eventLocations(event);
-  const primaryLocation = locations[0]?.name;
+  const primaryLocation = resolveLocationName(locations[0]) ?? undefined;
 
   // TODO: after Prisma migration: use `event.title` directly (remove fallback below)
   const displayTitle =
@@ -282,6 +231,37 @@ export function EventDetailContent({
 
   const signalCount = event.signals.length;
   const sourceCount = new Set(event.signals.map((s) => s.source.name)).size;
+
+  // Resolve best available location population: prefer L2, fall back to L1, then L0.
+  const areaPopulation = (() => {
+    const primaryLoc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+    if (!primaryLoc) return null;
+    const candidates = [primaryLoc, ...(primaryLoc.ancestors ?? [])];
+    for (const level of [2, 1, 0]) {
+      const loc = candidates.find((c) => c.level === level && c.population);
+      if (loc) return { name: loc.name, value: loc.population! };
+    }
+    return null;
+  })();
+
+  // IDP per capita: find iom_dtm_displacement metadata, falling back A2 → A1 → A0.
+  const idpData = (() => {
+    const primaryLoc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+    if (!primaryLoc) return null;
+    const candidates = [primaryLoc, ...(primaryLoc.ancestors ?? [])];
+    for (const level of [2, 1, 0]) {
+      const loc = candidates.find((c) => c.level === level);
+      if (!loc) continue;
+      const meta = loc.metadata?.find((m) => m.type === "iom_dtm_displacement");
+      if (!meta) continue;
+      const displaced = meta.data.population_displaced as number | undefined;
+      if (!displaced) continue;
+      const population = loc.population ? Number(loc.population) : null;
+      const ratio = population ? displaced / population : null;
+      return { displaced, population, ratio, name: loc.name };
+    }
+    return null;
+  })();
 
   return (
     <Box>
@@ -412,7 +392,7 @@ export function EventDetailContent({
 
         {/* Meta */}
         <Group gap={16} wrap="wrap">
-          {locations.length > 0 && (
+          {locations.some((l) => resolveLocationName(l)) && (
             <Group gap={4}>
               <IconMapPin size={13} color="#737373" />
               <Text size="xs" c="#525252" fw={500}>
@@ -484,7 +464,11 @@ export function EventDetailContent({
               </Box>
               <Box>
                 <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {event.populationAffected ?? "N/A"}
+                  {event.populationAffected
+                    ? (Number.isNaN(Number(event.populationAffected))
+                        ? event.populationAffected
+                        : Number(event.populationAffected).toLocaleString())
+                    : "N/A"}
                 </Text>
                 <Text size="xs" c="#737373" mt={2}>Population affected</Text>
               </Box>
@@ -518,17 +502,16 @@ export function EventDetailContent({
                 <IconWorld size={18} color="#2563EB" />
               </Box>
               <Box>
-                <Group gap={6} align="baseline">
-                  <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                    ~2.1M
-                  </Text>
-                  <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>(mock)</Text>
-                </Group>
-                <Text size="xs" c="#737373" mt={2}>Population in affected area</Text>
+                <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                  {areaPopulation ? Number(areaPopulation.value).toLocaleString() : "N/A"}
+                </Text>
+                <Text size="xs" c="#737373" mt={2}>
+                  {areaPopulation ? `Population in ${areaPopulation.name}` : "Population in area"}
+                </Text>
               </Box>
             </Box>
 
-            {/* Placeholder */}
+            {/* IDP per capita */}
             <Box
               p={16}
               style={{
@@ -556,10 +539,18 @@ export function EventDetailContent({
                 <IconShieldExclamation size={18} color="#D97706" />
               </Box>
               <Box>
-                <Text fw={700} c="#A3A3A3" style={{ fontSize: 15, lineHeight: 1.3 }}>
-                  Placeholder
+                <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                  {idpData?.ratio != null
+                    ? `${(idpData.ratio * 100).toFixed(1)}%`
+                    : idpData?.displaced != null
+                      ? idpData.displaced.toLocaleString()
+                      : "N/A"}
                 </Text>
-                <Text size="xs" c="#A3A3A3" mt={2}>Coming soon</Text>
+                <Text size="xs" c="#737373" mt={2}>
+                  {idpData
+                    ? `IDPs per capita in ${idpData.name} (${idpData.displaced.toLocaleString()} displaced)`
+                    : "IDP per capita"}
+                </Text>
               </Box>
             </Box>
 
@@ -602,61 +593,6 @@ export function EventDetailContent({
               <Text size="sm" c="#374151" style={{ lineHeight: 1.75 }}>
                 {event.description ?? "No summary available."}
               </Text>
-            </Box>
-          </Card>
-
-          {/* Intelligence details */}
-          <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
-              <Group justify="space-between">
-                <Group gap={8}>
-                  <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
-                    Intelligence Details
-                  </Text>
-                  <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>
-                    (mock data currently)
-                  </Text>
-                </Group>
-                <Text size="xs" c="#A3A3A3">
-                  {MOCK.intelligence_label}
-                </Text>
-              </Group>
-            </Box>
-            <Box
-              p={12}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 8,
-              }}
-            >
-              {MOCK.event_descriptions.map((item, i) => (
-                <Box
-                  key={i}
-                  p={12}
-                  style={{
-                    background: "#F9FAFB",
-                    border: "1px solid #E5E5E5",
-                    borderRadius: 6,
-                  }}
-                >
-                  <Text
-                    size="xs"
-                    fw={700}
-                    c="#A3A3A3"
-                    mb={4}
-                    style={{
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
-                    }}
-                  >
-                    {item.title}
-                  </Text>
-                  <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
-                    {item.notes}
-                  </Text>
-                </Box>
-              ))}
             </Box>
           </Card>
 
@@ -797,45 +733,12 @@ export function EventDetailContent({
           <Box style={{ width: 300, flexShrink: 0 }}>
             <Stack gap={20}>
               {/* Location map */}
-              <Card
-                p={0}
-                style={{
-                  border: "1px solid #E5E5E5",
-                  position: "sticky",
-                  top: 24,
-                }}
-              >
-                <Box px={16} py={10} className="border-b border-[#E5E5E5]">
-                  <Group justify="space-between">
-                    <Group gap={6}>
-                      <IconMapPin size={14} color="#525252" />
-                      <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
-                        Location
-                      </Text>
-                    </Group>
-                    <Link
-                      href={`/map?event=${event.id}`}
-                      style={{ textDecoration: "none" }}
-                    >
-                      <Group gap={4} className="hover:opacity-70">
-                        <IconMap size={12} color="#E85D3D" />
-                        <Text size="xs" c="#E85D3D" fw={500}>
-                          Full map
-                        </Text>
-                      </Group>
-                    </Link>
-                  </Group>
-                </Box>
-                <Box style={{ height: 180 }}>
-                  <CrisisMap
-                    markers={mapMarkers}
-                    center={mapCenter}
-                    zoom={8}
-                    className="w-full h-full"
-                    interactive={false}
-                  />
-                </Box>
-              </Card>
+              <MinimapCard
+                markers={mapMarkers}
+                center={mapCenter}
+                sudanGeometry={sudanGeometry}
+                sudanId={sudanId}
+              />
 
               {/* Was this event helpful? */}
               <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
@@ -916,7 +819,7 @@ export function EventDetailContent({
                         Turn into Alert
                       </Button>
                     )}
-                    <Button
+                    {/* <Button
                       variant="light"
                       color="gray"
                       size="xs"
@@ -927,7 +830,7 @@ export function EventDetailContent({
                       style={{ fontSize: 12 }}
                     >
                       Bookmark
-                    </Button>
+                    </Button> */}
                     <AddToCrisisButton
                       eventId={event.id}
                       defaultSeverity={
@@ -938,16 +841,27 @@ export function EventDetailContent({
                 </Box>
               </Card>
 
-              {/* Alert details */}
+              {/* System Data */}
               <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-                <Box px={16} py={10} className="border-b border-[#E5E5E5]">
-                  <Group gap={6}>
-                    <IconDatabase size={14} color="#525252" />
-                    <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
-                      Details
-                    </Text>
-                  </Group>
-                </Box>
+                <UnstyledButton
+                  onClick={() => setSystemDataOpen((o) => !o)}
+                  style={{ width: "100%" }}
+                >
+                  <Box px={16} py={10} className="border-b border-[#E5E5E5]">
+                    <Group gap={6} justify="space-between">
+                      <Group gap={6}>
+                        <IconDatabase size={14} color="#525252" />
+                        <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
+                          System Data
+                        </Text>
+                      </Group>
+                      {systemDataOpen
+                        ? <IconChevronUp size={13} color="#737373" />
+                        : <IconChevronDown size={13} color="#737373" />}
+                    </Group>
+                  </Box>
+                </UnstyledButton>
+                <Collapse in={systemDataOpen}>
                 <Box p={16}>
                   <Stack gap={8}>
                     <Group justify="space-between">
@@ -976,26 +890,19 @@ export function EventDetailContent({
                         {formatDate(detectedAt)}
                       </Text>
                     </Group>
-                    {/* TODO: after Prisma migration remove the italics/placeholder fallbacks below */}
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">
-                        Valid from
-                      </Text>
-                      {/* event.validFrom ? formatDate(alert.validFrom) : */}
-                      <Text size="xs" fw={500} c="#A3A3A3" fs="italic">
-                        pending
+                      <Text size="xs" c="#737373">Valid from</Text>
+                      <Text size="xs" fw={500}>
+                        {event?.validFrom ? formatDate(event.validFrom) : "-"}
                       </Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">
-                        Valid until
-                      </Text>
-                      {/* event.validTo ? formatDate(alert.validTo) : */}
-                      <Text size="xs" fw={500} c="#A3A3A3" fs="italic">
-                        pending
+                      <Text size="xs" c="#737373">Valid until</Text>
+                      <Text size="xs" fw={500}>
+                        {event?.validTo ? formatDate(event.validTo) : "-"}
                       </Text>
                     </Group>
-                    {locations.length > 0 && (
+                    {locations.some((l) => resolveLocationName(l)) && (
                       <Box
                         style={{ borderTop: "1px solid #F0F0F0" }}
                         pt={8}
@@ -1052,6 +959,7 @@ export function EventDetailContent({
                     </Group>
                   </Stack>
                 </Box>
+                </Collapse>
               </Card>
             </Stack>
           </Box>
