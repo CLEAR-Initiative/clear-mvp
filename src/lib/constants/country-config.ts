@@ -5,71 +5,21 @@ export interface CountryConfig {
   hasCrisisData?: boolean;
   /** [lng_min, lat_min, lng_max, lat_max] bounding box for country detection */
   bbox: [number, number, number, number];
+  /** ISO 3166-1 alpha-2 code used for Mapbox country focus layer */
+  pCode?: string;
 }
 
 export const countryConfig: Record<string, CountryConfig> = {
-  Sudan: {
-    center: [30.0, 15.5],
-    zoom: 5,
-    regions: ["All Regions", "Khartoum", "North Darfur", "South Darfur", "West Darfur", "Central Darfur", "Blue Nile", "Red Sea", "Kassala"],
-    hasCrisisData: true,
-    bbox: [21.8, 8.7, 38.6, 23.2],
-  },
-  Ethiopia: {
-    center: [40.5, 8.5],
-    zoom: 5.5,
-    regions: ["All Regions", "Somali", "Oromia", "Afar", "Amhara", "Tigray", "SNNPR"],
-    hasCrisisData: true,
-    bbox: [33.0, 3.4, 48.0, 14.9],
-  },
-  "South Sudan": {
-    center: [31.0, 7.0],
-    zoom: 5.5,
-    regions: ["All Regions", "Central Equatoria", "Jonglei", "Unity", "Upper Nile", "Lakes"],
-    bbox: [24.0, 3.5, 36.0, 12.2],
-  },
-  Somalia: {
-    center: [46.0, 5.0],
-    zoom: 5,
-    regions: ["All Regions", "Banadir", "Bay", "Gedo", "Lower Juba", "Middle Shabelle"],
-    bbox: [40.9, -1.7, 51.4, 12.0],
-  },
-  Yemen: {
-    center: [48.0, 15.5],
-    zoom: 5.5,
-    regions: ["All Regions", "Sana'a", "Aden", "Taiz", "Hodeidah", "Marib"],
-    bbox: [42.5, 12.1, 54.5, 19.0],
-  },
-  Afghanistan: {
-    center: [67.7, 33.9],
-    zoom: 5.5,
-    regions: ["All Regions", "Kabul", "Herat", "Kandahar", "Mazar-i-Sharif"],
-    bbox: [60.5, 29.4, 74.9, 38.5],
-  },
-  Ukraine: {
-    center: [31.2, 48.4],
-    zoom: 5,
-    regions: ["All Regions", "Kyiv", "Kharkiv", "Odesa", "Lviv"],
-    bbox: [22.1, 44.4, 40.2, 52.4],
-  },
-  Iraq: {
-    center: [44.4, 33.3],
-    zoom: 5.5,
-    regions: ["All Regions", "Baghdad", "Erbil", "Mosul", "Basra"],
-    bbox: [38.8, 29.1, 48.6, 37.4],
-  },
-  Syria: {
-    center: [38.9, 34.8],
-    zoom: 6,
-    regions: ["All Regions", "Damascus", "Aleppo", "Idlib", "Homs"],
-    bbox: [35.7, 32.3, 42.4, 37.3],
-  },
-  Colombia: {
-    center: [-74.3, 4.6],
-    zoom: 5,
-    regions: ["All Regions", "Bogota", "Medellin", "Cali"],
-    bbox: [-79.0, -4.2, -66.9, 13.4],
-  },
+  Sudan:        { center: [30.0, 15.5], zoom: 5,   pCode: "SD", hasCrisisData: true,  bbox: [21.8,  8.7, 38.6, 23.2], regions: ["All Regions", "Khartoum", "North Darfur", "South Darfur", "West Darfur", "Central Darfur", "Blue Nile", "Red Sea", "Kassala"] },
+  Ethiopia:     { center: [40.5,  8.5], zoom: 5.5, pCode: "ET", hasCrisisData: true,  bbox: [33.0,  3.4, 48.0, 14.9], regions: ["All Regions", "Somali", "Oromia", "Afar", "Amhara", "Tigray", "SNNPR"] },
+  "South Sudan":{ center: [31.0,  7.0], zoom: 5.5, pCode: "SS",                       bbox: [24.0,  3.5, 36.0, 12.2], regions: ["All Regions", "Central Equatoria", "Jonglei", "Unity", "Upper Nile", "Lakes"] },
+  Somalia:      { center: [46.0,  5.0], zoom: 5,   pCode: "SO",                       bbox: [40.9, -1.7, 51.4, 12.0], regions: ["All Regions", "Banadir", "Bay", "Gedo", "Lower Juba", "Middle Shabelle"] },
+  Yemen:        { center: [48.0, 15.5], zoom: 5.5, pCode: "YE",                       bbox: [42.5, 12.1, 54.5, 19.0], regions: ["All Regions", "Sana'a", "Aden", "Taiz", "Hodeidah", "Marib"] },
+  Afghanistan:  { center: [67.7, 33.9], zoom: 5.5, pCode: "AF",                       bbox: [60.5, 29.4, 74.9, 38.5], regions: ["All Regions", "Kabul", "Herat", "Kandahar", "Mazar-i-Sharif"] },
+  Ukraine:      { center: [31.2, 48.4], zoom: 5,   pCode: "UA",                       bbox: [22.1, 44.4, 40.2, 52.4], regions: ["All Regions", "Kyiv", "Kharkiv", "Odesa", "Lviv"] },
+  Iraq:         { center: [44.4, 33.3], zoom: 5.5, pCode: "IQ",                       bbox: [38.8, 29.1, 48.6, 37.4], regions: ["All Regions", "Baghdad", "Erbil", "Mosul", "Basra"] },
+  Syria:        { center: [38.9, 34.8], zoom: 6,   pCode: "SY",                       bbox: [35.7, 32.3, 42.4, 37.3], regions: ["All Regions", "Damascus", "Aleppo", "Idlib", "Homs"] },
+  Colombia:     { center: [-74.3, 4.6], zoom: 5,   pCode: "CO",                       bbox: [-79.0,-4.2, -66.9,13.4], regions: ["All Regions", "Bogota", "Medellin", "Cali"] },
 };
 
 export const countries = Object.keys(countryConfig).sort();

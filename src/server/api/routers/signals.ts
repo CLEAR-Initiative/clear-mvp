@@ -47,6 +47,7 @@ const SIGNAL_GET_QUERY = `
         title
         types
         rank
+        severity
         firstSignalCreatedAt
         signals {
           id

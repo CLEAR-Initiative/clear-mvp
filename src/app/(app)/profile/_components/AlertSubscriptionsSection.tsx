@@ -17,8 +17,8 @@ import {
 import { notifications } from "@mantine/notifications";
 import { IconBellRinging, IconPlus, IconTrash, IconCheck } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { getDisasterLabel } from "~/lib/disaster-types";
 import { severityLabels } from "~/lib/constants/severity";
+import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
 
 const FREQUENCY_LABELS: Record<string, string> = {
   immediately: "Immediately",
@@ -30,7 +30,9 @@ const FREQUENCY_LABELS: Record<string, string> = {
 export function AlertSubscriptionsSection() {
   const utils = api.useUtils();
   const subsQuery = api.subscriptions.list.useQuery();
-  const disasterTypesQuery = api.subscriptions.disasterTypes.useQuery();
+  const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
+    staleTime: Infinity, refetchOnWindowFocus: false,
+  });
   const locationsQuery = api.subscriptions.locations.useQuery();
 
   const [showForm, setShowForm] = useState(false);
@@ -67,7 +69,7 @@ export function AlertSubscriptionsSection() {
   });
 
   const subscriptions = subsQuery.data ?? [];
-  const disasterTypes = disasterTypesQuery.data ?? [];
+  const hierarchy = hierarchyQuery.data ?? [];
   const locations = locationsQuery.data ?? [];
 
   const LEVEL_GROUP: Record<number, string> = {
@@ -84,20 +86,10 @@ export function AlertSubscriptionsSection() {
     return items.length > 0 ? [{ group: LEVEL_GROUP[level]!, items }] : [];
   });
 
-  const alertTypeOptions = [
-    { value: "__all__", label: "All Types" },
-    ...disasterTypes.map((dt) => ({
-      value: dt.glideNumber,
-      label: `${getDisasterLabel(dt.glideNumber)} (${dt.glideNumber.toUpperCase()})`,
-    })),
-  ];
-
   const handleSubscribe = async () => {
     if (formLocationIds.length === 0 || formAlertTypes.length === 0 || !formFrequency) return;
 
-    const resolvedTypes = formAlertTypes.includes("__all__")
-      ? disasterTypes.map((dt) => dt.glideNumber)
-      : formAlertTypes;
+    const resolvedTypes = expandSelectionsToCodes(formAlertTypes, hierarchy);
 
     for (const locationId of formLocationIds) {
       for (const alertType of resolvedTypes) {
@@ -167,15 +159,11 @@ export function AlertSubscriptionsSection() {
               maxDropdownHeight={200}
               styles={{ groupLabel: { paddingTop: 12, paddingBottom: 4 } }}
             />
-            <MultiSelect
+            <DisasterTypePicker
               label="Alert Types"
-              placeholder="Select one or more disaster types"
-              data={alertTypeOptions}
-              value={formAlertTypes}
+              hierarchy={hierarchy}
+              selected={formAlertTypes}
               onChange={setFormAlertTypes}
-              searchable
-              size="xs"
-              maxDropdownHeight={200}
             />
             <MultiSelect
               label="Minimum Severity"

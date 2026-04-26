@@ -22,6 +22,11 @@ export interface GqlDataSource {
   infoUrl?: string | null;
 }
 
+export interface GqlLocationMetadata {
+  type: string;
+  data: Record<string, unknown>;
+}
+
 export interface GqlLocation {
   id: string;
   name: string;
@@ -29,7 +34,9 @@ export interface GqlLocation {
   geoId?: string | null;
   ancestorIds?: string[];
   geometry: GeoJSONGeometry | null | undefined;
-  ancestors?: Array<{ id: string; name: string; level: number }>;
+  population?: string | null;
+  metadata?: GqlLocationMetadata[] | null;
+  ancestors?: Array<{ id: string; name: string; level: number; population?: string | null; metadata?: GqlLocationMetadata[] | null }>;
 }
 
 /* ─── Signal ─── */
@@ -59,6 +66,7 @@ export interface GqlSignalDetail extends Omit<GqlSignal, "events"> {
     title: string | null;
     types: string[];
     rank: number;
+    severity: number | null;
     firstSignalCreatedAt: string;
     signals: Array<{
       id: string;
@@ -82,6 +90,8 @@ export interface GqlEvent {
   severity: number | null;
   /** Relative urgency score (0-1) */
   rank: number;
+  validFrom: string;
+  validTo: string;
   firstSignalCreatedAt: string;
   lastSignalCreatedAt: string;
   populationAffected: string | null;
@@ -119,21 +129,31 @@ export interface GqlAlert {
   status: "draft" | "published" | "archived";
 }
 
+/* ─── Situation ─── */
+
+export interface GqlSituation {
+  id: string;
+  title: string | null;
+  summary: string | null;
+  severity: number;
+  generalLocation: GqlLocation | null;
+  events: Array<{ id: string; types: string[] }>;
+}
+
 /* ─── Severity helpers ─── */
 
-/** Map severity (1-5) or rank to a UI severity bucket.
- *  Prefers the explicit severity field; falls back to rank * 5. */
-export function mapSeverity(rankOrSeverity: number, severity?: number | null): "critical" | "high" | "medium" | "low" {
-  const s = severity ?? rankOrSeverity;
+/** Map severity (1-5) to a UI severity bucket. */
+export function mapSeverity(severity: number | null | undefined): "critical" | "high" | "medium" | "low" {
+  const s = severity ?? 0;
   if (s >= 5) return "critical";
   if (s >= 4) return "high";
   if (s >= 3) return "medium";
   return "low";
 }
 
-/** Map severity (1-5) or rank to a display colour */
-export function severityColor(rankOrSeverity: number, severity?: number | null): string {
-  const s = severity ?? rankOrSeverity;
+/** Map severity (1-5) to a display colour. */
+export function severityColor(severity: number | null | undefined): string {
+  const s = severity ?? 0;
   if (s >= 5) return "#DC2626";
   if (s >= 4) return "#D97706";
   if (s >= 3) return "#F59E0B";

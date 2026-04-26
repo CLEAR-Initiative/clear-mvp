@@ -41,6 +41,19 @@ const SUBSCRIBE_MUTATION = `
   }
 `;
 
+const SUBSCRIBE_BATCH_MUTATION = `
+  mutation SubscribeToAlertsBatch($input: SubscribeToAlertsBatchInput!) {
+    subscribeToAlertsBatch(input: $input) {
+      id
+      alertType
+      active
+      channel
+      frequency
+      location { id name level }
+    }
+  }
+`;
+
 const UPDATE_SUBSCRIPTION_MUTATION = `
   mutation UpdateAlertSubscription($id: String!, $input: UpdateAlertSubscriptionInput!) {
     updateAlertSubscription(id: $id, input: $input) {
@@ -61,6 +74,19 @@ const UNSUBSCRIBE_MUTATION = `
 const DISASTER_TYPES_QUERY = `
   query DisasterTypes {
     disasterTypes { id disasterType glideNumber }
+  }
+`;
+
+const DISASTER_TYPE_HIERARCHY_QUERY = `
+  query DisasterTypeHierarchy {
+    disasterTypeHierarchy {
+      name
+      groups {
+        name
+        codes
+        subTypes { id disasterType glideNumber level2 }
+      }
+    }
   }
 `;
 
@@ -101,6 +127,26 @@ export const subscriptionsRouter = createTRPCRouter({
       return data.subscribeToAlerts;
     }),
 
+  /** Subscribe to every (location × alertType) pair in a single API call. */
+  subscribeBatch: protectedProcedure
+    .input(
+      z.object({
+        locationIds: z.array(z.string()).min(1),
+        alertTypes: z.array(z.string()).min(1),
+        channel: z.enum(["email", "sms"]),
+        frequency: z.enum(["immediately", "daily", "weekly", "monthly"]),
+        minSeverity: z.number().int().min(1).max(5).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ subscribeToAlertsBatch: GqlAlertSubscription[] }>(
+        SUBSCRIBE_BATCH_MUTATION,
+        { input },
+        cookieHeaders(ctx),
+      );
+      return data.subscribeToAlertsBatch;
+    }),
+
   update: protectedProcedure
     .input(
       z.object({
@@ -137,6 +183,26 @@ export const subscriptionsRouter = createTRPCRouter({
       disasterTypes: Array<{ id: string; disasterType: string; glideNumber: string }>;
     }>(DISASTER_TYPES_QUERY, undefined, cookieHeaders(ctx));
     return data.disasterTypes;
+  }),
+
+  /** Fetch disaster types grouped into the 3-level hierarchy (level1 > level2 > level3) */
+  disasterTypeHierarchy: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{
+      disasterTypeHierarchy: Array<{
+        name: string;
+        groups: Array<{
+          name: string;
+          codes: string[];
+          subTypes: Array<{
+            id: string;
+            disasterType: string;
+            glideNumber: string;
+            level2: string;
+          }>;
+        }>;
+      }>;
+    }>(DISASTER_TYPE_HIERARCHY_QUERY, undefined, cookieHeaders(ctx));
+    return data.disasterTypeHierarchy;
   }),
 
   /** Fetch locations for the subscription form dropdown */

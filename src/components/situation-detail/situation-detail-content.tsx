@@ -230,7 +230,7 @@ export function SituationDetailContent({
           lng: c[0],
           lat: c[1],
           title: e.title ?? e.types[0] ?? "Event",
-          severity: mapSeverity(e.rank, e.severity),
+          severity: mapSeverity(e.severity),
           description: resolveLocationName(pickEventLocation(e)) ?? undefined,
           type: e.types[0],
         });
@@ -846,8 +846,8 @@ function TimelineRow({
   isFirst: boolean;
   isLast: boolean;
 }) {
-  const sev = mapSeverity(event.rank, event.severity);
-  const dotColor = severityColor(event.rank, event.severity);
+  const sev = mapSeverity(event.severity);
+  const dotColor = severityColor(event.severity);
   const dateStr = event.lastSignalCreatedAt || event.firstSignalCreatedAt;
   const displayTitle = event.title ?? event.types[0] ?? "Event";
   const primaryType = event.types[0];
