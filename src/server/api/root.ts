@@ -10,7 +10,7 @@ import { informRouter } from "~/server/api/routers/inform";
 import { llmRouter } from "~/server/api/routers/llm";
 import { pipelineRouter } from "~/server/api/routers/pipeline";
 import { signalsRouter } from "~/server/api/routers/signals";
-import { situationsRouter } from "~/server/api/routers/situations";
+import { crisesRouter } from "~/server/api/routers/crises";
 import { teamsRouter } from "~/server/api/routers/teams";
 import { locationsRouter } from "~/server/api/routers/locations";
 import { invitationsRouter } from "~/server/api/routers/invitations";
@@ -31,7 +31,7 @@ export const appRouter = createTRPCRouter({
   locations: locationsRouter,
   pipeline: pipelineRouter,
   signals: signalsRouter,
-  situations: situationsRouter,
+  crises: crisesRouter,
   teams: teamsRouter,
   featureFlags: featureFlagsRouter,
   subscriptions: subscriptionsRouter,

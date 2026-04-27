@@ -17,10 +17,10 @@ interface AddToCrisisButtonProps {
 }
 
 /**
- * Dropdown that lets users link an event to a crisis (Situation):
- *   - "Create new Crisis" creates a situation seeded with the event's
- *     severity. Title, summary and needs are left to the pipeline.
- *   - Existing situations call addEventToSituation directly.
+ * Dropdown that lets users link an event to a crisis:
+ *   - "Create new Crisis" creates a crisis seeded with the event's severity.
+ *     Title, summary and needs are left to the pipeline.
+ *   - Existing crises call addEventToCrisis directly.
  */
 export function AddToCrisisButton({
   eventId,
@@ -29,17 +29,17 @@ export function AddToCrisisButton({
   const router = useRouter();
   const utils = api.useUtils();
 
-  const situationsQuery = api.situations.list.useQuery();
+  const crisesQuery = api.crises.list.useQuery();
 
-  const addEvent = api.situations.addEvent.useMutation({
+  const addEvent = api.crises.addEvent.useMutation({
     onSuccess: async (_data, vars) => {
       notifications.show({
         color: "teal",
         title: "Event linked",
-        message: "Added to the situation.",
+        message: "Added to the crisis.",
       });
-      await utils.situations.list.invalidate();
-      await utils.situations.get.invalidate({ id: vars.situationId });
+      await utils.crises.list.invalidate();
+      await utils.crises.get.invalidate({ id: vars.crisisId });
     },
     onError: (err) => {
       notifications.show({
@@ -50,15 +50,15 @@ export function AddToCrisisButton({
     },
   });
 
-  const createSituation = api.situations.createFromEvents.useMutation({
-    onSuccess: async (situation) => {
+  const createCrisis = api.crises.createFromEvents.useMutation({
+    onSuccess: async (crisis) => {
       notifications.show({
         color: "teal",
         title: "Crisis created",
         message: "Pipeline will generate the title and summary shortly.",
       });
-      await utils.situations.list.invalidate();
-      router.push(`/crisis/${situation.id}`);
+      await utils.crises.list.invalidate();
+      router.push(`/crisis/${crisis.id}`);
     },
     onError: (err) => {
       notifications.show({
@@ -69,7 +69,7 @@ export function AddToCrisisButton({
     },
   });
 
-  const pending = addEvent.isPending || createSituation.isPending;
+  const pending = addEvent.isPending || createCrisis.isPending;
 
   return (
     <Menu position="bottom-end" width={260} disabled={pending}>
@@ -92,7 +92,7 @@ export function AddToCrisisButton({
         <Menu.Item
           leftSection={<IconPlus size={14} />}
           onClick={() =>
-            createSituation.mutate({
+            createCrisis.mutate({
               severity: clampSeverity(defaultSeverity),
               needs: [],
               eventIds: [eventId],
@@ -104,7 +104,7 @@ export function AddToCrisisButton({
 
         <Menu.Divider />
 
-        {situationsQuery.isLoading && (
+        {crisesQuery.isLoading && (
           <Menu.Item disabled closeMenuOnClick={false}>
             <Group gap={8}>
               <Loader size={12} />
@@ -115,7 +115,7 @@ export function AddToCrisisButton({
           </Menu.Item>
         )}
 
-        {situationsQuery.data && situationsQuery.data.length === 0 && (
+        {crisesQuery.data && crisesQuery.data.length === 0 && (
           <Menu.Item disabled>
             <Text size="xs" c="var(--color-text-muted)">
               No existing crises yet.
@@ -123,10 +123,10 @@ export function AddToCrisisButton({
           </Menu.Item>
         )}
 
-        {(situationsQuery.data ?? []).map((s) => (
+        {(crisesQuery.data ?? []).map((s) => (
           <Menu.Item
             key={s.id}
-            onClick={() => addEvent.mutate({ situationId: s.id, eventId })}
+            onClick={() => addEvent.mutate({ crisisId: s.id, eventId })}
           >
             <Group justify="space-between" wrap="nowrap">
               <Text size="sm" truncate style={{ flex: 1 }}>

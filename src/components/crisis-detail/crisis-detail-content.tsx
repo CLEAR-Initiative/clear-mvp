@@ -35,11 +35,11 @@ import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import { IASC_CLUSTERS, type IASCClusterCode } from "~/lib/constants/iasc-clusters";
-import type { GqlSituation } from "~/server/api/routers/situations";
+import type { GqlCrisis } from "~/server/api/routers/crises";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { CommentsSection } from "~/components/comments-section";
 
-/** Humanitarian need row - parsed from a situation's free-form `needs` JSON. */
+/** Humanitarian need row - parsed from a crisis's free-form `needs` JSON. */
 interface ClusterNeed {
   cluster: IASCClusterCode;
   severity: number;
@@ -174,52 +174,52 @@ function TrendIcon({ trend }: { trend?: "up" | "flat" | "down" }) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-interface SituationDetailContentProps {
-  situation: GqlSituation | null | undefined;
+interface CrisisDetailContentProps {
+  crisis: GqlCrisis | null | undefined;
   loading: boolean;
   mode: "page" | "drawer";
-  relatedSituations?: GqlSituation[];
+  relatedCrises?: GqlCrisis[];
 }
 
-export function SituationDetailContent({
-  situation,
+export function CrisisDetailContent({
+  crisis,
   loading,
   mode,
-  relatedSituations = [],
-}: SituationDetailContentProps) {
+  relatedCrises = [],
+}: CrisisDetailContentProps) {
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [leftPanelTab, setLeftPanelTab] = useState<string | null>("events");
   const [layers, setLayers] = useState({ events: true, roads: false, population: false });
 
-  const parsedNeeds = useMemo(() => parseNeeds(situation?.needs), [situation?.needs]);
+  const parsedNeeds = useMemo(() => parseNeeds(crisis?.needs), [crisis?.needs]);
   // Fall back to demo data when the backend hasn't populated needs yet.
   const needs = parsedNeeds.length > 0 ? parsedNeeds : DEMO_NEEDS;
   const needsAreDemo = parsedNeeds.length === 0;
-  const events = situation?.events ?? [];
+  const events = crisis?.events ?? [];
 
-  // Pick a primary coordinate for the map centre. Prefer the situation's own
+  // Pick a primary coordinate for the map centre. Prefer the crisis's own
   // generalLocation, fall back to the first event with a resolvable location,
   // finally default to a Sudan-wide view.
   const primaryCoords = useMemo<[number, number]>(() => {
-    const fromSituation = locationCoords(situation?.generalLocation);
-    if (fromSituation) return fromSituation;
+    const fromCrisis = locationCoords(crisis?.generalLocation);
+    if (fromCrisis) return fromCrisis;
     for (const e of events) {
       const c = locationCoords(pickEventLocation(e));
       if (c) return c;
     }
     return [30, 14];
-  }, [situation, events]);
+  }, [crisis, events]);
 
   const mapMarkers = useMemo<MapMarker[]>(() => {
-    if (!situation) return [];
+    if (!crisis) return [];
     const markers: MapMarker[] = [
       {
         id: 0,
         lng: primaryCoords[0],
         lat: primaryCoords[1],
-        title: situation.title ?? "Crisis",
-        severity: mapSeverity(situation.severity),
-        description: resolveLocationName(situation.generalLocation) ?? undefined,
+        title: crisis.title ?? "Crisis",
+        severity: mapSeverity(crisis.severity),
+        description: resolveLocationName(crisis.generalLocation) ?? undefined,
       },
     ];
     if (layers.events) {
@@ -237,7 +237,7 @@ export function SituationDetailContent({
       });
     }
     return markers;
-  }, [situation, events, layers.events, primaryCoords]);
+  }, [crisis, events, layers.events, primaryCoords]);
 
   if (loading) {
     return (
@@ -247,7 +247,7 @@ export function SituationDetailContent({
     );
   }
 
-  if (!situation) {
+  if (!crisis) {
     return (
       <Box p={48} style={{ textAlign: "center" }}>
         <IconAlertTriangle size={40} color="var(--color-warning)" style={{ margin: "0 auto 16px" }} />
@@ -273,14 +273,14 @@ export function SituationDetailContent({
     );
   }
 
-  const sevColor = severityColor(situation.severity);
-  const sev = mapSeverity(situation.severity);
+  const sevColor = severityColor(crisis.severity);
+  const sev = mapSeverity(crisis.severity);
   const isCompact = mode === "drawer";
 
-  const title = situation.title ?? "Untitled crisis";
-  const locationName = resolveLocationName(situation.generalLocation);
-  const populationAffected = bigIntStrToNumber(situation.populationAffected);
-  const populationInArea = bigIntStrToNumber(situation.populationInArea);
+  const title = crisis.title ?? "Untitled crisis";
+  const locationName = resolveLocationName(crisis.generalLocation);
+  const populationAffected = bigIntStrToNumber(crisis.populationAffected);
+  const populationInArea = bigIntStrToNumber(crisis.populationInArea);
 
   const updatedAt: string | null = events.reduce<string | null>((latest, e) => {
     const d = e.lastSignalCreatedAt || e.firstSignalCreatedAt;
@@ -298,7 +298,7 @@ export function SituationDetailContent({
 
   return (
     <Box>
-      {/* Back nav + situation selector */}
+      {/* Back nav + crisis selector */}
       {mode === "page" && (
         <Box
           px={24}
@@ -315,7 +315,7 @@ export function SituationDetailContent({
               </Group>
             </Link>
             <Group gap={12}>
-              <Link href={`/map?crisis=${situation.id}`} style={{ textDecoration: "none" }}>
+              <Link href={`/map?crisis=${crisis.id}`} style={{ textDecoration: "none" }}>
                 <Group gap={4} className="hover:opacity-70" style={{ cursor: "pointer" }}>
                   <IconMap size={14} color="var(--color-accent)" />
                   <Text size="xs" c="var(--color-accent)" fw={500}>
@@ -323,12 +323,12 @@ export function SituationDetailContent({
                   </Text>
                 </Group>
               </Link>
-              {relatedSituations.length > 0 && (
+              {relatedCrises.length > 0 && (
                 <Select
                   size="xs"
                   w={220}
                   placeholder="Switch crisis"
-                  data={relatedSituations.map((s) => ({
+                  data={relatedCrises.map((s) => ({
                     value: s.id,
                     label: s.title ?? "Untitled crisis",
                   }))}
@@ -478,7 +478,7 @@ export function SituationDetailContent({
                 </Box>
                 <Stack gap={12} p={16}>
                   <Text size="sm" c="var(--color-text-primary)" style={{ lineHeight: 1.6 }}>
-                    {situation.summary ?? "No summary available yet."}
+                    {crisis.summary ?? "No summary available yet."}
                   </Text>
                 </Stack>
               </Card>
@@ -611,10 +611,10 @@ export function SituationDetailContent({
           </Box>
 
           {/* Discussion - reads from backend; compose is disabled until the
-              AddCommentInput mutation accepts a situationId. */}
+              AddCommentInput mutation accepts a crisisId. */}
           <Box px={isCompact ? 16 : 24} pb={isCompact ? 24 : 32}>
             <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-              <CommentsSection entityId={situation.id} entityType="situation" />
+              <CommentsSection entityId={crisis.id} entityType="crisis" />
             </Card>
           </Box>
         </>

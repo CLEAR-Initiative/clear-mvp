@@ -3,8 +3,8 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 
-/** Shape returned by the backend `situation` query. */
-export interface GqlSituation {
+/** Shape returned by the backend `crisis` query. */
+export interface GqlCrisis {
   id: string;
   title: string | null;
   summary: string | null;
@@ -55,7 +55,7 @@ const EVENT_FIELDS = `
   alerts { id status }
 `;
 
-const SITUATION_FIELDS = `
+const CRISIS_FIELDS = `
   id
   title
   summary
@@ -68,7 +68,7 @@ const SITUATION_FIELDS = `
 `;
 
 /** Cheaper field set for list views - no per-event detail. */
-const SITUATION_LIST_FIELDS = `
+const CRISIS_LIST_FIELDS = `
   id
   title
   summary
@@ -80,60 +80,60 @@ const SITUATION_LIST_FIELDS = `
   events { id title severity rank }
 `;
 
-const SITUATIONS_LIST_QUERY = `
-  query Situations {
-    situations {
-      ${SITUATION_LIST_FIELDS}
+const CRISES_LIST_QUERY = `
+  query Crises {
+    crises {
+      ${CRISIS_LIST_FIELDS}
     }
   }
 `;
 
-const SITUATION_GET_QUERY = `
-  query Situation($id: String!) {
-    situation(id: $id) {
-      ${SITUATION_FIELDS}
+const CRISIS_GET_QUERY = `
+  query Crisis($id: String!) {
+    crisis(id: $id) {
+      ${CRISIS_FIELDS}
     }
   }
 `;
 
-const CREATE_SITUATION_FROM_EVENTS_MUTATION = `
-  mutation CreateSituationFromEvents($input: CreateSituationFromEventsInput!) {
-    createSituationFromEvents(input: $input) {
-      ${SITUATION_FIELDS}
+const CREATE_CRISIS_FROM_EVENTS_MUTATION = `
+  mutation CreateCrisisFromEvents($input: CreateCrisisFromEventsInput!) {
+    createCrisisFromEvents(input: $input) {
+      ${CRISIS_FIELDS}
     }
   }
 `;
 
-const ADD_EVENT_TO_SITUATION_MUTATION = `
-  mutation AddEventToSituation($situationId: String!, $eventId: String!) {
-    addEventToSituation(situationId: $situationId, eventId: $eventId) {
+const ADD_EVENT_TO_CRISIS_MUTATION = `
+  mutation AddEventToCrisis($crisisId: String!, $eventId: String!) {
+    addEventToCrisis(crisisId: $crisisId, eventId: $eventId) {
       id
-      situationId
+      crisisId
       eventId
       collectedAt
     }
   }
 `;
 
-export const situationsRouter = createTRPCRouter({
+export const crisesRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
-    const data = await graphqlFetch<{ situations: GqlSituation[] }>(
-      SITUATIONS_LIST_QUERY,
+    const data = await graphqlFetch<{ crises: GqlCrisis[] }>(
+      CRISES_LIST_QUERY,
       undefined,
       cookieHeaders(ctx),
     );
-    return data.situations;
+    return data.crises;
   }),
 
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const data = await graphqlFetch<{ situation: GqlSituation | null }>(
-        SITUATION_GET_QUERY,
+      const data = await graphqlFetch<{ crisis: GqlCrisis | null }>(
+        CRISIS_GET_QUERY,
         { id: input.id },
         cookieHeaders(ctx),
       );
-      return data.situation;
+      return data.crisis;
     }),
 
   createFromEvents: protectedProcedure
@@ -149,25 +149,25 @@ export const situationsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const data = await graphqlFetch<{ createSituationFromEvents: GqlSituation }>(
-        CREATE_SITUATION_FROM_EVENTS_MUTATION,
+      const data = await graphqlFetch<{ createCrisisFromEvents: GqlCrisis }>(
+        CREATE_CRISIS_FROM_EVENTS_MUTATION,
         { input },
         cookieHeaders(ctx),
       );
-      return data.createSituationFromEvents;
+      return data.createCrisisFromEvents;
     }),
 
   addEvent: protectedProcedure
-    .input(z.object({ situationId: z.string(), eventId: z.string() }))
+    .input(z.object({ crisisId: z.string(), eventId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{
-        addEventToSituation: {
+        addEventToCrisis: {
           id: string;
-          situationId: string;
+          crisisId: string;
           eventId: string;
           collectedAt: string;
         };
-      }>(ADD_EVENT_TO_SITUATION_MUTATION, input, cookieHeaders(ctx));
-      return data.addEventToSituation;
+      }>(ADD_EVENT_TO_CRISIS_MUTATION, input, cookieHeaders(ctx));
+      return data.addEventToCrisis;
     }),
 });

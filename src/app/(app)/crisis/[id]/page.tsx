@@ -2,32 +2,32 @@
 
 import { use } from "react";
 import { api } from "~/trpc/react";
-import { SituationDetailContent } from "~/components/situation-detail/situation-detail-content";
+import { CrisisDetailContent } from "~/components/crisis-detail/crisis-detail-content";
 
-export default function SituationDetailPage({
+export default function CrisisDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
 
-  const situationQuery = api.situations.get.useQuery(
+  const crisisQuery = api.crises.get.useQuery(
     { id },
     { enabled: !!id },
   );
 
-  const relatedQuery = api.situations.list.useQuery(undefined, {
-    enabled: !!situationQuery.data,
+  const relatedQuery = api.crises.list.useQuery(undefined, {
+    enabled: !!crisisQuery.data,
   });
 
-  const related = (relatedQuery.data ?? []).filter((s) => s.id !== id);
+  const related = (relatedQuery.data ?? []).filter((c) => c.id !== id);
 
   return (
-    <SituationDetailContent
-      situation={situationQuery.data ?? null}
-      loading={situationQuery.isLoading}
+    <CrisisDetailContent
+      crisis={crisisQuery.data ?? null}
+      loading={crisisQuery.isLoading}
       mode="page"
-      relatedSituations={related}
+      relatedCrises={related}
     />
   );
 }
