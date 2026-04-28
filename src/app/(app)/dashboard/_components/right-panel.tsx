@@ -10,6 +10,9 @@ import {
   Group,
   SimpleGrid,
   Stack,
+  Modal,
+  List,
+  Anchor,
 } from "@mantine/core";
 import {
   IconBolt,
@@ -29,10 +32,12 @@ import {
   IconShield,
   IconTrendingDown,
   IconAlertCircle,
+  IconInfoCircle,
 } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { api } from "~/trpc/react";
 import { cn } from "~/lib/utils";
+import { useDisclosure } from "@mantine/hooks";
 import { CollapsibleSection } from "~/components/ui/collapsible-section";
 import { CreateSignalModal } from "~/components/create-signal-modal";
 import {
@@ -141,6 +146,7 @@ export function RightPanel({
 }: RightPanelProps) {
   const [expandedNRCRegion, setExpandedNRCRegion] = useState<string | null>(null);
   const [signalModalOpen, setSignalModalOpen] = useState(false);
+  const [informInfoOpened, { open: openInformInfo, close: closeInformInfo }] = useDisclosure(false);
 
   const riskQuery = api.inform.getRisk.useQuery(
     { country: selectedCountry },
@@ -237,9 +243,19 @@ export function RightPanel({
         </Box>
         <Box px={24} pb={12}>
           <Group justify="space-between" align="center">
-            <Text tt="uppercase" c="#A0A0A0" style={{ fontSize: 9, letterSpacing: "0.06em" }}>
-              INFORM Risk Overall - {riskQuery.data?.edition ?? "JRC"}
-            </Text>
+            <Group gap={4} align="center">
+              <Text tt="uppercase" c="#A0A0A0" style={{ fontSize: 9, letterSpacing: "0.06em" }}>
+                INFORM Risk Overall - {riskQuery.data?.edition ?? "INFORM Risk 2026"}
+              </Text>
+              <Box
+                onClick={openInformInfo}
+                style={{ cursor: "pointer", color: "#A0A0A0", display: "flex", lineHeight: 1, transition: "color 0.15s" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#525252")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#A0A0A0")}
+              >
+                <IconInfoCircle size={12} />
+              </Box>
+            </Group>
             <Group gap={4} align="baseline">
               <Text
                 fw={700}
@@ -258,6 +274,31 @@ export function RightPanel({
         </Box>
       </Box>
 
+
+      <Modal
+        opened={informInfoOpened}
+        onClose={closeInformInfo}
+        title="INFORM Risk Index: Methodology"
+        size="md"
+        styles={{ title: { fontSize: 14, fontWeight: 700, color: "#171717" }, body: { paddingTop: 4 } }}
+      >
+        <Text style={{ fontSize: 13, color: "#525252", marginBottom: 12, lineHeight: 1.6 }}>
+          The <strong>INFORM Risk Index</strong> is produced by the EU Joint Research Centre (JRC) in partnership with
+          the Inter-Agency Standing Committee (IASC). It measures the risk of humanitarian crises and disasters that
+          could overwhelm national response capacity. Scores range from <strong>0 to 10</strong> (higher = more risk).
+        </Text>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>The three pillars</Text>
+        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
+          <List.Item><strong>Hazard and Exposure</strong>: likelihood of physical events (natural hazards, conflict) affecting the population.</List.Item>
+          <List.Item><strong>Vulnerability</strong>: socio-economic factors that make communities less able to cope, including poverty, inequality, and displacement.</List.Item>
+          <List.Item><strong>Lack of Coping Capacity</strong>: institutional and infrastructure capacity to respond - governance, health system, communication.</List.Item>
+        </List>
+        <Text style={{ fontSize: 11, color: "#A3A3A3", lineHeight: 1.5 }}>
+          Source: <Anchor href="https://drmkc.jrc.ec.europa.eu/inform-index" target="_blank" size="xs">
+            JRC INFORM Risk Index
+          </Anchor>{" "}- updated annually.
+        </Text>
+      </Modal>
 
       {/* Active Crises - locked until real crisis data is wired */}
       {hasCrisisData ? (
