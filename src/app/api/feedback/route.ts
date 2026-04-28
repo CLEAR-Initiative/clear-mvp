@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     parent: { database_id: NOTION_FEEDBACK_DB_ID },
     properties: {
       Name: {
-        title: [{ text: { content: `[${body.type}] ${body.message.slice(0, 80)}` } }],
+        title: [{ text: { content: body.message.slice(0, 80) } }],
       },
       Type: { select: { name: body.type } },
       Message: { rich_text: [{ text: { content: body.message.slice(0, 2000) } }] },
