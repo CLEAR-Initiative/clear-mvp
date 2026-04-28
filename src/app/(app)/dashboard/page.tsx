@@ -5,6 +5,7 @@ import { Box } from "@mantine/core";
 import dynamic from "next/dynamic";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
+import { useLocations } from "~/hooks/use-locations";
 import {
   alertsToMarkers,
   alertsToRegions,
@@ -27,6 +28,13 @@ const CrisisMap = dynamic(
 
 export default function DashboardPage() {
   const { activeTeamId } = useTeam();
+  const { getLocationId } = useLocations();
+  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
+  const sudanL0Query = api.locations.getById.useQuery(
+    { id: sudanId! },
+    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const focusCountryGeometry = sudanL0Query.data?.geometry ?? undefined;
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(null);
   const [dataView, setDataView] = useState<DataView>("alert");
@@ -74,6 +82,7 @@ export default function DashboardPage() {
           zoom={5.0}
           focusCountryPCode="SD"
           focusCountryName="Sudan"
+          focusCountryGeometry={focusCountryGeometry}
           className="w-full h-full"
           onMarkerClick={handleMarkerClick}
         />
