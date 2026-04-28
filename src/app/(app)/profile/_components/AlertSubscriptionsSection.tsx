@@ -11,6 +11,14 @@ import { api } from "~/trpc/react";
 import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
 import { getDisasterPills } from "~/lib/disaster-types";
 
+const SEVERITY_LABELS: Record<number, string> = {
+  1: "All severities",
+  2: "Low+",
+  3: "Medium+",
+  4: "High+",
+  5: "Critical only",
+};
+
 const FREQUENCY_LABELS: Record<string, string> = {
   immediately: "Immediately",
   daily:       "Daily digest",
@@ -32,10 +40,11 @@ export function AlertSubscriptionsSection() {
   const [formLocationIds, setFormLocationIds] = useState<string[]>([]);
   const [formAlertTypes, setFormAlertTypes] = useState<string[]>([]);
   const [formFrequency, setFormFrequency] = useState<string | null>("immediately");
+  const [formMinSeverity, setFormMinSeverity] = useState<string>("4");
   const [deletingGroup, setDeletingGroup] = useState<string | null>(null);
   const [togglingGroup, setTogglingGroup] = useState<string | null>(null);
 
-  const subscribeMutation = api.subscriptions.subscribe.useMutation();
+  const subscribeBatchMutation = api.subscriptions.subscribeBatch.useMutation();
   const unsubscribeMutation = api.subscriptions.unsubscribe.useMutation();
   const toggleMutation = api.subscriptions.update.useMutation();
 
@@ -51,11 +60,11 @@ export function AlertSubscriptionsSection() {
     return items.length > 0 ? [{ group: LEVEL_GROUP[level]!, items }] : [];
   });
 
-  // Group subscriptions by (locationId, frequency) - each group = one card
+  // Group subscriptions by (locationId, frequency, minSeverity) - each group = one card
   const groups = Object.values(
-    subscriptions.reduce<Record<string, { key: string; locationId: string; locationName: string; locationLevel: number; frequency: string; active: boolean; ids: string[]; types: string[] }>>(
+    subscriptions.reduce<Record<string, { key: string; locationId: string; locationName: string; locationLevel: number; frequency: string; minSeverity: number; active: boolean; ids: string[]; types: string[] }>>(
       (acc, sub) => {
-        const key = `${sub.location.id}::${sub.frequency}`;
+        const key = `${sub.location.id}::${sub.frequency}::${sub.minSeverity ?? 1}`;
         if (!acc[key]) {
           acc[key] = {
             key,
@@ -63,6 +72,7 @@ export function AlertSubscriptionsSection() {
             locationName: sub.location.name,
             locationLevel: sub.location.level,
             frequency: sub.frequency,
+            minSeverity: sub.minSeverity ?? 1,
             active: sub.active,
             ids: [],
             types: [],
@@ -70,7 +80,6 @@ export function AlertSubscriptionsSection() {
         }
         acc[key].ids.push(sub.id);
         acc[key].types.push(sub.alertType);
-        // Group is active if any sub is active
         if (sub.active) acc[key].active = true;
         return acc;
       },
@@ -82,27 +91,26 @@ export function AlertSubscriptionsSection() {
     if (formLocationIds.length === 0 || !formFrequency) return;
     const resolvedTypes = formAlertTypes.length > 0
       ? expandSelectionsToCodes(formAlertTypes, hierarchy)
-      : ["conflict", "natural hazard", "epidemic", "famine", "economic crisis", "technological disaster"]
-          .flatMap((l1) => hierarchy.find((h) => h.name.toLowerCase() === l1)?.groups.flatMap((g) => g.codes) ?? []);
+      : hierarchy.flatMap((h) => h.groups.flatMap((g) => g.codes));
 
     const typesToCreate = resolvedTypes.length > 0 ? resolvedTypes : ["ot"];
 
     try {
       for (const locationId of formLocationIds) {
-        for (const alertType of typesToCreate) {
-          await subscribeMutation.mutateAsync({
-            locationId,
-            alertType,
-            channel: "email" as const,
-            frequency: formFrequency as "immediately" | "daily" | "weekly" | "monthly",
-          });
-        }
+        await subscribeBatchMutation.mutateAsync({
+          locationIds: [locationId],
+          alertTypes: typesToCreate,
+          channel: "email" as const,
+          frequency: formFrequency as "immediately" | "daily" | "weekly" | "monthly",
+          minSeverity: parseInt(formMinSeverity),
+        });
       }
       notifications.show({ title: "Subscribed", message: "Alert subscriptions created.", color: "green" });
       void utils.subscriptions.list.invalidate();
       setShowForm(false);
       setFormLocationIds([]);
       setFormAlertTypes([]);
+      setFormMinSeverity("4");
     } catch (err: unknown) {
       notifications.show({ title: "Error", message: err instanceof Error ? err.message : "Failed", color: "red" });
     }
@@ -184,6 +192,19 @@ export function AlertSubscriptionsSection() {
               onChange={setFormAlertTypes}
             />
             <Select
+              label="Minimum Severity"
+              data={[
+                { value: "1", label: "All (Minimal and above)" },
+                { value: "2", label: "Low and above" },
+                { value: "3", label: "Medium and above" },
+                { value: "4", label: "High and above" },
+                { value: "5", label: "Critical only" },
+              ]}
+              value={formMinSeverity}
+              onChange={(v) => v && setFormMinSeverity(v)}
+              size="xs"
+            />
+            <Select
               label="Frequency"
               data={[
                 { value: "immediately", label: "Immediately" },
@@ -203,7 +224,7 @@ export function AlertSubscriptionsSection() {
                 size="xs"
                 color="dark"
                 leftSection={<IconCheck size={12} />}
-                loading={subscribeMutation.isPending}
+                loading={subscribeBatchMutation.isPending}
                 disabled={formLocationIds.length === 0}
                 onClick={() => void handleSubscribe()}
               >
@@ -256,6 +277,8 @@ export function AlertSubscriptionsSection() {
                     </Group>
                     <Group gap={6}>
                       <Text size="xs" c="#737373">{typeLabel}</Text>
+                      <Divider orientation="vertical" />
+                      <Text size="xs" c="#737373">{SEVERITY_LABELS[group.minSeverity] ?? `Severity ${group.minSeverity}+`}</Text>
                       <Divider orientation="vertical" />
                       <Text size="xs" c="#737373">{FREQUENCY_LABELS[group.frequency] ?? group.frequency}</Text>
                     </Group>
