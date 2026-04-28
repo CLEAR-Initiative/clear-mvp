@@ -121,7 +121,7 @@ export function FeedbackModal({ opened, onClose }: FeedbackModalProps) {
               }}
             >
               <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.5 }}>
-                Console logs ({getConsoleBuffer().length} entries) will be attached automatically.
+                Console errors ({getConsoleBuffer().length}) will be attached automatically.
               </Text>
             </Box>
           )}
