@@ -17,6 +17,7 @@ import {
   IconSettings,
   IconDoorExit,
   IconShieldCog,
+  IconSpeakerphone,
   IconChevronLeft,
   IconChevronRight,
   IconBuilding,
@@ -470,6 +471,35 @@ export function NavSidebar() {
 
       {/* Bottom actions */}
       <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3], flexShrink: 0 }}>
+        {/* Feedback */}
+        {(() => {
+          const isActive = activeSegment === "feedback";
+          const inner = (
+            <UnstyledButton
+              component={Link}
+              href="/feedback"
+              style={{
+                display:        "flex",
+                alignItems:     "center",
+                gap:            spacingPx[3],
+                padding:        spacingPx[3],
+                width:          "100%",
+                borderRadius:   6,
+                textDecoration: "none",
+                background:     isActive ? colors.accentLight : "transparent",
+                color:          isActive ? colors.accent : colors.textSecondary,
+                transition:     "background 150ms",
+                marginBottom:   spacingPx[1],
+              }}
+              className="hover:bg-[#F5F5F5] transition-colors"
+            >
+              <IconSpeakerphone size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
+              <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Feedback</Text>
+            </UnstyledButton>
+          );
+          return collapsed ? <Tooltip label="Feedback" position="right" withArrow>{inner}</Tooltip> : inner;
+        })()}
+
         {/* Admin - only visible to admin role */}
         {isAdmin && (() => {
           const isActive = activeSegment === "admin";
