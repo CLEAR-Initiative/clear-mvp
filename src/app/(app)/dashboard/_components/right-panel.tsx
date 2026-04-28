@@ -471,7 +471,7 @@ export function RightPanel({
       </CollapsibleSection>
 
       {/* Response Status OR NRC Presence */}
-      <CollapsibleSection title={hasCrisisData ? "Response Status" : "NRC Presence"}>
+      <CollapsibleSection title={hasCrisisData ? "Response Status" : "NRC Presence"} locked>
         {hasCrisisData ? (
           <Box>
             {/* Team Deployments */}
@@ -635,7 +635,7 @@ export function RightPanel({
       </CollapsibleSection>
 
       {/* NRC Global Operations */}
-      <CollapsibleSection title={`NRC Global Operations (${nrcStatistics.totalCountries})`}>
+      <CollapsibleSection title={`NRC Global Operations (${nrcStatistics.totalCountries})`} locked>
         {/* Quick Stats */}
         <SimpleGrid cols={3} spacing={8} mb={16}>
           {[
@@ -810,42 +810,6 @@ export function RightPanel({
             ))}
           </Group>
         </Box>
-      </CollapsibleSection>
-
-      {/* Recent Activity */}
-      <CollapsibleSection title="Recent Activity">
-        <Stack gap={12}>
-          {recentActivity.map((item) => (
-            <Group key={item.title + item.time} gap={12} align="flex-start">
-              <Box
-                w={8}
-                h={8}
-                mt={4}
-                style={{
-                  backgroundColor: activityDotColors[item.type] ?? "#737373",
-                  flexShrink: 0,
-                }}
-              />
-              <Box style={{ flex: 1, minWidth: 0 }}>
-                <Group gap={8} mb={2}>
-                  <Text fw={600} style={{ fontSize: 12 }}>{item.title}</Text>
-                  <Text c="#A3A3A3" style={{ fontSize: 10 }}>{item.time}</Text>
-                </Group>
-                <Text c="#737373" style={{ fontSize: 11 }}>{item.description}</Text>
-              </Box>
-            </Group>
-          ))}
-        </Stack>
-        <Text
-          component={Link}
-          href="/detection"
-          c="#E85D3D"
-          fw={500}
-          style={{ fontSize: 12, display: "inline-block", marginTop: 16 }}
-          className="no-underline hover:underline"
-        >
-          View all activity &rarr;
-        </Text>
       </CollapsibleSection>
 
       {/* Action buttons */}
