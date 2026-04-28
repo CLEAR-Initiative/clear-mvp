@@ -16,7 +16,6 @@ import {
   IconGlobe,
   IconMapPin,
   IconChevronDown,
-  IconFileText,
   IconSword,
   IconDroplets,
   IconSun,
@@ -35,6 +34,7 @@ import type { ComponentType } from "react";
 import { api } from "~/trpc/react";
 import { cn } from "~/lib/utils";
 import { CollapsibleSection } from "~/components/ui/collapsible-section";
+import { CreateSignalModal } from "~/components/create-signal-modal";
 import {
   nrcLocations,
   nrcStatistics,
@@ -140,6 +140,7 @@ export function RightPanel({
   activeView,
 }: RightPanelProps) {
   const [expandedNRCRegion, setExpandedNRCRegion] = useState<string | null>(null);
+  const [signalModalOpen, setSignalModalOpen] = useState(false);
 
   const riskQuery = api.inform.getRisk.useQuery(
     { country: selectedCountry },
@@ -848,34 +849,13 @@ export function RightPanel({
       </CollapsibleSection>
 
       {/* Action buttons */}
-      <Group gap={8} px={24} py={16} className="border-t border-[#E5E5E5] mt-auto">
-        <Button
-          leftSection={<IconFileText size={14} />}
-          variant="unstyled"
-          style={{
-            flex: 1,
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-            background: "#F5F5F5",
-            color: "#171717",
-            border: "1px solid #E5E5E5",
-            padding: "12px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            cursor: "pointer",
-          }}
-        >
-          Generate Briefing
-        </Button>
+      <Box px={24} py={16} className="border-t border-[#E5E5E5] mt-auto">
         <Button
           leftSection={<IconBolt size={14} />}
           variant="unstyled"
+          fullWidth
+          onClick={() => setSignalModalOpen(true)}
           style={{
-            flex: 1,
             fontSize: 11,
             fontWeight: 600,
             letterSpacing: "0.05em",
@@ -891,9 +871,10 @@ export function RightPanel({
             cursor: "pointer",
           }}
         >
-          Create Alert
+          Create Signal
         </Button>
-      </Group>
+      </Box>
+      <CreateSignalModal opened={signalModalOpen} onClose={() => setSignalModalOpen(false)} />
 
       {/* Data source footer - TODO(demo): sources and "Updated" timestamp are hardcoded; derive from active pipeline metadata */}
       <Box px={24} py={16} className="border-t border-[#E5E5E5] bg-[#F5F5F5]">
