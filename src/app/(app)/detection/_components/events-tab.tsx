@@ -506,8 +506,6 @@ export function EventsTab({
                         ))}
                         <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>
                           {event.signals.length} signal{event.signals.length !== 1 ? "s" : ""}
-                          {" "}&bull;{" "}
-                          Rank: <Text span fw={600} c="var(--color-text-primary)">{event.rank.toFixed(1)}</Text>
                         </Text>
                       </Group>
                     </Box>

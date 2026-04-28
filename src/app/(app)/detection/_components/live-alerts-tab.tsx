@@ -495,9 +495,6 @@ export function LiveAlertsTab({
                             {pill.label}
                           </span>
                         ))}
-                        <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>
-                          Rank: <Text span fw={600} c="var(--color-text-primary)">{alert.event.rank.toFixed(1)}</Text>
-                        </Text>
                       </Group>
                     </Box>
                   </Box>
