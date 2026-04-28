@@ -258,11 +258,11 @@ export function RightPanel({
       </Box>
 
 
-      {/* Active Crises OR NRC Core Activities */}
+      {/* Active Crises - locked until real crisis data is wired */}
       {hasCrisisData ? (
         <CollapsibleSection
           title={`Active Crises (${crisisPins.length})`}
-          defaultOpen
+          locked
         >
           <Stack gap={8}>
             {crisisPins.slice(0, 4).map((pin) => (

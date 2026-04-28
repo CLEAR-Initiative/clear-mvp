@@ -1,17 +1,40 @@
 "use client";
 
 import { useState } from "react";
-import { Box, Text, Collapse, UnstyledButton } from "@mantine/core";
+import { Box, Text, Collapse, UnstyledButton, Badge } from "@mantine/core";
 import { cn } from "~/lib/utils";
 
 interface CollapsibleSectionProps {
   title: string;
   defaultOpen?: boolean;
   children?: React.ReactNode;
+  /** When true: always collapsed, non-interactive, greyed out, shows Coming Soon badge */
+  locked?: boolean;
 }
 
-export function CollapsibleSection({ title, defaultOpen = false, children }: CollapsibleSectionProps) {
+export function CollapsibleSection({ title, defaultOpen = false, children, locked = false }: CollapsibleSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
+
+  if (locked) {
+    return (
+      <Box className="border-b border-[#E5E5E5]" style={{ opacity: 0.45 }}>
+        <Box
+          w="100%"
+          px={24}
+          py={16}
+          className="flex justify-between items-center"
+          style={{ cursor: "not-allowed" }}
+        >
+          <Text fw={700} tt="uppercase" style={{ letterSpacing: "0.08em", fontSize: 11 }}>
+            {title}
+          </Text>
+          <Badge size="xs" variant="light" color="gray" style={{ fontSize: 9, fontWeight: 600 }}>
+            Coming Soon
+          </Badge>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box className="border-b border-[#E5E5E5]">

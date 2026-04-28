@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Box } from "@mantine/core";
 import dynamic from "next/dynamic";
 import { api } from "~/trpc/react";
@@ -11,10 +11,13 @@ import {
   eventsToMarkers,
   eventsToRegions,
   situationsToMarkers,
+  type CrisisMarker,
 } from "~/app/(app)/map/_components/map-markers-data";
+import { MapMarkerDetail } from "~/app/(app)/map/_components/map-marker-detail";
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
 import type { DataView } from "~/app/(app)/map/_components/map-layers-panel";
 import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
+import type { MapMarker } from "~/components/map/crisis-map";
 import { RightPanel } from "./_components/right-panel";
 
 const CrisisMap = dynamic(
@@ -25,6 +28,7 @@ const CrisisMap = dynamic(
 export default function DashboardPage() {
   const { activeTeamId } = useTeam();
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
+  const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(null);
   const [dataView, setDataView] = useState<DataView>("alert");
   const [showPopulation, setShowPopulation] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("none");
@@ -49,6 +53,11 @@ export default function DashboardPage() {
     return [];
   }, [dataView, alertsQuery.data, eventsQuery.data, situationsQuery.data]);
 
+  const handleMarkerClick = useCallback((marker: MapMarker) => {
+    const full = markers.find((m) => m.id === marker.id);
+    setSelectedMarker(full ?? null);
+  }, [markers]);
+
   const regions = useMemo(() => {
     if (dataView === "alert") return alertsToRegions(alertsQuery.data?.alerts ?? []);
     if (dataView === "event") return eventsToRegions(eventsQuery.data?.events ?? []);
@@ -66,7 +75,14 @@ export default function DashboardPage() {
           focusCountryPCode="SD"
           focusCountryName="Sudan"
           className="w-full h-full"
+          onMarkerClick={handleMarkerClick}
         />
+        {selectedMarker && (
+          <MapMarkerDetail
+            marker={selectedMarker}
+            onClose={() => setSelectedMarker(null)}
+          />
+        )}
         <MapPanelBar
           dataView={dataView}
           onDataViewChange={setDataView}
