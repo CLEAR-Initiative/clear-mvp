@@ -123,7 +123,7 @@ const DELETE_TEAM = `
 `;
 
 const ADD_TEAM_MEMBER = `
-  mutation AddTeamMember($teamId: String!, $userId: String!, $role: String) {
+  mutation AddTeamMember($teamId: String!, $userId: String!, $role: TeamMemberRole) {
     addTeamMember(teamId: $teamId, userId: $userId, role: $role) {
       id user { id name email } role
     }
@@ -137,7 +137,7 @@ const REMOVE_TEAM_MEMBER = `
 `;
 
 const UPDATE_TEAM_MEMBER_ROLE = `
-  mutation UpdateTeamMemberRole($teamId: String!, $userId: String!, $role: String!) {
+  mutation UpdateTeamMemberRole($teamId: String!, $userId: String!, $role: TeamMemberRole!) {
     updateTeamMemberRole(teamId: $teamId, userId: $userId, role: $role) { id role }
   }
 `;
