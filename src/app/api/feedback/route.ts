@@ -7,7 +7,6 @@ interface FeedbackPayload {
   type: "Bug" | "Feature Request" | "General";
   message: string;
   userEmail: string;
-  userName: string;
   pageUrl: string;
   consoleLogs?: string[];
 }
@@ -19,26 +18,39 @@ export async function POST(req: NextRequest) {
 
   const body = (await req.json()) as FeedbackPayload;
 
-  const consoleText = body.consoleLogs?.length
-    ? body.consoleLogs.join("\n")
-    : null;
+  const children = body.consoleLogs?.length
+    ? [
+        {
+          object: "block",
+          type: "heading_3",
+          heading_3: {
+            rich_text: [{ text: { content: "Console Logs" } }],
+          },
+        },
+        {
+          object: "block",
+          type: "code",
+          code: {
+            language: "plain text",
+            rich_text: [{ text: { content: body.consoleLogs.join("\n").slice(0, 10000) } }],
+          },
+        },
+      ]
+    : undefined;
 
   const notionBody = {
     parent: { database_id: NOTION_FEEDBACK_DB_ID },
     properties: {
-      Message: {
-        title: [{ text: { content: body.message.slice(0, 2000) } }],
+      Title: {
+        title: [{ text: { content: body.message.slice(0, 50) } }],
       },
       Type: { select: { name: body.type } },
-      User: { email: body.userEmail },
-      "User Name": { rich_text: [{ text: { content: body.userName } }] },
-      "Page URL": { url: body.pageUrl },
-      ...(consoleText && {
-        "Console Logs": {
-          rich_text: [{ text: { content: consoleText.slice(0, 2000) } }],
-        },
-      }),
+      Message: { rich_text: [{ text: { content: body.message.slice(0, 2000) } }] },
+      Date: { date: { start: new Date().toISOString() } },
+      User: { rich_text: [{ text: { content: body.userEmail } }] },
+      Page: { url: body.pageUrl },
     },
+    ...(children && { children }),
   };
 
   const res = await fetch("https://api.notion.com/v1/pages", {

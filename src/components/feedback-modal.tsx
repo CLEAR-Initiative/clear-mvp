@@ -42,7 +42,6 @@ export function FeedbackModal({ opened, onClose }: FeedbackModalProps) {
         type,
         message: message.trim(),
         userEmail: user?.email ?? "unknown",
-        userName: user?.name ?? "unknown",
         pageUrl: window.location.href,
         ...(type === "Bug" && { consoleLogs: getConsoleBuffer() }),
       };
