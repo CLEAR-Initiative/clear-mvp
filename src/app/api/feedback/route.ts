@@ -19,29 +19,35 @@ export async function POST(req: NextRequest) {
   const body = (await req.json()) as FeedbackPayload;
 
   const children = body.consoleLogs?.length
-    ? [
-        {
-          object: "block",
-          type: "heading_3",
-          heading_3: {
-            rich_text: [{ text: { content: "Console Logs" } }],
+    ? (() => {
+        const CHUNK = 1900;
+        const text = body.consoleLogs.join("\n");
+        const chunks: string[] = [];
+        for (let i = 0; i < text.length && i < 20000; i += CHUNK) {
+          chunks.push(text.slice(i, i + CHUNK));
+        }
+        return [
+          {
+            object: "block",
+            type: "heading_3",
+            heading_3: { rich_text: [{ text: { content: "Console Logs" } }] },
           },
-        },
-        {
-          object: "block",
-          type: "code",
-          code: {
-            language: "plain text",
-            rich_text: [{ text: { content: body.consoleLogs.join("\n").slice(0, 10000) } }],
+          {
+            object: "block",
+            type: "code",
+            code: {
+              language: "plain text",
+              rich_text: chunks.map((c) => ({ text: { content: c } })),
+            },
           },
-        },
-      ]
+        ];
+      })()
     : undefined;
 
   const notionBody = {
     parent: { database_id: NOTION_FEEDBACK_DB_ID },
     properties: {
-      Title: {
+      Name: {
         title: [{ text: { content: body.message.slice(0, 50) } }],
       },
       Type: { select: { name: body.type } },
@@ -66,7 +72,7 @@ export async function POST(req: NextRequest) {
   if (!res.ok) {
     const err = await res.text();
     console.error("[feedback] Notion error:", err);
-    return NextResponse.json({ error: "Failed to save feedback" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to save feedback", detail: err }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

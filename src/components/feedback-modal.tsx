@@ -50,7 +50,10 @@ export function FeedbackModal({ opened, onClose }: FeedbackModalProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Failed to submit");
+      if (!res.ok) {
+        const data = await res.json() as { error: string; detail?: string };
+        throw new Error(data.detail ?? data.error ?? "Failed to submit");
+      }
       setSubmitted(true);
     } catch {
       setError("Something went wrong. Please try again.");
