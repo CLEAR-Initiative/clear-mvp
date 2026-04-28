@@ -10,7 +10,7 @@ export function initConsoleBuffer() {
   if (patched || typeof window === "undefined") return;
   patched = true;
 
-  (["error"] as const).forEach((method) => {
+  (["warn", "error"] as const).forEach((method) => {
     const original = console[method].bind(console);
     console[method] = (...args: unknown[]) => {
       // Strip CSS styling args (used by styled console.log calls like tRPC devtools)

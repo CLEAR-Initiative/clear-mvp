@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   const body = (await req.json()) as FeedbackPayload;
 
-  const children = body.consoleLogs?.length
+  const children = body.consoleLogs !== undefined
     ? (() => {
         const CHUNK = 1900;
         const text = body.consoleLogs.join("\n");
@@ -30,16 +30,22 @@ export async function POST(req: NextRequest) {
           {
             object: "block",
             type: "heading_3",
-            heading_3: { rich_text: [{ text: { content: "Console Logs" } }] },
+            heading_3: { rich_text: [{ text: { content: "Console Errors / Warnings" } }] },
           },
-          {
-            object: "block",
-            type: "code",
-            code: {
-              language: "plain text",
-              rich_text: chunks.map((c) => ({ text: { content: c } })),
-            },
-          },
+          chunks.length > 0
+            ? {
+                object: "block",
+                type: "code",
+                code: {
+                  language: "plain text",
+                  rich_text: chunks.map((c) => ({ text: { content: c } })),
+                },
+              }
+            : {
+                object: "block",
+                type: "paragraph",
+                paragraph: { rich_text: [{ text: { content: "No errors captured." } }] },
+              },
         ];
       })()
     : undefined;
