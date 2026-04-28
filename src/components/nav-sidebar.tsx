@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSelectedLayoutSegments } from "next/navigation";
 import { Box, Text, Badge, UnstyledButton, Tooltip, Menu, Drawer } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { FeedbackModal } from "~/components/feedback-modal";
 import {
   IconLayoutDashboard,
   IconTarget,
@@ -132,6 +133,7 @@ function TeamSwitcher({ collapsed, labelStyle }: { collapsed: boolean; labelStyl
 export function NavSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, { open: openMobile, close: closeMobile }] = useDisclosure(false);
+  const [feedbackOpen, { open: openFeedback, close: closeFeedback }] = useDisclosure(false);
   const segments = useSelectedLayoutSegments();
   const activeSegment = segments[0] ?? "";
   const router = useRouter();
@@ -473,11 +475,9 @@ export function NavSidebar() {
       <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3], flexShrink: 0 }}>
         {/* Feedback */}
         {(() => {
-          const isActive = activeSegment === "feedback";
           const inner = (
             <UnstyledButton
-              component={Link}
-              href="/feedback"
+              onClick={openFeedback}
               style={{
                 display:        "flex",
                 alignItems:     "center",
@@ -485,9 +485,8 @@ export function NavSidebar() {
                 padding:        spacingPx[3],
                 width:          "100%",
                 borderRadius:   6,
-                textDecoration: "none",
-                background:     isActive ? colors.accentLight : "transparent",
-                color:          isActive ? colors.accent : colors.textSecondary,
+                background:     "transparent",
+                color:          colors.textSecondary,
                 transition:     "background 150ms",
                 marginBottom:   spacingPx[1],
               }}
@@ -614,6 +613,7 @@ export function NavSidebar() {
         </Box>
       </Box>
     </Box>
+    <FeedbackModal opened={feedbackOpen} onClose={closeFeedback} />
     </>
   );
 }
