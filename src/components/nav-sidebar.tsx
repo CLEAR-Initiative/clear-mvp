@@ -70,13 +70,6 @@ const navSections: NavSection[] = [
       { label: "Knowledge Hub", href: "/knowledge", icon: IconBook, featureKey: "knowledge_hub", comingSoonForNonAdmin: true },
     ],
   },
-  {
-    title: "SETTINGS",
-    adminOnly: true,
-    items: [
-      { label: "Organisation", href: "/settings/org", icon: IconBuilding },
-    ],
-  },
 ];
 
 const EXPANDED_W  = 240;
