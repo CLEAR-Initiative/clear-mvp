@@ -29,9 +29,9 @@ const SIGNAL_COMMENTS_QUERY = `
   }
 `;
 
-const SITUATION_COMMENTS_QUERY = `
-  query SituationComments($id: String!) {
-    situation(id: $id) {
+const CRISIS_COMMENTS_QUERY = `
+  query CrisisComments($id: String!) {
+    crisis(id: $id) {
       comments { ${COMMENT_FIELDS} }
     }
   }
@@ -59,7 +59,7 @@ export const commentsRouter = createTRPCRouter({
   list: protectedProcedure
     .input(z.object({
       entityId: z.string(),
-      entityType: z.enum(["event", "signal", "situation"]),
+      entityType: z.enum(["event", "signal", "crisis"]),
     }))
     .query(async ({ ctx, input }) => {
       if (input.entityType === "event") {
@@ -70,13 +70,13 @@ export const commentsRouter = createTRPCRouter({
         );
         return data.event?.comments ?? [];
       }
-      if (input.entityType === "situation") {
-        const data = await graphqlFetch<{ situation: { comments: GqlUserComment[] } | null }>(
-          SITUATION_COMMENTS_QUERY,
+      if (input.entityType === "crisis") {
+        const data = await graphqlFetch<{ crisis: { comments: GqlUserComment[] } | null }>(
+          CRISIS_COMMENTS_QUERY,
           { id: input.entityId },
           cookieHeaders(ctx),
         );
-        return data.situation?.comments ?? [];
+        return data.crisis?.comments ?? [];
       }
       const data = await graphqlFetch<{ signal: { comments: GqlUserComment[] } | null }>(
         SIGNAL_COMMENTS_QUERY,
@@ -89,7 +89,7 @@ export const commentsRouter = createTRPCRouter({
   add: protectedProcedure
     .input(z.object({
       entityId: z.string(),
-      entityType: z.enum(["event", "signal", "situation"]),
+      entityType: z.enum(["event", "signal", "crisis"]),
       comment: z.string().min(1),
       tagUserIds: z.array(z.string()).optional(),
     }))
@@ -99,7 +99,7 @@ export const commentsRouter = createTRPCRouter({
           ? { eventId: input.entityId }
           : input.entityType === "signal"
             ? { signalId: input.entityId }
-            : { situationId: input.entityId };
+            : { crisisId: input.entityId };
       const gqlInput = {
         comment: input.comment,
         tagUserIds: input.tagUserIds,

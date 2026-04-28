@@ -142,7 +142,7 @@ function CommentRow({ comment, isLast, currentUserId, onReply, onDelete, isDelet
 
 interface CommentsSectionProps {
   entityId: string;
-  entityType: "event" | "signal" | "situation";
+  entityType: "event" | "signal" | "crisis";
 }
 
 export function CommentsSection({ entityId, entityType }: CommentsSectionProps) {
