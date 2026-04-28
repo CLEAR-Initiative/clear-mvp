@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { type ChangeEvent, useState } from "react";
 import Link from "next/link";
 import {
   ActionIcon,
   Badge,
   Box,
   Button,
+  Checkbox,
   Group,
   Loader,
   Modal,
@@ -18,8 +19,10 @@ import {
   Title,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconPlus, IconTrash, IconUserPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+
+type TeamRole = "lead" | "analyst" | "viewer";
 
 function slugify(value: string) {
   return value
@@ -163,6 +166,24 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
   const [newTeamSlug, setNewTeamSlug] = useState("");
   const [newTeamDescription, setNewTeamDescription] = useState("");
 
+  // Invite-by-email state
+  const [inviteOpened, { open: openInvite, close: closeInvite }] = useDisclosure(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("member");
+  const [inviteTeams, setInviteTeams] = useState<Record<string, TeamRole>>({});
+  const [inviteError, setInviteError] = useState("");
+  const inviteMutation = api.invitations.invite.useMutation({
+    onSuccess: () => {
+      closeInvite();
+      setInviteEmail("");
+      setInviteRole("member");
+      setInviteTeams({});
+      setInviteError("");
+      void utils.teams.organisation.invalidate({ id: orgId });
+    },
+    onError: (err) => setInviteError(err.message),
+  });
+
   const org = orgQuery.data;
 
   if (orgQuery.isLoading || !org) {
@@ -272,9 +293,22 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
 
       {/* ── Members ─────────────────────────────────── */}
       <Box>
-        <Title order={4} mb="sm">
-          Members
-        </Title>
+        <Group justify="space-between" mb="sm">
+          <Title order={4}>Members</Title>
+          {canEdit && (
+            <Button
+              variant="light"
+              size="xs"
+              leftSection={<IconUserPlus size={14} />}
+              onClick={() => {
+                setInviteError("");
+                openInvite();
+              }}
+            >
+              Invite User
+            </Button>
+          )}
+        </Group>
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
@@ -437,6 +471,127 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
           )}
         </Stack>
       </Box>
+
+      {/* ── Invite User Modal ──────────────────────── */}
+      <Modal
+        opened={inviteOpened}
+        onClose={() => {
+          closeInvite();
+          setInviteError("");
+        }}
+        title="Invite User"
+        centered
+        size="md"
+      >
+        <Stack gap="sm">
+          {inviteError && (
+            <Text c="red" size="sm">
+              {inviteError}
+            </Text>
+          )}
+          <TextInput
+            label="Email"
+            placeholder="user@example.com"
+            type="email"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.currentTarget.value)}
+            required
+          />
+          <Select
+            label="Organisation Role"
+            value={inviteRole}
+            onChange={(v) => v && setInviteRole(v)}
+            data={[
+              { value: "member", label: "Member" },
+              { value: "admin", label: "Admin" },
+              { value: "owner", label: "Owner" },
+            ]}
+          />
+          <Box>
+            <Text fw={500} size="sm" mb={6}>
+              Teams <Text component="span" c="red">*</Text>
+            </Text>
+            {!org.teams || org.teams.length === 0 ? (
+              <Text size="sm" c="dimmed">
+                This organisation has no teams. Create one before inviting.
+              </Text>
+            ) : (
+              <Stack gap={6}>
+                {org.teams.map((t) => {
+                  const selectedRole = inviteTeams[t.id];
+                  const isSelected = selectedRole !== undefined;
+                  return (
+                    <Group key={t.id} gap={8} wrap="nowrap" align="center">
+                      <Checkbox
+                        checked={isSelected}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                          const checked = e.currentTarget.checked;
+                          setInviteTeams((prev) => {
+                            const next = { ...prev };
+                            if (checked) next[t.id] = "viewer";
+                            else delete next[t.id];
+                            return next;
+                          });
+                        }}
+                        label={t.name}
+                      />
+                      <Box style={{ flex: 1 }} />
+                      <Select
+                        size="xs"
+                        value={selectedRole ?? "viewer"}
+                        onChange={(v) => {
+                          if (!v || !isSelected) return;
+                          setInviteTeams((prev) => ({
+                            ...prev,
+                            [t.id]: v as TeamRole,
+                          }));
+                        }}
+                        data={[
+                          { value: "viewer", label: "Viewer" },
+                          { value: "analyst", label: "Analyst" },
+                          { value: "lead", label: "Lead" },
+                        ]}
+                        disabled={!isSelected}
+                        w={110}
+                      />
+                    </Group>
+                  );
+                })}
+              </Stack>
+            )}
+          </Box>
+          <Group justify="flex-end" mt="sm">
+            <Button variant="subtle" onClick={closeInvite}>
+              Cancel
+            </Button>
+            <Button
+              leftSection={<IconUserPlus size={14} />}
+              loading={inviteMutation.isPending}
+              onClick={() => {
+                setInviteError("");
+                const teams = Object.entries(inviteTeams).map(
+                  ([teamId, teamRole]) => ({ teamId, teamRole }),
+                );
+                if (teams.length === 0) {
+                  setInviteError("Select at least one team");
+                  return;
+                }
+                inviteMutation.mutate({
+                  email: inviteEmail.trim(),
+                  organisationId: orgId,
+                  role: inviteRole,
+                  teams,
+                });
+              }}
+              disabled={
+                !inviteEmail.trim() || Object.keys(inviteTeams).length === 0
+              }
+            >
+              Send Invitation
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Stack>
   );
 }
