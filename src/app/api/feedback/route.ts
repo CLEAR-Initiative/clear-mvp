@@ -26,11 +26,10 @@ export async function POST(req: NextRequest) {
   const notionBody = {
     parent: { database_id: NOTION_FEEDBACK_DB_ID },
     properties: {
-      Name: {
-        title: [{ text: { content: body.message.slice(0, 80) } }],
+      Message: {
+        title: [{ text: { content: body.message.slice(0, 2000) } }],
       },
       Type: { select: { name: body.type } },
-      Message: { rich_text: [{ text: { content: body.message.slice(0, 2000) } }] },
       User: { email: body.userEmail },
       "User Name": { rich_text: [{ text: { content: body.userName } }] },
       "Page URL": { url: body.pageUrl },
