@@ -40,7 +40,7 @@ import { MinimapCard } from "~/components/map/minimap-card";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
-import { getDisasterPills } from "~/lib/disaster-types";
+import { getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
@@ -368,7 +368,7 @@ export function EventDetailContent({
           </Group>
         </Group>
 
-        {/* Type pills */}
+        {/* Type pills - L1 + L2 */}
         <Group gap={6} mb={14} wrap="wrap">
           {getDisasterPills(eventTypes).map((pill) => (
             <span
@@ -383,6 +383,26 @@ export function EventDetailContent({
                 background: pill.bg,
                 letterSpacing: "0.01em",
                 whiteSpace: "nowrap",
+              }}
+            >
+              {pill.label}
+            </span>
+          ))}
+          {getDisasterL2Pills(eventTypes).map((pill) => (
+            <span
+              key={pill.label}
+              style={{
+                display: "inline-block",
+                padding: "2px 10px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 500,
+                color: pill.color,
+                background: "transparent",
+                border: `1px solid ${pill.color}`,
+                letterSpacing: "0.01em",
+                whiteSpace: "nowrap",
+                opacity: 0.75,
               }}
             >
               {pill.label}
