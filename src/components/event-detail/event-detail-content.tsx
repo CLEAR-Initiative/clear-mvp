@@ -435,7 +435,7 @@ export function EventDetailContent({
         >
           <Group gap={12}>
 
-            {/* Population Affected */}
+            {/* Casualties */}
             <Box
               p={16}
               style={{
@@ -464,13 +464,9 @@ export function EventDetailContent({
               </Box>
               <Box>
                 <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {event.populationAffected
-                    ? (Number.isNaN(Number(event.populationAffected))
-                        ? event.populationAffected
-                        : Number(event.populationAffected).toLocaleString())
-                    : "N/A"}
+                  {event.casualties != null ? event.casualties.toLocaleString() : "N/A"}
                 </Text>
-                <Text size="xs" c="#737373" mt={2}>Population affected</Text>
+                <Text size="xs" c="#737373" mt={2}>Casualties</Text>
               </Box>
             </Box>
 
