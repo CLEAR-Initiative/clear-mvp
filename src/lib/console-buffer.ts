@@ -9,6 +9,12 @@ let patched = false;
 export function initConsoleBuffer() {
   if (patched || typeof window === "undefined") return;
   patched = true;
+}
+
+// Auto-init at module load on the client - catches errors during hydration
+if (typeof window !== "undefined") {
+  initConsoleBuffer();
+}
 
   (["warn", "error"] as const).forEach((method) => {
     const original = console[method].bind(console);
