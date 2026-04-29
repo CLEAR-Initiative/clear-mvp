@@ -11,7 +11,6 @@ import {
   Badge,
   Loader,
   TextInput,
-  Popover,
   Menu,
   ActionIcon,
   Divider,
@@ -19,7 +18,6 @@ import {
 } from "@mantine/core";
 import {
   IconSearch,
-  IconFilter,
   IconSortDescending,
   IconX,
   IconExternalLink,
@@ -91,15 +89,9 @@ export function SignalsTab({
   const activeSources = activeSourcesProp ?? null;
   const activeSeverities = activeSeveritiesProp ?? new Set(["critical", "high", "medium", "low"]);
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
-  const [filterOpen, setFilterOpen] = useState(false);
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
 
-  function clearFilters() {
-    setSearch("");
-    setSortOrder("newest");
-  }
 
-  const isFiltered = search.trim() !== "" || sortOrder !== "newest";
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -143,8 +135,8 @@ export function SignalsTab({
             <Badge
               size="xs"
               style={{
-                background: isFiltered ? "var(--color-accent-light)" : "var(--color-bg-muted)",
-                color: isFiltered ? "var(--color-accent)" : "var(--color-text-secondary)",
+                background: "var(--color-bg-muted)",
+                color: "var(--color-text-secondary)",
                 fontWeight: 600,
               }}
             >
@@ -169,72 +161,6 @@ export function SignalsTab({
             style={{ flex: 1 }}
             styles={{ input: { fontSize: 13 } }}
           />
-
-          <Popover
-            opened={filterOpen}
-            onChange={setFilterOpen}
-            position="bottom-end"
-            shadow="md"
-            width={220}
-          >
-            <Popover.Target>
-              <button
-                onClick={() => setFilterOpen((o) => !o)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 30,
-                  height: 30,
-                  borderRadius: 6,
-                  border: `1px solid ${isFiltered ? "var(--color-accent)" : "var(--color-border)"}`,
-                  background: "var(--color-bg-white)",
-                  cursor: "pointer",
-                  color: isFiltered ? "var(--color-accent)" : "var(--color-text-secondary)",
-                  position: "relative",
-                  flexShrink: 0,
-                }}
-              >
-                <IconFilter size={13} />
-                {isFiltered && (
-                  <Box
-                    style={{
-                      position: "absolute",
-                      top: -3,
-                      right: -3,
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: "var(--color-accent)",
-                    }}
-                  />
-                )}
-              </button>
-            </Popover.Target>
-            <Popover.Dropdown p={16}>
-              {isFiltered && (
-                <>
-                  <Divider color="var(--color-border)" my={10} />
-                  <button
-                    onClick={clearFilters}
-                    style={{
-                      width: "100%",
-                      padding: "6px",
-                      borderRadius: 6,
-                      border: "1px solid var(--color-border)",
-                      background: "var(--color-bg-muted)",
-                      color: "var(--color-text-secondary)",
-                      fontSize: 12,
-                      fontWeight: 500,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Clear all filters
-                  </button>
-                </>
-              )}
-            </Popover.Dropdown>
-          </Popover>
 
           <Menu shadow="md" width={200} position="bottom-end">
             <Menu.Target>

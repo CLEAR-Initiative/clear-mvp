@@ -11,7 +11,6 @@ import {
   Badge,
   Loader,
   TextInput,
-  Popover,
   Menu,
   ActionIcon,
   Divider,
@@ -19,7 +18,6 @@ import {
 } from "@mantine/core";
 import {
   IconSearch,
-  IconFilter,
   IconSortDescending,
   IconX,
 } from "@tabler/icons-react";
@@ -41,7 +39,6 @@ const CrisisMap = dynamic(
   { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
 );
 
-type SeverityKey = "critical" | "high" | "medium" | "low";
 type SortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
 
 const SORT_LABELS: Record<SortOrder, string> = {
@@ -93,7 +90,6 @@ export function EventsTab({
   const { getTypeNames } = useDisasterTypes();
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
-  const [filterOpen, setFilterOpen] = useState(false);
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
 
   const allSources = useMemo(
@@ -104,14 +100,6 @@ export function EventsTab({
   const activeSeverities = activeSeveritiesProp ?? new Set(["critical", "high", "medium", "low"]);
   const activeSources = activeSourcesProp ?? null;
 
-  function clearFilters() {
-    setSearch("");
-    setSortOrder("sev-desc");
-  }
-
-  const isFiltered =
-    search.trim() !== "" ||
-    sortOrder !== "sev-desc";
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -152,14 +140,7 @@ export function EventsTab({
         <Group gap={8} mb={12} align="center" style={{ minHeight: 32 }}>
           <Group gap={6} style={{ flexShrink: 0 }}>
             <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Events</Text>
-            <Badge
-              size="xs"
-              style={{
-                background: isFiltered ? "var(--color-accent-light)" : "var(--color-bg-muted)",
-                color: isFiltered ? "var(--color-accent)" : "var(--color-text-secondary)",
-                fontWeight: 600,
-              }}
-            >
+            <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>
               {listCountLabel}
             </Badge>
             {loading && <Loader size="xs" />}
@@ -181,99 +162,6 @@ export function EventsTab({
             style={{ flex: 1 }}
             styles={{ input: { fontSize: 13 } }}
           />
-
-          <Popover
-            opened={filterOpen}
-            onChange={setFilterOpen}
-            position="bottom-end"
-            shadow="md"
-            width={240}
-          >
-            <Popover.Target>
-              <button
-                onClick={() => setFilterOpen((o) => !o)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 30,
-                  height: 30,
-                  borderRadius: 6,
-                  border: `1px solid ${isFiltered ? "var(--color-accent)" : "var(--color-border)"}`,
-                  background: "var(--color-bg-white)",
-                  cursor: "pointer",
-                  color: isFiltered ? "var(--color-accent)" : "var(--color-text-secondary)",
-                  position: "relative",
-                  flexShrink: 0,
-                }}
-              >
-                <IconFilter size={13} />
-                {isFiltered && (
-                  <Box
-                    style={{
-                      position: "absolute",
-                      top: -3,
-                      right: -3,
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: "var(--color-accent)",
-                    }}
-                  />
-                )}
-              </button>
-            </Popover.Target>
-            <Popover.Dropdown p={16}>
-              <Text size="xs" fw={700} c="var(--color-text-primary)" mb={10}>Severity</Text>
-              <Group gap={6} mb={14}>
-                {(["critical", "high", "medium", "low"] as SeverityKey[]).map((sev) => {
-                  const active = activeSeverities.has(sev);
-                  const color = severityColor(sev === "critical" ? 5 : sev === "high" ? 4 : sev === "medium" ? 3 : 2);
-                  return (
-                    <button
-                      key={sev}
-                      onClick={() => toggleSeverity(sev)}
-                      style={{
-                        padding: "4px 10px",
-                        borderRadius: 999,
-                        border: `1px solid ${active ? color : "var(--color-border)"}`,
-                        background: active ? `${color}15` : "var(--color-bg-muted)",
-                        color: active ? color : "var(--color-text-muted)",
-                        fontSize: 11,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {sev}
-                    </button>
-                  );
-                })}
-              </Group>
-
-              {isFiltered && (
-                <>
-                  <Divider color="var(--color-border)" my={10} />
-                  <button
-                    onClick={clearFilters}
-                    style={{
-                      width: "100%",
-                      padding: "6px",
-                      borderRadius: 6,
-                      border: "1px solid var(--color-border)",
-                      background: "var(--color-bg-muted)",
-                      color: "var(--color-text-secondary)",
-                      fontSize: 12,
-                      fontWeight: 500,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Clear all filters
-                  </button>
-                </>
-              )}
-            </Popover.Dropdown>
-          </Popover>
 
           <Menu shadow="md" width={200} position="bottom-end">
             <Menu.Target>
