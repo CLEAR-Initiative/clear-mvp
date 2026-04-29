@@ -65,6 +65,7 @@ interface SignalsTabProps {
   onBoundaryLevelChange?: (level: BoundaryLevel) => void;
   focusCountryPCode?: string;
   focusCountryName?: string;
+  focusCountryGeometry?: unknown;
   activeSeverities?: Set<string>;
   activeSources?: Set<string> | null;
 }
@@ -82,6 +83,7 @@ export function SignalsTab({
   onBoundaryLevelChange,
   focusCountryPCode,
   focusCountryName,
+  focusCountryGeometry,
   activeSeverities: activeSeveritiesProp,
   activeSources: activeSourcesProp,
 }: SignalsTabProps) {
@@ -335,6 +337,7 @@ export function SignalsTab({
               className="w-full h-full"
               focusCountryPCode={focusCountryPCode}
               focusCountryName={focusCountryName}
+              focusCountryGeometry={focusCountryGeometry}
               fitBoundsGeometry={fitBoundsGeometry}
               adminBoundaries={adminBoundaries}
               adminBoundaryLevel={adminBoundaryLevel}
