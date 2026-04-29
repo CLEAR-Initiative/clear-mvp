@@ -19,7 +19,7 @@ import {
   alertsToRegions,
   eventsToMarkers,
   eventsToRegions,
-  situationsToMarkers,
+  crisesToMarkers,
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
 import { MapPanelBar } from "./_components/map-panel-bar";
@@ -63,9 +63,10 @@ export default function MapPage() {
   );
   const eventsQuery = api.alerts.getEvents.useQuery(
     { teamId: activeTeamId ?? undefined },
-    { enabled: dataView === "event" && !!activeTeamId },
+    // No team → fetch the global feed (the API resolver permits this).
+    { enabled: dataView === "event" },
   );
-  const situationsQuery = api.alerts.getSituations.useQuery(
+  const crisesQuery = api.alerts.getCrises.useQuery(
     undefined,
     { enabled: dataView === "crisis" },
   );
@@ -78,9 +79,9 @@ export default function MapPage() {
   const allMarkers: CrisisMarker[] = useMemo(() => {
     if (dataView === "alert")  return alertsToMarkers(alertsQuery.data?.alerts ?? []);
     if (dataView === "event")  return eventsToMarkers(eventsQuery.data?.events ?? []);
-    if (dataView === "crisis") return situationsToMarkers(situationsQuery.data?.situations ?? []);
+    if (dataView === "crisis") return crisesToMarkers(crisesQuery.data?.crises ?? []);
     return [];
-  }, [dataView, alertsQuery.data, eventsQuery.data, situationsQuery.data]);
+  }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
 
   const allRegions = useMemo(() => {
     if (dataView === "alert") return alertsToRegions(alertsQuery.data?.alerts ?? []);
@@ -264,7 +265,7 @@ export default function MapPage() {
     [allMarkers],
   );
 
-  const isLoading = alertsQuery.isLoading || eventsQuery.isLoading || situationsQuery.isLoading;
+  const isLoading = alertsQuery.isLoading || eventsQuery.isLoading || crisesQuery.isLoading;
 
   return (
     <Box

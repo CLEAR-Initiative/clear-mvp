@@ -11,7 +11,7 @@ import {
   alertsToRegions,
   eventsToMarkers,
   eventsToRegions,
-  situationsToMarkers,
+  crisesToMarkers,
   type CrisisMarker,
 } from "~/app/(app)/map/_components/map-markers-data";
 import { MapMarkerDetail } from "~/app/(app)/map/_components/map-marker-detail";
@@ -39,7 +39,7 @@ export default function DashboardPage() {
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(null);
   const [dataView, setDataView] = useState<DataView>("alert");
   const [showPopulation, setShowPopulation] = useState(false);
-  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("none");
+  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
 
   const alertsQuery = api.alerts.getAlerts.useQuery(
     { activeOnly: true, teamId: activeTeamId },
@@ -47,19 +47,49 @@ export default function DashboardPage() {
   );
   const eventsQuery = api.alerts.getEvents.useQuery(
     { teamId: activeTeamId ?? undefined },
-    { enabled: dataView === "event" && !!activeTeamId },
+    // No team → fetch the global feed (the API resolver permits this).
+    { enabled: dataView === "event" },
   );
-  const situationsQuery = api.alerts.getSituations.useQuery(
+  const crisesQuery = api.alerts.getCrises.useQuery(
     undefined,
     { enabled: dataView === "crisis" },
+  );
+
+  // ── Admin-boundary + population overlay queries ─────────────────────────
+  // Mirrors the /map page so the layers panel here behaves identically.
+  // Each query is gated on the corresponding panel state to avoid burning
+  // bandwidth when the layer is off.
+  const a1Query = api.locations.getAdminBoundaries.useQuery(
+    { level: 1, countryId: sudanId ?? undefined },
+    { enabled: boundaryLevel === "A1" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const a2Query = api.locations.getAdminBoundaries.useQuery(
+    { level: 2, countryId: sudanId ?? undefined },
+    { enabled: boundaryLevel === "A2" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const adminBoundaries = useMemo(() => {
+    if (boundaryLevel === "A1") return a1Query.data ?? [];
+    if (boundaryLevel === "A2") return a2Query.data ?? [];
+    return [];
+  }, [boundaryLevel, a1Query.data, a2Query.data]);
+  const adminBoundaryLevel =
+    boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
+
+  const populationQuery = api.locations.getPopulationBoundaries.useQuery(
+    { countryId: sudanId ?? undefined },
+    { enabled: showPopulation && !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const populationBoundaries = useMemo(
+    () => (showPopulation ? (populationQuery.data ?? []) : []),
+    [showPopulation, populationQuery.data],
   );
 
   const markers = useMemo(() => {
     if (dataView === "alert")  return alertsToMarkers(alertsQuery.data?.alerts ?? []);
     if (dataView === "event")  return eventsToMarkers(eventsQuery.data?.events ?? []);
-    if (dataView === "crisis") return situationsToMarkers(situationsQuery.data?.situations ?? []);
+    if (dataView === "crisis") return crisesToMarkers(crisesQuery.data?.crises ?? []);
     return [];
-  }, [dataView, alertsQuery.data, eventsQuery.data, situationsQuery.data]);
+  }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
 
   const handleMarkerClick = useCallback((marker: MapMarker) => {
     const full = markers.find((m) => m.id === marker.id);
@@ -83,6 +113,9 @@ export default function DashboardPage() {
           focusCountryPCode="SD"
           focusCountryName="Sudan"
           focusCountryGeometry={focusCountryGeometry}
+          adminBoundaries={adminBoundaries}
+          adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+          populationBoundaries={populationBoundaries}
           className="w-full h-full"
           onMarkerClick={handleMarkerClick}
         />

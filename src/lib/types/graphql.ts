@@ -130,9 +130,9 @@ export interface GqlAlert {
   status: "draft" | "published" | "archived";
 }
 
-/* ─── Situation ─── */
+/* ─── Crisis ─── */
 
-export interface GqlSituation {
+export interface GqlCrisis {
   id: string;
   title: string | null;
   summary: string | null;

@@ -1,5 +1,5 @@
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
-import type { GqlAlert, GqlEvent, GqlSignal, GqlSituation } from "~/lib/types/graphql";
+import type { GqlAlert, GqlEvent, GqlSignal, GqlCrisis } from "~/lib/types/graphql";
 import { mapSeverity } from "~/lib/types/graphql";
 import { resolveLocationName } from "~/lib/location";
 
@@ -187,24 +187,24 @@ export function alertsToRegions(alerts: GqlAlert[]): MapRegion[] {
   return eventsToRegions(alerts.map((a) => a.event));
 }
 
-export function situationsToMarkers(situations: GqlSituation[]): CrisisMarker[] {
+export function crisesToMarkers(crises: GqlCrisis[]): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
-  for (const sit of situations) {
-    const loc = sit.generalLocation;
+  for (const crisis of crises) {
+    const loc = crisis.generalLocation;
     if (loc?.geometry?.type === "Point") {
       const [lng, lat] = loc.geometry.coordinates as [number, number];
       if (typeof lng === "number" && typeof lat === "number") {
         markers.push({
-          id: Math.abs(sit.id.split("").reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)),
+          id: Math.abs(crisis.id.split("").reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)),
           lng,
           lat,
-          title: sit.title ?? "Situation",
-          severity: mapSeverity(sit.severity),
+          title: crisis.title ?? "Crisis",
+          severity: mapSeverity(crisis.severity),
           locationId: loc.id,
           ancestorIds: loc.ancestorIds ?? [],
-          eventTypes: sit.events.flatMap((e) => e.types).map((t) => t.toLowerCase()),
+          eventTypes: crisis.events.flatMap((e) => e.types).map((t) => t.toLowerCase()),
           region: resolveLocationName(loc) ?? undefined,
-          eventId: sit.id,
+          eventId: crisis.id,
           markerKind: "crisis",
         });
       }

@@ -1,4 +1,4 @@
-import { Box, Text, Group, Stack, Badge, Button, CloseButton } from "@mantine/core";
+import { Box, Text, Group, Stack, Badge, Button, CloseButton, ScrollArea } from "@mantine/core";
 import Link from "next/link";
 import { type CrisisMarker } from "./map-markers-data";
 
@@ -31,6 +31,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
       </Group>
 
       {/* Body */}
+      <ScrollArea.Autosize mah={400} type="auto">
       <Box px={16} py={12}>
         {/* Severity */}
         <Group justify="space-between" mb={12}>
@@ -54,7 +55,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
 
         {/* Description */}
         {marker.description && (
-          <Text size="xs" c="#525252" mb={12} pb={8} className="border-b border-[#F5F5F5]" lineClamp={4}>
+          <Text size="xs" c="#525252" mb={12} pb={8} className="border-b border-[#F5F5F5]">
             {marker.description}
           </Text>
         )}
@@ -98,6 +99,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
           </Button>
         )}
       </Box>
+      </ScrollArea.Autosize>
     </Box>
   );
 }
