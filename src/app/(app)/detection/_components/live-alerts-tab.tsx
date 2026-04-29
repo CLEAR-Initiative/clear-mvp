@@ -26,7 +26,9 @@ import {
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
-import { getDisasterPills, getDisasterLabel } from "~/lib/disaster-types";
+import { getDisasterPills } from "~/lib/disaster-types";
+import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
+import { api } from "~/trpc/react";
 import { resolveLocationName } from "~/lib/location";
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
@@ -83,20 +85,19 @@ export function LiveAlertsTab({
   focusCountryGeometry,
 }: LiveAlertsTabProps) {
   const { getTypeNames } = useDisasterTypes();
+  const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
+    staleTime: Infinity, refetchOnWindowFocus: false,
+  });
+  const hierarchy = hierarchyQuery.data ?? [];
   const [search, setSearch] = useState("");
   const [activeSeverities, setActiveSeverities] = useState<Set<SeverityKey>>(
     new Set(["critical", "high", "medium", "low"]),
   );
-  const [activeTypes, setActiveTypes] = useState<Set<string> | null>(null);
+  const [selectedTypeFilters, setSelectedTypeFilters] = useState<string[]>([]);
   const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
   const [filterOpen, setFilterOpen] = useState(false);
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
-
-  const allTypes = useMemo(
-    () => [...new Set(alerts.flatMap((a) => a.event.types))].sort(),
-    [alerts],
-  );
 
   const allSources = useMemo(
     () => [...new Set(alerts.flatMap((a) => a.event.signals.map((s) => s.source.name)))].sort(),
@@ -108,15 +109,6 @@ export function LiveAlertsTab({
       const next = new Set(prev);
       next.has(sev) ? next.delete(sev) : next.add(sev);
       return next;
-    });
-  }
-
-  function toggleType(type: string) {
-    setActiveTypes((prev) => {
-      const base = prev ?? new Set(allTypes);
-      const next = new Set(base);
-      next.has(type) ? next.delete(type) : next.add(type);
-      return next.size === allTypes.length ? null : next;
     });
   }
 
@@ -132,7 +124,7 @@ export function LiveAlertsTab({
   function clearFilters() {
     setSearch("");
     setActiveSeverities(new Set(["critical", "high", "medium", "low"]));
-    setActiveTypes(null);
+    setSelectedTypeFilters([]);
     setActiveSources(null);
     setSortOrder("sev-desc");
   }
@@ -140,16 +132,19 @@ export function LiveAlertsTab({
   const isFiltered =
     search.trim() !== "" ||
     activeSeverities.size < 4 ||
-    activeTypes !== null ||
+    selectedTypeFilters.length > 0 ||
     activeSources !== null ||
     sortOrder !== "sev-desc";
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const expandedTypeCodes = selectedTypeFilters.length > 0
+      ? expandSelectionsToCodes(selectedTypeFilters, hierarchy)
+      : null;
     let result = alerts.filter((a) => {
       const sev = mapSeverity(a.event.severity);
       if (!activeSeverities.has(sev)) return false;
-      if (activeTypes !== null && !a.event.types.some((t) => activeTypes.has(t))) return false;
+      if (expandedTypeCodes && !a.event.types.some((t) => expandedTypeCodes.includes(t))) return false;
       if (activeSources !== null && !a.event.signals.some((s) => activeSources.has(s.source.name))) return false;
       if (q) {
         const title = (a.event.title ?? a.event.description ?? a.event.types[0] ?? "").toLowerCase();
@@ -168,7 +163,7 @@ export function LiveAlertsTab({
     });
 
     return result;
-  }, [alerts, search, activeSeverities, activeTypes, activeSources, sortOrder]);
+  }, [alerts, search, activeSeverities, selectedTypeFilters, hierarchy, activeSources, sortOrder]);
 
   const listCountLabel =
     filtered.length === alerts.length
@@ -282,43 +277,14 @@ export function LiveAlertsTab({
                 })}
               </Group>
 
-              {allTypes.length > 0 && (
-                <>
-                  <Divider color="var(--color-border)" mb={10} />
-                  <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Event Type</Text>
-                  <Stack gap={4} mb={4}>
-                    {allTypes.map((type) => {
-                      const active = activeTypes === null || activeTypes.has(type);
-                      return (
-                        <button
-                          key={type}
-                          onClick={() => toggleType(type)}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "5px 10px",
-                            borderRadius: 6,
-                            border: "1px solid",
-                            borderColor: active ? "color-mix(in srgb, var(--color-accent) 20%, transparent)" : "var(--color-border)",
-                            background: active ? "var(--color-accent-light)" : "var(--color-bg-muted)",
-                            color: active ? "var(--color-accent)" : "var(--color-text-muted)",
-                            fontSize: 12,
-                            fontWeight: 500,
-                            cursor: "pointer",
-                            textAlign: "left",
-                          }}
-                        >
-                          {getDisasterLabel(type)}
-                          {active && (
-                            <Box style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-accent)" }} />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </Stack>
-                </>
-              )}
+              <Divider color="var(--color-border)" my={10} />
+              <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Event Type</Text>
+              <DisasterTypePicker
+                hierarchy={hierarchy}
+                selected={selectedTypeFilters}
+                onChange={setSelectedTypeFilters}
+                size="xs"
+              />
 
               {allSources.length > 0 && (
                 <>
