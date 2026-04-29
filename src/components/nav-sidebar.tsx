@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSelectedLayoutSegments } from "next/navigation";
 import { Box, Text, Badge, UnstyledButton, Tooltip, Menu, Drawer } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { FeedbackModal } from "~/components/feedback-modal";
 import {
   IconLayoutDashboard,
   IconTarget,
@@ -17,6 +18,7 @@ import {
   IconSettings,
   IconDoorExit,
   IconShieldCog,
+  IconSpeakerphone,
   IconChevronLeft,
   IconChevronRight,
   IconBuilding,
@@ -68,13 +70,6 @@ const navSections: NavSection[] = [
     title: "RESOURCES",
     items: [
       { label: "Knowledge Hub", href: "/knowledge", icon: IconBook, featureKey: "knowledge_hub", comingSoonForNonAdmin: true },
-    ],
-  },
-  {
-    title: "SETTINGS",
-    adminOnly: true,
-    items: [
-      { label: "Organisation", href: "/settings/org", icon: IconBuilding },
     ],
   },
 ];
@@ -138,6 +133,7 @@ function TeamSwitcher({ collapsed, labelStyle }: { collapsed: boolean; labelStyl
 export function NavSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, { open: openMobile, close: closeMobile }] = useDisclosure(false);
+  const [feedbackOpen, { open: openFeedback, close: closeFeedback }] = useDisclosure(false);
   const segments = useSelectedLayoutSegments();
   const activeSegment = segments[0] ?? "";
   const router = useRouter();
@@ -477,6 +473,32 @@ export function NavSidebar() {
 
       {/* Bottom actions */}
       <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3], flexShrink: 0 }}>
+        {/* Feedback */}
+        {(() => {
+          const inner = (
+            <UnstyledButton
+              onClick={openFeedback}
+              style={{
+                display:        "flex",
+                alignItems:     "center",
+                gap:            spacingPx[3],
+                padding:        spacingPx[3],
+                width:          "100%",
+                borderRadius:   6,
+                background:     "transparent",
+                color:          colors.textSecondary,
+                transition:     "background 150ms",
+                marginBottom:   spacingPx[1],
+              }}
+              className="hover:bg-[#F5F5F5] transition-colors"
+            >
+              <IconSpeakerphone size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
+              <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Feedback</Text>
+            </UnstyledButton>
+          );
+          return collapsed ? <Tooltip label="Feedback" position="right" withArrow>{inner}</Tooltip> : inner;
+        })()}
+
         {/* Admin - only visible to admin role */}
         {isAdmin && (() => {
           const isActive = activeSegment === "admin";
@@ -591,6 +613,7 @@ export function NavSidebar() {
         </Box>
       </Box>
     </Box>
+    <FeedbackModal opened={feedbackOpen} onClose={closeFeedback} />
     </>
   );
 }

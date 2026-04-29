@@ -10,14 +10,16 @@ import {
   IconHistory,
   IconMapPinOff,
   IconAlertTriangle,
+  IconGauge,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 
 const ISSUE_TAGS = [
   { id: "not_relevant", label: "Not relevant", icon: IconCircleOff },
   { id: "already_known", label: "Already known", icon: IconHistory },
-  { id: "wrong_area", label: "Wrong area", icon: IconMapPinOff },
-  { id: "inaccurate", label: "Inaccurate", icon: IconAlertTriangle },
+  { id: "wrong_area",     label: "Wrong area",     icon: IconMapPinOff },
+  { id: "wrong_severity", label: "Wrong severity", icon: IconGauge },
+  { id: "inaccurate",     label: "Inaccurate",     icon: IconAlertTriangle },
 ];
 
 interface FeedbackSectionProps {
@@ -151,7 +153,7 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
         ) : (
           <Stack gap={16}>
             <Text size="sm" c="#737373">
-              Select all issues that apply — this helps us improve the detection pipeline.
+              Select all issues that apply - this helps us improve the detection pipeline.
             </Text>
 
             <Stack gap={8}>

@@ -9,6 +9,7 @@ interface GqlAlertSubscription {
   active: boolean;
   channel: string;
   frequency: string;
+  minSeverity: number;
   createdAt: string;
   location: { id: string; name: string; level: number };
 }
@@ -22,6 +23,7 @@ const MY_SUBSCRIPTIONS_QUERY = `
       active
       channel
       frequency
+      minSeverity
       createdAt
       location { id name level }
     }

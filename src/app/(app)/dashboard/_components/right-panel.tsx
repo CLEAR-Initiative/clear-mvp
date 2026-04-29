@@ -10,13 +10,15 @@ import {
   Group,
   SimpleGrid,
   Stack,
+  Modal,
+  List,
+  Anchor,
 } from "@mantine/core";
 import {
   IconBolt,
   IconGlobe,
   IconMapPin,
   IconChevronDown,
-  IconFileText,
   IconSword,
   IconDroplets,
   IconSun,
@@ -30,11 +32,14 @@ import {
   IconShield,
   IconTrendingDown,
   IconAlertCircle,
+  IconInfoCircle,
 } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { api } from "~/trpc/react";
 import { cn } from "~/lib/utils";
+import { useDisclosure } from "@mantine/hooks";
 import { CollapsibleSection } from "~/components/ui/collapsible-section";
+import { CreateSignalModal } from "~/components/create-signal-modal";
 import {
   nrcLocations,
   nrcStatistics,
@@ -140,6 +145,8 @@ export function RightPanel({
   activeView,
 }: RightPanelProps) {
   const [expandedNRCRegion, setExpandedNRCRegion] = useState<string | null>(null);
+  const [signalModalOpen, setSignalModalOpen] = useState(false);
+  const [informInfoOpened, { open: openInformInfo, close: closeInformInfo }] = useDisclosure(false);
 
   const riskQuery = api.inform.getRisk.useQuery(
     { country: selectedCountry },
@@ -236,9 +243,19 @@ export function RightPanel({
         </Box>
         <Box px={24} pb={12}>
           <Group justify="space-between" align="center">
-            <Text tt="uppercase" c="#A0A0A0" style={{ fontSize: 9, letterSpacing: "0.06em" }}>
-              INFORM Risk Overall - {riskQuery.data?.edition ?? "JRC"}
-            </Text>
+            <Group gap={4} align="center">
+              <Text tt="uppercase" c="#A0A0A0" style={{ fontSize: 9, letterSpacing: "0.06em" }}>
+                INFORM Risk Overall - {riskQuery.data?.edition ?? "INFORM Risk 2026"}
+              </Text>
+              <Box
+                onClick={openInformInfo}
+                style={{ cursor: "pointer", color: "#A0A0A0", display: "flex", lineHeight: 1, transition: "color 0.15s" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#525252")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#A0A0A0")}
+              >
+                <IconInfoCircle size={12} />
+              </Box>
+            </Group>
             <Group gap={4} align="baseline">
               <Text
                 fw={700}
@@ -258,11 +275,36 @@ export function RightPanel({
       </Box>
 
 
-      {/* Active Crises OR NRC Core Activities */}
+      <Modal
+        opened={informInfoOpened}
+        onClose={closeInformInfo}
+        title="INFORM Risk Index: Methodology"
+        size="md"
+        styles={{ title: { fontSize: 14, fontWeight: 700, color: "#171717" }, body: { paddingTop: 4 } }}
+      >
+        <Text style={{ fontSize: 13, color: "#525252", marginBottom: 12, lineHeight: 1.6 }}>
+          The <strong>INFORM Risk Index</strong> is produced by the EU Joint Research Centre (JRC) in partnership with
+          the Inter-Agency Standing Committee (IASC). It measures the risk of humanitarian crises and disasters that
+          could overwhelm national response capacity. Scores range from <strong>0 to 10</strong> (higher = more risk).
+        </Text>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>The three pillars</Text>
+        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
+          <List.Item><strong>Hazard and Exposure</strong>: likelihood of physical events (natural hazards, conflict) affecting the population.</List.Item>
+          <List.Item><strong>Vulnerability</strong>: socio-economic factors that make communities less able to cope, including poverty, inequality, and displacement.</List.Item>
+          <List.Item><strong>Lack of Coping Capacity</strong>: institutional and infrastructure capacity to respond - governance, health system, communication.</List.Item>
+        </List>
+        <Text style={{ fontSize: 11, color: "#A3A3A3", lineHeight: 1.5 }}>
+          Source: <Anchor href="https://drmkc.jrc.ec.europa.eu/inform-index" target="_blank" size="xs">
+            JRC INFORM Risk Index
+          </Anchor>{" "}- updated annually.
+        </Text>
+      </Modal>
+
+      {/* Active Crises - locked until real crisis data is wired */}
       {hasCrisisData ? (
         <CollapsibleSection
           title={`Active Crises (${crisisPins.length})`}
-          defaultOpen
+          locked
         >
           <Stack gap={8}>
             {crisisPins.slice(0, 4).map((pin) => (
@@ -470,7 +512,7 @@ export function RightPanel({
       </CollapsibleSection>
 
       {/* Response Status OR NRC Presence */}
-      <CollapsibleSection title={hasCrisisData ? "Response Status" : "NRC Presence"}>
+      <CollapsibleSection title={hasCrisisData ? "Response Status" : "NRC Presence"} locked>
         {hasCrisisData ? (
           <Box>
             {/* Team Deployments */}
@@ -634,7 +676,7 @@ export function RightPanel({
       </CollapsibleSection>
 
       {/* NRC Global Operations */}
-      <CollapsibleSection title={`NRC Global Operations (${nrcStatistics.totalCountries})`}>
+      <CollapsibleSection title={`NRC Global Operations (${nrcStatistics.totalCountries})`} locked>
         {/* Quick Stats */}
         <SimpleGrid cols={3} spacing={8} mb={16}>
           {[
@@ -811,71 +853,14 @@ export function RightPanel({
         </Box>
       </CollapsibleSection>
 
-      {/* Recent Activity */}
-      <CollapsibleSection title="Recent Activity">
-        <Stack gap={12}>
-          {recentActivity.map((item) => (
-            <Group key={item.title + item.time} gap={12} align="flex-start">
-              <Box
-                w={8}
-                h={8}
-                mt={4}
-                style={{
-                  backgroundColor: activityDotColors[item.type] ?? "#737373",
-                  flexShrink: 0,
-                }}
-              />
-              <Box style={{ flex: 1, minWidth: 0 }}>
-                <Group gap={8} mb={2}>
-                  <Text fw={600} style={{ fontSize: 12 }}>{item.title}</Text>
-                  <Text c="#A3A3A3" style={{ fontSize: 10 }}>{item.time}</Text>
-                </Group>
-                <Text c="#737373" style={{ fontSize: 11 }}>{item.description}</Text>
-              </Box>
-            </Group>
-          ))}
-        </Stack>
-        <Text
-          component={Link}
-          href="/detection"
-          c="#E85D3D"
-          fw={500}
-          style={{ fontSize: 12, display: "inline-block", marginTop: 16 }}
-          className="no-underline hover:underline"
-        >
-          View all activity &rarr;
-        </Text>
-      </CollapsibleSection>
-
       {/* Action buttons */}
-      <Group gap={8} px={24} py={16} className="border-t border-[#E5E5E5] mt-auto">
-        <Button
-          leftSection={<IconFileText size={14} />}
-          variant="unstyled"
-          style={{
-            flex: 1,
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-            background: "#F5F5F5",
-            color: "#171717",
-            border: "1px solid #E5E5E5",
-            padding: "12px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            cursor: "pointer",
-          }}
-        >
-          Generate Briefing
-        </Button>
+      <Box px={24} py={16} className="border-t border-[#E5E5E5] mt-auto">
         <Button
           leftSection={<IconBolt size={14} />}
           variant="unstyled"
+          fullWidth
+          onClick={() => setSignalModalOpen(true)}
           style={{
-            flex: 1,
             fontSize: 11,
             fontWeight: 600,
             letterSpacing: "0.05em",
@@ -891,9 +876,10 @@ export function RightPanel({
             cursor: "pointer",
           }}
         >
-          Create Alert
+          Create Signal
         </Button>
-      </Group>
+      </Box>
+      <CreateSignalModal opened={signalModalOpen} onClose={() => setSignalModalOpen(false)} />
 
       {/* Data source footer - TODO(demo): sources and "Updated" timestamp are hardcoded; derive from active pipeline metadata */}
       <Box px={24} py={16} className="border-t border-[#E5E5E5] bg-[#F5F5F5]">
