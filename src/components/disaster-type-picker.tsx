@@ -129,7 +129,7 @@ export function DisasterTypePicker({
             <IconSelector size={14} style={{ flexShrink: 0, marginLeft: 4, color: "var(--color-text-muted)" }} />
           </UnstyledButton>
         </Popover.Target>
-        <Popover.Dropdown p={0}>
+        <Popover.Dropdown p={0} onMouseDown={(e) => e.stopPropagation()}>
           <ScrollArea.Autosize mah={300} type="auto">
             <Stack gap={0} p={4}>
               {hierarchy.length === 0 && (
