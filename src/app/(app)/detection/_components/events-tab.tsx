@@ -66,6 +66,9 @@ interface EventsTabProps {
   focusCountryPCode?: string;
   focusCountryName?: string;
   focusCountryGeometry?: unknown;
+  activeSeverities?: Set<string>;
+  expandedTypeCodes?: string[] | null;
+  activeSources?: Set<string> | null;
 }
 
 export function EventsTab({
@@ -83,18 +86,12 @@ export function EventsTab({
   focusCountryPCode,
   focusCountryName,
   focusCountryGeometry,
+  activeSeverities: activeSeveritiesProp,
+  expandedTypeCodes: expandedTypeCodesProp,
+  activeSources: activeSourcesProp,
 }: EventsTabProps) {
   const { getTypeNames } = useDisasterTypes();
-  const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
-    staleTime: Infinity, refetchOnWindowFocus: false,
-  });
-  const hierarchy = hierarchyQuery.data ?? [];
   const [search, setSearch] = useState("");
-  const [activeSeverities, setActiveSeverities] = useState<Set<SeverityKey>>(
-    new Set(["critical", "high", "medium", "low"]),
-  );
-  const [selectedTypeFilters, setSelectedTypeFilters] = useState<string[]>([]);
-  const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
   const [filterOpen, setFilterOpen] = useState(false);
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
@@ -104,47 +101,24 @@ export function EventsTab({
     [events],
   );
 
-  function toggleSeverity(sev: SeverityKey) {
-    setActiveSeverities((prev) => {
-      const next = new Set(prev);
-      next.has(sev) ? next.delete(sev) : next.add(sev);
-      return next;
-    });
-  }
-
-  function toggleSource(src: string) {
-    setActiveSources((prev) => {
-      const base = prev ?? new Set(allSources);
-      const next = new Set(base);
-      next.has(src) ? next.delete(src) : next.add(src);
-      return next.size === allSources.length ? null : next;
-    });
-  }
+  const activeSeverities = activeSeveritiesProp ?? new Set(["critical", "high", "medium", "low"]);
+  const activeSources = activeSourcesProp ?? null;
 
   function clearFilters() {
     setSearch("");
-    setActiveSeverities(new Set(["critical", "high", "medium", "low"]));
-    setSelectedTypeFilters([]);
-    setActiveSources(null);
     setSortOrder("sev-desc");
   }
 
   const isFiltered =
     search.trim() !== "" ||
-    activeSeverities.size < 4 ||
-    selectedTypeFilters.length > 0 ||
-    activeSources !== null ||
     sortOrder !== "sev-desc";
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const expandedTypeCodes = selectedTypeFilters.length > 0
-      ? expandSelectionsToCodes(selectedTypeFilters, hierarchy)
-      : null;
     let result = events.filter((e) => {
       const sev = mapSeverity(e.severity);
       if (!activeSeverities.has(sev)) return false;
-      if (expandedTypeCodes && !e.types.some((t) => expandedTypeCodes.includes(t))) return false;
+      if (expandedTypeCodesProp && !e.types.some((t) => expandedTypeCodesProp.includes(t))) return false;
       if (activeSources !== null && !e.signals.some((s) => activeSources.has(s.source.name))) return false;
       if (q) {
         const title = (e.title ?? e.description ?? e.types[0] ?? "").toLowerCase();
@@ -163,7 +137,7 @@ export function EventsTab({
     });
 
     return result;
-  }, [events, search, activeSeverities, selectedTypeFilters, hierarchy, activeSources, sortOrder]);
+  }, [events, search, activeSeverities, expandedTypeCodesProp, activeSources, sortOrder]);
 
   const listCountLabel =
     filtered.length === events.length
@@ -276,53 +250,6 @@ export function EventsTab({
                   );
                 })}
               </Group>
-
-              <Divider color="var(--color-border)" my={10} />
-              <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Event Type</Text>
-              <DisasterTypePicker
-                hierarchy={hierarchy}
-                selected={selectedTypeFilters}
-                onChange={setSelectedTypeFilters}
-                size="xs"
-              />
-
-              {allSources.length > 0 && (
-                <>
-                  <Divider color="var(--color-border)" mb={10} mt={10} />
-                  <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Source</Text>
-                  <Stack gap={4}>
-                    {allSources.map((src) => {
-                      const active = activeSources === null || activeSources.has(src);
-                      return (
-                        <button
-                          key={src}
-                          onClick={() => toggleSource(src)}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "5px 10px",
-                            borderRadius: 6,
-                            border: "1px solid",
-                            borderColor: active ? "color-mix(in srgb, var(--color-accent) 20%, transparent)" : "var(--color-border)",
-                            background: active ? "var(--color-accent-light)" : "var(--color-bg-muted)",
-                            color: active ? "var(--color-accent)" : "var(--color-text-muted)",
-                            fontSize: 12,
-                            fontWeight: 500,
-                            cursor: "pointer",
-                            textAlign: "left",
-                          }}
-                        >
-                          {src}
-                          {active && (
-                            <Box style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-accent)" }} />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </Stack>
-                </>
-              )}
 
               {isFiltered && (
                 <>

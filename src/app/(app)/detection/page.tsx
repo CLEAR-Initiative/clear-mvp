@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { Box, Tabs, Button, Group } from "@mantine/core";
+import { Box, Tabs, Button, Group, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
+import { IconFilter } from "@tabler/icons-react";
+import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -25,6 +27,15 @@ export default function DetectionPage() {
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [selectedDate, setSelectedDate] = useState(dateOptions[0] ?? "Last 30 days");
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [activeSeverities, setActiveSeverities] = useState<Set<string>>(new Set(["critical", "high", "medium", "low"]));
+  const [selectedTypeFilters, setSelectedTypeFilters] = useState<string[]>([]);
+  const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, { staleTime: Infinity, refetchOnWindowFocus: false });
+  const hierarchy = hierarchyQuery.data ?? [];
+  const expandedTypeCodes = selectedTypeFilters.length > 0 ? expandSelectionsToCodes(selectedTypeFilters, hierarchy) : null;
+  const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
+  const isFiltered = activeSeverities.size < 4 || selectedTypeFilters.length > 0 || activeSources !== null;
+  const filterCount = (activeSeverities.size < 4 ? 1 : 0) + (selectedTypeFilters.length > 0 ? 1 : 0) + (activeSources !== null ? 1 : 0);
 
   const { activeTeamId } = useTeam();
   const { countries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
@@ -89,6 +100,14 @@ export default function DetectionPage() {
     const raw = alertsQuery.data?.alerts ?? [];
     return [...raw].sort((a, b) => b.event.rank - a.event.rank);
   }, [alertsQuery.data?.alerts]);
+
+  const allSources = useMemo(() => {
+    const s = new Set<string>();
+    allAlerts.forEach((a) => a.event.signals.forEach((sig) => s.add(sig.source.name)));
+    (eventsQuery.data ?? []).forEach((e) => e.signals.forEach((sig) => s.add(sig.source.name)));
+    (signalsQuery.data ?? []).forEach((sig) => s.add(sig.source.name));
+    return [...s].sort();
+  }, [allAlerts, eventsQuery.data, signalsQuery.data]);
 
   const focusCountryPCode = countryConfig[selectedCountry]?.pCode;
   const focusCountryName = selectedCountry;
@@ -225,8 +244,106 @@ export default function DetectionPage() {
           date={selectedDate}
           onDateChange={setSelectedDate}
           dateOptions={dateOptions}
-        />
-        <Group gap={12}>
+        >
+          {/* Filter popover - sits inline after Date at same height */}
+          <Box>
+            <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 5 }}>Filter</Text>
+            <Popover
+              opened={filterOpen}
+              onChange={setFilterOpen}
+              position="bottom-start"
+              shadow="md"
+              width={270}
+              withinPortal
+            >
+              <Popover.Target>
+                <ActionIcon
+                  variant="default"
+                  size={30}
+                  style={{ position: "relative", border: "1px solid #E5E5E5", borderRadius: 4 }}
+                  onClick={() => setFilterOpen((o) => !o)}
+                  title="Filter"
+                >
+                  <IconFilter size={13} color={isFiltered ? "var(--color-accent)" : "var(--color-text-muted)"} />
+                  {isFiltered && (
+                    <Box style={{ position: "absolute", top: -4, right: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Text style={{ fontSize: 9, color: "white", fontWeight: 700, lineHeight: 1 }}>{filterCount}</Text>
+                    </Box>
+                  )}
+                </ActionIcon>
+              </Popover.Target>
+              <Popover.Dropdown p={14} onMouseDown={(e) => e.stopPropagation()}>
+                <Group justify="space-between" mb={10}>
+                  <Text size="xs" fw={700} tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.06em" }}>Filters</Text>
+                  {isFiltered && (
+                    <Button size="compact-xs" variant="subtle" color="gray" onClick={() => { setActiveSeverities(new Set(["critical", "high", "medium", "low"])); setSelectedTypeFilters([]); setActiveSources(null); }}>
+                      Clear all
+                    </Button>
+                  )}
+                </Group>
+                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Severity</Text>
+                <Group gap={6} mb={12} wrap="wrap">
+                  {(["critical", "high", "medium", "low"] as const).map((sev) => {
+                    const active = activeSeverities.has(sev);
+                    return (
+                      <Badge
+                        key={sev}
+                        size="sm"
+                        variant={active ? "filled" : "light"}
+                        color={sev === "critical" ? "red" : sev === "high" ? "orange" : sev === "medium" ? "yellow" : "green"}
+                        style={{ cursor: "pointer", textTransform: "capitalize" }}
+                        onClick={() => setActiveSeverities((prev) => {
+                          const next = new Set(prev);
+                          next.has(sev) ? next.delete(sev) : next.add(sev);
+                          return next;
+                        })}
+                      >
+                        {sev.charAt(0).toUpperCase() + sev.slice(1)}
+                      </Badge>
+                    );
+                  })}
+                </Group>
+                <Divider color="var(--color-border)" mb={10} />
+                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Event Type</Text>
+                <DisasterTypePicker
+                  hierarchy={hierarchy}
+                  selected={selectedTypeFilters}
+                  onChange={setSelectedTypeFilters}
+                  size="xs"
+                />
+                {allSources.length > 0 && (
+                  <>
+                    <Divider color="var(--color-border)" my={10} />
+                    <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Source</Text>
+                    <Group gap={6} wrap="wrap">
+                      {allSources.map((src) => {
+                        const active = activeSources === null || activeSources.has(src);
+                        return (
+                          <Badge
+                            key={src}
+                            size="sm"
+                            variant={active ? "filled" : "light"}
+                            color={active ? "dark" : "gray"}
+                            style={{ cursor: "pointer", textTransform: "none" }}
+                            onClick={() => setActiveSources((prev) => {
+                              const base = prev ?? new Set(allSources);
+                              const next = new Set(base);
+                              next.has(src) ? next.delete(src) : next.add(src);
+                              return next.size === allSources.length ? null : next;
+                            })}
+                          >
+                            {src}
+                          </Badge>
+                        );
+                      })}
+                    </Group>
+                  </>
+                )}
+              </Popover.Dropdown>
+            </Popover>
+          </Box>
+        </FilterBar>
+        <Group gap={8}>
           <Button
             size="xs"
             leftSection={<IconPlus size={14} />}
@@ -276,6 +393,9 @@ export default function DetectionPage() {
             focusCountryPCode={focusCountryPCode}
             focusCountryName={focusCountryName}
             focusCountryGeometry={focusCountryGeometry}
+            activeSeverities={activeSeverities}
+            expandedTypeCodes={expandedTypeCodes}
+            activeSources={activeSources}
           />
         )}
 
@@ -294,6 +414,8 @@ export default function DetectionPage() {
             focusCountryPCode={focusCountryPCode}
             focusCountryName={focusCountryName}
             focusCountryGeometry={focusCountryGeometry}
+            activeSeverities={activeSeverities}
+            activeSources={activeSources}
           />
         )}
 
@@ -322,6 +444,9 @@ export default function DetectionPage() {
             focusCountryPCode={focusCountryPCode}
             focusCountryName={focusCountryName}
             focusCountryGeometry={focusCountryGeometry}
+            activeSeverities={activeSeverities}
+            expandedTypeCodes={expandedTypeCodes}
+            activeSources={activeSources}
           />
         )}
       </Box>

@@ -67,6 +67,8 @@ interface SignalsTabProps {
   onBoundaryLevelChange?: (level: BoundaryLevel) => void;
   focusCountryPCode?: string;
   focusCountryName?: string;
+  activeSeverities?: Set<string>;
+  activeSources?: Set<string> | null;
 }
 
 export function SignalsTab({
@@ -82,38 +84,28 @@ export function SignalsTab({
   onBoundaryLevelChange,
   focusCountryPCode,
   focusCountryName,
+  activeSeverities: activeSeveritiesProp,
+  activeSources: activeSourcesProp,
 }: SignalsTabProps) {
   const [search, setSearch] = useState("");
-  const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
+  const activeSources = activeSourcesProp ?? null;
+  const activeSeverities = activeSeveritiesProp ?? new Set(["critical", "high", "medium", "low"]);
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [filterOpen, setFilterOpen] = useState(false);
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
 
-  const allSources = useMemo(
-    () => [...new Set(signals.map((s) => s.source.name))].sort(),
-    [signals],
-  );
-
-  function toggleSource(src: string) {
-    setActiveSources((prev) => {
-      const base = prev ?? new Set(allSources);
-      const next = new Set(base);
-      next.has(src) ? next.delete(src) : next.add(src);
-      return next.size === allSources.length ? null : next;
-    });
-  }
-
   function clearFilters() {
     setSearch("");
-    setActiveSources(null);
     setSortOrder("newest");
   }
 
-  const isFiltered = search.trim() !== "" || activeSources !== null || sortOrder !== "newest";
+  const isFiltered = search.trim() !== "" || sortOrder !== "newest";
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let result = signals.filter((s) => {
+      const sev = mapSeverity(s.severity);
+      if (!activeSeverities.has(sev)) return false;
       if (activeSources !== null && !activeSources.has(s.source.name)) return false;
       if (q) {
         const title = (s.title ?? s.description ?? "").toLowerCase();
@@ -133,7 +125,7 @@ export function SignalsTab({
     });
 
     return result;
-  }, [signals, search, activeSources, sortOrder]);
+  }, [signals, search, activeSeverities, activeSources, sortOrder]);
 
   const listCountLabel =
     filtered.length === signals.length
@@ -220,43 +212,6 @@ export function SignalsTab({
               </button>
             </Popover.Target>
             <Popover.Dropdown p={16}>
-              {allSources.length > 0 && (
-                <>
-                  <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Source</Text>
-                  <Stack gap={4}>
-                    {allSources.map((src) => {
-                      const active = activeSources === null || activeSources.has(src);
-                      return (
-                        <button
-                          key={src}
-                          onClick={() => toggleSource(src)}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "5px 10px",
-                            borderRadius: 6,
-                            border: "1px solid",
-                            borderColor: active ? "color-mix(in srgb, var(--color-accent) 20%, transparent)" : "var(--color-border)",
-                            background: active ? "var(--color-accent-light)" : "var(--color-bg-muted)",
-                            color: active ? "var(--color-accent)" : "var(--color-text-muted)",
-                            fontSize: 12,
-                            fontWeight: 500,
-                            cursor: "pointer",
-                            textAlign: "left",
-                          }}
-                        >
-                          {src}
-                          {active && (
-                            <Box style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-accent)" }} />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </Stack>
-                </>
-              )}
-
               {isFiltered && (
                 <>
                   <Divider color="var(--color-border)" my={10} />
