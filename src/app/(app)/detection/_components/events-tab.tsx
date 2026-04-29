@@ -63,6 +63,7 @@ interface EventsTabProps {
   onBoundaryLevelChange?: (level: BoundaryLevel) => void;
   focusCountryPCode?: string;
   focusCountryName?: string;
+  focusCountryGeometry?: unknown;
 }
 
 export function EventsTab({
@@ -79,6 +80,7 @@ export function EventsTab({
   onBoundaryLevelChange,
   focusCountryPCode,
   focusCountryName,
+  focusCountryGeometry,
 }: EventsTabProps) {
   const { getTypeNames } = useDisasterTypes();
   const [search, setSearch] = useState("");
@@ -535,6 +537,7 @@ export function EventsTab({
               className="w-full h-full"
               focusCountryPCode={focusCountryPCode}
               focusCountryName={focusCountryName}
+              focusCountryGeometry={focusCountryGeometry}
               fitBoundsGeometry={fitBoundsGeometry}
               adminBoundaries={adminBoundaries}
               adminBoundaryLevel={adminBoundaryLevel}

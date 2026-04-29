@@ -63,6 +63,7 @@ interface LiveAlertsTabProps {
   onBoundaryLevelChange?: (level: BoundaryLevel) => void;
   focusCountryPCode?: string;
   focusCountryName?: string;
+  focusCountryGeometry?: unknown;
 }
 
 export function LiveAlertsTab({
@@ -79,6 +80,7 @@ export function LiveAlertsTab({
   onBoundaryLevelChange,
   focusCountryPCode,
   focusCountryName,
+  focusCountryGeometry,
 }: LiveAlertsTabProps) {
   const { getTypeNames } = useDisasterTypes();
   const [search, setSearch] = useState("");
@@ -523,6 +525,7 @@ export function LiveAlertsTab({
               className="w-full h-full"
               focusCountryPCode={focusCountryPCode}
               focusCountryName={focusCountryName}
+              focusCountryGeometry={focusCountryGeometry}
               fitBoundsGeometry={fitBoundsGeometry}
               adminBoundaries={adminBoundaries}
               adminBoundaryLevel={adminBoundaryLevel}

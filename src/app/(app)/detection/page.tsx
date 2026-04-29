@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { Box, Tabs, Button, Group, Switch, Text } from "@mantine/core";
+import { Box, Tabs, Button, Group } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -20,18 +20,25 @@ import { SignalsTab } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
 
 export default function DetectionPage() {
-  const [activeTab, setActiveTab] = useState<string | null>("live");
+  const [activeTab, setActiveTab] = useState<string | null>("events");
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [selectedDate, setSelectedDate] = useState(dateOptions[0] ?? "Last 30 days");
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
-  const [includeDummy, setIncludeDummy] = useState(false);
 
   const { activeTeamId } = useTeam();
   const { countries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
 
   const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
   const selectedCountryId = useMemo(() => getLocationId(selectedCountry), [selectedCountry, getLocationId]);
+
+  // Fetch L0 geometry to use as the country mask - avoids Mapbox tileset inaccuracies (e.g. Sudan Red Sea cutoff)
+  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
+  const sudanL0Query = api.locations.getById.useQuery(
+    { id: sudanId! },
+    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const focusCountryGeometry = sudanL0Query.data?.geometry ?? undefined;
 
   const a1BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
     { level: 1, countryId: selectedCountryId ?? undefined },
@@ -63,16 +70,16 @@ export default function DetectionPage() {
     () => (selectedRegion !== "All Regions" ? (regionQuery.data?.geometry ?? null) : null),
     [selectedRegion, regionQuery.data],
   );
-  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId, includeDummy });
+  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId});
   const historyQuery = api.alerts.getAlerts.useQuery(
-    { activeOnly: false, teamId: activeTeamId, includeDummy },
+    { activeOnly: false, teamId: activeTeamId},
     { enabled: activeTab === "history" },
   );
   const eventsQuery = api.events.list.useQuery(
-    { teamId: activeTeamId, includeDummy },
+    { teamId: activeTeamId},
   );
   const signalsQuery = api.signals.list.useQuery(
-    { teamId: activeTeamId, includeDummy },
+    { teamId: activeTeamId},
     { enabled: activeTab === "signals" || activeTab === "history" },
   );
 
@@ -220,15 +227,6 @@ export default function DetectionPage() {
           dateOptions={dateOptions}
         />
         <Group gap={12}>
-          <Group gap={6}>
-            <Switch
-              size="xs"
-              checked={includeDummy}
-              onChange={(e) => setIncludeDummy(e.currentTarget.checked)}
-              color="gray"
-            />
-            <Text size="xs" c="#737373" style={{ fontSize: 11 }}>Demo data</Text>
-          </Group>
           <Button
             size="xs"
             leftSection={<IconPlus size={14} />}
@@ -277,6 +275,7 @@ export default function DetectionPage() {
             onBoundaryLevelChange={setBoundaryLevel}
             focusCountryPCode={focusCountryPCode}
             focusCountryName={focusCountryName}
+            focusCountryGeometry={focusCountryGeometry}
           />
         )}
 
@@ -294,6 +293,7 @@ export default function DetectionPage() {
             onBoundaryLevelChange={setBoundaryLevel}
             focusCountryPCode={focusCountryPCode}
             focusCountryName={focusCountryName}
+            focusCountryGeometry={focusCountryGeometry}
           />
         )}
 
@@ -321,6 +321,7 @@ export default function DetectionPage() {
             onBoundaryLevelChange={setBoundaryLevel}
             focusCountryPCode={focusCountryPCode}
             focusCountryName={focusCountryName}
+            focusCountryGeometry={focusCountryGeometry}
           />
         )}
       </Box>

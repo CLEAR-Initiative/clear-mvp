@@ -39,7 +39,7 @@ interface DetectionKpiRowProps {
 
 export function DetectionKpiRow({ country, alerts, events, onNavigateToAlerts }: DetectionKpiRowProps) {
   const iso3 = ISO3[country] ?? "SDN";
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <Box mb={24}>
