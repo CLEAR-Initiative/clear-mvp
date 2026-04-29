@@ -31,6 +31,7 @@ import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { useDisasterTypes } from "~/hooks/use-disaster-types";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
+import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
 import { formatTimeAgo } from "~/lib/utils";
 
@@ -91,6 +92,7 @@ export function EventsTab({
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
+  const [showPopulation, setShowPopulation] = useState(false);
 
   const allSources = useMemo(
     () => [...new Set(events.flatMap((e) => e.signals.map((s) => s.source.name)))].sort(),
@@ -309,7 +311,7 @@ export function EventsTab({
           )}
         </Group>
         <Card p={0} style={{ border: "1px solid var(--color-border)", position: "sticky", top: 24 }}>
-          <Box style={{ height: 524 }}>
+          <Box style={{ height: 524, position: "relative" }}>
             <CrisisMap
               markers={mapMarkers}
               regions={mapRegions}
@@ -324,6 +326,14 @@ export function EventsTab({
               adminBoundaryLevel={adminBoundaryLevel}
               hoveredMarkerId={hoveredMarkerId}
               onMarkerHover={onMarkerHover}
+            />
+            <MapPanelBar
+              dataView="event"
+              onDataViewChange={() => {}}
+              showPopulation={showPopulation}
+              onShowPopulationChange={setShowPopulation}
+              boundaryLevel={boundaryLevel ?? "A1"}
+              onBoundaryLevelChange={onBoundaryLevelChange ?? (() => {})}
             />
           </Box>
         </Card>
