@@ -1,4 +1,5 @@
 import { Box, Text, Group, Stack, Badge, Button, CloseButton } from "@mantine/core";
+import Link from "next/link";
 import { type CrisisMarker } from "./map-markers-data";
 
 interface MapMarkerDetailProps {
@@ -60,7 +61,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
 
         {/* Details */}
         <Stack gap={0} mb={12}>
-          <DetailRow label="Location" value={marker.region ?? "—"} />
+          <DetailRow label="Location" value={marker.region ?? "-"} />
           {marker.dataSource && <DetailRow label="Data Source" value={marker.dataSource} />}
           {marker.shockDate && (
             <DetailRow
@@ -79,10 +80,23 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
           />
         </Stack>
 
-        <Group gap={8}>
-          <Button size="xs" style={{ flex: 1, background: "#171717" }}>View Details</Button>
-          <Button size="xs" variant="outline" color="gray" style={{ flex: 1 }}>Add to Report</Button>
-        </Group>
+        {marker.eventId && (
+          <Button
+            size="xs"
+            fullWidth
+            component={Link}
+            href={
+              marker.markerKind === "crisis"
+                ? `/crisis/${marker.eventId}`
+                : marker.markerKind === "signal"
+                ? `/signal/${marker.eventId}`
+                : `/event/${marker.eventId}`
+            }
+            style={{ background: "#171717" }}
+          >
+            View Details
+          </Button>
+        )}
       </Box>
     </Box>
   );

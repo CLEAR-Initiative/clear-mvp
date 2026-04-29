@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Group, Select, Text } from "@mantine/core";
 
 const LABEL_STYLE = {
@@ -30,6 +31,7 @@ interface FilterBarProps {
   date?: string;
   onDateChange?: (value: string) => void;
   dateOptions?: string[];
+  children?: ReactNode;
 }
 
 export function FilterBar({
@@ -42,6 +44,7 @@ export function FilterBar({
   date,
   onDateChange,
   dateOptions,
+  children,
 }: FilterBarProps) {
   return (
     <Group gap={12}>
@@ -74,6 +77,7 @@ export function FilterBar({
           label={<FilterLabel>Date</FilterLabel>}
         />
       )}
+      {children}
     </Group>
   );
 }

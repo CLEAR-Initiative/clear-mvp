@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSelectedLayoutSegments } from "next/navigation";
 import { Box, Text, Badge, UnstyledButton, Tooltip, Menu, Drawer } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { FeedbackModal } from "~/components/feedback-modal";
 import {
   IconLayoutDashboard,
   IconTarget,
@@ -17,10 +18,9 @@ import {
   IconSettings,
   IconDoorExit,
   IconShieldCog,
+  IconSpeakerphone,
   IconChevronLeft,
   IconChevronRight,
-  IconBuilding,
-  IconSelector,
   IconMenu2,
 } from "@tabler/icons-react";
 import { cn } from "~/lib/utils";
@@ -28,7 +28,6 @@ import { authClient } from "~/lib/auth-client";
 import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
-import { useTeam } from "~/providers/team-provider";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
 
 interface NavItem {
@@ -70,74 +69,18 @@ const navSections: NavSection[] = [
       { label: "Knowledge Hub", href: "/knowledge", icon: IconBook, featureKey: "knowledge_hub", comingSoonForNonAdmin: true },
     ],
   },
-  {
-    title: "SETTINGS",
-    adminOnly: true,
-    items: [
-      { label: "Organisation", href: "/settings/org", icon: IconBuilding },
-    ],
-  },
 ];
 
 const EXPANDED_W  = 240;
 const COLLAPSED_W = 80;
 const TRANSITION  = "200ms ease";
 
-function TeamSwitcher({ collapsed, labelStyle }: { collapsed: boolean; labelStyle: React.CSSProperties }) {
-  const { activeTeam, teams, switchTeam } = useTeam();
 
-  if (!teams?.length) return null;
-
-  return (
-    <Box style={{ borderBottom: `1px solid ${colors.border}`, flexShrink: 0 }}>
-      <Menu width={220} position="bottom-start">
-        <Menu.Target>
-          <UnstyledButton
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: spacingPx[3],
-              padding: `${spacingPx[3]}px ${spacingPx[5]}px`,
-              width: "100%",
-            }}
-            className="hover:bg-[#F5F5F5] transition-colors"
-          >
-            <IconBuilding size={18} style={{ flexShrink: 0, opacity: 0.6 }} />
-            <Box style={{ flex: 1, minWidth: 0, ...labelStyle }}>
-              <Text size="xs" fw={600} truncate="end">
-                {activeTeam?.name ?? "Select team"}
-              </Text>
-              <Text size="xs" c="dimmed" truncate="end">
-                {activeTeam?.organisation.name}
-              </Text>
-            </Box>
-            <IconSelector size={14} style={{ opacity: 0.5, flexShrink: 0, ...labelStyle }} />
-          </UnstyledButton>
-        </Menu.Target>
-        <Menu.Dropdown>
-          {teams.map((team) => (
-            <Menu.Item
-              key={team.id}
-              onClick={() => switchTeam(team.id)}
-              bg={team.id === activeTeam?.id ? colors.accentLight : undefined}
-            >
-              <Text size="sm" fw={500}>{team.name}</Text>
-              <Text size="xs" c="dimmed">{team.organisation.name}</Text>
-            </Menu.Item>
-          ))}
-          <Menu.Divider />
-          <Menu.Item component={Link} href="/settings/org">
-            Manage organisations
-          </Menu.Item>
-        </Menu.Dropdown>
-      </Menu>
-    </Box>
-  );
-}
 
 export function NavSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, { open: openMobile, close: closeMobile }] = useDisclosure(false);
+  const [feedbackOpen, { open: openFeedback, close: closeFeedback }] = useDisclosure(false);
   const segments = useSelectedLayoutSegments();
   const activeSegment = segments[0] ?? "";
   const router = useRouter();
@@ -210,7 +153,6 @@ export function NavSidebar() {
       </Box>
 
       {/* Mobile team switcher */}
-      <TeamSwitcher collapsed={false} labelStyle={{ opacity: 1, whiteSpace: "nowrap", overflow: "hidden" }} />
 
       {/* Mobile drawer nav */}
       <Box component="nav" style={{ flex: 1, overflowY: "auto", padding: spacingPx[3] }}>
@@ -364,7 +306,6 @@ export function NavSidebar() {
       </Box>
 
       {/* ── Team switcher ──────────────────────────────────────── */}
-      <TeamSwitcher collapsed={collapsed} labelStyle={labelStyle} />
 
       {/* ── Navigation ────────────────────────────────────────── */}
       <Box
@@ -477,6 +418,32 @@ export function NavSidebar() {
 
       {/* Bottom actions */}
       <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3], flexShrink: 0 }}>
+        {/* Feedback */}
+        {(() => {
+          const inner = (
+            <UnstyledButton
+              onClick={openFeedback}
+              style={{
+                display:        "flex",
+                alignItems:     "center",
+                gap:            spacingPx[3],
+                padding:        spacingPx[3],
+                width:          "100%",
+                borderRadius:   6,
+                background:     "transparent",
+                color:          colors.textSecondary,
+                transition:     "background 150ms",
+                marginBottom:   spacingPx[1],
+              }}
+              className="hover:bg-[#F5F5F5] transition-colors"
+            >
+              <IconSpeakerphone size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
+              <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Feedback</Text>
+            </UnstyledButton>
+          );
+          return collapsed ? <Tooltip label="Feedback" position="right" withArrow>{inner}</Tooltip> : inner;
+        })()}
+
         {/* Admin - only visible to admin role */}
         {isAdmin && (() => {
           const isActive = activeSegment === "admin";
@@ -591,6 +558,7 @@ export function NavSidebar() {
         </Box>
       </Box>
     </Box>
+    <FeedbackModal opened={feedbackOpen} onClose={closeFeedback} />
     </>
   );
 }

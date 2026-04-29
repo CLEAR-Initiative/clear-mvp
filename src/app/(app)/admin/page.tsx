@@ -9,6 +9,7 @@ import {
   Box,
   Button,
   Card,
+  Checkbox,
   Divider,
   Group,
   Loader,
@@ -39,7 +40,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
 import { PageHeader, StatsGrid } from "~/components/ui";
@@ -871,6 +872,11 @@ function OrganisationsPanel() {
       return;
     }
 
+    if (!createdTeamId) {
+      setStepError("Create a team in the previous step before inviting members");
+      return;
+    }
+
     let sent = 0;
     const errors: string[] = [];
     for (const email of emails) {
@@ -879,9 +885,12 @@ function OrganisationsPanel() {
           email,
           organisationId: createdOrgId,
           role: inviteRole,
-          ...(createdTeamId
-            ? { teamId: createdTeamId, teamRole: inviteTeamRole }
-            : {}),
+          teams: [
+            {
+              teamId: createdTeamId,
+              teamRole: inviteTeamRole as "lead" | "analyst" | "viewer",
+            },
+          ],
         });
         sent++;
       } catch (err) {
@@ -1474,11 +1483,13 @@ function InvitationsPanel() {
   );
 
   // Invite form state
+  type TeamRole = "lead" | "analyst" | "viewer";
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
-  const [inviteTeamId, setInviteTeamId] = useState<string | null>(null);
-  const [inviteTeamRole, setInviteTeamRole] = useState("viewer");
+  // teamId → teamRole map. Selecting/deselecting a team toggles a row;
+  // role per team defaults to "viewer".
+  const [inviteTeams, setInviteTeams] = useState<Record<string, TeamRole>>({});
   const [inviteError, setInviteError] = useState("");
 
   // Get teams for selected org
@@ -1496,8 +1507,7 @@ function InvitationsPanel() {
       setInviteOpen(false);
       setInviteEmail("");
       setInviteRole("member");
-      setInviteTeamId(null);
-      setInviteTeamRole("viewer");
+      setInviteTeams({});
       setInviteError("");
     },
     onError: (err) => setInviteError(err.message),
@@ -1795,45 +1805,68 @@ function InvitationsPanel() {
             }}
           />
 
-          <Select
-            label="Team (optional)"
-            value={inviteTeamId}
-            onChange={setInviteTeamId}
-            data={teamOptions}
-            placeholder="No team - org only"
-            clearable
-            styles={{
-              label: {
+          <Box>
+            <Text
+              style={{
                 fontSize: fontSizesPx.base,
                 fontWeight: 500,
                 color: colors.textPrimary,
-                marginBottom: 4,
-              },
-              input: { borderColor: colors.border, fontSize: fontSizesPx.lg },
-            }}
-          />
-
-          {inviteTeamId && (
-            <Select
-              label="Team Role"
-              value={inviteTeamRole}
-              onChange={(v) => v && setInviteTeamRole(v)}
-              data={[
-                { value: "viewer", label: "Viewer" },
-                { value: "analyst", label: "Analyst" },
-                { value: "lead", label: "Lead" },
-              ]}
-              styles={{
-                label: {
-                  fontSize: fontSizesPx.base,
-                  fontWeight: 500,
-                  color: colors.textPrimary,
-                  marginBottom: 4,
-                },
-                input: { borderColor: colors.border, fontSize: fontSizesPx.lg },
+                marginBottom: 6,
               }}
-            />
-          )}
+            >
+              Teams <Text component="span" c={colors.critical}>*</Text>
+            </Text>
+            {teamOptions.length === 0 ? (
+              <Text size="sm" c={colors.textMuted}>
+                This organisation has no teams. Create one before inviting.
+              </Text>
+            ) : (
+              <Stack gap={6}>
+                {teamOptions.map((opt) => {
+                  const teamId = opt.value;
+                  const selectedRole = inviteTeams[teamId];
+                  const isSelected = selectedRole !== undefined;
+                  return (
+                    <Group key={teamId} gap={8} wrap="nowrap" align="center">
+                      <Checkbox
+                        checked={isSelected}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                          const checked = e.currentTarget.checked;
+                          setInviteTeams((prev) => {
+                            const next = { ...prev };
+                            if (checked) next[teamId] = "viewer";
+                            else delete next[teamId];
+                            return next;
+                          });
+                        }}
+                        label={opt.label}
+                        styles={{ label: { fontSize: fontSizesPx.base } }}
+                      />
+                      <Box style={{ flex: 1 }} />
+                      <Select
+                        size="xs"
+                        value={selectedRole ?? "viewer"}
+                        onChange={(v) => {
+                          if (!v || !isSelected) return;
+                          setInviteTeams((prev) => ({
+                            ...prev,
+                            [teamId]: v as TeamRole,
+                          }));
+                        }}
+                        data={[
+                          { value: "viewer", label: "Viewer" },
+                          { value: "analyst", label: "Analyst" },
+                          { value: "lead", label: "Lead" },
+                        ]}
+                        disabled={!isSelected}
+                        w={110}
+                      />
+                    </Group>
+                  );
+                })}
+              </Stack>
+            )}
+          </Box>
 
           <Group justify="flex-end" mt={8}>
             <Button
@@ -1849,16 +1882,25 @@ function InvitationsPanel() {
               leftSection={<IconUserPlus size={14} />}
               onClick={() => {
                 setInviteError("");
+                const teams = Object.entries(inviteTeams).map(
+                  ([teamId, teamRole]) => ({ teamId, teamRole }),
+                );
+                if (teams.length === 0) {
+                  setInviteError("Select at least one team");
+                  return;
+                }
                 inviteMutation.mutate({
                   email: inviteEmail.trim(),
                   organisationId: selectedOrgId!,
                   role: inviteRole,
-                  ...(inviteTeamId
-                    ? { teamId: inviteTeamId, teamRole: inviteTeamRole }
-                    : {}),
+                  teams,
                 });
               }}
-              disabled={!inviteEmail.trim() || !selectedOrgId}
+              disabled={
+                !inviteEmail.trim() ||
+                !selectedOrgId ||
+                Object.keys(inviteTeams).length === 0
+              }
             >
               Send Invitation
             </Button>

@@ -13,6 +13,7 @@ const INVITATION_BY_TOKEN_QUERY = `
       teamName
       role
       teamRole
+      teams { teamId teamName teamRole }
       expiresAt
       status
     }
@@ -26,6 +27,7 @@ const PENDING_INVITES_QUERY = `
       email
       role
       teamRole
+      teams { team { id name } teamRole }
       expiresAt
       createdAt
       status
@@ -95,6 +97,7 @@ interface InvitationInfo {
   teamName: string | null;
   role: string;
   teamRole: string | null;
+  teams: { teamId: string; teamName: string; teamRole: string }[];
   expiresAt: string;
   status: "pending" | "accepted" | "expired";
 }
@@ -104,6 +107,7 @@ interface InvitationFull {
   email: string;
   role: string;
   teamRole: string | null;
+  teams: { team: { id: string; name: string }; teamRole: string }[];
   expiresAt: string;
   createdAt: string;
   status: string;
@@ -138,15 +142,21 @@ export const invitationsRouter = createTRPCRouter({
       return data.pendingInvites;
     }),
 
-  /** Invite a user to an org (+ optional team) */
+  /** Invite a user to an org with one or more team assignments. */
   invite: protectedProcedure
     .input(
       z.object({
         email: z.string().email(),
         organisationId: z.string(),
-        teamId: z.string().optional(),
         role: z.string().optional(),
-        teamRole: z.string().optional(),
+        teams: z
+          .array(
+            z.object({
+              teamId: z.string(),
+              teamRole: z.enum(["lead", "analyst", "viewer"]),
+            }),
+          )
+          .min(1, "At least one team must be selected"),
       }),
     )
     .mutation(async ({ ctx, input }) => {

@@ -95,6 +95,7 @@ export interface GqlEvent {
   firstSignalCreatedAt: string;
   lastSignalCreatedAt: string;
   populationAffected: string | null;
+  casualties: number | null;
   originLocation: GqlLocation | null;
   destinationLocation: GqlLocation | null;
   generalLocation: GqlLocation | null;
