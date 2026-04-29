@@ -25,7 +25,7 @@ export default function DetectionPage() {
   const [activeTab, setActiveTab] = useState<string | null>("events");
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
-  const [selectedDate, setSelectedDate] = useState(dateOptions[0] ?? "Last 30 days");
+  const [selectedDate, setSelectedDate] = useState("Last 30 days");
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [activeSeverities, setActiveSeverities] = useState<Set<string>>(new Set(["critical", "high", "medium", "low"]));
