@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
-import type { GqlAlert, GqlEvent, GqlSituation } from "~/lib/types/graphql";
+import type { GqlAlert, GqlEvent, GqlCrisis } from "~/lib/types/graphql";
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry
@@ -40,7 +40,7 @@ const EVENT_FIELDS = `
   alerts { id status }
 `;
 
-const SITUATION_FIELDS = `
+const CRISIS_FIELDS = `
   id
   title
   summary
@@ -55,9 +55,9 @@ const EVENTS_LIST_QUERY = `
   }
 `;
 
-const SITUATIONS_LIST_QUERY = `
-  query Situations {
-    situations { ${SITUATION_FIELDS} }
+const CRISES_LIST_QUERY = `
+  query Crises {
+    crises { ${CRISIS_FIELDS} }
   }
 `;
 
@@ -172,13 +172,13 @@ export const alertsRouter = createTRPCRouter({
       return { events: data.events };
     }),
 
-  getSituations: protectedProcedure.query(async ({ ctx }) => {
-    const data = await graphqlFetch<{ situations: GqlSituation[] }>(
-      SITUATIONS_LIST_QUERY,
+  getCrises: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{ crises: GqlCrisis[] }>(
+      CRISES_LIST_QUERY,
       undefined,
       cookieHeaders(ctx),
     );
-    return { situations: data.situations };
+    return { crises: data.crises };
   }),
 
   getShockTypes: publicProcedure.query(() => {
