@@ -24,6 +24,7 @@ import {
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
+import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
 import { api } from "~/trpc/react";
@@ -91,6 +92,7 @@ export function LiveAlertsTab({
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
+  const [showPopulation, setShowPopulation] = useState(false);
 
   const activeSeverities = activeSeveritiesProp ?? new Set(["critical", "high", "medium", "low"]);
   const activeSources = activeSourcesProp ?? null;
@@ -300,7 +302,7 @@ export function LiveAlertsTab({
           )}
         </Group>
         <Card p={0} style={{ border: "1px solid var(--color-border)", position: "sticky", top: 24 }}>
-          <Box style={{ height: 524 }}>
+          <Box style={{ height: 524, position: "relative" }}>
             <CrisisMap
               markers={mapMarkers}
               regions={mapRegions}
@@ -315,6 +317,14 @@ export function LiveAlertsTab({
               adminBoundaryLevel={adminBoundaryLevel}
               hoveredMarkerId={hoveredMarkerId}
               onMarkerHover={onMarkerHover}
+            />
+            <MapPanelBar
+              dataView="alert"
+              onDataViewChange={() => {}}
+              showPopulation={showPopulation}
+              onShowPopulationChange={setShowPopulation}
+              boundaryLevel={boundaryLevel ?? "A1"}
+              onBoundaryLevelChange={onBoundaryLevelChange ?? (() => {})}
             />
           </Box>
         </Card>
