@@ -33,6 +33,7 @@ import {
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
+import { COUNTRIES, COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
 import { NotificationPreferencesSection } from "./_components/NotificationPreferencesSection";
 import { AlertSubscriptionsSection } from "./_components/AlertSubscriptionsSection";
 
@@ -68,45 +69,18 @@ interface ProfileUser {
   isActive: boolean;
 }
 
-// Countries ordered: NRC operational priority first, then alphabetical.
-const DIAL_CODES = [
-  { value: "+249", label: "🇸🇩 Sudan (+249)" },
-  { value: "+251", label: "🇪🇹 Ethiopia (+251)" },
-  { value: "+252", label: "🇸🇴 Somalia (+252)" },
-  { value: "+256", label: "🇺🇬 Uganda (+256)" },
-  { value: "+963", label: "🇸🇾 Syria (+963)" },
-  { value: "+93",  label: "🇦🇫 Afghanistan (+93)" },
-  { value: "+380", label: "🇺🇦 Ukraine (+380)" },
-  { value: "+967", label: "🇾🇪 Yemen (+967)" },
-  { value: "+1",   label: "🇺🇸 United States (+1)" },
-  { value: "+44",  label: "🇬🇧 United Kingdom (+44)" },
-  { value: "+33",  label: "🇫🇷 France (+33)" },
-  { value: "+49",  label: "🇩🇪 Germany (+49)" },
-  { value: "+47",  label: "🇳🇴 Norway (+47)" },
-  { value: "+31",  label: "🇳🇱 Netherlands (+31)" },
-  { value: "+41",  label: "🇨🇭 Switzerland (+41)" },
-  { value: "+46",  label: "🇸🇪 Sweden (+46)" },
-  { value: "+20",  label: "🇪🇬 Egypt (+20)" },
-  { value: "+254", label: "🇰🇪 Kenya (+254)" },
-  { value: "+243", label: "🇨🇩 DR Congo (+243)" },
-  { value: "+211", label: "🇸🇸 South Sudan (+211)" },
-  { value: "+222", label: "🇲🇷 Mauritania (+222)" },
-  { value: "+234", label: "🇳🇬 Nigeria (+234)" },
-];
-
-function parseE164(e164: string): { dialCode: string; local: string } {
-  const match = DIAL_CODES.map((d) => d.value)
-    .sort((a, b) => b.length - a.length) // longest prefix first
-    .find((code) => e164.startsWith(code));
-  if (match) return { dialCode: match, local: e164.slice(match.length) };
-  return { dialCode: "+249", local: e164.replace(/^\+\d+/, "") };
+function parseE164(e164: string): { iso: string; local: string } {
+  const sorted = [...COUNTRIES].sort((a, b) => b.dialCode.length - a.dialCode.length);
+  const match = sorted.find((c) => e164.startsWith(c.dialCode));
+  if (match) return { iso: match.iso, local: e164.slice(match.dialCode.length) };
+  return { iso: "SD", local: "" };
 }
 
 function MobileNumberField() {
   const utils = api.useUtils();
   const phoneQuery = api.auth.myPhoneNumber.useQuery();
   const [editing, setEditing] = useState(false);
-  const [dialCode, setDialCode] = useState("+249");
+  const [selectedIso, setSelectedIso] = useState("SD");
   const [localNumber, setLocalNumber] = useState("");
 
   const savedE164 = phoneQuery.data?.phoneNumber ?? "";
@@ -116,13 +90,13 @@ function MobileNumberField() {
     if (phoneQuery.data !== undefined && !editing) {
       if (savedE164) {
         const parsed = parseE164(savedE164);
-        setDialCode(parsed.dialCode);
+        setSelectedIso(parsed.iso);
         setLocalNumber(parsed.local);
       }
     }
   }, [phoneQuery.data, editing, savedE164]);
 
-  const currentE164 = localNumber ? `${dialCode}${localNumber.replace(/\s/g, "")}` : "";
+  const currentE164 = localNumber ? `${getDialCode(selectedIso)}${localNumber.replace(/\s/g, "")}` : "";
   const isDirty = currentE164 !== savedE164;
 
   const updateProfile = api.auth.updateProfile.useMutation({
@@ -139,7 +113,7 @@ function MobileNumberField() {
   function handleCancel() {
     if (savedE164) {
       const parsed = parseE164(savedE164);
-      setDialCode(parsed.dialCode);
+      setSelectedIso(parsed.iso);
       setLocalNumber(parsed.local);
     } else {
       setLocalNumber("");
@@ -167,12 +141,13 @@ function MobileNumberField() {
       <Text size="xs" c="var(--color-text-muted)" mb={4}>Mobile</Text>
       <Group gap={8} align="center" wrap="nowrap">
         <Select
-          data={DIAL_CODES}
-          value={dialCode}
-          onChange={(v: string | null) => { setDialCode(v ?? "+249"); }}
+          data={COUNTRY_SELECT_DATA}
+          value={selectedIso}
+          onChange={(v: string | null) => { setSelectedIso(v ?? "SD"); }}
+          searchable
           size="xs"
           readOnly={readOnly}
-          style={{ width: 180, flexShrink: 0 }}
+          style={{ width: readOnly ? "auto" : 220, flexShrink: 0 }}
           styles={{
             input: {
               fontSize: 13,
