@@ -354,7 +354,7 @@ function ProfileContent({ user }: { user: ProfileUser }) {
 
       {activeTab === "notifications" && (
         <>
-          <NotificationPreferencesSection user={user} />
+          <NotificationPreferencesSection />
           <AlertSubscriptionsSection />
         </>
       )}

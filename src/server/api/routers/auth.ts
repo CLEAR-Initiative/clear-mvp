@@ -59,6 +59,14 @@ const UPDATE_PROFILE = `
   }
 `;
 
+const GET_USER_NOTIFICATION_PREFS = `
+  query GetUser($id: String!) {
+    user(id: $id) {
+      enableEmailNotification
+    }
+  }
+`;
+
 export const authRouter = createTRPCRouter({
   me: publicProcedure.query(async ({ ctx }) => {
     try {
@@ -118,6 +126,25 @@ export const authRouter = createTRPCRouter({
       });
       return { success: true, already_verified: !result.verifyEmail };
     }),
+
+  myNotificationPrefs: publicProcedure.query(async ({ ctx }) => {
+    const cookie = ctx.headers.get("cookie") ?? "";
+    const sessionRes = await fetch(`${API_URL}/api/auth/get-session`, {
+      headers: { Cookie: cookie },
+    });
+    const session = (await sessionRes.json()) as { user?: { id?: string } } | null;
+    const userId = session?.user?.id;
+    if (!userId) return { emailEnabled: false };
+
+    const data = await graphqlFetch<{ user: { enableEmailNotification: boolean } | null }>(
+      GET_USER_NOTIFICATION_PREFS,
+      { id: userId },
+      { Cookie: cookie },
+    );
+    return {
+      emailEnabled: data.user?.enableEmailNotification ?? false,
+    };
+  }),
 
   updateNotificationPrefs: publicProcedure
     .input(
