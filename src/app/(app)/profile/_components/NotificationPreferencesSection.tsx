@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Card,
   Text,
@@ -17,6 +18,15 @@ export function NotificationPreferencesSection() {
   const utils = api.useUtils();
   const prefsQuery = api.auth.myNotificationPrefs.useQuery();
 
+  // Local state for instant toggle feedback; synced from server on load.
+  const [emailEnabled, setEmailEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (prefsQuery.data !== undefined && emailEnabled === null) {
+      setEmailEnabled(prefsQuery.data.emailEnabled);
+    }
+  }, [prefsQuery.data, emailEnabled]);
+
   const updatePrefs = api.auth.updateNotificationPrefs.useMutation({
     onSuccess: () => {
       notifications.show({
@@ -28,16 +38,17 @@ export function NotificationPreferencesSection() {
       void utils.auth.myNotificationPrefs.invalidate();
     },
     onError: (err) => {
+      // Revert on failure
+      setEmailEnabled(prefsQuery.data?.emailEnabled ?? false);
       notifications.show({
         title: "Error",
         message: err.message,
         color: "red",
       });
-      void utils.auth.myNotificationPrefs.invalidate();
     },
   });
 
-  const emailEnabled = prefsQuery.data?.emailEnabled ?? false;
+  const displayEmailEnabled = emailEnabled ?? false;
   const isSaving = updatePrefs.isPending;
 
   return (
@@ -72,11 +83,13 @@ export function NotificationPreferencesSection() {
               </Text>
             </Box>
             <Switch
-              checked={emailEnabled}
+              checked={displayEmailEnabled}
               disabled={isSaving}
-              onChange={(e) =>
-                updatePrefs.mutate({ enableEmailNotification: e.currentTarget.checked })
-              }
+              onChange={(e) => {
+                const newValue = e.currentTarget.checked;
+                setEmailEnabled(newValue);
+                updatePrefs.mutate({ enableEmailNotification: newValue });
+              }}
               color="teal"
             />
           </Group>
