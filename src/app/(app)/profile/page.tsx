@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Box,
@@ -12,6 +12,10 @@ import {
   Tabs,
   Loader,
   Table,
+  TextInput,
+  ActionIcon,
+  Divider,
+  Stack,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import {
@@ -21,6 +25,11 @@ import {
   IconKey,
   IconCheck,
   IconSettings,
+  IconPencil,
+  IconX,
+  IconPhone,
+  IconLanguage,
+  IconClock,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
@@ -59,6 +68,90 @@ interface ProfileUser {
   isActive: boolean;
 }
 
+function MobileNumberField() {
+  const utils = api.useUtils();
+  const phoneQuery = api.auth.myPhoneNumber.useQuery();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState("");
+
+  useEffect(() => {
+    if (phoneQuery.data !== undefined && !editing) {
+      setValue(phoneQuery.data.phoneNumber ?? "");
+    }
+  }, [phoneQuery.data, editing]);
+
+  const savedValue = phoneQuery.data?.phoneNumber ?? "";
+  const isDirty = editing && value !== savedValue;
+
+  const updateProfile = api.auth.updateProfile.useMutation({
+    onSuccess: () => {
+      setEditing(false);
+      void utils.auth.myPhoneNumber.invalidate();
+      notifications.show({ title: "Saved", message: "Mobile number updated.", color: "green", autoClose: 2000 });
+    },
+    onError: (err) => {
+      notifications.show({ title: "Error", message: err.message, color: "red" });
+    },
+  });
+
+  function handleCancel() {
+    setValue(savedValue);
+    setEditing(false);
+  }
+
+  function handleSave() {
+    updateProfile.mutate({ phoneNumber: value });
+  }
+
+  return (
+    <Box>
+      <Text size="xs" c="var(--color-text-muted)" mb={4}>Mobile</Text>
+      <Group gap={8} align="center">
+        {editing ? (
+          <>
+            <TextInput
+              value={value}
+              onChange={(e) => setValue(e.currentTarget.value)}
+              placeholder="+249912345678"
+              size="xs"
+              style={{ flex: 1, maxWidth: 240 }}
+              styles={{ input: { fontSize: 13 } }}
+              autoFocus
+            />
+            <Button size="xs" variant="subtle" color="gray" onClick={handleCancel} leftSection={<IconX size={12} />}>
+              Cancel
+            </Button>
+            <Button
+              size="xs"
+              color="dark"
+              loading={updateProfile.isPending}
+              disabled={!isDirty}
+              onClick={handleSave}
+            >
+              Save
+            </Button>
+          </>
+        ) : (
+          <>
+            <Text size="sm" fw={500} c={savedValue ? "var(--color-text-primary)" : "var(--color-text-muted)"}>
+              {savedValue || "Not set"}
+            </Text>
+            <ActionIcon
+              size="xs"
+              variant="subtle"
+              color="gray"
+              onClick={() => setEditing(true)}
+              title="Edit mobile number"
+            >
+              <IconPencil size={13} />
+            </ActionIcon>
+          </>
+        )}
+      </Group>
+    </Box>
+  );
+}
+
 function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) {
   const { activeTeamId, switchTeam } = useTeam();
   const teamsQuery = api.teams.myTeams.useQuery();
@@ -79,7 +172,7 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
     };
   });
 
-  async function handleSetActive(teamId: string, teamName: string) {
+  function handleSetActive(teamId: string, teamName: string) {
     setActivating(teamId);
     switchTeam(teamId);
     notifications.show({
@@ -170,34 +263,46 @@ function SettingsContent({ user }: { user: ProfileUser }) {
         <>
           {/* Information */}
           <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
-            <Group gap={8} mb={16}>
+            <Group gap={8} mb={20}>
               <IconUser size={18} color="var(--color-accent)" />
               <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
                 Information
               </Text>
             </Group>
 
-            <Box mb={16}>
-              <Text size="xs" c="var(--color-text-muted)" mb={2}>Name</Text>
-              <Text size="sm" fw={500}>{user.name || "Not set"}</Text>
-            </Box>
-
-            <Group justify="space-between" align="flex-start">
+            <Stack gap={20}>
+              {/* Name */}
               <Box>
-                <Text size="xs" c="var(--color-text-muted)" mb={2}>Email</Text>
-                <Text size="sm" fw={500}>{user.email}</Text>
+                <Text size="xs" c="var(--color-text-muted)" mb={4}>Name</Text>
+                <Text size="sm" fw={500}>{user.name || "Not set"}</Text>
               </Box>
-              <Button
-                component={Link}
-                href="/change-password"
-                variant="outline"
-                color="gray"
-                leftSection={<IconKey size={14} />}
-                size="xs"
-              >
-                Change Password
-              </Button>
-            </Group>
+
+              <Divider color="var(--color-border)" />
+
+              {/* Email + Change Password */}
+              <Group justify="space-between" align="center">
+                <Box>
+                  <Text size="xs" c="var(--color-text-muted)" mb={4}>Email</Text>
+                  <Text size="sm" fw={500}>{user.email}</Text>
+                </Box>
+                <Button
+                  component={Link}
+                  href="/change-password"
+                  variant="outline"
+                  color="gray"
+                  leftSection={<IconKey size={13} />}
+                  size="xs"
+                  style={{ fontSize: 12 }}
+                >
+                  Change Password
+                </Button>
+              </Group>
+
+              <Divider color="var(--color-border)" />
+
+              {/* Mobile */}
+              <MobileNumberField />
+            </Stack>
           </Card>
 
           {/* Organisation & Roles */}
@@ -205,19 +310,26 @@ function SettingsContent({ user }: { user: ProfileUser }) {
 
           {/* Preferences */}
           <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
-            <Group gap={8} mb={16}>
+            <Group gap={8} mb={20}>
               <IconSettings size={18} color="var(--color-accent)" />
               <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
                 Preferences
               </Text>
             </Group>
-            <Group gap={32}>
-              <Box>
-                <Text size="xs" c="var(--color-text-muted)" mb={2}>Language</Text>
+            <Group gap={0} grow>
+              <Box px={4}>
+                <Group gap={6} mb={6}>
+                  <IconLanguage size={14} color="var(--color-text-muted)" />
+                  <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>Language</Text>
+                </Group>
                 <Text size="sm" fw={500}>English</Text>
               </Box>
-              <Box>
-                <Text size="xs" c="var(--color-text-muted)" mb={2}>Timezone</Text>
+              <Divider orientation="vertical" color="var(--color-border)" />
+              <Box px={24}>
+                <Group gap={6} mb={6}>
+                  <IconClock size={14} color="var(--color-text-muted)" />
+                  <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>Timezone</Text>
+                </Group>
                 <Text size="sm" fw={500}>UTC</Text>
               </Box>
             </Group>

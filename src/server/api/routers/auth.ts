@@ -67,6 +67,14 @@ const GET_USER_NOTIFICATION_PREFS = `
   }
 `;
 
+const GET_USER_PHONE = `
+  query GetUserPhone($id: String!) {
+    user(id: $id) {
+      phoneNumber
+    }
+  }
+`;
+
 export const authRouter = createTRPCRouter({
   me: publicProcedure.query(async ({ ctx }) => {
     try {
@@ -144,6 +152,23 @@ export const authRouter = createTRPCRouter({
     return {
       emailEnabled: data.user?.enableEmailNotification ?? false,
     };
+  }),
+
+  myPhoneNumber: publicProcedure.query(async ({ ctx }) => {
+    const cookie = ctx.headers.get("cookie") ?? "";
+    const sessionRes = await fetch(`${API_URL}/api/auth/get-session`, {
+      headers: { Cookie: cookie },
+    });
+    const session = (await sessionRes.json()) as { user?: { id?: string } } | null;
+    const userId = session?.user?.id;
+    if (!userId) return { phoneNumber: null as string | null };
+
+    const data = await graphqlFetch<{ user: { phoneNumber: string | null } | null }>(
+      GET_USER_PHONE,
+      { id: userId },
+      { Cookie: cookie },
+    );
+    return { phoneNumber: data.user?.phoneNumber ?? null };
   }),
 
   updateNotificationPrefs: publicProcedure
