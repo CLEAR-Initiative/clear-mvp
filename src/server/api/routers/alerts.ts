@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
-import type { GqlAlert, GqlEvent, GqlCrisis } from "~/lib/types/graphql";
+import type { GqlAlert, GqlEvent, GqlSignal, GqlCrisis } from "~/lib/types/graphql";
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry
@@ -90,6 +90,80 @@ const CREATE_ALERT_MUTATION = `
     }
   }
 `;
+
+// ─── Paginated queries (alerts / events / signals) + cross-entity stats ───
+// Each *Page query mirrors the shape of the underlying list query but wraps
+// the rows in `{ items, totalCount, hasMore }` so the UI can render proper
+// pagination + filter chips. `entityStats` is a cross-entity counter that
+// honours the same filter shape.
+
+const ALERTS_PAGE_QUERY = `
+  query AlertsPage($input: AlertsPageInput) {
+    alertsPage(input: $input) {
+      totalCount
+      hasMore
+      items {
+        id
+        status
+        event { ${EVENT_FIELDS} }
+      }
+    }
+  }
+`;
+
+const EVENTS_PAGE_QUERY = `
+  query EventsPage($input: EventsPageInput) {
+    eventsPage(input: $input) {
+      totalCount
+      hasMore
+      items { ${EVENT_FIELDS} }
+    }
+  }
+`;
+
+const SIGNALS_PAGE_QUERY = `
+  query SignalsPage($input: SignalsPageInput) {
+    signalsPage(input: $input) {
+      totalCount
+      hasMore
+      items { ${SIGNAL_FIELDS} }
+    }
+  }
+`;
+
+const ENTITY_STATS_QUERY = `
+  query EntityStats($input: EntityStatsInput!) {
+    entityStats(input: $input) {
+      total
+      buckets { key count }
+    }
+  }
+`;
+
+// Shared zod fragments for the filter shape.
+const dateLike = z.union([z.date(), z.string()]).optional();
+const commonFilter = {
+  teamId: z.string().nullish(),
+  locationId: z.string().nullish(),
+  eventTypes: z.array(z.string()).optional(),
+  severityMin: z.number().int().min(1).max(5).optional(),
+  severityMax: z.number().int().min(1).max(5).optional(),
+  from: dateLike,
+  to: dateLike,
+  includeDummy: z.boolean().optional(),
+};
+
+const ALERT_ORDER = ["CREATED_DESC", "CREATED_ASC", "SEVERITY_DESC", "SEVERITY_ASC"] as const;
+const EVENT_ORDER = ["LAST_SIGNAL_DESC", "LAST_SIGNAL_ASC", "CREATED_DESC", "CREATED_ASC", "SEVERITY_DESC", "SEVERITY_ASC"] as const;
+const SIGNAL_ORDER = ["PUBLISHED_DESC", "PUBLISHED_ASC", "SEVERITY_DESC", "SEVERITY_ASC"] as const;
+const ENTITY_KIND = ["signal", "event", "alert"] as const;
+const STATS_GROUP_BY = ["none", "type", "severity", "day", "week", "month"] as const;
+
+interface PaginatedResult<T> {
+  items: T[];
+  totalCount: number;
+  hasMore: boolean;
+}
 
 export const alertsRouter = createTRPCRouter({
   getAlerts: protectedProcedure
@@ -240,5 +314,90 @@ export const alertsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.createAlert;
+    }),
+
+  // ─── Paginated feeds ───────────────────────────────────────────────────
+  alertsPage: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).optional(),
+        offset: z.number().int().min(0).optional(),
+        orderBy: z.enum(ALERT_ORDER).optional(),
+        status: z.enum(["draft", "published", "archived"]).optional(),
+        ...commonFilter,
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ alertsPage: PaginatedResult<GqlAlert> }>(
+        ALERTS_PAGE_QUERY,
+        { input },
+        cookieHeaders(ctx),
+      );
+      return data.alertsPage;
+    }),
+
+  eventsPage: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).optional(),
+        offset: z.number().int().min(0).optional(),
+        orderBy: z.enum(EVENT_ORDER).optional(),
+        ...commonFilter,
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ eventsPage: PaginatedResult<GqlEvent> }>(
+        EVENTS_PAGE_QUERY,
+        { input },
+        cookieHeaders(ctx),
+      );
+      return data.eventsPage;
+    }),
+
+  signalsPage: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).optional(),
+        offset: z.number().int().min(0).optional(),
+        orderBy: z.enum(SIGNAL_ORDER).optional(),
+        // Signals filter shape mirrors commonFilter except `eventTypes` is
+        // replaced by `sourceNames` (signals don't carry the type array).
+        teamId: z.string().nullish(),
+        locationId: z.string().nullish(),
+        sourceNames: z.array(z.string()).optional(),
+        severityMin: z.number().int().min(1).max(5).optional(),
+        severityMax: z.number().int().min(1).max(5).optional(),
+        from: dateLike,
+        to: dateLike,
+        includeDummy: z.boolean().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ signalsPage: PaginatedResult<GqlSignal> }>(
+        SIGNALS_PAGE_QUERY,
+        { input },
+        cookieHeaders(ctx),
+      );
+      return data.signalsPage;
+    }),
+
+  // ─── Cross-entity stats ────────────────────────────────────────────────
+  entityStats: protectedProcedure
+    .input(
+      z.object({
+        entity: z.enum(ENTITY_KIND),
+        groupBy: z.enum(STATS_GROUP_BY).optional(),
+        ...commonFilter,
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{
+        entityStats: { total: number; buckets: { key: string; count: number }[] };
+      }>(
+        ENTITY_STATS_QUERY,
+        { input },
+        cookieHeaders(ctx),
+      );
+      return data.entityStats;
     }),
 });

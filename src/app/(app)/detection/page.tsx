@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import { Box, Tabs, Button, Group, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { Box, Tabs, Button, Group, Pagination, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
 import { IconFilter } from "@tabler/icons-react";
 import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
 import { useDisclosure } from "@mantine/hooks";
@@ -81,116 +81,148 @@ export default function DetectionPage() {
     () => (selectedRegion !== "All Regions" ? (regionQuery.data?.geometry ?? null) : null),
     [selectedRegion, regionQuery.data],
   );
-  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId});
-  const historyQuery = api.alerts.getAlerts.useQuery(
-    { activeOnly: false, teamId: activeTeamId},
-    { enabled: activeTab === "history" },
-  );
-  const eventsQuery = api.events.list.useQuery(
-    { teamId: activeTeamId},
-  );
-  const signalsQuery = api.signals.list.useQuery(
-    { teamId: activeTeamId},
-    { enabled: activeTab === "signals" || activeTab === "history" },
-  );
+  // ── Pagination state (1-based to match Mantine's <Pagination>) ───────
+  const PAGE_SIZE = 25;
+  const [alertsPageNum, setAlertsPageNum] = useState(1);
+  const [eventsPageNum, setEventsPageNum] = useState(1);
+  const [signalsPageNum, setSignalsPageNum] = useState(1);
 
-  const regions = getRegions(selectedCountry);
-
-  const allAlerts = useMemo(() => {
-    const raw = alertsQuery.data?.alerts ?? [];
-    return [...raw].sort((a, b) => b.event.rank - a.event.rank);
-  }, [alertsQuery.data?.alerts]);
-
-  const allSources = useMemo(() => {
-    const s = new Set<string>();
-    allAlerts.forEach((a) => a.event.signals.forEach((sig) => s.add(sig.source.name)));
-    (eventsQuery.data ?? []).forEach((e) => e.signals.forEach((sig) => s.add(sig.source.name)));
-    (signalsQuery.data ?? []).forEach((sig) => s.add(sig.source.name));
-    return [...s].sort();
-  }, [allAlerts, eventsQuery.data, signalsQuery.data]);
-
-  const focusCountryPCode = countryConfig[selectedCountry]?.pCode;
-  const focusCountryName = selectedCountry;
-
-  // Resolve selected location for filtering
+  // Resolve the focused location id (region overrides country). Drives the
+  // server-side filter AND the client-side `clipToRegion` map clip.
   const selectedLocationId = useMemo(() => {
     if (selectedRegion !== "All Regions") return getLocationId(selectedRegion);
     return getLocationId(selectedCountry);
   }, [selectedCountry, selectedRegion, getLocationId]);
 
-  const selectedLocationName = useMemo(() => {
-    return selectedRegion !== "All Regions" ? selectedRegion : selectedCountry;
-  }, [selectedCountry, selectedRegion]);
+  // ── Server-side filter shape ─────────────────────────────────────────
+  // Date preset → from/to bounds. Recompute only when the preset string
+  // changes; the underlying dates are stable per preset.
+  const dateRange = useMemo(() => parseDateFilter(selectedDate), [selectedDate]);
+  const fromIso = useMemo(() => dateRange.start.toISOString(), [dateRange]);
+  const toIso = useMemo(() => dateRange.end.toISOString(), [dateRange]);
 
-  /** Check if any location in the list matches the selected location (by ID hierarchy or name fallback).
-   *  Items with NO location data at all are always included. */
-  const matchesLocationFilter = useMemo(() => {
-    if (!selectedLocationId && !selectedLocationName) return () => true;
-    return (locs: Array<{ id: string; name: string; ancestorIds?: string[] } | null | undefined>) => {
-      // If item has no location data at all, include it (don't filter out)
-      const hasAnyLocation = locs.some((loc) => loc != null);
-      if (!hasAnyLocation) return true;
+  // Convert the severity Set ("critical"|"high"|"medium"|"low") to the
+  // numeric (min, max) range the API takes. We only push to the server
+  // when the user has actually narrowed the set — full-set means "no
+  // filter". Tabs still apply their own client-side severity filter, so
+  // a non-contiguous selection (e.g. just critical+low) over-fetches by
+  // one step and gets trimmed in the tab.
+  const SEV_NUM: Record<string, number> = { low: 2, medium: 3, high: 4, critical: 5 };
+  const { severityMin, severityMax } = useMemo(() => {
+    if (activeSeverities.size === 0 || activeSeverities.size === 4) {
+      return { severityMin: undefined, severityMax: undefined };
+    }
+    const nums = [...activeSeverities].map((s) => SEV_NUM[s]).filter((n): n is number => typeof n === "number");
+    if (nums.length === 0) return { severityMin: undefined, severityMax: undefined };
+    // "low" maps to severity ≤ 2 — push min down to 1 so we catch severity 1 too.
+    const min = Math.min(...nums) === 2 ? 1 : Math.min(...nums);
+    return { severityMin: min, severityMax: Math.max(...nums) };
+  }, [activeSeverities]);
 
-      return locs.some((loc) => {
-        if (!loc) return false;
-        // Match by ID or ancestorIds
-        if (selectedLocationId) {
-          if (loc.id === selectedLocationId) return true;
-          if (loc.ancestorIds && loc.ancestorIds.length > 0 && loc.ancestorIds.includes(selectedLocationId)) return true;
-        }
-        // Fallback: name matching
-        const locNameLower = loc.name.toLowerCase();
-        const selectedLower = selectedLocationName.toLowerCase();
-        return locNameLower.includes(selectedLower) || selectedLower.includes(locNameLower);
-      });
-    };
-  }, [selectedLocationId, selectedLocationName]);
+  // Reset page → 1 whenever the underlying filter set changes — otherwise
+  // narrowing the filter would leave the user on a non-existent page.
+  useEffect(() => setAlertsPageNum(1), [
+    selectedLocationId, fromIso, toIso, activeTeamId,
+    severityMin, severityMax, expandedTypeCodes,
+  ]);
+  useEffect(() => setEventsPageNum(1), [
+    selectedLocationId, fromIso, toIso, activeTeamId,
+    severityMin, severityMax, expandedTypeCodes,
+  ]);
+  useEffect(() => setSignalsPageNum(1), [
+    selectedLocationId, fromIso, toIso, activeTeamId,
+    severityMin, severityMax, activeSources,
+  ]);
 
-  // Filter alerts by location + date range
-  const alerts = useMemo(() => {
-    if (allAlerts.length === 0) return [];
-    const dateRange = parseDateFilter(selectedDate);
+  const sharedFilter = {
+    teamId: activeTeamId,
+    locationId: selectedLocationId ?? undefined,
+    from: fromIso,
+    to: toIso,
+    severityMin,
+    severityMax,
+    eventTypes: expandedTypeCodes ?? undefined,
+  };
 
-    return allAlerts.filter((alert) => {
-      // Date filter
-      const alertDate = new Date(alert.event.firstSignalCreatedAt).getTime();
-      if (alertDate < dateRange.start.getTime() || alertDate > dateRange.end.getTime()) return false;
+  const alertsQuery = api.alerts.alertsPage.useQuery(
+    {
+      ...sharedFilter,
+      status: "published",
+      orderBy: "SEVERITY_DESC",
+      limit: PAGE_SIZE,
+      offset: (alertsPageNum - 1) * PAGE_SIZE,
+    },
+    { enabled: activeTab === "live" },
+  );
+  const eventsQuery = api.alerts.eventsPage.useQuery(
+    {
+      ...sharedFilter,
+      orderBy: "SEVERITY_DESC",
+      limit: PAGE_SIZE,
+      offset: (eventsPageNum - 1) * PAGE_SIZE,
+    },
+    { enabled: activeTab === "events" },
+  );
+  // Signals don't carry an event-type array — drop eventTypes and forward
+  // sourceNames (which alerts/events don't yet support server-side).
+  const signalsQuery = api.alerts.signalsPage.useQuery(
+    {
+      teamId: activeTeamId,
+      locationId: selectedLocationId ?? undefined,
+      from: fromIso,
+      to: toIso,
+      severityMin,
+      severityMax,
+      sourceNames: activeSources ? [...activeSources] : undefined,
+      orderBy: "PUBLISHED_DESC",
+      limit: PAGE_SIZE,
+      offset: (signalsPageNum - 1) * PAGE_SIZE,
+    },
+    { enabled: activeTab === "signals" },
+  );
 
-      // Location filter
-      const locs = [
-        alert.event.generalLocation,
-        alert.event.originLocation,
-        alert.event.destinationLocation,
-      ];
-      if (!matchesLocationFilter(locs)) return false;
+  // History tab keeps the existing unpaginated queries — it's a roll-up
+  // view and isn't part of the pagination scope.
+  const historyQuery = api.alerts.getAlerts.useQuery(
+    { activeOnly: false, teamId: activeTeamId },
+    { enabled: activeTab === "history" },
+  );
+  const historyEventsQuery = api.events.list.useQuery(
+    { teamId: activeTeamId },
+    { enabled: activeTab === "history" },
+  );
+  const historySignalsQuery = api.signals.list.useQuery(
+    { teamId: activeTeamId },
+    { enabled: activeTab === "history" },
+  );
 
-      return true;
-    });
-  }, [allAlerts, matchesLocationFilter, selectedDate]);
+  const regions = getRegions(selectedCountry);
 
+  // Source list for the popover. Only tells us about sources that show up
+  // in the currently-loaded pages — when more pages load, more sources
+  // appear. Acceptable trade-off vs an unpaginated "all sources" probe.
+  const allSources = useMemo(() => {
+    const s = new Set<string>();
+    (alertsQuery.data?.items ?? []).forEach((a) => a.event.signals.forEach((sig) => s.add(sig.source.name)));
+    (eventsQuery.data?.items ?? []).forEach((e) => e.signals.forEach((sig) => s.add(sig.source.name)));
+    (signalsQuery.data?.items ?? []).forEach((sig) => s.add(sig.source.name));
+    return [...s].sort();
+  }, [alertsQuery.data, eventsQuery.data, signalsQuery.data]);
+
+  const focusCountryPCode = countryConfig[selectedCountry]?.pCode;
+  const focusCountryName = selectedCountry;
+
+  // location + date are now applied server-side via the *Page query inputs.
+  // The page just unwraps `items` and lets the tabs apply any remaining
+  // client-side niceties (sort/search/source filter).
+  const alerts = alertsQuery.data?.items ?? [];
+  const filteredEvents = eventsQuery.data?.items ?? [];
+  const filteredSignals = signalsQuery.data?.items ?? [];
   const historyAlerts = historyQuery.data?.alerts ?? [];
 
-  // Filter events by location + date
-  const filteredEvents = useMemo(() => {
-    const events = eventsQuery.data ?? [];
-    const dateRange = parseDateFilter(selectedDate);
-    return events.filter((e) => {
-      const eventDate = new Date(e.firstSignalCreatedAt).getTime();
-      if (eventDate < dateRange.start.getTime() || eventDate > dateRange.end.getTime()) return false;
-      return matchesLocationFilter([e.generalLocation, e.originLocation, e.destinationLocation]);
-    });
-  }, [eventsQuery.data, matchesLocationFilter, selectedDate]);
-
-  // Filter signals by location + date
-  const filteredSignals = useMemo(() => {
-    const signals = signalsQuery.data ?? [];
-    const dateRange = parseDateFilter(selectedDate);
-    return signals.filter((s) => {
-      const sigDate = new Date(s.publishedAt).getTime();
-      if (sigDate < dateRange.start.getTime() || sigDate > dateRange.end.getTime()) return false;
-      return matchesLocationFilter([s.generalLocation, s.originLocation, s.destinationLocation]);
-    });
-  }, [signalsQuery.data, matchesLocationFilter, selectedDate]);
+  const alertsTotalPages = Math.max(1, Math.ceil((alertsQuery.data?.totalCount ?? 0) / PAGE_SIZE));
+  const eventsTotalPages = Math.max(1, Math.ceil((eventsQuery.data?.totalCount ?? 0) / PAGE_SIZE));
+  const signalsTotalPages = Math.max(1, Math.ceil((signalsQuery.data?.totalCount ?? 0) / PAGE_SIZE));
 
   // Secondary clip: drop markers whose plotted Point location is outside the selected region.
   // An event can pass the text filter (via generalLocation) but be plotted at originLocation
@@ -378,76 +410,107 @@ export default function DetectionPage() {
         />
 
         {activeTab === "live" && (
-          <LiveAlertsTab
-            alerts={alerts}
-            alertsLoading={alertsQuery.isLoading}
-            mapMarkers={mapMarkers}
-            mapRegions={mapRegions}
-            mapCenter={mapCenter}
-            mapZoom={mapZoom}
-            fitBoundsGeometry={fitBoundsGeometry}
-            adminBoundaries={adminBoundaries}
-            adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-            boundaryLevel={boundaryLevel}
-            onBoundaryLevelChange={setBoundaryLevel}
-            focusCountryPCode={focusCountryPCode}
-            focusCountryName={focusCountryName}
-            focusCountryGeometry={focusCountryGeometry}
-            activeSeverities={activeSeverities}
-            expandedTypeCodes={expandedTypeCodes}
-            activeSources={activeSources}
-          />
+          <>
+            <LiveAlertsTab
+              alerts={alerts}
+              alertsLoading={alertsQuery.isLoading}
+              mapMarkers={mapMarkers}
+              mapRegions={mapRegions}
+              mapCenter={mapCenter}
+              mapZoom={mapZoom}
+              fitBoundsGeometry={fitBoundsGeometry}
+              adminBoundaries={adminBoundaries}
+              adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+              boundaryLevel={boundaryLevel}
+              onBoundaryLevelChange={setBoundaryLevel}
+              focusCountryPCode={focusCountryPCode}
+              focusCountryName={focusCountryName}
+              focusCountryGeometry={focusCountryGeometry}
+              activeSeverities={activeSeverities}
+              expandedTypeCodes={expandedTypeCodes}
+              activeSources={activeSources}
+            />
+            <PaginationFooter
+              page={alertsPageNum}
+              total={alertsQuery.data?.totalCount ?? 0}
+              totalPages={alertsTotalPages}
+              pageSize={PAGE_SIZE}
+              onChange={setAlertsPageNum}
+            />
+          </>
         )}
 
         {activeTab === "signals" && (
-          <SignalsTab
-            signals={filteredSignals}
-            loading={signalsQuery.isLoading}
-            mapMarkers={signalMapMarkers}
-            mapCenter={mapCenter}
-            mapZoom={mapZoom}
-            fitBoundsGeometry={fitBoundsGeometry}
-            adminBoundaries={adminBoundaries}
-            adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-            boundaryLevel={boundaryLevel}
-            onBoundaryLevelChange={setBoundaryLevel}
-            focusCountryPCode={focusCountryPCode}
-            focusCountryName={focusCountryName}
-            focusCountryGeometry={focusCountryGeometry}
-            activeSeverities={activeSeverities}
-            activeSources={activeSources}
-          />
+          <>
+            <SignalsTab
+              signals={filteredSignals}
+              loading={signalsQuery.isLoading}
+              mapMarkers={signalMapMarkers}
+              mapCenter={mapCenter}
+              mapZoom={mapZoom}
+              fitBoundsGeometry={fitBoundsGeometry}
+              adminBoundaries={adminBoundaries}
+              adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+              boundaryLevel={boundaryLevel}
+              onBoundaryLevelChange={setBoundaryLevel}
+              focusCountryPCode={focusCountryPCode}
+              focusCountryName={focusCountryName}
+              focusCountryGeometry={focusCountryGeometry}
+              activeSeverities={activeSeverities}
+              activeSources={activeSources}
+            />
+            <PaginationFooter
+              page={signalsPageNum}
+              total={signalsQuery.data?.totalCount ?? 0}
+              totalPages={signalsTotalPages}
+              pageSize={PAGE_SIZE}
+              onChange={setSignalsPageNum}
+            />
+          </>
         )}
 
         {activeTab === "history" && (
           <HistoryTab
             alerts={historyAlerts}
-            events={filteredEvents}
-            signals={filteredSignals}
-            loading={historyQuery.isLoading || eventsQuery.isLoading || signalsQuery.isLoading}
+            events={historyEventsQuery.data ?? []}
+            signals={historySignalsQuery.data ?? []}
+            loading={
+              historyQuery.isLoading ||
+              historyEventsQuery.isLoading ||
+              historySignalsQuery.isLoading
+            }
           />
         )}
 
         {activeTab === "events" && (
-          <EventsTab
-            events={filteredEvents}
-            loading={eventsQuery.isLoading}
-            mapMarkers={eventMapMarkers}
-            mapRegions={eventMapRegions}
-            mapCenter={mapCenter}
-            mapZoom={mapZoom}
-            fitBoundsGeometry={fitBoundsGeometry}
-            adminBoundaries={adminBoundaries}
-            adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-            boundaryLevel={boundaryLevel}
-            onBoundaryLevelChange={setBoundaryLevel}
-            focusCountryPCode={focusCountryPCode}
-            focusCountryName={focusCountryName}
-            focusCountryGeometry={focusCountryGeometry}
-            activeSeverities={activeSeverities}
-            expandedTypeCodes={expandedTypeCodes}
-            activeSources={activeSources}
-          />
+          <>
+            <EventsTab
+              events={filteredEvents}
+              loading={eventsQuery.isLoading}
+              mapMarkers={eventMapMarkers}
+              mapRegions={eventMapRegions}
+              mapCenter={mapCenter}
+              mapZoom={mapZoom}
+              fitBoundsGeometry={fitBoundsGeometry}
+              adminBoundaries={adminBoundaries}
+              adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+              boundaryLevel={boundaryLevel}
+              onBoundaryLevelChange={setBoundaryLevel}
+              focusCountryPCode={focusCountryPCode}
+              focusCountryName={focusCountryName}
+              focusCountryGeometry={focusCountryGeometry}
+              activeSeverities={activeSeverities}
+              expandedTypeCodes={expandedTypeCodes}
+              activeSources={activeSources}
+            />
+            <PaginationFooter
+              page={eventsPageNum}
+              total={eventsQuery.data?.totalCount ?? 0}
+              totalPages={eventsTotalPages}
+              pageSize={PAGE_SIZE}
+              onChange={setEventsPageNum}
+            />
+          </>
         )}
       </Box>
 
@@ -456,5 +519,44 @@ export default function DetectionPage() {
         onClose={closeCreateModal}
       />
     </Box>
+  );
+}
+
+// ── Pagination footer ─────────────────────────────────────────────────────
+// Compact "Showing X–Y of Z · [< 1 2 3 >]" row rendered under each tab.
+// Hides the controls when there's only one page; hides the whole row when
+// there are no results at all.
+function PaginationFooter({
+  page,
+  totalPages,
+  total,
+  pageSize,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  pageSize: number;
+  onChange: (page: number) => void;
+}) {
+  if (total === 0) return null;
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, total);
+  return (
+    <Group justify="space-between" mt={16} px={4}>
+      <Text size="xs" c="#737373">
+        Showing {start.toLocaleString()}–{end.toLocaleString()} of{" "}
+        {total.toLocaleString()}
+      </Text>
+      {totalPages > 1 && (
+        <Pagination
+          value={page}
+          onChange={onChange}
+          total={totalPages}
+          size="sm"
+          siblings={1}
+        />
+      )}
+    </Group>
   );
 }
