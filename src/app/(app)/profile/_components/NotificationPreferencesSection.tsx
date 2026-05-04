@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   Card,
   Text,
@@ -8,39 +7,25 @@ import {
   Group,
   Stack,
   Box,
-  Button,
+  Loader,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconBell, IconMail, IconPhone } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 
-interface NotificationPreferencesSectionProps {
-  user: {
-    email_notifications_enabled?: boolean;
-  };
-}
-
-export function NotificationPreferencesSection({
-  user,
-}: NotificationPreferencesSectionProps) {
-  const [emailEnabled, setEmailEnabled] = useState(
-    user.email_notifications_enabled ?? false,
-  );
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    setEmailEnabled(user.email_notifications_enabled ?? false);
-  }, [user.email_notifications_enabled]);
-
+export function NotificationPreferencesSection() {
   const utils = api.useUtils();
-  const updateProfile = api.auth.updateNotificationPrefs.useMutation({
+  const prefsQuery = api.auth.myNotificationPrefs.useQuery();
+
+  const updatePrefs = api.auth.updateNotificationPrefs.useMutation({
     onSuccess: () => {
       notifications.show({
         title: "Saved",
-        message: "Notification preferences updated.",
+        message: "Notification channels updated.",
         color: "green",
+        autoClose: 2000,
       });
-      void utils.auth.me.invalidate();
+      void utils.auth.myNotificationPrefs.invalidate();
     },
     onError: (err) => {
       notifications.show({
@@ -48,16 +33,12 @@ export function NotificationPreferencesSection({
         message: err.message,
         color: "red",
       });
+      void utils.auth.myNotificationPrefs.invalidate();
     },
-    onSettled: () => setIsSaving(false),
   });
 
-  const handleSave = () => {
-    setIsSaving(true);
-    updateProfile.mutate({
-      enableEmailNotification: emailEnabled,
-    });
-  };
+  const emailEnabled = prefsQuery.data?.emailEnabled ?? false;
+  const isSaving = updatePrefs.isPending;
 
   return (
     <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
@@ -69,62 +50,54 @@ export function NotificationPreferencesSection({
           tt="uppercase"
           style={{ letterSpacing: "0.05em", fontSize: 11 }}
         >
-          Notification Preferences
+          Notification Channels
         </Text>
       </Group>
 
-      <Stack gap={16}>
-        {/* Email toggle */}
-        <Group justify="space-between">
-          <Box>
-            <Group gap={6}>
-              <IconMail size={14} color="#737373" />
-              <Text size="sm" fw={500}>
-                Email Notifications
+      {prefsQuery.isLoading ? (
+        <Loader size="xs" />
+      ) : (
+        <Stack gap={16}>
+          {/* Email toggle */}
+          <Group justify="space-between">
+            <Box>
+              <Group gap={6}>
+                <IconMail size={14} color="#737373" />
+                <Text size="sm" fw={500}>
+                  Email Notifications
+                </Text>
+              </Group>
+              <Text size="xs" c="#737373">
+                Receive crisis alerts and digests via email
               </Text>
-            </Group>
-            <Text size="xs" c="#737373">
-              Receive crisis alerts and digests via email
-            </Text>
-          </Box>
-          <Switch
-            checked={emailEnabled}
-            onChange={(e) => setEmailEnabled(e.currentTarget.checked)}
-            color="teal"
-          />
-        </Group>
+            </Box>
+            <Switch
+              checked={emailEnabled}
+              disabled={isSaving}
+              onChange={(e) =>
+                updatePrefs.mutate({ enableEmailNotification: e.currentTarget.checked })
+              }
+              color="teal"
+            />
+          </Group>
 
-        {/* SMS toggle (disabled until backend is ready) */}
-        <Group justify="space-between" style={{ opacity: 0.5 }}>
-          <Box>
-            <Group gap={6}>
-              <IconPhone size={14} color="#737373" />
-              <Text size="sm" fw={500}>
-                SMS Notifications
+          {/* SMS toggle (disabled until backend is ready) */}
+          <Group justify="space-between" style={{ opacity: 0.5 }}>
+            <Box>
+              <Group gap={6}>
+                <IconPhone size={14} color="#737373" />
+                <Text size="sm" fw={500}>
+                  SMS Notifications
+                </Text>
+              </Group>
+              <Text size="xs" c="#737373">
+                Coming soon
               </Text>
-            </Group>
-            <Text size="xs" c="#737373">
-              Coming soon
-            </Text>
-          </Box>
-          <Switch
-            checked={false}
-            disabled
-            color="teal"
-          />
-        </Group>
-
-        <Group justify="flex-end" mt={4}>
-          <Button
-            size="xs"
-            color="dark"
-            loading={isSaving}
-            onClick={handleSave}
-          >
-            Save Preferences
-          </Button>
-        </Group>
-      </Stack>
+            </Box>
+            <Switch checked={false} disabled color="teal" />
+          </Group>
+        </Stack>
+      )}
     </Card>
   );
 }
