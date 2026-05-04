@@ -16,6 +16,7 @@ import {
   ActionIcon,
   Divider,
   Stack,
+  Select,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import {
@@ -27,7 +28,6 @@ import {
   IconSettings,
   IconPencil,
   IconX,
-  IconPhone,
   IconLanguage,
   IconClock,
 } from "@tabler/icons-react";
@@ -68,20 +68,62 @@ interface ProfileUser {
   isActive: boolean;
 }
 
+// Countries ordered: NRC operational priority first, then alphabetical.
+const DIAL_CODES = [
+  { value: "+249", label: "🇸🇩 Sudan (+249)" },
+  { value: "+251", label: "🇪🇹 Ethiopia (+251)" },
+  { value: "+252", label: "🇸🇴 Somalia (+252)" },
+  { value: "+256", label: "🇺🇬 Uganda (+256)" },
+  { value: "+963", label: "🇸🇾 Syria (+963)" },
+  { value: "+93",  label: "🇦🇫 Afghanistan (+93)" },
+  { value: "+380", label: "🇺🇦 Ukraine (+380)" },
+  { value: "+967", label: "🇾🇪 Yemen (+967)" },
+  { value: "+1",   label: "🇺🇸 United States (+1)" },
+  { value: "+44",  label: "🇬🇧 United Kingdom (+44)" },
+  { value: "+33",  label: "🇫🇷 France (+33)" },
+  { value: "+49",  label: "🇩🇪 Germany (+49)" },
+  { value: "+47",  label: "🇳🇴 Norway (+47)" },
+  { value: "+31",  label: "🇳🇱 Netherlands (+31)" },
+  { value: "+41",  label: "🇨🇭 Switzerland (+41)" },
+  { value: "+46",  label: "🇸🇪 Sweden (+46)" },
+  { value: "+20",  label: "🇪🇬 Egypt (+20)" },
+  { value: "+254", label: "🇰🇪 Kenya (+254)" },
+  { value: "+243", label: "🇨🇩 DR Congo (+243)" },
+  { value: "+211", label: "🇸🇸 South Sudan (+211)" },
+  { value: "+222", label: "🇲🇷 Mauritania (+222)" },
+  { value: "+234", label: "🇳🇬 Nigeria (+234)" },
+];
+
+function parseE164(e164: string): { dialCode: string; local: string } {
+  const match = DIAL_CODES.map((d) => d.value)
+    .sort((a, b) => b.length - a.length) // longest prefix first
+    .find((code) => e164.startsWith(code));
+  if (match) return { dialCode: match, local: e164.slice(match.length) };
+  return { dialCode: "+249", local: e164.replace(/^\+\d+/, "") };
+}
+
 function MobileNumberField() {
   const utils = api.useUtils();
   const phoneQuery = api.auth.myPhoneNumber.useQuery();
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState("");
+  const [dialCode, setDialCode] = useState("+249");
+  const [localNumber, setLocalNumber] = useState("");
 
+  const savedE164 = phoneQuery.data?.phoneNumber ?? "";
+
+  // Sync from server on initial load
   useEffect(() => {
     if (phoneQuery.data !== undefined && !editing) {
-      setValue(phoneQuery.data.phoneNumber ?? "");
+      if (savedE164) {
+        const parsed = parseE164(savedE164);
+        setDialCode(parsed.dialCode);
+        setLocalNumber(parsed.local);
+      }
     }
-  }, [phoneQuery.data, editing]);
+  }, [phoneQuery.data, editing, savedE164]);
 
-  const savedValue = phoneQuery.data?.phoneNumber ?? "";
-  const isDirty = editing && value !== savedValue;
+  const currentE164 = localNumber ? `${dialCode}${localNumber.replace(/\s/g, "")}` : "";
+  const isDirty = currentE164 !== savedE164;
 
   const updateProfile = api.auth.updateProfile.useMutation({
     onSuccess: () => {
@@ -95,29 +137,72 @@ function MobileNumberField() {
   });
 
   function handleCancel() {
-    setValue(savedValue);
+    if (savedE164) {
+      const parsed = parseE164(savedE164);
+      setDialCode(parsed.dialCode);
+      setLocalNumber(parsed.local);
+    } else {
+      setLocalNumber("");
+    }
     setEditing(false);
   }
 
   function handleSave() {
-    updateProfile.mutate({ phoneNumber: value });
+    updateProfile.mutate({ phoneNumber: currentE164 || "" });
   }
+
+  const readOnly = !editing;
+  const inputStyles = {
+    input: {
+      fontSize: 13,
+      background: readOnly ? "transparent" : undefined,
+      border: readOnly ? "1px solid transparent" : undefined,
+      cursor: readOnly ? "default" : undefined,
+      paddingLeft: readOnly ? 0 : undefined,
+    },
+  };
 
   return (
     <Box>
       <Text size="xs" c="var(--color-text-muted)" mb={4}>Mobile</Text>
-      <Group gap={8} align="center">
-        {editing ? (
+      <Group gap={8} align="center" wrap="nowrap">
+        <Select
+          data={DIAL_CODES}
+          value={dialCode}
+          onChange={(v: string | null) => { setDialCode(v ?? "+249"); }}
+          size="xs"
+          readOnly={readOnly}
+          style={{ width: 180, flexShrink: 0 }}
+          styles={{
+            input: {
+              fontSize: 13,
+              background: readOnly ? "transparent" : undefined,
+              border: readOnly ? "1px solid transparent" : undefined,
+              cursor: readOnly ? "default" : undefined,
+              paddingLeft: readOnly ? 0 : undefined,
+            },
+          }}
+          rightSection={readOnly ? null : undefined}
+          comboboxProps={{ withinPortal: true }}
+        />
+        <TextInput
+          value={localNumber}
+          onChange={(e) => setLocalNumber(e.currentTarget.value)}
+          placeholder={readOnly ? (savedE164 ? undefined : "Not set") : "912 345 678"}
+          size="xs"
+          readOnly={readOnly}
+          style={{ flex: 1 }}
+          styles={inputStyles}
+          rightSection={
+            readOnly ? (
+              <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditing(true)}>
+                <IconPencil size={13} />
+              </ActionIcon>
+            ) : null
+          }
+        />
+        {editing && (
           <>
-            <TextInput
-              value={value}
-              onChange={(e) => setValue(e.currentTarget.value)}
-              placeholder="+249912345678"
-              size="xs"
-              style={{ flex: 1, maxWidth: 240 }}
-              styles={{ input: { fontSize: 13 } }}
-              autoFocus
-            />
             <Button size="xs" variant="subtle" color="gray" onClick={handleCancel} leftSection={<IconX size={12} />}>
               Cancel
             </Button>
@@ -130,21 +215,6 @@ function MobileNumberField() {
             >
               Save
             </Button>
-          </>
-        ) : (
-          <>
-            <Text size="sm" fw={500} c={savedValue ? "var(--color-text-primary)" : "var(--color-text-muted)"}>
-              {savedValue || "Not set"}
-            </Text>
-            <ActionIcon
-              size="xs"
-              variant="subtle"
-              color="gray"
-              onClick={() => setEditing(true)}
-              title="Edit mobile number"
-            >
-              <IconPencil size={13} />
-            </ActionIcon>
           </>
         )}
       </Group>
