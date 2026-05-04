@@ -206,6 +206,10 @@ export const COUNTRIES: Country[] = [
   { iso: "ZW", name: "Zimbabwe", dialCode: "+263" },
 ].sort((a, b) => a.name.localeCompare(b.name));
 
+export const COUNTRIES_BY_DIAL_LENGTH = [...COUNTRIES].sort(
+  (a, b) => b.dialCode.length - a.dialCode.length,
+);
+
 export const COUNTRY_SELECT_DATA = COUNTRIES.map((c) => ({
   value: c.iso,
   label: `${flag(c.iso)} ${c.name} (${c.dialCode})`,
@@ -213,8 +217,4 @@ export const COUNTRY_SELECT_DATA = COUNTRIES.map((c) => ({
 
 export function getDialCode(iso: string): string {
   return COUNTRIES.find((c) => c.iso === iso)?.dialCode ?? "+1";
-}
-
-export function isoFromDialCode(dialCode: string): string {
-  return COUNTRIES.find((c) => c.dialCode === dialCode)?.iso ?? "SD";
 }

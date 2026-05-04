@@ -33,7 +33,7 @@ import {
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
-import { COUNTRIES, COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
+import { COUNTRIES_BY_DIAL_LENGTH, COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
 import { NotificationPreferencesSection } from "./_components/NotificationPreferencesSection";
 import { AlertSubscriptionsSection } from "./_components/AlertSubscriptionsSection";
 
@@ -63,22 +63,18 @@ interface ProfileUser {
   id: string;
   name: string;
   email: string;
-  emailVerified: boolean;
-  image: string | null;
   role: string;
-  isActive: boolean;
 }
 
 function parseE164(e164: string): { iso: string; local: string } {
-  const sorted = [...COUNTRIES].sort((a, b) => b.dialCode.length - a.dialCode.length);
-  const match = sorted.find((c) => e164.startsWith(c.dialCode));
+  const match = COUNTRIES_BY_DIAL_LENGTH.find((c) => e164.startsWith(c.dialCode));
   if (match) return { iso: match.iso, local: e164.slice(match.dialCode.length) };
   return { iso: "SD", local: "" };
 }
 
 function MobileNumberField() {
   const utils = api.useUtils();
-  const phoneQuery = api.auth.myPhoneNumber.useQuery();
+  const phoneQuery = api.auth.myUserDetails.useQuery();
   const [editing, setEditing] = useState(false);
   const [selectedIso, setSelectedIso] = useState("SD");
   const [localNumber, setLocalNumber] = useState("");
@@ -102,7 +98,7 @@ function MobileNumberField() {
   const updateProfile = api.auth.updateProfile.useMutation({
     onSuccess: () => {
       setEditing(false);
-      void utils.auth.myPhoneNumber.invalidate();
+      void utils.auth.myUserDetails.invalidate();
       notifications.show({ title: "Saved", message: "Mobile number updated.", color: "green", autoClose: 2000 });
     },
     onError: (err) => {
@@ -122,7 +118,7 @@ function MobileNumberField() {
   }
 
   function handleSave() {
-    updateProfile.mutate({ phoneNumber: currentE164 || "" });
+    updateProfile.mutate({ phoneNumber: currentE164 || undefined });
   }
 
   const readOnly = !editing;
@@ -200,7 +196,6 @@ function MobileNumberField() {
 function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) {
   const { activeTeamId, switchTeam } = useTeam();
   const teamsQuery = api.teams.myTeams.useQuery();
-  const [activating, setActivating] = useState<string | null>(null);
 
   if (teamsQuery.isLoading) return <Loader size="xs" />;
 
@@ -218,7 +213,6 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
   });
 
   function handleSetActive(teamId: string, teamName: string) {
-    setActivating(teamId);
     switchTeam(teamId);
     notifications.show({
       title: "Active team updated",
@@ -226,7 +220,6 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
       color: "green",
       autoClose: 2000,
     });
-    setActivating(null);
   }
 
   return (
@@ -269,7 +262,6 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
                       size="xs"
                       variant="subtle"
                       color="gray"
-                      loading={activating === row.teamId}
                       onClick={() => handleSetActive(row.teamId, row.teamName)}
                     >
                       Set Active
