@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import { Box, Tabs, Button, Group, Switch, Text } from "@mantine/core";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { Box, Tabs, Button, Group, Pagination, Switch, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -19,6 +19,8 @@ import { EventsTab } from "./_components/events-tab";
 import { SignalsTab } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
 
+const PAGE_SIZE = 25;
+
 export default function DetectionPage() {
   const [activeTab, setActiveTab] = useState<string | null>("live");
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
@@ -27,107 +29,95 @@ export default function DetectionPage() {
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
   const [includeDummy, setIncludeDummy] = useState(false);
 
+  // Per-tab page state (1-based to match Mantine's <Pagination>).
+  const [alertsPageNum, setAlertsPageNum] = useState(1);
+  const [eventsPageNum, setEventsPageNum] = useState(1);
+  const [signalsPageNum, setSignalsPageNum] = useState(1);
+
   const { activeTeamId } = useTeam();
   const { countries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
-  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId, includeDummy });
-  const historyQuery = api.alerts.getAlerts.useQuery(
-    { activeOnly: false, teamId: activeTeamId, includeDummy },
-    { enabled: activeTab === "history" },
-  );
-  const eventsQuery = api.events.list.useQuery(
-    { teamId: activeTeamId, includeDummy },
-  );
-  const signalsQuery = api.signals.list.useQuery(
-    { teamId: activeTeamId, includeDummy },
-    { enabled: activeTab === "signals" || activeTab === "history" },
-  );
 
-  const regions = getRegions(selectedCountry);
-
-  const allAlerts = useMemo(() => {
-    const raw = alertsQuery.data?.alerts ?? [];
-    return [...raw].sort((a, b) => b.event.rank - a.event.rank);
-  }, [alertsQuery.data?.alerts]);
-
-  // Resolve selected location for filtering
+  // Resolve filters server-side: locationId from country/region, date range
+  // from the FilterBar preset. The API takes care of the rest (severity
+  // ordering, scoping to team, etc.).
   const selectedLocationId = useMemo(() => {
     if (selectedRegion !== "All Regions") return getLocationId(selectedRegion);
     return getLocationId(selectedCountry);
   }, [selectedCountry, selectedRegion, getLocationId]);
 
-  const selectedLocationName = useMemo(() => {
-    return selectedRegion !== "All Regions" ? selectedRegion : selectedCountry;
-  }, [selectedCountry, selectedRegion]);
+  const dateRange = useMemo(() => parseDateFilter(selectedDate), [selectedDate]);
+  const fromIso = useMemo(() => dateRange.start.toISOString(), [dateRange]);
+  const toIso = useMemo(() => dateRange.end.toISOString(), [dateRange]);
 
-  /** Check if any location in the list matches the selected location (by ID hierarchy or name fallback).
-   *  Items with NO location data at all are always included. */
-  const matchesLocationFilter = useMemo(() => {
-    if (!selectedLocationId && !selectedLocationName) return () => true;
-    return (locs: Array<{ id: string; name: string; ancestorIds?: string[] } | null | undefined>) => {
-      // If item has no location data at all, include it (don't filter out)
-      const hasAnyLocation = locs.some((loc) => loc != null);
-      if (!hasAnyLocation) return true;
+  // Reset page → 1 whenever the underlying filter changes — otherwise the
+  // user lands on page 5 of a freshly-narrowed result set.
+  useEffect(() => setAlertsPageNum(1), [selectedLocationId, fromIso, toIso, includeDummy, activeTeamId]);
+  useEffect(() => setEventsPageNum(1), [selectedLocationId, fromIso, toIso, includeDummy, activeTeamId]);
+  useEffect(() => setSignalsPageNum(1), [selectedLocationId, fromIso, toIso, includeDummy, activeTeamId]);
 
-      return locs.some((loc) => {
-        if (!loc) return false;
-        // Match by ID or ancestorIds
-        if (selectedLocationId) {
-          if (loc.id === selectedLocationId) return true;
-          if (loc.ancestorIds && loc.ancestorIds.length > 0 && loc.ancestorIds.includes(selectedLocationId)) return true;
-        }
-        // Fallback: name matching
-        const locNameLower = loc.name.toLowerCase();
-        const selectedLower = selectedLocationName.toLowerCase();
-        return locNameLower.includes(selectedLower) || selectedLower.includes(locNameLower);
-      });
-    };
-  }, [selectedLocationId, selectedLocationName]);
+  const sharedFilter = {
+    teamId: activeTeamId,
+    locationId: selectedLocationId ?? undefined,
+    from: fromIso,
+    to: toIso,
+    includeDummy,
+  };
 
-  // Filter alerts by location + date range
-  const alerts = useMemo(() => {
-    if (allAlerts.length === 0) return [];
-    const dateRange = parseDateFilter(selectedDate);
+  const alertsPageQuery = api.alerts.alertsPage.useQuery(
+    {
+      ...sharedFilter,
+      status: "published",
+      orderBy: "SEVERITY_DESC",
+      limit: PAGE_SIZE,
+      offset: (alertsPageNum - 1) * PAGE_SIZE,
+    },
+    { enabled: activeTab === "live" },
+  );
+  const eventsPageQuery = api.alerts.eventsPage.useQuery(
+    {
+      ...sharedFilter,
+      orderBy: "SEVERITY_DESC",
+      limit: PAGE_SIZE,
+      offset: (eventsPageNum - 1) * PAGE_SIZE,
+    },
+    { enabled: activeTab === "events" },
+  );
+  const signalsPageQuery = api.alerts.signalsPage.useQuery(
+    {
+      ...sharedFilter,
+      orderBy: "PUBLISHED_DESC",
+      limit: PAGE_SIZE,
+      offset: (signalsPageNum - 1) * PAGE_SIZE,
+    },
+    { enabled: activeTab === "signals" },
+  );
 
-    return allAlerts.filter((alert) => {
-      // Date filter
-      const alertDate = new Date(alert.event.firstSignalCreatedAt).getTime();
-      if (alertDate < dateRange.start.getTime() || alertDate > dateRange.end.getTime()) return false;
+  // History tab keeps its existing unpaginated query for now — it shows a
+  // mixed alerts/events/signals roll-up and isn't part of the "list of all"
+  // pagination scope.
+  const historyQuery = api.alerts.getAlerts.useQuery(
+    { activeOnly: false, teamId: activeTeamId, includeDummy },
+    { enabled: activeTab === "history" },
+  );
+  const historyEventsQuery = api.events.list.useQuery(
+    { teamId: activeTeamId, includeDummy },
+    { enabled: activeTab === "history" },
+  );
+  const historySignalsQuery = api.signals.list.useQuery(
+    { teamId: activeTeamId, includeDummy },
+    { enabled: activeTab === "history" },
+  );
 
-      // Location filter
-      const locs = [
-        alert.event.generalLocation,
-        alert.event.originLocation,
-        alert.event.destinationLocation,
-      ];
-      if (!matchesLocationFilter(locs)) return false;
+  const regions = getRegions(selectedCountry);
 
-      return true;
-    });
-  }, [allAlerts, matchesLocationFilter, selectedDate]);
-
+  const alerts = useMemo(() => alertsPageQuery.data?.items ?? [], [alertsPageQuery.data]);
+  const filteredEvents = useMemo(() => eventsPageQuery.data?.items ?? [], [eventsPageQuery.data]);
+  const filteredSignals = useMemo(() => signalsPageQuery.data?.items ?? [], [signalsPageQuery.data]);
   const historyAlerts = historyQuery.data?.alerts ?? [];
 
-  // Filter events by location + date
-  const filteredEvents = useMemo(() => {
-    const events = eventsQuery.data ?? [];
-    const dateRange = parseDateFilter(selectedDate);
-    return events.filter((e) => {
-      const eventDate = new Date(e.firstSignalCreatedAt).getTime();
-      if (eventDate < dateRange.start.getTime() || eventDate > dateRange.end.getTime()) return false;
-      return matchesLocationFilter([e.generalLocation, e.originLocation, e.destinationLocation]);
-    });
-  }, [eventsQuery.data, matchesLocationFilter, selectedDate]);
-
-  // Filter signals by location + date
-  const filteredSignals = useMemo(() => {
-    const signals = signalsQuery.data ?? [];
-    const dateRange = parseDateFilter(selectedDate);
-    return signals.filter((s) => {
-      const sigDate = new Date(s.publishedAt).getTime();
-      if (sigDate < dateRange.start.getTime() || sigDate > dateRange.end.getTime()) return false;
-      return matchesLocationFilter([s.generalLocation, s.originLocation, s.destinationLocation]);
-    });
-  }, [signalsQuery.data, matchesLocationFilter, selectedDate]);
+  const alertsTotalPages = Math.max(1, Math.ceil((alertsPageQuery.data?.totalCount ?? 0) / PAGE_SIZE));
+  const eventsTotalPages = Math.max(1, Math.ceil((eventsPageQuery.data?.totalCount ?? 0) / PAGE_SIZE));
+  const signalsTotalPages = Math.max(1, Math.ceil((signalsPageQuery.data?.totalCount ?? 0) / PAGE_SIZE));
 
   const mapMarkers: MapMarker[] = useMemo(() => alertsToMarkers(alerts), [alerts]);
   const mapRegions = useMemo(() => alertsToRegions(alerts), [alerts]);
@@ -144,7 +134,7 @@ export default function DetectionPage() {
   const mapZoom = useMemo(() => getZoom(selectedCountry), [selectedCountry]);
 
   const handleAlertCreated = useCallback(() => {
-    void alertsQuery.refetch();
+    void alertsPageQuery.refetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -154,7 +144,7 @@ export default function DetectionPage() {
         title="Crisis Detection"
         subtitle="Detection"
         breadcrumbs={["CLEAR", "Detection"]}
-        loading={alertsQuery.isLoading}
+        loading={alertsPageQuery.isLoading}
       >
         <FilterBar
           country={selectedCountry}
@@ -214,44 +204,75 @@ export default function DetectionPage() {
         />
 
         {activeTab === "live" && (
-          <LiveAlertsTab
-            alerts={alerts}
-            alertsLoading={alertsQuery.isLoading}
-            mapMarkers={mapMarkers}
-            mapRegions={mapRegions}
-            mapCenter={mapCenter}
-            mapZoom={mapZoom}
-          />
+          <>
+            <LiveAlertsTab
+              alerts={alerts}
+              alertsLoading={alertsPageQuery.isLoading}
+              mapMarkers={mapMarkers}
+              mapRegions={mapRegions}
+              mapCenter={mapCenter}
+              mapZoom={mapZoom}
+            />
+            <PaginationFooter
+              page={alertsPageNum}
+              total={alertsPageQuery.data?.totalCount ?? 0}
+              totalPages={alertsTotalPages}
+              pageSize={PAGE_SIZE}
+              onChange={setAlertsPageNum}
+            />
+          </>
         )}
 
         {activeTab === "signals" && (
-          <SignalsTab
-            signals={filteredSignals}
-            loading={signalsQuery.isLoading}
-            mapMarkers={signalMapMarkers}
-            mapCenter={mapCenter}
-            mapZoom={mapZoom}
-          />
+          <>
+            <SignalsTab
+              signals={filteredSignals}
+              loading={signalsPageQuery.isLoading}
+              mapMarkers={signalMapMarkers}
+              mapCenter={mapCenter}
+              mapZoom={mapZoom}
+            />
+            <PaginationFooter
+              page={signalsPageNum}
+              total={signalsPageQuery.data?.totalCount ?? 0}
+              totalPages={signalsTotalPages}
+              pageSize={PAGE_SIZE}
+              onChange={setSignalsPageNum}
+            />
+          </>
         )}
 
         {activeTab === "history" && (
           <HistoryTab
             alerts={historyAlerts}
-            events={filteredEvents}
-            signals={filteredSignals}
-            loading={historyQuery.isLoading || eventsQuery.isLoading || signalsQuery.isLoading}
+            events={historyEventsQuery.data ?? []}
+            signals={historySignalsQuery.data ?? []}
+            loading={
+              historyQuery.isLoading ||
+              historyEventsQuery.isLoading ||
+              historySignalsQuery.isLoading
+            }
           />
         )}
 
         {activeTab === "events" && (
-          <EventsTab
-            events={filteredEvents}
-            loading={eventsQuery.isLoading}
-            mapMarkers={eventMapMarkers}
-            mapRegions={eventMapRegions}
-            mapCenter={mapCenter}
-            mapZoom={mapZoom}
-          />
+          <>
+            <EventsTab
+              events={filteredEvents}
+              loading={eventsPageQuery.isLoading}
+              mapMarkers={eventMapMarkers}
+              mapRegions={eventMapRegions}
+              mapCenter={mapCenter}
+              mapZoom={mapZoom}
+            />
+            <PaginationFooter
+              page={eventsPageNum}
+              total={eventsPageQuery.data?.totalCount ?? 0}
+              totalPages={eventsTotalPages}
+              pageSize={PAGE_SIZE}
+              onChange={setEventsPageNum}
+            />
+          </>
         )}
       </Box>
 
@@ -260,5 +281,44 @@ export default function DetectionPage() {
         onClose={closeCreateModal}
       />
     </Box>
+  );
+}
+
+// ── Pagination footer ─────────────────────────────────────────────────────
+// Compact "Showing X–Y of Z · [< 1 2 3 >]" row rendered under each tab.
+// Keeps the loading flicker subtle by hiding the controls entirely when
+// there's only one page of results.
+function PaginationFooter({
+  page,
+  totalPages,
+  total,
+  pageSize,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  pageSize: number;
+  onChange: (page: number) => void;
+}) {
+  if (total === 0) return null;
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, total);
+  return (
+    <Group justify="space-between" mt={16} px={4}>
+      <Text size="xs" c="#737373">
+        Showing {start.toLocaleString()}–{end.toLocaleString()} of{" "}
+        {total.toLocaleString()}
+      </Text>
+      {totalPages > 1 && (
+        <Pagination
+          value={page}
+          onChange={onChange}
+          total={totalPages}
+          size="sm"
+          siblings={1}
+        />
+      )}
+    </Group>
   );
 }
