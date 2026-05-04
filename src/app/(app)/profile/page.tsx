@@ -20,6 +20,7 @@ import {
   IconBuilding,
   IconKey,
   IconCheck,
+  IconSettings,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
@@ -201,6 +202,26 @@ function SettingsContent({ user }: { user: ProfileUser }) {
 
           {/* Organisation & Roles */}
           <OrganisationRolesSection currentUserId={user.id} />
+
+          {/* Preferences */}
+          <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
+            <Group gap={8} mb={16}>
+              <IconSettings size={18} color="var(--color-accent)" />
+              <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
+                Preferences
+              </Text>
+            </Group>
+            <Group gap={32}>
+              <Box>
+                <Text size="xs" c="var(--color-text-muted)" mb={2}>Language</Text>
+                <Text size="sm" fw={500}>English</Text>
+              </Box>
+              <Box>
+                <Text size="xs" c="var(--color-text-muted)" mb={2}>Timezone</Text>
+                <Text size="sm" fw={500}>UTC</Text>
+              </Box>
+            </Group>
+          </Card>
         </>
       )}
 
