@@ -59,9 +59,9 @@ const UPDATE_PROFILE = `
   }
 `;
 
-const MY_NOTIFICATION_PREFS = `
-  query {
-    me {
+const GET_USER_NOTIFICATION_PREFS = `
+  query GetUser($id: String!) {
+    user(id: $id) {
       enableEmailNotification
     }
   }
@@ -129,13 +129,20 @@ export const authRouter = createTRPCRouter({
 
   myNotificationPrefs: publicProcedure.query(async ({ ctx }) => {
     const cookie = ctx.headers.get("cookie") ?? "";
-    const data = await graphqlFetch<{ me: { enableEmailNotification: boolean } | null }>(
-      MY_NOTIFICATION_PREFS,
-      undefined,
+    const sessionRes = await fetch(`${API_URL}/api/auth/get-session`, {
+      headers: { Cookie: cookie },
+    });
+    const session = (await sessionRes.json()) as { user?: { id?: string } } | null;
+    const userId = session?.user?.id;
+    if (!userId) return { emailEnabled: false };
+
+    const data = await graphqlFetch<{ user: { enableEmailNotification: boolean } | null }>(
+      GET_USER_NOTIFICATION_PREFS,
+      { id: userId },
       { Cookie: cookie },
     );
     return {
-      emailEnabled: data.me?.enableEmailNotification ?? false,
+      emailEnabled: data.user?.enableEmailNotification ?? false,
     };
   }),
 
