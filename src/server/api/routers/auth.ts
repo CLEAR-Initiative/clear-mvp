@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, publicProcedure, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import { API_URL, GRAPHQL_API_KEY } from "~/server/env";
 
@@ -55,6 +55,15 @@ const UPDATE_PROFILE = `
       id
       enableEmailNotification
       enableSMSNotification
+    }
+  }
+`;
+
+const GET_USER_DETAILS = `
+  query GetUserDetails($id: String!) {
+    user(id: $id) {
+      enableEmailNotification
+      phoneNumber
     }
   }
 `;
@@ -119,7 +128,17 @@ export const authRouter = createTRPCRouter({
       return { success: true, already_verified: !result.verifyEmail };
     }),
 
-  updateNotificationPrefs: publicProcedure
+  myUserDetails: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{
+      user: { enableEmailNotification: boolean; phoneNumber: string | null } | null;
+    }>(GET_USER_DETAILS, { id: ctx.user.id }, cookieHeaders(ctx));
+    return {
+      emailEnabled: data.user?.enableEmailNotification ?? false,
+      phoneNumber: data.user?.phoneNumber ?? null,
+    };
+  }),
+
+  updateNotificationPrefs: protectedProcedure
     .input(
       z.object({
         enableEmailNotification: z.boolean().optional(),
@@ -127,18 +146,17 @@ export const authRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const cookie = ctx.headers.get("cookie") ?? "";
       const data = await graphqlFetch<{
         updateProfile: {
           id: string;
           enableEmailNotification: boolean;
           enableSMSNotification: boolean;
         };
-      }>(UPDATE_PROFILE, { input }, { Cookie: cookie });
+      }>(UPDATE_PROFILE, { input }, cookieHeaders(ctx));
       return data.updateProfile;
     }),
 
-  updateProfile: publicProcedure
+  updateProfile: protectedProcedure
     .input(
       z.object({
         name: z.string().optional(),
@@ -147,13 +165,9 @@ export const authRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const cookie = ctx.headers.get("cookie") ?? "";
       const data = await graphqlFetch<{
-        updateProfile: {
-          id: string;
-          name: string;
-        };
-      }>(UPDATE_PROFILE, { input }, { Cookie: cookie });
+        updateProfile: { id: string; name: string };
+      }>(UPDATE_PROFILE, { input }, cookieHeaders(ctx));
       return data.updateProfile;
     }),
 
