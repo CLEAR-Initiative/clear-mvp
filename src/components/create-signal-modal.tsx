@@ -207,10 +207,10 @@ function MediaStep({
           onChange={handleFileInput}
         />
         <IconUpload size={24} style={{ color: "var(--color-text-muted)", marginBottom: 8 }} />
-        <Text size="sm" fw={500} c="#525252">
+        <Text size="sm" fw={500} c="var(--color-text-secondary)">
           Drop files here or click to browse
         </Text>
-        <Text size="xs" c="#A3A3A3" mt={4}>
+        <Text size="xs" c="var(--color-text-muted)" mt={4}>
           Photos, videos, PDFs, documents
         </Text>
       </Box>
@@ -232,10 +232,10 @@ function MediaStep({
                 {fileIcon(file)}
               </Box>
               <Box style={{ flex: 1, minWidth: 0 }}>
-                <Text size="xs" fw={500} c="#171717" truncate="end">
+                <Text size="xs" fw={500} c="var(--color-text-primary)" truncate="end">
                   {file.name}
                 </Text>
-                <Text size="xs" c="#A3A3A3">
+                <Text size="xs" c="var(--color-text-muted)">
                   {formatBytes(file.size)}
                 </Text>
               </Box>
@@ -295,10 +295,10 @@ function SuccessStep({ onClose }: { onClose: () => void }) {
     <Stack align="center" gap={16} py={24}>
       <IconCircleCheck size={56} color="var(--color-success)" style={{ strokeWidth: 1.5 }} />
       <Box ta="center">
-        <Text fw={700} size="lg" c="#171717">
+        <Text fw={700} size="lg" c="var(--color-text-primary)">
           Signal created
         </Text>
-        <Text size="sm" c="#737373" mt={4} maw={280} mx="auto">
+        <Text size="sm" c="var(--color-text-muted)" mt={4} maw={280} mx="auto">
           Your signal has been submitted and is now visible to your team.
         </Text>
       </Box>
@@ -377,7 +377,7 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
   async function handleSubmit() {
     setErrorMsg(null);
     try {
-      // Upload files to S3 if any — returns S3 keys (presigned URLs generated at read time)
+      // Upload files to S3 if any - returns S3 keys (presigned URLs generated at read time)
       let mediaKeys: string[] = [];
       if (files.length > 0) {
         const formData = new FormData();
@@ -413,7 +413,7 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
       opened={opened}
       onClose={handleClose}
       title={
-        <Text fw={600} size="sm" c="#171717">
+        <Text fw={600} size="sm" c="var(--color-text-primary)">
           {STEP_TITLES[step]}
         </Text>
       }

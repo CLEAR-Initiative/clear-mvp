@@ -244,7 +244,7 @@ export function SignalDetailContent({
         <Text fw={600} size="lg">
           Signal not found
         </Text>
-        <Text size="sm" c="#737373" mt={8}>
+        <Text size="sm" c="var(--color-text-muted)" mt={8}>
           This signal may have been removed or the ID is invalid.
         </Text>
         {mode === "page" && (
@@ -286,7 +286,7 @@ export function SignalDetailContent({
         <Box
           px={24}
           py={10}
-          style={{ background: "#FFF", borderBottom: "1px solid #E5E5E5" }}
+          style={{ background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)" }}
         >
           <Group justify="space-between">
             <Link href="/detection" style={{ textDecoration: "none" }}>
@@ -295,8 +295,8 @@ export function SignalDetailContent({
                 className="hover:opacity-70"
                 style={{ cursor: "pointer" }}
               >
-                <IconArrowLeft size={14} color="#525252" />
-                <Text size="sm" c="#525252" fw={500}>
+                <IconArrowLeft size={14} color="var(--color-text-secondary)" />
+                <Text size="sm" c="var(--color-text-secondary)" fw={500}>
                   Back to Events Overview
                 </Text>
               </Group>
@@ -328,9 +328,9 @@ export function SignalDetailContent({
         pt={isCompact ? 16 : 20}
         pb={isCompact ? 16 : 20}
         style={{
-          background: "#FFF",
-          borderBottom: "1px solid #E5E5E5",
-          borderLeft: "4px solid #737373",
+          background: "var(--color-bg-white)",
+          borderBottom: "1px solid var(--color-border)",
+          borderLeft: "4px solid var(--color-text-muted)",
         }}
       >
         {/* Severity badge */}
@@ -360,14 +360,14 @@ export function SignalDetailContent({
         >
           <Text
             fw={700}
-            c="#171717"
+            c="var(--color-text-primary)"
             style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3, flex: 1 }}
           >
             {displayTitle}
           </Text>
           <Group gap={6} style={{ flexShrink: 0, paddingTop: 3 }} wrap="nowrap">
-            <IconRadar size={13} color="#737373" />
-            <Text size="xs" fw={500} c="#737373">
+            <IconRadar size={13} color="var(--color-text-muted)" />
+            <Text size="xs" fw={500} c="var(--color-text-muted)">
               Signal
             </Text>
           </Group>
@@ -379,16 +379,16 @@ export function SignalDetailContent({
             size="sm"
             radius="xl"
             variant="outline"
-            style={{ color: "#737373", borderColor: "#73737340", fontWeight: 500 }}
+            style={{ color: "var(--color-text-muted)", borderColor: "color-mix(in srgb, var(--color-text-muted) 25%, transparent)", fontWeight: 500 }}
           >
             {sourceTypeLabel}
           </Badge>
-          <Text size="xs" c="#525252" fw={500}>
+          <Text size="xs" c="var(--color-text-secondary)" fw={500}>
             via {signal.source.name}
           </Text>
           {(signal.url ?? signal.source.infoUrl) && (
             <>
-              <Text size="xs" c="#D4D4D4">·</Text>
+              <Text size="xs" c="var(--color-text-muted)">·</Text>
               <a
                 href={signal.url ?? signal.source.infoUrl ?? ""}
                 target="_blank"
@@ -414,21 +414,21 @@ export function SignalDetailContent({
         <Group gap={16} wrap="wrap">
           {locations.some((l) => resolveLocationName(l)) && (
             <Group gap={4}>
-              <IconMapPin size={13} color="#737373" />
-              <Text size="xs" c="#525252" fw={500}>
+              <IconMapPin size={13} color="var(--color-text-muted)" />
+              <Text size="xs" c="var(--color-text-secondary)" fw={500}>
                 {locations.map((l) => resolveLocationName(l)).filter(Boolean).join(", ")}
               </Text>
             </Group>
           )}
           <Group gap={4}>
-            <IconCalendar size={13} color="#737373" />
-            <Text size="xs" c="#525252">
+            <IconCalendar size={13} color="var(--color-text-muted)" />
+            <Text size="xs" c="var(--color-text-secondary)">
               {formatDate(signal.publishedAt)}
             </Text>
           </Group>
           <Group gap={4}>
-            <IconClock size={13} color="#A3A3A3" />
-            <Text size="xs" c="#A3A3A3">
+            <IconClock size={13} color="var(--color-text-muted)" />
+            <Text size="xs" c="var(--color-text-muted)">
               {formatTimeAgo(signal.publishedAt)}
             </Text>
           </Group>
@@ -447,14 +447,14 @@ export function SignalDetailContent({
         {/* Left column */}
         <Box style={{ flex: 1, minWidth: 0 }}>
           {/* Description */}
-          <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
-              <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+          <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
+            <Box px={16} py={12} className="border-b border-[var(--color-border)]">
+              <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                 Description
               </Text>
             </Box>
             <Box p={16}>
-              <Text size="sm" c="#374151" style={{ lineHeight: 1.75 }}>
+              <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.75 }}>
                 {signal.description ?? "No description available."}
               </Text>
               <button
@@ -466,7 +466,7 @@ export function SignalDetailContent({
                   marginTop: 12,
                   fontSize: 12,
                   fontWeight: 500,
-                  color: "#737373",
+                  color: "var(--color-text-muted)",
                   background: "none",
                   border: "none",
                   cursor: "pointer",
@@ -481,8 +481,8 @@ export function SignalDetailContent({
                   mt={10}
                   p={12}
                   style={{
-                    background: "#F9FAFB",
-                    border: "1px solid #E5E5E5",
+                    background: "var(--color-bg-muted)",
+                    border: "1px solid var(--color-border)",
                     borderRadius: 6,
                     overflowX: "auto",
                   }}
@@ -492,7 +492,7 @@ export function SignalDetailContent({
                       margin: 0,
                       fontSize: 11,
                       lineHeight: 1.65,
-                      color: "#374151",
+                      color: "var(--color-text-secondary)",
                       fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                       whiteSpace: "pre-wrap",
                       wordBreak: "break-word",
@@ -508,10 +508,10 @@ export function SignalDetailContent({
           </Card>
 
           {/* Source details */}
-          <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+          <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
+            <Box px={16} py={12} className="border-b border-[var(--color-border)]">
               <Group gap={8}>
-                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+                <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                   Source Details
                 </Text>
               </Group>
@@ -526,49 +526,49 @@ export function SignalDetailContent({
             >
               <Box
                 p={12}
-                style={{ background: "#F9FAFB", border: "1px solid #E5E5E5", borderRadius: 6 }}
+                style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}
               >
-                <Text size="xs" fw={700} c="#A3A3A3" mb={4} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <Text size="xs" fw={700} c="var(--color-text-muted)" mb={4} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Source Name
                 </Text>
-                <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
+                <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
                   {signal.source.name}
                 </Text>
               </Box>
               <Box
                 p={12}
-                style={{ background: "#F9FAFB", border: "1px solid #E5E5E5", borderRadius: 6 }}
+                style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}
               >
-                <Text size="xs" fw={700} c="#A3A3A3" mb={4} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <Text size="xs" fw={700} c="var(--color-text-muted)" mb={4} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Source Type
                 </Text>
-                <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
+                <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
                   {sourceTypeLabel}
                 </Text>
               </Box>
               <Box
                 p={12}
-                style={{ background: "#F9FAFB", border: "1px solid #E5E5E5", borderRadius: 6 }}
+                style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}
               >
-                <Text size="xs" fw={700} c="#A3A3A3" mb={6} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <Text size="xs" fw={700} c="var(--color-text-muted)" mb={6} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Source Activity
                 </Text>
                 <Group gap={6} align="baseline">
-                  <Text fw={700} c="#171717" style={{ fontSize: 18, lineHeight: 1 }}>
+                  <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 18, lineHeight: 1 }}>
                     {sourceSignalCount}
                   </Text>
-                  <Text size="xs" c="#525252">
+                  <Text size="xs" c="var(--color-text-secondary)">
                     signal{sourceSignalCount !== 1 ? "s" : ""} from {signal.source.name}
                   </Text>
                 </Group>
-                <Text size="xs" c="#A3A3A3" mt={4}>in current detection context</Text>
+                <Text size="xs" c="var(--color-text-muted)" mt={4}>in current detection context</Text>
               </Box>
               {signal.source.infoUrl && (
                 <Box
                   p={12}
-                  style={{ background: "#F9FAFB", border: "1px solid #E5E5E5", borderRadius: 6 }}
+                  style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}
                 >
-                  <Text size="xs" fw={700} c="#A3A3A3" mb={4} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  <Text size="xs" fw={700} c="var(--color-text-muted)" mb={4} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
                     Info URL
                   </Text>
                   <a
@@ -588,7 +588,7 @@ export function SignalDetailContent({
           {/* Media */}
           {signal.media && signal.media.length > 0 && (
             <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
-              <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+              <Box px={16} py={12} className="border-b border-[var(--color-border)]">
                 <Group gap={8}>
                   <IconPhoto size={14} color="var(--color-text-secondary)" />
                   <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
@@ -614,7 +614,7 @@ export function SignalDetailContent({
           )}
 
           {/* Discussion */}
-          <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
+          <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
             <CommentsSection entityId={signal.id} entityType="signal" />
           </Card>
 
@@ -622,16 +622,16 @@ export function SignalDetailContent({
           <Box style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
 
             {/* Part of Events */}
-            <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-              <Box px={16} py={12} className="border-b border-[#E5E5E5]">
-                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+            <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+              <Box px={16} py={12} className="border-b border-[var(--color-border)]">
+                <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                   Part of Events ({signal.events.length})
                 </Text>
               </Box>
               <Box>
                 {signal.events.length === 0 && (
                   <Box px={16} py={24} style={{ textAlign: "center" }}>
-                    <Text c="#A3A3A3" size="sm">
+                    <Text c="var(--color-text-muted)" size="sm">
                       Not assigned to any event yet
                     </Text>
                   </Box>
@@ -639,7 +639,7 @@ export function SignalDetailContent({
                 {signal.events.map((ev) => {
                   const relSev = mapSeverity(ev.rank);
                   const relColor = severityColor(ev.rank);
-                  const relBg = severityColors[relSev]?.bg ?? "#F5F5F5";
+                  const relBg = severityColors[relSev]?.bg ?? "var(--color-bg-muted)";
                   const relTitle = ev.title ?? ev.types[0] ?? `Event ${ev.id}`;
                   return (
                     <Link
@@ -650,7 +650,7 @@ export function SignalDetailContent({
                       <Box
                         px={16}
                         py={12}
-                        className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
+                        className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"
                         style={{ display: "flex", gap: 12 }}
                       >
                         <Box style={{ width: 3, background: relColor, flexShrink: 0, borderRadius: 2 }} />
@@ -659,15 +659,15 @@ export function SignalDetailContent({
                             <Badge size="xs" style={{ background: relBg, color: relColor, fontWeight: 600 }}>
                               {severityLabels[relSev]}
                             </Badge>
-                            <Text size="xs" c="#A3A3A3">{formatTimeAgo(ev.firstSignalCreatedAt)}</Text>
+                            <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(ev.firstSignalCreatedAt)}</Text>
                           </Group>
-                          <Text size="sm" fw={500} c="#171717" lineClamp={2} style={{ lineHeight: 1.4 }}>
+                          <Text size="sm" fw={500} c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }}>
                             {relTitle}
                           </Text>
                           {ev.types.length > 0 && (
                             <Group gap={4} mt={4}>
                               {ev.types.slice(0, 2).map((t) => (
-                                <Badge key={t} size="xs" variant="outline" style={{ color: "#737373", borderColor: "#73737340", fontWeight: 400 }}>
+                                <Badge key={t} size="xs" variant="outline" style={{ color: "var(--color-text-muted)", borderColor: "color-mix(in srgb, var(--color-text-muted) 25%, transparent)", fontWeight: 400 }}>
                                   {t}
                                 </Badge>
                               ))}
@@ -682,16 +682,16 @@ export function SignalDetailContent({
             </Card>
 
             {/* Similar Signals */}
-            <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-              <Box px={16} py={12} className="border-b border-[#E5E5E5]">
-                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+            <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+              <Box px={16} py={12} className="border-b border-[var(--color-border)]">
+                <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                   Similar Signals ({relatedSignals.length})
                 </Text>
               </Box>
               <Box>
                 {relatedSignals.length === 0 && (
                   <Box px={16} py={24} style={{ textAlign: "center" }}>
-                    <Text c="#A3A3A3" size="sm">
+                    <Text c="var(--color-text-muted)" size="sm">
                       No co-detected signals found
                     </Text>
                   </Box>
@@ -709,18 +709,18 @@ export function SignalDetailContent({
                       <Box
                         px={16}
                         py={12}
-                        className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
+                        className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"
                         style={{ display: "flex", gap: 12 }}
                       >
-                        <Box style={{ width: 3, background: "#737373", flexShrink: 0, borderRadius: 2 }} />
+                        <Box style={{ width: 3, background: "var(--color-text-muted)", flexShrink: 0, borderRadius: 2 }} />
                         <Box style={{ flex: 1, minWidth: 0 }}>
                           <Group justify="space-between" mb={2}>
-                            <Badge size="xs" style={{ background: "#F5F5F5", color: "#525252", fontWeight: 600 }}>
+                            <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>
                               {s.source.name}
                             </Badge>
-                            <Text size="xs" c="#A3A3A3">{formatTimeAgo(s.publishedAt)}</Text>
+                            <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(s.publishedAt)}</Text>
                           </Group>
-                          <Text size="sm" fw={500} c="#171717" lineClamp={2} style={{ lineHeight: 1.4 }}>
+                          <Text size="sm" fw={500} c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }}>
                             {relTitle}
                           </Text>
                         </Box>
@@ -749,14 +749,14 @@ export function SignalDetailContent({
               )}
 
               {/* Was this signal helpful? */}
-              <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
+              <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
                 <FeedbackSection entityId={signal.id} entityType="signal" />
               </Card>
 
               {/* Actions */}
-              <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-                <Box px={16} py={10} className="border-b border-[#E5E5E5]">
-                  <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
+              <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+                <Box px={16} py={10} className="border-b border-[var(--color-border)]">
+                  <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
                     Actions
                   </Text>
                 </Box>
@@ -787,7 +787,7 @@ export function SignalDetailContent({
                       <Text
                         component="span"
                         size="10px"
-                        c="#A3A3A3"
+                        c="var(--color-text-muted)"
                         ml={6}
                         style={{ fontWeight: 400 }}
                       >
@@ -799,11 +799,11 @@ export function SignalDetailContent({
               </Card>
 
               {/* Signal details */}
-              <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-                <Box px={16} py={10} className="border-b border-[#E5E5E5]">
+              <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+                <Box px={16} py={10} className="border-b border-[var(--color-border)]">
                   <Group gap={6}>
-                    <IconDatabase size={14} color="#525252" />
-                    <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
+                    <IconDatabase size={14} color="var(--color-text-secondary)" />
+                    <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
                       Details
                     </Text>
                   </Group>
@@ -811,24 +811,24 @@ export function SignalDetailContent({
                 <Box p={16}>
                   <Stack gap={8}>
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">Signal ID</Text>
-                      <Text size="xs" fw={500} c="#171717">#{signal.id}</Text>
+                      <Text size="xs" c="var(--color-text-muted)">Signal ID</Text>
+                      <Text size="xs" fw={500} c="var(--color-text-primary)">#{signal.id}</Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">Source</Text>
-                      <Text size="xs" fw={500} c="#171717">{signal.source.name}</Text>
+                      <Text size="xs" c="var(--color-text-muted)">Source</Text>
+                      <Text size="xs" fw={500} c="var(--color-text-primary)">{signal.source.name}</Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">Published</Text>
-                      <Text size="xs" fw={500} c="#171717">{formatDate(signal.publishedAt)}</Text>
+                      <Text size="xs" c="var(--color-text-muted)">Published</Text>
+                      <Text size="xs" fw={500} c="var(--color-text-primary)">{formatDate(signal.publishedAt)}</Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">Collected</Text>
-                      <Text size="xs" fw={500} c="#171717">{formatDateTime(signal.collectedAt)}</Text>
+                      <Text size="xs" c="var(--color-text-muted)">Collected</Text>
+                      <Text size="xs" fw={500} c="var(--color-text-primary)">{formatDateTime(signal.collectedAt)}</Text>
                     </Group>
                     {locations.some((l) => resolveLocationName(l)) && (
-                      <Box style={{ borderTop: "1px solid #F0F0F0" }} pt={8} mt={2}>
-                        <Text size="xs" c="#737373" mb={6}>Affected Areas</Text>
+                      <Box style={{ borderTop: "1px solid var(--color-border)" }} pt={8} mt={2}>
+                        <Text size="xs" c="var(--color-text-muted)" mb={6}>Affected Areas</Text>
                         <Group gap={6} wrap="wrap">
                           {locations.map((loc) => {
                             const name = resolveLocationName(loc);
@@ -839,7 +839,7 @@ export function SignalDetailContent({
                                 size="sm"
                                 variant="light"
                                 style={{
-                                  background: "#FEF2F0",
+                                  background: "var(--color-accent-light)",
                                   color: "#E85D3D",
                                   fontWeight: 500,
                                   border: "1px solid #E85D3D30",

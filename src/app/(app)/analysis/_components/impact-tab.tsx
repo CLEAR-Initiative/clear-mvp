@@ -69,7 +69,7 @@ export function ImpactTab() {
                   </Text>
                 </Table.Td>
                 <Table.Td>
-                  <Text c="#525252" style={{ fontSize: 13 }}>
+                  <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
                     {item.description}
                   </Text>
                 </Table.Td>
@@ -93,10 +93,10 @@ export function ImpactTab() {
                 borderLeft: "3px solid #F59E0B",
               }}
             >
-              <Text size="xs" fw={700} c="#92400E" tt="uppercase" mb={4}>
+              <Text size="xs" fw={700} c="var(--color-warning)" tt="uppercase" mb={4}>
                 Flood Risk
               </Text>
-              <Text size="sm" c="#525252">
+              <Text size="sm" c="var(--color-text-secondary)">
                 {environmentalFactors.floodRisk}
               </Text>
             </Box>
@@ -107,10 +107,10 @@ export function ImpactTab() {
                 borderLeft: "3px solid #3B82F6",
               }}
             >
-              <Text size="xs" fw={700} c="#1E40AF" tt="uppercase" mb={4}>
+              <Text size="xs" fw={700} c="var(--color-info)" tt="uppercase" mb={4}>
                 Rainfall Forecast
               </Text>
-              <Text size="sm" c="#525252">
+              <Text size="sm" c="var(--color-text-secondary)">
                 {environmentalFactors.rainfallForecast}
               </Text>
             </Box>
@@ -121,10 +121,10 @@ export function ImpactTab() {
                 borderLeft: "3px solid #DC2626",
               }}
             >
-              <Text size="xs" fw={700} c="#991B1B" tt="uppercase" mb={4}>
+              <Text size="xs" fw={700} c="var(--color-critical)" tt="uppercase" mb={4}>
                 Secondary Risk
               </Text>
-              <Text size="sm" c="#525252">
+              <Text size="sm" c="var(--color-text-secondary)">
                 {environmentalFactors.secondaryRisk}
               </Text>
             </Box>
@@ -154,7 +154,7 @@ export function ImpactTab() {
                   color="#7C3AED"
                   style={{ marginTop: 2, flexShrink: 0 }}
                 />
-                <Text size="sm" c="#525252" style={{ lineHeight: 1.5 }}>
+                <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }}>
                   {concern}
                 </Text>
               </Group>
@@ -173,7 +173,7 @@ export function ImpactTab() {
             <Box
               key={idx}
               p={12}
-              style={{ background: "#F5F5F5", border: "1px solid #E5E5E5" }}
+              style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)" }}
             >
               <Group gap={8} align="flex-start" wrap="nowrap">
                 <IconAlertTriangle
@@ -181,7 +181,7 @@ export function ImpactTab() {
                   color="#F59E0B"
                   style={{ marginTop: 2, flexShrink: 0 }}
                 />
-                <Text size="sm" c="#525252" style={{ lineHeight: 1.5 }}>
+                <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }}>
                   {effect}
                 </Text>
               </Group>

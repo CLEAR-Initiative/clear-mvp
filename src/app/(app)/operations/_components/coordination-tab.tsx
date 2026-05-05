@@ -22,9 +22,9 @@ export function CoordinationTab() {
         renderRow={(p) => (
           <Table.Tr key={p.org}>
             <Table.Td><Text fw={600} style={{ fontSize: 13 }}>{p.org}</Text></Table.Td>
-            <Table.Td><Text c="#525252" style={{ fontSize: 13 }}>{p.role}</Text></Table.Td>
-            <Table.Td><Text c="#525252" style={{ fontSize: 13 }}>{p.coverage}</Text></Table.Td>
-            <Table.Td><Text c="#525252" style={{ fontSize: 13 }}>{p.contact}</Text></Table.Td>
+            <Table.Td><Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>{p.role}</Text></Table.Td>
+            <Table.Td><Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>{p.coverage}</Text></Table.Td>
+            <Table.Td><Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>{p.contact}</Text></Table.Td>
             <Table.Td>
               <StatusIndicator status={p.status} color={p.statusColor} />
             </Table.Td>

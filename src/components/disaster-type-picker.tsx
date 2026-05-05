@@ -90,7 +90,7 @@ export function DisasterTypePicker({
 
   return (
     <Input.Wrapper label={label && (
-      <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.05em" }}>
+      <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.05em" }}>
         {label}
       </Text>
     )}>

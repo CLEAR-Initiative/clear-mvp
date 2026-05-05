@@ -68,13 +68,13 @@ export function EventDetailDrawer({
         px={20}
         py={12}
         style={{
-          background: "#FFF",
-          borderBottom: "1px solid #E5E5E5",
+          background: "var(--color-bg-white)",
+          borderBottom: "1px solid var(--color-border)",
           flexShrink: 0,
         }}
       >
         <Group justify="space-between">
-          <Text fw={600} c="#171717" size="sm">
+          <Text fw={600} c="var(--color-text-primary)" size="sm">
             Event Details
           </Text>
           <Group gap={8}>

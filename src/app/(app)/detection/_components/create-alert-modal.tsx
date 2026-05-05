@@ -30,11 +30,11 @@ interface FormData {
 }
 
 const SEVERITY_OPTIONS = [
-  { value: "1", label: "1 — Low" },
-  { value: "2", label: "2 — Moderate" },
-  { value: "3", label: "3 — High" },
-  { value: "4", label: "4 — Very High" },
-  { value: "5", label: "5 — Critical" },
+  { value: "1", label: "1 - Low" },
+  { value: "2", label: "2 - Moderate" },
+  { value: "3", label: "3 - High" },
+  { value: "4", label: "4 - Very High" },
+  { value: "5", label: "5 - Critical" },
 ];
 
 const SECTION_LABEL_STYLE = {
@@ -42,7 +42,7 @@ const SECTION_LABEL_STYLE = {
   fontWeight: 600,
   textTransform: "uppercase" as const,
   letterSpacing: "0.5px",
-  color: "#737373",
+  color: "var(--color-text-muted)",
 };
 
 export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModalProps) {
@@ -128,7 +128,7 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
       )}
 
       <Stack gap="md">
-        {/* Section 1 — Alert Content */}
+        {/* Section 1 - Alert Content */}
         <Divider />
         <Text style={SECTION_LABEL_STYLE}>Alert Content</Text>
 
@@ -155,7 +155,7 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
           required
         />
 
-        {/* Section 2 — Classification */}
+        {/* Section 2 - Classification */}
         <Divider />
         <Text style={SECTION_LABEL_STYLE}>Classification</Text>
 

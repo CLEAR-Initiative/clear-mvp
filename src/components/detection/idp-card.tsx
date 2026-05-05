@@ -94,7 +94,7 @@ function SparkTooltip({ active, payload, label }: SparkTooltipProps) {
   if (!active || !payload?.[0]) return null;
   return (
     <Box style={{
-      background: "#FFFFFF", border: "1px solid #E5E5E5",
+      background: "var(--color-bg-white)", border: "1px solid var(--color-border)",
       borderRadius: 6, padding: "6px 10px",
       boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
     }}>
@@ -149,7 +149,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
             onClick={() => void query.refetch()}
             style={{
               fontSize: 10, fontWeight: 600, color: "#6B7280",
-              background: "#F5F5F5", border: "1px solid #E5E5E5",
+              background: "var(--color-bg-muted)", border: "1px solid var(--color-border)",
               borderRadius: 5, padding: "4px 10px", cursor: "pointer",
               display: "flex", alignItems: "center", gap: 4,
             }}

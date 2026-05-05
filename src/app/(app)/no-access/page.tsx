@@ -28,17 +28,17 @@ export default function NoAccessPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#FAFAFA",
+        backgroundColor: "var(--color-bg-primary)",
       }}
     >
       <Box w={440}>
-        <Card p="xl" style={{ border: "1px solid #E5E5E5" }}>
+        <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
           <Stack align="center" gap={16}>
             <IconLock size={48} color="#E85D3D" stroke={1.5} />
-            <Text size="lg" fw={600} c="#171717">
+            <Text size="lg" fw={600} c="var(--color-text-primary)">
               Waiting for Access
             </Text>
-            <Text size="sm" c="#737373" ta="center" maw={360}>
+            <Text size="sm" c="var(--color-text-muted)" ta="center" maw={360}>
               You&apos;ve signed in but haven&apos;t been assigned to an organisation yet.
               Contact your administrator to receive an invitation.
             </Text>
@@ -55,7 +55,7 @@ export default function NoAccessPage() {
           </Stack>
         </Card>
 
-        <Text ta="center" size="xs" c="#737373" mt={16}>
+        <Text ta="center" size="xs" c="var(--color-text-muted)" mt={16}>
           Norwegian Refugee Council &bull; CLEAR Platform
         </Text>
       </Box>

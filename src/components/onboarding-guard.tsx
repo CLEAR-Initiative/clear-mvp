@@ -21,7 +21,7 @@ export function OnboardingGuard({ children }: { children: React.ReactNode }) {
     const hasOrgs = (orgsQuery.data?.length ?? 0) > 0;
     const hasTeams = (teams?.length ?? 0) > 0;
 
-    // User has no org membership — they haven't been invited yet
+    // User has no org membership - they haven't been invited yet
     if (!hasOrgs && !hasTeams && pathname !== "/no-access") {
       router.replace("/no-access");
     }

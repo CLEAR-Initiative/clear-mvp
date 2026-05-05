@@ -48,8 +48,8 @@ export function MapSettingsPopover({
             width: 30,
             height: 30,
             borderRadius: 4,
-            border: "1px solid #E5E5E5",
-            background: "white",
+            border: "1px solid var(--color-border)",
+            background: "var(--color-bg-white)",
             cursor: "pointer",
             color: opened ? "#2563EB" : "#525252",
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
@@ -64,7 +64,7 @@ export function MapSettingsPopover({
         <Text
           fw={700}
           tt="uppercase"
-          c="#737373"
+          c="var(--color-text-muted)"
           style={{ fontSize: 10, letterSpacing: "0.05em" }}
           mb={10}
         >
@@ -73,7 +73,7 @@ export function MapSettingsPopover({
 
         <Group justify="space-between" align="center" gap={8} wrap="nowrap">
           <Box style={{ flexShrink: 0 }}>
-            <Text size="xs" c="#525252" style={{ fontSize: 12 }}>Show boundaries</Text>
+            <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>Show boundaries</Text>
           </Box>
           <Select
             size="xs"
@@ -87,11 +87,11 @@ export function MapSettingsPopover({
 
         {onShowPopulationChange && (
           <>
-            <Divider color="#F5F5F5" my={10} />
+            <Divider color="var(--color-border)" my={10} />
             <Group justify="space-between" align="center" gap={8} wrap="nowrap">
               <Box>
-                <Text size="xs" c="#525252" style={{ fontSize: 12 }}>Population layer</Text>
-                <Text size="xs" c="#A3A3A3" style={{ fontSize: 10 }}>A2 district resolution</Text>
+                <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>Population layer</Text>
+                <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 10 }}>A2 district resolution</Text>
               </Box>
               <Switch
                 size="xs"

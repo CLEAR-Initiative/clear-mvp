@@ -23,18 +23,18 @@ export function CardSection({
   style,
 }: CardSectionProps) {
   return (
-    <Card p={0} className={className} style={{ border: "1px solid #E5E5E5", ...style }}>
-      <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+    <Card p={0} className={className} style={{ border: "1px solid var(--color-border)", ...style }}>
+      <Box px={16} py={12} className="border-b border-[var(--color-border)]">
         <Group justify="space-between">
           <Box>
             <Group gap={8}>
               {icon}
-              <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+              <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                 {title}
               </Text>
             </Group>
             {subtitle && (
-              <Text size="xs" c="#737373">
+              <Text size="xs" c="var(--color-text-muted)">
                 {subtitle}
               </Text>
             )}

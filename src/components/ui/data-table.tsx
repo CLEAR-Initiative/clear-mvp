@@ -40,7 +40,7 @@ export function DataTable<T>({
   return (
     <Table>
       <Table.Thead>
-        <Table.Tr style={{ background: "#F5F5F5" }}>
+        <Table.Tr style={{ background: "var(--color-bg-muted)" }}>
           {columns.map((col) => (
             <Table.Th key={col.label} style={{ ...TH_STYLE, width: col.width }}>
               {col.label}

@@ -23,17 +23,17 @@ interface KpiCardsProps {
 
 /* ── design tokens ── */
 const SEV = [
-  { label: "Critical", color: "#DC2626", bg: "#FEF2F2", border: "#FECACA" },
-  { label: "High",     color: "#EA580C", bg: "#FFF7ED", border: "#FED7AA" },
-  { label: "Medium",   color: "#D97706", bg: "#FFFBEB", border: "#FDE68A" },
-  { label: "Low",      color: "#16A34A", bg: "#F0FDF4", border: "#BBF7D0" },
+  { label: "Critical", color: "#DC2626", bg: "var(--color-critical-light)", border: "var(--color-border)" },
+  { label: "High",     color: "#EA580C", bg: "var(--color-warning-light)",  border: "var(--color-border)" },
+  { label: "Medium",   color: "#D97706", bg: "var(--color-warning-light)",  border: "var(--color-border)" },
+  { label: "Low",      color: "#16A34A", bg: "var(--color-success-light)",  border: "var(--color-border)" },
 ] as const;
 
 function Card({ children, accent }: { children: React.ReactNode; accent: string }) {
   return (
     <Box style={{
-      background: "#fff",
-      border: "1px solid #EBEBEB",
+      background: "var(--color-bg-white)",
+      border: "1px solid var(--color-border)",
       borderRadius: 10,
       overflow: "hidden",
       height: "100%",
@@ -51,7 +51,7 @@ function Card({ children, accent }: { children: React.ReactNode; accent: string 
 
 function CardHeader({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <Group gap={7} px={16} pt={14} pb={10} style={{ borderBottom: "1px solid #F5F5F5" }}>
+    <Group gap={7} px={16} pt={14} pb={10} style={{ borderBottom: "1px solid var(--color-border)" }}>
       <Box style={{ color: "#A3A3A3" }}>{icon}</Box>
       <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "#A3A3A3" }}>
         {label}
@@ -68,7 +68,7 @@ function CoverageRing({ pct, color, size = 72 }: { pct: number; color: string; s
   const cx = size / 2, cy = size / 2;
   return (
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#F0F0F0" strokeWidth={7} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--color-border)" strokeWidth={7} />
       <circle
         cx={cx} cy={cy} r={r} fill="none"
         stroke={color} strokeWidth={7}
@@ -80,16 +80,16 @@ function CoverageRing({ pct, color, size = 72 }: { pct: number; color: string; s
 }
 
 const INFORM_COLORS = {
-  5: { accent: "#DC2626", badge: "#FEF2F2", badgeBorder: "#FECACA", badgeText: "#DC2626" },
-  4: { accent: "#EA580C", badge: "#FFF7ED", badgeBorder: "#FED7AA", badgeText: "#EA580C" },
-  3: { accent: "#D97706", badge: "#FFFBEB", badgeBorder: "#FDE68A", badgeText: "#D97706" },
-  2: { accent: "#16A34A", badge: "#F0FDF4", badgeBorder: "#BBF7D0", badgeText: "#16A34A" },
-  1: { accent: "#16A34A", badge: "#F0FDF4", badgeBorder: "#BBF7D0", badgeText: "#16A34A" },
+  5: { accent: "#DC2626", badge: "var(--color-critical-light)", badgeBorder: "var(--color-border)", badgeText: "#DC2626" },
+  4: { accent: "#EA580C", badge: "var(--color-warning-light)",  badgeBorder: "var(--color-border)", badgeText: "#EA580C" },
+  3: { accent: "#D97706", badge: "var(--color-warning-light)",  badgeBorder: "var(--color-border)", badgeText: "#D97706" },
+  2: { accent: "#16A34A", badge: "var(--color-success-light)",  badgeBorder: "var(--color-border)", badgeText: "#16A34A" },
+  1: { accent: "#16A34A", badge: "var(--color-success-light)",  badgeBorder: "var(--color-border)", badgeText: "#16A34A" },
 } as const;
 
 function ScoreBar({ value, max = 10, color }: { value: number; max?: number; color: string }) {
   return (
-    <Box style={{ height: 3, background: "#F0F0F0", borderRadius: 2, overflow: "hidden" }}>
+    <Box style={{ height: 3, background: "var(--color-bg-muted)", borderRadius: 2, overflow: "hidden" }}>
       <Box style={{ height: "100%", width: `${(value / max) * 100}%`, background: color, borderRadius: 2 }} />
     </Box>
   );
@@ -168,10 +168,10 @@ export function KpiCards({ alerts, loading, country = "Sudan", events = [] }: Kp
         <Box px={16} pt={12} pb={16} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
 
           <Group align="baseline" gap={6} mb={14}>
-            <Text style={{ fontSize: 44, fontWeight: 800, lineHeight: 1, letterSpacing: "-0.04em", color: "#171717", fontVariantNumeric: "tabular-nums" }}>
+            <Text style={{ fontSize: 44, fontWeight: 800, lineHeight: 1, letterSpacing: "-0.04em", color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>
               {total}
             </Text>
-            <Text size="xs" c="#A3A3A3" fw={500}>alerts</Text>
+            <Text size="xs" c="var(--color-text-muted)" fw={500}>alerts</Text>
           </Group>
 
           <Box style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
@@ -183,7 +183,7 @@ export function KpiCards({ alerts, loading, country = "Sudan", events = [] }: Kp
             ].map(({ label, count, color, bg, border }) => (
               <Group key={label} justify="space-between" align="center">
                 <Group gap={6}>
-                  <Box style={{ width: 6, height: 6, borderRadius: "50%", background: count > 0 ? color : "#E5E5E5", flexShrink: 0 }} />
+                  <Box style={{ width: 6, height: 6, borderRadius: "50%", background: count > 0 ? color : "var(--color-border)", flexShrink: 0 }} />
                   <Text style={{ fontSize: 11, color: count > 0 ? "#525252" : "#A3A3A3", fontWeight: 500 }}>{label}</Text>
                 </Group>
                 {count > 0 ? (
@@ -191,7 +191,7 @@ export function KpiCards({ alerts, loading, country = "Sudan", events = [] }: Kp
                     <Text style={{ fontSize: 11, fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>{count}</Text>
                   </Box>
                 ) : (
-                  <Text style={{ fontSize: 11, color: "#D4D4D4", fontVariantNumeric: "tabular-nums" }}>—</Text>
+                  <Text style={{ fontSize: 11, color: "#D4D4D4", fontVariantNumeric: "tabular-nums" }}>-</Text>
                 )}
               </Group>
             ))}
@@ -207,7 +207,7 @@ export function KpiCards({ alerts, loading, country = "Sudan", events = [] }: Kp
                 {counts.low > 0      && <Box style={{ flex: counts.low,      background: "#16A34A" }} />}
               </>
             ) : (
-              <Box style={{ flex: 1, background: "#F0F0F0" }} />
+              <Box style={{ flex: 1, background: "var(--color-bg-muted)" }} />
             )}
           </Box>
         </Box>
@@ -220,7 +220,7 @@ export function KpiCards({ alerts, loading, country = "Sudan", events = [] }: Kp
 
           <Group justify="space-between" align="center" mb={10}>
             <Group align="baseline" gap={5}>
-              <Text style={{ fontSize: 28, fontWeight: 800, lineHeight: 1, letterSpacing: "-0.03em", color: "#171717", fontVariantNumeric: "tabular-nums" }}>
+              <Text style={{ fontSize: 28, fontWeight: 800, lineHeight: 1, letterSpacing: "-0.03em", color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>
                 {total}
               </Text>
               <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500 }}>
@@ -236,9 +236,9 @@ export function KpiCards({ alerts, loading, country = "Sudan", events = [] }: Kp
                     fontSize: 10, fontWeight: 700, padding: "3px 9px",
                     borderRadius: 5, border: "1px solid", cursor: "pointer",
                     transition: "all 0.15s",
-                    background: trendPeriod === p ? "#171717" : "transparent",
-                    color:      trendPeriod === p ? "#fff"     : "#A3A3A3",
-                    borderColor:trendPeriod === p ? "#171717"  : "#E5E5E5",
+                    background: trendPeriod === p ? "var(--color-text-primary)" : "transparent",
+                    color:      trendPeriod === p ? "var(--color-bg-white)"   : "var(--color-text-muted)",
+                    borderColor:trendPeriod === p ? "var(--color-text-primary)" : "var(--color-border)",
                   }}
                 >{p}</button>
               ))}
@@ -297,7 +297,7 @@ export function KpiCards({ alerts, loading, country = "Sudan", events = [] }: Kp
                 display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center",
               }}>
-                <Text style={{ fontSize: 16, fontWeight: 800, color: "#171717", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+                <Text style={{ fontSize: 16, fontWeight: 800, color: "var(--color-text-primary)", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
                   {coverage.pct}%
                 </Text>
                 <Text style={{ fontSize: 8, color: "#A3A3A3", fontWeight: 600, marginTop: 1 }}>flagged</Text>
@@ -309,7 +309,7 @@ export function KpiCards({ alerts, loading, country = "Sudan", events = [] }: Kp
               <Box>
                 <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 600, marginBottom: 2 }}>Events</Text>
                 <Group gap={6} align="baseline">
-                  <Text style={{ fontSize: 20, fontWeight: 800, color: "#171717", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+                  <Text style={{ fontSize: 20, fontWeight: 800, color: "var(--color-text-primary)", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
                     {coverage.totalEvents}
                   </Text>
                   <Text style={{ fontSize: 10, color: "#A3A3A3" }}>total</Text>
@@ -317,25 +317,25 @@ export function KpiCards({ alerts, loading, country = "Sudan", events = [] }: Kp
                 <Group gap={10} mt={3}>
                   <Group gap={4}>
                     <Box style={{ width: 6, height: 6, borderRadius: "50%", background: "#DC2626" }} />
-                    <Text style={{ fontSize: 10, color: "#737373" }}>{coverage.flagged} alerted</Text>
+                    <Text style={{ fontSize: 10, color: "var(--color-text-muted)" }}>{coverage.flagged} alerted</Text>
                   </Group>
                   <Group gap={4}>
                     <Box style={{ width: 6, height: 6, borderRadius: "50%", background: "#D4D4D4" }} />
-                    <Text style={{ fontSize: 10, color: "#737373" }}>{coverage.unflagged} monitoring</Text>
+                    <Text style={{ fontSize: 10, color: "var(--color-text-muted)" }}>{coverage.unflagged} monitoring</Text>
                   </Group>
                 </Group>
               </Box>
 
-              <Box style={{ borderTop: "1px solid #F5F5F5", paddingTop: 7 }}>
+              <Box style={{ borderTop: "1px solid var(--color-border)", paddingTop: 7 }}>
                 <Group justify="space-between">
                   <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500 }}>Total signals</Text>
-                  <Text style={{ fontSize: 13, fontWeight: 700, color: "#525252", fontVariantNumeric: "tabular-nums" }}>
+                  <Text style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-secondary)", fontVariantNumeric: "tabular-nums" }}>
                     {coverage.totalSignals}
                   </Text>
                 </Group>
                 <Group justify="space-between" mt={3}>
                   <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500 }}>Avg / event</Text>
-                  <Text style={{ fontSize: 13, fontWeight: 700, color: "#525252", fontVariantNumeric: "tabular-nums" }}>
+                  <Text style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-secondary)", fontVariantNumeric: "tabular-nums" }}>
                     {coverage.avgSignals}
                   </Text>
                 </Group>
@@ -392,7 +392,7 @@ export function KpiCards({ alerts, loading, country = "Sudan", events = [] }: Kp
               </Group>
 
               {/* crisis name */}
-              <Text style={{ fontSize: 10, color: "#737373", fontWeight: 500, marginBottom: 12, lineHeight: 1.3 }}
+              <Text style={{ fontSize: 10, color: "var(--color-text-muted)", fontWeight: 500, marginBottom: 12, lineHeight: 1.3 }}
                 lineClamp={2}>
                 {inform.crisisName}
               </Text>
@@ -407,7 +407,7 @@ export function KpiCards({ alerts, loading, country = "Sudan", events = [] }: Kp
                   <Box key={label}>
                     <Group justify="space-between" mb={3}>
                       <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500 }}>{label}</Text>
-                      <Text style={{ fontSize: 10, fontWeight: 700, color: "#525252", fontVariantNumeric: "tabular-nums" }}>
+                      <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-secondary)", fontVariantNumeric: "tabular-nums" }}>
                         {value.toFixed(1)}
                       </Text>
                     </Group>

@@ -21,13 +21,13 @@ export function ScenariosTab() {
             <Text size="xl" fw={700} c={scenario.likelihoodColor} mb={8}>
               {scenario.likelihood.replace(" likely", "")}
             </Text>
-            <Text fw={600} c="#171717">
+            <Text fw={600} c="var(--color-text-primary)">
               {scenario.name}
             </Text>
-            <Text size="xs" c="#525252" mb={12}>
+            <Text size="xs" c="var(--color-text-secondary)" mb={12}>
               {scenario.sub}
             </Text>
-            <Text size="sm" c="#525252" style={{ lineHeight: 1.5 }}>
+            <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }}>
               {scenario.description}
             </Text>
           </Box>

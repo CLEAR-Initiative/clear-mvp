@@ -80,7 +80,7 @@ function CommentRow({ comment, isLast, currentUserId, onReply, onDelete, isDelet
         <Box style={{ flex: 1 }}>
           <Group gap={8} mb={4} justify="space-between">
             <Group gap={8}>
-              <Text size="xs" fw={600} c="#171717">
+              <Text size="xs" fw={600} c="var(--color-text-primary)">
                 {comment.user.name ?? "Unknown"}
               </Text>
               {comment.isCommentReply && (
@@ -88,7 +88,7 @@ function CommentRow({ comment, isLast, currentUserId, onReply, onDelete, isDelet
                   Reply
                 </Badge>
               )}
-              <Text size="xs" c="#A3A3A3">
+              <Text size="xs" c="var(--color-text-muted)">
                 {formatTimeAgo(comment.createdAt)}
               </Text>
             </Group>
@@ -122,7 +122,7 @@ function CommentRow({ comment, isLast, currentUserId, onReply, onDelete, isDelet
               )}
             </Group>
           </Group>
-          <Text size="sm" c="#525252" style={{ lineHeight: 1.6 }}>
+          <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
             {comment.comment}
           </Text>
           {comment.tags.length > 0 && (
@@ -208,7 +208,7 @@ export function CommentsSection({ entityId, entityType }: CommentsSectionProps) 
       <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
         <Group gap={8}>
           <IconMessageCircle size={14} color="var(--color-text-secondary)" />
-          <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
             Discussion
           </Text>
           {!query.isLoading && (
@@ -227,7 +227,7 @@ export function CommentsSection({ entityId, entityType }: CommentsSectionProps) 
         </>
       ) : comments.length === 0 ? (
         <Box px={16} py={20} style={{ textAlign: "center" }}>
-          <Text size="sm" c="#A3A3A3">
+          <Text size="sm" c="var(--color-text-muted)">
             No comments yet. Be the first to add one.
           </Text>
         </Box>
@@ -250,7 +250,7 @@ export function CommentsSection({ entityId, entityType }: CommentsSectionProps) 
         {replyingTo && (
           <Group gap={6} mb={8} p={8} style={{ background: "var(--color-bg-muted)", borderRadius: 4 }}>
             <IconArrowBack size={12} color="var(--color-text-muted)" />
-            <Text size="xs" c="#737373" style={{ flex: 1 }}>
+            <Text size="xs" c="var(--color-text-muted)" style={{ flex: 1 }}>
               Replying to <strong>{replyingTo.user.name}</strong>
             </Text>
             <ActionIcon size="xs" variant="subtle" color="neutral" onClick={() => setReplyingTo(null)}>
@@ -269,7 +269,7 @@ export function CommentsSection({ entityId, entityType }: CommentsSectionProps) 
           mb={8}
         />
         <Group justify="space-between" align="center">
-          <Text size="xs" c="#A3A3A3">
+          <Text size="xs" c="var(--color-text-muted)">
             ⌘ + Enter to post
           </Text>
           <Button

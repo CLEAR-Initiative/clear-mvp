@@ -27,7 +27,7 @@ import {
 } from "@tabler/icons-react";
 
 // ============================================================================
-// SHARED DATA — exported for use by the main page and other components
+// SHARED DATA - exported for use by the main page and other components
 // ============================================================================
 
 export interface LocationData {
@@ -265,7 +265,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
     >
       {/* Step Indicator */}
       <Box mb={24}>
-        <Text size="xs" c="#737373" mb={16}>
+        <Text size="xs" c="var(--color-text-muted)" mb={16}>
           Step {currentStep + 1} of 4: {WIZARD_STEPS[currentStep]?.title}
         </Text>
         <Stepper active={currentStep} size="xs" color="#E85D3D">
@@ -278,7 +278,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
       {/* Step 1: Target Locations */}
       {currentStep === 0 && (
         <Box>
-          <Text size="sm" c="#525252" mb={16}>
+          <Text size="sm" c="var(--color-text-secondary)" mb={16}>
             Select the locations where cash assistance will be distributed. You can select multiple locations.
           </Text>
           <SimpleGrid cols={2} spacing={12}>
@@ -290,7 +290,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
                 style={{
                   border: formData.locations.includes(location.id)
                     ? "2px solid #E85D3D"
-                    : "1px solid #E5E5E5",
+                    : "1px solid var(--color-border)",
                   background: formData.locations.includes(location.id)
                     ? "#FEF2F0"
                     : "white",
@@ -300,7 +300,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
                 <Group justify="space-between">
                   <Box>
                     <Text fw={600} size="sm">{location.name}</Text>
-                    <Text size="xs" c="#737373">{location.affected.toLocaleString()} affected</Text>
+                    <Text size="xs" c="var(--color-text-muted)">{location.affected.toLocaleString()} affected</Text>
                   </Box>
                   <Group gap={8}>
                     <Badge size="xs" style={{ background: location.severityColor, color: "white" }}>
@@ -315,7 +315,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
             ))}
           </SimpleGrid>
           {formData.locations.length > 0 && (
-            <Box mt={16} p={12} style={{ background: "#F5F5F5" }}>
+            <Box mt={16} p={12} style={{ background: "var(--color-bg-muted)" }}>
               <Text size="sm">
                 <Text span fw={700}>{formData.locations.length}</Text> location(s) selected{" \u2022 "}
                 <Text span fw={700}>{totalAffected.toLocaleString()}</Text> total affected{" \u2022 "}
@@ -329,11 +329,11 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
       {/* Step 2: Transfer Details */}
       {currentStep === 1 && (
         <Box>
-          <Text size="sm" c="#525252" mb={16}>
+          <Text size="sm" c="var(--color-text-secondary)" mb={16}>
             Configure the transfer modality and amount for this distribution.
           </Text>
 
-          <Text size="xs" fw={600} c="#737373" tt="uppercase" mb={8} style={{ letterSpacing: "0.5px" }}>
+          <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={8} style={{ letterSpacing: "0.5px" }}>
             Transfer Modality
           </Text>
           <SimpleGrid cols={2} spacing={12} mb={20}>
@@ -347,7 +347,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
                   style={{
                     border: formData.modality === option.value
                       ? "2px solid #E85D3D"
-                      : "1px solid #E5E5E5",
+                      : "1px solid var(--color-border)",
                     background: formData.modality === option.value ? "#FEF2F0" : "white",
                     cursor: "pointer",
                     display: "flex",
@@ -403,7 +403,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
               <Text size="xl" fw={700} style={{ fontFamily: "monospace" }}>
                 {estimatedBudget.toLocaleString()} {formData.currency}
               </Text>
-              <Text size="xs" c="#525252" mt={4}>
+              <Text size="xs" c="var(--color-text-secondary)" mt={4}>
                 Based on ~{estimatedHouseholds.toLocaleString()} households at {formData.amount} {formData.currency} each
               </Text>
             </Box>
@@ -414,7 +414,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
       {/* Step 3: Schedule & Criteria */}
       {currentStep === 2 && (
         <Box>
-          <Text size="sm" c="#525252" mb={16}>
+          <Text size="sm" c="var(--color-text-secondary)" mb={16}>
             Set the distribution schedule and targeting criteria.
           </Text>
 
@@ -436,7 +436,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
             />
           </SimpleGrid>
 
-          <Text size="xs" fw={600} c="#737373" tt="uppercase" mb={8} style={{ letterSpacing: "0.5px" }}>
+          <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={8} style={{ letterSpacing: "0.5px" }}>
             Verification Method <Text span c="#DC2626">*</Text>
           </Text>
           <SimpleGrid cols={2} spacing={12} mb={20}>
@@ -448,7 +448,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
                 style={{
                   border: formData.verificationMethod === option.value
                     ? "2px solid #E85D3D"
-                    : "1px solid #E5E5E5",
+                    : "1px solid var(--color-border)",
                   background: formData.verificationMethod === option.value ? "#FEF2F0" : "white",
                   cursor: "pointer",
                 }}
@@ -458,7 +458,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
             ))}
           </SimpleGrid>
 
-          <Text size="xs" fw={600} c="#737373" tt="uppercase" mb={8} style={{ letterSpacing: "0.5px" }}>
+          <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={8} style={{ letterSpacing: "0.5px" }}>
             Targeting Criteria (Optional)
           </Text>
           <Box style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -479,34 +479,34 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
       {/* Step 4: Review & Confirm */}
       {currentStep === 3 && (
         <Box>
-          <Text size="sm" c="#525252" mb={16}>
+          <Text size="sm" c="var(--color-text-secondary)" mb={16}>
             Review the distribution plan before creating.
           </Text>
 
-          <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-            <Box p={16} className="border-b border-[#E5E5E5]">
-              <Text size="xs" fw={600} c="#737373" tt="uppercase" mb={8}>Target Locations</Text>
+          <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+            <Box p={16} className="border-b border-[var(--color-border)]">
+              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={8}>Target Locations</Text>
               <Group gap={8}>
                 {selectedLocations.map((loc) => (
-                  <Text key={loc.id} px={8} py={4} size="sm" fw={500} style={{ background: "#F5F5F5" }}>
+                  <Text key={loc.id} px={8} py={4} size="sm" fw={500} style={{ background: "var(--color-bg-muted)" }}>
                     {loc.name}
                   </Text>
                 ))}
               </Group>
-              <Text size="xs" c="#737373" mt={8}>
+              <Text size="xs" c="var(--color-text-muted)" mt={8}>
                 {totalAffected.toLocaleString()} affected {"\u2022"} ~{estimatedHouseholds.toLocaleString()} households
               </Text>
             </Box>
 
             <SimpleGrid cols={2} spacing={0}>
-              <Box p={16} className="border-b border-r border-[#E5E5E5]">
-                <Text size="xs" fw={600} c="#737373" tt="uppercase" mb={4}>Transfer Modality</Text>
+              <Box p={16} className="border-b border-r border-[var(--color-border)]">
+                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={4}>Transfer Modality</Text>
                 <Text size="sm" fw={500}>
                   {modalityOptions.find((o) => o.value === formData.modality)?.label}
                 </Text>
               </Box>
-              <Box p={16} className="border-b border-[#E5E5E5]">
-                <Text size="xs" fw={600} c="#737373" tt="uppercase" mb={4}>Amount per HH</Text>
+              <Box p={16} className="border-b border-[var(--color-border)]">
+                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={4}>Amount per HH</Text>
                 <Text size="sm" fw={500} style={{ fontFamily: "monospace" }}>
                   {formData.amount} {formData.currency}
                 </Text>
@@ -514,14 +514,14 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
             </SimpleGrid>
 
             <SimpleGrid cols={2} spacing={0}>
-              <Box p={16} className="border-b border-r border-[#E5E5E5]">
-                <Text size="xs" fw={600} c="#737373" tt="uppercase" mb={4}>Distribution Period</Text>
+              <Box p={16} className="border-b border-r border-[var(--color-border)]">
+                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={4}>Distribution Period</Text>
                 <Text size="sm" fw={500}>
                   {formData.startDate} {formData.endDate ? `to ${formData.endDate}` : "(single day)"}
                 </Text>
               </Box>
-              <Box p={16} className="border-b border-[#E5E5E5]">
-                <Text size="xs" fw={600} c="#737373" tt="uppercase" mb={4}>Verification</Text>
+              <Box p={16} className="border-b border-[var(--color-border)]">
+                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={4}>Verification</Text>
                 <Text size="sm" fw={500}>
                   {verificationOptions.find((o) => o.value === formData.verificationMethod)?.label}
                 </Text>
@@ -529,8 +529,8 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
             </SimpleGrid>
 
             {formData.targetCriteria.length > 0 && (
-              <Box p={16} className="border-b border-[#E5E5E5]">
-                <Text size="xs" fw={600} c="#737373" tt="uppercase" mb={8}>Targeting Criteria</Text>
+              <Box p={16} className="border-b border-[var(--color-border)]">
+                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={8}>Targeting Criteria</Text>
                 <Group gap={8}>
                   {formData.targetCriteria.map((c) => (
                     <Text key={c} px={8} py={4} size="xs" style={{ background: "#FEF3C7", color: "#92400E" }}>
@@ -562,7 +562,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
       )}
 
       {/* Footer Navigation */}
-      <Group justify="space-between" mt={24} pt={16} className="border-t border-[#E5E5E5]">
+      <Group justify="space-between" mt={24} pt={16} className="border-t border-[var(--color-border)]">
         <Button
           variant="outline"
           color="gray"

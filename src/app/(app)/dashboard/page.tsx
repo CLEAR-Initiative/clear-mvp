@@ -23,7 +23,7 @@ import { RightPanel } from "./_components/right-panel";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
+  { ssr: false, loading: () => <Box w="100%" h="100%" style={{ background: "var(--color-bg-muted)" }} /> },
 );
 
 export default function DashboardPage() {
