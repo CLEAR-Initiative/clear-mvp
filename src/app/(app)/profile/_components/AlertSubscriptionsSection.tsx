@@ -96,15 +96,17 @@ export function AlertSubscriptionsSection() {
     const typesToCreate = resolvedTypes.length > 0 ? resolvedTypes : ["ot"];
 
     try {
-      for (const locationId of formLocationIds) {
-        await subscribeBatchMutation.mutateAsync({
-          locationIds: [locationId],
-          alertTypes: typesToCreate,
-          channel: "email" as const,
-          frequency: formFrequency as "immediately" | "daily" | "weekly" | "monthly",
-          minSeverity: parseInt(formMinSeverity),
-        });
-      }
+      await Promise.all(
+        formLocationIds.map((locationId) =>
+          subscribeBatchMutation.mutateAsync({
+            locationIds: [locationId],
+            alertTypes: typesToCreate,
+            channel: "email" as const,
+            frequency: formFrequency as "immediately" | "daily" | "weekly" | "monthly",
+            minSeverity: parseInt(formMinSeverity),
+          }),
+        ),
+      );
       notifications.show({ title: "Subscribed", message: "Alert subscriptions created.", color: "green" });
       void utils.subscriptions.list.invalidate();
       setShowForm(false);
@@ -120,9 +122,7 @@ export function AlertSubscriptionsSection() {
     const key = ids[0] ?? "";
     setDeletingGroup(key);
     try {
-      for (const id of ids) {
-        await unsubscribeMutation.mutateAsync({ id });
-      }
+      await Promise.all(ids.map((id) => unsubscribeMutation.mutateAsync({ id })));
       void utils.subscriptions.list.invalidate();
     } finally {
       setDeletingGroup(null);
@@ -133,9 +133,7 @@ export function AlertSubscriptionsSection() {
     const key = ids[0] ?? "";
     setTogglingGroup(key);
     try {
-      for (const id of ids) {
-        await toggleMutation.mutateAsync({ id, active: !currentActive });
-      }
+      await Promise.all(ids.map((id) => toggleMutation.mutateAsync({ id, active: !currentActive })));
       void utils.subscriptions.list.invalidate();
     } finally {
       setTogglingGroup(null);
@@ -143,10 +141,10 @@ export function AlertSubscriptionsSection() {
   }
 
   return (
-    <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
+    <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
       <Group gap={8} mb={16} justify="space-between">
         <Group gap={8}>
-          <IconBellRinging size={18} color="#E85D3D" />
+          <IconBellRinging size={18} color="var(--color-accent)" />
           <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
             Alert Subscriptions
           </Text>
@@ -169,7 +167,7 @@ export function AlertSubscriptionsSection() {
 
       {/* New subscription form */}
       {showForm && (
-        <Card p="sm" mb={16} style={{ background: "#F9FAFB", border: "1px solid #E5E5E5" }}>
+        <Card p="sm" mb={16} style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)" }}>
           <Text size="xs" fw={600} mb={12} tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 10 }}>
             New Subscription
           </Text>
@@ -239,7 +237,7 @@ export function AlertSubscriptionsSection() {
       {subsQuery.isLoading ? (
         <Box py={16} style={{ textAlign: "center" }}><Loader size={16} /></Box>
       ) : groups.length === 0 ? (
-        <Text size="sm" c="#737373">
+        <Text size="sm" c="var(--color-text-muted)">
           No alert subscriptions yet. Click &quot;Add&quot; to get started.
         </Text>
       ) : (
@@ -260,15 +258,15 @@ export function AlertSubscriptionsSection() {
                 key={group.key}
                 p={12}
                 style={{
-                  border: "1px solid #E5E5E5",
-                  background: group.active ? "#fff" : "#F9FAFB",
+                  border: "1px solid var(--color-border)",
+                  background: group.active ? "var(--color-bg-white)" : "var(--color-bg-muted)",
                   opacity: group.active ? 1 : 0.65,
                 }}
               >
                 <Group justify="space-between" wrap="nowrap">
                   <Box style={{ flex: 1, minWidth: 0 }}>
                     <Group gap={6} mb={4}>
-                      <Text fw={600} size="sm" c="#171717" truncate="end">
+                      <Text fw={600} size="sm" c="var(--color-text-primary)" truncate="end">
                         {group.locationName}
                       </Text>
                       <Badge size="xs" variant="light" color="gray" style={{ fontSize: 9, textTransform: "uppercase" }}>
@@ -276,11 +274,11 @@ export function AlertSubscriptionsSection() {
                       </Badge>
                     </Group>
                     <Group gap={6}>
-                      <Text size="xs" c="#737373">{typeLabel}</Text>
+                      <Text size="xs" c="var(--color-text-muted)">{typeLabel}</Text>
                       <Divider orientation="vertical" />
-                      <Text size="xs" c="#737373">{SEVERITY_LABELS[group.minSeverity] ?? `Severity ${group.minSeverity}+`}</Text>
+                      <Text size="xs" c="var(--color-text-muted)">{SEVERITY_LABELS[group.minSeverity] ?? `Severity ${group.minSeverity}+`}</Text>
                       <Divider orientation="vertical" />
-                      <Text size="xs" c="#737373">{FREQUENCY_LABELS[group.frequency] ?? group.frequency}</Text>
+                      <Text size="xs" c="var(--color-text-muted)">{FREQUENCY_LABELS[group.frequency] ?? group.frequency}</Text>
                     </Group>
                   </Box>
                   <Group gap={4} wrap="nowrap">

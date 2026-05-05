@@ -16,7 +16,7 @@ import { api } from "~/trpc/react";
 
 export function NotificationPreferencesSection() {
   const utils = api.useUtils();
-  const prefsQuery = api.auth.myNotificationPrefs.useQuery();
+  const prefsQuery = api.auth.myUserDetails.useQuery();
 
   // Local state for instant toggle feedback; synced from server on load.
   const [emailEnabled, setEmailEnabled] = useState<boolean | null>(null);
@@ -35,7 +35,7 @@ export function NotificationPreferencesSection() {
         color: "green",
         autoClose: 2000,
       });
-      void utils.auth.myNotificationPrefs.invalidate();
+      void utils.auth.myUserDetails.invalidate();
     },
     onError: (err) => {
       // Revert on failure
@@ -52,9 +52,9 @@ export function NotificationPreferencesSection() {
   const isSaving = updatePrefs.isPending;
 
   return (
-    <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
+    <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
       <Group gap={8} mb={16}>
-        <IconBell size={18} color="#E85D3D" />
+        <IconBell size={18} color="var(--color-accent)" />
         <Text
           fw={700}
           size="sm"
@@ -73,12 +73,12 @@ export function NotificationPreferencesSection() {
           <Group justify="space-between">
             <Box>
               <Group gap={6}>
-                <IconMail size={14} color="#737373" />
+                <IconMail size={14} color="var(--color-text-muted)" />
                 <Text size="sm" fw={500}>
                   Email Notifications
                 </Text>
               </Group>
-              <Text size="xs" c="#737373">
+              <Text size="xs" c="var(--color-text-muted)">
                 Receive crisis alerts and digests via email
               </Text>
             </Box>
@@ -95,19 +95,19 @@ export function NotificationPreferencesSection() {
           </Group>
 
           {/* SMS toggle (disabled until backend is ready) */}
-          <Group justify="space-between" style={{ opacity: 0.5 }}>
+          <Group justify="space-between" style={{ opacity: 0.5 }} aria-hidden="true">
             <Box>
               <Group gap={6}>
-                <IconPhone size={14} color="#737373" />
+                <IconPhone size={14} color="var(--color-text-muted)" />
                 <Text size="sm" fw={500}>
                   SMS Notifications
                 </Text>
               </Group>
-              <Text size="xs" c="#737373">
+              <Text size="xs" c="var(--color-text-muted)">
                 Coming soon
               </Text>
             </Box>
-            <Switch checked={false} disabled color="teal" />
+            <Switch checked={false} disabled color="teal" tabIndex={-1} />
           </Group>
         </Stack>
       )}

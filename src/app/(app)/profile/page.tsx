@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Box,
@@ -9,34 +9,33 @@ import {
   Group,
   Badge,
   Button,
-  SimpleGrid,
-  Divider,
   Tabs,
-  Select,
   Loader,
+  Table,
+  TextInput,
+  ActionIcon,
+  Divider,
+  Stack,
+  Select,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import {
   IconUser,
-  IconSettings,
-  IconShield,
-  IconPencil,
-  IconKey,
   IconBell,
   IconBuilding,
+  IconKey,
   IconCheck,
-  IconMailForward,
+  IconSettings,
+  IconPencil,
+  IconX,
+  IconLanguage,
+  IconClock,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
+import { COUNTRIES_BY_DIAL_LENGTH, COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
 import { NotificationPreferencesSection } from "./_components/NotificationPreferencesSection";
 import { AlertSubscriptionsSection } from "./_components/AlertSubscriptionsSection";
-
-const roleBadgeColor: Record<string, string> = {
-  admin: "blue",
-  analyst: "teal",
-  viewer: "gray",
-};
 
 export default function ProfilePage() {
   const { data, isLoading } = api.auth.me.useQuery();
@@ -44,7 +43,7 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <Box p={32}>
-        <Text c="var(--color-text-muted)">Loading profile...</Text>
+        <Loader size="sm" />
       </Box>
     );
   }
@@ -57,169 +56,233 @@ export default function ProfilePage() {
     );
   }
 
-  return <ProfileContent user={data.user} />;
+  return <SettingsContent user={data.user} />;
 }
 
 interface ProfileUser {
   id: string;
   name: string;
   email: string;
-  emailVerified: boolean;
-  image: string | null;
   role: string;
-  isActive: boolean;
-  email_notifications_enabled?: boolean;
-  sms_notifications_enabled?: boolean;
-  mobile_number?: string;
-  preferred_language?: string;
-  timezone?: string;
 }
 
-function OrganizationSection() {
-  const { activeTeamId, activeTeam, isLoading: teamLoading, switchTeam } = useTeam();
-  const orgsQuery = api.teams.myOrganisations.useQuery();
-  const orgs = orgsQuery.data ?? [];
+function parseE164(e164: string): { iso: string; local: string } {
+  const match = COUNTRIES_BY_DIAL_LENGTH.find((c) => e164.startsWith(c.dialCode));
+  if (match) return { iso: match.iso, local: e164.slice(match.dialCode.length) };
+  return { iso: "SD", local: "" };
+}
 
-  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+function MobileNumberField() {
+  const utils = api.useUtils();
+  const phoneQuery = api.auth.myUserDetails.useQuery();
+  const [editing, setEditing] = useState(false);
+  const [selectedIso, setSelectedIso] = useState("SD");
+  const [localNumber, setLocalNumber] = useState("");
 
-  // Derive which org the active team belongs to
-  const activeOrgId = useMemo(() => {
-    if (!activeTeamId) return null;
-    return orgs.find((o) => o.teams.some((t) => t.id === activeTeamId))?.id ?? null;
-  }, [activeTeamId, orgs]);
+  const savedE164 = phoneQuery.data?.phoneNumber ?? "";
 
-  const effectiveOrgId = selectedOrgId ?? activeOrgId;
-  const selectedOrg = orgs.find((o) => o.id === effectiveOrgId);
-  const orgOptions = orgs.map((o) => ({ value: o.id, label: o.name }));
-  const teamOptions = (selectedOrg?.teams ?? []).map((t) => ({ value: t.id, label: t.name }));
-  const effectiveTeamId = selectedTeamId ?? (selectedOrgId ? null : activeTeamId);
-  const isChanged = selectedTeamId !== null && selectedTeamId !== activeTeamId;
+  // Sync from server on initial load
+  useEffect(() => {
+    if (phoneQuery.data !== undefined && !editing) {
+      if (savedE164) {
+        const parsed = parseE164(savedE164);
+        setSelectedIso(parsed.iso);
+        setLocalNumber(parsed.local);
+      }
+    }
+  }, [phoneQuery.data, editing, savedE164]);
 
-  function handleOrgChange(orgId: string | null) {
-    setSelectedOrgId(orgId);
-    setSelectedTeamId(null);
-    setSaved(false);
+  const currentE164 = localNumber ? `${getDialCode(selectedIso)}${localNumber.replace(/\s/g, "")}` : "";
+  const isDirty = currentE164 !== savedE164;
+
+  const updateProfile = api.auth.updateProfile.useMutation({
+    onSuccess: () => {
+      setEditing(false);
+      void utils.auth.myUserDetails.invalidate();
+      notifications.show({ title: "Saved", message: "Mobile number updated.", color: "green", autoClose: 2000 });
+    },
+    onError: (err) => {
+      notifications.show({ title: "Error", message: err.message, color: "red" });
+    },
+  });
+
+  function handleCancel() {
+    if (savedE164) {
+      const parsed = parseE164(savedE164);
+      setSelectedIso(parsed.iso);
+      setLocalNumber(parsed.local);
+    } else {
+      setLocalNumber("");
+    }
+    setEditing(false);
   }
 
-  function handleSetActive() {
-    if (!effectiveTeamId) return;
-    switchTeam(effectiveTeamId);
-    setSaved(true);
+  function handleSave() {
+    updateProfile.mutate({ phoneNumber: currentE164 || undefined });
+  }
+
+  const readOnly = !editing;
+  const inputStyles = {
+    input: {
+      fontSize: 13,
+      background: readOnly ? "transparent" : undefined,
+      border: readOnly ? "1px solid transparent" : undefined,
+      cursor: readOnly ? "default" : undefined,
+      paddingLeft: readOnly ? 0 : undefined,
+    },
+  };
+
+  return (
+    <Box>
+      <Text size="xs" c="var(--color-text-muted)" mb={4}>Mobile</Text>
+      <Group gap={8} align="center" wrap="nowrap">
+        <Select
+          data={COUNTRY_SELECT_DATA}
+          value={selectedIso}
+          onChange={(v: string | null) => { setSelectedIso(v ?? "SD"); }}
+          searchable
+          size="xs"
+          readOnly={readOnly}
+          style={{ width: readOnly ? "auto" : 220, flexShrink: 0 }}
+          styles={{
+            input: {
+              fontSize: 13,
+              background: readOnly ? "transparent" : undefined,
+              border: readOnly ? "1px solid transparent" : undefined,
+              cursor: readOnly ? "default" : undefined,
+              paddingLeft: readOnly ? 0 : undefined,
+            },
+          }}
+          rightSection={readOnly ? null : undefined}
+          comboboxProps={{ withinPortal: true }}
+        />
+        <TextInput
+          value={localNumber}
+          onChange={(e) => setLocalNumber(e.currentTarget.value)}
+          placeholder={readOnly ? (savedE164 ? undefined : "Not set") : "912 345 678"}
+          size="xs"
+          readOnly={readOnly}
+          style={{ flex: 1 }}
+          styles={inputStyles}
+          rightSection={
+            readOnly ? (
+              <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditing(true)}>
+                <IconPencil size={13} />
+              </ActionIcon>
+            ) : null
+          }
+        />
+        {editing && (
+          <>
+            <Button size="xs" variant="subtle" color="gray" onClick={handleCancel} leftSection={<IconX size={12} />}>
+              Cancel
+            </Button>
+            <Button
+              size="xs"
+              color="dark"
+              loading={updateProfile.isPending}
+              disabled={!isDirty}
+              onClick={handleSave}
+            >
+              Save
+            </Button>
+          </>
+        )}
+      </Group>
+    </Box>
+  );
+}
+
+function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) {
+  const { activeTeamId, switchTeam } = useTeam();
+  const teamsQuery = api.teams.myTeams.useQuery();
+
+  if (teamsQuery.isLoading) return <Loader size="xs" />;
+
+  const teams = teamsQuery.data ?? [];
+
+  const rows = teams.map((team) => {
+    const membership = team.members.find((m) => m.user.id === currentUserId);
+    return {
+      teamId: team.id,
+      orgName: team.organisation.name,
+      teamName: team.name,
+      role: membership?.role ?? "-",
+      isActive: team.id === activeTeamId,
+    };
+  });
+
+  function handleSetActive(teamId: string, teamName: string) {
+    switchTeam(teamId);
     notifications.show({
       title: "Active team updated",
-      message: `Now viewing data for ${selectedOrg?.name ?? "selected organisation"} - ${selectedOrg?.teams.find((t) => t.id === effectiveTeamId)?.name ?? ""}.`,
+      message: `Now viewing ${teamName}.`,
       color: "green",
+      autoClose: 2000,
     });
-    setTimeout(() => setSaved(false), 3000);
   }
-
-  if (orgsQuery.isLoading || teamLoading) {
-    return (
-      <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
-        <Group gap={8} mb={16}>
-          <IconBuilding size={18} color="var(--color-accent)" />
-          <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
-            Organisation
-          </Text>
-        </Group>
-        <Loader size="sm" />
-      </Card>
-    );
-  }
-
-  // Derive display names from orgsQuery data (more reliable than activeTeam.organisation)
-  const activeOrgName = orgs.find((o) => o.id === activeOrgId)?.name ?? activeTeam?.organisation?.name ?? null;
-  const activeTeamName = activeTeam?.name ?? null;
 
   return (
     <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
       <Group gap={8} mb={16}>
         <IconBuilding size={18} color="var(--color-accent)" />
         <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
-          Organisation
+          Organisation & Roles
         </Text>
       </Group>
 
-      <Text size="sm" c="var(--color-text-muted)" mb={12}>
-        Currently in{" "}
-        <Text span fw={600} c="var(--color-text-primary)">
-          {activeOrgName ?? "-"}
-        </Text>
-        {activeTeamName && (
-          <>
-            {" - "}
-            <Text span fw={600} c="var(--color-text-primary)">
-              {activeTeamName}
-            </Text>
-          </>
-        )}
-      </Text>
-
-      <SimpleGrid cols={2} spacing={12} mb={12}>
-        <Select
-          label="Organisation"
-          placeholder="Select organisation"
-          data={orgOptions}
-          value={effectiveOrgId}
-          onChange={handleOrgChange}
-          size="sm"
-          styles={{ label: { fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 4 } }}
-        />
-        <Select
-          label="Team"
-          placeholder={effectiveOrgId ? "Select team" : "Select an organisation first"}
-          data={teamOptions}
-          value={effectiveTeamId}
-          onChange={(v) => { setSelectedTeamId(v); setSaved(false); }}
-          disabled={!effectiveOrgId || teamOptions.length === 0}
-          size="sm"
-          styles={{ label: { fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 4 } }}
-        />
-      </SimpleGrid>
-
-      <Group justify="flex-end">
-        <Button
-          size="xs"
-          disabled={!isChanged}
-          leftSection={saved ? <IconCheck size={13} /> : undefined}
-          onClick={handleSetActive}
-          style={{
-            background: isChanged ? "var(--color-accent)" : undefined,
-            borderColor: isChanged ? "var(--color-accent)" : undefined,
-          }}
-        >
-          {saved ? "Active team set" : "Set Active"}
-        </Button>
-      </Group>
+      {rows.length === 0 ? (
+        <Text size="sm" c="var(--color-text-muted)">No team memberships found.</Text>
+      ) : (
+        <Table horizontalSpacing="md" verticalSpacing="sm" style={{ fontSize: 13 }}>
+          <Table.Thead>
+            <Table.Tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+              <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>Organisation</Table.Th>
+              <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>Team</Table.Th>
+              <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>Role</Table.Th>
+              <Table.Th />
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {rows.map((row) => (
+              <Table.Tr key={row.teamId} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                <Table.Td c="var(--color-text-primary)" fw={500}>{row.orgName}</Table.Td>
+                <Table.Td c="var(--color-text-secondary)">{row.teamName}</Table.Td>
+                <Table.Td>
+                  <Badge size="xs" variant="light" color="gray" tt="capitalize">{row.role}</Badge>
+                </Table.Td>
+                <Table.Td style={{ textAlign: "right" }}>
+                  {row.isActive ? (
+                    <Group gap={4} justify="flex-end">
+                      <IconCheck size={13} color="var(--color-success)" />
+                      <Text size="xs" c="var(--color-success)" fw={600}>Active</Text>
+                    </Group>
+                  ) : (
+                    <Button
+                      size="xs"
+                      variant="subtle"
+                      color="gray"
+                      onClick={() => handleSetActive(row.teamId, row.teamName)}
+                    >
+                      Set Active
+                    </Button>
+                  )}
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      )}
     </Card>
   );
 }
 
-function ProfileContent({ user }: { user: ProfileUser }) {
+function SettingsContent({ user }: { user: ProfileUser }) {
   const [activeTab, setActiveTab] = useState<string | null>("account");
-  const normalizedRole = user.role?.toLowerCase() ?? "viewer";
-  const verifyEmail = api.auth.requestEmailVerification.useMutation();
 
   return (
     <Box p={32} style={{ maxWidth: 800 }}>
-      <Group justify="space-between" mb={24}>
-        <Box>
-          <Text size="xl" fw={700} c="var(--color-text-primary)">User Profile</Text>
-          <Text size="sm" c="var(--color-text-muted)">Manage your account settings and preferences</Text>
-        </Box>
-        <Button
-          component={Link}
-          href="/profile/edit"
-          variant="outline"
-          color="gray"
-          leftSection={<IconPencil size={16} />}
-          style={{ fontWeight: 600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}
-        >
-          Edit Profile
-        </Button>
-      </Group>
+      <Text size="xl" fw={700} c="var(--color-text-primary)" mb={24}>Settings</Text>
 
       <Tabs
         value={activeTab}
@@ -237,118 +300,77 @@ function ProfileContent({ user }: { user: ProfileUser }) {
         <>
           {/* Information */}
           <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
-            <Group gap={8} mb={16}>
+            <Group gap={8} mb={20}>
               <IconUser size={18} color="var(--color-accent)" />
               <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
                 Information
               </Text>
             </Group>
-            <SimpleGrid cols={2} spacing={16}>
+
+            <Stack gap={20}>
+              {/* Name */}
               <Box>
-                <Text size="xs" c="var(--color-text-muted)" mb={2}>Name</Text>
+                <Text size="xs" c="var(--color-text-muted)" mb={4}>Name</Text>
                 <Text size="sm" fw={500}>{user.name || "Not set"}</Text>
               </Box>
-              <Box>
-                <Text size="xs" c="var(--color-text-muted)" mb={2}>Email</Text>
-                <Group gap={8}>
-                  <Text size="sm" fw={500}>{user.email ?? "Not set"}</Text>
-                  {user.emailVerified ? (
-                    <Badge size="xs" color="green" variant="light">Verified</Badge>
-                  ) : (
-                    <Badge size="xs" color="red" variant="light">Unverified</Badge>
-                  )}
-                </Group>
-                {!user.emailVerified && user.email && (
-                  <>
-                    {verifyEmail.isSuccess && (
-                      <Text size="xs" c="green" mt={8} fw={500}>
-                        Verification email sent to {user.email}. Check your inbox.
-                      </Text>
-                    )}
-                    {verifyEmail.isError && (
-                      <Text size="xs" c="red" mt={4}>{verifyEmail.error.message}</Text>
-                    )}
-                    <Button
-                      size="xs"
-                      variant="light"
-                      color={verifyEmail.isSuccess ? "gray" : "red"}
-                      mt={8}
-                      leftSection={<IconMailForward size={14} />}
-                      loading={verifyEmail.isPending}
-                      onClick={() => verifyEmail.mutate()}
-                    >
-                      {verifyEmail.isSuccess ? "Resend" : "Verify Email"}
-                    </Button>
-                  </>
-                )}
-              </Box>
-              <Box>
-                <Text size="xs" c="var(--color-text-muted)" mb={2}>Role</Text>
-                <Badge size="sm" color={roleBadgeColor[normalizedRole] ?? "gray"} variant="light" tt="capitalize">
-                  {normalizedRole}
-                </Badge>
-              </Box>
-              <Box>
-                <Text size="xs" c="var(--color-text-muted)" mb={2}>Status</Text>
-                <Badge size="sm" color={user.isActive ? "green" : "red"} variant="light">
-                  {user.isActive ? "Active" : "Inactive"}
-                </Badge>
-              </Box>
-            </SimpleGrid>
+
+              <Divider color="var(--color-border)" />
+
+              {/* Email + Change Password */}
+              <Group justify="space-between" align="center">
+                <Box>
+                  <Text size="xs" c="var(--color-text-muted)" mb={4}>Email</Text>
+                  <Text size="sm" fw={500}>{user.email}</Text>
+                </Box>
+                <Button
+                  component={Link}
+                  href="/change-password"
+                  variant="outline"
+                  color="gray"
+                  leftSection={<IconKey size={13} />}
+                  size="xs"
+                  style={{ fontSize: 12 }}
+                >
+                  Change Password
+                </Button>
+              </Group>
+
+              <Divider color="var(--color-border)" />
+
+              {/* Mobile */}
+              <MobileNumberField />
+            </Stack>
           </Card>
 
-          {/* Organisation */}
-          <OrganizationSection />
+          {/* Organisation & Roles */}
+          <OrganisationRolesSection currentUserId={user.id} />
 
           {/* Preferences */}
           <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
-            <Group gap={8} mb={16}>
+            <Group gap={8} mb={20}>
               <IconSettings size={18} color="var(--color-accent)" />
               <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
                 Preferences
               </Text>
             </Group>
-            <SimpleGrid cols={2} spacing={16}>
-              <Box>
-                <Text size="xs" c="var(--color-text-muted)" mb={2}>Language</Text>
-                <Text size="sm" fw={500}>{user.preferred_language === "ar" ? "Arabic" : "English"}</Text>
+            <Group gap={0} grow>
+              <Box px={4}>
+                <Group gap={6} mb={6}>
+                  <IconLanguage size={14} color="var(--color-text-muted)" />
+                  <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>Language</Text>
+                </Group>
+                <Text size="sm" fw={500}>English</Text>
               </Box>
-              <Box>
-                <Text size="xs" c="var(--color-text-muted)" mb={2}>Timezone</Text>
-                <Text size="sm" fw={500}>{user.timezone ?? "UTC"}</Text>
+              <Divider orientation="vertical" color="var(--color-border)" />
+              <Box px={24}>
+                <Group gap={6} mb={6}>
+                  <IconClock size={14} color="var(--color-text-muted)" />
+                  <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>Timezone</Text>
+                </Group>
+                <Text size="sm" fw={500}>UTC</Text>
               </Box>
-            </SimpleGrid>
+            </Group>
           </Card>
-
-          <Divider my={24} color="var(--color-border)" />
-
-          <Text fw={700} size="sm" tt="uppercase" mb={12} style={{ letterSpacing: "0.05em", fontSize: 11 }}>
-            Quick Actions
-          </Text>
-          <Group gap={8}>
-            <Button
-              component={Link}
-              href="/change-password"
-              variant="outline"
-              color="gray"
-              leftSection={<IconKey size={14} />}
-              size="sm"
-            >
-              Change Password
-            </Button>
-            {normalizedRole === "admin" && (
-              <Button
-                component={Link}
-                href="/admin"
-                variant="outline"
-                color="blue"
-                leftSection={<IconShield size={14} />}
-                size="sm"
-              >
-                Admin Dashboard
-              </Button>
-            )}
-          </Group>
         </>
       )}
 

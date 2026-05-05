@@ -26,6 +26,7 @@ const MY_TEAMS_QUERY = `
       id name slug description
       organisation { id name }
       locations { id name level }
+      members { id user { id } role }
     }
   }
 `;
