@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Box, Tabs, Button, Group, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
 import { IconFilter } from "@tabler/icons-react";
 import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
@@ -52,8 +53,23 @@ const SIGNAL_ORDER_MAP: Record<SignalSortOrder, SignalOrderBy> = {
   "source":   "PUBLISHED_DESC",
 };
 
+const VALID_TABS = new Set(["live", "events", "signals", "history"]);
+
 export default function DetectionPage() {
-  const [activeTab, setActiveTab] = useState<string | null>("events");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<string | null>(
+    initialTab && VALID_TABS.has(initialTab) ? initialTab : "events",
+  );
+
+  const handleTabChange = useCallback((tab: string | null) => {
+    if (!tab) return;
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`/detection?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [selectedDate, setSelectedDate] = useState("Last 30 days");
@@ -548,7 +564,7 @@ export default function DetectionPage() {
       </PageHeader>
 
       <Box p={24}>
-        <Tabs value={activeTab} onChange={setActiveTab} mb={24} styles={{ tab: { fontSize: 13, fontWeight: 500 } }}>
+        <Tabs value={activeTab} onChange={handleTabChange} mb={24} styles={{ tab: { fontSize: 13, fontWeight: 500 } }}>
           <Tabs.List>
             <Tabs.Tab value="live">Alerts</Tabs.Tab>
             <Tabs.Tab value="events">Events</Tabs.Tab>
@@ -561,7 +577,7 @@ export default function DetectionPage() {
           country={selectedCountry}
           alerts={alertsItems}
           events={eventsItems}
-          onNavigateToAlerts={() => setActiveTab("live")}
+          onNavigateToAlerts={() => handleTabChange("live")}
         />
 
         {activeTab === "live" && (
