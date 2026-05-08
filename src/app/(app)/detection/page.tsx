@@ -140,8 +140,8 @@ export default function DetectionPage() {
   }, [activeSeverities]);
 
   // ── Per-feed sort state ────────────────────────────────────────────────────
-  const [eventsSort, setEventsSort] = useState<EventSortOrder>("sev-desc");
-  const [alertsSort, setAlertsSort] = useState<AlertSortOrder>("sev-desc");
+  const [eventsSort, setEventsSort] = useState<EventSortOrder>("newest");
+  const [alertsSort, setAlertsSort] = useState<AlertSortOrder>("newest");
   const [signalsSort, setSignalsSort] = useState<SignalSortOrder>("newest");
 
   // ── Per-feed accumulated items + offset ───────────────────────────────────

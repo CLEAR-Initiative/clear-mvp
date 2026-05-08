@@ -3,6 +3,7 @@ export const severityColors: Record<string, { bg: string; text: string }> = {
   high: { bg: "#FEF3C7", text: "#D97706" },
   medium: { bg: "#FEF3C7", text: "#D97706" },
   low: { bg: "#ECFDF5", text: "#059669" },
+  unknown: { bg: "#F5F5F5", text: "#A3A3A3" },
 };
 
 export const severityLabels: Record<string, string> = {
@@ -10,6 +11,7 @@ export const severityLabels: Record<string, string> = {
   high: "High",
   medium: "Medium",
   low: "Low",
+  unknown: "Unknown",
 };
 
 export const severityDotColors: Record<string, string> = {
@@ -17,4 +19,5 @@ export const severityDotColors: Record<string, string> = {
   high: "bg-[#D97706]",
   medium: "bg-[#D97706]",
   low: "bg-[#059669]",
+  unknown: "bg-[#A3A3A3]",
 };
