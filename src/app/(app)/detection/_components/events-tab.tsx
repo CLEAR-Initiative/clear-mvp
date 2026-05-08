@@ -212,9 +212,9 @@ export function EventsTab({
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
                   width: 30, height: 30, borderRadius: 6,
-                  border: `1px solid ${sortOrder !== "sev-desc" ? "var(--color-accent)" : "var(--color-border)"}`,
+                  border: `1px solid ${sortOrder !== "newest" ? "var(--color-accent)" : "var(--color-border)"}`,
                   background: "var(--color-bg-white)", cursor: "pointer",
-                  color: sortOrder !== "sev-desc" ? "var(--color-accent)" : "var(--color-text-secondary)",
+                  color: sortOrder !== "newest" ? "var(--color-accent)" : "var(--color-text-secondary)",
                   flexShrink: 0,
                 }}
               >
@@ -277,7 +277,9 @@ export function EventsTab({
                           {isAlert && <Badge size="xs" variant="filled" color="red" style={{ fontSize: 10 }}>Alert</Badge>}
                           {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
                         </Group>
-                        <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(event.firstSignalCreatedAt)}</Text>
+                        <Text size="xs" c="var(--color-text-muted)" title={`First signal: ${formatTimeAgo(event.firstSignalCreatedAt)}`}>
+                          {formatTimeAgo(event.lastSignalCreatedAt)}
+                        </Text>
                       </Group>
                       <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>
                         {displayTitle}

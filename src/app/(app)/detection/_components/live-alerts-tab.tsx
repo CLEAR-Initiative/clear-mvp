@@ -260,7 +260,9 @@ export function LiveAlertsTab({
                           <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 700 }}>{severityLabels[sev]}</Badge>
                           {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
                         </Group>
-                        <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(alert.event.firstSignalCreatedAt)}</Text>
+                        <Text size="xs" c="var(--color-text-muted)" title={`First signal: ${formatTimeAgo(alert.event.firstSignalCreatedAt)}`}>
+                          {formatTimeAgo(alert.event.lastSignalCreatedAt)}
+                        </Text>
                       </Group>
                       <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>{displayTitle}</Text>
                       <Group gap={12}>
