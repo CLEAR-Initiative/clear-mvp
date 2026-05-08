@@ -19,6 +19,7 @@ import {
   IconSortDescending,
   IconX,
   IconRefresh,
+  IconMapPin,
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
@@ -267,7 +268,10 @@ export function LiveAlertsTab({
                       <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>{displayTitle}</Text>
                       <Group gap={12}>
                         {resolveLocationName(location) && (
-                          <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
+                          <Group gap={3} style={{ flexShrink: 0 }}>
+                            <IconMapPin size={11} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+                            <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
+                          </Group>
                         )}
                         {alert.event.types.length > 0 && (
                           <Group gap={4}>{getTypeNames(alert.event.types).map((name) => (

@@ -19,6 +19,7 @@ import {
   IconSortDescending,
   IconX,
   IconRefresh,
+  IconMapPin,
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
@@ -286,7 +287,10 @@ export function EventsTab({
                       </Text>
                       <Group gap={12}>
                         {resolveLocationName(location) && (
-                          <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
+                          <Group gap={3} style={{ flexShrink: 0 }}>
+                            <IconMapPin size={11} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+                            <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
+                          </Group>
                         )}
                         {event.types.length > 0 && (
                           <Group gap={4}>{getTypeNames(event.types).map((name) => (

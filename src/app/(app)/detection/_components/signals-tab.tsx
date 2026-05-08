@@ -20,6 +20,7 @@ import {
   IconX,
   IconExternalLink,
   IconRefresh,
+  IconMapPin,
 } from "@tabler/icons-react";
 import type { GqlSignal } from "~/lib/types/graphql";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
@@ -279,7 +280,10 @@ export function SignalsTab({
                       </Text>
                       <Group gap={12}>
                         {resolveLocationName(location) && (
-                          <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
+                          <Group gap={3} style={{ flexShrink: 0 }}>
+                            <IconMapPin size={11} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+                            <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
+                          </Group>
                         )}
                         <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>{formatDate(signal.publishedAt)}</Text>
                         {signal.url && (
