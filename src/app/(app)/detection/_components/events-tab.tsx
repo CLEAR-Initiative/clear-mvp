@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -13,19 +13,16 @@ import {
   TextInput,
   Menu,
   ActionIcon,
-  Divider,
-  Stack,
 } from "@mantine/core";
 import {
   IconSearch,
   IconSortDescending,
   IconX,
+  IconRefresh,
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
 import { getDisasterPills } from "~/lib/disaster-types";
-import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
-import { api } from "~/trpc/react";
 import { resolveLocationName } from "~/lib/location";
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
@@ -40,9 +37,9 @@ const CrisisMap = dynamic(
   { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
 );
 
-type SortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
+export type EventSortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
 
-const SORT_LABELS: Record<SortOrder, string> = {
+export const EVENT_SORT_LABELS: Record<EventSortOrder, string> = {
   "sev-desc": "Severity: High to Low",
   "sev-asc":  "Severity: Low to High",
   "newest":   "Newest first",
@@ -52,6 +49,14 @@ const SORT_LABELS: Record<SortOrder, string> = {
 interface EventsTabProps {
   events: GqlEvent[];
   loading: boolean;
+  isFetchingMore: boolean;
+  hasMore: boolean;
+  totalCount: number;
+  newCount: number;
+  sortOrder: EventSortOrder;
+  onSortChange: (order: EventSortOrder) => void;
+  onLoadMore: () => void;
+  onRefresh: () => void;
   mapMarkers: MapMarker[];
   mapRegions?: MapRegion[];
   mapCenter: [number, number];
@@ -67,14 +72,19 @@ interface EventsTabProps {
   activeSeverities?: Set<string>;
   expandedTypeCodes?: string[] | null;
   activeSources?: Set<string> | null;
-  // Lifted to the parent — drives the server-side orderBy.
-  sortOrder: SortOrder;
-  onSortOrderChange: (o: SortOrder) => void;
 }
 
 export function EventsTab({
   events,
   loading,
+  isFetchingMore,
+  hasMore,
+  totalCount = 0,
+  newCount = 0,
+  sortOrder,
+  onSortChange,
+  onLoadMore,
+  onRefresh,
   mapMarkers,
   mapRegions,
   mapCenter,
@@ -90,25 +100,39 @@ export function EventsTab({
   activeSeverities: activeSeveritiesProp,
   expandedTypeCodes: expandedTypeCodesProp,
   activeSources: activeSourcesProp,
-  sortOrder,
-  onSortOrderChange,
 }: EventsTabProps) {
   const { getTypeNames } = useDisasterTypes();
   const [search, setSearch] = useState("");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
   const [showPopulation, setShowPopulation] = useState(false);
 
-  const allSources = useMemo(
-    () => [...new Set(events.flatMap((e) => e.signals.map((s) => s.source.name)))].sort(),
-    [events],
-  );
-
   const activeSeverities = activeSeveritiesProp ?? new Set(["critical", "high", "medium", "low"]);
   const activeSources = activeSourcesProp ?? null;
 
+  // Lazy-load sentinel inside the scroll container
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const onLoadMoreStable = useCallback(onLoadMore, [onLoadMore]);
 
-  // Sorting is applied server-side by the parent's eventsPage query — local
-  // .sort() would just shuffle the current page.
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const container = scrollContainerRef.current;
+    if (!sentinel || !container) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting && hasMore && !isFetchingMore) {
+          onLoadMoreStable();
+        }
+      },
+      { root: container, threshold: 0.1 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, isFetchingMore, onLoadMoreStable]);
+
+  // Client-side filtering only (search + severity + type + source).
+  // Sort is handled server-side - no .sort() here.
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return events.filter((e) => {
@@ -125,27 +149,48 @@ export function EventsTab({
     });
   }, [events, search, activeSeverities, expandedTypeCodesProp, activeSources]);
 
-  const listCountLabel =
-    filtered.length === events.length
-      ? String(events.length)
-      : `${filtered.length}/${events.length}`;
+  const countLabel = search || activeSeverities.size < 4 || activeSources !== null || expandedTypeCodesProp
+    ? `${filtered.length} / ${totalCount.toLocaleString()}`
+    : totalCount.toLocaleString();
 
   return (
     <Box style={{ display: "flex", gap: 24 }}>
       {/* Left: Event list */}
       <Box style={{ flex: 1, minWidth: 0 }}>
-        {/* Toolbar row */}
+        {/* New-items banner */}
+        {newCount > 0 && (
+          <Group
+            gap={8}
+            mb={8}
+            px={12}
+            py={6}
+            style={{
+              background: "var(--color-accent-light)",
+              border: "1px solid var(--color-accent)",
+              borderRadius: 6,
+              cursor: "pointer",
+            }}
+            onClick={onRefresh}
+          >
+            <IconRefresh size={13} color="var(--color-accent)" />
+            <Text size="xs" fw={600} c="var(--color-accent)">
+              {newCount} new event{newCount !== 1 ? "s" : ""} - refresh
+            </Text>
+          </Group>
+        )}
+
+        {/* Toolbar */}
         <Group gap={8} mb={12} align="center" style={{ minHeight: 32 }}>
           <Group gap={6} style={{ flexShrink: 0 }}>
             <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Events</Text>
             <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>
-              {listCountLabel}
+              {loading ? "…" : countLabel}
             </Badge>
             {loading && <Loader size="xs" />}
           </Group>
 
           <TextInput
-            placeholder="Search events..."
+            placeholder="Search current page…"
             value={search}
             onChange={(e) => setSearch(e.currentTarget.value)}
             leftSection={<IconSearch size={14} color="var(--color-text-muted)" />}
@@ -165,15 +210,10 @@ export function EventsTab({
             <Menu.Target>
               <button
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 30,
-                  height: 30,
-                  borderRadius: 6,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 30, height: 30, borderRadius: 6,
                   border: `1px solid ${sortOrder !== "sev-desc" ? "var(--color-accent)" : "var(--color-border)"}`,
-                  background: "var(--color-bg-white)",
-                  cursor: "pointer",
+                  background: "var(--color-bg-white)", cursor: "pointer",
                   color: sortOrder !== "sev-desc" ? "var(--color-accent)" : "var(--color-text-secondary)",
                   flexShrink: 0,
                 }}
@@ -182,10 +222,10 @@ export function EventsTab({
               </button>
             </Menu.Target>
             <Menu.Dropdown>
-              {(Object.entries(SORT_LABELS) as [SortOrder, string][]).map(([key, label]) => (
+              {(Object.entries(EVENT_SORT_LABELS) as [EventSortOrder, string][]).map(([key, label]) => (
                 <Menu.Item
                   key={key}
-                  onClick={() => onSortOrderChange(key)}
+                  onClick={() => onSortChange(key)}
                   style={{
                     fontSize: 12,
                     fontWeight: sortOrder === key ? 600 : 400,
@@ -199,9 +239,8 @@ export function EventsTab({
           </Menu>
         </Group>
 
-        {/* Event list - no card header */}
         <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-          <Box style={{ maxHeight: 524, overflowY: "auto" }}>
+          <Box ref={scrollContainerRef} style={{ maxHeight: 524, overflowY: "auto" }}>
             {filtered.length === 0 && !loading && (
               <Box px={16} py={32} style={{ textAlign: "center" }}>
                 <Text c="var(--color-text-muted)" size="sm">
@@ -209,6 +248,7 @@ export function EventsTab({
                 </Text>
               </Box>
             )}
+
             {filtered.map((event) => {
               const sev = mapSeverity(event.severity);
               const sevCol = severityColor(event.severity);
@@ -219,14 +259,9 @@ export function EventsTab({
               const isAlert = event.alerts.length > 0;
 
               return (
-                <Link
-                  key={event.id}
-                  href={`/event/${event.id}`}
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
+                <Link key={event.id} href={`/event/${event.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                   <Box
-                    px={16}
-                    py={12}
+                    px={16} py={12}
                     className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
                     style={{ display: "flex", gap: 12, ...getCardProps(event.id).style }}
                     onMouseEnter={getCardProps(event.id).onMouseEnter}
@@ -236,22 +271,11 @@ export function EventsTab({
                     <Box style={{ flex: 1, minWidth: 0 }}>
                       <Group justify="space-between" mb={4}>
                         <Group gap={6}>
-                          <Badge
-                            size="xs"
-                            style={{ background: sevBg, color: sevCol, fontWeight: 700 }}
-                          >
+                          <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 700 }}>
                             {severityLabels[sev]}
                           </Badge>
-                          {isAlert && (
-                            <Badge size="xs" variant="filled" color="red" style={{ fontSize: 10 }}>
-                              Alert
-                            </Badge>
-                          )}
-                          {sourceName && (
-                            <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>
-                              {sourceName}
-                            </Badge>
-                          )}
+                          {isAlert && <Badge size="xs" variant="filled" color="red" style={{ fontSize: 10 }}>Alert</Badge>}
+                          {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
                         </Group>
                         <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(event.firstSignalCreatedAt)}</Text>
                       </Group>
@@ -268,20 +292,7 @@ export function EventsTab({
                           ))}</Group>
                         )}
                         {getDisasterPills(event.types).map((pill) => (
-                          <span
-                            key={pill.label}
-                            style={{
-                              display: "inline-block",
-                              padding: "1px 7px",
-                              borderRadius: 999,
-                              fontSize: 10,
-                              fontWeight: 600,
-                              color: pill.color,
-                              background: pill.bg,
-                              letterSpacing: "0.01em",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
+                          <span key={pill.label} style={{ display: "inline-block", padding: "1px 7px", borderRadius: 999, fontSize: 10, fontWeight: 600, color: pill.color, background: pill.bg, letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
                             {pill.label}
                           </span>
                         ))}
@@ -294,6 +305,23 @@ export function EventsTab({
                 </Link>
               );
             })}
+
+            {/* Lazy-load sentinel - IntersectionObserver fires when this enters the scroll viewport */}
+            {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
+
+            {isFetchingMore && (
+              <Box py={12} style={{ display: "flex", justifyContent: "center" }}>
+                <Loader size="xs" />
+              </Box>
+            )}
+
+            {!hasMore && events.length > 0 && (
+              <Box py={10} style={{ textAlign: "center" }}>
+                <Text size="xs" c="var(--color-text-muted)">
+                  All {totalCount.toLocaleString()} events loaded
+                </Text>
+              </Box>
+            )}
           </Box>
         </Card>
       </Box>
