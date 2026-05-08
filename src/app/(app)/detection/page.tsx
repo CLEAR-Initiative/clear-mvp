@@ -54,18 +54,27 @@ const SIGNAL_ORDER_MAP: Record<SignalSortOrder, SignalOrderBy> = {
 };
 
 const VALID_TABS = new Set(["live", "events", "signals", "history"]);
+const TAB_STORAGE_KEY = "detection-active-tab";
 
 export default function DetectionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState<string | null>(
-    initialTab && VALID_TABS.has(initialTab) ? initialTab : "events",
-  );
+
+  // Priority: URL param (shareable link) > sessionStorage (browser back) > default
+  const [activeTab, setActiveTab] = useState<string | null>(() => {
+    const fromUrl = searchParams.get("tab");
+    if (fromUrl && VALID_TABS.has(fromUrl)) return fromUrl;
+    try {
+      const stored = sessionStorage.getItem(TAB_STORAGE_KEY);
+      if (stored && VALID_TABS.has(stored)) return stored;
+    } catch { /* sessionStorage unavailable (SSR or private mode) */ }
+    return "events";
+  });
 
   const handleTabChange = useCallback((tab: string | null) => {
     if (!tab) return;
     setActiveTab(tab);
+    try { sessionStorage.setItem(TAB_STORAGE_KEY, tab); } catch { /* ignore */ }
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
     router.replace(`/detection?${params.toString()}`, { scroll: false });

@@ -273,18 +273,20 @@ export function EventDetailContent({
           style={{ background: "#FFF", borderBottom: "1px solid #E5E5E5" }}
         >
           <Group justify="space-between">
-            <Link href="/detection" style={{ textDecoration: "none" }}>
+            <button
+              onClick={() => router.back()}
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textDecoration: "none" }}
+            >
               <Group
                 gap={6}
                 className="hover:opacity-70"
-                style={{ cursor: "pointer" }}
               >
                 <IconArrowLeft size={14} color="#525252" />
                 <Text size="sm" c="#525252" fw={500}>
                   Back to Events Overview
                 </Text>
               </Group>
-            </Link>
+            </button>
             <Link
               href={`/map?event=${event.id}`}
               style={{ textDecoration: "none" }}
