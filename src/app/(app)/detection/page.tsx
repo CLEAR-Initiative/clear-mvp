@@ -238,16 +238,27 @@ export default function DetectionPage() {
     }
   }, [signalsQuery.data]);
 
-  // ── Reset effects: filter or sort change resets the feed and snapshot ──────
-  // Each feed resets independently so changing activeSources (signals-only)
-  // does not discard the already-loaded events/alerts pages.
+  // ── Reset effects ──────────────────────────────────────────────────────────
+  // FILTER changes: reset snapshot + items. A new snapshotTime means a new
+  // frozen window, so the user sees results from the correct time range.
+  // SORT changes: reset items only, keep the existing snapshotTime. This
+  // ensures switching sort and switching back always queries the same dataset.
+  const FILTER_DEPS = [selectedLocationId, fromIso, toIso, activeTeamId, severityMin, severityMax, expandedTypeCodes?.join(",")] as const;
+
   useEffect(() => {
     setSnapshotTime(new Date().toISOString());
     eventsAppending.current = false;
     setEventsOffset(0);
     setEventsItems([]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLocationId, fromIso, toIso, activeTeamId, severityMin, severityMax, expandedTypeCodes?.join(","), eventsSort]);
+  }, [...FILTER_DEPS]);
+
+  useEffect(() => {
+    eventsAppending.current = false;
+    setEventsOffset(0);
+    setEventsItems([]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventsSort]);
 
   useEffect(() => {
     setSnapshotTime(new Date().toISOString());
@@ -255,7 +266,14 @@ export default function DetectionPage() {
     setAlertsOffset(0);
     setAlertsItems([]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLocationId, fromIso, toIso, activeTeamId, severityMin, severityMax, expandedTypeCodes?.join(","), alertsSort]);
+  }, [...FILTER_DEPS]);
+
+  useEffect(() => {
+    alertsAppending.current = false;
+    setAlertsOffset(0);
+    setAlertsItems([]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alertsSort]);
 
   useEffect(() => {
     setSnapshotTime(new Date().toISOString());
@@ -263,7 +281,14 @@ export default function DetectionPage() {
     setSignalsOffset(0);
     setSignalsItems([]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLocationId, fromIso, toIso, activeTeamId, severityMin, severityMax, activeSources, signalsSort]);
+  }, [...FILTER_DEPS, activeSources]);
+
+  useEffect(() => {
+    signalsAppending.current = false;
+    setSignalsOffset(0);
+    setSignalsItems([]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signalsSort]);
 
   // ── Load-more callbacks ────────────────────────────────────────────────────
   const loadMoreEvents = useCallback(() => {
