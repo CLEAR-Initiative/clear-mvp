@@ -296,7 +296,7 @@ export function SignalsTab({
               );
             })}
 
-            {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
+            {hasMore && filtered.length > 0 && <div ref={sentinelRef} style={{ height: 1 }} />}
 
             {isFetchingMore && (
               <Box py={12} style={{ display: "flex", justifyContent: "center" }}>

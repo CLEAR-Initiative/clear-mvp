@@ -150,18 +150,24 @@ export default function DetectionPage() {
   const [eventsTotalCount, setEventsTotalCount] = useState(0);
   const [eventsHasMore, setEventsHasMore] = useState(false);
   const eventsAppending = useRef(false);
+  // Incremented on every reset so the React Query cache key always changes,
+  // guaranteeing eventsQuery.data changes and the accumulation effect fires
+  // even when offset stays 0 and staleTime would otherwise return a cached ref.
+  const [eventsVersion, setEventsVersion] = useState(0);
 
   const [alertsItems, setAlertsItems] = useState<GqlAlert[]>([]);
   const [alertsOffset, setAlertsOffset] = useState(0);
   const [alertsTotalCount, setAlertsTotalCount] = useState(0);
   const [alertsHasMore, setAlertsHasMore] = useState(false);
   const alertsAppending = useRef(false);
+  const [alertsVersion, setAlertsVersion] = useState(0);
 
   const [signalsItems, setSignalsItems] = useState<GqlSignal[]>([]);
   const [signalsOffset, setSignalsOffset] = useState(0);
   const [signalsTotalCount, setSignalsTotalCount] = useState(0);
   const [signalsHasMore, setSignalsHasMore] = useState(false);
   const signalsAppending = useRef(false);
+  const [signalsVersion, setSignalsVersion] = useState(0);
 
   const sharedFilter = {
     teamId: activeTeamId,
@@ -173,13 +179,17 @@ export default function DetectionPage() {
     eventTypes: expandedTypeCodes ?? undefined,
   };
 
-  // ── Main feed queries (staleTime: Infinity so tab switches don't re-fetch) ─
+  // ── Main feed queries ──────────────────────────────────────────────────────
+  // staleTime: Infinity prevents re-fetching on tab switch.
+  // _v (version) is stripped by Zod before the API call but is part of the
+  // React Query cache key, so incrementing it on reset forces a fresh fetch
+  // and guarantees the accumulation effect fires via a data reference change.
   const eventsQuery = api.alerts.eventsPage.useQuery(
-    { ...sharedFilter, orderBy: EVENT_ORDER_MAP[eventsSort], limit: PAGE_SIZE, offset: eventsOffset },
+    { ...sharedFilter, orderBy: EVENT_ORDER_MAP[eventsSort], limit: PAGE_SIZE, offset: eventsOffset, _v: eventsVersion } as Parameters<typeof api.alerts.eventsPage.useQuery>[0],
     { enabled: activeTab === "events", staleTime: Infinity },
   );
   const alertsQuery = api.alerts.alertsPage.useQuery(
-    { ...sharedFilter, status: "published", orderBy: ALERT_ORDER_MAP[alertsSort], limit: PAGE_SIZE, offset: alertsOffset },
+    { ...sharedFilter, status: "published", orderBy: ALERT_ORDER_MAP[alertsSort], limit: PAGE_SIZE, offset: alertsOffset, _v: alertsVersion } as Parameters<typeof api.alerts.alertsPage.useQuery>[0],
     { enabled: activeTab === "live", staleTime: Infinity },
   );
   const signalsQuery = api.alerts.signalsPage.useQuery(
@@ -194,7 +204,8 @@ export default function DetectionPage() {
       orderBy: SIGNAL_ORDER_MAP[signalsSort],
       limit: PAGE_SIZE,
       offset: signalsOffset,
-    },
+      _v: signalsVersion,
+    } as Parameters<typeof api.alerts.signalsPage.useQuery>[0],
     { enabled: activeTab === "signals", staleTime: Infinity },
   );
 
@@ -250,6 +261,7 @@ export default function DetectionPage() {
     eventsAppending.current = false;
     setEventsOffset(0);
     setEventsItems([]);
+    setEventsVersion((v) => v + 1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...FILTER_DEPS]);
 
@@ -257,6 +269,7 @@ export default function DetectionPage() {
     eventsAppending.current = false;
     setEventsOffset(0);
     setEventsItems([]);
+    setEventsVersion((v) => v + 1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventsSort]);
 
@@ -265,6 +278,7 @@ export default function DetectionPage() {
     alertsAppending.current = false;
     setAlertsOffset(0);
     setAlertsItems([]);
+    setAlertsVersion((v) => v + 1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...FILTER_DEPS]);
 
@@ -272,6 +286,7 @@ export default function DetectionPage() {
     alertsAppending.current = false;
     setAlertsOffset(0);
     setAlertsItems([]);
+    setAlertsVersion((v) => v + 1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alertsSort]);
 
@@ -280,6 +295,7 @@ export default function DetectionPage() {
     signalsAppending.current = false;
     setSignalsOffset(0);
     setSignalsItems([]);
+    setSignalsVersion((v) => v + 1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...FILTER_DEPS, activeSources]);
 
@@ -287,6 +303,7 @@ export default function DetectionPage() {
     signalsAppending.current = false;
     setSignalsOffset(0);
     setSignalsItems([]);
+    setSignalsVersion((v) => v + 1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signalsSort]);
 
