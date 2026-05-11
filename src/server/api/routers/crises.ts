@@ -77,7 +77,7 @@ const CRISIS_LIST_FIELDS = `
   needs
   populationAffected
   populationInArea
-  events { id title severity rank }
+  events { id title severity rank lastSignalCreatedAt }
 `;
 
 const CRISES_LIST_QUERY = `

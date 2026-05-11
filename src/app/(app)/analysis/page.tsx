@@ -9,6 +9,7 @@ import { PageHeader } from "~/components/ui";
 import { OverviewTab } from "./_components/overview-tab";
 import { SectorsTab } from "./_components/sectors-tab";
 import { SourcesTab } from "./_components/sources-tab";
+import { CrisesTab } from "./_components/crises-tab";
 import {
   SAF_COUNTRIES,
   ALL_DATA,
@@ -18,7 +19,7 @@ import {
 
 export default function AnalysisPage() {
   const [activeTab, setActiveTab] = useState<string | null>("overview");
-  const [safCountry, setSafCountry] = useState<CountryKey>("lebanon");
+  const [safCountry, setSafCountry] = useState<CountryKey>("sudan");
   const [generatedSummary, setGeneratedSummary] = useState<string | null>(null);
 
   const llmMutation = api.llm.query.useMutation();
@@ -128,6 +129,7 @@ Context (top): ${Object.entries(ctx)
           <Tabs.List mb={0}>
             <Tabs.Tab value="overview">Overview</Tabs.Tab>
             <Tabs.Tab value="sectors">Sectors</Tabs.Tab>
+            <Tabs.Tab value="crises">Crises</Tabs.Tab>
             <Tabs.Tab value="sources">Sources</Tabs.Tab>
           </Tabs.List>
 
@@ -142,6 +144,10 @@ Context (top): ${Object.entries(ctx)
 
           <Tabs.Panel value="sectors">
             <SectorsTab countryData={countryData} />
+          </Tabs.Panel>
+
+          <Tabs.Panel value="crises" pt={20}>
+            <CrisesTab countryLabel={countryMeta.label} />
           </Tabs.Panel>
 
           <Tabs.Panel value="sources" pt={20}>

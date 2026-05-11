@@ -25,12 +25,14 @@
       "Bash(vercel env:*)",
       "Bash(vercel ls:*)",
       "Bash(git add:*)",
-      "Bash(grep -n \"Cookie\" /Users/james/code/clear-mvp/src/server/api/routers/*.ts)"
+      "Bash(grep -n \"Cookie\" /Users/james/code/clear-mvp/src/server/api/routers/*.ts)",
+      "Read(/Users/karoon/Projects/CLEAR-AutomatedAnalysis/**)"
     ],
     "additionalDirectories": [
       "/Users/james/code/clear-mvp/src/app/api/auth",
       "/Users/james/code/clear-mvp",
-      "/Users/james/code/clear-api/src/resolvers"
+      "/Users/james/code/clear-api/src/resolvers",
+      "/Users/karoon/Projects/CLEAR-AutomatedAnalysis"
     ]
   }
 }

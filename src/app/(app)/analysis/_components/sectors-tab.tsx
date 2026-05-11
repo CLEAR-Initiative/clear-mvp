@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Box, Group, Stack, Text } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import {
   IconSchool,
   IconLeaf,
@@ -40,6 +41,14 @@ const SEV_SHORT: Record<SeverityScale, string> = {
   UNKNOWN: "—",
 };
 
+const SEV_FULL: Record<SeverityScale, string> = {
+  CRITICAL: "Critical",
+  SEVERE: "Severe",
+  SERIOUS: "Serious",
+  MODERATE: "Moderate",
+  UNKNOWN: "—",
+};
+
 const PILLARS = ["Impact", "Humanitarian Conditions", "At Risk"] as const;
 
 /* ── Component ────────────────────────────────────────────────────── */
@@ -49,6 +58,9 @@ interface SectorsTabProps {
 
 export function SectorsTab({ countryData }: SectorsTabProps) {
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
+  const wide = useMediaQuery("(min-width: 1400px)") ?? false;
+  const pillColW = wide ? 88 : 58;
+  const leftPanelW = wide ? 420 : 300;
 
   const {
     SHOWN_RISKS_DATA,
@@ -70,7 +82,7 @@ export function SectorsTab({ countryData }: SectorsTabProps) {
     <Box
       style={{
         display: "grid",
-        gridTemplateColumns: "300px 1fr",
+        gridTemplateColumns: `${leftPanelW}px 1fr`,
         height: "calc(100vh - 190px)",
         overflow: "hidden",
         border: "1px solid var(--color-border)",
@@ -118,7 +130,7 @@ export function SectorsTab({ countryData }: SectorsTabProps) {
           py={7}
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 58px 58px 58px",
+            gridTemplateColumns: `1fr ${pillColW}px ${pillColW}px ${pillColW}px`,
             borderBottom: "2px solid var(--color-border)",
             background: "var(--color-bg-muted)",
           }}
@@ -152,7 +164,7 @@ export function SectorsTab({ countryData }: SectorsTabProps) {
               onClick={() => setSelectedSector(sector)}
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 58px 58px 58px",
+                gridTemplateColumns: `1fr ${pillColW}px ${pillColW}px ${pillColW}px`,
                 alignItems: "center",
                 cursor: "pointer",
                 borderBottom: "1px solid var(--color-border)",
@@ -207,7 +219,7 @@ export function SectorsTab({ countryData }: SectorsTabProps) {
                       key={cat}
                       style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
-                      <SevPill scale="UNKNOWN" />
+                      <SevPill scale="UNKNOWN" wide={wide} />
                     </Box>
                   );
                 return (
@@ -215,7 +227,7 @@ export function SectorsTab({ countryData }: SectorsTabProps) {
                     key={cat}
                     style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
                   >
-                    <SevPill scale={e.severity_scale} />
+                    <SevPill scale={e.severity_scale} wide={wide} />
                   </Box>
                 );
               })}
@@ -263,7 +275,7 @@ export function SectorsTab({ countryData }: SectorsTabProps) {
 }
 
 /* ── Severity pill ────────────────────────────────────────────────── */
-function SevPill({ scale }: { scale: SeverityScale }) {
+function SevPill({ scale, wide }: { scale: SeverityScale; wide?: boolean }) {
   const s = severityColors(scale);
   return (
     <Box
@@ -279,7 +291,7 @@ function SevPill({ scale }: { scale: SeverityScale }) {
         whiteSpace: "nowrap",
       }}
     >
-      {SEV_SHORT[scale]}
+      {wide ? SEV_FULL[scale] : SEV_SHORT[scale]}
     </Box>
   );
 }
@@ -367,7 +379,7 @@ function SectorDetail({
                 {e ? (
                   <>
                     <Box mb={6}>
-                      <SevPill scale={e.severity_scale} />
+                      <SevPill scale={e.severity_scale} wide />
                     </Box>
                     <Stack gap={2} component="ul" style={{ listStyle: "none", padding: 0, margin: 0 }}>
                       {e.top3_risks.map((r) => (
