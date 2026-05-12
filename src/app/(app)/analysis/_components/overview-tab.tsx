@@ -1,31 +1,170 @@
 "use client";
 
-import { Box, Group, Loader, SimpleGrid, Stack, Text } from "@mantine/core";
-import { IconSparkles } from "@tabler/icons-react";
+import { Badge, Box, Card, Group, Loader, SimpleGrid, Stack, Text } from "@mantine/core";
+import {
+  IconAlertTriangle,
+  IconArrowNarrowDown,
+  IconArrowNarrowUp,
+  IconSparkles,
+  IconUsers,
+  IconWorld,
+} from "@tabler/icons-react";
 import type { CountryData } from "./saf-data";
 import { fmtNumber } from "./saf-data";
 
-/* ── helpers ─────────────────────────────────────────────────────────── */
-const KPI_COLOR: Record<string, string> = {
-  displaced: "var(--color-info)",
-  affected: "var(--color-warning)",
-  killed: "var(--color-critical)",
-  "in need": "var(--color-info)",
+/* ── KPI config ───────────────────────────────────────────────────── */
+
+type KpiKey = "displaced" | "affected" | "killed" | "in need" | string;
+
+const KPI_META: Record<
+  KpiKey,
+  { label: string; icon: React.ElementType; iconColor: string; iconBg: string }
+> = {
+  displaced: {
+    label: "Displaced",
+    icon: IconUsers,
+    iconColor: "#E85D3D",
+    iconBg: "#FEF2F0",
+  },
+  affected: {
+    label: "Affected",
+    icon: IconWorld,
+    iconColor: "#2563EB",
+    iconBg: "#EFF6FF",
+  },
+  killed: {
+    label: "Killed",
+    icon: IconAlertTriangle,
+    iconColor: "#DC2626",
+    iconBg: "#FEF2F2",
+  },
+  "in need": {
+    label: "In Need",
+    icon: IconUsers,
+    iconColor: "#D97706",
+    iconBg: "#FEF3C7",
+  },
 };
 
-const KPI_LABEL: Record<string, string> = {
-  displaced: "Displaced",
-  affected: "Affected",
-  killed: "Killed",
-  "in need": "In Need",
+const KPI_FALLBACK = {
+  label: (key: string) => key.charAt(0).toUpperCase() + key.slice(1),
+  icon: IconWorld,
+  iconColor: "#525252",
+  iconBg: "#F5F5F5",
 };
 
-/* ── component ───────────────────────────────────────────────────────── */
+/* ── Section card ─────────────────────────────────────────────────── */
+
+function SectionCard({
+  title,
+  children,
+  badge,
+}: {
+  title: string;
+  children: React.ReactNode;
+  badge?: React.ReactNode;
+}) {
+  return (
+    <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
+      <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+        <Group justify="space-between">
+          <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+            {title}
+          </Text>
+          {badge}
+        </Group>
+      </Box>
+      <Box p={16}>{children}</Box>
+    </Card>
+  );
+}
+
+/* ── Bullet list ──────────────────────────────────────────────────── */
+
+function BulletList({ items, accentColor }: { items: string[]; accentColor?: string }) {
+  return (
+    <Stack gap={6} component="ul" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+      {items.map((item) => (
+        <Box
+          key={item}
+          component="li"
+          style={{
+            fontSize: 13,
+            lineHeight: 1.6,
+            paddingLeft: 14,
+            position: "relative",
+            color: "#374151",
+          }}
+        >
+          <span
+            style={{
+              position: "absolute",
+              left: 1,
+              fontSize: 15,
+              lineHeight: 1,
+              color: accentColor ?? "#A3A3A3",
+            }}
+          >
+            ·
+          </span>
+          {item}
+        </Box>
+      ))}
+    </Stack>
+  );
+}
+
+/* ── Push/intention block ─────────────────────────────────────────── */
+
+function DisplacementCard({
+  heading,
+  items,
+  icon: Icon,
+  accentColor,
+  iconBg,
+}: {
+  heading: string;
+  items: string[];
+  icon: React.ElementType;
+  accentColor: string;
+  iconBg: string;
+}) {
+  return (
+    <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
+      <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+        <Group gap={8}>
+          <Box
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 6,
+              background: iconBg,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <Icon size={13} color={accentColor} />
+          </Box>
+          <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+            {heading}
+          </Text>
+        </Group>
+      </Box>
+      <Box p={16}>
+        <BulletList items={items} accentColor={accentColor} />
+      </Box>
+    </Card>
+  );
+}
+
+/* ── Component ────────────────────────────────────────────────────── */
+
 interface OverviewTabProps {
   countryData: CountryData;
   generatedSummary: string | null;
   llmIsPending: boolean;
-  onGenerateSummary: () => void;
 }
 
 export function OverviewTab({
@@ -42,92 +181,82 @@ export function OverviewTab({
   } = countryData;
 
   return (
-    <Stack gap={20} pb={32}>
-      {/* ── KPI Row ──────────────────────────────────────────────── */}
-      <Group gap={10} wrap="wrap">
-        {FINAL_NUMBERS_DATA.map((d) => (
-          <Box
-            key={d.what_happened}
-            px={18}
-            py={14}
-            style={{
-              background: "var(--color-bg-white)",
-              border: "1px solid var(--color-border)",
-              flex: 1,
-              minWidth: 140,
-            }}
-          >
-            <Text
+    <Stack gap={16} pb={32}>
+
+      {/* ── KPI row ──────────────────────────────────────────────── */}
+      <Group gap={12} wrap="nowrap" style={{ overflowX: "auto" }}>
+        {FINAL_NUMBERS_DATA.map((d) => {
+          const meta = KPI_META[d.what_happened];
+          const Icon = meta?.icon ?? KPI_FALLBACK.icon;
+          const iconColor = meta?.iconColor ?? KPI_FALLBACK.iconColor;
+          const iconBg = meta?.iconBg ?? KPI_FALLBACK.iconBg;
+          const label = meta?.label ?? KPI_FALLBACK.label(d.what_happened);
+          return (
+            <Box
+              key={d.what_happened}
+              p={16}
               style={{
-                fontSize: 9.5,
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "0.09em",
-                color: "var(--color-text-muted)",
-                marginBottom: 5,
+                flex: 1,
+                minWidth: 160,
+                background: "#FFF",
+                border: "1px solid #E5E5E5",
+                borderRadius: 8,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
               }}
             >
-              {KPI_LABEL[d.what_happened] ?? d.what_happened}
-            </Text>
-            <Text
-              style={{
-                fontSize: 28,
-                fontWeight: 700,
-                lineHeight: 1,
-                marginBottom: 3,
-                color: KPI_COLOR[d.what_happened] ?? "var(--color-info)",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {fmtNumber(d.number)}
-            </Text>
-            <Text style={{ fontSize: 10, color: "var(--color-text-muted)" }}>
-              {d.unit}
-            </Text>
-          </Box>
-        ))}
+              <Box
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: iconBg,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Icon size={18} color={iconColor} />
+              </Box>
+              <Box>
+                <Text
+                  fw={700}
+                  c="#171717"
+                  style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}
+                >
+                  {fmtNumber(d.number)}
+                </Text>
+                <Text size="xs" c="#737373" mt={2}>
+                  {label} · {d.unit}
+                </Text>
+              </Box>
+            </Box>
+          );
+        })}
       </Group>
 
-      {/* ── AI Situation Summary ──────────────────────────────────── */}
-      <Box
-        p={20}
-        style={{
-          background: "var(--color-bg-white)",
-          border: "1px solid var(--color-border)",
-        }}
-      >
-        <Group gap={6} mb={10}>
-          {llmIsPending ? (
-            <Loader size={10} color="var(--color-accent)" />
-          ) : (
-            <Box
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: "var(--color-accent)",
-                animation: "pulse-dot 2.5s ease-in-out infinite",
-                flexShrink: 0,
-              }}
-            />
-          )}
-          <Text
+      {/* ── AI Situation Summary ─────────────────────────────────── */}
+      <SectionCard
+        title="Summary"
+        badge={
+          <Badge
+            size="xs"
             style={{
-              fontSize: 9.5,
+              background: "#F3E8FF",
+              color: "#7C3AED",
+              border: "1px solid #7C3AED25",
               fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              color: "var(--color-text-muted)",
             }}
           >
-            AI Situation Summary
-          </Text>
-          <IconSparkles
-            size={11}
-            style={{ color: "var(--color-ai)", marginLeft: 2 }}
-          />
-        </Group>
-
+            <Group gap={4} wrap="nowrap">
+              <IconSparkles size={10} />
+              AI generated
+            </Group>
+          </Badge>
+        }
+      >
         {llmIsPending ? (
           <Stack gap={8}>
             {[94, 100, 87, 98, 72].map((w, i) => (
@@ -136,7 +265,7 @@ export function OverviewTab({
                 style={{
                   height: 12,
                   width: `${w}%`,
-                  background: "var(--color-bg-muted)",
+                  background: "#F5F5F5",
                   borderRadius: 2,
                   animation: "pulse-dot 1.3s ease-in-out infinite",
                   animationDelay: `${i * 0.1}s`,
@@ -145,31 +274,26 @@ export function OverviewTab({
             ))}
           </Stack>
         ) : generatedSummary ? (
-          <Text
-            style={{
-              fontSize: 13,
-              color: "var(--color-text-primary)",
-              lineHeight: 1.68,
-            }}
-          >
+          <Text size="sm" c="#374151" style={{ lineHeight: 1.75 }}>
             {generatedSummary}
           </Text>
         ) : (
-          <Text style={{ fontSize: 13, color: "var(--color-text-muted)", fontStyle: "italic" }}>
-            Click &ldquo;Generate Summary&rdquo; in the header to produce an AI situation summary.
-          </Text>
+          <Group gap={6}>
+            {llmIsPending && <Loader size={10} />}
+            <Text size="sm" c="#A3A3A3" style={{ fontStyle: "italic" }}>
+              AI situation summary will appear here once generated.
+            </Text>
+          </Group>
         )}
-      </Box>
+      </SectionCard>
 
-      {/* ── Context Risks ─────────────────────────────────────────── */}
-      <SectionHeading>Context Risks</SectionHeading>
-      <Box
-        style={{
-          background: "var(--color-bg-white)",
-          border: "1px solid var(--color-border)",
-          overflow: "hidden",
-        }}
-      >
+      {/* ── Context Risks ────────────────────────────────────────── */}
+      <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
+        <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+          <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+            Context Risks
+          </Text>
+        </Box>
         {Object.entries(OUTPUT_CONTEXT_RISKS_DATA)
           .filter(([, v]) => v?.length)
           .map(([cat, items], idx, arr) => (
@@ -177,56 +301,41 @@ export function OverviewTab({
               key={cat}
               style={{
                 display: "grid",
-                gridTemplateColumns: "130px 1fr",
-                borderBottom:
-                  idx < arr.length - 1 ? "1px solid var(--color-border)" : "none",
+                gridTemplateColumns: "140px 1fr",
+                borderBottom: idx < arr.length - 1 ? "1px solid #E5E5E5" : "none",
               }}
             >
               <Box
-                px={14}
+                px={16}
                 pt={12}
                 pb={10}
                 style={{
-                  background: "var(--color-bg-muted)",
+                  background: "#FAFAFA",
+                  borderRight: "1px solid #E5E5E5",
                   display: "flex",
                   alignItems: "flex-start",
                 }}
               >
                 <Text
                   style={{
-                    fontSize: 9.5,
+                    fontSize: 11,
                     fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "var(--color-text-muted)",
-                    lineHeight: 1.4,
+                    color: "#525252",
                   }}
                 >
                   {cat}
                 </Text>
               </Box>
-              <Box px={14} py={10}>
-                <Stack gap={3}>
+              <Box px={16} py={10}>
+                <Stack gap={4}>
                   {items.map((item) => (
                     <Text
                       key={item}
-                      style={{
-                        fontSize: 12,
-                        color: "var(--color-text-secondary)",
-                        lineHeight: 1.45,
-                        paddingLeft: 12,
-                        position: "relative",
-                      }}
+                      size="sm"
+                      c="#374151"
+                      style={{ lineHeight: 1.6, paddingLeft: 12, position: "relative" }}
                     >
-                      <span
-                        style={{
-                          position: "absolute",
-                          left: 0,
-                          color: "var(--color-text-muted)",
-                        }}
-                      >
-                        –
-                      </span>
+                      <span style={{ position: "absolute", left: 1, color: "#A3A3A3" }}>–</span>
                       {item}
                     </Text>
                   ))}
@@ -234,146 +343,36 @@ export function OverviewTab({
               </Box>
             </Box>
           ))}
-      </Box>
+      </Card>
 
-      {/* ── Hazards & Pre-Crisis Vulnerabilities ──────────────────── */}
-      <SectionHeading>Hazards &amp; Pre-Crisis Vulnerabilities</SectionHeading>
+      {/* ── Hazards & Pre-Crisis Vulnerabilities ─────────────────── */}
       <SimpleGrid cols={2} spacing={12}>
-        <RiskBlock
-          variant="critical"
-          heading="Current Hazards"
-          items={CURRENT_HAZARDS_AND_THREATS_DATA}
-        />
-        <RiskBlock
-          variant="warning"
-          heading="Pre-Crisis Vulnerabilities"
-          items={PRECRISIS_VULNERABILITIES_DATA}
-        />
+        <SectionCard title="Current Hazards & Threats">
+          <BulletList items={CURRENT_HAZARDS_AND_THREATS_DATA} accentColor="#E85D3D" />
+        </SectionCard>
+        <SectionCard title="Pre-Crisis Vulnerabilities">
+          <BulletList items={PRECRISIS_VULNERABILITIES_DATA} accentColor="#D97706" />
+        </SectionCard>
       </SimpleGrid>
 
-      {/* ── Displacement ──────────────────────────────────────────── */}
-      <SectionHeading>Displacement</SectionHeading>
+      {/* ── Displacement ─────────────────────────────────────────── */}
       <SimpleGrid cols={2} spacing={12}>
-        <RiskBlock
-          variant="info"
+        <DisplacementCard
           heading="Push Factors"
           items={DISPLACEMENT_RISKS_DATA["Push Factors"]}
+          icon={IconArrowNarrowUp}
+          accentColor="#2563EB"
+          iconBg="#EFF6FF"
         />
-        <RiskBlock
-          variant="success"
+        <DisplacementCard
           heading="Return Intentions"
           items={DISPLACEMENT_RISKS_DATA.Intentions}
+          icon={IconArrowNarrowDown}
+          accentColor="#059669"
+          iconBg="#ECFDF5"
         />
       </SimpleGrid>
+
     </Stack>
-  );
-}
-
-/* ── Sub-components ─────────────────────────────────────────────────── */
-
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <Box
-      pb={7}
-      style={{ borderBottom: "1px solid var(--color-border)" }}
-    >
-      <Text
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.09em",
-          color: "var(--color-text-muted)",
-        }}
-      >
-        {children}
-      </Text>
-    </Box>
-  );
-}
-
-const RISK_BLOCK_STYLES = {
-  critical: {
-    border: "var(--color-critical)",
-    bg: "var(--color-critical-light)",
-    textColor: "var(--color-critical)",
-  },
-  warning: {
-    border: "var(--color-warning)",
-    bg: "var(--color-warning-light)",
-    textColor: "var(--color-warning)",
-  },
-  info: {
-    border: "var(--color-info)",
-    bg: "var(--color-info-light)",
-    textColor: "var(--color-info)",
-  },
-  success: {
-    border: "var(--color-success)",
-    bg: "var(--color-success-light)",
-    textColor: "var(--color-success)",
-  },
-} as const;
-
-function RiskBlock({
-  variant,
-  heading,
-  items,
-}: {
-  variant: keyof typeof RISK_BLOCK_STYLES;
-  heading: string;
-  items: string[];
-}) {
-  const s = RISK_BLOCK_STYLES[variant];
-  return (
-    <Box
-      p={13}
-      style={{
-        borderLeft: `3px solid ${s.border}`,
-        background: s.bg,
-      }}
-    >
-      <Text
-        mb={7}
-        style={{
-          fontSize: 9.5,
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          color: s.textColor,
-          opacity: 0.7,
-        }}
-      >
-        {heading}
-      </Text>
-      <Stack gap={4} component="ul" style={{ listStyle: "none", padding: 0, margin: 0 }}>
-        {items.map((item) => (
-          <Box
-            key={item}
-            component="li"
-            style={{
-              fontSize: 12,
-              lineHeight: 1.45,
-              paddingLeft: 10,
-              position: "relative",
-              color: "var(--color-text-secondary)",
-            }}
-          >
-            <span
-              style={{
-                position: "absolute",
-                left: 1,
-                fontSize: 14,
-                lineHeight: 1,
-                color: s.border,
-              }}
-            >
-              ·
-            </span>
-            {item}
-          </Box>
-        ))}
-      </Stack>
-    </Box>
   );
 }

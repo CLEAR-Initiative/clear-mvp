@@ -36,7 +36,7 @@ const SORT_LABELS: Record<SortOrder, string> = {
   oldest: "Oldest first",
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 5;
 
 interface CardProps {
   style?: React.CSSProperties;
