@@ -22,6 +22,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconMenu2,
+  IconTool,
 } from "@tabler/icons-react";
 import { cn } from "~/lib/utils";
 import { authClient } from "~/lib/auth-client";
@@ -66,7 +67,8 @@ const navSections: NavSection[] = [
   {
     title: "RESOURCES",
     items: [
-      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook, featureKey: "knowledge_hub", comingSoonForNonAdmin: true },
+      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook,  featureKey: "knowledge_hub", comingSoonForNonAdmin: true },
+      { label: "Tools",         href: "/tools",     icon: IconTool,  featureKey: "tools" },
     ],
   },
 ];
