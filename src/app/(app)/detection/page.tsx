@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Box, Tabs, Button, Group, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
 import { IconFilter } from "@tabler/icons-react";
@@ -56,7 +56,7 @@ const SIGNAL_ORDER_MAP: Record<SignalSortOrder, SignalOrderBy> = {
 const VALID_TABS = new Set(["live", "events", "signals", "history"]);
 const TAB_STORAGE_KEY = "detection-active-tab";
 
-export default function DetectionPage() {
+function DetectionPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -689,5 +689,13 @@ export default function DetectionPage() {
 
       <CreateSignalModal opened={createModalOpened} onClose={closeCreateModal} />
     </Box>
+  );
+}
+
+export default function DetectionPage() {
+  return (
+    <Suspense>
+      <DetectionPageContent />
+    </Suspense>
   );
 }
