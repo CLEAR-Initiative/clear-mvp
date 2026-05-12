@@ -174,15 +174,7 @@ export function RightPanel({
           <Text fw={700} style={{ fontSize: 24, letterSpacing: "-0.02em" }}>
             {selectedCountry}
           </Text>
-          {hasCrisisData ? (
-            <Badge
-              size="sm"
-              tt="uppercase"
-              style={{ fontSize: 10, fontWeight: 700, background: "#DC2626", color: "white" }}
-            >
-              {crisisPins.length} Active
-            </Badge>
-          ) : currentNRCLocation ? (
+          {!hasCrisisData && currentNRCLocation ? (
             <Badge
               size="sm"
               tt="uppercase"
@@ -192,28 +184,14 @@ export function RightPanel({
             </Badge>
           ) : null}
         </Group>
-        {/* TODO(demo): "Feb 2026" date is hardcoded - should reflect the active timeline month */}
-        <Text size="sm" c="#E85D3D" style={{ fontSize: 13 }}>
-          {hasCrisisData ? (
-            <>
-              Humanitarian{" "}
-              <Text component="span" c="#737373">
-                | Feb 2026
-              </Text>
-            </>
-          ) : currentNRCLocation ? (
-            <>
-              {currentNRCLocation.region.split(" ")[0]}{" "}
-              <Text component="span" c="#737373">
-                | NRC Office
-              </Text>
-            </>
-          ) : (
-            <>
-              Overview <Text component="span" c="#737373">| Feb 2026</Text>
-            </>
-          )}
-        </Text>
+        {!hasCrisisData && currentNRCLocation && (
+          <Text size="sm" c="#E85D3D" style={{ fontSize: 13 }}>
+            {currentNRCLocation.region.split(" ")[0]}{" "}
+            <Text component="span" c="#737373">
+              | NRC Office
+            </Text>
+          </Text>
+        )}
       </Box>
 
       {/* INFORM Risk Pillars */}
