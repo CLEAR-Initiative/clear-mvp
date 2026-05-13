@@ -282,8 +282,16 @@ function DetectionPageContent() {
   // ensures switching sort and switching back always queries the same dataset.
   const FILTER_DEPS = [selectedLocationId, fromIso, toIso, activeTeamId, severityMin, severityMax, expandedTypeCodes?.join(",")] as const;
 
+  // Snapshot is shared across all three feeds, so we set it once. Previously
+  // each per-feed reset effect called setSnapshotTime independently, which
+  // scheduled three setState calls per filter change with three slightly
+  // different timestamps.
   useEffect(() => {
     setSnapshotTime(new Date().toISOString());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...FILTER_DEPS, activeSources]);
+
+  useEffect(() => {
     eventsAppending.current = false;
     setEventsOffset(0);
     setEventsItems([]);
@@ -300,7 +308,6 @@ function DetectionPageContent() {
   }, [eventsSort]);
 
   useEffect(() => {
-    setSnapshotTime(new Date().toISOString());
     alertsAppending.current = false;
     setAlertsOffset(0);
     setAlertsItems([]);
@@ -317,7 +324,6 @@ function DetectionPageContent() {
   }, [alertsSort]);
 
   useEffect(() => {
-    setSnapshotTime(new Date().toISOString());
     signalsAppending.current = false;
     setSignalsOffset(0);
     setSignalsItems([]);
