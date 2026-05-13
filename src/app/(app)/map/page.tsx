@@ -8,6 +8,7 @@ import {
   Group,
   Select,
   Loader,
+  useMantineColorScheme,
 } from "@mantine/core";
 import { DisasterTypePicker } from "~/components/disaster-type-picker";
 import type { MapMarker } from "~/components/map/crisis-map";
@@ -50,6 +51,11 @@ function FilterLabel({ children }: { children: string }) {
 }
 
 export default function MapPage() {
+  const { colorScheme } = useMantineColorScheme();
+  const mapStyle = colorScheme === "dark"
+    ? "mapbox://styles/mapbox/dark-v11"
+    : "mapbox://styles/mapbox/light-v11";
+
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>("alert");
 
@@ -336,6 +342,7 @@ export default function MapPage() {
         adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
         fitBoundsGeometry={fitBoundsGeometry}
         populationBoundaries={populationBoundaries}
+        mapStyle={mapStyle}
       />
 
       {/* ===== Left Panel Bar (Layers / Legend / Config) ===== */}

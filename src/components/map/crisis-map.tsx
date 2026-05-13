@@ -65,6 +65,8 @@ interface CrisisMapProps {
   hoveredMarkerId?: number | null;
   /** Suppress the automatic fitBounds-to-country when a focus country loads. Default true. */
   fitBoundsOnFocus?: boolean;
+  /** Mapbox style URL. Defaults to light-v11. Pass dark-v11 for dark mode. */
+  mapStyle?: string;
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -209,7 +211,9 @@ export function CrisisMap({
   populationBoundaries,
   hoveredMarkerId,
   fitBoundsOnFocus = true,
+  mapStyle = "mapbox://styles/mapbox/light-v11",
 }: CrisisMapProps) {
+  const isDark = mapStyle.includes("dark");
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxGLAny>(null);
   const mbRef = useRef<MapboxGLAny>(null);
@@ -246,7 +250,7 @@ export function CrisisMap({
 
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: "mapbox://styles/mapbox/light-v11",
+        style: mapStyle,
         center,
         zoom,
         interactive,
@@ -269,7 +273,7 @@ export function CrisisMap({
       map.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mapStyle]);
 
   // ── Country focus: dim mask + border glow + bounds ──────────────────────
   //
@@ -323,7 +327,8 @@ export function CrisisMap({
       url: "mapbox://mapbox.country-boundaries-v1",
     });
 
-    // Near-white wash over every country EXCEPT the focus.
+    // Mask over every country EXCEPT the focus.
+    // Light: near-white wash. Dark: black overlay so non-focus areas recede further.
     m.addLayer(
       {
         id: "focus-mask-fill",
@@ -332,8 +337,8 @@ export function CrisisMap({
         "source-layer": "country_boundaries",
         filter: ["!=", ["get", "iso_3166_1"], focusIso],
         paint: {
-          "fill-color": "#FFFFFF",
-          "fill-opacity": 0.9,
+          "fill-color": isDark ? "#000000" : "#FFFFFF",
+          "fill-opacity": isDark ? 0.55 : 0.9,
         },
       },
       fillBeforeId,
@@ -341,6 +346,12 @@ export function CrisisMap({
 
     // Blue tint + border for the focus country.
     // Prefer our own DB geometry (accurate OCHA boundaries) over Mapbox's tileset.
+    const highlightColor = isDark ? "#1E3A5F" : "#1E40AF";
+    const highlightOpacity = isDark ? 0.45 : 0.35;
+    const borderColor = isDark ? "#60A5FA" : "#1D4ED8";
+    const borderWidth = isDark ? 1.5 : 1.25;
+    const borderOpacity = isDark ? 0.9 : 0.85;
+
     if (focusCountryGeometry) {
       m.addSource(FOCUS_GEOJSON_SOURCE, {
         type: "geojson",
@@ -348,12 +359,12 @@ export function CrisisMap({
       });
       m.addLayer(
         { id: "focus-highlight-fill", type: "fill", source: FOCUS_GEOJSON_SOURCE,
-          paint: { "fill-color": "#1E40AF", "fill-opacity": 0.35 } },
+          paint: { "fill-color": highlightColor, "fill-opacity": highlightOpacity } },
         fillBeforeId,
       );
       m.addLayer(
         { id: "focus-border-line", type: "line", source: FOCUS_GEOJSON_SOURCE,
-          paint: { "line-color": "#1D4ED8", "line-width": 1.25, "line-opacity": 0.85 } },
+          paint: { "line-color": borderColor, "line-width": borderWidth, "line-opacity": borderOpacity } },
         borderBeforeId,
       );
     } else {
@@ -365,7 +376,7 @@ export function CrisisMap({
           source: COUNTRY_SOURCE,
           "source-layer": "country_boundaries",
           filter: ["==", ["get", "iso_3166_1"], focusIso],
-          paint: { "fill-color": "#1E40AF", "fill-opacity": 0.35 },
+          paint: { "fill-color": highlightColor, "fill-opacity": highlightOpacity },
         },
         fillBeforeId,
       );
@@ -376,7 +387,7 @@ export function CrisisMap({
           source: COUNTRY_SOURCE,
           "source-layer": "country_boundaries",
           filter: ["==", ["get", "iso_3166_1"], focusIso],
-          paint: { "line-color": "#1D4ED8", "line-width": 1.25, "line-opacity": 0.85 },
+          paint: { "line-color": borderColor, "line-width": borderWidth, "line-opacity": borderOpacity },
         },
         borderBeforeId,
       );
@@ -412,7 +423,7 @@ export function CrisisMap({
               ["==", ["get", "iso_3166_1"], focusIso],
             ]);
             m.setLayerZoomRange(layer.id, 0, 24);
-            m.setPaintProperty(layer.id, "line-color", "#475569");
+            m.setPaintProperty(layer.id, "line-color", isDark ? "#94A3B8" : "#475569");
             m.setPaintProperty(layer.id, "line-width", 1.4);
             m.setPaintProperty(layer.id, "line-opacity", 0.85);
             m.setPaintProperty(layer.id, "line-dasharray", [3, 2]);
@@ -455,10 +466,9 @@ export function CrisisMap({
             6, 14,
             10, 17,
           ]);
-          // Bold weight + dark colour with a bright halo so labels stay
-          // readable on top of both the grey focus fill and basemap detail.
-          m.setPaintProperty(layer.id, "text-color", "#1F2937");
-          m.setPaintProperty(layer.id, "text-halo-color", "#FFFFFF");
+          // Labels: dark text on light basemap, light text on dark basemap.
+          m.setPaintProperty(layer.id, "text-color", isDark ? "#E2E8F0" : "#1F2937");
+          m.setPaintProperty(layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.85)" : "#FFFFFF");
           m.setPaintProperty(layer.id, "text-halo-width", 1.5);
           m.setPaintProperty(layer.id, "text-halo-blur", 0.5);
         } catch { /* ignore */ }
@@ -466,7 +476,7 @@ export function CrisisMap({
     }
 
     return cleanup;
-  }, [focusIso, focusCountryGeometry, loaded, adminBoundaries, adminBoundaryLevel]);
+  }, [focusIso, focusCountryGeometry, loaded, adminBoundaries, adminBoundaryLevel, isDark]);
 
   // Fit bounds to the focus country once its backend bbox is available.
   // Skips when fitBoundsGeometry is set (a more specific region is focused).
@@ -522,9 +532,9 @@ export function CrisisMap({
           data: { type: "Feature", geometry: fitBoundsGeometry as never, properties: {} },
         });
         m.addLayer({ id: REGION_FILL, type: "fill", source: REGION_SOURCE,
-          paint: { "fill-color": "#1E40AF", "fill-opacity": 0.25 } }, beforeId);
+          paint: { "fill-color": isDark ? "#1E3A5F" : "#1E40AF", "fill-opacity": isDark ? 0.35 : 0.25 } }, beforeId);
         m.addLayer({ id: REGION_LINE, type: "line", source: REGION_SOURCE,
-          paint: { "line-color": "#1D4ED8", "line-width": 1.5, "line-opacity": 0.9 } }, beforeId);
+          paint: { "line-color": isDark ? "#60A5FA" : "#1D4ED8", "line-width": 1.5, "line-opacity": 0.9 } }, beforeId);
       } catch { /* ignore */ }
     } else {
       // Restore country highlight when no region is selected.
@@ -776,7 +786,7 @@ export function CrisisMap({
         type: "line",
         source: SOURCE,
         paint: {
-          "line-color": "#C2410C",
+          "line-color": isDark ? "#FB923C" : "#C2410C",
           "line-width": 0.5,
           "line-opacity": 0.5,
         },
@@ -818,7 +828,7 @@ export function CrisisMap({
     if (features.length === 0) return;
 
     const isA2 = adminBoundaryLevel === 2;
-    const lineColor = "#1D4ED8";
+    const lineColor = isDark ? "#60A5FA" : "#1D4ED8";
     const lineWidth = isA2 ? 1 : 1.5;
     const lineOpacity = isA2 ? 0.7 : 0.85;
 
