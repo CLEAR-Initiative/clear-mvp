@@ -10,3 +10,7 @@ node_modules
 .env
 .vercel
 tsconfig.tsbuildinfo
+
+# AI agent skills (installed per-developer, not shared)
+.agents/
+skills-lock.json
