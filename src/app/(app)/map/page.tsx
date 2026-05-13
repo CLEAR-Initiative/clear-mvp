@@ -8,7 +8,6 @@ import {
   Group,
   Select,
   Loader,
-  useMantineColorScheme,
 } from "@mantine/core";
 import { DisasterTypePicker } from "~/components/disaster-type-picker";
 import type { MapMarker } from "~/components/map/crisis-map";
@@ -39,7 +38,9 @@ const LABEL_STYLE = { fontSize: 10, letterSpacing: "0.05em" } as const;
 const INPUT_STYLE = {
   fontWeight: 600,
   fontSize: 13,
-  border: "1px solid var(--color-border)",
+  background: "var(--color-bg-muted)",
+  border: "1px solid var(--color-border-dark)",
+  boxShadow: "var(--shadow-sm)",
 } as const;
 
 function FilterLabel({ children }: { children: string }) {
@@ -51,8 +52,16 @@ function FilterLabel({ children }: { children: string }) {
 }
 
 export default function MapPage() {
-  const { colorScheme } = useMantineColorScheme();
-  const mapStyle = colorScheme === "dark"
+  const [isDark, setIsDark] = useState(false);
+  useEffect(() => {
+    const update = () =>
+      setIsDark(document.documentElement.getAttribute("data-mantine-color-scheme") === "dark");
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-mantine-color-scheme"] });
+    return () => observer.disconnect();
+  }, []);
+  const mapStyle = isDark
     ? "mapbox://styles/mapbox/dark-v11"
     : "mapbox://styles/mapbox/light-v11";
 
@@ -287,9 +296,9 @@ export default function MapPage() {
         px={16}
         py={12}
         style={{
-          background: colorScheme === "dark"
-            ? "linear-gradient(to bottom, rgba(30,30,30,0.97), rgba(30,30,30,0))"
-            : "linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(255,255,255,0))",
+          background: "linear-gradient(to bottom, var(--map-overlay-from) 60%, var(--map-overlay-to))",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",

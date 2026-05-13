@@ -48,11 +48,11 @@ export function MapSettingsPopover({
             width: 30,
             height: 30,
             borderRadius: 4,
-            border: "1px solid var(--color-border)",
-            background: "var(--color-bg-white)",
+            border: "1px solid var(--color-border-dark)",
+            background: "var(--color-bg-muted)",
             cursor: "pointer",
-            color: opened ? "#2563EB" : "#525252",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            color: opened ? "var(--color-info)" : "var(--color-text-secondary)",
+            boxShadow: "var(--shadow-sm)",
             padding: 0,
           }}
         >

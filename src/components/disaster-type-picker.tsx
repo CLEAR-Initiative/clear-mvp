@@ -114,12 +114,13 @@ export function DisasterTypePicker({
               height,
               paddingLeft: 10,
               paddingRight: 8,
-              border: "1px solid #E5E5E5",
+              border: "1px solid var(--color-border-dark)",
               borderRadius: 0,
               fontSize,
               fontWeight,
-              background: "var(--color-bg-white)",
-              color: selected.length === 0 ? "var(--color-text-muted)" : "var(--color-text-primary)",
+              background: "var(--color-bg-muted)",
+              boxShadow: "var(--shadow-sm)",
+              color: "var(--color-text-primary)",
               cursor: "pointer",
             }}
           >

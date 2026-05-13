@@ -434,10 +434,10 @@ export function CrisisMap({
         }
       }
 
-      // Settlement labels - relax the filterrank threshold from <=2 to <=4
-      // so mid-tier cities in the focus country become visible, and slightly
-      // bump text size at low zooms. Mapbox's own filterrank keeps Europe/US
-      // from over-cluttering, and our ROW mask covers neighbour labels.
+      // Settlement labels - restrict to focus country only, and relax
+      // filterrank so mid-tier cities (Port Sudan, Nyala, etc.) are visible.
+      // All settlement labels outside the focus country are hidden; country
+      // names on those areas are left to Mapbox's own country-label layer.
       if (
         layer.type === "symbol" &&
         (id === "settlement-minor-label" || id === "settlement-major-label")
@@ -458,7 +458,9 @@ export function CrisisMap({
               }
               return clause;
             });
-            m.setFilter(layer.id, relaxed as unknown as never);
+            // Append country filter so only the focus country's cities show.
+            const withCountry = [...relaxed, ["==", ["get", "iso_3166_1"], focusIso]];
+            m.setFilter(layer.id, withCountry as unknown as never);
           }
           m.setLayoutProperty(layer.id, "text-size", [
             "interpolate", ["linear"], ["zoom"],
