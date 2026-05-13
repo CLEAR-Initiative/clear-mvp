@@ -386,10 +386,12 @@ function DetectionPageContent() {
 
   // ── "New items" polls: lightweight queries with from=snapshotTime ──────────
   // Only the active tab polls so we don't waste bandwidth on hidden tabs.
+  // These spread the same filter shape as the main queries so the count
+  // reflects what refresh will actually load — otherwise the banner can show
+  // "100 new events" while a Critical-only filter would load 0.
   const eventsNewQuery = api.alerts.eventsPage.useQuery(
     {
-      teamId: activeTeamId,
-      locationId: selectedLocationId ?? undefined,
+      ...sharedFilter,
       from: snapshotTime,
       limit: 1,
       orderBy: "LAST_SIGNAL_DESC",
@@ -398,10 +400,9 @@ function DetectionPageContent() {
   );
   const alertsNewQuery = api.alerts.alertsPage.useQuery(
     {
-      teamId: activeTeamId,
-      locationId: selectedLocationId ?? undefined,
-      from: snapshotTime,
+      ...sharedFilter,
       status: "published",
+      from: snapshotTime,
       limit: 1,
       orderBy: "CREATED_DESC",
     },
@@ -411,6 +412,9 @@ function DetectionPageContent() {
     {
       teamId: activeTeamId,
       locationId: selectedLocationId ?? undefined,
+      severityMin,
+      severityMax,
+      sourceNames: activeSources ? [...activeSources] : undefined,
       from: snapshotTime,
       limit: 1,
       orderBy: "PUBLISHED_DESC",
