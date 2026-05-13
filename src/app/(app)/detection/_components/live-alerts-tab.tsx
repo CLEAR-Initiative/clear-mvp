@@ -67,6 +67,10 @@ interface LiveAlertsTabProps {
   activeSeverities?: Set<string>;
   expandedTypeCodes?: string[] | null;
   activeSources?: Set<string> | null;
+  // Sort state lives in the parent so the server-paginated query can apply
+  // orderBy before slicing into pages.
+  sortOrder: SortOrder;
+  onSortOrderChange: (o: SortOrder) => void;
 }
 
 export function LiveAlertsTab({
@@ -87,10 +91,11 @@ export function LiveAlertsTab({
   activeSeverities: activeSeveritiesProp,
   expandedTypeCodes: expandedTypeCodesProp,
   activeSources: activeSourcesProp,
+  sortOrder,
+  onSortOrderChange,
 }: LiveAlertsTabProps) {
   const { getTypeNames } = useDisasterTypes();
   const [search, setSearch] = useState("");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
   const [showPopulation, setShowPopulation] = useState(false);
 
@@ -99,9 +104,12 @@ export function LiveAlertsTab({
 
 
 
+  // Order is applied server-side via the parent's *Page query — only filter
+  // here. Sorting locally would just shuffle the current page and is what
+  // caused the "newest items on a different page" bug.
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let result = alerts.filter((a) => {
+    return alerts.filter((a) => {
       const sev = mapSeverity(a.event.severity);
       if (!activeSeverities.has(sev)) return false;
       if (expandedTypeCodesProp && !a.event.types.some((t) => expandedTypeCodesProp.includes(t))) return false;
@@ -113,17 +121,7 @@ export function LiveAlertsTab({
       }
       return true;
     });
-
-    result = [...result].sort((a, b) => {
-      if (sortOrder === "sev-desc") return b.event.rank - a.event.rank;
-      if (sortOrder === "sev-asc")  return a.event.rank - b.event.rank;
-      if (sortOrder === "newest")
-        return new Date(b.event.firstSignalCreatedAt).getTime() - new Date(a.event.firstSignalCreatedAt).getTime();
-      return new Date(a.event.firstSignalCreatedAt).getTime() - new Date(b.event.firstSignalCreatedAt).getTime();
-    });
-
-    return result;
-  }, [alerts, search, activeSeverities, expandedTypeCodesProp, activeSources, sortOrder]);
+  }, [alerts, search, activeSeverities, expandedTypeCodesProp, activeSources]);
 
   const listCountLabel =
     filtered.length === alerts.length
@@ -192,7 +190,7 @@ export function LiveAlertsTab({
               {(Object.entries(SORT_LABELS) as [SortOrder, string][]).map(([key, label]) => (
                 <Menu.Item
                   key={key}
-                  onClick={() => setSortOrder(key)}
+                  onClick={() => onSortOrderChange(key)}
                   style={{
                     fontSize: 12,
                     fontWeight: sortOrder === key ? 600 : 400,

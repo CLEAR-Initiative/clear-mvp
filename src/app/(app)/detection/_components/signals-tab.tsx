@@ -36,12 +36,14 @@ const CrisisMap = dynamic(
   { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
 );
 
-type SortOrder = "newest" | "oldest" | "source";
+// "source" sort was previously client-side only and would only sort the
+// current page. Removed for now — re-add once the SignalOrderBy enum on the
+// server gains a source-name option.
+type SortOrder = "newest" | "oldest";
 
 const SORT_LABELS: Record<SortOrder, string> = {
   newest: "Newest first",
   oldest: "Oldest first",
-  source: "Source name",
 };
 
 function formatDate(dateStr: string): string {
@@ -68,6 +70,9 @@ interface SignalsTabProps {
   focusCountryGeometry?: unknown;
   activeSeverities?: Set<string>;
   activeSources?: Set<string> | null;
+  // Lifted to the parent — drives the signalsPage orderBy.
+  sortOrder: SortOrder;
+  onSortOrderChange: (o: SortOrder) => void;
 }
 
 export function SignalsTab({
@@ -86,18 +91,20 @@ export function SignalsTab({
   focusCountryGeometry,
   activeSeverities: activeSeveritiesProp,
   activeSources: activeSourcesProp,
+  sortOrder,
+  onSortOrderChange,
 }: SignalsTabProps) {
   const [search, setSearch] = useState("");
   const activeSources = activeSourcesProp ?? null;
   const activeSeverities = activeSeveritiesProp ?? new Set(["critical", "high", "medium", "low"]);
-  const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
 
 
 
+  // Sort is applied server-side by the parent's signalsPage query.
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let result = signals.filter((s) => {
+    return signals.filter((s) => {
       const sev = mapSeverity(s.severity);
       if (!activeSeverities.has(sev)) return false;
       if (activeSources !== null && !activeSources.has(s.source.name)) return false;
@@ -109,17 +116,7 @@ export function SignalsTab({
       }
       return true;
     });
-
-    result = [...result].sort((a, b) => {
-      if (sortOrder === "newest")
-        return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-      if (sortOrder === "oldest")
-        return new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime();
-      return a.source.name.localeCompare(b.source.name);
-    });
-
-    return result;
-  }, [signals, search, activeSeverities, activeSources, sortOrder]);
+  }, [signals, search, activeSeverities, activeSources]);
 
   const listCountLabel =
     filtered.length === signals.length
@@ -188,7 +185,7 @@ export function SignalsTab({
               {(Object.entries(SORT_LABELS) as [SortOrder, string][]).map(([key, label]) => (
                 <Menu.Item
                   key={key}
-                  onClick={() => setSortOrder(key)}
+                  onClick={() => onSortOrderChange(key)}
                   style={{
                     fontSize: 12,
                     fontWeight: sortOrder === key ? 600 : 400,

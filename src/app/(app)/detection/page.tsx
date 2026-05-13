@@ -21,6 +21,42 @@ import { EventsTab } from "./_components/events-tab";
 import { SignalsTab } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
 
+// Sort options surfaced in the per-tab dropdown. The mapping below converts
+// each one to the GraphQL `orderBy` enum that the *Page resolvers understand
+// so sorting is applied before pagination — fixes the "newest item lives on
+// page 2" bug we saw with the previous client-side .sort().
+export type AlertEventSortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
+export type SignalSortOrder = "newest" | "oldest";
+
+type AlertOrderBy = "SEVERITY_DESC" | "SEVERITY_ASC" | "CREATED_DESC" | "CREATED_ASC";
+type EventOrderBy =
+  | "SEVERITY_DESC"
+  | "SEVERITY_ASC"
+  | "LAST_SIGNAL_DESC"
+  | "LAST_SIGNAL_ASC";
+type SignalOrderBy = "PUBLISHED_DESC" | "PUBLISHED_ASC";
+
+function toAlertOrderBy(s: AlertEventSortOrder): AlertOrderBy {
+  if (s === "sev-desc") return "SEVERITY_DESC";
+  if (s === "sev-asc") return "SEVERITY_ASC";
+  if (s === "newest") return "CREATED_DESC";
+  return "CREATED_ASC";
+}
+
+function toEventOrderBy(s: AlertEventSortOrder): EventOrderBy {
+  // For events, "newest"/"oldest" mean "most/least recently active" — i.e.
+  // ordered by lastSignalCreatedAt. An older event that just received a new
+  // signal floats to the top of the "newest" view.
+  if (s === "sev-desc") return "SEVERITY_DESC";
+  if (s === "sev-asc") return "SEVERITY_ASC";
+  if (s === "newest") return "LAST_SIGNAL_DESC";
+  return "LAST_SIGNAL_ASC";
+}
+
+function toSignalOrderBy(s: SignalSortOrder): SignalOrderBy {
+  return s === "newest" ? "PUBLISHED_DESC" : "PUBLISHED_ASC";
+}
+
 export default function DetectionPage() {
   const [activeTab, setActiveTab] = useState<string | null>("events");
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
@@ -87,6 +123,14 @@ export default function DetectionPage() {
   const [eventsPageNum, setEventsPageNum] = useState(1);
   const [signalsPageNum, setSignalsPageNum] = useState(1);
 
+  // Sort order per tab. Held at the parent so the *Page query can include
+  // `orderBy` and the DB sorts before slicing into pages — without this, the
+  // tabs' .sort() only reorders the current page and "newest" items can
+  // end up on a different page.
+  const [alertsSortOrder, setAlertsSortOrder] = useState<AlertEventSortOrder>("sev-desc");
+  const [eventsSortOrder, setEventsSortOrder] = useState<AlertEventSortOrder>("sev-desc");
+  const [signalsSortOrder, setSignalsSortOrder] = useState<SignalSortOrder>("newest");
+
   // Resolve the focused location id (region overrides country). Drives the
   // server-side filter AND the client-side `clipToRegion` map clip.
   const selectedLocationId = useMemo(() => {
@@ -119,19 +163,20 @@ export default function DetectionPage() {
     return { severityMin: min, severityMax: Math.max(...nums) };
   }, [activeSeverities]);
 
-  // Reset page → 1 whenever the underlying filter set changes — otherwise
-  // narrowing the filter would leave the user on a non-existent page.
+  // Reset page → 1 whenever the underlying filter set OR sort order changes —
+  // otherwise narrowing the filter / re-sorting would leave the user on a
+  // non-existent or semantically wrong page.
   useEffect(() => setAlertsPageNum(1), [
     selectedLocationId, fromIso, toIso, activeTeamId,
-    severityMin, severityMax, expandedTypeCodes,
+    severityMin, severityMax, expandedTypeCodes, alertsSortOrder,
   ]);
   useEffect(() => setEventsPageNum(1), [
     selectedLocationId, fromIso, toIso, activeTeamId,
-    severityMin, severityMax, expandedTypeCodes,
+    severityMin, severityMax, expandedTypeCodes, eventsSortOrder,
   ]);
   useEffect(() => setSignalsPageNum(1), [
     selectedLocationId, fromIso, toIso, activeTeamId,
-    severityMin, severityMax, activeSources,
+    severityMin, severityMax, activeSources, signalsSortOrder,
   ]);
 
   const sharedFilter = {
@@ -148,7 +193,7 @@ export default function DetectionPage() {
     {
       ...sharedFilter,
       status: "published",
-      orderBy: "SEVERITY_DESC",
+      orderBy: toAlertOrderBy(alertsSortOrder),
       limit: PAGE_SIZE,
       offset: (alertsPageNum - 1) * PAGE_SIZE,
     },
@@ -157,7 +202,7 @@ export default function DetectionPage() {
   const eventsQuery = api.alerts.eventsPage.useQuery(
     {
       ...sharedFilter,
-      orderBy: "SEVERITY_DESC",
+      orderBy: toEventOrderBy(eventsSortOrder),
       limit: PAGE_SIZE,
       offset: (eventsPageNum - 1) * PAGE_SIZE,
     },
@@ -174,7 +219,7 @@ export default function DetectionPage() {
       severityMin,
       severityMax,
       sourceNames: activeSources ? [...activeSources] : undefined,
-      orderBy: "PUBLISHED_DESC",
+      orderBy: toSignalOrderBy(signalsSortOrder),
       limit: PAGE_SIZE,
       offset: (signalsPageNum - 1) * PAGE_SIZE,
     },
@@ -429,6 +474,8 @@ export default function DetectionPage() {
               activeSeverities={activeSeverities}
               expandedTypeCodes={expandedTypeCodes}
               activeSources={activeSources}
+              sortOrder={alertsSortOrder}
+              onSortOrderChange={setAlertsSortOrder}
             />
             <PaginationFooter
               page={alertsPageNum}
@@ -458,6 +505,8 @@ export default function DetectionPage() {
               focusCountryGeometry={focusCountryGeometry}
               activeSeverities={activeSeverities}
               activeSources={activeSources}
+              sortOrder={signalsSortOrder}
+              onSortOrderChange={setSignalsSortOrder}
             />
             <PaginationFooter
               page={signalsPageNum}
@@ -502,6 +551,8 @@ export default function DetectionPage() {
               activeSeverities={activeSeverities}
               expandedTypeCodes={expandedTypeCodes}
               activeSources={activeSources}
+              sortOrder={eventsSortOrder}
+              onSortOrderChange={setEventsSortOrder}
             />
             <PaginationFooter
               page={eventsPageNum}

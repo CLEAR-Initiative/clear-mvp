@@ -67,6 +67,9 @@ interface EventsTabProps {
   activeSeverities?: Set<string>;
   expandedTypeCodes?: string[] | null;
   activeSources?: Set<string> | null;
+  // Lifted to the parent — drives the server-side orderBy.
+  sortOrder: SortOrder;
+  onSortOrderChange: (o: SortOrder) => void;
 }
 
 export function EventsTab({
@@ -87,10 +90,11 @@ export function EventsTab({
   activeSeverities: activeSeveritiesProp,
   expandedTypeCodes: expandedTypeCodesProp,
   activeSources: activeSourcesProp,
+  sortOrder,
+  onSortOrderChange,
 }: EventsTabProps) {
   const { getTypeNames } = useDisasterTypes();
   const [search, setSearch] = useState("");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
   const [showPopulation, setShowPopulation] = useState(false);
 
@@ -103,9 +107,11 @@ export function EventsTab({
   const activeSources = activeSourcesProp ?? null;
 
 
+  // Sorting is applied server-side by the parent's eventsPage query — local
+  // .sort() would just shuffle the current page.
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let result = events.filter((e) => {
+    return events.filter((e) => {
       const sev = mapSeverity(e.severity);
       if (!activeSeverities.has(sev)) return false;
       if (expandedTypeCodesProp && !e.types.some((t) => expandedTypeCodesProp.includes(t))) return false;
@@ -117,17 +123,7 @@ export function EventsTab({
       }
       return true;
     });
-
-    result = [...result].sort((a, b) => {
-      if (sortOrder === "sev-desc") return b.rank - a.rank;
-      if (sortOrder === "sev-asc")  return a.rank - b.rank;
-      if (sortOrder === "newest")
-        return new Date(b.firstSignalCreatedAt).getTime() - new Date(a.firstSignalCreatedAt).getTime();
-      return new Date(a.firstSignalCreatedAt).getTime() - new Date(b.firstSignalCreatedAt).getTime();
-    });
-
-    return result;
-  }, [events, search, activeSeverities, expandedTypeCodesProp, activeSources, sortOrder]);
+  }, [events, search, activeSeverities, expandedTypeCodesProp, activeSources]);
 
   const listCountLabel =
     filtered.length === events.length
@@ -189,7 +185,7 @@ export function EventsTab({
               {(Object.entries(SORT_LABELS) as [SortOrder, string][]).map(([key, label]) => (
                 <Menu.Item
                   key={key}
-                  onClick={() => setSortOrder(key)}
+                  onClick={() => onSortOrderChange(key)}
                   style={{
                     fontSize: 12,
                     fontWeight: sortOrder === key ? 600 : 400,
