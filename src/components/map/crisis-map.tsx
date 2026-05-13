@@ -434,6 +434,24 @@ export function CrisisMap({
         }
       }
 
+      // State/province labels - show for focus country only at all zoom levels.
+      if (layer.type === "symbol" && id === "state-label") {
+        try {
+          m.setLayerZoomRange(layer.id, 0, 24);
+          m.setFilter(layer.id, ["==", ["get", "iso_3166_1"], focusIso] as unknown as never);
+          m.setLayoutProperty(layer.id, "text-size", [
+            "interpolate", ["linear"], ["zoom"],
+            3, 11,
+            6, 13,
+            10, 15,
+          ]);
+          m.setPaintProperty(layer.id, "text-color", isDark ? "#CBD5E1" : "#374151");
+          m.setPaintProperty(layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.85)" : "#FFFFFF");
+          m.setPaintProperty(layer.id, "text-halo-width", 1.5);
+          m.setPaintProperty(layer.id, "text-halo-blur", 0.5);
+        } catch { /* ignore */ }
+      }
+
       // Settlement labels - restrict to focus country only, and relax
       // filterrank so mid-tier cities (Port Sudan, Nyala, etc.) are visible.
       // All settlement labels outside the focus country are hidden; country
@@ -534,9 +552,9 @@ export function CrisisMap({
           data: { type: "Feature", geometry: fitBoundsGeometry as never, properties: {} },
         });
         m.addLayer({ id: REGION_FILL, type: "fill", source: REGION_SOURCE,
-          paint: { "fill-color": isDark ? "#1E3A5F" : "#1E40AF", "fill-opacity": isDark ? 0.35 : 0.25 } }, beforeId);
+          paint: { "fill-color": isDark ? "#1D4ED8" : "#1E40AF", "fill-opacity": isDark ? 0.25 : 0.25 } }, beforeId);
         m.addLayer({ id: REGION_LINE, type: "line", source: REGION_SOURCE,
-          paint: { "line-color": isDark ? "#60A5FA" : "#1D4ED8", "line-width": 1.5, "line-opacity": 0.9 } }, beforeId);
+          paint: { "line-color": isDark ? "#60A5FA" : "#1D4ED8", "line-width": 2, "line-opacity": 1 } }, beforeId);
       } catch { /* ignore */ }
     } else {
       // Restore country highlight when no region is selected.
@@ -546,7 +564,7 @@ export function CrisisMap({
     }
 
     return cleanup;
-  }, [fitBoundsGeometry, loaded]);
+  }, [fitBoundsGeometry, loaded, isDark]);
 
   // ── FlyTo on center/zoom prop change ────────────────────────────────────
   const prevCenter = useRef(center);

@@ -16,9 +16,7 @@ import { useTeam } from "~/providers/team-provider";
 import {
   type CrisisMarker,
   alertsToMarkers,
-  alertsToRegions,
   eventsToMarkers,
-  eventsToRegions,
   crisesToMarkers,
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
@@ -69,7 +67,7 @@ export default function MapPage() {
   const [dataView, setDataView] = useState<DataView>("alert");
 
   /* ---- Fetch data ---- */
-  const { activeTeamId } = useTeam();
+  const { activeTeamId, activeTeam } = useTeam();
   const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
 
   const alertsQuery = api.alerts.getAlerts.useQuery(
@@ -99,10 +97,8 @@ export default function MapPage() {
   }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
 
   const allRegions = useMemo(() => {
-    if (dataView === "alert") return alertsToRegions(alertsQuery.data?.alerts ?? []);
-    if (dataView === "event") return eventsToRegions(eventsQuery.data?.events ?? []);
     return [];
-  }, [dataView, alertsQuery.data, eventsQuery.data]);
+  }, []);
 
 
 
@@ -123,6 +119,16 @@ export default function MapPage() {
 
   const [selectedCountry, setSelectedCountry] = useState("All Countries");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
+
+  // Pre-select the team's country when the active team loads.
+  useEffect(() => {
+    const countryLoc = activeTeam?.locations.find((l) => l.level === 0);
+    if (countryLoc) {
+      setSelectedCountry(countryLoc.name);
+      setSelectedRegion("All Regions");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTeam?.id]);
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(
     null,
   );
