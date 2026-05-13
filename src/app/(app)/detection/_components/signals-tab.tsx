@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -112,7 +112,6 @@ export function SignalsTab({
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const onLoadMoreStable = useCallback(onLoadMore, [onLoadMore]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -122,14 +121,14 @@ export function SignalsTab({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting && hasMore && !isFetchingMore) {
-          onLoadMoreStable();
+          onLoadMore();
         }
       },
       { root: container, threshold: 0.1 },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, isFetchingMore, onLoadMoreStable]);
+  }, [hasMore, isFetchingMore, onLoadMore]);
 
   // Sort is applied server-side by the parent's signalsPage query.
   const filtered = useMemo(() => {
