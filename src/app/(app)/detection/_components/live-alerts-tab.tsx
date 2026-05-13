@@ -200,9 +200,9 @@ export function LiveAlertsTab({
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
                   width: 30, height: 30, borderRadius: 6,
-                  border: `1px solid ${sortOrder !== "sev-desc" ? "var(--color-accent)" : "var(--color-border)"}`,
+                  border: `1px solid ${sortOrder !== "newest" ? "var(--color-accent)" : "var(--color-border)"}`,
                   background: "var(--color-bg-white)", cursor: "pointer",
-                  color: sortOrder !== "sev-desc" ? "var(--color-accent)" : "var(--color-text-secondary)",
+                  color: sortOrder !== "newest" ? "var(--color-accent)" : "var(--color-text-secondary)",
                   flexShrink: 0,
                 }}
               >
