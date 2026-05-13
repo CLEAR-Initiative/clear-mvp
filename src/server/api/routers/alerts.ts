@@ -317,6 +317,10 @@ export const alertsRouter = createTRPCRouter({
     }),
 
   // ─── Paginated feeds ───────────────────────────────────────────────────
+  // `_v` is a client-only cache-bust knob: bumping it on the client forces
+  // a new React Query cache key without any change to the meaningful inputs.
+  // It's declared here so the client can pass it through the typed input
+  // without an `as` cast, and stripped out below before the GraphQL call.
   alertsPage: protectedProcedure
     .input(
       z.object({
@@ -324,13 +328,15 @@ export const alertsRouter = createTRPCRouter({
         offset: z.number().int().min(0).optional(),
         orderBy: z.enum(ALERT_ORDER).optional(),
         status: z.enum(["draft", "published", "archived"]).optional(),
+        _v: z.number().int().optional(),
         ...commonFilter,
       }),
     )
     .query(async ({ ctx, input }) => {
+      const { _v: _, ...graphqlInput } = input;
       const data = await graphqlFetch<{ alertsPage: PaginatedResult<GqlAlert> }>(
         ALERTS_PAGE_QUERY,
-        { input },
+        { input: graphqlInput },
         cookieHeaders(ctx),
       );
       return data.alertsPage;
@@ -342,13 +348,15 @@ export const alertsRouter = createTRPCRouter({
         limit: z.number().int().min(1).max(100).optional(),
         offset: z.number().int().min(0).optional(),
         orderBy: z.enum(EVENT_ORDER).optional(),
+        _v: z.number().int().optional(),
         ...commonFilter,
       }),
     )
     .query(async ({ ctx, input }) => {
+      const { _v: _, ...graphqlInput } = input;
       const data = await graphqlFetch<{ eventsPage: PaginatedResult<GqlEvent> }>(
         EVENTS_PAGE_QUERY,
-        { input },
+        { input: graphqlInput },
         cookieHeaders(ctx),
       );
       return data.eventsPage;
@@ -370,12 +378,14 @@ export const alertsRouter = createTRPCRouter({
         from: dateLike,
         to: dateLike,
         includeDummy: z.boolean().optional(),
+        _v: z.number().int().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
+      const { _v: _, ...graphqlInput } = input;
       const data = await graphqlFetch<{ signalsPage: PaginatedResult<GqlSignal> }>(
         SIGNALS_PAGE_QUERY,
-        { input },
+        { input: graphqlInput },
         cookieHeaders(ctx),
       );
       return data.signalsPage;

@@ -206,15 +206,16 @@ function DetectionPageContent() {
 
   // ── Main feed queries ──────────────────────────────────────────────────────
   // staleTime: Infinity prevents re-fetching on tab switch.
-  // _v (version) is stripped by Zod before the API call but is part of the
-  // React Query cache key, so incrementing it on reset forces a fresh fetch
-  // and guarantees the accumulation effect fires via a data reference change.
+  // _v (version) is part of the React Query cache key, so incrementing it on
+  // reset forces a fresh fetch and guarantees the accumulation effect fires
+  // via a data reference change. The router schema declares it optional and
+  // strips it before forwarding to GraphQL — see alerts.ts.
   const eventsQuery = api.alerts.eventsPage.useQuery(
-    { ...sharedFilter, orderBy: EVENT_ORDER_MAP[eventsSort], limit: PAGE_SIZE, offset: eventsOffset, _v: eventsVersion } as Parameters<typeof api.alerts.eventsPage.useQuery>[0],
+    { ...sharedFilter, orderBy: EVENT_ORDER_MAP[eventsSort], limit: PAGE_SIZE, offset: eventsOffset, _v: eventsVersion },
     { enabled: activeTab === "events", staleTime: Infinity },
   );
   const alertsQuery = api.alerts.alertsPage.useQuery(
-    { ...sharedFilter, status: "published", orderBy: ALERT_ORDER_MAP[alertsSort], limit: PAGE_SIZE, offset: alertsOffset, _v: alertsVersion } as Parameters<typeof api.alerts.alertsPage.useQuery>[0],
+    { ...sharedFilter, status: "published", orderBy: ALERT_ORDER_MAP[alertsSort], limit: PAGE_SIZE, offset: alertsOffset, _v: alertsVersion },
     { enabled: activeTab === "live", staleTime: Infinity },
   );
   const signalsQuery = api.alerts.signalsPage.useQuery(
@@ -230,7 +231,7 @@ function DetectionPageContent() {
       limit: PAGE_SIZE,
       offset: signalsOffset,
       _v: signalsVersion,
-    } as Parameters<typeof api.alerts.signalsPage.useQuery>[0],
+    },
     { enabled: activeTab === "signals", staleTime: Infinity },
   );
 
