@@ -146,9 +146,12 @@ function DetectionPageContent() {
   // items arriving mid-session don't shift offsets and cause duplicates when
   // the user loads more. Resets whenever filters or sort change.
   const [snapshotTime, setSnapshotTime] = useState(() => new Date().toISOString());
-  // effectiveTo = min(dateFilter.to, snapshotTime) so custom date-range upper
-  // bounds are still respected when they're earlier than the snapshot.
-  const effectiveTo = toIso < snapshotTime ? toIso : snapshotTime;
+  // Rolling presets ("Last N days") follow snapshotTime so refresh expands
+  // the window to include new events. Fixed-range presets ("Mon YYYY") keep
+  // their explicit upper bound — snapshotTime is irrelevant there because
+  // the range is in the past and no new events can fall into it.
+  const isRollingPreset = /^Last \d+ days$/i.test(selectedDate);
+  const effectiveTo = isRollingPreset ? snapshotTime : toIso;
 
   const SEV_NUM: Record<string, number> = { low: 2, medium: 3, high: 4, critical: 5 };
   const { severityMin, severityMax } = useMemo(() => {
@@ -349,12 +352,18 @@ function DetectionPageContent() {
   }, [signalsHasMore, signalsQuery.isFetching]);
 
   // ── Refresh callbacks: new snapshot + full reset ───────────────────────────
+  // Each refresh bumps *Version so the React Query cache key always changes,
+  // even for fixed-range presets where effectiveTo wouldn't otherwise move.
+  // Without it, the eventsQuery input is byte-identical, React Query returns
+  // the cached value, the accumulation effect doesn't fire, and the list
+  // we just cleared above stays blank.
   const refreshEvents = useCallback(() => {
     const now = new Date().toISOString();
     setSnapshotTime(now);
     eventsAppending.current = false;
     setEventsOffset(0);
     setEventsItems([]);
+    setEventsVersion((v) => v + 1);
   }, []);
 
   const refreshAlerts = useCallback(() => {
@@ -363,6 +372,7 @@ function DetectionPageContent() {
     alertsAppending.current = false;
     setAlertsOffset(0);
     setAlertsItems([]);
+    setAlertsVersion((v) => v + 1);
   }, []);
 
   const refreshSignals = useCallback(() => {
@@ -371,6 +381,7 @@ function DetectionPageContent() {
     signalsAppending.current = false;
     setSignalsOffset(0);
     setSignalsItems([]);
+    setSignalsVersion((v) => v + 1);
   }, []);
 
   // ── "New items" polls: lightweight queries with from=snapshotTime ──────────
