@@ -287,8 +287,9 @@ export default function MapPage() {
         px={16}
         py={12}
         style={{
-          background:
-            "linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(255,255,255,0))",
+          background: colorScheme === "dark"
+            ? "linear-gradient(to bottom, rgba(30,30,30,0.97), rgba(30,30,30,0))"
+            : "linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(255,255,255,0))",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
