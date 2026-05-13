@@ -36,16 +36,14 @@ const CrisisMap = dynamic(
   { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
 );
 
-// "newest" | "oldest" | "sev-desc" | "sev-asc" are handled server-side.
-// "source" has no API equivalent so it sorts the loaded page client-side.
-export type SignalSortOrder = "newest" | "oldest" | "sev-desc" | "sev-asc" | "source";
+// All options are handled server-side via the SignalOrderBy enum.
+export type SignalSortOrder = "newest" | "oldest" | "sev-desc" | "sev-asc";
 
 export const SIGNAL_SORT_LABELS: Record<SignalSortOrder, string> = {
   "newest":   "Newest first",
   "oldest":   "Oldest first",
   "sev-desc": "Severity: High to Low",
   "sev-asc":  "Severity: Low to High",
-  "source":   "Source name",
 };
 
 function formatDate(dateStr: string): string {
@@ -133,10 +131,10 @@ export function SignalsTab({
     return () => observer.disconnect();
   }, [hasMore, isFetchingMore, onLoadMoreStable]);
 
-  // Client-side filter + optional source-name sort (only "source" order is client-side).
+  // Sort is applied server-side by the parent's signalsPage query.
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let result = signals.filter((s) => {
+    return signals.filter((s) => {
       const sev = mapSeverity(s.severity);
       if (!activeSeverities.has(sev)) return false;
       if (activeSources !== null && !activeSources.has(s.source.name)) return false;
@@ -148,13 +146,7 @@ export function SignalsTab({
       }
       return true;
     });
-
-    if (sortOrder === "source") {
-      result = [...result].sort((a, b) => a.source.name.localeCompare(b.source.name));
-    }
-
-    return result;
-  }, [signals, search, activeSeverities, activeSources, sortOrder]);
+  }, [signals, search, activeSeverities, activeSources]);
 
   const countLabel = search || activeSeverities.size < 4 || activeSources !== null
     ? `${filtered.length} / ${totalCount.toLocaleString()}`

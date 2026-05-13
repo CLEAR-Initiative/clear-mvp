@@ -43,14 +43,11 @@ const ALERT_ORDER_MAP: Record<AlertSortOrder, AlertOrderBy> = {
   "newest":   "CREATED_DESC",
   "oldest":   "CREATED_ASC",
 };
-// "source" sort has no API equivalent; server gets PUBLISHED_DESC and the
-// tab applies a client-side localeCompare on top of the loaded page.
 const SIGNAL_ORDER_MAP: Record<SignalSortOrder, SignalOrderBy> = {
   "newest":   "PUBLISHED_DESC",
   "oldest":   "PUBLISHED_ASC",
   "sev-desc": "SEVERITY_DESC",
   "sev-asc":  "SEVERITY_ASC",
-  "source":   "PUBLISHED_DESC",
 };
 
 const VALID_TABS = new Set(["live", "events", "signals", "history"]);
