@@ -117,7 +117,11 @@ export default function MapPage() {
     return codes;
   }, [selectedTypes, hierarchy]);
 
-  const [selectedCountry, setSelectedCountry] = useState("All Countries");
+  // TODO: hardcoded to Sudan for the current single-team deployment.
+  // When more teams join, remove this default and rely solely on the
+  // useEffect below which sets the country from activeTeam.locations.
+  // Requires teams to have a level-0 location configured in the DB.
+  const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
 
   // Pre-select the team's country when the active team loads.
