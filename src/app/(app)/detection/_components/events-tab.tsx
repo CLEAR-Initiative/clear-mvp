@@ -25,7 +25,7 @@ import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
-import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
+import type { MapMarker } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { useDisasterTypes } from "~/hooks/use-disaster-types";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
@@ -59,7 +59,6 @@ interface EventsTabProps {
   onLoadMore: () => void;
   onRefresh: () => void;
   mapMarkers: MapMarker[];
-  mapRegions?: MapRegion[];
   mapCenter: [number, number];
   mapZoom: number;
   fitBoundsGeometry?: unknown;
@@ -87,7 +86,6 @@ export function EventsTab({
   onLoadMore,
   onRefresh,
   mapMarkers,
-  mapRegions,
   mapCenter,
   mapZoom,
   fitBoundsGeometry,
@@ -343,7 +341,6 @@ export function EventsTab({
           <Box style={{ height: 524, position: "relative" }}>
             <CrisisMap
               markers={mapMarkers}
-              regions={mapRegions}
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"

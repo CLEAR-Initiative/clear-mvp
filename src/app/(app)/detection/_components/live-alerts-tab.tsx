@@ -27,7 +27,7 @@ import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_compone
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
-import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
+import type { MapMarker } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { useDisasterTypes } from "~/hooks/use-disaster-types";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
@@ -59,7 +59,6 @@ interface LiveAlertsTabProps {
   onLoadMore: () => void;
   onRefresh: () => void;
   mapMarkers: MapMarker[];
-  mapRegions?: MapRegion[];
   mapCenter: [number, number];
   mapZoom: number;
   fitBoundsGeometry?: unknown;
@@ -87,7 +86,6 @@ export function LiveAlertsTab({
   onLoadMore,
   onRefresh,
   mapMarkers,
-  mapRegions,
   mapCenter,
   mapZoom,
   fitBoundsGeometry,
@@ -317,7 +315,6 @@ export function LiveAlertsTab({
           <Box style={{ height: 524, position: "relative" }}>
             <CrisisMap
               markers={mapMarkers}
-              regions={mapRegions}
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"

@@ -12,7 +12,7 @@ import { useTeam } from "~/providers/team-provider";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { countryConfig, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
-import { alertsToMarkers, alertsToRegions, eventsToMarkers, eventsToRegions, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
+import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar } from "~/components/ui";
 import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
 
@@ -470,9 +470,7 @@ function DetectionPageContent() {
   }, [selectedLocationId]);
 
   const mapMarkers: MapMarker[] = useMemo(() => clipToRegion(alertsToMarkers(alertsItems)), [alertsItems, clipToRegion]);
-  const mapRegions = useMemo(() => alertsToRegions(alertsItems), [alertsItems]);
   const eventMapMarkers: MapMarker[] = useMemo(() => clipToRegion(eventsToMarkers(eventsItems)), [eventsItems, clipToRegion]);
-  const eventMapRegions = useMemo(() => eventsToRegions(eventsItems), [eventsItems]);
   const signalMapMarkers: MapMarker[] = useMemo(() => clipToRegion(signalsToMarkers(signalsItems)), [signalsItems, clipToRegion]);
 
   const mapCenter = useMemo<[number, number]>(() => getCenter(selectedCountry), [selectedCountry]);
@@ -621,7 +619,6 @@ function DetectionPageContent() {
             onLoadMore={loadMoreAlerts}
             onRefresh={refreshAlerts}
             mapMarkers={mapMarkers}
-            mapRegions={mapRegions}
             mapCenter={mapCenter}
             mapZoom={mapZoom}
             fitBoundsGeometry={fitBoundsGeometry}
@@ -651,7 +648,6 @@ function DetectionPageContent() {
             onLoadMore={loadMoreEvents}
             onRefresh={refreshEvents}
             mapMarkers={eventMapMarkers}
-            mapRegions={eventMapRegions}
             mapCenter={mapCenter}
             mapZoom={mapZoom}
             fitBoundsGeometry={fitBoundsGeometry}
