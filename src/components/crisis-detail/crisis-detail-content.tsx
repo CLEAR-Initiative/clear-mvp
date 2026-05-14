@@ -792,7 +792,7 @@ function NeedRow({ need, isLast }: { need: ClusterNeed; isLast: boolean }) {
   );
 }
 
-function SeverityPill({ severity }: { severity: "critical" | "high" | "medium" | "low" }) {
+function SeverityPill({ severity }: { severity: "critical" | "high" | "medium" | "low" | "unknown" }) {
   const colors = severityColors[severity] ?? severityColors.medium!;
   return (
     <span

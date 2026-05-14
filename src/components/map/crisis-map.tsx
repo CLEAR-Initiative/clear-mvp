@@ -9,7 +9,7 @@ export interface MapMarker {
   lng: number;
   lat: number;
   title: string;
-  severity: "critical" | "high" | "medium" | "low";
+  severity: "critical" | "high" | "medium" | "low" | "unknown";
   type?: string;
   description?: string;
   popup?: string;
@@ -19,7 +19,7 @@ export interface MapRegion {
   id: string;
   /** GeoJSON geometry (Polygon or MultiPolygon) */
   geometry: { type: string; coordinates: unknown };
-  severity: "critical" | "high" | "medium" | "low";
+  severity: "critical" | "high" | "medium" | "low" | "unknown";
   title: string;
   /** Signal points within this region - if present, rendered as a heatmap. */
   signalPoints?: Array<{ lng: number; lat: number; title: string }>;

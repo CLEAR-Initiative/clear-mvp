@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -13,14 +13,14 @@ import {
   TextInput,
   Menu,
   ActionIcon,
-  Divider,
-  Stack,
 } from "@mantine/core";
 import {
   IconSearch,
   IconSortDescending,
   IconX,
   IconExternalLink,
+  IconRefresh,
+  IconMapPin,
 } from "@tabler/icons-react";
 import type { GqlSignal } from "~/lib/types/graphql";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
@@ -36,14 +36,14 @@ const CrisisMap = dynamic(
   { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
 );
 
-// "source" sort was previously client-side only and would only sort the
-// current page. Removed for now — re-add once the SignalOrderBy enum on the
-// server gains a source-name option.
-type SortOrder = "newest" | "oldest";
+// All options are handled server-side via the SignalOrderBy enum.
+export type SignalSortOrder = "newest" | "oldest" | "sev-desc" | "sev-asc";
 
-const SORT_LABELS: Record<SortOrder, string> = {
-  newest: "Newest first",
-  oldest: "Oldest first",
+export const SIGNAL_SORT_LABELS: Record<SignalSortOrder, string> = {
+  "newest":   "Newest first",
+  "oldest":   "Oldest first",
+  "sev-desc": "Severity: High to Low",
+  "sev-asc":  "Severity: Low to High",
 };
 
 function formatDate(dateStr: string): string {
@@ -57,6 +57,14 @@ function formatDate(dateStr: string): string {
 interface SignalsTabProps {
   signals: GqlSignal[];
   loading: boolean;
+  isFetchingMore: boolean;
+  hasMore: boolean;
+  totalCount: number;
+  newCount: number;
+  sortOrder: SignalSortOrder;
+  onSortChange: (order: SignalSortOrder) => void;
+  onLoadMore: () => void;
+  onRefresh: () => void;
   mapMarkers: MapMarker[];
   mapCenter: [number, number];
   mapZoom: number;
@@ -70,14 +78,19 @@ interface SignalsTabProps {
   focusCountryGeometry?: unknown;
   activeSeverities?: Set<string>;
   activeSources?: Set<string> | null;
-  // Lifted to the parent — drives the signalsPage orderBy.
-  sortOrder: SortOrder;
-  onSortOrderChange: (o: SortOrder) => void;
 }
 
 export function SignalsTab({
   signals,
   loading,
+  isFetchingMore,
+  hasMore,
+  totalCount = 0,
+  newCount = 0,
+  sortOrder,
+  onSortChange,
+  onLoadMore,
+  onRefresh,
   mapMarkers,
   mapCenter,
   mapZoom,
@@ -91,15 +104,31 @@ export function SignalsTab({
   focusCountryGeometry,
   activeSeverities: activeSeveritiesProp,
   activeSources: activeSourcesProp,
-  sortOrder,
-  onSortOrderChange,
 }: SignalsTabProps) {
   const [search, setSearch] = useState("");
   const activeSources = activeSourcesProp ?? null;
   const activeSeverities = activeSeveritiesProp ?? new Set(["critical", "high", "medium", "low"]);
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const container = scrollContainerRef.current;
+    if (!sentinel || !container) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting && hasMore && !isFetchingMore) {
+          onLoadMore();
+        }
+      },
+      { root: container, threshold: 0.1 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, isFetchingMore, onLoadMore]);
 
   // Sort is applied server-side by the parent's signalsPage query.
   const filtered = useMemo(() => {
@@ -118,34 +147,37 @@ export function SignalsTab({
     });
   }, [signals, search, activeSeverities, activeSources]);
 
-  const listCountLabel =
-    filtered.length === signals.length
-      ? String(signals.length)
-      : `${filtered.length}/${signals.length}`;
+  const countLabel = search || activeSeverities.size < 4 || activeSources !== null
+    ? `${filtered.length} / ${totalCount.toLocaleString()}`
+    : totalCount.toLocaleString();
 
   return (
     <Box style={{ display: "flex", gap: 24 }}>
-      {/* Left: Signal list */}
       <Box style={{ flex: 1, minWidth: 0 }}>
-        {/* Toolbar row */}
+        {newCount > 0 && (
+          <Group
+            gap={8} mb={8} px={12} py={6}
+            style={{ background: "var(--color-accent-light)", border: "1px solid var(--color-accent)", borderRadius: 6, cursor: "pointer" }}
+            onClick={onRefresh}
+          >
+            <IconRefresh size={13} color="var(--color-accent)" />
+            <Text size="xs" fw={600} c="var(--color-accent)">
+              {newCount} new signal{newCount !== 1 ? "s" : ""} - refresh
+            </Text>
+          </Group>
+        )}
+
         <Group gap={8} mb={12} align="center" style={{ minHeight: 32 }}>
           <Group gap={6} style={{ flexShrink: 0 }}>
             <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Signals</Text>
-            <Badge
-              size="xs"
-              style={{
-                background: "var(--color-bg-muted)",
-                color: "var(--color-text-secondary)",
-                fontWeight: 600,
-              }}
-            >
-              {listCountLabel}
+            <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>
+              {loading ? "..." : countLabel}
             </Badge>
             {loading && <Loader size="xs" />}
           </Group>
 
           <TextInput
-            placeholder="Search signals..."
+            placeholder="Search current page..."
             value={search}
             onChange={(e) => setSearch(e.currentTarget.value)}
             leftSection={<IconSearch size={14} color="var(--color-text-muted)" />}
@@ -165,15 +197,10 @@ export function SignalsTab({
             <Menu.Target>
               <button
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 30,
-                  height: 30,
-                  borderRadius: 6,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 30, height: 30, borderRadius: 6,
                   border: `1px solid ${sortOrder !== "newest" ? "var(--color-accent)" : "var(--color-border)"}`,
-                  background: "var(--color-bg-white)",
-                  cursor: "pointer",
+                  background: "var(--color-bg-white)", cursor: "pointer",
                   color: sortOrder !== "newest" ? "var(--color-accent)" : "var(--color-text-secondary)",
                   flexShrink: 0,
                 }}
@@ -182,10 +209,10 @@ export function SignalsTab({
               </button>
             </Menu.Target>
             <Menu.Dropdown>
-              {(Object.entries(SORT_LABELS) as [SortOrder, string][]).map(([key, label]) => (
+              {(Object.entries(SIGNAL_SORT_LABELS) as [SignalSortOrder, string][]).map(([key, label]) => (
                 <Menu.Item
                   key={key}
-                  onClick={() => onSortOrderChange(key)}
+                  onClick={() => onSortChange(key)}
                   style={{
                     fontSize: 12,
                     fontWeight: sortOrder === key ? 600 : 400,
@@ -199,9 +226,8 @@ export function SignalsTab({
           </Menu>
         </Group>
 
-        {/* Signal list - no card header */}
         <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-          <Box style={{ maxHeight: 524, overflowY: "auto" }}>
+          <Box ref={scrollContainerRef} style={{ maxHeight: 524, overflowY: "auto" }}>
             {filtered.length === 0 && !loading && (
               <Box px={16} py={32} style={{ textAlign: "center" }}>
                 <Text c="var(--color-text-muted)" size="sm">
@@ -209,12 +235,12 @@ export function SignalsTab({
                 </Text>
               </Box>
             )}
+
             {filtered.map((signal) => {
               const sev = mapSeverity(signal.severity ?? 0);
               const sevCol = severityColor(signal.severity ?? 0);
               const sevBg = severityColors[sev]?.bg ?? "var(--color-bg-muted)";
-              const location =
-                signal.generalLocation ?? signal.originLocation ?? signal.destinationLocation;
+              const location = signal.generalLocation ?? signal.originLocation ?? signal.destinationLocation;
               const displayTitle =
                 signal.title ??
                 (signal.description
@@ -222,87 +248,38 @@ export function SignalsTab({
                   : "Untitled signal");
 
               return (
-                <Link
-                  key={signal.id}
-                  href={`/signal/${signal.id}`}
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
+                <Link key={signal.id} href={`/signal/${signal.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                   <Box
-                    px={16}
-                    py={12}
+                    px={16} py={12}
                     className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
                     style={{ display: "flex", gap: 12, ...getCardProps(signal.id).style }}
                     onMouseEnter={getCardProps(signal.id).onMouseEnter}
                     onMouseLeave={getCardProps(signal.id).onMouseLeave}
                   >
-                    <Box
-                      style={{
-                        width: 3,
-                        background: sevCol,
-                        flexShrink: 0,
-                        borderRadius: 2,
-                      }}
-                    />
+                    <Box style={{ width: 3, background: sevCol, flexShrink: 0, borderRadius: 2 }} />
                     <Box style={{ flex: 1, minWidth: 0 }}>
                       <Group justify="space-between" mb={4}>
                         <Group gap={6}>
-                          <Badge
-                            size="xs"
-                            style={{
-                              background: sevBg,
-                              color: sevCol,
-                              fontWeight: 600,
-                            }}
-                          >
-                            {severityLabels[sev]}
-                          </Badge>
-                          <Badge
-                            size="xs"
-                            style={{
-                              background: "var(--color-bg-muted)",
-                              color: "var(--color-text-secondary)",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {signal.source.name}
-                          </Badge>
-                          <Badge
-                            size="xs"
-                            variant="outline"
-                            style={{ color: "var(--color-text-muted)", borderColor: "var(--color-border-dark)", fontSize: 10 }}
-                          >
-                            {signal.source.type}
-                          </Badge>
+                          <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 600 }}>{severityLabels[sev]}</Badge>
+                          <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>{signal.source.name}</Badge>
+                          <Badge size="xs" variant="outline" style={{ color: "var(--color-text-muted)", borderColor: "var(--color-border-dark)", fontSize: 10 }}>{signal.source.type}</Badge>
                         </Group>
-                        <Text size="xs" c="var(--color-text-muted)">
-                          {formatTimeAgo(signal.publishedAt)}
-                        </Text>
+                        <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(signal.publishedAt)}</Text>
                       </Group>
                       <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={2} mb={4} style={{ lineHeight: 1.4 }}>
                         {displayTitle}
                       </Text>
                       <Group gap={12}>
                         {resolveLocationName(location) && (
-                          <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
+                          <Group gap={3} style={{ flexShrink: 0 }}>
+                            <IconMapPin size={11} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+                            <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
+                          </Group>
                         )}
-                        <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>
-                          {formatDate(signal.publishedAt)}
-                        </Text>
+                        <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>{formatDate(signal.publishedAt)}</Text>
                         {signal.url && (
-                          <a
-                            href={signal.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 3,
-                              fontSize: 11,
-                              color: "var(--color-accent)",
-                              textDecoration: "none",
-                            }}
-                          >
+                          <a href={signal.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--color-accent)", textDecoration: "none" }}>
                             <IconExternalLink size={11} />
                             Source
                           </a>
@@ -313,11 +290,24 @@ export function SignalsTab({
                 </Link>
               );
             })}
+
+            {hasMore && filtered.length > 0 && <div ref={sentinelRef} style={{ height: 1 }} />}
+
+            {isFetchingMore && (
+              <Box py={12} style={{ display: "flex", justifyContent: "center" }}>
+                <Loader size="xs" />
+              </Box>
+            )}
+
+            {!hasMore && signals.length > 0 && (
+              <Box py={10} style={{ textAlign: "center" }}>
+                <Text size="xs" c="var(--color-text-muted)">All {totalCount.toLocaleString()} signals loaded</Text>
+              </Box>
+            )}
           </Box>
         </Card>
       </Box>
 
-      {/* Right: Crisis Map */}
       <Box style={{ width: 480, flexShrink: 0 }}>
         <Group mb={12} justify="space-between" align="center" style={{ minHeight: 32 }}>
           <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Crisis Map</Text>
