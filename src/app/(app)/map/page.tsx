@@ -50,19 +50,6 @@ function FilterLabel({ children }: { children: string }) {
 }
 
 export default function MapPage() {
-  const [isDark, setIsDark] = useState(false);
-  useEffect(() => {
-    const update = () =>
-      setIsDark(document.documentElement.getAttribute("data-mantine-color-scheme") === "dark");
-    update();
-    const observer = new MutationObserver(update);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-mantine-color-scheme"] });
-    return () => observer.disconnect();
-  }, []);
-  const mapStyle = isDark
-    ? "mapbox://styles/mapbox/dark-v11"
-    : "mapbox://styles/mapbox/light-v11";
-
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>("alert");
 
@@ -362,7 +349,6 @@ export default function MapPage() {
         adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
         fitBoundsGeometry={fitBoundsGeometry}
         populationBoundaries={populationBoundaries}
-        mapStyle={mapStyle}
       />
 
       {/* ===== Left Panel Bar (Layers / Legend / Config) ===== */}

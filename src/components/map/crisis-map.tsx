@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { geometryBounds } from "~/lib/geo/country-mask";
+import { useIsDark } from "~/hooks/use-is-dark";
 
 export interface MapMarker {
   id: number;
@@ -65,8 +66,6 @@ interface CrisisMapProps {
   hoveredMarkerId?: number | null;
   /** Suppress the automatic fitBounds-to-country when a focus country loads. Default true. */
   fitBoundsOnFocus?: boolean;
-  /** Mapbox style URL. Defaults to light-v11. Pass dark-v11 for dark mode. */
-  mapStyle?: string;
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -211,9 +210,11 @@ export function CrisisMap({
   populationBoundaries,
   hoveredMarkerId,
   fitBoundsOnFocus = true,
-  mapStyle = "mapbox://styles/mapbox/light-v11",
 }: CrisisMapProps) {
-  const isDark = mapStyle.includes("dark");
+  const isDark = useIsDark();
+  const mapStyle = isDark
+    ? "mapbox://styles/mapbox/dark-v11"
+    : "mapbox://styles/mapbox/light-v11";
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxGLAny>(null);
   const mbRef = useRef<MapboxGLAny>(null);
