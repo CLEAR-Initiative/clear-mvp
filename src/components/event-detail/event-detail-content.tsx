@@ -754,6 +754,7 @@ export function EventDetailContent({
                 center={mapCenter}
                 sudanGeometry={sudanGeometry}
                 sudanId={sudanId}
+                locationGeometry={(event.generalLocation ?? event.originLocation ?? event.destinationLocation)?.geometry}
               />
 
               {/* Was this event helpful? */}

@@ -745,6 +745,7 @@ export function SignalDetailContent({
                   center={mapCenter}
                   sudanGeometry={sudanGeometry}
                   sudanId={sudanId}
+                  locationGeometry={(signal.generalLocation ?? signal.originLocation ?? signal.destinationLocation)?.geometry}
                 />
               )}
 
