@@ -166,10 +166,10 @@ export function RightPanel({
   return (
     <Box
       component="aside"
-      className="bg-white sm:border-l border-t sm:border-t-0 border-[#E5E5E5] overflow-y-auto flex flex-col flex-shrink-0 sm:w-[380px] sm:min-h-0 sm:h-full"
+      className="bg-[var(--color-bg-white)] sm:border-l border-t sm:border-t-0 border-[var(--color-border)] overflow-y-auto flex flex-col flex-shrink-0 sm:w-[380px] sm:min-h-0 sm:h-full"
     >
       {/* Panel Header */}
-      <Box px={24} py={24} className="border-b border-[#E5E5E5] bg-[#F9FAFB]">
+      <Box px={24} py={24} className="border-b border-[var(--color-border)] bg-[var(--color-bg-muted)]">
         <Group justify="space-between" align="flex-start" mb={4}>
           <Text fw={700} style={{ fontSize: 24, letterSpacing: "-0.02em" }}>
             {selectedCountry}
@@ -187,7 +187,7 @@ export function RightPanel({
         {!hasCrisisData && currentNRCLocation && (
           <Text size="sm" c="#E85D3D" style={{ fontSize: 13 }}>
             {currentNRCLocation.region.split(" ")[0]}{" "}
-            <Text component="span" c="#737373">
+            <Text component="span" c="var(--color-text-muted)">
               | NRC Office
             </Text>
           </Text>
@@ -195,7 +195,7 @@ export function RightPanel({
       </Box>
 
       {/* INFORM Risk Pillars */}
-      <Box className="bg-[#F9FAFB] border-b border-[#E5E5E5]">
+      <Box className="bg-[var(--color-bg-muted)] border-b border-[var(--color-border)]">
         <Box px={24} pt={16} pb={12} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }}>
           {[
             { label: "Hazard", score: riskQuery.data?.pillars.hazard ?? null },
@@ -213,7 +213,7 @@ export function RightPanel({
               >
                 {pillar.score !== null ? pillar.score.toFixed(1) : "-"}
               </Text>
-              <Text tt="uppercase" c="#737373" style={{ letterSpacing: "0.03em", fontSize: 10 }}>
+              <Text tt="uppercase" c="var(--color-text-muted)" style={{ letterSpacing: "0.03em", fontSize: 10 }}>
                 {pillar.label}
               </Text>
             </Stack>
@@ -222,7 +222,7 @@ export function RightPanel({
         <Box px={24} pb={12}>
           <Group justify="space-between" align="center">
             <Group gap={4} align="center">
-              <Text tt="uppercase" c="#A0A0A0" style={{ fontSize: 9, letterSpacing: "0.06em" }}>
+              <Text tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em" }}>
                 INFORM Risk Overall - {riskQuery.data?.edition ?? "INFORM Risk 2026"}
               </Text>
               <Box
@@ -246,7 +246,7 @@ export function RightPanel({
               >
                 {riskQuery.data?.score?.toFixed(1) ?? "-"}
               </Text>
-              <Text c="#A0A0A0" style={{ fontSize: 10 }}>/10</Text>
+              <Text c="var(--color-text-muted)" style={{ fontSize: 10 }}>/10</Text>
             </Group>
           </Group>
         </Box>
@@ -289,7 +289,7 @@ export function RightPanel({
               <Box
                 key={pin.id}
                 p={12}
-                className="bg-[#F5F5F5] hover:bg-[#E5E5E5] transition-colors flex items-start gap-3"
+                className="bg-[var(--color-bg-muted)] hover:bg-[var(--color-border)] transition-colors flex items-start gap-3"
               >
                 <Box
                   w={10}
@@ -310,7 +310,7 @@ export function RightPanel({
                   <Text fw={600} c="#171717" style={{ fontSize: 13 }} lineClamp={1}>
                     {pin.name}
                   </Text>
-                  <Text c="#737373" style={{ fontSize: 11 }}>
+                  <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
                     {pin.region ?? "Field"} &bull;{" "}
                     {pin.cases
                       ? `${pin.cases} cases`
@@ -352,7 +352,7 @@ export function RightPanel({
               <Box
                 key={activity}
                 p={12}
-                className="bg-[#F5F5F5]"
+                className="bg-[var(--color-bg-muted)]"
               >
                 <Group gap={12}>
                   <Box
@@ -362,7 +362,7 @@ export function RightPanel({
                   />
                   <Box style={{ flex: 1, minWidth: 0 }}>
                     <Text fw={600} c="#171717" style={{ fontSize: 13 }}>{activity}</Text>
-                    <Text c="#737373" style={{ fontSize: 11 }}>
+                    <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
                       {nrcOperationDescriptions[activity as keyof typeof nrcOperationDescriptions] ?? ""}
                     </Text>
                   </Box>
@@ -384,7 +384,7 @@ export function RightPanel({
         {hasCrisisData ? (
           <Box>
             {riskQuery.isLoading ? (
-              <Text c="#A0A0A0" style={{ fontSize: 12 }}>Loading risk data&hellip;</Text>
+              <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>Loading risk data&hellip;</Text>
             ) : riskQuery.data?.indicators.length ? (
               <Stack gap={10}>
                 {riskQuery.data.indicators.slice(0, 5).map((indicator) => {
@@ -416,12 +416,12 @@ export function RightPanel({
                     </Box>
                   );
                 })}
-                <Text c="#A0A0A0" style={{ fontSize: 10, marginTop: 2 }}>
+                <Text c="var(--color-text-muted)" style={{ fontSize: 10, marginTop: 2 }}>
                   Source: {riskQuery.data.edition}
                 </Text>
               </Stack>
             ) : (
-              <Text c="#737373" style={{ fontSize: 13 }}>Risk data unavailable for this country.</Text>
+              <Text c="var(--color-text-muted)" style={{ fontSize: 13 }}>Risk data unavailable for this country.</Text>
             )}
           </Box>
         ) : currentNRCLocation ? (
@@ -461,24 +461,24 @@ export function RightPanel({
               </Text>
             )}
             <Box mt={16} pt={16} style={{ borderTop: "1px solid #F0F0F0" }}>
-              <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
+              <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
                 Location Details
               </Text>
               <Box style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12 }}>
                 <Group justify="space-between">
-                  <Text c="#737373" style={{ fontSize: 12 }}>Capital</Text>
+                  <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>Capital</Text>
                   <Text fw={500} style={{ fontSize: 12 }}>{currentNRCLocation.capital}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text c="#737373" style={{ fontSize: 12 }}>Region</Text>
+                  <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>Region</Text>
                   <Text fw={500} style={{ fontSize: 12 }}>{currentNRCLocation.region.split(" ")[0]}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text c="#737373" style={{ fontSize: 12 }}>Latitude</Text>
+                  <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>Latitude</Text>
                   <Text fw={500} style={{ fontSize: 12 }}>{currentNRCLocation.latitude.toFixed(2)}°</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text c="#737373" style={{ fontSize: 12 }}>Longitude</Text>
+                  <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>Longitude</Text>
                   <Text fw={500} style={{ fontSize: 12 }}>{currentNRCLocation.longitude.toFixed(2)}°</Text>
                 </Group>
               </Box>
@@ -494,7 +494,7 @@ export function RightPanel({
         {hasCrisisData ? (
           <Box>
             {/* Team Deployments */}
-            <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
+            <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
               Active Deployments
             </Text>
             <Stack gap={8} mb={16}>
@@ -510,7 +510,7 @@ export function RightPanel({
                       <Box w={8} h={8} style={{ background: "#059669" }} className="animate-pulse" />
                       <Box>
                         <Text fw={500} style={{ fontSize: 13 }}>{team.name}</Text>
-                        <Text c="#737373" style={{ fontSize: 11 }}>
+                        <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
                           {team.region ?? "Field"} &bull; {team.members} members
                         </Text>
                       </Box>
@@ -528,7 +528,7 @@ export function RightPanel({
                     <Box w={8} h={8} style={{ background: "#F59E0B" }} />
                     <Box>
                       <Text fw={500} style={{ fontSize: 13 }}>Assessment Team</Text>
-                      <Text c="#737373" style={{ fontSize: 11 }}>
+                      <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
                         En route to Gode &bull; 4 members
                       </Text>
                     </Box>
@@ -542,7 +542,7 @@ export function RightPanel({
 
             {/* Critical Resources */}
             {/* TODO(demo): resource stock percentages are hardcoded - replace with real logistics/stock data from operations API */}
-            <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
+            <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
               Critical Resources
             </Text>
             <Stack gap={4} mb={16}>
@@ -577,7 +577,7 @@ export function RightPanel({
         ) : currentNRCLocation ? (
           <Box>
             {/* Country Office */}
-            <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
+            <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
               Country Office
             </Text>
             <Stack gap={8} mb={16}>
@@ -587,7 +587,7 @@ export function RightPanel({
                     <Box w={8} h={8} style={{ background: "#E85D3D" }} />
                     <Box>
                       <Text fw={500} style={{ fontSize: 13 }}>NRC {currentNRCLocation.country}</Text>
-                      <Text c="#737373" style={{ fontSize: 11 }}>
+                      <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
                         {currentNRCLocation.capital} &bull; Country Office
                       </Text>
                     </Box>
@@ -600,7 +600,7 @@ export function RightPanel({
             </Stack>
 
             {/* Regional Context */}
-            <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
+            <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
               Regional Context
             </Text>
             <Stack gap={0} mb={16}>
@@ -620,7 +620,7 @@ export function RightPanel({
             </Stack>
 
             {/* Neighboring NRC Countries */}
-            <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
+            <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
               Other {currentNRCLocation.region.split(" ")[0]} Countries
             </Text>
             <Group gap={4}>
@@ -641,7 +641,7 @@ export function RightPanel({
                       border: "none",
                       cursor: "pointer",
                     }}
-                    className="hover:bg-[#E5E5E5] transition-colors"
+                    className="hover:bg-[var(--color-border)] transition-colors"
                   >
                     {loc.country}
                   </Box>
@@ -664,7 +664,7 @@ export function RightPanel({
           ].map((s) => (
             <Box key={s.label} p={8} style={{ textAlign: "center", background: "#F9FAFB" }}>
               <Text fw={700} c="#E85D3D" style={{ fontSize: 18, lineHeight: 1 }}>{s.value}</Text>
-              <Text c="#737373" tt="uppercase" style={{ fontSize: 9, marginTop: 4 }}>{s.label}</Text>
+              <Text c="var(--color-text-muted)" tt="uppercase" style={{ fontSize: 9, marginTop: 4 }}>{s.label}</Text>
             </Box>
           ))}
         </SimpleGrid>
@@ -717,7 +717,7 @@ export function RightPanel({
                     border: "none",
                     cursor: "pointer",
                   }}
-                  className="hover:bg-[#F9FAFB] transition-colors"
+                  className="hover:bg-[var(--color-bg-muted)] transition-colors"
                 >
                   <Group gap={8}>
                     <Box w={10} h={10} style={{ backgroundColor: rColor, borderRadius: "50%" }} />
@@ -809,7 +809,7 @@ export function RightPanel({
 
         {/* Core Competencies */}
         <Box mt={16} pt={16} style={{ borderTop: "1px solid #F0F0F0" }}>
-          <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
+          <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
             Core Competencies
           </Text>
           <Group gap={4}>
@@ -832,7 +832,7 @@ export function RightPanel({
       </CollapsibleSection>
 
       {/* Action buttons */}
-      <Box px={24} py={16} className="border-t border-[#E5E5E5] mt-auto">
+      <Box px={24} py={16} className="border-t border-[var(--color-border)] mt-auto">
         <Button
           leftSection={<IconBolt size={14} />}
           variant="unstyled"
@@ -860,8 +860,8 @@ export function RightPanel({
       <CreateSignalModal opened={signalModalOpen} onClose={() => setSignalModalOpen(false)} />
 
       {/* Data source footer - TODO(demo): sources and "Updated" timestamp are hardcoded; derive from active pipeline metadata */}
-      <Box px={24} py={16} className="border-t border-[#E5E5E5] bg-[#F5F5F5]">
-        <Text size="xs" c="#737373" style={{ fontSize: 11 }}>
+      <Box px={24} py={16} className="border-t border-[var(--color-border)] bg-[var(--color-bg-muted)]">
+        <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 11 }}>
           Data:{" "}
           <Text component="span" c="#E85D3D" style={{ fontSize: 11 }}>MOH PHEM</Text>
           {", "}

@@ -18,18 +18,18 @@ export function MapLayersPanel({
 }: MapLayersPanelProps) {
   return (
     <Box
-      className="absolute z-10 bg-white border border-[#E5E5E5]"
+      className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
       style={{ top: 80, left: 16, width: 200 }}
     >
-      <Group gap={8} px={12} py={10} className="border-b border-[#E5E5E5]">
+      <Group gap={8} px={12} py={10} className="border-b border-[var(--color-border)]">
         <IconLayersLinked size={14} color="#737373" />
-        <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 10, letterSpacing: "0.05em" }}>
+        <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em" }}>
           Layers
         </Text>
       </Group>
 
       <Stack gap={0} px={12} py={8}>
-        <Text fw={700} tt="uppercase" c="#A3A3A3" style={{ fontSize: 9, letterSpacing: "0.06em" }} mb={8}>
+        <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em" }} mb={8}>
           CLEAR Data
         </Text>
         <Radio.Group value={dataView} onChange={(v) => onDataViewChange(v as DataView)}>
@@ -40,7 +40,7 @@ export function MapLayersPanel({
                 gap={8}
                 py={6}
                 px={4}
-                className="cursor-pointer hover:bg-[#F9FAFB] -mx-1"
+                className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
                 onClick={() => onDataViewChange(view)}
                 style={{ userSelect: "none" }}
               >
@@ -50,7 +50,7 @@ export function MapLayersPanel({
                   styles={{ radio: { cursor: "pointer" } }}
                   onClick={(e) => e.stopPropagation()}
                 />
-                <Text size="xs" c="#525252" style={{ fontSize: 12, textTransform: "capitalize" }}>
+                <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12, textTransform: "capitalize" }}>
                   {view}
                 </Text>
               </Group>
@@ -58,13 +58,13 @@ export function MapLayersPanel({
           </Stack>
         </Radio.Group>
 
-        <Divider color="#F5F5F5" my={8} />
+        <Divider color="var(--color-border)" my={8} />
 
         <Group
           gap={8}
           py={6}
           px={4}
-          className="cursor-pointer hover:bg-[#F9FAFB] -mx-1"
+          className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
           onClick={() => onShowPopulationChange(!showPopulation)}
           style={{ userSelect: "none" }}
         >
@@ -75,7 +75,7 @@ export function MapLayersPanel({
             styles={{ input: { cursor: "pointer" } }}
             onClick={(e) => e.stopPropagation()}
           />
-          <Text size="xs" c="#525252" style={{ fontSize: 12 }}>
+          <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
             Population
           </Text>
         </Group>

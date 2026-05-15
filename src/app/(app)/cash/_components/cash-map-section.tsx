@@ -18,7 +18,7 @@ interface CashMapSectionProps {
 export function CashMapSection({ mapMarkers, center, onMarkerClick }: CashMapSectionProps) {
   return (
     <Box style={{ flex: "0 0 65%" }}>
-      <Card p={0} style={{ border: "1px solid #E5E5E5", overflow: "hidden" }}>
+      <Card p={0} style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
         <Box style={{ height: 500, position: "relative" }}>
           <CrisisMap
             markers={mapMarkers}
@@ -29,7 +29,7 @@ export function CashMapSection({ mapMarkers, center, onMarkerClick }: CashMapSec
           />
 
           {/* Map Legend */}
-          <Box style={{ position: "absolute", top: 12, left: 12, background: "white", border: "1px solid #E5E5E5", padding: "10px 14px", zIndex: 5 }}>
+          <Box style={{ position: "absolute", top: 12, left: 12, background: "var(--color-bg-white)", border: "1px solid var(--color-border)", padding: "10px 14px", zIndex: 5 }}>
             <Box style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 11 }}>
               {[
                 { color: "#DC2626", label: "Critical Exposure" },

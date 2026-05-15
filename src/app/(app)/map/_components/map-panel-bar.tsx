@@ -53,11 +53,11 @@ function IconBtn({
       style={{
         display: "flex", alignItems: "center", justifyContent: "center",
         width: 30, height: 30,
-        border: "1px solid var(--color-border)", borderRadius: 4,
-        background: active ? "var(--color-info-light)" : "var(--color-bg-white)",
+        border: "1px solid var(--color-border-dark)", borderRadius: 4,
+        background: active ? "var(--color-info-light)" : "var(--color-bg-muted)",
         color: active ? "var(--color-info)" : "var(--color-text-secondary)",
         cursor: "pointer", padding: 0,
-        boxShadow: "var(--shadow-xs)", flexShrink: 0,
+        boxShadow: "var(--shadow-sm)", flexShrink: 0,
       }}
     >
       <Icon size={15} />
@@ -110,8 +110,8 @@ export function MapPanelBar({
           <Box
             style={{
               width: 240,
-              background: "var(--color-bg-white)",
-              border: "1px solid var(--color-border)",
+              background: "var(--color-bg-muted)",
+              border: "1px solid var(--color-border-dark)",
               boxShadow: "var(--shadow-md)",
             }}
           >

@@ -394,7 +394,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
         </Group>
         <Stack gap="xs">
           {org.teams?.map((t) => (
-            <Group key={t.id} justify="space-between" p="xs" style={{ border: "1px solid #E5E5E5", borderRadius: 6 }}>
+            <Group key={t.id} justify="space-between" p="xs" style={{ border: "1px solid var(--color-border)", borderRadius: 6 }}>
               <Box>
                 <Text fw={500}>{t.name}</Text>
                 {t.description && (
@@ -414,7 +414,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
             </Group>
           ))}
           {creatingTeam && (
-            <Box p="xs" style={{ border: "1px solid #E5E5E5", borderRadius: 6 }}>
+            <Box p="xs" style={{ border: "1px solid var(--color-border)", borderRadius: 6 }}>
               <Stack gap="sm">
                 <TextInput
                   label="Team name"

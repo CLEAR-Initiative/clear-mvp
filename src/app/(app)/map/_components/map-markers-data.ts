@@ -79,23 +79,53 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
   for (const event of events) {
     const point = pointLocation(event);
-    if (!point) continue;
-    const { loc, lng, lat } = point;
-    markers.push({
-      id: hashId(event.id, loc.id),
-      lng,
-      lat,
-      title: event.title ?? event.types[0] ?? "Event",
-      severity: mapSeverity(event.severity),
-      description: event.description ?? undefined,
-      region: resolveLocationName(loc) ?? undefined,
-      locationId: loc.id,
-      ancestorIds: loc.ancestorIds ?? [],
-      eventTypes: event.types.map((t) => t.toLowerCase()),
-      eventId: event.id,
-      markerKind: "event",
-      status: event.alerts[0]?.status,
-    });
+
+    if (point) {
+      // Event has its own point location - use it directly.
+      const { loc, lng, lat } = point;
+      markers.push({
+        id: hashId(event.id, loc.id),
+        lng, lat,
+        title: event.title ?? event.types[0] ?? "Event",
+        severity: mapSeverity(event.severity),
+        description: event.description ?? undefined,
+        region: resolveLocationName(loc) ?? undefined,
+        locationId: loc.id,
+        ancestorIds: loc.ancestorIds ?? [],
+        eventTypes: event.types.map((t) => t.toLowerCase()),
+        eventId: event.id,
+        markerKind: "event",
+        status: event.alerts[0]?.status,
+      });
+    } else {
+      // No point on the event itself - fall back to signal point locations.
+      // One marker per signal, so an event with 3 signals shows 3 markers.
+      for (const signal of (event.signals ?? [])) {
+        const sigCandidates = [signal.originLocation, signal.destinationLocation, signal.generalLocation];
+        for (const loc of sigCandidates) {
+          if (loc?.geometry?.type === "Point") {
+            const [lng, lat] = loc.geometry.coordinates as [number, number];
+            if (typeof lng === "number" && typeof lat === "number") {
+              markers.push({
+                id: hashId(event.id, loc.id),
+                lng, lat,
+                title: event.title ?? event.types[0] ?? "Event",
+                severity: mapSeverity(event.severity),
+                description: event.description ?? undefined,
+                region: resolveLocationName(loc) ?? undefined,
+                locationId: loc.id,
+                ancestorIds: loc.ancestorIds ?? [],
+                eventTypes: event.types.map((t) => t.toLowerCase()),
+                eventId: event.id,
+                markerKind: "event",
+                status: event.alerts[0]?.status,
+              });
+              break;
+            }
+          }
+        }
+      }
+    }
   }
   return markers;
 }
@@ -152,6 +182,8 @@ export function eventsToRegions(events: GqlEvent[]): MapRegion[] {
     const candidates = [event.generalLocation, event.originLocation, event.destinationLocation];
     const polyLoc = candidates.find((loc) => loc?.geometry && isPolygonGeometry(loc.geometry));
     if (!polyLoc?.geometry) continue;
+    // Skip country-level locations - rendering the entire country polygon is not meaningful.
+    if (polyLoc.level === 0) continue;
 
     // Collect signal point locations
     const signalPoints: Array<{ lng: number; lat: number; title: string }> = [];

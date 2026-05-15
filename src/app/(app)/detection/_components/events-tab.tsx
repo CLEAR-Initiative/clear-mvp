@@ -23,11 +23,10 @@ import {
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
-import { getDisasterPills } from "~/lib/disaster-types";
+import { getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
-import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
+import type { MapMarker } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
-import { useDisasterTypes } from "~/hooks/use-disaster-types";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
@@ -59,7 +58,6 @@ interface EventsTabProps {
   onLoadMore: () => void;
   onRefresh: () => void;
   mapMarkers: MapMarker[];
-  mapRegions?: MapRegion[];
   mapCenter: [number, number];
   mapZoom: number;
   fitBoundsGeometry?: unknown;
@@ -87,7 +85,6 @@ export function EventsTab({
   onLoadMore,
   onRefresh,
   mapMarkers,
-  mapRegions,
   mapCenter,
   mapZoom,
   fitBoundsGeometry,
@@ -102,7 +99,6 @@ export function EventsTab({
   expandedTypeCodes: expandedTypeCodesProp,
   activeSources: activeSourcesProp,
 }: EventsTabProps) {
-  const { getTypeNames } = useDisasterTypes();
   const [search, setSearch] = useState("");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
   const [showPopulation, setShowPopulation] = useState(false);
@@ -262,7 +258,7 @@ export function EventsTab({
                 <Link key={event.id} href={`/event/${event.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                   <Box
                     px={16} py={12}
-                    className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
+                    className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"
                     style={{ display: "flex", gap: 12, ...getCardProps(event.id).style }}
                     onMouseEnter={getCardProps(event.id).onMouseEnter}
                     onMouseLeave={getCardProps(event.id).onMouseLeave}
@@ -274,7 +270,7 @@ export function EventsTab({
                           <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 700 }}>
                             {severityLabels[sev]}
                           </Badge>
-                          {isAlert && <Badge size="xs" variant="filled" color="red" style={{ fontSize: 10 }}>Alert</Badge>}
+                          {isAlert && <Badge size="xs" variant="outline" style={{ fontSize: 10, borderColor: "var(--color-critical)", color: "var(--color-critical)" }}>Alert</Badge>}
                           {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
                         </Group>
                         <Text size="xs" c="var(--color-text-muted)" title={`First signal: ${formatTimeAgo(event.firstSignalCreatedAt)}`}>
@@ -291,12 +287,7 @@ export function EventsTab({
                             <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
                           </Group>
                         )}
-                        {event.types.length > 0 && (
-                          <Group gap={4}>{getTypeNames(event.types).map((name) => (
-                            <Badge key={name} size="xs" variant="light" color="violet" style={{ fontSize: 9 }}>{name}</Badge>
-                          ))}</Group>
-                        )}
-                        {getDisasterPills(event.types).map((pill) => (
+                        {[...getDisasterPills(event.types), ...getDisasterL2Pills(event.types)].map((pill) => (
                           <span key={pill.label} style={{ display: "inline-block", padding: "1px 7px", borderRadius: 999, fontSize: 10, fontWeight: 600, color: pill.color, background: pill.bg, letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
                             {pill.label}
                           </span>
@@ -343,7 +334,6 @@ export function EventsTab({
           <Box style={{ height: 524, position: "relative" }}>
             <CrisisMap
               markers={mapMarkers}
-              regions={mapRegions}
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"

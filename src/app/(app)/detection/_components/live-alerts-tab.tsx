@@ -25,11 +25,10 @@ import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
-import { getDisasterPills } from "~/lib/disaster-types";
+import { getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
-import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
+import type { MapMarker } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
-import { useDisasterTypes } from "~/hooks/use-disaster-types";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
 import { formatTimeAgo } from "~/lib/utils";
 
@@ -59,7 +58,6 @@ interface LiveAlertsTabProps {
   onLoadMore: () => void;
   onRefresh: () => void;
   mapMarkers: MapMarker[];
-  mapRegions?: MapRegion[];
   mapCenter: [number, number];
   mapZoom: number;
   fitBoundsGeometry?: unknown;
@@ -87,7 +85,6 @@ export function LiveAlertsTab({
   onLoadMore,
   onRefresh,
   mapMarkers,
-  mapRegions,
   mapCenter,
   mapZoom,
   fitBoundsGeometry,
@@ -102,7 +99,6 @@ export function LiveAlertsTab({
   expandedTypeCodes: expandedTypeCodesProp,
   activeSources: activeSourcesProp,
 }: LiveAlertsTabProps) {
-  const { getTypeNames } = useDisasterTypes();
   const [search, setSearch] = useState("");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
   const [showPopulation, setShowPopulation] = useState(false);
@@ -248,7 +244,7 @@ export function LiveAlertsTab({
                 <Link key={alert.id} href={`/event/${alert.event.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                   <Box
                     px={16} py={12}
-                    className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
+                    className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"
                     style={{ display: "flex", gap: 12, ...getCardProps(alert.event.id).style }}
                     onMouseEnter={getCardProps(alert.event.id).onMouseEnter}
                     onMouseLeave={getCardProps(alert.event.id).onMouseLeave}
@@ -272,12 +268,7 @@ export function LiveAlertsTab({
                             <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
                           </Group>
                         )}
-                        {alert.event.types.length > 0 && (
-                          <Group gap={4}>{getTypeNames(alert.event.types).map((name) => (
-                            <Badge key={name} size="xs" variant="light" color="violet" style={{ fontSize: 9 }}>{name}</Badge>
-                          ))}</Group>
-                        )}
-                        {getDisasterPills(alert.event.types).map((pill) => (
+                        {[...getDisasterPills(alert.event.types), ...getDisasterL2Pills(alert.event.types)].map((pill) => (
                           <span key={pill.label} style={{ display: "inline-block", padding: "1px 7px", borderRadius: 999, fontSize: 10, fontWeight: 600, color: pill.color, background: pill.bg, letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
                             {pill.label}
                           </span>
@@ -317,7 +308,6 @@ export function LiveAlertsTab({
           <Box style={{ height: 524, position: "relative" }}>
             <CrisisMap
               markers={mapMarkers}
-              regions={mapRegions}
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"

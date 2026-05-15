@@ -11,13 +11,13 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, breadcrumbs, loading, children }: PageHeaderProps) {
   return (
-    <Box px={24} py={12} className="border-b border-[#E5E5E5]" style={{ background: "#FFFFFF" }}>
+    <Box px={24} py={12} className="border-b border-[var(--color-border)]" style={{ background: "var(--color-bg-white)" }}>
       {breadcrumbs && breadcrumbs.length > 0 && (
         <Group gap={4} mb={8}>
           {breadcrumbs.map((crumb, i) => (
             <Group key={i} gap={4}>
               {i > 0 && (
-                <Text size="xs" c="#A3A3A3">
+                <Text size="xs" c="var(--color-text-muted)">
                   &gt;
                 </Text>
               )}
@@ -37,7 +37,7 @@ export function PageHeader({ title, subtitle, breadcrumbs, loading, children }: 
       {subtitle ? (
         <>
           <Group gap={12} mb={12}>
-            <Text fw={700} c="#171717" style={{ fontSize: 20 }}>
+            <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20 }}>
               {title}
             </Text>
             {loading && <Loader size={14} />}
@@ -46,7 +46,7 @@ export function PageHeader({ title, subtitle, breadcrumbs, loading, children }: 
       ) : (
         <Group justify="space-between">
           <Group gap={12}>
-            <Text fw={600} c="#171717" style={{ fontSize: 16 }}>
+            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 16 }}>
               {title}
             </Text>
             {loading && <Loader size={14} />}

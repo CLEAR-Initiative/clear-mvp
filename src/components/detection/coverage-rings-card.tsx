@@ -52,7 +52,7 @@ export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: Covera
         <Box style={{ width: "100%", maxWidth: 196 }}>
           <svg viewBox="0 0 180 98" width="100%" style={{ overflow: "visible" }}>
 
-            {/* Track — full half-ring, muted red = uncovered */}
+            {/* Track - full half-ring, muted red = uncovered */}
             <path
               d={arcD(180, 0)}
               fill="none"
@@ -61,7 +61,7 @@ export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: Covera
               strokeLinecap="round"
             />
 
-            {/* Fill — covered portion */}
+            {/* Fill - covered portion */}
             {hasGreen && (
               <path
                 d={arcD(180, greenEnd)}

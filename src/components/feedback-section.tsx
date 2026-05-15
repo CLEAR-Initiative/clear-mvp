@@ -71,7 +71,7 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
   return (
     <>
       <Box px={16} py={10} style={{ borderBottom: "1px solid var(--color-border)" }}>
-        <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
+        <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
           Was this {entityLabel} helpful?
         </Text>
       </Box>
@@ -140,10 +140,10 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
         {modalSubmitted ? (
           <Stack align="center" gap={12} py={32}>
             <IconCircleCheck size={52} color="var(--color-success)" style={{ strokeWidth: 1.5 }} />
-            <Text fw={700} size="lg" c="#171717">
+            <Text fw={700} size="lg" c="var(--color-text-primary)">
               Thank you!
             </Text>
-            <Text size="sm" c="#737373" ta="center" maw={260}>
+            <Text size="sm" c="var(--color-text-muted)" ta="center" maw={260}>
               Your feedback helps improve {entityLabel} quality for the whole team.
             </Text>
             <Button variant="subtle" color="gray" size="sm" mt={8} onClick={() => setModalOpen(false)}>
@@ -152,7 +152,7 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
           </Stack>
         ) : (
           <Stack gap={16}>
-            <Text size="sm" c="#737373">
+            <Text size="sm" c="var(--color-text-muted)">
               Select all issues that apply - this helps us improve the detection pipeline.
             </Text>
 

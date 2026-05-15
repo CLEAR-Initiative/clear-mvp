@@ -41,8 +41,8 @@ export function DocumentLibrary({ filteredDocuments }: DocumentLibraryProps) {
                   {doc.type}
                 </Text>
               </Table.Td>
-              <Table.Td><Text c="#525252" style={{ fontSize: 13 }}>{doc.sector}</Text></Table.Td>
-              <Table.Td><Text c="#525252" style={{ fontSize: 13 }}>{doc.updated}</Text></Table.Td>
+              <Table.Td><Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>{doc.sector}</Text></Table.Td>
+              <Table.Td><Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>{doc.updated}</Text></Table.Td>
               <Table.Td>
                 <Text c="#2563EB" style={{ cursor: "pointer", fontSize: 12 }}>Download</Text>
               </Table.Td>

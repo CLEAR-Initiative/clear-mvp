@@ -2171,7 +2171,7 @@ function DataPanel() {
         {/* Demo Data card */}
         <Card p="md" radius={0} style={{
           border: `1px solid ${colors.border}`,
-          background: demoEnabled ? "#FFFBF5" : colors.bgWhite,
+          background: demoEnabled ? colors.accentLight : colors.bgWhite,
         }}>
           <Group justify="space-between" align="center">
             <Box>

@@ -17,7 +17,7 @@ export function CollapsibleSection({ title, defaultOpen = false, children, locke
 
   if (locked) {
     return (
-      <Box className="border-b border-[#E5E5E5]" style={{ opacity: 0.45 }}>
+      <Box className="border-b border-[var(--color-border)]" style={{ opacity: 0.45 }}>
         <Box
           w="100%"
           px={24}
@@ -37,13 +37,13 @@ export function CollapsibleSection({ title, defaultOpen = false, children, locke
   }
 
   return (
-    <Box className="border-b border-[#E5E5E5]">
+    <Box className="border-b border-[var(--color-border)]">
       <UnstyledButton
         onClick={() => setOpen(!open)}
         w="100%"
         px={24}
         py={16}
-        className="flex justify-between items-center cursor-pointer hover:bg-[#F5F5F5] transition-colors"
+        className="flex justify-between items-center cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
       >
         <Text fw={700} tt="uppercase" style={{ letterSpacing: "0.08em", fontSize: 11 }}>
           {title}

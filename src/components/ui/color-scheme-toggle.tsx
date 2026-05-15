@@ -1,25 +1,35 @@
 "use client";
 
-import { ActionIcon, useComputedColorScheme, useMantineColorScheme } from "@mantine/core";
-import { IconSun, IconMoon } from "@tabler/icons-react";
+import { SegmentedControl, Center, Box } from "@mantine/core";
+import { useMantineColorScheme } from "@mantine/core";
+import { IconSun, IconMoon, IconDeviceDesktop } from "@tabler/icons-react";
 
-interface ColorSchemeToggleProps {
-  size?: number;
-}
+type ColorSchemeValue = "light" | "auto" | "dark";
 
-export function ColorSchemeToggle({ size = 16 }: ColorSchemeToggleProps) {
-  const { setColorScheme } = useMantineColorScheme();
-  const computed = useComputedColorScheme("light", { getInitialValueInEffect: true });
+const SEGMENTS: { value: ColorSchemeValue; icon: React.ReactNode }[] = [
+  { value: "light", icon: <IconSun size={14} /> },
+  { value: "auto", icon: <IconDeviceDesktop size={14} /> },
+  { value: "dark", icon: <IconMoon size={14} /> },
+];
+
+export function ColorSchemeToggle() {
+  const { colorScheme, setColorScheme } = useMantineColorScheme({
+    keepTransitions: true,
+  });
 
   return (
-    <ActionIcon
-      variant="subtle"
-      color="gray"
-      size="sm"
-      onClick={() => setColorScheme(computed === "light" ? "dark" : "light")}
-      aria-label="Toggle color scheme"
-    >
-      {computed === "dark" ? <IconSun size={size} /> : <IconMoon size={size} />}
-    </ActionIcon>
+    <SegmentedControl
+      size="xs"
+      value={colorScheme}
+      onChange={(v) => setColorScheme(v as ColorSchemeValue)}
+      data={SEGMENTS.map(({ value, icon }) => ({
+        value,
+        label: (
+          <Center>
+            <Box style={{ display: "flex", alignItems: "center" }}>{icon}</Box>
+          </Center>
+        ),
+      }))}
+    />
   );
 }

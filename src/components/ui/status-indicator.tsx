@@ -10,7 +10,7 @@ export function StatusIndicator({ status, color }: StatusIndicatorProps) {
   return (
     <Group gap={6}>
       <IconPointFilled size={10} color={color} />
-      <Text c="#525252" style={{ fontSize: 13 }}>
+      <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
         {status}
       </Text>
     </Group>

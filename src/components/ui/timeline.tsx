@@ -20,7 +20,7 @@ export function Timeline({ items }: TimelineProps) {
           top: 16,
           bottom: 16,
           width: 2,
-          background: "#E5E5E5",
+          background: "var(--color-border)",
         }}
       />
       <Stack gap={20}>
@@ -41,7 +41,7 @@ export function Timeline({ items }: TimelineProps) {
               <Text fw={600} style={{ fontSize: 13 }}>
                 {item.title}
               </Text>
-              <Text c="#737373" style={{ fontSize: 12 }}>
+              <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>
                 {item.meta}
               </Text>
             </Box>

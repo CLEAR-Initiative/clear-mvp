@@ -151,7 +151,7 @@ export default function KnowledgePage() {
           <Card p={16} mb={24} style={{ border: "1px solid #E5E5E5" }}>
             <Group gap={8} mb={12}>
               <IconMapPin size={16} color="#E85D3D" />
-              <Text fw={600} c="#171717" style={{ fontSize: 13 }}>Filter by Location & Type</Text>
+              <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>Filter by Location & Type</Text>
               {hasActiveFilters && (
                 <UnstyledButton
                   onClick={clearFilters}

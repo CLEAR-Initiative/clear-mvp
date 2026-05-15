@@ -42,19 +42,19 @@ export default function ForgotPasswordPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#FAFAFA",
+        backgroundColor: "var(--color-bg-primary)",
       }}
     >
       <Box w={400}>
-        <Card p="xl" style={{ border: "1px solid #E5E5E5" }}>
+        <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
           <Stack align="center" gap={4} mb={24}>
             <Text fw={700} size="xl" c="#E85D3D" style={{ letterSpacing: "-0.025em" }}>
               CLEAR
             </Text>
-            <Text size="lg" fw={600} c="#171717">
+            <Text size="lg" fw={600} c="var(--color-text-primary)">
               Reset Password
             </Text>
-            <Text size="sm" c="#737373" ta="center">
+            <Text size="sm" c="var(--color-text-muted)" ta="center">
               Enter your email and we&apos;ll send you a link to reset your password.
             </Text>
           </Stack>
@@ -89,8 +89,8 @@ export default function ForgotPasswordPage() {
                   autoComplete="email"
                   autoFocus
                   styles={{
-                    label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                    input: { borderColor: "#E5E5E5", fontSize: 14 },
+                    label: { fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 4 },
+                    input: { borderColor: "var(--color-border)", fontSize: 14 },
                   }}
                 />
 
@@ -106,7 +106,7 @@ export default function ForgotPasswordPage() {
                 </Button>
 
                 <Text ta="center" size="sm" mt={8}>
-                  <Anchor component={Link} href="/auth/login" c="#737373" fw={500} size="sm">
+                  <Anchor component={Link} href="/auth/login" c="var(--color-text-muted)" fw={500} size="sm">
                     <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginRight: 4 }} />
                     Back to Sign In
                   </Anchor>

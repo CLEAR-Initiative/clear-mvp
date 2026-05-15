@@ -24,12 +24,12 @@ export function StatsGrid({ stats, cols = 4, mb = 24, cardStyle }: StatsGridProp
           key={stat.label}
           p="lg"
           style={{
-            border: "1px solid #E5E5E5",
+            border: "1px solid var(--color-border)",
             ...cardStyle?.(stat, i),
           }}
         >
           <Text
-            c="#737373"
+            c="var(--color-text-muted)"
             fw={600}
             tt="uppercase"
             mb={stat.sub ? 8 : 4}

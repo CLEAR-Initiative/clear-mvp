@@ -179,7 +179,7 @@ export function EventDetailContent({
         <Text fw={600} size="lg">
           Event not found
         </Text>
-        <Text size="sm" c="#737373" mt={8}>
+        <Text size="sm" c="var(--color-text-muted)" mt={8}>
           This event may have been removed or the ID is invalid.
         </Text>
         {mode === "page" && (
@@ -211,7 +211,7 @@ export function EventDetailContent({
 
   const sevColor = severityColor(event.severity);
   const sev = mapSeverity(event.severity);
-  const sevBg = severityColors[sev]?.bg ?? "#F5F5F5";
+  const sevBg = severityColors[sev]?.bg ?? "var(--color-bg-muted)";
   const isCompact = mode === "drawer";
 
   // signal.publishedAt replaces signal.source.detectedAt
@@ -270,7 +270,7 @@ export function EventDetailContent({
         <Box
           px={24}
           py={10}
-          style={{ background: "#FFF", borderBottom: "1px solid #E5E5E5" }}
+          style={{ background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)" }}
         >
           <Group justify="space-between">
             <Link href="/detection" style={{ textDecoration: "none" }}>
@@ -279,8 +279,8 @@ export function EventDetailContent({
                 className="hover:opacity-70"
                 style={{ cursor: "pointer" }}
               >
-                <IconArrowLeft size={14} color="#525252" />
-                <Text size="sm" c="#525252" fw={500}>
+                <IconArrowLeft size={14} color="var(--color-text-secondary)" />
+                <Text size="sm" c="var(--color-text-secondary)" fw={500}>
                   Back to Events Overview
                 </Text>
               </Group>
@@ -310,8 +310,8 @@ export function EventDetailContent({
         pt={isCompact ? 16 : 20}
         pb={isCompact ? 16 : 20}
         style={{
-          background: isAlready || promoted ? "var(--color-critical-light)" : "#FFF",
-          borderBottom: "1px solid #E5E5E5",
+          background: isAlready || promoted ? "var(--color-critical-light)" : "var(--color-bg-white)",
+          borderBottom: "1px solid var(--color-border)",
           borderLeft: `4px solid ${sevColor}`,
         }}
       >
@@ -342,7 +342,7 @@ export function EventDetailContent({
         >
           <Text
             fw={700}
-            c="#171717"
+            c="var(--color-text-primary)"
             style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3, flex: 1 }}
           >
             {displayTitle}
@@ -414,31 +414,31 @@ export function EventDetailContent({
         <Group gap={16} wrap="wrap">
           {locations.some((l) => resolveLocationName(l)) && (
             <Group gap={4}>
-              <IconMapPin size={13} color="#737373" />
-              <Text size="xs" c="#525252" fw={500}>
+              <IconMapPin size={13} color="var(--color-text-muted)" />
+              <Text size="xs" c="var(--color-text-secondary)" fw={500}>
                 {locations.map((l) => resolveLocationName(l)).filter(Boolean).join(", ")}
               </Text>
             </Group>
           )}
           <Group gap={4}>
-            <IconCalendar size={13} color="#737373" />
-            <Text size="xs" c="#525252">{formatDate(detectedAt)}</Text>
+            <IconCalendar size={13} color="var(--color-text-muted)" />
+            <Text size="xs" c="var(--color-text-secondary)">{formatDate(detectedAt)}</Text>
           </Group>
           <Group gap={4}>
-            <IconClock size={13} color="#A3A3A3" />
-            <Text size="xs" c="#A3A3A3">{formatTimeAgo(detectedAt)}</Text>
+            <IconClock size={13} color="var(--color-text-muted)" />
+            <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(detectedAt)}</Text>
           </Group>
-          <Box style={{ width: 1, height: 12, background: "#E5E5E5", alignSelf: "center" }} />
+          <Box style={{ width: 1, height: 12, background: "var(--color-border)", alignSelf: "center" }} />
           <Group gap={4}>
-            <IconRadar size={13} color="#737373" />
-            <Text size="xs" c="#525252" fw={500}>
+            <IconRadar size={13} color="var(--color-text-muted)" />
+            <Text size="xs" c="var(--color-text-secondary)" fw={500}>
               {signalCount} signal{signalCount !== 1 ? "s" : ""}
             </Text>
           </Group>
           {sourceCount > 0 && (
             <Group gap={4}>
-              <IconDatabase size={13} color="#737373" />
-              <Text size="xs" c="#525252">
+              <IconDatabase size={13} color="var(--color-text-muted)" />
+              <Text size="xs" c="var(--color-text-secondary)">
                 {sourceCount} source{sourceCount !== 1 ? "s" : ""}
               </Text>
             </Group>
@@ -451,7 +451,7 @@ export function EventDetailContent({
         <Box
           px={24}
           py={16}
-          style={{ background: "#FAFAFA", borderBottom: "1px solid #E5E5E5" }}
+          style={{ background: "var(--color-bg-primary)", borderBottom: "1px solid var(--color-border)" }}
         >
           <Group gap={12}>
 
@@ -460,8 +460,8 @@ export function EventDetailContent({
               p={16}
               style={{
                 flex: 1,
-                background: "#FFF",
-                border: "1px solid #E5E5E5",
+                background: "var(--color-bg-white)",
+                border: "1px solid var(--color-border)",
                 borderRadius: 8,
                 display: "flex",
                 gap: 12,
@@ -473,7 +473,7 @@ export function EventDetailContent({
                   width: 36,
                   height: 36,
                   borderRadius: 8,
-                  background: "#FEF2F0",
+                  background: "var(--color-accent-light)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -483,10 +483,10 @@ export function EventDetailContent({
                 <IconUsers size={18} color="#E85D3D" />
               </Box>
               <Box>
-                <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
                   {event.casualties != null ? event.casualties.toLocaleString() : "N/A"}
                 </Text>
-                <Text size="xs" c="#737373" mt={2}>Casualties</Text>
+                <Text size="xs" c="var(--color-text-muted)" mt={2}>Casualties</Text>
               </Box>
             </Box>
 
@@ -495,8 +495,8 @@ export function EventDetailContent({
               p={16}
               style={{
                 flex: 1,
-                background: "#FFF",
-                border: "1px solid #E5E5E5",
+                background: "var(--color-bg-white)",
+                border: "1px solid var(--color-border)",
                 borderRadius: 8,
                 display: "flex",
                 gap: 12,
@@ -508,7 +508,7 @@ export function EventDetailContent({
                   width: 36,
                   height: 36,
                   borderRadius: 8,
-                  background: "#EFF6FF",
+                  background: "var(--color-info-light)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -518,10 +518,10 @@ export function EventDetailContent({
                 <IconWorld size={18} color="#2563EB" />
               </Box>
               <Box>
-                <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
                   {areaPopulation ? Number(areaPopulation.value).toLocaleString() : "N/A"}
                 </Text>
-                <Text size="xs" c="#737373" mt={2}>
+                <Text size="xs" c="var(--color-text-muted)" mt={2}>
                   {areaPopulation ? `Population in ${areaPopulation.name}` : "Population in area"}
                 </Text>
               </Box>
@@ -532,8 +532,8 @@ export function EventDetailContent({
               p={16}
               style={{
                 flex: 1,
-                background: "#FFF",
-                border: "1px solid #E5E5E5",
+                background: "var(--color-bg-white)",
+                border: "1px solid var(--color-border)",
                 borderRadius: 8,
                 display: "flex",
                 gap: 12,
@@ -545,7 +545,7 @@ export function EventDetailContent({
                   width: 36,
                   height: 36,
                   borderRadius: 8,
-                  background: "#FEF3C7",
+                  background: "var(--color-warning-light)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -555,14 +555,14 @@ export function EventDetailContent({
                 <IconShieldExclamation size={18} color="#D97706" />
               </Box>
               <Box>
-                <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
                   {idpData?.ratio != null
                     ? `${(idpData.ratio * 100).toFixed(1)}%`
                     : idpData?.displaced != null
                       ? idpData.displaced.toLocaleString()
                       : "N/A"}
                 </Text>
-                <Text size="xs" c="#737373" mt={2}>
+                <Text size="xs" c="var(--color-text-muted)" mt={2}>
                   {idpData
                     ? `IDPs per capita in ${idpData.name} (${idpData.displaced.toLocaleString()} displaced)`
                     : "IDP per capita"}
@@ -586,16 +586,16 @@ export function EventDetailContent({
         {/* Left column */}
         <Box style={{ flex: 1, minWidth: 0 }}>
           {/* Summary */}
-          <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+          <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
+            <Box px={16} py={12} className="border-b border-[var(--color-border)]">
               <Group justify="space-between">
-                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+                <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                   Summary
                 </Text>
                 <Badge
                   size="xs"
                   style={{
-                    background: "#F3E8FF",
+                    background: "var(--color-ai-light)",
                     color: "#7C3AED",
                     border: "1px solid #7C3AED25",
                     fontWeight: 600,
@@ -606,26 +606,26 @@ export function EventDetailContent({
               </Group>
             </Box>
             <Box p={16}>
-              <Text size="sm" c="#374151" style={{ lineHeight: 1.75 }}>
+              <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.75 }}>
                 {event.description ?? "No summary available."}
               </Text>
             </Box>
           </Card>
 
           {/* Discussion */}
-          <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
+          <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
             <CommentsSection entityId={event.id} entityType="event" />
           </Card>
 
           {/* Source Signals */}
-          <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+          <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
+            <Box px={16} py={12} className="border-b border-[var(--color-border)]">
               <Group justify="space-between">
                 <Group gap={8}>
-                  <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+                  <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                     Signals ({event.signals.length})
                   </Text>
-                  <Text size="xs" c="#A3A3A3" style={{ fontWeight: 400 }}>
+                  <Text size="xs" c="var(--color-text-muted)" style={{ fontWeight: 400 }}>
                     Source intelligence that triggered this event
                   </Text>
                 </Group>
@@ -634,7 +634,7 @@ export function EventDetailContent({
             <Box>
               {event.signals.length === 0 && (
                 <Box px={16} py={24} style={{ textAlign: "center" }}>
-                  <Text c="#A3A3A3" size="sm">No signals attached</Text>
+                  <Text c="var(--color-text-muted)" size="sm">No signals attached</Text>
                 </Box>
               )}
               {event.signals.map((sig) => {
@@ -647,18 +647,18 @@ export function EventDetailContent({
                     key={sig.id}
                     px={16}
                     py={12}
-                    className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
+                    className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"
                     style={{ display: "flex", gap: 12 }}
                     onClick={() => router.push(`/signal/${sig.id}`)}
                   >
-                      <Box style={{ width: 3, background: "#737373", flexShrink: 0, borderRadius: 2 }} />
+                      <Box style={{ width: 3, background: "var(--color-text-muted)", flexShrink: 0, borderRadius: 2 }} />
                       <Box style={{ flex: 1, minWidth: 0 }}>
                         <Group justify="space-between" mb={4}>
                           <Group gap={6}>
-                            <Badge size="xs" style={{ background: "#F5F5F5", color: "#525252", fontWeight: 600 }}>
+                            <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>
                               {sig.source.name}
                             </Badge>
-                            <Badge size="xs" variant="outline" style={{ color: "#737373", borderColor: "#73737340", fontSize: 10 }}>
+                            <Badge size="xs" variant="outline" style={{ color: "var(--color-text-muted)", borderColor: "color-mix(in srgb, var(--color-text-muted) 25%, transparent)", fontSize: 10 }}>
                               {sig.source.type}
                             </Badge>
                           </Group>
@@ -675,14 +675,14 @@ export function EventDetailContent({
                                 Source
                               </a>
                             )}
-                            <Text size="xs" c="#A3A3A3">{formatTimeAgo(sig.publishedAt)}</Text>
+                            <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(sig.publishedAt)}</Text>
                           </Group>
                         </Group>
-                        <Text fw={500} size="sm" c="#171717" lineClamp={2} style={{ lineHeight: 1.4 }} mb={sigLocation ? 2 : 0}>
+                        <Text fw={500} size="sm" c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }} mb={sigLocation ? 2 : 0}>
                           {sigTitle}
                         </Text>
                         {sigLocation && (
-                          <Text size="xs" c="#737373">{sigLocation.name}</Text>
+                          <Text size="xs" c="var(--color-text-muted)">{sigLocation.name}</Text>
                         )}
                       </Box>
                   </Box>
@@ -692,10 +692,10 @@ export function EventDetailContent({
           </Card>
 
           {/* Related Events */}
-          <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+          <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+            <Box px={16} py={12} className="border-b border-[var(--color-border)]">
               <Group justify="space-between">
-                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+                <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                   Related Events
                 </Text>
                 {relatedLoading && <Loader size={14} />}
@@ -704,13 +704,13 @@ export function EventDetailContent({
             <Box>
               {relatedEvents.length === 0 && !relatedLoading && (
                 <Box px={16} py={24} style={{ textAlign: "center" }}>
-                  <Text c="#A3A3A3" size="sm">No related events found</Text>
+                  <Text c="var(--color-text-muted)" size="sm">No related events found</Text>
                 </Box>
               )}
               {relatedEvents.slice(0, 5).map((related) => {
                 const relSev = mapSeverity(related.severity);
                 const relColor = severityColor(related.severity);
-                const relBg = severityColors[relSev]?.bg ?? "#F5F5F5";
+                const relBg = severityColors[relSev]?.bg ?? "var(--color-bg-muted)";
                 const relTitle = related.title ?? related.description ?? related.types[0] ?? "";
                 return (
                   <Link
@@ -721,7 +721,7 @@ export function EventDetailContent({
                     <Box
                       px={16}
                       py={12}
-                      className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
+                      className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"
                       style={{ display: "flex", gap: 12 }}
                     >
                       <Box style={{ width: 3, background: relColor, flexShrink: 0, borderRadius: 2 }} />
@@ -730,9 +730,9 @@ export function EventDetailContent({
                           <Badge size="xs" style={{ background: relBg, color: relColor, fontWeight: 600 }}>
                             {severityLabels[relSev]}
                           </Badge>
-                          <Text size="xs" c="#A3A3A3">{formatTimeAgo(related.lastSignalCreatedAt)}</Text>
+                          <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(related.lastSignalCreatedAt)}</Text>
                         </Group>
-                        <Text size="sm" fw={500} c="#171717" lineClamp={2} style={{ lineHeight: 1.4 }}>
+                        <Text size="sm" fw={500} c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }}>
                           {relTitle}
                         </Text>
                       </Box>
@@ -754,17 +754,18 @@ export function EventDetailContent({
                 center={mapCenter}
                 sudanGeometry={sudanGeometry}
                 sudanId={sudanId}
+                locationGeometry={(event.generalLocation ?? event.originLocation ?? event.destinationLocation)?.geometry}
               />
 
               {/* Was this event helpful? */}
-              <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
+              <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
                 <FeedbackSection entityId={event.id} entityType="event" />
               </Card>
 
               {/* Actions */}
-              <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-                <Box px={16} py={10} className="border-b border-[#E5E5E5]">
-                  <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
+              <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+                <Box px={16} py={10} className="border-b border-[var(--color-border)]">
+                  <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
                     Actions
                   </Text>
                 </Box>
@@ -858,22 +859,22 @@ export function EventDetailContent({
               </Card>
 
               {/* System Data */}
-              <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
+              <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
                 <UnstyledButton
                   onClick={() => setSystemDataOpen((o) => !o)}
                   style={{ width: "100%" }}
                 >
-                  <Box px={16} py={10} className="border-b border-[#E5E5E5]">
+                  <Box px={16} py={10} className="border-b border-[var(--color-border)]">
                     <Group gap={6} justify="space-between">
                       <Group gap={6}>
-                        <IconDatabase size={14} color="#525252" />
-                        <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
+                        <IconDatabase size={14} color="var(--color-text-secondary)" />
+                        <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
                           System Data
                         </Text>
                       </Group>
                       {systemDataOpen
-                        ? <IconChevronUp size={13} color="#737373" />
-                        : <IconChevronDown size={13} color="#737373" />}
+                        ? <IconChevronUp size={13} color="var(--color-text-muted)" />
+                        : <IconChevronDown size={13} color="var(--color-text-muted)" />}
                     </Group>
                   </Box>
                 </UnstyledButton>
@@ -881,50 +882,50 @@ export function EventDetailContent({
                 <Box p={16}>
                   <Stack gap={8}>
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">
+                      <Text size="xs" c="var(--color-text-muted)">
                         Event ID
                       </Text>
-                      <Text size="xs" fw={500} c="#171717">
+                      <Text size="xs" fw={500} c="var(--color-text-primary)">
                         #{event.id}
                       </Text>
                     </Group>
                     {event.signals?.[0]?.source && (
                       <Group justify="space-between">
-                        <Text size="xs" c="#737373">
+                        <Text size="xs" c="var(--color-text-muted)">
                           Source
                         </Text>
-                        <Text size="xs" fw={500} c="#171717">
+                        <Text size="xs" fw={500} c="var(--color-text-primary)">
                           {event.signals[0].source.name}
                         </Text>
                       </Group>
                     )}
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">
+                      <Text size="xs" c="var(--color-text-muted)">
                         Detected
                       </Text>
-                      <Text size="xs" fw={500} c="#171717">
+                      <Text size="xs" fw={500} c="var(--color-text-primary)">
                         {formatDate(detectedAt)}
                       </Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">Valid from</Text>
+                      <Text size="xs" c="var(--color-text-muted)">Valid from</Text>
                       <Text size="xs" fw={500}>
                         {event?.validFrom ? formatDate(event.validFrom) : "-"}
                       </Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">Valid until</Text>
+                      <Text size="xs" c="var(--color-text-muted)">Valid until</Text>
                       <Text size="xs" fw={500}>
                         {event?.validTo ? formatDate(event.validTo) : "-"}
                       </Text>
                     </Group>
                     {locations.some((l) => resolveLocationName(l)) && (
                       <Box
-                        style={{ borderTop: "1px solid #F0F0F0" }}
+                        style={{ borderTop: "1px solid var(--color-border)" }}
                         pt={8}
                         mt={2}
                       >
-                        <Text size="xs" c="#737373" mb={6}>
+                        <Text size="xs" c="var(--color-text-muted)" mb={6}>
                           Affected Areas
                         </Text>
                         <Group gap={6} wrap="wrap">
@@ -937,7 +938,7 @@ export function EventDetailContent({
                                 size="sm"
                                 variant="light"
                                 style={{
-                                  background: "#FEF2F0",
+                                  background: "var(--color-accent-light)",
                                   color: "#E85D3D",
                                   fontWeight: 500,
                                   border: "1px solid #E85D3D30",
@@ -952,24 +953,24 @@ export function EventDetailContent({
                       </Box>
                     )}
                     <Box
-                      style={{ borderTop: "1px solid #F0F0F0" }}
+                      style={{ borderTop: "1px solid var(--color-border)" }}
                       pt={8}
                       mt={2}
                     >
                       <Group justify="space-between">
-                        <Text size="xs" c="#737373">
+                        <Text size="xs" c="var(--color-text-muted)">
                           Created
                         </Text>
-                        <Text size="xs" fw={500} c="#171717">
+                        <Text size="xs" fw={500} c="var(--color-text-primary)">
                           {formatDateTime(eventCreatedAt)}
                         </Text>
                       </Group>
                     </Box>
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">
+                      <Text size="xs" c="var(--color-text-muted)">
                         Updated
                       </Text>
-                      <Text size="xs" fw={500} c="#171717">
+                      <Text size="xs" fw={500} c="var(--color-text-primary)">
                         {formatDateTime(eventUpdatedAt)}
                       </Text>
                     </Group>

@@ -27,7 +27,7 @@ export default function TeamSettingsPage() {
   const router = useRouter();
   const teamQuery = api.teams.team.useQuery({ id });
   // Fetch the parent org so we can offer its members as a dropdown for "Add
-  // member" — only fires once we know the org id from the team query.
+  // member" - only fires once we know the org id from the team query.
   const orgId = teamQuery.data?.organisation.id;
   const orgQuery = api.teams.organisation.useQuery(
     { id: orgId ?? "" },
@@ -55,7 +55,7 @@ export default function TeamSettingsPage() {
 
   const team = teamQuery.data;
 
-  // Org members not yet in the team — Mantine Select shape.
+  // Org members not yet in the team - Mantine Select shape.
   const addableMembers = useMemo(() => {
     const orgMembers = orgQuery.data?.members ?? [];
     const inTeam = new Set(team?.members?.map((m) => m.user.id) ?? []);
@@ -186,7 +186,7 @@ export default function TeamSettingsPage() {
             <Stack gap={4}>
               <Text><Text span fw={600}>Name:</Text> {team.name}</Text>
               <Text><Text span fw={600}>Slug:</Text> {team.slug}</Text>
-              <Text><Text span fw={600}>Description:</Text> {team.description ?? "—"}</Text>
+              <Text><Text span fw={600}>Description:</Text> {team.description ?? "-"}</Text>
             </Stack>
           )}
         </Box>

@@ -251,7 +251,7 @@ export function SignalsTab({
                 <Link key={signal.id} href={`/signal/${signal.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                   <Box
                     px={16} py={12}
-                    className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
+                    className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"
                     style={{ display: "flex", gap: 12, ...getCardProps(signal.id).style }}
                     onMouseEnter={getCardProps(signal.id).onMouseEnter}
                     onMouseLeave={getCardProps(signal.id).onMouseLeave}

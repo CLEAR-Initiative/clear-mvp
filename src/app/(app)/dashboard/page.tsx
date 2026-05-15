@@ -8,9 +8,7 @@ import { useTeam } from "~/providers/team-provider";
 import { useLocations } from "~/hooks/use-locations";
 import {
   alertsToMarkers,
-  alertsToRegions,
   eventsToMarkers,
-  eventsToRegions,
   crisesToMarkers,
   type CrisisMarker,
 } from "~/app/(app)/map/_components/map-markers-data";
@@ -23,7 +21,7 @@ import { RightPanel } from "./_components/right-panel";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
+  { ssr: false, loading: () => <Box w="100%" h="100%" style={{ background: "var(--color-bg-muted)" }} /> },
 );
 
 export default function DashboardPage() {
@@ -96,18 +94,12 @@ export default function DashboardPage() {
     setSelectedMarker(full ?? null);
   }, [markers]);
 
-  const regions = useMemo(() => {
-    if (dataView === "alert") return alertsToRegions(alertsQuery.data?.alerts ?? []);
-    if (dataView === "event") return eventsToRegions(eventsQuery.data?.events ?? []);
-    return [];
-  }, [dataView, alertsQuery.data, eventsQuery.data]);
 
   return (
     <Box style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
       <Box style={{ position: "relative", flex: 1, minWidth: 0, overflow: "hidden" }}>
         <CrisisMap
           markers={markers}
-          regions={regions}
           center={[30.0, 15.5]}
           zoom={5.0}
           focusCountryPCode="SD"
