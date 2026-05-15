@@ -18,8 +18,6 @@ import {
   IconUpload,
   IconX,
   IconFile,
-  IconPhoto,
-  IconVideo,
   IconArrowRight,
   IconArrowLeft,
 } from "@tabler/icons-react";
@@ -53,9 +51,7 @@ const LABEL_STYLE: React.CSSProperties = {
   color: "var(--color-text-muted)",
 };
 
-function fileIcon(file: File) {
-  if (file.type.startsWith("image/")) return <IconPhoto size={14} />;
-  if (file.type.startsWith("video/")) return <IconVideo size={14} />;
+function fileIcon(_file: File) {
   return <IconFile size={14} />;
 }
 
@@ -202,7 +198,7 @@ function MediaStep({
           ref={inputRef}
           type="file"
           multiple
-          accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
           style={{ display: "none" }}
           onChange={handleFileInput}
         />
@@ -211,7 +207,7 @@ function MediaStep({
           Drop files here or click to browse
         </Text>
         <Text size="xs" c="var(--color-text-muted)" mt={4}>
-          Photos, videos, PDFs, documents
+          PDFs, Word, Excel, CSV, text files
         </Text>
       </Box>
 
@@ -329,10 +325,12 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
   const createSignal = api.signals.createManual.useMutation();
   const utils = api.useUtils();
 
-  const locationOptions = (locationsQuery.data ?? []).map((loc) => ({
-    value: loc.id,
-    label: loc.parent ? `${loc.name} (${loc.parent.name})` : loc.name,
-  }));
+  const locationOptions = (locationsQuery.data ?? [])
+    .filter((loc) => loc.level <= 2)
+    .map((loc) => ({
+      value: loc.id,
+      label: loc.parent ? `${loc.name} (${loc.parent.name})` : loc.name,
+    }));
 
   const sourceOptions = (sourcesQuery.data ?? []).map((s) => ({
     value: s.id,
