@@ -18,13 +18,13 @@ import {
   IconUpload,
   IconX,
   IconFile,
-  IconPhoto,
-  IconVideo,
   IconArrowRight,
   IconArrowLeft,
+  IconAlertTriangle,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
+import { sourceLabels, isManualSourceName } from "~/lib/constants/sources";
 
 type Step = "details" | "media" | "success";
 
@@ -33,7 +33,15 @@ interface SignalFormData {
   description: string;
   locationId: string;
   sourceId: string;
+  severity: string;
 }
+
+const SEVERITY_OPTIONS = [
+  { value: "2", label: "Low" },
+  { value: "3", label: "Medium" },
+  { value: "4", label: "High" },
+  { value: "5", label: "Critical" },
+];
 
 interface SelectedFile {
   file: File;
@@ -53,9 +61,7 @@ const LABEL_STYLE: React.CSSProperties = {
   color: "var(--color-text-muted)",
 };
 
-function fileIcon(file: File) {
-  if (file.type.startsWith("image/")) return <IconPhoto size={14} />;
-  if (file.type.startsWith("video/")) return <IconVideo size={14} />;
+function fileIcon(_file: File) {
   return <IconFile size={14} />;
 }
 
@@ -85,6 +91,7 @@ function DetailsStep({
   sourcesLoading: boolean;
 }) {
   const isValid = form.title.trim().length > 0 && form.sourceId.length > 0;
+  const isHighSeverity = form.severity === "4" || form.severity === "5";
 
   return (
     <Stack gap="md">
@@ -131,6 +138,26 @@ function DetailsStep({
         comboboxProps={{ zIndex: 1000 }}
         nothingFoundMessage="No matching location"
       />
+
+      <Box>
+        <Select
+          label={<Text style={LABEL_STYLE}>Severity</Text>}
+          placeholder="Select severity…"
+          data={SEVERITY_OPTIONS}
+          value={form.severity || null}
+          onChange={(v) => setForm((p) => ({ ...p, severity: v ?? "" }))}
+          clearable
+          comboboxProps={{ zIndex: 1000 }}
+        />
+        {isHighSeverity && (
+          <Box mt={8} style={{ display: "grid", gridTemplateColumns: "16px 1fr", gap: 6, alignItems: "center" }}>
+            <IconAlertTriangle size={14} style={{ color: "var(--color-warning)", justifySelf: "center" }} />
+            <Text size="xs" c="var(--color-warning)">
+              {form.severity === "5" ? "Critical" : "High"} severity signals may trigger an alert and notify team members subscribed to alerts at this level.
+            </Text>
+          </Box>
+        )}
+      </Box>
 
       <Group justify="flex-end" mt="xs">
         <Button
@@ -202,7 +229,7 @@ function MediaStep({
           ref={inputRef}
           type="file"
           multiple
-          accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
           style={{ display: "none" }}
           onChange={handleFileInput}
         />
@@ -211,7 +238,7 @@ function MediaStep({
           Drop files here or click to browse
         </Text>
         <Text size="xs" c="var(--color-text-muted)" mt={4}>
-          Photos, videos, PDFs, documents
+          PDFs, Word, Excel, CSV, text files
         </Text>
       </Box>
 
@@ -319,7 +346,7 @@ const STEP_TITLES: Record<Step, string> = {
 
 export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
   const [step, setStep] = useState<Step>("details");
-  const [form, setForm] = useState<SignalFormData>({ title: "", description: "", locationId: "", sourceId: "" });
+  const [form, setForm] = useState<SignalFormData>({ title: "", description: "", locationId: "", sourceId: "", severity: "" });
   const [files, setFiles] = useState<SelectedFile[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -329,14 +356,16 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
   const createSignal = api.signals.createManual.useMutation();
   const utils = api.useUtils();
 
-  const locationOptions = (locationsQuery.data ?? []).map((loc) => ({
-    value: loc.id,
-    label: loc.parent ? `${loc.name} (${loc.parent.name})` : loc.name,
-  }));
+  const locationOptions = (locationsQuery.data ?? [])
+    .filter((loc) => loc.level <= 2)
+    .map((loc) => ({
+      value: loc.id,
+      label: loc.parent ? `${loc.name} (${loc.parent.name})` : loc.name,
+    }));
 
   const sourceOptions = (sourcesQuery.data ?? []).map((s) => ({
     value: s.id,
-    label: s.name,
+    label: isManualSourceName(s.name) ? sourceLabels[s.name] : s.name,
   }));
 
   // Auto-select source: always prefer field_officer (trusted type required by backend)
@@ -345,15 +374,14 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
     const sources = sourcesQuery.data;
     const auto =
       sources.find((s) => s.name === "field_officer") ??
-      sources.find((s) => s.type === "field_officer") ??
-      sources.find((s) => /partner|government/i.test(s.type)) ??
+      sources.find((s) => /partner|government/i.test(s.name)) ??
       sources[0];
     if (auto) setForm((p) => ({ ...p, sourceId: auto.id }));
   }, [sourcesQuery.data, form.sourceId]);
 
   function reset() {
     setStep("details");
-    setForm({ title: "", description: "", locationId: "", sourceId: "" });
+    setForm({ title: "", description: "", locationId: "", sourceId: "", severity: "" });
     setFiles([]);
     setErrorMsg(null);
   }
@@ -399,6 +427,7 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
         title: form.title.trim(),
         description: form.description.trim() || form.title.trim(),
         locationId: form.locationId || undefined,
+        severity: form.severity ? parseInt(form.severity) : undefined,
         mediaUrls: mediaKeys.length > 0 ? mediaKeys : undefined,
       });
       void utils.signals.list.invalidate({ teamId: activeTeamId ?? undefined });
