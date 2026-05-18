@@ -5,32 +5,21 @@ import { useRouter } from "next/navigation";
 import { Drawer, Box, Group, Text, ActionIcon } from "@mantine/core";
 import { IconX, IconExternalLink, IconCopy, IconCheck } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { useTeam } from "~/providers/team-provider";
-import { EventDetailContent } from "./event-detail-content";
+import { SignalDetailContent } from "./signal-detail-content";
 
-interface EventDetailDrawerProps {
-  eventId: string | null;
+interface SignalDetailDrawerProps {
+  signalId: string | null;
   opened: boolean;
   onClose: () => void;
 }
 
-export function EventDetailDrawer({
-  eventId,
-  opened,
-  onClose,
-}: EventDetailDrawerProps) {
+export function SignalDetailDrawer({ signalId, opened, onClose }: SignalDetailDrawerProps) {
   const router = useRouter();
-  const { activeTeamId } = useTeam();
   const [urlCopied, setUrlCopied] = useState(false);
 
-  const eventQuery = api.events.get.useQuery(
-    { id: eventId! },
-    { enabled: eventId != null && opened },
-  );
-
-  const relatedQuery = api.events.related.useQuery(
-    { id: eventId!, teamId: activeTeamId },
-    { enabled: !!eventQuery.data && opened },
+  const signalQuery = api.signals.get.useQuery(
+    { id: signalId! },
+    { enabled: signalId != null && opened },
   );
 
   return (
@@ -45,7 +34,6 @@ export function EventDetailDrawer({
         content: { display: "flex", flexDirection: "column" },
       }}
     >
-      {/* Custom header */}
       <Box
         px={20}
         py={12}
@@ -57,7 +45,7 @@ export function EventDetailDrawer({
       >
         <Group justify="space-between">
           <Text fw={600} c="var(--color-text-primary)" size="sm">
-            Event Details
+            Signal Details
           </Text>
           <Group gap={8}>
             <ActionIcon
@@ -65,8 +53,8 @@ export function EventDetailDrawer({
               color={urlCopied ? "green" : "gray"}
               size="sm"
               onClick={() => {
-                if (eventId == null) return;
-                void navigator.clipboard.writeText(`${window.location.origin}/event/${eventId}`);
+                if (signalId == null) return;
+                void navigator.clipboard.writeText(`${window.location.origin}/signal/${signalId}`);
                 setUrlCopied(true);
                 setTimeout(() => setUrlCopied(false), 1500);
               }}
@@ -78,31 +66,23 @@ export function EventDetailDrawer({
               variant="subtle"
               color="gray"
               size="sm"
-              onClick={() => { if (eventId == null) return; router.push(`/event/${eventId}`); }}
+              onClick={() => { if (signalId == null) return; router.push(`/signal/${signalId}`); }}
               title="Open as full page"
             >
               <IconExternalLink size={16} />
             </ActionIcon>
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              size="sm"
-              onClick={onClose}
-            >
+            <ActionIcon variant="subtle" color="gray" size="sm" onClick={onClose}>
               <IconX size={16} />
             </ActionIcon>
           </Group>
         </Group>
       </Box>
 
-      {/* Scrollable content */}
       <Box style={{ flex: 1, overflowY: "auto" }}>
-        <EventDetailContent
-          event={eventQuery.data}
-          loading={eventQuery.isLoading}
+        <SignalDetailContent
+          signal={signalQuery.data}
+          loading={signalQuery.isLoading}
           mode="drawer"
-          relatedEvents={relatedQuery.data ?? []}
-          relatedLoading={relatedQuery.isLoading}
         />
       </Box>
     </Drawer>

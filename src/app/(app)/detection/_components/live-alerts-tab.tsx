@@ -71,6 +71,7 @@ interface LiveAlertsTabProps {
   activeSeverities?: Set<string>;
   expandedTypeCodes?: string[] | null;
   activeSources?: Set<string> | null;
+  onEventClick?: (eventId: string) => void;
 }
 
 export function LiveAlertsTab({
@@ -98,6 +99,7 @@ export function LiveAlertsTab({
   activeSeverities: activeSeveritiesProp,
   expandedTypeCodes: expandedTypeCodesProp,
   activeSources: activeSourcesProp,
+  onEventClick,
 }: LiveAlertsTabProps) {
   const [search, setSearch] = useState("");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
@@ -241,7 +243,7 @@ export function LiveAlertsTab({
               const displayTitle = alert.event.title ?? alert.event.description ?? alert.event.types[0] ?? "Untitled alert";
 
               return (
-                <Link key={alert.id} href={`/event/${alert.event.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                <Link key={alert.id} href={`/event/${alert.event.id}`} style={{ textDecoration: "none", color: "inherit" }} onClick={(e) => { if (onEventClick) { e.preventDefault(); onEventClick(alert.event.id); } }}>
                   <Box
                     px={16} py={12}
                     className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"

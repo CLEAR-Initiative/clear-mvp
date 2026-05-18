@@ -744,10 +744,9 @@ export function EventDetailContent({
           </Card>
         </Box>
 
-        {/* Right sidebar */}
-        {!isCompact && (
-          <Box style={{ width: 300, flexShrink: 0 }}>
-            <Stack gap={20}>
+        {/* Right sidebar — full column on page, stacked below on drawer */}
+        <Box style={isCompact ? { width: "100%" } : { width: 300, flexShrink: 0 }}>
+          <Stack gap={20}>
               {/* Location map */}
               <MinimapCard
                 markers={mapMarkers}
@@ -758,9 +757,11 @@ export function EventDetailContent({
               />
 
               {/* Was this event helpful? */}
-              <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-                <FeedbackSection entityId={event.id} entityType="event" />
-              </Card>
+              {!isCompact && (
+                <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+                  <FeedbackSection entityId={event.id} entityType="event" />
+                </Card>
+              )}
 
               {/* Actions */}
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
@@ -980,7 +981,6 @@ export function EventDetailContent({
               </Card>
             </Stack>
           </Box>
-        )}
       </Box>
 
     </Box>

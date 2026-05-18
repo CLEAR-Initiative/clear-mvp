@@ -71,6 +71,7 @@ interface EventsTabProps {
   activeSeverities?: Set<string>;
   expandedTypeCodes?: string[] | null;
   activeSources?: Set<string> | null;
+  onEventClick?: (eventId: string) => void;
 }
 
 export function EventsTab({
@@ -98,6 +99,7 @@ export function EventsTab({
   activeSeverities: activeSeveritiesProp,
   expandedTypeCodes: expandedTypeCodesProp,
   activeSources: activeSourcesProp,
+  onEventClick,
 }: EventsTabProps) {
   const [search, setSearch] = useState("");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
@@ -255,7 +257,7 @@ export function EventsTab({
               const isAlert = event.alerts.length > 0;
 
               return (
-                <Link key={event.id} href={`/event/${event.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                <Link key={event.id} href={`/event/${event.id}`} style={{ textDecoration: "none", color: "inherit" }} onClick={(e) => { if (onEventClick) { e.preventDefault(); onEventClick(event.id); } }}>
                   <Box
                     px={16} py={12}
                     className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"

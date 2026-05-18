@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { EventDetailDrawer } from "~/components/event-detail/event-detail-drawer";
+import { SignalDetailDrawer } from "~/components/signal-detail/signal-detail-drawer";
 import { Box, Tabs, Button, Group, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
 import { IconFilter } from "@tabler/icons-react";
 import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
@@ -80,6 +82,50 @@ function DetectionPageContent() {
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [selectedDate, setSelectedDate] = useState("Last 30 days");
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
+
+  const initialPanel = searchParams.get("panel");
+  const [drawerEventId, setDrawerEventId] = useState<string | null>(() =>
+    initialPanel?.startsWith("event-") ? initialPanel.slice("event-".length) : null
+  );
+  const [eventDrawerOpened, { open: openEventDrawer, close: closeEventDrawer }] = useDisclosure(
+    initialPanel?.startsWith("event-") ?? false
+  );
+  const [drawerSignalId, setDrawerSignalId] = useState<string | null>(() =>
+    initialPanel?.startsWith("signal-") ? initialPanel.slice("signal-".length) : null
+  );
+  const [signalDrawerOpened, { open: openSignalDrawer, close: closeSignalDrawer }] = useDisclosure(
+    initialPanel?.startsWith("signal-") ?? false
+  );
+
+  const handleEventClick = useCallback((id: string) => {
+    setDrawerEventId(id);
+    openEventDrawer();
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("panel", `event-${id}`);
+    router.replace(`/detection?${params.toString()}`, { scroll: false });
+  }, [openEventDrawer, router, searchParams]);
+
+  const handleSignalClick = useCallback((id: string) => {
+    setDrawerSignalId(id);
+    openSignalDrawer();
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("panel", `signal-${id}`);
+    router.replace(`/detection?${params.toString()}`, { scroll: false });
+  }, [openSignalDrawer, router, searchParams]);
+
+  const handleCloseEventDrawer = useCallback(() => {
+    closeEventDrawer();
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("panel");
+    router.replace(`/detection?${params.toString()}`, { scroll: false });
+  }, [closeEventDrawer, router, searchParams]);
+
+  const handleCloseSignalDrawer = useCallback(() => {
+    closeSignalDrawer();
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("panel");
+    router.replace(`/detection?${params.toString()}`, { scroll: false });
+  }, [closeSignalDrawer, router, searchParams]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [activeSeverities, setActiveSeverities] = useState<Set<string>>(new Set(["critical", "high", "medium", "low"]));
   const [selectedTypeFilters, setSelectedTypeFilters] = useState<string[]>([]);
@@ -608,6 +654,7 @@ function DetectionPageContent() {
 
         {activeTab === "live" && (
           <LiveAlertsTab
+            onEventClick={handleEventClick}
             alerts={alertsItems}
             alertsLoading={alertsQuery.isLoading}
             isFetchingMore={alertsQuery.isFetching && alertsAppending.current}
@@ -637,6 +684,7 @@ function DetectionPageContent() {
 
         {activeTab === "events" && (
           <EventsTab
+            onEventClick={handleEventClick}
             events={eventsItems}
             loading={eventsQuery.isLoading}
             isFetchingMore={eventsQuery.isFetching && eventsAppending.current}
@@ -666,6 +714,7 @@ function DetectionPageContent() {
 
         {activeTab === "signals" && (
           <SignalsTab
+            onSignalClick={handleSignalClick}
             signals={signalsItems}
             loading={signalsQuery.isLoading}
             isFetchingMore={signalsQuery.isFetching && signalsAppending.current}
@@ -703,6 +752,17 @@ function DetectionPageContent() {
       </Box>
 
       <CreateSignalModal opened={createModalOpened} onClose={closeCreateModal} />
+
+      <EventDetailDrawer
+        eventId={drawerEventId}
+        opened={eventDrawerOpened}
+        onClose={handleCloseEventDrawer}
+      />
+      <SignalDetailDrawer
+        signalId={drawerSignalId}
+        opened={signalDrawerOpened}
+        onClose={handleCloseSignalDrawer}
+      />
     </Box>
   );
 }

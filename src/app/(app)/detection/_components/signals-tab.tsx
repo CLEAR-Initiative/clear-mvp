@@ -78,6 +78,7 @@ interface SignalsTabProps {
   focusCountryGeometry?: unknown;
   activeSeverities?: Set<string>;
   activeSources?: Set<string> | null;
+  onSignalClick?: (signalId: string) => void;
 }
 
 export function SignalsTab({
@@ -104,6 +105,7 @@ export function SignalsTab({
   focusCountryGeometry,
   activeSeverities: activeSeveritiesProp,
   activeSources: activeSourcesProp,
+  onSignalClick,
 }: SignalsTabProps) {
   const [search, setSearch] = useState("");
   const activeSources = activeSourcesProp ?? null;
@@ -248,7 +250,7 @@ export function SignalsTab({
                   : "Untitled signal");
 
               return (
-                <Link key={signal.id} href={`/signal/${signal.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                <Link key={signal.id} href={`/signal/${signal.id}`} style={{ textDecoration: "none", color: "inherit" }} onClick={(e) => { if (onSignalClick) { e.preventDefault(); onSignalClick(signal.id); } }}>
                   <Box
                     px={16} py={12}
                     className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"
