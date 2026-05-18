@@ -1,13 +1,13 @@
-const MANUAL_SOURCE_TYPES = ["field_officer", "partner", "government"] as const;
+const MANUAL_SOURCE_NAMES = ["field_officer", "partner", "government"] as const;
 
-export type ManualSourceType = (typeof MANUAL_SOURCE_TYPES)[number];
+export type ManualSourceName = (typeof MANUAL_SOURCE_NAMES)[number];
 
-export const sourceLabels: Record<ManualSourceType, string> = {
+export const sourceLabels: Record<ManualSourceName, string> = {
   field_officer: "Field Team",
   partner: "Partner Organisation",
   government: "Government Source",
 };
 
-export function isManualSourceType(type: string): type is ManualSourceType {
-  return (MANUAL_SOURCE_TYPES as readonly string[]).includes(type);
+export function isManualSourceName(name: string): name is ManualSourceName {
+  return (MANUAL_SOURCE_NAMES as readonly string[]).includes(name);
 }

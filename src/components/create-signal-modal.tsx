@@ -24,7 +24,7 @@ import {
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
-import { sourceLabels, isManualSourceType } from "~/lib/constants/sources";
+import { sourceLabels, isManualSourceName } from "~/lib/constants/sources";
 
 type Step = "details" | "media" | "success";
 
@@ -363,12 +363,10 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
       label: loc.parent ? `${loc.name} (${loc.parent.name})` : loc.name,
     }));
 
-  const sourceOptions = (sourcesQuery.data ?? [])
-    .filter((s) => isManualSourceType(s.type))
-    .map((s) => ({
-      value: s.id,
-      label: isManualSourceType(s.type) ? sourceLabels[s.type] : s.name,
-    }));
+  const sourceOptions = (sourcesQuery.data ?? []).map((s) => ({
+    value: s.id,
+    label: isManualSourceName(s.name) ? sourceLabels[s.name] : s.name,
+  }));
 
   // Auto-select source: always prefer field_officer (trusted type required by backend)
   useEffect(() => {
@@ -376,8 +374,7 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
     const sources = sourcesQuery.data;
     const auto =
       sources.find((s) => s.name === "field_officer") ??
-      sources.find((s) => s.type === "field_officer") ??
-      sources.find((s) => /partner|government/i.test(s.type)) ??
+      sources.find((s) => /partner|government/i.test(s.name)) ??
       sources[0];
     if (auto) setForm((p) => ({ ...p, sourceId: auto.id }));
   }, [sourcesQuery.data, form.sourceId]);

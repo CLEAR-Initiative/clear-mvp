@@ -127,7 +127,8 @@ export const signalsRouter = createTRPCRouter({
       undefined,
       cookieHeaders(ctx),
     );
-    return data.dataSources;
+    const MANUAL_SOURCE_NAMES = new Set(["field_officer", "partner", "government"]);
+    return data.dataSources.filter((s) => MANUAL_SOURCE_NAMES.has(s.name));
   }),
 
   /** Pipeline-facing signal creation (used internally, not from UI) */
@@ -161,7 +162,7 @@ export const signalsRouter = createTRPCRouter({
       return data.createSignal;
     }),
 
-  /** Manual signal creation from UI — triggers pipeline processing + auto-escalation */
+  /** Manual signal creation from UI - triggers pipeline processing + auto-escalation */
   createManual: protectedProcedure
     .input(
       z.object({
