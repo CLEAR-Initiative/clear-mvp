@@ -20,9 +20,11 @@ import {
   IconFile,
   IconArrowRight,
   IconArrowLeft,
+  IconAlertTriangle,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
+import { sourceLabels, isManualSourceType } from "~/lib/constants/sources";
 
 type Step = "details" | "media" | "success";
 
@@ -31,7 +33,15 @@ interface SignalFormData {
   description: string;
   locationId: string;
   sourceId: string;
+  severity: string;
 }
+
+const SEVERITY_OPTIONS = [
+  { value: "2", label: "Low" },
+  { value: "3", label: "Medium" },
+  { value: "4", label: "High" },
+  { value: "5", label: "Critical" },
+];
 
 interface SelectedFile {
   file: File;
@@ -81,6 +91,7 @@ function DetailsStep({
   sourcesLoading: boolean;
 }) {
   const isValid = form.title.trim().length > 0 && form.sourceId.length > 0;
+  const isHighSeverity = form.severity === "4" || form.severity === "5";
 
   return (
     <Stack gap="md">
@@ -127,6 +138,26 @@ function DetailsStep({
         comboboxProps={{ zIndex: 1000 }}
         nothingFoundMessage="No matching location"
       />
+
+      <Box>
+        <Select
+          label={<Text style={LABEL_STYLE}>Severity</Text>}
+          placeholder="Select severity…"
+          data={SEVERITY_OPTIONS}
+          value={form.severity || null}
+          onChange={(v) => setForm((p) => ({ ...p, severity: v ?? "" }))}
+          clearable
+          comboboxProps={{ zIndex: 1000 }}
+        />
+        {isHighSeverity && (
+          <Box mt={8} style={{ display: "grid", gridTemplateColumns: "16px 1fr", gap: 6, alignItems: "center" }}>
+            <IconAlertTriangle size={14} style={{ color: "var(--color-warning)", justifySelf: "center" }} />
+            <Text size="xs" c="var(--color-warning)">
+              {form.severity === "5" ? "Critical" : "High"} severity signals may trigger an alert and notify team members subscribed to alerts at this level.
+            </Text>
+          </Box>
+        )}
+      </Box>
 
       <Group justify="flex-end" mt="xs">
         <Button
@@ -315,7 +346,7 @@ const STEP_TITLES: Record<Step, string> = {
 
 export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
   const [step, setStep] = useState<Step>("details");
-  const [form, setForm] = useState<SignalFormData>({ title: "", description: "", locationId: "", sourceId: "" });
+  const [form, setForm] = useState<SignalFormData>({ title: "", description: "", locationId: "", sourceId: "", severity: "" });
   const [files, setFiles] = useState<SelectedFile[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -332,10 +363,12 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
       label: loc.parent ? `${loc.name} (${loc.parent.name})` : loc.name,
     }));
 
-  const sourceOptions = (sourcesQuery.data ?? []).map((s) => ({
-    value: s.id,
-    label: s.name,
-  }));
+  const sourceOptions = (sourcesQuery.data ?? [])
+    .filter((s) => isManualSourceType(s.type))
+    .map((s) => ({
+      value: s.id,
+      label: isManualSourceType(s.type) ? sourceLabels[s.type] : s.name,
+    }));
 
   // Auto-select source: always prefer field_officer (trusted type required by backend)
   useEffect(() => {
@@ -351,7 +384,7 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
 
   function reset() {
     setStep("details");
-    setForm({ title: "", description: "", locationId: "", sourceId: "" });
+    setForm({ title: "", description: "", locationId: "", sourceId: "", severity: "" });
     setFiles([]);
     setErrorMsg(null);
   }
@@ -397,6 +430,7 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
         title: form.title.trim(),
         description: form.description.trim() || form.title.trim(),
         locationId: form.locationId || undefined,
+        severity: form.severity ? parseInt(form.severity) : undefined,
         mediaUrls: mediaKeys.length > 0 ? mediaKeys : undefined,
       });
       void utils.signals.list.invalidate({ teamId: activeTeamId ?? undefined });
