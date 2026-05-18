@@ -38,10 +38,12 @@ export default withPWA({
     maximumFileSizeToCacheInBytes: 500 * 1024,
 
     // 2. Exclude file types that don't need to be cached on install.
+    //    `exclude` is the workbox GenerateSWPlugin name (note: the original
+    //    shadowwalker/next-pwa uses `buildExcludes` — different library).
     //    These regexes are checked against the manifest entry path BEFORE
     //    hash computation, so excluded files never load their content into
     //    memory.
-    buildExcludes: [
+    exclude: [
       /\.map$/,                       // source maps — large, dev-only
       /\.txt$/,                       // text manifests etc.
       /chunks\/pages\/_error/,        // Next.js error pages
