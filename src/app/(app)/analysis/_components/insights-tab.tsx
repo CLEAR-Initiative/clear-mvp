@@ -40,7 +40,7 @@ export function InsightsTab() {
                 key={insight.title}
                 p={16}
                 style={{
-                  background: "#F9FAFB",
+                  background: "var(--color-bg-muted)",
                   borderLeft: `3px solid ${insight.borderColor}`,
                 }}
               >
@@ -55,10 +55,10 @@ export function InsightsTab() {
                     {insight.type}
                   </Text>
                 </Group>
-                <Text fw={600} c="#171717" mb={8}>
+                <Text fw={600} c="var(--color-text-primary)" mb={8}>
                   {insight.title}
                 </Text>
-                <Text size="sm" c="#525252" style={{ lineHeight: 1.5 }}>
+                <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }}>
                   {insight.description}
                 </Text>
               </Box>
@@ -92,7 +92,7 @@ export function InsightsTab() {
                     color={row.completeness >= 80 ? "green" : "yellow"}
                     style={{ flex: 1 }}
                   />
-                  <Text c="#525252" style={{ fontSize: 13 }}>
+                  <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
                     {row.completeness}%
                   </Text>
                 </Group>
@@ -100,7 +100,7 @@ export function InsightsTab() {
               <Table.Td>
                 <Group gap={6}>
                   <IconPointFilled size={10} color={row.timelinessColor} />
-                  <Text c="#525252" style={{ fontSize: 13 }}>
+                  <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
                     {row.timeliness}
                   </Text>
                 </Group>
@@ -111,7 +111,7 @@ export function InsightsTab() {
                 </Text>
               </Table.Td>
               <Table.Td>
-                <Text c="#525252" style={{ fontSize: 13 }}>
+                <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
                   {row.lastUpdate}
                 </Text>
               </Table.Td>

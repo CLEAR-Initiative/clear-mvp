@@ -179,7 +179,7 @@ export function ExecutiveSummary({
                     px={10}
                     py={8}
                     style={{
-                      background: "white",
+                      background: "var(--color-bg-white)",
                       border: "1px solid var(--color-border)",
                       textAlign: "center",
                       minWidth: 80,
@@ -238,7 +238,7 @@ export function ExecutiveSummary({
             <Text
               size="xs"
               fw={600}
-              c="#7C3AED"
+              c="var(--color-ai)"
               tt="uppercase"
               style={{ letterSpacing: "0.05em" }}
             >
@@ -254,7 +254,7 @@ export function ExecutiveSummary({
           {llmMutation.isPending ? (
             <Group gap={8}>
               <Loader size={16} />
-              <Text size="sm" c="#737373">
+              <Text size="sm" c="var(--color-text-muted)">
                 Generating comprehensive analysis from {allAlerts.length} active
                 alerts...
               </Text>
@@ -262,7 +262,7 @@ export function ExecutiveSummary({
           ) : generatedAnalysis ? (
             <Text
               size="sm"
-              c="#525252"
+              c="var(--color-text-secondary)"
               lh={1.65}
               style={{ fontSize: 13, whiteSpace: "pre-line" }}
             >

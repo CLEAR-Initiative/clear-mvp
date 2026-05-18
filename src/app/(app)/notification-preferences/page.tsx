@@ -33,10 +33,10 @@ export default function NotificationPreferencesPage() {
     <Box p={32} style={{ maxWidth: 600 }}>
       <Group justify="space-between" mb={24}>
         <Box>
-          <Text size="xl" fw={700} c="#171717">
+          <Text size="xl" fw={700} c="var(--color-text-primary)">
             Notification Preferences
           </Text>
-          <Text size="sm" c="#737373">
+          <Text size="sm" c="var(--color-text-muted)">
             Manage how you receive alerts and updates
           </Text>
         </Box>
@@ -62,7 +62,7 @@ export default function NotificationPreferencesPage() {
         <Group justify="space-between">
           <Box>
             <Text size="sm" fw={500}>Enable Email Alerts</Text>
-            <Text size="xs" c="#737373">
+            <Text size="xs" c="var(--color-text-muted)">
               Receive crisis alerts and system notifications via email
             </Text>
           </Box>
@@ -86,7 +86,7 @@ export default function NotificationPreferencesPage() {
           <Group justify="space-between">
             <Box>
               <Text size="sm" fw={500}>Crisis Alerts</Text>
-              <Text size="xs" c="#737373">New alerts and severity changes</Text>
+              <Text size="xs" c="var(--color-text-muted)">New alerts and severity changes</Text>
             </Box>
             <Switch
               checked={internalAlerts}
@@ -97,7 +97,7 @@ export default function NotificationPreferencesPage() {
           <Group justify="space-between">
             <Box>
               <Text size="sm" fw={500}>System Notifications</Text>
-              <Text size="xs" c="#737373">Pipeline status, task assignments</Text>
+              <Text size="xs" c="var(--color-text-muted)">Pipeline status, task assignments</Text>
             </Box>
             <Switch
               checked={systemNotifications}
@@ -108,7 +108,7 @@ export default function NotificationPreferencesPage() {
           <Group justify="space-between">
             <Box>
               <Text size="sm" fw={500}>Updates & Reports</Text>
-              <Text size="xs" c="#737373">Weekly summaries and analysis reports</Text>
+              <Text size="xs" c="var(--color-text-muted)">Weekly summaries and analysis reports</Text>
             </Box>
             <Switch
               checked={updates}
@@ -131,7 +131,7 @@ export default function NotificationPreferencesPage() {
           <Group justify="space-between">
             <Box>
               <Text size="sm" fw={500}>Desktop Notifications</Text>
-              <Text size="xs" c="#737373">Show browser push notifications</Text>
+              <Text size="xs" c="var(--color-text-muted)">Show browser push notifications</Text>
             </Box>
             <Switch
               checked={desktopNotifications}
@@ -142,7 +142,7 @@ export default function NotificationPreferencesPage() {
           <Group justify="space-between">
             <Box>
               <Text size="sm" fw={500}>Sound Alerts</Text>
-              <Text size="xs" c="#737373">Play sound for critical alerts</Text>
+              <Text size="xs" c="var(--color-text-muted)">Play sound for critical alerts</Text>
             </Box>
             <Switch
               checked={soundAlerts}
@@ -164,7 +164,7 @@ export default function NotificationPreferencesPage() {
         <Group justify="space-between">
           <Box>
             <Text size="sm" fw={500}>Enable Quiet Hours</Text>
-            <Text size="xs" c="#737373">
+            <Text size="xs" c="var(--color-text-muted)">
               Suppress non-critical notifications during set hours
             </Text>
           </Box>

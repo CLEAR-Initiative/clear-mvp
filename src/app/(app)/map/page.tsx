@@ -16,9 +16,7 @@ import { useTeam } from "~/providers/team-provider";
 import {
   type CrisisMarker,
   alertsToMarkers,
-  alertsToRegions,
   eventsToMarkers,
-  eventsToRegions,
   crisesToMarkers,
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
@@ -38,12 +36,14 @@ const LABEL_STYLE = { fontSize: 10, letterSpacing: "0.05em" } as const;
 const INPUT_STYLE = {
   fontWeight: 600,
   fontSize: 13,
-  border: "1px solid #E5E5E5",
+  background: "var(--color-bg-muted)",
+  border: "1px solid var(--color-border-dark)",
+  boxShadow: "var(--shadow-sm)",
 } as const;
 
 function FilterLabel({ children }: { children: string }) {
   return (
-    <Text size="xs" c="#737373" tt="uppercase" style={LABEL_STYLE}>
+    <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={LABEL_STYLE}>
       {children}
     </Text>
   );
@@ -54,7 +54,7 @@ export default function MapPage() {
   const [dataView, setDataView] = useState<DataView>("alert");
 
   /* ---- Fetch data ---- */
-  const { activeTeamId } = useTeam();
+  const { activeTeamId, activeTeam } = useTeam();
   const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
 
   const alertsQuery = api.alerts.getAlerts.useQuery(
@@ -84,10 +84,8 @@ export default function MapPage() {
   }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
 
   const allRegions = useMemo(() => {
-    if (dataView === "alert") return alertsToRegions(alertsQuery.data?.alerts ?? []);
-    if (dataView === "event") return eventsToRegions(eventsQuery.data?.events ?? []);
     return [];
-  }, [dataView, alertsQuery.data, eventsQuery.data]);
+  }, []);
 
 
 
@@ -106,8 +104,22 @@ export default function MapPage() {
     return codes;
   }, [selectedTypes, hierarchy]);
 
-  const [selectedCountry, setSelectedCountry] = useState("All Countries");
+  // TODO: hardcoded to Sudan for the current single-team deployment.
+  // When more teams join, remove this default and rely solely on the
+  // useEffect below which sets the country from activeTeam.locations.
+  // Requires teams to have a level-0 location configured in the DB.
+  const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
+
+  // Pre-select the team's country when the active team loads.
+  useEffect(() => {
+    const countryLoc = activeTeam?.locations.find((l) => l.level === 0);
+    if (countryLoc) {
+      setSelectedCountry(countryLoc.name);
+      setSelectedRegion("All Regions");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTeam?.id]);
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(
     null,
   );
@@ -281,8 +293,9 @@ export default function MapPage() {
         px={16}
         py={12}
         style={{
-          background:
-            "linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(255,255,255,0))",
+          background: "linear-gradient(to bottom, var(--map-overlay-from) 60%, var(--map-overlay-to))",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",

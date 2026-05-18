@@ -16,7 +16,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <NavSidebar />
             <Box
               component="main"
-              style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", background: "#FAFAFA" }}
+              style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", background: "var(--color-bg-primary)" }}
               pt={{ base: 56, sm: 0 }}
               pb={{ base: 72, sm: 0 }}
             >

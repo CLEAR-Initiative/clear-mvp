@@ -53,10 +53,10 @@ function AcceptInviteForm() {
   if (inviteQuery.isLoading) {
     return (
       <CenteredBox>
-        <Card p="xl" style={{ border: "1px solid #E5E5E5" }}>
+        <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
           <Stack align="center" gap={16}>
             <Loader size="sm" />
-            <Text size="sm" c="#737373">Loading invitation...</Text>
+            <Text size="sm" c="var(--color-text-muted)">Loading invitation...</Text>
           </Stack>
         </Card>
       </CenteredBox>
@@ -129,12 +129,12 @@ function AcceptInviteForm() {
 
   return (
     <CenteredBox>
-      <Card p="xl" style={{ border: "1px solid #E5E5E5" }}>
+      <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
         <Stack align="center" gap={4} mb={24}>
           <Text fw={700} size="xl" c="#E85D3D" style={{ letterSpacing: "-0.025em" }}>
             CLEAR
           </Text>
-          <Text size="lg" fw={600} c="#171717">
+          <Text size="lg" fw={600} c="var(--color-text-primary)">
             Accept Invitation
           </Text>
         </Stack>
@@ -142,15 +142,15 @@ function AcceptInviteForm() {
         {/* Invitation details */}
         <Box p={16} mb={20} style={{ backgroundColor: "#F5F5F5", borderRadius: 8 }}>
           <Stack gap={8}>
-            <Text size="sm" c="#525252">
+            <Text size="sm" c="var(--color-text-secondary)">
               You&apos;ve been invited to join:
             </Text>
-            <Text size="md" fw={600} c="#171717">
+            <Text size="md" fw={600} c="var(--color-text-primary)">
               {invite.organisationName}
             </Text>
             {invite.teamName && (
-              <Text size="sm" c="#525252">
-                Team: <Text component="span" fw={600} c="#171717">{invite.teamName}</Text>
+              <Text size="sm" c="var(--color-text-secondary)">
+                Team: <Text component="span" fw={600} c="var(--color-text-primary)">{invite.teamName}</Text>
               </Text>
             )}
             <Badge size="sm" variant="light" color="blue" w="fit-content">
@@ -178,7 +178,7 @@ function AcceptInviteForm() {
               autoFocus
               styles={{
                 label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                input: { borderColor: "#E5E5E5", fontSize: 14 },
+                input: { borderColor: "var(--color-border)", fontSize: 14 },
               }}
             />
 
@@ -188,7 +188,7 @@ function AcceptInviteForm() {
               disabled
               styles={{
                 label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                input: { borderColor: "#E5E5E5", fontSize: 14, color: "#737373" },
+                input: { borderColor: "var(--color-border)", fontSize: 14, color: "#737373" },
               }}
             />
 
@@ -201,7 +201,7 @@ function AcceptInviteForm() {
               autoComplete="new-password"
               styles={{
                 label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                input: { borderColor: "#E5E5E5", fontSize: 14 },
+                input: { borderColor: "var(--color-border)", fontSize: 14 },
               }}
             />
 
@@ -214,7 +214,7 @@ function AcceptInviteForm() {
               autoComplete="new-password"
               styles={{
                 label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                input: { borderColor: "#E5E5E5", fontSize: 14 },
+                input: { borderColor: "var(--color-border)", fontSize: 14 },
               }}
             />
 
@@ -244,7 +244,7 @@ function CenteredBox({ children }: { children: React.ReactNode }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#FAFAFA",
+        backgroundColor: "var(--color-bg-primary)",
       }}
     >
       <Box w={420}>{children}</Box>
@@ -255,7 +255,7 @@ function CenteredBox({ children }: { children: React.ReactNode }) {
 function ErrorState({ message, showLogin }: { message: string; showLogin?: boolean }) {
   return (
     <CenteredBox>
-      <Card p="xl" style={{ border: "1px solid #E5E5E5" }}>
+      <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
         <Stack align="center" gap={16}>
           <Text fw={700} size="xl" c="#E85D3D">CLEAR</Text>
           <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light" styles={{ message: { fontSize: 13 } }}>

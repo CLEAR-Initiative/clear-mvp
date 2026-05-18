@@ -143,20 +143,20 @@ export interface GqlCrisis {
 
 /* ─── Severity helpers ─── */
 
-/** Map severity (1-5) to a UI severity bucket. */
-export function mapSeverity(severity: number | null | undefined): "critical" | "high" | "medium" | "low" {
-  const s = severity ?? 0;
-  if (s >= 5) return "critical";
-  if (s >= 4) return "high";
-  if (s >= 3) return "medium";
+/** Map severity (1-5) to a UI severity bucket. Null/undefined = pipeline hasn't set it yet. */
+export function mapSeverity(severity: number | null | undefined): "critical" | "high" | "medium" | "low" | "unknown" {
+  if (severity == null) return "unknown";
+  if (severity >= 5) return "critical";
+  if (severity >= 4) return "high";
+  if (severity >= 3) return "medium";
   return "low";
 }
 
 /** Map severity (1-5) to a display colour. */
 export function severityColor(severity: number | null | undefined): string {
-  const s = severity ?? 0;
-  if (s >= 5) return "#DC2626";
-  if (s >= 4) return "#D97706";
-  if (s >= 3) return "#F59E0B";
+  if (severity == null) return "#A3A3A3";
+  if (severity >= 5) return "#DC2626";
+  if (severity >= 4) return "#D97706";
+  if (severity >= 3) return "#F59E0B";
   return "#059669";
 }

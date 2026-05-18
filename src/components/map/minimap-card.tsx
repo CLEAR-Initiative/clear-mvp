@@ -10,7 +10,7 @@ import type { MapMarker } from "~/components/map/crisis-map";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box style={{ width: "100%", aspectRatio: "4/3", background: "#F5F5F5" }} /> },
+  { ssr: false, loading: () => <Box style={{ width: "100%", aspectRatio: "4/3", background: "var(--color-bg-muted)" }} /> },
 );
 
 type BoundaryLevel = "none" | "A1" | "A2";
@@ -26,9 +26,11 @@ interface MinimapCardProps {
   center: [number, number];
   sudanGeometry: unknown | undefined;
   sudanId: string | null;
+  /** Geometry of the specific location to highlight (state/district). Replaces the full-Sudan highlight. */
+  locationGeometry?: unknown;
 }
 
-export function MinimapCard({ markers, center, sudanGeometry, sudanId }: MinimapCardProps) {
+export function MinimapCard({ markers, center, sudanGeometry, sudanId, locationGeometry }: MinimapCardProps) {
   const [layersOpen, setLayersOpen] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("none");
   const [showPopulation, setShowPopulation] = useState(false);
@@ -58,18 +60,18 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId }: Minimap
   );
 
   return (
-    <Box p={0} style={{ border: "1px solid #E5E5E5", background: "#fff" }}>
+    <Box p={0} style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}>
       {/* Header */}
-      <Box px={16} py={10} className="border-b border-[#E5E5E5]">
+      <Box px={16} py={10} style={{ borderBottom: "1px solid var(--color-border)" }}>
         <Group justify="space-between">
           <Group gap={6}>
-            <IconMapPin size={14} color="#525252" />
-            <Text fw={600} c="#171717" style={{ fontSize: 13 }}>Location</Text>
+            <IconMapPin size={14} color="var(--color-text-secondary)" />
+            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>Location</Text>
           </Group>
           <Link href="/map" style={{ textDecoration: "none" }}>
             <Group gap={4} className="hover:opacity-70">
-              <IconMap size={12} color="#E85D3D" />
-              <Text size="xs" c="#E85D3D" fw={500}>Full map</Text>
+              <IconMap size={12} color="var(--color-accent)" />
+              <Text size="xs" c="var(--color-accent)" fw={500}>Full map</Text>
             </Group>
           </Link>
         </Group>
@@ -86,6 +88,7 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId }: Minimap
           focusCountryName="Sudan"
           focusCountryGeometry={sudanGeometry}
           fitBoundsOnFocus={false}
+          fitBoundsGeometry={locationGeometry}
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
           populationBoundaries={populationBoundaries}
@@ -99,9 +102,9 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId }: Minimap
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: 26, height: 26,
-              border: "1px solid #E5E5E5", borderRadius: 4,
-              background: layersOpen ? "#DBEAFE" : "#fff",
-              color: layersOpen ? "#2563EB" : "#525252",
+              border: "1px solid var(--color-border)", borderRadius: 4,
+              background: layersOpen ? "var(--color-info-light)" : "var(--color-bg-muted)",
+              color: layersOpen ? "var(--color-info)" : "var(--color-text-secondary)",
               cursor: "pointer", padding: 0,
               boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
             }}
@@ -114,14 +117,14 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId }: Minimap
               style={{
                 position: "absolute", top: 30, left: 0,
                 width: 180,
-                background: "#fff",
-                border: "1px solid #E5E5E5",
+                background: "var(--color-bg-white)",
+                border: "1px solid var(--color-border)",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
                 zIndex: 20,
                 padding: "10px 12px",
               }}
             >
-              <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 9, letterSpacing: "0.06em", opacity: 0.7 }} mb={6}>
+              <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em", opacity: 0.7 }} mb={6}>
                 Boundaries
               </Text>
               <Select
@@ -133,7 +136,7 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId }: Minimap
                 styles={{ input: { fontWeight: 600, fontSize: 12 } }}
               />
               <Box
-                style={{ borderTop: "1px solid #F0F0F0", paddingTop: 8 }}
+                style={{ borderTop: "1px solid var(--color-border)", paddingTop: 8 }}
               >
                 <Group
                   gap={8}
@@ -148,7 +151,7 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId }: Minimap
                     styles={{ input: { cursor: "pointer" } }}
                     onClick={(e) => e.stopPropagation()}
                   />
-                  <Text size="xs" c="#525252" style={{ fontSize: 12 }}>Population</Text>
+                  <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>Population</Text>
                 </Group>
               </Box>
             </Box>

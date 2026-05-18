@@ -298,7 +298,7 @@ export function NavSidebar() {
               flexShrink:     0,
               marginTop:      5,
             }}
-            className="hover:bg-[#F5F5F5] transition-colors"
+            className="hover:bg-[var(--color-bg-muted)] transition-colors"
           >
             {collapsed ? <IconChevronRight size={16} /> : <IconChevronLeft size={16} />}
           </UnstyledButton>
@@ -362,7 +362,7 @@ export function NavSidebar() {
                     textDecoration: "none",
                     color:          isActive ? colors.accent : colors.textSecondary,
                   }}
-                  className={cn(!isDisabled && !isActive && "hover:bg-[#F5F5F5] hover:!text-[#171717]")}
+                  className={cn(!isDisabled && !isActive && "hover:bg-[var(--color-bg-muted)] hover:!text-[var(--color-text-primary)]")}
                   component="div"
                 >
                   <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
@@ -435,7 +435,7 @@ export function NavSidebar() {
                 transition:     "background 150ms",
                 marginBottom:   spacingPx[1],
               }}
-              className="hover:bg-[#F5F5F5] transition-colors"
+              className="hover:bg-[var(--color-bg-muted)] transition-colors"
             >
               <IconSpeakerphone size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
               <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Feedback</Text>
@@ -464,7 +464,7 @@ export function NavSidebar() {
                 transition:     "background 150ms",
                 marginBottom:   spacingPx[1],
               }}
-              className="hover:bg-[#F5F5F5] transition-colors"
+              className="hover:bg-[var(--color-bg-muted)] transition-colors"
             >
               <IconShieldCog size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
               <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Admin</Text>
@@ -494,7 +494,7 @@ export function NavSidebar() {
                 color:          isActive ? colors.accent : colors.textSecondary,
                 transition:     "background 150ms",
               }}
-              className="hover:bg-[#F5F5F5] transition-colors"
+              className="hover:bg-[var(--color-bg-muted)] transition-colors"
             >
               <IconSettings size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
               <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Settings</Text>
@@ -520,7 +520,7 @@ export function NavSidebar() {
                     flexShrink:     0,
                     transition:     "background 150ms",
                   }}
-                  className="hover:bg-[#F5F5F5] transition-colors"
+                  className="hover:bg-[var(--color-bg-muted)] transition-colors"
                 >
                   <IconDoorExit size={18} />
                 </UnstyledButton>
@@ -538,7 +538,7 @@ export function NavSidebar() {
                   flexShrink:     0,
                   transition:     "background 150ms",
                 }}
-                className="hover:bg-[#F5F5F5] transition-colors"
+                className="hover:bg-[var(--color-bg-muted)] transition-colors"
               >
                 <IconDoorExit size={18} />
               </UnstyledButton>

@@ -8,10 +8,10 @@ interface MapMarkerDetailProps {
 }
 
 const severityColors: Record<string, { bg: string; color: string }> = {
-  critical: { bg: "#FEE2E2", color: "#DC2626" },
-  high: { bg: "#FEF3C7", color: "#D97706" },
-  medium: { bg: "#FEF9C3", color: "#A16207" },
-  low: { bg: "#DCFCE7", color: "#059669" },
+  critical: { bg: "var(--color-critical-light)", color: "#DC2626" },
+  high:     { bg: "var(--color-warning-light)",  color: "#D97706" },
+  medium:   { bg: "var(--color-warning-light)",  color: "#D97706" },
+  low:      { bg: "var(--color-success-light)",  color: "#059669" },
 };
 
 export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
@@ -19,11 +19,11 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
 
   return (
     <Box
-      className="absolute z-10 bg-white border border-[#E5E5E5]"
+      className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
       style={{ top: 80, right: 16, width: 320, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
     >
       {/* Header */}
-      <Group justify="space-between" px={16} py={12} className="border-b border-[#E5E5E5]">
+      <Group justify="space-between" px={16} py={12} className="border-b border-[var(--color-border)]">
         <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
           {marker.title}
         </Text>
@@ -36,7 +36,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
         {/* Severity */}
         <Group justify="space-between" mb={12}>
           <Box>
-            <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10 }}>Severity</Text>
+            <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ fontSize: 10 }}>Severity</Text>
             <Badge
               size="sm"
               mt={4}
@@ -47,7 +47,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
           </Box>
           {marker.shockTypeName && (
             <Box style={{ textAlign: "right" }}>
-              <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10 }}>Type</Text>
+              <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ fontSize: 10 }}>Type</Text>
               <Text fw={600} size="sm" mt={4}>{marker.shockTypeName}</Text>
             </Box>
           )}
@@ -55,7 +55,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
 
         {/* Description */}
         {marker.description && (
-          <Text size="xs" c="#525252" mb={12} pb={8} className="border-b border-[#F5F5F5]">
+          <Text size="xs" c="var(--color-text-secondary)" mb={12} pb={8} className="border-b border-[var(--color-border)]">
             {marker.description}
           </Text>
         )}
@@ -93,7 +93,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
                 ? `/signal/${marker.eventId}`
                 : `/event/${marker.eventId}`
             }
-            style={{ background: "#171717" }}
+            style={{ background: "var(--color-text-primary)" }}
           >
             View Details
           </Button>
@@ -106,8 +106,8 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
 
 function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <Group justify="space-between" py={6} className="border-b border-[#F5F5F5] last:border-b-0">
-      <Text size="xs" c="#737373">{label}</Text>
+    <Group justify="space-between" py={6} className="border-b border-[var(--color-border)] last:border-b-0">
+      <Text size="xs" c="var(--color-text-muted)">{label}</Text>
       <Text
         size="xs"
         fw={500}

@@ -1,0 +1,45 @@
+# Local toolchain output that has no business in the image and slows the
+# build context upload.
+
+# Dependencies + build artifacts (rebuilt inside the image)
+node_modules
+.next
+.swc
+tsconfig.tsbuildinfo
+
+# Source-control + editor
+.git
+.gitignore
+.vscode
+.idea
+
+# OS + crash files
+.DS_Store
+*.log
+
+# Secrets — env files belong at runtime via compose `env_file:`, never baked in
+.env
+.env.*
+!.env.example
+
+# Local-only / CI / vendor configs
+.github
+.husky
+.vercel
+README.md
+detection-prototype.html
+
+# Lockfiles for other package managers (we use bun)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Next-PWA generated artifacts (regenerated during build)
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+public/workbox-*.js
+
+# Docker bootstrap files themselves
+Dockerfile
+.dockerignore

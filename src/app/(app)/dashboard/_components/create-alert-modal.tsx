@@ -43,11 +43,11 @@ interface CreateAlertModalProps {
 /* ========== Severity Options ========== */
 
 const SEVERITY_OPTIONS = [
-  { value: "1", label: "1 — Low" },
-  { value: "2", label: "2 — Moderate" },
-  { value: "3", label: "3 — High" },
-  { value: "4", label: "4 — Very High" },
-  { value: "5", label: "5 — Critical" },
+  { value: "1", label: "1 - Low" },
+  { value: "2", label: "2 - Moderate" },
+  { value: "3", label: "3 - High" },
+  { value: "4", label: "4 - Very High" },
+  { value: "5", label: "5 - Critical" },
 ];
 
 const LABEL_STYLE = {
@@ -55,7 +55,7 @@ const LABEL_STYLE = {
   fontWeight: 600,
   textTransform: "uppercase" as const,
   letterSpacing: "0.5px",
-  color: "#737373",
+  color: "var(--color-text-muted)",
 };
 
 /* ========== Helpers ========== */
@@ -64,7 +64,7 @@ function eventDisplayTitle(event: GqlEvent): string {
   if (event.title) return event.title;
   if (event.description) return event.description;
   const loc = (event.generalLocation ?? event.originLocation)?.name;
-  return loc ? `${event.types[0] ?? "Event"} — ${loc}` : (event.types[0] ?? "Event");
+  return loc ? `${event.types[0] ?? "Event"} - ${loc}` : (event.types[0] ?? "Event");
 }
 
 function eventLocations(event: GqlEvent): string {
@@ -101,7 +101,7 @@ function EventSelectionStep({
 
   return (
     <Stack gap="md">
-      <Text fw={600} size="sm" c="#525252">
+      <Text fw={600} size="sm" c="var(--color-text-secondary)">
         Select events to include in the alert
       </Text>
 
@@ -124,8 +124,8 @@ function EventSelectionStep({
                 onClick={() => onToggle(event.id)}
                 className="cursor-pointer transition-colors"
                 style={{
-                  border: isSelected ? "2px solid #E85D3D" : "1px solid #E5E5E5",
-                  background: isSelected ? "#FEF2F0" : "#F9FAFB",
+                  border: isSelected ? "2px solid var(--color-accent)" : "1px solid var(--color-border)",
+                  background: isSelected ? "var(--color-accent-light)" : "var(--color-bg-muted)",
                 }}
               >
                 <Group gap={10} wrap="nowrap">
@@ -140,7 +140,7 @@ function EventSelectionStep({
                     <Text fw={600} style={{ fontSize: 13 }} lineClamp={1}>
                       {eventDisplayTitle(event)}
                     </Text>
-                    <Text c="#737373" style={{ fontSize: 11 }}>
+                    <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
                       {eventLocations(event)} &bull; {event.signals.length} signal{event.signals.length !== 1 ? "s" : ""}
                     </Text>
                   </Box>
@@ -256,7 +256,7 @@ function CreateEventSubFlow({
         </Button>
       </Group>
 
-      <Text fw={600} size="sm" c="#525252">
+      <Text fw={600} size="sm" c="var(--color-text-secondary)">
         Select signals to group into a new event
       </Text>
 
@@ -285,8 +285,8 @@ function CreateEventSubFlow({
                 onClick={() => toggleSignal(signal.id)}
                 className="cursor-pointer transition-colors"
                 style={{
-                  border: isSelected ? "2px solid #E85D3D" : "1px solid #E5E5E5",
-                  background: isSelected ? "#FEF2F0" : "#F9FAFB",
+                  border: isSelected ? "2px solid var(--color-accent)" : "1px solid var(--color-border)",
+                  background: isSelected ? "var(--color-accent-light)" : "var(--color-bg-muted)",
                 }}
               >
                 <Group gap={8} wrap="nowrap">
@@ -301,7 +301,7 @@ function CreateEventSubFlow({
                     <Text fw={500} style={{ fontSize: 12 }} lineClamp={1}>
                       {signalDisplayTitle(signal)}
                     </Text>
-                    <Text c="#737373" style={{ fontSize: 10 }}>
+                    <Text c="var(--color-text-muted)" style={{ fontSize: 10 }}>
                       Source: {signal.source.name}
                     </Text>
                   </Box>
@@ -590,9 +590,9 @@ export function CreateAlertModal({ opened, onClose }: CreateAlertModalProps) {
   }
 
   const stepTitles: Record<Step, string> = {
-    "select-events": "Create Alert — Select Events",
-    "create-event": "Create Alert — New Event",
-    "alert-details": "Create Alert — Details",
+    "select-events": "Create Alert - Select Events",
+    "create-event": "Create Alert - New Event",
+    "alert-details": "Create Alert - Details",
   };
 
   return (

@@ -58,11 +58,11 @@ export default function CashPage() {
         <Group justify="space-between">
           <Group gap={12}>
             <IconAlertCircle size={18} color="#C2410C" />
-            <Text size="sm" c="#171717">
-              <Text span fw={700} c="#C2410C">Active Crisis:</Text> Cholera Outbreak - Somali Region {"\u2022"} Jijiga, Kebridehar
+            <Text size="sm" c="var(--color-text-primary)">
+              <Text span fw={700} c="var(--color-warning)">Active Crisis:</Text> Cholera Outbreak - Somali Region {"\u2022"} Jijiga, Kebridehar
             </Text>
           </Group>
-          <Text size="xs" fw={600} px={10} py={4} style={{ background: "white", border: "1px solid #E5E5E5", color: "#525252" }}>
+          <Text size="xs" fw={600} px={10} py={4} style={{ background: "var(--color-bg-white)", border: "1px solid var(--color-border)", color: "#525252" }}>
             46h intervention window
           </Text>
         </Group>
@@ -75,9 +75,9 @@ export default function CashPage() {
         {/* Map Section Header */}
         <Group gap={8} mb={4}>
           <IconMapPin size={18} color="#171717" />
-          <Text size="sm" fw={600} c="#171717">Cash Assistance Mapping & Assessment</Text>
+          <Text size="sm" fw={600} c="var(--color-text-primary)">Cash Assistance Mapping & Assessment</Text>
         </Group>
-        <Text size="xs" c="#A3A3A3" mb={16}>
+        <Text size="xs" c="var(--color-text-muted)" mb={16}>
           Click on location cards to view detailed population demographics, market analysis, and field coordinator inputs
         </Text>
 
@@ -95,22 +95,22 @@ export default function CashPage() {
         </Group>
 
         {/* Data Sources */}
-        <Text size="sm" fw={600} c="#171717" mb={12}>Data Sources</Text>
+        <Text size="sm" fw={600} c="var(--color-text-primary)" mb={12}>Data Sources</Text>
         <SimpleGrid cols={2} spacing={16}>
           {[
             { title: "Rapid Assessment", org: "NRC/UNHCR", date: "10/21/2025", pct: 68, color: "#2563EB" },
             { title: "Census Projection", org: "National Statistics", date: "2024 Baseline", pct: 100, color: "#059669" },
           ].map((src) => (
-            <Card key={src.title} p={16} style={{ border: "1px solid #E5E5E5" }}>
+            <Card key={src.title} p={16} style={{ border: "1px solid var(--color-border)" }}>
               <Group justify="space-between" mb={8}>
                 <Box>
-                  <Text fw={600} c="#171717" style={{ fontSize: 14 }}>{src.title}</Text>
-                  <Text size="xs" c="#A3A3A3">{src.org}</Text>
-                  <Text size="xs" c="#A3A3A3">{src.date}</Text>
+                  <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>{src.title}</Text>
+                  <Text size="xs" c="var(--color-text-muted)">{src.org}</Text>
+                  <Text size="xs" c="var(--color-text-muted)">{src.date}</Text>
                 </Box>
                 <Text size="sm" fw={600} style={{ fontFamily: "monospace" }} c={src.color}>{src.pct}%</Text>
               </Group>
-              <Box style={{ height: 4, background: "#F5F5F5" }}>
+              <Box style={{ height: 4, background: "var(--color-bg-muted)" }}>
                 <Box style={{ height: "100%", width: `${src.pct}%`, background: src.color }} />
               </Box>
             </Card>

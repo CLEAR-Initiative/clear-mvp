@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -13,25 +13,22 @@ import {
   TextInput,
   Menu,
   ActionIcon,
-  Divider,
-  Stack,
 } from "@mantine/core";
 import {
   IconSearch,
   IconSortDescending,
   IconX,
+  IconRefresh,
+  IconMapPin,
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
-import { getDisasterPills } from "~/lib/disaster-types";
-import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
-import { api } from "~/trpc/react";
+import { getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
-import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
+import type { MapMarker } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
-import { useDisasterTypes } from "~/hooks/use-disaster-types";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
 import { formatTimeAgo } from "~/lib/utils";
 
@@ -40,9 +37,9 @@ const CrisisMap = dynamic(
   { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
 );
 
-type SortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
+export type AlertSortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
 
-const SORT_LABELS: Record<SortOrder, string> = {
+export const ALERT_SORT_LABELS: Record<AlertSortOrder, string> = {
   "sev-desc": "Severity: High to Low",
   "sev-asc":  "Severity: Low to High",
   "newest":   "Newest first",
@@ -52,8 +49,15 @@ const SORT_LABELS: Record<SortOrder, string> = {
 interface LiveAlertsTabProps {
   alerts: GqlAlert[];
   alertsLoading: boolean;
+  isFetchingMore: boolean;
+  hasMore: boolean;
+  totalCount: number;
+  newCount: number;
+  sortOrder: AlertSortOrder;
+  onSortChange: (order: AlertSortOrder) => void;
+  onLoadMore: () => void;
+  onRefresh: () => void;
   mapMarkers: MapMarker[];
-  mapRegions?: MapRegion[];
   mapCenter: [number, number];
   mapZoom: number;
   fitBoundsGeometry?: unknown;
@@ -72,8 +76,15 @@ interface LiveAlertsTabProps {
 export function LiveAlertsTab({
   alerts,
   alertsLoading,
+  isFetchingMore,
+  hasMore,
+  totalCount = 0,
+  newCount = 0,
+  sortOrder,
+  onSortChange,
+  onLoadMore,
+  onRefresh,
   mapMarkers,
-  mapRegions,
   mapCenter,
   mapZoom,
   fitBoundsGeometry,
@@ -88,20 +99,37 @@ export function LiveAlertsTab({
   expandedTypeCodes: expandedTypeCodesProp,
   activeSources: activeSourcesProp,
 }: LiveAlertsTabProps) {
-  const { getTypeNames } = useDisasterTypes();
   const [search, setSearch] = useState("");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("sev-desc");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
   const [showPopulation, setShowPopulation] = useState(false);
 
   const activeSeverities = activeSeveritiesProp ?? new Set(["critical", "high", "medium", "low"]);
   const activeSources = activeSourcesProp ?? null;
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const container = scrollContainerRef.current;
+    if (!sentinel || !container) return;
 
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting && hasMore && !isFetchingMore) {
+          onLoadMore();
+        }
+      },
+      { root: container, threshold: 0.1 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, isFetchingMore, onLoadMore]);
+
+  // Client-side filtering only - sort is server-side.
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let result = alerts.filter((a) => {
+    return alerts.filter((a) => {
       const sev = mapSeverity(a.event.severity);
       if (!activeSeverities.has(sev)) return false;
       if (expandedTypeCodesProp && !a.event.types.some((t) => expandedTypeCodesProp.includes(t))) return false;
@@ -113,46 +141,39 @@ export function LiveAlertsTab({
       }
       return true;
     });
+  }, [alerts, search, activeSeverities, expandedTypeCodesProp, activeSources]);
 
-    result = [...result].sort((a, b) => {
-      if (sortOrder === "sev-desc") return b.event.rank - a.event.rank;
-      if (sortOrder === "sev-asc")  return a.event.rank - b.event.rank;
-      if (sortOrder === "newest")
-        return new Date(b.event.firstSignalCreatedAt).getTime() - new Date(a.event.firstSignalCreatedAt).getTime();
-      return new Date(a.event.firstSignalCreatedAt).getTime() - new Date(b.event.firstSignalCreatedAt).getTime();
-    });
-
-    return result;
-  }, [alerts, search, activeSeverities, expandedTypeCodesProp, activeSources, sortOrder]);
-
-  const listCountLabel =
-    filtered.length === alerts.length
-      ? String(alerts.length)
-      : `${filtered.length}/${alerts.length}`;
+  const countLabel = search || activeSeverities.size < 4 || activeSources !== null || expandedTypeCodesProp
+    ? `${filtered.length} / ${totalCount.toLocaleString()}`
+    : totalCount.toLocaleString();
 
   return (
     <Box style={{ display: "flex", gap: 24 }}>
-      {/* Left: Alert list */}
       <Box style={{ flex: 1, minWidth: 0 }}>
-        {/* Toolbar row */}
+        {newCount > 0 && (
+          <Group
+            gap={8} mb={8} px={12} py={6}
+            style={{ background: "var(--color-accent-light)", border: "1px solid var(--color-accent)", borderRadius: 6, cursor: "pointer" }}
+            onClick={onRefresh}
+          >
+            <IconRefresh size={13} color="var(--color-accent)" />
+            <Text size="xs" fw={600} c="var(--color-accent)">
+              {newCount} new alert{newCount !== 1 ? "s" : ""} - refresh
+            </Text>
+          </Group>
+        )}
+
         <Group gap={8} mb={12} align="center" style={{ minHeight: 32 }}>
           <Group gap={6} style={{ flexShrink: 0 }}>
             <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Alerts</Text>
-            <Badge
-              size="xs"
-              style={{
-                background: "var(--color-bg-muted)",
-                color: "var(--color-text-secondary)",
-                fontWeight: 600,
-              }}
-            >
-              {listCountLabel}
+            <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>
+              {alertsLoading ? "..." : countLabel}
             </Badge>
             {alertsLoading && <Loader size="xs" />}
           </Group>
 
           <TextInput
-            placeholder="Search alerts..."
+            placeholder="Search current page..."
             value={search}
             onChange={(e) => setSearch(e.currentTarget.value)}
             leftSection={<IconSearch size={14} color="var(--color-text-muted)" />}
@@ -172,16 +193,11 @@ export function LiveAlertsTab({
             <Menu.Target>
               <button
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 30,
-                  height: 30,
-                  borderRadius: 6,
-                  border: `1px solid ${sortOrder !== "sev-desc" ? "var(--color-accent)" : "var(--color-border)"}`,
-                  background: "var(--color-bg-white)",
-                  cursor: "pointer",
-                  color: sortOrder !== "sev-desc" ? "var(--color-accent)" : "var(--color-text-secondary)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 30, height: 30, borderRadius: 6,
+                  border: `1px solid ${sortOrder !== "newest" ? "var(--color-accent)" : "var(--color-border)"}`,
+                  background: "var(--color-bg-white)", cursor: "pointer",
+                  color: sortOrder !== "newest" ? "var(--color-accent)" : "var(--color-text-secondary)",
                   flexShrink: 0,
                 }}
               >
@@ -189,10 +205,10 @@ export function LiveAlertsTab({
               </button>
             </Menu.Target>
             <Menu.Dropdown>
-              {(Object.entries(SORT_LABELS) as [SortOrder, string][]).map(([key, label]) => (
+              {(Object.entries(ALERT_SORT_LABELS) as [AlertSortOrder, string][]).map(([key, label]) => (
                 <Menu.Item
                   key={key}
-                  onClick={() => setSortOrder(key)}
+                  onClick={() => onSortChange(key)}
                   style={{
                     fontSize: 12,
                     fontWeight: sortOrder === key ? 600 : 400,
@@ -206,9 +222,8 @@ export function LiveAlertsTab({
           </Menu>
         </Group>
 
-        {/* Alert list - no card header */}
         <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-          <Box style={{ maxHeight: 524, overflowY: "auto" }}>
+          <Box ref={scrollContainerRef} style={{ maxHeight: 524, overflowY: "auto" }}>
             {filtered.length === 0 && !alertsLoading && (
               <Box px={16} py={32} style={{ textAlign: "center" }}>
                 <Text c="var(--color-text-muted)" size="sm">
@@ -216,6 +231,7 @@ export function LiveAlertsTab({
                 </Text>
               </Box>
             )}
+
             {filtered.map((alert) => {
               const sev = mapSeverity(alert.event.severity);
               const sevCol = severityColor(alert.event.severity);
@@ -225,15 +241,10 @@ export function LiveAlertsTab({
               const displayTitle = alert.event.title ?? alert.event.description ?? alert.event.types[0] ?? "Untitled alert";
 
               return (
-                <Link
-                  key={alert.id}
-                  href={`/event/${alert.event.id}`}
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
+                <Link key={alert.id} href={`/event/${alert.event.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                   <Box
-                    px={16}
-                    py={12}
-                    className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
+                    px={16} py={12}
+                    className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"
                     style={{ display: "flex", gap: 12, ...getCardProps(alert.event.id).style }}
                     onMouseEnter={getCardProps(alert.event.id).onMouseEnter}
                     onMouseLeave={getCardProps(alert.event.id).onMouseLeave}
@@ -242,44 +253,23 @@ export function LiveAlertsTab({
                     <Box style={{ flex: 1, minWidth: 0 }}>
                       <Group justify="space-between" mb={4}>
                         <Group gap={6}>
-                          <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 700 }}>
-                            {severityLabels[sev]}
-                          </Badge>
-                          {sourceName && (
-                            <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>
-                              {sourceName}
-                            </Badge>
-                          )}
+                          <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 700 }}>{severityLabels[sev]}</Badge>
+                          {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
                         </Group>
-                        <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(alert.event.firstSignalCreatedAt)}</Text>
+                        <Text size="xs" c="var(--color-text-muted)" title={`First signal: ${formatTimeAgo(alert.event.firstSignalCreatedAt)}`}>
+                          {formatTimeAgo(alert.event.lastSignalCreatedAt)}
+                        </Text>
                       </Group>
-                      <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>
-                        {displayTitle}
-                      </Text>
+                      <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>{displayTitle}</Text>
                       <Group gap={12}>
                         {resolveLocationName(location) && (
-                          <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
+                          <Group gap={3} style={{ flexShrink: 0 }}>
+                            <IconMapPin size={11} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+                            <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
+                          </Group>
                         )}
-                        {alert.event.types.length > 0 && (
-                          <Group gap={4}>{getTypeNames(alert.event.types).map((name) => (
-                            <Badge key={name} size="xs" variant="light" color="violet" style={{ fontSize: 9 }}>{name}</Badge>
-                          ))}</Group>
-                        )}
-                        {getDisasterPills(alert.event.types).map((pill) => (
-                          <span
-                            key={pill.label}
-                            style={{
-                              display: "inline-block",
-                              padding: "1px 7px",
-                              borderRadius: 999,
-                              fontSize: 10,
-                              fontWeight: 600,
-                              color: pill.color,
-                              background: pill.bg,
-                              letterSpacing: "0.01em",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
+                        {[...getDisasterPills(alert.event.types), ...getDisasterL2Pills(alert.event.types)].map((pill) => (
+                          <span key={pill.label} style={{ display: "inline-block", padding: "1px 7px", borderRadius: 999, fontSize: 10, fontWeight: 600, color: pill.color, background: pill.bg, letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
                             {pill.label}
                           </span>
                         ))}
@@ -289,11 +279,24 @@ export function LiveAlertsTab({
                 </Link>
               );
             })}
+
+            {hasMore && filtered.length > 0 && <div ref={sentinelRef} style={{ height: 1 }} />}
+
+            {isFetchingMore && (
+              <Box py={12} style={{ display: "flex", justifyContent: "center" }}>
+                <Loader size="xs" />
+              </Box>
+            )}
+
+            {!hasMore && alerts.length > 0 && (
+              <Box py={10} style={{ textAlign: "center" }}>
+                <Text size="xs" c="var(--color-text-muted)">All {totalCount.toLocaleString()} alerts loaded</Text>
+              </Box>
+            )}
           </Box>
         </Card>
       </Box>
 
-      {/* Right: Crisis Map */}
       <Box style={{ width: 480, flexShrink: 0 }}>
         <Group mb={12} justify="space-between" align="center" style={{ minHeight: 32 }}>
           <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Crisis Map</Text>
@@ -305,7 +308,6 @@ export function LiveAlertsTab({
           <Box style={{ height: 524, position: "relative" }}>
             <CrisisMap
               markers={mapMarkers}
-              regions={mapRegions}
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"

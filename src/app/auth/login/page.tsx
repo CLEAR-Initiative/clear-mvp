@@ -78,20 +78,20 @@ function LoginForm() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#FAFAFA",
+        backgroundColor: "var(--color-bg-primary)",
       }}
     >
       <Box w={400}>
-        <Card p="xl" style={{ border: "1px solid #E5E5E5" }}>
+        <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
           {/* Branding */}
           <Stack align="center" gap={4} mb={24}>
             <Text fw={700} size="xl" c="#E85D3D" style={{ letterSpacing: "-0.025em" }}>
               CLEAR
             </Text>
-            <Text size="lg" fw={600} c="#171717">
+            <Text size="lg" fw={600} c="var(--color-text-primary)">
               Sign In
             </Text>
-            <Text size="sm" c="#737373">
+            <Text size="sm" c="var(--color-text-muted)">
               Crisis Early Warning & Response
             </Text>
           </Stack>
@@ -122,8 +122,8 @@ function LoginForm() {
                 autoComplete="email"
                 autoFocus
                 styles={{
-                  label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                  input: { borderColor: "#E5E5E5", fontSize: 14 },
+                  label: { fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 4 },
+                  input: { borderColor: "var(--color-border)", fontSize: 14 },
                 }}
               />
 
@@ -135,8 +135,8 @@ function LoginForm() {
                 required
                 autoComplete="current-password"
                 styles={{
-                  label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                  input: { borderColor: "#E5E5E5", fontSize: 14 },
+                  label: { fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 4 },
+                  input: { borderColor: "var(--color-border)", fontSize: 14 },
                 }}
               />
 
@@ -144,7 +144,7 @@ function LoginForm() {
                 <Checkbox
                   label="Remember me"
                   size="sm"
-                  styles={{ label: { fontSize: 13, color: "#525252" } }}
+                  styles={{ label: { fontSize: 13, color: "var(--color-text-secondary)" } }}
                 />
                 <Anchor
                   component={Link}
@@ -173,8 +173,8 @@ function LoginForm() {
 
           {/* Demo Users */}
           <Divider my={20} label="Demo Users" labelPosition="center" />
-          <Box p={12} style={{ backgroundColor: "#F5F5F5" }}>
-            <Text size="xs" c="#737373" mb={8}>
+          <Box p={12} style={{ backgroundColor: "var(--color-bg-muted)" }}>
+            <Text size="xs" c="var(--color-text-muted)" mb={8}>
               Available demo accounts (all use password: password123):
             </Text>
             <SimpleGrid cols={1} spacing={4}>
@@ -183,7 +183,7 @@ function LoginForm() {
                   key={user.email}
                   size="xs"
                   fw={600}
-                  c="#171717"
+                  c="var(--color-text-primary)"
                   style={{ cursor: "pointer" }}
                   onClick={() => setEmail(user.email)}
                 >
@@ -195,7 +195,7 @@ function LoginForm() {
         </Card>
 
         {/* Footer */}
-        <Text ta="center" size="xs" c="#737373" mt={16}>
+        <Text ta="center" size="xs" c="var(--color-text-muted)" mt={16}>
           Norwegian Refugee Council &bull; Early Warning and Alert System for Sudan
         </Text>
       </Box>

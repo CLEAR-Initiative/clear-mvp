@@ -25,7 +25,7 @@ import { CardSection, DataTable, Table, SeverityBadge } from "~/components/ui";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 
-type SeverityKey = "critical" | "high" | "medium" | "low";
+type SeverityKey = "critical" | "high" | "medium" | "low" | "unknown";
 type SortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
 
 const SORT_LABELS: Record<SortOrder, string> = {

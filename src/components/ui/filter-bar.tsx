@@ -10,12 +10,12 @@ const LABEL_STYLE = {
 const INPUT_STYLE = {
   fontWeight: 600,
   fontSize: 13,
-  border: "1px solid #E5E5E5",
+  border: "1px solid var(--color-border)",
 };
 
 function FilterLabel({ children }: { children: string }) {
   return (
-    <Text size="xs" c="#737373" tt="uppercase" style={LABEL_STYLE}>
+    <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={LABEL_STYLE}>
       {children}
     </Text>
   );

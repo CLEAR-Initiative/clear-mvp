@@ -56,7 +56,7 @@ function loadMapboxGL(): Promise<any> {
 
 /* ========== Timeline ========== */
 
-// TODO(demo): months, range, and hasEvent flags are hardcoded — replace with dynamic date range
+// TODO(demo): months, range, and hasEvent flags are hardcoded - replace with dynamic date range
 // derived from the active crisis data or a configurable time window
 const timelineMonths = [
   { label: "Sep", hasEvent: false },
@@ -90,7 +90,7 @@ const severityColors: Record<string, string> = {
 const typeIcons: Record<string, string> = {
   // Crisis: alert circle with exclamation (Tabler IconAlertCircle)
   crisis: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
-  // Conflict: crossed swords — simplified as an X with pointed ends
+  // Conflict: crossed swords - simplified as an X with pointed ends
   conflict: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/><line x1="5" y1="4" x2="6" y2="7"/><line x1="18" y1="4" x2="19" y2="7"/></svg>`,
   // Famine: grain stalks
   famine: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-9"/><path d="M9 8a3 3 0 0 0 3 3"/><path d="M15 8a3 3 0 0 1-3 3"/><path d="M9 4a3 3 0 0 0 3 3"/><path d="M15 4a3 3 0 0 1-3 3"/><path d="M6 20a3 3 0 0 0 3-3"/><path d="M18 20a3 3 0 0 1-3-3"/></svg>`,
@@ -364,7 +364,7 @@ export function MapSection({
 
   if (!MAPBOX_TOKEN) {
     return (
-      <Box className="relative h-[50vh] sm:min-h-0 sm:h-full flex-1 bg-[#F5F5F5] flex items-center justify-center text-sm text-[#737373]">
+      <Box className="relative h-[50vh] sm:min-h-0 sm:h-full flex-1 bg-[var(--color-bg-muted)] flex items-center justify-center text-sm text-[#737373]">
         Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env
       </Box>
     );
@@ -378,7 +378,7 @@ export function MapSection({
         px={{ base: 12, sm: 24 }}
         py={{ base: 8, sm: 16 }}
         style={{
-          background: "linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(255,255,255,0))",
+          background: "linear-gradient(to bottom, color-mix(in srgb, var(--color-bg-white) 98%, transparent), transparent)",
         }}
       >
         <Group gap={8} wrap="wrap" style={{ flex: 1 }} className="pointer-events-auto">
@@ -389,12 +389,12 @@ export function MapSection({
             data={countries}
             style={{ minWidth: 120 }}
             styles={{
-              input: { fontWeight: 600, fontSize: 13, border: "1px solid #E5E5E5", background: "white", color: "#171717", height: 30 },
-              dropdown: { background: "white", border: "1px solid #E5E5E5" },
+              input: { fontWeight: 600, fontSize: 13, border: "1px solid var(--color-border)", background: "var(--color-bg-white)", color: "#171717", height: 30 },
+              dropdown: { background: "var(--color-bg-white)", border: "1px solid var(--color-border)" },
               option: { color: "#171717", fontSize: 13 },
             }}
             label={
-              <Text size="xs" c="#737373" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 10 }}>
+              <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 10 }}>
                 Country
               </Text>
             }
@@ -406,25 +406,25 @@ export function MapSection({
             data={regionOptions}
             style={{ minWidth: 120 }}
             styles={{
-              input: { fontWeight: 600, fontSize: 13, border: "1px solid #E5E5E5", background: "white", color: "#171717", height: 30 },
-              dropdown: { background: "white", border: "1px solid #E5E5E5" },
+              input: { fontWeight: 600, fontSize: 13, border: "1px solid var(--color-border)", background: "var(--color-bg-white)", color: "#171717", height: 30 },
+              dropdown: { background: "var(--color-bg-white)", border: "1px solid var(--color-border)" },
               option: { color: "#171717", fontSize: 13 },
             }}
             label={
-              <Text size="xs" c="#737373" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 10 }}>
+              <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 10 }}>
                 Region
               </Text>
             }
           />
           <Box>
-            <Text size="xs" c="#737373" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 10, marginBottom: 5 }}>
+            <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 10, marginBottom: 5 }}>
               Date
             </Text>
             <Box
               style={{
                 height: 30,
-                background: "white",
-                border: "1px solid #E5E5E5",
+                background: "var(--color-bg-white)",
+                border: "1px solid var(--color-border)",
                 borderRadius: 4,
                 padding: "0 12px",
                 fontSize: 13,
@@ -436,13 +436,13 @@ export function MapSection({
                 minWidth: 100,
               }}
             >
-              Feb 2026 {/* TODO(demo): hardcoded date — tie to activeMonth state */}
+              Feb 2026 {/* TODO(demo): hardcoded date - tie to activeMonth state */}
             </Box>
           </Box>
         </Group>
 
         {/* View toggle */}
-        <Group gap={0} className="bg-white border border-[#E5E5E5] overflow-hidden pointer-events-auto" visibleFrom="sm">
+        <Group gap={0} className="bg-[var(--color-bg-white)] border border-[var(--color-border)] overflow-hidden pointer-events-auto" visibleFrom="sm">
           {views.map((view) => (
             <UnstyledButton
               key={view.key}
@@ -450,12 +450,12 @@ export function MapSection({
               px={10}
               py={8}
               className={cn(
-                "text-[11px] font-semibold cursor-pointer flex items-center gap-1.5 transition-all border-r border-[#E5E5E5] last:border-r-0",
+                "text-[11px] font-semibold cursor-pointer flex items-center gap-1.5 transition-all border-r border-[var(--color-border)] last:border-r-0",
                 activeView === view.key
                   ? view.key === "nrc-global"
                     ? "bg-[#E85D3D] text-white"
                     : "bg-[#171717] text-white"
-                  : "bg-transparent text-[#171717] hover:bg-[#F5F5F5]",
+                  : "bg-transparent text-[#171717] hover:bg-[var(--color-bg-muted)]",
               )}
             >
               {view.label}
@@ -467,13 +467,13 @@ export function MapSection({
       {/* Map */}
       <div ref={mapContainer} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
 
-      {/* Legend — anchored just above the timeline, grows upward when open */}
+      {/* Legend - anchored just above the timeline, grows upward when open */}
       <Box
-        className="absolute z-10 bg-white border border-[#E5E5E5]"
+        className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
         style={{ bottom: 104, left: 16, minWidth: 168 }}
         visibleFrom="sm"
       >
-        {/* Header — always visible, click to collapse/expand */}
+        {/* Header - always visible, click to collapse/expand */}
         <UnstyledButton
           onClick={() => setLegendOpen((o) => !o)}
           style={{
@@ -482,10 +482,10 @@ export function MapSection({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            borderBottom: legendOpen ? "1px solid #E5E5E5" : "none",
+            borderBottom: legendOpen ? "1px solid var(--color-border)" : "none",
           }}
         >
-          <Text fw={700} tt="uppercase" c="#737373" style={{ letterSpacing: "0.05em", fontSize: 10 }}>
+          <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ letterSpacing: "0.05em", fontSize: 10 }}>
             {activeView === "nrc-global" ? "NRC Regions" : "Legend"}
           </Text>
           {legendOpen ? <IconChevronDown size={12} color="#737373" /> : <IconChevronUp size={12} color="#737373" />}
@@ -514,7 +514,7 @@ export function MapSection({
               </Stack>
             ) : (
               <Stack gap={3}>
-                <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 9, letterSpacing: "0.05em", marginBottom: 2 }}>Severity</Text>
+                <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.05em", marginBottom: 2 }}>Severity</Text>
                 {[
                   { label: "Critical", color: "#DC2626" },
                   { label: "High",     color: "#F59E0B" },
@@ -527,7 +527,7 @@ export function MapSection({
                   </Group>
                 ))}
 
-                <Text fw={700} tt="uppercase" c="#737373" style={{ fontSize: 9, letterSpacing: "0.05em", marginTop: 6, marginBottom: 2 }}>Event Type</Text>
+                <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.05em", marginTop: 6, marginBottom: 2 }}>Event Type</Text>
                 {(
                   [
                     { IconComponent: IconAlertCircle, label: "Crisis",   type: "crisis"   },
@@ -568,12 +568,12 @@ export function MapSection({
 
       {/* Timeline */}
       <Box
-        className="absolute z-10 bg-white border border-[#E5E5E5]"
+        className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
         style={{ bottom: 16, left: 16, right: 16, padding: 16 }}
         visibleFrom="sm"
       >
         <Group justify="space-between" mb={12}>
-          <Text fw={700} tt="uppercase" c="#737373" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
+          <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
             Timeline
           </Text>
           <Group gap={8}>
@@ -589,7 +589,7 @@ export function MapSection({
           </Group>
         </Group>
         <Group justify="space-between" className="relative" h={40}>
-          <Box className="absolute top-1/2 left-0 right-0 h-1 bg-[#E5E5E5] -translate-y-1/2" />
+          <Box className="absolute top-1/2 left-0 right-0 h-1 bg-[var(--color-border)] -translate-y-1/2" />
           {timelineMonths.map((month, i) => (
             <Stack
               key={month.label}

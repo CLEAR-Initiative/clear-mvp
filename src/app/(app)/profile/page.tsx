@@ -30,7 +30,9 @@ import {
   IconX,
   IconLanguage,
   IconClock,
+  IconPalette,
 } from "@tabler/icons-react";
+import { ColorSchemeToggle } from "~/components/ui";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { COUNTRIES_BY_DIAL_LENGTH, COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
@@ -353,6 +355,14 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                 Preferences
               </Text>
             </Group>
+            <Box px={4} mb={16}>
+              <Group gap={6} mb={8}>
+                <IconPalette size={14} color="var(--color-text-muted)" />
+                <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>Appearance</Text>
+              </Group>
+              <ColorSchemeToggle />
+            </Box>
+            <Divider color="var(--color-border)" mb={16} />
             <Group gap={0} grow>
               <Box px={4}>
                 <Group gap={6} mb={6}>
