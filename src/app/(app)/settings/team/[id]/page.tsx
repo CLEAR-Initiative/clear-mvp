@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ActionIcon,
@@ -26,6 +26,13 @@ export default function TeamSettingsPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const teamQuery = api.teams.team.useQuery({ id });
+  // Fetch the parent org so we can offer its members as a dropdown for "Add
+  // member" - only fires once we know the org id from the team query.
+  const orgId = teamQuery.data?.organisation.id;
+  const orgQuery = api.teams.organisation.useQuery(
+    { id: orgId ?? "" },
+    { enabled: !!orgId },
+  );
   const updateTeam = api.teams.updateTeam.useMutation();
   const deleteTeam = api.teams.deleteTeam.useMutation();
   const addMember = api.teams.addTeamMember.useMutation();
@@ -47,6 +54,18 @@ export default function TeamSettingsPage() {
   const [newMemberRole, setNewMemberRole] = useState("analyst");
 
   const team = teamQuery.data;
+
+  // Org members not yet in the team - Mantine Select shape.
+  const addableMembers = useMemo(() => {
+    const orgMembers = orgQuery.data?.members ?? [];
+    const inTeam = new Set(team?.members?.map((m) => m.user.id) ?? []);
+    return orgMembers
+      .filter((m) => !inTeam.has(m.user.id))
+      .map((m) => ({
+        value: m.user.id,
+        label: m.user.name ? `${m.user.name} (${m.user.email})` : m.user.email,
+      }));
+  }, [orgQuery.data, team?.members]);
 
   if (teamQuery.isLoading) {
     return (
@@ -167,7 +186,7 @@ export default function TeamSettingsPage() {
             <Stack gap={4}>
               <Text><Text span fw={600}>Name:</Text> {team.name}</Text>
               <Text><Text span fw={600}>Slug:</Text> {team.slug}</Text>
-              <Text><Text span fw={600}>Description:</Text> {team.description ?? "—"}</Text>
+              <Text><Text span fw={600}>Description:</Text> {team.description ?? "-"}</Text>
             </Stack>
           )}
         </Box>
@@ -213,14 +232,27 @@ export default function TeamSettingsPage() {
               ))}
             </Table.Tbody>
           </Table>
-          <Group mt="sm" gap="sm">
-            <TextInput
-              placeholder="User ID or email"
-              value={newMemberId}
-              onChange={(e) => setNewMemberId(e.currentTarget.value)}
+          <Group mt="sm" gap="sm" align="flex-end">
+            <Select
+              label="Add member"
+              placeholder={
+                orgQuery.isLoading
+                  ? "Loading…"
+                  : addableMembers.length === 0
+                    ? "All org members already in this team"
+                    : "Select a user"
+              }
+              data={addableMembers}
+              value={newMemberId || null}
+              onChange={(v) => setNewMemberId(v ?? "")}
+              disabled={orgQuery.isLoading || addableMembers.length === 0}
               size="xs"
+              searchable
+              nothingFoundMessage="No matching users"
+              w={280}
             />
             <Select
+              label="Role"
               data={["lead", "analyst", "viewer"]}
               value={newMemberRole}
               onChange={(v) => setNewMemberRole(v ?? "analyst")}
@@ -232,6 +264,7 @@ export default function TeamSettingsPage() {
               leftSection={<IconPlus size={14} />}
               onClick={handleAddMember}
               loading={addMember.isPending}
+              disabled={!newMemberId}
             >
               Add
             </Button>

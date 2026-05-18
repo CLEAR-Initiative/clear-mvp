@@ -25,10 +25,10 @@ const inputStyles = {
   label: {
     fontSize: 13,
     fontWeight: 500,
-    color: "#171717",
+    color: "var(--color-text-primary)",
     marginBottom: 4,
   },
-  input: { borderColor: "#E5E5E5" },
+  input: { borderColor: "var(--color-border)" },
 };
 
 export default function ProfileEditPage() {
@@ -37,7 +37,7 @@ export default function ProfileEditPage() {
   if (isLoading) {
     return (
       <Box p={32}>
-        <Text c="#737373">Loading profile...</Text>
+        <Text c="var(--color-text-muted)">Loading profile...</Text>
       </Box>
     );
   }
@@ -45,7 +45,7 @@ export default function ProfileEditPage() {
   if (!data?.authenticated || !data.user) {
     return (
       <Box p={32}>
-        <Text c="#737373">Not authenticated. Please sign in.</Text>
+        <Text c="var(--color-text-muted)">Not authenticated. Please sign in.</Text>
       </Box>
     );
   }
@@ -107,10 +107,10 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
     <Box p={32} style={{ maxWidth: 600 }}>
       <Group justify="space-between" mb={24}>
         <Box>
-          <Text size="xl" fw={700} c="#171717">
+          <Text size="xl" fw={700} c="var(--color-text-primary)">
             Edit Profile
           </Text>
-          <Text size="sm" c="#737373">
+          <Text size="sm" c="var(--color-text-muted)">
             Update your personal information and preferences
           </Text>
         </Box>
@@ -151,7 +151,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
       )}
 
       <form onSubmit={handleSubmit}>
-        <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
+        <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
           <Group gap={8} mb={16}>
             <IconUser size={18} color="#E85D3D" />
             <Text
@@ -203,7 +203,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
           </Stack>
         </Card>
 
-        <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
+        <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
           <Group gap={8} mb={16}>
             <IconUser size={18} color="#E85D3D" />
             <Text

@@ -43,14 +43,14 @@ export function DataSourcesTab({ sources, loading }: DataSourcesTabProps) {
                   {src.name}
                 </Text>
                 {src.description && (
-                  <Text size="xs" c="#737373" lineClamp={1}>
+                  <Text size="xs" c="var(--color-text-muted)" lineClamp={1}>
                     {src.description}
                   </Text>
                 )}
               </Box>
             </Table.Td>
             <Table.Td>
-              <Text c="#525252" style={{ fontSize: 13 }}>
+              <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
                 {src.type}
               </Text>
             </Table.Td>
@@ -61,12 +61,12 @@ export function DataSourcesTab({ sources, loading }: DataSourcesTabProps) {
               />
             </Table.Td>
             <Table.Td>
-              <Text c="#525252" style={{ fontSize: 13 }}>
+              <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
                 {src.data_frequency}
               </Text>
             </Table.Td>
             <Table.Td>
-              <Text c="#525252" style={{ fontSize: 13 }}>
+              <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
                 {src.variable_count ?? "\u2014"}
               </Text>
             </Table.Td>

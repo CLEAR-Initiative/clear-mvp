@@ -1,125 +1,582 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import { Box, Tabs, Button, Group } from "@mantine/core";
+import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Box, Tabs, Button, Group, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
+import { IconFilter } from "@tabler/icons-react";
+import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { countryConfig, countries, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
-import { alertsToMarkers, eventsToMarkers, signalsToMarkers } from "../map/_components/map-markers-data";
+import { countryConfig, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
+import { useLocations } from "~/hooks/use-locations";
+import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar } from "~/components/ui";
+import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
 
 import { DetectionKpiRow } from "~/components/detection/detection-kpi-row";
-import { LiveAlertsTab } from "./_components/live-alerts-tab";
+import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
 import { HistoryTab } from "./_components/history-tab";
-import { EventsTab } from "./_components/events-tab";
-import { SignalsTab } from "./_components/signals-tab";
-import { CreateAlertModal } from "./_components/create-alert-modal";
+import { EventsTab, type EventSortOrder } from "./_components/events-tab";
+import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
+import { CreateSignalModal } from "~/components/create-signal-modal";
 
-export default function DetectionPage() {
-  const [activeTab, setActiveTab] = useState<string | null>("live");
+const PAGE_SIZE = 25;
+
+// Map UI sort labels to API orderBy enum values.
+// Types must match the z.enum() definitions in alerts.ts router exactly.
+type EventOrderBy = "LAST_SIGNAL_DESC" | "LAST_SIGNAL_ASC" | "CREATED_DESC" | "CREATED_ASC" | "SEVERITY_DESC" | "SEVERITY_ASC";
+type AlertOrderBy = "CREATED_DESC" | "CREATED_ASC" | "SEVERITY_DESC" | "SEVERITY_ASC";
+type SignalOrderBy = "PUBLISHED_DESC" | "PUBLISHED_ASC" | "SEVERITY_DESC" | "SEVERITY_ASC";
+
+const EVENT_ORDER_MAP: Record<EventSortOrder, EventOrderBy> = {
+  "sev-desc": "SEVERITY_DESC",
+  "sev-asc":  "SEVERITY_ASC",
+  "newest":   "LAST_SIGNAL_DESC",
+  "oldest":   "LAST_SIGNAL_ASC",
+};
+const ALERT_ORDER_MAP: Record<AlertSortOrder, AlertOrderBy> = {
+  "sev-desc": "SEVERITY_DESC",
+  "sev-asc":  "SEVERITY_ASC",
+  "newest":   "CREATED_DESC",
+  "oldest":   "CREATED_ASC",
+};
+const SIGNAL_ORDER_MAP: Record<SignalSortOrder, SignalOrderBy> = {
+  "newest":   "PUBLISHED_DESC",
+  "oldest":   "PUBLISHED_ASC",
+  "sev-desc": "SEVERITY_DESC",
+  "sev-asc":  "SEVERITY_ASC",
+};
+
+const VALID_TABS = new Set(["live", "events", "signals", "history"]);
+const TAB_STORAGE_KEY = "detection-active-tab";
+
+function DetectionPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Priority: URL param (shareable link) > sessionStorage (browser back) > default
+  const [activeTab, setActiveTab] = useState<string | null>(() => {
+    const fromUrl = searchParams.get("tab");
+    if (fromUrl && VALID_TABS.has(fromUrl)) return fromUrl;
+    try {
+      const stored = sessionStorage.getItem(TAB_STORAGE_KEY);
+      if (stored && VALID_TABS.has(stored)) return stored;
+    } catch { /* sessionStorage unavailable (SSR or private mode) */ }
+    return "events";
+  });
+
+  const handleTabChange = useCallback((tab: string | null) => {
+    if (!tab) return;
+    setActiveTab(tab);
+    try { sessionStorage.setItem(TAB_STORAGE_KEY, tab); } catch { /* ignore */ }
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`/detection?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
-  const [selectedDate, setSelectedDate] = useState(dateOptions[0] ?? "Last 30 days");
+  const [selectedDate, setSelectedDate] = useState("Last 30 days");
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [activeSeverities, setActiveSeverities] = useState<Set<string>>(new Set(["critical", "high", "medium", "low"]));
+  const [selectedTypeFilters, setSelectedTypeFilters] = useState<string[]>([]);
+  const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, { staleTime: Infinity, refetchOnWindowFocus: false });
+  const hierarchy = hierarchyQuery.data ?? [];
+  const expandedTypeCodes = selectedTypeFilters.length > 0 ? expandSelectionsToCodes(selectedTypeFilters, hierarchy) : null;
+  const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
+  const isFiltered = activeSeverities.size < 4 || selectedTypeFilters.length > 0 || activeSources !== null;
+  const filterCount = (activeSeverities.size < 4 ? 1 : 0) + (selectedTypeFilters.length > 0 ? 1 : 0) + (activeSources !== null ? 1 : 0);
 
   const { activeTeamId } = useTeam();
-  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId });
+  const { countries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
+
+  const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
+  const selectedCountryId = useMemo(() => getLocationId(selectedCountry), [selectedCountry, getLocationId]);
+
+  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
+  const sudanL0Query = api.locations.getById.useQuery(
+    { id: sudanId! },
+    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const focusCountryGeometry = sudanL0Query.data?.geometry ?? undefined;
+
+  const a1BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
+    { level: 1, countryId: selectedCountryId ?? undefined },
+    { enabled: boundaryLevel === "A1" && !!selectedCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const a2BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
+    { level: 2, countryId: selectedCountryId ?? undefined },
+    { enabled: boundaryLevel === "A2" && !!selectedCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const adminBoundaries = useMemo(() => {
+    if (selectedRegion !== "All Regions") return [];
+    if (boundaryLevel === "A1") return a1BoundaryQuery.data ?? [];
+    if (boundaryLevel === "A2") return a2BoundaryQuery.data ?? [];
+    return [];
+  }, [selectedRegion, boundaryLevel, a1BoundaryQuery.data, a2BoundaryQuery.data]);
+  const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
+
+  const selectedRegionId = useMemo(
+    () => (selectedRegion !== "All Regions" ? getLocationId(selectedRegion) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedRegion, getLocationId],
+  );
+  const regionQuery = api.locations.getById.useQuery(
+    { id: selectedRegionId! },
+    { enabled: !!selectedRegionId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const fitBoundsGeometry = useMemo(
+    () => (selectedRegion !== "All Regions" ? (regionQuery.data?.geometry ?? null) : null),
+    [selectedRegion, regionQuery.data],
+  );
+
+  const selectedLocationId = useMemo(() => {
+    if (selectedRegion !== "All Regions") return getLocationId(selectedRegion);
+    return getLocationId(selectedCountry);
+  }, [selectedCountry, selectedRegion, getLocationId]);
+
+  const dateRange = useMemo(() => parseDateFilter(selectedDate), [selectedDate]);
+  const fromIso = useMemo(() => dateRange.start.toISOString(), [dateRange]);
+  const toIso = useMemo(() => dateRange.end.toISOString(), [dateRange]);
+
+  // Snapshot time: freezes the upper bound of all feed queries so that new
+  // items arriving mid-session don't shift offsets and cause duplicates when
+  // the user loads more. Resets whenever filters or sort change.
+  const [snapshotTime, setSnapshotTime] = useState(() => new Date().toISOString());
+  // Rolling presets ("Last N days") follow snapshotTime so refresh expands
+  // the window to include new events. Fixed-range presets ("Mon YYYY") keep
+  // their explicit upper bound — snapshotTime is irrelevant there because
+  // the range is in the past and no new events can fall into it.
+  const isRollingPreset = /^Last \d+ days$/i.test(selectedDate);
+  const effectiveTo = isRollingPreset ? snapshotTime : toIso;
+
+  const SEV_NUM: Record<string, number> = { low: 2, medium: 3, high: 4, critical: 5 };
+  const { severityMin, severityMax } = useMemo(() => {
+    if (activeSeverities.size === 0 || activeSeverities.size === 4) {
+      return { severityMin: undefined, severityMax: undefined };
+    }
+    const nums = [...activeSeverities].map((s) => SEV_NUM[s]).filter((n): n is number => typeof n === "number");
+    if (nums.length === 0) return { severityMin: undefined, severityMax: undefined };
+    const min = Math.min(...nums) === 2 ? 1 : Math.min(...nums);
+    return { severityMin: min, severityMax: Math.max(...nums) };
+  }, [activeSeverities]);
+
+  // ── Per-feed sort state ────────────────────────────────────────────────────
+  const [eventsSort, setEventsSort] = useState<EventSortOrder>("newest");
+  const [alertsSort, setAlertsSort] = useState<AlertSortOrder>("newest");
+  const [signalsSort, setSignalsSort] = useState<SignalSortOrder>("newest");
+
+  // ── Per-feed accumulated items + offset ───────────────────────────────────
+  const [eventsItems, setEventsItems] = useState<GqlEvent[]>([]);
+  const [eventsOffset, setEventsOffset] = useState(0);
+  const [eventsTotalCount, setEventsTotalCount] = useState(0);
+  const [eventsHasMore, setEventsHasMore] = useState(false);
+  const eventsAppending = useRef(false);
+  // Incremented on every reset so the React Query cache key always changes,
+  // guaranteeing eventsQuery.data changes and the accumulation effect fires
+  // even when offset stays 0 and staleTime would otherwise return a cached ref.
+  const [eventsVersion, setEventsVersion] = useState(0);
+
+  const [alertsItems, setAlertsItems] = useState<GqlAlert[]>([]);
+  const [alertsOffset, setAlertsOffset] = useState(0);
+  const [alertsTotalCount, setAlertsTotalCount] = useState(0);
+  const [alertsHasMore, setAlertsHasMore] = useState(false);
+  const alertsAppending = useRef(false);
+  const [alertsVersion, setAlertsVersion] = useState(0);
+
+  const [signalsItems, setSignalsItems] = useState<GqlSignal[]>([]);
+  const [signalsOffset, setSignalsOffset] = useState(0);
+  const [signalsTotalCount, setSignalsTotalCount] = useState(0);
+  const [signalsHasMore, setSignalsHasMore] = useState(false);
+  const signalsAppending = useRef(false);
+  const [signalsVersion, setSignalsVersion] = useState(0);
+
+  const sharedFilter = {
+    teamId: activeTeamId,
+    locationId: selectedLocationId ?? undefined,
+    from: fromIso,
+    to: effectiveTo,
+    severityMin,
+    severityMax,
+    eventTypes: expandedTypeCodes ?? undefined,
+  };
+
+  // ── Main feed queries ──────────────────────────────────────────────────────
+  // staleTime: Infinity prevents re-fetching on tab switch.
+  // _v (version) is part of the React Query cache key, so incrementing it on
+  // reset forces a fresh fetch and guarantees the accumulation effect fires
+  // via a data reference change. The router schema declares it optional and
+  // strips it before forwarding to GraphQL — see alerts.ts.
+  const eventsQuery = api.alerts.eventsPage.useQuery(
+    { ...sharedFilter, orderBy: EVENT_ORDER_MAP[eventsSort], limit: PAGE_SIZE, offset: eventsOffset, _v: eventsVersion },
+    { enabled: activeTab === "events", staleTime: Infinity },
+  );
+  const alertsQuery = api.alerts.alertsPage.useQuery(
+    { ...sharedFilter, status: "published", orderBy: ALERT_ORDER_MAP[alertsSort], limit: PAGE_SIZE, offset: alertsOffset, _v: alertsVersion },
+    { enabled: activeTab === "live", staleTime: Infinity },
+  );
+  const signalsQuery = api.alerts.signalsPage.useQuery(
+    {
+      teamId: activeTeamId,
+      locationId: selectedLocationId ?? undefined,
+      from: fromIso,
+      to: effectiveTo,
+      severityMin,
+      severityMax,
+      sourceNames: activeSources ? [...activeSources] : undefined,
+      orderBy: SIGNAL_ORDER_MAP[signalsSort],
+      limit: PAGE_SIZE,
+      offset: signalsOffset,
+      _v: signalsVersion,
+    },
+    { enabled: activeTab === "signals", staleTime: Infinity },
+  );
+
+  // ── Accumulation effects ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (!eventsQuery.data) return;
+    const { items, totalCount, hasMore } = eventsQuery.data;
+    setEventsTotalCount(totalCount);
+    setEventsHasMore(hasMore);
+    if (eventsAppending.current) {
+      setEventsItems((prev) => [...prev, ...items]);
+      eventsAppending.current = false;
+    } else {
+      setEventsItems(items);
+    }
+  }, [eventsQuery.data]);
+
+  useEffect(() => {
+    if (!alertsQuery.data) return;
+    const { items, totalCount, hasMore } = alertsQuery.data;
+    setAlertsTotalCount(totalCount);
+    setAlertsHasMore(hasMore);
+    if (alertsAppending.current) {
+      setAlertsItems((prev) => [...prev, ...items]);
+      alertsAppending.current = false;
+    } else {
+      setAlertsItems(items);
+    }
+  }, [alertsQuery.data]);
+
+  useEffect(() => {
+    if (!signalsQuery.data) return;
+    const { items, totalCount, hasMore } = signalsQuery.data;
+    setSignalsTotalCount(totalCount);
+    setSignalsHasMore(hasMore);
+    if (signalsAppending.current) {
+      setSignalsItems((prev) => [...prev, ...items]);
+      signalsAppending.current = false;
+    } else {
+      setSignalsItems(items);
+    }
+  }, [signalsQuery.data]);
+
+  // ── Reset effects ──────────────────────────────────────────────────────────
+  // FILTER changes: reset snapshot + items. A new snapshotTime means a new
+  // frozen window, so the user sees results from the correct time range.
+  // SORT changes: reset items only, keep the existing snapshotTime. This
+  // ensures switching sort and switching back always queries the same dataset.
+  const FILTER_DEPS = [selectedLocationId, fromIso, toIso, activeTeamId, severityMin, severityMax, expandedTypeCodes?.join(",")] as const;
+
+  // Snapshot is shared across all three feeds, so we set it once. Previously
+  // each per-feed reset effect called setSnapshotTime independently, which
+  // scheduled three setState calls per filter change with three slightly
+  // different timestamps.
+  useEffect(() => {
+    setSnapshotTime(new Date().toISOString());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...FILTER_DEPS, activeSources]);
+
+  useEffect(() => {
+    eventsAppending.current = false;
+    setEventsOffset(0);
+    setEventsItems([]);
+    setEventsVersion((v) => v + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...FILTER_DEPS]);
+
+  useEffect(() => {
+    eventsAppending.current = false;
+    setEventsOffset(0);
+    setEventsItems([]);
+    setEventsVersion((v) => v + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventsSort]);
+
+  useEffect(() => {
+    alertsAppending.current = false;
+    setAlertsOffset(0);
+    setAlertsItems([]);
+    setAlertsVersion((v) => v + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...FILTER_DEPS]);
+
+  useEffect(() => {
+    alertsAppending.current = false;
+    setAlertsOffset(0);
+    setAlertsItems([]);
+    setAlertsVersion((v) => v + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alertsSort]);
+
+  useEffect(() => {
+    signalsAppending.current = false;
+    setSignalsOffset(0);
+    setSignalsItems([]);
+    setSignalsVersion((v) => v + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...FILTER_DEPS, activeSources]);
+
+  useEffect(() => {
+    signalsAppending.current = false;
+    setSignalsOffset(0);
+    setSignalsItems([]);
+    setSignalsVersion((v) => v + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signalsSort]);
+
+  // ── Load-more callbacks ────────────────────────────────────────────────────
+  const loadMoreEvents = useCallback(() => {
+    if (!eventsHasMore || eventsQuery.isFetching) return;
+    eventsAppending.current = true;
+    setEventsOffset((prev) => prev + PAGE_SIZE);
+  }, [eventsHasMore, eventsQuery.isFetching]);
+
+  const loadMoreAlerts = useCallback(() => {
+    if (!alertsHasMore || alertsQuery.isFetching) return;
+    alertsAppending.current = true;
+    setAlertsOffset((prev) => prev + PAGE_SIZE);
+  }, [alertsHasMore, alertsQuery.isFetching]);
+
+  const loadMoreSignals = useCallback(() => {
+    if (!signalsHasMore || signalsQuery.isFetching) return;
+    signalsAppending.current = true;
+    setSignalsOffset((prev) => prev + PAGE_SIZE);
+  }, [signalsHasMore, signalsQuery.isFetching]);
+
+  // ── Refresh callbacks: new snapshot + full reset ───────────────────────────
+  // Each refresh bumps *Version so the React Query cache key always changes,
+  // even for fixed-range presets where effectiveTo wouldn't otherwise move.
+  // Without it, the eventsQuery input is byte-identical, React Query returns
+  // the cached value, the accumulation effect doesn't fire, and the list
+  // we just cleared above stays blank.
+  const refreshEvents = useCallback(() => {
+    const now = new Date().toISOString();
+    setSnapshotTime(now);
+    eventsAppending.current = false;
+    setEventsOffset(0);
+    setEventsItems([]);
+    setEventsVersion((v) => v + 1);
+  }, []);
+
+  const refreshAlerts = useCallback(() => {
+    const now = new Date().toISOString();
+    setSnapshotTime(now);
+    alertsAppending.current = false;
+    setAlertsOffset(0);
+    setAlertsItems([]);
+    setAlertsVersion((v) => v + 1);
+  }, []);
+
+  const refreshSignals = useCallback(() => {
+    const now = new Date().toISOString();
+    setSnapshotTime(now);
+    signalsAppending.current = false;
+    setSignalsOffset(0);
+    setSignalsItems([]);
+    setSignalsVersion((v) => v + 1);
+  }, []);
+
+  // ── "New items" polls: lightweight queries with from=snapshotTime ──────────
+  // Only the active tab polls so we don't waste bandwidth on hidden tabs.
+  // These spread the same filter shape as the main queries so the count
+  // reflects what refresh will actually load — otherwise the banner can show
+  // "100 new events" while a Critical-only filter would load 0.
+  const eventsNewQuery = api.alerts.eventsPage.useQuery(
+    {
+      ...sharedFilter,
+      from: snapshotTime,
+      limit: 1,
+      orderBy: "LAST_SIGNAL_DESC",
+    },
+    { enabled: activeTab === "events", refetchInterval: 60_000, staleTime: 0 },
+  );
+  const alertsNewQuery = api.alerts.alertsPage.useQuery(
+    {
+      ...sharedFilter,
+      status: "published",
+      from: snapshotTime,
+      limit: 1,
+      orderBy: "CREATED_DESC",
+    },
+    { enabled: activeTab === "live", refetchInterval: 60_000, staleTime: 0 },
+  );
+  const signalsNewQuery = api.alerts.signalsPage.useQuery(
+    {
+      teamId: activeTeamId,
+      locationId: selectedLocationId ?? undefined,
+      severityMin,
+      severityMax,
+      sourceNames: activeSources ? [...activeSources] : undefined,
+      from: snapshotTime,
+      limit: 1,
+      orderBy: "PUBLISHED_DESC",
+    },
+    { enabled: activeTab === "signals", refetchInterval: 60_000, staleTime: 0 },
+  );
+
+  const eventsNewCount = eventsNewQuery.data?.totalCount ?? 0;
+  const alertsNewCount = alertsNewQuery.data?.totalCount ?? 0;
+  const signalsNewCount = signalsNewQuery.data?.totalCount ?? 0;
+
+  // ── History tab (intentionally unpaginated - roll-up view) ─────────────────
   const historyQuery = api.alerts.getAlerts.useQuery(
     { activeOnly: false, teamId: activeTeamId },
     { enabled: activeTab === "history" },
   );
-  const eventsQuery = api.events.list.useQuery(
+  const historyEventsQuery = api.events.list.useQuery(
     { teamId: activeTeamId },
-    { enabled: activeTab === "events" },
+    { enabled: activeTab === "history" },
   );
-  const signalsQuery = api.signals.list.useQuery(
+  const historySignalsQuery = api.signals.list.useQuery(
     { teamId: activeTeamId },
-    { enabled: activeTab === "signals" },
+    { enabled: activeTab === "history" },
   );
 
-  const countryConf = countryConfig[selectedCountry];
+  const regions = getRegions(selectedCountry);
 
-  const allAlerts = useMemo(() => {
-    const raw = alertsQuery.data?.alerts ?? [];
-    return [...raw].sort((a, b) => b.event.rank - a.event.rank);
-  }, [alertsQuery.data?.alerts]);
+  const allSources = useMemo(() => {
+    const s = new Set<string>();
+    alertsItems.forEach((a) => a.event.signals.forEach((sig) => s.add(sig.source.name)));
+    eventsItems.forEach((e) => e.signals.forEach((sig) => s.add(sig.source.name)));
+    signalsItems.forEach((sig) => s.add(sig.source.name));
+    return [...s].sort();
+  }, [alertsItems, eventsItems, signalsItems]);
 
-  // Region + date filtered alerts passed down to KPI cards and list
-  const alerts = useMemo(() => {
-    if (allAlerts.length === 0) return [];
-    const regions = countryConf?.regions?.map((r) => r.toLowerCase()) ?? [];
-    const countryLower = selectedCountry.toLowerCase();
-    const regionLower = selectedRegion !== "All Regions" ? selectedRegion.toLowerCase() : null;
-    const dateRange = parseDateFilter(selectedDate);
+  const focusCountryPCode = countryConfig[selectedCountry]?.pCode;
+  const focusCountryName = selectedCountry;
 
-    return allAlerts.filter((alert) => {
-      const alertDate = new Date(alert.event.firstSignalCreatedAt).getTime();
-      if (alertDate < dateRange.start.getTime() || alertDate > dateRange.end.getTime()) return false;
-
-      const loc = alert.event.generalLocation ?? alert.event.originLocation ?? alert.event.destinationLocation;
-      const locName = loc?.name.toLowerCase() ?? "";
-      const matchesCountry =
-        regions.some((r) => r !== "all regions" && locName.includes(r)) ||
-        locName.includes(countryLower) ||
-        (alert.event.description?.toLowerCase().includes(countryLower) ?? false) ||
-        alert.event.types.some((t) => t.toLowerCase().includes(countryLower));
-
-      if (!matchesCountry) return false;
-
-      if (regionLower) {
-        return (
-          locName.includes(regionLower) ||
-          (alert.event.description?.toLowerCase().includes(regionLower) ?? false)
-        );
-      }
-      return true;
+  const clipToRegion = useCallback((markers: CrisisMarker[]): CrisisMarker[] => {
+    if (!selectedLocationId) return markers;
+    return markers.filter((mk) => {
+      if (!mk.locationId) return false;
+      if (mk.locationId === selectedLocationId) return true;
+      return mk.ancestorIds?.includes(selectedLocationId) ?? false;
     });
-  }, [allAlerts, selectedCountry, selectedRegion, selectedDate]);
+  }, [selectedLocationId]);
 
-  const historyAlerts = historyQuery.data?.alerts ?? [];
+  const mapMarkers: MapMarker[] = useMemo(() => clipToRegion(alertsToMarkers(alertsItems)), [alertsItems, clipToRegion]);
+  const eventMapMarkers: MapMarker[] = useMemo(() => clipToRegion(eventsToMarkers(eventsItems)), [eventsItems, clipToRegion]);
+  const signalMapMarkers: MapMarker[] = useMemo(() => clipToRegion(signalsToMarkers(signalsItems)), [signalsItems, clipToRegion]);
 
-  const mapMarkers: MapMarker[] = useMemo(() => alertsToMarkers(alerts), [alerts]);
-  const eventMapMarkers: MapMarker[] = useMemo(
-    () => eventsToMarkers(eventsQuery.data ?? []),
-    [eventsQuery.data],
-  );
-  const signalMapMarkers: MapMarker[] = useMemo(
-    () => signalsToMarkers(signalsQuery.data ?? []),
-    [signalsQuery.data],
-  );
-  const mapCenter = useMemo<[number, number]>(() => countryConf?.center ?? [30.0, 15.5], [selectedCountry]);
-  const mapZoom = useMemo(() => countryConf?.zoom ?? 5, [selectedCountry]);
-
-  const handleAlertCreated = useCallback(() => {
-    void alertsQuery.refetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const mapCenter = useMemo<[number, number]>(() => getCenter(selectedCountry), [selectedCountry]);
+  const mapZoom = useMemo(() => getZoom(selectedCountry), [selectedCountry]);
 
   return (
     <Box>
       <PageHeader
-        title="Crisis Detection"
-        subtitle="Detection"
+        title="Event Detection"
+        subtitle="Event Detection"
         breadcrumbs={["CLEAR", "Detection"]}
-        loading={alertsQuery.isLoading}
+        loading={eventsQuery.isLoading || alertsQuery.isLoading}
       >
         <FilterBar
           country={selectedCountry}
-          onCountryChange={(v) => {
-            setSelectedCountry(v);
-            setSelectedRegion("All Regions");
-          }}
+          onCountryChange={(v) => { setSelectedCountry(v); setSelectedRegion("All Regions"); }}
           region={selectedRegion}
           onRegionChange={setSelectedRegion}
           countries={countries}
-          regions={countryConf?.regions ?? ["All Regions"]}
+          regions={regions}
           date={selectedDate}
           onDateChange={setSelectedDate}
           dateOptions={dateOptions}
-        />
+        >
+          <Box>
+            <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 5 }}>Filter</Text>
+            <Popover opened={filterOpen} onChange={setFilterOpen} position="bottom-start" shadow="md" width={270} withinPortal>
+              <Popover.Target>
+                <ActionIcon
+                  variant="default" size={30}
+                  style={{ position: "relative", border: "1px solid #E5E5E5", borderRadius: 4 }}
+                  onClick={() => setFilterOpen((o) => !o)}
+                  title="Filter"
+                >
+                  <IconFilter size={13} color={isFiltered ? "var(--color-accent)" : "var(--color-text-muted)"} />
+                  {isFiltered && (
+                    <Box style={{ position: "absolute", top: -4, right: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Text style={{ fontSize: 9, color: "white", fontWeight: 700, lineHeight: 1 }}>{filterCount}</Text>
+                    </Box>
+                  )}
+                </ActionIcon>
+              </Popover.Target>
+              <Popover.Dropdown p={14} onMouseDown={(e) => e.stopPropagation()}>
+                <Group justify="space-between" mb={10}>
+                  <Text size="xs" fw={700} tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.06em" }}>Filters</Text>
+                  {isFiltered && (
+                    <Button size="compact-xs" variant="subtle" color="gray" onClick={() => { setActiveSeverities(new Set(["critical", "high", "medium", "low"])); setSelectedTypeFilters([]); setActiveSources(null); }}>
+                      Clear all
+                    </Button>
+                  )}
+                </Group>
+                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Severity</Text>
+                <Group gap={6} mb={12} wrap="wrap">
+                  {(["critical", "high", "medium", "low"] as const).map((sev) => {
+                    const active = activeSeverities.has(sev);
+                    return (
+                      <Badge
+                        key={sev} size="sm"
+                        variant={active ? "filled" : "light"}
+                        color={sev === "critical" ? "red" : sev === "high" ? "orange" : sev === "medium" ? "yellow" : "green"}
+                        style={{ cursor: "pointer", textTransform: "capitalize" }}
+                        onClick={() => setActiveSeverities((prev) => {
+                          const next = new Set(prev);
+                          next.has(sev) ? next.delete(sev) : next.add(sev);
+                          return next;
+                        })}
+                      >
+                        {sev.charAt(0).toUpperCase() + sev.slice(1)}
+                      </Badge>
+                    );
+                  })}
+                </Group>
+                <Divider color="var(--color-border)" mb={10} />
+                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Event Type</Text>
+                <DisasterTypePicker hierarchy={hierarchy} selected={selectedTypeFilters} onChange={setSelectedTypeFilters} size="xs" />
+                {allSources.length > 0 && (
+                  <>
+                    <Divider color="var(--color-border)" my={10} />
+                    <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Source</Text>
+                    <Group gap={6} wrap="wrap">
+                      {allSources.map((src) => {
+                        const active = activeSources === null || activeSources.has(src);
+                        return (
+                          <Badge
+                            key={src} size="sm"
+                            variant={active ? "filled" : "light"}
+                            color={active ? "dark" : "gray"}
+                            style={{ cursor: "pointer", textTransform: "none" }}
+                            onClick={() => setActiveSources((prev) => {
+                              const base = prev ?? new Set(allSources);
+                              const next = new Set(base);
+                              next.has(src) ? next.delete(src) : next.add(src);
+                              return next.size === allSources.length ? null : next;
+                            })}
+                          >
+                            {src}
+                          </Badge>
+                        );
+                      })}
+                    </Group>
+                  </>
+                )}
+              </Popover.Dropdown>
+            </Popover>
+          </Box>
+        </FilterBar>
         <Group gap={8}>
           <Button
             size="xs"
@@ -127,18 +584,13 @@ export default function DetectionPage() {
             onClick={openCreateModal}
             style={{ background: "#E85D3D", borderColor: "#E85D3D", fontSize: 13 }}
           >
-            Create Manual Alert
+            Create Signal
           </Button>
         </Group>
       </PageHeader>
 
       <Box p={24}>
-        <Tabs
-          value={activeTab}
-          onChange={setActiveTab}
-          mb={24}
-          styles={{ tab: { fontSize: 13, fontWeight: 500 } }}
-        >
+        <Tabs value={activeTab} onChange={handleTabChange} mb={24} styles={{ tab: { fontSize: 13, fontWeight: 500 } }}>
           <Tabs.List>
             <Tabs.Tab value="live">Alerts</Tabs.Tab>
             <Tabs.Tab value="events">Events</Tabs.Tab>
@@ -149,56 +601,116 @@ export default function DetectionPage() {
 
         <DetectionKpiRow
           country={selectedCountry}
-          alerts={alerts}
-          events={eventsQuery.data ?? []}
-          onNavigateToAlerts={() => setActiveTab("live")}
+          alerts={alertsItems}
+          events={eventsItems}
+          onNavigateToAlerts={() => handleTabChange("live")}
         />
 
         {activeTab === "live" && (
           <LiveAlertsTab
-            alerts={alerts}
+            alerts={alertsItems}
             alertsLoading={alertsQuery.isLoading}
+            isFetchingMore={alertsQuery.isFetching && alertsAppending.current}
+            hasMore={alertsHasMore}
+            totalCount={alertsTotalCount}
+            newCount={alertsNewCount}
+            sortOrder={alertsSort}
+            onSortChange={setAlertsSort}
+            onLoadMore={loadMoreAlerts}
+            onRefresh={refreshAlerts}
             mapMarkers={mapMarkers}
             mapCenter={mapCenter}
             mapZoom={mapZoom}
-          />
-        )}
-
-        {activeTab === "signals" && (
-          <SignalsTab
-            signals={signalsQuery.data ?? []}
-            loading={signalsQuery.isLoading}
-            mapMarkers={signalMapMarkers}
-            mapCenter={mapCenter}
-            mapZoom={mapZoom}
-          />
-        )}
-
-        {activeTab === "history" && (
-          <HistoryTab
-            alerts={historyAlerts}
-            loading={historyQuery.isLoading}
-            total={historyAlerts.length}
-            count={historyAlerts.length}
+            fitBoundsGeometry={fitBoundsGeometry}
+            adminBoundaries={adminBoundaries}
+            adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+            boundaryLevel={boundaryLevel}
+            onBoundaryLevelChange={setBoundaryLevel}
+            focusCountryPCode={focusCountryPCode}
+            focusCountryName={focusCountryName}
+            focusCountryGeometry={focusCountryGeometry}
+            activeSeverities={activeSeverities}
+            expandedTypeCodes={expandedTypeCodes}
+            activeSources={activeSources}
           />
         )}
 
         {activeTab === "events" && (
           <EventsTab
-            events={eventsQuery.data ?? []}
+            events={eventsItems}
             loading={eventsQuery.isLoading}
+            isFetchingMore={eventsQuery.isFetching && eventsAppending.current}
+            hasMore={eventsHasMore}
+            totalCount={eventsTotalCount}
+            newCount={eventsNewCount}
+            sortOrder={eventsSort}
+            onSortChange={setEventsSort}
+            onLoadMore={loadMoreEvents}
+            onRefresh={refreshEvents}
             mapMarkers={eventMapMarkers}
             mapCenter={mapCenter}
             mapZoom={mapZoom}
+            fitBoundsGeometry={fitBoundsGeometry}
+            adminBoundaries={adminBoundaries}
+            adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+            boundaryLevel={boundaryLevel}
+            onBoundaryLevelChange={setBoundaryLevel}
+            focusCountryPCode={focusCountryPCode}
+            focusCountryName={focusCountryName}
+            focusCountryGeometry={focusCountryGeometry}
+            activeSeverities={activeSeverities}
+            expandedTypeCodes={expandedTypeCodes}
+            activeSources={activeSources}
+          />
+        )}
+
+        {activeTab === "signals" && (
+          <SignalsTab
+            signals={signalsItems}
+            loading={signalsQuery.isLoading}
+            isFetchingMore={signalsQuery.isFetching && signalsAppending.current}
+            hasMore={signalsHasMore}
+            totalCount={signalsTotalCount}
+            newCount={signalsNewCount}
+            sortOrder={signalsSort}
+            onSortChange={setSignalsSort}
+            onLoadMore={loadMoreSignals}
+            onRefresh={refreshSignals}
+            mapMarkers={signalMapMarkers}
+            mapCenter={mapCenter}
+            mapZoom={mapZoom}
+            fitBoundsGeometry={fitBoundsGeometry}
+            adminBoundaries={adminBoundaries}
+            adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+            boundaryLevel={boundaryLevel}
+            onBoundaryLevelChange={setBoundaryLevel}
+            focusCountryPCode={focusCountryPCode}
+            focusCountryName={focusCountryName}
+            focusCountryGeometry={focusCountryGeometry}
+            activeSeverities={activeSeverities}
+            activeSources={activeSources}
+          />
+        )}
+
+        {activeTab === "history" && (
+          <HistoryTab
+            alerts={historyQuery.data?.alerts ?? []}
+            events={historyEventsQuery.data ?? []}
+            signals={historySignalsQuery.data ?? []}
+            loading={historyQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading}
           />
         )}
       </Box>
 
-      <CreateAlertModal
-        opened={createModalOpened}
-        onClose={closeCreateModal}
-        onSuccess={handleAlertCreated}
-      />
+      <CreateSignalModal opened={createModalOpened} onClose={closeCreateModal} />
     </Box>
+  );
+}
+
+export default function DetectionPage() {
+  return (
+    <Suspense>
+      <DetectionPageContent />
+    </Suspense>
   );
 }

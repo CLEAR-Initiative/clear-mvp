@@ -7,130 +7,190 @@ import {
   Text,
   Group,
   Select,
-  Button,
-  TextInput,
-  ActionIcon,
-  Stack,
   Loader,
 } from "@mantine/core";
-import {
-  IconSearch,
-  IconDownload,
-  IconPlayerSkipBack,
-  IconPlayerPlay,
-  IconPlayerSkipForward,
-} from "@tabler/icons-react";
+import { DisasterTypePicker } from "~/components/disaster-type-picker";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import {
   type CrisisMarker,
-  buildLayersFromShockTypes,
-  buildCrisisTypeOptions,
   alertsToMarkers,
-  deriveCountryOptions,
-  deriveRegionOptions,
+  eventsToMarkers,
+  crisesToMarkers,
 } from "./_components/map-markers-data";
-import { countryConfig } from "~/lib/constants/country-config";
-import { MapLayersPanel } from "./_components/map-layers-panel";
-import { MapLegendPanel } from "./_components/map-legend-panel";
+import { useLocations } from "~/hooks/use-locations";
+import { MapPanelBar } from "./_components/map-panel-bar";
+import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
+import type { DataView } from "./_components/map-layers-panel";
+import type { BoundaryLevel } from "./_components/map-settings-popover";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
   { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
 );
 
-/* ========== Timeline data ========== */
-const timelineMonths = [
-  { label: "Sep", hasEvent: false },
-  { label: "Oct", hasEvent: true },
-  { label: "Nov", hasEvent: true },
-  { label: "Dec", hasEvent: false },
-  { label: "Jan", hasEvent: false },
-  { label: "Feb", hasEvent: false },
-];
-
 /* ========== Label styles ========== */
 const LABEL_STYLE = { fontSize: 10, letterSpacing: "0.05em" } as const;
 const INPUT_STYLE = {
   fontWeight: 600,
   fontSize: 13,
-  border: "1px solid #E5E5E5",
+  background: "var(--color-bg-muted)",
+  border: "1px solid var(--color-border-dark)",
+  boxShadow: "var(--shadow-sm)",
 } as const;
 
 function FilterLabel({ children }: { children: string }) {
   return (
-    <Text size="xs" c="#737373" tt="uppercase" style={LABEL_STYLE}>
+    <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={LABEL_STYLE}>
       {children}
     </Text>
   );
 }
 
 export default function MapPage() {
-  /* ---- Fetch alert data ---- */
-  const { activeTeamId } = useTeam();
-  const alertsQuery = api.alerts.getAlerts.useQuery({
-    activeOnly: true,
-    teamId: activeTeamId,
+  /* ---- Core state (must precede queries that depend on it) ---- */
+  const [dataView, setDataView] = useState<DataView>("alert");
+
+  /* ---- Fetch data ---- */
+  const { activeTeamId, activeTeam } = useTeam();
+  const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
+
+  const alertsQuery = api.alerts.getAlerts.useQuery(
+    { activeOnly: true, teamId: activeTeamId },
+    { enabled: dataView === "alert" },
+  );
+  const eventsQuery = api.alerts.getEvents.useQuery(
+    { teamId: activeTeamId ?? undefined },
+    // No team → fetch the global feed (the API resolver permits this).
+    { enabled: dataView === "event" },
+  );
+  const crisesQuery = api.alerts.getCrises.useQuery(
+    undefined,
+    { enabled: dataView === "crisis" },
+  );
+  const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
+    staleTime: Infinity, refetchOnWindowFocus: false,
   });
-  const shockTypesQuery = api.alerts.getShockTypes.useQuery();
+  const hierarchy: HierarchyLevel1[] = hierarchyQuery.data ?? [];
 
-  const allAlerts = alertsQuery.data?.alerts ?? [];
-  const shockTypes = shockTypesQuery.data?.shock_types ?? [];
-
-  /* ---- Derive layers and crisis type options from API data ---- */
-  const layers = useMemo(
-    () => buildLayersFromShockTypes(shockTypes),
-    [shockTypes],
-  );
-
-  const crisisTypeOptions = useMemo(
-    () => buildCrisisTypeOptions(shockTypes),
-    [shockTypes],
-  );
-
-  /* ---- Transform alerts to map markers ---- */
+  /* ---- Derive markers + regions based on active data view ---- */
   const allMarkers: CrisisMarker[] = useMemo(() => {
-    const markers = alertsToMarkers(allAlerts);
-    console.log("[MapPage] allAlerts:", allAlerts.length, "allMarkers:", markers.length);
-    if (allAlerts.length > 0 && markers.length === 0) {
-      // debug removed
-    }
-    return markers;
-  }, [allAlerts]);
+    if (dataView === "alert")  return alertsToMarkers(alertsQuery.data?.alerts ?? []);
+    if (dataView === "event")  return eventsToMarkers(eventsQuery.data?.events ?? []);
+    if (dataView === "crisis") return crisesToMarkers(crisesQuery.data?.crises ?? []);
+    return [];
+  }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
+
+  const allRegions = useMemo(() => {
+    return [];
+  }, []);
+
+
 
   /* ---- Filter state ---- */
-  const [selectedCountry, setSelectedCountry] = useState("All Countries");
-  const [selectedRegion, setSelectedRegion] = useState("All Regions");
-  const [selectedShockType, setSelectedShockType] = useState("All Types");
-  const [activeLayers, setActiveLayers] = useState<string[]>([]);
-  // Sync active layers when shock types load (useState initializer runs before data arrives)
-  useEffect(() => {
-    if (layers.length > 0) {
-      setActiveLayers((prev) => prev.length === 0 ? layers.map((l) => l.id) : prev);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+
+  const selectedTypeCodes = useMemo((): Set<string> | null => {
+    if (selectedTypes.length === 0) return null;
+    const codes = new Set<string>();
+    for (const value of selectedTypes) {
+      const [l1Name, l2Name] = value.split("::");
+      const l1 = hierarchy.find((h) => h.name === l1Name);
+      const l2 = l1?.groups.find((g) => g.name === l2Name);
+      l2?.codes.forEach((c) => codes.add(c.toLowerCase()));
     }
-  }, [layers]);
+    return codes;
+  }, [selectedTypes, hierarchy]);
+
+  // TODO: hardcoded to Sudan for the current single-team deployment.
+  // When more teams join, remove this default and rely solely on the
+  // useEffect below which sets the country from activeTeam.locations.
+  // Requires teams to have a level-0 location configured in the DB.
+  const [selectedCountry, setSelectedCountry] = useState("Sudan");
+  const [selectedRegion, setSelectedRegion] = useState("All Regions");
+
+  // Pre-select the team's country when the active team loads.
+  useEffect(() => {
+    const countryLoc = activeTeam?.locations.find((l) => l.level === 0);
+    if (countryLoc) {
+      setSelectedCountry(countryLoc.name);
+      setSelectedRegion("All Regions");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTeam?.id]);
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(
     null,
   );
-  const [activeMonth, setActiveMonth] = useState(5);
+  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
+  const [showPopulation, setShowPopulation] = useState(false);
 
-  /* ---- Derive country/region options from markers ---- */
+  // Resolve Sudan's location ID for scoping admin boundary queries.
+  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
+
+  const a1Query = api.locations.getAdminBoundaries.useQuery(
+    { level: 1, countryId: sudanId ?? undefined },
+    { enabled: boundaryLevel === "A1" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const a2Query = api.locations.getAdminBoundaries.useQuery(
+    { level: 2, countryId: sudanId ?? undefined },
+    { enabled: boundaryLevel === "A2" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+
+  const adminBoundaries = useMemo(() => {
+    if (boundaryLevel === "A1") return a1Query.data ?? [];
+    if (boundaryLevel === "A2") return a2Query.data ?? [];
+    return [];
+  }, [boundaryLevel, a1Query.data, a2Query.data]);
+
+  const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
+
+  // Population layer: A2 districts with population, lazy-loaded when first enabled.
+  const populationQuery = api.locations.getPopulationBoundaries.useQuery(
+    { countryId: sudanId ?? undefined },
+    { enabled: showPopulation && !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const populationBoundaries = useMemo(
+    () => (showPopulation ? (populationQuery.data ?? []) : []),
+    [showPopulation, populationQuery.data],
+  );
+
+  // Sudan L0 geometry - used for the country highlight instead of Mapbox's inaccurate tileset.
+  const sudanL0Query = api.locations.getById.useQuery(
+    { id: sudanId! },
+    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const focusCountryGeometry = sudanL0Query.data?.geometry ?? undefined;
+
+  // Region zoom: fetch selected region geometry and fit map to it.
+  const selectedRegionId = useMemo(
+    () => (selectedRegion !== "All Regions" ? getLocationId(selectedRegion) : null),
+    [selectedRegion, getLocationId],
+  );
+  const regionQuery = api.locations.getById.useQuery(
+    { id: selectedRegionId! },
+    { enabled: !!selectedRegionId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const fitBoundsGeometry = useMemo(
+    () => (selectedRegion !== "All Regions" ? (regionQuery.data?.geometry ?? null) : null),
+    [selectedRegion, regionQuery.data],
+  );
+
+  /* ---- Derive country/region options from API locations ---- */
   const countryOptions = useMemo(
-    () => deriveCountryOptions(allMarkers),
-    [allMarkers],
+    () => ["All Countries", ...apiCountries],
+    [apiCountries],
   );
   const regionOptions = useMemo(
-    () => deriveRegionOptions(allMarkers, selectedCountry),
-    [allMarkers, selectedCountry],
+    () => selectedCountry !== "All Countries" ? getRegions(selectedCountry) : ["All Regions"],
+    [selectedCountry, getRegions],
   );
 
-  /* ---- Map center: use countryConfig when a country is selected ---- */
+  /* ---- Map center ---- */
   const mapCenter: [number, number] = useMemo(() => {
     if (selectedCountry !== "All Countries") {
-      const cfg = countryConfig[selectedCountry];
-      if (cfg) return cfg.center;
+      return getCenter(selectedCountry);
     }
     if (allMarkers.length === 0) return [30.0, 15.5];
     const avgLng =
@@ -142,46 +202,58 @@ export default function MapPage() {
 
   const mapZoom = useMemo(() => {
     if (selectedCountry !== "All Countries") {
-      const cfg = countryConfig[selectedCountry];
-      if (cfg) return cfg.zoom;
+      return getZoom(selectedCountry);
     }
     return 5;
   }, [selectedCountry]);
 
+  /* ---- Resolve selected location for filtering ---- */
+  const selectedLocationId = useMemo(() => {
+    if (selectedRegion !== "All Regions") return getLocationId(selectedRegion);
+    if (selectedCountry !== "All Countries") return getLocationId(selectedCountry);
+    return null;
+  }, [selectedCountry, selectedRegion, getLocationId]);
+
+  const selectedLocationName = useMemo(() => {
+    if (selectedRegion !== "All Regions") return selectedRegion;
+    if (selectedCountry !== "All Countries") return selectedCountry;
+    return null;
+  }, [selectedCountry, selectedRegion]);
+
   /* ---- Filtered markers ---- */
   const currentMarkers: MapMarker[] = useMemo(() => {
     const filtered = allMarkers.filter((m) => {
-      // Country filter
-      if (selectedCountry !== "All Countries" && m.country !== selectedCountry)
-        return false;
-
-      // Region filter
-      if (selectedRegion !== "All Regions" && m.region !== selectedRegion)
-        return false;
-
-      // Layer filter — only apply when layers are defined (shock types loaded)
-      if (activeLayers.length > 0) {
-        const markerType = m.type ?? "";
-        if (!activeLayers.includes(markerType)) return false;
+      // Location filter (hierarchy + name fallback)
+      if (selectedLocationId ?? selectedLocationName) {
+        let matchesLocation = false;
+        // Try ID-based hierarchy match
+        if (selectedLocationId) {
+          if (m.locationId === selectedLocationId) matchesLocation = true;
+          else if (m.ancestorIds && m.ancestorIds.length > 0 && m.ancestorIds.includes(selectedLocationId)) matchesLocation = true;
+        }
+        // Fallback: name match on region
+        if (!matchesLocation && selectedLocationName && m.region) {
+          const regionLower = m.region.toLowerCase();
+          const selectedLower = selectedLocationName.toLowerCase();
+          matchesLocation = regionLower.includes(selectedLower) || selectedLower.includes(regionLower);
+        }
+        if (!matchesLocation) return false;
       }
 
-      // Crisis type filter by name
-      if (
-        selectedShockType !== "All Types" &&
-        m.shockTypeName !== selectedShockType
-      )
-        return false;
+      // Disaster type filter via L1/L2 hierarchy picker
+      if (selectedTypeCodes !== null && selectedTypeCodes.size > 0) {
+        const markerCodes = m.eventTypes ?? [];
+        if (!markerCodes.some((c) => selectedTypeCodes.has(c))) return false;
+      }
 
       return true;
     });
-    console.log("[MapPage] currentMarkers:", filtered.length, "activeLayers:", activeLayers);
     return filtered;
   }, [
     allMarkers,
-    selectedCountry,
-    selectedRegion,
-    activeLayers,
-    selectedShockType,
+    selectedLocationId,
+    selectedLocationName,
+    selectedTypeCodes,
   ]);
 
   /* ---- Handlers ---- */
@@ -196,17 +268,6 @@ export default function MapPage() {
     setSelectedMarker(null);
   };
 
-  const handleShockTypeChange = (value: string | null) => {
-    setSelectedShockType(value ?? "All Types");
-  };
-
-  const toggleLayer = (layerId: string) => {
-    setActiveLayers((prev) =>
-      prev.includes(layerId)
-        ? prev.filter((l) => l !== layerId)
-        : [...prev, layerId],
-    );
-  };
 
   const handleMarkerClick = useCallback(
     (marker: MapMarker) => {
@@ -216,7 +277,7 @@ export default function MapPage() {
     [allMarkers],
   );
 
-  const isLoading = alertsQuery.isLoading || shockTypesQuery.isLoading;
+  const isLoading = alertsQuery.isLoading || eventsQuery.isLoading || crisesQuery.isLoading;
 
   return (
     <Box
@@ -232,8 +293,9 @@ export default function MapPage() {
         px={16}
         py={12}
         style={{
-          background:
-            "linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(255,255,255,0))",
+          background: "linear-gradient(to bottom, var(--map-overlay-from) 60%, var(--map-overlay-to))",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
@@ -259,59 +321,45 @@ export default function MapPage() {
             styles={{ input: INPUT_STYLE }}
             label={<FilterLabel>Region</FilterLabel>}
           />
-          <Select
-            size="xs"
-            value={selectedShockType}
-            onChange={handleShockTypeChange}
-            data={crisisTypeOptions}
-            style={{ minWidth: 160 }}
-            styles={{ input: INPUT_STYLE }}
-            label={<FilterLabel>Crisis Type</FilterLabel>}
-          />
+          <Box style={{ minWidth: 160 }}>
+            <DisasterTypePicker
+              label="Crisis Type"
+              hierarchy={hierarchy}
+              selected={selectedTypes}
+              onChange={setSelectedTypes}
+              size="xs"
+            />
+          </Box>
           {isLoading && <Loader size={14} mt={20} />}
-        </Group>
-        <Group gap={8} style={{ pointerEvents: "auto" }}>
-          <TextInput
-            placeholder="Search locations..."
-            size="xs"
-            leftSection={<IconSearch size={14} />}
-            style={{ width: 220 }}
-            styles={{ input: { boxShadow: "0 2px 4px rgba(0,0,0,0.1)" } }}
-          />
-          <Button
-            variant="outline"
-            color="gray"
-            size="xs"
-            leftSection={<IconDownload size={14} />}
-            style={{
-              background: "white",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-              fontSize: 13,
-            }}
-          >
-            Export
-          </Button>
         </Group>
       </Box>
 
       {/* ===== Mapbox Map ===== */}
       <CrisisMap
         markers={currentMarkers}
+        regions={allRegions}
         center={mapCenter}
         zoom={mapZoom}
         className="w-full h-full"
         onMarkerClick={handleMarkerClick}
+        focusCountryPCode="SD"
+        focusCountryName="Sudan"
+        focusCountryGeometry={focusCountryGeometry}
+        adminBoundaries={adminBoundaries}
+        adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+        fitBoundsGeometry={fitBoundsGeometry}
+        populationBoundaries={populationBoundaries}
       />
 
-      {/* ===== Layers Panel ===== */}
-      <MapLayersPanel
-        layers={layers}
-        activeLayers={activeLayers}
-        onToggleLayer={toggleLayer}
+      {/* ===== Left Panel Bar (Layers / Legend / Config) ===== */}
+      <MapPanelBar
+        dataView={dataView}
+        onDataViewChange={setDataView}
+        showPopulation={showPopulation}
+        onShowPopulationChange={setShowPopulation}
+        boundaryLevel={boundaryLevel}
+        onBoundaryLevelChange={setBoundaryLevel}
       />
-
-      {/* ===== Legend Panel ===== */}
-      <MapLegendPanel layers={layers} />
 
       {/* ===== Selected Marker Detail ===== */}
       {selectedMarker && (
@@ -320,74 +368,6 @@ export default function MapPage() {
           onClose={() => setSelectedMarker(null)}
         />
       )}
-
-      {/* ===== Timeline Bar ===== */}
-      <Box
-        className="absolute bottom-0 left-0 right-0 z-10 bg-white border-t border-[#E5E5E5]"
-        px={16}
-        py={12}
-      >
-        <Group justify="space-between" mb={8}>
-          <Text
-            size="xs"
-            fw={700}
-            c="#737373"
-            tt="uppercase"
-            style={{ letterSpacing: "0.05em", fontSize: 11 }}
-          >
-            Timeline
-          </Text>
-          <Group gap={8}>
-            <ActionIcon variant="light" color="gray" size="sm">
-              <IconPlayerSkipBack size={12} />
-            </ActionIcon>
-            <ActionIcon
-              variant="filled"
-              size="sm"
-              style={{ background: "#E85D3D" }}
-            >
-              <IconPlayerPlay size={12} />
-            </ActionIcon>
-            <ActionIcon variant="light" color="gray" size="sm">
-              <IconPlayerSkipForward size={12} />
-            </ActionIcon>
-          </Group>
-        </Group>
-        <Group justify="space-between" className="relative" h={40}>
-          <Box className="absolute top-1/2 left-0 right-0 h-1 bg-[#E5E5E5] -translate-y-1/2" />
-          {timelineMonths.map((month, i) => (
-            <Stack
-              key={month.label}
-              align="center"
-              gap={4}
-              className="cursor-pointer z-[1]"
-              onClick={() => setActiveMonth(i)}
-            >
-              <Box
-                w={i === activeMonth ? 14 : 8}
-                h={i === activeMonth ? 14 : 8}
-                style={{
-                  backgroundColor:
-                    i === activeMonth
-                      ? "#E85D3D"
-                      : month.hasEvent
-                        ? "#D97706"
-                        : "#E5E5E5",
-                  marginTop: i === activeMonth ? 12 : 16,
-                }}
-              />
-              <Text
-                size="xs"
-                fw={i === activeMonth ? 600 : 400}
-                c={i === activeMonth ? "#171717" : "#737373"}
-                style={{ fontSize: 9 }}
-              >
-                {month.label}
-              </Text>
-            </Stack>
-          ))}
-        </Group>
-      </Box>
 
       {/* Pulse animation for critical markers */}
       <style>{`

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { graphqlFetch } from "~/server/api/graphql";
+import { createTRPCRouter, publicProcedure, protectedProcedure } from "~/server/api/trpc";
+import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import { API_URL, GRAPHQL_API_KEY } from "~/server/env";
 
 const BetterAuthUserSchema = z.object({
@@ -11,6 +11,15 @@ const BetterAuthUserSchema = z.object({
   image: z.string().nullable(),
   role: z.string(),
   isActive: z.boolean(),
+  organisations: z.array(z.object({
+    id: z.string(),
+    organisationId: z.string(),
+    role: z.string(),
+  })).optional(),
+  teamMemberships: z.array(z.object({
+    id: z.string(),
+    role: z.string(),
+  })).optional(),
 });
 
 const SessionResponseSchema = z.object({
@@ -46,6 +55,15 @@ const UPDATE_PROFILE = `
       id
       enableEmailNotification
       enableSMSNotification
+    }
+  }
+`;
+
+const GET_USER_DETAILS = `
+  query GetUserDetails($id: String!) {
+    user(id: $id) {
+      enableEmailNotification
+      phoneNumber
     }
   }
 `;
@@ -110,7 +128,17 @@ export const authRouter = createTRPCRouter({
       return { success: true, already_verified: !result.verifyEmail };
     }),
 
-  updateNotificationPrefs: publicProcedure
+  myUserDetails: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{
+      user: { enableEmailNotification: boolean; phoneNumber: string | null } | null;
+    }>(GET_USER_DETAILS, { id: ctx.user.id }, cookieHeaders(ctx));
+    return {
+      emailEnabled: data.user?.enableEmailNotification ?? false,
+      phoneNumber: data.user?.phoneNumber ?? null,
+    };
+  }),
+
+  updateNotificationPrefs: protectedProcedure
     .input(
       z.object({
         enableEmailNotification: z.boolean().optional(),
@@ -118,18 +146,17 @@ export const authRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const cookie = ctx.headers.get("cookie") ?? "";
       const data = await graphqlFetch<{
         updateProfile: {
           id: string;
           enableEmailNotification: boolean;
           enableSMSNotification: boolean;
         };
-      }>(UPDATE_PROFILE, { input }, { Cookie: cookie });
+      }>(UPDATE_PROFILE, { input }, cookieHeaders(ctx));
       return data.updateProfile;
     }),
 
-  updateProfile: publicProcedure
+  updateProfile: protectedProcedure
     .input(
       z.object({
         name: z.string().optional(),
@@ -138,26 +165,48 @@ export const authRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const cookie = ctx.headers.get("cookie") ?? "";
       const data = await graphqlFetch<{
-        updateProfile: {
-          id: string;
-          name: string;
-        };
-      }>(UPDATE_PROFILE, { input }, { Cookie: cookie });
+        updateProfile: { id: string; name: string };
+      }>(UPDATE_PROFILE, { input }, cookieHeaders(ctx));
       return data.updateProfile;
     }),
 
   listUsers: publicProcedure.query(async () => {
     try {
       const data = await graphqlFetch<{ users: z.infer<typeof BetterAuthUserSchema>[] }>(
-        `{ users { id email name role isActive emailVerified image } }`,
+        `{ users { id email name role isActive emailVerified image organisations { id organisationId role } teamMemberships { id role } } }`,
         undefined,
         { "x-api-key": GRAPHQL_API_KEY },
       );
       return { users: data.users ?? [], error: null as string | null };
     } catch {
       return { users: [] as z.infer<typeof BetterAuthUserSchema>[], error: "Failed to fetch users" as string | null };
+    }
+  }),
+
+  listOrganisations: publicProcedure.query(async ({ ctx }) => {
+    try {
+      const data = await graphqlFetch<{
+        myOrganisations: Array<{
+          id: string;
+          name: string;
+          slug: string;
+          teams: Array<{ id: string; name: string; members: Array<{ id: string }> }>;
+        }>;
+      }>(
+        `{ myOrganisations { id name slug teams { id name members { id } } } }`,
+        undefined,
+        cookieHeaders(ctx),
+      );
+      return { organisations: data.myOrganisations ?? [], error: null as string | null };
+    } catch {
+      return {
+        organisations: [] as Array<{
+          id: string; name: string; slug: string;
+          teams: Array<{ id: string; name: string; members: Array<{ id: string }> }>;
+        }>,
+        error: "Failed to fetch organisations" as string | null,
+      };
     }
   }),
 });

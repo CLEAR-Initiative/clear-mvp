@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import dynamic from "next/dynamic";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Box,
   Text,
@@ -11,11 +11,9 @@ import {
   Card,
   Stack,
   Loader,
-  Textarea,
   Button,
-  Avatar,
-  Divider,
-  Modal,
+  Collapse,
+  UnstyledButton,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -28,92 +26,30 @@ import {
   IconCalendar,
   IconDatabase,
   IconExternalLink,
-  IconSend,
-  IconMessageCircle,
-  IconThumbUp,
-  IconThumbDown,
-  IconCircleCheck,
-  IconCircleOff,
-  IconHistory,
-  IconMapPinOff,
   IconRadar,
   IconUsers,
   IconShieldExclamation,
   IconWorld,
+  IconBellRinging,
+  IconChevronDown,
+  IconChevronUp,
 } from "@tabler/icons-react";
+import { api } from "~/trpc/react";
+import { useLocations } from "~/hooks/use-locations";
+import { MinimapCard } from "~/components/map/minimap-card";
+import type { MapMarker } from "~/components/map/crisis-map";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
+import { getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
+import { resolveLocationName } from "~/lib/location";
+import { CommentsSection } from "~/components/comments-section";
+import { FeedbackSection } from "~/components/feedback-section";
+import { AddToCrisisButton } from "~/components/event-detail/add-to-crisis-button";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
-import type { MapMarker } from "~/components/map/crisis-map";
-
-const CrisisMap = dynamic(
-  () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box w="100%" h={180} bg="#F5F5F5" /> },
-);
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 // These fields don't exist in the current API response.
 // Remove and replace with real fields when backend delivers them.
-const MOCK = {
-  title_is_ai: false, // Dataminr: false (source headline). ACLED: true (generated).
-  primary_source_label: "Post on X (Twitter)",
-  intermediary: "Dataminr",
-  source_url: "https://x.com/SudanDoctorsNet/status/1896152842738958399",
-  ai_summary:
-    "An attack attributed to Rapid Support Forces targeted a hospital in al-Obeid, North Kordofan, resulting in 12 casualties including five medical personnel. The incident represents an escalation of attacks on protected medical facilities amid heightened RSF activity across the region since late February 2026.",
-  original_text:
-    "Sudan Doctors Network says 12 injured, including five medical personnel, in Rapid Support Forces attack on hospital in al-Obeid, Sudan: Blog via X.",
-  intelligence_label: "Dataminr · Source analysis",
-  event_descriptions: [
-    {
-      title: "Primary Cause",
-      notes:
-        "Armed attack on a functioning medical facility attributed to Rapid Support Forces (RSF) in al-Obeid.",
-    },
-    {
-      title: "Casualties",
-      notes:
-        "12 injured, including 5 medical personnel. No fatalities reported at time of detection.",
-    },
-    {
-      title: "Event Location",
-      notes: "Al-Obeid Hospital, North Kordofan State, Sudan.",
-    },
-    {
-      title: "Actors Involved",
-      notes:
-        "Rapid Support Forces (RSF) identified as perpetrators. Sudan Doctors Network as reporting source.",
-    },
-    {
-      title: "Property Damage",
-      notes:
-        "Hospital infrastructure damaged. Facility reported as non-operational following the attack.",
-    },
-  ],
-  ratings: {
-    relevance: { value: 4.2, count: 5 },
-    timeliness: { value: 4.8, count: 5 },
-    accuracy: { value: 3.6, count: 5 },
-  },
-  comments: [
-    {
-      id: 1,
-      initials: "U1",
-      author: "User 1",
-      role: "Placeholder role",
-      timeAgo: "2h ago",
-      text: "This is a placeholder comment to show the commentary feature.",
-    },
-    {
-      id: 2,
-      initials: "U2",
-      author: "User 2",
-      role: "Placeholder role",
-      timeAgo: "1h ago",
-      text: "Placeholder content as well.",
-    },
-  ],
-};
 // ─────────────────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
@@ -169,64 +105,17 @@ export function EventDetailContent({
   relatedEvents = [],
   relatedLoading = false,
 }: EventDetailContentProps) {
-  const [comment, setComment] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalSubmitted, setModalSubmitted] = useState(false);
-  const [helpfulSubmitted, setHelpfulSubmitted] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [modalComment, setModalComment] = useState("");
-  const [feedbackPending, setFeedbackPending] = useState(false);
-
-  // submitFeedback is a no-op stub until the backend exposes this mutation.
-  // TODO: wire to api.alerts.submitFeedback once Masae exposes the mutation
-  const submitFeedback = {
-    mutateAsync: async (_args: { alertId: string; comment: string }) => {
-      // no-op stub
-    },
-    isPending: feedbackPending,
-  };
-
   // TODO: after Prisma migration use event.title directly; remove this fallback
   // TODO: after Prisma migration use event.types (list) instead of eventType
-  const issueTags = [
-    { id: "not_relevant", label: "Not relevant", icon: IconCircleOff },
-    { id: "already_known", label: "Already known", icon: IconHistory },
-    { id: "wrong_area", label: "Wrong area", icon: IconMapPinOff },
-    { id: "inaccurate", label: "Inaccurate", icon: IconAlertTriangle },
-  ];
 
-  function toggleTag(id: string) {
-    setSelectedTags((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
-    );
-  }
-
-  async function handleHelpful() {
-    if (!event) return;
-    setFeedbackPending(true);
-    try {
-      await submitFeedback.mutateAsync({ alertId: event.id, comment: "helpful" });
-      setHelpfulSubmitted(true);
-    } catch (err) {
-      console.error("Failed to submit feedback", err);
-    } finally {
-      setFeedbackPending(false);
-    }
-  }
-
-  async function handleSubmitIssues() {
-    if (!event) return;
-    const parts = [selectedTags.join(", "), modalComment.trim()].filter(Boolean);
-    setFeedbackPending(true);
-    try {
-      await submitFeedback.mutateAsync({ alertId: event.id, comment: parts.join(" | ") });
-      setModalSubmitted(true);
-    } catch (err) {
-      console.error("Failed to submit feedback", err);
-    } finally {
-      setFeedbackPending(false);
-    }
-  }
+  const router = useRouter();
+  const isAlready = (event?.alerts?.length ?? 0) > 0;
+  const [promoted, setPromoted] = useState(false);
+  const [confirmPromote, setConfirmPromote] = useState(false);
+  const [systemDataOpen, setSystemDataOpen] = useState(false);
+  const promoteToAlert = api.alerts.promoteToAlert.useMutation({
+    onSuccess: () => { setPromoted(true); setConfirmPromote(false); },
+  });
 
   const mapMarkers = useMemo<MapMarker[]>(() => {
     if (!event) return [];
@@ -243,7 +132,7 @@ export function EventDetailContent({
         lng,
         lat,
         title: loc.name,
-        severity: mapSeverity(event.rank),
+        severity: mapSeverity(event.severity),
         description: loc.name,
       });
     }
@@ -254,6 +143,14 @@ export function EventDetailContent({
     if (!mapMarkers.length) return [30, 15];
     return [mapMarkers[0]!.lng, mapMarkers[0]!.lat];
   }, [mapMarkers]);
+
+  const { getLocationId } = useLocations();
+  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
+  const sudanL0Query = api.locations.getById.useQuery(
+    { id: sudanId! },
+    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
 
   if (loading) {
     return (
@@ -282,7 +179,7 @@ export function EventDetailContent({
         <Text fw={600} size="lg">
           Event not found
         </Text>
-        <Text size="sm" c="#737373" mt={8}>
+        <Text size="sm" c="var(--color-text-muted)" mt={8}>
           This event may have been removed or the ID is invalid.
         </Text>
         {mode === "page" && (
@@ -304,7 +201,6 @@ export function EventDetailContent({
   }
 
   // Field mappings from old schema to current GqlEvent schema
-  const eventRank = event.rank;
   const eventStatus = event.alerts[0]?.status ?? "active";
   // event.firstSignalCreatedAt replaces event.createdAt
   // event.lastSignalCreatedAt replaces event.updatedAt
@@ -313,9 +209,9 @@ export function EventDetailContent({
   // event.types[0] replaces event.eventType
   const eventType = event.types[0] ?? "";
 
-  const sevColor = severityColor(eventRank);
-  const sev = mapSeverity(eventRank);
-  const sevBg = severityColors[sev]?.bg ?? "#F5F5F5";
+  const sevColor = severityColor(event.severity);
+  const sev = mapSeverity(event.severity);
+  const sevBg = severityColors[sev]?.bg ?? "var(--color-bg-muted)";
   const isCompact = mode === "drawer";
 
   // signal.publishedAt replaces signal.source.detectedAt
@@ -323,18 +219,49 @@ export function EventDetailContent({
     event.signals?.[0]?.publishedAt ?? event.firstSignalCreatedAt;
 
   const locations = eventLocations(event);
-  const primaryLocation = locations[0]?.name;
+  const primaryLocation = resolveLocationName(locations[0]) ?? undefined;
 
   // TODO: after Prisma migration: use `event.title` directly (remove fallback below)
   const displayTitle =
     // event.title ??  // uncomment after Prisma migration
-    event.title ?? (primaryLocation ? `${eventType} — ${primaryLocation}` : eventType);
+    event.title ?? (primaryLocation ? `${eventType} - ${primaryLocation}` : eventType);
 
   // TODO: after Prisma migration: use `event.types` (string[]) directly
   const eventTypes: string[] = event.types.length > 0 ? event.types : [eventType];
 
   const signalCount = event.signals.length;
   const sourceCount = new Set(event.signals.map((s) => s.source.name)).size;
+
+  // Resolve best available location population: prefer L2, fall back to L1, then L0.
+  const areaPopulation = (() => {
+    const primaryLoc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+    if (!primaryLoc) return null;
+    const candidates = [primaryLoc, ...(primaryLoc.ancestors ?? [])];
+    for (const level of [2, 1, 0]) {
+      const loc = candidates.find((c) => c.level === level && c.population);
+      if (loc) return { name: loc.name, value: loc.population! };
+    }
+    return null;
+  })();
+
+  // IDP per capita: find iom_dtm_displacement metadata, falling back A2 → A1 → A0.
+  const idpData = (() => {
+    const primaryLoc = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
+    if (!primaryLoc) return null;
+    const candidates = [primaryLoc, ...(primaryLoc.ancestors ?? [])];
+    for (const level of [2, 1, 0]) {
+      const loc = candidates.find((c) => c.level === level);
+      if (!loc) continue;
+      const meta = loc.metadata?.find((m) => m.type === "iom_dtm_displacement");
+      if (!meta) continue;
+      const displaced = meta.data.population_displaced as number | undefined;
+      if (!displaced) continue;
+      const population = loc.population ? Number(loc.population) : null;
+      const ratio = population ? displaced / population : null;
+      return { displaced, population, ratio, name: loc.name };
+    }
+    return null;
+  })();
 
   return (
     <Box>
@@ -343,7 +270,7 @@ export function EventDetailContent({
         <Box
           px={24}
           py={10}
-          style={{ background: "#FFF", borderBottom: "1px solid #E5E5E5" }}
+          style={{ background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)" }}
         >
           <Group justify="space-between">
             <Link href="/detection" style={{ textDecoration: "none" }}>
@@ -352,8 +279,8 @@ export function EventDetailContent({
                 className="hover:opacity-70"
                 style={{ cursor: "pointer" }}
               >
-                <IconArrowLeft size={14} color="#525252" />
-                <Text size="sm" c="#525252" fw={500}>
+                <IconArrowLeft size={14} color="var(--color-text-secondary)" />
+                <Text size="sm" c="var(--color-text-secondary)" fw={500}>
                   Back to Events Overview
                 </Text>
               </Group>
@@ -383,12 +310,29 @@ export function EventDetailContent({
         pt={isCompact ? 16 : 20}
         pb={isCompact ? 16 : 20}
         style={{
-          background: "#FFF",
-          borderBottom: "1px solid #E5E5E5",
+          background: isAlready || promoted ? "var(--color-critical-light)" : "var(--color-bg-white)",
+          borderBottom: "1px solid var(--color-border)",
           borderLeft: `4px solid ${sevColor}`,
         }}
       >
-        {/* Title row — title left, active status right, both top-aligned */}
+        {/* Severity badge */}
+        <Group gap={6} mb={10}>
+          <span style={{
+            display: "inline-block",
+            padding: "2px 10px",
+            borderRadius: 999,
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            background: sev === "critical" ? "var(--color-critical-light)" : sev === "low" ? "var(--color-success-light)" : "var(--color-warning-light)",
+            color: sev === "critical" ? "var(--color-critical)" : sev === "low" ? "var(--color-success)" : "var(--color-warning)",
+          }}>
+            {severityLabels[sev]}
+          </span>
+        </Group>
+
+        {/* Title row - title left, active status right, both top-aligned */}
         <Group
           justify="space-between"
           align="flex-start"
@@ -398,7 +342,7 @@ export function EventDetailContent({
         >
           <Text
             fw={700}
-            c="#171717"
+            c="var(--color-text-primary)"
             style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3, flex: 1 }}
           >
             {displayTitle}
@@ -424,50 +368,77 @@ export function EventDetailContent({
           </Group>
         </Group>
 
-        {/* Type pills */}
+        {/* Type pills - L1 + L2 */}
         <Group gap={6} mb={14} wrap="wrap">
-          {eventTypes.map((t) => (
-            <Badge
-              key={t}
-              size="sm"
-              radius="xl"
-              variant="outline"
-              style={{ color: "#525252", borderColor: "#52525240", fontWeight: 500 }}
+          {getDisasterPills(eventTypes).map((pill) => (
+            <span
+              key={pill.label}
+              style={{
+                display: "inline-block",
+                padding: "2px 10px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 600,
+                color: pill.color,
+                background: pill.bg,
+                letterSpacing: "0.01em",
+                whiteSpace: "nowrap",
+              }}
             >
-              {t}
-            </Badge>
+              {pill.label}
+            </span>
+          ))}
+          {getDisasterL2Pills(eventTypes).map((pill) => (
+            <span
+              key={pill.label}
+              style={{
+                display: "inline-block",
+                padding: "2px 10px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 500,
+                color: pill.color,
+                background: "transparent",
+                border: `1px solid ${pill.color}`,
+                letterSpacing: "0.01em",
+                whiteSpace: "nowrap",
+                opacity: 0.75,
+              }}
+            >
+              {pill.label}
+            </span>
           ))}
         </Group>
 
         {/* Meta */}
         <Group gap={16} wrap="wrap">
-          {locations.length > 0 && (
+          {locations.some((l) => resolveLocationName(l)) && (
             <Group gap={4}>
-              <IconMapPin size={13} color="#737373" />
-              <Text size="xs" c="#525252" fw={500}>
-                {locations.map((l) => l.name).join(", ")}
+              <IconMapPin size={13} color="var(--color-text-muted)" />
+              <Text size="xs" c="var(--color-text-secondary)" fw={500}>
+                {locations.map((l) => resolveLocationName(l)).filter(Boolean).join(", ")}
               </Text>
             </Group>
           )}
           <Group gap={4}>
-            <IconCalendar size={13} color="#737373" />
-            <Text size="xs" c="#525252">{formatDate(detectedAt)}</Text>
+            <IconCalendar size={13} color="var(--color-text-muted)" />
+            <Text size="xs" c="var(--color-text-secondary)">{formatDate(detectedAt)}</Text>
           </Group>
           <Group gap={4}>
-            <IconClock size={13} color="#A3A3A3" />
-            <Text size="xs" c="#A3A3A3">{formatTimeAgo(detectedAt)}</Text>
+            <IconClock size={13} color="var(--color-text-muted)" />
+            <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(detectedAt)}</Text>
           </Group>
-          <Box style={{ width: 1, height: 12, background: "#E5E5E5", alignSelf: "center" }} />
+          <Box style={{ width: 1, height: 12, background: "var(--color-border)", alignSelf: "center" }} />
           <Group gap={4}>
-            <IconRadar size={13} color="#737373" />
-            <Text size="xs" c="#525252" fw={500}>
+            <IconRadar size={13} color="var(--color-text-muted)" />
+            <Text size="xs" c="var(--color-text-secondary)" fw={500}>
               {signalCount} signal{signalCount !== 1 ? "s" : ""}
             </Text>
           </Group>
           {sourceCount > 0 && (
             <Group gap={4}>
-              <IconDatabase size={13} color="#737373" />
-              <Text size="xs" c="#525252">
+              <IconDatabase size={13} color="var(--color-text-muted)" />
+              <Text size="xs" c="var(--color-text-secondary)">
                 {sourceCount} source{sourceCount !== 1 ? "s" : ""}
               </Text>
             </Group>
@@ -480,17 +451,17 @@ export function EventDetailContent({
         <Box
           px={24}
           py={16}
-          style={{ background: "#FAFAFA", borderBottom: "1px solid #E5E5E5" }}
+          style={{ background: "var(--color-bg-primary)", borderBottom: "1px solid var(--color-border)" }}
         >
           <Group gap={12}>
 
-            {/* Population Affected */}
+            {/* Casualties */}
             <Box
               p={16}
               style={{
                 flex: 1,
-                background: "#FFF",
-                border: "1px solid #E5E5E5",
+                background: "var(--color-bg-white)",
+                border: "1px solid var(--color-border)",
                 borderRadius: 8,
                 display: "flex",
                 gap: 12,
@@ -502,7 +473,7 @@ export function EventDetailContent({
                   width: 36,
                   height: 36,
                   borderRadius: 8,
-                  background: "#FEF2F0",
+                  background: "var(--color-accent-light)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -512,10 +483,10 @@ export function EventDetailContent({
                 <IconUsers size={18} color="#E85D3D" />
               </Box>
               <Box>
-                <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {event.populationAffected ?? "N/A"}
+                <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                  {event.casualties != null ? event.casualties.toLocaleString() : "N/A"}
                 </Text>
-                <Text size="xs" c="#737373" mt={2}>Population affected</Text>
+                <Text size="xs" c="var(--color-text-muted)" mt={2}>Casualties</Text>
               </Box>
             </Box>
 
@@ -524,8 +495,8 @@ export function EventDetailContent({
               p={16}
               style={{
                 flex: 1,
-                background: "#FFF",
-                border: "1px solid #E5E5E5",
+                background: "var(--color-bg-white)",
+                border: "1px solid var(--color-border)",
                 borderRadius: 8,
                 display: "flex",
                 gap: 12,
@@ -537,7 +508,7 @@ export function EventDetailContent({
                   width: 36,
                   height: 36,
                   borderRadius: 8,
-                  background: "#EFF6FF",
+                  background: "var(--color-info-light)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -547,23 +518,22 @@ export function EventDetailContent({
                 <IconWorld size={18} color="#2563EB" />
               </Box>
               <Box>
-                <Group gap={6} align="baseline">
-                  <Text fw={700} c="#171717" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                    ~2.1M
-                  </Text>
-                  <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>(mock)</Text>
-                </Group>
-                <Text size="xs" c="#737373" mt={2}>Population in affected area</Text>
+                <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                  {areaPopulation ? Number(areaPopulation.value).toLocaleString() : "N/A"}
+                </Text>
+                <Text size="xs" c="var(--color-text-muted)" mt={2}>
+                  {areaPopulation ? `Population in ${areaPopulation.name}` : "Population in area"}
+                </Text>
               </Box>
             </Box>
 
-            {/* Placeholder */}
+            {/* IDP per capita */}
             <Box
               p={16}
               style={{
                 flex: 1,
-                background: "#FFF",
-                border: "1px solid #E5E5E5",
+                background: "var(--color-bg-white)",
+                border: "1px solid var(--color-border)",
                 borderRadius: 8,
                 display: "flex",
                 gap: 12,
@@ -575,7 +545,7 @@ export function EventDetailContent({
                   width: 36,
                   height: 36,
                   borderRadius: 8,
-                  background: "#FEF3C7",
+                  background: "var(--color-warning-light)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -585,10 +555,18 @@ export function EventDetailContent({
                 <IconShieldExclamation size={18} color="#D97706" />
               </Box>
               <Box>
-                <Text fw={700} c="#A3A3A3" style={{ fontSize: 15, lineHeight: 1.3 }}>
-                  Placeholder
+                <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                  {idpData?.ratio != null
+                    ? `${(idpData.ratio * 100).toFixed(1)}%`
+                    : idpData?.displaced != null
+                      ? idpData.displaced.toLocaleString()
+                      : "N/A"}
                 </Text>
-                <Text size="xs" c="#A3A3A3" mt={2}>Coming soon</Text>
+                <Text size="xs" c="var(--color-text-muted)" mt={2}>
+                  {idpData
+                    ? `IDPs per capita in ${idpData.name} (${idpData.displaced.toLocaleString()} displaced)`
+                    : "IDP per capita"}
+                </Text>
               </Box>
             </Box>
 
@@ -608,16 +586,16 @@ export function EventDetailContent({
         {/* Left column */}
         <Box style={{ flex: 1, minWidth: 0 }}>
           {/* Summary */}
-          <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+          <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
+            <Box px={16} py={12} className="border-b border-[var(--color-border)]">
               <Group justify="space-between">
-                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+                <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                   Summary
                 </Text>
                 <Badge
                   size="xs"
                   style={{
-                    background: "#F3E8FF",
+                    background: "var(--color-ai-light)",
                     color: "#7C3AED",
                     border: "1px solid #7C3AED25",
                     fontWeight: 600,
@@ -628,179 +606,26 @@ export function EventDetailContent({
               </Group>
             </Box>
             <Box p={16}>
-              <Text size="sm" c="#374151" style={{ lineHeight: 1.75 }}>
+              <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.75 }}>
                 {event.description ?? "No summary available."}
               </Text>
             </Box>
           </Card>
 
-          {/* Intelligence details */}
-          <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
-              <Group justify="space-between">
-                <Group gap={8}>
-                  <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
-                    Intelligence Details
-                  </Text>
-                  <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>
-                    (mock data currently)
-                  </Text>
-                </Group>
-                <Text size="xs" c="#A3A3A3">
-                  {MOCK.intelligence_label}
-                </Text>
-              </Group>
-            </Box>
-            <Box
-              p={12}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 8,
-              }}
-            >
-              {MOCK.event_descriptions.map((item, i) => (
-                <Box
-                  key={i}
-                  p={12}
-                  style={{
-                    background: "#F9FAFB",
-                    border: "1px solid #E5E5E5",
-                    borderRadius: 6,
-                  }}
-                >
-                  <Text
-                    size="xs"
-                    fw={700}
-                    c="#A3A3A3"
-                    mb={4}
-                    style={{
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
-                    }}
-                  >
-                    {item.title}
-                  </Text>
-                  <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
-                    {item.notes}
-                  </Text>
-                </Box>
-              ))}
-            </Box>
-          </Card>
-
           {/* Discussion */}
-          <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
-              <Group gap={8}>
-                <IconMessageCircle size={14} color="#525252" />
-                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
-                  Discussion
-                </Text>
-                <Badge
-                  size="xs"
-                  variant="light"
-                  color="gray"
-                  style={{ fontWeight: 600 }}
-                >
-                  {MOCK.comments.length}
-                </Badge>
-                <Text size="xs" c="#A3A3A3" style={{ fontStyle: "italic" }}>
-                  (mock data currently)
-                </Text>
-              </Group>
-            </Box>
-            <Box>
-              {MOCK.comments.map((c, i) => (
-                <Box
-                  key={c.id}
-                  px={16}
-                  py={12}
-                  style={{
-                    borderBottom:
-                      i < MOCK.comments.length - 1
-                        ? "1px solid #F5F5F5"
-                        : undefined,
-                  }}
-                >
-                  <Group align="flex-start" gap={10}>
-                    <Avatar
-                      size={30}
-                      radius="xl"
-                      style={{
-                        background: "#FEF2F0",
-                        color: "#E85D3D",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {c.initials}
-                    </Avatar>
-                    <Box style={{ flex: 1 }}>
-                      <Group gap={8} mb={4}>
-                        <Text size="xs" fw={600} c="#171717">
-                          {c.author}
-                        </Text>
-                        <Text size="xs" c="#A3A3A3">
-                          {c.role}
-                        </Text>
-                        <Text
-                          size="xs"
-                          c="#A3A3A3"
-                          style={{ marginLeft: "auto" }}
-                        >
-                          {c.timeAgo}
-                        </Text>
-                      </Group>
-                      <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
-                        {c.text}
-                      </Text>
-                    </Box>
-                  </Group>
-                </Box>
-              ))}
-
-              {/* Comment input */}
-              <Box px={16} py={12} style={{ borderTop: "1px solid #F5F5F5" }}>
-                <Textarea
-                  placeholder="Add a comment…"
-                  value={comment}
-                  onChange={(e) => setComment(e.currentTarget.value)}
-                  minRows={2}
-                  size="xs"
-                  styles={{ input: { fontSize: 13 } }}
-                  mb={8}
-                />
-                <Group justify="flex-end">
-                  <Button
-                    size="xs"
-                    leftSection={<IconSend size={12} />}
-                    disabled
-                    title="Comments coming soon"
-                    style={{
-                      background: "#E85D3D",
-                      borderColor: "#E85D3D",
-                      fontSize: 12,
-                      opacity: 0.5,
-                    }}
-                  >
-                    Post
-                  </Button>
-                </Group>
-              </Box>
-            </Box>
+          <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
+            <CommentsSection entityId={event.id} entityType="event" />
           </Card>
 
           {/* Source Signals */}
-          <Card p={0} mb={20} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+          <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
+            <Box px={16} py={12} className="border-b border-[var(--color-border)]">
               <Group justify="space-between">
                 <Group gap={8}>
-                  <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+                  <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                     Signals ({event.signals.length})
                   </Text>
-                  <Text size="xs" c="#A3A3A3" style={{ fontWeight: 400 }}>
+                  <Text size="xs" c="var(--color-text-muted)" style={{ fontWeight: 400 }}>
                     Source intelligence that triggered this event
                   </Text>
                 </Group>
@@ -809,7 +634,7 @@ export function EventDetailContent({
             <Box>
               {event.signals.length === 0 && (
                 <Box px={16} py={24} style={{ textAlign: "center" }}>
-                  <Text c="#A3A3A3" size="sm">No signals attached</Text>
+                  <Text c="var(--color-text-muted)" size="sm">No signals attached</Text>
                 </Box>
               )}
               {event.signals.map((sig) => {
@@ -818,25 +643,22 @@ export function EventDetailContent({
                   sig.title ??
                   (sig.description ? sig.description.slice(0, 100) + (sig.description.length > 100 ? "…" : "") : `Signal ${sig.id}`);
                 return (
-                  <Link
+                  <Box
                     key={sig.id}
-                    href={`/signal/${sig.id}`}
-                    style={{ textDecoration: "none", color: "inherit" }}
+                    px={16}
+                    py={12}
+                    className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"
+                    style={{ display: "flex", gap: 12 }}
+                    onClick={() => router.push(`/signal/${sig.id}`)}
                   >
-                    <Box
-                      px={16}
-                      py={12}
-                      className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
-                      style={{ display: "flex", gap: 12 }}
-                    >
-                      <Box style={{ width: 3, background: "#737373", flexShrink: 0, borderRadius: 2 }} />
+                      <Box style={{ width: 3, background: "var(--color-text-muted)", flexShrink: 0, borderRadius: 2 }} />
                       <Box style={{ flex: 1, minWidth: 0 }}>
                         <Group justify="space-between" mb={4}>
                           <Group gap={6}>
-                            <Badge size="xs" style={{ background: "#F5F5F5", color: "#525252", fontWeight: 600 }}>
+                            <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>
                               {sig.source.name}
                             </Badge>
-                            <Badge size="xs" variant="outline" style={{ color: "#737373", borderColor: "#73737340", fontSize: 10 }}>
+                            <Badge size="xs" variant="outline" style={{ color: "var(--color-text-muted)", borderColor: "color-mix(in srgb, var(--color-text-muted) 25%, transparent)", fontSize: 10 }}>
                               {sig.source.type}
                             </Badge>
                           </Group>
@@ -853,28 +675,27 @@ export function EventDetailContent({
                                 Source
                               </a>
                             )}
-                            <Text size="xs" c="#A3A3A3">{formatTimeAgo(sig.publishedAt)}</Text>
+                            <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(sig.publishedAt)}</Text>
                           </Group>
                         </Group>
-                        <Text fw={500} size="sm" c="#171717" lineClamp={2} style={{ lineHeight: 1.4 }} mb={sigLocation ? 2 : 0}>
+                        <Text fw={500} size="sm" c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }} mb={sigLocation ? 2 : 0}>
                           {sigTitle}
                         </Text>
                         {sigLocation && (
-                          <Text size="xs" c="#737373">{sigLocation.name}</Text>
+                          <Text size="xs" c="var(--color-text-muted)">{sigLocation.name}</Text>
                         )}
                       </Box>
-                    </Box>
-                  </Link>
+                  </Box>
                 );
               })}
             </Box>
           </Card>
 
           {/* Related Events */}
-          <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-            <Box px={16} py={12} className="border-b border-[#E5E5E5]">
+          <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+            <Box px={16} py={12} className="border-b border-[var(--color-border)]">
               <Group justify="space-between">
-                <Text fw={600} c="#171717" style={{ fontSize: 14 }}>
+                <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                   Related Events
                 </Text>
                 {relatedLoading && <Loader size={14} />}
@@ -883,13 +704,13 @@ export function EventDetailContent({
             <Box>
               {relatedEvents.length === 0 && !relatedLoading && (
                 <Box px={16} py={24} style={{ textAlign: "center" }}>
-                  <Text c="#A3A3A3" size="sm">No related events found</Text>
+                  <Text c="var(--color-text-muted)" size="sm">No related events found</Text>
                 </Box>
               )}
               {relatedEvents.slice(0, 5).map((related) => {
-                const relSev = mapSeverity(related.rank);
-                const relColor = severityColor(related.rank);
-                const relBg = severityColors[relSev]?.bg ?? "#F5F5F5";
+                const relSev = mapSeverity(related.severity);
+                const relColor = severityColor(related.severity);
+                const relBg = severityColors[relSev]?.bg ?? "var(--color-bg-muted)";
                 const relTitle = related.title ?? related.description ?? related.types[0] ?? "";
                 return (
                   <Link
@@ -900,7 +721,7 @@ export function EventDetailContent({
                     <Box
                       px={16}
                       py={12}
-                      className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB] cursor-pointer"
+                      className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"
                       style={{ display: "flex", gap: 12 }}
                     >
                       <Box style={{ width: 3, background: relColor, flexShrink: 0, borderRadius: 2 }} />
@@ -909,9 +730,9 @@ export function EventDetailContent({
                           <Badge size="xs" style={{ background: relBg, color: relColor, fontWeight: 600 }}>
                             {severityLabels[relSev]}
                           </Badge>
-                          <Text size="xs" c="#A3A3A3">{formatTimeAgo(related.lastSignalCreatedAt)}</Text>
+                          <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(related.lastSignalCreatedAt)}</Text>
                         </Group>
-                        <Text size="sm" fw={500} c="#171717" lineClamp={2} style={{ lineHeight: 1.4 }}>
+                        <Text size="sm" fw={500} c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }}>
                           {relTitle}
                         </Text>
                       </Box>
@@ -928,125 +749,94 @@ export function EventDetailContent({
           <Box style={{ width: 300, flexShrink: 0 }}>
             <Stack gap={20}>
               {/* Location map */}
-              <Card
-                p={0}
-                style={{
-                  border: "1px solid #E5E5E5",
-                  position: "sticky",
-                  top: 24,
-                }}
-              >
-                <Box px={16} py={10} className="border-b border-[#E5E5E5]">
-                  <Group justify="space-between">
-                    <Group gap={6}>
-                      <IconMapPin size={14} color="#525252" />
-                      <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
-                        Location
-                      </Text>
-                    </Group>
-                    <Link
-                      href={`/map?event=${event.id}`}
-                      style={{ textDecoration: "none" }}
-                    >
-                      <Group gap={4} className="hover:opacity-70">
-                        <IconMap size={12} color="#E85D3D" />
-                        <Text size="xs" c="#E85D3D" fw={500}>
-                          Full map
-                        </Text>
-                      </Group>
-                    </Link>
-                  </Group>
-                </Box>
-                <Box style={{ height: 180 }}>
-                  <CrisisMap
-                    markers={mapMarkers}
-                    center={mapCenter}
-                    zoom={8}
-                    className="w-full h-full"
-                    interactive={false}
-                  />
-                </Box>
-              </Card>
+              <MinimapCard
+                markers={mapMarkers}
+                center={mapCenter}
+                sudanGeometry={sudanGeometry}
+                sudanId={sudanId}
+                locationGeometry={(event.generalLocation ?? event.originLocation ?? event.destinationLocation)?.geometry}
+              />
 
               {/* Was this event helpful? */}
-              <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-                <Box px={16} py={10} className="border-b border-[#E5E5E5]">
-                  <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
-                    Was this event helpful?
-                  </Text>
-                </Box>
-                <Box p={16}>
-                  {helpfulSubmitted ? (
-                    <Group gap={6} justify="center">
-                      <IconCircleCheck
-                        size={15}
-                        color="#059669"
-                        style={{ strokeWidth: 1.5 }}
-                      />
-                      <Text size="xs" c="#059669" fw={500}>
-                        Thanks for the feedback!
-                      </Text>
-                    </Group>
-                  ) : (
-                    <Group gap={8}>
-                      <button
-                        onClick={() => {
-                          setModalOpen(true);
-                          setModalSubmitted(false);
-                          setSelectedTags([]);
-                          setModalComment("");
-                        }}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
-                        style={{
-                          background: "#FEE2E2",
-                          color: "#B91C1C",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.background = "#FECACA")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.background = "#FEE2E2")
-                        }
-                      >
-                        <IconThumbDown size={13} />
-                        Issues
-                      </button>
-                      <button
-                        onClick={handleHelpful}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
-                        style={{
-                          background: "#D1FAE5",
-                          color: "#065F46",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.background = "#A7F3D0")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.background = "#D1FAE5")
-                        }
-                      >
-                        <IconThumbUp size={13} />
-                        Helpful
-                      </button>
-                    </Group>
-                  )}
-                </Box>
+              <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+                <FeedbackSection entityId={event.id} entityType="event" />
               </Card>
 
               {/* Actions */}
-              <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-                <Box px={16} py={10} className="border-b border-[#E5E5E5]">
-                  <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
+              <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+                <Box px={16} py={10} className="border-b border-[var(--color-border)]">
+                  <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
                     Actions
                   </Text>
                 </Box>
                 <Box p={16}>
                   <Stack gap={8}>
-                    <Button
+                    {isAlready || promoted ? (
+                      <Button
+                        variant="filled"
+                        size="xs"
+                        leftSection={<IconBellRinging size={13} />}
+                        fullWidth
+                        disabled
+                        style={{
+                          fontSize: 12,
+                          background: "var(--color-critical-light)",
+                          color: "var(--color-critical)",
+                          border: "1px solid color-mix(in srgb, var(--color-critical) 20%, transparent)",
+                          cursor: "default",
+                        }}
+                      >
+                        Alert
+                      </Button>
+                    ) : confirmPromote ? (
+                      <Stack gap={6}>
+                        <Text size="xs" c="var(--color-critical)" fw={600} style={{ textAlign: "center" }}>
+                          Raise this event as an alert?
+                        </Text>
+                        <Group gap={6} grow>
+                          <Button
+                            variant="light"
+                            color="gray"
+                            size="xs"
+                            style={{ fontSize: 12 }}
+                            onClick={() => setConfirmPromote(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            variant="filled"
+                            size="xs"
+                            leftSection={promoteToAlert.isPending ? <Loader size={11} color="white" /> : <IconBellRinging size={13} />}
+                            loading={promoteToAlert.isPending}
+                            onClick={() => promoteToAlert.mutate({ eventId: event.id })}
+                            style={{ fontSize: 12, background: "var(--color-critical)", border: "none" }}
+                          >
+                            Confirm
+                          </Button>
+                        </Group>
+                        {promoteToAlert.isError && (
+                          <Text size="xs" c="var(--color-critical)" style={{ textAlign: "center" }}>
+                            Failed. Try again.
+                          </Text>
+                        )}
+                      </Stack>
+                    ) : (
+                      <Button
+                        variant="filled"
+                        size="xs"
+                        leftSection={<IconBellRinging size={13} />}
+                        fullWidth
+                        onClick={() => setConfirmPromote(true)}
+                        style={{
+                          fontSize: 12,
+                          background: "var(--color-critical)",
+                          border: "none",
+                        }}
+                      >
+                        Turn into Alert
+                      </Button>
+                    )}
+                    {/* <Button
                       variant="light"
                       color="gray"
                       size="xs"
@@ -1057,116 +847,105 @@ export function EventDetailContent({
                       style={{ fontSize: 12 }}
                     >
                       Bookmark
-                    </Button>
-                    <Button
-                      variant="light"
-                      color="gray"
-                      size="xs"
-                      leftSection={<IconLayoutGridAdd size={12} />}
-                      fullWidth
-                      disabled
-                      style={{ fontSize: 12 }}
-                    >
-                      Add to Crisis
-                      <Text
-                        component="span"
-                        size="10px"
-                        c="#A3A3A3"
-                        ml={6}
-                        style={{ fontWeight: 400 }}
-                      >
-                        coming soon
-                      </Text>
-                    </Button>
+                    </Button> */}
+                    <AddToCrisisButton
+                      eventId={event.id}
+                      defaultSeverity={
+                        event.severity ?? Math.round((event.rank ?? 0) * 5)
+                      }
+                    />
                   </Stack>
                 </Box>
               </Card>
 
-              {/* Alert details */}
-              <Card p={0} style={{ border: "1px solid #E5E5E5" }}>
-                <Box px={16} py={10} className="border-b border-[#E5E5E5]">
-                  <Group gap={6}>
-                    <IconDatabase size={14} color="#525252" />
-                    <Text fw={600} c="#171717" style={{ fontSize: 13 }}>
-                      Details
-                    </Text>
-                  </Group>
-                </Box>
+              {/* System Data */}
+              <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+                <UnstyledButton
+                  onClick={() => setSystemDataOpen((o) => !o)}
+                  style={{ width: "100%" }}
+                >
+                  <Box px={16} py={10} className="border-b border-[var(--color-border)]">
+                    <Group gap={6} justify="space-between">
+                      <Group gap={6}>
+                        <IconDatabase size={14} color="var(--color-text-secondary)" />
+                        <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
+                          System Data
+                        </Text>
+                      </Group>
+                      {systemDataOpen
+                        ? <IconChevronUp size={13} color="var(--color-text-muted)" />
+                        : <IconChevronDown size={13} color="var(--color-text-muted)" />}
+                    </Group>
+                  </Box>
+                </UnstyledButton>
+                <Collapse in={systemDataOpen}>
                 <Box p={16}>
                   <Stack gap={8}>
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">
+                      <Text size="xs" c="var(--color-text-muted)">
                         Event ID
                       </Text>
-                      <Text size="xs" fw={500} c="#171717">
+                      <Text size="xs" fw={500} c="var(--color-text-primary)">
                         #{event.id}
                       </Text>
                     </Group>
                     {event.signals?.[0]?.source && (
                       <Group justify="space-between">
-                        <Text size="xs" c="#737373">
+                        <Text size="xs" c="var(--color-text-muted)">
                           Source
                         </Text>
-                        <Text size="xs" fw={500} c="#171717">
+                        <Text size="xs" fw={500} c="var(--color-text-primary)">
                           {event.signals[0].source.name}
                         </Text>
                       </Group>
                     )}
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">
+                      <Text size="xs" c="var(--color-text-muted)">
                         Detected
                       </Text>
-                      <Text size="xs" fw={500} c="#171717">
+                      <Text size="xs" fw={500} c="var(--color-text-primary)">
                         {formatDate(detectedAt)}
                       </Text>
                     </Group>
-                    {/* TODO: after Prisma migration remove the italics/placeholder fallbacks below */}
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">
-                        Valid from
-                      </Text>
-                      {/* event.validFrom ? formatDate(alert.validFrom) : */}
-                      <Text size="xs" fw={500} c="#A3A3A3" fs="italic">
-                        pending
+                      <Text size="xs" c="var(--color-text-muted)">Valid from</Text>
+                      <Text size="xs" fw={500}>
+                        {event?.validFrom ? formatDate(event.validFrom) : "-"}
                       </Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">
-                        Valid until
-                      </Text>
-                      {/* event.validTo ? formatDate(alert.validTo) : */}
-                      <Text size="xs" fw={500} c="#A3A3A3" fs="italic">
-                        pending
+                      <Text size="xs" c="var(--color-text-muted)">Valid until</Text>
+                      <Text size="xs" fw={500}>
+                        {event?.validTo ? formatDate(event.validTo) : "-"}
                       </Text>
                     </Group>
-                    {locations.length > 0 && (
+                    {locations.some((l) => resolveLocationName(l)) && (
                       <Box
-                        style={{ borderTop: "1px solid #F0F0F0" }}
+                        style={{ borderTop: "1px solid var(--color-border)" }}
                         pt={8}
                         mt={2}
                       >
-                        <Text size="xs" c="#737373" mb={6}>
+                        <Text size="xs" c="var(--color-text-muted)" mb={6}>
                           Affected Areas
                         </Text>
                         <Group gap={6} wrap="wrap">
                           {locations.map((loc) => {
-                            const levelLabels: Record<number, string> = { 0: "Country", 1: "State", 2: "City" };
-                            const levelLabel = levelLabels[loc.level];
+                            const name = resolveLocationName(loc);
+                            if (!name) return null;
                             return (
                               <Badge
                                 key={loc.id}
                                 size="sm"
                                 variant="light"
                                 style={{
-                                  background: "#FEF2F0",
+                                  background: "var(--color-accent-light)",
                                   color: "#E85D3D",
                                   fontWeight: 500,
                                   border: "1px solid #E85D3D30",
                                   textTransform: "none",
                                 }}
                               >
-                                {loc.name}
-                                {levelLabel ? ` (${levelLabel})` : ""}
+                                {name}
                               </Badge>
                             );
                           })}
@@ -1174,150 +953,36 @@ export function EventDetailContent({
                       </Box>
                     )}
                     <Box
-                      style={{ borderTop: "1px solid #F0F0F0" }}
+                      style={{ borderTop: "1px solid var(--color-border)" }}
                       pt={8}
                       mt={2}
                     >
                       <Group justify="space-between">
-                        <Text size="xs" c="#737373">
+                        <Text size="xs" c="var(--color-text-muted)">
                           Created
                         </Text>
-                        <Text size="xs" fw={500} c="#171717">
+                        <Text size="xs" fw={500} c="var(--color-text-primary)">
                           {formatDateTime(eventCreatedAt)}
                         </Text>
                       </Group>
                     </Box>
                     <Group justify="space-between">
-                      <Text size="xs" c="#737373">
+                      <Text size="xs" c="var(--color-text-muted)">
                         Updated
                       </Text>
-                      <Text size="xs" fw={500} c="#171717">
+                      <Text size="xs" fw={500} c="var(--color-text-primary)">
                         {formatDateTime(eventUpdatedAt)}
                       </Text>
                     </Group>
                   </Stack>
                 </Box>
+                </Collapse>
               </Card>
             </Stack>
           </Box>
         )}
       </Box>
 
-      {/* Issues feedback modal */}
-      <Modal
-        opened={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={modalSubmitted ? undefined : "What was the issue?"}
-        size="sm"
-        centered
-        styles={{
-          header: { paddingBottom: 8 },
-          body: { paddingTop: modalSubmitted ? 0 : 8 },
-        }}
-      >
-        {modalSubmitted ? (
-          <Stack align="center" gap={12} py={32}>
-            <IconCircleCheck
-              size={52}
-              color="#059669"
-              style={{ strokeWidth: 1.5 }}
-            />
-            <Text fw={700} size="lg" c="#171717">
-              Thank you!
-            </Text>
-            <Text size="sm" c="#737373" ta="center" maw={260}>
-              Your feedback helps improve alert quality for the whole team.
-            </Text>
-            <Button
-              variant="subtle"
-              color="gray"
-              size="sm"
-              mt={8}
-              onClick={() => setModalOpen(false)}
-            >
-              Close
-            </Button>
-          </Stack>
-        ) : (
-          <Stack gap={16}>
-            <Text size="sm" c="#737373">
-              Select all issues that apply - this helps us improve the detection
-              pipeline.
-            </Text>
-
-            <Stack gap={8}>
-              {issueTags.map(({ id, label, icon: Icon }) => {
-                const active = selectedTags.includes(id);
-                return (
-                  <button
-                    key={id}
-                    onClick={() => toggleTag(id)}
-                    className="transition-colors"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 7,
-                      width: "100%",
-                      borderRadius: 999,
-                      padding: "9px 16px",
-                      fontSize: 13,
-                      fontWeight: 500,
-                      background: active ? "#FEE2E2" : "#F5F5F5",
-                      color: active ? "#B91C1C" : "#525252",
-                      border: active ? "1px solid #FECACA" : "1px solid #E5E5E5",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <Icon size={14} strokeWidth={1.75} />
-                    {label}
-                  </button>
-                );
-              })}
-            </Stack>
-
-            <Divider color="#F5F5F5" />
-
-            <Textarea
-              label="Additional comments (optional)"
-              placeholder="Anything else we should know about this alert…"
-              value={modalComment}
-              onChange={(e) => setModalComment(e.currentTarget.value)}
-              minRows={3}
-              maxLength={1000}
-              size="sm"
-              styles={{
-                label: {
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "#171717",
-                  marginBottom: 6,
-                },
-              }}
-            />
-
-            <Group justify="flex-end">
-              <Button
-                variant="subtle"
-                color="gray"
-                size="sm"
-                onClick={() => setModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                disabled={selectedTags.length === 0 && !modalComment.trim()}
-                loading={feedbackPending}
-                onClick={handleSubmitIssues}
-                style={{ background: "#E85D3D", borderColor: "#E85D3D" }}
-              >
-                Send Feedback
-              </Button>
-            </Group>
-          </Stack>
-        )}
-      </Modal>
     </Box>
   );
 }

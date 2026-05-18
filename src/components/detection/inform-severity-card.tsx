@@ -15,7 +15,7 @@ const INFORM_COLORS = {
 
 function ScoreBar({ value, max = 10, color }: { value: number; max?: number; color: string }) {
   return (
-    <Box style={{ height: 3, background: "#F0F0F0", borderRadius: 2, overflow: "hidden" }}>
+    <Box style={{ height: 3, background: "var(--color-bg-muted)", borderRadius: 2, overflow: "hidden" }}>
       <Box style={{ height: "100%", width: `${(value / max) * 100}%`, background: color, borderRadius: 2 }} />
     </Box>
   );

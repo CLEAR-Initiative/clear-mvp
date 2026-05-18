@@ -1,93 +1,136 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Box } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
-import type { MapMarker } from "~/components/map/crisis-map";
+import dynamic from "next/dynamic";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
-import { countryConfig, countries } from "~/lib/constants/country-config";
-import { alertsToMarkers } from "../map/_components/map-markers-data";
-import { MapSection } from "./_components/map-section";
+import { useLocations } from "~/hooks/use-locations";
+import {
+  alertsToMarkers,
+  eventsToMarkers,
+  crisesToMarkers,
+  type CrisisMarker,
+} from "~/app/(app)/map/_components/map-markers-data";
+import { MapMarkerDetail } from "~/app/(app)/map/_components/map-marker-detail";
+import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
+import type { DataView } from "~/app/(app)/map/_components/map-layers-panel";
+import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
+import type { MapMarker } from "~/components/map/crisis-map";
 import { RightPanel } from "./_components/right-panel";
-import { CreateAlertModal } from "./_components/create-alert-modal";
 
-/* ========== Main Page ========== */
+const CrisisMap = dynamic(
+  () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
+  { ssr: false, loading: () => <Box w="100%" h="100%" style={{ background: "var(--color-bg-muted)" }} /> },
+);
+
 export default function DashboardPage() {
-  const [selectedCountry, setSelectedCountry] = useState("Sudan");
-  const [selectedRegion, setSelectedRegion] = useState("All Regions");
-  const [activeView, setActiveView] = useState("single");
-  const [activeMonth, setActiveMonth] = useState(2);
-  const [createAlertOpened, createAlertHandlers] = useDisclosure(false);
-
-  // Team-scoped tRPC queries — GraphQL-backed
   const { activeTeamId } = useTeam();
-  const alertsQuery = api.alerts.getAlerts.useQuery({ activeOnly: true, teamId: activeTeamId });
-  const statsQuery = api.alerts.getStats.useQuery({ teamId: activeTeamId });
-  const eventsQuery = api.events.list.useQuery({ teamId: activeTeamId });
-  const pipelineStatsQuery = api.pipeline.getStatistics.useQuery(undefined, {
-    retry: false,
-  });
+  const { getLocationId } = useLocations();
+  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
+  const sudanL0Query = api.locations.getById.useQuery(
+    { id: sudanId! },
+    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const focusCountryGeometry = sudanL0Query.data?.geometry ?? undefined;
+  const [selectedCountry, setSelectedCountry] = useState("Sudan");
+  const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(null);
+  const [dataView, setDataView] = useState<DataView>("alert");
+  const [showPopulation, setShowPopulation] = useState(false);
+  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
 
-  const allAlerts = alertsQuery.data?.alerts ?? [];
-  const allEvents = eventsQuery.data ?? [];
-  const overview = statsQuery.data?.stats?.overview;
-
-  const config = countryConfig[selectedCountry];
-
-  const currentMarkers = useMemo<MapMarker[]>(
-    () => alertsToMarkers(allAlerts),
-    [allAlerts],
+  const alertsQuery = api.alerts.getAlerts.useQuery(
+    { activeOnly: true, teamId: activeTeamId },
+    { enabled: dataView === "alert" },
+  );
+  const eventsQuery = api.alerts.getEvents.useQuery(
+    { teamId: activeTeamId ?? undefined },
+    // No team → fetch the global feed (the API resolver permits this).
+    { enabled: dataView === "event" },
+  );
+  const crisesQuery = api.alerts.getCrises.useQuery(
+    undefined,
+    { enabled: dataView === "crisis" },
   );
 
-  const mapCenter = useMemo<[number, number]>(() => {
-    return config?.center ?? [40.5, 8.5];
-  }, [config?.center]);
+  // ── Admin-boundary + population overlay queries ─────────────────────────
+  // Mirrors the /map page so the layers panel here behaves identically.
+  // Each query is gated on the corresponding panel state to avoid burning
+  // bandwidth when the layer is off.
+  const a1Query = api.locations.getAdminBoundaries.useQuery(
+    { level: 1, countryId: sudanId ?? undefined },
+    { enabled: boundaryLevel === "A1" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const a2Query = api.locations.getAdminBoundaries.useQuery(
+    { level: 2, countryId: sudanId ?? undefined },
+    { enabled: boundaryLevel === "A2" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const adminBoundaries = useMemo(() => {
+    if (boundaryLevel === "A1") return a1Query.data ?? [];
+    if (boundaryLevel === "A2") return a2Query.data ?? [];
+    return [];
+  }, [boundaryLevel, a1Query.data, a2Query.data]);
+  const adminBoundaryLevel =
+    boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
-  const mapZoom = useMemo(() => {
-    return config?.zoom ?? 5.5;
-  }, [config?.zoom]);
+  const populationQuery = api.locations.getPopulationBoundaries.useQuery(
+    { countryId: sudanId ?? undefined },
+    { enabled: showPopulation && !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const populationBoundaries = useMemo(
+    () => (showPopulation ? (populationQuery.data ?? []) : []),
+    [showPopulation, populationQuery.data],
+  );
 
-  const handleCountryChange = (country: string | null) => {
-    if (!country) return;
-    setSelectedCountry(country);
-    setSelectedRegion("All Regions");
-  };
+  const markers = useMemo(() => {
+    if (dataView === "alert")  return alertsToMarkers(alertsQuery.data?.alerts ?? []);
+    if (dataView === "event")  return eventsToMarkers(eventsQuery.data?.events ?? []);
+    if (dataView === "crisis") return crisesToMarkers(crisesQuery.data?.crises ?? []);
+    return [];
+  }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
 
-  const regionOptions = config?.regions ?? ["All Regions"];
+  const handleMarkerClick = useCallback((marker: MapMarker) => {
+    const full = markers.find((m) => m.id === marker.id);
+    setSelectedMarker(full ?? null);
+  }, [markers]);
+
 
   return (
-    <Box className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_380px]" style={{ minHeight: "100vh" }}>
-      <MapSection
-        selectedCountry={selectedCountry}
-        selectedRegion={selectedRegion}
-        onCountryChange={handleCountryChange}
-        onRegionChange={(v) => setSelectedRegion(v ?? "All Regions")}
-        activeView={activeView}
-        onViewChange={setActiveView}
-        currentMarkers={currentMarkers}
-        mapCenter={mapCenter}
-        mapZoom={mapZoom}
-        activeMonth={activeMonth}
-        onMonthChange={setActiveMonth}
-        countries={countries}
-        regionOptions={regionOptions}
-      />
+    <Box style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+      <Box style={{ position: "relative", flex: 1, minWidth: 0, overflow: "hidden" }}>
+        <CrisisMap
+          markers={markers}
+          center={[30.0, 15.5]}
+          zoom={5.0}
+          focusCountryPCode="SD"
+          focusCountryName="Sudan"
+          focusCountryGeometry={focusCountryGeometry}
+          adminBoundaries={adminBoundaries}
+          adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+          populationBoundaries={populationBoundaries}
+          className="w-full h-full"
+          onMarkerClick={handleMarkerClick}
+        />
+        {selectedMarker && (
+          <MapMarkerDetail
+            marker={selectedMarker}
+            onClose={() => setSelectedMarker(null)}
+          />
+        )}
+        <MapPanelBar
+          dataView={dataView}
+          onDataViewChange={setDataView}
+          showPopulation={showPopulation}
+          onShowPopulationChange={setShowPopulation}
+          boundaryLevel={boundaryLevel}
+          onBoundaryLevelChange={setBoundaryLevel}
+        />
+      </Box>
       <RightPanel
         selectedCountry={selectedCountry}
-        alerts={allAlerts}
-        events={allEvents}
-        eventsLoading={eventsQuery.isLoading}
-        alertsLoading={alertsQuery.isLoading}
-        alertsUpdatedAt={alertsQuery.dataUpdatedAt}
-        alertCount={overview?.active_alerts ?? allAlerts.length}
-        recent7Days={overview?.recent_7_days ?? 0}
-        pipelineStats={pipelineStatsQuery.data as { overall: { total_sources: number; total_data_records: number } } | undefined}
-        onCreateAlert={createAlertHandlers.open}
-      />
-      <CreateAlertModal
-        opened={createAlertOpened}
-        onClose={createAlertHandlers.close}
+        onCountryChange={setSelectedCountry}
+        onViewChange={() => {}}
+        activeView="single"
       />
     </Box>
   );

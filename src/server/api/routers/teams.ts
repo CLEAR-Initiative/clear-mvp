@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, orgAdminProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type {
   Organisation,
@@ -26,6 +26,7 @@ const MY_TEAMS_QUERY = `
       id name slug description
       organisation { id name }
       locations { id name level }
+      members { id user { id } role }
     }
   }
 `;
@@ -84,6 +85,12 @@ const UPDATE_ORGANISATION = `
   }
 `;
 
+const DELETE_ORGANISATION = `
+  mutation DeleteOrganisation($id: String!) {
+    deleteOrganisation(id: $id)
+  }
+`;
+
 const ADD_ORG_MEMBER = `
   mutation AddOrgMember($orgId: String!, $userId: String!, $role: OrgMemberRole) {
     addOrgMember(orgId: $orgId, userId: $userId, role: $role) {
@@ -117,7 +124,7 @@ const DELETE_TEAM = `
 `;
 
 const ADD_TEAM_MEMBER = `
-  mutation AddTeamMember($teamId: String!, $userId: String!, $role: String) {
+  mutation AddTeamMember($teamId: String!, $userId: String!, $role: TeamMemberRole) {
     addTeamMember(teamId: $teamId, userId: $userId, role: $role) {
       id user { id name email } role
     }
@@ -131,7 +138,7 @@ const REMOVE_TEAM_MEMBER = `
 `;
 
 const UPDATE_TEAM_MEMBER_ROLE = `
-  mutation UpdateTeamMemberRole($teamId: String!, $userId: String!, $role: String!) {
+  mutation UpdateTeamMemberRole($teamId: String!, $userId: String!, $role: TeamMemberRole!) {
     updateTeamMemberRole(teamId: $teamId, userId: $userId, role: $role) { id role }
   }
 `;
@@ -208,7 +215,7 @@ export const teamsRouter = createTRPCRouter({
 
   // ── Mutations ────────────────────────────────────────────
 
-  createOrganisation: protectedProcedure
+  createOrganisation: orgAdminProcedure
     .input(z.object({ name: z.string(), slug: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ createOrganisation: Organisation }>(
@@ -229,6 +236,17 @@ export const teamsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.updateOrganisation;
+    }),
+
+  deleteOrganisation: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ deleteOrganisation: boolean }>(
+        DELETE_ORGANISATION,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.deleteOrganisation;
     }),
 
   addOrgMember: protectedProcedure

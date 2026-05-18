@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSelectedLayoutSegments } from "next/navigation";
 import { Box, Text, Badge, UnstyledButton, Tooltip, Menu, Drawer } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { FeedbackModal } from "~/components/feedback-modal";
 import {
   IconLayoutDashboard,
   IconTarget,
@@ -17,10 +18,9 @@ import {
   IconSettings,
   IconDoorExit,
   IconShieldCog,
+  IconSpeakerphone,
   IconChevronLeft,
   IconChevronRight,
-  IconBuilding,
-  IconSelector,
   IconMenu2,
 } from "@tabler/icons-react";
 import { cn } from "~/lib/utils";
@@ -28,43 +28,45 @@ import { authClient } from "~/lib/auth-client";
 import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
-import { useTeam } from "~/providers/team-provider";
+import { useFeatureFlags } from "~/components/feature-flags-provider";
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
+  featureKey?: string;
   badge?: number;
   disabled?: boolean;
+  demo?: boolean;
+  /** Hidden entirely for non-admin users */
+  adminOnly?: boolean;
+  /** Shown but greyed out with "Coming Soon" for non-admin users */
+  comingSoonForNonAdmin?: boolean;
 }
 
 interface NavSection {
   title: string;
   items: NavItem[];
+  /** Hide the entire section for non-admin users */
+  adminOnly?: boolean;
 }
 
 const navSections: NavSection[] = [
   {
     title: "MAIN",
     items: [
-      { label: "Overview",        href: "/dashboard",  icon: IconLayoutDashboard },
-      { label: "Detection",       href: "/detection",  icon: IconTarget, badge: 3 },
-      { label: "Analysis",        href: "/analysis",   icon: IconChartPie,       disabled: true },
-      { label: "Operations",      href: "/operations", icon: IconUser,           disabled: true },
-      { label: "Cash Assistance", href: "/cash",       icon: IconCurrencyDollar, disabled: true },
+      { label: "Overview",           href: "/dashboard",  icon: IconLayoutDashboard, featureKey: "overview" },
+      { label: "Crisis Detection",   href: "/detection",  icon: IconTarget,          featureKey: "detection" },
+      { label: "Crisis Map",         href: "/map",        icon: IconMapPin,          featureKey: "crisis_map" },
+      { label: "Situation Analysis", href: "/analysis",   icon: IconChartPie,        featureKey: "analysis",        comingSoonForNonAdmin: true },
+      { label: "Operations",         href: "/operations", icon: IconUser,            featureKey: "operations",      adminOnly: true },
+      { label: "Cash Assistance",    href: "/cash",       icon: IconCurrencyDollar,  featureKey: "cash_assistance", adminOnly: true },
     ],
   },
   {
     title: "RESOURCES",
     items: [
-      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook,   disabled: true },
-      { label: "Crisis Map",    href: "/map",       icon: IconMapPin },
-    ],
-  },
-  {
-    title: "SETTINGS",
-    items: [
-      { label: "Organisation", href: "/settings/org", icon: IconBuilding },
+      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook, featureKey: "knowledge_hub", comingSoonForNonAdmin: true },
     ],
   },
 ];
@@ -73,70 +75,25 @@ const EXPANDED_W  = 240;
 const COLLAPSED_W = 80;
 const TRANSITION  = "200ms ease";
 
-function TeamSwitcher({ collapsed, labelStyle }: { collapsed: boolean; labelStyle: React.CSSProperties }) {
-  const { activeTeam, teams, switchTeam } = useTeam();
 
-  if (!teams?.length) return null;
-
-  return (
-    <Box style={{ borderBottom: `1px solid ${colors.border}`, flexShrink: 0 }}>
-      <Menu width={220} position="bottom-start">
-        <Menu.Target>
-          <UnstyledButton
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: spacingPx[3],
-              padding: `${spacingPx[3]}px ${spacingPx[5]}px`,
-              width: "100%",
-            }}
-            className="hover:bg-[#F5F5F5] transition-colors"
-          >
-            <IconBuilding size={18} style={{ flexShrink: 0, opacity: 0.6 }} />
-            <Box style={{ flex: 1, minWidth: 0, ...labelStyle }}>
-              <Text size="xs" fw={600} truncate="end">
-                {activeTeam?.name ?? "Select team"}
-              </Text>
-              <Text size="xs" c="dimmed" truncate="end">
-                {activeTeam?.organisation.name}
-              </Text>
-            </Box>
-            <IconSelector size={14} style={{ opacity: 0.5, flexShrink: 0, ...labelStyle }} />
-          </UnstyledButton>
-        </Menu.Target>
-        <Menu.Dropdown>
-          {teams.map((team) => (
-            <Menu.Item
-              key={team.id}
-              onClick={() => switchTeam(team.id)}
-              bg={team.id === activeTeam?.id ? colors.accentLight : undefined}
-            >
-              <Text size="sm" fw={500}>{team.name}</Text>
-              <Text size="xs" c="dimmed">{team.organisation.name}</Text>
-            </Menu.Item>
-          ))}
-          <Menu.Divider />
-          <Menu.Item component={Link} href="/settings/org">
-            Manage organisations
-          </Menu.Item>
-        </Menu.Dropdown>
-      </Menu>
-    </Box>
-  );
-}
 
 export function NavSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, { open: openMobile, close: closeMobile }] = useDisclosure(false);
+  const [feedbackOpen, { open: openFeedback, close: closeFeedback }] = useDisclosure(false);
   const segments = useSelectedLayoutSegments();
   const activeSegment = segments[0] ?? "";
   const router = useRouter();
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const isAdmin = authData?.user?.role === "admin";
+  const { flags } = useFeatureFlags();
 
   const handleLogout = async () => {
     try { await authClient.signOut(); } catch { /* ignore */ }
-    router.push("/auth/login");
+    localStorage.clear();
+    sessionStorage.clear();
+    // Hard redirect to clear all in-memory state and let the server handle cookie cleanup
+    window.location.href = "/auth/login";
   };
 
   // Text labels: fade out instantly on collapse, fade in after drawer has widened
@@ -196,20 +153,27 @@ export function NavSidebar() {
       </Box>
 
       {/* Mobile team switcher */}
-      <TeamSwitcher collapsed={false} labelStyle={{ opacity: 1, whiteSpace: "nowrap", overflow: "hidden" }} />
 
       {/* Mobile drawer nav */}
       <Box component="nav" style={{ flex: 1, overflowY: "auto", padding: spacingPx[3] }}>
-        {navSections.map((section) => (
+        {navSections.map((section) => {
+          if (section.adminOnly && !isAdmin) return null;
+          const visibleItems = section.items.filter((item) => {
+            if (item.adminOnly && !isAdmin) return false;
+            return item.featureKey ? (flags[item.featureKey] ?? true) : true;
+          });
+          if (visibleItems.length === 0) return null;
+          return (
           <Box key={section.title} mb={spacingPx[5]}>
             <Box style={{ height: 28, display: "flex", alignItems: "flex-end", paddingBottom: 4 }}>
               <Text fw={600} tt="uppercase" px={spacingPx[3]} style={{ letterSpacing: "0.07em", fontSize: fontSizesPx["2xs"], color: colors.textMuted }}>
                 {section.title}
               </Text>
             </Box>
-            {section.items.map((item) => {
+            {visibleItems.map((item) => {
+              const isDisabled = item.disabled || (!isAdmin && !!item.comingSoonForNonAdmin);
               const itemSegment = item.href.replace(/^\//, "");
-              const isActive = !item.disabled && activeSegment === itemSegment;
+              const isActive = !isDisabled && activeSegment === itemSegment;
               const Icon = item.icon;
               const content = (
                 <Box
@@ -217,8 +181,8 @@ export function NavSidebar() {
                   style={{
                     display: "flex", alignItems: "center", gap: spacingPx[4],
                     padding: `${spacingPx[4]}px ${spacingPx[3]}px`, borderRadius: 6,
-                    cursor: item.disabled ? "not-allowed" : "pointer",
-                    opacity: item.disabled ? 0.45 : 1,
+                    cursor: isDisabled ? "not-allowed" : "pointer",
+                    opacity: isDisabled ? 0.45 : 1,
                     background: isActive ? colors.accentLight : "transparent",
                     borderLeft: isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
                     color: isActive ? colors.accent : colors.textSecondary,
@@ -228,20 +192,19 @@ export function NavSidebar() {
                 >
                   <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
                   <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{item.label}</Text>
-                  {item.disabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>Soon</Badge>}
-                  {!item.disabled && item.badge !== undefined && (
-                    <Badge size="xs" color="red" variant="filled" style={{ fontSize: fontSizesPx.xs, fontWeight: 600 }}>{item.badge}</Badge>
-                  )}
+                  {isDisabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>Soon</Badge>}
+                  {!isDisabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>Demo</Badge>}
                 </Box>
               );
-              return item.disabled ? content : (
+              return isDisabled ? content : (
                 <Link key={item.href} href={item.href} onClick={closeMobile} style={{ textDecoration: "none", display: "block", color: "inherit" }}>
                   {content}
                 </Link>
               );
             })}
           </Box>
-        ))}
+          );
+        })}
       </Box>
 
       {/* Mobile drawer footer */}
@@ -335,7 +298,7 @@ export function NavSidebar() {
               flexShrink:     0,
               marginTop:      5,
             }}
-            className="hover:bg-[#F5F5F5] transition-colors"
+            className="hover:bg-[var(--color-bg-muted)] transition-colors"
           >
             {collapsed ? <IconChevronRight size={16} /> : <IconChevronLeft size={16} />}
           </UnstyledButton>
@@ -343,16 +306,22 @@ export function NavSidebar() {
       </Box>
 
       {/* ── Team switcher ──────────────────────────────────────── */}
-      <TeamSwitcher collapsed={collapsed} labelStyle={labelStyle} />
 
       {/* ── Navigation ────────────────────────────────────────── */}
       <Box
         component="nav"
         style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: `${spacingPx[3]}px ${spacingPx[3]}px` }}
       >
-        {navSections.map((section) => (
+        {navSections.map((section) => {
+          if (section.adminOnly && !isAdmin) return null;
+          const visibleItems = section.items.filter((item) => {
+            if (item.adminOnly && !isAdmin) return false;
+            return item.featureKey ? (flags[item.featureKey] ?? true) : true;
+          });
+          if (visibleItems.length === 0) return null;
+          return (
           <Box key={section.title} mb={spacingPx[5]}>
-            {/* Section label — always in DOM, fades out */}
+            {/* Section label - always in DOM, fades out */}
             <Box style={{ height: 28, display: "flex", alignItems: "flex-end", paddingBottom: 4 }}>
               <Text
                 fw={600}
@@ -369,9 +338,10 @@ export function NavSidebar() {
               </Text>
             </Box>
 
-            {section.items.map((item) => {
+            {visibleItems.map((item) => {
+              const isDisabled = item.disabled || (!isAdmin && !!item.comingSoonForNonAdmin);
               const itemSegment = item.href.replace(/^\//, "");
-              const isActive = !item.disabled && activeSegment === itemSegment;
+              const isActive = !isDisabled && activeSegment === itemSegment;
               const Icon = item.icon;
 
               const row = (
@@ -384,15 +354,15 @@ export function NavSidebar() {
                     padding:        `${spacingPx[4]}px ${spacingPx[3]}px`,
                     borderRadius:   6,
                     position:       "relative",
-                    cursor:         item.disabled ? "not-allowed" : "pointer",
-                    opacity:        item.disabled ? 0.45 : 1,
+                    cursor:         isDisabled ? "not-allowed" : "pointer",
+                    opacity:        isDisabled ? 0.45 : 1,
                     background:     isActive ? colors.accentLight : "transparent",
                     borderLeft:     isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
                     transition:     "none",
                     textDecoration: "none",
                     color:          isActive ? colors.accent : colors.textSecondary,
                   }}
-                  className={cn(!item.disabled && !isActive && "hover:bg-[#F5F5F5] hover:!text-[#171717]")}
+                  className={cn(!isDisabled && !isActive && "hover:bg-[var(--color-bg-muted)] hover:!text-[var(--color-text-primary)]")}
                   component="div"
                 >
                   <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
@@ -404,7 +374,7 @@ export function NavSidebar() {
                     {item.label}
                   </Text>
 
-                  {item.disabled && (
+                  {isDisabled && (
                     <Badge
                       size="xs"
                       variant="light"
@@ -415,38 +385,21 @@ export function NavSidebar() {
                     </Badge>
                   )}
 
-                  {!item.disabled && item.badge !== undefined && (
+                  {!isDisabled && item.demo && (
                     <Badge
                       size="xs"
-                      color="red"
-                      variant="filled"
-                      style={{ fontSize: fontSizesPx.xs, fontWeight: 600, minWidth: 18, padding: "0 6px", flexShrink: 0, ...labelStyle }}
+                      variant="light"
+                      color="accent"
+                      style={{ fontSize: fontSizesPx["2xs"], fontWeight: 500, padding: "0 5px", flexShrink: 0, ...labelStyle }}
                     >
-                      {item.badge}
+                      Demo
                     </Badge>
                   )}
 
-                  {/* Dot badge visible only when collapsed */}
-                  {!item.disabled && item.badge !== undefined && (
-                    <Box
-                      style={{
-                        position:      "absolute",
-                        top:           6,
-                        right:         8,
-                        width:         7,
-                        height:        7,
-                        borderRadius:  "50%",
-                        background:    colors.critical,
-                        opacity:       collapsed ? 1 : 0,
-                        transition:    collapsed ? "opacity 80ms ease" : "opacity 100ms ease 160ms",
-                        pointerEvents: "none",
-                      }}
-                    />
-                  )}
                 </Box>
               );
 
-              const linked = item.disabled ? row : (
+              const linked = isDisabled ? row : (
                 <Link key={item.href} href={item.href} style={{ textDecoration: "none", display: "block", color: "inherit" }}>
                   {row}
                 </Link>
@@ -459,12 +412,39 @@ export function NavSidebar() {
               ) : linked;
             })}
           </Box>
-        ))}
+          );
+        })}
       </Box>
 
-      {/* ── Bottom actions ────────────────────────────────────── */}
+      {/* Bottom actions */}
       <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3], flexShrink: 0 }}>
-        {/* Admin — only visible to admin role */}
+        {/* Feedback */}
+        {(() => {
+          const inner = (
+            <UnstyledButton
+              onClick={openFeedback}
+              style={{
+                display:        "flex",
+                alignItems:     "center",
+                gap:            spacingPx[3],
+                padding:        spacingPx[3],
+                width:          "100%",
+                borderRadius:   6,
+                background:     "transparent",
+                color:          colors.textSecondary,
+                transition:     "background 150ms",
+                marginBottom:   spacingPx[1],
+              }}
+              className="hover:bg-[var(--color-bg-muted)] transition-colors"
+            >
+              <IconSpeakerphone size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
+              <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Feedback</Text>
+            </UnstyledButton>
+          );
+          return collapsed ? <Tooltip label="Feedback" position="right" withArrow>{inner}</Tooltip> : inner;
+        })()}
+
+        {/* Admin - only visible to admin role */}
         {isAdmin && (() => {
           const isActive = activeSegment === "admin";
           const inner = (
@@ -484,7 +464,7 @@ export function NavSidebar() {
                 transition:     "background 150ms",
                 marginBottom:   spacingPx[1],
               }}
-              className="hover:bg-[#F5F5F5] transition-colors"
+              className="hover:bg-[var(--color-bg-muted)] transition-colors"
             >
               <IconShieldCog size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
               <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Admin</Text>
@@ -495,7 +475,7 @@ export function NavSidebar() {
 
         {/* Settings + exit row */}
         <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[2] }}>
-        {/* Settings — takes remaining width */}
+        {/* Settings - takes remaining width */}
         {(() => {
           const isActive = activeSegment === "profile";
           const inner = (
@@ -514,7 +494,7 @@ export function NavSidebar() {
                 color:          isActive ? colors.accent : colors.textSecondary,
                 transition:     "background 150ms",
               }}
-              className="hover:bg-[#F5F5F5] transition-colors"
+              className="hover:bg-[var(--color-bg-muted)] transition-colors"
             >
               <IconSettings size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
               <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Settings</Text>
@@ -540,7 +520,7 @@ export function NavSidebar() {
                     flexShrink:     0,
                     transition:     "background 150ms",
                   }}
-                  className="hover:bg-[#F5F5F5] transition-colors"
+                  className="hover:bg-[var(--color-bg-muted)] transition-colors"
                 >
                   <IconDoorExit size={18} />
                 </UnstyledButton>
@@ -558,7 +538,7 @@ export function NavSidebar() {
                   flexShrink:     0,
                   transition:     "background 150ms",
                 }}
-                className="hover:bg-[#F5F5F5] transition-colors"
+                className="hover:bg-[var(--color-bg-muted)] transition-colors"
               >
                 <IconDoorExit size={18} />
               </UnstyledButton>
@@ -578,6 +558,7 @@ export function NavSidebar() {
         </Box>
       </Box>
     </Box>
+    <FeedbackModal opened={feedbackOpen} onClose={closeFeedback} />
     </>
   );
 }

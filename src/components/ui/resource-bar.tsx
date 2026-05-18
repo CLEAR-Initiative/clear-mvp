@@ -22,7 +22,7 @@ export function ResourceBar({
   const pct = (current / total) * 100;
 
   return (
-    <Box py={12} className={showBorder ? "border-b border-[#E5E5E5] last:border-b-0" : ""}>
+    <Box py={12} className={showBorder ? "border-b border-[var(--color-border)] last:border-b-0" : ""}>
       <Group justify="space-between" mb={8}>
         <Text fw={500} size="sm">
           {name}
@@ -35,7 +35,7 @@ export function ResourceBar({
       </Group>
       <Group gap={8}>
         <Progress value={pct} size={6} color={color} style={{ flex: 1 }} />
-        <Text size="xs" c="#A3A3A3">
+        <Text size="xs" c="var(--color-text-muted)">
           {current.toLocaleString()} / {total.toLocaleString()}
         </Text>
       </Group>

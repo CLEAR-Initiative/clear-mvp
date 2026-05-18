@@ -9,19 +9,64 @@ import {
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
 } from "recharts";
-import { api } from "~/trpc/react";
+import { useQuery } from "@tanstack/react-query";
 
-// ISO3 mapping for supported countries
-const COUNTRY_ISO3: Record<string, string> = {
-  Sudan:        "SDN",
-  Ethiopia:     "ETH",
-  "South Sudan": "SSD",
-  Somalia:      "SOM",
-  Yemen:        "YEM",
-  Syria:        "SYR",
-  Afghanistan:  "AFG",
-  Myanmar:      "MMR",
-};
+const HAPI_BASE = "https://hapi.humdata.org/api/v2";
+const HAPI_APP_ID = "Y2xlYXItbXZwOmRldkBzeW50cm8uZmk=";
+
+interface HapiIdpRecord {
+  population: number;
+  operation: string;
+  reference_period_end: string;
+  location_name: string;
+}
+
+async function fetchIdpTrend(locationCode: string) {
+  const url = new URL(`${HAPI_BASE}/affected-people/idps`);
+  url.searchParams.set("location_code", locationCode.toUpperCase());
+  url.searchParams.set("admin_level", "0");
+  url.searchParams.set("output_format", "json");
+  url.searchParams.set("limit", "500");
+  url.searchParams.set("app_identifier", HAPI_APP_ID);
+
+  const res = await fetch(url.toString());
+
+  if (!res.ok) throw new Error(`HAPI request failed: ${res.status}`);
+
+  const json = await res.json() as { data?: HapiIdpRecord[] };
+  const records: HapiIdpRecord[] = json.data ?? [];
+
+  if (records.length === 0) return { available: false as const, locationCode };
+
+  const overviewRecords = records.filter((r) => r.operation.includes("Overview"));
+  const series = overviewRecords.length > 0 ? overviewRecords : records;
+
+  const sorted = [...series].sort(
+    (a, b) => new Date(a.reference_period_end).getTime() - new Date(b.reference_period_end).getTime(),
+  );
+
+  const byMonth = new Map<string, HapiIdpRecord>();
+  for (const r of sorted) {
+    byMonth.set(r.reference_period_end.slice(0, 7), r);
+  }
+
+  const trend = Array.from(byMonth.values())
+    .slice(-12)
+    .map((r) => ({ date: r.reference_period_end.slice(0, 7), value: r.population }));
+
+  const latest = trend[trend.length - 1];
+  const previous = trend[trend.length - 2];
+
+  return {
+    available: true as const,
+    locationCode,
+    current: latest?.value ?? 0,
+    lastUpdated: sorted[sorted.length - 1]?.reference_period_end ?? "",
+    delta: previous && latest ? latest.value - previous.value : null,
+    trend,
+    locationName: sorted[sorted.length - 1]?.location_name ?? locationCode,
+  };
+}
 
 function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -49,7 +94,7 @@ function SparkTooltip({ active, payload, label }: SparkTooltipProps) {
   if (!active || !payload?.[0]) return null;
   return (
     <Box style={{
-      background: "#FFFFFF", border: "1px solid #E5E5E5",
+      background: "var(--color-bg-white)", border: "1px solid var(--color-border)",
       borderRadius: 6, padding: "6px 10px",
       boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
     }}>
@@ -66,10 +111,12 @@ interface IdpCardProps {
 }
 
 export function IdpCard({ locationCode }: IdpCardProps) {
-  const query = api.hapi.getIdpTrend.useQuery(
-    { locationCode },
-    { staleTime: 1000 * 60 * 60, retry: 1 },
-  );
+  const query = useQuery({
+    queryKey: ["hapi", "idpTrend", locationCode],
+    queryFn: () => fetchIdpTrend(locationCode),
+    staleTime: 1000 * 60 * 60,
+    retry: 1,
+  });
   const [infoOpened, { open: openInfo, close: closeInfo }] = useDisclosure(false);
 
   const cardLabel = (
@@ -102,7 +149,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
             onClick={() => void query.refetch()}
             style={{
               fontSize: 10, fontWeight: 600, color: "#6B7280",
-              background: "#F5F5F5", border: "1px solid #E5E5E5",
+              background: "var(--color-bg-muted)", border: "1px solid var(--color-border)",
               borderRadius: 5, padding: "4px 10px", cursor: "pointer",
               display: "flex", alignItems: "center", gap: 4,
             }}

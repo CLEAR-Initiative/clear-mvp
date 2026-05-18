@@ -150,9 +150,9 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
   }
 
   return (
-    <Box style={{ display: "flex", flexDirection: "column", height: "100%", background: "white", borderLeft: "1px solid #E5E5E5" }}>
+    <Box style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--color-bg-white)", borderLeft: "1px solid var(--color-border)" }}>
       {/* Header */}
-      <Box px={16} py={12} className="border-b border-[#E5E5E5]" style={{ background: "#F9FAFB" }}>
+      <Box px={16} py={12} className="border-b border-[var(--color-border)]" style={{ background: "var(--color-bg-muted)" }}>
         <Group justify="space-between">
           <Group gap={8}>
             <Box
@@ -168,8 +168,8 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
               <IconWorld size={16} color="white" />
             </Box>
             <Box>
-              <Text fw={600} c="#171717" style={{ fontSize: 13 }}>HumChat AI</Text>
-              <Text c="#737373" style={{ fontSize: 10 }}>Humanitarian AI Assistant</Text>
+              <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>HumChat AI</Text>
+              <Text c="var(--color-text-muted)" style={{ fontSize: 10 }}>Humanitarian AI Assistant</Text>
             </Box>
           </Group>
           <Group gap={4}>
@@ -229,14 +229,14 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
                   fontSize: 13,
                   background: message.role === "assistant" ? "#F9FAFB" : "#E85D3D",
                   color: message.role === "assistant" ? "#525252" : "white",
-                  border: message.role === "assistant" ? "1px solid #E5E5E5" : "none",
+                  border: message.role === "assistant" ? "1px solid var(--color-border)" : "none",
                   maxWidth: "90%",
                 }}
               >
                 {message.role === "assistant" ? renderMarkdown(message.content) : <Text style={{ whiteSpace: "pre-wrap", fontSize: 13 }}>{message.content}</Text>}
               </Box>
               {message.role === "assistant" && (
-                <Text c="#A3A3A3" style={{ fontSize: 9, marginTop: 4 }}>
+                <Text c="var(--color-text-muted)" style={{ fontSize: 9, marginTop: 4 }}>
                   {message.timestamp.toLocaleString([], { month: "numeric", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </Text>
               )}
@@ -248,7 +248,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
             <Box style={{ width: 24, height: 24, background: "#FEF2F0", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <IconWorld size={12} color="#E85D3D" />
             </Box>
-            <Box style={{ background: "#F9FAFB", border: "1px solid #E5E5E5", padding: "8px 12px" }}>
+            <Box style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", padding: "8px 12px" }}>
               <Box style={{ display: "flex", gap: 4 }}>
                 <Box style={{ width: 6, height: 6, background: "#A3A3A3", borderRadius: "50%", animation: "bounce 1s infinite 0ms" }} />
                 <Box style={{ width: 6, height: 6, background: "#A3A3A3", borderRadius: "50%", animation: "bounce 1s infinite 150ms" }} />
@@ -261,7 +261,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
       </Box>
 
       {/* Input */}
-      <Box className="border-t border-[#E5E5E5]" p={12} style={{ background: "#F9FAFB" }}>
+      <Box className="border-t border-[var(--color-border)]" p={12} style={{ background: "var(--color-bg-muted)" }}>
         <Group gap={8}>
           <TextInput
             value={inputValue}

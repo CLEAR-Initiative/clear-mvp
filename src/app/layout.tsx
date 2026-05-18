@@ -14,8 +14,17 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CLEAR — Crisis Learning, Early-warning, Anticipation & Response",
+  title: "CLEAR: Crisis Learning, Early-warning, Anticipation & Response",
   description: "Humanitarian decision-support platform",
+  manifest: "/manifest.json",
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "CLEAR Observe",
+  },
 };
 
 export const viewport: Viewport = {
@@ -32,10 +41,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <ColorSchemeScript defaultColorScheme="light" />
+        <ColorSchemeScript defaultColorScheme="auto" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <MantineProvider theme={clearTheme} defaultColorScheme="light">
+        <MantineProvider theme={clearTheme} defaultColorScheme="auto">
           <Notifications position="top-right" />
           <TRPCReactProvider>{children}</TRPCReactProvider>
         </MantineProvider>

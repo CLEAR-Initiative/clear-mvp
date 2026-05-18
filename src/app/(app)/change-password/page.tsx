@@ -72,10 +72,10 @@ export default function ChangePasswordPage() {
     <Box p={32} style={{ maxWidth: 600 }}>
       <Group justify="space-between" mb={24}>
         <Box>
-          <Text size="xl" fw={700} c="#171717">
+          <Text size="xl" fw={700} c="var(--color-text-primary)">
             Change Password
           </Text>
-          <Text size="sm" c="#737373">
+          <Text size="sm" c="var(--color-text-muted)">
             Update your account password
           </Text>
         </Box>
@@ -114,7 +114,7 @@ export default function ChangePasswordPage() {
         </Alert>
       )}
 
-      <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
+      <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
         <Group gap={8} mb={16}>
           <IconKey size={18} color="#E85D3D" />
           <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
@@ -132,7 +132,7 @@ export default function ChangePasswordPage() {
               required
               styles={{
                 label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                input: { borderColor: "#E5E5E5" },
+                input: { borderColor: "var(--color-border)" },
               }}
             />
 
@@ -144,7 +144,7 @@ export default function ChangePasswordPage() {
               required
               styles={{
                 label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                input: { borderColor: "#E5E5E5" },
+                input: { borderColor: "var(--color-border)" },
               }}
             />
 
@@ -156,7 +156,7 @@ export default function ChangePasswordPage() {
               required
               styles={{
                 label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                input: { borderColor: "#E5E5E5" },
+                input: { borderColor: "var(--color-border)" },
               }}
             />
 
@@ -175,14 +175,14 @@ export default function ChangePasswordPage() {
       </Card>
 
       {/* Password Requirements */}
-      <Card p="lg" style={{ border: "1px solid #E5E5E5", backgroundColor: "#F5F5F5" }}>
+      <Card p="lg" style={{ border: "1px solid var(--color-border)", backgroundColor: "#F5F5F5" }}>
         <Group gap={8} mb={12}>
           <IconInfoCircle size={16} color="#737373" />
-          <Text size="xs" fw={600} c="#737373" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
+          <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
             Password Requirements
           </Text>
         </Group>
-        <List size="xs" spacing={4} c="#525252">
+        <List size="xs" spacing={4} c="var(--color-text-secondary)">
           <List.Item>At least 8 characters long</List.Item>
         </List>
       </Card>

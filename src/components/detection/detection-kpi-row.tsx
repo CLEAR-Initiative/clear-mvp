@@ -1,6 +1,8 @@
 "use client";
 
-import { Box } from "@mantine/core";
+import { useState } from "react";
+import { Box, Text, Group, Collapse, ActionIcon } from "@mantine/core";
+import { IconChevronUp, IconChevronDown } from "@tabler/icons-react";
 import type { GqlAlert, GqlEvent } from "~/lib/types/graphql";
 import { SignalTrendCard }      from "./signal-trend-card";
 import { CoverageRingsCard }    from "./coverage-rings-card";
@@ -37,32 +39,56 @@ interface DetectionKpiRowProps {
 
 export function DetectionKpiRow({ country, alerts, events, onNavigateToAlerts }: DetectionKpiRowProps) {
   const iso3 = ISO3[country] ?? "SDN";
+  const [expanded, setExpanded] = useState(false);
 
   return (
-    <Box
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(4, 1fr)",
-        gap: 16,
-        marginBottom: 24,
-      }}
-      className="sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-    >
-      <Box style={CARD}>
-        <SignalTrendCard alerts={alerts} events={events} />
-      </Box>
+    <Box mb={24}>
+      <Group
+        justify="space-between"
+        align="center"
+        mb={expanded ? 12 : 0}
+        style={{ cursor: "pointer", userSelect: "none" }}
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <Text fw={600} c="var(--color-text-secondary)" style={{ fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          Indicators
+        </Text>
+        <ActionIcon
+          variant="subtle"
+          color="gray"
+          size="xs"
+          style={{ pointerEvents: "none" }}
+        >
+          {expanded ? <IconChevronUp size={13} /> : <IconChevronDown size={13} />}
+        </ActionIcon>
+      </Group>
 
-      <Box style={CARD}>
-        <CoverageRingsCard alerts={alerts} events={events} onNavigateToAlerts={onNavigateToAlerts} />
-      </Box>
+      <Collapse in={expanded}>
+        <Box
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 16,
+          }}
+          className="sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+        >
+          <Box style={CARD}>
+            <SignalTrendCard alerts={alerts} events={events} />
+          </Box>
 
-      <Box style={CARD}>
-        <IdpCard locationCode={iso3} />
-      </Box>
+          <Box style={CARD}>
+            <CoverageRingsCard alerts={alerts} events={events} onNavigateToAlerts={onNavigateToAlerts} />
+          </Box>
 
-      <Box style={CARD}>
-        <InformSeverityCard country={country} />
-      </Box>
+          <Box style={CARD}>
+            <IdpCard locationCode={iso3} />
+          </Box>
+
+          <Box style={CARD}>
+            <InformSeverityCard country={country} />
+          </Box>
+        </Box>
+      </Collapse>
     </Box>
   );
 }

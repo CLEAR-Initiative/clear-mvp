@@ -22,8 +22,8 @@ export function StrategyTab() {
           <Box key={phase.name} mb={20} p={16} style={{ border: `1px solid ${phase.color}30`, borderLeft: `4px solid ${phase.color}`, background: `${phase.colorBg}30` }}>
             <Group justify="space-between" mb={12}>
               <Box>
-                <Text fw={600} c="#171717">{phase.name}</Text>
-                <Text size="xs" c="#737373">{phase.duration}</Text>
+                <Text fw={600} c="var(--color-text-primary)">{phase.name}</Text>
+                <Text size="xs" c="var(--color-text-muted)">{phase.duration}</Text>
               </Box>
               <Text fw={600} c={phase.color} style={{ fontFamily: "monospace" }}>{phase.budget}</Text>
             </Group>
@@ -31,7 +31,7 @@ export function StrategyTab() {
               {phase.activities.map((activity, idx) => (
                 <Group key={idx} gap={8} align="flex-start" wrap="nowrap">
                   <IconCircleCheck size={14} color={phase.color} style={{ marginTop: 2, flexShrink: 0 }} />
-                  <Text size="sm" c="#525252">{activity}</Text>
+                  <Text size="sm" c="var(--color-text-secondary)">{activity}</Text>
                 </Group>
               ))}
             </Box>
@@ -69,8 +69,8 @@ export function StrategyTab() {
               <Table.Td>
                 <Badge size="xs" style={{ background: r.severityBg, color: r.severityColor, textTransform: "uppercase" }}>{r.severity}</Badge>
               </Table.Td>
-              <Table.Td><Text c="#525252" style={{ fontSize: 13 }}>{r.description}</Text></Table.Td>
-              <Table.Td><Text c="#525252" style={{ fontSize: 13 }}>{r.mitigation}</Text></Table.Td>
+              <Table.Td><Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>{r.description}</Text></Table.Td>
+              <Table.Td><Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>{r.mitigation}</Text></Table.Td>
             </Table.Tr>
           )}
         />

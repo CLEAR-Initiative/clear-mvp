@@ -80,7 +80,7 @@ export default function VerifyEmailPage() {
         {state === "loading" && (
           <Stack align="center" gap={16}>
             <Loader size="lg" color="gray" />
-            <Text size="sm" c="#737373">
+            <Text size="sm" c="var(--color-text-muted)">
               Verifying your email...
             </Text>
           </Stack>
@@ -98,10 +98,10 @@ export default function VerifyEmailPage() {
             >
               <IconCircleCheck size={32} color="#059669" />
             </Center>
-            <Text size="lg" fw={700} c="#171717" ta="center">
+            <Text size="lg" fw={700} c="var(--color-text-primary)" ta="center">
               Email Verified
             </Text>
-            <Text size="sm" c="#737373" ta="center">
+            <Text size="sm" c="var(--color-text-muted)" ta="center">
               Your email has been verified successfully. You can now receive
               email notifications.
             </Text>
@@ -129,10 +129,10 @@ export default function VerifyEmailPage() {
             >
               <IconCircleCheck size={32} color="#3B82F6" />
             </Center>
-            <Text size="lg" fw={700} c="#171717" ta="center">
+            <Text size="lg" fw={700} c="var(--color-text-primary)" ta="center">
               Already Verified
             </Text>
-            <Text size="sm" c="#737373" ta="center">
+            <Text size="sm" c="var(--color-text-muted)" ta="center">
               Your email is already verified. No further action needed.
             </Text>
             <Button
@@ -159,10 +159,10 @@ export default function VerifyEmailPage() {
             >
               <IconAlertCircle size={32} color="#DC2626" />
             </Center>
-            <Text size="lg" fw={700} c="#171717" ta="center">
+            <Text size="lg" fw={700} c="var(--color-text-primary)" ta="center">
               Verification Failed
             </Text>
-            <Text size="sm" c="#737373" ta="center">
+            <Text size="sm" c="var(--color-text-muted)" ta="center">
               {errorMessage}
             </Text>
             {resendMessage && (

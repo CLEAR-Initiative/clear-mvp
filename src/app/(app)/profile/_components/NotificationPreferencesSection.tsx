@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   Text,
@@ -8,130 +8,109 @@ import {
   Group,
   Stack,
   Box,
-  Button,
+  Loader,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconBell, IconMail, IconPhone } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 
-interface NotificationPreferencesSectionProps {
-  user: {
-    email_verified?: boolean;
-    email_notifications_enabled?: boolean;
-  };
-}
+export function NotificationPreferencesSection() {
+  const utils = api.useUtils();
+  const prefsQuery = api.auth.myUserDetails.useQuery();
 
-export function NotificationPreferencesSection({
-  user,
-}: NotificationPreferencesSectionProps) {
-  const emailVerified = user.email_verified ?? false;
-  const [emailEnabled, setEmailEnabled] = useState(
-    user.email_notifications_enabled ?? false,
-  );
-  const [isSaving, setIsSaving] = useState(false);
+  // Local state for instant toggle feedback; synced from server on load.
+  const [emailEnabled, setEmailEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
-    setEmailEnabled(user.email_notifications_enabled ?? false);
-  }, [user.email_notifications_enabled]);
+    if (prefsQuery.data !== undefined && emailEnabled === null) {
+      setEmailEnabled(prefsQuery.data.emailEnabled);
+    }
+  }, [prefsQuery.data, emailEnabled]);
 
-  const utils = api.useUtils();
-  const updateProfile = api.auth.updateNotificationPrefs.useMutation({
+  const updatePrefs = api.auth.updateNotificationPrefs.useMutation({
     onSuccess: () => {
       notifications.show({
         title: "Saved",
-        message: "Notification preferences updated.",
+        message: "Notification channels updated.",
         color: "green",
+        autoClose: 2000,
       });
-      void utils.auth.me.invalidate();
+      void utils.auth.myUserDetails.invalidate();
     },
     onError: (err) => {
+      // Revert on failure
+      setEmailEnabled(prefsQuery.data?.emailEnabled ?? false);
       notifications.show({
         title: "Error",
         message: err.message,
         color: "red",
       });
     },
-    onSettled: () => setIsSaving(false),
   });
 
-  const handleSave = () => {
-    setIsSaving(true);
-    updateProfile.mutate({
-      enableEmailNotification: emailEnabled,
-    });
-  };
+  const displayEmailEnabled = emailEnabled ?? false;
+  const isSaving = updatePrefs.isPending;
 
   return (
-    <Card p="lg" mb={16} style={{ border: "1px solid #E5E5E5" }}>
+    <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
       <Group gap={8} mb={16}>
-        <IconBell size={18} color="#E85D3D" />
+        <IconBell size={18} color="var(--color-accent)" />
         <Text
           fw={700}
           size="sm"
           tt="uppercase"
           style={{ letterSpacing: "0.05em", fontSize: 11 }}
         >
-          Notification Preferences
+          Notification Channels
         </Text>
       </Group>
 
-      <Stack gap={16}>
-        {/* Email toggle */}
-        <Group justify="space-between">
-          <Box>
-            <Group gap={6}>
-              <IconMail size={14} color={emailVerified ? "#737373" : "#E85D3D"} />
-              <Text size="sm" fw={500}>
-                Email Notifications
+      {prefsQuery.isLoading ? (
+        <Loader size="xs" />
+      ) : (
+        <Stack gap={16}>
+          {/* Email toggle */}
+          <Group justify="space-between">
+            <Box>
+              <Group gap={6}>
+                <IconMail size={14} color="var(--color-text-muted)" />
+                <Text size="sm" fw={500}>
+                  Email Notifications
+                </Text>
+              </Group>
+              <Text size="xs" c="var(--color-text-muted)">
+                Receive crisis alerts and digests via email
               </Text>
-            </Group>
-            <Text size="xs" c={emailVerified ? "#737373" : "#E85D3D"}>
-              {emailVerified
-                ? "Receive crisis alerts and digests via email"
-                : "Verify your email first to receive notifications"}
-            </Text>
-          </Box>
-          <Switch
-            checked={emailEnabled}
-            onChange={(e) => setEmailEnabled(e.currentTarget.checked)}
-            disabled={!emailVerified}
-            color="teal"
-          />
-        </Group>
-
-        {/* SMS toggle (disabled until backend is ready) */}
-        <Group justify="space-between" style={{ opacity: 0.5 }}>
-          <Box>
-            <Group gap={6}>
-              <IconPhone size={14} color="#737373" />
-              <Text size="sm" fw={500}>
-                SMS Notifications
-              </Text>
-            </Group>
-            <Text size="xs" c="#737373">
-              Coming soon
-            </Text>
-          </Box>
-          <Switch
-            checked={false}
-            disabled
-            color="teal"
-          />
-        </Group>
-
-        {emailVerified && (
-          <Group justify="flex-end" mt={4}>
-            <Button
-              size="xs"
-              color="dark"
-              loading={isSaving}
-              onClick={handleSave}
-            >
-              Save Preferences
-            </Button>
+            </Box>
+            <Switch
+              checked={displayEmailEnabled}
+              disabled={isSaving}
+              onChange={(e) => {
+                const newValue = e.currentTarget.checked;
+                setEmailEnabled(newValue);
+                updatePrefs.mutate({ enableEmailNotification: newValue });
+              }}
+              color="teal"
+            />
           </Group>
-        )}
-      </Stack>
+
+          {/* SMS toggle (disabled until backend is ready) */}
+          <Group justify="space-between" style={{ opacity: 0.5 }} aria-hidden="true">
+            <Box>
+              <Group gap={6}>
+                <IconPhone size={14} color="var(--color-text-muted)" />
+                <Text size="sm" fw={500}>
+                  SMS Notifications
+                </Text>
+              </Group>
+              <Text size="xs" c="var(--color-text-muted)">
+                Coming soon
+              </Text>
+            </Box>
+            <Switch checked={false} disabled color="teal" tabIndex={-1} />
+          </Group>
+        </Stack>
+      )}
     </Card>
   );
 }

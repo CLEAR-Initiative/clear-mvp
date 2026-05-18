@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   Box,
   Card,
@@ -14,6 +15,8 @@ import {
   Stack,
   SimpleGrid,
   Divider,
+  Anchor,
+  Group,
 } from "@mantine/core";
 import { IconAlertCircle, IconLogin } from "@tabler/icons-react";
 import { authClient } from "~/lib/auth-client";
@@ -30,14 +33,11 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawCallback = searchParams.get("callbackUrl") ?? "/dashboard";
-  // Sanitize callbackUrl: only allow relative paths to prevent open-redirect
   const callbackUrl =
     rawCallback.startsWith("/") && !rawCallback.startsWith("//")
       ? rawCallback
       : "/dashboard";
 
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -49,38 +49,14 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      if (mode === "signup") {
-        if (!name.trim()) {
-          setError("Name is required");
-          setLoading(false);
-          return;
-        }
-        const { error: signUpError } = await authClient.signUp.email({
-          name: name.trim(),
-          email: email.trim(),
-          password,
-        });
-        if (signUpError) {
-          setError(signUpError.message ?? "Sign up failed");
-        } else {
-          // Verify session was actually created before redirecting
-          const session = await authClient.getSession();
-          if (session?.data) {
-            router.push("/onboarding");
-          } else {
-            setError("Account creation failed. Please try again.");
-          }
-        }
+      const { error: signInError } = await authClient.signIn.email({
+        email: email.trim(),
+        password,
+      });
+      if (signInError) {
+        setError(signInError.message ?? "Login failed");
       } else {
-        const { error: signInError } = await authClient.signIn.email({
-          email: email.trim(),
-          password,
-        });
-        if (signInError) {
-          setError(signInError.message ?? "Login failed");
-        } else {
-          router.push(callbackUrl);
-        }
+        router.push(callbackUrl);
       }
     } catch {
       setError("An unexpected error occurred");
@@ -102,20 +78,20 @@ function LoginForm() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#FAFAFA",
+        backgroundColor: "var(--color-bg-primary)",
       }}
     >
       <Box w={400}>
-        <Card p="xl" style={{ border: "1px solid #E5E5E5" }}>
+        <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
           {/* Branding */}
           <Stack align="center" gap={4} mb={24}>
             <Text fw={700} size="xl" c="#E85D3D" style={{ letterSpacing: "-0.025em" }}>
               CLEAR
             </Text>
-            <Text size="lg" fw={600} c="#171717">
-              {mode === "login" ? "Sign In" : "Create Account"}
+            <Text size="lg" fw={600} c="var(--color-text-primary)">
+              Sign In
             </Text>
-            <Text size="sm" c="#737373">
+            <Text size="sm" c="var(--color-text-muted)">
               Crisis Early Warning & Response
             </Text>
           </Stack>
@@ -133,25 +109,9 @@ function LoginForm() {
             </Alert>
           )}
 
-          {/* Auth Form */}
+          {/* Login Form */}
           <form onSubmit={(e) => void handleSubmit(e)}>
             <Stack gap={12}>
-              {mode === "signup" && (
-                <TextInput
-                  label="Full Name"
-                  placeholder="Enter your name"
-                  value={name}
-                  onChange={(e) => setName(e.currentTarget.value)}
-                  required
-                  autoComplete="name"
-                  autoFocus
-                  styles={{
-                    label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                    input: { borderColor: "#E5E5E5", fontSize: 14 },
-                  }}
-                />
-              )}
-
               <TextInput
                 label="Email"
                 placeholder="Enter your email"
@@ -160,35 +120,42 @@ function LoginForm() {
                 onChange={(e) => setEmail(e.currentTarget.value)}
                 required
                 autoComplete="email"
-                autoFocus={mode === "login"}
+                autoFocus
                 styles={{
-                  label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                  input: { borderColor: "#E5E5E5", fontSize: 14 },
+                  label: { fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 4 },
+                  input: { borderColor: "var(--color-border)", fontSize: 14 },
                 }}
               />
 
               <PasswordInput
                 label="Password"
-                placeholder={mode === "signup" ? "Choose a password (min 8 chars)" : "Enter your password"}
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.currentTarget.value)}
                 required
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                autoComplete="current-password"
                 styles={{
-                  label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                  input: { borderColor: "#E5E5E5", fontSize: 14 },
+                  label: { fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 4 },
+                  input: { borderColor: "var(--color-border)", fontSize: 14 },
                 }}
               />
 
-              {mode === "login" && (
+              <Group justify="space-between">
                 <Checkbox
                   label="Remember me"
                   size="sm"
-                  styles={{
-                    label: { fontSize: 13, color: "#525252" },
-                  }}
+                  styles={{ label: { fontSize: 13, color: "var(--color-text-secondary)" } }}
                 />
-              )}
+                <Anchor
+                  component={Link}
+                  href="/auth/forgot-password"
+                  size="sm"
+                  c="#E85D3D"
+                  fw={500}
+                >
+                  Forgot password?
+                </Anchor>
+              </Group>
 
               <Button
                 type="submit"
@@ -199,32 +166,15 @@ function LoginForm() {
                 mt={8}
                 style={{ fontWeight: 600, fontSize: 14 }}
               >
-                {mode === "login" ? "Sign In" : "Create Account"}
+                Sign In
               </Button>
             </Stack>
           </form>
 
-          {/* Toggle login/signup */}
-          <Text ta="center" size="sm" c="#737373" mt={16}>
-            {mode === "login" ? (
-              <>Don&apos;t have an account?{" "}
-                <Text component="span" c="#E85D3D" fw={600} style={{ cursor: "pointer" }} onClick={() => { setMode("signup"); setError(""); }}>
-                  Sign up
-                </Text>
-              </>
-            ) : (
-              <>Already have an account?{" "}
-                <Text component="span" c="#E85D3D" fw={600} style={{ cursor: "pointer" }} onClick={() => { setMode("login"); setError(""); }}>
-                  Sign in
-                </Text>
-              </>
-            )}
-          </Text>
-
           {/* Demo Users */}
           <Divider my={20} label="Demo Users" labelPosition="center" />
-          <Box p={12} style={{ backgroundColor: "#F5F5F5" }}>
-            <Text size="xs" c="#737373" mb={8}>
+          <Box p={12} style={{ backgroundColor: "var(--color-bg-muted)" }}>
+            <Text size="xs" c="var(--color-text-muted)" mb={8}>
               Available demo accounts (all use password: password123):
             </Text>
             <SimpleGrid cols={1} spacing={4}>
@@ -233,7 +183,7 @@ function LoginForm() {
                   key={user.email}
                   size="xs"
                   fw={600}
-                  c="#171717"
+                  c="var(--color-text-primary)"
                   style={{ cursor: "pointer" }}
                   onClick={() => setEmail(user.email)}
                 >
@@ -245,7 +195,7 @@ function LoginForm() {
         </Card>
 
         {/* Footer */}
-        <Text ta="center" size="xs" c="#737373" mt={16}>
+        <Text ta="center" size="xs" c="var(--color-text-muted)" mt={16}>
           Norwegian Refugee Council &bull; Early Warning and Alert System for Sudan
         </Text>
       </Box>

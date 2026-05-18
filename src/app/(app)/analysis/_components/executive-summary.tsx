@@ -9,8 +9,36 @@ import {
   Button,
   Loader,
 } from "@mantine/core";
-import { IconChartPie, IconSparkles } from "@tabler/icons-react";
+import {
+  IconChartPie,
+  IconSparkles,
+  IconHome,
+  IconDroplet,
+  IconShield,
+  IconHeart,
+  IconToolsKitchen2,
+  IconAlertCircle,
+} from "@tabler/icons-react";
 import type { GqlAlert } from "~/lib/types/graphql";
+
+type IconComponent = React.ComponentType<{ size?: number; color?: string }>;
+
+const SECTOR_CONFIG: Record<string, { icon: IconComponent; description: string }> = {
+  shelter: { icon: IconHome, description: "Housing & displacement" },
+  wash: { icon: IconDroplet, description: "Water & sanitation" },
+  protection: { icon: IconShield, description: "Rights & safety" },
+  health: { icon: IconHeart, description: "Medical response" },
+  "food security": { icon: IconToolsKitchen2, description: "Nutrition access" },
+  food: { icon: IconToolsKitchen2, description: "Nutrition access" },
+};
+
+const DEFAULT_NEEDS = [
+  { label: "Shelter", icon: IconHome, description: "Housing & displacement" },
+  { label: "WASH", icon: IconDroplet, description: "Water & sanitation" },
+  { label: "Protection", icon: IconShield, description: "Rights & safety" },
+  { label: "Health", icon: IconHeart, description: "Medical response" },
+  { label: "Food Security", icon: IconToolsKitchen2, description: "Nutrition access" },
+];
 
 interface SummaryStats {
   critical: number;
@@ -47,15 +75,17 @@ export function ExecutiveSummary({
   llmMutation,
   selectedCountry,
 }: ExecutiveSummaryProps) {
+  const needs = DEFAULT_NEEDS;
+
   return (
     <>
-      {/* Executive Summary Banner */}
+      {/* Priority Analysis Banner */}
       <Card
         p="lg"
         mb={24}
         style={{
-          border: "1px solid #2563EB",
-          background: "linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%)",
+          border: "1px solid var(--color-accent)",
+          background: "linear-gradient(135deg, var(--color-accent-light) 0%, #FDE8E4 100%)",
         }}
       >
         <Group align="flex-start" gap={16}>
@@ -63,10 +93,11 @@ export function ExecutiveSummary({
             style={{
               width: 48,
               height: 48,
-              background: "#2563EB",
+              background: "var(--color-accent)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              flexShrink: 0,
             }}
           >
             <IconChartPie size={24} color="white" />
@@ -76,18 +107,18 @@ export function ExecutiveSummary({
               <Text
                 size="xs"
                 fw={600}
-                c="#2563EB"
+                c="var(--color-accent)"
                 tt="uppercase"
                 style={{ letterSpacing: "0.05em" }}
               >
-                Latest AI Analysis
+                Priority Analysis
               </Text>
               {summaryStats.critical > 0 && (
                 <Badge
                   size="xs"
                   style={{
-                    background: "#FEE2E2",
-                    color: "#DC2626",
+                    background: "var(--color-critical-light)",
+                    color: "var(--color-critical)",
                     border: "1px solid #FCA5A5",
                   }}
                 >
@@ -97,76 +128,80 @@ export function ExecutiveSummary({
               {summaryStats.total > 0 && (
                 <Badge
                   size="xs"
-                  style={{ background: "#DC2626", color: "white" }}
+                  style={{ background: "var(--color-critical)", color: "white" }}
                 >
                   {summaryStats.total} Active
                 </Badge>
               )}
             </Group>
-            <Text fw={600} c="#171717" mb={8}>
+            <Text fw={600} c="var(--color-text-primary)" mb={12}>
               {allAlerts.length > 0
-                ? `Situation Report — ${selectedCountry}`
-                : `Cholera Outbreak Situation Report - ${selectedCountry}`}
+                ? `Situation Report - ${selectedCountry}`
+                : `Armed Conflict Displacement Crisis - ${selectedCountry}`}
             </Text>
 
-            <Group gap={24} mb={12}>
+            <Group gap={24} mb={16}>
               <Box style={{ textAlign: "center" }}>
-                <Text size="xl" fw={700} c="#DC2626">
-                  {overview?.active_alerts ?? "\u2014"}
+                <Text size="xl" fw={700} c="var(--color-critical)">
+                  {overview?.active_alerts ?? "-"}
                 </Text>
-                <Text size="xs" c="#737373" tt="uppercase">
+                <Text size="xs" c="var(--color-text-muted)" tt="uppercase">
                   Active Alerts
                 </Text>
               </Box>
               <Box style={{ textAlign: "center" }}>
-                <Text size="xl" fw={700} c="#171717">
-                  {overview?.total_alerts ?? "\u2014"}
+                <Text size="xl" fw={700} c="var(--color-text-primary)">
+                  {overview?.total_alerts ?? "-"}
                 </Text>
-                <Text size="xs" c="#737373" tt="uppercase">
+                <Text size="xs" c="var(--color-text-muted)" tt="uppercase">
                   Total Alerts
                 </Text>
               </Box>
               <Box style={{ textAlign: "center" }}>
-                <Text size="xl" fw={700} c="#DC2626">
+                <Text size="xl" fw={700} c="var(--color-critical)">
                   {overview?.recent_7_days != null
                     ? `${overview.recent_7_days} / 7d`
-                    : "\u2191 23%"}
+                    : "+12%"}
                 </Text>
-                <Text size="xs" c="#737373" tt="uppercase">
+                <Text size="xs" c="var(--color-text-muted)" tt="uppercase">
                   Trend
                 </Text>
               </Box>
             </Group>
 
-            <Group gap={6} mb={12}>
-              {(summaryStats.types.length > 0
-                ? summaryStats.types
-                : [
-                    "WASH",
-                    "Health",
-                    "Shelter",
-                    "Food Security",
-                    "Protection",
-                  ]
-              ).map((s) => (
-                <Text
-                  key={s}
-                  size="xs"
-                  px={8}
-                  py={2}
-                  style={{
-                    background: "white",
-                    border: "1px solid #E5E5E5",
-                    color: "#525252",
-                  }}
-                >
-                  {s}
-                </Text>
-              ))}
+            {/* Priority needs with icons */}
+            <Group gap={8} mb={16} align="flex-start">
+              {needs.map((need) => {
+                const Icon = need.icon;
+                return (
+                  <Box
+                    key={need.label}
+                    px={10}
+                    py={8}
+                    style={{
+                      background: "var(--color-bg-white)",
+                      border: "1px solid var(--color-border)",
+                      textAlign: "center",
+                      minWidth: 80,
+                    }}
+                  >
+                    <Icon size={16} color="var(--color-accent)" />
+                    <Text size="xs" fw={600} c="var(--color-text-primary)" mt={4} mb={2}>
+                      {need.label}
+                    </Text>
+                    <Text style={{ fontSize: 10 }} c="var(--color-text-muted)" lh={1.3}>
+                      {need.description}
+                    </Text>
+                  </Box>
+                );
+              })}
             </Group>
 
             <Group gap={8}>
-              <Button size="xs" color="blue">
+              <Button
+                size="xs"
+                style={{ background: "var(--color-accent)", borderColor: "var(--color-accent)" }}
+              >
                 View Full Report
               </Button>
               <Button size="xs" variant="outline" color="gray">
@@ -174,13 +209,13 @@ export function ExecutiveSummary({
               </Button>
             </Group>
           </Box>
-          <Box style={{ textAlign: "right" }}>
-            <Text size="xs" c="#A3A3A3">
+          <Box style={{ textAlign: "right", flexShrink: 0 }}>
+            <Text size="xs" c="var(--color-text-muted)">
               {alertsDataUpdatedAt
                 ? `Updated ${new Date(alertsDataUpdatedAt).toLocaleTimeString()}`
-                : "Updated 30 min ago"}
+                : "Updated 2 hours ago"}
             </Text>
-            <Text size="xs" c="#A3A3A3" mt={4}>
+            <Text size="xs" c="var(--color-text-muted)" mt={4}>
               Confidence: 94%
             </Text>
           </Box>
@@ -203,7 +238,7 @@ export function ExecutiveSummary({
             <Text
               size="xs"
               fw={600}
-              c="#7C3AED"
+              c="var(--color-ai)"
               tt="uppercase"
               style={{ letterSpacing: "0.05em" }}
             >
@@ -219,7 +254,7 @@ export function ExecutiveSummary({
           {llmMutation.isPending ? (
             <Group gap={8}>
               <Loader size={16} />
-              <Text size="sm" c="#737373">
+              <Text size="sm" c="var(--color-text-muted)">
                 Generating comprehensive analysis from {allAlerts.length} active
                 alerts...
               </Text>
@@ -227,7 +262,7 @@ export function ExecutiveSummary({
           ) : generatedAnalysis ? (
             <Text
               size="sm"
-              c="#525252"
+              c="var(--color-text-secondary)"
               lh={1.65}
               style={{ fontSize: 13, whiteSpace: "pre-line" }}
             >
