@@ -34,6 +34,11 @@ export interface GqlLocation {
   geoId?: string | null;
   ancestorIds?: string[];
   geometry: GeoJSONGeometry | null | undefined;
+  /** Provenance of the location's geometry — 'landmark-geocoded' means the
+   *  point was resolved from a landmark/place name in signal text via the
+   *  geoparser, so its `name` field is meaningful for display (e.g.,
+   *  "Nyala Airport") and should be shown instead of the A2 parent. */
+  pointType?: string | null;
   population?: string | null;
   metadata?: GqlLocationMetadata[] | null;
   ancestors?: Array<{ id: string; name: string; level: number; population?: string | null; metadata?: GqlLocationMetadata[] | null }>;
