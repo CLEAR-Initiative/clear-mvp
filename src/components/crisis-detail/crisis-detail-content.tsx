@@ -554,6 +554,8 @@ export function CrisisDetailContent({
                 sudanGeometry={sudanGeometry}
                 sudanId={sudanId ?? null}
                 locationGeometry={crisis.generalLocation?.geometry}
+                locationName={locationName ?? undefined}
+                fullMapHref={`/map?crisis=${crisis.id}`}
               />
             </Box>
           </Box>

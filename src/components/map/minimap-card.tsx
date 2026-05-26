@@ -28,9 +28,13 @@ interface MinimapCardProps {
   sudanId: string | null;
   /** Geometry of the specific location to highlight (state/district). Replaces the full-Sudan highlight. */
   locationGeometry?: unknown;
+  /** Shown in the header instead of the generic "Location" label. */
+  locationName?: string;
+  /** Override the "Full map" href (defaults to "/map"). */
+  fullMapHref?: string;
 }
 
-export function MinimapCard({ markers, center, sudanGeometry, sudanId, locationGeometry }: MinimapCardProps) {
+export function MinimapCard({ markers, center, sudanGeometry, sudanId, locationGeometry, locationName, fullMapHref = "/map" }: MinimapCardProps) {
   const [layersOpen, setLayersOpen] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("none");
   const [showPopulation, setShowPopulation] = useState(false);
@@ -66,9 +70,11 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, locationG
         <Group justify="space-between">
           <Group gap={6}>
             <IconMapPin size={14} color="var(--color-text-secondary)" />
-            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>Location</Text>
+            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
+              {locationName ?? "Location"}
+            </Text>
           </Group>
-          <Link href="/map" style={{ textDecoration: "none" }}>
+          <Link href={fullMapHref} style={{ textDecoration: "none" }}>
             <Group gap={4} className="hover:opacity-70">
               <IconMap size={12} color="var(--color-accent)" />
               <Text size="xs" c="var(--color-accent)" fw={500}>Full map</Text>
