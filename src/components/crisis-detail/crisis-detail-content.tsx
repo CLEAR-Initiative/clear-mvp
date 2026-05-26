@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   Box,
@@ -13,7 +12,6 @@ import {
   Loader,
   Tabs,
   Select,
-  Checkbox,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -29,14 +27,17 @@ import {
   IconTrendingDown,
   IconMinus,
 } from "@tabler/icons-react";
+import { api } from "~/trpc/react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
+import { useLocations } from "~/hooks/use-locations";
 import { IASC_CLUSTERS, type IASCClusterCode } from "~/lib/constants/iasc-clusters";
 import type { GqlCrisis } from "~/server/api/routers/crises";
 import type { MapMarker } from "~/components/map/crisis-map";
+import { MinimapCard } from "~/components/map/minimap-card";
 import { CommentsSection } from "~/components/comments-section";
 
 /** Humanitarian need row - parsed from a crisis's free-form `needs` JSON. */
@@ -48,11 +49,6 @@ interface ClusterNeed {
   trend?: "up" | "flat" | "down";
   detail?: string;
 }
-
-const CrisisMap = dynamic(
-  () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box w="100%" h={360} bg="var(--color-bg-muted)" /> },
-);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -189,7 +185,14 @@ export function CrisisDetailContent({
 }: CrisisDetailContentProps) {
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [leftPanelTab, setLeftPanelTab] = useState<string | null>("events");
-  const [layers, setLayers] = useState({ events: true, roads: false, population: false });
+
+  const { getLocationId } = useLocations();
+  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
+  const sudanL0Query = api.locations.getById.useQuery(
+    { id: sudanId! },
+    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
 
   const parsedNeeds = useMemo(() => parseNeeds(crisis?.needs), [crisis?.needs]);
   // Fall back to demo data when the backend hasn't populated needs yet.
@@ -222,22 +225,20 @@ export function CrisisDetailContent({
         description: resolveLocationName(crisis.generalLocation) ?? undefined,
       },
     ];
-    if (layers.events) {
-      events.forEach((e, idx) => {
-        const c = locationCoords(pickEventLocation(e)) ?? primaryCoords;
-        markers.push({
-          id: idx + 1,
-          lng: c[0],
-          lat: c[1],
-          title: e.title ?? e.types[0] ?? "Event",
-          severity: mapSeverity(e.severity),
-          description: resolveLocationName(pickEventLocation(e)) ?? undefined,
-          type: e.types[0],
-        });
+    events.forEach((e, idx) => {
+      const c = locationCoords(pickEventLocation(e)) ?? primaryCoords;
+      markers.push({
+        id: idx + 1,
+        lng: c[0],
+        lat: c[1],
+        title: e.title ?? e.types[0] ?? "Event",
+        severity: mapSeverity(e.severity),
+        description: resolveLocationName(pickEventLocation(e)) ?? undefined,
+        type: e.types[0],
       });
-    }
+    });
     return markers;
-  }, [crisis, events, layers.events, primaryCoords]);
+  }, [crisis, events, primaryCoords]);
 
   if (loading) {
     return (
@@ -546,62 +547,14 @@ export function CrisisDetailContent({
                 />
               </Group>
 
-              {/* Map with layer control */}
-              <Card
-                p={0}
-                style={{
-                  border: "1px solid var(--color-border)",
-                  position: "relative",
-                  flex: 1,
-                  minHeight: 360,
-                  overflow: "hidden",
-                }}
-              >
-                <CrisisMap
-                  markers={mapMarkers}
-                  center={primaryCoords}
-                  zoom={6}
-                  className="w-full h-full"
-                />
-                {/* Layer control */}
-                <Box
-                  p={10}
-                  style={{
-                    position: "absolute",
-                    bottom: 12,
-                    right: 12,
-                    background: "var(--color-bg-white)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: 8,
-                    boxShadow: "var(--shadow-sm)",
-                    minWidth: 140,
-                  }}
-                >
-                  <Text size="xs" fw={700} c="var(--color-text-secondary)" mb={6} style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                    Layers
-                  </Text>
-                  <Stack gap={4}>
-                    <Checkbox
-                      size="xs"
-                      label="Events"
-                      checked={layers.events}
-                      onChange={(e) => setLayers((l) => ({ ...l, events: e.currentTarget.checked }))}
-                    />
-                    <Checkbox
-                      size="xs"
-                      label="Roads"
-                      checked={layers.roads}
-                      onChange={(e) => setLayers((l) => ({ ...l, roads: e.currentTarget.checked }))}
-                    />
-                    <Checkbox
-                      size="xs"
-                      label="Population"
-                      checked={layers.population}
-                      onChange={(e) => setLayers((l) => ({ ...l, population: e.currentTarget.checked }))}
-                    />
-                  </Stack>
-                </Box>
-              </Card>
+              {/* Map */}
+              <MinimapCard
+                markers={mapMarkers}
+                center={primaryCoords}
+                sudanGeometry={sudanGeometry}
+                sudanId={sudanId ?? null}
+                locationGeometry={crisis.generalLocation?.geometry}
+              />
             </Box>
           </Box>
 
