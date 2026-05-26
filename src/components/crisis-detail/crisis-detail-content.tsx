@@ -39,6 +39,7 @@ import type { GqlCrisis } from "~/server/api/routers/crises";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { MinimapCard } from "~/components/map/minimap-card";
 import { CommentsSection } from "~/components/comments-section";
+import { NeedsAssessmentPanel } from "~/components/crisis-detail/needs-assessment-panel";
 
 /** Humanitarian need row - parsed from a crisis's free-form `needs` JSON. */
 interface ClusterNeed {
@@ -444,7 +445,7 @@ export function CrisisDetailContent({
       )}
 
       {activeTab === "needs" ? (
-        <NeedsAssessmentPanel needs={needs} isDemo={needsAreDemo} />
+        <NeedsAssessmentPanel crisis={crisis} />
       ) : (
         <>
           {/* Body: two-column */}
@@ -969,35 +970,4 @@ function TimelineRow({
   );
 }
 
-function NeedsAssessmentPanel({ needs, isDemo }: { needs: ClusterNeed[]; isDemo?: boolean }) {
-  const ranked = rankNeeds(needs);
-  if (ranked.length === 0) {
-    return (
-      <Box p={24} style={{ textAlign: "center" }}>
-        <Text size="sm" c="var(--color-text-muted)">
-          No needs recorded for this crisis yet.
-        </Text>
-      </Box>
-    );
-  }
-  return (
-    <Box p={24}>
-      <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-        <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
-          <Group gap={8}>
-            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-              Needs assessment (all clusters)
-            </Text>
-            {isDemo && <DemoBadge />}
-          </Group>
-        </Box>
-        <Stack gap={0}>
-          {ranked.map((need, idx) => (
-            <NeedRow key={need.cluster} need={need} isLast={idx === ranked.length - 1} />
-          ))}
-        </Stack>
-      </Card>
-    </Box>
-  );
-}
 
