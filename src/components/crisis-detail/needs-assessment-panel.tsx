@@ -130,7 +130,7 @@ function SectorRow({
         className="hover:bg-[var(--color-bg-muted)]"
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 140px 180px 24px",
+          gridTemplateColumns: "120px 1fr 180px 24px",
           alignItems: "center",
           columnGap: 16,
           padding: "12px 16px",
@@ -139,22 +139,7 @@ function SectorRow({
           transition: "background 100ms",
         }}
       >
-        {/* Sector */}
-        <Group gap={10} wrap="nowrap">
-          <Box
-            style={{
-              width: 32, height: 32, borderRadius: 6,
-              background: "var(--color-bg-muted)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <Icon size={16} color="var(--color-text-secondary)" />
-          </Box>
-          <Text fw={600} size="sm" c="var(--color-text-primary)">{label}</Text>
-        </Group>
-
-        {/* SAF severity */}
+        {/* Severity */}
         <Box>
           <span
             style={{
@@ -175,6 +160,21 @@ function SectorRow({
             <Text size="xs" c="var(--color-text-muted)" mt={2}>{score}/100</Text>
           )}
         </Box>
+
+        {/* Sector */}
+        <Group gap={10} wrap="nowrap">
+          <Box
+            style={{
+              width: 32, height: 32, borderRadius: 6,
+              background: "var(--color-bg-muted)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <Icon size={16} color="var(--color-text-secondary)" />
+          </Box>
+          <Text fw={600} size="sm" c="var(--color-text-primary)">{label}</Text>
+        </Group>
 
         {/* Operational presence */}
         <Box>
@@ -310,15 +310,15 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
         <Box
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 140px 180px 24px",
+            gridTemplateColumns: "120px 1fr 180px 24px",
             columnGap: 16,
             padding: "8px 16px",
             borderBottom: "1px solid var(--color-border)",
             background: "var(--color-bg-muted)",
           }}
         >
+          <ColHeader>Severity</ColHeader>
           <ColHeader>Sector</ColHeader>
-          <ColHeader>SAF Severity</ColHeader>
           <ColHeader>Operational Presence</ColHeader>
           <Box />
         </Box>
