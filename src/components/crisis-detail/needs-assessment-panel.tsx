@@ -77,11 +77,25 @@ const SECTORS: {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function resolveA2(crisis: GqlCrisis) {
-  const loc = crisis.generalLocation;
+type A2Location = { id: string; name: string; level: number; metadata?: { type: string; data: unknown }[] | null } | null;
+
+function findA2InLocation(loc: { level: number; ancestors?: { id: string; name: string; level: number; metadata?: { type: string; data: unknown }[] | null }[] } | null): A2Location {
   if (!loc) return null;
-  if (loc.level === 2) return loc;
+  if (loc.level === 2) return loc as A2Location;
   return loc.ancestors?.find((a) => a.level === 2) ?? null;
+}
+
+function resolveA2(crisis: GqlCrisis): A2Location {
+  const direct = findA2InLocation(crisis.generalLocation);
+  if (direct) return direct;
+  for (const event of crisis.events ?? []) {
+    const e = event as { generalLocation?: typeof crisis.generalLocation; originLocation?: typeof crisis.generalLocation };
+    const fromGeneral = findA2InLocation(e.generalLocation ?? null);
+    if (fromGeneral) return fromGeneral;
+    const fromOrigin = findA2InLocation(e.originLocation ?? null);
+    if (fromOrigin) return fromOrigin;
+  }
+  return null;
 }
 
 function parseOcha3w(crisis: GqlCrisis): Ocha3wData | null {
