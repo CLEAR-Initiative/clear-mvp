@@ -18,14 +18,14 @@ import type { GqlCrisis } from "~/server/api/routers/crises";
 // ── SAF scale ─────────────────────────────────────────────────────────────────
 
 const SAF_SCALE = [
-  { min: 80, level: "Catastrophic", color: "#DC2626", bg: "#FEE2E2" },
-  { min: 65, level: "Extreme",      color: "#EA580C", bg: "#FFEDD5" },
-  { min: 45, level: "Severe",       color: "#D97706", bg: "#FEF3C7" },
-  { min: 25, level: "Stressed",     color: "#CA8A04", bg: "#FEF9C3" },
-  { min: 0,  level: "Minimal",      color: "#059669", bg: "#D1FAE5" },
+  { min: 80, level: "Catastrophic", color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
+  { min: 65, level: "Extreme",      color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
+  { min: 45, level: "Severe",       color: "var(--color-warning)",   bg: "var(--color-warning-light)"  },
+  { min: 25, level: "Stressed",     color: "var(--color-info)",      bg: "var(--color-info-light)"     },
+  { min: 0,  level: "Minimal",      color: "var(--color-success)",   bg: "var(--color-success-light)"  },
 ] as const;
 
-const UNKNOWN_SAF = { level: "Unknown", color: "#737373", bg: "#F5F5F5" };
+const UNKNOWN_SAF = { level: "Unknown", color: "var(--color-text-muted)", bg: "var(--color-bg-muted)" };
 
 function getSafLevel(score: number | null) {
   if (score === null) return UNKNOWN_SAF;
@@ -130,7 +130,7 @@ function SectorRow({
         className="hover:bg-[var(--color-bg-muted)]"
         style={{
           display: "grid",
-          gridTemplateColumns: "120px 1fr 180px 24px",
+          gridTemplateColumns: "1fr 140px 180px 24px",
           alignItems: "center",
           columnGap: 16,
           padding: "12px 16px",
@@ -139,6 +139,21 @@ function SectorRow({
           transition: "background 100ms",
         }}
       >
+        {/* Sector */}
+        <Group gap={10} wrap="nowrap">
+          <Box
+            style={{
+              width: 32, height: 32, borderRadius: 6,
+              background: "var(--color-bg-muted)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <Icon size={16} color="var(--color-text-secondary)" />
+          </Box>
+          <Text fw={600} size="sm" c="var(--color-text-primary)">{label}</Text>
+        </Group>
+
         {/* Severity */}
         <Box>
           <span
@@ -160,21 +175,6 @@ function SectorRow({
             <Text size="xs" c="var(--color-text-muted)" mt={2}>{score}/100</Text>
           )}
         </Box>
-
-        {/* Sector */}
-        <Group gap={10} wrap="nowrap">
-          <Box
-            style={{
-              width: 32, height: 32, borderRadius: 6,
-              background: "var(--color-bg-muted)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <Icon size={16} color="var(--color-text-secondary)" />
-          </Box>
-          <Text fw={600} size="sm" c="var(--color-text-primary)">{label}</Text>
-        </Group>
 
         {/* Operational presence */}
         <Box>
@@ -310,15 +310,15 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
         <Box
           style={{
             display: "grid",
-            gridTemplateColumns: "120px 1fr 180px 24px",
+            gridTemplateColumns: "1fr 140px 180px 24px",
             columnGap: 16,
             padding: "8px 16px",
             borderBottom: "1px solid var(--color-border)",
             background: "var(--color-bg-muted)",
           }}
         >
-          <ColHeader>Severity</ColHeader>
           <ColHeader>Sector</ColHeader>
+          <ColHeader>Severity</ColHeader>
           <ColHeader>Operational Presence</ColHeader>
           <Box />
         </Box>
