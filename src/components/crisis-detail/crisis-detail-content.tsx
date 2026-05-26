@@ -279,7 +279,9 @@ export function CrisisDetailContent({
   const isCompact = mode === "drawer";
 
   const title = crisis.title ?? "Untitled crisis";
-  const locationName = resolveLocationName(crisis.generalLocation);
+  const locationName =
+    resolveLocationName(crisis.generalLocation) ??
+    resolveLocationName(events[0] ? pickEventLocation(events[0]) : null);
   const populationAffected = bigIntStrToNumber(crisis.populationAffected);
   const populationInArea = bigIntStrToNumber(crisis.populationInArea);
 
