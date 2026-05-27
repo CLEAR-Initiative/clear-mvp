@@ -101,11 +101,28 @@ export function ReportsTab({
                       <Text size="xs" c="var(--color-text-muted)" mb={8}>{locationName}</Text>
                     )}
 
-                    {crisis.summary && (
-                      <Text size="sm" c="var(--color-text-secondary)" mb={12} style={{ lineHeight: 1.6 }}>
-                        {crisis.summary}
-                      </Text>
-                    )}
+                    {crisis.summary && (() => {
+                      try {
+                        const obj = JSON.parse(crisis.summary) as Record<string, unknown>;
+                        if (Array.isArray(obj.tldr) && (obj.tldr as unknown[]).length > 0) {
+                          return (
+                            <Box mb={12}>
+                              {(obj.tldr as string[]).map((bullet, i) => (
+                                <Group key={i} gap={6} wrap="nowrap" align="flex-start" mb={2}>
+                                  <Box style={{ width: 3, height: 3, borderRadius: "50%", background: "var(--color-text-muted)", flexShrink: 0, marginTop: 7 }} />
+                                  <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.55 }}>{bullet}</Text>
+                                </Group>
+                              ))}
+                            </Box>
+                          );
+                        }
+                      } catch { /* fall through */ }
+                      return (
+                        <Text size="sm" c="var(--color-text-secondary)" mb={12} style={{ lineHeight: 1.6 }}>
+                          {crisis.summary}
+                        </Text>
+                      );
+                    })()}
 
                     {pills.length > 0 && (
                       <Group gap={6} mb={12}>
