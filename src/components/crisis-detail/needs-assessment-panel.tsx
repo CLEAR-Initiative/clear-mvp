@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Box, Text, Group, Badge, Stack } from "@mantine/core";
+import { Box, Text, Group, Badge, Stack, Modal } from "@mantine/core";
 import {
   IconHome2,
   IconDroplet,
@@ -11,6 +11,7 @@ import {
   IconBook,
   IconChevronRight,
   IconChevronDown,
+  IconInfoCircle,
 } from "@tabler/icons-react";
 import type { GqlCrisis } from "~/server/api/routers/crises";
 
@@ -292,6 +293,23 @@ function SectorRow({
   );
 }
 
+// ── Info button ───────────────────────────────────────────────────────────────
+
+function InfoButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        background: "none", border: "none", padding: 0, cursor: "pointer",
+        color: "var(--color-text-muted)", lineHeight: 1,
+      }}
+    >
+      <IconInfoCircle size={12} />
+    </button>
+  );
+}
+
 // ── Column header ─────────────────────────────────────────────────────────────
 
 function ColHeader({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
@@ -317,6 +335,8 @@ interface NeedsAssessmentPanelProps {
 export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
   const ocha3w = useMemo(() => parseOcha3w(crisis), [crisis]);
   const a2 = useMemo(() => resolveA2(crisis), [crisis]);
+  const [severityInfoOpen, setSeverityInfoOpen] = useState(false);
+  const [presenceInfoOpen, setPresenceInfoOpen] = useState(false);
 
   const rows = useMemo(() => {
     return SECTORS.map((sector) => {
@@ -368,8 +388,14 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
           }}
         >
           <ColHeader>Sector</ColHeader>
-          <ColHeader>Severity</ColHeader>
-          <ColHeader>Operational Presence</ColHeader>
+          <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <ColHeader>Severity</ColHeader>
+            <InfoButton onClick={() => setSeverityInfoOpen(true)} />
+          </Box>
+          <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <ColHeader>Operational Presence</ColHeader>
+            <InfoButton onClick={() => setPresenceInfoOpen(true)} />
+          </Box>
           <Box />
         </Box>
 
@@ -385,6 +411,76 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
           />
         ))}
       </Box>
+
+      {/* ── Severity info modal ─────────────────────────────────────────── */}
+      <Modal
+        opened={severityInfoOpen}
+        onClose={() => setSeverityInfoOpen(false)}
+        title={<Text fw={700} size="sm" c="var(--color-text-primary)">Sector Severity</Text>}
+        size="sm"
+      >
+        <Stack gap={16}>
+          <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+            Each sector is scored 0-100 using weighted combinations of MSNA survey indicators across three dimensions: disruption to living standards (access, availability, and quality of essential services), coping mechanisms adopted by affected populations, and physical and mental wellbeing outcomes.
+          </Text>
+
+          <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
+            <Box style={{ display: "grid", gridTemplateColumns: "90px 1fr", background: "var(--color-bg-muted)", padding: "6px 12px", borderBottom: "1px solid var(--color-border)" }}>
+              <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Score</Text>
+              <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Level</Text>
+            </Box>
+            {([
+              { range: "80-100", level: "Catastrophic", color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
+              { range: "65-79",  level: "Extreme",      color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
+              { range: "45-64",  level: "Severe",       color: "var(--color-warning)",   bg: "var(--color-warning-light)"  },
+              { range: "25-44",  level: "Stressed",     color: "var(--color-info)",      bg: "var(--color-info-light)"     },
+              { range: "0-24",   level: "Minimal",      color: "var(--color-success)",   bg: "var(--color-success-light)"  },
+              { range: "No data",level: "Unknown",      color: "var(--color-text-muted)",bg: "var(--color-bg-muted)"       },
+            ] as const).map((row) => (
+              <Box key={row.level} style={{ display: "grid", gridTemplateColumns: "90px 1fr", padding: "8px 12px", borderTop: "1px solid var(--color-border)", alignItems: "center" }}>
+                <Text size="xs" c="var(--color-text-secondary)">{row.range}</Text>
+                <span style={{ display: "inline-block", padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", background: row.bg, color: row.color }}>
+                  {row.level}
+                </span>
+              </Box>
+            ))}
+          </Box>
+
+          <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
+            Thresholds are prototype-stage and pending validation against JIAF cluster standards and NRC benchmarks.
+          </Text>
+        </Stack>
+      </Modal>
+
+      {/* ── Operational Presence info modal ─────────────────────────────── */}
+      <Modal
+        opened={presenceInfoOpen}
+        onClose={() => setPresenceInfoOpen(false)}
+        title={<Text fw={700} size="sm" c="var(--color-text-primary)">Operational Presence</Text>}
+        size="sm"
+      >
+        <Stack gap={16}>
+          <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+            Sourced from OCHA&apos;s 3W (Who does What Where) dataset. Shows humanitarian organizations actively operating in the district, broken down by organization type.
+          </Text>
+
+          <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
+            {([
+              { abbrev: "UN",    label: "United Nations agencies"   },
+              { abbrev: "INGO",  label: "International NGOs"        },
+              { abbrev: "NNGO",  label: "National NGOs"             },
+              { abbrev: "Gov",   label: "Government bodies"         },
+              { abbrev: "RCRC",  label: "Red Cross / Red Crescent"  },
+              { abbrev: "Other", label: "Other organizations"       },
+            ] as const).map((row, i) => (
+              <Box key={row.abbrev} style={{ display: "grid", gridTemplateColumns: "56px 1fr", padding: "8px 12px", borderTop: i > 0 ? "1px solid var(--color-border)" : undefined, alignItems: "center" }}>
+                <Text size="xs" fw={700} c="var(--color-text-primary)">{row.abbrev}</Text>
+                <Text size="xs" c="var(--color-text-secondary)">{row.label}</Text>
+              </Box>
+            ))}
+          </Box>
+        </Stack>
+      </Modal>
     </Box>
   );
 }
