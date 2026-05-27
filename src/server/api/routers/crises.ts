@@ -144,15 +144,14 @@ const REMOVE_EVENT_FROM_CRISIS_MUTATION = `
   mutation RemoveEventFromCrisis($crisisId: String!, $eventId: String!) {
     removeEventFromCrisis(crisisId: $crisisId, eventId: $eventId) {
       id
+      events { id }
     }
   }
 `;
 
 const DELETE_CRISIS_MUTATION = `
   mutation DeleteCrisis($id: String!) {
-    deleteCrisis(id: $id) {
-      id
-    }
+    deleteCrisis(id: $id)
   }
 `;
 
@@ -237,7 +236,7 @@ export const crisesRouter = createTRPCRouter({
   removeEvent: protectedProcedure
     .input(z.object({ crisisId: z.string(), eventId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const data = await graphqlFetch<{ removeEventFromCrisis: { id: string } }>(
+      const data = await graphqlFetch<{ removeEventFromCrisis: { id: string; events: { id: string }[] } | null }>(
         REMOVE_EVENT_FROM_CRISIS_MUTATION,
         input,
         cookieHeaders(ctx),
@@ -248,7 +247,7 @@ export const crisesRouter = createTRPCRouter({
   deleteCrisis: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const data = await graphqlFetch<{ deleteCrisis: { id: string } }>(
+      const data = await graphqlFetch<{ deleteCrisis: boolean }>(
         DELETE_CRISIS_MUTATION,
         { id: input.id },
         cookieHeaders(ctx),
