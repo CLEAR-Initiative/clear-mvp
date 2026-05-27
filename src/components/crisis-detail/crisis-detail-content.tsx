@@ -1360,6 +1360,7 @@ function TimelineRow({
   isAdmin: boolean;
   onRemove: () => void;
 }) {
+  const [hovered, setHovered] = useState(false);
   const sev = mapSeverity(event.severity);
   const dotColor = severityColor(event.severity);
   const dateStr = event.lastSignalCreatedAt || event.firstSignalCreatedAt;
@@ -1376,6 +1377,8 @@ function TimelineRow({
 
   return (
     <Box
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         display: "grid",
         gridTemplateColumns: "72px 24px 1fr",
@@ -1521,11 +1524,16 @@ function TimelineRow({
             </Group>
           </Box>
         </Link>
-        {isAdmin && (
+        {isAdmin && hovered && (
           <Menu position="bottom-end" withinPortal>
             <Menu.Target>
-              <ActionIcon variant="subtle" color="gray" size="sm" mt={4} style={{ flexShrink: 0 }}>
-                <IconDotsVertical size={14} />
+              <ActionIcon
+                variant="default"
+                size="sm"
+                mt={4}
+                style={{ flexShrink: 0, border: "1px solid var(--color-border)" }}
+              >
+                <IconDotsVertical size={13} />
               </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
@@ -1534,6 +1542,9 @@ function TimelineRow({
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
+        )}
+        {isAdmin && !hovered && (
+          <Box style={{ width: 28, flexShrink: 0 }} />
         )}
       </Box>
     </Box>
