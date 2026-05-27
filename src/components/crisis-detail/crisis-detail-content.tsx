@@ -12,6 +12,8 @@ import {
   Loader,
   Tabs,
   Select,
+  Modal,
+  Button,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -711,6 +713,8 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
   );
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<CrisisDoc | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const utils = api.useUtils();
 
@@ -723,8 +727,12 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
 
   const removeAttachment = api.crises.removeAttachment.useMutation({
     onSuccess: (data) => {
+      setRemoveError(null);
       setDocs(data.attachments.map((url) => ({ id: crypto.randomUUID(), name: nameFromAttachmentUrl(url), url })));
       void utils.crises.get.invalidate({ id: crisis.id });
+    },
+    onError: (err) => {
+      setRemoveError(err.message ?? "Remove failed. Please try again.");
     },
   });
 
@@ -748,118 +756,155 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
     }
   }
 
-  function removeDoc(doc: CrisisDoc) {
-    removeAttachment.mutate({ id: crisis.id, key: keyFromAttachmentUrl(doc.url) });
+  function confirmRemove() {
+    if (!pendingRemove) return;
+    const key = keyFromAttachmentUrl(pendingRemove.url);
+    removeAttachment.mutate({ id: crisis.id, key });
+    setPendingRemove(null);
   }
 
   return (
-    <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-      {/* Header */}
-      <Box
-        px={16} py={12}
-        onClick={() => setCollapsed((c) => !c)}
-        className="hover:bg-[var(--color-bg-muted)]"
-        style={{
-          borderBottom: collapsed ? undefined : "1px solid var(--color-border)",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          transition: "background 100ms",
-        }}
+    <>
+      <Modal
+        opened={pendingRemove !== null}
+        onClose={() => setPendingRemove(null)}
+        title="Remove document"
+        size="sm"
+        centered
       >
-        <Group gap={8} align="center">
-          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Documents</Text>
-          {docs.length > 0 && (
-            <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-muted)" }}>
-              {docs.length}
-            </Badge>
-          )}
+        <Text size="sm" c="var(--color-text-secondary)" mb={20}>
+          Remove <strong>{pendingRemove?.name}</strong>? This cannot be undone.
+        </Text>
+        <Group justify="flex-end" gap={8}>
+          <Button variant="default" size="xs" onClick={() => setPendingRemove(null)}>
+            Cancel
+          </Button>
+          <Button
+            size="xs"
+            color="red"
+            loading={removeAttachment.isPending}
+            onClick={confirmRemove}
+          >
+            Remove
+          </Button>
         </Group>
-        {collapsed
-          ? <IconChevronRight size={14} color="var(--color-text-muted)" />
-          : <IconChevronDown size={14} color="var(--color-text-muted)" />
-        }
-      </Box>
+      </Modal>
 
-      {!collapsed && (
-        <>
-          {/* Document list */}
-          {docs.map((doc, idx) => (
-            <Box
-              key={doc.id}
-              px={16} py={10}
-              style={{
-                borderBottom: idx < docs.length - 1 ? "1px solid var(--color-border)" : undefined,
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <IconFileText size={14} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
-              <a
-                href={doc.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ flex: 1, minWidth: 0, textDecoration: "none" }}
-              >
-                <Text
-                  size="sm"
-                  c="var(--color-text-primary)"
-                  truncate
-                  className="hover:underline"
-                  style={{ cursor: "pointer" }}
-                >
-                  {doc.name}
-                </Text>
-              </a>
-              <button
-                onClick={() => removeDoc(doc)}
-                title="Remove"
+      <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+        {/* Header */}
+        <Box
+          px={16} py={12}
+          onClick={() => setCollapsed((c) => !c)}
+          className="hover:bg-[var(--color-bg-muted)]"
+          style={{
+            borderBottom: collapsed ? undefined : "1px solid var(--color-border)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            transition: "background 100ms",
+          }}
+        >
+          <Group gap={8} align="center">
+            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Documents</Text>
+            {docs.length > 0 && (
+              <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-muted)" }}>
+                {docs.length}
+              </Badge>
+            )}
+          </Group>
+          {collapsed
+            ? <IconChevronRight size={14} color="var(--color-text-muted)" />
+            : <IconChevronDown size={14} color="var(--color-text-muted)" />
+          }
+        </Box>
+
+        {!collapsed && (
+          <>
+            {/* Document list */}
+            {docs.map((doc, idx) => (
+              <Box
+                key={doc.id}
+                px={16} py={10}
                 style={{
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  background: "none", border: "none", padding: 4, cursor: "pointer",
-                  color: "var(--color-text-muted)", borderRadius: 4, flexShrink: 0,
+                  borderBottom: idx < docs.length - 1 ? "1px solid var(--color-border)" : undefined,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
                 }}
-                className="hover:text-[var(--color-critical)]"
               >
-                <IconTrash size={13} />
+                <IconFileText size={14} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+                <a
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ flex: 1, minWidth: 0, textDecoration: "none" }}
+                >
+                  <Text
+                    size="sm"
+                    c="var(--color-text-primary)"
+                    truncate
+                    className="hover:underline"
+                    style={{ cursor: "pointer" }}
+                  >
+                    {doc.name}
+                  </Text>
+                </a>
+                <button
+                  onClick={() => setPendingRemove(doc)}
+                  title="Remove"
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "none", border: "none", padding: 4, cursor: "pointer",
+                    color: "var(--color-text-muted)", borderRadius: 4, flexShrink: 0,
+                  }}
+                  className="hover:text-[var(--color-critical)]"
+                >
+                  <IconTrash size={13} />
+                </button>
+              </Box>
+            ))}
+
+            {/* Error */}
+            {removeError && (
+              <Box px={16} py={8} style={{ borderTop: "1px solid var(--color-border)" }}>
+                <Text size="xs" c="var(--color-critical)">{removeError}</Text>
+              </Box>
+            )}
+
+            {/* Empty state + upload */}
+            <Box
+              px={16} py={12}
+              style={{ borderTop: docs.length > 0 || removeError ? "1px solid var(--color-border)" : undefined, display: "flex", alignItems: "center", gap: 8 }}
+            >
+              {docs.length === 0 && !uploading && (
+                <Text size="xs" c="var(--color-text-muted)" style={{ flex: 1 }}>No documents attached.</Text>
+              )}
+              {uploadError && (
+                <Text size="xs" c="var(--color-critical)" style={{ flex: 1 }}>{uploadError}</Text>
+              )}
+              <input ref={inputRef} type="file" multiple onChange={handleUpload} style={{ display: "none" }} />
+              <button
+                onClick={() => !uploading && inputRef.current?.click()}
+                disabled={uploading}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  background: "none", border: "1px solid var(--color-border)",
+                  borderRadius: 4, padding: "4px 10px", cursor: uploading ? "default" : "pointer",
+                  color: uploading ? "var(--color-text-muted)" : "var(--color-text-secondary)",
+                  fontSize: 12, fontWeight: 600, marginLeft: "auto",
+                  opacity: uploading ? 0.6 : 1,
+                }}
+                className={uploading ? undefined : "hover:bg-[var(--color-bg-muted)]"}
+              >
+                {uploading ? <Loader size={12} /> : <IconUpload size={12} />}
+                {uploading ? "Uploading..." : "Upload"}
               </button>
             </Box>
-          ))}
-
-          {/* Empty state + upload */}
-          <Box
-            px={16} py={12}
-            style={{ borderTop: docs.length > 0 ? "1px solid var(--color-border)" : undefined, display: "flex", alignItems: "center", gap: 8 }}
-          >
-            {docs.length === 0 && !uploading && (
-              <Text size="xs" c="var(--color-text-muted)" style={{ flex: 1 }}>No documents attached.</Text>
-            )}
-            {uploadError && (
-              <Text size="xs" c="var(--color-critical)" style={{ flex: 1 }}>{uploadError}</Text>
-            )}
-            <input ref={inputRef} type="file" multiple onChange={handleUpload} style={{ display: "none" }} />
-            <button
-              onClick={() => !uploading && inputRef.current?.click()}
-              disabled={uploading}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                background: "none", border: "1px solid var(--color-border)",
-                borderRadius: 4, padding: "4px 10px", cursor: uploading ? "default" : "pointer",
-                color: uploading ? "var(--color-text-muted)" : "var(--color-text-secondary)",
-                fontSize: 12, fontWeight: 600, marginLeft: "auto",
-                opacity: uploading ? 0.6 : 1,
-              }}
-              className={uploading ? undefined : "hover:bg-[var(--color-bg-muted)]"}
-            >
-              {uploading ? <Loader size={12} /> : <IconUpload size={12} />}
-              {uploading ? "Uploading..." : "Upload"}
-            </button>
-          </Box>
-        </>
-      )}
-    </Card>
+          </>
+        )}
+      </Card>
+    </>
   );
 }
 
