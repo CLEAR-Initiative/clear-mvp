@@ -195,10 +195,6 @@ export function CrisisDetailContent({
   );
   const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
 
-  const parsedNeeds = useMemo(() => parseNeeds(crisis?.needs), [crisis?.needs]);
-  // Fall back to demo data when the backend hasn't populated needs yet.
-  const needs = parsedNeeds.length > 0 ? parsedNeeds : DEMO_NEEDS;
-  const needsAreDemo = parsedNeeds.length === 0;
   const events = crisis?.events ?? [];
 
   // Pick a primary coordinate for the map centre. Prefer the crisis's own
@@ -563,9 +559,9 @@ export function CrisisDetailContent({
             </Box>
           </Box>
 
-          {/* Top humanitarian needs */}
+          {/* Scenario planning */}
           <Box px={isCompact ? 16 : 24} pb={isCompact ? 16 : 24}>
-            <TopNeedsCard needs={rankNeeds(needs).slice(0, 5)} isDemo={needsAreDemo} />
+            <ScenarioComparisonCard />
           </Box>
 
           {/* Discussion - reads from backend; compose is disabled until the
@@ -578,6 +574,72 @@ export function CrisisDetailContent({
         </>
       )}
     </Box>
+  );
+}
+
+// ── Scenario planning ────────────────────────────────────────────────────────
+
+const SCENARIOS = [
+  {
+    label: "Best Case",
+    subtitle: "Ceasefire + access scenario",
+    probability: 20,
+    description: "Ceasefire holds and humanitarian corridor opens within 2 weeks. Displacement stabilises and returns begin. Estimated newly displaced: 12,000.",
+    color: "var(--color-success)",
+    bg: "var(--color-success-light)",
+  },
+  {
+    label: "Most Likely",
+    subtitle: "Continued low-intensity conflict",
+    probability: 55,
+    description: "Sporadic fighting continues with intermittent humanitarian access. Slow displacement increase over 4-6 weeks. Estimated newly displaced: 45,000.",
+    color: "var(--color-info)",
+    bg: "var(--color-info-light)",
+  },
+  {
+    label: "Worst Case",
+    subtitle: "Full escalation scenario",
+    probability: 25,
+    description: "Major offensive extends into Blue Nile State, triggering mass displacement and health system collapse. Estimated newly displaced: 120,000+.",
+    color: "var(--color-critical)",
+    bg: "var(--color-critical-light)",
+  },
+] as const;
+
+function ScenarioComparisonCard() {
+  return (
+    <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+      <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
+        <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
+          Scenario Comparison
+        </Text>
+        <Text size="xs" c="var(--color-text-muted)" mt={2}>
+          Compare projected outcomes
+        </Text>
+      </Box>
+      <Box p={16} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+        {SCENARIOS.map((s) => (
+          <Box
+            key={s.label}
+            p={16}
+            style={{ border: `1px solid ${s.color}30`, background: s.bg }}
+          >
+            <Text style={{ fontSize: 28, fontWeight: 800, color: s.color, lineHeight: 1, marginBottom: 10 }}>
+              {s.probability}%
+            </Text>
+            <Text fw={700} size="sm" c="var(--color-text-primary)" mb={2}>
+              {s.label}
+            </Text>
+            <Text size="xs" c="var(--color-text-muted)" mb={10} style={{ fontStyle: "italic" }}>
+              {s.subtitle}
+            </Text>
+            <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
+              {s.description}
+            </Text>
+          </Box>
+        ))}
+      </Box>
+    </Card>
   );
 }
 
