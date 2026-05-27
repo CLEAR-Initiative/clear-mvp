@@ -11,7 +11,6 @@ import {
   IconBook,
   IconChevronRight,
   IconChevronDown,
-  IconBuilding,
 } from "@tabler/icons-react";
 import type { GqlCrisis } from "~/server/api/routers/crises";
 
@@ -110,6 +109,66 @@ function parseOcha3w(crisis: GqlCrisis): Ocha3wData | null {
   return d as unknown as Ocha3wData;
 }
 
+const ORG_TYPE_ABBREV: Record<string, string> = {
+  "United Nations":           "UN",
+  "International NGO":        "INGO",
+  "National NGO":             "NNGO",
+  "Government":               "Gov",
+  "Red Cross / Red Crescent": "RCRC",
+  "Other":                    "Other",
+};
+
+const ORG_TYPE_COLOR: Record<string, string> = {
+  "United Nations":           "var(--color-info)",
+  "International NGO":        "var(--color-warning)",
+  "National NGO":             "var(--color-success)",
+  "Government":               "var(--color-accent)",
+  "Red Cross / Red Crescent": "var(--color-critical)",
+  "Other":                    "var(--color-text-muted)",
+};
+
+function abbreviateOrgType(type: string): string {
+  return ORG_TYPE_ABBREV[type] ?? type.slice(0, 6);
+}
+
+function OrgBar({ byType, total }: { byType: Record<string, number>; total: number }) {
+  const entries = Object.entries(byType);
+  return (
+    <Box style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
+      <Text style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-primary)", minWidth: 18, textAlign: "right", flexShrink: 0 }}>
+        {total}
+      </Text>
+      <Box style={{ flex: 1, height: 22, display: "flex", gap: 1, borderRadius: 4, overflow: "hidden" }}>
+        {entries.map(([type, count]) => {
+          const pct = (count / total) * 100;
+          const color = ORG_TYPE_COLOR[type] ?? "var(--color-text-muted)";
+          return (
+            <Box
+              key={type}
+              title={`${abbreviateOrgType(type)}: ${count}`}
+              style={{
+                width: `${pct}%`,
+                background: color,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+                minWidth: pct > 0 ? 3 : 0,
+              }}
+            >
+              {pct >= 20 && (
+                <Text style={{ fontSize: 9, fontWeight: 800, color: "white", whiteSpace: "nowrap", letterSpacing: "0.04em" }}>
+                  {abbreviateOrgType(type)}
+                </Text>
+              )}
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
+  );
+}
+
 function matchOchasector(ochaSectors: Ocha3wSector[], codes: string[]): Ocha3wSector | null {
   const upper = codes.map((c) => c.toUpperCase());
   return (
@@ -193,23 +252,9 @@ function SectorRow({
         {/* Operational presence */}
         <Box>
           {ochaData ? (
-            <Group gap={6} wrap="wrap">
-              <Group gap={4} wrap="nowrap">
-                <IconBuilding size={12} color="var(--color-text-muted)" />
-                <Text size="xs" fw={600} c="var(--color-text-primary)">{ochaData.org_count} org{ochaData.org_count !== 1 ? "s" : ""}</Text>
-              </Group>
-              {Object.entries(ochaData.by_type).slice(0, 3).map(([type, count]) => (
-                <Badge
-                  key={type}
-                  size="xs"
-                  style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 500 }}
-                >
-                  {count} {type.replace("Government", "Govt").replace("International", "Intl")}
-                </Badge>
-              ))}
-            </Group>
+            <OrgBar byType={ochaData.by_type} total={ochaData.org_count} />
           ) : (
-            <Text size="xs" c="var(--color-text-muted)">No presence data</Text>
+            <Text size="xs" c="var(--color-text-muted)">-</Text>
           )}
         </Box>
 
