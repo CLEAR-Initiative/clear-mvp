@@ -438,7 +438,7 @@ export function CrisisDetailContent({
           <Tabs value={activeTab} onChange={setActiveTab} variant="default">
             <Tabs.List style={{ borderBottom: "none" }}>
               <Tabs.Tab value="overview">Overview</Tabs.Tab>
-              <Tabs.Tab value="needs">Needs Assessment</Tabs.Tab>
+              <Tabs.Tab value="needs">Needs</Tabs.Tab>
             </Tabs.List>
           </Tabs>
         </Box>
