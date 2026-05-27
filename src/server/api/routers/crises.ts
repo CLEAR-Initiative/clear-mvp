@@ -12,6 +12,8 @@ export interface GqlCrisis {
   generalLocation: GqlLocation | null;
   /** Free-form JSON, expected to match ClusterNeed[] when set by CLEAR. */
   needs: unknown;
+  /** Free-form JSON, expected to match ScenarioPlan[] when set by CLEAR. */
+  scenarios: unknown;
   /** BigInt serialised as string; null when unset. */
   populationAffected: string | null;
   populationInArea: string | null;
@@ -65,6 +67,7 @@ const CRISIS_FIELDS = `
   severity
   generalLocation { ${LOCATION_FIELDS} }
   needs
+  scenarios
   populationAffected
   populationInArea
   attachments
