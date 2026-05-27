@@ -486,7 +486,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
           <Group justify="space-between" align="center" wrap="nowrap">
             <Group gap={8} align="center">
               <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                Needs Assessment
+                Sectoral Needs
               </Text>
               {a2 && (
                 <Badge size="xs" style={{ background: "var(--color-info-light)", color: "var(--color-info)" }}>
