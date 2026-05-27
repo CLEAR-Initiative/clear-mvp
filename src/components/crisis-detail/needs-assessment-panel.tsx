@@ -118,50 +118,41 @@ const ORG_TYPE_ABBREV: Record<string, string> = {
   "Other":                    "Other",
 };
 
-const ORG_TYPE_COLOR: Record<string, string> = {
-  "United Nations":           "var(--color-info)",
-  "International NGO":        "var(--color-warning)",
-  "National NGO":             "var(--color-success)",
-  "Government":               "var(--color-accent)",
-  "Red Cross / Red Crescent": "var(--color-critical)",
-  "Other":                    "var(--color-text-muted)",
-};
-
 function abbreviateOrgType(type: string): string {
   return ORG_TYPE_ABBREV[type] ?? type.slice(0, 6);
 }
 
-function OrgBar({ byType, total }: { byType: Record<string, number>; total: number }) {
-  const entries = Object.entries(byType);
+// Fixed at 3 slots so every row renders at the same height.
+const ORG_SLOTS = 3;
+const ROW_H = 14; // px per label row (10px font + leading)
+const ROW_GAP = 2; // px between rows
+const PRESENCE_H = ORG_SLOTS * ROW_H + (ORG_SLOTS - 1) * ROW_GAP; // 46px
+
+function OrgPresence({ byType, total }: { byType: Record<string, number>; total: number }) {
+  const entries = Object.entries(byType)
+    .filter(([, n]) => n > 0)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, ORG_SLOTS);
+
   return (
-    <Box style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
-      <Text style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-primary)", minWidth: 18, textAlign: "right", flexShrink: 0 }}>
+    <Box style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <Text style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1, flexShrink: 0 }}>
         {total}
       </Text>
-      <Box style={{ flex: 1, height: 22, display: "flex", gap: 1, borderRadius: 4, overflow: "hidden" }}>
-        {entries.map(([type, count]) => {
-          const pct = (count / total) * 100;
-          const color = ORG_TYPE_COLOR[type] ?? "var(--color-text-muted)";
-          return (
-            <Box
-              key={type}
-              title={`${abbreviateOrgType(type)}: ${count}`}
-              style={{
-                width: `${pct}%`,
-                background: color,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
-                minWidth: pct > 0 ? 3 : 0,
-              }}
-            >
-              {pct >= 20 && (
-                <Text style={{ fontSize: 9, fontWeight: 800, color: "white", whiteSpace: "nowrap", letterSpacing: "0.04em" }}>
-                  {abbreviateOrgType(type)}
-                </Text>
-              )}
+      <Box style={{ display: "flex", flexDirection: "column", gap: ROW_GAP, height: PRESENCE_H, justifyContent: "center" }}>
+        {Array.from({ length: ORG_SLOTS }).map((_, i) => {
+          const entry = entries[i];
+          return entry ? (
+            <Box key={entry[0]} style={{ display: "flex", alignItems: "baseline", gap: 5, height: ROW_H }}>
+              <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", minWidth: 34, lineHeight: 1 }}>
+                {abbreviateOrgType(entry[0])}
+              </Text>
+              <Text style={{ fontSize: 10, fontWeight: 600, color: "var(--color-text-secondary)", lineHeight: 1 }}>
+                {entry[1]}
+              </Text>
             </Box>
+          ) : (
+            <Box key={i} style={{ height: ROW_H }} />
           );
         })}
       </Box>
@@ -252,7 +243,7 @@ function SectorRow({
         {/* Operational presence */}
         <Box>
           {ochaData ? (
-            <OrgBar byType={ochaData.by_type} total={ochaData.org_count} />
+            <OrgPresence byType={ochaData.by_type} total={ochaData.org_count} />
           ) : (
             <Text size="xs" c="var(--color-text-muted)">-</Text>
           )}
