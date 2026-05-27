@@ -504,16 +504,12 @@ export function CrisisDetailContent({
                   <Tabs.Panel value="demography">
                     <Box p={24} style={{ textAlign: "center" }}>
                       <Text size="sm" c="var(--color-text-muted)">
-                        Demography breakdown coming soon.
+                        Demographic breakdown coming soon.
                       </Text>
                     </Box>
                   </Tabs.Panel>
                   <Tabs.Panel value="sources">
-                    <Box p={24} style={{ textAlign: "center" }}>
-                      <Text size="sm" c="var(--color-text-muted)">
-                        Sources view coming soon.
-                      </Text>
-                    </Box>
+                    <SourcesList events={eventsNewestFirst} />
                   </Tabs.Panel>
                 </Tabs>
               </Card>
@@ -1054,6 +1050,73 @@ function SeverityPill({ severity }: { severity: "critical" | "high" | "medium" |
     >
       {severityLabels[severity]}
     </span>
+  );
+}
+
+function SourcesList({ events }: { events: GqlEvent[] }) {
+  // Deduplicate sources across all signals from all events; count signals per source.
+  const sources = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; type: string; baseUrl?: string | null; infoUrl?: string | null; signalCount: number }>();
+    for (const event of events) {
+      for (const signal of event.signals ?? []) {
+        const src = signal.source;
+        if (!src) continue;
+        const existing = map.get(src.id);
+        if (existing) {
+          existing.signalCount += 1;
+        } else {
+          map.set(src.id, { id: src.id, name: src.name, type: src.type, baseUrl: src.baseUrl, infoUrl: src.infoUrl, signalCount: 1 });
+        }
+      }
+    }
+    return [...map.values()].sort((a, b) => b.signalCount - a.signalCount);
+  }, [events]);
+
+  if (sources.length === 0) {
+    return (
+      <Box p={24} style={{ textAlign: "center" }}>
+        <Text size="sm" c="var(--color-text-muted)">No sources linked to this crisis.</Text>
+      </Box>
+    );
+  }
+
+  return (
+    <Box py={4}>
+      {sources.map((src, idx) => {
+        const href = src.infoUrl ?? src.baseUrl ?? null;
+        return (
+          <Box
+            key={src.id}
+            px={16} py={12}
+            style={{
+              borderBottom: idx < sources.length - 1 ? "1px solid var(--color-border)" : undefined,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              {href ? (
+                <a href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                  <Text size="sm" fw={500} c="var(--color-text-primary)" className="hover:underline" truncate>
+                    {src.name}
+                  </Text>
+                </a>
+              ) : (
+                <Text size="sm" fw={500} c="var(--color-text-primary)" truncate>{src.name}</Text>
+              )}
+              <Text size="xs" c="var(--color-text-muted)" mt={1}>{src.type}</Text>
+            </Box>
+            <Badge
+              size="xs"
+              style={{ background: "var(--color-bg-muted)", color: "var(--color-text-muted)", flexShrink: 0 }}
+            >
+              {src.signalCount} signal{src.signalCount !== 1 ? "s" : ""}
+            </Badge>
+          </Box>
+        );
+      })}
+    </Box>
   );
 }
 

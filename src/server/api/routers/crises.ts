@@ -30,7 +30,7 @@ const LOCATION_FIELDS = `
 
 const SIGNAL_FIELDS = `
   id
-  source { id name type }
+  source { id name type baseUrl infoUrl }
   title
   description
   severity
