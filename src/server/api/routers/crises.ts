@@ -15,6 +15,8 @@ export interface GqlCrisis {
   /** BigInt serialised as string; null when unset. */
   populationAffected: string | null;
   populationInArea: string | null;
+  /** Presigned S3 URLs generated at query time from stored S3 keys. */
+  attachments: string[];
   events: GqlEvent[];
 }
 
@@ -65,6 +67,7 @@ const CRISIS_FIELDS = `
   needs
   populationAffected
   populationInArea
+  attachments
   events { ${EVENT_FIELDS} }
 `;
 
@@ -101,6 +104,24 @@ const CREATE_CRISIS_FROM_EVENTS_MUTATION = `
   mutation CreateCrisisFromEvents($input: CreateCrisisFromEventsInput!) {
     createCrisisFromEvents(input: $input) {
       ${CRISIS_FIELDS}
+    }
+  }
+`;
+
+const ADD_ATTACHMENTS_MUTATION = `
+  mutation AddCrisisAttachments($id: String!, $keys: [String!]!) {
+    addCrisisAttachments(id: $id, keys: $keys) {
+      id
+      attachments
+    }
+  }
+`;
+
+const REMOVE_ATTACHMENT_MUTATION = `
+  mutation RemoveCrisisAttachment($id: String!, $key: String!) {
+    removeCrisisAttachment(id: $id, key: $key) {
+      id
+      attachments
     }
   }
 `;
@@ -156,6 +177,28 @@ export const crisesRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.createCrisisFromEvents;
+    }),
+
+  addAttachments: protectedProcedure
+    .input(z.object({ id: z.string(), keys: z.array(z.string()).min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ addCrisisAttachments: { id: string; attachments: string[] } }>(
+        ADD_ATTACHMENTS_MUTATION,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.addCrisisAttachments;
+    }),
+
+  removeAttachment: protectedProcedure
+    .input(z.object({ id: z.string(), key: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ removeCrisisAttachment: { id: string; attachments: string[] } }>(
+        REMOVE_ATTACHMENT_MUTATION,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.removeCrisisAttachment;
     }),
 
   addEvent: protectedProcedure

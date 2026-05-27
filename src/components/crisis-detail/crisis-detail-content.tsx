@@ -571,7 +571,7 @@ export function CrisisDetailContent({
 
           {/* Documents */}
           <Box px={isCompact ? 16 : 24} pb={isCompact ? 16 : 24}>
-            <DocumentsSection />
+            <DocumentsSection crisis={crisis} />
           </Box>
 
           {/* Discussion - reads from backend; compose is disabled until the
@@ -665,12 +665,45 @@ interface CrisisDoc {
   url: string;
 }
 
-function DocumentsSection() {
+function nameFromAttachmentUrl(url: string): string {
+  try {
+    return decodeURIComponent(new URL(url).pathname.split("/").pop() ?? "Document");
+  } catch {
+    return url.split("/").pop()?.split("?")[0] ?? "Document";
+  }
+}
+
+function keyFromAttachmentUrl(url: string): string {
+  try {
+    return new URL(url).pathname.slice(1);
+  } catch {
+    return url;
+  }
+}
+
+function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
   const [collapsed, setCollapsed] = useState(false);
-  const [docs, setDocs] = useState<CrisisDoc[]>([]);
+  const [docs, setDocs] = useState<CrisisDoc[]>(() =>
+    crisis.attachments.map((url) => ({ id: crypto.randomUUID(), name: nameFromAttachmentUrl(url), url }))
+  );
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const utils = api.useUtils();
+
+  const addAttachments = api.crises.addAttachments.useMutation({
+    onSuccess: (data) => {
+      setDocs(data.attachments.map((url) => ({ id: crypto.randomUUID(), name: nameFromAttachmentUrl(url), url })));
+      void utils.crises.get.invalidate({ id: crisis.id });
+    },
+  });
+
+  const removeAttachment = api.crises.removeAttachment.useMutation({
+    onSuccess: (data) => {
+      setDocs(data.attachments.map((url) => ({ id: crypto.randomUUID(), name: nameFromAttachmentUrl(url), url })));
+      void utils.crises.get.invalidate({ id: crisis.id });
+    },
+  });
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -684,14 +717,7 @@ function DocumentsSection() {
       const resp = await fetch("/api/proxy/upload", { method: "POST", body: formData });
       if (!resp.ok) throw new Error("Upload failed");
       const { keys } = (await resp.json()) as { keys: string[] };
-      setDocs((prev) => [
-        ...prev,
-        ...keys.map((url, i) => ({
-          id: crypto.randomUUID(),
-          name: files[i]?.name ?? url.split("/").pop() ?? "Document",
-          url,
-        })),
-      ]);
+      await addAttachments.mutateAsync({ id: crisis.id, keys });
     } catch {
       setUploadError("Upload failed. Please try again.");
     } finally {
@@ -699,8 +725,8 @@ function DocumentsSection() {
     }
   }
 
-  function removeDoc(id: string) {
-    setDocs((prev) => prev.filter((d) => d.id !== id));
+  function removeDoc(doc: CrisisDoc) {
+    removeAttachment.mutate({ id: crisis.id, key: keyFromAttachmentUrl(doc.url) });
   }
 
   return (
@@ -765,7 +791,7 @@ function DocumentsSection() {
                 </Text>
               </a>
               <button
-                onClick={() => removeDoc(doc.id)}
+                onClick={() => removeDoc(doc)}
                 title="Remove"
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
