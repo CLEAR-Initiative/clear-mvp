@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import {
   Box,
@@ -26,6 +26,11 @@ import {
   IconTrendingUp,
   IconTrendingDown,
   IconMinus,
+  IconChevronDown,
+  IconChevronRight,
+  IconFileText,
+  IconUpload,
+  IconTrash,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
@@ -564,6 +569,11 @@ export function CrisisDetailContent({
             <ScenarioComparisonCard />
           </Box>
 
+          {/* Documents */}
+          <Box px={isCompact ? 16 : 24} pb={isCompact ? 16 : 24}>
+            <DocumentsSection />
+          </Box>
+
           {/* Discussion - reads from backend; compose is disabled until the
               AddCommentInput mutation accepts a crisisId. */}
           <Box px={isCompact ? 16 : 24} pb={isCompact ? 24 : 32}>
@@ -643,6 +653,143 @@ function ScenarioComparisonCard() {
           </Box>
         ))}
       </Box>
+    </Card>
+  );
+}
+
+// ── Documents section ────────────────────────────────────────────────────────
+
+interface CrisisDoc {
+  id: string;
+  name: string;
+  url: string;
+}
+
+function DocumentsSection() {
+  const [collapsed, setCollapsed] = useState(false);
+  const [docs, setDocs] = useState<CrisisDoc[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setDocs((prev) => [
+      ...prev,
+      ...files.map((f) => ({ id: crypto.randomUUID(), name: f.name, url: URL.createObjectURL(f) })),
+    ]);
+    e.target.value = "";
+  }
+
+  function removeDoc(id: string) {
+    setDocs((prev) => {
+      const doc = prev.find((d) => d.id === id);
+      if (doc) URL.revokeObjectURL(doc.url);
+      return prev.filter((d) => d.id !== id);
+    });
+  }
+
+  return (
+    <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+      {/* Header */}
+      <Box
+        px={16} py={12}
+        onClick={() => setCollapsed((c) => !c)}
+        className="hover:bg-[var(--color-bg-muted)]"
+        style={{
+          borderBottom: collapsed ? undefined : "1px solid var(--color-border)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          transition: "background 100ms",
+        }}
+      >
+        <Group gap={8} align="center">
+          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Documents</Text>
+          {docs.length > 0 && (
+            <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-muted)" }}>
+              {docs.length}
+            </Badge>
+          )}
+        </Group>
+        {collapsed
+          ? <IconChevronRight size={14} color="var(--color-text-muted)" />
+          : <IconChevronDown size={14} color="var(--color-text-muted)" />
+        }
+      </Box>
+
+      {!collapsed && (
+        <>
+          {/* Document list */}
+          {docs.map((doc, idx) => (
+            <Box
+              key={doc.id}
+              px={16} py={10}
+              style={{
+                borderBottom: idx < docs.length - 1 ? "1px solid var(--color-border)" : undefined,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <IconFileText size={14} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+              <a
+                href={doc.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ flex: 1, minWidth: 0, textDecoration: "none" }}
+              >
+                <Text
+                  size="sm"
+                  c="var(--color-text-primary)"
+                  truncate
+                  className="hover:underline"
+                  style={{ cursor: "pointer" }}
+                >
+                  {doc.name}
+                </Text>
+              </a>
+              <button
+                onClick={() => removeDoc(doc.id)}
+                title="Remove"
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "none", border: "none", padding: 4, cursor: "pointer",
+                  color: "var(--color-text-muted)", borderRadius: 4, flexShrink: 0,
+                }}
+                className="hover:text-[var(--color-critical)]"
+              >
+                <IconTrash size={13} />
+              </button>
+            </Box>
+          ))}
+
+          {/* Empty state + upload */}
+          <Box
+            px={16} py={12}
+            style={{ borderTop: docs.length > 0 ? "1px solid var(--color-border)" : undefined, display: "flex", alignItems: "center", gap: 8 }}
+          >
+            {docs.length === 0 && (
+              <Text size="xs" c="var(--color-text-muted)" style={{ flex: 1 }}>No documents attached.</Text>
+            )}
+            <input ref={inputRef} type="file" multiple onChange={handleUpload} style={{ display: "none" }} />
+            <button
+              onClick={() => inputRef.current?.click()}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                background: "none", border: "1px solid var(--color-border)",
+                borderRadius: 4, padding: "4px 10px", cursor: "pointer",
+                color: "var(--color-text-secondary)", fontSize: 12, fontWeight: 600,
+                marginLeft: "auto",
+              }}
+              className="hover:bg-[var(--color-bg-muted)]"
+            >
+              <IconUpload size={12} />
+              Upload
+            </button>
+          </Box>
+        </>
+      )}
     </Card>
   );
 }
