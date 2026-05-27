@@ -668,24 +668,39 @@ interface CrisisDoc {
 function DocumentsSection() {
   const [collapsed, setCollapsed] = useState(false);
   const [docs, setDocs] = useState<CrisisDoc[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    setDocs((prev) => [
-      ...prev,
-      ...files.map((f) => ({ id: crypto.randomUUID(), name: f.name, url: URL.createObjectURL(f) })),
-    ]);
     e.target.value = "";
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const formData = new FormData();
+      files.forEach((f) => formData.append("files", f));
+      const resp = await fetch("/api/proxy/upload", { method: "POST", body: formData });
+      if (!resp.ok) throw new Error("Upload failed");
+      const { keys } = (await resp.json()) as { keys: string[] };
+      setDocs((prev) => [
+        ...prev,
+        ...keys.map((url, i) => ({
+          id: crypto.randomUUID(),
+          name: files[i]?.name ?? url.split("/").pop() ?? "Document",
+          url,
+        })),
+      ]);
+    } catch {
+      setUploadError("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
   }
 
   function removeDoc(id: string) {
-    setDocs((prev) => {
-      const doc = prev.find((d) => d.id === id);
-      if (doc) URL.revokeObjectURL(doc.url);
-      return prev.filter((d) => d.id !== id);
-    });
+    setDocs((prev) => prev.filter((d) => d.id !== id));
   }
 
   return (
@@ -769,23 +784,28 @@ function DocumentsSection() {
             px={16} py={12}
             style={{ borderTop: docs.length > 0 ? "1px solid var(--color-border)" : undefined, display: "flex", alignItems: "center", gap: 8 }}
           >
-            {docs.length === 0 && (
+            {docs.length === 0 && !uploading && (
               <Text size="xs" c="var(--color-text-muted)" style={{ flex: 1 }}>No documents attached.</Text>
+            )}
+            {uploadError && (
+              <Text size="xs" c="var(--color-critical)" style={{ flex: 1 }}>{uploadError}</Text>
             )}
             <input ref={inputRef} type="file" multiple onChange={handleUpload} style={{ display: "none" }} />
             <button
-              onClick={() => inputRef.current?.click()}
+              onClick={() => !uploading && inputRef.current?.click()}
+              disabled={uploading}
               style={{
                 display: "flex", alignItems: "center", gap: 6,
                 background: "none", border: "1px solid var(--color-border)",
-                borderRadius: 4, padding: "4px 10px", cursor: "pointer",
-                color: "var(--color-text-secondary)", fontSize: 12, fontWeight: 600,
-                marginLeft: "auto",
+                borderRadius: 4, padding: "4px 10px", cursor: uploading ? "default" : "pointer",
+                color: uploading ? "var(--color-text-muted)" : "var(--color-text-secondary)",
+                fontSize: 12, fontWeight: 600, marginLeft: "auto",
+                opacity: uploading ? 0.6 : 1,
               }}
-              className="hover:bg-[var(--color-bg-muted)]"
+              className={uploading ? undefined : "hover:bg-[var(--color-bg-muted)]"}
             >
-              <IconUpload size={12} />
-              Upload
+              {uploading ? <Loader size={12} /> : <IconUpload size={12} />}
+              {uploading ? "Uploading..." : "Upload"}
             </button>
           </Box>
         </>
