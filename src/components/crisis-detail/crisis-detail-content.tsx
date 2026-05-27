@@ -564,7 +564,7 @@ export function CrisisDetailContent({
 
           {/* Scenario planning */}
           <Box px={isCompact ? 16 : 24} pb={isCompact ? 16 : 24}>
-            <ScenarioComparisonCard scenarios={parseScenarios(crisis.scenarios) ?? DEMO_SCENARIOS} />
+            <ScenarioComparisonCard scenarios={parseScenarios(crisis.scenarios)} />
           </Box>
 
           {/* Documents */}
@@ -599,24 +599,6 @@ const SCENARIO_STYLE: Record<string, { color: string; bg: string }> = {
   "Worst Case":  { color: "var(--color-critical)", bg: "var(--color-critical-light)" },
 };
 
-const DEMO_SCENARIOS: ScenarioPlan[] = [
-  {
-    label: "Best Case",
-    subtitle: "Ceasefire + access scenario",
-    description: "Ceasefire holds and humanitarian corridor opens within 2 weeks. Displacement stabilises and returns begin. Estimated newly displaced: 12,000.",
-  },
-  {
-    label: "Most Likely",
-    subtitle: "Continued low-intensity conflict",
-    description: "Sporadic fighting continues with intermittent humanitarian access. Slow displacement increase over 4-6 weeks. Estimated newly displaced: 45,000.",
-  },
-  {
-    label: "Worst Case",
-    subtitle: "Full escalation scenario",
-    description: "Major offensive extends into Blue Nile State, triggering mass displacement and health system collapse. Estimated newly displaced: 120,000+.",
-  },
-];
-
 function parseScenarios(json: unknown): ScenarioPlan[] | null {
   if (!Array.isArray(json) || json.length === 0) return null;
   const result: ScenarioPlan[] = [];
@@ -633,7 +615,7 @@ function parseScenarios(json: unknown): ScenarioPlan[] | null {
   return result.length > 0 ? result : null;
 }
 
-function ScenarioComparisonCard({ scenarios }: { scenarios: ScenarioPlan[]; isDemo?: boolean }) {
+function ScenarioComparisonCard({ scenarios }: { scenarios: ScenarioPlan[] | null }) {
   return (
     <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
       <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
@@ -641,43 +623,54 @@ function ScenarioComparisonCard({ scenarios }: { scenarios: ScenarioPlan[]; isDe
           <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
             Scenario Comparison
           </Text>
-          <Badge
-            size="xs"
-            style={{
-              background: "var(--color-ai-light)",
-              color: "var(--color-ai)",
-              border: "1px solid var(--color-ai-border)",
-              fontWeight: 600,
-            }}
-          >
-            ✦ AI generated
-          </Badge>
+          {scenarios && (
+            <Badge
+              size="xs"
+              style={{
+                background: "var(--color-ai-light)",
+                color: "var(--color-ai)",
+                border: "1px solid var(--color-ai-border)",
+                fontWeight: 600,
+              }}
+            >
+              ✦ AI generated
+            </Badge>
+          )}
         </Group>
       </Box>
-      <Box p={16} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-        {scenarios.map((s) => {
-          const style = SCENARIO_STYLE[s.label] ?? { color: "var(--color-border)", bg: "var(--color-bg-muted)" };
-          return (
-            <Box
-              key={s.label}
-              p={16}
-              style={{ border: `1px solid ${style.color}30`, background: style.bg }}
-            >
-              <Text fw={700} size="sm" c="var(--color-text-primary)" mb={2}>
-                {s.label}
-              </Text>
-              {s.subtitle && (
-                <Text size="xs" c="var(--color-text-muted)" mb={10} style={{ fontStyle: "italic" }}>
-                  {s.subtitle}
+
+      {scenarios ? (
+        <Box p={16} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          {scenarios.map((s) => {
+            const style = SCENARIO_STYLE[s.label] ?? { color: "var(--color-border)", bg: "var(--color-bg-muted)" };
+            return (
+              <Box
+                key={s.label}
+                p={16}
+                style={{ border: `1px solid ${style.color}30`, background: style.bg }}
+              >
+                <Text fw={700} size="sm" c="var(--color-text-primary)" mb={2}>
+                  {s.label}
                 </Text>
-              )}
-              <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
-                {s.description}
-              </Text>
-            </Box>
-          );
-        })}
-      </Box>
+                {s.subtitle && (
+                  <Text size="xs" c="var(--color-text-muted)" mb={10} style={{ fontStyle: "italic" }}>
+                    {s.subtitle}
+                  </Text>
+                )}
+                <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
+                  {s.description}
+                </Text>
+              </Box>
+            );
+          })}
+        </Box>
+      ) : (
+        <Box p={24} style={{ textAlign: "center" }}>
+          <Text size="sm" c="var(--color-text-muted)">
+            Scenarios not yet generated for this crisis.
+          </Text>
+        </Box>
+      )}
     </Card>
   );
 }
