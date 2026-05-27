@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Box,
   Text,
@@ -14,6 +15,8 @@ import {
   Select,
   Modal,
   Button,
+  Menu,
+  ActionIcon,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -33,6 +36,7 @@ import {
   IconFileText,
   IconUpload,
   IconTrash,
+  IconDotsVertical,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
@@ -191,8 +195,22 @@ export function CrisisDetailContent({
   mode,
   relatedCrises = [],
 }: CrisisDetailContentProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [leftPanelTab, setLeftPanelTab] = useState<string | null>("events");
+  const [confirmDeleteCrisis, setConfirmDeleteCrisis] = useState(false);
+
+  const meQuery = api.auth.me.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
+  const isAdmin = meQuery.data?.user?.role === "admin" || meQuery.data?.user?.role === "org_admin";
+
+  const utils = api.useUtils();
+
+  const deleteCrisis = api.crises.delete.useMutation({
+    onSuccess: () => {
+      void utils.crises.list.invalidate();
+      router.push("/analysis");
+    },
+  });
 
   const { getLocationId } = useLocations();
   const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
@@ -305,6 +323,32 @@ export function CrisisDetailContent({
 
   return (
     <Box>
+      {/* Delete crisis confirmation modal */}
+      <Modal
+        opened={confirmDeleteCrisis}
+        onClose={() => setConfirmDeleteCrisis(false)}
+        title="Delete crisis"
+        size="sm"
+        centered
+      >
+        <Text size="sm" c="var(--color-text-secondary)" mb={20}>
+          Permanently delete <strong>{crisis.title ?? "this crisis"}</strong>? This cannot be undone.
+        </Text>
+        <Group justify="flex-end" gap={8}>
+          <Button variant="default" size="xs" onClick={() => setConfirmDeleteCrisis(false)}>
+            Cancel
+          </Button>
+          <Button
+            size="xs"
+            color="red"
+            loading={deleteCrisis.isPending}
+            onClick={() => deleteCrisis.mutate({ id: crisis.id })}
+          >
+            Delete
+          </Button>
+        </Group>
+      </Modal>
+
       {/* Back nav + crisis selector */}
       {mode === "page" && (
         <Box
@@ -344,6 +388,24 @@ export function CrisisDetailContent({
                     if (val) window.location.href = `/crisis/${val}`;
                   }}
                 />
+              )}
+              {isAdmin && (
+                <Menu position="bottom-end" withinPortal>
+                  <Menu.Target>
+                    <ActionIcon variant="subtle" color="gray" size="sm">
+                      <IconDotsVertical size={16} />
+                    </ActionIcon>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Item
+                      color="red"
+                      leftSection={<IconTrash size={14} />}
+                      onClick={() => setConfirmDeleteCrisis(true)}
+                    >
+                      Delete crisis
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
               )}
             </Group>
           </Group>
@@ -497,7 +559,7 @@ export function CrisisDetailContent({
                     </Tabs.List>
                   </Box>
                   <Tabs.Panel value="events">
-                    <EventsTimeline events={eventsNewestFirst} />
+                    <EventsTimeline events={eventsNewestFirst} isAdmin={isAdmin} crisisId={crisis.id} totalEventCount={events.length} />
                   </Tabs.Panel>
                   <Tabs.Panel value="demography">
                     <Box p={24} style={{ textAlign: "center" }}>
@@ -1210,7 +1272,29 @@ function SourcesList({ events }: { events: GqlEvent[] }) {
   );
 }
 
-function EventsTimeline({ events }: { events: GqlEvent[] }) {
+function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events: GqlEvent[]; isAdmin: boolean; crisisId: string; totalEventCount: number }) {
+  const router = useRouter();
+  const utils = api.useUtils();
+  const [pendingRemoveEvent, setPendingRemoveEvent] = useState<GqlEvent | null>(null);
+
+  const removeEvent = api.crises.removeEvent.useMutation({
+    onSuccess: () => {
+      if (totalEventCount <= 1) {
+        // Last event removed - crisis was deleted by the backend
+        void utils.crises.list.invalidate();
+        router.push("/analysis");
+      } else {
+        void utils.crises.get.invalidate({ id: crisisId });
+      }
+    },
+  });
+
+  function confirmRemoveEvent() {
+    if (!pendingRemoveEvent) return;
+    removeEvent.mutate({ crisisId, eventId: pendingRemoveEvent.id });
+    setPendingRemoveEvent(null);
+  }
+
   if (events.length === 0) {
     return (
       <Box p={24} style={{ textAlign: "center" }}>
@@ -1221,16 +1305,45 @@ function EventsTimeline({ events }: { events: GqlEvent[] }) {
     );
   }
   return (
-    <Box py={12} px={4}>
-      {events.map((event, idx) => (
-        <TimelineRow
-          key={event.id}
-          event={event}
-          isFirst={idx === 0}
-          isLast={idx === events.length - 1}
-        />
-      ))}
-    </Box>
+    <>
+      <Modal
+        opened={pendingRemoveEvent !== null}
+        onClose={() => setPendingRemoveEvent(null)}
+        title="Remove event from crisis"
+        size="sm"
+        centered
+      >
+        <Text size="sm" c="var(--color-text-secondary)" mb={8}>
+          Remove <strong>{pendingRemoveEvent?.title ?? pendingRemoveEvent?.types[0] ?? "this event"}</strong> from the crisis?
+        </Text>
+        {totalEventCount <= 1 && (
+          <Text size="xs" c="var(--color-critical)" mb={12}>
+            This is the last event. Removing it will delete the entire crisis.
+          </Text>
+        )}
+        <Group justify="flex-end" gap={8} mt={16}>
+          <Button variant="default" size="xs" onClick={() => setPendingRemoveEvent(null)}>
+            Cancel
+          </Button>
+          <Button size="xs" color="red" loading={removeEvent.isPending} onClick={confirmRemoveEvent}>
+            {totalEventCount <= 1 ? "Remove and delete crisis" : "Remove"}
+          </Button>
+        </Group>
+      </Modal>
+
+      <Box py={12} px={4}>
+        {events.map((event, idx) => (
+          <TimelineRow
+            key={event.id}
+            event={event}
+            isFirst={idx === 0}
+            isLast={idx === events.length - 1}
+            isAdmin={isAdmin}
+            onRemove={() => setPendingRemoveEvent(event)}
+          />
+        ))}
+      </Box>
+    </>
   );
 }
 
@@ -1238,10 +1351,14 @@ function TimelineRow({
   event,
   isFirst,
   isLast,
+  isAdmin,
+  onRemove,
 }: {
   event: GqlEvent;
   isFirst: boolean;
   isLast: boolean;
+  isAdmin: boolean;
+  onRemove: () => void;
 }) {
   const sev = mapSeverity(event.severity);
   const dotColor = severityColor(event.severity);
@@ -1330,10 +1447,10 @@ function TimelineRow({
       </Box>
 
       {/* Card column */}
-      <Box py={6}>
+      <Box py={6} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
         <Link
           href={`/event/${event.id}`}
-          style={{ textDecoration: "none", color: "inherit" }}
+          style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}
         >
           <Box
             className="hover:bg-[var(--color-bg-muted)]"
@@ -1404,6 +1521,20 @@ function TimelineRow({
             </Group>
           </Box>
         </Link>
+        {isAdmin && (
+          <Menu position="bottom-end" withinPortal>
+            <Menu.Target>
+              <ActionIcon variant="subtle" color="gray" size="sm" mt={4} style={{ flexShrink: 0 }}>
+                <IconDotsVertical size={14} />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={onRemove}>
+                Remove from crisis
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+        )}
       </Box>
     </Box>
   );
