@@ -17,6 +17,7 @@ import {
   Button,
   Menu,
   ActionIcon,
+  Divider,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -666,20 +667,23 @@ function CrisisSummaryBody({ summary }: { summary: string | null }) {
   }
 
   return (
-    <Stack gap={10} p={16}>
-      <Text size="sm" c="var(--color-text-primary)" style={{ lineHeight: 1.65 }}>
+    <Stack gap={0} p={16}>
+      {parsed.tldr.length > 0 && (
+        <>
+          <Stack gap={4} pb={12}>
+            {parsed.tldr.map((bullet, i) => (
+              <Group key={i} gap={8} wrap="nowrap" align="flex-start">
+                <Box style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--color-text-muted)", flexShrink: 0, marginTop: 7 }} />
+                <Text size="sm" c="var(--color-text-primary)" style={{ lineHeight: 1.55 }}>{bullet}</Text>
+              </Group>
+            ))}
+          </Stack>
+          <Divider mb={12} />
+        </>
+      )}
+      <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
         {parsed.description}
       </Text>
-      {parsed.tldr.length > 0 && (
-        <Stack gap={4} pt={4} style={{ borderTop: "1px solid var(--color-border)" }}>
-          {parsed.tldr.map((bullet, i) => (
-            <Group key={i} gap={8} wrap="nowrap" align="flex-start">
-              <Box style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--color-text-muted)", flexShrink: 0, marginTop: 7 }} />
-              <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.55 }}>{bullet}</Text>
-            </Group>
-          ))}
-        </Stack>
-      )}
     </Stack>
   );
 }
