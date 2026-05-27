@@ -1450,102 +1450,112 @@ function TimelineRow({
       </Box>
 
       {/* Card column */}
-      <Box py={6} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-        <Link
-          href={`/event/${event.id}`}
-          style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}
-        >
-          <Box
-            className="hover:bg-[var(--color-bg-muted)]"
-            style={{
-              border: "1px solid var(--color-border)",
-              borderRadius: 8,
-              padding: "10px 12px",
-              background: "var(--color-bg-white)",
-              cursor: "pointer",
-              transition: "box-shadow 120ms ease-out",
-            }}
+      <Box py={6} style={{ flex: 1, minWidth: 0 }}>
+        <Box style={{ position: "relative" }}>
+          <Link
+            href={`/event/${event.id}`}
+            style={{ textDecoration: "none", color: "inherit", display: "block" }}
           >
-            {/* Row 1: title */}
-            <Text
-              fw={600}
-              size="sm"
-              c="var(--color-text-primary)"
-              truncate
-              mb={4}
-              style={{ lineHeight: 1.3 }}
+            <Box
+              className="hover:bg-[var(--color-bg-muted)]"
+              style={{
+                border: "1px solid var(--color-border)",
+                borderRadius: 8,
+                padding: isAdmin ? "10px 36px 10px 12px" : "10px 12px",
+                background: "var(--color-bg-white)",
+                cursor: "pointer",
+                transition: "box-shadow 120ms ease-out",
+              }}
             >
-              {displayTitle}
-            </Text>
-            {/* Row 2: severity + type + location */}
-            <Group gap={6} wrap="nowrap" align="center" style={{ overflow: "hidden" }}>
-              <span
-                style={{
-                  display: "inline-block",
-                  padding: "1px 8px",
-                  borderRadius: 999,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                  background: severityColors[sev]?.bg,
-                  color: severityColors[sev]?.text,
-                  flexShrink: 0,
-                }}
-              >
-                {severityLabels[sev]}
-              </span>
-              {primaryType &&
-                getDisasterPills([primaryType]).map((pill) => (
-                  <span
-                    key={pill.label}
-                    style={{
-                      display: "inline-block",
-                      padding: "1px 8px",
-                      borderRadius: 999,
-                      fontSize: 10,
-                      fontWeight: 600,
-                      color: pill.color,
-                      background: pill.bg,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {pill.label}
-                  </span>
-                ))}
-              {locationLabel && (
-                <Group gap={3} wrap="nowrap" style={{ minWidth: 0 }}>
-                  <IconMapPin size={11} color="var(--color-text-muted)" />
-                  <Text size="xs" c="var(--color-text-muted)" truncate>
-                    {locationLabel}
-                  </Text>
-                </Group>
-              )}
-            </Group>
-          </Box>
-        </Link>
-        {isAdmin && hovered && (
-          <Menu position="bottom-end" withinPortal>
-            <Menu.Target>
-              <ActionIcon
-                variant="default"
+              {/* Row 1: title */}
+              <Text
+                fw={600}
                 size="sm"
-                mt={4}
-                style={{ flexShrink: 0, border: "1px solid var(--color-border)" }}
+                c="var(--color-text-primary)"
+                truncate
+                mb={4}
+                style={{ lineHeight: 1.3 }}
               >
-                <IconDotsVertical size={13} />
-              </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={onRemove}>
-                Remove from crisis
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        )}
-        {isAdmin && !hovered && (
-          <Box style={{ width: 28, flexShrink: 0 }} />
-        )}
+                {displayTitle}
+              </Text>
+              {/* Row 2: severity + type + location */}
+              <Group gap={6} wrap="nowrap" align="center" style={{ overflow: "hidden" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "1px 8px",
+                    borderRadius: 999,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                    background: severityColors[sev]?.bg,
+                    color: severityColors[sev]?.text,
+                    flexShrink: 0,
+                  }}
+                >
+                  {severityLabels[sev]}
+                </span>
+                {primaryType &&
+                  getDisasterPills([primaryType]).map((pill) => (
+                    <span
+                      key={pill.label}
+                      style={{
+                        display: "inline-block",
+                        padding: "1px 8px",
+                        borderRadius: 999,
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: pill.color,
+                        background: pill.bg,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {pill.label}
+                    </span>
+                  ))}
+                {locationLabel && (
+                  <Group gap={3} wrap="nowrap" style={{ minWidth: 0 }}>
+                    <IconMapPin size={11} color="var(--color-text-muted)" />
+                    <Text size="xs" c="var(--color-text-muted)" truncate>
+                      {locationLabel}
+                    </Text>
+                  </Group>
+                )}
+              </Group>
+            </Box>
+          </Link>
+          {isAdmin && (
+            <Box
+              style={{
+                position: "absolute",
+                top: 6,
+                right: 6,
+                opacity: hovered ? 1 : 0,
+                transition: "opacity 100ms",
+                pointerEvents: hovered ? "auto" : "none",
+              }}
+            >
+              <Menu position="bottom-end" withinPortal>
+                <Menu.Target>
+                  <ActionIcon
+                    variant="default"
+                    size="sm"
+                    style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <IconDotsVertical size={13} />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={onRemove}>
+                    Remove from crisis
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            </Box>
+          )}
+        </Box>
       </Box>
     </Box>
   );
