@@ -123,40 +123,49 @@ function abbreviateOrgType(type: string): string {
   return ORG_TYPE_ABBREV[type] ?? type.slice(0, 6);
 }
 
-// Fixed at 3 slots so every row renders at the same height.
+// Fixed at 3 slots per column so every row renders at the same height.
 const ORG_SLOTS = 3;
 const ROW_H = 14; // px per label row (10px font + leading)
 const ROW_GAP = 2; // px between rows
 const PRESENCE_H = ORG_SLOTS * ROW_H + (ORG_SLOTS - 1) * ROW_GAP; // 46px
 
+function OrgColumn({ entries }: { entries: [string, number][] }) {
+  return (
+    <Box style={{ display: "flex", flexDirection: "column", gap: ROW_GAP, height: PRESENCE_H, justifyContent: "center" }}>
+      {Array.from({ length: ORG_SLOTS }).map((_, i) => {
+        const entry = entries[i];
+        return entry ? (
+          <Box key={entry[0]} style={{ display: "flex", alignItems: "baseline", gap: 5, height: ROW_H }}>
+            <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", minWidth: 34, lineHeight: 1 }}>
+              {abbreviateOrgType(entry[0])}
+            </Text>
+            <Text style={{ fontSize: 10, fontWeight: 600, color: "var(--color-text-secondary)", lineHeight: 1 }}>
+              {entry[1]}
+            </Text>
+          </Box>
+        ) : (
+          <Box key={i} style={{ height: ROW_H }} />
+        );
+      })}
+    </Box>
+  );
+}
+
 function OrgPresence({ byType, total }: { byType: Record<string, number>; total: number }) {
   const entries = Object.entries(byType)
     .filter(([, n]) => n > 0)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, ORG_SLOTS);
+    .sort(([, a], [, b]) => b - a);
+
+  const col1 = entries.slice(0, ORG_SLOTS);
+  const col2 = entries.slice(ORG_SLOTS, ORG_SLOTS * 2);
 
   return (
     <Box style={{ display: "flex", alignItems: "center", gap: 20 }}>
       <Text style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1, flexShrink: 0 }}>
         {total}
       </Text>
-      <Box style={{ display: "flex", flexDirection: "column", gap: ROW_GAP, height: PRESENCE_H, justifyContent: "center" }}>
-        {Array.from({ length: ORG_SLOTS }).map((_, i) => {
-          const entry = entries[i];
-          return entry ? (
-            <Box key={entry[0]} style={{ display: "flex", alignItems: "baseline", gap: 5, height: ROW_H }}>
-              <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", minWidth: 34, lineHeight: 1 }}>
-                {abbreviateOrgType(entry[0])}
-              </Text>
-              <Text style={{ fontSize: 10, fontWeight: 600, color: "var(--color-text-secondary)", lineHeight: 1 }}>
-                {entry[1]}
-              </Text>
-            </Box>
-          ) : (
-            <Box key={i} style={{ height: ROW_H }} />
-          );
-        })}
-      </Box>
+      <OrgColumn entries={col1} />
+      {col2.length > 0 && <OrgColumn entries={col2} />}
     </Box>
   );
 }
@@ -365,14 +374,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
                 </Badge>
               )}
             </Group>
-            <Group gap={16} align="center">
-              <Text size="xs" c="var(--color-text-muted)">
-                {ocha3w?.as_of ? `3W as of ${new Date(ocha3w.as_of).toLocaleDateString("en-US", { month: "short", year: "numeric" })}` : "3W data unavailable"}
-              </Text>
-              <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-muted)" }}>
-                SAF demo scores
-              </Badge>
-            </Group>
+            <Box />
           </Group>
         </Box>
 
