@@ -607,12 +607,22 @@ function ScenarioComparisonCard() {
   return (
     <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
       <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
-        <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-          Scenario Comparison
-        </Text>
-        <Text size="xs" c="var(--color-text-muted)" mt={2}>
-          Compare projected outcomes
-        </Text>
+        <Group gap={8} align="center">
+          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
+            Scenario Comparison
+          </Text>
+          <Badge
+            size="xs"
+            style={{
+              background: "var(--color-ai-light)",
+              color: "var(--color-ai)",
+              border: "1px solid var(--color-ai-border)",
+              fontWeight: 600,
+            }}
+          >
+            ✦ AI generated
+          </Badge>
+        </Group>
       </Box>
       <Box p={16} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
         {SCENARIOS.map((s) => (
