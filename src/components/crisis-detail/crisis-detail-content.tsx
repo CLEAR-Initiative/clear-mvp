@@ -205,7 +205,7 @@ export function CrisisDetailContent({
 
   const utils = api.useUtils();
 
-  const deleteCrisis = api.crises.delete.useMutation({
+  const deleteCrisis = api.crises.deleteCrisis.useMutation({
     onSuccess: () => {
       void utils.crises.list.invalidate();
       router.push("/analysis");

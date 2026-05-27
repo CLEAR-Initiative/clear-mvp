@@ -245,7 +245,7 @@ export const crisesRouter = createTRPCRouter({
       return data.removeEventFromCrisis;
     }),
 
-  delete: protectedProcedure
+  deleteCrisis: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ deleteCrisis: { id: string } }>(
