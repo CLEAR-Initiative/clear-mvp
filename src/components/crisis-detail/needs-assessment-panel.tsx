@@ -17,19 +17,18 @@ import type { GqlCrisis } from "~/server/api/routers/crises";
 
 // ── SAF scale ─────────────────────────────────────────────────────────────────
 
-const SAF_SCALE = [
-  { min: 80, level: "Catastrophic", color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
-  { min: 65, level: "Extreme",      color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
-  { min: 45, level: "Severe",       color: "var(--color-warning)",   bg: "var(--color-warning-light)"  },
-  { min: 25, level: "Stressed",     color: "var(--color-info)",      bg: "var(--color-info-light)"     },
-  { min: 0,  level: "Minimal",      color: "var(--color-success)",   bg: "var(--color-success-light)"  },
-] as const;
+const SAF_COLORS: Record<string, { color: string; bg: string }> = {
+  Catastrophic: { color: "var(--color-critical)", bg: "var(--color-critical-light)" },
+  Extreme:      { color: "var(--color-critical)", bg: "var(--color-critical-light)" },
+  Severe:       { color: "var(--color-warning)",  bg: "var(--color-warning-light)"  },
+  Stressed:     { color: "var(--color-info)",     bg: "var(--color-info-light)"     },
+  Minimal:      { color: "var(--color-success)",  bg: "var(--color-success-light)"  },
+};
+const UNKNOWN_SAF_COLORS = { color: "var(--color-text-muted)", bg: "var(--color-bg-muted)" };
 
-const UNKNOWN_SAF = { level: "Unknown", color: "var(--color-text-muted)", bg: "var(--color-bg-muted)" };
-
-function getSafLevel(score: number | null) {
-  if (score === null) return UNKNOWN_SAF;
-  return SAF_SCALE.find((s) => score >= s.min) ?? UNKNOWN_SAF;
+function getSafColors(severity: string | null) {
+  if (!severity) return UNKNOWN_SAF_COLORS;
+  return SAF_COLORS[severity] ?? UNKNOWN_SAF_COLORS;
 }
 
 const SAF_ORDER: Record<string, number> = {
@@ -65,14 +64,13 @@ const SECTORS: {
   label: string;
   icon: SectorIcon;
   ochaCodes: string[];
-  demoScore: number;
 }[] = [
-  { key: "shelter",   label: "Shelter",       icon: IconHome2,          ochaCodes: ["SHL", "SNFI", "NFI"],              demoScore: 65 },
-  { key: "wash",      label: "WASH",          icon: IconDroplet,        ochaCodes: ["WSH", "WASH", "WS"],               demoScore: 55 },
-  { key: "protection",label: "Protection",    icon: IconShield,         ochaCodes: ["PRO", "CP", "GBV"],                demoScore: 70 },
-  { key: "health",    label: "Health",        icon: IconHeart,          ochaCodes: ["HLT", "HEA", "HEALTH"],            demoScore: 60 },
-  { key: "food",      label: "Food Security", icon: IconToolsKitchen2,  ochaCodes: ["FSL", "FSC", "FOOD", "FSLA"],      demoScore: 80 },
-  { key: "education", label: "Education",     icon: IconBook,           ochaCodes: ["EDU"],                             demoScore: 38 },
+  { key: "shelter",    label: "Shelter",       icon: IconHome2,         ochaCodes: ["SHL", "SNFI", "NFI"]         },
+  { key: "wash",       label: "WASH",          icon: IconDroplet,       ochaCodes: ["WSH", "WASH", "WS"]          },
+  { key: "protection", label: "Protection",    icon: IconShield,        ochaCodes: ["PRO", "CP", "GBV"]           },
+  { key: "health",     label: "Health",        icon: IconHeart,         ochaCodes: ["HLT", "HEA", "HEALTH"]       },
+  { key: "food",       label: "Food Security", icon: IconToolsKitchen2, ochaCodes: ["FSL", "FSC", "FOOD", "FSLA"] },
+  { key: "education",  label: "Education",     icon: IconBook,          ochaCodes: ["EDU"]                        },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -182,18 +180,25 @@ function matchOchasector(ochaSectors: Ocha3wSector[], codes: string[]): Ocha3wSe
 function SectorRow({
   label,
   Icon,
-  score,
+  severity,
+  description,
+  responseGap,
+  nrcRelevant,
   ochaData,
   isLast,
 }: {
   label: string;
   Icon: SectorIcon;
-  score: number | null;
+  severity: string | null;
+  description: string | null;
+  responseGap: boolean | null;
+  nrcRelevant: boolean | null;
   ochaData: Ocha3wSector | null;
   isLast: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const saf = getSafLevel(score);
+  const saf = getSafColors(severity);
+  const displayLevel = severity ?? "Unknown";
   const Chevron = open ? IconChevronDown : IconChevronRight;
 
   return (
@@ -243,11 +248,8 @@ function SectorRow({
               color: saf.color,
             }}
           >
-            {saf.level}
+            {displayLevel}
           </span>
-          {score !== null && (
-            <Text size="xs" c="var(--color-text-muted)" mt={2}>{score}/100</Text>
-          )}
         </Box>
 
         {/* Operational presence */}
@@ -273,6 +275,30 @@ function SectorRow({
             borderBottom: isLast ? undefined : "1px solid var(--color-border)",
           }}
         >
+          {/* AI-generated sector description */}
+          {description && (
+            <Text size="xs" c="var(--color-text-secondary)" mb={10} style={{ lineHeight: 1.6 }}>
+              {description}
+            </Text>
+          )}
+
+          {/* Indicators */}
+          {(responseGap === true || nrcRelevant === true) && (
+            <Group gap={6} mb={ochaData?.organizations?.length ? 10 : 0}>
+              {responseGap === true && (
+                <Badge size="xs" style={{ background: "var(--color-critical-light)", color: "var(--color-critical)" }}>
+                  Response gap
+                </Badge>
+              )}
+              {nrcRelevant === true && (
+                <Badge size="xs" style={{ background: "var(--color-info-light)", color: "var(--color-info)" }}>
+                  NRC mandate
+                </Badge>
+              )}
+            </Group>
+          )}
+
+          {/* 3W organisations */}
           {ochaData?.organizations && ochaData.organizations.length > 0 ? (
             <Stack gap={4}>
               <Text size="xs" fw={700} c="var(--color-text-secondary)" tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }} mb={4}>
@@ -291,10 +317,8 @@ function SectorRow({
                 <Text size="xs" c="var(--color-text-muted)" mt={4}>+{ochaData.organizations.length - 10} more</Text>
               )}
             </Stack>
-          ) : (
-            <Text size="xs" c="var(--color-text-muted)">
-              Detailed sector breakdown coming soon.
-            </Text>
+          ) : !description && (
+            <Text size="xs" c="var(--color-text-muted)">No detailed data available for this sector.</Text>
           )}
         </Box>
       )}
@@ -340,60 +364,26 @@ function ColHeader({ children, style }: { children: React.ReactNode; style?: Rea
 interface SectorRowData {
   key: string;
   label: string;
-  score: number;
-  saf: typeof UNKNOWN_SAF;
+  icon: SectorIcon;
+  severity: string | null;
+  description: string | null;
+  responseGap: boolean | null;
+  nrcRelevant: boolean | null;
   ochaMatch: Ocha3wSector | null;
 }
 
-/** Parse the SAF clarification string from crisis.needs.clarification.
- *  Format: "- Label - sentence\n- Label - sentence\n..." (pipeline uses em-dash; we match both)
- *  Returns [{label, text}] or null if the format doesn't match. */
-function parseClarification(raw: string): { label: string; text: string }[] | null {
-  const lines = raw.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("-"));
-  if (lines.length < 2) return null;
-  return lines.map((line) => {
-    const body = line.replace(/^-\s*/, "");
-    // Pipeline writes "Label <em-dash> text"; match either em-dash (-) or plain " - "
-    const sep = body.search(/ [--] /);
-    if (sep === -1) return { label: "", text: body };
-    return { label: body.slice(0, sep), text: body.slice(sep + 3) };
-  });
-}
-
-function NeedsSummaryCard({ crisis, ocha3w, rows }: { crisis: GqlCrisis; ocha3w: Ocha3wData | null; rows: SectorRowData[] }) {
+function NeedsSummaryCard({ crisis, ocha3w }: { crisis: GqlCrisis; ocha3w: Ocha3wData | null }) {
   const [open, setOpen] = useState(true);
 
-  // Try to use the pipeline-generated SAF clarification first
-  const clarificationBullets = useMemo(() => {
+  const generalSummary = useMemo(() => {
     const needs = crisis.needs as Record<string, unknown> | null | undefined;
-    const raw = needs?.clarification;
-    if (typeof raw !== "string") return null;
-    return parseClarification(raw);
+    const raw = needs?.generalSummary;
+    return typeof raw === "string" && raw.length > 0 ? raw : null;
   }, [crisis.needs]);
-
-  // Fallback: derive bullets from SAF scores + ocha3w data
-  const criticalRows = rows.filter((r) => r.saf.level === "Catastrophic" || r.saf.level === "Extreme");
-  const severeRows   = rows.filter((r) => r.saf.level === "Severe");
-  const gapRows      = rows.filter(
-    (r) =>
-      (r.saf.level === "Catastrophic" || r.saf.level === "Extreme" || r.saf.level === "Severe") &&
-      (!r.ochaMatch || r.ochaMatch.org_count === 0),
-  );
-  const recParts: string[] = [];
-  if (criticalRows.length > 0) recParts.push(`${criticalRows.length} critical sector${criticalRows.length !== 1 ? "s" : ""} (${criticalRows.map((r) => r.label.toLowerCase()).join(", ")})`);
-  if (severeRows.length > 0)   recParts.push(`${severeRows.length} severe sector${severeRows.length !== 1 ? "s" : ""} (${severeRows.map((r) => r.label.toLowerCase()).join(", ")})`);
-  const fallbackBullets = [
-    { label: "Recommendation", text: recParts.length > 0 ? `Respond immediately; ${recParts.join(" and ")} require urgent intervention.` : "No critical or severe sectors identified from current data." },
-    { label: "Key needs",      text: "Health: 57% unable to access care; Education: 85% not in school; WASH: open defecation widely reported." },
-    { label: "Response gaps",  text: gapRows.length > 0 ? `${gapRows.map((r) => `${r.label} (${r.saf.level.toLowerCase()})`).join(" and ")} ${gapRows.length === 1 ? "has" : "have"} zero 3W actors present.` : "No major response gaps identified from current 3W data." },
-    { label: "Data note",      text: `MSNA data (Sep 2024) may not reflect post-rainy-season shelter deterioration or recent displacement shifts.` },
-  ];
-
-  const bullets = clarificationBullets ?? fallbackBullets;
 
   const ocha3wDate = ocha3w?.as_of
     ? new Date(ocha3w.as_of).toLocaleDateString("en-US", { month: "short", year: "numeric" })
-    : "Feb 2026";
+    : null;
 
   return (
     <Box style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)", marginBottom: 12 }}>
@@ -433,31 +423,21 @@ function NeedsSummaryCard({ crisis, ocha3w, rows }: { crisis: GqlCrisis; ocha3w:
 
       {open && (
         <Box px={16} pt={10} pb={14}>
-          {/* Data sources line */}
-          <Text size="xs" c="var(--color-text-muted)" mb={12} style={{ lineHeight: 1.4 }}>
-            Based on{" "}
-            <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>MSNA Sep 2024</span>
-            {" and "}
-            <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>OCHA 3W {ocha3wDate}</span>
-          </Text>
-
-          {/* Bullets */}
-          <Stack gap={8}>
-            {bullets.map((b) => (
-              <Box key={b.label} style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
-                <Text
-                  size="xs"
-                  fw={700}
-                  style={{ color: "var(--color-text-primary)", flexShrink: 0, minWidth: 110 }}
-                >
-                  {b.label}
-                </Text>
-                <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.55 }}>
-                  {b.text}
-                </Text>
-              </Box>
-            ))}
-          </Stack>
+          {ocha3wDate && (
+            <Text size="xs" c="var(--color-text-muted)" mb={10} style={{ lineHeight: 1.4 }}>
+              Operational presence from{" "}
+              <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>OCHA 3W {ocha3wDate}</span>
+            </Text>
+          )}
+          {generalSummary ? (
+            <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+              {generalSummary}
+            </Text>
+          ) : (
+            <Text size="xs" c="var(--color-text-muted)">
+              Needs analysis is being generated...
+            </Text>
+          )}
         </Box>
       )}
     </Box>
@@ -476,20 +456,28 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
   const [severityInfoOpen, setSeverityInfoOpen] = useState(false);
   const [presenceInfoOpen, setPresenceInfoOpen] = useState(false);
 
-  const rows = useMemo(() => {
+  const rows = useMemo<SectorRowData[]>(() => {
+    const needsSector = (crisis.needs as Record<string, unknown> | null | undefined)?.sector as Record<string, Record<string, unknown>> | null | undefined;
     return SECTORS.map((sector) => {
       const ochaMatch = ocha3w ? matchOchasector(ocha3w.sectors, sector.ochaCodes) : null;
-      // SAF score: use demo scores until backend has this data
-      const score = sector.demoScore;
-      const saf = getSafLevel(score);
-      return { ...sector, score, saf, ochaMatch };
-    }).sort((a, b) => SAF_ORDER[a.saf.level]! - SAF_ORDER[b.saf.level]!);
-  }, [ocha3w]);
+      const pipelineData = needsSector?.[sector.label];
+      return {
+        key: sector.key,
+        label: sector.label,
+        icon: sector.icon,
+        severity: typeof pipelineData?.severity === "string" ? pipelineData.severity : null,
+        description: typeof pipelineData?.description === "string" ? pipelineData.description : null,
+        responseGap: typeof pipelineData?.responseGap === "boolean" ? pipelineData.responseGap : null,
+        nrcRelevant: typeof pipelineData?.nrcRelevant === "boolean" ? pipelineData.nrcRelevant : null,
+        ochaMatch,
+      };
+    }).sort((a, b) => (SAF_ORDER[a.severity ?? "Unknown"] ?? 5) - (SAF_ORDER[b.severity ?? "Unknown"] ?? 5));
+  }, [crisis.needs, ocha3w]);
 
   return (
     <Box p={24}>
       {/* Summary */}
-      <NeedsSummaryCard crisis={crisis} ocha3w={ocha3w} rows={rows} />
+      <NeedsSummaryCard crisis={crisis} ocha3w={ocha3w} />
 
       {/* Panel card */}
       <Box style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}>
@@ -539,7 +527,10 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
             key={row.key}
             label={row.label}
             Icon={row.icon}
-            score={row.score}
+            severity={row.severity}
+            description={row.description}
+            responseGap={row.responseGap}
+            nrcRelevant={row.nrcRelevant}
             ochaData={row.ochaMatch}
             isLast={idx === rows.length - 1}
           />
