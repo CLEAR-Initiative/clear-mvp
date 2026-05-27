@@ -583,7 +583,6 @@ const SCENARIOS = [
   {
     label: "Best Case",
     subtitle: "Ceasefire + access scenario",
-    probability: 20,
     description: "Ceasefire holds and humanitarian corridor opens within 2 weeks. Displacement stabilises and returns begin. Estimated newly displaced: 12,000.",
     color: "var(--color-success)",
     bg: "var(--color-success-light)",
@@ -591,7 +590,6 @@ const SCENARIOS = [
   {
     label: "Most Likely",
     subtitle: "Continued low-intensity conflict",
-    probability: 55,
     description: "Sporadic fighting continues with intermittent humanitarian access. Slow displacement increase over 4-6 weeks. Estimated newly displaced: 45,000.",
     color: "var(--color-info)",
     bg: "var(--color-info-light)",
@@ -599,7 +597,6 @@ const SCENARIOS = [
   {
     label: "Worst Case",
     subtitle: "Full escalation scenario",
-    probability: 25,
     description: "Major offensive extends into Blue Nile State, triggering mass displacement and health system collapse. Estimated newly displaced: 120,000+.",
     color: "var(--color-critical)",
     bg: "var(--color-critical-light)",
@@ -624,9 +621,6 @@ function ScenarioComparisonCard() {
             p={16}
             style={{ border: `1px solid ${s.color}30`, background: s.bg }}
           >
-            <Text style={{ fontSize: 28, fontWeight: 800, color: s.color, lineHeight: 1, marginBottom: 10 }}>
-              {s.probability}%
-            </Text>
             <Text fw={700} size="sm" c="var(--color-text-primary)" mb={2}>
               {s.label}
             </Text>
