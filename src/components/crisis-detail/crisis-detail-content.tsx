@@ -483,11 +483,7 @@ export function CrisisDetailContent({
                     </Badge>
                   </Group>
                 </Box>
-                <Stack gap={12} p={16}>
-                  <Text size="sm" c="var(--color-text-primary)" style={{ lineHeight: 1.6 }}>
-                    {crisis.summary ?? "No summary available yet."}
-                  </Text>
-                </Stack>
+                <CrisisSummaryBody summary={crisis.summary} />
               </Card>
 
               {/* Events / Demography / Sources tabs */}
@@ -585,6 +581,47 @@ export function CrisisDetailContent({
   );
 }
 
+// ── Crisis summary body ───────────────────────────────────────────────────────
+
+function CrisisSummaryBody({ summary }: { summary: string | null }) {
+  const parsed = useMemo(() => {
+    if (!summary) return null;
+    try {
+      const obj = JSON.parse(summary) as Record<string, unknown>;
+      if (typeof obj.description === "string" && Array.isArray(obj.tldr)) {
+        return { description: obj.description, tldr: obj.tldr as string[] };
+      }
+    } catch { /* fall through */ }
+    return { description: summary, tldr: [] };
+  }, [summary]);
+
+  if (!parsed) {
+    return (
+      <Box p={16}>
+        <Text size="sm" c="var(--color-text-muted)">No summary available yet.</Text>
+      </Box>
+    );
+  }
+
+  return (
+    <Stack gap={10} p={16}>
+      <Text size="sm" c="var(--color-text-primary)" style={{ lineHeight: 1.65 }}>
+        {parsed.description}
+      </Text>
+      {parsed.tldr.length > 0 && (
+        <Stack gap={4} pt={4} style={{ borderTop: "1px solid var(--color-border)" }}>
+          {parsed.tldr.map((bullet, i) => (
+            <Group key={i} gap={8} wrap="nowrap" align="flex-start">
+              <Box style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--color-text-muted)", flexShrink: 0, marginTop: 7 }} />
+              <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.55 }}>{bullet}</Text>
+            </Group>
+          ))}
+        </Stack>
+      )}
+    </Stack>
+  );
+}
+
 // ── Scenario planning ────────────────────────────────────────────────────────
 
 interface ScenarioPlan {
@@ -600,6 +637,21 @@ const SCENARIO_STYLE: Record<string, { color: string; bg: string }> = {
 };
 
 function parseScenarios(json: unknown): ScenarioPlan[] | null {
+  if (json === null || json === undefined) return null;
+
+  // Pipeline format: { most_likely, best_case, worst_case, description }
+  if (typeof json === "object" && !Array.isArray(json)) {
+    const r = json as Record<string, unknown>;
+    if (typeof r.most_likely === "string" && typeof r.best_case === "string" && typeof r.worst_case === "string") {
+      return [
+        { label: "Best Case",   subtitle: "", description: r.best_case },
+        { label: "Most Likely", subtitle: "", description: r.most_likely },
+        { label: "Worst Case",  subtitle: "", description: r.worst_case },
+      ];
+    }
+  }
+
+  // Legacy array format: [{ label, subtitle, description }]
   if (!Array.isArray(json) || json.length === 0) return null;
   const result: ScenarioPlan[] = [];
   for (const item of json) {

@@ -345,9 +345,33 @@ interface SectorRowData {
   ochaMatch: Ocha3wSector | null;
 }
 
-function NeedsSummaryCard({ ocha3w, rows }: { ocha3w: Ocha3wData | null; rows: SectorRowData[] }) {
+/** Parse the SAF clarification string from crisis.needs.clarification.
+ *  Format: "- Label - sentence\n- Label - sentence\n..." (pipeline uses em-dash; we match both)
+ *  Returns [{label, text}] or null if the format doesn't match. */
+function parseClarification(raw: string): { label: string; text: string }[] | null {
+  const lines = raw.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("-"));
+  if (lines.length < 2) return null;
+  return lines.map((line) => {
+    const body = line.replace(/^-\s*/, "");
+    // Pipeline writes "Label <em-dash> text"; match either em-dash (-) or plain " - "
+    const sep = body.search(/ [--] /);
+    if (sep === -1) return { label: "", text: body };
+    return { label: body.slice(0, sep), text: body.slice(sep + 3) };
+  });
+}
+
+function NeedsSummaryCard({ crisis, ocha3w, rows }: { crisis: GqlCrisis; ocha3w: Ocha3wData | null; rows: SectorRowData[] }) {
   const [open, setOpen] = useState(true);
 
+  // Try to use the pipeline-generated SAF clarification first
+  const clarificationBullets = useMemo(() => {
+    const needs = crisis.needs as Record<string, unknown> | null | undefined;
+    const raw = needs?.clarification;
+    if (typeof raw !== "string") return null;
+    return parseClarification(raw);
+  }, [crisis.needs]);
+
+  // Fallback: derive bullets from SAF scores + ocha3w data
   const criticalRows = rows.filter((r) => r.saf.level === "Catastrophic" || r.saf.level === "Extreme");
   const severeRows   = rows.filter((r) => r.saf.level === "Severe");
   const gapRows      = rows.filter(
@@ -355,43 +379,21 @@ function NeedsSummaryCard({ ocha3w, rows }: { ocha3w: Ocha3wData | null; rows: S
       (r.saf.level === "Catastrophic" || r.saf.level === "Extreme" || r.saf.level === "Severe") &&
       (!r.ochaMatch || r.ochaMatch.org_count === 0),
   );
-
-  // Build recommendation sentence
   const recParts: string[] = [];
   if (criticalRows.length > 0) recParts.push(`${criticalRows.length} critical sector${criticalRows.length !== 1 ? "s" : ""} (${criticalRows.map((r) => r.label.toLowerCase()).join(", ")})`);
   if (severeRows.length > 0)   recParts.push(`${severeRows.length} severe sector${severeRows.length !== 1 ? "s" : ""} (${severeRows.map((r) => r.label.toLowerCase()).join(", ")})`);
-  const recommendation = recParts.length > 0
-    ? `Respond immediately; ${recParts.join(" and ")} require urgent intervention.`
-    : "No critical or severe sectors identified from current data.";
+  const fallbackBullets = [
+    { label: "Recommendation", text: recParts.length > 0 ? `Respond immediately; ${recParts.join(" and ")} require urgent intervention.` : "No critical or severe sectors identified from current data." },
+    { label: "Key needs",      text: "Health: 57% unable to access care; Education: 85% not in school; WASH: open defecation widely reported." },
+    { label: "Response gaps",  text: gapRows.length > 0 ? `${gapRows.map((r) => `${r.label} (${r.saf.level.toLowerCase()})`).join(" and ")} ${gapRows.length === 1 ? "has" : "have"} zero 3W actors present.` : "No major response gaps identified from current 3W data." },
+    { label: "Data note",      text: `MSNA data (Sep 2024) may not reflect post-rainy-season shelter deterioration or recent displacement shifts.` },
+  ];
 
-  // Response gaps sentence
-  const gapText = gapRows.length > 0
-    ? `${gapRows.map((r) => `${r.label} (${r.saf.level.toLowerCase()})`).join(" and ")} ${gapRows.length === 1 ? "has" : "have"} zero 3W actors present.`
-    : "No major response gaps identified from current 3W data.";
+  const bullets = clarificationBullets ?? fallbackBullets;
 
   const ocha3wDate = ocha3w?.as_of
     ? new Date(ocha3w.as_of).toLocaleDateString("en-US", { month: "short", year: "numeric" })
     : "Feb 2026";
-
-  const bullets = [
-    {
-      label: "Recommendation",
-      text: recommendation,
-    },
-    {
-      label: "Key needs",
-      // Demo-level statistics until MSNA indicators are surfaced per sector
-      text: "Health: 57% unable to access care; Education: 85% not in school; WASH: open defecation widely reported.",
-    },
-    {
-      label: "Response gaps",
-      text: gapText,
-    },
-    {
-      label: "Data note",
-      text: `MSNA data (Sep 2024) may not reflect post-rainy-season shelter deterioration or recent displacement shifts. 3W data as of ${ocha3wDate}.`,
-    },
-  ];
 
   return (
     <Box style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)", marginBottom: 12 }}>
@@ -487,7 +489,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
   return (
     <Box p={24}>
       {/* Summary */}
-      <NeedsSummaryCard ocha3w={ocha3w} rows={rows} />
+      <NeedsSummaryCard crisis={crisis} ocha3w={ocha3w} rows={rows} />
 
       {/* Panel card */}
       <Box style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}>
