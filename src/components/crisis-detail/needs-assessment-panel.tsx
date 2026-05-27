@@ -335,6 +335,133 @@ function ColHeader({ children, style }: { children: React.ReactNode; style?: Rea
   );
 }
 
+// ── Needs summary card ────────────────────────────────────────────────────────
+
+interface SectorRowData {
+  key: string;
+  label: string;
+  score: number;
+  saf: typeof UNKNOWN_SAF;
+  ochaMatch: Ocha3wSector | null;
+}
+
+function NeedsSummaryCard({ ocha3w, rows }: { ocha3w: Ocha3wData | null; rows: SectorRowData[] }) {
+  const [open, setOpen] = useState(true);
+
+  const criticalRows = rows.filter((r) => r.saf.level === "Catastrophic" || r.saf.level === "Extreme");
+  const severeRows   = rows.filter((r) => r.saf.level === "Severe");
+  const gapRows      = rows.filter(
+    (r) =>
+      (r.saf.level === "Catastrophic" || r.saf.level === "Extreme" || r.saf.level === "Severe") &&
+      (!r.ochaMatch || r.ochaMatch.org_count === 0),
+  );
+
+  // Build recommendation sentence
+  const recParts: string[] = [];
+  if (criticalRows.length > 0) recParts.push(`${criticalRows.length} critical sector${criticalRows.length !== 1 ? "s" : ""} (${criticalRows.map((r) => r.label.toLowerCase()).join(", ")})`);
+  if (severeRows.length > 0)   recParts.push(`${severeRows.length} severe sector${severeRows.length !== 1 ? "s" : ""} (${severeRows.map((r) => r.label.toLowerCase()).join(", ")})`);
+  const recommendation = recParts.length > 0
+    ? `Respond immediately; ${recParts.join(" and ")} require urgent intervention.`
+    : "No critical or severe sectors identified from current data.";
+
+  // Response gaps sentence
+  const gapText = gapRows.length > 0
+    ? `${gapRows.map((r) => `${r.label} (${r.saf.level.toLowerCase()})`).join(" and ")} ${gapRows.length === 1 ? "has" : "have"} zero 3W actors present.`
+    : "No major response gaps identified from current 3W data.";
+
+  const ocha3wDate = ocha3w?.as_of
+    ? new Date(ocha3w.as_of).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+    : "Feb 2026";
+
+  const bullets = [
+    {
+      label: "Recommendation",
+      text: recommendation,
+    },
+    {
+      label: "Key needs",
+      // Demo-level statistics until MSNA indicators are surfaced per sector
+      text: "Health: 57% unable to access care; Education: 85% not in school; WASH: open defecation widely reported.",
+    },
+    {
+      label: "Response gaps",
+      text: gapText,
+    },
+    {
+      label: "Data note",
+      text: `MSNA data (Sep 2024) may not reflect post-rainy-season shelter deterioration or recent displacement shifts. 3W data as of ${ocha3wDate}.`,
+    },
+  ];
+
+  return (
+    <Box style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)", marginBottom: 12 }}>
+      {/* Header */}
+      <Box
+        px={16} py={12}
+        onClick={() => setOpen((o) => !o)}
+        className="hover:bg-[var(--color-bg-muted)]"
+        style={{
+          borderBottom: open ? "1px solid var(--color-border)" : undefined,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          transition: "background 100ms",
+        }}
+      >
+        <Group gap={8} align="center">
+          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Summary</Text>
+          <Badge
+            size="xs"
+            style={{
+              background: "var(--color-ai-light)",
+              color: "var(--color-ai)",
+              border: "1px solid var(--color-ai-border)",
+              fontWeight: 600,
+            }}
+          >
+            ✦ AI generated
+          </Badge>
+        </Group>
+        {open
+          ? <IconChevronDown size={14} color="var(--color-text-muted)" />
+          : <IconChevronRight size={14} color="var(--color-text-muted)" />
+        }
+      </Box>
+
+      {open && (
+        <Box px={16} pt={10} pb={14}>
+          {/* Data sources line */}
+          <Text size="xs" c="var(--color-text-muted)" mb={12} style={{ lineHeight: 1.4 }}>
+            Based on{" "}
+            <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>MSNA Sep 2024</span>
+            {" and "}
+            <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>OCHA 3W {ocha3wDate}</span>
+          </Text>
+
+          {/* Bullets */}
+          <Stack gap={8}>
+            {bullets.map((b) => (
+              <Box key={b.label} style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
+                <Text
+                  size="xs"
+                  fw={700}
+                  style={{ color: "var(--color-text-primary)", flexShrink: 0, minWidth: 110 }}
+                >
+                  {b.label}
+                </Text>
+                <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.55 }}>
+                  {b.text}
+                </Text>
+              </Box>
+            ))}
+          </Stack>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface NeedsAssessmentPanelProps {
@@ -359,6 +486,9 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
 
   return (
     <Box p={24}>
+      {/* Summary */}
+      <NeedsSummaryCard ocha3w={ocha3w} rows={rows} />
+
       {/* Panel card */}
       <Box style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}>
         {/* Header */}
