@@ -18,7 +18,7 @@ import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
 
 import { DetectionKpiRow } from "~/components/detection/detection-kpi-row";
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
-import { HistoryTab } from "./_components/history-tab";
+import { HistoryTab, type HistorySortOrder } from "./_components/history-tab";
 import { EventsTab, type EventSortOrder } from "./_components/events-tab";
 import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
@@ -169,6 +169,7 @@ function DetectionPageContent() {
   const [eventsSort, setEventsSort] = useState<EventSortOrder>("newest");
   const [alertsSort, setAlertsSort] = useState<AlertSortOrder>("newest");
   const [signalsSort, setSignalsSort] = useState<SignalSortOrder>("newest");
+  const [historySortOrder, setHistorySortOrder] = useState<HistorySortOrder>("newest");
 
   // ── Per-feed accumulated items + offset ───────────────────────────────────
   const [eventsItems, setEventsItems] = useState<GqlEvent[]>([]);
@@ -450,15 +451,15 @@ function DetectionPageContent() {
 
   // ── History tab - paginated, 100 per page, all three sources accumulated ──────
   const historyAlertsQuery = api.alerts.alertsPage.useQuery(
-    { ...sharedFilter, orderBy: "CREATED_DESC", limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
+    { ...sharedFilter, orderBy: ALERT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
     { enabled: activeTab === "history", staleTime: Infinity },
   );
   const historyEventsQuery = api.alerts.eventsPage.useQuery(
-    { ...sharedFilter, orderBy: "LAST_SIGNAL_DESC", limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
+    { ...sharedFilter, orderBy: EVENT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
     { enabled: activeTab === "history", staleTime: Infinity },
   );
   const historySignalsQuery = api.alerts.signalsPage.useQuery(
-    { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, orderBy: "PUBLISHED_DESC", limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
+    { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, orderBy: SIGNAL_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
     { enabled: activeTab === "history", staleTime: Infinity },
   );
 
@@ -510,6 +511,17 @@ function DetectionPageContent() {
     setHistoryVersion((v) => v + 1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...FILTER_DEPS]);
+
+  // Reset history on sort change
+  useEffect(() => {
+    historyAppending.current = false;
+    setHistoryOffset(0);
+    setHistoryAlertsItems([]);
+    setHistoryEventsItems([]);
+    setHistorySignalsItems([]);
+    setHistoryVersion((v) => v + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historySortOrder]);
 
   const historyHasMore = historyAlertsHasMore || historyEventsHasMore || historySignalsHasMore;
   const historyTotalCount = historyAlertsTotalCount + historyEventsTotalCount + historySignalsTotalCount;
@@ -776,6 +788,8 @@ function DetectionPageContent() {
             isFetchingMore={historyIsFetching && historyAppending.current}
             totalCount={historyTotalCount}
             onLoadMore={loadMoreHistory}
+            sortOrder={historySortOrder}
+            onSortChange={setHistorySortOrder}
           />
         )}
       </Box>
