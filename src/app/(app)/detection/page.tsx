@@ -24,6 +24,7 @@ import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
 
 const PAGE_SIZE = 25;
+const HISTORY_PAGE_SIZE = 100;
 
 // Map UI sort labels to API orderBy enum values.
 // Types must match the z.enum() definitions in alerts.ts router exactly.
@@ -148,7 +149,7 @@ function DetectionPageContent() {
   const [snapshotTime, setSnapshotTime] = useState(() => new Date().toISOString());
   // Rolling presets ("Last N days") follow snapshotTime so refresh expands
   // the window to include new events. Fixed-range presets ("Mon YYYY") keep
-  // their explicit upper bound — snapshotTime is irrelevant there because
+  // their explicit upper bound - snapshotTime is irrelevant there because
   // the range is in the past and no new events can fall into it.
   const isRollingPreset = /^Last \d+ days$/i.test(selectedDate);
   const effectiveTo = isRollingPreset ? snapshotTime : toIso;
@@ -194,6 +195,20 @@ function DetectionPageContent() {
   const signalsAppending = useRef(false);
   const [signalsVersion, setSignalsVersion] = useState(0);
 
+  // History tab accumulation - same pattern as feeds but HISTORY_PAGE_SIZE = 100
+  const [historyAlertsItems, setHistoryAlertsItems] = useState<GqlAlert[]>([]);
+  const [historyEventsItems, setHistoryEventsItems] = useState<GqlEvent[]>([]);
+  const [historySignalsItems, setHistorySignalsItems] = useState<GqlSignal[]>([]);
+  const [historyOffset, setHistoryOffset] = useState(0);
+  const [historyAlertsTotalCount, setHistoryAlertsTotalCount] = useState(0);
+  const [historyEventsTotalCount, setHistoryEventsTotalCount] = useState(0);
+  const [historySignalsTotalCount, setHistorySignalsTotalCount] = useState(0);
+  const [historyAlertsHasMore, setHistoryAlertsHasMore] = useState(false);
+  const [historyEventsHasMore, setHistoryEventsHasMore] = useState(false);
+  const [historySignalsHasMore, setHistorySignalsHasMore] = useState(false);
+  const historyAppending = useRef(false);
+  const [historyVersion, setHistoryVersion] = useState(0);
+
   const sharedFilter = {
     teamId: activeTeamId,
     locationId: selectedLocationId ?? undefined,
@@ -209,7 +224,7 @@ function DetectionPageContent() {
   // _v (version) is part of the React Query cache key, so incrementing it on
   // reset forces a fresh fetch and guarantees the accumulation effect fires
   // via a data reference change. The router schema declares it optional and
-  // strips it before forwarding to GraphQL — see alerts.ts.
+  // strips it before forwarding to GraphQL - see alerts.ts.
   const eventsQuery = api.alerts.eventsPage.useQuery(
     { ...sharedFilter, orderBy: EVENT_ORDER_MAP[eventsSort], limit: PAGE_SIZE, offset: eventsOffset, _v: eventsVersion },
     { enabled: activeTab === "events", staleTime: Infinity },
@@ -394,7 +409,7 @@ function DetectionPageContent() {
   // ── "New items" polls: lightweight queries with from=snapshotTime ──────────
   // Only the active tab polls so we don't waste bandwidth on hidden tabs.
   // These spread the same filter shape as the main queries so the count
-  // reflects what refresh will actually load — otherwise the banner can show
+  // reflects what refresh will actually load - otherwise the banner can show
   // "100 new events" while a Critical-only filter would load 0.
   const eventsNewQuery = api.alerts.eventsPage.useQuery(
     {
@@ -433,19 +448,78 @@ function DetectionPageContent() {
   const alertsNewCount = alertsNewQuery.data?.totalCount ?? 0;
   const signalsNewCount = signalsNewQuery.data?.totalCount ?? 0;
 
-  // ── History tab (intentionally unpaginated - roll-up view) ─────────────────
-  const historyQuery = api.alerts.getAlerts.useQuery(
-    { activeOnly: false, teamId: activeTeamId },
-    { enabled: activeTab === "history" },
+  // ── History tab - paginated, 100 per page, all three sources accumulated ──────
+  const historyAlertsQuery = api.alerts.alertsPage.useQuery(
+    { ...sharedFilter, orderBy: "CREATED_DESC", limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
+    { enabled: activeTab === "history", staleTime: Infinity },
   );
-  const historyEventsQuery = api.events.list.useQuery(
-    { teamId: activeTeamId },
-    { enabled: activeTab === "history" },
+  const historyEventsQuery = api.alerts.eventsPage.useQuery(
+    { ...sharedFilter, orderBy: "LAST_SIGNAL_DESC", limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
+    { enabled: activeTab === "history", staleTime: Infinity },
   );
-  const historySignalsQuery = api.signals.list.useQuery(
-    { teamId: activeTeamId },
-    { enabled: activeTab === "history" },
+  const historySignalsQuery = api.alerts.signalsPage.useQuery(
+    { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, orderBy: "PUBLISHED_DESC", limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
+    { enabled: activeTab === "history", staleTime: Infinity },
   );
+
+  // ── History accumulation effects ───────────────────────────────────────────
+  useEffect(() => {
+    if (!historyAlertsQuery.data) return;
+    const { items, totalCount, hasMore } = historyAlertsQuery.data;
+    setHistoryAlertsTotalCount(totalCount);
+    setHistoryAlertsHasMore(hasMore);
+    if (historyAppending.current) {
+      setHistoryAlertsItems((prev) => [...prev, ...items]);
+    } else {
+      setHistoryAlertsItems(items);
+    }
+  }, [historyAlertsQuery.data]);
+
+  useEffect(() => {
+    if (!historyEventsQuery.data) return;
+    const { items, totalCount, hasMore } = historyEventsQuery.data;
+    setHistoryEventsTotalCount(totalCount);
+    setHistoryEventsHasMore(hasMore);
+    if (historyAppending.current) {
+      setHistoryEventsItems((prev) => [...prev, ...items]);
+    } else {
+      setHistoryEventsItems(items);
+    }
+  }, [historyEventsQuery.data]);
+
+  useEffect(() => {
+    if (!historySignalsQuery.data) return;
+    const { items, totalCount, hasMore } = historySignalsQuery.data;
+    setHistorySignalsTotalCount(totalCount);
+    setHistorySignalsHasMore(hasMore);
+    if (historyAppending.current) {
+      setHistorySignalsItems((prev) => [...prev, ...items]);
+      historyAppending.current = false;
+    } else {
+      setHistorySignalsItems(items);
+    }
+  }, [historySignalsQuery.data]);
+
+  // Reset history on filter change
+  useEffect(() => {
+    historyAppending.current = false;
+    setHistoryOffset(0);
+    setHistoryAlertsItems([]);
+    setHistoryEventsItems([]);
+    setHistorySignalsItems([]);
+    setHistoryVersion((v) => v + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...FILTER_DEPS]);
+
+  const historyHasMore = historyAlertsHasMore || historyEventsHasMore || historySignalsHasMore;
+  const historyTotalCount = historyAlertsTotalCount + historyEventsTotalCount + historySignalsTotalCount;
+  const historyIsFetching = historyAlertsQuery.isFetching || historyEventsQuery.isFetching || historySignalsQuery.isFetching;
+
+  const loadMoreHistory = useCallback(() => {
+    if (!historyHasMore || historyIsFetching) return;
+    historyAppending.current = true;
+    setHistoryOffset((prev) => prev + HISTORY_PAGE_SIZE);
+  }, [historyHasMore, historyIsFetching]);
 
   const regions = getRegions(selectedCountry);
 
@@ -694,10 +768,14 @@ function DetectionPageContent() {
 
         {activeTab === "history" && (
           <HistoryTab
-            alerts={historyQuery.data?.alerts ?? []}
-            events={historyEventsQuery.data ?? []}
-            signals={historySignalsQuery.data ?? []}
-            loading={historyQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading}
+            alerts={historyAlertsItems}
+            events={historyEventsItems}
+            signals={historySignalsItems}
+            loading={historyAlertsQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading}
+            hasMore={historyHasMore}
+            isFetchingMore={historyIsFetching && historyAppending.current}
+            totalCount={historyTotalCount}
+            onLoadMore={loadMoreHistory}
           />
         )}
       </Box>

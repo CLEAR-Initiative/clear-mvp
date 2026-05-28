@@ -12,6 +12,7 @@ import {
   ActionIcon,
   Divider,
   Stack,
+  Loader,
 } from "@mantine/core";
 import {
   IconSearch,
@@ -64,6 +65,10 @@ interface HistoryTabProps {
   events: GqlEvent[];
   signals: GqlSignal[];
   loading: boolean;
+  hasMore?: boolean;
+  isFetchingMore?: boolean;
+  totalCount?: number;
+  onLoadMore?: () => void;
 }
 
 const CLASS_STYLES: Record<string, { bg: string; color: string; label: string }> = {
@@ -82,7 +87,7 @@ const columns = [
   { label: "Location" },
 ];
 
-export function HistoryTab({ alerts, events, signals, loading }: HistoryTabProps) {
+export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchingMore, totalCount, onLoadMore }: HistoryTabProps) {
   const [search, setSearch] = useState("");
   const [activeSeverities, setActiveSeverities] = useState<Set<SeverityKey>>(
     new Set(["critical", "high", "medium", "low"]),
@@ -191,9 +196,13 @@ export function HistoryTab({ alerts, events, signals, loading }: HistoryTabProps
     return result;
   }, [allRows, search, activeSeverities, activeTypes, sortOrder]);
 
+  const loadedCount = allRows.length;
+  const total = totalCount ?? loadedCount;
   const subtitle = isFiltered
-    ? `${filtered.length} of ${allRows.length}`
-    : `${allRows.length} items`;
+    ? `${filtered.length} of ${loadedCount} loaded`
+    : loadedCount < total
+      ? `${loadedCount} of ${total}`
+      : `${loadedCount} items`;
 
   return (
     <CardSection title="History" subtitle={subtitle} noPadding>
@@ -392,7 +401,7 @@ export function HistoryTab({ alerts, events, signals, loading }: HistoryTabProps
         columns={columns}
         data={filtered}
         loading={loading}
-        emptyMessage={allRows.length === 0 ? "No history available." : "No items match your filters."}
+        emptyMessage={loadedCount === 0 ? "No history available." : "No items match your filters."}
         renderRow={(row) => {
           const sev = rowSeverity(row);
           const cls = CLASS_STYLES[row.kind]!;
@@ -505,6 +514,29 @@ export function HistoryTab({ alerts, events, signals, loading }: HistoryTabProps
           );
         }}
       />
+      {(hasMore || isFetchingMore) && (
+        <Box px={16} py={12} style={{ borderTop: "1px solid var(--color-border)", display: "flex", justifyContent: "center" }}>
+          {isFetchingMore ? (
+            <Loader size="xs" color="gray" />
+          ) : (
+            <button
+              onClick={onLoadMore}
+              style={{
+                padding: "6px 16px",
+                borderRadius: 6,
+                border: "1px solid var(--color-border)",
+                background: "var(--color-bg-white)",
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 500,
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              Load more
+            </button>
+          )}
+        </Box>
+      )}
     </CardSection>
   );
 }

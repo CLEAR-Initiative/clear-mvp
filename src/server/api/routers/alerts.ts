@@ -324,7 +324,7 @@ export const alertsRouter = createTRPCRouter({
   alertsPage: protectedProcedure
     .input(
       z.object({
-        limit: z.number().int().min(1).max(100).optional(),
+        limit: z.number().int().min(1).max(500).optional(),
         offset: z.number().int().min(0).optional(),
         orderBy: z.enum(ALERT_ORDER).optional(),
         status: z.enum(["draft", "published", "archived"]).optional(),
@@ -345,7 +345,7 @@ export const alertsRouter = createTRPCRouter({
   eventsPage: protectedProcedure
     .input(
       z.object({
-        limit: z.number().int().min(1).max(100).optional(),
+        limit: z.number().int().min(1).max(500).optional(),
         offset: z.number().int().min(0).optional(),
         orderBy: z.enum(EVENT_ORDER).optional(),
         _v: z.number().int().optional(),
@@ -365,7 +365,7 @@ export const alertsRouter = createTRPCRouter({
   signalsPage: protectedProcedure
     .input(
       z.object({
-        limit: z.number().int().min(1).max(100).optional(),
+        limit: z.number().int().min(1).max(500).optional(),
         offset: z.number().int().min(0).optional(),
         orderBy: z.enum(SIGNAL_ORDER).optional(),
         // Signals filter shape mirrors commonFilter except `eventTypes` is

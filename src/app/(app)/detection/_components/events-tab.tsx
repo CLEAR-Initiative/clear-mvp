@@ -287,7 +287,7 @@ export function EventsTab({
                             <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
                           </Group>
                         )}
-                        {[...getDisasterPills(event.types), ...getDisasterL2Pills(event.types)].map((pill) => (
+                        {(() => { const all = [...getDisasterPills(event.types), ...getDisasterL2Pills(event.types)]; return all.filter((p, i) => all.findIndex((q) => q.label === p.label) === i); })().map((pill) => (
                           <span key={pill.label} style={{ display: "inline-block", padding: "1px 7px", borderRadius: 999, fontSize: 10, fontWeight: 600, color: pill.color, background: pill.bg, letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
                             {pill.label}
                           </span>
