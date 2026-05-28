@@ -13,7 +13,7 @@ import type { MapMarker } from "~/components/map/crisis-map";
 import { countryConfig, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
 import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
-import { PageHeader, FilterBar } from "~/components/ui";
+import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
 import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
 
 import { DetectionKpiRow } from "~/components/detection/detection-kpi-row";
@@ -78,7 +78,7 @@ function DetectionPageContent() {
     router.replace(`/detection?${params.toString()}`, { scroll: false });
   }, [router, searchParams]);
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
-  const [selectedRegion, setSelectedRegion] = useState("All Regions");
+  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("Last 30 days");
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -92,7 +92,7 @@ function DetectionPageContent() {
   const filterCount = (activeSeverities.size < 4 ? 1 : 0) + (selectedTypeFilters.length > 0 ? 1 : 0) + (activeSources !== null ? 1 : 0);
 
   const { activeTeamId } = useTeam();
-  const { countries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
+  const { countries, getCenter, getZoom, getLocationId, tree } = useLocations();
 
   const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
   const selectedCountryId = useMemo(() => getLocationId(selectedCountry), [selectedCountry, getLocationId]);
@@ -113,31 +113,31 @@ function DetectionPageContent() {
     { enabled: boundaryLevel === "A2" && !!selectedCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const adminBoundaries = useMemo(() => {
-    if (selectedRegion !== "All Regions") return [];
+    if (selectedRegionId !== null) return [];
     if (boundaryLevel === "A1") return a1BoundaryQuery.data ?? [];
     if (boundaryLevel === "A2") return a2BoundaryQuery.data ?? [];
     return [];
-  }, [selectedRegion, boundaryLevel, a1BoundaryQuery.data, a2BoundaryQuery.data]);
+  }, [selectedRegionId, boundaryLevel, a1BoundaryQuery.data, a2BoundaryQuery.data]);
   const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
-  const selectedRegionId = useMemo(
-    () => (selectedRegion !== "All Regions" ? getLocationId(selectedRegion) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedRegion, getLocationId],
-  );
   const regionQuery = api.locations.getById.useQuery(
     { id: selectedRegionId! },
     { enabled: !!selectedRegionId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const fitBoundsGeometry = useMemo(
-    () => (selectedRegion !== "All Regions" ? (regionQuery.data?.geometry ?? null) : null),
-    [selectedRegion, regionQuery.data],
+    () => (selectedRegionId ? (regionQuery.data?.geometry ?? null) : null),
+    [selectedRegionId, regionQuery.data],
   );
 
-  const selectedLocationId = useMemo(() => {
-    if (selectedRegion !== "All Regions") return getLocationId(selectedRegion);
-    return getLocationId(selectedCountry);
-  }, [selectedCountry, selectedRegion, getLocationId]);
+  const selectedLocationId = useMemo(
+    () => selectedRegionId ?? getLocationId(selectedCountry),
+    [selectedCountry, selectedRegionId, getLocationId],
+  );
+
+  const currentCountryStates = useMemo(
+    () => tree.find((c) => c.name === selectedCountry)?.states ?? [],
+    [tree, selectedCountry],
+  );
 
   const dateRange = useMemo(() => parseDateFilter(selectedDate), [selectedDate]);
   const fromIso = useMemo(() => dateRange.start.toISOString(), [dateRange]);
@@ -533,8 +533,6 @@ function DetectionPageContent() {
     setHistoryOffset((prev) => prev + HISTORY_PAGE_SIZE);
   }, [historyHasMore, historyIsFetching]);
 
-  const regions = getRegions(selectedCountry);
-
   const allSources = useMemo(() => {
     const s = new Set<string>();
     alertsItems.forEach((a) => a.event.signals.forEach((sig) => s.add(sig.source.name)));
@@ -572,11 +570,16 @@ function DetectionPageContent() {
       >
         <FilterBar
           country={selectedCountry}
-          onCountryChange={(v) => { setSelectedCountry(v); setSelectedRegion("All Regions"); }}
-          region={selectedRegion}
-          onRegionChange={setSelectedRegion}
+          onCountryChange={(v) => { setSelectedCountry(v); setSelectedRegionId(null); }}
           countries={countries}
-          regions={regions}
+          regionsContent={
+            <RegionPicker
+              states={currentCountryStates}
+              value={selectedRegionId}
+              onChange={setSelectedRegionId}
+              label="Region"
+            />
+          }
           date={selectedDate}
           onDateChange={setSelectedDate}
           dateOptions={dateOptions}
