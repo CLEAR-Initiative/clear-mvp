@@ -24,10 +24,12 @@ function FilterLabel({ children }: { children: string }) {
 interface FilterBarProps {
   country: string;
   onCountryChange: (value: string) => void;
-  region: string;
-  onRegionChange: (value: string) => void;
+  region?: string;
+  onRegionChange?: (value: string) => void;
   countries: string[];
-  regions: string[];
+  regions?: string[];
+  /** Replaces the default Region select. Use to render a custom picker (e.g. RegionPicker). */
+  regionsContent?: ReactNode;
   date?: string;
   onDateChange?: (value: string) => void;
   dateOptions?: string[];
@@ -41,6 +43,7 @@ export function FilterBar({
   onRegionChange,
   countries,
   regions,
+  regionsContent,
   date,
   onDateChange,
   dateOptions,
@@ -57,15 +60,17 @@ export function FilterBar({
         styles={{ input: INPUT_STYLE }}
         label={<FilterLabel>Country</FilterLabel>}
       />
-      <Select
-        size="xs"
-        value={region}
-        onChange={(v) => onRegionChange(v ?? "All Regions")}
-        data={regions}
-        style={{ minWidth: 130 }}
-        styles={{ input: INPUT_STYLE }}
-        label={<FilterLabel>Region</FilterLabel>}
-      />
+      {regionsContent ?? (region != null && regions != null && onRegionChange != null && (
+        <Select
+          size="xs"
+          value={region}
+          onChange={(v) => onRegionChange(v ?? "All Regions")}
+          data={regions}
+          style={{ minWidth: 130 }}
+          styles={{ input: INPUT_STYLE }}
+          label={<FilterLabel>Region</FilterLabel>}
+        />
+      ))}
       {date != null && onDateChange && dateOptions && (
         <Select
           size="xs"
