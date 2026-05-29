@@ -12,20 +12,25 @@ export interface GqlCrisis {
   generalLocation: GqlLocation | null;
   /** Free-form JSON, expected to match ClusterNeed[] when set by CLEAR. */
   needs: unknown;
+  /** Free-form JSON, expected to match ScenarioPlan[] when set by CLEAR. */
+  scenarios: unknown;
   /** BigInt serialised as string; null when unset. */
   populationAffected: string | null;
   populationInArea: string | null;
+  /** Presigned S3 URLs generated at query time from stored S3 keys. */
+  attachments: string[];
   events: GqlEvent[];
 }
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry
-  ancestors { id name level }
+  metadata { type data }
+  ancestors { id name level metadata { type data } }
 `;
 
 const SIGNAL_FIELDS = `
   id
-  source { id name type }
+  source { id name type baseUrl infoUrl }
   title
   description
   severity
@@ -62,8 +67,10 @@ const CRISIS_FIELDS = `
   severity
   generalLocation { ${LOCATION_FIELDS} }
   needs
+  scenarios
   populationAffected
   populationInArea
+  attachments
   events { ${EVENT_FIELDS} }
 `;
 
@@ -104,6 +111,24 @@ const CREATE_CRISIS_FROM_EVENTS_MUTATION = `
   }
 `;
 
+const ADD_ATTACHMENTS_MUTATION = `
+  mutation AddCrisisAttachments($id: String!, $keys: [String!]!) {
+    addCrisisAttachments(id: $id, keys: $keys) {
+      id
+      attachments
+    }
+  }
+`;
+
+const REMOVE_ATTACHMENT_MUTATION = `
+  mutation RemoveCrisisAttachment($id: String!, $key: String!) {
+    removeCrisisAttachment(id: $id, key: $key) {
+      id
+      attachments
+    }
+  }
+`;
+
 const ADD_EVENT_TO_CRISIS_MUTATION = `
   mutation AddEventToCrisis($crisisId: String!, $eventId: String!) {
     addEventToCrisis(crisisId: $crisisId, eventId: $eventId) {
@@ -112,6 +137,21 @@ const ADD_EVENT_TO_CRISIS_MUTATION = `
       eventId
       collectedAt
     }
+  }
+`;
+
+const REMOVE_EVENT_FROM_CRISIS_MUTATION = `
+  mutation RemoveEventFromCrisis($crisisId: String!, $eventId: String!) {
+    removeEventFromCrisis(crisisId: $crisisId, eventId: $eventId) {
+      id
+      events { id }
+    }
+  }
+`;
+
+const DELETE_CRISIS_MUTATION = `
+  mutation DeleteCrisis($id: String!) {
+    deleteCrisis(id: $id)
   }
 `;
 
@@ -157,6 +197,28 @@ export const crisesRouter = createTRPCRouter({
       return data.createCrisisFromEvents;
     }),
 
+  addAttachments: protectedProcedure
+    .input(z.object({ id: z.string(), keys: z.array(z.string()).min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ addCrisisAttachments: { id: string; attachments: string[] } }>(
+        ADD_ATTACHMENTS_MUTATION,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.addCrisisAttachments;
+    }),
+
+  removeAttachment: protectedProcedure
+    .input(z.object({ id: z.string(), key: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ removeCrisisAttachment: { id: string; attachments: string[] } }>(
+        REMOVE_ATTACHMENT_MUTATION,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.removeCrisisAttachment;
+    }),
+
   addEvent: protectedProcedure
     .input(z.object({ crisisId: z.string(), eventId: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -169,5 +231,27 @@ export const crisesRouter = createTRPCRouter({
         };
       }>(ADD_EVENT_TO_CRISIS_MUTATION, input, cookieHeaders(ctx));
       return data.addEventToCrisis;
+    }),
+
+  removeEvent: protectedProcedure
+    .input(z.object({ crisisId: z.string(), eventId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ removeEventFromCrisis: { id: string; events: { id: string }[] } | null }>(
+        REMOVE_EVENT_FROM_CRISIS_MUTATION,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.removeEventFromCrisis;
+    }),
+
+  deleteCrisis: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ deleteCrisis: boolean }>(
+        DELETE_CRISIS_MUTATION,
+        { id: input.id },
+        cookieHeaders(ctx),
+      );
+      return data.deleteCrisis;
     }),
 });

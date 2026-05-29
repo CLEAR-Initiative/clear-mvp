@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import dynamic from "next/dynamic";
+import { useMemo, useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Box,
   Text,
@@ -13,7 +13,11 @@ import {
   Loader,
   Tabs,
   Select,
-  Checkbox,
+  Modal,
+  Button,
+  Menu,
+  ActionIcon,
+  Divider,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -28,16 +32,26 @@ import {
   IconTrendingUp,
   IconTrendingDown,
   IconMinus,
+  IconChevronDown,
+  IconChevronRight,
+  IconFileText,
+  IconUpload,
+  IconTrash,
+  IconDotsVertical,
 } from "@tabler/icons-react";
+import { api } from "~/trpc/react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
+import { useLocations } from "~/hooks/use-locations";
 import { IASC_CLUSTERS, type IASCClusterCode } from "~/lib/constants/iasc-clusters";
 import type { GqlCrisis } from "~/server/api/routers/crises";
 import type { MapMarker } from "~/components/map/crisis-map";
+import { MinimapCard } from "~/components/map/minimap-card";
 import { CommentsSection } from "~/components/comments-section";
+import { NeedsAssessmentPanel } from "~/components/crisis-detail/needs-assessment-panel";
 
 /** Humanitarian need row - parsed from a crisis's free-form `needs` JSON. */
 interface ClusterNeed {
@@ -48,11 +62,6 @@ interface ClusterNeed {
   trend?: "up" | "flat" | "down";
   detail?: string;
 }
-
-const CrisisMap = dynamic(
-  () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box w="100%" h={360} bg="var(--color-bg-muted)" /> },
-);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -187,14 +196,31 @@ export function CrisisDetailContent({
   mode,
   relatedCrises = [],
 }: CrisisDetailContentProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [leftPanelTab, setLeftPanelTab] = useState<string | null>("events");
-  const [layers, setLayers] = useState({ events: true, roads: false, population: false });
+  const [confirmDeleteCrisis, setConfirmDeleteCrisis] = useState(false);
 
-  const parsedNeeds = useMemo(() => parseNeeds(crisis?.needs), [crisis?.needs]);
-  // Fall back to demo data when the backend hasn't populated needs yet.
-  const needs = parsedNeeds.length > 0 ? parsedNeeds : DEMO_NEEDS;
-  const needsAreDemo = parsedNeeds.length === 0;
+  const meQuery = api.auth.me.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
+  const isAdmin = meQuery.data?.user?.role === "admin" || meQuery.data?.user?.role === "org_admin";
+
+  const utils = api.useUtils();
+
+  const deleteCrisis = api.crises.deleteCrisis.useMutation({
+    onSuccess: () => {
+      void utils.crises.list.invalidate();
+      router.push("/analysis");
+    },
+  });
+
+  const { getLocationId } = useLocations();
+  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
+  const sudanL0Query = api.locations.getById.useQuery(
+    { id: sudanId! },
+    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
+
   const events = crisis?.events ?? [];
 
   // Pick a primary coordinate for the map centre. Prefer the crisis's own
@@ -222,22 +248,20 @@ export function CrisisDetailContent({
         description: resolveLocationName(crisis.generalLocation) ?? undefined,
       },
     ];
-    if (layers.events) {
-      events.forEach((e, idx) => {
-        const c = locationCoords(pickEventLocation(e)) ?? primaryCoords;
-        markers.push({
-          id: idx + 1,
-          lng: c[0],
-          lat: c[1],
-          title: e.title ?? e.types[0] ?? "Event",
-          severity: mapSeverity(e.severity),
-          description: resolveLocationName(pickEventLocation(e)) ?? undefined,
-          type: e.types[0],
-        });
+    events.forEach((e, idx) => {
+      const c = locationCoords(pickEventLocation(e)) ?? primaryCoords;
+      markers.push({
+        id: idx + 1,
+        lng: c[0],
+        lat: c[1],
+        title: e.title ?? e.types[0] ?? "Event",
+        severity: mapSeverity(e.severity),
+        description: resolveLocationName(pickEventLocation(e)) ?? undefined,
+        type: e.types[0],
       });
-    }
+    });
     return markers;
-  }, [crisis, events, layers.events, primaryCoords]);
+  }, [crisis, events, primaryCoords]);
 
   if (loading) {
     return (
@@ -278,7 +302,9 @@ export function CrisisDetailContent({
   const isCompact = mode === "drawer";
 
   const title = crisis.title ?? "Untitled crisis";
-  const locationName = resolveLocationName(crisis.generalLocation);
+  const locationName =
+    resolveLocationName(crisis.generalLocation) ??
+    resolveLocationName(events[0] ? pickEventLocation(events[0]) : null);
   const populationAffected = bigIntStrToNumber(crisis.populationAffected);
   const populationInArea = bigIntStrToNumber(crisis.populationInArea);
 
@@ -298,6 +324,32 @@ export function CrisisDetailContent({
 
   return (
     <Box>
+      {/* Delete crisis confirmation modal */}
+      <Modal
+        opened={confirmDeleteCrisis}
+        onClose={() => setConfirmDeleteCrisis(false)}
+        title="Delete crisis"
+        size="sm"
+        centered
+      >
+        <Text size="sm" c="var(--color-text-secondary)" mb={20}>
+          Permanently delete <strong>{crisis.title ?? "this crisis"}</strong>? This cannot be undone.
+        </Text>
+        <Group justify="flex-end" gap={8}>
+          <Button variant="default" size="xs" onClick={() => setConfirmDeleteCrisis(false)}>
+            Cancel
+          </Button>
+          <Button
+            size="xs"
+            color="red"
+            loading={deleteCrisis.isPending}
+            onClick={() => deleteCrisis.mutate({ id: crisis.id })}
+          >
+            Delete
+          </Button>
+        </Group>
+      </Modal>
+
       {/* Back nav + crisis selector */}
       {mode === "page" && (
         <Box
@@ -337,6 +389,24 @@ export function CrisisDetailContent({
                     if (val) window.location.href = `/crisis/${val}`;
                   }}
                 />
+              )}
+              {isAdmin && (
+                <Menu position="bottom-end" withinPortal>
+                  <Menu.Target>
+                    <ActionIcon variant="subtle" color="gray" size="sm">
+                      <IconDotsVertical size={16} />
+                    </ActionIcon>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Item
+                      color="red"
+                      leftSection={<IconTrash size={14} />}
+                      onClick={() => setConfirmDeleteCrisis(true)}
+                    >
+                      Delete crisis
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
               )}
             </Group>
           </Group>
@@ -441,7 +511,7 @@ export function CrisisDetailContent({
       )}
 
       {activeTab === "needs" ? (
-        <NeedsAssessmentPanel needs={needs} isDemo={needsAreDemo} />
+        <NeedsAssessmentPanel crisis={crisis} />
       ) : (
         <>
           {/* Body: two-column */}
@@ -476,11 +546,7 @@ export function CrisisDetailContent({
                     </Badge>
                   </Group>
                 </Box>
-                <Stack gap={12} p={16}>
-                  <Text size="sm" c="var(--color-text-primary)" style={{ lineHeight: 1.6 }}>
-                    {crisis.summary ?? "No summary available yet."}
-                  </Text>
-                </Stack>
+                <CrisisSummaryBody summary={crisis.summary} />
               </Card>
 
               {/* Events / Demography / Sources tabs */}
@@ -494,21 +560,17 @@ export function CrisisDetailContent({
                     </Tabs.List>
                   </Box>
                   <Tabs.Panel value="events">
-                    <EventsTimeline events={eventsNewestFirst} />
+                    <EventsTimeline events={eventsNewestFirst} isAdmin={isAdmin} crisisId={crisis.id} totalEventCount={events.length} />
                   </Tabs.Panel>
                   <Tabs.Panel value="demography">
                     <Box p={24} style={{ textAlign: "center" }}>
                       <Text size="sm" c="var(--color-text-muted)">
-                        Demography breakdown coming soon.
+                        Demographic breakdown coming soon.
                       </Text>
                     </Box>
                   </Tabs.Panel>
                   <Tabs.Panel value="sources">
-                    <Box p={24} style={{ textAlign: "center" }}>
-                      <Text size="sm" c="var(--color-text-muted)">
-                        Sources view coming soon.
-                      </Text>
-                    </Box>
+                    <SourcesList events={eventsNewestFirst} />
                   </Tabs.Panel>
                 </Tabs>
               </Card>
@@ -546,68 +608,27 @@ export function CrisisDetailContent({
                 />
               </Group>
 
-              {/* Map with layer control */}
-              <Card
-                p={0}
-                style={{
-                  border: "1px solid var(--color-border)",
-                  position: "relative",
-                  flex: 1,
-                  minHeight: 360,
-                  overflow: "hidden",
-                }}
-              >
-                <CrisisMap
-                  markers={mapMarkers}
-                  center={primaryCoords}
-                  zoom={6}
-                  className="w-full h-full"
-                />
-                {/* Layer control */}
-                <Box
-                  p={10}
-                  style={{
-                    position: "absolute",
-                    bottom: 12,
-                    right: 12,
-                    background: "var(--color-bg-white)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: 8,
-                    boxShadow: "var(--shadow-sm)",
-                    minWidth: 140,
-                  }}
-                >
-                  <Text size="xs" fw={700} c="var(--color-text-secondary)" mb={6} style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                    Layers
-                  </Text>
-                  <Stack gap={4}>
-                    <Checkbox
-                      size="xs"
-                      label="Events"
-                      checked={layers.events}
-                      onChange={(e) => setLayers((l) => ({ ...l, events: e.currentTarget.checked }))}
-                    />
-                    <Checkbox
-                      size="xs"
-                      label="Roads"
-                      checked={layers.roads}
-                      onChange={(e) => setLayers((l) => ({ ...l, roads: e.currentTarget.checked }))}
-                    />
-                    <Checkbox
-                      size="xs"
-                      label="Population"
-                      checked={layers.population}
-                      onChange={(e) => setLayers((l) => ({ ...l, population: e.currentTarget.checked }))}
-                    />
-                  </Stack>
-                </Box>
-              </Card>
+              {/* Map */}
+              <MinimapCard
+                markers={mapMarkers}
+                center={primaryCoords}
+                sudanGeometry={sudanGeometry}
+                sudanId={sudanId ?? null}
+                locationGeometry={crisis.generalLocation?.geometry}
+                locationName={locationName ?? undefined}
+                fullMapHref={`/map?crisis=${crisis.id}`}
+              />
             </Box>
           </Box>
 
-          {/* Top humanitarian needs */}
+          {/* Scenario planning */}
           <Box px={isCompact ? 16 : 24} pb={isCompact ? 16 : 24}>
-            <TopNeedsCard needs={rankNeeds(needs).slice(0, 5)} isDemo={needsAreDemo} />
+            <ScenarioComparisonCard scenarios={parseScenarios(crisis.scenarios)} />
+          </Box>
+
+          {/* Documents */}
+          <Box px={isCompact ? 16 : 24} pb={isCompact ? 16 : 24}>
+            <DocumentsSection crisis={crisis} />
           </Box>
 
           {/* Discussion - reads from backend; compose is disabled until the
@@ -620,6 +641,381 @@ export function CrisisDetailContent({
         </>
       )}
     </Box>
+  );
+}
+
+// ── Crisis summary body ───────────────────────────────────────────────────────
+
+function CrisisSummaryBody({ summary }: { summary: string | null }) {
+  const parsed = useMemo(() => {
+    if (!summary) return null;
+    try {
+      const obj = JSON.parse(summary) as Record<string, unknown>;
+      if (typeof obj.description === "string" && Array.isArray(obj.tldr)) {
+        return { description: obj.description, tldr: obj.tldr as string[] };
+      }
+    } catch { /* fall through */ }
+    return { description: summary, tldr: [] };
+  }, [summary]);
+
+  if (!parsed) {
+    return (
+      <Box p={16}>
+        <Text size="sm" c="var(--color-text-muted)">No summary available yet.</Text>
+      </Box>
+    );
+  }
+
+  return (
+    <Stack gap={0} p={16}>
+      {parsed.tldr.length > 0 && (
+        <>
+          <Stack gap={4} pb={12}>
+            {parsed.tldr.map((bullet, i) => (
+              <Group key={i} gap={8} wrap="nowrap" align="flex-start">
+                <Box style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--color-text-muted)", flexShrink: 0, marginTop: 7 }} />
+                <Text size="sm" c="var(--color-text-primary)" style={{ lineHeight: 1.55 }}>{bullet}</Text>
+              </Group>
+            ))}
+          </Stack>
+          <Divider mb={12} />
+        </>
+      )}
+      <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+        {parsed.description}
+      </Text>
+    </Stack>
+  );
+}
+
+// ── Scenario planning ────────────────────────────────────────────────────────
+
+interface ScenarioPlan {
+  label: string;
+  subtitle: string;
+  description: string;
+}
+
+const SCENARIO_STYLE: Record<string, { color: string; bg: string }> = {
+  "Best Case":   { color: "var(--color-success)",  bg: "var(--color-success-light)" },
+  "Most Likely": { color: "var(--color-info)",     bg: "var(--color-info-light)" },
+  "Worst Case":  { color: "var(--color-critical)", bg: "var(--color-critical-light)" },
+};
+
+function parseScenarios(json: unknown): ScenarioPlan[] | null {
+  if (json === null || json === undefined) return null;
+
+  // Pipeline format: { most_likely, best_case, worst_case, description }
+  if (typeof json === "object" && !Array.isArray(json)) {
+    const r = json as Record<string, unknown>;
+    if (typeof r.most_likely === "string" && typeof r.best_case === "string" && typeof r.worst_case === "string") {
+      return [
+        { label: "Best Case",   subtitle: "", description: r.best_case },
+        { label: "Most Likely", subtitle: "", description: r.most_likely },
+        { label: "Worst Case",  subtitle: "", description: r.worst_case },
+      ];
+    }
+  }
+
+  // Legacy array format: [{ label, subtitle, description }]
+  if (!Array.isArray(json) || json.length === 0) return null;
+  const result: ScenarioPlan[] = [];
+  for (const item of json) {
+    if (typeof item !== "object" || item === null) return null;
+    const r = item as Record<string, unknown>;
+    if (typeof r.label !== "string" || typeof r.description !== "string") return null;
+    result.push({
+      label: r.label,
+      subtitle: typeof r.subtitle === "string" ? r.subtitle : "",
+      description: r.description,
+    });
+  }
+  return result.length > 0 ? result : null;
+}
+
+function ScenarioComparisonCard({ scenarios }: { scenarios: ScenarioPlan[] | null }) {
+  return (
+    <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+      <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
+        <Group gap={8} align="center">
+          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
+            Scenario Comparison
+          </Text>
+          {scenarios && (
+            <Badge
+              size="xs"
+              style={{
+                background: "var(--color-ai-light)",
+                color: "var(--color-ai)",
+                border: "1px solid var(--color-ai-border)",
+                fontWeight: 600,
+              }}
+            >
+              ✦ AI generated
+            </Badge>
+          )}
+        </Group>
+      </Box>
+
+      {scenarios ? (
+        <Box p={16} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          {scenarios.map((s) => {
+            const style = SCENARIO_STYLE[s.label] ?? { color: "var(--color-border)", bg: "var(--color-bg-muted)" };
+            return (
+              <Box
+                key={s.label}
+                p={16}
+                style={{ border: `1px solid ${style.color}30`, background: style.bg }}
+              >
+                <Text fw={700} size="sm" c="var(--color-text-primary)" mb={2}>
+                  {s.label}
+                </Text>
+                {s.subtitle && (
+                  <Text size="xs" c="var(--color-text-muted)" mb={10} style={{ fontStyle: "italic" }}>
+                    {s.subtitle}
+                  </Text>
+                )}
+                <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
+                  {s.description}
+                </Text>
+              </Box>
+            );
+          })}
+        </Box>
+      ) : (
+        <Box p={24} style={{ textAlign: "center" }}>
+          <Text size="sm" c="var(--color-text-muted)">
+            Scenarios not yet generated for this crisis.
+          </Text>
+        </Box>
+      )}
+    </Card>
+  );
+}
+
+// ── Documents section ────────────────────────────────────────────────────────
+
+interface CrisisDoc {
+  id: string;
+  name: string;
+  url: string;
+}
+
+function nameFromAttachmentUrl(url: string): string {
+  try {
+    return decodeURIComponent(new URL(url).pathname.split("/").pop() ?? "Document");
+  } catch {
+    return url.split("/").pop()?.split("?")[0] ?? "Document";
+  }
+}
+
+function keyFromAttachmentUrl(url: string): string {
+  try {
+    return new URL(url).pathname.slice(1);
+  } catch {
+    return url;
+  }
+}
+
+function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [docs, setDocs] = useState<CrisisDoc[]>(() =>
+    crisis.attachments.map((url) => ({ id: crypto.randomUUID(), name: nameFromAttachmentUrl(url), url }))
+  );
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<CrisisDoc | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const utils = api.useUtils();
+
+  const addAttachments = api.crises.addAttachments.useMutation({
+    onSuccess: (data) => {
+      setDocs(data.attachments.map((url) => ({ id: crypto.randomUUID(), name: nameFromAttachmentUrl(url), url })));
+      void utils.crises.get.invalidate({ id: crisis.id });
+    },
+  });
+
+  const removeAttachment = api.crises.removeAttachment.useMutation({
+    onSuccess: (data) => {
+      setRemoveError(null);
+      setDocs(data.attachments.map((url) => ({ id: crypto.randomUUID(), name: nameFromAttachmentUrl(url), url })));
+      void utils.crises.get.invalidate({ id: crisis.id });
+    },
+    onError: (err) => {
+      setRemoveError(err.message ?? "Remove failed. Please try again.");
+    },
+  });
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    e.target.value = "";
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const formData = new FormData();
+      files.forEach((f) => formData.append("files", f));
+      const resp = await fetch("/api/proxy/upload", { method: "POST", body: formData });
+      if (!resp.ok) throw new Error("Upload failed");
+      const { keys } = (await resp.json()) as { keys: string[] };
+      await addAttachments.mutateAsync({ id: crisis.id, keys });
+    } catch {
+      setUploadError("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function confirmRemove() {
+    if (!pendingRemove) return;
+    const key = keyFromAttachmentUrl(pendingRemove.url);
+    removeAttachment.mutate({ id: crisis.id, key });
+    setPendingRemove(null);
+  }
+
+  return (
+    <>
+      <Modal
+        opened={pendingRemove !== null}
+        onClose={() => setPendingRemove(null)}
+        title="Remove document"
+        size="sm"
+        centered
+      >
+        <Text size="sm" c="var(--color-text-secondary)" mb={20}>
+          Remove <strong>{pendingRemove?.name}</strong>? This cannot be undone.
+        </Text>
+        <Group justify="flex-end" gap={8}>
+          <Button variant="default" size="xs" onClick={() => setPendingRemove(null)}>
+            Cancel
+          </Button>
+          <Button
+            size="xs"
+            color="red"
+            loading={removeAttachment.isPending}
+            onClick={confirmRemove}
+          >
+            Remove
+          </Button>
+        </Group>
+      </Modal>
+
+      <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+        {/* Header */}
+        <Box
+          px={16} py={12}
+          onClick={() => setCollapsed((c) => !c)}
+          className="hover:bg-[var(--color-bg-muted)]"
+          style={{
+            borderBottom: collapsed ? undefined : "1px solid var(--color-border)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            transition: "background 100ms",
+          }}
+        >
+          <Group gap={8} align="center">
+            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Documents</Text>
+            {docs.length > 0 && (
+              <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-muted)" }}>
+                {docs.length}
+              </Badge>
+            )}
+          </Group>
+          {collapsed
+            ? <IconChevronRight size={14} color="var(--color-text-muted)" />
+            : <IconChevronDown size={14} color="var(--color-text-muted)" />
+          }
+        </Box>
+
+        {!collapsed && (
+          <>
+            {/* Document list */}
+            {docs.map((doc, idx) => (
+              <Box
+                key={doc.id}
+                px={16} py={10}
+                style={{
+                  borderBottom: idx < docs.length - 1 ? "1px solid var(--color-border)" : undefined,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <IconFileText size={14} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+                <a
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ flex: 1, minWidth: 0, textDecoration: "none" }}
+                >
+                  <Text
+                    size="sm"
+                    c="var(--color-text-primary)"
+                    truncate
+                    className="hover:underline"
+                    style={{ cursor: "pointer" }}
+                  >
+                    {doc.name}
+                  </Text>
+                </a>
+                <button
+                  onClick={() => setPendingRemove(doc)}
+                  title="Remove"
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "none", border: "none", padding: 4, cursor: "pointer",
+                    color: "var(--color-text-muted)", borderRadius: 4, flexShrink: 0,
+                  }}
+                  className="hover:text-[var(--color-critical)]"
+                >
+                  <IconTrash size={13} />
+                </button>
+              </Box>
+            ))}
+
+            {/* Error */}
+            {removeError && (
+              <Box px={16} py={8} style={{ borderTop: "1px solid var(--color-border)" }}>
+                <Text size="xs" c="var(--color-critical)">{removeError}</Text>
+              </Box>
+            )}
+
+            {/* Empty state + upload */}
+            <Box
+              px={16} py={12}
+              style={{ borderTop: docs.length > 0 || removeError ? "1px solid var(--color-border)" : undefined, display: "flex", alignItems: "center", gap: 8 }}
+            >
+              {docs.length === 0 && !uploading && (
+                <Text size="xs" c="var(--color-text-muted)" style={{ flex: 1 }}>No documents attached.</Text>
+              )}
+              {uploadError && (
+                <Text size="xs" c="var(--color-critical)" style={{ flex: 1 }}>{uploadError}</Text>
+              )}
+              <input ref={inputRef} type="file" multiple onChange={handleUpload} style={{ display: "none" }} />
+              <button
+                onClick={() => !uploading && inputRef.current?.click()}
+                disabled={uploading}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  background: "none", border: "1px solid var(--color-border)",
+                  borderRadius: 4, padding: "4px 10px", cursor: uploading ? "default" : "pointer",
+                  color: uploading ? "var(--color-text-muted)" : "var(--color-text-secondary)",
+                  fontSize: 12, fontWeight: 600, marginLeft: "auto",
+                  opacity: uploading ? 0.6 : 1,
+                }}
+                className={uploading ? undefined : "hover:bg-[var(--color-bg-muted)]"}
+              >
+                {uploading ? <Loader size={12} /> : <IconUpload size={12} />}
+                {uploading ? "Uploading..." : "Upload"}
+              </button>
+            </Box>
+          </>
+        )}
+      </Card>
+    </>
   );
 }
 
@@ -813,7 +1209,96 @@ function SeverityPill({ severity }: { severity: "critical" | "high" | "medium" |
   );
 }
 
-function EventsTimeline({ events }: { events: GqlEvent[] }) {
+function SourcesList({ events }: { events: GqlEvent[] }) {
+  // Deduplicate sources across all signals from all events; count signals per source.
+  const sources = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; type: string; baseUrl?: string | null; infoUrl?: string | null; signalCount: number }>();
+    for (const event of events) {
+      for (const signal of event.signals ?? []) {
+        const src = signal.source;
+        if (!src) continue;
+        const existing = map.get(src.id);
+        if (existing) {
+          existing.signalCount += 1;
+        } else {
+          map.set(src.id, { id: src.id, name: src.name, type: src.type, baseUrl: src.baseUrl, infoUrl: src.infoUrl, signalCount: 1 });
+        }
+      }
+    }
+    return [...map.values()].sort((a, b) => b.signalCount - a.signalCount);
+  }, [events]);
+
+  if (sources.length === 0) {
+    return (
+      <Box p={24} style={{ textAlign: "center" }}>
+        <Text size="sm" c="var(--color-text-muted)">No sources linked to this crisis.</Text>
+      </Box>
+    );
+  }
+
+  return (
+    <Box py={4}>
+      {sources.map((src, idx) => {
+        const href = src.infoUrl ?? src.baseUrl ?? null;
+        return (
+          <Box
+            key={src.id}
+            px={16} py={12}
+            style={{
+              borderBottom: idx < sources.length - 1 ? "1px solid var(--color-border)" : undefined,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              {href ? (
+                <a href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                  <Text size="sm" fw={500} c="var(--color-text-primary)" className="hover:underline" truncate>
+                    {src.name}
+                  </Text>
+                </a>
+              ) : (
+                <Text size="sm" fw={500} c="var(--color-text-primary)" truncate>{src.name}</Text>
+              )}
+              <Text size="xs" c="var(--color-text-muted)" mt={1}>{src.type}</Text>
+            </Box>
+            <Badge
+              size="xs"
+              style={{ background: "var(--color-bg-muted)", color: "var(--color-text-muted)", flexShrink: 0 }}
+            >
+              {src.signalCount} signal{src.signalCount !== 1 ? "s" : ""}
+            </Badge>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
+function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events: GqlEvent[]; isAdmin: boolean; crisisId: string; totalEventCount: number }) {
+  const router = useRouter();
+  const utils = api.useUtils();
+  const [pendingRemoveEvent, setPendingRemoveEvent] = useState<GqlEvent | null>(null);
+
+  const removeEvent = api.crises.removeEvent.useMutation({
+    onSuccess: () => {
+      if (totalEventCount <= 1) {
+        // Last event removed - crisis was deleted by the backend
+        void utils.crises.list.invalidate();
+        router.push("/analysis");
+      } else {
+        void utils.crises.get.invalidate({ id: crisisId });
+      }
+    },
+  });
+
+  function confirmRemoveEvent() {
+    if (!pendingRemoveEvent) return;
+    removeEvent.mutate({ crisisId, eventId: pendingRemoveEvent.id });
+    setPendingRemoveEvent(null);
+  }
+
   if (events.length === 0) {
     return (
       <Box p={24} style={{ textAlign: "center" }}>
@@ -824,16 +1309,45 @@ function EventsTimeline({ events }: { events: GqlEvent[] }) {
     );
   }
   return (
-    <Box py={12} px={4}>
-      {events.map((event, idx) => (
-        <TimelineRow
-          key={event.id}
-          event={event}
-          isFirst={idx === 0}
-          isLast={idx === events.length - 1}
-        />
-      ))}
-    </Box>
+    <>
+      <Modal
+        opened={pendingRemoveEvent !== null}
+        onClose={() => setPendingRemoveEvent(null)}
+        title="Remove event from crisis"
+        size="sm"
+        centered
+      >
+        <Text size="sm" c="var(--color-text-secondary)" mb={8}>
+          Remove <strong>{pendingRemoveEvent?.title ?? pendingRemoveEvent?.types[0] ?? "this event"}</strong> from the crisis?
+        </Text>
+        {totalEventCount <= 1 && (
+          <Text size="xs" c="var(--color-critical)" mb={12}>
+            This is the last event. Removing it will delete the entire crisis.
+          </Text>
+        )}
+        <Group justify="flex-end" gap={8} mt={16}>
+          <Button variant="default" size="xs" onClick={() => setPendingRemoveEvent(null)}>
+            Cancel
+          </Button>
+          <Button size="xs" color="red" loading={removeEvent.isPending} onClick={confirmRemoveEvent}>
+            {totalEventCount <= 1 ? "Remove and delete crisis" : "Remove"}
+          </Button>
+        </Group>
+      </Modal>
+
+      <Box py={12} px={4}>
+        {events.map((event, idx) => (
+          <TimelineRow
+            key={event.id}
+            event={event}
+            isFirst={idx === 0}
+            isLast={idx === events.length - 1}
+            isAdmin={isAdmin}
+            onRemove={() => setPendingRemoveEvent(event)}
+          />
+        ))}
+      </Box>
+    </>
   );
 }
 
@@ -841,11 +1355,16 @@ function TimelineRow({
   event,
   isFirst,
   isLast,
+  isAdmin,
+  onRemove,
 }: {
   event: GqlEvent;
   isFirst: boolean;
   isLast: boolean;
+  isAdmin: boolean;
+  onRemove: () => void;
 }) {
+  const [hovered, setHovered] = useState(false);
   const sev = mapSeverity(event.severity);
   const dotColor = severityColor(event.severity);
   const dateStr = event.lastSignalCreatedAt || event.firstSignalCreatedAt;
@@ -862,6 +1381,8 @@ function TimelineRow({
 
   return (
     <Box
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         display: "grid",
         gridTemplateColumns: "72px 24px 1fr",
@@ -933,114 +1454,115 @@ function TimelineRow({
       </Box>
 
       {/* Card column */}
-      <Box py={6}>
-        <Link
-          href={`/event/${event.id}`}
-          style={{ textDecoration: "none", color: "inherit" }}
-        >
-          <Box
-            className="hover:bg-[var(--color-bg-muted)]"
-            style={{
-              border: "1px solid var(--color-border)",
-              borderRadius: 8,
-              padding: "10px 12px",
-              background: "var(--color-bg-white)",
-              cursor: "pointer",
-              transition: "box-shadow 120ms ease-out",
-            }}
+      <Box py={6} style={{ flex: 1, minWidth: 0 }}>
+        <Box style={{ position: "relative" }}>
+          <Link
+            href={`/event/${event.id}`}
+            style={{ textDecoration: "none", color: "inherit", display: "block" }}
           >
-            {/* Row 1: title */}
-            <Text
-              fw={600}
-              size="sm"
-              c="var(--color-text-primary)"
-              truncate
-              mb={4}
-              style={{ lineHeight: 1.3 }}
+            <Box
+              className="hover:bg-[var(--color-bg-muted)]"
+              style={{
+                border: "1px solid var(--color-border)",
+                borderRadius: 8,
+                padding: isAdmin ? "10px 36px 10px 12px" : "10px 12px",
+                background: "var(--color-bg-white)",
+                cursor: "pointer",
+                transition: "box-shadow 120ms ease-out",
+              }}
             >
-              {displayTitle}
-            </Text>
-            {/* Row 2: severity + type + location */}
-            <Group gap={6} wrap="nowrap" align="center" style={{ overflow: "hidden" }}>
-              <span
-                style={{
-                  display: "inline-block",
-                  padding: "1px 8px",
-                  borderRadius: 999,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                  background: severityColors[sev]?.bg,
-                  color: severityColors[sev]?.text,
-                  flexShrink: 0,
-                }}
+              {/* Row 1: title */}
+              <Text
+                fw={600}
+                size="sm"
+                c="var(--color-text-primary)"
+                truncate
+                mb={4}
+                style={{ lineHeight: 1.3 }}
               >
-                {severityLabels[sev]}
-              </span>
-              {primaryType &&
-                getDisasterPills([primaryType]).map((pill) => (
-                  <span
-                    key={pill.label}
-                    style={{
-                      display: "inline-block",
-                      padding: "1px 8px",
-                      borderRadius: 999,
-                      fontSize: 10,
-                      fontWeight: 600,
-                      color: pill.color,
-                      background: pill.bg,
-                      flexShrink: 0,
-                    }}
+                {displayTitle}
+              </Text>
+              {/* Row 2: severity + type + location */}
+              <Group gap={6} wrap="nowrap" align="center" style={{ overflow: "hidden" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "1px 8px",
+                    borderRadius: 999,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                    background: severityColors[sev]?.bg,
+                    color: severityColors[sev]?.text,
+                    flexShrink: 0,
+                  }}
+                >
+                  {severityLabels[sev]}
+                </span>
+                {primaryType &&
+                  getDisasterPills([primaryType]).map((pill) => (
+                    <span
+                      key={pill.label}
+                      style={{
+                        display: "inline-block",
+                        padding: "1px 8px",
+                        borderRadius: 999,
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: pill.color,
+                        background: pill.bg,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {pill.label}
+                    </span>
+                  ))}
+                {locationLabel && (
+                  <Group gap={3} wrap="nowrap" style={{ minWidth: 0 }}>
+                    <IconMapPin size={11} color="var(--color-text-muted)" />
+                    <Text size="xs" c="var(--color-text-muted)" truncate>
+                      {locationLabel}
+                    </Text>
+                  </Group>
+                )}
+              </Group>
+            </Box>
+          </Link>
+          {isAdmin && (
+            <Box
+              style={{
+                position: "absolute",
+                top: 6,
+                right: 6,
+                opacity: hovered ? 1 : 0,
+                transition: "opacity 100ms",
+                pointerEvents: hovered ? "auto" : "none",
+              }}
+            >
+              <Menu position="bottom-end" withinPortal>
+                <Menu.Target>
+                  <ActionIcon
+                    variant="default"
+                    size="sm"
+                    style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}
+                    onClick={(e) => e.preventDefault()}
                   >
-                    {pill.label}
-                  </span>
-                ))}
-              {locationLabel && (
-                <Group gap={3} wrap="nowrap" style={{ minWidth: 0 }}>
-                  <IconMapPin size={11} color="var(--color-text-muted)" />
-                  <Text size="xs" c="var(--color-text-muted)" truncate>
-                    {locationLabel}
-                  </Text>
-                </Group>
-              )}
-            </Group>
-          </Box>
-        </Link>
+                    <IconDotsVertical size={13} />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={onRemove}>
+                    Remove from crisis
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            </Box>
+          )}
+        </Box>
       </Box>
     </Box>
   );
 }
 
-function NeedsAssessmentPanel({ needs, isDemo }: { needs: ClusterNeed[]; isDemo?: boolean }) {
-  const ranked = rankNeeds(needs);
-  if (ranked.length === 0) {
-    return (
-      <Box p={24} style={{ textAlign: "center" }}>
-        <Text size="sm" c="var(--color-text-muted)">
-          No needs recorded for this crisis yet.
-        </Text>
-      </Box>
-    );
-  }
-  return (
-    <Box p={24}>
-      <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-        <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
-          <Group gap={8}>
-            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-              Needs assessment (all clusters)
-            </Text>
-            {isDemo && <DemoBadge />}
-          </Group>
-        </Box>
-        <Stack gap={0}>
-          {ranked.map((need, idx) => (
-            <NeedRow key={need.cluster} need={need} isLast={idx === ranked.length - 1} />
-          ))}
-        </Stack>
-      </Card>
-    </Box>
-  );
-}
 
