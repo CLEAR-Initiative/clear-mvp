@@ -221,6 +221,14 @@ export function CrisisDetailContent({
   );
   const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
 
+  // Resolve the A1 state ancestor ID to pass to MinimapCard for zoom-to-state.
+  const a1AncestorId = useMemo(() => {
+    const loc = crisis?.generalLocation;
+    if (!loc) return null;
+    if (loc.level === 1) return loc.id;
+    return loc.ancestors?.find((a) => a.level === 1)?.id ?? null;
+  }, [crisis?.generalLocation]);
+
   const events = crisis?.events ?? [];
 
   // Pick a primary coordinate for the map centre. Prefer the crisis's own
@@ -614,7 +622,7 @@ export function CrisisDetailContent({
                 center={primaryCoords}
                 sudanGeometry={sudanGeometry}
                 sudanId={sudanId ?? null}
-                locationGeometry={crisis.generalLocation?.geometry}
+                fitLocationId={a1AncestorId}
                 locationName={locationName ?? undefined}
                 fullMapHref={`/map?crisis=${crisis.id}`}
               />

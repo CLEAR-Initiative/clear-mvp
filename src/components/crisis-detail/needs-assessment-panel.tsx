@@ -133,27 +133,9 @@ function parseMsna(crisis: GqlCrisis): MsnaData | null {
 
 // ── PIN calculation ───────────────────────────────────────────────────────────
 
-// Child population share applied to education PIN until WorldPop age-sex data lands.
+// Education score represents % of school-age children not attending, so multiply
+// by the child share of total population until WorldPop age-sex data lands.
 const CHILD_SHARE_APPROX = 0.18;
-
-function pinRateForSector(msnaKey: string, inputs: Record<string, number>): number | null {
-  switch (msnaKey) {
-    case "FSL":
-      return (inputs.poor_FCS ?? 0) + (inputs.borderline_FCS ?? 0);
-    case "WASH":
-      return (100 - (inputs.improved_water ?? 100)) + (inputs.unimproved_sanitation ?? 0) + (inputs.open_defecation ?? 0);
-    case "Health":
-      return inputs.unable_to_access_care ?? null;
-    case "Shelter":
-      return (inputs.makeshift ?? 0) + (inputs.no_shelter ?? 0) + (inputs.tent ?? 0);
-    case "Education":
-      return inputs.children_not_attending != null ? inputs.children_not_attending * CHILD_SHARE_APPROX : null;
-    case "Protection":
-      return Math.max(inputs.missing_civil_docs ?? 0, inputs.movement_restrictions ?? 0);
-    default:
-      return null;
-  }
-}
 
 function formatPin(n: number): string {
   if (n >= 1_000_000) return `~${(n / 1_000_000).toFixed(1)}M`;
@@ -268,7 +250,7 @@ function SectorRow({
         className="hover:bg-[var(--color-bg-muted)]"
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 130px 110px 170px 24px",
+          gridTemplateColumns: "minmax(120px, 220px) 130px 110px 170px 1fr 24px",
           alignItems: "center",
           columnGap: 16,
           padding: "12px 16px",
@@ -338,6 +320,9 @@ function SectorRow({
           )}
         </Box>
 
+        {/* 1fr spacer */}
+        <Box />
+
         {/* Chevron */}
         <Chevron size={14} color="var(--color-text-muted)" />
       </Box>
@@ -345,58 +330,74 @@ function SectorRow({
       {/* Expanded detail */}
       {open && (
         <Box
-          px={16}
-          py={14}
           style={{
             background: "var(--color-bg-muted)",
             borderBottom: isLast ? undefined : "1px solid var(--color-border)",
+            paddingTop: 14,
+            paddingBottom: 14,
+            paddingRight: 16,
+            paddingLeft: 58, // 16px outer + 32px icon + 10px gap = aligns with sector name
           }}
         >
-          {/* AI-generated sector description */}
-          {description && (
-            <Text size="xs" c="var(--color-text-secondary)" mb={10} style={{ lineHeight: 1.6 }}>
-              {description}
-            </Text>
-          )}
-
-          {/* Indicators */}
-          {(responseGap === true || nrcRelevant === true) && (
-            <Group gap={6} mb={ochaData?.organizations?.length ? 10 : 0}>
-              {responseGap === true && (
-                <Badge size="xs" style={{ background: "var(--color-critical-light)", color: "var(--color-critical)" }}>
-                  Response gap
+          <Stack gap={14}>
+            {/* Summary */}
+            <Box>
+              <Group gap={6} mb={6} align="center">
+                <Text size="xs" fw={700} c="var(--color-text-secondary)" tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>
+                  Summary
+                </Text>
+                <Badge size="xs" style={{ background: "var(--color-ai-light)", color: "var(--color-ai)", border: "1px solid var(--color-ai-border)", fontWeight: 600 }}>
+                  ✦ AI generated
                 </Badge>
+              </Group>
+              {description ? (
+                <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
+                  {description}
+                </Text>
+              ) : (
+                <Text size="xs" c="var(--color-text-muted)" style={{ fontStyle: "italic" }}>
+                  AI generated summary coming soon.
+                </Text>
               )}
-              {nrcRelevant === true && (
-                <Badge size="xs" style={{ background: "var(--color-info-light)", color: "var(--color-info)" }}>
-                  NRC mandate
-                </Badge>
-              )}
-            </Group>
-          )}
+            </Box>
 
-          {/* 3W organisations */}
-          {ochaData?.organizations && ochaData.organizations.length > 0 ? (
-            <Stack gap={4}>
-              <Text size="xs" fw={700} c="var(--color-text-secondary)" tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }} mb={4}>
-                Organisations active in this area
-              </Text>
-              {ochaData.organizations.slice(0, 10).map((org) => (
-                <Group key={org.acronym} gap={8} wrap="nowrap">
-                  <Text size="xs" fw={600} c="var(--color-text-primary)" style={{ minWidth: 60 }}>{org.acronym}</Text>
-                  <Text size="xs" c="var(--color-text-secondary)" truncate>{org.name}</Text>
-                  <Badge size="xs" style={{ background: "var(--color-bg-white)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)", flexShrink: 0 }}>
-                    {org.type}
+            {/* Indicators */}
+            {(responseGap === true || nrcRelevant === true) && (
+              <Group gap={6}>
+                {responseGap === true && (
+                  <Badge size="xs" style={{ background: "var(--color-critical-light)", color: "var(--color-critical)" }}>
+                    Response gap
                   </Badge>
-                </Group>
-              ))}
-              {ochaData.organizations.length > 10 && (
-                <Text size="xs" c="var(--color-text-muted)" mt={4}>+{ochaData.organizations.length - 10} more</Text>
-              )}
-            </Stack>
-          ) : !description && (
-            <Text size="xs" c="var(--color-text-muted)">No detailed data available for this sector.</Text>
-          )}
+                )}
+                {nrcRelevant === true && (
+                  <Badge size="xs" style={{ background: "var(--color-info-light)", color: "var(--color-info)" }}>
+                    NRC mandate
+                  </Badge>
+                )}
+              </Group>
+            )}
+
+            {/* 3W organisations */}
+            {ochaData?.organizations && ochaData.organizations.length > 0 && (
+              <Stack gap={4}>
+                <Text size="xs" fw={700} c="var(--color-text-secondary)" tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }} mb={4}>
+                  Organisations active in this area
+                </Text>
+                {ochaData.organizations.slice(0, 10).map((org) => (
+                  <Group key={org.acronym} gap={8} wrap="nowrap">
+                    <Text size="xs" fw={600} c="var(--color-text-primary)" style={{ minWidth: 60 }}>{org.acronym}</Text>
+                    <Text size="xs" c="var(--color-text-secondary)" truncate>{org.name}</Text>
+                    <Badge size="xs" style={{ background: "var(--color-bg-white)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)", flexShrink: 0 }}>
+                      {org.type}
+                    </Badge>
+                  </Group>
+                ))}
+                {ochaData.organizations.length > 10 && (
+                  <Text size="xs" c="var(--color-text-muted)" mt={4}>+{ochaData.organizations.length - 10} more</Text>
+                )}
+              </Stack>
+            )}
+          </Stack>
         </Box>
       )}
     </Box>
@@ -557,13 +558,11 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
       const pipelineData = needsSector?.[sector.label];
       const msnaEntry = msna?.[sector.msnaKey];
       const msnaSeverity = msnaEntry?.label ?? null;
-      const inputs = msnaEntry?.inputs ?? null;
+      const score = msnaEntry?.score ?? null;
       const pinIsApprox = sector.msnaKey === "Education";
-      const pin = (inputs && a2Pop)
-        ? (() => {
-            const rate = pinRateForSector(sector.msnaKey, inputs);
-            return rate != null ? Math.round((rate / 100) * a2Pop) : null;
-          })()
+      const effPop = pinIsApprox ? (a2Pop != null ? Math.round(a2Pop * CHILD_SHARE_APPROX) : null) : a2Pop;
+      const pin = (score != null && effPop != null)
+        ? Math.round((score / 100) * effPop)
         : null;
       return {
         key: sector.key,
@@ -592,7 +591,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
           <Group justify="space-between" align="center" wrap="nowrap">
             <Group gap={8} align="center">
               <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                Sectoral Needs
+                Sectors
               </Text>
               {a2 && (
                 <Badge size="xs" style={{ background: "var(--color-info-light)", color: "var(--color-info)" }}>
@@ -608,7 +607,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
         <Box
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 130px 110px 170px 24px",
+            gridTemplateColumns: "minmax(120px, 220px) 130px 110px 170px 1fr 24px",
             columnGap: 16,
             padding: "8px 16px",
             borderBottom: "1px solid var(--color-border)",
@@ -628,6 +627,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
             <ColHeader>Operational Presence</ColHeader>
             <InfoButton onClick={() => setPresenceInfoOpen(true)} />
           </Box>
+          <Box />
           <Box />
         </Box>
 
@@ -698,25 +698,18 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
       >
         <Stack gap={12}>
           <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
-            Estimated by multiplying the MSNA survey indicator rate for each sector by the district population (WorldPop 2026 constrained, Nyala Janoub).
+            Estimated from the sector severity score using the same weighted composite formula that drives the severity label:
           </Text>
-          <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
-            {([
-              { sector: "Food Security", formula: "% poor FCS + % borderline FCS × population" },
-              { sector: "WASH",          formula: "% without improved water + % unimproved sanitation × population" },
-              { sector: "Health",        formula: "% unable to access care × population" },
-              { sector: "Shelter",       formula: "% makeshift + no shelter + tent × population" },
-              { sector: "Education",     formula: "% children not attending × 18% child share × population *" },
-              { sector: "Protection",    formula: "max(% missing civil docs, % movement restrictions) × population" },
-            ] as const).map((r, i) => (
-              <Box key={r.sector} style={{ display: "grid", gridTemplateColumns: "100px 1fr", padding: "7px 12px", borderTop: i > 0 ? "1px solid var(--color-border)" : undefined }}>
-                <Text size="xs" fw={600} c="var(--color-text-primary)">{r.sector}</Text>
-                <Text size="xs" c="var(--color-text-secondary)">{r.formula}</Text>
-              </Box>
-            ))}
+          <Box style={{ border: "1px solid var(--color-border)", padding: "10px 14px", background: "var(--color-bg-muted)" }}>
+            <Text size="xs" fw={600} c="var(--color-text-primary)" style={{ fontFamily: "monospace", letterSpacing: "0.02em" }}>
+              PIN = (score / 100) x district population
+            </Text>
           </Box>
+          <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+            Population data: WorldPop 2026 constrained estimates. Education applies an 18% child population share since the sector score represents school-age children only.
+          </Text>
           <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
-            * Education uses an 18% child population share approximation. Will be replaced by WorldPop age-sex breakdown when available.
+            Education child share will be replaced by WorldPop age-sex breakdown when available.
           </Text>
         </Stack>
       </Modal>

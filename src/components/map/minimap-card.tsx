@@ -26,7 +26,9 @@ interface MinimapCardProps {
   center: [number, number];
   sudanGeometry: unknown | undefined;
   sudanId: string | null;
-  /** Geometry of the specific location to highlight (state/district). Replaces the full-Sudan highlight. */
+  /** Location ID whose geometry the map should fit to (e.g. A1 state). Fetched internally. Takes precedence over locationGeometry. */
+  fitLocationId?: string | null;
+  /** Fallback geometry to fit bounds to when fitLocationId is not provided. */
   locationGeometry?: unknown;
   /** Shown in the header instead of the generic "Location" label. */
   locationName?: string;
@@ -34,9 +36,9 @@ interface MinimapCardProps {
   fullMapHref?: string;
 }
 
-export function MinimapCard({ markers, center, sudanGeometry, sudanId, locationGeometry, locationName, fullMapHref = "/map" }: MinimapCardProps) {
+export function MinimapCard({ markers, center, sudanGeometry, sudanId, fitLocationId, locationGeometry, locationName, fullMapHref = "/map" }: MinimapCardProps) {
   const [layersOpen, setLayersOpen] = useState(false);
-  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("none");
+  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A2");
   const [showPopulation, setShowPopulation] = useState(false);
 
   const a1Query = api.locations.getAdminBoundaries.useQuery(
@@ -53,6 +55,12 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, locationG
     return [];
   }, [boundaryLevel, a1Query.data, a2Query.data]);
   const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
+
+  const fitLocationQuery = api.locations.getById.useQuery(
+    { id: fitLocationId! },
+    { enabled: !!fitLocationId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const fitBoundsGeometry = fitLocationQuery.data?.geometry ?? locationGeometry ?? undefined;
 
   const populationQuery = api.locations.getPopulationBoundaries.useQuery(
     { countryId: sudanId ?? undefined },
@@ -94,7 +102,7 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, locationG
           focusCountryName="Sudan"
           focusCountryGeometry={sudanGeometry}
           fitBoundsOnFocus={false}
-          fitBoundsGeometry={locationGeometry}
+          fitBoundsGeometry={fitBoundsGeometry}
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
           populationBoundaries={populationBoundaries}
