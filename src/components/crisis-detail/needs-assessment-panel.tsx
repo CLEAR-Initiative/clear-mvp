@@ -40,6 +40,15 @@ const SAF_ORDER: Record<string, number> = {
   Unknown: 5,
 };
 
+// ── MSNA types ────────────────────────────────────────────────────────────────
+
+interface MsnaSectorEntry {
+  label: string;
+  score: number;
+  inputs: Record<string, number>;
+}
+type MsnaData = Record<string, MsnaSectorEntry>;
+
 // ── OCHA 3W types ─────────────────────────────────────────────────────────────
 
 interface Ocha3wSector {
@@ -64,20 +73,21 @@ const SECTORS: {
   label: string;
   icon: SectorIcon;
   ochaCodes: string[];
+  msnaKey: string;
 }[] = [
-  { key: "shelter",    label: "Shelter",       icon: IconHome2,         ochaCodes: ["SHL", "SNFI", "NFI"]         },
-  { key: "wash",       label: "WASH",          icon: IconDroplet,       ochaCodes: ["WSH", "WASH", "WS"]          },
-  { key: "protection", label: "Protection",    icon: IconShield,        ochaCodes: ["PRO", "CP", "GBV"]           },
-  { key: "health",     label: "Health",        icon: IconHeart,         ochaCodes: ["HLT", "HEA", "HEALTH"]       },
-  { key: "food",       label: "Food Security", icon: IconToolsKitchen2, ochaCodes: ["FSL", "FSC", "FOOD", "FSLA"] },
-  { key: "education",  label: "Education",     icon: IconBook,          ochaCodes: ["EDU"]                        },
+  { key: "shelter",    label: "Shelter",       icon: IconHome2,         ochaCodes: ["SHL", "SNFI", "NFI"],         msnaKey: "Shelter"    },
+  { key: "wash",       label: "WASH",          icon: IconDroplet,       ochaCodes: ["WSH", "WASH", "WS"],          msnaKey: "WASH"       },
+  { key: "protection", label: "Protection",    icon: IconShield,        ochaCodes: ["PRO", "CP", "GBV"],           msnaKey: "Protection" },
+  { key: "health",     label: "Health",        icon: IconHeart,         ochaCodes: ["HLT", "HEA", "HEALTH"],       msnaKey: "Health"     },
+  { key: "food",       label: "Food Security", icon: IconToolsKitchen2, ochaCodes: ["FSL", "FSC", "FOOD", "FSLA"], msnaKey: "FSL"        },
+  { key: "education",  label: "Education",     icon: IconBook,          ochaCodes: ["EDU"],                        msnaKey: "Education"  },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-type A2Location = { id: string; name: string; level: number; metadata?: { type: string; data: unknown }[] | null } | null;
+type A2Location = { id: string; name: string; level: number; population?: string | null; metadata?: { type: string; data: unknown }[] | null } | null;
 
-function findA2InLocation(loc: { level: number; ancestors?: { id: string; name: string; level: number; metadata?: { type: string; data: unknown }[] | null }[] } | null): A2Location {
+function findA2InLocation(loc: { level: number; population?: string | null; ancestors?: { id: string; name: string; level: number; population?: string | null; metadata?: { type: string; data: unknown }[] | null }[] } | null): A2Location {
   if (!loc) return null;
   if (loc.level === 2) return loc as A2Location;
   return loc.ancestors?.find((a) => a.level === 2) ?? null;
@@ -107,6 +117,51 @@ function parseOcha3w(crisis: GqlCrisis): Ocha3wData | null {
   if (!Array.isArray(d.sectors)) return null;
   return d as unknown as Ocha3wData;
 }
+
+function parseMsna(crisis: GqlCrisis): MsnaData | null {
+  const a2 = resolveA2(crisis);
+  if (!a2) return null;
+  const meta = (a2 as { metadata?: { type: string; data: unknown }[] }).metadata;
+  if (!meta) return null;
+  const entry = meta.find((m) => m.type === "msna_severity_082025");
+  if (!entry) return null;
+  const d = entry.data as Record<string, unknown>;
+  const sectors = d.sectors;
+  if (!sectors || typeof sectors !== "object" || Array.isArray(sectors)) return null;
+  return sectors as MsnaData;
+}
+
+// ── PIN calculation ───────────────────────────────────────────────────────────
+
+// Child population share applied to education PIN until WorldPop age-sex data lands.
+const CHILD_SHARE_APPROX = 0.18;
+
+function pinRateForSector(msnaKey: string, inputs: Record<string, number>): number | null {
+  switch (msnaKey) {
+    case "FSL":
+      return (inputs.poor_FCS ?? 0) + (inputs.borderline_FCS ?? 0);
+    case "WASH":
+      return (100 - (inputs.improved_water ?? 100)) + (inputs.unimproved_sanitation ?? 0) + (inputs.open_defecation ?? 0);
+    case "Health":
+      return inputs.unable_to_access_care ?? null;
+    case "Shelter":
+      return (inputs.makeshift ?? 0) + (inputs.no_shelter ?? 0) + (inputs.tent ?? 0);
+    case "Education":
+      return inputs.children_not_attending != null ? inputs.children_not_attending * CHILD_SHARE_APPROX : null;
+    case "Protection":
+      return Math.max(inputs.missing_civil_docs ?? 0, inputs.movement_restrictions ?? 0);
+    default:
+      return null;
+  }
+}
+
+function formatPin(n: number): string {
+  if (n >= 1_000_000) return `~${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `~${Math.round(n / 1_000)}k`;
+  return `~${n}`;
+}
+
+// ── Org type abbreviations ────────────────────────────────────────────────────
 
 const ORG_TYPE_ABBREV: Record<string, string> = {
   "United Nations":           "UN",
@@ -185,6 +240,8 @@ function SectorRow({
   responseGap,
   nrcRelevant,
   ochaData,
+  pin,
+  pinIsApprox,
   isLast,
 }: {
   label: string;
@@ -194,6 +251,8 @@ function SectorRow({
   responseGap: boolean | null;
   nrcRelevant: boolean | null;
   ochaData: Ocha3wSector | null;
+  pin: number | null;
+  pinIsApprox: boolean;
   isLast: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -209,7 +268,7 @@ function SectorRow({
         className="hover:bg-[var(--color-bg-muted)]"
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 140px 180px 24px",
+          gridTemplateColumns: "1fr 130px 110px 170px 24px",
           alignItems: "center",
           columnGap: 16,
           padding: "12px 16px",
@@ -250,6 +309,24 @@ function SectorRow({
           >
             {displayLevel}
           </span>
+        </Box>
+
+        {/* People in need */}
+        <Box>
+          {pin != null ? (
+            <Box>
+              <Text style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1 }}>
+                {formatPin(pin)}
+              </Text>
+              {pinIsApprox && (
+                <Text style={{ fontSize: 9, color: "var(--color-text-muted)", lineHeight: 1, marginTop: 2 }}>
+                  est. child share
+                </Text>
+              )}
+            </Box>
+          ) : (
+            <Text size="xs" c="var(--color-text-muted)">-</Text>
+          )}
         </Box>
 
         {/* Operational presence */}
@@ -370,9 +447,11 @@ interface SectorRowData {
   responseGap: boolean | null;
   nrcRelevant: boolean | null;
   ochaMatch: Ocha3wSector | null;
+  pin: number | null;
+  pinIsApprox: boolean;
 }
 
-function NeedsSummaryCard({ crisis, ocha3w }: { crisis: GqlCrisis; ocha3w: Ocha3wData | null }) {
+function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha3w: Ocha3wData | null; hasMsna: boolean }) {
   const [open, setOpen] = useState(true);
 
   const generalSummary = useMemo(() => {
@@ -423,10 +502,16 @@ function NeedsSummaryCard({ crisis, ocha3w }: { crisis: GqlCrisis; ocha3w: Ocha3
 
       {open && (
         <Box px={16} pt={10} pb={14}>
-          {ocha3wDate && (
+          {(ocha3wDate ?? hasMsna) && (
             <Text size="xs" c="var(--color-text-muted)" mb={10} style={{ lineHeight: 1.4 }}>
-              Operational presence from{" "}
-              <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>OCHA 3W {ocha3wDate}</span>
+              {hasMsna && (
+                <>Sector severity from <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>MSNA Aug 2025</span>.</>
+              )}
+              {ocha3wDate && (
+                <>{hasMsna ? " " : ""}Operational presence from{" "}
+                  <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>OCHA 3W {ocha3wDate}</span>.
+                </>
+              )}
             </Text>
           )}
           {generalSummary ? (
@@ -452,32 +537,53 @@ interface NeedsAssessmentPanelProps {
 
 export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
   const ocha3w = useMemo(() => parseOcha3w(crisis), [crisis]);
+  const msna = useMemo(() => parseMsna(crisis), [crisis]);
   const a2 = useMemo(() => resolveA2(crisis), [crisis]);
   const [severityInfoOpen, setSeverityInfoOpen] = useState(false);
   const [presenceInfoOpen, setPresenceInfoOpen] = useState(false);
+  const [pinInfoOpen, setPinInfoOpen] = useState(false);
+
+  const a2Pop = useMemo(() => {
+    const raw = a2?.population;
+    if (!raw) return null;
+    const n = parseInt(raw, 10);
+    return isNaN(n) ? null : n;
+  }, [a2]);
 
   const rows = useMemo<SectorRowData[]>(() => {
     const needsSector = (crisis.needs as Record<string, unknown> | null | undefined)?.sector as Record<string, Record<string, unknown>> | null | undefined;
     return SECTORS.map((sector) => {
       const ochaMatch = ocha3w ? matchOchasector(ocha3w.sectors, sector.ochaCodes) : null;
       const pipelineData = needsSector?.[sector.label];
+      const msnaEntry = msna?.[sector.msnaKey];
+      const msnaSeverity = msnaEntry?.label ?? null;
+      const inputs = msnaEntry?.inputs ?? null;
+      const pinIsApprox = sector.msnaKey === "Education";
+      const pin = (inputs && a2Pop)
+        ? (() => {
+            const rate = pinRateForSector(sector.msnaKey, inputs);
+            return rate != null ? Math.round((rate / 100) * a2Pop) : null;
+          })()
+        : null;
       return {
         key: sector.key,
         label: sector.label,
         icon: sector.icon,
-        severity: typeof pipelineData?.severity === "string" ? pipelineData.severity : null,
+        severity: typeof pipelineData?.severity === "string" ? pipelineData.severity : msnaSeverity,
         description: typeof pipelineData?.description === "string" ? pipelineData.description : null,
         responseGap: typeof pipelineData?.responseGap === "boolean" ? pipelineData.responseGap : null,
         nrcRelevant: typeof pipelineData?.nrcRelevant === "boolean" ? pipelineData.nrcRelevant : null,
         ochaMatch,
+        pin,
+        pinIsApprox,
       };
     }).sort((a, b) => (SAF_ORDER[a.severity ?? "Unknown"] ?? 5) - (SAF_ORDER[b.severity ?? "Unknown"] ?? 5));
-  }, [crisis.needs, ocha3w]);
+  }, [crisis.needs, ocha3w, msna, a2Pop]);
 
   return (
     <Box p={24}>
       {/* Summary */}
-      <NeedsSummaryCard crisis={crisis} ocha3w={ocha3w} />
+      <NeedsSummaryCard crisis={crisis} ocha3w={ocha3w} hasMsna={msna !== null} />
 
       {/* Panel card */}
       <Box style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}>
@@ -502,7 +608,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
         <Box
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 140px 180px 24px",
+            gridTemplateColumns: "1fr 130px 110px 170px 24px",
             columnGap: 16,
             padding: "8px 16px",
             borderBottom: "1px solid var(--color-border)",
@@ -513,6 +619,10 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
           <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <ColHeader>Severity</ColHeader>
             <InfoButton onClick={() => setSeverityInfoOpen(true)} />
+          </Box>
+          <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <ColHeader>People in Need</ColHeader>
+            <InfoButton onClick={() => setPinInfoOpen(true)} />
           </Box>
           <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <ColHeader>Operational Presence</ColHeader>
@@ -532,6 +642,8 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
             responseGap={row.responseGap}
             nrcRelevant={row.nrcRelevant}
             ochaData={row.ochaMatch}
+            pin={row.pin}
+            pinIsApprox={row.pinIsApprox}
             isLast={idx === rows.length - 1}
           />
         ))}
@@ -573,6 +685,38 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
 
           <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
             Thresholds are prototype-stage and pending validation against JIAF cluster standards and NRC benchmarks.
+          </Text>
+        </Stack>
+      </Modal>
+
+      {/* ── People in Need info modal ───────────────────────────────────── */}
+      <Modal
+        opened={pinInfoOpen}
+        onClose={() => setPinInfoOpen(false)}
+        title={<Text fw={700} size="sm" c="var(--color-text-primary)">People in Need</Text>}
+        size="sm"
+      >
+        <Stack gap={12}>
+          <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+            Estimated by multiplying the MSNA survey indicator rate for each sector by the district population (WorldPop 2026 constrained, Nyala Janoub).
+          </Text>
+          <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
+            {([
+              { sector: "Food Security", formula: "% poor FCS + % borderline FCS × population" },
+              { sector: "WASH",          formula: "% without improved water + % unimproved sanitation × population" },
+              { sector: "Health",        formula: "% unable to access care × population" },
+              { sector: "Shelter",       formula: "% makeshift + no shelter + tent × population" },
+              { sector: "Education",     formula: "% children not attending × 18% child share × population *" },
+              { sector: "Protection",    formula: "max(% missing civil docs, % movement restrictions) × population" },
+            ] as const).map((r, i) => (
+              <Box key={r.sector} style={{ display: "grid", gridTemplateColumns: "100px 1fr", padding: "7px 12px", borderTop: i > 0 ? "1px solid var(--color-border)" : undefined }}>
+                <Text size="xs" fw={600} c="var(--color-text-primary)">{r.sector}</Text>
+                <Text size="xs" c="var(--color-text-secondary)">{r.formula}</Text>
+              </Box>
+            ))}
+          </Box>
+          <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
+            * Education uses an 18% child population share approximation. Will be replaced by WorldPop age-sex breakdown when available.
           </Text>
         </Stack>
       </Modal>
