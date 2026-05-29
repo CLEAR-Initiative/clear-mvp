@@ -9,3 +9,5 @@ export { CollapsibleSection } from "./collapsible-section";
 export { Timeline, type TimelineItem } from "./timeline";
 export { ResourceBar } from "./resource-bar";
 export { ColorSchemeToggle } from "./color-scheme-toggle";
+export { FeedToolbar } from "./feed-toolbar";
+export { RegionPicker } from "./region-picker";

@@ -13,17 +13,18 @@ import type { MapMarker } from "~/components/map/crisis-map";
 import { countryConfig, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
 import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
-import { PageHeader, FilterBar } from "~/components/ui";
+import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
 import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
 
 import { DetectionKpiRow } from "~/components/detection/detection-kpi-row";
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
-import { HistoryTab } from "./_components/history-tab";
+import { HistoryTab, type HistorySortOrder } from "./_components/history-tab";
 import { EventsTab, type EventSortOrder } from "./_components/events-tab";
 import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
 
 const PAGE_SIZE = 25;
+const HISTORY_PAGE_SIZE = 100;
 
 // Map UI sort labels to API orderBy enum values.
 // Types must match the z.enum() definitions in alerts.ts router exactly.
@@ -77,7 +78,7 @@ function DetectionPageContent() {
     router.replace(`/detection?${params.toString()}`, { scroll: false });
   }, [router, searchParams]);
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
-  const [selectedRegion, setSelectedRegion] = useState("All Regions");
+  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("Last 30 days");
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -91,7 +92,7 @@ function DetectionPageContent() {
   const filterCount = (activeSeverities.size < 4 ? 1 : 0) + (selectedTypeFilters.length > 0 ? 1 : 0) + (activeSources !== null ? 1 : 0);
 
   const { activeTeamId } = useTeam();
-  const { countries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
+  const { countries, getCenter, getZoom, getLocationId, tree } = useLocations();
 
   const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
   const selectedCountryId = useMemo(() => getLocationId(selectedCountry), [selectedCountry, getLocationId]);
@@ -112,31 +113,31 @@ function DetectionPageContent() {
     { enabled: boundaryLevel === "A2" && !!selectedCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const adminBoundaries = useMemo(() => {
-    if (selectedRegion !== "All Regions") return [];
+    if (selectedRegionId !== null) return [];
     if (boundaryLevel === "A1") return a1BoundaryQuery.data ?? [];
     if (boundaryLevel === "A2") return a2BoundaryQuery.data ?? [];
     return [];
-  }, [selectedRegion, boundaryLevel, a1BoundaryQuery.data, a2BoundaryQuery.data]);
+  }, [selectedRegionId, boundaryLevel, a1BoundaryQuery.data, a2BoundaryQuery.data]);
   const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
-  const selectedRegionId = useMemo(
-    () => (selectedRegion !== "All Regions" ? getLocationId(selectedRegion) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedRegion, getLocationId],
-  );
   const regionQuery = api.locations.getById.useQuery(
     { id: selectedRegionId! },
     { enabled: !!selectedRegionId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const fitBoundsGeometry = useMemo(
-    () => (selectedRegion !== "All Regions" ? (regionQuery.data?.geometry ?? null) : null),
-    [selectedRegion, regionQuery.data],
+    () => (selectedRegionId ? (regionQuery.data?.geometry ?? null) : null),
+    [selectedRegionId, regionQuery.data],
   );
 
-  const selectedLocationId = useMemo(() => {
-    if (selectedRegion !== "All Regions") return getLocationId(selectedRegion);
-    return getLocationId(selectedCountry);
-  }, [selectedCountry, selectedRegion, getLocationId]);
+  const selectedLocationId = useMemo(
+    () => selectedRegionId ?? getLocationId(selectedCountry),
+    [selectedCountry, selectedRegionId, getLocationId],
+  );
+
+  const currentCountryStates = useMemo(
+    () => tree.find((c) => c.name === selectedCountry)?.states ?? [],
+    [tree, selectedCountry],
+  );
 
   const dateRange = useMemo(() => parseDateFilter(selectedDate), [selectedDate]);
   const fromIso = useMemo(() => dateRange.start.toISOString(), [dateRange]);
@@ -148,7 +149,7 @@ function DetectionPageContent() {
   const [snapshotTime, setSnapshotTime] = useState(() => new Date().toISOString());
   // Rolling presets ("Last N days") follow snapshotTime so refresh expands
   // the window to include new events. Fixed-range presets ("Mon YYYY") keep
-  // their explicit upper bound — snapshotTime is irrelevant there because
+  // their explicit upper bound - snapshotTime is irrelevant there because
   // the range is in the past and no new events can fall into it.
   const isRollingPreset = /^Last \d+ days$/i.test(selectedDate);
   const effectiveTo = isRollingPreset ? snapshotTime : toIso;
@@ -168,6 +169,7 @@ function DetectionPageContent() {
   const [eventsSort, setEventsSort] = useState<EventSortOrder>("newest");
   const [alertsSort, setAlertsSort] = useState<AlertSortOrder>("newest");
   const [signalsSort, setSignalsSort] = useState<SignalSortOrder>("newest");
+  const [historySortOrder, setHistorySortOrder] = useState<HistorySortOrder>("newest");
 
   // ── Per-feed accumulated items + offset ───────────────────────────────────
   const [eventsItems, setEventsItems] = useState<GqlEvent[]>([]);
@@ -194,6 +196,20 @@ function DetectionPageContent() {
   const signalsAppending = useRef(false);
   const [signalsVersion, setSignalsVersion] = useState(0);
 
+  // History tab accumulation - same pattern as feeds but HISTORY_PAGE_SIZE = 100
+  const [historyAlertsItems, setHistoryAlertsItems] = useState<GqlAlert[]>([]);
+  const [historyEventsItems, setHistoryEventsItems] = useState<GqlEvent[]>([]);
+  const [historySignalsItems, setHistorySignalsItems] = useState<GqlSignal[]>([]);
+  const [historyOffset, setHistoryOffset] = useState(0);
+  const [historyAlertsTotalCount, setHistoryAlertsTotalCount] = useState(0);
+  const [historyEventsTotalCount, setHistoryEventsTotalCount] = useState(0);
+  const [historySignalsTotalCount, setHistorySignalsTotalCount] = useState(0);
+  const [historyAlertsHasMore, setHistoryAlertsHasMore] = useState(false);
+  const [historyEventsHasMore, setHistoryEventsHasMore] = useState(false);
+  const [historySignalsHasMore, setHistorySignalsHasMore] = useState(false);
+  const historyAppending = useRef(false);
+  const [historyVersion, setHistoryVersion] = useState(0);
+
   const sharedFilter = {
     teamId: activeTeamId,
     locationId: selectedLocationId ?? undefined,
@@ -209,7 +225,7 @@ function DetectionPageContent() {
   // _v (version) is part of the React Query cache key, so incrementing it on
   // reset forces a fresh fetch and guarantees the accumulation effect fires
   // via a data reference change. The router schema declares it optional and
-  // strips it before forwarding to GraphQL — see alerts.ts.
+  // strips it before forwarding to GraphQL - see alerts.ts.
   const eventsQuery = api.alerts.eventsPage.useQuery(
     { ...sharedFilter, orderBy: EVENT_ORDER_MAP[eventsSort], limit: PAGE_SIZE, offset: eventsOffset, _v: eventsVersion },
     { enabled: activeTab === "events", staleTime: Infinity },
@@ -394,7 +410,7 @@ function DetectionPageContent() {
   // ── "New items" polls: lightweight queries with from=snapshotTime ──────────
   // Only the active tab polls so we don't waste bandwidth on hidden tabs.
   // These spread the same filter shape as the main queries so the count
-  // reflects what refresh will actually load — otherwise the banner can show
+  // reflects what refresh will actually load - otherwise the banner can show
   // "100 new events" while a Critical-only filter would load 0.
   const eventsNewQuery = api.alerts.eventsPage.useQuery(
     {
@@ -433,21 +449,89 @@ function DetectionPageContent() {
   const alertsNewCount = alertsNewQuery.data?.totalCount ?? 0;
   const signalsNewCount = signalsNewQuery.data?.totalCount ?? 0;
 
-  // ── History tab (intentionally unpaginated - roll-up view) ─────────────────
-  const historyQuery = api.alerts.getAlerts.useQuery(
-    { activeOnly: false, teamId: activeTeamId },
-    { enabled: activeTab === "history" },
+  // ── History tab - paginated, 100 per page, all three sources accumulated ──────
+  const historyAlertsQuery = api.alerts.alertsPage.useQuery(
+    { ...sharedFilter, orderBy: ALERT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
+    { enabled: activeTab === "history", staleTime: Infinity },
   );
-  const historyEventsQuery = api.events.list.useQuery(
-    { teamId: activeTeamId },
-    { enabled: activeTab === "history" },
+  const historyEventsQuery = api.alerts.eventsPage.useQuery(
+    { ...sharedFilter, orderBy: EVENT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
+    { enabled: activeTab === "history", staleTime: Infinity },
   );
-  const historySignalsQuery = api.signals.list.useQuery(
-    { teamId: activeTeamId },
-    { enabled: activeTab === "history" },
+  const historySignalsQuery = api.alerts.signalsPage.useQuery(
+    { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, orderBy: SIGNAL_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
+    { enabled: activeTab === "history", staleTime: Infinity },
   );
 
-  const regions = getRegions(selectedCountry);
+  // ── History accumulation effects ───────────────────────────────────────────
+  useEffect(() => {
+    if (!historyAlertsQuery.data) return;
+    const { items, totalCount, hasMore } = historyAlertsQuery.data;
+    setHistoryAlertsTotalCount(totalCount);
+    setHistoryAlertsHasMore(hasMore);
+    if (historyAppending.current) {
+      setHistoryAlertsItems((prev) => [...prev, ...items]);
+    } else {
+      setHistoryAlertsItems(items);
+    }
+  }, [historyAlertsQuery.data]);
+
+  useEffect(() => {
+    if (!historyEventsQuery.data) return;
+    const { items, totalCount, hasMore } = historyEventsQuery.data;
+    setHistoryEventsTotalCount(totalCount);
+    setHistoryEventsHasMore(hasMore);
+    if (historyAppending.current) {
+      setHistoryEventsItems((prev) => [...prev, ...items]);
+    } else {
+      setHistoryEventsItems(items);
+    }
+  }, [historyEventsQuery.data]);
+
+  useEffect(() => {
+    if (!historySignalsQuery.data) return;
+    const { items, totalCount, hasMore } = historySignalsQuery.data;
+    setHistorySignalsTotalCount(totalCount);
+    setHistorySignalsHasMore(hasMore);
+    if (historyAppending.current) {
+      setHistorySignalsItems((prev) => [...prev, ...items]);
+      historyAppending.current = false;
+    } else {
+      setHistorySignalsItems(items);
+    }
+  }, [historySignalsQuery.data]);
+
+  // Reset history on filter change
+  useEffect(() => {
+    historyAppending.current = false;
+    setHistoryOffset(0);
+    setHistoryAlertsItems([]);
+    setHistoryEventsItems([]);
+    setHistorySignalsItems([]);
+    setHistoryVersion((v) => v + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...FILTER_DEPS]);
+
+  // Reset history on sort change
+  useEffect(() => {
+    historyAppending.current = false;
+    setHistoryOffset(0);
+    setHistoryAlertsItems([]);
+    setHistoryEventsItems([]);
+    setHistorySignalsItems([]);
+    setHistoryVersion((v) => v + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historySortOrder]);
+
+  const historyHasMore = historyAlertsHasMore || historyEventsHasMore || historySignalsHasMore;
+  const historyTotalCount = historyAlertsTotalCount + historyEventsTotalCount + historySignalsTotalCount;
+  const historyIsFetching = historyAlertsQuery.isFetching || historyEventsQuery.isFetching || historySignalsQuery.isFetching;
+
+  const loadMoreHistory = useCallback(() => {
+    if (!historyHasMore || historyIsFetching) return;
+    historyAppending.current = true;
+    setHistoryOffset((prev) => prev + HISTORY_PAGE_SIZE);
+  }, [historyHasMore, historyIsFetching]);
 
   const allSources = useMemo(() => {
     const s = new Set<string>();
@@ -486,11 +570,16 @@ function DetectionPageContent() {
       >
         <FilterBar
           country={selectedCountry}
-          onCountryChange={(v) => { setSelectedCountry(v); setSelectedRegion("All Regions"); }}
-          region={selectedRegion}
-          onRegionChange={setSelectedRegion}
+          onCountryChange={(v) => { setSelectedCountry(v); setSelectedRegionId(null); }}
           countries={countries}
-          regions={regions}
+          regionsContent={
+            <RegionPicker
+              states={currentCountryStates}
+              value={selectedRegionId}
+              onChange={setSelectedRegionId}
+              label="Region"
+            />
+          }
           date={selectedDate}
           onDateChange={setSelectedDate}
           dateOptions={dateOptions}
@@ -694,10 +783,16 @@ function DetectionPageContent() {
 
         {activeTab === "history" && (
           <HistoryTab
-            alerts={historyQuery.data?.alerts ?? []}
-            events={historyEventsQuery.data ?? []}
-            signals={historySignalsQuery.data ?? []}
-            loading={historyQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading}
+            alerts={historyAlertsItems}
+            events={historyEventsItems}
+            signals={historySignalsItems}
+            loading={historyAlertsQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading}
+            hasMore={historyHasMore}
+            isFetchingMore={historyIsFetching && historyAppending.current}
+            totalCount={historyTotalCount}
+            onLoadMore={loadMoreHistory}
+            sortOrder={historySortOrder}
+            onSortChange={setHistorySortOrder}
           />
         )}
       </Box>

@@ -10,17 +10,11 @@ import {
   Group,
   Badge,
   Loader,
-  TextInput,
-  Menu,
-  ActionIcon,
 } from "@mantine/core";
 import {
-  IconSearch,
-  IconSortDescending,
-  IconX,
-  IconRefresh,
   IconMapPin,
 } from "@tabler/icons-react";
+import { FeedToolbar } from "~/components/ui";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
@@ -150,77 +144,18 @@ export function LiveAlertsTab({
   return (
     <Box style={{ display: "flex", gap: 24 }}>
       <Box style={{ flex: 1, minWidth: 0 }}>
-        {newCount > 0 && (
-          <Group
-            gap={8} mb={8} px={12} py={6}
-            style={{ background: "var(--color-accent-light)", border: "1px solid var(--color-accent)", borderRadius: 6, cursor: "pointer" }}
-            onClick={onRefresh}
-          >
-            <IconRefresh size={13} color="var(--color-accent)" />
-            <Text size="xs" fw={600} c="var(--color-accent)">
-              {newCount} new alert{newCount !== 1 ? "s" : ""} - refresh
-            </Text>
-          </Group>
-        )}
-
-        <Group gap={8} mb={12} align="center" style={{ minHeight: 32 }}>
-          <Group gap={6} style={{ flexShrink: 0 }}>
-            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Alerts</Text>
-            <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>
-              {alertsLoading ? "..." : countLabel}
-            </Badge>
-            {alertsLoading && <Loader size="xs" />}
-          </Group>
-
-          <TextInput
-            placeholder="Search current page..."
-            value={search}
-            onChange={(e) => setSearch(e.currentTarget.value)}
-            leftSection={<IconSearch size={14} color="var(--color-text-muted)" />}
-            rightSection={
-              search ? (
-                <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setSearch("")}>
-                  <IconX size={12} />
-                </ActionIcon>
-              ) : null
-            }
-            size="xs"
-            style={{ flex: 1 }}
-            styles={{ input: { fontSize: 13 } }}
-          />
-
-          <Menu shadow="md" width={200} position="bottom-end">
-            <Menu.Target>
-              <button
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  width: 30, height: 30, borderRadius: 6,
-                  border: `1px solid ${sortOrder !== "newest" ? "var(--color-accent)" : "var(--color-border)"}`,
-                  background: "var(--color-bg-white)", cursor: "pointer",
-                  color: sortOrder !== "newest" ? "var(--color-accent)" : "var(--color-text-secondary)",
-                  flexShrink: 0,
-                }}
-              >
-                <IconSortDescending size={13} />
-              </button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              {(Object.entries(ALERT_SORT_LABELS) as [AlertSortOrder, string][]).map(([key, label]) => (
-                <Menu.Item
-                  key={key}
-                  onClick={() => onSortChange(key)}
-                  style={{
-                    fontSize: 12,
-                    fontWeight: sortOrder === key ? 600 : 400,
-                    color: sortOrder === key ? "var(--color-accent)" : "var(--color-text-primary)",
-                  }}
-                >
-                  {label}
-                </Menu.Item>
-              ))}
-            </Menu.Dropdown>
-          </Menu>
-        </Group>
+        <FeedToolbar
+          title="Alerts"
+          count={alertsLoading ? "..." : countLabel}
+          loading={alertsLoading}
+          search={search}
+          onSearchChange={setSearch}
+          sortOrder={sortOrder}
+          sortLabels={ALERT_SORT_LABELS}
+          onSortChange={(o) => onSortChange(o as AlertSortOrder)}
+          newCount={newCount}
+          onRefresh={onRefresh}
+        />
 
         <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
           <Box ref={scrollContainerRef} style={{ maxHeight: 524, overflowY: "auto" }}>
@@ -268,7 +203,7 @@ export function LiveAlertsTab({
                             <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
                           </Group>
                         )}
-                        {[...getDisasterPills(alert.event.types), ...getDisasterL2Pills(alert.event.types)].map((pill) => (
+                        {(() => { const all = [...getDisasterPills(alert.event.types), ...getDisasterL2Pills(alert.event.types)]; return all.filter((p, i) => all.findIndex((q) => q.label === p.label) === i); })().map((pill) => (
                           <span key={pill.label} style={{ display: "inline-block", padding: "1px 7px", borderRadius: 999, fontSize: 10, fontWeight: 600, color: pill.color, background: pill.bg, letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
                             {pill.label}
                           </span>
