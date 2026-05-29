@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Box,
@@ -25,8 +25,6 @@ import {
   IconExternalLink,
   IconRadar,
   IconLink,
-  IconChevronDown,
-  IconChevronUp,
   IconPhoto,
   IconFile,
 } from "@tabler/icons-react";
@@ -149,9 +147,6 @@ export function SignalDetailContent({
   loading,
   mode,
 }: SignalDetailContentProps) {
-  const [rawExpanded, setRawExpanded] = useState(false);
-
-  const toggleRaw = useCallback(() => setRawExpanded((v) => !v), []);
 
   const mapMarkers = useMemo<MapMarker[]>(() => {
     if (!signal) return [];
@@ -457,53 +452,6 @@ export function SignalDetailContent({
               <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.75 }}>
                 {signal.description ?? "No description available."}
               </Text>
-              <button
-                onClick={toggleRaw}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  marginTop: 12,
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: "var(--color-text-muted)",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 0,
-                }}
-              >
-                {rawExpanded ? <IconChevronUp size={13} /> : <IconChevronDown size={13} />}
-                {rawExpanded ? "Hide raw content" : "Show raw content"}
-              </button>
-              {rawExpanded && (
-                <Box
-                  mt={10}
-                  p={12}
-                  style={{
-                    background: "var(--color-bg-muted)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: 6,
-                    overflowX: "auto",
-                  }}
-                >
-                  <pre
-                    style={{
-                      margin: 0,
-                      fontSize: 11,
-                      lineHeight: 1.65,
-                      color: "var(--color-text-secondary)",
-                      fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                      maxHeight: 400,
-                      overflowY: "auto",
-                    }}
-                  >
-                    {JSON.stringify(signal.rawData, null, 2)}
-                  </pre>
-                </Box>
-              )}
             </Box>
           </Card>
 

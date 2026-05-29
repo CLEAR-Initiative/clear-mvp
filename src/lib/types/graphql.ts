@@ -64,8 +64,6 @@ export interface GqlSignal {
 
 /** Signal detail - richer events list returned by the `signal(id)` query */
 export interface GqlSignalDetail extends Omit<GqlSignal, "events"> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  rawData: Record<string, any>;
   events: Array<{
     id: string;
     title: string | null;

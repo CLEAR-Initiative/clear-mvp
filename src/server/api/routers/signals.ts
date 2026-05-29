@@ -31,7 +31,6 @@ const SIGNAL_GET_QUERY = `
     signal(id: $id) {
       id
       source { ${SOURCE_FIELDS} }
-      rawData
       title
       description
       severity
