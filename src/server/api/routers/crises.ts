@@ -24,6 +24,7 @@ export interface GqlCrisis {
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry population
+  parent { id name }
   metadata { type data }
   ancestors { id name level population metadata { type data } }
 `;

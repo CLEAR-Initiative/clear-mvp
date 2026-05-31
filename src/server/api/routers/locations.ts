@@ -131,13 +131,16 @@ export const locationsRouter = createTRPCRouter({
    * Optionally scoped to a country by its location ID.
    */
   getAdminBoundaries: protectedProcedure
-    .input(z.object({ level: z.number(), countryId: z.string().optional() }))
+    .input(z.object({ level: z.number(), countryId: z.string().optional(), stateId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ locations: GqlLocationWithGeometry[] }>(
         LOCATIONS_WITH_GEOMETRY_QUERY,
         { level: input.level },
         cookieHeaders(ctx),
       );
+      if (input.stateId) {
+        return data.locations.filter((l) => l.ancestorIds.includes(input.stateId!));
+      }
       if (input.countryId) {
         return data.locations.filter((l) => l.ancestorIds.includes(input.countryId!));
       }

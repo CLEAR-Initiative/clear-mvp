@@ -5,6 +5,7 @@ import type { GqlAlert, GqlEvent, GqlSignal, GqlCrisis } from "~/lib/types/graph
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry pointType
+  parent { id name }
   ancestors { id name level }
 `;
 

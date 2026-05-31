@@ -7,6 +7,7 @@ import Link from "next/link";
 import { IconMap, IconMapPin, IconLayersLinked } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { MapMarker } from "~/components/map/crisis-map";
+import type { GqlLocation } from "~/lib/types/graphql";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -26,41 +27,60 @@ interface MinimapCardProps {
   center: [number, number];
   sudanGeometry: unknown | undefined;
   sudanId: string | null;
-  /** Location ID whose geometry the map should fit to (e.g. A1 state). Fetched internally. Takes precedence over locationGeometry. */
-  fitLocationId?: string | null;
-  /** Fallback geometry to fit bounds to when fitLocationId is not provided. */
-  locationGeometry?: unknown;
+  /**
+   * The primary location for this entity (A2 district or A1 state).
+   * MinimapCard uses location.parent.id (for level-2) or location.id (for level-1)
+   * to fetch the A1 state geometry and zoom + highlight it - identical to the
+   * detection page's region-picker approach.
+   */
+  location?: GqlLocation | null;
   /** Shown in the header instead of the generic "Location" label. */
   locationName?: string;
   /** Override the "Full map" href (defaults to "/map"). */
   fullMapHref?: string;
 }
 
-export function MinimapCard({ markers, center, sudanGeometry, sudanId, fitLocationId, locationGeometry, locationName, fullMapHref = "/map" }: MinimapCardProps) {
+export function MinimapCard({ markers, center, sudanGeometry, sudanId, location, locationName, fullMapHref = "/map" }: MinimapCardProps) {
   const [layersOpen, setLayersOpen] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A2");
   const [showPopulation, setShowPopulation] = useState(false);
 
-  const a1Query = api.locations.getAdminBoundaries.useQuery(
+  // Derive the A1 state ID from the location:
+  //   level 1 (state)    -> location itself
+  //   level 2 (district) -> direct parent
+  //   level 3+ (city/point) -> find A1 in ancestors array
+  const a1StateId = useMemo(() => {
+    if (!location) return null;
+    if (location.level === 1) return location.id;
+    if (location.level === 2) return location.parent?.id ?? null;
+    return location.ancestors?.find((a) => a.level === 1)?.id ?? null;
+  }, [location]);
+
+  // Fetch state geometry directly by ID - identical to detection's regionQuery pattern.
+  const stateQuery = api.locations.getById.useQuery(
+    { id: a1StateId! },
+    { enabled: !!a1StateId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+
+  const fitBoundsGeometry = stateQuery.data?.geometry ?? undefined;
+
+  const a1BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
     { level: 1, countryId: sudanId ?? undefined },
     { enabled: boundaryLevel === "A1" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
-  const a2Query = api.locations.getAdminBoundaries.useQuery(
-    { level: 2, countryId: sudanId ?? undefined },
-    { enabled: boundaryLevel === "A2" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  const a2BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
+    a1StateId
+      ? { level: 2, stateId: a1StateId }
+      : { level: 2, countryId: sudanId ?? undefined },
+    { enabled: boundaryLevel === "A2" && (!!a1StateId || !!sudanId), staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
-  const adminBoundaries = useMemo(() => {
-    if (boundaryLevel === "A1") return a1Query.data ?? [];
-    if (boundaryLevel === "A2") return a2Query.data ?? [];
-    return [];
-  }, [boundaryLevel, a1Query.data, a2Query.data]);
-  const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
-  const fitLocationQuery = api.locations.getById.useQuery(
-    { id: fitLocationId! },
-    { enabled: !!fitLocationId, staleTime: Infinity, refetchOnWindowFocus: false },
-  );
-  const fitBoundsGeometry = fitLocationQuery.data?.geometry ?? locationGeometry ?? undefined;
+  const adminBoundaries = useMemo(() => {
+    if (boundaryLevel === "A1") return a1BoundaryQuery.data ?? [];
+    if (boundaryLevel === "A2") return a2BoundaryQuery.data ?? [];
+    return [];
+  }, [boundaryLevel, a1BoundaryQuery.data, a2BoundaryQuery.data]);
+  const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
   const populationQuery = api.locations.getPopulationBoundaries.useQuery(
     { countryId: sudanId ?? undefined },

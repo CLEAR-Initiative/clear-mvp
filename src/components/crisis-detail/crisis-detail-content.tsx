@@ -157,20 +157,57 @@ function bigIntStrToNumber(s: string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Extract [lng, lat] from a GqlLocation's Point geometry, if present. */
+/** Extract [lng, lat] from any GqlLocation geometry: Point directly, Polygon/MultiPolygon via centroid. */
 function locationCoords(location: GqlLocation | null | undefined): [number, number] | null {
-  const geom = location?.geometry as
-    | { type?: string; coordinates?: unknown }
-    | null
-    | undefined;
-  if (!geom || geom.type !== "Point" || !Array.isArray(geom.coordinates)) return null;
-  const [lng, lat] = geom.coordinates as unknown as number[];
-  if (typeof lng !== "number" || typeof lat !== "number") return null;
-  return [lng, lat];
+  const geom = location?.geometry as { type?: string; coordinates?: unknown } | null | undefined;
+  if (!geom) return null;
+
+  if (geom.type === "Point" && Array.isArray(geom.coordinates)) {
+    const [lng, lat] = geom.coordinates as number[];
+    if (typeof lng === "number" && typeof lat === "number") return [lng, lat];
+  }
+
+  if (geom.type === "Polygon") {
+    const ring = (geom.coordinates as number[][][])?.[0];
+    if (ring?.length) {
+      const lng = ring.reduce((s, p) => s + (p[0] ?? 0), 0) / ring.length;
+      const lat = ring.reduce((s, p) => s + (p[1] ?? 0), 0) / ring.length;
+      return [lng, lat];
+    }
+  }
+
+  if (geom.type === "MultiPolygon") {
+    const pts = ((geom.coordinates as number[][][][]) ?? []).flatMap((p) => p[0] ?? []);
+    if (pts.length) {
+      const lng = pts.reduce((s, p) => s + (p[0] ?? 0), 0) / pts.length;
+      const lat = pts.reduce((s, p) => s + (p[1] ?? 0), 0) / pts.length;
+      return [lng, lat];
+    }
+  }
+
+  return null;
 }
 
-/** Pick the best representative location for an event. */
+/**
+ * Pick the best location for an event marker.
+ * Prefers a Point geometry over a Polygon/MultiPolygon district boundary,
+ * since the event's generalLocation is often rolled up to an A2 district
+ * while the underlying signals carry the precise geocoded Point.
+ */
 function pickEventLocation(event: GqlEvent): GqlLocation | null {
+  const candidates = [
+    event.generalLocation,
+    event.originLocation,
+    event.destinationLocation,
+    // Signal locations are often level-4 Points - more precise than the district polygon
+    ...(event.signals ?? []).map((s) => s.generalLocation),
+  ].filter((l): l is GqlLocation => !!l);
+
+  // Prefer the first Point geometry - it's an exact geocoded coordinate
+  const point = candidates.find((l) => l.geometry?.type === "Point");
+  if (point) return point;
+
+  // Fall back to whatever is available
   return event.generalLocation ?? event.originLocation ?? event.destinationLocation ?? null;
 }
 
@@ -221,14 +258,6 @@ export function CrisisDetailContent({
   );
   const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
 
-  // Resolve the A1 state ancestor ID to pass to MinimapCard for zoom-to-state.
-  const a1AncestorId = useMemo(() => {
-    const loc = crisis?.generalLocation;
-    if (!loc) return null;
-    if (loc.level === 1) return loc.id;
-    return loc.ancestors?.find((a) => a.level === 1)?.id ?? null;
-  }, [crisis?.generalLocation]);
-
   const events = crisis?.events ?? [];
 
   // Pick a primary coordinate for the map centre. Prefer the crisis's own
@@ -244,31 +273,43 @@ export function CrisisDetailContent({
     return [30, 14];
   }, [crisis, events]);
 
+  // For the minimap zoom, use the first event location that has a proper parent
+  // chain (A2 district with A1 state parent). The crisis's own generalLocation
+  // is often a synthetic point without hierarchy, but event locations are real
+  // A2 districts that map to A1 states - the same data the detection page uses.
+  const mapZoomLocation = useMemo(() => {
+    for (const e of events) {
+      const loc = pickEventLocation(e);
+      if (loc?.parent?.id) return loc;
+      if (loc?.level === 1) return loc;
+    }
+    return crisis?.generalLocation ?? null;
+  }, [crisis, events]);
+
   const mapMarkers = useMemo<MapMarker[]>(() => {
     if (!crisis) return [];
-    const markers: MapMarker[] = [
-      {
+    if (events.length === 0) {
+      return [{
         id: 0,
         lng: primaryCoords[0],
         lat: primaryCoords[1],
         title: crisis.title ?? "Crisis",
         severity: mapSeverity(crisis.severity),
         description: resolveLocationName(crisis.generalLocation) ?? undefined,
-      },
-    ];
-    events.forEach((e, idx) => {
+      }];
+    }
+    return events.map((e, idx) => {
       const c = locationCoords(pickEventLocation(e)) ?? primaryCoords;
-      markers.push({
-        id: idx + 1,
+      return {
+        id: idx,
         lng: c[0],
         lat: c[1],
         title: e.title ?? e.types[0] ?? "Event",
         severity: mapSeverity(e.severity),
         description: resolveLocationName(pickEventLocation(e)) ?? undefined,
         type: e.types[0],
-      });
+      };
     });
-    return markers;
   }, [crisis, events, primaryCoords]);
 
   if (loading) {
@@ -622,7 +663,7 @@ export function CrisisDetailContent({
                 center={primaryCoords}
                 sudanGeometry={sudanGeometry}
                 sudanId={sudanId ?? null}
-                fitLocationId={a1AncestorId}
+                location={mapZoomLocation}
                 locationName={locationName ?? undefined}
                 fullMapHref={`/map?crisis=${crisis.id}`}
               />
