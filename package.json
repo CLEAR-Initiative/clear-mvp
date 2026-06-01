@@ -15,6 +15,7 @@
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
     "@mantine/core": "^8.3.0",
+    "@sentry/nextjs": "^10.0.0",
     "@mantine/hooks": "^8.3.0",
     "@mantine/notifications": "^8.3.0",
     "@tabler/icons-react": "2.47.0",
