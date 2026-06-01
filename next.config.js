@@ -4,6 +4,20 @@ import withPWA from "@ducanh2912/next-pwa";
 const nextConfig = {
   devIndicators: false,
   output: "standalone",
+  // Force @sentry/nextjs and the instrumentation config files into the
+  // standalone trace. Without this, Next.js's file tracer can miss them
+  // (instrumentation.ts is auto-loaded by Next.js, not statically imported
+  // from page code, so the tracer doesn't see the dependency chain) and
+  // the deployed container ends up without the SDK installed.
+  outputFileTracingIncludes: {
+    "/": [
+      "./node_modules/@sentry/**/*",
+      "./instrumentation.ts",
+      "./instrumentation-client.ts",
+      "./sentry.server.config.ts",
+      "./sentry.edge.config.ts",
+    ],
+  },
   experimental: {
     // Optimize large icon/component libraries to prevent webpack JSON parse crash
     optimizePackageImports: ["@mantine/core", "@mantine/hooks", "@tabler/icons-react"],

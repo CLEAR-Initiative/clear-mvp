@@ -85,6 +85,10 @@ jobs:
             set -e
             cd /srv/app
             docker compose pull clear-mvp
-            docker compose up -d clear-mvp
+            # --force-recreate destroys + recreates the container against the
+            # freshly pulled image. Without it, compose sometimes sees "no
+            # compose config change" and skips, leaving the container on the
+            # old image even though the new one was pulled.
+            docker compose up -d --force-recreate clear-mvp
             docker image prune -a -f
             docker compose ps clear-mvp
