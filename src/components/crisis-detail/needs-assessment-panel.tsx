@@ -212,6 +212,43 @@ function matchOchasector(ochaSectors: Ocha3wSector[], codes: string[]): Ocha3wSe
   );
 }
 
+// ── Assessment types ──────────────────────────────────────────────────────────
+
+type AssessmentLevel = 1 | 2 | 3;
+type Precision = "District" | "Locality";
+
+const LEVEL_STYLE: Record<AssessmentLevel, { label: string; color: string; bg: string }> = {
+  1: { label: "Baseline",  color: "var(--color-text-muted)", bg: "var(--color-bg-muted)"   },
+  2: { label: "AI Review", color: "var(--color-ai)",         bg: "var(--color-ai-light)"   },
+  3: { label: "RNA",       color: "var(--color-info)",       bg: "var(--color-info-light)" },
+};
+
+// ── Assessment bar ────────────────────────────────────────────────────────────
+
+function AssessmentBar({ level }: { level: AssessmentLevel }) {
+  const s = LEVEL_STYLE[level];
+  return (
+    <Box style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <Box style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {[3, 2, 1].map((l) => (
+          <Box
+            key={l}
+            style={{
+              width: 14,
+              height: 4,
+              borderRadius: 2,
+              background: l <= level ? s.color : "var(--color-border)",
+            }}
+          />
+        ))}
+      </Box>
+      <Text style={{ fontSize: 11, fontWeight: 600, color: s.color, lineHeight: 1 }}>
+        {s.label}
+      </Text>
+    </Box>
+  );
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function SectorRow({
@@ -224,6 +261,8 @@ function SectorRow({
   ochaData,
   pin,
   pinIsApprox,
+  assessmentLevel,
+  precision,
   isLast,
 }: {
   label: string;
@@ -235,6 +274,8 @@ function SectorRow({
   ochaData: Ocha3wSector | null;
   pin: number | null;
   pinIsApprox: boolean;
+  assessmentLevel: AssessmentLevel;
+  precision: Precision | null;
   isLast: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -250,7 +291,7 @@ function SectorRow({
         className="hover:bg-[var(--color-bg-muted)]"
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(120px, 220px) 130px 110px 170px 1fr 24px",
+          gridTemplateColumns: "180px 110px 100px 150px 120px 70px 24px",
           alignItems: "center",
           columnGap: 16,
           padding: "12px 16px",
@@ -320,8 +361,21 @@ function SectorRow({
           )}
         </Box>
 
-        {/* 1fr spacer */}
-        <Box />
+        {/* Assessment level */}
+        <Box>
+          <AssessmentBar level={assessmentLevel} />
+        </Box>
+
+        {/* Precision */}
+        <Box>
+          {precision ? (
+            <Text style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-muted)" }}>
+              {precision}
+            </Text>
+          ) : (
+            <Text size="xs" c="var(--color-text-muted)">-</Text>
+          )}
+        </Box>
 
         {/* Chevron */}
         <Chevron size={14} color="var(--color-text-muted)" />
@@ -450,6 +504,8 @@ interface SectorRowData {
   ochaMatch: Ocha3wSector | null;
   pin: number | null;
   pinIsApprox: boolean;
+  assessmentLevel: AssessmentLevel;
+  precision: Precision | null;
 }
 
 function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha3w: Ocha3wData | null; hasMsna: boolean }) {
@@ -543,6 +599,8 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
   const [severityInfoOpen, setSeverityInfoOpen] = useState(false);
   const [presenceInfoOpen, setPresenceInfoOpen] = useState(false);
   const [pinInfoOpen, setPinInfoOpen] = useState(false);
+  const [assessmentInfoOpen, setAssessmentInfoOpen] = useState(false);
+  const [precisionInfoOpen, setPrecisionInfoOpen] = useState(false);
 
   const a2Pop = useMemo(() => {
     const raw = a2?.population;
@@ -564,6 +622,11 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
       const pin = (score != null && effPop != null)
         ? Math.round((score / 100) * effPop)
         : null;
+      // Hardcoded to Level 1 until the pipeline can assess severity from
+      // contextual signals and reports rather than MSNA baseline data only.
+      const assessmentLevel: AssessmentLevel = 1;
+      const precision: Precision | null = a2 ? "District" : null;
+
       return {
         key: sector.key,
         label: sector.label,
@@ -575,6 +638,8 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
         ochaMatch,
         pin,
         pinIsApprox,
+        assessmentLevel,
+        precision,
       };
     }).sort((a, b) => (SAF_ORDER[a.severity ?? "Unknown"] ?? 5) - (SAF_ORDER[b.severity ?? "Unknown"] ?? 5));
   }, [crisis.needs, ocha3w, msna, a2Pop]);
@@ -607,7 +672,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
         <Box
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(120px, 220px) 130px 110px 170px 1fr 24px",
+            gridTemplateColumns: "180px 110px 100px 150px 120px 70px 24px",
             columnGap: 16,
             padding: "8px 16px",
             borderBottom: "1px solid var(--color-border)",
@@ -624,10 +689,17 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
             <InfoButton onClick={() => setPinInfoOpen(true)} />
           </Box>
           <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <ColHeader>Operational Presence</ColHeader>
+            <ColHeader>Op. Presence</ColHeader>
             <InfoButton onClick={() => setPresenceInfoOpen(true)} />
           </Box>
-          <Box />
+          <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <ColHeader>Assessment</ColHeader>
+            <InfoButton onClick={() => setAssessmentInfoOpen(true)} />
+          </Box>
+          <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <ColHeader>Precision</ColHeader>
+            <InfoButton onClick={() => setPrecisionInfoOpen(true)} />
+          </Box>
           <Box />
         </Box>
 
@@ -644,6 +716,8 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
             ochaData={row.ochaMatch}
             pin={row.pin}
             pinIsApprox={row.pinIsApprox}
+            assessmentLevel={row.assessmentLevel}
+            precision={row.precision}
             isLast={idx === rows.length - 1}
           />
         ))}
@@ -710,6 +784,72 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
           </Text>
           <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
             Education child share will be replaced by WorldPop age-sex breakdown when available.
+          </Text>
+        </Stack>
+      </Modal>
+
+      {/* ── Assessment Level info modal ─────────────────────────────────── */}
+      <Modal
+        opened={assessmentInfoOpen}
+        onClose={() => setAssessmentInfoOpen(false)}
+        title={<Text fw={700} size="sm" c="var(--color-text-primary)">Assessment Level</Text>}
+        size="sm"
+      >
+        <Stack gap={16}>
+          <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+            Indicates how the sector assessment was produced and which data sources it draws on.
+          </Text>
+          <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
+            {([
+              {
+                level: "1  Baseline",
+                color: "var(--color-text-muted)",
+                desc: "Sourced from MSNA (Multi-Sector Needs Assessment) survey data, August 2025. District-level coverage only. No AI review has been applied.",
+              },
+              {
+                level: "2  AI Review",
+                color: "var(--color-ai)",
+                desc: "An AI model has reviewed available signals and reports alongside the MSNA baseline to produce an updated severity assessment and written sector summary.",
+              },
+              {
+                level: "3  RNA",
+                color: "var(--color-info)",
+                desc: "A Rapid Needs Assessment conducted in-field provides direct on-the-ground data, superseding remote-sensing and survey estimates.",
+              },
+            ]).map((row, i) => (
+              <Box key={row.level} style={{ padding: "10px 14px", borderTop: i > 0 ? "1px solid var(--color-border)" : undefined }}>
+                <Text size="xs" fw={700} style={{ color: row.color, marginBottom: 4 }}>{row.level}</Text>
+                <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.55 }}>{row.desc}</Text>
+              </Box>
+            ))}
+          </Box>
+        </Stack>
+      </Modal>
+
+      {/* ── Precision info modal ─────────────────────────────────────────── */}
+      <Modal
+        opened={precisionInfoOpen}
+        onClose={() => setPrecisionInfoOpen(false)}
+        title={<Text fw={700} size="sm" c="var(--color-text-primary)">Precision</Text>}
+        size="sm"
+      >
+        <Stack gap={16}>
+          <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+            Indicates the finest geographic granularity at which the assessment data was collected.
+          </Text>
+          <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
+            {([
+              { label: "District", desc: "Data collected at administrative level 2 (A2 district). This is the current granularity of the MSNA dataset." },
+              { label: "Locality", desc: "Data collected at sub-district (locality) level, providing finer resolution. Requires field validation or higher-resolution data sources not yet integrated." },
+            ]).map((row, i) => (
+              <Box key={row.label} style={{ padding: "10px 14px", borderTop: i > 0 ? "1px solid var(--color-border)" : undefined }}>
+                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={4}>{row.label}</Text>
+                <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.55 }}>{row.desc}</Text>
+              </Box>
+            ))}
+          </Box>
+          <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
+            Most current assessments are at District level. Locality precision will become available as finer data sources are integrated.
           </Text>
         </Stack>
       </Modal>

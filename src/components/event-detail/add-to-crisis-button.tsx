@@ -94,7 +94,7 @@ export function AddToCrisisButton({
           onClick={() =>
             createCrisis.mutate({
               severity: clampSeverity(defaultSeverity),
-              needs: [],
+              needs: {},
               eventIds: [eventId],
             })
           }

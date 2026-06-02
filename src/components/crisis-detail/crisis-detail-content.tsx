@@ -18,6 +18,8 @@ import {
   Menu,
   ActionIcon,
   Divider,
+  Collapse,
+  UnstyledButton,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -33,6 +35,7 @@ import {
   IconTrendingDown,
   IconMinus,
   IconChevronDown,
+  IconChevronUp,
   IconChevronRight,
   IconFileText,
   IconUpload,
@@ -783,61 +786,72 @@ function parseScenarios(json: unknown): ScenarioPlan[] | null {
 }
 
 function ScenarioComparisonCard({ scenarios }: { scenarios: ScenarioPlan[] | null }) {
+  const [open, setOpen] = useState(false);
+
   return (
     <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
-      <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
-        <Group gap={8} align="center">
-          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-            Scenario Comparison
-          </Text>
-          {scenarios && (
-            <Badge
-              size="xs"
-              style={{
-                background: "var(--color-ai-light)",
-                color: "var(--color-ai)",
-                border: "1px solid var(--color-ai-border)",
-                fontWeight: 600,
-              }}
-            >
-              ✦ AI generated
-            </Badge>
-          )}
-        </Group>
-      </Box>
+      <UnstyledButton onClick={() => setOpen((o) => !o)} style={{ width: "100%" }}>
+        <Box px={16} py={12} style={{ borderBottom: open ? "1px solid var(--color-border)" : undefined }}>
+          <Group justify="space-between" align="center">
+            <Group gap={8} align="center">
+              <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
+                Scenario Analysis
+              </Text>
+              {scenarios && (
+                <Badge
+                  size="xs"
+                  style={{
+                    background: "var(--color-ai-light)",
+                    color: "var(--color-ai)",
+                    border: "1px solid var(--color-ai-border)",
+                    fontWeight: 600,
+                  }}
+                >
+                  ✦ AI generated
+                </Badge>
+              )}
+            </Group>
+            {open
+              ? <IconChevronUp size={14} color="var(--color-text-muted)" />
+              : <IconChevronDown size={14} color="var(--color-text-muted)" />}
+          </Group>
+        </Box>
+      </UnstyledButton>
 
-      {scenarios ? (
-        <Box p={16} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-          {scenarios.map((s) => {
-            const style = SCENARIO_STYLE[s.label] ?? { color: "var(--color-border)", bg: "var(--color-bg-muted)" };
-            return (
-              <Box
-                key={s.label}
-                p={16}
-                style={{ border: `1px solid ${style.color}30`, background: style.bg }}
-              >
-                <Text fw={700} size="sm" c="var(--color-text-primary)" mb={2}>
-                  {s.label}
-                </Text>
-                {s.subtitle && (
-                  <Text size="xs" c="var(--color-text-muted)" mb={10} style={{ fontStyle: "italic" }}>
-                    {s.subtitle}
+      <Collapse in={open}>
+        {scenarios ? (
+          <Box p={16} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            {scenarios.map((s) => {
+              const style = SCENARIO_STYLE[s.label] ?? { color: "var(--color-border)", bg: "var(--color-bg-muted)" };
+              return (
+                <Box
+                  key={s.label}
+                  p={16}
+                  style={{ border: `1px solid ${style.color}30`, background: style.bg }}
+                >
+                  <Text fw={700} size="sm" c="var(--color-text-primary)" mb={2}>
+                    {s.label}
                   </Text>
-                )}
-                <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
-                  {s.description}
-                </Text>
-              </Box>
-            );
-          })}
-        </Box>
-      ) : (
-        <Box p={24} style={{ textAlign: "center" }}>
-          <Text size="sm" c="var(--color-text-muted)">
-            Scenarios not yet generated for this crisis.
-          </Text>
-        </Box>
-      )}
+                  {s.subtitle && (
+                    <Text size="xs" c="var(--color-text-muted)" mb={10} style={{ fontStyle: "italic" }}>
+                      {s.subtitle}
+                    </Text>
+                  )}
+                  <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
+                    {s.description}
+                  </Text>
+                </Box>
+              );
+            })}
+          </Box>
+        ) : (
+          <Box p={24} style={{ textAlign: "center" }}>
+            <Text size="sm" c="var(--color-text-muted)">
+              Scenarios not yet generated for this crisis.
+            </Text>
+          </Box>
+        )}
+      </Collapse>
     </Card>
   );
 }
