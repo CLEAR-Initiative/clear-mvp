@@ -7,19 +7,21 @@ import { createTheme } from "@mantine/core";
 export const clearTheme = createTheme({
   fontFamily:
     "var(--font-inter), Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  fontFamilyMonospace: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
   colors: {
-    // CLEAR accent orange
+    // CLEAR accent orange — Situation Analysis design system.
+    // Shade 5 = #ff5722 (dark primary), shade 6 = #e0500f (light primary).
     accent: [
-      "#FEF2F0",
-      "#FDDDD8",
-      "#FAB4AA",
-      "#F68B7C",
-      "#F26E5A",
-      "#E85D3D",
-      "#D44E30",
-      "#B04028",
-      "#8C3220",
-      "#682418",
+      "#fff1ec",
+      "#ffe0d6",
+      "#ffc2ad",
+      "#ffa07f",
+      "#ff7e52",
+      "#ff5722",
+      "#e0500f",
+      "#c0440c",
+      "#9c360a",
+      "#782807",
     ],
     // Neutral grays matching prototype
     neutral: [
@@ -88,48 +90,50 @@ export const clearTheme = createTheme({
     ],
   },
   primaryColor: "accent",
-  primaryShade: 5,
-  defaultRadius: 0, // Sharp corners matching prototype
+  // Light theme uses the deeper #e0500f, dark uses #ff5722 — matches the spec tokens.
+  primaryShade: { light: 6, dark: 5 },
+  // Rounded corners matching the Situation Analysis design system.
+  defaultRadius: 8,
   components: {
     Button: {
       defaultProps: {
-        radius: 0,
+        radius: 8,
       },
     },
     Card: {
       defaultProps: {
-        radius: 0,
+        radius: 14,
         padding: "md",
       },
     },
     Paper: {
       defaultProps: {
-        radius: 0,
+        radius: 14,
       },
     },
     Badge: {
       defaultProps: {
-        radius: 0,
+        radius: 6,
       },
     },
     TextInput: {
       defaultProps: {
-        radius: 0,
+        radius: 8,
       },
     },
     Select: {
       defaultProps: {
-        radius: 0,
+        radius: 8,
       },
     },
     Textarea: {
       defaultProps: {
-        radius: 0,
+        radius: 8,
       },
     },
     Modal: {
       defaultProps: {
-        radius: 0,
+        radius: 14,
       },
     },
   },

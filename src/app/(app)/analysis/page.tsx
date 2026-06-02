@@ -1,61 +1,99 @@
 "use client";
 
 import { useState } from "react";
-import { Box, Tabs, Text } from "@mantine/core";
-import { PageHeader } from "~/components/ui";
-import { ReportsTab } from "./_components/reports-tab";
+import { Center, Loader, Text } from "@mantine/core";
+import { api } from "~/trpc/react";
+import { CrisisBar } from "./_components/crisis-bar";
+import { CrisisList } from "./_components/crisis-list";
+import { SituationOverview } from "./_components/situation-overview";
+import { SituationSectors } from "./_components/situation-sectors";
+import { SituationSources } from "./_components/situation-sources";
+import "~/styles/situation-analysis.css";
+
+type PrimaryTab = "crisis" | "situation";
+type SubTab = "overview" | "sectors" | "sources";
+
+const SUB_TABS: { id: SubTab; label: string; live?: boolean }[] = [
+  { id: "overview", label: "Overview", live: true },
+  { id: "sectors", label: "Sectors" },
+  { id: "sources", label: "Sources" },
+];
 
 export default function AnalysisPage() {
-  const [activeTab, setActiveTab] = useState<string | null>("crisis");
+  // Default primary tab = Situation Analysis (per spec).
+  const [ptab, setPtab] = useState<PrimaryTab>("situation");
+  const [tab, setTab] = useState<SubTab>("overview");
+
+  const { data, isLoading, isError } = api.situationAnalysis.get.useQuery(
+    undefined,
+  );
 
   return (
-    <Box>
-      <PageHeader
-        title="Analysis"
-        subtitle="Analysis"
-        breadcrumbs={["CLEAR", "Analysis"]}
-      />
+    <div className="sa-module">
+      {data && <CrisisBar crisis={data.crisis} />}
 
-      <Box p={24}>
-        <Tabs
-          value={activeTab}
-          onChange={setActiveTab}
-          mb={24}
-          styles={{ tab: { fontSize: 13, fontWeight: 500 } }}
+      <div className="ptabs">
+        <button
+          type="button"
+          className={"ptab" + (ptab === "crisis" ? " active" : "")}
+          onClick={() => setPtab("crisis")}
         >
-          <Tabs.List>
-            <Tabs.Tab value="crisis">Crisis</Tabs.Tab>
-            <Tabs.Tab value="situation">Situation Analysis</Tabs.Tab>
-          </Tabs.List>
-        </Tabs>
+          Crisis
+        </button>
+        <button
+          type="button"
+          className={"ptab" + (ptab === "situation" ? " active" : "")}
+          onClick={() => setPtab("situation")}
+        >
+          Situation Analysis
+        </button>
+      </div>
 
-        {activeTab === "crisis" && (
-          <ReportsTab
-            selectedCountry="Sudan"
-            selectedRegion="All Regions"
-            summaryStats={{ critical: 0, total: 0, types: [] }}
-            realSituationItems={null}
-          />
-        )}
+      <div className="scroll">
+        <div className="page">
+          {isLoading && (
+            <Center mih="40vh">
+              <Loader color="accent" />
+            </Center>
+          )}
 
-        {activeTab === "situation" && (
-          <Box
-            p={32}
-            style={{
-              border: "1px solid var(--color-border)",
-              background: "var(--color-bg-white)",
-              textAlign: "center",
-            }}
-          >
-            <Text fw={600} c="var(--color-text-primary)" mb={8}>
-              Situation Analysis
-            </Text>
-            <Text size="sm" c="var(--color-text-muted)">
-              AI-generated situation reports coming soon.
-            </Text>
-          </Box>
-        )}
-      </Box>
-    </Box>
+          {isError && (
+            <Center mih="40vh">
+              <Text c="var(--ink-3)">
+                Unable to load the situation analysis. Please try again.
+              </Text>
+            </Center>
+          )}
+
+          {data &&
+            (ptab === "crisis" ? (
+              <CrisisList
+                country={data.crisis.country}
+                crises={data.activeCrises}
+              />
+            ) : (
+              <>
+                <div className="segmented">
+                  {SUB_TABS.map((t) => (
+                    <button
+                      type="button"
+                      key={t.id}
+                      className={"seg-btn" + (tab === t.id ? " active" : "")}
+                      onClick={() => setTab(t.id)}
+                    >
+                      {t.label}
+                      {t.live && <span className="live-pill">LIVE</span>}
+                    </button>
+                  ))}
+                </div>
+
+                {tab === "overview" && <SituationOverview data={data} />}
+                {tab === "sectors" && <SituationSectors sectors={data.sectors} />}
+                {tab === "sources" && <SituationSources sources={data.sources} />}
+              </>
+            ))}
+        </div>
+      </div>
+    </div>
   );
 }

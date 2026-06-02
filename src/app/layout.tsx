@@ -1,7 +1,7 @@
 import "~/styles/globals.css";
 
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { MantineProvider, ColorSchemeScript } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 
@@ -11,6 +11,11 @@ import { clearTheme } from "~/app/config/themes";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
 });
 
 export const metadata: Metadata = {
@@ -43,7 +48,9 @@ export default function RootLayout({
       <head>
         <ColorSchemeScript defaultColorScheme="auto" />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body
+        className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
+      >
         <MantineProvider theme={clearTheme} defaultColorScheme="auto">
           <Notifications position="top-right" />
           <TRPCReactProvider>{children}</TRPCReactProvider>
