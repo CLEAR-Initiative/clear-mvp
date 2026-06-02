@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Box, Text, Group, Badge, Stack, Modal } from "@mantine/core";
+import { Box, Text, Group, Badge, Stack, Modal, List } from "@mantine/core";
 import {
   IconHome2,
   IconDroplet,
@@ -40,6 +40,15 @@ const SAF_ORDER: Record<string, number> = {
   Unknown: 5,
 };
 
+// ── MSNA types ────────────────────────────────────────────────────────────────
+
+interface MsnaSectorEntry {
+  label: string;
+  score: number;
+  inputs: Record<string, number>;
+}
+type MsnaData = Record<string, MsnaSectorEntry>;
+
 // ── OCHA 3W types ─────────────────────────────────────────────────────────────
 
 interface Ocha3wSector {
@@ -64,20 +73,21 @@ const SECTORS: {
   label: string;
   icon: SectorIcon;
   ochaCodes: string[];
+  msnaKey: string;
 }[] = [
-  { key: "shelter",    label: "Shelter",       icon: IconHome2,         ochaCodes: ["SHL", "SNFI", "NFI"]         },
-  { key: "wash",       label: "WASH",          icon: IconDroplet,       ochaCodes: ["WSH", "WASH", "WS"]          },
-  { key: "protection", label: "Protection",    icon: IconShield,        ochaCodes: ["PRO", "CP", "GBV"]           },
-  { key: "health",     label: "Health",        icon: IconHeart,         ochaCodes: ["HLT", "HEA", "HEALTH"]       },
-  { key: "food",       label: "Food Security", icon: IconToolsKitchen2, ochaCodes: ["FSL", "FSC", "FOOD", "FSLA"] },
-  { key: "education",  label: "Education",     icon: IconBook,          ochaCodes: ["EDU"]                        },
+  { key: "shelter",    label: "Shelter",       icon: IconHome2,         ochaCodes: ["SHL", "SNFI", "NFI"],         msnaKey: "Shelter"    },
+  { key: "wash",       label: "WASH",          icon: IconDroplet,       ochaCodes: ["WSH", "WASH", "WS"],          msnaKey: "WASH"       },
+  { key: "protection", label: "Protection",    icon: IconShield,        ochaCodes: ["PRO", "CP", "GBV"],           msnaKey: "Protection" },
+  { key: "health",     label: "Health",        icon: IconHeart,         ochaCodes: ["HLT", "HEA", "HEALTH"],       msnaKey: "Health"     },
+  { key: "food",       label: "Food Security", icon: IconToolsKitchen2, ochaCodes: ["FSL", "FSC", "FOOD", "FSLA"], msnaKey: "FSL"        },
+  { key: "education",  label: "Education",     icon: IconBook,          ochaCodes: ["EDU"],                        msnaKey: "Education"  },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-type A2Location = { id: string; name: string; level: number; metadata?: { type: string; data: unknown }[] | null } | null;
+type A2Location = { id: string; name: string; level: number; population?: string | null; metadata?: { type: string; data: unknown }[] | null } | null;
 
-function findA2InLocation(loc: { level: number; ancestors?: { id: string; name: string; level: number; metadata?: { type: string; data: unknown }[] | null }[] } | null): A2Location {
+function findA2InLocation(loc: { level: number; population?: string | null; ancestors?: { id: string; name: string; level: number; population?: string | null; metadata?: { type: string; data: unknown }[] | null }[] } | null): A2Location {
   if (!loc) return null;
   if (loc.level === 2) return loc as A2Location;
   return loc.ancestors?.find((a) => a.level === 2) ?? null;
@@ -107,6 +117,33 @@ function parseOcha3w(crisis: GqlCrisis): Ocha3wData | null {
   if (!Array.isArray(d.sectors)) return null;
   return d as unknown as Ocha3wData;
 }
+
+function parseMsna(crisis: GqlCrisis): MsnaData | null {
+  const a2 = resolveA2(crisis);
+  if (!a2) return null;
+  const meta = (a2 as { metadata?: { type: string; data: unknown }[] }).metadata;
+  if (!meta) return null;
+  const entry = meta.find((m) => m.type === "msna_severity_082025");
+  if (!entry) return null;
+  const d = entry.data as Record<string, unknown>;
+  const sectors = d.sectors;
+  if (!sectors || typeof sectors !== "object" || Array.isArray(sectors)) return null;
+  return sectors as MsnaData;
+}
+
+// ── PIN calculation ───────────────────────────────────────────────────────────
+
+// Education score represents % of school-age children not attending, so multiply
+// by the child share of total population until WorldPop age-sex data lands.
+const CHILD_SHARE_APPROX = 0.18;
+
+function formatPin(n: number): string {
+  if (n >= 1_000_000) return `~${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `~${Math.round(n / 1_000)}k`;
+  return `~${n}`;
+}
+
+// ── Org type abbreviations ────────────────────────────────────────────────────
 
 const ORG_TYPE_ABBREV: Record<string, string> = {
   "United Nations":           "UN",
@@ -175,6 +212,43 @@ function matchOchasector(ochaSectors: Ocha3wSector[], codes: string[]): Ocha3wSe
   );
 }
 
+// ── Assessment types ──────────────────────────────────────────────────────────
+
+type AssessmentLevel = 1 | 2 | 3;
+type Precision = "District" | "Locality";
+
+const LEVEL_STYLE: Record<AssessmentLevel, { label: string; color: string; bg: string }> = {
+  1: { label: "Baseline",  color: "var(--color-text-muted)", bg: "var(--color-bg-muted)"   },
+  2: { label: "AI Review", color: "var(--color-ai)",         bg: "var(--color-ai-light)"   },
+  3: { label: "RNA",       color: "var(--color-info)",       bg: "var(--color-info-light)" },
+};
+
+// ── Assessment bar ────────────────────────────────────────────────────────────
+
+function AssessmentBar({ level }: { level: AssessmentLevel }) {
+  const s = LEVEL_STYLE[level];
+  return (
+    <Box style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <Box style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {[3, 2, 1].map((l) => (
+          <Box
+            key={l}
+            style={{
+              width: 14,
+              height: 4,
+              borderRadius: 2,
+              background: l <= level ? s.color : "var(--color-border)",
+            }}
+          />
+        ))}
+      </Box>
+      <Text style={{ fontSize: 11, fontWeight: 600, color: s.color, lineHeight: 1 }}>
+        {s.label}
+      </Text>
+    </Box>
+  );
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function SectorRow({
@@ -185,6 +259,10 @@ function SectorRow({
   responseGap,
   nrcRelevant,
   ochaData,
+  pin,
+  pinIsApprox,
+  assessmentLevel,
+  precision,
   isLast,
 }: {
   label: string;
@@ -194,6 +272,10 @@ function SectorRow({
   responseGap: boolean | null;
   nrcRelevant: boolean | null;
   ochaData: Ocha3wSector | null;
+  pin: number | null;
+  pinIsApprox: boolean;
+  assessmentLevel: AssessmentLevel;
+  precision: Precision | null;
   isLast: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -209,7 +291,7 @@ function SectorRow({
         className="hover:bg-[var(--color-bg-muted)]"
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 140px 180px 24px",
+          gridTemplateColumns: "180px 110px 100px 150px 120px 70px 24px",
           alignItems: "center",
           columnGap: 16,
           padding: "12px 16px",
@@ -252,10 +334,44 @@ function SectorRow({
           </span>
         </Box>
 
+        {/* People in need */}
+        <Box>
+          {pin != null ? (
+            <Box>
+              <Text style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1 }}>
+                {formatPin(pin)}
+              </Text>
+              {pinIsApprox && (
+                <Text style={{ fontSize: 9, color: "var(--color-text-muted)", lineHeight: 1, marginTop: 2 }}>
+                  est. child share
+                </Text>
+              )}
+            </Box>
+          ) : (
+            <Text size="xs" c="var(--color-text-muted)">-</Text>
+          )}
+        </Box>
+
         {/* Operational presence */}
         <Box>
           {ochaData ? (
             <OrgPresence byType={ochaData.by_type} total={ochaData.org_count} />
+          ) : (
+            <Text size="xs" c="var(--color-text-muted)">-</Text>
+          )}
+        </Box>
+
+        {/* Assessment level */}
+        <Box>
+          <AssessmentBar level={assessmentLevel} />
+        </Box>
+
+        {/* Precision */}
+        <Box>
+          {precision ? (
+            <Text style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-muted)" }}>
+              {precision}
+            </Text>
           ) : (
             <Text size="xs" c="var(--color-text-muted)">-</Text>
           )}
@@ -268,58 +384,74 @@ function SectorRow({
       {/* Expanded detail */}
       {open && (
         <Box
-          px={16}
-          py={14}
           style={{
             background: "var(--color-bg-muted)",
             borderBottom: isLast ? undefined : "1px solid var(--color-border)",
+            paddingTop: 14,
+            paddingBottom: 14,
+            paddingRight: 16,
+            paddingLeft: 58, // 16px outer + 32px icon + 10px gap = aligns with sector name
           }}
         >
-          {/* AI-generated sector description */}
-          {description && (
-            <Text size="xs" c="var(--color-text-secondary)" mb={10} style={{ lineHeight: 1.6 }}>
-              {description}
-            </Text>
-          )}
-
-          {/* Indicators */}
-          {(responseGap === true || nrcRelevant === true) && (
-            <Group gap={6} mb={ochaData?.organizations?.length ? 10 : 0}>
-              {responseGap === true && (
-                <Badge size="xs" style={{ background: "var(--color-critical-light)", color: "var(--color-critical)" }}>
-                  Response gap
+          <Stack gap={14}>
+            {/* Summary */}
+            <Box>
+              <Group gap={6} mb={6} align="center">
+                <Text size="xs" fw={700} c="var(--color-text-secondary)" tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>
+                  Summary
+                </Text>
+                <Badge size="xs" style={{ background: "var(--color-ai-light)", color: "var(--color-ai)", border: "1px solid var(--color-ai-border)", fontWeight: 600 }}>
+                  ✦ AI generated
                 </Badge>
+              </Group>
+              {description ? (
+                <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
+                  {description}
+                </Text>
+              ) : (
+                <Text size="xs" c="var(--color-text-muted)" style={{ fontStyle: "italic" }}>
+                  AI generated summary coming soon.
+                </Text>
               )}
-              {nrcRelevant === true && (
-                <Badge size="xs" style={{ background: "var(--color-info-light)", color: "var(--color-info)" }}>
-                  NRC mandate
-                </Badge>
-              )}
-            </Group>
-          )}
+            </Box>
 
-          {/* 3W organisations */}
-          {ochaData?.organizations && ochaData.organizations.length > 0 ? (
-            <Stack gap={4}>
-              <Text size="xs" fw={700} c="var(--color-text-secondary)" tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }} mb={4}>
-                Organisations active in this area
-              </Text>
-              {ochaData.organizations.slice(0, 10).map((org) => (
-                <Group key={org.acronym} gap={8} wrap="nowrap">
-                  <Text size="xs" fw={600} c="var(--color-text-primary)" style={{ minWidth: 60 }}>{org.acronym}</Text>
-                  <Text size="xs" c="var(--color-text-secondary)" truncate>{org.name}</Text>
-                  <Badge size="xs" style={{ background: "var(--color-bg-white)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)", flexShrink: 0 }}>
-                    {org.type}
+            {/* Indicators */}
+            {(responseGap === true || nrcRelevant === true) && (
+              <Group gap={6}>
+                {responseGap === true && (
+                  <Badge size="xs" style={{ background: "var(--color-critical-light)", color: "var(--color-critical)" }}>
+                    Response gap
                   </Badge>
-                </Group>
-              ))}
-              {ochaData.organizations.length > 10 && (
-                <Text size="xs" c="var(--color-text-muted)" mt={4}>+{ochaData.organizations.length - 10} more</Text>
-              )}
-            </Stack>
-          ) : !description && (
-            <Text size="xs" c="var(--color-text-muted)">No detailed data available for this sector.</Text>
-          )}
+                )}
+                {nrcRelevant === true && (
+                  <Badge size="xs" style={{ background: "var(--color-info-light)", color: "var(--color-info)" }}>
+                    NRC mandate
+                  </Badge>
+                )}
+              </Group>
+            )}
+
+            {/* 3W organisations */}
+            {ochaData?.organizations && ochaData.organizations.length > 0 && (
+              <Stack gap={4}>
+                <Text size="xs" fw={700} c="var(--color-text-secondary)" tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }} mb={4}>
+                  Organisations active in this area
+                </Text>
+                {ochaData.organizations.slice(0, 10).map((org) => (
+                  <Group key={org.acronym} gap={8} wrap="nowrap">
+                    <Text size="xs" fw={600} c="var(--color-text-primary)" style={{ minWidth: 60 }}>{org.acronym}</Text>
+                    <Text size="xs" c="var(--color-text-secondary)" truncate>{org.name}</Text>
+                    <Badge size="xs" style={{ background: "var(--color-bg-white)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)", flexShrink: 0 }}>
+                      {org.type}
+                    </Badge>
+                  </Group>
+                ))}
+                {ochaData.organizations.length > 10 && (
+                  <Text size="xs" c="var(--color-text-muted)" mt={4}>+{ochaData.organizations.length - 10} more</Text>
+                )}
+              </Stack>
+            )}
+          </Stack>
         </Box>
       )}
     </Box>
@@ -370,9 +502,61 @@ interface SectorRowData {
   responseGap: boolean | null;
   nrcRelevant: boolean | null;
   ochaMatch: Ocha3wSector | null;
+  pin: number | null;
+  pinIsApprox: boolean;
+  assessmentLevel: AssessmentLevel;
+  precision: Precision | null;
 }
 
-function NeedsSummaryCard({ crisis, ocha3w }: { crisis: GqlCrisis; ocha3w: Ocha3wData | null }) {
+// Renders a text field that may contain plain prose or markdown-style bullet
+// lines (- item / • item). Splits into paragraphs and <List> blocks so
+// bullets stored by the pipeline display correctly.
+function SummaryText({ text }: { text: string }) {
+  type Block = { type: "para"; text: string } | { type: "list"; items: string[] };
+
+  const blocks = useMemo<Block[]>(() => {
+    const result: Block[] = [];
+    let currentList: string[] | null = null;
+
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
+      if (!line) {
+        if (currentList) { result.push({ type: "list", items: currentList }); currentList = null; }
+        continue;
+      }
+      const bulletMatch = line.match(/^[-•*]\s+(.*)/);
+      if (bulletMatch) {
+        if (!currentList) currentList = [];
+        currentList.push(bulletMatch[1]!);
+      } else {
+        if (currentList) { result.push({ type: "list", items: currentList }); currentList = null; }
+        result.push({ type: "para", text: line });
+      }
+    }
+    if (currentList) result.push({ type: "list", items: currentList });
+    return result;
+  }, [text]);
+
+  return (
+    <Stack gap={8}>
+      {blocks.map((block, i) =>
+        block.type === "list" ? (
+          <List key={i} size="sm" spacing={4} style={{ color: "var(--color-text-secondary)", lineHeight: 1.65 }}>
+            {block.items.map((item, j) => (
+              <List.Item key={j}>{item}</List.Item>
+            ))}
+          </List>
+        ) : (
+          <Text key={i} size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+            {block.text}
+          </Text>
+        )
+      )}
+    </Stack>
+  );
+}
+
+function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha3w: Ocha3wData | null; hasMsna: boolean }) {
   const [open, setOpen] = useState(true);
 
   const generalSummary = useMemo(() => {
@@ -423,16 +607,20 @@ function NeedsSummaryCard({ crisis, ocha3w }: { crisis: GqlCrisis; ocha3w: Ocha3
 
       {open && (
         <Box px={16} pt={10} pb={14}>
-          {ocha3wDate && (
+          {(ocha3wDate ?? hasMsna) && (
             <Text size="xs" c="var(--color-text-muted)" mb={10} style={{ lineHeight: 1.4 }}>
-              Operational presence from{" "}
-              <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>OCHA 3W {ocha3wDate}</span>
+              {hasMsna && (
+                <>Sector severity from <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>MSNA Aug 2025</span>.</>
+              )}
+              {ocha3wDate && (
+                <>{hasMsna ? " " : ""}Operational presence from{" "}
+                  <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>OCHA 3W {ocha3wDate}</span>.
+                </>
+              )}
             </Text>
           )}
           {generalSummary ? (
-            <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
-              {generalSummary}
-            </Text>
+            <SummaryText text={generalSummary} />
           ) : (
             <Text size="xs" c="var(--color-text-muted)">
               Needs analysis is being generated...
@@ -452,32 +640,60 @@ interface NeedsAssessmentPanelProps {
 
 export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
   const ocha3w = useMemo(() => parseOcha3w(crisis), [crisis]);
+  const msna = useMemo(() => parseMsna(crisis), [crisis]);
   const a2 = useMemo(() => resolveA2(crisis), [crisis]);
   const [severityInfoOpen, setSeverityInfoOpen] = useState(false);
   const [presenceInfoOpen, setPresenceInfoOpen] = useState(false);
+  const [pinInfoOpen, setPinInfoOpen] = useState(false);
+  const [assessmentInfoOpen, setAssessmentInfoOpen] = useState(false);
+  const [precisionInfoOpen, setPrecisionInfoOpen] = useState(false);
+
+  const a2Pop = useMemo(() => {
+    const raw = a2?.population;
+    if (!raw) return null;
+    const n = parseInt(raw, 10);
+    return isNaN(n) ? null : n;
+  }, [a2]);
 
   const rows = useMemo<SectorRowData[]>(() => {
     const needsSector = (crisis.needs as Record<string, unknown> | null | undefined)?.sector as Record<string, Record<string, unknown>> | null | undefined;
     return SECTORS.map((sector) => {
       const ochaMatch = ocha3w ? matchOchasector(ocha3w.sectors, sector.ochaCodes) : null;
       const pipelineData = needsSector?.[sector.label];
+      const msnaEntry = msna?.[sector.msnaKey];
+      const msnaSeverity = msnaEntry?.label ?? null;
+      const score = msnaEntry?.score ?? null;
+      const pinIsApprox = sector.msnaKey === "Education";
+      const effPop = pinIsApprox ? (a2Pop != null ? Math.round(a2Pop * CHILD_SHARE_APPROX) : null) : a2Pop;
+      const pin = (score != null && effPop != null)
+        ? Math.round((score / 100) * effPop)
+        : null;
+      // Hardcoded to Level 1 until the pipeline can assess severity from
+      // contextual signals and reports rather than MSNA baseline data only.
+      const assessmentLevel: AssessmentLevel = 1;
+      const precision: Precision | null = a2 ? "District" : null;
+
       return {
         key: sector.key,
         label: sector.label,
         icon: sector.icon,
-        severity: typeof pipelineData?.severity === "string" ? pipelineData.severity : null,
+        severity: typeof pipelineData?.severity === "string" ? pipelineData.severity : msnaSeverity,
         description: typeof pipelineData?.description === "string" ? pipelineData.description : null,
         responseGap: typeof pipelineData?.responseGap === "boolean" ? pipelineData.responseGap : null,
         nrcRelevant: typeof pipelineData?.nrcRelevant === "boolean" ? pipelineData.nrcRelevant : null,
         ochaMatch,
+        pin,
+        pinIsApprox,
+        assessmentLevel,
+        precision,
       };
     }).sort((a, b) => (SAF_ORDER[a.severity ?? "Unknown"] ?? 5) - (SAF_ORDER[b.severity ?? "Unknown"] ?? 5));
-  }, [crisis.needs, ocha3w]);
+  }, [crisis.needs, ocha3w, msna, a2Pop]);
 
   return (
     <Box p={24}>
       {/* Summary */}
-      <NeedsSummaryCard crisis={crisis} ocha3w={ocha3w} />
+      <NeedsSummaryCard crisis={crisis} ocha3w={ocha3w} hasMsna={msna !== null} />
 
       {/* Panel card */}
       <Box style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}>
@@ -486,7 +702,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
           <Group justify="space-between" align="center" wrap="nowrap">
             <Group gap={8} align="center">
               <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                Sectoral Needs
+                Sectors
               </Text>
               {a2 && (
                 <Badge size="xs" style={{ background: "var(--color-info-light)", color: "var(--color-info)" }}>
@@ -502,7 +718,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
         <Box
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 140px 180px 24px",
+            gridTemplateColumns: "180px 110px 100px 150px 120px 70px 24px",
             columnGap: 16,
             padding: "8px 16px",
             borderBottom: "1px solid var(--color-border)",
@@ -515,8 +731,20 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
             <InfoButton onClick={() => setSeverityInfoOpen(true)} />
           </Box>
           <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <ColHeader>Operational Presence</ColHeader>
+            <ColHeader>People in Need</ColHeader>
+            <InfoButton onClick={() => setPinInfoOpen(true)} />
+          </Box>
+          <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <ColHeader>Op. Presence</ColHeader>
             <InfoButton onClick={() => setPresenceInfoOpen(true)} />
+          </Box>
+          <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <ColHeader>Assessment</ColHeader>
+            <InfoButton onClick={() => setAssessmentInfoOpen(true)} />
+          </Box>
+          <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <ColHeader>Precision</ColHeader>
+            <InfoButton onClick={() => setPrecisionInfoOpen(true)} />
           </Box>
           <Box />
         </Box>
@@ -532,6 +760,10 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
             responseGap={row.responseGap}
             nrcRelevant={row.nrcRelevant}
             ochaData={row.ochaMatch}
+            pin={row.pin}
+            pinIsApprox={row.pinIsApprox}
+            assessmentLevel={row.assessmentLevel}
+            precision={row.precision}
             isLast={idx === rows.length - 1}
           />
         ))}
@@ -573,6 +805,97 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
 
           <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
             Thresholds are prototype-stage and pending validation against JIAF cluster standards and NRC benchmarks.
+          </Text>
+        </Stack>
+      </Modal>
+
+      {/* ── People in Need info modal ───────────────────────────────────── */}
+      <Modal
+        opened={pinInfoOpen}
+        onClose={() => setPinInfoOpen(false)}
+        title={<Text fw={700} size="sm" c="var(--color-text-primary)">People in Need</Text>}
+        size="sm"
+      >
+        <Stack gap={12}>
+          <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+            Estimated from the sector severity score using the same weighted composite formula that drives the severity label:
+          </Text>
+          <Box style={{ border: "1px solid var(--color-border)", padding: "10px 14px", background: "var(--color-bg-muted)" }}>
+            <Text size="xs" fw={600} c="var(--color-text-primary)" style={{ fontFamily: "monospace", letterSpacing: "0.02em" }}>
+              PIN = (score / 100) x district population
+            </Text>
+          </Box>
+          <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+            Population data: WorldPop 2026 constrained estimates. Education applies an 18% child population share since the sector score represents school-age children only.
+          </Text>
+          <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
+            Education child share will be replaced by WorldPop age-sex breakdown when available.
+          </Text>
+        </Stack>
+      </Modal>
+
+      {/* ── Assessment Level info modal ─────────────────────────────────── */}
+      <Modal
+        opened={assessmentInfoOpen}
+        onClose={() => setAssessmentInfoOpen(false)}
+        title={<Text fw={700} size="sm" c="var(--color-text-primary)">Assessment Level</Text>}
+        size="sm"
+      >
+        <Stack gap={16}>
+          <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+            Indicates how the sector assessment was produced and which data sources it draws on.
+          </Text>
+          <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
+            {([
+              {
+                level: "1  Baseline",
+                color: "var(--color-text-muted)",
+                desc: "Sourced from MSNA (Multi-Sector Needs Assessment) survey data, August 2025. District-level coverage only. No AI review has been applied.",
+              },
+              {
+                level: "2  AI Review",
+                color: "var(--color-ai)",
+                desc: "An AI model has reviewed available signals and reports alongside the MSNA baseline to produce an updated severity assessment and written sector summary.",
+              },
+              {
+                level: "3  RNA",
+                color: "var(--color-info)",
+                desc: "A Rapid Needs Assessment conducted in-field provides direct on-the-ground data, superseding remote-sensing and survey estimates.",
+              },
+            ]).map((row, i) => (
+              <Box key={row.level} style={{ padding: "10px 14px", borderTop: i > 0 ? "1px solid var(--color-border)" : undefined }}>
+                <Text size="xs" fw={700} style={{ color: row.color, marginBottom: 4 }}>{row.level}</Text>
+                <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.55 }}>{row.desc}</Text>
+              </Box>
+            ))}
+          </Box>
+        </Stack>
+      </Modal>
+
+      {/* ── Precision info modal ─────────────────────────────────────────── */}
+      <Modal
+        opened={precisionInfoOpen}
+        onClose={() => setPrecisionInfoOpen(false)}
+        title={<Text fw={700} size="sm" c="var(--color-text-primary)">Precision</Text>}
+        size="sm"
+      >
+        <Stack gap={16}>
+          <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+            Indicates the finest geographic granularity at which the assessment data was collected.
+          </Text>
+          <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
+            {([
+              { label: "District", desc: "Data collected at administrative level 2 (A2 district). This is the current granularity of the MSNA dataset." },
+              { label: "Locality", desc: "Data collected at sub-district (locality) level, providing finer resolution. Requires field validation or higher-resolution data sources not yet integrated." },
+            ]).map((row, i) => (
+              <Box key={row.label} style={{ padding: "10px 14px", borderTop: i > 0 ? "1px solid var(--color-border)" : undefined }}>
+                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={4}>{row.label}</Text>
+                <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.55 }}>{row.desc}</Text>
+              </Box>
+            ))}
+          </Box>
+          <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
+            Most current assessments are at District level. Locality precision will become available as finer data sources are integrated.
           </Text>
         </Stack>
       </Modal>
