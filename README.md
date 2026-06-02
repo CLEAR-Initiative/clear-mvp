@@ -158,3 +158,12 @@ Events store an array of glide codes (e.g. `["fl", "ba"]`). All codes in a singl
 - All generated code must pass `bun run check`.
 - Follow the no-emojis, no-commenting-the-obvious rule (see [`CLAUDE.md`](./CLAUDE.md)).
 - Commit messages: conventional-commit style, professional; no "Claude Code" or AI references.
+
+## License
+
+Copyright (C) 2026 Norwegian Refugee Council.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version. See [`LICENSE`](./LICENSE) for the full text.
