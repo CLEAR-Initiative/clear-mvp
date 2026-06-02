@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Box, Text, Group, Badge, Stack, Modal } from "@mantine/core";
+import { Box, Text, Group, Badge, Stack, Modal, List } from "@mantine/core";
 import {
   IconHome2,
   IconDroplet,
@@ -508,6 +508,54 @@ interface SectorRowData {
   precision: Precision | null;
 }
 
+// Renders a text field that may contain plain prose or markdown-style bullet
+// lines (- item / • item). Splits into paragraphs and <List> blocks so
+// bullets stored by the pipeline display correctly.
+function SummaryText({ text }: { text: string }) {
+  type Block = { type: "para"; text: string } | { type: "list"; items: string[] };
+
+  const blocks = useMemo<Block[]>(() => {
+    const result: Block[] = [];
+    let currentList: string[] | null = null;
+
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
+      if (!line) {
+        if (currentList) { result.push({ type: "list", items: currentList }); currentList = null; }
+        continue;
+      }
+      const bulletMatch = line.match(/^[-•*]\s+(.*)/);
+      if (bulletMatch) {
+        if (!currentList) currentList = [];
+        currentList.push(bulletMatch[1]!);
+      } else {
+        if (currentList) { result.push({ type: "list", items: currentList }); currentList = null; }
+        result.push({ type: "para", text: line });
+      }
+    }
+    if (currentList) result.push({ type: "list", items: currentList });
+    return result;
+  }, [text]);
+
+  return (
+    <Stack gap={8}>
+      {blocks.map((block, i) =>
+        block.type === "list" ? (
+          <List key={i} size="sm" spacing={4} style={{ color: "var(--color-text-secondary)", lineHeight: 1.65 }}>
+            {block.items.map((item, j) => (
+              <List.Item key={j}>{item}</List.Item>
+            ))}
+          </List>
+        ) : (
+          <Text key={i} size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+            {block.text}
+          </Text>
+        )
+      )}
+    </Stack>
+  );
+}
+
 function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha3w: Ocha3wData | null; hasMsna: boolean }) {
   const [open, setOpen] = useState(true);
 
@@ -572,9 +620,7 @@ function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha
             </Text>
           )}
           {generalSummary ? (
-            <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
-              {generalSummary}
-            </Text>
+            <SummaryText text={generalSummary} />
           ) : (
             <Text size="xs" c="var(--color-text-muted)">
               Needs analysis is being generated...
