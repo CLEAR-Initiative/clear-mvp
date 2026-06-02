@@ -19,3 +19,7 @@ public/sw.js
 public/sw.js.map
 public/swe-worker-*.js
 public/workbox-*.js
+
+# Local agent-skill configuration (not for the shared repo)
+/CLAUDE.md
+/docs/agents/
