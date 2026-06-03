@@ -105,6 +105,16 @@ const CRISIS_GET_QUERY = `
   }
 `;
 
+const UPDATE_CRISIS_META_MUTATION = `
+  mutation UpdateCrisisMeta($id: String!, $input: UpdateCrisisPopulationInput!) {
+    updateCrisisPopulation(id: $id, input: $input) {
+      id
+      title
+      summary
+    }
+  }
+`;
+
 const CREATE_CRISIS_FROM_EVENTS_MUTATION = `
   mutation CreateCrisisFromEvents($input: CreateCrisisFromEventsInput!) {
     createCrisisFromEvents(input: $input) {
@@ -255,5 +265,21 @@ export const crisesRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.deleteCrisis;
+    }),
+
+  updateMeta: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      title: z.string().optional(),
+      summary: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...fields } = input;
+      const data = await graphqlFetch<{ updateCrisisPopulation: { id: string; title: string | null; summary: string | null } }>(
+        UPDATE_CRISIS_META_MUTATION,
+        { id, input: fields },
+        cookieHeaders(ctx),
+      );
+      return data.updateCrisisPopulation;
     }),
 });

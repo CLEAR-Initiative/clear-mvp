@@ -21,6 +21,8 @@ import {
   Collapse,
   UnstyledButton,
   Tooltip,
+  Textarea,
+  TextInput,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -45,6 +47,8 @@ import {
   IconCheck,
   IconCircleDashed,
   IconInfoCircle,
+  IconPencil,
+  IconX,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
@@ -244,11 +248,25 @@ export function CrisisDetailContent({
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [leftPanelTab, setLeftPanelTab] = useState<string | null>("events");
   const [confirmDeleteCrisis, setConfirmDeleteCrisis] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingMeta, setEditingMeta] = useState(false);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftSummary, setDraftSummary] = useState("");
 
   const meQuery = api.auth.me.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
   const isAdmin = meQuery.data?.user?.role === "admin" || meQuery.data?.user?.role === "org_admin";
 
   const utils = api.useUtils();
+
+  const updateMeta = api.crises.updateMeta.useMutation({
+    onSuccess: (updated) => {
+      utils.crises.get.setData({ id: updated.id }, (prev) =>
+        prev ? { ...prev, title: updated.title, summary: updated.summary } : prev,
+      );
+      setEditingTitle(false);
+      setEditingMeta(false);
+    },
+  });
 
   const deleteCrisis = api.crises.deleteCrisis.useMutation({
     onSuccess: () => {
@@ -547,13 +565,38 @@ export function CrisisDetailContent({
         </Group>
 
         <Group justify="space-between" align="flex-start" mb={10} wrap="nowrap" gap={16}>
-          <Text
-            fw={700}
-            c="var(--color-text-primary)"
-            style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3, flex: 1 }}
-          >
-            {title}
-          </Text>
+          {editingTitle ? (
+            <Group gap={8} style={{ flex: 1 }} wrap="nowrap">
+              <TextInput
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.currentTarget.value)}
+                style={{ flex: 1 }}
+                size="sm"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") updateMeta.mutate({ id: crisis.id, title: draftTitle });
+                  if (e.key === "Escape") setEditingTitle(false);
+                }}
+              />
+              <ActionIcon size="sm" variant="filled" color="green" loading={updateMeta.isPending} onClick={() => updateMeta.mutate({ id: crisis.id, title: draftTitle })}>
+                <IconCheck size={14} />
+              </ActionIcon>
+              <ActionIcon size="sm" variant="subtle" onClick={() => setEditingTitle(false)}>
+                <IconX size={14} />
+              </ActionIcon>
+            </Group>
+          ) : (
+            <Group gap={8} align="center" style={{ flex: 1 }} wrap="nowrap">
+              <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3 }}>
+                {title}
+              </Text>
+              {isAdmin && (
+                <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => { setDraftTitle(crisis.title ?? ""); setEditingTitle(true); }}>
+                  <IconPencil size={13} />
+                </ActionIcon>
+              )}
+            </Group>
+          )}
         </Group>
 
         <Group gap={16} wrap="wrap">
@@ -680,20 +723,47 @@ export function CrisisDetailContent({
                     <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                       Summary
                     </Text>
-                    <Badge
-                      size="xs"
-                      style={{
-                        background: "var(--color-ai-light)",
-                        color: "var(--color-ai)",
-                        border: "1px solid var(--color-ai-border)",
-                        fontWeight: 600,
-                      }}
-                    >
-                      ✦ AI generated
-                    </Badge>
+                    <Group gap={6}>
+                      {isAdmin && !editingMeta && (
+                        <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => { setDraftSummary(crisis.summary ?? ""); setEditingMeta(true); }}>
+                          <IconPencil size={13} />
+                        </ActionIcon>
+                      )}
+                      {!editingMeta && (
+                        <Badge
+                          size="xs"
+                          style={{
+                            background: "var(--color-ai-light)",
+                            color: "var(--color-ai)",
+                            border: "1px solid var(--color-ai-border)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          ✦ AI generated
+                        </Badge>
+                      )}
+                    </Group>
                   </Group>
                 </Box>
-                <CrisisSummaryBody summary={crisis.summary} />
+                {editingMeta ? (
+                  <Box p={16}>
+                    <Textarea
+                      value={draftSummary}
+                      onChange={(e) => setDraftSummary(e.currentTarget.value)}
+                      autosize
+                      minRows={4}
+                      maxRows={16}
+                      size="sm"
+                      autoFocus
+                    />
+                    <Group gap={8} mt={10} justify="flex-end">
+                      <Button size="xs" variant="subtle" onClick={() => setEditingMeta(false)}>Cancel</Button>
+                      <Button size="xs" loading={updateMeta.isPending} onClick={() => updateMeta.mutate({ id: crisis.id, summary: draftSummary })}>Save</Button>
+                    </Group>
+                  </Box>
+                ) : (
+                  <CrisisSummaryBody summary={crisis.summary} />
+                )}
               </Card>
             </Box>
 
