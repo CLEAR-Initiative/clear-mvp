@@ -572,10 +572,16 @@ function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha
     const needs = crisis.needs as Record<string, unknown> | null | undefined;
     const raw = needs?.generalSummary;
     if (Array.isArray(raw)) {
-      const bullets = (raw as unknown[]).filter((s): s is string => typeof s === "string" && s.length > 0);
+      const bullets = (raw as unknown[])
+        .filter((s): s is string => typeof s === "string")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
       return bullets.length > 0 ? bullets : null;
     }
-    if (typeof raw === "string" && raw.length > 0) return raw;
+    if (typeof raw === "string") {
+      const trimmed = raw.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    }
     return null;
   }, [crisis.needs]);
 

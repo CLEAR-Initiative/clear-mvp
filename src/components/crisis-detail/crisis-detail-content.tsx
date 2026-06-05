@@ -263,6 +263,7 @@ export function CrisisDetailContent({
       utils.crises.get.setData({ id: updated.id }, (prev) =>
         prev ? { ...prev, title: updated.title, summary: updated.summary } : prev,
       );
+      void utils.crises.list.invalidate();
       setEditingTitle(false);
       setEditingMeta(false);
     },
@@ -358,8 +359,8 @@ export function CrisisDetailContent({
         if (!candidate) continue;
         const meta = candidate.metadata?.find((m) => m.type === "iom_dtm_displacement");
         if (!meta) continue;
-        const displaced = (meta.data as Record<string, unknown>).population_displaced as number | undefined;
-        if (!displaced) continue;
+        const displaced = (meta.data as Record<string, unknown>).population_displaced;
+        if (typeof displaced !== "number") continue;
         const pop = candidate.population ? Number(candidate.population) : popInArea;
         const ratio = pop ? displaced / pop : null;
         return { displaced, ratio, name: candidate.name };
@@ -750,6 +751,12 @@ export function CrisisDetailContent({
                     <Textarea
                       value={draftSummary}
                       onChange={(e) => setDraftSummary(e.currentTarget.value)}
+                      onKeyDown={(e) => {
+                        if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !updateMeta.isPending) {
+                          updateMeta.mutate({ id: crisis.id, summary: draftSummary });
+                        }
+                        if (e.key === "Escape") setEditingMeta(false);
+                      }}
                       autosize
                       minRows={4}
                       maxRows={16}

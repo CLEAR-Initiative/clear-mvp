@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
@@ -274,6 +275,10 @@ export const crisesRouter = createTRPCRouter({
       summary: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const user = (ctx as { user?: { role?: string } }).user;
+      if (user?.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
       const { id, ...fields } = input;
       const data = await graphqlFetch<{ updateCrisisPopulation: { id: string; title: string | null; summary: string | null } }>(
         UPDATE_CRISIS_META_MUTATION,
