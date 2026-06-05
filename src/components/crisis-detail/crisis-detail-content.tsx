@@ -802,16 +802,16 @@ export function CrisisDetailContent({
                     <Tabs.Tab value="confidence">Confidence</Tabs.Tab>
                   </Tabs.List>
                 </Box>
-                <Tabs.Panel value="events">
+                <Tabs.Panel value="events" style={{ height: 300, overflowY: "auto" }}>
                   <EventsTimeline events={eventsNewestFirst} isAdmin={isAdmin} crisisId={crisis.id} totalEventCount={events.length} />
                 </Tabs.Panel>
-                <Tabs.Panel value="demography">
+                <Tabs.Panel value="demography" style={{ height: 300, overflowY: "auto" }}>
                   <DemographyPanel crisis={crisis} />
                 </Tabs.Panel>
-                <Tabs.Panel value="sources">
+                <Tabs.Panel value="sources" style={{ height: 300, overflowY: "auto" }}>
                   <SourcesPanel events={eventsNewestFirst} crisis={crisis} />
                 </Tabs.Panel>
-                <Tabs.Panel value="confidence">
+                <Tabs.Panel value="confidence" style={{ height: 300, overflowY: "auto" }}>
                   <ConfidencePanel crisis={crisis} />
                 </Tabs.Panel>
               </Tabs>
@@ -1447,29 +1447,6 @@ function SeverityPill({ severity }: { severity: "critical" | "high" | "medium" |
 
 // ── Demography panel ──────────────────────────────────────────────────────────
 
-// WorldPop age-band keys in display order, youngest to oldest.
-const AGE_BANDS: { key: string; label: string }[] = [
-  { key: "00", label: "<1" },
-  { key: "01", label: "1-4" },
-  { key: "05", label: "5-9" },
-  { key: "10", label: "10-14" },
-  { key: "15", label: "15-19" },
-  { key: "20", label: "20-24" },
-  { key: "25", label: "25-29" },
-  { key: "30", label: "30-34" },
-  { key: "35", label: "35-39" },
-  { key: "40", label: "40-44" },
-  { key: "45", label: "45-49" },
-  { key: "50", label: "50-54" },
-  { key: "55", label: "55-59" },
-  { key: "60", label: "60-64" },
-  { key: "65", label: "65-69" },
-  { key: "70", label: "70-74" },
-  { key: "75", label: "75-79" },
-  { key: "80", label: "80-84" },
-  { key: "85", label: "85-89" },
-  { key: "90", label: "90+" },
-];
 
 type A2Location = { name: string; metadata: { type: string; data: unknown }[] };
 
@@ -1530,13 +1507,13 @@ function DemographyPanel({ crisis }: { crisis: GqlCrisis }) {
   const src = wp._source as { year?: number; release?: string } | undefined;
   const band = (key: string) => wp[key] as WpBand | undefined;
 
-  let totalPop = 0, totalMale = 0, totalFemale = 0, maxSex = 0;
-  for (const { key } of AGE_BANDS) {
-    const b = band(key);
-    if (!b) continue;
-    totalPop += b.total; totalMale += b.male; totalFemale += b.female;
-    if (b.male > maxSex) maxSex = b.male;
-    if (b.female > maxSex) maxSex = b.female;
+  let totalPop = 0, totalMale = 0, totalFemale = 0;
+  for (const [key, val] of Object.entries(wp)) {
+    if (key === "_source" || typeof val !== "object" || val === null) continue;
+    const b = val as WpBand;
+    totalPop += b.total ?? 0;
+    totalMale += b.male ?? 0;
+    totalFemale += b.female ?? 0;
   }
 
   const fmt = (n: number) =>
@@ -1572,45 +1549,32 @@ function DemographyPanel({ crisis }: { crisis: GqlCrisis }) {
             }, 0);
             return (
               <Box key={g.label} p={10} style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}>
-                <Text fw={700} size="sm" c="var(--color-text-primary)" style={{ lineHeight: 1.2 }}>{fmt(count)}</Text>
-                <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.3 }}>{g.label}</Text>
-                <Text style={{ fontSize: 10, color: "var(--color-text-muted)", marginTop: 2 }}>{pct(count, totalPop)} of area pop.</Text>
+                <Text style={{ fontSize: 10, color: "var(--color-text-muted)", marginBottom: 4 }}>{g.label}</Text>
+                <Text fw={700} size="lg" c="var(--color-text-primary)" style={{ lineHeight: 1.2 }}>{pct(count, totalPop)}</Text>
+                <Text size="xs" c="var(--color-text-muted)">{fmt(count)}</Text>
               </Box>
             );
           })}
         </Box>
       </Box>
 
-      {/* Compact age/sex pyramid */}
-      <Box px={16} pt={10} pb={8}>
-        <Group justify="space-between" mb={6}>
-          <Group gap={5}>
-            <Box style={{ width: 8, height: 8, borderRadius: 1, background: "var(--color-info)", opacity: 0.7 }} />
-            <Text style={{ fontSize: 10, color: "var(--color-text-muted)" }}>Male {pct(totalMale, totalPop)}</Text>
-          </Group>
-          <Text style={{ fontSize: 10, color: "var(--color-text-muted)", fontWeight: 600 }}>Age/sex structure</Text>
-          <Group gap={5}>
-            <Text style={{ fontSize: 10, color: "var(--color-text-muted)" }}>Female {pct(totalFemale, totalPop)}</Text>
-            <Box style={{ width: 8, height: 8, borderRadius: 1, background: "var(--color-accent)", opacity: 0.7 }} />
-          </Group>
-        </Group>
-        {[...AGE_BANDS].reverse().map(({ key, label }) => {
-          const b = band(key);
-          if (!b) return null;
-          const mW = maxSex > 0 ? (b.male / maxSex) * 100 : 0;
-          const fW = maxSex > 0 ? (b.female / maxSex) * 100 : 0;
-          return (
-            <Box key={key} style={{ display: "grid", gridTemplateColumns: "1fr 26px 1fr", gap: 3, alignItems: "center", marginBottom: 2 }}>
-              <Box style={{ display: "flex", justifyContent: "flex-end" }}>
-                <Box style={{ width: `${mW}%`, height: 6, background: "var(--color-info)", opacity: 0.55, borderRadius: "2px 0 0 2px" }} />
-              </Box>
-              <Text style={{ fontSize: 9, textAlign: "center", color: "var(--color-text-muted)", lineHeight: 1 }}>{label}</Text>
-              <Box>
-                <Box style={{ width: `${fW}%`, height: 6, background: "var(--color-accent)", opacity: 0.55, borderRadius: "0 2px 2px 0" }} />
-              </Box>
+      {/* Gender split */}
+      <Box px={16} pt={10} pb={12}>
+        <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>
+          Gender split
+        </Text>
+        <Box style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {[
+            { label: "Male",   count: totalMale },
+            { label: "Female", count: totalFemale },
+          ].map(({ label, count }) => (
+            <Box key={label} p={10} style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}>
+              <Text fw={700} size="lg" c="var(--color-text-primary)" style={{ lineHeight: 1.2 }}>{pct(count, totalPop)}</Text>
+              <Text size="xs" c="var(--color-text-muted)">{fmt(count)}</Text>
+              <Text style={{ fontSize: 10, color: "var(--color-text-muted)", marginTop: 2 }}>{label}</Text>
             </Box>
-          );
-        })}
+          ))}
+        </Box>
       </Box>
     </Box>
   );
@@ -1695,12 +1659,26 @@ function buildContextRows(metadata: { type: string; data: unknown }[]): ContextR
 
 // ── Section header ─────────────────────────────────────────────────────────────
 
-function SectionHeader({ children }: { children: React.ReactNode }) {
+function SectionHeader({ children, open, onToggle }: { children: React.ReactNode; open?: boolean; onToggle?: () => void }) {
+  const isCollapsible = onToggle !== undefined;
   return (
-    <Box px={16} py={8} style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-bg-muted)" }}>
+    <Box
+      px={16} py={8}
+      onClick={onToggle}
+      style={{
+        borderBottom: "1px solid var(--color-border)",
+        background: "var(--color-bg-muted)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        cursor: isCollapsible ? "pointer" : undefined,
+        userSelect: "none",
+      }}
+    >
       <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
         {children}
       </Text>
+      {isCollapsible && (open ? <IconChevronUp size={12} color="var(--color-text-muted)" /> : <IconChevronDown size={12} color="var(--color-text-muted)" />)}
     </Box>
   );
 }
@@ -1708,6 +1686,10 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 // ── Sources panel ──────────────────────────────────────────────────────────────
 
 function SourcesPanel({ events, crisis }: { events: GqlEvent[]; crisis: GqlCrisis }) {
+  const [signalsOpen, setSignalsOpen] = useState(true);
+  const [enrichmentOpen, setEnrichmentOpen] = useState(false);
+  const [contextOpen, setContextOpen] = useState(false);
+
   // Group by original publisher extracted from signal title
   const signalSources = useMemo(() => {
     const map = new Map<string, { publisher: string; aggregator: string | null; signalCount: number; href: string | null; latestPublishedAt: string | null }>();
@@ -1739,63 +1721,69 @@ function SourcesPanel({ events, crisis }: { events: GqlEvent[]; crisis: GqlCrisi
   return (
     <Box>
       {/* ── Underlying Signals ── */}
-      <SectionHeader>Underlying Signals</SectionHeader>
-      {signalSources.length === 0 ? (
-        <Box p={16}><Text size="sm" c="var(--color-text-muted)">No signal sources linked.</Text></Box>
-      ) : (
-        signalSources.map((src, idx) => {
-          const label = src.aggregator ? `${src.publisher} via ${src.aggregator}` : src.publisher;
-          const asOf = src.latestPublishedAt
-            ? `As of ${new Date(src.latestPublishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
-            : null;
-          return (
-            <Box
-              key={src.publisher}
-              px={16} py={8}
-              style={{ borderBottom: idx < signalSources.length - 1 ? "1px solid var(--color-border)" : undefined, display: "flex", alignItems: "center", gap: 12 }}
-            >
-              {src.href ? (
-                <a href={src.href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", flex: 1, minWidth: 0 }}>
-                  <Text size="sm" fw={500} c="var(--color-text-primary)" truncate className="hover:underline">{label}</Text>
-                </a>
-              ) : (
-                <Text size="sm" fw={500} c="var(--color-text-primary)" truncate style={{ flex: 1, minWidth: 0 }}>{label}</Text>
-              )}
-              {asOf && (
-                <Text size="xs" c="var(--color-text-muted)" style={{ flexShrink: 0 }}>{asOf}</Text>
-              )}
-              <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-muted)", flexShrink: 0 }}>
-                {src.signalCount} signal{src.signalCount !== 1 ? "s" : ""}
-              </Badge>
-            </Box>
-          );
-        })
-      )}
+      <SectionHeader open={signalsOpen} onToggle={() => setSignalsOpen((v) => !v)}>Underlying Signals</SectionHeader>
+      <Collapse in={signalsOpen}>
+        {signalSources.length === 0 ? (
+          <Box p={16}><Text size="sm" c="var(--color-text-muted)">No signal sources linked.</Text></Box>
+        ) : (
+          signalSources.map((src, idx) => {
+            const label = src.aggregator ? `${src.publisher} via ${src.aggregator}` : src.publisher;
+            const asOf = src.latestPublishedAt
+              ? `As of ${new Date(src.latestPublishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+              : null;
+            return (
+              <Box
+                key={src.publisher}
+                px={16} py={8}
+                style={{ borderBottom: idx < signalSources.length - 1 ? "1px solid var(--color-border)" : undefined, display: "flex", alignItems: "center", gap: 12 }}
+              >
+                {src.href ? (
+                  <a href={src.href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", flex: 1, minWidth: 0 }}>
+                    <Text size="sm" fw={500} c="var(--color-text-primary)" truncate className="hover:underline">{label}</Text>
+                  </a>
+                ) : (
+                  <Text size="sm" fw={500} c="var(--color-text-primary)" truncate style={{ flex: 1, minWidth: 0 }}>{label}</Text>
+                )}
+                {asOf && (
+                  <Text size="xs" c="var(--color-text-muted)" style={{ flexShrink: 0 }}>{asOf}</Text>
+                )}
+                <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-muted)", flexShrink: 0 }}>
+                  {src.signalCount} signal{src.signalCount !== 1 ? "s" : ""}
+                </Badge>
+              </Box>
+            );
+          })
+        )}
+      </Collapse>
 
       {/* ── Enrichment ── */}
-      <SectionHeader>Enrichment</SectionHeader>
-      <Box p={16}>
-        <Text size="sm" c="var(--color-text-muted)">
-          No external enrichment sources incorporated yet. ReliefWeb situation reports and historical signal analysis will appear here when available.
-        </Text>
-      </Box>
+      <SectionHeader open={enrichmentOpen} onToggle={() => setEnrichmentOpen((v) => !v)}>Enrichment</SectionHeader>
+      <Collapse in={enrichmentOpen}>
+        <Box p={16}>
+          <Text size="sm" c="var(--color-text-muted)">
+            No external enrichment sources incorporated yet. ReliefWeb situation reports and historical signal analysis will appear here when available.
+          </Text>
+        </Box>
+      </Collapse>
 
       {/* ── Context Data ── */}
-      <SectionHeader>Context Data</SectionHeader>
-      {contextRows.length === 0 ? (
-        <Box p={16}><Text size="sm" c="var(--color-text-muted)">No context data available for this location.</Text></Box>
-      ) : (
-        contextRows.map((row, idx) => (
-          <Box
-            key={row.label}
-            px={16} py={11}
-            style={{ borderBottom: idx < contextRows.length - 1 ? "1px solid var(--color-border)" : undefined, display: "flex", alignItems: "baseline", gap: 12 }}
-          >
-            <Text size="sm" fw={500} c="var(--color-text-muted)" style={{ minWidth: 180, flexShrink: 0 }}>{row.label}</Text>
-            <Text size="sm" c="var(--color-text-primary)">{row.detail}</Text>
-          </Box>
-        ))
-      )}
+      <SectionHeader open={contextOpen} onToggle={() => setContextOpen((v) => !v)}>Context Data</SectionHeader>
+      <Collapse in={contextOpen}>
+        {contextRows.length === 0 ? (
+          <Box p={16}><Text size="sm" c="var(--color-text-muted)">No context data available for this location.</Text></Box>
+        ) : (
+          contextRows.map((row, idx) => (
+            <Box
+              key={row.label}
+              px={16} py={11}
+              style={{ borderBottom: idx < contextRows.length - 1 ? "1px solid var(--color-border)" : undefined, display: "flex", alignItems: "baseline", gap: 12 }}
+            >
+              <Text size="sm" fw={500} c="var(--color-text-muted)" style={{ minWidth: 180, flexShrink: 0 }}>{row.label}</Text>
+              <Text size="sm" c="var(--color-text-primary)">{row.detail}</Text>
+            </Box>
+          ))
+        )}
+      </Collapse>
     </Box>
   );
 }
@@ -1876,7 +1864,7 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
           gridTemplateColumns: COL_TEMPLATE,
           borderBottom: "1px solid var(--color-border)",
           background: "var(--color-bg-muted)",
-          marginTop: 14,
+          marginTop: 32,
         }}
       >
         <Box px={16} py={8} />
