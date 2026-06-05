@@ -20,6 +20,9 @@ import {
   Divider,
   Collapse,
   UnstyledButton,
+  Tooltip,
+  Textarea,
+  TextInput,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -41,6 +44,11 @@ import {
   IconUpload,
   IconTrash,
   IconDotsVertical,
+  IconCheck,
+  IconCircleDashed,
+  IconInfoCircle,
+  IconPencil,
+  IconX,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
@@ -240,11 +248,26 @@ export function CrisisDetailContent({
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [leftPanelTab, setLeftPanelTab] = useState<string | null>("events");
   const [confirmDeleteCrisis, setConfirmDeleteCrisis] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingMeta, setEditingMeta] = useState(false);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftSummary, setDraftSummary] = useState("");
 
   const meQuery = api.auth.me.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
   const isAdmin = meQuery.data?.user?.role === "admin" || meQuery.data?.user?.role === "org_admin";
 
   const utils = api.useUtils();
+
+  const updateMeta = api.crises.updateMeta.useMutation({
+    onSuccess: (updated) => {
+      utils.crises.get.setData({ id: updated.id }, (prev) =>
+        prev ? { ...prev, title: updated.title, summary: updated.summary } : prev,
+      );
+      void utils.crises.list.invalidate();
+      setEditingTitle(false);
+      setEditingMeta(false);
+    },
+  });
 
   const deleteCrisis = api.crises.deleteCrisis.useMutation({
     onSuccess: () => {
@@ -314,6 +337,37 @@ export function CrisisDetailContent({
       };
     });
   }, [crisis, events, primaryCoords]);
+
+  // Sum populationDisplaced across all linked events.
+  const populationDisplaced = useMemo(() => {
+    const total = events.reduce((sum, e) => {
+      const n = bigIntStrToNumber(e.populationDisplaced);
+      return sum + (n ?? 0);
+    }, 0);
+    return total > 0 ? total : null;
+  }, [events]);
+
+  // Resolve IDP displacement count from event location metadata (A2 -> A1 -> A0 fallback).
+  const crisisIdpData = useMemo(() => {
+    const popInArea = crisis?.populationInArea ? Number(crisis.populationInArea) : null;
+    for (const event of events) {
+      const loc = pickEventLocation(event);
+      if (!loc) continue;
+      const candidates = [loc, ...(loc.ancestors ?? [])];
+      for (const level of [2, 1, 0]) {
+        const candidate = candidates.find((c) => c.level === level);
+        if (!candidate) continue;
+        const meta = candidate.metadata?.find((m) => m.type === "iom_dtm_displacement");
+        if (!meta) continue;
+        const displaced = (meta.data as Record<string, unknown>).population_displaced;
+        if (typeof displaced !== "number") continue;
+        const pop = candidate.population ? Number(candidate.population) : popInArea;
+        const ratio = pop ? displaced / pop : null;
+        return { displaced, ratio, name: candidate.name };
+      }
+    }
+    return null;
+  }, [crisis, events]);
 
   if (loading) {
     return (
@@ -512,13 +566,38 @@ export function CrisisDetailContent({
         </Group>
 
         <Group justify="space-between" align="flex-start" mb={10} wrap="nowrap" gap={16}>
-          <Text
-            fw={700}
-            c="var(--color-text-primary)"
-            style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3, flex: 1 }}
-          >
-            {title}
-          </Text>
+          {editingTitle ? (
+            <Group gap={8} style={{ flex: 1 }} wrap="nowrap">
+              <TextInput
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.currentTarget.value)}
+                style={{ flex: 1 }}
+                size="sm"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") updateMeta.mutate({ id: crisis.id, title: draftTitle });
+                  if (e.key === "Escape") setEditingTitle(false);
+                }}
+              />
+              <ActionIcon size="sm" variant="filled" color="green" loading={updateMeta.isPending} onClick={() => updateMeta.mutate({ id: crisis.id, title: draftTitle })}>
+                <IconCheck size={14} />
+              </ActionIcon>
+              <ActionIcon size="sm" variant="subtle" onClick={() => setEditingTitle(false)}>
+                <IconX size={14} />
+              </ActionIcon>
+            </Group>
+          ) : (
+            <Group gap={8} align="center" style={{ flex: 1 }} wrap="nowrap">
+              <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3 }}>
+                {title}
+              </Text>
+              {isAdmin && (
+                <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => { setDraftTitle(crisis.title ?? ""); setEditingTitle(true); }}>
+                  <IconPencil size={13} />
+                </ActionIcon>
+              )}
+            </Group>
+          )}
         </Group>
 
         <Group gap={16} wrap="wrap">
@@ -566,6 +645,66 @@ export function CrisisDetailContent({
         <NeedsAssessmentPanel crisis={crisis} />
       ) : (
         <>
+          {/* Full-width KPI row */}
+          <Box px={isCompact ? 16 : 24} pt={isCompact ? 16 : 24}>
+            <Box style={{ display: "flex", background: "var(--color-bg-white)", border: "1px solid var(--color-border)", borderRadius: 8, overflow: "hidden" }}>
+              {/* Impact */}
+              <Box style={{ flex: 1, borderRight: "1px solid var(--color-border)" }}>
+                <Box px={12} py={6} style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-bg-muted)" }}>
+                  <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>Impact</Text>
+                </Box>
+                <Box style={{ display: "flex" }}>
+                  <Box style={{ flex: 1, borderRight: "1px solid var(--color-border)" }}>
+                    <ImpactRow
+                      icon={<IconUsers size={14} color="var(--color-accent)" />}
+                      iconBg="var(--color-accent-light)"
+                      value={populationAffected !== null ? formatCount(populationAffected) : "-"}
+                      label="People affected"
+                    />
+                  </Box>
+                  <Box style={{ flex: 1 }}>
+                    <ImpactRow
+                      icon={<IconUsersGroup size={14} color="var(--color-warning)" />}
+                      iconBg="var(--color-warning-light)"
+                      value={populationDisplaced !== null ? formatCount(populationDisplaced) : "-"}
+                      label="People displaced"
+                    />
+                  </Box>
+                </Box>
+              </Box>
+              {/* Area Context */}
+              <Box style={{ flex: 1 }}>
+                <Box px={12} py={6} style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-bg-muted)" }}>
+                  <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>Area Context</Text>
+                </Box>
+                <Box style={{ display: "flex" }}>
+                  <Box style={{ flex: 1, borderRight: "1px solid var(--color-border)" }}>
+                    <ImpactRow
+                      icon={<IconUsersGroup size={14} color="var(--color-info)" />}
+                      iconBg="var(--color-info-light)"
+                      value={populationInArea !== null ? formatCount(populationInArea) : "-"}
+                      label="People in the area"
+                    />
+                  </Box>
+                  <Box style={{ flex: 1 }}>
+                    <ImpactRow
+                      icon={<IconTrendingUp size={14} color="var(--color-text-muted)" />}
+                      iconBg="var(--color-bg-muted)"
+                      value={
+                        crisisIdpData?.ratio != null
+                          ? `${(crisisIdpData.ratio * 100).toFixed(1)}%`
+                          : crisisIdpData?.displaced != null
+                            ? formatCount(crisisIdpData.displaced)
+                            : "-"
+                      }
+                      label={crisisIdpData ? `IDP per capita in ${crisisIdpData.name}` : "IDP per capita"}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+
           {/* Body: two-column */}
           <Box
             p={isCompact ? 16 : 24}
@@ -577,7 +716,7 @@ export function CrisisDetailContent({
             }}
           >
             {/* Left column */}
-            <Box style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 20 }}>
+            <Box style={{ flex: 1, minWidth: 0 }}>
               {/* Summary card */}
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
                 <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
@@ -585,46 +724,53 @@ export function CrisisDetailContent({
                     <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                       Summary
                     </Text>
-                    <Badge
-                      size="xs"
-                      style={{
-                        background: "var(--color-ai-light)",
-                        color: "var(--color-ai)",
-                        border: "1px solid var(--color-ai-border)",
-                        fontWeight: 600,
-                      }}
-                    >
-                      ✦ AI generated
-                    </Badge>
+                    <Group gap={6}>
+                      {isAdmin && !editingMeta && (
+                        <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => { setDraftSummary(crisis.summary ?? ""); setEditingMeta(true); }}>
+                          <IconPencil size={13} />
+                        </ActionIcon>
+                      )}
+                      {!editingMeta && (
+                        <Badge
+                          size="xs"
+                          style={{
+                            background: "var(--color-ai-light)",
+                            color: "var(--color-ai)",
+                            border: "1px solid var(--color-ai-border)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          ✦ AI generated
+                        </Badge>
+                      )}
+                    </Group>
                   </Group>
                 </Box>
-                <CrisisSummaryBody summary={crisis.summary} />
-              </Card>
-
-              {/* Events / Demography / Sources tabs */}
-              <Card p={0} style={{ border: "1px solid var(--color-border)", flex: 1 }}>
-                <Tabs value={leftPanelTab} onChange={setLeftPanelTab}>
-                  <Box px={8} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                    <Tabs.List style={{ borderBottom: "none" }}>
-                      <Tabs.Tab value="events">Events</Tabs.Tab>
-                      <Tabs.Tab value="demography">Demography</Tabs.Tab>
-                      <Tabs.Tab value="sources">Sources</Tabs.Tab>
-                    </Tabs.List>
+                {editingMeta ? (
+                  <Box p={16}>
+                    <Textarea
+                      value={draftSummary}
+                      onChange={(e) => setDraftSummary(e.currentTarget.value)}
+                      onKeyDown={(e) => {
+                        if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !updateMeta.isPending) {
+                          updateMeta.mutate({ id: crisis.id, summary: draftSummary });
+                        }
+                        if (e.key === "Escape") setEditingMeta(false);
+                      }}
+                      autosize
+                      minRows={4}
+                      maxRows={16}
+                      size="sm"
+                      autoFocus
+                    />
+                    <Group gap={8} mt={10} justify="flex-end">
+                      <Button size="xs" variant="subtle" onClick={() => setEditingMeta(false)}>Cancel</Button>
+                      <Button size="xs" loading={updateMeta.isPending} onClick={() => updateMeta.mutate({ id: crisis.id, summary: draftSummary })}>Save</Button>
+                    </Group>
                   </Box>
-                  <Tabs.Panel value="events">
-                    <EventsTimeline events={eventsNewestFirst} isAdmin={isAdmin} crisisId={crisis.id} totalEventCount={events.length} />
-                  </Tabs.Panel>
-                  <Tabs.Panel value="demography">
-                    <Box p={24} style={{ textAlign: "center" }}>
-                      <Text size="sm" c="var(--color-text-muted)">
-                        Demographic breakdown coming soon.
-                      </Text>
-                    </Box>
-                  </Tabs.Panel>
-                  <Tabs.Panel value="sources">
-                    <SourcesList events={eventsNewestFirst} />
-                  </Tabs.Panel>
-                </Tabs>
+                ) : (
+                  <CrisisSummaryBody summary={crisis.summary} />
+                )}
               </Card>
             </Box>
 
@@ -638,28 +784,6 @@ export function CrisisDetailContent({
                 gap: 16,
               }}
             >
-              {/* KPI row */}
-              <Group gap={12} grow wrap="nowrap">
-                <KpiCard
-                  icon={<IconUsers size={18} color="var(--color-accent)" />}
-                  iconBg="var(--color-accent-light)"
-                  value={populationAffected !== null ? formatCount(populationAffected) : "-"}
-                  label="People affected"
-                />
-                <KpiCard
-                  icon={<IconUsersGroup size={18} color="var(--color-info)" />}
-                  iconBg="var(--color-info-light)"
-                  value={populationInArea !== null ? formatCount(populationInArea) : "-"}
-                  label="Population in area"
-                />
-                <KpiCard
-                  icon={<IconHome2 size={18} color="var(--color-warning)" />}
-                  iconBg="var(--color-warning-light)"
-                  value="-"
-                  label="Households"
-                />
-              </Group>
-
               {/* Map */}
               <MinimapCard
                 markers={mapMarkers}
@@ -671,6 +795,34 @@ export function CrisisDetailContent({
                 fullMapHref={`/map?crisis=${crisis.id}`}
               />
             </Box>
+          </Box>
+
+          {/* Events / Demography / Sources tabs - full width */}
+          <Box px={isCompact ? 16 : 24} pb={isCompact ? 16 : 24}>
+            <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+              <Tabs value={leftPanelTab} onChange={setLeftPanelTab}>
+                <Box px={8} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                  <Tabs.List style={{ borderBottom: "none" }}>
+                    <Tabs.Tab value="events">Events</Tabs.Tab>
+                    <Tabs.Tab value="demography">Demography</Tabs.Tab>
+                    <Tabs.Tab value="sources">Sources</Tabs.Tab>
+                    <Tabs.Tab value="confidence">Confidence</Tabs.Tab>
+                  </Tabs.List>
+                </Box>
+                <Tabs.Panel value="events" style={{ height: 300, overflowY: "auto" }}>
+                  <EventsTimeline events={eventsNewestFirst} isAdmin={isAdmin} crisisId={crisis.id} totalEventCount={events.length} />
+                </Tabs.Panel>
+                <Tabs.Panel value="demography" style={{ height: 300, overflowY: "auto" }}>
+                  <DemographyPanel crisis={crisis} />
+                </Tabs.Panel>
+                <Tabs.Panel value="sources" style={{ height: 300, overflowY: "auto" }}>
+                  <SourcesPanel events={eventsNewestFirst} crisis={crisis} />
+                </Tabs.Panel>
+                <Tabs.Panel value="confidence" style={{ height: 300, overflowY: "auto" }}>
+                  <ConfidencePanel crisis={crisis} />
+                </Tabs.Panel>
+              </Tabs>
+            </Card>
           </Box>
 
           {/* Scenario planning */}
@@ -1137,6 +1289,34 @@ function KpiCard({
   );
 }
 
+function ImpactRow({
+  icon, iconBg, value, label, border,
+}: {
+  icon: React.ReactNode;
+  iconBg: string;
+  value: string;
+  label: string;
+  border?: boolean;
+}) {
+  return (
+    <Box
+      px={12} py={10}
+      style={{
+        display: "flex", alignItems: "center", gap: 10,
+        borderBottom: border ? "1px solid var(--color-border)" : undefined,
+      }}
+    >
+      <Box style={{ width: 28, height: 28, borderRadius: 6, background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        {icon}
+      </Box>
+      <Box style={{ minWidth: 0 }}>
+        <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 17, lineHeight: 1, letterSpacing: "-0.02em" }}>{value}</Text>
+        <Text size="xs" c="var(--color-text-muted)" mt={2} truncate>{label}</Text>
+      </Box>
+    </Box>
+  );
+}
+
 function DemoBadge() {
   return (
     <span
@@ -1272,69 +1452,510 @@ function SeverityPill({ severity }: { severity: "critical" | "high" | "medium" |
   );
 }
 
-function SourcesList({ events }: { events: GqlEvent[] }) {
-  // Deduplicate sources across all signals from all events; count signals per source.
-  const sources = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; type: string; baseUrl?: string | null; infoUrl?: string | null; signalCount: number }>();
+// ── Demography panel ──────────────────────────────────────────────────────────
+
+
+type A2Location = { name: string; metadata: { type: string; data: unknown }[] };
+
+// Like resolveA2Metadata but also returns the location name for display.
+function resolveA2Location(crisis: GqlCrisis): A2Location | null {
+  type LocLike = {
+    name?: string;
+    level: number;
+    metadata?: { type: string; data: unknown }[] | null;
+    ancestors?: { name?: string; level: number; metadata?: { type: string; data: unknown }[] | null }[] | null;
+  };
+  const candidates: LocLike[] = [
+    crisis.generalLocation,
+    ...((crisis.events ?? []) as { generalLocation?: LocLike | null; originLocation?: LocLike | null }[])
+      .flatMap((e) => [e.generalLocation, e.originLocation]),
+  ].filter(Boolean) as LocLike[];
+
+  for (const loc of candidates) {
+    if (loc.level === 2 && loc.metadata?.length) return { name: loc.name ?? "Unknown", metadata: loc.metadata };
+    const a2 = loc.ancestors?.find((a) => a.level === 2);
+    if (a2?.metadata?.length) return { name: a2.name ?? "Unknown", metadata: a2.metadata };
+  }
+  return null;
+}
+
+type WpBand = { male: number; female: number; total: number };
+
+// Humanitarian vulnerable-group definitions (WorldPop age-band keys).
+const VULN_GROUPS = [
+  { label: "Children under 5",  keys: ["00", "01"],                                          note: "Acute nutrition risk" },
+  { label: "Children 5-14",     keys: ["05", "10"],                                          note: "Education, child protection" },
+  { label: "Women 15-49",       keys: ["15", "20", "25", "30", "35", "40", "45"], femaleOnly: true, note: "Reproductive health, GBV" },
+  { label: "Elderly 60+",       keys: ["60", "65", "70", "75", "80", "85", "90"],            note: "Health, protection" },
+] as const;
+
+function DemographyPanel({ crisis }: { crisis: GqlCrisis }) {
+  const a2 = useMemo(() => resolveA2Location(crisis), [crisis]);
+
+  if (!a2) {
+    return (
+      <Box p={24} style={{ textAlign: "center" }}>
+        <Text size="sm" c="var(--color-text-muted)">No demographic data available for this location.</Text>
+      </Box>
+    );
+  }
+
+  const wpMeta = a2.metadata.find((m) => m.type === "worldpop_age_sex_2026");
+
+  if (!wpMeta) {
+    return (
+      <Box p={24} style={{ textAlign: "center" }}>
+        <Text size="sm" c="var(--color-text-muted)">Demographic data not yet available for {a2.name}.</Text>
+      </Box>
+    );
+  }
+
+  const wp = wpMeta.data as Record<string, WpBand | Record<string, unknown>>;
+  const src = wp._source as { year?: number; release?: string } | undefined;
+  const band = (key: string) => wp[key] as WpBand | undefined;
+
+  let totalPop = 0, totalMale = 0, totalFemale = 0;
+  for (const [key, val] of Object.entries(wp)) {
+    if (key === "_source" || typeof val !== "object" || val === null) continue;
+    const b = val as WpBand;
+    totalPop += b.total ?? 0;
+    totalMale += b.male ?? 0;
+    totalFemale += b.female ?? 0;
+  }
+
+  const fmt = (n: number) =>
+    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}k` : String(n);
+  const pct = (n: number, total: number) => total > 0 ? `${Math.round((n / total) * 100)}%` : "-";
+
+  return (
+    <Box>
+      {/* Location + total */}
+      <Box px={16} py={10} style={{ borderBottom: "1px solid var(--color-border)" }}>
+        <Group justify="space-between" align="center">
+          <Box>
+            <Text fw={600} size="sm" c="var(--color-text-primary)">{a2.name}</Text>
+            <Text size="xs" c="var(--color-text-muted)">WorldPop {src?.year ?? 2026}{src?.release ? ` ${src.release}` : ""} constrained</Text>
+          </Box>
+          <Box style={{ textAlign: "right" }}>
+            <Text fw={700} size="sm" c="var(--color-text-primary)">{fmt(totalPop)}</Text>
+            <Text size="xs" c="var(--color-text-muted)">total</Text>
+          </Box>
+        </Group>
+      </Box>
+
+      {/* Vulnerable group KPIs */}
+      <Box px={16} py={10} style={{ borderBottom: "1px solid var(--color-border)" }}>
+        <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>
+          Vulnerable groups
+        </Text>
+        <Box style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {VULN_GROUPS.map((g) => {
+            const count = g.keys.reduce((s, k) => {
+              const b = band(k);
+              return s + (b ? ("femaleOnly" in g && g.femaleOnly ? b.female : b.total) : 0);
+            }, 0);
+            return (
+              <Box key={g.label} p={10} style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}>
+                <Text style={{ fontSize: 10, color: "var(--color-text-muted)", marginBottom: 4 }}>{g.label}</Text>
+                <Text fw={700} size="lg" c="var(--color-text-primary)" style={{ lineHeight: 1.2 }}>{pct(count, totalPop)}</Text>
+                <Text size="xs" c="var(--color-text-muted)">{fmt(count)}</Text>
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
+
+      {/* Gender split */}
+      <Box px={16} pt={10} pb={12}>
+        <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>
+          Gender split
+        </Text>
+        <Box style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {[
+            { label: "Male",   count: totalMale },
+            { label: "Female", count: totalFemale },
+          ].map(({ label, count }) => (
+            <Box key={label} p={10} style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}>
+              <Text fw={700} size="lg" c="var(--color-text-primary)" style={{ lineHeight: 1.2 }}>{pct(count, totalPop)}</Text>
+              <Text size="xs" c="var(--color-text-muted)">{fmt(count)}</Text>
+              <Text style={{ fontSize: 10, color: "var(--color-text-muted)", marginTop: 2 }}>{label}</Text>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+// ── Sources panel helpers ─────────────────────────────────────────────────────
+
+// Dataminr signal titles end with ": [SourceCategory] via [Publisher]."
+// Extract the publisher name so we show the original source, not "dataminr".
+function extractPublisher(title: string): string | null {
+  const match = title.match(/via ([^.]+)\.?\s*$/i);
+  return match ? match[1]!.trim() : null;
+}
+
+function resolveA2Metadata(crisis: GqlCrisis): { type: string; data: unknown }[] {
+  type LocLike = { level: number; metadata?: { type: string; data: unknown }[] | null; ancestors?: { level: number; metadata?: { type: string; data: unknown }[] | null }[] | null };
+  const candidates: LocLike[] = [
+    crisis.generalLocation,
+    ...((crisis.events ?? []) as { generalLocation?: LocLike | null; originLocation?: LocLike | null }[])
+      .flatMap((e) => [e.generalLocation, e.originLocation]),
+  ].filter(Boolean) as LocLike[];
+
+  for (const loc of candidates) {
+    if (loc.level === 2 && loc.metadata?.length) return loc.metadata;
+    const a2 = loc.ancestors?.find((a) => a.level === 2);
+    if (a2?.metadata?.length) return a2.metadata;
+  }
+  return [];
+}
+
+// Derive human-readable context rows from raw location metadata.
+interface ContextRow { label: string; detail: string }
+
+type MetadataFormatter = (data: Record<string, unknown>) => ContextRow[];
+
+// Registry: maps metadata type keys to display formatters.
+// Add new entries here as the pipeline introduces new metadata types.
+const METADATA_REGISTRY: Record<string, MetadataFormatter> = {
+  worldpop_age_sex_2026: (d) => {
+    // Age-band keys are 2-digit strings ("00","01","05","10",...,"90"); _source holds dataset info.
+    const src = d._source as Record<string, unknown> | undefined;
+    const year = typeof src?.year === "number" ? src.year : 2026;
+    const release = typeof src?.release === "string" ? ` ${src.release}` : "";
+    let totalPop = 0, totalMale = 0, totalFemale = 0;
+    for (const [key, val] of Object.entries(d)) {
+      if (key === "_source" || typeof val !== "object" || val === null) continue;
+      const band = val as Record<string, number>;
+      totalPop += band.total ?? 0;
+      totalMale += band.male ?? 0;
+      totalFemale += band.female ?? 0;
+    }
+    const fmt = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}k` : String(n);
+    const mPct = totalPop > 0 ? Math.round((totalMale / totalPop) * 100) : 0;
+    const fPct = 100 - mPct;
+    return [
+      { label: "Population", detail: `${fmt(totalPop)} - WorldPop ${year} constrained${release}` },
+      { label: "Demographics", detail: `Male ${mPct}% / Female ${fPct}% - WorldPop ${year} age/sex breakdown` },
+    ];
+  },
+  iom_dtm_displacement: (d) => {
+    const parts: string[] = ["IOM DTM"];
+    if (d.round_number) parts.push(`Round ${String(d.round_number)}`);
+    if (typeof d.reporting_date === "string") parts.push(d.reporting_date.slice(0, 10));
+    if (typeof d.operation === "string" && d.operation) parts.push(d.operation);
+    return [{ label: "IDP", detail: parts.join(" - ") }];
+  },
+  msna_severity_082025: (d) => {
+    const asOf = typeof d.as_of === "string" ? ` (${d.as_of})` : "";
+    return [{ label: "Needs Assessment Baseline", detail: `MSNA 2025${asOf}` }];
+  },
+};
+
+// Iterates over whatever metadata types are actually present - no hardcoded type checks.
+function buildContextRows(metadata: { type: string; data: unknown }[]): ContextRow[] {
+  const rows: ContextRow[] = [];
+  for (const { type, data } of metadata) {
+    const formatter = METADATA_REGISTRY[type];
+    if (formatter) rows.push(...formatter(data as Record<string, unknown>));
+  }
+  return rows;
+}
+
+// ── Section header ─────────────────────────────────────────────────────────────
+
+function SectionHeader({ children, open, onToggle }: { children: React.ReactNode; open?: boolean; onToggle?: () => void }) {
+  const isCollapsible = onToggle !== undefined;
+  return (
+    <Box
+      px={16} py={8}
+      onClick={onToggle}
+      style={{
+        borderBottom: "1px solid var(--color-border)",
+        background: "var(--color-bg-muted)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        cursor: isCollapsible ? "pointer" : undefined,
+        userSelect: "none",
+      }}
+    >
+      <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+        {children}
+      </Text>
+      {isCollapsible && (open ? <IconChevronUp size={12} color="var(--color-text-muted)" /> : <IconChevronDown size={12} color="var(--color-text-muted)" />)}
+    </Box>
+  );
+}
+
+// ── Sources panel ──────────────────────────────────────────────────────────────
+
+function SourcesPanel({ events, crisis }: { events: GqlEvent[]; crisis: GqlCrisis }) {
+  const [signalsOpen, setSignalsOpen] = useState(true);
+  const [enrichmentOpen, setEnrichmentOpen] = useState(false);
+  const [contextOpen, setContextOpen] = useState(false);
+
+  // Group by original publisher extracted from signal title
+  const signalSources = useMemo(() => {
+    const map = new Map<string, { publisher: string; aggregator: string | null; signalCount: number; href: string | null; latestPublishedAt: string | null }>();
     for (const event of events) {
       for (const signal of event.signals ?? []) {
-        const src = signal.source;
-        if (!src) continue;
-        const existing = map.get(src.id);
+        const extracted = extractPublisher(signal.title ?? "");
+        const sourceName = signal.source?.name ?? null;
+        const publisher = extracted ?? sourceName ?? "Unknown";
+        // Only show aggregator label when the publisher was extracted from the title
+        // (meaning it passed through an aggregator like Dataminr).
+        const aggregator = extracted ? sourceName : null;
+        const existing = map.get(publisher);
         if (existing) {
           existing.signalCount += 1;
+          if (signal.publishedAt && (!existing.latestPublishedAt || signal.publishedAt > existing.latestPublishedAt)) {
+            existing.latestPublishedAt = signal.publishedAt;
+          }
         } else {
-          map.set(src.id, { id: src.id, name: src.name, type: src.type, baseUrl: src.baseUrl, infoUrl: src.infoUrl, signalCount: 1 });
+          map.set(publisher, { publisher, aggregator, signalCount: 1, href: signal.url ?? null, latestPublishedAt: signal.publishedAt ?? null });
         }
       }
     }
     return [...map.values()].sort((a, b) => b.signalCount - a.signalCount);
   }, [events]);
 
-  if (sources.length === 0) {
-    return (
-      <Box p={24} style={{ textAlign: "center" }}>
-        <Text size="sm" c="var(--color-text-muted)">No sources linked to this crisis.</Text>
-      </Box>
-    );
-  }
+  const contextMetadata = useMemo(() => resolveA2Metadata(crisis), [crisis]);
+  const contextRows = useMemo(() => buildContextRows(contextMetadata), [contextMetadata]);
 
   return (
-    <Box py={4}>
-      {sources.map((src, idx) => {
-        const href = src.infoUrl ?? src.baseUrl ?? null;
-        return (
-          <Box
-            key={src.id}
-            px={16} py={12}
-            style={{
-              borderBottom: idx < sources.length - 1 ? "1px solid var(--color-border)" : undefined,
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
-            <Box style={{ flex: 1, minWidth: 0 }}>
-              {href ? (
-                <a href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-                  <Text size="sm" fw={500} c="var(--color-text-primary)" className="hover:underline" truncate>
-                    {src.name}
-                  </Text>
-                </a>
-              ) : (
-                <Text size="sm" fw={500} c="var(--color-text-primary)" truncate>{src.name}</Text>
-              )}
-              <Text size="xs" c="var(--color-text-muted)" mt={1}>{src.type}</Text>
-            </Box>
-            <Badge
-              size="xs"
-              style={{ background: "var(--color-bg-muted)", color: "var(--color-text-muted)", flexShrink: 0 }}
+    <Box>
+      {/* ── Underlying Signals ── */}
+      <SectionHeader open={signalsOpen} onToggle={() => setSignalsOpen((v) => !v)}>Underlying Signals</SectionHeader>
+      <Collapse in={signalsOpen}>
+        {signalSources.length === 0 ? (
+          <Box p={16}><Text size="sm" c="var(--color-text-muted)">No signal sources linked.</Text></Box>
+        ) : (
+          signalSources.map((src, idx) => {
+            const label = src.aggregator ? `${src.publisher} via ${src.aggregator}` : src.publisher;
+            const asOf = src.latestPublishedAt
+              ? `As of ${new Date(src.latestPublishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+              : null;
+            return (
+              <Box
+                key={src.publisher}
+                px={16} py={8}
+                style={{ borderBottom: idx < signalSources.length - 1 ? "1px solid var(--color-border)" : undefined, display: "flex", alignItems: "center", gap: 12 }}
+              >
+                {src.href ? (
+                  <a href={src.href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", flex: 1, minWidth: 0 }}>
+                    <Text size="sm" fw={500} c="var(--color-text-primary)" truncate className="hover:underline">{label}</Text>
+                  </a>
+                ) : (
+                  <Text size="sm" fw={500} c="var(--color-text-primary)" truncate style={{ flex: 1, minWidth: 0 }}>{label}</Text>
+                )}
+                {asOf && (
+                  <Text size="xs" c="var(--color-text-muted)" style={{ flexShrink: 0 }}>{asOf}</Text>
+                )}
+                <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-muted)", flexShrink: 0 }}>
+                  {src.signalCount} signal{src.signalCount !== 1 ? "s" : ""}
+                </Badge>
+              </Box>
+            );
+          })
+        )}
+      </Collapse>
+
+      {/* ── Enrichment ── */}
+      <SectionHeader open={enrichmentOpen} onToggle={() => setEnrichmentOpen((v) => !v)}>Enrichment</SectionHeader>
+      <Collapse in={enrichmentOpen}>
+        <Box p={16}>
+          <Text size="sm" c="var(--color-text-muted)">
+            No external enrichment sources incorporated yet. ReliefWeb situation reports and historical signal analysis will appear here when available.
+          </Text>
+        </Box>
+      </Collapse>
+
+      {/* ── Context Data ── */}
+      <SectionHeader open={contextOpen} onToggle={() => setContextOpen((v) => !v)}>Context Data</SectionHeader>
+      <Collapse in={contextOpen}>
+        {contextRows.length === 0 ? (
+          <Box p={16}><Text size="sm" c="var(--color-text-muted)">No context data available for this location.</Text></Box>
+        ) : (
+          contextRows.map((row, idx) => (
+            <Box
+              key={row.label}
+              px={16} py={11}
+              style={{ borderBottom: idx < contextRows.length - 1 ? "1px solid var(--color-border)" : undefined, display: "flex", alignItems: "baseline", gap: 12 }}
             >
-              {src.signalCount} signal{src.signalCount !== 1 ? "s" : ""}
-            </Badge>
+              <Text size="sm" fw={500} c="var(--color-text-muted)" style={{ minWidth: 180, flexShrink: 0 }}>{row.label}</Text>
+              <Text size="sm" c="var(--color-text-primary)">{row.detail}</Text>
+            </Box>
+          ))
+        )}
+      </Collapse>
+    </Box>
+  );
+}
+
+// ── Confidence panel ──────────────────────────────────────────────────────────
+
+const CONFIDENCE_COLS = [
+  {
+    key: "baseline",
+    label: "Baseline",
+    description: "Content generated solely from pipeline signal data - events, severities, and locations ingested from connected sources.",
+  },
+  {
+    key: "enriched",
+    label: "AI enriched",
+    description: "The pipeline incorporated external context data (WorldPop demographics, IOM DTM displacement, INFORM risk scores) when generating this content.",
+  },
+  {
+    key: "reviewed",
+    label: "Analyst reviewed",
+    description: "A CLEAR analyst has reviewed and validated the content against their field knowledge.",
+  },
+  {
+    key: "validated",
+    label: "Field validated",
+    description: "Content has been confirmed through direct community or field team feedback.",
+  },
+] as const;
+
+type ConfidenceKey = (typeof CONFIDENCE_COLS)[number]["key"];
+
+interface ConfidenceRow {
+  label: string;
+  description: string;
+  baseline: boolean;
+  enriched: boolean;
+  reviewed: boolean;
+  validated: boolean;
+}
+
+function ConfidenceSquare({ active }: { active: boolean }) {
+  return (
+    <Box
+      style={{
+        width: 12,
+        height: 12,
+        borderRadius: 3,
+        background: active ? "var(--color-success)" : "var(--color-border-dark)",
+        flexShrink: 0,
+        position: "relative",
+        zIndex: 1,
+      }}
+    />
+  );
+}
+
+const COL_TEMPLATE = "260px repeat(4, 1fr)";
+
+function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
+  const [legendOpen, setLegendOpen] = useState(false);
+
+  const hasDescription = !!crisis.summary;
+  const hasScenarios   = (parseScenarios(crisis.scenarios)?.length ?? 0) > 0;
+  const hasNeeds       = parseNeeds(crisis.needs).length > 0;
+
+  const rows: ConfidenceRow[] = [
+    { label: "Description",      description: "", baseline: hasDescription, enriched: false, reviewed: false, validated: false },
+    { label: "Scenarios",        description: "", baseline: hasScenarios,   enriched: false, reviewed: false, validated: false },
+    { label: "Needs Assessment", description: "", baseline: hasNeeds,       enriched: false, reviewed: false, validated: false },
+  ];
+
+  return (
+    <Box>
+      {/* Header row */}
+      <Box
+        style={{
+          display: "grid",
+          gridTemplateColumns: COL_TEMPLATE,
+          borderBottom: "1px solid var(--color-border)",
+          background: "var(--color-bg-muted)",
+          marginTop: 32,
+        }}
+      >
+        <Box px={16} py={8} />
+        {CONFIDENCE_COLS.map((col, colIdx) => (
+          <Box key={col.key} px={8} py={8} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-primary)", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
+              {col.label}
+            </Text>
+            {colIdx < CONFIDENCE_COLS.length - 1 && (
+              <Box style={{
+                position: "absolute",
+                right: -5,
+                top: "50%",
+                transform: "translateY(-50%)",
+                zIndex: 2,
+                fontSize: 7,
+                lineHeight: 1,
+                color: "var(--color-text-muted)",
+                userSelect: "none",
+              }}>
+                ▶
+              </Box>
+            )}
           </Box>
-        );
-      })}
+        ))}
+      </Box>
+
+      {/* Data rows */}
+      {rows.map((row, idx) => (
+        <Box
+          key={row.label}
+          style={{
+            display: "grid",
+            gridTemplateColumns: COL_TEMPLATE,
+            borderBottom: idx < rows.length - 1 ? "1px solid var(--color-border)" : undefined,
+          }}
+        >
+          <Box px={16} py={10} style={{ display: "flex", alignItems: "center" }}>
+            <Text size="sm" fw={500} c="var(--color-text-primary)">{row.label}</Text>
+          </Box>
+          {CONFIDENCE_COLS.map((col, colIdx) => (
+            <Box
+              key={col.key}
+              py={10}
+              style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              {/* Connector line - spans full width except half-cells at each end */}
+              <Box style={{
+                position: "absolute",
+                top: "50%",
+                left:  colIdx === 0 ? "50%" : 0,
+                right: colIdx === CONFIDENCE_COLS.length - 1 ? "50%" : 0,
+                height: 1,
+                background: "var(--color-border-dark)",
+                transform: "translateY(-50%)",
+              }} />
+              <ConfidenceSquare active={row[col.key as ConfidenceKey]} />
+            </Box>
+          ))}
+        </Box>
+      ))}
+
+      {/* Bottom legend trigger */}
+      <Box
+        px={16} py={8}
+        style={{ borderTop: "1px solid var(--color-border)", display: "flex", alignItems: "center", gap: 5 }}
+      >
+        <Text style={{ fontSize: 11, color: "var(--color-text-muted)" }}>Legend</Text>
+        <ActionIcon size={16} variant="transparent" onClick={() => setLegendOpen(true)} style={{ color: "var(--color-text-muted)" }}>
+          <IconInfoCircle size={13} />
+        </ActionIcon>
+      </Box>
+
+      {/* Legend modal */}
+      <Modal opened={legendOpen} onClose={() => setLegendOpen(false)} title="Confidence levels" size="sm">
+        <Stack gap={16}>
+          {CONFIDENCE_COLS.map((col) => (
+            <Box key={col.key}>
+              <Text size="sm" fw={600} c="var(--color-text-primary)" mb={4}>{col.label}</Text>
+              <Text size="sm" c="var(--color-text-muted)">{col.description}</Text>
+            </Box>
+          ))}
+        </Stack>
+      </Modal>
     </Box>
   );
 }

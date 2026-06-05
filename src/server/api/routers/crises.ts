@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
@@ -54,6 +55,7 @@ const EVENT_FIELDS = `
   firstSignalCreatedAt
   lastSignalCreatedAt
   populationAffected
+  populationDisplaced
   generalLocation { ${LOCATION_FIELDS} }
   originLocation { ${LOCATION_FIELDS} }
   destinationLocation { ${LOCATION_FIELDS} }
@@ -100,6 +102,16 @@ const CRISIS_GET_QUERY = `
   query Crisis($id: String!) {
     crisis(id: $id) {
       ${CRISIS_FIELDS}
+    }
+  }
+`;
+
+const UPDATE_CRISIS_META_MUTATION = `
+  mutation UpdateCrisisMeta($id: String!, $input: UpdateCrisisPopulationInput!) {
+    updateCrisisPopulation(id: $id, input: $input) {
+      id
+      title
+      summary
     }
   }
 `;
@@ -254,5 +266,25 @@ export const crisesRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.deleteCrisis;
+    }),
+
+  updateMeta: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      title: z.string().optional(),
+      summary: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const user = (ctx as { user?: { role?: string } }).user;
+      if (user?.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      const { id, ...fields } = input;
+      const data = await graphqlFetch<{ updateCrisisPopulation: { id: string; title: string | null; summary: string | null } }>(
+        UPDATE_CRISIS_META_MUTATION,
+        { id, input: fields },
+        cookieHeaders(ctx),
+      );
+      return data.updateCrisisPopulation;
     }),
 });
