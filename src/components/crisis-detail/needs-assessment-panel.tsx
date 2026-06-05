@@ -509,8 +509,9 @@ interface SectorRowData {
 }
 
 // Renders a text field that may contain plain prose or markdown-style bullet
-// lines (- item / • item). Splits into paragraphs and <List> blocks so
-// bullets stored by the pipeline display correctly.
+// lines (- item / • item). Splits into paragraphs and <List> blocks.
+// Single-block prose (no newlines) is split on sentence boundaries so long
+// AI-generated paragraphs don't render as one dense wall of text.
 function SummaryText({ text }: { text: string }) {
   type Block = { type: "para"; text: string } | { type: "list"; items: string[] };
 
@@ -518,7 +519,15 @@ function SummaryText({ text }: { text: string }) {
     const result: Block[] = [];
     let currentList: string[] | null = null;
 
-    for (const raw of text.split("\n")) {
+    const lines = text.split("\n");
+
+    // If the whole value is a single line (no newlines), split on sentence
+    // boundaries (". " followed by a capital letter) so it reads as paragraphs.
+    const expanded = lines.length === 1
+      ? text.split(/(?<=\.)\s+(?=[A-Z])/)
+      : lines;
+
+    for (const raw of expanded) {
       const line = raw.trim();
       if (!line) {
         if (currentList) { result.push({ type: "list", items: currentList }); currentList = null; }
@@ -562,7 +571,12 @@ function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha
   const generalSummary = useMemo(() => {
     const needs = crisis.needs as Record<string, unknown> | null | undefined;
     const raw = needs?.generalSummary;
-    return typeof raw === "string" && raw.length > 0 ? raw : null;
+    if (Array.isArray(raw)) {
+      const bullets = (raw as unknown[]).filter((s): s is string => typeof s === "string" && s.length > 0);
+      return bullets.length > 0 ? bullets : null;
+    }
+    if (typeof raw === "string" && raw.length > 0) return raw;
+    return null;
   }, [crisis.needs]);
 
   const ocha3wDate = ocha3w?.as_of
@@ -619,7 +633,13 @@ function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha
               )}
             </Text>
           )}
-          {generalSummary ? (
+          {Array.isArray(generalSummary) ? (
+            <List size="sm" spacing={6} style={{ color: "var(--color-text-secondary)", lineHeight: 1.65 }}>
+              {generalSummary.map((bullet, i) => (
+                <List.Item key={i}>{bullet}</List.Item>
+              ))}
+            </List>
+          ) : generalSummary ? (
             <SummaryText text={generalSummary} />
           ) : (
             <Text size="xs" c="var(--color-text-muted)">
