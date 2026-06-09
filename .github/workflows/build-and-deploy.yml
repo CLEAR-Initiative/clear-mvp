@@ -63,6 +63,8 @@ jobs:
             ${{ env.REGISTRY }}/${{ steps.meta.outputs.image_name }}:${{ steps.meta.outputs.sha_tag }}
           build-args: |
             NEXT_PUBLIC_MAPBOX_TOKEN=${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+            NEXT_PUBLIC_SENTRY_ENV=${{ github.ref_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -83,6 +85,10 @@ jobs:
             set -e
             cd /srv/app
             docker compose pull clear-mvp
-            docker compose up -d clear-mvp
+            # --force-recreate destroys + recreates the container against the
+            # freshly pulled image. Without it, compose sometimes sees "no
+            # compose config change" and skips, leaving the container on the
+            # old image even though the new one was pulled.
+            docker compose up -d --force-recreate clear-mvp
             docker image prune -a -f
             docker compose ps clear-mvp

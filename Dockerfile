@@ -34,10 +34,16 @@ COPY . .
 # ── Build args for NEXT_PUBLIC_* values ─────────────────────────────────────
 # These are INLINED into the client bundle at build time — they can't be
 # overridden at runtime via env_file. To deploy different values per env, the
-# CI workflow passes --build-arg NEXT_PUBLIC_MAPBOX_TOKEN=... and tags the
-# image per environment (e.g. clear-mvp:dev, clear-mvp:staging).
+# CI workflow passes --build-arg NEXT_PUBLIC_* and tags the image per env
+# (e.g. clear-mvp:dev, clear-mvp:staging).
 ARG NEXT_PUBLIC_MAPBOX_TOKEN=""
 ENV NEXT_PUBLIC_MAPBOX_TOKEN=${NEXT_PUBLIC_MAPBOX_TOKEN}
+
+ARG NEXT_PUBLIC_SENTRY_DSN=""
+ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
+
+ARG NEXT_PUBLIC_SENTRY_ENV="development"
+ENV NEXT_PUBLIC_SENTRY_ENV=${NEXT_PUBLIC_SENTRY_ENV}
 
 # Build the Next.js app. Telemetry off so the build doesn't phone home from CI.
 # NODE_OPTIONS raises Node's heap ceiling — Next.js 15 + Mantine + recharts

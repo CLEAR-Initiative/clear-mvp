@@ -34,7 +34,9 @@ export interface GqlLocation {
   geoId?: string | null;
   ancestorIds?: string[];
   geometry: GeoJSONGeometry | null | undefined;
-  /** Provenance of the location's geometry — 'landmark-geocoded' means the
+  /** Direct parent location (A1 state for an A2 district, country for an A1 state). */
+  parent?: { id: string; name: string } | null;
+  /** Provenance of the location's geometry - 'landmark-geocoded' means the
    *  point was resolved from a landmark/place name in signal text via the
    *  geoparser, so its `name` field is meaningful for display (e.g.,
    *  "Nyala Airport") and should be shown instead of the A2 parent. */
@@ -98,6 +100,7 @@ export interface GqlEvent {
   firstSignalCreatedAt: string;
   lastSignalCreatedAt: string;
   populationAffected: string | null;
+  populationDisplaced: string | null;
   casualties: number | null;
   originLocation: GqlLocation | null;
   destinationLocation: GqlLocation | null;

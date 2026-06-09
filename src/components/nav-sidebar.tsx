@@ -55,10 +55,10 @@ const navSections: NavSection[] = [
   {
     title: "MAIN",
     items: [
-      { label: "Overview",           href: "/dashboard",  icon: IconLayoutDashboard, featureKey: "overview" },
-      { label: "Crisis Detection",   href: "/detection",  icon: IconTarget,          featureKey: "detection" },
-      { label: "Crisis Map",         href: "/map",        icon: IconMapPin,          featureKey: "crisis_map" },
-      { label: "Situation Analysis", href: "/analysis",   icon: IconChartPie,        featureKey: "analysis",        comingSoonForNonAdmin: true },
+      { label: "Overview",  href: "/dashboard",  icon: IconLayoutDashboard, featureKey: "overview" },
+      { label: "Detection", href: "/detection",  icon: IconTarget,          featureKey: "detection" },
+      { label: "Map",       href: "/map",        icon: IconMapPin,          featureKey: "crisis_map" },
+      { label: "Analysis",  href: "/analysis",   icon: IconChartPie,        featureKey: "analysis",        comingSoonForNonAdmin: true },
       { label: "Operations",         href: "/operations", icon: IconUser,            featureKey: "operations",      adminOnly: true },
       { label: "Cash Assistance",    href: "/cash",       icon: IconCurrencyDollar,  featureKey: "cash_assistance", adminOnly: true },
     ],

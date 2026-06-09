@@ -121,7 +121,15 @@ export function EventDetailContent({
     if (!event) return [];
     const markers: MapMarker[] = [];
     let idx = 0;
-    for (const loc of eventLocations(event)) {
+    // Prefer event-level Point locations; if none exist (e.g. all Polygons), use signal locations.
+    const eventLocs = eventLocations(event);
+    const hasEventPoints = eventLocs.some((l) => l.geometry?.type === "Point");
+    const sourceLocs: GqlLocation[] = hasEventPoints
+      ? eventLocs
+      : (event.signals ?? []).flatMap((s) =>
+          [s.generalLocation, s.originLocation, s.destinationLocation].filter((l): l is GqlLocation => !!l),
+        );
+    for (const loc of sourceLocs) {
       const geom = loc.geometry;
       if (!geom || geom.type !== "Point") continue;
       const coords = geom.coordinates as [number, number] | undefined;
@@ -754,7 +762,7 @@ export function EventDetailContent({
                 center={mapCenter}
                 sudanGeometry={sudanGeometry}
                 sudanId={sudanId}
-                locationGeometry={(event.generalLocation ?? event.originLocation ?? event.destinationLocation)?.geometry}
+                location={event.generalLocation ?? event.originLocation ?? event.destinationLocation}
               />
 
               {/* Was this event helpful? */}
