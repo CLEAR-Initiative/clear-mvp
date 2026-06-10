@@ -27,6 +27,199 @@
       "demo": "Demo"
     }
   },
+  "dashboard": {
+    "rightPanel": {
+      "nrcOpsBadge": "NRC Ops",
+      "nrcOffice": "NRC Office",
+      "pillars": {
+        "hazard": "Hazard",
+        "vulnerability": "Vulnerability",
+        "coping": "Coping Cap."
+      },
+      "informOverall": "INFORM Risk Overall - {edition}",
+      "informModal": {
+        "title": "INFORM Risk Index: Methodology",
+        "intro": "The <strong>INFORM Risk Index</strong> is produced by the EU Joint Research Centre (JRC) in partnership with the Inter-Agency Standing Committee (IASC). It measures the risk of humanitarian crises and disasters that could overwhelm national response capacity. Scores range from <strong>0 to 10</strong> (higher = more risk).",
+        "pillarsHeading": "The three pillars",
+        "pillarHazard": "<strong>Hazard and Exposure</strong>: likelihood of physical events (natural hazards, conflict) affecting the population.",
+        "pillarVulnerability": "<strong>Vulnerability</strong>: socio-economic factors that make communities less able to cope, including poverty, inequality, and displacement.",
+        "pillarCoping": "<strong>Lack of Coping Capacity</strong>: institutional and infrastructure capacity to respond - governance, health system, communication.",
+        "sourceLabel": "Source:",
+        "sourceLink": "JRC INFORM Risk Index",
+        "updatedAnnually": "- updated annually."
+      },
+      "activeCrises": "Active Crises ({count})",
+      "fieldFallback": "Field",
+      "casesCount": "{count, plural, one {# case} other {# cases}}",
+      "affectedShort": "{count}k affected",
+      "severities": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "response": "Response"
+      },
+      "nrcCoreActivities": "NRC Core Activities ({count})",
+      "activeBadge": "Active",
+      "countryRisks": "Country Risks",
+      "locationOverview": "Location Overview",
+      "loadingRisk": "Loading risk data...",
+      "riskSource": "Source: {edition}",
+      "riskUnavailable": "Risk data unavailable for this country.",
+      "defaultCountryDescription": "NRC operates in {country} providing humanitarian assistance to displaced and vulnerable populations.",
+      "establishedIn": "NRC established operations in {year}",
+      "multiSectorResponse": "and continues to provide multi-sector humanitarian response including {activities}.",
+      "locationDetails": "Location Details",
+      "capital": "Capital",
+      "region": "Region",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "noLocationInfo": "No detailed information available for this location.",
+      "responseStatus": "Response Status",
+      "nrcPresence": "NRC Presence",
+      "activeDeployments": "Active Deployments",
+      "membersCount": "{count, plural, one {# member} other {# members}}",
+      "assessmentTeam": "Assessment Team",
+      "enRouteGode": "En route to Gode",
+      "transitBadge": "Transit",
+      "criticalResources": "Critical Resources",
+      "resources": {
+        "ivFluids": "IV Fluids",
+        "orsPackets": "ORS Packets",
+        "waterPurification": "Water Purification"
+      },
+      "viewOperations": "View Operations Center",
+      "countryOffice": "Country Office",
+      "regionalContext": "Regional Context",
+      "nrcRegion": "NRC Region",
+      "countriesInRegion": "Countries in Region",
+      "activePrograms": "Active Programs",
+      "otherRegionCountries": "Other {region} Countries",
+      "noResponseData": "No response data available.",
+      "nrcGlobalOperations": "NRC Global Operations ({count})",
+      "stats": {
+        "countries": "Countries",
+        "regions": "Regions",
+        "staff": "Staff"
+      },
+      "viewingGlobalMap": "Viewing Global Map",
+      "viewAllOnMap": "View All on Map",
+      "selectedBadge": "Selected",
+      "coreCompetencies": "Core Competencies",
+      "competencies": {
+        "education": "Education",
+        "foodSecurity": "Food Security",
+        "icla": "ICLA",
+        "shelter": "Shelter",
+        "wash": "WASH",
+        "campMgmt": "Camp Mgmt"
+      },
+      "createSignal": "Create Signal",
+      "footer": {
+        "data": "Data:",
+        "aiAnalysis": "AI Analysis",
+        "updated": "Updated: 30m ago"
+      }
+    },
+    "mapSection": {
+      "tokenMissing": "Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env",
+      "country": "Country",
+      "region": "Region",
+      "date": "Date",
+      "views": {
+        "single": "◻ Single",
+        "compare": "◫ Compare",
+        "time": "▶ Time",
+        "nrc": "🌍 NRC"
+      },
+      "legend": "Legend",
+      "nrcRegions": "NRC Regions",
+      "severity": "Severity",
+      "severities": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "teams": "Teams"
+      },
+      "eventType": "Event Type",
+      "eventTypes": {
+        "crisis": "Crisis",
+        "conflict": "Conflict",
+        "famine": "Famine",
+        "disease": "Disease",
+        "flood": "Flood",
+        "drought": "Drought",
+        "response": "Response"
+      },
+      "regionShort": {
+        "eastAfricaYemen": "E. Africa & Yemen",
+        "centralWestAfrica": "Central & W. Africa",
+        "southernAfrica": "Southern Africa",
+        "middleEast": "Middle East",
+        "asia": "Asia",
+        "europe": "Europe",
+        "americas": "Americas"
+      },
+      "timeline": "Timeline",
+      "popup": {
+        "cases": "Cases",
+        "affected": "Affected",
+        "members": "Members",
+        "trend": "Trend",
+        "status": "Status",
+        "region": "Region",
+        "coreActivities": "Core Activities:",
+        "operationsActive": "Operations active"
+      }
+    },
+    "createAlert": {
+      "steps": {
+        "selectEvents": "Create Alert - Select Events",
+        "createEvent": "Create Alert - New Event",
+        "details": "Create Alert - Details"
+      },
+      "success": "Alert created successfully!",
+      "selectEventsPrompt": "Select events to include in the alert",
+      "noEvents": "No events found. Create an event first.",
+      "signalCount": "{count, plural, one {# signal} other {# signals}}",
+      "alertBadge": "Alert",
+      "createNewEvent": "Create New Event",
+      "nextDetails": "Next: Alert Details ({count} selected)",
+      "backToEvents": "Back to Events",
+      "selectSignalsPrompt": "Select signals to group into a new event",
+      "noAvailableSignals": "No available signals. Create one below.",
+      "sourceLabel": "Source: {name}",
+      "createManualSignal": "Create Manual Signal",
+      "fieldDataSource": "Data Source",
+      "dataSourcePlaceholder": "Select data source",
+      "fieldTitle": "Title",
+      "titlePlaceholder": "e.g., Cholera outbreak in El Fasher",
+      "createSignal": "Create Signal",
+      "createEventCount": "Create Event ({count, plural, one {# signal} other {# signals}})",
+      "selectedEvents": "Selected Events ({count})",
+      "fieldAlertTitle": "Alert Title",
+      "alertTitlePlaceholder": "e.g., Darfur Humanitarian Crisis Alert",
+      "fieldDescription": "Description",
+      "descriptionPlaceholder": "Describe the alert, its context, and recommended actions...",
+      "fieldSeverity": "Severity",
+      "severityPlaceholder": "Select severity",
+      "severityOptions": {
+        "low": "1 - Low",
+        "moderate": "2 - Moderate",
+        "high": "3 - High",
+        "veryHigh": "4 - Very High",
+        "critical": "5 - Critical"
+      },
+      "fieldStatus": "Status",
+      "statusDraft": "Draft",
+      "statusPublished": "Published",
+      "submit": "Create Alert",
+      "errors": {
+        "createEvent": "Failed to create event",
+        "createSignal": "Failed to create signal",
+        "createAlert": "Failed to create alert"
+      }
+    }
+  },
   "detection": {
     "header": {
       "title": "Event Detection",
@@ -183,6 +376,65 @@
         "variables": "Variables"
       }
     }
+  },
+  "map": {
+    "filters": {
+      "country": "Country",
+      "region": "Region",
+      "crisisType": "Crisis Type",
+      "allCountries": "All Countries",
+      "allRegions": "All Regions"
+    },
+    "panels": {
+      "layers": "Layers",
+      "legend": "Legend",
+      "clearData": "CLEAR Data",
+      "boundaries": "Boundaries",
+      "markers": "Markers",
+      "severity": "Severity",
+      "eventType": "Event Type",
+      "population": "Population"
+    },
+    "severities": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "unknown": "Unknown"
+    },
+    "dataViews": {
+      "none": "None",
+      "crisis": "Crisis",
+      "alert": "Alert",
+      "event": "Event"
+    },
+    "boundaries": {
+      "none": "None",
+      "a0": "A0 - Country",
+      "a1": "A1 - States",
+      "a2": "A2 - Districts"
+    },
+    "settings": {
+      "tooltip": "Map settings",
+      "title": "Map Settings",
+      "showBoundaries": "Show boundaries",
+      "populationLayer": "Population layer",
+      "a2Resolution": "A2 district resolution"
+    },
+    "detail": {
+      "severity": "Severity",
+      "type": "Type",
+      "location": "Location",
+      "dataSource": "Data Source",
+      "shockDate": "Shock Date",
+      "coordinates": "Coordinates",
+      "viewDetails": "View Details"
+    },
+    "minimap": {
+      "location": "Location",
+      "fullMap": "Full map"
+    },
+    "tokenMissing": "Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env"
   },
   "nav": {
     "sections": {

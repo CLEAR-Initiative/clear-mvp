@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Box, Text, Group, Stack, Badge, Button, CloseButton, ScrollArea } from "@mantine/core";
 import Link from "next/link";
 import { type CrisisMarker } from "./map-markers-data";
@@ -15,6 +16,7 @@ const severityColors: Record<string, { bg: string; color: string }> = {
 };
 
 export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
+  const t = useTranslations("map");
   const sev = severityColors[marker.severity] ?? severityColors.medium;
 
   return (
@@ -36,18 +38,18 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
         {/* Severity */}
         <Group justify="space-between" mb={12}>
           <Box>
-            <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ fontSize: 10 }}>Severity</Text>
+            <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ fontSize: 10 }}>{t("detail.severity")}</Text>
             <Badge
               size="sm"
               mt={4}
               style={{ background: sev.bg, color: sev.color, fontSize: 10, textTransform: "uppercase" }}
             >
-              {marker.severity}
+              {t(`severities.${marker.severity}`)}
             </Badge>
           </Box>
           {marker.shockTypeName && (
             <Box style={{ textAlign: "right" }}>
-              <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ fontSize: 10 }}>Type</Text>
+              <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ fontSize: 10 }}>{t("detail.type")}</Text>
               <Text fw={600} size="sm" mt={4}>{marker.shockTypeName}</Text>
             </Box>
           )}
@@ -62,11 +64,11 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
 
         {/* Details */}
         <Stack gap={0} mb={12}>
-          <DetailRow label="Location" value={marker.region ?? "-"} />
-          {marker.dataSource && <DetailRow label="Data Source" value={marker.dataSource} />}
+          <DetailRow label={t("detail.location")} value={marker.region ?? "-"} />
+          {marker.dataSource && <DetailRow label={t("detail.dataSource")} value={marker.dataSource} />}
           {marker.shockDate && (
             <DetailRow
-              label="Shock Date"
+              label={t("detail.shockDate")}
               value={new Date(marker.shockDate).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
@@ -75,7 +77,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
             />
           )}
           <DetailRow
-            label="Coordinates"
+            label={t("detail.coordinates")}
             value={`${marker.lat.toFixed(2)}, ${marker.lng.toFixed(2)}`}
             mono
           />
@@ -95,7 +97,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
             }
             style={{ background: "var(--color-text-primary)" }}
           >
-            View Details
+            {t("detail.viewDetails")}
           </Button>
         )}
       </Box>

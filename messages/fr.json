@@ -27,6 +27,199 @@
       "demo": "Démo"
     }
   },
+  "dashboard": {
+    "rightPanel": {
+      "nrcOpsBadge": "Ops NRC",
+      "nrcOffice": "Bureau NRC",
+      "pillars": {
+        "hazard": "Aléas",
+        "vulnerability": "Vulnérabilité",
+        "coping": "Cap. de réponse"
+      },
+      "informOverall": "Risque INFORM global - {edition}",
+      "informModal": {
+        "title": "Indice de risque INFORM : méthodologie",
+        "intro": "L'<strong>indice de risque INFORM</strong> est produit par le Centre commun de recherche de l'UE (JRC) en partenariat avec le Comité permanent interorganisations (IASC). Il mesure le risque de crises humanitaires et de catastrophes susceptibles de dépasser les capacités nationales de réponse. Les scores vont de <strong>0 à 10</strong> (plus le score est élevé, plus le risque est important).",
+        "pillarsHeading": "Les trois piliers",
+        "pillarHazard": "<strong>Aléas et exposition</strong> : probabilité que des événements physiques (catastrophes naturelles, conflit) affectent la population.",
+        "pillarVulnerability": "<strong>Vulnérabilité</strong> : facteurs socio-économiques qui réduisent la capacité des communautés à faire face, notamment la pauvreté, les inégalités et le déplacement.",
+        "pillarCoping": "<strong>Manque de capacité de réponse</strong> : capacité institutionnelle et infrastructurelle à répondre - gouvernance, système de santé, communication.",
+        "sourceLabel": "Source :",
+        "sourceLink": "Indice de risque INFORM du JRC",
+        "updatedAnnually": "- mise à jour annuelle."
+      },
+      "activeCrises": "Crises actives ({count})",
+      "fieldFallback": "Terrain",
+      "casesCount": "{count, plural, one {# cas} other {# cas}}",
+      "affectedShort": "{count}k personnes affectées",
+      "severities": {
+        "critical": "Critique",
+        "high": "Élevée",
+        "medium": "Moyenne",
+        "response": "Réponse"
+      },
+      "nrcCoreActivities": "Activités principales NRC ({count})",
+      "activeBadge": "Actif",
+      "countryRisks": "Risques du pays",
+      "locationOverview": "Aperçu de la localisation",
+      "loadingRisk": "Chargement des données de risque...",
+      "riskSource": "Source : {edition}",
+      "riskUnavailable": "Données de risque indisponibles pour ce pays.",
+      "defaultCountryDescription": "NRC intervient dans ce pays ({country}) en fournissant une assistance humanitaire aux populations déplacées et vulnérables.",
+      "establishedIn": "NRC y a établi ses opérations en {year}",
+      "multiSectorResponse": "et continue de fournir une réponse humanitaire multisectorielle, notamment {activities}.",
+      "locationDetails": "Détails de la localisation",
+      "capital": "Capitale",
+      "region": "Région",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "noLocationInfo": "Aucune information détaillée disponible pour cette localisation.",
+      "responseStatus": "Statut de la réponse",
+      "nrcPresence": "Présence NRC",
+      "activeDeployments": "Déploiements actifs",
+      "membersCount": "{count, plural, one {# membre} other {# membres}}",
+      "assessmentTeam": "Équipe d'évaluation",
+      "enRouteGode": "En route vers Gode",
+      "transitBadge": "En transit",
+      "criticalResources": "Ressources critiques",
+      "resources": {
+        "ivFluids": "Solutés IV",
+        "orsPackets": "Sachets de SRO",
+        "waterPurification": "Purification de l'eau"
+      },
+      "viewOperations": "Voir le centre des opérations",
+      "countryOffice": "Bureau pays",
+      "regionalContext": "Contexte régional",
+      "nrcRegion": "Région NRC",
+      "countriesInRegion": "Pays dans la région",
+      "activePrograms": "Programmes actifs",
+      "otherRegionCountries": "Autres pays de la région {region}",
+      "noResponseData": "Aucune donnée de réponse disponible.",
+      "nrcGlobalOperations": "Opérations mondiales NRC ({count})",
+      "stats": {
+        "countries": "Pays",
+        "regions": "Régions",
+        "staff": "Personnel"
+      },
+      "viewingGlobalMap": "Carte mondiale affichée",
+      "viewAllOnMap": "Tout voir sur la carte",
+      "selectedBadge": "Sélectionné",
+      "coreCompetencies": "Compétences clés",
+      "competencies": {
+        "education": "Éducation",
+        "foodSecurity": "Sécurité alimentaire",
+        "icla": "ICLA",
+        "shelter": "Abris",
+        "wash": "WASH",
+        "campMgmt": "Gestion de camps"
+      },
+      "createSignal": "Créer un signal",
+      "footer": {
+        "data": "Données :",
+        "aiAnalysis": "Analyse IA",
+        "updated": "Mise à jour : il y a 30 min"
+      }
+    },
+    "mapSection": {
+      "tokenMissing": "Jeton Mapbox non configuré. Définissez NEXT_PUBLIC_MAPBOX_TOKEN dans .env",
+      "country": "Pays",
+      "region": "Région",
+      "date": "Date",
+      "views": {
+        "single": "◻ Simple",
+        "compare": "◫ Comparer",
+        "time": "▶ Temps",
+        "nrc": "🌍 NRC"
+      },
+      "legend": "Légende",
+      "nrcRegions": "Régions NRC",
+      "severity": "Sévérité",
+      "severities": {
+        "critical": "Critique",
+        "high": "Élevée",
+        "medium": "Moyenne",
+        "teams": "Équipes"
+      },
+      "eventType": "Type d'événement",
+      "eventTypes": {
+        "crisis": "Crise",
+        "conflict": "Conflit",
+        "famine": "Famine",
+        "disease": "Maladie",
+        "flood": "Inondation",
+        "drought": "Sécheresse",
+        "response": "Réponse"
+      },
+      "regionShort": {
+        "eastAfricaYemen": "Afr. de l'Est et Yémen",
+        "centralWestAfrica": "Afr. centrale et de l'Ouest",
+        "southernAfrica": "Afrique australe",
+        "middleEast": "Moyen-Orient",
+        "asia": "Asie",
+        "europe": "Europe",
+        "americas": "Amériques"
+      },
+      "timeline": "Chronologie",
+      "popup": {
+        "cases": "Cas",
+        "affected": "Affectés",
+        "members": "Membres",
+        "trend": "Tendance",
+        "status": "Statut",
+        "region": "Région",
+        "coreActivities": "Activités principales :",
+        "operationsActive": "Opérations en cours"
+      }
+    },
+    "createAlert": {
+      "steps": {
+        "selectEvents": "Créer une alerte - Sélection des événements",
+        "createEvent": "Créer une alerte - Nouvel événement",
+        "details": "Créer une alerte - Détails"
+      },
+      "success": "Alerte créée avec succès !",
+      "selectEventsPrompt": "Sélectionnez les événements à inclure dans l'alerte",
+      "noEvents": "Aucun événement trouvé. Créez d'abord un événement.",
+      "signalCount": "{count, plural, one {# signal} other {# signaux}}",
+      "alertBadge": "Alerte",
+      "createNewEvent": "Créer un nouvel événement",
+      "nextDetails": "Suivant : détails de l'alerte ({count, plural, one {# sélectionné} other {# sélectionnés}})",
+      "backToEvents": "Retour aux événements",
+      "selectSignalsPrompt": "Sélectionnez les signaux à regrouper dans un nouvel événement",
+      "noAvailableSignals": "Aucun signal disponible. Créez-en un ci-dessous.",
+      "sourceLabel": "Source : {name}",
+      "createManualSignal": "Créer un signal manuel",
+      "fieldDataSource": "Source de données",
+      "dataSourcePlaceholder": "Sélectionnez la source de données",
+      "fieldTitle": "Titre",
+      "titlePlaceholder": "p. ex. Épidémie de choléra à El Fasher",
+      "createSignal": "Créer le signal",
+      "createEventCount": "Créer l'événement ({count, plural, one {# signal} other {# signaux}})",
+      "selectedEvents": "Événements sélectionnés ({count})",
+      "fieldAlertTitle": "Titre de l'alerte",
+      "alertTitlePlaceholder": "p. ex. Alerte crise humanitaire au Darfour",
+      "fieldDescription": "Description",
+      "descriptionPlaceholder": "Décrivez l'alerte, son contexte et les actions recommandées...",
+      "fieldSeverity": "Sévérité",
+      "severityPlaceholder": "Sélectionnez la sévérité",
+      "severityOptions": {
+        "low": "1 - Faible",
+        "moderate": "2 - Modérée",
+        "high": "3 - Élevée",
+        "veryHigh": "4 - Très élevée",
+        "critical": "5 - Critique"
+      },
+      "fieldStatus": "Statut",
+      "statusDraft": "Brouillon",
+      "statusPublished": "Publiée",
+      "submit": "Créer l'alerte",
+      "errors": {
+        "createEvent": "Échec de la création de l'événement",
+        "createSignal": "Échec de la création du signal",
+        "createAlert": "Échec de la création de l'alerte"
+      }
+    }
+  },
   "detection": {
     "header": {
       "title": "Détection d'événements",
@@ -183,6 +376,65 @@
         "variables": "Variables"
       }
     }
+  },
+  "map": {
+    "filters": {
+      "country": "Pays",
+      "region": "Région",
+      "crisisType": "Type de crise",
+      "allCountries": "Tous les pays",
+      "allRegions": "Toutes les régions"
+    },
+    "panels": {
+      "layers": "Couches",
+      "legend": "Légende",
+      "clearData": "Données CLEAR",
+      "boundaries": "Limites administratives",
+      "markers": "Marqueurs",
+      "severity": "Sévérité",
+      "eventType": "Type d'événement",
+      "population": "Population"
+    },
+    "severities": {
+      "critical": "Critique",
+      "high": "Élevée",
+      "medium": "Moyenne",
+      "low": "Faible",
+      "unknown": "Inconnue"
+    },
+    "dataViews": {
+      "none": "Aucun",
+      "crisis": "Crise",
+      "alert": "Alerte",
+      "event": "Événement"
+    },
+    "boundaries": {
+      "none": "Aucune",
+      "a0": "A0 - Pays",
+      "a1": "A1 - États",
+      "a2": "A2 - Districts"
+    },
+    "settings": {
+      "tooltip": "Paramètres de la carte",
+      "title": "Paramètres de la carte",
+      "showBoundaries": "Afficher les limites administratives",
+      "populationLayer": "Couche de population",
+      "a2Resolution": "Résolution au niveau des districts (A2)"
+    },
+    "detail": {
+      "severity": "Sévérité",
+      "type": "Type",
+      "location": "Localisation",
+      "dataSource": "Source de données",
+      "shockDate": "Date du choc",
+      "coordinates": "Coordonnées",
+      "viewDetails": "Voir les détails"
+    },
+    "minimap": {
+      "location": "Localisation",
+      "fullMap": "Carte complète"
+    },
+    "tokenMissing": "Jeton Mapbox non configuré. Définissez NEXT_PUBLIC_MAPBOX_TOKEN dans .env"
   },
   "nav": {
     "sections": {

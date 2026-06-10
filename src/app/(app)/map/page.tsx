@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -50,6 +51,7 @@ function FilterLabel({ children }: { children: string }) {
 }
 
 export default function MapPage() {
+  const t = useTranslations("map");
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>("alert");
 
@@ -307,23 +309,29 @@ export default function MapPage() {
             size="xs"
             value={selectedCountry}
             onChange={handleCountryChange}
-            data={countryOptions}
+            data={countryOptions.map((c) =>
+              // "All Countries" is a logic sentinel - translate display label only.
+              c === "All Countries" ? { value: c, label: t("filters.allCountries") } : c,
+            )}
             style={{ minWidth: 140 }}
             styles={{ input: INPUT_STYLE }}
-            label={<FilterLabel>Country</FilterLabel>}
+            label={<FilterLabel>{t("filters.country")}</FilterLabel>}
           />
           <Select
             size="xs"
             value={selectedRegion}
             onChange={handleRegionChange}
-            data={regionOptions}
+            data={regionOptions.map((r) =>
+              // "All Regions" is a logic sentinel - translate display label only.
+              r === "All Regions" ? { value: r, label: t("filters.allRegions") } : r,
+            )}
             style={{ minWidth: 140 }}
             styles={{ input: INPUT_STYLE }}
-            label={<FilterLabel>Region</FilterLabel>}
+            label={<FilterLabel>{t("filters.region")}</FilterLabel>}
           />
           <Box style={{ minWidth: 160 }}>
             <DisasterTypePicker
-              label="Crisis Type"
+              label={t("filters.crisisType")}
               hierarchy={hierarchy}
               selected={selectedTypes}
               onChange={setSelectedTypes}

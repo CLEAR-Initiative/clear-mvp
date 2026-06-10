@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Box, Text, Stack, Checkbox, Group, Radio, Divider } from "@mantine/core";
 import { IconLayersLinked } from "@tabler/icons-react";
 
@@ -16,6 +17,7 @@ export function MapLayersPanel({
   showPopulation,
   onShowPopulationChange,
 }: MapLayersPanelProps) {
+  const t = useTranslations("map");
   return (
     <Box
       className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
@@ -24,13 +26,13 @@ export function MapLayersPanel({
       <Group gap={8} px={12} py={10} className="border-b border-[var(--color-border)]">
         <IconLayersLinked size={14} color="#737373" />
         <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em" }}>
-          Layers
+          {t("panels.layers")}
         </Text>
       </Group>
 
       <Stack gap={0} px={12} py={8}>
         <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em" }} mb={8}>
-          CLEAR Data
+          {t("panels.clearData")}
         </Text>
         <Radio.Group value={dataView} onChange={(v) => onDataViewChange(v as DataView)}>
           <Stack gap={0}>
@@ -51,7 +53,7 @@ export function MapLayersPanel({
                   onClick={(e) => e.stopPropagation()}
                 />
                 <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12, textTransform: "capitalize" }}>
-                  {view}
+                  {t(`dataViews.${view}`)}
                 </Text>
               </Group>
             ))}
@@ -76,7 +78,7 @@ export function MapLayersPanel({
             onClick={(e) => e.stopPropagation()}
           />
           <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
-            Population
+            {t("panels.population")}
           </Text>
         </Group>
       </Stack>

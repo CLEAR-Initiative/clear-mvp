@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { Box, Text, Group, Select, Checkbox } from "@mantine/core";
 import Link from "next/link";
 import { IconMap, IconMapPin, IconLayersLinked } from "@tabler/icons-react";
@@ -16,11 +17,12 @@ const CrisisMap = dynamic(
 
 type BoundaryLevel = "none" | "A1" | "A2";
 
+// labelKey: i18n keys under map.boundaries.* - resolved via t() at render time.
 const BOUNDARY_OPTIONS = [
-  { value: "none", label: "None" },
-  { value: "A1",   label: "A1 - States" },
-  { value: "A2",   label: "A2 - Districts" },
-];
+  { value: "none", labelKey: "none" },
+  { value: "A1",   labelKey: "a1" },
+  { value: "A2",   labelKey: "a2" },
+] as const;
 
 interface MinimapCardProps {
   markers: MapMarker[];
@@ -41,6 +43,7 @@ interface MinimapCardProps {
 }
 
 export function MinimapCard({ markers, center, sudanGeometry, sudanId, location, locationName, fullMapHref = "/map" }: MinimapCardProps) {
+  const t = useTranslations("map");
   const [layersOpen, setLayersOpen] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A2");
   const [showPopulation, setShowPopulation] = useState(false);
@@ -99,13 +102,13 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, location,
           <Group gap={6}>
             <IconMapPin size={14} color="var(--color-text-secondary)" />
             <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
-              {locationName ?? "Location"}
+              {locationName ?? t("minimap.location")}
             </Text>
           </Group>
           <Link href={fullMapHref} style={{ textDecoration: "none" }}>
             <Group gap={4} className="hover:opacity-70">
               <IconMap size={12} color="var(--color-accent)" />
-              <Text size="xs" c="var(--color-accent)" fw={500}>Full map</Text>
+              <Text size="xs" c="var(--color-accent)" fw={500}>{t("minimap.fullMap")}</Text>
             </Group>
           </Link>
         </Group>
@@ -131,7 +134,7 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, location,
         {/* Layers toggle button */}
         <Box style={{ position: "absolute", top: 6, left: 6, zIndex: 10 }}>
           <button
-            title="Layers"
+            title={t("panels.layers")}
             onClick={() => setLayersOpen((o) => !o)}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -159,13 +162,13 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, location,
               }}
             >
               <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em", opacity: 0.7 }} mb={6}>
-                Boundaries
+                {t("panels.boundaries")}
               </Text>
               <Select
                 size="xs"
                 value={boundaryLevel}
                 onChange={(v) => setBoundaryLevel((v ?? "none") as BoundaryLevel)}
-                data={BOUNDARY_OPTIONS}
+                data={BOUNDARY_OPTIONS.map((o) => ({ value: o.value, label: t(`boundaries.${o.labelKey}`) }))}
                 mb={10}
                 styles={{ input: { fontWeight: 600, fontSize: 12 } }}
               />
@@ -185,7 +188,7 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, location,
                     styles={{ input: { cursor: "pointer" } }}
                     onClick={(e) => e.stopPropagation()}
                   />
-                  <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>Population</Text>
+                  <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>{t("panels.population")}</Text>
                 </Group>
               </Box>
             </Box>
