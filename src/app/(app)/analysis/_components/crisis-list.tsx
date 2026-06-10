@@ -15,6 +15,11 @@ export function CrisisList({
         <div className="t">Active Crises</div>
         <div className="s">{country}</div>
       </div>
+      {crises.length === 0 && (
+        <div className="crisis-card" style={{ color: "var(--ink-4)", cursor: "default" }}>
+          No active crises recorded for {country}.
+        </div>
+      )}
       {crises.map((c, i) => (
         <button type="button" className="crisis-card" key={i}>
           <span className="crisis-mk" />

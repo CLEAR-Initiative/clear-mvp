@@ -23,14 +23,24 @@ export default function AnalysisPage() {
   // Default primary tab = Situation Analysis (per spec).
   const [ptab, setPtab] = useState<PrimaryTab>("situation");
   const [tab, setTab] = useState<SubTab>("overview");
+  // undefined = let the backend pick the first available country.
+  const [country, setCountry] = useState<string | undefined>(undefined);
 
-  const { data, isLoading, isError } = api.situationAnalysis.get.useQuery(
-    undefined,
-  );
+  const { data, isLoading, isError } = api.situationAnalysis.get.useQuery({
+    country,
+  });
+  const { data: countries } = api.situationAnalysis.countries.useQuery();
 
   return (
     <div className="sa-module">
-      {data && <CrisisBar crisis={data.crisis} />}
+      {data && (
+        <CrisisBar
+          crisis={data.crisis}
+          countries={countries ?? []}
+          onSelectCountry={setCountry}
+          isSampleData={data.dataSource === "fixture"}
+        />
+      )}
 
       <div className="ptabs">
         <button
@@ -89,7 +99,12 @@ export default function AnalysisPage() {
 
                 {tab === "overview" && <SituationOverview data={data} />}
                 {tab === "sectors" && <SituationSectors sectors={data.sectors} />}
-                {tab === "sources" && <SituationSources sources={data.sources} />}
+                {tab === "sources" && (
+                  <SituationSources
+                    sources={data.sources}
+                    country={data.crisis.country}
+                  />
+                )}
               </>
             ))}
         </div>

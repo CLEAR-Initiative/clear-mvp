@@ -98,6 +98,12 @@ export interface SaSources {
 }
 
 export interface SituationAnalysis {
+  /**
+   * Where this analysis came from: `"fixture"` is the curated hard-coded
+   * sample (Lebanon); `"live"` is mapped from the CLEAR pipeline. The UI
+   * surfaces a badge for `"fixture"`.
+   */
+  dataSource: "fixture" | "live";
   crisis: SaCrisis;
   contextRisks: SaContextRisk[];
   hazards: SaHazards;
@@ -108,6 +114,7 @@ export interface SituationAnalysis {
 }
 
 export const LEBANON_SITUATION_ANALYSIS: SituationAnalysis = {
+  dataSource: "fixture",
   crisis: {
     name: "Lebanon Crisis 2026",
     country: "Lebanon",

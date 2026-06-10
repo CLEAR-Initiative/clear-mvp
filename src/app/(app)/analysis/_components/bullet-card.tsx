@@ -12,12 +12,18 @@ export function BulletCard({
     <div className={`accent-card ${tone}`}>
       <div className="ac-label">{label}</div>
       <div className="bullet-list">
-        {items.map((it, i) => (
-          <div className="bullet" key={i}>
-            <span className="b">·</span>
-            <span>{it}</span>
+        {items.length > 0 ? (
+          items.map((it, i) => (
+            <div className="bullet" key={i}>
+              <span className="b">·</span>
+              <span>{it}</span>
+            </div>
+          ))
+        ) : (
+          <div className="bullet" style={{ color: "var(--ink-4)" }}>
+            <span>None reported</span>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

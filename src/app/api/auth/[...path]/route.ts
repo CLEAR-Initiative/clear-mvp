@@ -20,7 +20,7 @@ async function handler(
     );
   }
 
-  const upstream = `${API_URL}/api/auth/${path.join("/")}`;
+  const upstream = `${API_URL.replace(/\/+$/, "")}/api/auth/${path.join("/")}`;
 
   // Forward query string if present
   const url = new URL(upstream);

@@ -5,6 +5,10 @@ import { BulletCard } from "./bullet-card";
 /** Situation Analysis → Overview sub-view. */
 export function SituationOverview({ data }: { data: SituationAnalysis }) {
   const c = data.crisis;
+  const hasHazards = data.hazards.current.length > 0 || data.hazards.precrisis.length > 0;
+  const hasDisplacement =
+    data.displacement.push.length > 0 || data.displacement.return.length > 0;
+
   return (
     <div>
       <div className="stat-grid">
@@ -20,51 +24,67 @@ export function SituationOverview({ data }: { data: SituationAnalysis }) {
         </div>
       </div>
 
-      <div style={{ height: 24 }} />
-      <div className="summary-card">
-        <div className="summary-tag">
-          <span className="ldot" />
-          AI Situation Summary
-        </div>
-        <p className="summary-body">{c.summary}</p>
-      </div>
-
-      <SecHead>Context Risks</SecHead>
-      <div className="risk-table">
-        {data.contextRisks.map((r, i) => (
-          <div className="risk-row" key={i}>
-            <div className="risk-cat">{r.label}</div>
-            <div className="risk-items">
-              {r.items.map((it, j) => (
-                <div className="risk-item" key={j}>
-                  <span className="dash">—</span>
-                  <span>{it}</span>
-                </div>
-              ))}
+      {c.summary && (
+        <>
+          <div style={{ height: 24 }} />
+          <div className="summary-card">
+            <div className="summary-tag">
+              <span className="ldot" />
+              AI Situation Summary
             </div>
+            <p className="summary-body">{c.summary}</p>
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
-      <SecHead>Hazards & Pre-Crisis Vulnerabilities</SecHead>
-      <div className="pair-grid">
-        <BulletCard tone="red" label="Current Hazards" items={data.hazards.current} />
-        <BulletCard
-          tone="amber"
-          label="Pre-Crisis Vulnerabilities"
-          items={data.hazards.precrisis}
-        />
-      </div>
+      {data.contextRisks.length > 0 && (
+        <>
+          <SecHead>Context Risks</SecHead>
+          <div className="risk-table">
+            {data.contextRisks.map((r, i) => (
+              <div className="risk-row" key={i}>
+                <div className="risk-cat">{r.label}</div>
+                <div className="risk-items">
+                  {r.items.map((it, j) => (
+                    <div className="risk-item" key={j}>
+                      <span className="dash">—</span>
+                      <span>{it}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
-      <SecHead>Displacement</SecHead>
-      <div className="pair-grid">
-        <BulletCard tone="blue" label="Push Factors" items={data.displacement.push} />
-        <BulletCard
-          tone="green"
-          label="Return Intentions"
-          items={data.displacement.return}
-        />
-      </div>
+      {hasHazards && (
+        <>
+          <SecHead>Hazards & Pre-Crisis Vulnerabilities</SecHead>
+          <div className="pair-grid">
+            <BulletCard tone="red" label="Current Hazards" items={data.hazards.current} />
+            <BulletCard
+              tone="amber"
+              label="Pre-Crisis Vulnerabilities"
+              items={data.hazards.precrisis}
+            />
+          </div>
+        </>
+      )}
+
+      {hasDisplacement && (
+        <>
+          <SecHead>Displacement</SecHead>
+          <div className="pair-grid">
+            <BulletCard tone="blue" label="Push Factors" items={data.displacement.push} />
+            <BulletCard
+              tone="green"
+              label="Return Intentions"
+              items={data.displacement.return}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

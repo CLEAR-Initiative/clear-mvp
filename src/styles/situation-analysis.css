@@ -264,6 +264,16 @@
   padding: 2px 5px;
 }
 
+/* Badge marking the curated hard-coded sample (Lebanon). */
+.sa-module .meta-chip.sample {
+  color: var(--sev);
+  background: var(--sev-bg);
+  border-color: var(--sev-line);
+}
+.sa-module .meta-chip.sample .d {
+  background: var(--sev);
+}
+
 /* ---------- CRISIS TAB: active crises ---------- */
 .sa-module .crisis-list {
   background: var(--surface);
