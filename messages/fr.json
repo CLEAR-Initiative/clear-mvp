@@ -1,0 +1,52 @@
+{
+  "metadata": {
+    "title": "CLEAR : Crisis Learning, Early-warning, Anticipation & Response",
+    "description": "Plateforme humanitaire d'aide à la décision"
+  },
+  "common": {
+    "actions": {
+      "save": "Enregistrer",
+      "saveChanges": "Enregistrer les modifications",
+      "cancel": "Annuler",
+      "close": "Fermer",
+      "back": "Retour",
+      "search": "Rechercher",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "confirm": "Confirmer",
+      "retry": "Réessayer"
+    },
+    "states": {
+      "loading": "Chargement...",
+      "error": "Une erreur est survenue",
+      "empty": "Aucune donnée disponible",
+      "comingSoon": "Bientôt disponible"
+    },
+    "badges": {
+      "soon": "Bientôt",
+      "demo": "Démo"
+    }
+  },
+  "nav": {
+    "sections": {
+      "main": "Principal",
+      "resources": "Ressources"
+    },
+    "items": {
+      "overview": "Vue d'ensemble",
+      "detection": "Détection",
+      "map": "Carte",
+      "insights": "Analyses",
+      "operations": "Opérations",
+      "cash": "Assistance monétaire",
+      "knowledge": "Centre de connaissances"
+    },
+    "itemSoon": "{label} (bientôt)",
+    "expand": "Développer",
+    "collapse": "Réduire",
+    "feedback": "Retours",
+    "admin": "Admin",
+    "settings": "Paramètres",
+    "signOut": "Se déconnecter"
+  }
+}

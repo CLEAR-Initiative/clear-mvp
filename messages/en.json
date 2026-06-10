@@ -1,0 +1,52 @@
+{
+  "metadata": {
+    "title": "CLEAR: Crisis Learning, Early-warning, Anticipation & Response",
+    "description": "Humanitarian decision-support platform"
+  },
+  "common": {
+    "actions": {
+      "save": "Save",
+      "saveChanges": "Save Changes",
+      "cancel": "Cancel",
+      "close": "Close",
+      "back": "Back",
+      "search": "Search",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirm": "Confirm",
+      "retry": "Retry"
+    },
+    "states": {
+      "loading": "Loading...",
+      "error": "Something went wrong",
+      "empty": "No data available",
+      "comingSoon": "Coming Soon"
+    },
+    "badges": {
+      "soon": "Soon",
+      "demo": "Demo"
+    }
+  },
+  "nav": {
+    "sections": {
+      "main": "Main",
+      "resources": "Resources"
+    },
+    "items": {
+      "overview": "Overview",
+      "detection": "Detection",
+      "map": "Map",
+      "insights": "Insights",
+      "operations": "Operations",
+      "cash": "Cash Assistance",
+      "knowledge": "Knowledge Hub"
+    },
+    "itemSoon": "{label} (soon)",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "feedback": "Feedback",
+    "admin": "Admin",
+    "settings": "Settings",
+    "signOut": "Sign out"
+  }
+}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSelectedLayoutSegments } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Box, Text, Badge, UnstyledButton, Tooltip, Menu, Drawer } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { FeedbackModal } from "~/components/feedback-modal";
@@ -30,8 +31,17 @@ import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
 
+type NavItemKey =
+  | "overview"
+  | "detection"
+  | "map"
+  | "insights"
+  | "operations"
+  | "cash"
+  | "knowledge";
+
 interface NavItem {
-  label: string;
+  labelKey: NavItemKey;
   href: string;
   icon: React.ElementType;
   featureKey?: string;
@@ -45,7 +55,7 @@ interface NavItem {
 }
 
 interface NavSection {
-  title: string;
+  titleKey: "main" | "resources";
   items: NavItem[];
   /** Hide the entire section for non-admin users */
   adminOnly?: boolean;
@@ -53,20 +63,20 @@ interface NavSection {
 
 const navSections: NavSection[] = [
   {
-    title: "MAIN",
+    titleKey: "main",
     items: [
-      { label: "Overview",  href: "/dashboard",  icon: IconLayoutDashboard, featureKey: "overview" },
-      { label: "Detection", href: "/detection",  icon: IconTarget,          featureKey: "detection" },
-      { label: "Map",       href: "/map",        icon: IconMapPin,          featureKey: "crisis_map" },
-      { label: "Insights",  href: "/insights",   icon: IconChartPie,        featureKey: "analysis",        comingSoonForNonAdmin: true },
-      { label: "Operations",         href: "/operations", icon: IconUser,            featureKey: "operations",      adminOnly: true },
-      { label: "Cash Assistance",    href: "/cash",       icon: IconCurrencyDollar,  featureKey: "cash_assistance", adminOnly: true },
+      { labelKey: "overview",  href: "/dashboard",  icon: IconLayoutDashboard, featureKey: "overview" },
+      { labelKey: "detection", href: "/detection",  icon: IconTarget,          featureKey: "detection" },
+      { labelKey: "map",       href: "/map",        icon: IconMapPin,          featureKey: "crisis_map" },
+      { labelKey: "insights",  href: "/insights",   icon: IconChartPie,        featureKey: "analysis",        comingSoonForNonAdmin: true },
+      { labelKey: "operations", href: "/operations", icon: IconUser,            featureKey: "operations",      adminOnly: true },
+      { labelKey: "cash",       href: "/cash",       icon: IconCurrencyDollar,  featureKey: "cash_assistance", adminOnly: true },
     ],
   },
   {
-    title: "RESOURCES",
+    titleKey: "resources",
     items: [
-      { label: "Knowledge Hub", href: "/knowledge", icon: IconBook, featureKey: "knowledge_hub", comingSoonForNonAdmin: true },
+      { labelKey: "knowledge", href: "/knowledge", icon: IconBook, featureKey: "knowledge_hub", comingSoonForNonAdmin: true },
     ],
   },
 ];
@@ -78,6 +88,8 @@ const TRANSITION  = "200ms ease";
 
 
 export function NavSidebar() {
+  const t = useTranslations("nav");
+  const tBadges = useTranslations("common.badges");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, { open: openMobile, close: closeMobile }] = useDisclosure(false);
   const [feedbackOpen, { open: openFeedback, close: closeFeedback }] = useDisclosure(false);
@@ -164,10 +176,10 @@ export function NavSidebar() {
           });
           if (visibleItems.length === 0) return null;
           return (
-          <Box key={section.title} mb={spacingPx[5]}>
+          <Box key={section.titleKey} mb={spacingPx[5]}>
             <Box style={{ height: 28, display: "flex", alignItems: "flex-end", paddingBottom: 4 }}>
               <Text fw={600} tt="uppercase" px={spacingPx[3]} style={{ letterSpacing: "0.07em", fontSize: fontSizesPx["2xs"], color: colors.textMuted }}>
-                {section.title}
+                {t(`sections.${section.titleKey}`)}
               </Text>
             </Box>
             {visibleItems.map((item) => {
@@ -191,9 +203,9 @@ export function NavSidebar() {
                   component="div"
                 >
                   <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
-                  <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{item.label}</Text>
-                  {isDisabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>Soon</Badge>}
-                  {!isDisabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>Demo</Badge>}
+                  <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{t(`items.${item.labelKey}`)}</Text>
+                  {isDisabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("soon")}</Badge>}
+                  {!isDisabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("demo")}</Badge>}
                 </Box>
               );
               return isDisabled ? content : (
@@ -214,7 +226,7 @@ export function NavSidebar() {
             style={{ display: "flex", alignItems: "center", gap: spacingPx[3], padding: spacingPx[3], width: "100%", borderRadius: 6, color: colors.textSecondary, minHeight: 44 }}
           >
             <IconShieldCog size={18} style={{ opacity: 0.7 }} />
-            <Text fw={500} style={{ fontSize: fontSizesPx.lg }}>Admin</Text>
+            <Text fw={500} style={{ fontSize: fontSizesPx.lg }}>{t("admin")}</Text>
           </UnstyledButton>
         )}
         <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[2] }}>
@@ -222,7 +234,7 @@ export function NavSidebar() {
             style={{ display: "flex", alignItems: "center", gap: spacingPx[3], padding: spacingPx[3], flex: 1, borderRadius: 6, color: colors.textSecondary, minHeight: 44 }}
           >
             <IconSettings size={18} style={{ opacity: 0.7 }} />
-            <Text fw={500} style={{ fontSize: fontSizesPx.lg }}>Settings</Text>
+            <Text fw={500} style={{ fontSize: fontSizesPx.lg }}>{t("settings")}</Text>
           </UnstyledButton>
           <UnstyledButton onClick={handleLogout}
             style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, color: colors.textMuted }}
@@ -284,7 +296,7 @@ export function NavSidebar() {
           </Text>
         </Box>
 
-        <Tooltip label={collapsed ? "Expand" : "Collapse"} position="right" withArrow>
+        <Tooltip label={collapsed ? t("expand") : t("collapse")} position="right" withArrow>
           <UnstyledButton
             onClick={() => setCollapsed((v) => !v)}
             style={{
@@ -320,7 +332,7 @@ export function NavSidebar() {
           });
           if (visibleItems.length === 0) return null;
           return (
-          <Box key={section.title} mb={spacingPx[5]}>
+          <Box key={section.titleKey} mb={spacingPx[5]}>
             {/* Section label - always in DOM, fades out */}
             <Box style={{ height: 28, display: "flex", alignItems: "flex-end", paddingBottom: 4 }}>
               <Text
@@ -334,7 +346,7 @@ export function NavSidebar() {
                   ...labelStyle,
                 }}
               >
-                {section.title}
+                {t(`sections.${section.titleKey}`)}
               </Text>
             </Box>
 
@@ -371,7 +383,7 @@ export function NavSidebar() {
                     fw={isActive ? 600 : 500}
                     style={{ fontSize: fontSizesPx.lg, flex: 1, ...labelStyle }}
                   >
-                    {item.label}
+                    {t(`items.${item.labelKey}`)}
                   </Text>
 
                   {isDisabled && (
@@ -381,7 +393,7 @@ export function NavSidebar() {
                       color="gray"
                       style={{ fontSize: fontSizesPx["2xs"], fontWeight: 500, padding: "0 5px", flexShrink: 0, ...labelStyle }}
                     >
-                      Soon
+                      {tBadges("soon")}
                     </Badge>
                   )}
 
@@ -392,7 +404,7 @@ export function NavSidebar() {
                       color="accent"
                       style={{ fontSize: fontSizesPx["2xs"], fontWeight: 500, padding: "0 5px", flexShrink: 0, ...labelStyle }}
                     >
-                      Demo
+                      {tBadges("demo")}
                     </Badge>
                   )}
 
@@ -406,7 +418,12 @@ export function NavSidebar() {
               );
 
               return collapsed ? (
-                <Tooltip key={item.href} label={item.disabled ? `${item.label} (soon)` : item.label} position="right" withArrow>
+                <Tooltip
+                  key={item.href}
+                  label={item.disabled ? t("itemSoon", { label: t(`items.${item.labelKey}`) }) : t(`items.${item.labelKey}`)}
+                  position="right"
+                  withArrow
+                >
                   {linked}
                 </Tooltip>
               ) : linked;
@@ -438,10 +455,10 @@ export function NavSidebar() {
               className="hover:bg-[var(--color-bg-muted)] transition-colors"
             >
               <IconSpeakerphone size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
-              <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Feedback</Text>
+              <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>{t("feedback")}</Text>
             </UnstyledButton>
           );
-          return collapsed ? <Tooltip label="Feedback" position="right" withArrow>{inner}</Tooltip> : inner;
+          return collapsed ? <Tooltip label={t("feedback")} position="right" withArrow>{inner}</Tooltip> : inner;
         })()}
 
         {/* Admin - only visible to admin role */}
@@ -467,10 +484,10 @@ export function NavSidebar() {
               className="hover:bg-[var(--color-bg-muted)] transition-colors"
             >
               <IconShieldCog size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
-              <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Admin</Text>
+              <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>{t("admin")}</Text>
             </UnstyledButton>
           );
-          return collapsed ? <Tooltip label="Admin" position="right" withArrow>{inner}</Tooltip> : inner;
+          return collapsed ? <Tooltip label={t("admin")} position="right" withArrow>{inner}</Tooltip> : inner;
         })()}
 
         {/* Settings + exit row */}
@@ -497,17 +514,17 @@ export function NavSidebar() {
               className="hover:bg-[var(--color-bg-muted)] transition-colors"
             >
               <IconSettings size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
-              <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>Settings</Text>
+              <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>{t("settings")}</Text>
             </UnstyledButton>
           );
-          return collapsed ? <Tooltip label="Settings" position="right" withArrow>{inner}</Tooltip> : inner;
+          return collapsed ? <Tooltip label={t("settings")} position="right" withArrow>{inner}</Tooltip> : inner;
         })()}
 
         {/* Exit menu */}
         <Menu position="top-end" withArrow offset={6}>
           <Menu.Target>
             {collapsed ? (
-              <Tooltip label="Sign out" position="right" withArrow>
+              <Tooltip label={t("signOut")} position="right" withArrow>
                 <UnstyledButton
                   style={{
                     width:          36,
@@ -551,7 +568,7 @@ export function NavSidebar() {
               onClick={handleLogout}
               style={{ fontSize: fontSizesPx.base }}
             >
-              Sign out
+              {t("signOut")}
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
