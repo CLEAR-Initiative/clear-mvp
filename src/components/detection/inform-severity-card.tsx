@@ -3,6 +3,7 @@
 import { Box, Text, Group, Skeleton, Modal, Anchor, List } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconChartBar, IconInfoCircle, IconExternalLink } from "@tabler/icons-react";
+import { useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 
 const INFORM_COLORS = {
@@ -26,6 +27,8 @@ interface InformSeverityCardProps {
 }
 
 export function InformSeverityCard({ country }: InformSeverityCardProps) {
+  const t = useTranslations("detection");
+  const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>;
   const informQuery = api.inform.getSeverity.useQuery(
     { country },
     { staleTime: 1000 * 60 * 60 * 12 },
@@ -36,7 +39,7 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
     <Group gap={6} mb={16}>
       <Box style={{ color: "#A3A3A3" }}><IconChartBar size={13} /></Box>
       <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A3A3A3" }}>
-        INFORM Severity
+        {t("kpi.inform.title")}
       </Text>
     </Group>
   );
@@ -61,7 +64,7 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
       <Box style={{ height: "100%", display: "flex", flexDirection: "column" }}>
         {cardLabel}
         <Box style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ fontSize: 11, color: "#737373" }}>No data for {country}</Text>
+          <Text style={{ fontSize: 11, color: "#737373" }}>{t("kpi.inform.noData", { country })}</Text>
         </Box>
       </Box>
     );
@@ -102,9 +105,9 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
       {/* sub-dimension bars */}
       <Box style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
         {[
-          { label: "Impact",     value: inform.impact },
-          { label: "Conditions", value: inform.conditions },
-          { label: "Complexity", value: inform.complexity },
+          { label: t("kpi.inform.impact"),     value: inform.impact },
+          { label: t("kpi.inform.conditions"), value: inform.conditions },
+          { label: t("kpi.inform.complexity"), value: inform.complexity },
         ].map(({ label, value }) => (
           <Box key={label}>
             <Group justify="space-between" mb={3}>
@@ -121,11 +124,11 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
       {/* footer */}
       <Group justify="space-between" mt={12} align="center">
         <Text style={{ fontSize: 9, color: "#A3A3A3" }}>
-          Updated {inform.lastUpdated}
+          {t("kpi.inform.updated", { date: inform.lastUpdated })}
         </Text>
         <Group gap={6} align="center">
           <Text style={{ fontSize: 9, color: "#A3A3A3", fontWeight: 600 }}>
-            ACAPS · {inform.month}
+            {t("kpi.inform.acapsLine", { month: inform.month })}
           </Text>
           <Box
             onClick={openInfo}
@@ -141,7 +144,7 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
       <Modal
         opened={infoOpened}
         onClose={closeInfo}
-        title="INFORM Severity Index: Methodology"
+        title={t("kpi.inform.modal.title")}
         size="md"
         styles={{
           title: { fontSize: 14, fontWeight: 700, color: "#171717" },
@@ -149,36 +152,32 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
         }}
       >
         <Text style={{ fontSize: 13, color: "#525252", marginBottom: 12, lineHeight: 1.6 }}>
-          The <strong>INFORM Severity Index</strong> is a joint product of the EU Joint Research Centre (JRC), ACAPS,
-          and OCHA. JRC owns the methodology; ACAPS collects the data and produces the monthly scores; OCHA coordinates
-          the initiative. As of the February 2026 release (Version 2026 methodology), scores use a continuous scale of{" "}
-          <strong>0 to 10</strong>, rescaled from the previous 0 to 5 range for consistency with other INFORM products.
-          Scores are grouped into five severity categories. Only countries with an active humanitarian crisis are included.
+          {t.rich("kpi.inform.modal.intro", { strong })}
         </Text>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>Score dimensions (each 0 to 10)</Text>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.inform.modal.dimensionsHeading")}</Text>
         <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
-          <List.Item><strong>Impact</strong>: scale and depth of humanitarian needs, including people affected, displacement, and mortality.</List.Item>
-          <List.Item><strong>Conditions of affected people</strong>: living standards, food security, health, water and sanitation, and protection environment.</List.Item>
-          <List.Item><strong>Complexity</strong>: factors constraining response such as conflict intensity, access restrictions, and political instability.</List.Item>
+          <List.Item>{t.rich("kpi.inform.modal.dimImpact", { strong })}</List.Item>
+          <List.Item>{t.rich("kpi.inform.modal.dimConditions", { strong })}</List.Item>
+          <List.Item>{t.rich("kpi.inform.modal.dimComplexity", { strong })}</List.Item>
         </List>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>Severity categories</Text>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.inform.modal.categoriesHeading")}</Text>
         <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
-          <List.Item><strong>1 / Low</strong></List.Item>
-          <List.Item><strong>2 / Medium</strong></List.Item>
-          <List.Item><strong>3 / High</strong></List.Item>
-          <List.Item><strong>4 / Very High</strong></List.Item>
-          <List.Item><strong>5 / Extremely High</strong></List.Item>
+          <List.Item>{t.rich("kpi.inform.modal.cat1", { strong })}</List.Item>
+          <List.Item>{t.rich("kpi.inform.modal.cat2", { strong })}</List.Item>
+          <List.Item>{t.rich("kpi.inform.modal.cat3", { strong })}</List.Item>
+          <List.Item>{t.rich("kpi.inform.modal.cat4", { strong })}</List.Item>
+          <List.Item>{t.rich("kpi.inform.modal.cat5", { strong })}</List.Item>
         </List>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>Limitations</Text>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.inform.modal.limitationsHeading")}</Text>
         <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
-          <List.Item>Scores reflect ACAPS analytical judgement and may lag 4 to 8 weeks behind rapidly evolving situations.</List.Item>
-          <List.Item>The index covers active humanitarian crises only. Countries without an active crisis are not included.</List.Item>
+          <List.Item>{t("kpi.inform.modal.limitationJudgement")}</List.Item>
+          <List.Item>{t("kpi.inform.modal.limitationCoverage")}</List.Item>
         </List>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>Source</Text>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.inform.modal.sourceHeading")}</Text>
         <Group gap={6} align="center" mb={6}>
           <Anchor
             href="https://drmkc.jrc.ec.europa.eu/inform-index/INFORM-Severity"
@@ -186,7 +185,7 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
             rel="noopener noreferrer"
             style={{ fontSize: 12, color: "#E85D3D" }}
           >
-            INFORM Severity Index (JRC/EU canonical portal)
+            {t("kpi.inform.modal.sourceJrc")}
           </Anchor>
           <IconExternalLink size={11} color="#E85D3D" />
         </Group>
@@ -197,13 +196,12 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
             rel="noopener noreferrer"
             style={{ fontSize: 12, color: "#E85D3D" }}
           >
-            ACAPS INFORM Severity Index (data and API)
+            {t("kpi.inform.modal.sourceAcaps")}
           </Anchor>
           <IconExternalLink size={11} color="#E85D3D" />
         </Group>
         <Text style={{ fontSize: 11, color: "#A3A3A3", marginTop: 6 }}>
-          Data is fetched from the ACAPS API, which is identical to the JRC-published monthly dataset. The JRC portal
-          may lag by one release; ACAPS and HDX are authoritative for the latest scores. Updated monthly.
+          {t("kpi.inform.modal.sourceNote")}
         </Text>
       </Modal>
     </Box>

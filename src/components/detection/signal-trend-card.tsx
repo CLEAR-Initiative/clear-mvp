@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { Box, Text, Group } from "@mantine/core";
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from "recharts";
+import { useTranslations } from "next-intl";
 import type { GqlAlert } from "~/lib/types/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
 
@@ -37,6 +38,7 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
 }
 
 export function SignalTrendCard({ alerts, events }: SignalTrendCardProps) {
+  const t = useTranslations("detection");
   const [period, setPeriod] = useState<"7d" | "30d">("7d");
   const days = period === "7d" ? 7 : 30;
 
@@ -60,7 +62,7 @@ export function SignalTrendCard({ alerts, events }: SignalTrendCardProps) {
       {/* ── Header ── */}
       <Group justify="space-between" align="center" mb={14}>
         <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A3A3A3" }}>
-          Event Activity
+          {t("kpi.activity.title")}
         </Text>
         <Group gap={4}>
           {(["7d", "30d"] as const).map((p) => (
@@ -76,7 +78,7 @@ export function SignalTrendCard({ alerts, events }: SignalTrendCardProps) {
                 transition: "all 0.15s ease",
               }}
             >
-              {p}
+              {t(p === "7d" ? "kpi.trend.days7" : "kpi.trend.days30")}
             </button>
           ))}
         </Group>
@@ -91,7 +93,7 @@ export function SignalTrendCard({ alerts, events }: SignalTrendCardProps) {
               {events.length}
             </Text>
           </Group>
-          <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500, paddingInlineStart: 13 }}>Events</Text>
+          <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500, paddingInlineStart: 13 }}>{t("kpi.activity.events")}</Text>
         </Box>
         <Box>
           <Group gap={6} align="center" mb={1}>
@@ -100,7 +102,7 @@ export function SignalTrendCard({ alerts, events }: SignalTrendCardProps) {
               {alerts.length}
             </Text>
           </Group>
-          <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500, paddingInlineStart: 13 }}>Alerts</Text>
+          <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500, paddingInlineStart: 13 }}>{t("kpi.activity.alerts")}</Text>
         </Box>
       </Group>
 
@@ -123,8 +125,8 @@ export function SignalTrendCard({ alerts, events }: SignalTrendCardProps) {
               </linearGradient>
             </defs>
             <Tooltip content={<ChartTooltip />} />
-            <Area type="monotone" dataKey="Events" stroke="#F59E0B" strokeWidth={1.5} fill="url(#stGradEvents)" dot={false} />
-            <Area type="monotone" dataKey="Alerts" stroke="#E85D3D" strokeWidth={1.5} fill="url(#stGradAlerts)" dot={false} />
+            <Area type="monotone" dataKey="Events" name={t("kpi.activity.events")} stroke="#F59E0B" strokeWidth={1.5} fill="url(#stGradEvents)" dot={false} />
+            <Area type="monotone" dataKey="Alerts" name={t("kpi.activity.alerts")} stroke="#E85D3D" strokeWidth={1.5} fill="url(#stGradAlerts)" dot={false} />
           </AreaChart>
         </ResponsiveContainer>
       </Box>

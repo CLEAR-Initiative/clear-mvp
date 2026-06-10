@@ -2,6 +2,7 @@
 
 import { Box, Text, Group } from "@mantine/core";
 import { IconArrowRight, IconCheck } from "@tabler/icons-react";
+import { useTranslations } from "next-intl";
 import type { GqlAlert } from "~/lib/types/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
 
@@ -31,6 +32,7 @@ function arcD(fromDeg: number, toDeg: number): string {
 }
 
 export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: CoverageRingsCardProps) {
+  const t = useTranslations("detection");
   void events;
   const totalAlerts = alerts.length;
   const analysed  = Math.min(1, totalAlerts);
@@ -45,7 +47,7 @@ export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: Covera
   return (
     <Box style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A3A3A3", marginBottom: 12 }}>
-        Analysis Coverage
+        {t("kpi.analysisCoverage.title")}
       </Text>
 
       <Box style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
@@ -87,7 +89,7 @@ export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: Covera
               fill="#A3A3A3" fontSize="8" fontWeight="600" letterSpacing="0.1em"
               fontFamily="system-ui, -apple-system, sans-serif"
             >
-              COVERED
+              {t("kpi.analysisCoverage.covered")}
             </text>
           </svg>
         </Box>
@@ -95,9 +97,9 @@ export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: Covera
         {/* Stats */}
         <Group justify="center" gap={20} mt={16}>
           {[
-            { dot: "#22C55E",             value: analysed,    label: "Analysed"   },
-            { dot: "rgba(239,68,68,0.6)", value: uncovered,   label: "Unanalysed" },
-            { dot: "#F59E0B",             value: totalAlerts, label: "Alerts"     },
+            { dot: "#22C55E",             value: analysed,    label: t("kpi.analysisCoverage.analysed")   },
+            { dot: "rgba(239,68,68,0.6)", value: uncovered,   label: t("kpi.analysisCoverage.unanalysed") },
+            { dot: "#F59E0B",             value: totalAlerts, label: t("kpi.analysisCoverage.alerts")     },
           ].map(({ dot, value, label }) => (
             <Box key={label} style={{ textAlign: "center" }}>
               <Group gap={4} justify="center" mb={2}>
@@ -121,13 +123,13 @@ export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: Covera
           <>
             <IconArrowRight size={13} color="#F59E0B" />
             <Text style={{ fontSize: 11, color: "#F59E0B", fontWeight: 600 }}>
-              {uncovered} alert{uncovered !== 1 ? "s" : ""} without analysis
+              {t("kpi.analysisCoverage.withoutAnalysis", { count: uncovered })}
             </Text>
           </>
         ) : (
           <>
             <IconCheck size={13} color="#22C55E" />
-            <Text style={{ fontSize: 11, color: "#22C55E", fontWeight: 600 }}>All alerts covered</Text>
+            <Text style={{ fontSize: 11, color: "#22C55E", fontWeight: 600 }}>{t("kpi.analysisCoverage.allCovered")}</Text>
           </>
         )}
       </Box>
