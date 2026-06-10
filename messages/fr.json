@@ -3,6 +3,222 @@
     "title": "CLEAR : Crisis Learning, Early-warning, Anticipation & Response",
     "description": "Plateforme humanitaire d'aide à la décision"
   },
+  "analysis": {
+    "page": {
+      "title": "Analyses",
+      "breadcrumb": "Analyses",
+      "tabs": {
+        "crisis": "Vue d'ensemble de la crise",
+        "situation": "Analyse de situation"
+      },
+      "situationPlaceholder": {
+        "title": "Analyse de situation",
+        "description": "Rapports de situation générés par IA bientôt disponibles."
+      }
+    },
+    "reports": {
+      "activeCrises": "Crises actives",
+      "criticalBadge": "{count} critique(s)",
+      "untitledCrisis": "Crise sans titre",
+      "eventCount": "{count, plural, one {# événement} other {# événements}}",
+      "empty": "Aucune crise active."
+    },
+    "executiveSummary": {
+      "priorityAnalysis": "Analyse prioritaire",
+      "criticalBadge": "{count} critique(s)",
+      "activeBadge": "{count} active(s)",
+      "situationReport": "Rapport de situation - {country}",
+      "defaultReportTitle": "Crise de déplacement liée au conflit armé - {country}",
+      "activeAlerts": "Alertes actives",
+      "totalAlerts": "Total des alertes",
+      "trend": "Tendance",
+      "needs": {
+        "shelter": {
+          "label": "Abris",
+          "description": "Logement et déplacement"
+        },
+        "wash": {
+          "label": "WASH",
+          "description": "Eau et assainissement"
+        },
+        "protection": {
+          "label": "Protection",
+          "description": "Droits et sécurité"
+        },
+        "health": {
+          "label": "Santé",
+          "description": "Réponse médicale"
+        },
+        "foodSecurity": {
+          "label": "Sécurité alimentaire",
+          "description": "Accès à la nutrition"
+        }
+      },
+      "viewFullReport": "Voir le rapport complet",
+      "downloadPdf": "Télécharger le PDF",
+      "updatedAt": "Mise à jour {time}",
+      "updatedFallback": "Mise à jour il y a 2 heures",
+      "confidence": "Confiance : {pct} %",
+      "aiGeneratedAnalysis": "Analyse générée par IA",
+      "generating": "Génération d'une analyse complète à partir de {count} alertes actives...",
+      "generateFailed": "Échec de la génération de l'analyse. Veuillez réessayer."
+    },
+    "insights": {
+      "title": "Constats générés par IA",
+      "subtitle": "Détection de tendances et recommandations",
+      "filters": {
+        "epidemiological": "Épidémiologique",
+        "allTypes": "Tous les types",
+        "logistics": "Logistique"
+      },
+      "dataQualityTitle": "Qualité des données d'analyse",
+      "dataQualitySubtitle": "Indicateurs de fiabilité des sources",
+      "columns": {
+        "dataSource": "Source de données",
+        "completeness": "Complétude",
+        "timeliness": "Actualité",
+        "confidence": "Confiance",
+        "lastUpdate": "Dernière mise à jour"
+      }
+    },
+    "impact": {
+      "title": "Évaluation de l'impact sectoriel",
+      "subtitle": "Besoins humanitaires par secteur",
+      "columns": {
+        "sector": "Secteur",
+        "severity": "Sévérité",
+        "affected": "Affectés",
+        "details": "Détails"
+      },
+      "environmental": {
+        "title": "Facteurs environnementaux",
+        "subtitle": "Risques climatiques et environnementaux",
+        "floodRisk": "Risque d'inondation",
+        "rainfallForecast": "Prévisions de précipitations",
+        "secondaryRisk": "Risque secondaire"
+      },
+      "protection": {
+        "title": "Préoccupations de protection",
+        "subtitle": "Vulnérabilités identifiées"
+      },
+      "secondaryEffects": {
+        "title": "Effets secondaires",
+        "subtitle": "Impacts en cascade anticipés"
+      }
+    },
+    "scenarios": {
+      "title": "Comparaison de scénarios",
+      "subtitle": "Comparez les résultats projetés"
+    },
+    "data": {
+      "insights": {
+        "waterClustering": {
+          "type": "Schéma critique",
+          "title": "Regroupement des sources d'eau",
+          "description": "87 % des cas à moins de 500 m de 3 points d'eau. Tests et traitement immédiats recommandés."
+        },
+        "peakTiming": {
+          "type": "Sensible au facteur temps",
+          "title": "Prédiction du pic de transmission",
+          "description": "Les tendances historiques suggèrent un pic de transmission 14 à 21 jours après le début de l'épidémie. Actuellement : jour 8."
+        },
+        "resourceOptimization": {
+          "type": "Opportunité",
+          "title": "Optimisation des ressources",
+          "description": "Les stocks de SRO à Dire Dawa peuvent atteindre les zones affectées en 6 heures. Prépositionnement possible."
+        }
+      },
+      "dataQuality": {
+        "mohPhem": {
+          "source": "Données MOH PHEM",
+          "timeliness": "Temps réel",
+          "confidence": "Élevée",
+          "lastUpdate": "il y a 3 min"
+        },
+        "whoEwarn": {
+          "source": "EWARN de l'OMS",
+          "timeliness": "Toutes les heures",
+          "confidence": "Élevée",
+          "lastUpdate": "il y a 1 h"
+        },
+        "fieldReports": {
+          "source": "Rapports de terrain",
+          "timeliness": "Quotidienne",
+          "confidence": "Moyenne",
+          "lastUpdate": "il y a 4 h"
+        },
+        "satellite": {
+          "source": "Imagerie satellite",
+          "timeliness": "Cycle de 6 h",
+          "confidence": "Élevée",
+          "lastUpdate": "il y a 2 h"
+        }
+      },
+      "scenarios": {
+        "bestCase": {
+          "name": "Meilleur cas",
+          "sub": "Scénario d'endiguement rapide",
+          "description": "Une intervention précoce avec une couverture WASH complète permet un endiguement en 2 semaines. Personnes affectées estimées : 2 400."
+        },
+        "mostLikely": {
+          "name": "Le plus probable",
+          "sub": "Scénario de propagation modérée",
+          "description": "Endiguement partiel avec transmission persistante dans 3 woredas. Pic dans 3 à 4 semaines. Personnes affectées estimées : 8 500."
+        },
+        "worstCase": {
+          "name": "Pire cas",
+          "sub": "Scénario de propagation régionale",
+          "description": "Transmission généralisée dans plus de 8 woredas avec saturation du système de santé. Personnes affectées estimées : plus de 24 000."
+        }
+      },
+      "impactAssessment": {
+        "shelter": {
+          "sector": "Abris",
+          "affected": "{count} personnes",
+          "description": "45 % des abris endommagés ou détruits dans les zones touchées par les inondations"
+        },
+        "wash": {
+          "sector": "WASH",
+          "affected": "{count} personnes",
+          "description": "3 stations de traitement de l'eau hors service, contamination détectée"
+        },
+        "protection": {
+          "sector": "Protection",
+          "affected": "{count} personnes",
+          "description": "Risques de VBG accrus, préoccupations de protection de l'enfance dans les sites de déplacement"
+        },
+        "health": {
+          "sector": "Santé",
+          "affected": "{count} cas",
+          "description": "Épidémie de choléra avec un taux de létalité de 2,1 %, au-dessus du seuil d'urgence"
+        },
+        "foodSecurity": {
+          "sector": "Sécurité alimentaire",
+          "affected": "{count} personnes",
+          "description": "Insécurité alimentaire IPC Phase 3+ dans 5 woredas, perturbation des marchés en cours"
+        }
+      },
+      "environmentalFactors": {
+        "floodRisk": "GloFAS indique une probabilité de 75 % de niveaux fluviaux supérieurs à la normale dans les 14 prochains jours",
+        "rainfallForecast": "150 à 200 mm attendus dans la région Somali au cours de la semaine à venir, soit 40 % au-dessus de la moyenne saisonnière",
+        "secondaryRisk": "Risque ÉLEVÉ d'épidémie de maladies d'origine hydrique en raison de la contamination des sources d'eau par les inondations"
+      },
+      "protectionConcerns": {
+        "gbv": "Risques de VBG accrus dans les sites de déplacement surpeuplés, en particulier pour les femmes et les filles",
+        "separatedChildren": "Enfants séparés et non accompagnés identifiés dans 3 sites de déplacement",
+        "disabilities": "Obstacles à l'accès aux services pour les personnes en situation de handicap dans les abris temporaires",
+        "documentation": "La perte de documents d'identité compromet l'accès aux services de base pour les populations déplacées"
+      },
+      "secondaryEffects": {
+        "market": "La perturbation des marchés entraîne une hausse de 28 % des prix alimentaires dans les zones affectées",
+        "schools": "Fermetures d'écoles affectant 15 000 enfants dans 23 établissements",
+        "livestock": "Pertes de bétail estimées à 2,3 M$ affectant les moyens de subsistance pastoraux",
+        "transport": "Les perturbations des axes de transport retardent les chaînes d'approvisionnement humanitaire de 48 à 72 heures",
+        "mentalHealth": "Impacts sur la santé mentale signalés dans 60 % des ménages déplacés",
+        "agriculture": "La perturbation de la saison agricole menace la prochaine récolte dans 4 woredas"
+      }
+    }
+  },
   "cash": {
     "header": {
       "title": "Ciblage et distribution de l'assistance monétaire",
@@ -202,7 +418,245 @@
     },
     "badges": {
       "soon": "Bientôt",
-      "demo": "Démo"
+      "demo": "Démo",
+      "aiGenerated": "✦ Généré par IA"
+    },
+    "severities": {
+      "critical": "Critique",
+      "high": "Élevée",
+      "medium": "Moyenne",
+      "low": "Faible",
+      "unknown": "Inconnue"
+    }
+  },
+  "crisisDetail": {
+    "backToAnalysis": "Retour à l'analyse",
+    "viewOnCrisisMap": "Voir sur la carte des crises",
+    "switchCrisis": "Changer de crise",
+    "untitledCrisis": "Crise sans titre",
+    "crisisBadge": "Crise",
+    "eventFallback": "Événement",
+    "updatedDate": "Mise à jour le {date}",
+    "eventCount": "{count, plural, one {# événement} other {# événements}}",
+    "enrichment": {
+      "preparingTitle": "Les informations sont en cours de préparation",
+      "preparingDescription": "Génération du titre, du résumé, des scénarios et de l'évaluation des besoins..."
+    },
+    "notFound": {
+      "title": "Crise introuvable",
+      "description": "Cette crise a peut-être été supprimée ou l'identifiant est invalide."
+    },
+    "deleteModal": {
+      "title": "Supprimer la crise",
+      "confirm": "Supprimer définitivement <strong>{title}</strong> ? Cette action est irréversible.",
+      "fallbackName": "cette crise",
+      "menuItem": "Supprimer la crise"
+    },
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "needs": "Évaluation des besoins",
+      "events": "Événements",
+      "demography": "Démographie",
+      "sources": "Sources",
+      "confidence": "Confiance"
+    },
+    "kpi": {
+      "impact": "Impact",
+      "areaContext": "Contexte de la zone",
+      "peopleAffected": "Personnes affectées",
+      "peopleDisplaced": "Personnes déplacées",
+      "peopleInArea": "Personnes dans la zone",
+      "idpPerCapitaIn": "Déplacés internes par habitant dans {name}",
+      "idpPerCapita": "Déplacés internes par habitant"
+    },
+    "summary": {
+      "title": "Résumé",
+      "empty": "Aucun résumé disponible pour le moment."
+    },
+    "scenario": {
+      "title": "Analyse de scénarios",
+      "empty": "Scénarios pas encore générés pour cette crise.",
+      "labels": {
+        "bestCase": "Meilleur cas",
+        "mostLikely": "Le plus probable",
+        "worstCase": "Pire cas"
+      }
+    },
+    "documents": {
+      "title": "Documents",
+      "removeModalTitle": "Retirer le document",
+      "removeConfirm": "Retirer <strong>{name}</strong> ? Cette action est irréversible.",
+      "remove": "Retirer",
+      "empty": "Aucun document joint.",
+      "upload": "Téléverser",
+      "uploading": "Téléversement...",
+      "uploadFailed": "Échec du téléversement. Veuillez réessayer.",
+      "removeFailed": "Échec du retrait. Veuillez réessayer."
+    },
+    "demography": {
+      "noData": "Aucune donnée démographique disponible pour cette localisation.",
+      "notYetAvailable": "Données démographiques pas encore disponibles pour {name}.",
+      "source": "WorldPop {year}{release} contraint",
+      "total": "total",
+      "vulnerableGroups": "Groupes vulnérables",
+      "groups": {
+        "childrenUnder5": "Enfants de moins de 5 ans",
+        "children5to14": "Enfants de 5 à 14 ans",
+        "women15to49": "Femmes de 15 à 49 ans",
+        "elderly60plus": "Personnes âgées de 60 ans et plus"
+      },
+      "genderSplit": "Répartition par genre",
+      "male": "Hommes",
+      "female": "Femmes"
+    },
+    "sources": {
+      "underlyingSignals": "Signaux sous-jacents",
+      "enrichmentSection": "Enrichissement",
+      "contextData": "Données de contexte",
+      "noSignalSources": "Aucune source de signal liée.",
+      "viaAggregator": "{publisher} via {aggregator}",
+      "asOf": "Au {date}",
+      "signalCount": "{count, plural, one {# signal} other {# signaux}}",
+      "noEnrichment": "Aucune source d'enrichissement externe intégrée pour le moment. Les rapports de situation ReliefWeb et l'analyse historique des signaux apparaîtront ici dès qu'ils seront disponibles.",
+      "noContextData": "Aucune donnée de contexte disponible pour cette localisation.",
+      "context": {
+        "population": "Population",
+        "populationDetail": "{value} - WorldPop {year} contraint{release}",
+        "demographics": "Démographie",
+        "demographicsDetail": "Hommes {malePct} % / Femmes {femalePct} % - répartition par âge et sexe WorldPop {year}",
+        "idp": "Déplacés internes",
+        "round": "Round {number}",
+        "needsBaseline": "Référence de l'évaluation des besoins"
+      }
+    },
+    "confidence": {
+      "legend": "Légende",
+      "modalTitle": "Niveaux de confiance",
+      "cols": {
+        "baseline": {
+          "label": "Référence",
+          "description": "Contenu généré uniquement à partir des données de signaux du pipeline - événements, sévérités et localisations ingérés depuis les sources connectées."
+        },
+        "enriched": {
+          "label": "Enrichi par IA",
+          "description": "Le pipeline a intégré des données de contexte externes (démographie WorldPop, déplacement DTM de l'OIM, scores de risque INFORM) lors de la génération de ce contenu."
+        },
+        "reviewed": {
+          "label": "Revu par un analyste",
+          "description": "Un analyste CLEAR a revu et validé le contenu à la lumière de sa connaissance du terrain."
+        },
+        "validated": {
+          "label": "Validé sur le terrain",
+          "description": "Le contenu a été confirmé par un retour direct de la communauté ou des équipes de terrain."
+        }
+      },
+      "rows": {
+        "description": "Description",
+        "scenarios": "Scénarios",
+        "needs": "Évaluation des besoins"
+      }
+    },
+    "events": {
+      "empty": "Aucun événement lié à cette crise.",
+      "removeModalTitle": "Retirer l'événement de la crise",
+      "removeConfirm": "Retirer <strong>{title}</strong> de la crise ?",
+      "fallbackName": "cet événement",
+      "lastEventWarning": "Il s'agit du dernier événement. Le retirer supprimera la crise entière.",
+      "removeAndDelete": "Retirer et supprimer la crise",
+      "remove": "Retirer",
+      "removeFromCrisis": "Retirer de la crise"
+    },
+    "needs": {
+      "saf": {
+        "catastrophic": "Catastrophique",
+        "extreme": "Extrême",
+        "severe": "Sévère",
+        "stressed": "Stress",
+        "minimal": "Minimale",
+        "unknown": "Inconnue"
+      },
+      "sectors": {
+        "shelter": "Abris",
+        "wash": "WASH",
+        "protection": "Protection",
+        "health": "Santé",
+        "food": "Sécurité alimentaire",
+        "education": "Éducation"
+      },
+      "levels": {
+        "baseline": "Référence",
+        "aiReview": "Revue IA",
+        "rna": "RNA"
+      },
+      "precision": {
+        "district": "District",
+        "locality": "Localité"
+      },
+      "estChildShare": "part estimée d'enfants",
+      "sectorsTitle": "Secteurs",
+      "columns": {
+        "sector": "Secteur",
+        "severity": "Sévérité",
+        "pin": "Personnes dans le besoin",
+        "presence": "Présence op.",
+        "assessment": "Évaluation",
+        "precision": "Précision"
+      },
+      "summaryTitle": "Résumé",
+      "severityFromMsna": "Sévérité sectorielle issue de la <b>MSNA d'août 2025</b>.",
+      "presenceFromOcha": "Présence opérationnelle issue du <b>3W OCHA {date}</b>.",
+      "generating": "L'analyse des besoins est en cours de génération...",
+      "aiSummaryComingSoon": "Résumé généré par IA bientôt disponible.",
+      "responseGap": "Déficit de réponse",
+      "nrcMandate": "Mandat NRC",
+      "orgsActive": "Organisations actives dans cette zone",
+      "moreOrgs": "+{count} autres",
+      "severityModal": {
+        "title": "Sévérité sectorielle",
+        "intro": "Chaque secteur est noté de 0 à 100 à l'aide de combinaisons pondérées d'indicateurs de l'enquête MSNA selon trois dimensions : perturbation des conditions de vie (accès, disponibilité et qualité des services essentiels), mécanismes d'adaptation adoptés par les populations affectées, et état de bien-être physique et mental.",
+        "score": "Score",
+        "level": "Niveau",
+        "noData": "Aucune donnée",
+        "footnote": "Les seuils sont au stade de prototype et en attente de validation par rapport aux standards des clusters JIAF et aux référentiels NRC."
+      },
+      "pinModal": {
+        "title": "Personnes dans le besoin",
+        "intro": "Estimé à partir du score de sévérité sectorielle selon la même formule composite pondérée que celle qui détermine le niveau de sévérité :",
+        "formula": "PIN = (score / 100) x population du district",
+        "population": "Données de population : estimations contraintes WorldPop 2026. L'éducation applique une part de 18 % d'enfants dans la population, le score de ce secteur ne portant que sur les enfants d'âge scolaire.",
+        "footnote": "La part d'enfants pour l'éducation sera remplacée par la répartition par âge et sexe de WorldPop dès qu'elle sera disponible."
+      },
+      "assessmentModal": {
+        "title": "Niveau d'évaluation",
+        "intro": "Indique comment l'évaluation sectorielle a été produite et sur quelles sources de données elle s'appuie.",
+        "level1Label": "1  Référence",
+        "level1Description": "Issu des données de l'enquête MSNA (évaluation multisectorielle des besoins), août 2025. Couverture au niveau du district uniquement. Aucune revue IA n'a été appliquée.",
+        "level2Label": "2  Revue IA",
+        "level2Description": "Un modèle d'IA a examiné les signaux et rapports disponibles ainsi que la référence MSNA afin de produire une évaluation de sévérité actualisée et un résumé sectoriel rédigé.",
+        "level3Label": "3  RNA",
+        "level3Description": "Une évaluation rapide des besoins (RNA) menée sur le terrain fournit des données directes, qui prévalent sur les estimations issues de la télédétection et des enquêtes."
+      },
+      "precisionModal": {
+        "title": "Précision",
+        "intro": "Indique la granularité géographique la plus fine à laquelle les données d'évaluation ont été collectées.",
+        "districtLabel": "District",
+        "districtDescription": "Données collectées au niveau administratif 2 (district A2). C'est la granularité actuelle du jeu de données MSNA.",
+        "localityLabel": "Localité",
+        "localityDescription": "Données collectées au niveau infra-district (localité), offrant une résolution plus fine. Nécessite une validation de terrain ou des sources de données à plus haute résolution pas encore intégrées.",
+        "footnote": "La plupart des évaluations actuelles sont au niveau du district. La précision au niveau de la localité deviendra disponible à mesure que des sources de données plus fines seront intégrées."
+      },
+      "presenceModal": {
+        "title": "Présence opérationnelle",
+        "intro": "Issu du jeu de données 3W (Qui fait quoi où) d'OCHA. Présente les organisations humanitaires actives dans le district, ventilées par type d'organisation.",
+        "types": {
+          "un": "Agences des Nations Unies",
+          "ingo": "ONG internationales",
+          "nngo": "ONG nationales",
+          "gov": "Institutions gouvernementales",
+          "rcrc": "Croix-Rouge / Croissant-Rouge",
+          "other": "Autres organisations"
+        }
+      }
     }
   },
   "dashboard": {
@@ -514,8 +968,109 @@
         "impact": "Impact",
         "conditions": "Conditions",
         "complexity": "Complexité",
-        "updated": "Mise à jour : {date}"
+        "updated": "Mise à jour : {date}",
+        "acapsLine": "ACAPS · {month}",
+        "modal": {
+          "title": "Indice de sévérité INFORM : méthodologie",
+          "intro": "L'<strong>indice de sévérité INFORM</strong> est un produit conjoint du Centre commun de recherche de l'UE (JRC), d'ACAPS et d'OCHA. Le JRC est propriétaire de la méthodologie ; ACAPS collecte les données et produit les scores mensuels ; OCHA coordonne l'initiative. Depuis la publication de février 2026 (méthodologie version 2026), les scores utilisent une échelle continue de <strong>0 à 10</strong>, recalibrée depuis l'ancienne échelle de 0 à 5 pour assurer la cohérence avec les autres produits INFORM. Les scores sont regroupés en cinq catégories de sévérité. Seuls les pays connaissant une crise humanitaire active sont inclus.",
+          "dimensionsHeading": "Dimensions du score (chacune de 0 à 10)",
+          "dimImpact": "<strong>Impact</strong> : ampleur et profondeur des besoins humanitaires, y compris les personnes affectées, le déplacement et la mortalité.",
+          "dimConditions": "<strong>Conditions des personnes affectées</strong> : conditions de vie, sécurité alimentaire, santé, eau et assainissement, et environnement de protection.",
+          "dimComplexity": "<strong>Complexité</strong> : facteurs contraignant la réponse, tels que l'intensité du conflit, les restrictions d'accès et l'instabilité politique.",
+          "categoriesHeading": "Catégories de sévérité",
+          "cat1": "<strong>1 / Faible</strong>",
+          "cat2": "<strong>2 / Moyenne</strong>",
+          "cat3": "<strong>3 / Élevée</strong>",
+          "cat4": "<strong>4 / Très élevée</strong>",
+          "cat5": "<strong>5 / Extrêmement élevée</strong>",
+          "limitationsHeading": "Limites",
+          "limitationJudgement": "Les scores reflètent le jugement analytique d'ACAPS et peuvent accuser un retard de 4 à 8 semaines sur des situations évoluant rapidement.",
+          "limitationCoverage": "L'indice ne couvre que les crises humanitaires actives. Les pays sans crise active ne sont pas inclus.",
+          "sourceHeading": "Source",
+          "sourceJrc": "Indice de sévérité INFORM (portail canonique JRC/UE)",
+          "sourceAcaps": "Indice de sévérité INFORM d'ACAPS (données et API)",
+          "sourceNote": "Les données proviennent de l'API ACAPS, identique au jeu de données mensuel publié par le JRC. Le portail du JRC peut avoir une publication de retard ; ACAPS et HDX font foi pour les scores les plus récents. Mise à jour mensuelle."
+        }
+      },
+      "indicators": "Indicateurs",
+      "activity": {
+        "title": "Activité des événements",
+        "events": "Événements",
+        "alerts": "Alertes"
+      },
+      "analysisCoverage": {
+        "title": "Couverture d'analyse",
+        "covered": "COUVERT",
+        "analysed": "Analysées",
+        "unanalysed": "Non analysées",
+        "alerts": "Alertes",
+        "withoutAnalysis": "{count, plural, one {# alerte} other {# alertes}} sans analyse",
+        "allCovered": "Toutes les alertes couvertes"
+      },
+      "idp": {
+        "title": "Déplacement interne",
+        "unavailable": "Données indisponibles",
+        "noData": "Aucune donnée de déplacement",
+        "notTracked": "{code} n'est pas suivi par la DTM de l'OIM",
+        "coverageVaries": "La couverture varie selon les pays",
+        "internallyDisplaced": "Déplacés internes",
+        "vsLastMonth": "vs mois précédent",
+        "sourceLine": "DTM de l'OIM via HAPI",
+        "modal": {
+          "title": "Déplacement interne : méthodologie",
+          "intro": "Cette carte présente le nombre total de <strong>personnes déplacées internes en raison du conflit</strong> suivies par la matrice de suivi des déplacements (DTM) de l'OIM pour le pays sélectionné. Le chiffre reflète le dernier instantané disponible, et non un total cumulé.",
+          "numbersHeading": "Signification des chiffres",
+          "numberCurrent": "<strong>Décompte actuel</strong> : chiffre de déplacés internes le plus récent de la DTM de l'OIM pour le pays.",
+          "numberDelta": "<strong>Variation mensuelle</strong> : évolution des déplacés internes signalés par rapport au point de données du mois précédent.",
+          "numberTrend": "<strong>Courbe de tendance</strong> : décomptes mensuels historiques de déplacés internes montrant la trajectoire du déplacement.",
+          "numberFreshness": "<strong>Indicateur de fraîcheur</strong> : vert si mis à jour il y a moins de 30 jours, orange il y a moins de 90 jours, rouge au-delà.",
+          "limitationsHeading": "Limites",
+          "limitationFloods": "Les déplacements liés aux inondations et aux catastrophes ne sont <strong>pas inclus</strong>. Dans ce contexte, la DTM de l'OIM suit uniquement les déplacements induits par le conflit.",
+          "limitationCoverage": "La couverture se limite au périmètre de suivi de la DTM de l'OIM, qui peut ne pas saisir toutes les situations de déplacement dans un pays.",
+          "limitationLag": "Les données peuvent accuser un retard de 4 à 8 semaines sur la réalité du terrain selon l'opération pays.",
+          "sourceHeading": "Source",
+          "sourceLink": "HAPI : Humanitarian API (humdata.org)",
+          "sourceNote": "HAPI agrège les données de la DTM de l'OIM avec d'autres jeux de données humanitaires sous la responsabilité d'OCHA."
+        }
       }
+    },
+    "createSignalModal": {
+      "stepTitles": {
+        "details": "Créer un signal - Détails",
+        "media": "Créer un signal - Ajouter des médias",
+        "success": "Signal créé"
+      },
+      "fields": {
+        "title": "Titre",
+        "titlePlaceholder": "p. ex. Inondations signalées dans l'État de Kassala",
+        "description": "Description",
+        "descriptionPlaceholder": "Décrivez ce qui a été observé, la source et tout contexte pertinent...",
+        "source": "Source",
+        "sourcePlaceholderLoading": "Chargement des sources...",
+        "sourcePlaceholder": "Sélectionnez une source...",
+        "noSources": "Aucune source disponible",
+        "location": "Localisation",
+        "locationPlaceholderLoading": "Chargement des localisations...",
+        "locationPlaceholder": "Rechercher une localisation...",
+        "noLocation": "Aucune localisation correspondante",
+        "severity": "Sévérité",
+        "severityPlaceholder": "Sélectionnez la sévérité..."
+      },
+      "severityWarning": "Les signaux de sévérité {severity} peuvent déclencher une alerte et notifier les membres de l'équipe abonnés aux alertes de ce niveau.",
+      "nextAddMedia": "Suivant : ajouter des médias",
+      "media": {
+        "dropzone": "Déposez les fichiers ici ou cliquez pour parcourir",
+        "fileTypes": "PDF, Word, Excel, CSV, fichiers texte",
+        "skipSubmit": "Ignorer et soumettre",
+        "submit": "Soumettre le signal"
+      },
+      "success": {
+        "title": "Signal créé",
+        "message": "Votre signal a été soumis et est désormais visible par votre équipe.",
+        "done": "Terminé"
+      },
+      "uploadError": "Échec du téléversement du fichier",
+      "submitError": "Échec de la création du signal"
     },
     "createAlert": {
       "title": "Créer une alerte manuelle",
@@ -553,6 +1108,79 @@
         "frequency": "Fréquence",
         "variables": "Variables"
       }
+    }
+  },
+  "eventDetail": {
+    "notFound": {
+      "title": "Événement introuvable",
+      "description": "Cet événement a peut-être été supprimé ou l'identifiant est invalide."
+    },
+    "backToEvents": "Retour à la vue d'ensemble des événements",
+    "viewOnCrisisMap": "Voir sur la carte des crises",
+    "status": {
+      "active": "Actif",
+      "resolved": "Résolu"
+    },
+    "signalCount": "{count, plural, one {# signal} other {# signaux}}",
+    "sourceCount": "{count, plural, one {# source} other {# sources}}",
+    "notAvailable": "N/D",
+    "kpi": {
+      "casualties": "Victimes",
+      "populationIn": "Population dans {name}",
+      "populationInArea": "Population dans la zone",
+      "idpPerCapitaIn": "Déplacés internes par habitant dans {name} ({count} déplacés)",
+      "idpPerCapita": "Déplacés internes par habitant"
+    },
+    "summary": {
+      "title": "Résumé",
+      "empty": "Aucun résumé disponible."
+    },
+    "signals": {
+      "title": "Signaux ({count})",
+      "subtitle": "Renseignements sources à l'origine de cet événement",
+      "empty": "Aucun signal associé",
+      "sourceLink": "Source",
+      "fallbackTitle": "Signal {id}"
+    },
+    "related": {
+      "title": "Événements liés",
+      "empty": "Aucun événement lié trouvé"
+    },
+    "actions": {
+      "title": "Actions",
+      "alert": "Alerte",
+      "confirmPrompt": "Faire remonter cet événement en alerte ?",
+      "failed": "Échec. Veuillez réessayer.",
+      "turnIntoAlert": "Transformer en alerte"
+    },
+    "systemData": {
+      "title": "Données système",
+      "eventId": "ID de l'événement",
+      "source": "Source",
+      "detected": "Détecté",
+      "validFrom": "Valide à partir du",
+      "validUntil": "Valide jusqu'au",
+      "affectedAreas": "Zones affectées",
+      "created": "Créé",
+      "updated": "Mis à jour"
+    },
+    "drawer": {
+      "title": "Détails de l'événement",
+      "openFullPage": "Ouvrir en pleine page"
+    },
+    "addToCrisis": {
+      "button": "Ajouter à une crise",
+      "createNew": "Créer une nouvelle crise",
+      "loading": "Chargement des crises...",
+      "empty": "Aucune crise existante pour le moment.",
+      "untitledCrisis": "Crise sans titre",
+      "eventCount": "{count, plural, one {# événement} other {# événements}}",
+      "linkedTitle": "Événement lié",
+      "linkedMessage": "Ajouté à la crise.",
+      "linkErrorTitle": "Impossible de lier l'événement",
+      "createdTitle": "Crise créée",
+      "createdMessage": "Le pipeline va générer le titre et le résumé sous peu.",
+      "createErrorTitle": "Impossible de créer la crise"
     }
   },
   "knowledge": {
@@ -822,6 +1450,60 @@
       "timezone": "Fuseau horaire",
       "timezoneKhartoum": "Soudan (Khartoum)",
       "timezoneUtc": "UTC"
+    }
+  },
+  "signalDetail": {
+    "notFound": {
+      "title": "Signal introuvable",
+      "description": "Ce signal a peut-être été supprimé ou l'identifiant est invalide."
+    },
+    "backToEvents": "Retour à la vue d'ensemble des événements",
+    "viewOnCrisisMap": "Voir sur la carte des crises",
+    "signalBadge": "Signal",
+    "fallbackTitleWithLocation": "Signal - {location}",
+    "fallbackTitle": "Signal",
+    "unknownSourceType": "Inconnu",
+    "viaSource": "via {name}",
+    "viewOriginal": "Voir l'original",
+    "viewSource": "Voir la source",
+    "description": {
+      "title": "Description",
+      "empty": "Aucune description disponible."
+    },
+    "source": {
+      "title": "Détails de la source",
+      "name": "Nom de la source",
+      "type": "Type de source",
+      "activity": "Activité de la source",
+      "signalsFrom": "{count, plural, one {signal} other {signaux}} de {name}",
+      "activityContext": "dans le contexte de détection actuel",
+      "infoUrl": "URL d'information"
+    },
+    "media": {
+      "title": "Médias ({count})"
+    },
+    "events": {
+      "title": "Fait partie des événements ({count})",
+      "empty": "Pas encore assigné à un événement",
+      "fallbackTitle": "Événement {id}"
+    },
+    "similar": {
+      "title": "Signaux similaires ({count})",
+      "empty": "Aucun signal co-détecté trouvé",
+      "fallbackTitle": "Signal {id}"
+    },
+    "actions": {
+      "title": "Actions",
+      "addToCrisis": "Ajouter à une crise",
+      "comingSoon": "bientôt disponible"
+    },
+    "details": {
+      "title": "Détails",
+      "signalId": "ID du signal",
+      "source": "Source",
+      "published": "Publié",
+      "collected": "Collecté",
+      "affectedAreas": "Zones affectées"
     }
   }
 }

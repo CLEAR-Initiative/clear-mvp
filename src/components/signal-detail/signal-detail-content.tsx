@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -33,7 +34,7 @@ import type { GqlSignalDetail, GqlLocation } from "~/lib/types/graphql";
 import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
-import { severityColors, severityLabels } from "~/lib/constants/severity";
+import { severityColors } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
 import { useLocations } from "~/hooks/use-locations";
@@ -147,6 +148,8 @@ export function SignalDetailContent({
   loading,
   mode,
 }: SignalDetailContentProps) {
+  const t = useTranslations("signalDetail");
+  const tCommon = useTranslations("common");
 
   const mapMarkers = useMemo<MapMarker[]>(() => {
     if (!signal) return [];
@@ -237,10 +240,10 @@ export function SignalDetailContent({
           style={{ margin: "0 auto 16px" }}
         />
         <Text fw={600} size="lg">
-          Signal not found
+          {t("notFound.title")}
         </Text>
         <Text size="sm" c="var(--color-text-muted)" mt={8}>
-          This signal may have been removed or the ID is invalid.
+          {t("notFound.description")}
         </Text>
         {mode === "page" && (
           <Link
@@ -253,7 +256,7 @@ export function SignalDetailContent({
               fontWeight: 500,
             }}
           >
-            &larr; Back to Events Overview
+            &larr; {t("backToEvents")}
           </Link>
         )}
       </Box>
@@ -268,11 +271,11 @@ export function SignalDetailContent({
   const displayTitle =
     signal.title ??
     (signal.description ? signal.description.slice(0, 120) + (signal.description.length > 120 ? "…" : "") : null) ??
-    (primaryLocation ? `Signal - ${primaryLocation}` : "Signal");
+    (primaryLocation ? t("fallbackTitleWithLocation", { location: primaryLocation }) : t("fallbackTitle"));
 
   const sourceTypeLabel = signal.source.type
     ? signal.source.type.charAt(0).toUpperCase() + signal.source.type.slice(1).toLowerCase()
-    : "Unknown";
+    : t("unknownSourceType");
 
   return (
     <Box>
@@ -292,7 +295,7 @@ export function SignalDetailContent({
               >
                 <IconArrowLeft size={14} color="var(--color-text-secondary)" />
                 <Text size="sm" c="var(--color-text-secondary)" fw={500}>
-                  Back to Events Overview
+                  {t("backToEvents")}
                 </Text>
               </Group>
             </Link>
@@ -308,7 +311,7 @@ export function SignalDetailContent({
                 >
                   <IconMap size={14} color="#E85D3D" />
                   <Text size="xs" c="#E85D3D" fw={500}>
-                    View on Crisis Map
+                    {t("viewOnCrisisMap")}
                   </Text>
                 </Group>
               </Link>
@@ -341,7 +344,7 @@ export function SignalDetailContent({
             background: sev === "critical" ? "var(--color-critical-light)" : sev === "low" ? "var(--color-success-light)" : "var(--color-warning-light)",
             color: sev === "critical" ? "var(--color-critical)" : sev === "low" ? "var(--color-success)" : "var(--color-warning)",
           }}>
-            {severityLabels[sev]}
+            {tCommon(`severities.${sev}`)}
           </span>
         </Group>
 
@@ -363,7 +366,7 @@ export function SignalDetailContent({
           <Group gap={6} style={{ flexShrink: 0, paddingTop: 3 }} wrap="nowrap">
             <IconRadar size={13} color="var(--color-text-muted)" />
             <Text size="xs" fw={500} c="var(--color-text-muted)">
-              Signal
+              {t("signalBadge")}
             </Text>
           </Group>
         </Group>
@@ -379,7 +382,7 @@ export function SignalDetailContent({
             {sourceTypeLabel}
           </Badge>
           <Text size="xs" c="var(--color-text-secondary)" fw={500}>
-            via {signal.source.name}
+            {t("viaSource", { name: signal.source.name })}
           </Text>
           {(signal.url ?? signal.source.infoUrl) && (
             <>
@@ -399,7 +402,7 @@ export function SignalDetailContent({
                 }}
               >
                 <IconExternalLink size={12} />
-                {signal.url ? "View original" : "View source"}
+                {signal.url ? t("viewOriginal") : t("viewSource")}
               </a>
             </>
           )}
@@ -445,12 +448,12 @@ export function SignalDetailContent({
           <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
             <Box px={16} py={12} className="border-b border-[var(--color-border)]">
               <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                Description
+                {t("description.title")}
               </Text>
             </Box>
             <Box p={16}>
               <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.75 }}>
-                {signal.description ?? "No description available."}
+                {signal.description ?? t("description.empty")}
               </Text>
             </Box>
           </Card>
@@ -460,7 +463,7 @@ export function SignalDetailContent({
             <Box px={16} py={12} className="border-b border-[var(--color-border)]">
               <Group gap={8}>
                 <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                  Source Details
+                  {t("source.title")}
                 </Text>
               </Group>
             </Box>
@@ -477,7 +480,7 @@ export function SignalDetailContent({
                 style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}
               >
                 <Text size="xs" fw={700} c="var(--color-text-muted)" mb={4} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Source Name
+                  {t("source.name")}
                 </Text>
                 <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
                   {signal.source.name}
@@ -488,7 +491,7 @@ export function SignalDetailContent({
                 style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}
               >
                 <Text size="xs" fw={700} c="var(--color-text-muted)" mb={4} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Source Type
+                  {t("source.type")}
                 </Text>
                 <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
                   {sourceTypeLabel}
@@ -499,17 +502,17 @@ export function SignalDetailContent({
                 style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}
               >
                 <Text size="xs" fw={700} c="var(--color-text-muted)" mb={6} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Source Activity
+                  {t("source.activity")}
                 </Text>
                 <Group gap={6} align="baseline">
                   <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 18, lineHeight: 1 }}>
                     {sourceSignalCount}
                   </Text>
                   <Text size="xs" c="var(--color-text-secondary)">
-                    signal{sourceSignalCount !== 1 ? "s" : ""} from {signal.source.name}
+                    {t("source.signalsFrom", { count: sourceSignalCount, name: signal.source.name })}
                   </Text>
                 </Group>
-                <Text size="xs" c="var(--color-text-muted)" mt={4}>in current detection context</Text>
+                <Text size="xs" c="var(--color-text-muted)" mt={4}>{t("source.activityContext")}</Text>
               </Box>
               {signal.source.infoUrl && (
                 <Box
@@ -517,7 +520,7 @@ export function SignalDetailContent({
                   style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}
                 >
                   <Text size="xs" fw={700} c="var(--color-text-muted)" mb={4} style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                    Info URL
+                    {t("source.infoUrl")}
                   </Text>
                   <a
                     href={signal.source.infoUrl}
@@ -540,7 +543,7 @@ export function SignalDetailContent({
                 <Group gap={8}>
                   <IconPhoto size={14} color="var(--color-text-secondary)" />
                   <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                    Media ({signal.media.length})
+                    {t("media.title", { count: signal.media.length })}
                   </Text>
                 </Group>
               </Box>
@@ -573,14 +576,14 @@ export function SignalDetailContent({
             <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
               <Box px={16} py={12} className="border-b border-[var(--color-border)]">
                 <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                  Part of Events ({signal.events.length})
+                  {t("events.title", { count: signal.events.length })}
                 </Text>
               </Box>
               <Box>
                 {signal.events.length === 0 && (
                   <Box px={16} py={24} style={{ textAlign: "center" }}>
                     <Text c="var(--color-text-muted)" size="sm">
-                      Not assigned to any event yet
+                      {t("events.empty")}
                     </Text>
                   </Box>
                 )}
@@ -588,7 +591,7 @@ export function SignalDetailContent({
                   const relSev = mapSeverity(ev.rank);
                   const relColor = severityColor(ev.rank);
                   const relBg = severityColors[relSev]?.bg ?? "var(--color-bg-muted)";
-                  const relTitle = ev.title ?? ev.types[0] ?? `Event ${ev.id}`;
+                  const relTitle = ev.title ?? ev.types[0] ?? t("events.fallbackTitle", { id: ev.id });
                   return (
                     <Link
                       key={ev.id}
@@ -605,7 +608,7 @@ export function SignalDetailContent({
                         <Box style={{ flex: 1, minWidth: 0 }}>
                           <Group justify="space-between" mb={2}>
                             <Badge size="xs" style={{ background: relBg, color: relColor, fontWeight: 600 }}>
-                              {severityLabels[relSev]}
+                              {tCommon(`severities.${relSev}`)}
                             </Badge>
                             <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(ev.firstSignalCreatedAt)}</Text>
                           </Group>
@@ -633,21 +636,21 @@ export function SignalDetailContent({
             <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
               <Box px={16} py={12} className="border-b border-[var(--color-border)]">
                 <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                  Similar Signals ({relatedSignals.length})
+                  {t("similar.title", { count: relatedSignals.length })}
                 </Text>
               </Box>
               <Box>
                 {relatedSignals.length === 0 && (
                   <Box px={16} py={24} style={{ textAlign: "center" }}>
                     <Text c="var(--color-text-muted)" size="sm">
-                      No co-detected signals found
+                      {t("similar.empty")}
                     </Text>
                   </Box>
                 )}
                 {relatedSignals.slice(0, 8).map((s) => {
                   const relTitle =
                     s.title ??
-                    (s.description ? s.description.slice(0, 80) + (s.description.length > 80 ? "…" : "") : `Signal ${s.id}`);
+                    (s.description ? s.description.slice(0, 80) + (s.description.length > 80 ? "…" : "") : t("similar.fallbackTitle", { id: s.id }));
                   return (
                     <Link
                       key={s.id}
@@ -706,7 +709,7 @@ export function SignalDetailContent({
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
                 <Box px={16} py={10} className="border-b border-[var(--color-border)]">
                   <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
-                    Actions
+                    {t("actions.title")}
                   </Text>
                 </Box>
                 <Box p={16}>
@@ -732,7 +735,7 @@ export function SignalDetailContent({
                       disabled
                       style={{ fontSize: 12 }}
                     >
-                      Add to Crisis
+                      {t("actions.addToCrisis")}
                       <Text
                         component="span"
                         size="10px"
@@ -740,7 +743,7 @@ export function SignalDetailContent({
                         ml={6}
                         style={{ fontWeight: 400 }}
                       >
-                        coming soon
+                        {t("actions.comingSoon")}
                       </Text>
                     </Button>
                   </Stack>
@@ -753,31 +756,31 @@ export function SignalDetailContent({
                   <Group gap={6}>
                     <IconDatabase size={14} color="var(--color-text-secondary)" />
                     <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
-                      Details
+                      {t("details.title")}
                     </Text>
                   </Group>
                 </Box>
                 <Box p={16}>
                   <Stack gap={8}>
                     <Group justify="space-between">
-                      <Text size="xs" c="var(--color-text-muted)">Signal ID</Text>
+                      <Text size="xs" c="var(--color-text-muted)">{t("details.signalId")}</Text>
                       <Text size="xs" fw={500} c="var(--color-text-primary)">#{signal.id}</Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text size="xs" c="var(--color-text-muted)">Source</Text>
+                      <Text size="xs" c="var(--color-text-muted)">{t("details.source")}</Text>
                       <Text size="xs" fw={500} c="var(--color-text-primary)">{signal.source.name}</Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text size="xs" c="var(--color-text-muted)">Published</Text>
+                      <Text size="xs" c="var(--color-text-muted)">{t("details.published")}</Text>
                       <Text size="xs" fw={500} c="var(--color-text-primary)">{formatDate(signal.publishedAt)}</Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text size="xs" c="var(--color-text-muted)">Collected</Text>
+                      <Text size="xs" c="var(--color-text-muted)">{t("details.collected")}</Text>
                       <Text size="xs" fw={500} c="var(--color-text-primary)">{formatDateTime(signal.collectedAt)}</Text>
                     </Group>
                     {locations.some((l) => resolveLocationName(l)) && (
                       <Box style={{ borderTop: "1px solid var(--color-border)" }} pt={8} mt={2}>
-                        <Text size="xs" c="var(--color-text-muted)" mb={6}>Affected Areas</Text>
+                        <Text size="xs" c="var(--color-text-muted)" mb={6}>{t("details.affectedAreas")}</Text>
                         <Group gap={6} wrap="wrap">
                           {locations.map((loc) => {
                             const name = resolveLocationName(loc);

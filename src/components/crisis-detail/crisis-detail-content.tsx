@@ -3,6 +3,7 @@
 import { useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -244,6 +245,8 @@ export function CrisisDetailContent({
   mode,
   relatedCrises = [],
 }: CrisisDetailContentProps) {
+  const t = useTranslations("crisisDetail");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [leftPanelTab, setLeftPanelTab] = useState<string | null>("events");
@@ -319,7 +322,7 @@ export function CrisisDetailContent({
         id: 0,
         lng: primaryCoords[0],
         lat: primaryCoords[1],
-        title: crisis.title ?? "Crisis",
+        title: crisis.title ?? t("crisisBadge"),
         severity: mapSeverity(crisis.severity),
         description: resolveLocationName(crisis.generalLocation) ?? undefined,
       }];
@@ -330,13 +333,13 @@ export function CrisisDetailContent({
         id: idx,
         lng: c[0],
         lat: c[1],
-        title: e.title ?? e.types[0] ?? "Event",
+        title: e.title ?? e.types[0] ?? t("eventFallback"),
         severity: mapSeverity(e.severity),
         description: resolveLocationName(pickEventLocation(e)) ?? undefined,
         type: e.types[0],
       };
     });
-  }, [crisis, events, primaryCoords]);
+  }, [crisis, events, primaryCoords, t]);
 
   // Sum populationDisplaced across all linked events.
   const populationDisplaced = useMemo(() => {
@@ -381,9 +384,9 @@ export function CrisisDetailContent({
     return (
       <Box p={48} style={{ textAlign: "center" }}>
         <IconAlertTriangle size={40} color="var(--color-warning)" style={{ margin: "0 auto 16px" }} />
-        <Text fw={600} size="lg">Crisis not found</Text>
+        <Text fw={600} size="lg">{t("notFound.title")}</Text>
         <Text size="sm" c="var(--color-text-muted)" mt={8}>
-          This crisis may have been removed or the ID is invalid.
+          {t("notFound.description")}
         </Text>
         {mode === "page" && (
           <Link
@@ -396,7 +399,7 @@ export function CrisisDetailContent({
               fontWeight: 500,
             }}
           >
-            &larr; Back to Analysis
+            &larr; {t("backToAnalysis")}
           </Link>
         )}
       </Box>
@@ -407,7 +410,7 @@ export function CrisisDetailContent({
   const sev = mapSeverity(crisis.severity);
   const isCompact = mode === "drawer";
 
-  const title = crisis.title ?? "Untitled crisis";
+  const title = crisis.title ?? t("untitledCrisis");
   const locationName =
     resolveLocationName(crisis.generalLocation) ??
     resolveLocationName(events[0] ? pickEventLocation(events[0]) : null);
@@ -434,16 +437,19 @@ export function CrisisDetailContent({
       <Modal
         opened={confirmDeleteCrisis}
         onClose={() => setConfirmDeleteCrisis(false)}
-        title="Delete crisis"
+        title={t("deleteModal.title")}
         size="sm"
         centered
       >
         <Text size="sm" c="var(--color-text-secondary)" mb={20}>
-          Permanently delete <strong>{crisis.title ?? "this crisis"}</strong>? This cannot be undone.
+          {t.rich("deleteModal.confirm", {
+            title: crisis.title ?? t("deleteModal.fallbackName"),
+            strong: (chunks) => <strong>{chunks}</strong>,
+          })}
         </Text>
         <Group justify="flex-end" gap={8}>
           <Button variant="default" size="xs" onClick={() => setConfirmDeleteCrisis(false)}>
-            Cancel
+            {tCommon("actions.cancel")}
           </Button>
           <Button
             size="xs"
@@ -451,7 +457,7 @@ export function CrisisDetailContent({
             loading={deleteCrisis.isPending}
             onClick={() => deleteCrisis.mutate({ id: crisis.id })}
           >
-            Delete
+            {tCommon("actions.delete")}
           </Button>
         </Group>
       </Modal>
@@ -468,7 +474,7 @@ export function CrisisDetailContent({
               <Group gap={6} className="hover:opacity-70" style={{ cursor: "pointer" }}>
                 <IconArrowLeft size={14} color="var(--color-text-secondary)" />
                 <Text size="sm" c="var(--color-text-secondary)" fw={500}>
-                  Back to Analysis
+                  {t("backToAnalysis")}
                 </Text>
               </Group>
             </Link>
@@ -477,7 +483,7 @@ export function CrisisDetailContent({
                 <Group gap={4} className="hover:opacity-70" style={{ cursor: "pointer" }}>
                   <IconMap size={14} color="var(--color-accent)" />
                   <Text size="xs" c="var(--color-accent)" fw={500}>
-                    View on Crisis Map
+                    {t("viewOnCrisisMap")}
                   </Text>
                 </Group>
               </Link>
@@ -485,10 +491,10 @@ export function CrisisDetailContent({
                 <Select
                   size="xs"
                   w={220}
-                  placeholder="Switch crisis"
+                  placeholder={t("switchCrisis")}
                   data={relatedCrises.map((s) => ({
                     value: s.id,
-                    label: s.title ?? "Untitled crisis",
+                    label: s.title ?? t("untitledCrisis"),
                   }))}
                   value={null}
                   onChange={(val) => {
@@ -509,7 +515,7 @@ export function CrisisDetailContent({
                       leftSection={<IconTrash size={14} />}
                       onClick={() => setConfirmDeleteCrisis(true)}
                     >
-                      Delete crisis
+                      {t("deleteModal.menuItem")}
                     </Menu.Item>
                   </Menu.Dropdown>
                 </Menu>
@@ -554,14 +560,14 @@ export function CrisisDetailContent({
                     : "var(--color-warning)",
             }}
           >
-            {severityLabels[sev]}
+            {tCommon(`severities.${sev}`)}
           </span>
           <Badge
             size="xs"
             variant="light"
             style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)" }}
           >
-            Crisis
+            {t("crisisBadge")}
           </Badge>
         </Group>
 
@@ -613,14 +619,14 @@ export function CrisisDetailContent({
             <Group gap={4}>
               <IconCalendar size={13} color="var(--color-text-muted)" />
               <Text size="xs" c="var(--color-text-secondary)">
-                Updated {formatDate(updatedAt)}
+                {t("updatedDate", { date: formatDate(updatedAt) })}
               </Text>
             </Group>
           )}
           <Group gap={4}>
             <IconLayersIntersect size={13} color="var(--color-text-muted)" />
             <Text size="xs" c="var(--color-text-secondary)" fw={500}>
-              {events.length} event{events.length !== 1 ? "s" : ""}
+              {t("eventCount", { count: events.length })}
             </Text>
           </Group>
         </Group>
@@ -634,8 +640,8 @@ export function CrisisDetailContent({
         >
           <Tabs value={activeTab} onChange={setActiveTab} variant="default">
             <Tabs.List style={{ borderBottom: "none" }}>
-              <Tabs.Tab value="overview">Overview</Tabs.Tab>
-              <Tabs.Tab value="needs">Needs Assessment</Tabs.Tab>
+              <Tabs.Tab value="overview">{t("tabs.overview")}</Tabs.Tab>
+              <Tabs.Tab value="needs">{t("tabs.needs")}</Tabs.Tab>
             </Tabs.List>
           </Tabs>
         </Box>
@@ -651,7 +657,7 @@ export function CrisisDetailContent({
               {/* Impact */}
               <Box style={{ flex: 1, borderRight: "1px solid var(--color-border)" }}>
                 <Box px={12} py={6} style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-bg-muted)" }}>
-                  <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>Impact</Text>
+                  <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>{t("kpi.impact")}</Text>
                 </Box>
                 <Box style={{ display: "flex" }}>
                   <Box style={{ flex: 1, borderRight: "1px solid var(--color-border)" }}>
@@ -659,7 +665,7 @@ export function CrisisDetailContent({
                       icon={<IconUsers size={14} color="var(--color-accent)" />}
                       iconBg="var(--color-accent-light)"
                       value={populationAffected !== null ? formatCount(populationAffected) : "-"}
-                      label="People affected"
+                      label={t("kpi.peopleAffected")}
                     />
                   </Box>
                   <Box style={{ flex: 1 }}>
@@ -667,7 +673,7 @@ export function CrisisDetailContent({
                       icon={<IconUsersGroup size={14} color="var(--color-warning)" />}
                       iconBg="var(--color-warning-light)"
                       value={populationDisplaced !== null ? formatCount(populationDisplaced) : "-"}
-                      label="People displaced"
+                      label={t("kpi.peopleDisplaced")}
                     />
                   </Box>
                 </Box>
@@ -675,7 +681,7 @@ export function CrisisDetailContent({
               {/* Area Context */}
               <Box style={{ flex: 1 }}>
                 <Box px={12} py={6} style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-bg-muted)" }}>
-                  <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>Area Context</Text>
+                  <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>{t("kpi.areaContext")}</Text>
                 </Box>
                 <Box style={{ display: "flex" }}>
                   <Box style={{ flex: 1, borderRight: "1px solid var(--color-border)" }}>
@@ -683,7 +689,7 @@ export function CrisisDetailContent({
                       icon={<IconUsersGroup size={14} color="var(--color-info)" />}
                       iconBg="var(--color-info-light)"
                       value={populationInArea !== null ? formatCount(populationInArea) : "-"}
-                      label="People in the area"
+                      label={t("kpi.peopleInArea")}
                     />
                   </Box>
                   <Box style={{ flex: 1 }}>
@@ -697,7 +703,7 @@ export function CrisisDetailContent({
                             ? formatCount(crisisIdpData.displaced)
                             : "-"
                       }
-                      label={crisisIdpData ? `IDP per capita in ${crisisIdpData.name}` : "IDP per capita"}
+                      label={crisisIdpData ? t("kpi.idpPerCapitaIn", { name: crisisIdpData.name }) : t("kpi.idpPerCapita")}
                     />
                   </Box>
                 </Box>
@@ -722,7 +728,7 @@ export function CrisisDetailContent({
                 <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <Group justify="space-between">
                     <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                      Summary
+                      {t("summary.title")}
                     </Text>
                     <Group gap={6}>
                       {isAdmin && !editingMeta && (
@@ -740,7 +746,7 @@ export function CrisisDetailContent({
                             fontWeight: 600,
                           }}
                         >
-                          ✦ AI generated
+                          {tCommon("badges.aiGenerated")}
                         </Badge>
                       )}
                     </Group>
@@ -764,8 +770,8 @@ export function CrisisDetailContent({
                       autoFocus
                     />
                     <Group gap={8} mt={10} justify="flex-end">
-                      <Button size="xs" variant="subtle" onClick={() => setEditingMeta(false)}>Cancel</Button>
-                      <Button size="xs" loading={updateMeta.isPending} onClick={() => updateMeta.mutate({ id: crisis.id, summary: draftSummary })}>Save</Button>
+                      <Button size="xs" variant="subtle" onClick={() => setEditingMeta(false)}>{tCommon("actions.cancel")}</Button>
+                      <Button size="xs" loading={updateMeta.isPending} onClick={() => updateMeta.mutate({ id: crisis.id, summary: draftSummary })}>{tCommon("actions.save")}</Button>
                     </Group>
                   </Box>
                 ) : (
@@ -803,10 +809,10 @@ export function CrisisDetailContent({
               <Tabs value={leftPanelTab} onChange={setLeftPanelTab}>
                 <Box px={8} style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <Tabs.List style={{ borderBottom: "none" }}>
-                    <Tabs.Tab value="events">Events</Tabs.Tab>
-                    <Tabs.Tab value="demography">Demography</Tabs.Tab>
-                    <Tabs.Tab value="sources">Sources</Tabs.Tab>
-                    <Tabs.Tab value="confidence">Confidence</Tabs.Tab>
+                    <Tabs.Tab value="events">{t("tabs.events")}</Tabs.Tab>
+                    <Tabs.Tab value="demography">{t("tabs.demography")}</Tabs.Tab>
+                    <Tabs.Tab value="sources">{t("tabs.sources")}</Tabs.Tab>
+                    <Tabs.Tab value="confidence">{t("tabs.confidence")}</Tabs.Tab>
                   </Tabs.List>
                 </Box>
                 <Tabs.Panel value="events" style={{ height: 300, overflowY: "auto" }}>
@@ -851,6 +857,7 @@ export function CrisisDetailContent({
 // ── Crisis summary body ───────────────────────────────────────────────────────
 
 function CrisisSummaryBody({ summary }: { summary: string | null }) {
+  const t = useTranslations("crisisDetail");
   const parsed = useMemo(() => {
     if (!summary) return null;
     try {
@@ -865,7 +872,7 @@ function CrisisSummaryBody({ summary }: { summary: string | null }) {
   if (!parsed) {
     return (
       <Box p={16}>
-        <Text size="sm" c="var(--color-text-muted)">No summary available yet.</Text>
+        <Text size="sm" c="var(--color-text-muted)">{t("summary.empty")}</Text>
       </Box>
     );
   }
@@ -906,6 +913,14 @@ const SCENARIO_STYLE: Record<string, { color: string; bg: string }> = {
   "Worst Case":  { color: "var(--color-critical)", bg: "var(--color-critical-light)" },
 };
 
+// Pipeline-generated scenario labels -> i18n keys under crisisDetail.scenario.labels.*
+// Legacy API-provided labels fall back to the raw string.
+const SCENARIO_LABEL_KEYS: Record<string, "bestCase" | "mostLikely" | "worstCase"> = {
+  "Best Case": "bestCase",
+  "Most Likely": "mostLikely",
+  "Worst Case": "worstCase",
+};
+
 function parseScenarios(json: unknown): ScenarioPlan[] | null {
   if (json === null || json === undefined) return null;
 
@@ -938,6 +953,8 @@ function parseScenarios(json: unknown): ScenarioPlan[] | null {
 }
 
 function ScenarioComparisonCard({ scenarios }: { scenarios: ScenarioPlan[] | null }) {
+  const t = useTranslations("crisisDetail");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
 
   return (
@@ -947,7 +964,7 @@ function ScenarioComparisonCard({ scenarios }: { scenarios: ScenarioPlan[] | nul
           <Group justify="space-between" align="center">
             <Group gap={8} align="center">
               <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                Scenario Analysis
+                {t("scenario.title")}
               </Text>
               {scenarios && (
                 <Badge
@@ -959,7 +976,7 @@ function ScenarioComparisonCard({ scenarios }: { scenarios: ScenarioPlan[] | nul
                     fontWeight: 600,
                   }}
                 >
-                  ✦ AI generated
+                  {tCommon("badges.aiGenerated")}
                 </Badge>
               )}
             </Group>
@@ -982,7 +999,7 @@ function ScenarioComparisonCard({ scenarios }: { scenarios: ScenarioPlan[] | nul
                   style={{ border: `1px solid ${style.color}30`, background: style.bg }}
                 >
                   <Text fw={700} size="sm" c="var(--color-text-primary)" mb={2}>
-                    {s.label}
+                    {SCENARIO_LABEL_KEYS[s.label] ? t(`scenario.labels.${SCENARIO_LABEL_KEYS[s.label]}`) : s.label}
                   </Text>
                   {s.subtitle && (
                     <Text size="xs" c="var(--color-text-muted)" mb={10} style={{ fontStyle: "italic" }}>
@@ -999,7 +1016,7 @@ function ScenarioComparisonCard({ scenarios }: { scenarios: ScenarioPlan[] | nul
         ) : (
           <Box p={24} style={{ textAlign: "center" }}>
             <Text size="sm" c="var(--color-text-muted)">
-              Scenarios not yet generated for this crisis.
+              {t("scenario.empty")}
             </Text>
           </Box>
         )}
@@ -1033,6 +1050,8 @@ function keyFromAttachmentUrl(url: string): string {
 }
 
 function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
+  const t = useTranslations("crisisDetail");
+  const tCommon = useTranslations("common");
   const [collapsed, setCollapsed] = useState(false);
   const [docs, setDocs] = useState<CrisisDoc[]>(() =>
     crisis.attachments.map((url) => ({ id: crypto.randomUUID(), name: nameFromAttachmentUrl(url), url }))
@@ -1058,7 +1077,7 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
       void utils.crises.get.invalidate({ id: crisis.id });
     },
     onError: (err) => {
-      setRemoveError(err.message ?? "Remove failed. Please try again.");
+      setRemoveError(err.message ?? t("documents.removeFailed"));
     },
   });
 
@@ -1076,7 +1095,7 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
       const { keys } = (await resp.json()) as { keys: string[] };
       await addAttachments.mutateAsync({ id: crisis.id, keys });
     } catch {
-      setUploadError("Upload failed. Please try again.");
+      setUploadError(t("documents.uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -1094,16 +1113,19 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
       <Modal
         opened={pendingRemove !== null}
         onClose={() => setPendingRemove(null)}
-        title="Remove document"
+        title={t("documents.removeModalTitle")}
         size="sm"
         centered
       >
         <Text size="sm" c="var(--color-text-secondary)" mb={20}>
-          Remove <strong>{pendingRemove?.name}</strong>? This cannot be undone.
+          {t.rich("documents.removeConfirm", {
+            name: pendingRemove?.name ?? "",
+            strong: (chunks) => <strong>{chunks}</strong>,
+          })}
         </Text>
         <Group justify="flex-end" gap={8}>
           <Button variant="default" size="xs" onClick={() => setPendingRemove(null)}>
-            Cancel
+            {tCommon("actions.cancel")}
           </Button>
           <Button
             size="xs"
@@ -1111,7 +1133,7 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
             loading={removeAttachment.isPending}
             onClick={confirmRemove}
           >
-            Remove
+            {t("documents.remove")}
           </Button>
         </Group>
       </Modal>
@@ -1132,7 +1154,7 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
           }}
         >
           <Group gap={8} align="center">
-            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Documents</Text>
+            <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>{t("documents.title")}</Text>
             {docs.length > 0 && (
               <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-muted)" }}>
                 {docs.length}
@@ -1178,7 +1200,7 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
                 </a>
                 <button
                   onClick={() => setPendingRemove(doc)}
-                  title="Remove"
+                  title={t("documents.remove")}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     background: "none", border: "none", padding: 4, cursor: "pointer",
@@ -1204,7 +1226,7 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
               style={{ borderTop: docs.length > 0 || removeError ? "1px solid var(--color-border)" : undefined, display: "flex", alignItems: "center", gap: 8 }}
             >
               {docs.length === 0 && !uploading && (
-                <Text size="xs" c="var(--color-text-muted)" style={{ flex: 1 }}>No documents attached.</Text>
+                <Text size="xs" c="var(--color-text-muted)" style={{ flex: 1 }}>{t("documents.empty")}</Text>
               )}
               {uploadError && (
                 <Text size="xs" c="var(--color-critical)" style={{ flex: 1 }}>{uploadError}</Text>
@@ -1224,7 +1246,7 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
                 className={uploading ? undefined : "hover:bg-[var(--color-bg-muted)]"}
               >
                 {uploading ? <Loader size={12} /> : <IconUpload size={12} />}
-                {uploading ? "Uploading..." : "Upload"}
+                {uploading ? t("documents.uploading") : t("documents.upload")}
               </button>
             </Box>
           </>
@@ -1482,20 +1504,22 @@ function resolveA2Location(crisis: GqlCrisis): A2Location | null {
 type WpBand = { male: number; female: number; total: number };
 
 // Humanitarian vulnerable-group definitions (WorldPop age-band keys).
+// labelKey: i18n keys under crisisDetail.demography.groups.* - resolved via t() at render time.
 const VULN_GROUPS = [
-  { label: "Children under 5",  keys: ["00", "01"],                                          note: "Acute nutrition risk" },
-  { label: "Children 5-14",     keys: ["05", "10"],                                          note: "Education, child protection" },
-  { label: "Women 15-49",       keys: ["15", "20", "25", "30", "35", "40", "45"], femaleOnly: true, note: "Reproductive health, GBV" },
-  { label: "Elderly 60+",       keys: ["60", "65", "70", "75", "80", "85", "90"],            note: "Health, protection" },
+  { labelKey: "childrenUnder5", keys: ["00", "01"] },
+  { labelKey: "children5to14",  keys: ["05", "10"] },
+  { labelKey: "women15to49",    keys: ["15", "20", "25", "30", "35", "40", "45"], femaleOnly: true },
+  { labelKey: "elderly60plus",  keys: ["60", "65", "70", "75", "80", "85", "90"] },
 ] as const;
 
 function DemographyPanel({ crisis }: { crisis: GqlCrisis }) {
+  const t = useTranslations("crisisDetail");
   const a2 = useMemo(() => resolveA2Location(crisis), [crisis]);
 
   if (!a2) {
     return (
       <Box p={24} style={{ textAlign: "center" }}>
-        <Text size="sm" c="var(--color-text-muted)">No demographic data available for this location.</Text>
+        <Text size="sm" c="var(--color-text-muted)">{t("demography.noData")}</Text>
       </Box>
     );
   }
@@ -1505,7 +1529,7 @@ function DemographyPanel({ crisis }: { crisis: GqlCrisis }) {
   if (!wpMeta) {
     return (
       <Box p={24} style={{ textAlign: "center" }}>
-        <Text size="sm" c="var(--color-text-muted)">Demographic data not yet available for {a2.name}.</Text>
+        <Text size="sm" c="var(--color-text-muted)">{t("demography.notYetAvailable", { name: a2.name })}</Text>
       </Box>
     );
   }
@@ -1534,11 +1558,11 @@ function DemographyPanel({ crisis }: { crisis: GqlCrisis }) {
         <Group justify="space-between" align="center">
           <Box>
             <Text fw={600} size="sm" c="var(--color-text-primary)">{a2.name}</Text>
-            <Text size="xs" c="var(--color-text-muted)">WorldPop {src?.year ?? 2026}{src?.release ? ` ${src.release}` : ""} constrained</Text>
+            <Text size="xs" c="var(--color-text-muted)">{t("demography.source", { year: src?.year ?? 2026, release: src?.release ? ` ${src.release}` : "" })}</Text>
           </Box>
           <Box style={{ textAlign: "right" }}>
             <Text fw={700} size="sm" c="var(--color-text-primary)">{fmt(totalPop)}</Text>
-            <Text size="xs" c="var(--color-text-muted)">total</Text>
+            <Text size="xs" c="var(--color-text-muted)">{t("demography.total")}</Text>
           </Box>
         </Group>
       </Box>
@@ -1546,7 +1570,7 @@ function DemographyPanel({ crisis }: { crisis: GqlCrisis }) {
       {/* Vulnerable group KPIs */}
       <Box px={16} py={10} style={{ borderBottom: "1px solid var(--color-border)" }}>
         <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>
-          Vulnerable groups
+          {t("demography.vulnerableGroups")}
         </Text>
         <Box style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           {VULN_GROUPS.map((g) => {
@@ -1555,8 +1579,8 @@ function DemographyPanel({ crisis }: { crisis: GqlCrisis }) {
               return s + (b ? ("femaleOnly" in g && g.femaleOnly ? b.female : b.total) : 0);
             }, 0);
             return (
-              <Box key={g.label} p={10} style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}>
-                <Text style={{ fontSize: 10, color: "var(--color-text-muted)", marginBottom: 4 }}>{g.label}</Text>
+              <Box key={g.labelKey} p={10} style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}>
+                <Text style={{ fontSize: 10, color: "var(--color-text-muted)", marginBottom: 4 }}>{t(`demography.groups.${g.labelKey}`)}</Text>
                 <Text fw={700} size="lg" c="var(--color-text-primary)" style={{ lineHeight: 1.2 }}>{pct(count, totalPop)}</Text>
                 <Text size="xs" c="var(--color-text-muted)">{fmt(count)}</Text>
               </Box>
@@ -1568,12 +1592,12 @@ function DemographyPanel({ crisis }: { crisis: GqlCrisis }) {
       {/* Gender split */}
       <Box px={16} pt={10} pb={12}>
         <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>
-          Gender split
+          {t("demography.genderSplit")}
         </Text>
         <Box style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           {[
-            { label: "Male",   count: totalMale },
-            { label: "Female", count: totalFemale },
+            { label: t("demography.male"),   count: totalMale },
+            { label: t("demography.female"), count: totalFemale },
           ].map(({ label, count }) => (
             <Box key={label} p={10} style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)", borderRadius: 6 }}>
               <Text fw={700} size="lg" c="var(--color-text-primary)" style={{ lineHeight: 1.2 }}>{pct(count, totalPop)}</Text>
@@ -1615,12 +1639,15 @@ function resolveA2Metadata(crisis: GqlCrisis): { type: string; data: unknown }[]
 // Derive human-readable context rows from raw location metadata.
 interface ContextRow { label: string; detail: string }
 
-type MetadataFormatter = (data: Record<string, unknown>) => ContextRow[];
+// Translator bound to the "crisisDetail" namespace, passed in from the component.
+type CrisisDetailT = ReturnType<typeof useTranslations<"crisisDetail">>;
+
+type MetadataFormatter = (data: Record<string, unknown>, t: CrisisDetailT) => ContextRow[];
 
 // Registry: maps metadata type keys to display formatters.
 // Add new entries here as the pipeline introduces new metadata types.
 const METADATA_REGISTRY: Record<string, MetadataFormatter> = {
-  worldpop_age_sex_2026: (d) => {
+  worldpop_age_sex_2026: (d, t) => {
     // Age-band keys are 2-digit strings ("00","01","05","10",...,"90"); _source holds dataset info.
     const src = d._source as Record<string, unknown> | undefined;
     const year = typeof src?.year === "number" ? src.year : 2026;
@@ -1637,29 +1664,29 @@ const METADATA_REGISTRY: Record<string, MetadataFormatter> = {
     const mPct = totalPop > 0 ? Math.round((totalMale / totalPop) * 100) : 0;
     const fPct = 100 - mPct;
     return [
-      { label: "Population", detail: `${fmt(totalPop)} - WorldPop ${year} constrained${release}` },
-      { label: "Demographics", detail: `Male ${mPct}% / Female ${fPct}% - WorldPop ${year} age/sex breakdown` },
+      { label: t("sources.context.population"), detail: t("sources.context.populationDetail", { value: fmt(totalPop), year, release }) },
+      { label: t("sources.context.demographics"), detail: t("sources.context.demographicsDetail", { malePct: mPct, femalePct: fPct, year }) },
     ];
   },
-  iom_dtm_displacement: (d) => {
+  iom_dtm_displacement: (d, t) => {
     const parts: string[] = ["IOM DTM"];
-    if (d.round_number) parts.push(`Round ${String(d.round_number)}`);
+    if (d.round_number) parts.push(t("sources.context.round", { number: String(d.round_number) }));
     if (typeof d.reporting_date === "string") parts.push(d.reporting_date.slice(0, 10));
     if (typeof d.operation === "string" && d.operation) parts.push(d.operation);
-    return [{ label: "IDP", detail: parts.join(" - ") }];
+    return [{ label: t("sources.context.idp"), detail: parts.join(" - ") }];
   },
-  msna_severity_082025: (d) => {
+  msna_severity_082025: (d, t) => {
     const asOf = typeof d.as_of === "string" ? ` (${d.as_of})` : "";
-    return [{ label: "Needs Assessment Baseline", detail: `MSNA 2025${asOf}` }];
+    return [{ label: t("sources.context.needsBaseline"), detail: `MSNA 2025${asOf}` }];
   },
 };
 
 // Iterates over whatever metadata types are actually present - no hardcoded type checks.
-function buildContextRows(metadata: { type: string; data: unknown }[]): ContextRow[] {
+function buildContextRows(metadata: { type: string; data: unknown }[], t: CrisisDetailT): ContextRow[] {
   const rows: ContextRow[] = [];
   for (const { type, data } of metadata) {
     const formatter = METADATA_REGISTRY[type];
-    if (formatter) rows.push(...formatter(data as Record<string, unknown>));
+    if (formatter) rows.push(...formatter(data as Record<string, unknown>, t));
   }
   return rows;
 }
@@ -1693,6 +1720,7 @@ function SectionHeader({ children, open, onToggle }: { children: React.ReactNode
 // ── Sources panel ──────────────────────────────────────────────────────────────
 
 function SourcesPanel({ events, crisis }: { events: GqlEvent[]; crisis: GqlCrisis }) {
+  const t = useTranslations("crisisDetail");
   const [signalsOpen, setSignalsOpen] = useState(true);
   const [enrichmentOpen, setEnrichmentOpen] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
@@ -1723,20 +1751,20 @@ function SourcesPanel({ events, crisis }: { events: GqlEvent[]; crisis: GqlCrisi
   }, [events]);
 
   const contextMetadata = useMemo(() => resolveA2Metadata(crisis), [crisis]);
-  const contextRows = useMemo(() => buildContextRows(contextMetadata), [contextMetadata]);
+  const contextRows = useMemo(() => buildContextRows(contextMetadata, t), [contextMetadata, t]);
 
   return (
     <Box>
       {/* ── Underlying Signals ── */}
-      <SectionHeader open={signalsOpen} onToggle={() => setSignalsOpen((v) => !v)}>Underlying Signals</SectionHeader>
+      <SectionHeader open={signalsOpen} onToggle={() => setSignalsOpen((v) => !v)}>{t("sources.underlyingSignals")}</SectionHeader>
       <Collapse in={signalsOpen}>
         {signalSources.length === 0 ? (
-          <Box p={16}><Text size="sm" c="var(--color-text-muted)">No signal sources linked.</Text></Box>
+          <Box p={16}><Text size="sm" c="var(--color-text-muted)">{t("sources.noSignalSources")}</Text></Box>
         ) : (
           signalSources.map((src, idx) => {
-            const label = src.aggregator ? `${src.publisher} via ${src.aggregator}` : src.publisher;
+            const label = src.aggregator ? t("sources.viaAggregator", { publisher: src.publisher, aggregator: src.aggregator }) : src.publisher;
             const asOf = src.latestPublishedAt
-              ? `As of ${new Date(src.latestPublishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+              ? t("sources.asOf", { date: new Date(src.latestPublishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) })
               : null;
             return (
               <Box
@@ -1755,7 +1783,7 @@ function SourcesPanel({ events, crisis }: { events: GqlEvent[]; crisis: GqlCrisi
                   <Text size="xs" c="var(--color-text-muted)" style={{ flexShrink: 0 }}>{asOf}</Text>
                 )}
                 <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-muted)", flexShrink: 0 }}>
-                  {src.signalCount} signal{src.signalCount !== 1 ? "s" : ""}
+                  {t("sources.signalCount", { count: src.signalCount })}
                 </Badge>
               </Box>
             );
@@ -1764,20 +1792,20 @@ function SourcesPanel({ events, crisis }: { events: GqlEvent[]; crisis: GqlCrisi
       </Collapse>
 
       {/* ── Enrichment ── */}
-      <SectionHeader open={enrichmentOpen} onToggle={() => setEnrichmentOpen((v) => !v)}>Enrichment</SectionHeader>
+      <SectionHeader open={enrichmentOpen} onToggle={() => setEnrichmentOpen((v) => !v)}>{t("sources.enrichmentSection")}</SectionHeader>
       <Collapse in={enrichmentOpen}>
         <Box p={16}>
           <Text size="sm" c="var(--color-text-muted)">
-            No external enrichment sources incorporated yet. ReliefWeb situation reports and historical signal analysis will appear here when available.
+            {t("sources.noEnrichment")}
           </Text>
         </Box>
       </Collapse>
 
       {/* ── Context Data ── */}
-      <SectionHeader open={contextOpen} onToggle={() => setContextOpen((v) => !v)}>Context Data</SectionHeader>
+      <SectionHeader open={contextOpen} onToggle={() => setContextOpen((v) => !v)}>{t("sources.contextData")}</SectionHeader>
       <Collapse in={contextOpen}>
         {contextRows.length === 0 ? (
-          <Box p={16}><Text size="sm" c="var(--color-text-muted)">No context data available for this location.</Text></Box>
+          <Box p={16}><Text size="sm" c="var(--color-text-muted)">{t("sources.noContextData")}</Text></Box>
         ) : (
           contextRows.map((row, idx) => (
             <Box
@@ -1797,34 +1825,18 @@ function SourcesPanel({ events, crisis }: { events: GqlEvent[]; crisis: GqlCrisi
 
 // ── Confidence panel ──────────────────────────────────────────────────────────
 
+// key: i18n keys under crisisDetail.confidence.cols.* - resolved via t() at render time.
 const CONFIDENCE_COLS = [
-  {
-    key: "baseline",
-    label: "Baseline",
-    description: "Content generated solely from pipeline signal data - events, severities, and locations ingested from connected sources.",
-  },
-  {
-    key: "enriched",
-    label: "AI enriched",
-    description: "The pipeline incorporated external context data (WorldPop demographics, IOM DTM displacement, INFORM risk scores) when generating this content.",
-  },
-  {
-    key: "reviewed",
-    label: "Analyst reviewed",
-    description: "A CLEAR analyst has reviewed and validated the content against their field knowledge.",
-  },
-  {
-    key: "validated",
-    label: "Field validated",
-    description: "Content has been confirmed through direct community or field team feedback.",
-  },
+  { key: "baseline" },
+  { key: "enriched" },
+  { key: "reviewed" },
+  { key: "validated" },
 ] as const;
 
 type ConfidenceKey = (typeof CONFIDENCE_COLS)[number]["key"];
 
 interface ConfidenceRow {
-  label: string;
-  description: string;
+  labelKey: "description" | "scenarios" | "needs";
   baseline: boolean;
   enriched: boolean;
   reviewed: boolean;
@@ -1850,6 +1862,7 @@ function ConfidenceSquare({ active }: { active: boolean }) {
 const COL_TEMPLATE = "260px repeat(4, 1fr)";
 
 function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
+  const t = useTranslations("crisisDetail");
   const [legendOpen, setLegendOpen] = useState(false);
 
   const hasDescription = !!crisis.summary;
@@ -1857,9 +1870,9 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
   const hasNeeds       = parseNeeds(crisis.needs).length > 0;
 
   const rows: ConfidenceRow[] = [
-    { label: "Description",      description: "", baseline: hasDescription, enriched: false, reviewed: false, validated: false },
-    { label: "Scenarios",        description: "", baseline: hasScenarios,   enriched: false, reviewed: false, validated: false },
-    { label: "Needs Assessment", description: "", baseline: hasNeeds,       enriched: false, reviewed: false, validated: false },
+    { labelKey: "description", baseline: hasDescription, enriched: false, reviewed: false, validated: false },
+    { labelKey: "scenarios",   baseline: hasScenarios,   enriched: false, reviewed: false, validated: false },
+    { labelKey: "needs",       baseline: hasNeeds,       enriched: false, reviewed: false, validated: false },
   ];
 
   return (
@@ -1878,7 +1891,7 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
         {CONFIDENCE_COLS.map((col, colIdx) => (
           <Box key={col.key} px={8} py={8} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Text style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-primary)", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
-              {col.label}
+              {t(`confidence.cols.${col.key}.label`)}
             </Text>
             {colIdx < CONFIDENCE_COLS.length - 1 && (
               <Box style={{
@@ -1902,7 +1915,7 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
       {/* Data rows */}
       {rows.map((row, idx) => (
         <Box
-          key={row.label}
+          key={row.labelKey}
           style={{
             display: "grid",
             gridTemplateColumns: COL_TEMPLATE,
@@ -1910,7 +1923,7 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
           }}
         >
           <Box px={16} py={10} style={{ display: "flex", alignItems: "center" }}>
-            <Text size="sm" fw={500} c="var(--color-text-primary)">{row.label}</Text>
+            <Text size="sm" fw={500} c="var(--color-text-primary)">{t(`confidence.rows.${row.labelKey}`)}</Text>
           </Box>
           {CONFIDENCE_COLS.map((col, colIdx) => (
             <Box
@@ -1939,19 +1952,19 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
         px={16} py={8}
         style={{ borderTop: "1px solid var(--color-border)", display: "flex", alignItems: "center", gap: 5 }}
       >
-        <Text style={{ fontSize: 11, color: "var(--color-text-muted)" }}>Legend</Text>
+        <Text style={{ fontSize: 11, color: "var(--color-text-muted)" }}>{t("confidence.legend")}</Text>
         <ActionIcon size={16} variant="transparent" onClick={() => setLegendOpen(true)} style={{ color: "var(--color-text-muted)" }}>
           <IconInfoCircle size={13} />
         </ActionIcon>
       </Box>
 
       {/* Legend modal */}
-      <Modal opened={legendOpen} onClose={() => setLegendOpen(false)} title="Confidence levels" size="sm">
+      <Modal opened={legendOpen} onClose={() => setLegendOpen(false)} title={t("confidence.modalTitle")} size="sm">
         <Stack gap={16}>
           {CONFIDENCE_COLS.map((col) => (
             <Box key={col.key}>
-              <Text size="sm" fw={600} c="var(--color-text-primary)" mb={4}>{col.label}</Text>
-              <Text size="sm" c="var(--color-text-muted)">{col.description}</Text>
+              <Text size="sm" fw={600} c="var(--color-text-primary)" mb={4}>{t(`confidence.cols.${col.key}.label`)}</Text>
+              <Text size="sm" c="var(--color-text-muted)">{t(`confidence.cols.${col.key}.description`)}</Text>
             </Box>
           ))}
         </Stack>
@@ -1961,6 +1974,8 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
 }
 
 function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events: GqlEvent[]; isAdmin: boolean; crisisId: string; totalEventCount: number }) {
+  const t = useTranslations("crisisDetail");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const utils = api.useUtils();
   const [pendingRemoveEvent, setPendingRemoveEvent] = useState<GqlEvent | null>(null);
@@ -1987,7 +2002,7 @@ function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events
     return (
       <Box p={24} style={{ textAlign: "center" }}>
         <Text size="sm" c="var(--color-text-muted)">
-          No events linked to this crisis.
+          {t("events.empty")}
         </Text>
       </Box>
     );
@@ -1997,24 +2012,27 @@ function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events
       <Modal
         opened={pendingRemoveEvent !== null}
         onClose={() => setPendingRemoveEvent(null)}
-        title="Remove event from crisis"
+        title={t("events.removeModalTitle")}
         size="sm"
         centered
       >
         <Text size="sm" c="var(--color-text-secondary)" mb={8}>
-          Remove <strong>{pendingRemoveEvent?.title ?? pendingRemoveEvent?.types[0] ?? "this event"}</strong> from the crisis?
+          {t.rich("events.removeConfirm", {
+            title: pendingRemoveEvent?.title ?? pendingRemoveEvent?.types[0] ?? t("events.fallbackName"),
+            strong: (chunks) => <strong>{chunks}</strong>,
+          })}
         </Text>
         {totalEventCount <= 1 && (
           <Text size="xs" c="var(--color-critical)" mb={12}>
-            This is the last event. Removing it will delete the entire crisis.
+            {t("events.lastEventWarning")}
           </Text>
         )}
         <Group justify="flex-end" gap={8} mt={16}>
           <Button variant="default" size="xs" onClick={() => setPendingRemoveEvent(null)}>
-            Cancel
+            {tCommon("actions.cancel")}
           </Button>
           <Button size="xs" color="red" loading={removeEvent.isPending} onClick={confirmRemoveEvent}>
-            {totalEventCount <= 1 ? "Remove and delete crisis" : "Remove"}
+            {totalEventCount <= 1 ? t("events.removeAndDelete") : t("events.remove")}
           </Button>
         </Group>
       </Modal>
@@ -2048,11 +2066,13 @@ function TimelineRow({
   isAdmin: boolean;
   onRemove: () => void;
 }) {
+  const t = useTranslations("crisisDetail");
+  const tCommon = useTranslations("common");
   const [hovered, setHovered] = useState(false);
   const sev = mapSeverity(event.severity);
   const dotColor = severityColor(event.severity);
   const dateStr = event.lastSignalCreatedAt || event.firstSignalCreatedAt;
-  const displayTitle = event.title ?? event.types[0] ?? "Event";
+  const displayTitle = event.title ?? event.types[0] ?? t("eventFallback");
   const primaryType = event.types[0];
   const locationLabel = resolveLocationName(pickEventLocation(event));
 
@@ -2182,7 +2202,7 @@ function TimelineRow({
                     flexShrink: 0,
                   }}
                 >
-                  {severityLabels[sev]}
+                  {tCommon(`severities.${sev}`)}
                 </span>
                 {primaryType &&
                   getDisasterPills([primaryType]).map((pill) => (
@@ -2237,7 +2257,7 @@ function TimelineRow({
                 </Menu.Target>
                 <Menu.Dropdown>
                   <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={onRemove}>
-                    Remove from crisis
+                    {t("events.removeFromCrisis")}
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>

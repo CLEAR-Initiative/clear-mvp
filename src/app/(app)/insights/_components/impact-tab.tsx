@@ -1,36 +1,34 @@
+import { useTranslations } from "next-intl";
 import { Box, Text, Group, Badge, SimpleGrid } from "@mantine/core";
 import { IconAlertTriangle, IconShield } from "@tabler/icons-react";
 import { CardSection, DataTable, Table } from "~/components/ui";
 import {
   impactAssessment,
-  environmentalFactors,
   protectionConcerns,
   secondaryEffects,
 } from "./analysis-data";
 
-const SECTOR_COLUMNS = [
-  { label: "Sector" },
-  { label: "Severity" },
-  { label: "Affected" },
-  { label: "Details" },
-];
+// i18n keys under analysis.impact.columns.* - resolved via t() at render time.
+const SECTOR_COLUMN_KEYS = ["sector", "severity", "affected", "details"] as const;
 
 export function ImpactTab() {
+  const t = useTranslations("analysis");
+  const tCommon = useTranslations("common");
   return (
     <Box>
       {/* Sector Impact Table */}
       <CardSection
-        title="Sector Impact Assessment"
-        subtitle="Humanitarian needs by sector"
+        title={t("impact.title")}
+        subtitle={t("impact.subtitle")}
         noPadding
       >
         <DataTable
-          columns={SECTOR_COLUMNS}
+          columns={SECTOR_COLUMN_KEYS.map((k) => ({ label: t(`impact.columns.${k}`) }))}
           data={impactAssessment}
           renderRow={(item) => {
             const Icon = item.icon;
             return (
-              <Table.Tr key={item.sector}>
+              <Table.Tr key={item.key}>
                 <Table.Td>
                   <Group gap={8}>
                     <Box
@@ -46,7 +44,7 @@ export function ImpactTab() {
                       <Icon size={16} color={item.severityColor} />
                     </Box>
                     <Text fw={600} style={{ fontSize: 13 }}>
-                      {item.sector}
+                      {t(`data.impactAssessment.${item.key}.sector`)}
                     </Text>
                   </Group>
                 </Table.Td>
@@ -60,17 +58,17 @@ export function ImpactTab() {
                       textTransform: "uppercase",
                     }}
                   >
-                    {item.severity}
+                    {tCommon(`severities.${item.severity}`)}
                   </Badge>
                 </Table.Td>
                 <Table.Td>
                   <Text fw={700} c={item.severityColor} style={{ fontSize: 13 }}>
-                    {item.number.toLocaleString()} {item.unit}
+                    {t(`data.impactAssessment.${item.key}.affected`, { count: item.number.toLocaleString() })}
                   </Text>
                 </Table.Td>
                 <Table.Td>
                   <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
-                    {item.description}
+                    {t(`data.impactAssessment.${item.key}.description`)}
                   </Text>
                 </Table.Td>
               </Table.Tr>
@@ -82,8 +80,8 @@ export function ImpactTab() {
       <SimpleGrid cols={2} spacing={16} mt={24} mb={24}>
         {/* Environmental Factors */}
         <CardSection
-          title="Environmental Factors"
-          subtitle="Climate and environmental risks"
+          title={t("impact.environmental.title")}
+          subtitle={t("impact.environmental.subtitle")}
         >
           <Box style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <Box
@@ -94,10 +92,10 @@ export function ImpactTab() {
               }}
             >
               <Text size="xs" fw={700} c="var(--color-warning)" tt="uppercase" mb={4}>
-                Flood Risk
+                {t("impact.environmental.floodRisk")}
               </Text>
               <Text size="sm" c="var(--color-text-secondary)">
-                {environmentalFactors.floodRisk}
+                {t("data.environmentalFactors.floodRisk")}
               </Text>
             </Box>
             <Box
@@ -108,10 +106,10 @@ export function ImpactTab() {
               }}
             >
               <Text size="xs" fw={700} c="var(--color-info)" tt="uppercase" mb={4}>
-                Rainfall Forecast
+                {t("impact.environmental.rainfallForecast")}
               </Text>
               <Text size="sm" c="var(--color-text-secondary)">
-                {environmentalFactors.rainfallForecast}
+                {t("data.environmentalFactors.rainfallForecast")}
               </Text>
             </Box>
             <Box
@@ -122,10 +120,10 @@ export function ImpactTab() {
               }}
             >
               <Text size="xs" fw={700} c="var(--color-critical)" tt="uppercase" mb={4}>
-                Secondary Risk
+                {t("impact.environmental.secondaryRisk")}
               </Text>
               <Text size="sm" c="var(--color-text-secondary)">
-                {environmentalFactors.secondaryRisk}
+                {t("data.environmentalFactors.secondaryRisk")}
               </Text>
             </Box>
           </Box>
@@ -133,13 +131,13 @@ export function ImpactTab() {
 
         {/* Protection Concerns */}
         <CardSection
-          title="Protection Concerns"
-          subtitle="Identified vulnerabilities"
+          title={t("impact.protection.title")}
+          subtitle={t("impact.protection.subtitle")}
         >
           <Box style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {protectionConcerns.map((concern, idx) => (
+            {protectionConcerns.map((concern) => (
               <Group
-                key={idx}
+                key={concern}
                 gap={8}
                 p={8}
                 align="flex-start"
@@ -155,7 +153,7 @@ export function ImpactTab() {
                   style={{ marginTop: 2, flexShrink: 0 }}
                 />
                 <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }}>
-                  {concern}
+                  {t(`data.protectionConcerns.${concern}`)}
                 </Text>
               </Group>
             ))}
@@ -165,13 +163,13 @@ export function ImpactTab() {
 
       {/* Secondary Effects */}
       <CardSection
-        title="Secondary Effects"
-        subtitle="Anticipated cascading impacts"
+        title={t("impact.secondaryEffects.title")}
+        subtitle={t("impact.secondaryEffects.subtitle")}
       >
         <SimpleGrid cols={3} spacing={12}>
-          {secondaryEffects.map((effect, idx) => (
+          {secondaryEffects.map((effect) => (
             <Box
-              key={idx}
+              key={effect}
               p={12}
               style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)" }}
             >
@@ -182,7 +180,7 @@ export function ImpactTab() {
                   style={{ marginTop: 2, flexShrink: 0 }}
                 />
                 <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }}>
-                  {effect}
+                  {t(`data.secondaryEffects.${effect}`)}
                 </Text>
               </Group>
             </Box>

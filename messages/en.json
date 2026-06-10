@@ -3,6 +3,222 @@
     "title": "CLEAR: Crisis Learning, Early-warning, Anticipation & Response",
     "description": "Humanitarian decision-support platform"
   },
+  "analysis": {
+    "page": {
+      "title": "Insights",
+      "breadcrumb": "Insights",
+      "tabs": {
+        "crisis": "Crisis Overview",
+        "situation": "Situation Analysis"
+      },
+      "situationPlaceholder": {
+        "title": "Situation Analysis",
+        "description": "AI-generated situation reports coming soon."
+      }
+    },
+    "reports": {
+      "activeCrises": "Active Crises",
+      "criticalBadge": "{count} Critical",
+      "untitledCrisis": "Untitled crisis",
+      "eventCount": "{count, plural, one {# event} other {# events}}",
+      "empty": "No active crises."
+    },
+    "executiveSummary": {
+      "priorityAnalysis": "Priority Analysis",
+      "criticalBadge": "{count} Critical",
+      "activeBadge": "{count} Active",
+      "situationReport": "Situation Report - {country}",
+      "defaultReportTitle": "Armed Conflict Displacement Crisis - {country}",
+      "activeAlerts": "Active Alerts",
+      "totalAlerts": "Total Alerts",
+      "trend": "Trend",
+      "needs": {
+        "shelter": {
+          "label": "Shelter",
+          "description": "Housing & displacement"
+        },
+        "wash": {
+          "label": "WASH",
+          "description": "Water & sanitation"
+        },
+        "protection": {
+          "label": "Protection",
+          "description": "Rights & safety"
+        },
+        "health": {
+          "label": "Health",
+          "description": "Medical response"
+        },
+        "foodSecurity": {
+          "label": "Food Security",
+          "description": "Nutrition access"
+        }
+      },
+      "viewFullReport": "View Full Report",
+      "downloadPdf": "Download PDF",
+      "updatedAt": "Updated {time}",
+      "updatedFallback": "Updated 2 hours ago",
+      "confidence": "Confidence: {pct}%",
+      "aiGeneratedAnalysis": "AI-Generated Analysis",
+      "generating": "Generating comprehensive analysis from {count} active alerts...",
+      "generateFailed": "Failed to generate analysis. Please try again."
+    },
+    "insights": {
+      "title": "AI-Generated Insights",
+      "subtitle": "Pattern detection and recommendations",
+      "filters": {
+        "epidemiological": "Epidemiological",
+        "allTypes": "All Types",
+        "logistics": "Logistics"
+      },
+      "dataQualityTitle": "Analysis Data Quality",
+      "dataQualitySubtitle": "Source reliability metrics",
+      "columns": {
+        "dataSource": "Data Source",
+        "completeness": "Completeness",
+        "timeliness": "Timeliness",
+        "confidence": "Confidence",
+        "lastUpdate": "Last Update"
+      }
+    },
+    "impact": {
+      "title": "Sector Impact Assessment",
+      "subtitle": "Humanitarian needs by sector",
+      "columns": {
+        "sector": "Sector",
+        "severity": "Severity",
+        "affected": "Affected",
+        "details": "Details"
+      },
+      "environmental": {
+        "title": "Environmental Factors",
+        "subtitle": "Climate and environmental risks",
+        "floodRisk": "Flood Risk",
+        "rainfallForecast": "Rainfall Forecast",
+        "secondaryRisk": "Secondary Risk"
+      },
+      "protection": {
+        "title": "Protection Concerns",
+        "subtitle": "Identified vulnerabilities"
+      },
+      "secondaryEffects": {
+        "title": "Secondary Effects",
+        "subtitle": "Anticipated cascading impacts"
+      }
+    },
+    "scenarios": {
+      "title": "Scenario Comparison",
+      "subtitle": "Compare projected outcomes"
+    },
+    "data": {
+      "insights": {
+        "waterClustering": {
+          "type": "Critical Pattern",
+          "title": "Water Source Clustering",
+          "description": "87% of cases within 500m of 3 water points. Immediate testing and treatment recommended."
+        },
+        "peakTiming": {
+          "type": "Time Sensitive",
+          "title": "Peak Timing Prediction",
+          "description": "Historical patterns suggest peak transmission 14-21 days from outbreak start. Current: Day 8."
+        },
+        "resourceOptimization": {
+          "type": "Opportunity",
+          "title": "Resource Optimization",
+          "description": "ORS supplies in Dire Dawa can reach affected areas within 6 hours. Pre-positioning available."
+        }
+      },
+      "dataQuality": {
+        "mohPhem": {
+          "source": "MOH PHEM Data",
+          "timeliness": "Real-time",
+          "confidence": "High",
+          "lastUpdate": "3 min ago"
+        },
+        "whoEwarn": {
+          "source": "WHO EWARN",
+          "timeliness": "Hourly",
+          "confidence": "High",
+          "lastUpdate": "1h ago"
+        },
+        "fieldReports": {
+          "source": "Field Reports",
+          "timeliness": "Daily",
+          "confidence": "Medium",
+          "lastUpdate": "4h ago"
+        },
+        "satellite": {
+          "source": "Satellite Imagery",
+          "timeliness": "6h cycle",
+          "confidence": "High",
+          "lastUpdate": "2h ago"
+        }
+      },
+      "scenarios": {
+        "bestCase": {
+          "name": "Best Case",
+          "sub": "Rapid containment scenario",
+          "description": "Early intervention with full WASH coverage achieves containment within 2 weeks. Estimated affected: 2,400 people."
+        },
+        "mostLikely": {
+          "name": "Most Likely",
+          "sub": "Moderate spread scenario",
+          "description": "Partial containment with ongoing transmission in 3 woredas. Peak in 3-4 weeks. Estimated affected: 8,500 people."
+        },
+        "worstCase": {
+          "name": "Worst Case",
+          "sub": "Regional spread scenario",
+          "description": "Widespread transmission across 8+ woredas with health system strain. Estimated affected: 24,000+ people."
+        }
+      },
+      "impactAssessment": {
+        "shelter": {
+          "sector": "Shelter",
+          "affected": "{count} people",
+          "description": "45% of shelters damaged or destroyed in flood-affected areas"
+        },
+        "wash": {
+          "sector": "WASH",
+          "affected": "{count} people",
+          "description": "3 water treatment facilities non-functional, contamination detected"
+        },
+        "protection": {
+          "sector": "Protection",
+          "affected": "{count} people",
+          "description": "GBV risks elevated, child protection concerns in displacement sites"
+        },
+        "health": {
+          "sector": "Health",
+          "affected": "{count} cases",
+          "description": "Cholera outbreak with Case Fatality Rate of 2.1%, above emergency threshold"
+        },
+        "foodSecurity": {
+          "sector": "Food Security",
+          "affected": "{count} people",
+          "description": "IPC Phase 3+ food insecurity in 5 woredas, market disruption ongoing"
+        }
+      },
+      "environmentalFactors": {
+        "floodRisk": "GloFAS indicates 75% probability of above-normal river levels in next 14 days",
+        "rainfallForecast": "150-200mm expected in Somali Region over next week, 40% above seasonal average",
+        "secondaryRisk": "Waterborne disease outbreak risk HIGH due to flood contamination of water sources"
+      },
+      "protectionConcerns": {
+        "gbv": "Increased GBV risks in overcrowded displacement sites, particularly for women and girls",
+        "separatedChildren": "Separated and unaccompanied children identified in 3 displacement sites",
+        "disabilities": "Barriers to accessing services for persons with disabilities in temporary shelters",
+        "documentation": "Documentation loss affecting access to basic services for displaced populations"
+      },
+      "secondaryEffects": {
+        "market": "Market disruption causing 28% food price increase in affected areas",
+        "schools": "School closures affecting 15,000 children across 23 schools",
+        "livestock": "Livestock losses estimated at $2.3M impacting pastoral livelihoods",
+        "transport": "Transport route disruptions delaying humanitarian supply chains by 48-72 hours",
+        "mentalHealth": "Mental health impacts reported in 60% of displaced households",
+        "agriculture": "Agricultural season disruption threatening next harvest in 4 woredas"
+      }
+    }
+  },
   "cash": {
     "header": {
       "title": "Cash Assistance Targeting & Distribution",
@@ -202,7 +418,245 @@
     },
     "badges": {
       "soon": "Soon",
-      "demo": "Demo"
+      "demo": "Demo",
+      "aiGenerated": "✦ AI generated"
+    },
+    "severities": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "unknown": "Unknown"
+    }
+  },
+  "crisisDetail": {
+    "backToAnalysis": "Back to Analysis",
+    "viewOnCrisisMap": "View on Crisis Map",
+    "switchCrisis": "Switch crisis",
+    "untitledCrisis": "Untitled crisis",
+    "crisisBadge": "Crisis",
+    "eventFallback": "Event",
+    "updatedDate": "Updated {date}",
+    "eventCount": "{count, plural, one {# event} other {# events}}",
+    "enrichment": {
+      "preparingTitle": "Information is being prepared",
+      "preparingDescription": "Generating title, summary, scenarios and needs assessment..."
+    },
+    "notFound": {
+      "title": "Crisis not found",
+      "description": "This crisis may have been removed or the ID is invalid."
+    },
+    "deleteModal": {
+      "title": "Delete crisis",
+      "confirm": "Permanently delete <strong>{title}</strong>? This cannot be undone.",
+      "fallbackName": "this crisis",
+      "menuItem": "Delete crisis"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "needs": "Needs Assessment",
+      "events": "Events",
+      "demography": "Demography",
+      "sources": "Sources",
+      "confidence": "Confidence"
+    },
+    "kpi": {
+      "impact": "Impact",
+      "areaContext": "Area Context",
+      "peopleAffected": "People affected",
+      "peopleDisplaced": "People displaced",
+      "peopleInArea": "People in the area",
+      "idpPerCapitaIn": "IDP per capita in {name}",
+      "idpPerCapita": "IDP per capita"
+    },
+    "summary": {
+      "title": "Summary",
+      "empty": "No summary available yet."
+    },
+    "scenario": {
+      "title": "Scenario Analysis",
+      "empty": "Scenarios not yet generated for this crisis.",
+      "labels": {
+        "bestCase": "Best Case",
+        "mostLikely": "Most Likely",
+        "worstCase": "Worst Case"
+      }
+    },
+    "documents": {
+      "title": "Documents",
+      "removeModalTitle": "Remove document",
+      "removeConfirm": "Remove <strong>{name}</strong>? This cannot be undone.",
+      "remove": "Remove",
+      "empty": "No documents attached.",
+      "upload": "Upload",
+      "uploading": "Uploading...",
+      "uploadFailed": "Upload failed. Please try again.",
+      "removeFailed": "Remove failed. Please try again."
+    },
+    "demography": {
+      "noData": "No demographic data available for this location.",
+      "notYetAvailable": "Demographic data not yet available for {name}.",
+      "source": "WorldPop {year}{release} constrained",
+      "total": "total",
+      "vulnerableGroups": "Vulnerable groups",
+      "groups": {
+        "childrenUnder5": "Children under 5",
+        "children5to14": "Children 5-14",
+        "women15to49": "Women 15-49",
+        "elderly60plus": "Elderly 60+"
+      },
+      "genderSplit": "Gender split",
+      "male": "Male",
+      "female": "Female"
+    },
+    "sources": {
+      "underlyingSignals": "Underlying Signals",
+      "enrichmentSection": "Enrichment",
+      "contextData": "Context Data",
+      "noSignalSources": "No signal sources linked.",
+      "viaAggregator": "{publisher} via {aggregator}",
+      "asOf": "As of {date}",
+      "signalCount": "{count, plural, one {# signal} other {# signals}}",
+      "noEnrichment": "No external enrichment sources incorporated yet. ReliefWeb situation reports and historical signal analysis will appear here when available.",
+      "noContextData": "No context data available for this location.",
+      "context": {
+        "population": "Population",
+        "populationDetail": "{value} - WorldPop {year} constrained{release}",
+        "demographics": "Demographics",
+        "demographicsDetail": "Male {malePct}% / Female {femalePct}% - WorldPop {year} age/sex breakdown",
+        "idp": "IDP",
+        "round": "Round {number}",
+        "needsBaseline": "Needs Assessment Baseline"
+      }
+    },
+    "confidence": {
+      "legend": "Legend",
+      "modalTitle": "Confidence levels",
+      "cols": {
+        "baseline": {
+          "label": "Baseline",
+          "description": "Content generated solely from pipeline signal data - events, severities, and locations ingested from connected sources."
+        },
+        "enriched": {
+          "label": "AI enriched",
+          "description": "The pipeline incorporated external context data (WorldPop demographics, IOM DTM displacement, INFORM risk scores) when generating this content."
+        },
+        "reviewed": {
+          "label": "Analyst reviewed",
+          "description": "A CLEAR analyst has reviewed and validated the content against their field knowledge."
+        },
+        "validated": {
+          "label": "Field validated",
+          "description": "Content has been confirmed through direct community or field team feedback."
+        }
+      },
+      "rows": {
+        "description": "Description",
+        "scenarios": "Scenarios",
+        "needs": "Needs Assessment"
+      }
+    },
+    "events": {
+      "empty": "No events linked to this crisis.",
+      "removeModalTitle": "Remove event from crisis",
+      "removeConfirm": "Remove <strong>{title}</strong> from the crisis?",
+      "fallbackName": "this event",
+      "lastEventWarning": "This is the last event. Removing it will delete the entire crisis.",
+      "removeAndDelete": "Remove and delete crisis",
+      "remove": "Remove",
+      "removeFromCrisis": "Remove from crisis"
+    },
+    "needs": {
+      "saf": {
+        "catastrophic": "Catastrophic",
+        "extreme": "Extreme",
+        "severe": "Severe",
+        "stressed": "Stressed",
+        "minimal": "Minimal",
+        "unknown": "Unknown"
+      },
+      "sectors": {
+        "shelter": "Shelter",
+        "wash": "WASH",
+        "protection": "Protection",
+        "health": "Health",
+        "food": "Food Security",
+        "education": "Education"
+      },
+      "levels": {
+        "baseline": "Baseline",
+        "aiReview": "AI Review",
+        "rna": "RNA"
+      },
+      "precision": {
+        "district": "District",
+        "locality": "Locality"
+      },
+      "estChildShare": "est. child share",
+      "sectorsTitle": "Sectors",
+      "columns": {
+        "sector": "Sector",
+        "severity": "Severity",
+        "pin": "People in Need",
+        "presence": "Op. Presence",
+        "assessment": "Assessment",
+        "precision": "Precision"
+      },
+      "summaryTitle": "Summary",
+      "severityFromMsna": "Sector severity from <b>MSNA Aug 2025</b>.",
+      "presenceFromOcha": "Operational presence from <b>OCHA 3W {date}</b>.",
+      "generating": "Needs analysis is being generated...",
+      "aiSummaryComingSoon": "AI generated summary coming soon.",
+      "responseGap": "Response gap",
+      "nrcMandate": "NRC mandate",
+      "orgsActive": "Organisations active in this area",
+      "moreOrgs": "+{count} more",
+      "severityModal": {
+        "title": "Sector Severity",
+        "intro": "Each sector is scored 0-100 using weighted combinations of MSNA survey indicators across three dimensions: disruption to living standards (access, availability, and quality of essential services), coping mechanisms adopted by affected populations, and physical and mental wellbeing outcomes.",
+        "score": "Score",
+        "level": "Level",
+        "noData": "No data",
+        "footnote": "Thresholds are prototype-stage and pending validation against JIAF cluster standards and NRC benchmarks."
+      },
+      "pinModal": {
+        "title": "People in Need",
+        "intro": "Estimated from the sector severity score using the same weighted composite formula that drives the severity label:",
+        "formula": "PIN = (score / 100) x district population",
+        "population": "Population data: WorldPop 2026 constrained estimates. Education applies an 18% child population share since the sector score represents school-age children only.",
+        "footnote": "Education child share will be replaced by WorldPop age-sex breakdown when available."
+      },
+      "assessmentModal": {
+        "title": "Assessment Level",
+        "intro": "Indicates how the sector assessment was produced and which data sources it draws on.",
+        "level1Label": "1  Baseline",
+        "level1Description": "Sourced from MSNA (Multi-Sector Needs Assessment) survey data, August 2025. District-level coverage only. No AI review has been applied.",
+        "level2Label": "2  AI Review",
+        "level2Description": "An AI model has reviewed available signals and reports alongside the MSNA baseline to produce an updated severity assessment and written sector summary.",
+        "level3Label": "3  RNA",
+        "level3Description": "A Rapid Needs Assessment conducted in-field provides direct on-the-ground data, superseding remote-sensing and survey estimates."
+      },
+      "precisionModal": {
+        "title": "Precision",
+        "intro": "Indicates the finest geographic granularity at which the assessment data was collected.",
+        "districtLabel": "District",
+        "districtDescription": "Data collected at administrative level 2 (A2 district). This is the current granularity of the MSNA dataset.",
+        "localityLabel": "Locality",
+        "localityDescription": "Data collected at sub-district (locality) level, providing finer resolution. Requires field validation or higher-resolution data sources not yet integrated.",
+        "footnote": "Most current assessments are at District level. Locality precision will become available as finer data sources are integrated."
+      },
+      "presenceModal": {
+        "title": "Operational Presence",
+        "intro": "Sourced from OCHA's 3W (Who does What Where) dataset. Shows humanitarian organizations actively operating in the district, broken down by organization type.",
+        "types": {
+          "un": "United Nations agencies",
+          "ingo": "International NGOs",
+          "nngo": "National NGOs",
+          "gov": "Government bodies",
+          "rcrc": "Red Cross / Red Crescent",
+          "other": "Other organizations"
+        }
+      }
     }
   },
   "dashboard": {
@@ -514,8 +968,109 @@
         "impact": "Impact",
         "conditions": "Conditions",
         "complexity": "Complexity",
-        "updated": "Updated {date}"
+        "updated": "Updated {date}",
+        "acapsLine": "ACAPS · {month}",
+        "modal": {
+          "title": "INFORM Severity Index: Methodology",
+          "intro": "The <strong>INFORM Severity Index</strong> is a joint product of the EU Joint Research Centre (JRC), ACAPS, and OCHA. JRC owns the methodology; ACAPS collects the data and produces the monthly scores; OCHA coordinates the initiative. As of the February 2026 release (Version 2026 methodology), scores use a continuous scale of <strong>0 to 10</strong>, rescaled from the previous 0 to 5 range for consistency with other INFORM products. Scores are grouped into five severity categories. Only countries with an active humanitarian crisis are included.",
+          "dimensionsHeading": "Score dimensions (each 0 to 10)",
+          "dimImpact": "<strong>Impact</strong>: scale and depth of humanitarian needs, including people affected, displacement, and mortality.",
+          "dimConditions": "<strong>Conditions of affected people</strong>: living standards, food security, health, water and sanitation, and protection environment.",
+          "dimComplexity": "<strong>Complexity</strong>: factors constraining response such as conflict intensity, access restrictions, and political instability.",
+          "categoriesHeading": "Severity categories",
+          "cat1": "<strong>1 / Low</strong>",
+          "cat2": "<strong>2 / Medium</strong>",
+          "cat3": "<strong>3 / High</strong>",
+          "cat4": "<strong>4 / Very High</strong>",
+          "cat5": "<strong>5 / Extremely High</strong>",
+          "limitationsHeading": "Limitations",
+          "limitationJudgement": "Scores reflect ACAPS analytical judgement and may lag 4 to 8 weeks behind rapidly evolving situations.",
+          "limitationCoverage": "The index covers active humanitarian crises only. Countries without an active crisis are not included.",
+          "sourceHeading": "Source",
+          "sourceJrc": "INFORM Severity Index (JRC/EU canonical portal)",
+          "sourceAcaps": "ACAPS INFORM Severity Index (data and API)",
+          "sourceNote": "Data is fetched from the ACAPS API, which is identical to the JRC-published monthly dataset. The JRC portal may lag by one release; ACAPS and HDX are authoritative for the latest scores. Updated monthly."
+        }
+      },
+      "indicators": "Indicators",
+      "activity": {
+        "title": "Event Activity",
+        "events": "Events",
+        "alerts": "Alerts"
+      },
+      "analysisCoverage": {
+        "title": "Analysis Coverage",
+        "covered": "COVERED",
+        "analysed": "Analysed",
+        "unanalysed": "Unanalysed",
+        "alerts": "Alerts",
+        "withoutAnalysis": "{count, plural, one {# alert} other {# alerts}} without analysis",
+        "allCovered": "All alerts covered"
+      },
+      "idp": {
+        "title": "IDP Displacement",
+        "unavailable": "Data unavailable",
+        "noData": "No displacement data",
+        "notTracked": "{code} is not tracked in IOM DTM",
+        "coverageVaries": "Coverage varies by country",
+        "internallyDisplaced": "Internally Displaced",
+        "vsLastMonth": "vs last month",
+        "sourceLine": "IOM DTM via HAPI",
+        "modal": {
+          "title": "IDP Displacement: Methodology",
+          "intro": "This card shows the total number of <strong>conflict-induced internally displaced persons (IDPs)</strong> tracked by IOM's Displacement Tracking Matrix (DTM) for the selected country. The figure reflects the latest available snapshot, not a cumulative total.",
+          "numbersHeading": "What the numbers mean",
+          "numberCurrent": "<strong>Current count</strong>: most recent IDP figure from IOM DTM for the country.",
+          "numberDelta": "<strong>Month-over-month delta</strong>: change in reported IDPs compared to the previous month's data point.",
+          "numberTrend": "<strong>Trend sparkline</strong>: historical monthly IDP counts showing displacement trajectory.",
+          "numberFreshness": "<strong>Freshness dot</strong>: green if updated within 30 days, amber within 90 days, red if older.",
+          "limitationsHeading": "Limitations",
+          "limitationFloods": "Flood and disaster displacement is <strong>not included</strong>. IOM DTM in this context tracks conflict-induced displacement only.",
+          "limitationCoverage": "Coverage is limited to IOM DTM's monitoring footprint, which may not capture all displacement situations within a country.",
+          "limitationLag": "Data may lag 4 to 8 weeks behind real-world conditions depending on the country operation.",
+          "sourceHeading": "Source",
+          "sourceLink": "HAPI: Humanitarian API (humdata.org)",
+          "sourceNote": "HAPI aggregates IOM DTM data alongside other humanitarian datasets under OCHA's stewardship."
+        }
       }
+    },
+    "createSignalModal": {
+      "stepTitles": {
+        "details": "Create a Signal - Details",
+        "media": "Create a Signal - Add Media",
+        "success": "Signal Created"
+      },
+      "fields": {
+        "title": "Title",
+        "titlePlaceholder": "e.g., Flooding reported in Kassala State",
+        "description": "Description",
+        "descriptionPlaceholder": "Describe what was observed, source, and any relevant context…",
+        "source": "Source",
+        "sourcePlaceholderLoading": "Loading sources…",
+        "sourcePlaceholder": "Select a source…",
+        "noSources": "No sources available",
+        "location": "Location",
+        "locationPlaceholderLoading": "Loading locations…",
+        "locationPlaceholder": "Search location…",
+        "noLocation": "No matching location",
+        "severity": "Severity",
+        "severityPlaceholder": "Select severity…"
+      },
+      "severityWarning": "{severity} severity signals may trigger an alert and notify team members subscribed to alerts at this level.",
+      "nextAddMedia": "Next: Add Media",
+      "media": {
+        "dropzone": "Drop files here or click to browse",
+        "fileTypes": "PDFs, Word, Excel, CSV, text files",
+        "skipSubmit": "Skip & Submit",
+        "submit": "Submit Signal"
+      },
+      "success": {
+        "title": "Signal created",
+        "message": "Your signal has been submitted and is now visible to your team.",
+        "done": "Done"
+      },
+      "uploadError": "File upload failed",
+      "submitError": "Failed to create signal"
     },
     "createAlert": {
       "title": "Create Manual Alert",
@@ -553,6 +1108,79 @@
         "frequency": "Frequency",
         "variables": "Variables"
       }
+    }
+  },
+  "eventDetail": {
+    "notFound": {
+      "title": "Event not found",
+      "description": "This event may have been removed or the ID is invalid."
+    },
+    "backToEvents": "Back to Events Overview",
+    "viewOnCrisisMap": "View on Crisis Map",
+    "status": {
+      "active": "Active",
+      "resolved": "Resolved"
+    },
+    "signalCount": "{count, plural, one {# signal} other {# signals}}",
+    "sourceCount": "{count, plural, one {# source} other {# sources}}",
+    "notAvailable": "N/A",
+    "kpi": {
+      "casualties": "Casualties",
+      "populationIn": "Population in {name}",
+      "populationInArea": "Population in area",
+      "idpPerCapitaIn": "IDPs per capita in {name} ({count} displaced)",
+      "idpPerCapita": "IDP per capita"
+    },
+    "summary": {
+      "title": "Summary",
+      "empty": "No summary available."
+    },
+    "signals": {
+      "title": "Signals ({count})",
+      "subtitle": "Source intelligence that triggered this event",
+      "empty": "No signals attached",
+      "sourceLink": "Source",
+      "fallbackTitle": "Signal {id}"
+    },
+    "related": {
+      "title": "Related Events",
+      "empty": "No related events found"
+    },
+    "actions": {
+      "title": "Actions",
+      "alert": "Alert",
+      "confirmPrompt": "Raise this event as an alert?",
+      "failed": "Failed. Try again.",
+      "turnIntoAlert": "Turn into Alert"
+    },
+    "systemData": {
+      "title": "System Data",
+      "eventId": "Event ID",
+      "source": "Source",
+      "detected": "Detected",
+      "validFrom": "Valid from",
+      "validUntil": "Valid until",
+      "affectedAreas": "Affected Areas",
+      "created": "Created",
+      "updated": "Updated"
+    },
+    "drawer": {
+      "title": "Event Details",
+      "openFullPage": "Open as full page"
+    },
+    "addToCrisis": {
+      "button": "Add to Crisis",
+      "createNew": "Create new Crisis",
+      "loading": "Loading crises...",
+      "empty": "No existing crises yet.",
+      "untitledCrisis": "Untitled crisis",
+      "eventCount": "{count, plural, one {# event} other {# events}}",
+      "linkedTitle": "Event linked",
+      "linkedMessage": "Added to the crisis.",
+      "linkErrorTitle": "Could not link event",
+      "createdTitle": "Crisis created",
+      "createdMessage": "Pipeline will generate the title and summary shortly.",
+      "createErrorTitle": "Could not create crisis"
     }
   },
   "knowledge": {
@@ -822,6 +1450,60 @@
       "timezone": "Timezone",
       "timezoneKhartoum": "Sudan (Khartoum)",
       "timezoneUtc": "UTC"
+    }
+  },
+  "signalDetail": {
+    "notFound": {
+      "title": "Signal not found",
+      "description": "This signal may have been removed or the ID is invalid."
+    },
+    "backToEvents": "Back to Events Overview",
+    "viewOnCrisisMap": "View on Crisis Map",
+    "signalBadge": "Signal",
+    "fallbackTitleWithLocation": "Signal - {location}",
+    "fallbackTitle": "Signal",
+    "unknownSourceType": "Unknown",
+    "viaSource": "via {name}",
+    "viewOriginal": "View original",
+    "viewSource": "View source",
+    "description": {
+      "title": "Description",
+      "empty": "No description available."
+    },
+    "source": {
+      "title": "Source Details",
+      "name": "Source Name",
+      "type": "Source Type",
+      "activity": "Source Activity",
+      "signalsFrom": "{count, plural, one {signal} other {signals}} from {name}",
+      "activityContext": "in current detection context",
+      "infoUrl": "Info URL"
+    },
+    "media": {
+      "title": "Media ({count})"
+    },
+    "events": {
+      "title": "Part of Events ({count})",
+      "empty": "Not assigned to any event yet",
+      "fallbackTitle": "Event {id}"
+    },
+    "similar": {
+      "title": "Similar Signals ({count})",
+      "empty": "No co-detected signals found",
+      "fallbackTitle": "Signal {id}"
+    },
+    "actions": {
+      "title": "Actions",
+      "addToCrisis": "Add to Crisis",
+      "comingSoon": "coming soon"
+    },
+    "details": {
+      "title": "Details",
+      "signalId": "Signal ID",
+      "source": "Source",
+      "published": "Published",
+      "collected": "Collected",
+      "affectedAreas": "Affected Areas"
     }
   }
 }

@@ -16,7 +16,7 @@ interface DataTableColumn {
 
 interface DataTableProps<T> {
   columns: DataTableColumn[];
-  data: T[];
+  data: readonly T[];
   renderRow: (item: T, index: number) => ReactNode;
   loading?: boolean;
   emptyMessage?: string;

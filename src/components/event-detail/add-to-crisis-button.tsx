@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button, Menu, Text, Group, Loader } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconLayoutGridAdd, IconChevronDown, IconPlus } from "@tabler/icons-react";
@@ -26,6 +27,7 @@ export function AddToCrisisButton({
   eventId,
   defaultSeverity = 3,
 }: AddToCrisisButtonProps) {
+  const t = useTranslations("eventDetail");
   const router = useRouter();
   const utils = api.useUtils();
 
@@ -35,8 +37,8 @@ export function AddToCrisisButton({
     onSuccess: async (_data, vars) => {
       notifications.show({
         color: "teal",
-        title: "Event linked",
-        message: "Added to the crisis.",
+        title: t("addToCrisis.linkedTitle"),
+        message: t("addToCrisis.linkedMessage"),
       });
       await utils.crises.list.invalidate();
       await utils.crises.get.invalidate({ id: vars.crisisId });
@@ -44,7 +46,7 @@ export function AddToCrisisButton({
     onError: (err) => {
       notifications.show({
         color: "red",
-        title: "Could not link event",
+        title: t("addToCrisis.linkErrorTitle"),
         message: err.message,
       });
     },
@@ -54,8 +56,8 @@ export function AddToCrisisButton({
     onSuccess: async (crisis) => {
       notifications.show({
         color: "teal",
-        title: "Crisis created",
-        message: "Pipeline will generate the title and summary shortly.",
+        title: t("addToCrisis.createdTitle"),
+        message: t("addToCrisis.createdMessage"),
       });
       await utils.crises.list.invalidate();
       router.push(`/crisis/${crisis.id}`);
@@ -63,7 +65,7 @@ export function AddToCrisisButton({
     onError: (err) => {
       notifications.show({
         color: "red",
-        title: "Could not create crisis",
+        title: t("addToCrisis.createErrorTitle"),
         message: err.message,
       });
     },
@@ -84,7 +86,7 @@ export function AddToCrisisButton({
           loading={pending}
           style={{ fontSize: 12 }}
         >
-          Add to Crisis
+          {t("addToCrisis.button")}
         </Button>
       </Menu.Target>
 
@@ -99,7 +101,7 @@ export function AddToCrisisButton({
             })
           }
         >
-          Create new Crisis
+          {t("addToCrisis.createNew")}
         </Menu.Item>
 
         <Menu.Divider />
@@ -109,7 +111,7 @@ export function AddToCrisisButton({
             <Group gap={8}>
               <Loader size={12} />
               <Text size="xs" c="var(--color-text-muted)">
-                Loading crises...
+                {t("addToCrisis.loading")}
               </Text>
             </Group>
           </Menu.Item>
@@ -118,7 +120,7 @@ export function AddToCrisisButton({
         {crisesQuery.data && crisesQuery.data.length === 0 && (
           <Menu.Item disabled>
             <Text size="xs" c="var(--color-text-muted)">
-              No existing crises yet.
+              {t("addToCrisis.empty")}
             </Text>
           </Menu.Item>
         )}
@@ -130,10 +132,10 @@ export function AddToCrisisButton({
           >
             <Group justify="space-between" wrap="nowrap">
               <Text size="sm" truncate style={{ flex: 1 }}>
-                {s.title ?? "Untitled crisis"}
+                {s.title ?? t("addToCrisis.untitledCrisis")}
               </Text>
               <Text size="xs" c="var(--color-text-muted)" style={{ flexShrink: 0 }}>
-                {s.events.length} event{s.events.length !== 1 ? "s" : ""}
+                {t("addToCrisis.eventCount", { count: s.events.length })}
               </Text>
             </Group>
           </Menu.Item>
