@@ -272,7 +272,7 @@ export function CrisisDetailContent({
   const deleteCrisis = api.crises.deleteCrisis.useMutation({
     onSuccess: () => {
       void utils.crises.list.invalidate();
-      router.push("/analysis");
+      router.push("/insights");
     },
   });
 
@@ -387,7 +387,7 @@ export function CrisisDetailContent({
         </Text>
         {mode === "page" && (
           <Link
-            href="/analysis"
+            href="/insights"
             style={{
               display: "inline-block",
               marginTop: 16,
@@ -464,7 +464,7 @@ export function CrisisDetailContent({
           style={{ background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)" }}
         >
           <Group justify="space-between">
-            <Link href="/analysis" style={{ textDecoration: "none" }}>
+            <Link href="/insights" style={{ textDecoration: "none" }}>
               <Group gap={6} className="hover:opacity-70" style={{ cursor: "pointer" }}>
                 <IconArrowLeft size={14} color="var(--color-text-secondary)" />
                 <Text size="sm" c="var(--color-text-secondary)" fw={500}>
@@ -1970,7 +1970,7 @@ function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events
       if (totalEventCount <= 1) {
         // Last event removed - crisis was deleted by the backend
         void utils.crises.list.invalidate();
-        router.push("/analysis");
+        router.push("/insights");
       } else {
         void utils.crises.get.invalidate({ id: crisisId });
       }

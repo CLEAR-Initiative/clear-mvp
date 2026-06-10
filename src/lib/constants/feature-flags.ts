@@ -1,5 +1,5 @@
 /**
- * Feature flag registry — nav items only.
+ * Feature flag registry - nav items only.
  *
  * Tier 1 = Core (always on, non-toggleable)
  * Tier 2 = High priority
@@ -17,7 +17,7 @@ export interface FeatureFlagDefinition {
 }
 
 export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
-  // Tier 1 — Core (always on)
+  // Tier 1 - Core (always on)
   {
     key: "overview",
     label: "Overview",
@@ -27,7 +27,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     route: "/dashboard",
   },
 
-  // Tier 2 — High Priority
+  // Tier 2 - High Priority
   {
     key: "detection",
     label: "Detection",
@@ -45,14 +45,14 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     route: "/map",
   },
 
-  // Tier 3 — Medium Priority
+  // Tier 3 - Medium Priority
   {
     key: "analysis",
-    label: "Analysis",
+    label: "Insights",
     description: "Situation reports, scenario planning, and impact assessment",
     tier: 3,
     defaultEnabled: true,
-    route: "/analysis",
+    route: "/insights",
   },
   {
     key: "operations",
@@ -71,7 +71,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     route: "/cash",
   },
 
-  // Tier 4 — Lower Priority
+  // Tier 4 - Lower Priority
   {
     key: "knowledge_hub",
     label: "Knowledge Hub",

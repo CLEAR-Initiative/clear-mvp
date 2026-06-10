@@ -1,19 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Box, Tabs, Text } from "@mantine/core";
+import { Badge, Box, Group, Tabs, Text } from "@mantine/core";
 import { PageHeader } from "~/components/ui";
 import { ReportsTab } from "./_components/reports-tab";
 
-export default function AnalysisPage() {
+export default function InsightsPage() {
   const [activeTab, setActiveTab] = useState<string | null>("crisis");
 
   return (
     <Box>
       <PageHeader
-        title="Analysis"
-        subtitle="Analysis"
-        breadcrumbs={["CLEAR", "Analysis"]}
+        title="Insights"
+        subtitle="Insights"
+        breadcrumbs={["CLEAR", "Insights"]}
       />
 
       <Box p={24}>
@@ -24,8 +24,13 @@ export default function AnalysisPage() {
           styles={{ tab: { fontSize: 13, fontWeight: 500 } }}
         >
           <Tabs.List>
-            <Tabs.Tab value="crisis">Crisis</Tabs.Tab>
-            <Tabs.Tab value="situation">Situation Analysis</Tabs.Tab>
+            <Tabs.Tab value="crisis">Crisis Overview</Tabs.Tab>
+            <Tabs.Tab value="situation">
+              <Group gap={6} align="center">
+                Situation Analysis
+                <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>Soon</Badge>
+              </Group>
+            </Tabs.Tab>
           </Tabs.List>
         </Tabs>
 
