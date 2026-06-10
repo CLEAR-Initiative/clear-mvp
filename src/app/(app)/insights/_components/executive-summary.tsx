@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -78,6 +78,7 @@ export function ExecutiveSummary({
   selectedCountry,
 }: ExecutiveSummaryProps) {
   const t = useTranslations("analysis");
+  const format = useFormatter();
   const needs = DEFAULT_NEEDS;
 
   return (
@@ -215,7 +216,7 @@ export function ExecutiveSummary({
           <Box style={{ textAlign: "right", flexShrink: 0 }}>
             <Text size="xs" c="var(--color-text-muted)">
               {alertsDataUpdatedAt
-                ? t("executiveSummary.updatedAt", { time: new Date(alertsDataUpdatedAt).toLocaleTimeString() })
+                ? t("executiveSummary.updatedAt", { time: format.dateTime(new Date(alertsDataUpdatedAt), "time") })
                 : t("executiveSummary.updatedFallback")}
             </Text>
             <Text size="xs" c="var(--color-text-muted)" mt={4}>

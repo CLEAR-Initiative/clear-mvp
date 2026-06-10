@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   Box,
@@ -74,6 +74,7 @@ const COLUMN_KEYS = ["title", "class", "type", "severity", "source", "date", "lo
 
 export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchingMore, totalCount, onLoadMore, sortOrder, onSortChange }: HistoryTabProps) {
   const t = useTranslations("detection");
+  const format = useFormatter();
   const [search, setSearch] = useState("");
 
   // Build the unified row list - alerts take priority; events already shown as
@@ -245,7 +246,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
                 </Table.Td>
                 <Table.Td style={{ whiteSpace: "nowrap" }}>
                   <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
-                    {new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    {format.dateTime(new Date(date), "short")}
                   </Text>
                 </Table.Td>
                 <Table.Td style={{ minWidth: 100 }}>

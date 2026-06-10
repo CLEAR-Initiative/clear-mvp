@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -23,7 +23,6 @@ import { severityColors, severityLabels } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
-import { formatTimeAgo } from "~/lib/utils";
 import { resolveLocationName } from "~/lib/location";
 
 const CrisisMap = dynamic(
@@ -41,14 +40,6 @@ export const SIGNAL_SORT_LABEL_KEYS: Record<SignalSortOrder, "sevDesc" | "sevAsc
   "sev-desc": "sevDesc",
   "sev-asc":  "sevAsc",
 };
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 interface SignalsTabProps {
   signals: GqlSignal[];
@@ -102,6 +93,7 @@ export function SignalsTab({
   activeSources: activeSourcesProp,
 }: SignalsTabProps) {
   const t = useTranslations("detection");
+  const format = useFormatter();
   const [search, setSearch] = useState("");
   const activeSources = activeSourcesProp ?? null;
   const activeSeverities = activeSeveritiesProp ?? new Set(["critical", "high", "medium", "low"]);
@@ -145,8 +137,8 @@ export function SignalsTab({
   }, [signals, search, activeSeverities, activeSources]);
 
   const countLabel = search || activeSeverities.size < 4 || activeSources !== null
-    ? `${filtered.length} / ${totalCount.toLocaleString()}`
-    : totalCount.toLocaleString();
+    ? `${filtered.length} / ${format.number(totalCount)}`
+    : format.number(totalCount);
 
   return (
     <Box style={{ display: "flex", gap: 24 }}>
@@ -202,7 +194,7 @@ export function SignalsTab({
                           <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>{signal.source.name}</Badge>
                           <Badge size="xs" variant="outline" style={{ color: "var(--color-text-muted)", borderColor: "var(--color-border-dark)", fontSize: 10 }}>{signal.source.type}</Badge>
                         </Group>
-                        <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(signal.publishedAt)}</Text>
+                        <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(signal.publishedAt))}</Text>
                       </Group>
                       <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={2} mb={4} style={{ lineHeight: 1.4 }}>
                         {displayTitle}
@@ -214,7 +206,7 @@ export function SignalsTab({
                             <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
                           </Group>
                         )}
-                        <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>{formatDate(signal.publishedAt)}</Text>
+                        <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>{format.dateTime(new Date(signal.publishedAt), "short")}</Text>
                         {signal.url && (
                           <a href={signal.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
                             style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--color-accent)", textDecoration: "none" }}>

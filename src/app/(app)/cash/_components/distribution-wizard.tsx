@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -197,6 +197,7 @@ interface NewDistributionWizardProps {
 
 export function NewDistributionWizard({ opened, onClose }: NewDistributionWizardProps) {
   const t = useTranslations("cash.wizard");
+  const format = useFormatter();
   const tActions = useTranslations("common.actions");
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -313,7 +314,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
                 <Group justify="space-between">
                   <Box>
                     <Text fw={600} size="sm">{location.name}</Text>
-                    <Text size="xs" c="var(--color-text-muted)">{t("locationsStep.affected", { count: location.affected.toLocaleString() })}</Text>
+                    <Text size="xs" c="var(--color-text-muted)">{t("locationsStep.affected", { count: format.number(location.affected) })}</Text>
                   </Box>
                   <Group gap={8}>
                     <Badge size="xs" style={{ background: location.severityColor, color: "white" }}>
@@ -333,8 +334,8 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
                 {t.rich("locationsStep.summary", {
                   b: (chunks) => <Text span fw={700}>{chunks}</Text>,
                   locations: formData.locations.length,
-                  affected: totalAffected.toLocaleString(),
-                  households: estimatedHouseholds.toLocaleString(),
+                  affected: format.number(totalAffected),
+                  households: format.number(estimatedHouseholds),
                 })}
               </Text>
             </Box>
@@ -417,11 +418,11 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
             <Box p={16} style={{ background: "#F0F9FF", borderLeft: "4px solid #E85D3D" }}>
               <Text size="xs" fw={600} c="#E85D3D" tt="uppercase" mb={4}>{t("transferStep.estimatedBudget")}</Text>
               <Text size="xl" fw={700} style={{ fontFamily: "monospace" }}>
-                {estimatedBudget.toLocaleString()} {formData.currency}
+                {format.number(estimatedBudget)} {formData.currency}
               </Text>
               <Text size="xs" c="var(--color-text-secondary)" mt={4}>
                 {t("transferStep.budgetBasis", {
-                  households: estimatedHouseholds.toLocaleString(),
+                  households: format.number(estimatedHouseholds),
                   amount: formData.amount,
                   currency: formData.currency,
                 })}
@@ -515,8 +516,8 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
               </Group>
               <Text size="xs" c="var(--color-text-muted)" mt={8}>
                 {t("reviewStep.summary", {
-                  affected: totalAffected.toLocaleString(),
-                  households: estimatedHouseholds.toLocaleString(),
+                  affected: format.number(totalAffected),
+                  households: format.number(estimatedHouseholds),
                 })}
               </Text>
             </Box>
@@ -575,7 +576,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
             <Box p={16} style={{ background: "#D1FAE5" }}>
               <Text size="xs" fw={600} c="#059669" tt="uppercase" mb={4}>{t("reviewStep.totalBudget")}</Text>
               <Text size="xl" fw={700} c="#059669" style={{ fontFamily: "monospace" }}>
-                {estimatedBudget.toLocaleString()} {formData.currency}
+                {format.number(estimatedBudget)} {formData.currency}
               </Text>
             </Box>
           </Card>

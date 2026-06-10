@@ -11,7 +11,7 @@ import {
   SimpleGrid,
   Tabs,
 } from "@mantine/core";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { IconMapPin, IconShieldCheck } from "@tabler/icons-react";
 import type { LocationData } from "./distribution-wizard";
 
@@ -21,6 +21,7 @@ interface LocationDetailsPanelProps {
 
 export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelProps) {
   const t = useTranslations("cash.details");
+  const format = useFormatter();
   const [detailTab, setDetailTab] = useState<string | null>("demographics");
   const d = selectedLocation.demographics;
   const total = d.male + d.female;
@@ -40,7 +41,7 @@ export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelP
           <Group justify="space-between">
             <Box>
               <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ letterSpacing: "0.5px" }} mb={4}>{t("totalAffected")}</Text>
-              <Text size="xl" fw={700} style={{ fontFamily: "monospace" }}>{selectedLocation.affected.toLocaleString()}</Text>
+              <Text size="xl" fw={700} style={{ fontFamily: "monospace" }}>{format.number(selectedLocation.affected)}</Text>
             </Box>
             <Badge size="lg" style={{ background: selectedLocation.severityColor, color: "white", fontWeight: 600 }}>
               {selectedLocation.severity}
@@ -72,7 +73,7 @@ export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelP
                 <Box key={g.label} mb={8}>
                   <Group justify="space-between" mb={4}>
                     <Text size="xs">{g.label}</Text>
-                    <Text size="xs" style={{ fontFamily: "monospace" }}>{g.value.toLocaleString()} ({g.pct}%)</Text>
+                    <Text size="xs" style={{ fontFamily: "monospace" }}>{format.number(g.value)} ({g.pct}%)</Text>
                   </Group>
                   <Box style={{ height: 6, background: "var(--color-bg-muted)" }}>
                     <Box style={{ height: "100%", width: `${g.pct}%`, background: "#525252" }} />
@@ -86,7 +87,7 @@ export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelP
                 {Object.entries(d.ages).map(([label, value]) => (
                   <Box key={label} p={10} style={{ background: "var(--color-bg-muted)", textAlign: "center" }}>
                     <Text size="xs" c="var(--color-text-muted)" mb={4}>{label}</Text>
-                    <Text size="sm" fw={600} style={{ fontFamily: "monospace" }}>{value.toLocaleString()}</Text>
+                    <Text size="sm" fw={600} style={{ fontFamily: "monospace" }}>{format.number(value)}</Text>
                   </Box>
                 ))}
               </SimpleGrid>

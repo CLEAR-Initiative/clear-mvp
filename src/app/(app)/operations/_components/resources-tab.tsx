@@ -1,10 +1,11 @@
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, SimpleGrid, Progress, Button } from "@mantine/core";
 import { CardSection, ResourceBar } from "~/components/ui";
 import { budgetBreakdown, resources, humanResources } from "./operations-data";
 
 export function ResourcesTab() {
   const t = useTranslations("operations");
+  const format = useFormatter();
 
   return (
     <Box>
@@ -18,7 +19,7 @@ export function ResourcesTab() {
           <Box key={item.phase} mb={12}>
             <Group justify="space-between" mb={4}>
               <Text size="sm" fw={500}>{item.phase}</Text>
-              <Text size="sm" fw={600} style={{ fontFamily: "monospace" }}>${item.budget.toLocaleString()} ({item.pct}%)</Text>
+              <Text size="sm" fw={600} style={{ fontFamily: "monospace" }}>${format.number(item.budget)} ({item.pct}%)</Text>
             </Group>
             <Progress value={item.pct} size={8} color={item.color} />
           </Box>

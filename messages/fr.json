@@ -207,6 +207,7 @@
       "signalsUnit": "signaux",
       "directQuery": "Requête directe",
       "noSignals": "Aucun signal pour le moment",
+      "noDataYet": "Aucune donnée pour le moment",
       "cadences": {
         "realTime": "Temps réel",
         "weekly": "Hebdomadaire",
@@ -782,6 +783,47 @@
       "medium": "Moyenne",
       "low": "Faible",
       "unknown": "Inconnue"
+    },
+    "comments": {
+      "title": "Discussion",
+      "replyBadge": "Réponse",
+      "replyAction": "Répondre",
+      "unknownUser": "Inconnu",
+      "empty": "Aucun commentaire pour le moment. Soyez le premier à en ajouter un.",
+      "replyingTo": "Réponse à <strong>{name}</strong>",
+      "placeholderReply": "Répondre à {name}…",
+      "placeholderAdd": "Ajouter un commentaire…",
+      "shortcutHint": "⌘ + Entrée pour publier",
+      "post": "Publier"
+    },
+    "feedbackSection": {
+      "question": {
+        "event": "Cet événement vous a-t-il été utile ?",
+        "signal": "Ce signal vous a-t-il été utile ?"
+      },
+      "thanksInline": "Merci pour votre retour !",
+      "issues": "Problèmes",
+      "helpful": "Utile",
+      "modalTitle": "Quel était le problème ?",
+      "thankYou": "Merci !",
+      "thanksBody": {
+        "event": "Votre retour contribue à améliorer la qualité des événements pour toute l'équipe.",
+        "signal": "Votre retour contribue à améliorer la qualité des signaux pour toute l'équipe."
+      },
+      "selectIssues": "Sélectionnez tous les problèmes concernés - cela nous aide à améliorer le pipeline de détection.",
+      "reasons": {
+        "notRelevant": "Non pertinent",
+        "alreadyKnown": "Déjà connu",
+        "wrongArea": "Zone erronée",
+        "wrongSeverity": "Sévérité erronée",
+        "inaccurate": "Inexact"
+      },
+      "commentsLabel": "Commentaires supplémentaires (facultatif)",
+      "commentsPlaceholder": {
+        "event": "Autre chose que nous devrions savoir sur cet événement…",
+        "signal": "Autre chose que nous devrions savoir sur ce signal…"
+      },
+      "send": "Envoyer le retour"
     },
     "createSignal": {
       "detailsTitle": "Créer un signal - Détails",

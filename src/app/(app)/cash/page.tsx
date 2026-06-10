@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { Box, Text, Card, Group, Button, SimpleGrid } from "@mantine/core";
 import { IconDownload, IconPlus, IconAlertCircle, IconMapPin } from "@tabler/icons-react";
@@ -14,6 +14,7 @@ import { LocationDetailsPanel } from "./_components/location-details-panel";
 
 export default function CashPage() {
   const t = useTranslations("cash");
+  const format = useFormatter();
   const [selectedLocation, setSelectedLocation] = useState(locations[0]!);
   const [showDistributionWizard, setShowDistributionWizard] = useState(false);
 
@@ -32,10 +33,10 @@ export default function CashPage() {
         lat: loc.lat,
         title: loc.name,
         severity: loc.severity === "CRITICAL" ? "critical" : loc.severity === "HIGH" ? "high" : "medium",
-        type: t("mapping.markerAffected", { count: loc.affected.toLocaleString() }),
+        type: t("mapping.markerAffected", { count: format.number(loc.affected) }),
         description: t("mapping.markerSeverity", { severity: loc.severity }),
       })),
-    [t],
+    [t, format],
   );
 
   return (

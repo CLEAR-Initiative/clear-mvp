@@ -3,7 +3,7 @@
 import { useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -76,40 +76,6 @@ interface ClusterNeed {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatDateTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
-function formatCount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toLocaleString();
-}
 
 /** Rank needs by severity * PiN so the most pressing sit at the top. */
 function rankNeeds(needs: ClusterNeed[]): ClusterNeed[] {
@@ -247,6 +213,7 @@ export function CrisisDetailContent({
 }: CrisisDetailContentProps) {
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
+  const format = useFormatter();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [leftPanelTab, setLeftPanelTab] = useState<string | null>("events");
@@ -619,7 +586,7 @@ export function CrisisDetailContent({
             <Group gap={4}>
               <IconCalendar size={13} color="var(--color-text-muted)" />
               <Text size="xs" c="var(--color-text-secondary)">
-                {t("updatedDate", { date: formatDate(updatedAt) })}
+                {t("updatedDate", { date: format.dateTime(new Date(updatedAt), "short") })}
               </Text>
             </Group>
           )}
@@ -664,7 +631,7 @@ export function CrisisDetailContent({
                     <ImpactRow
                       icon={<IconUsers size={14} color="var(--color-accent)" />}
                       iconBg="var(--color-accent-light)"
-                      value={populationAffected !== null ? formatCount(populationAffected) : "-"}
+                      value={populationAffected !== null ? format.number(populationAffected, "compact") : "-"}
                       label={t("kpi.peopleAffected")}
                     />
                   </Box>
@@ -672,7 +639,7 @@ export function CrisisDetailContent({
                     <ImpactRow
                       icon={<IconUsersGroup size={14} color="var(--color-warning)" />}
                       iconBg="var(--color-warning-light)"
-                      value={populationDisplaced !== null ? formatCount(populationDisplaced) : "-"}
+                      value={populationDisplaced !== null ? format.number(populationDisplaced, "compact") : "-"}
                       label={t("kpi.peopleDisplaced")}
                     />
                   </Box>
@@ -688,7 +655,7 @@ export function CrisisDetailContent({
                     <ImpactRow
                       icon={<IconUsersGroup size={14} color="var(--color-info)" />}
                       iconBg="var(--color-info-light)"
-                      value={populationInArea !== null ? formatCount(populationInArea) : "-"}
+                      value={populationInArea !== null ? format.number(populationInArea, "compact") : "-"}
                       label={t("kpi.peopleInArea")}
                     />
                   </Box>
@@ -700,7 +667,7 @@ export function CrisisDetailContent({
                         crisisIdpData?.ratio != null
                           ? `${(crisisIdpData.ratio * 100).toFixed(1)}%`
                           : crisisIdpData?.displaced != null
-                            ? formatCount(crisisIdpData.displaced)
+                            ? format.number(crisisIdpData.displaced, "compact")
                             : "-"
                       }
                       label={crisisIdpData ? t("kpi.idpPerCapitaIn", { name: crisisIdpData.name }) : t("kpi.idpPerCapita")}
@@ -1385,6 +1352,7 @@ function TopNeedsCard({ needs, isDemo }: { needs: ClusterNeed[]; isDemo?: boolea
 }
 
 function NeedRow({ need, isLast }: { need: ClusterNeed; isLast: boolean }) {
+  const format = useFormatter();
   const cluster = IASC_CLUSTERS[need.cluster];
   const sev = mapSeverity(need.severity);
   const colors = severityColors[sev] ?? severityColors.medium!;
@@ -1437,7 +1405,7 @@ function NeedRow({ need, isLast }: { need: ClusterNeed; isLast: boolean }) {
           {need.peopleInNeed !== undefined ? (
             <>
               <Text fw={700} size="sm" c="var(--color-text-primary)" style={{ letterSpacing: "-0.01em" }}>
-                {formatCount(need.peopleInNeed)}
+                {format.number(need.peopleInNeed, "compact")}
               </Text>
               <Text size="xs" c="var(--color-text-muted)">
                 in need
@@ -1721,6 +1689,7 @@ function SectionHeader({ children, open, onToggle }: { children: React.ReactNode
 
 function SourcesPanel({ events, crisis }: { events: GqlEvent[]; crisis: GqlCrisis }) {
   const t = useTranslations("crisisDetail");
+  const format = useFormatter();
   const [signalsOpen, setSignalsOpen] = useState(true);
   const [enrichmentOpen, setEnrichmentOpen] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
@@ -1764,7 +1733,7 @@ function SourcesPanel({ events, crisis }: { events: GqlEvent[]; crisis: GqlCrisi
           signalSources.map((src, idx) => {
             const label = src.aggregator ? t("sources.viaAggregator", { publisher: src.publisher, aggregator: src.aggregator }) : src.publisher;
             const asOf = src.latestPublishedAt
-              ? t("sources.asOf", { date: new Date(src.latestPublishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) })
+              ? t("sources.asOf", { date: format.dateTime(new Date(src.latestPublishedAt), "short") })
               : null;
             return (
               <Box
@@ -1976,6 +1945,7 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
 function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events: GqlEvent[]; isAdmin: boolean; crisisId: string; totalEventCount: number }) {
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
+  const format = useFormatter();
   const router = useRouter();
   const utils = api.useUtils();
   const [pendingRemoveEvent, setPendingRemoveEvent] = useState<GqlEvent | null>(null);
@@ -2068,6 +2038,7 @@ function TimelineRow({
 }) {
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
+  const format = useFormatter();
   const [hovered, setHovered] = useState(false);
   const sev = mapSeverity(event.severity);
   const dotColor = severityColor(event.severity);
@@ -2078,7 +2049,7 @@ function TimelineRow({
 
   const dateObj = dateStr ? new Date(dateStr) : null;
   const dateMonthDay = dateObj
-    ? dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    ? format.dateTime(dateObj, { month: "short", day: "numeric" })
     : "";
   const dateYear = dateObj ? dateObj.getFullYear() : null;
   const nowYear = new Date().getFullYear();

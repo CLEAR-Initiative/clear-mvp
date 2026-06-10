@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -41,35 +41,6 @@ import { useLocations } from "~/hooks/use-locations";
 import { MinimapCard } from "~/components/map/minimap-card";
 
 // ─────────────────────────────────────────────────────────────────────────────
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatDateTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 function signalLocations(signal: GqlSignalDetail): GqlLocation[] {
   const locs: GqlLocation[] = [];
@@ -150,6 +121,7 @@ export function SignalDetailContent({
 }: SignalDetailContentProps) {
   const t = useTranslations("signalDetail");
   const tCommon = useTranslations("common");
+  const format = useFormatter();
 
   const mapMarkers = useMemo<MapMarker[]>(() => {
     if (!signal) return [];
@@ -421,13 +393,13 @@ export function SignalDetailContent({
           <Group gap={4}>
             <IconCalendar size={13} color="var(--color-text-muted)" />
             <Text size="xs" c="var(--color-text-secondary)">
-              {formatDate(signal.publishedAt)}
+              {format.dateTime(new Date(signal.publishedAt), "short")}
             </Text>
           </Group>
           <Group gap={4}>
             <IconClock size={13} color="var(--color-text-muted)" />
             <Text size="xs" c="var(--color-text-muted)">
-              {formatTimeAgo(signal.publishedAt)}
+              {format.relativeTime(new Date(signal.publishedAt))}
             </Text>
           </Group>
         </Group>
@@ -610,7 +582,7 @@ export function SignalDetailContent({
                             <Badge size="xs" style={{ background: relBg, color: relColor, fontWeight: 600 }}>
                               {tCommon(`severities.${relSev}`)}
                             </Badge>
-                            <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(ev.firstSignalCreatedAt)}</Text>
+                            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(ev.firstSignalCreatedAt))}</Text>
                           </Group>
                           <Text size="sm" fw={500} c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }}>
                             {relTitle}
@@ -669,7 +641,7 @@ export function SignalDetailContent({
                             <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>
                               {s.source.name}
                             </Badge>
-                            <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(s.publishedAt)}</Text>
+                            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(s.publishedAt))}</Text>
                           </Group>
                           <Text size="sm" fw={500} c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }}>
                             {relTitle}
@@ -772,11 +744,11 @@ export function SignalDetailContent({
                     </Group>
                     <Group justify="space-between">
                       <Text size="xs" c="var(--color-text-muted)">{t("details.published")}</Text>
-                      <Text size="xs" fw={500} c="var(--color-text-primary)">{formatDate(signal.publishedAt)}</Text>
+                      <Text size="xs" fw={500} c="var(--color-text-primary)">{format.dateTime(new Date(signal.publishedAt), "short")}</Text>
                     </Group>
                     <Group justify="space-between">
                       <Text size="xs" c="var(--color-text-muted)">{t("details.collected")}</Text>
-                      <Text size="xs" fw={500} c="var(--color-text-primary)">{formatDateTime(signal.collectedAt)}</Text>
+                      <Text size="xs" fw={500} c="var(--color-text-primary)">{format.dateTime(new Date(signal.collectedAt), "dateTime")}</Text>
                     </Group>
                     {locations.some((l) => resolveLocationName(l)) && (
                       <Box style={{ borderTop: "1px solid var(--color-border)" }} pt={8} mt={2}>

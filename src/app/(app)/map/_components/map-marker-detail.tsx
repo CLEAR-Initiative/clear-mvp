@@ -1,4 +1,4 @@
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Stack, Badge, Button, CloseButton, ScrollArea } from "@mantine/core";
 import Link from "next/link";
 import { type CrisisMarker } from "./map-markers-data";
@@ -17,6 +17,7 @@ const severityColors: Record<string, { bg: string; color: string }> = {
 
 export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
   const t = useTranslations("map");
+  const format = useFormatter();
   const sev = severityColors[marker.severity] ?? severityColors.medium;
 
   return (
@@ -69,11 +70,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
           {marker.shockDate && (
             <DetailRow
               label={t("detail.shockDate")}
-              value={new Date(marker.shockDate).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
+              value={format.dateTime(new Date(marker.shockDate), "short")}
             />
           )}
           <DetailRow

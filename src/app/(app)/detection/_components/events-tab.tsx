@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -25,7 +25,6 @@ import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
-import { formatTimeAgo } from "~/lib/utils";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -96,6 +95,7 @@ export function EventsTab({
   activeSources: activeSourcesProp,
 }: EventsTabProps) {
   const t = useTranslations("detection");
+  const format = useFormatter();
   const [search, setSearch] = useState("");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
   const [showPopulation, setShowPopulation] = useState(false);
@@ -143,8 +143,8 @@ export function EventsTab({
   }, [events, search, activeSeverities, expandedTypeCodesProp, activeSources]);
 
   const countLabel = search || activeSeverities.size < 4 || activeSources !== null || expandedTypeCodesProp
-    ? `${filtered.length} / ${totalCount.toLocaleString()}`
-    : totalCount.toLocaleString();
+    ? `${filtered.length} / ${format.number(totalCount)}`
+    : format.number(totalCount);
 
   return (
     <Box style={{ display: "flex", gap: 24 }}>
@@ -201,8 +201,8 @@ export function EventsTab({
                           {isAlert && <Badge size="xs" variant="outline" style={{ fontSize: 10, borderColor: "var(--color-critical)", color: "var(--color-critical)" }}>{t("feed.alertBadge")}</Badge>}
                           {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
                         </Group>
-                        <Text size="xs" c="var(--color-text-muted)" title={t("feed.firstSignal", { time: formatTimeAgo(event.firstSignalCreatedAt) })}>
-                          {formatTimeAgo(event.lastSignalCreatedAt)}
+                        <Text size="xs" c="var(--color-text-muted)" title={t("feed.firstSignal", { time: format.relativeTime(new Date(event.firstSignalCreatedAt)) })}>
+                          {format.relativeTime(new Date(event.lastSignalCreatedAt))}
                         </Text>
                       </Group>
                       <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>

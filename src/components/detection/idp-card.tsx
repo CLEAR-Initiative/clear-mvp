@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
+import { useFormatter } from "next-intl";
 
 const HAPI_BASE = "https://hapi.humdata.org/api/v2";
 const HAPI_APP_ID = "Y2xlYXItbXZwOmRldkBzeW50cm8uZmk=";
@@ -68,18 +69,14 @@ async function fetchIdpTrend(locationCode: string) {
   };
 }
 
-function formatCount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}K`;
-  return n.toLocaleString();
-}
+type IntlFormatter = ReturnType<typeof useFormatter>;
 
-function formatMonth(dateStr: unknown): string {
+function formatMonth(format: IntlFormatter, dateStr: unknown): string {
   if (typeof dateStr !== "string") return String(dateStr ?? "");
   const [year, month] = dateStr.split("-");
   if (!year || !month) return dateStr;
   const d = new Date(Number(year), Number(month) - 1, 1);
-  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return format.dateTime(d, { month: "short", year: "numeric" });
 }
 
 function freshnessColor(lastUpdated: string): string {
@@ -91,6 +88,7 @@ function freshnessColor(lastUpdated: string): string {
 
 interface SparkTooltipProps { active?: boolean; payload?: Array<{ value?: number }>; label?: string }
 function SparkTooltip({ active, payload, label }: SparkTooltipProps) {
+  const format = useFormatter();
   if (!active || !payload?.[0]) return null;
   return (
     <Box style={{
@@ -98,9 +96,9 @@ function SparkTooltip({ active, payload, label }: SparkTooltipProps) {
       borderRadius: 6, padding: "6px 10px",
       boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
     }}>
-      <Text style={{ color: "#A3A3A3", fontSize: 10 }}>{label != null ? formatMonth(label) : ""}</Text>
+      <Text style={{ color: "#A3A3A3", fontSize: 10 }}>{label != null ? formatMonth(format, label) : ""}</Text>
       <Text style={{ color: "#171717", fontSize: 12, fontWeight: 700 }}>
-        {payload[0].value !== undefined ? formatCount(payload[0].value) : ""}
+        {payload[0].value !== undefined ? format.number(payload[0].value, "compact") : ""}
       </Text>
     </Box>
   );
@@ -111,6 +109,7 @@ interface IdpCardProps {
 }
 
 export function IdpCard({ locationCode }: IdpCardProps) {
+  const format = useFormatter();
   const query = useQuery({
     queryKey: ["hapi", "idpTrend", locationCode],
     queryFn: () => fetchIdpTrend(locationCode),
@@ -196,7 +195,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
             fontSize: 34, fontWeight: 800, color: "#171717", lineHeight: 1,
             fontVariantNumeric: "tabular-nums", letterSpacing: "-0.03em",
           }}>
-            {formatCount(current)}
+            {format.number(current, "compact")}
           </Text>
           <Text style={{ fontSize: 11, color: "#737373", marginTop: 3 }}>
             Internally Displaced &middot; {locationName}
@@ -213,7 +212,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
               color: delta >= 0 ? "#22C55E" : "#EF4444",
               fontVariantNumeric: "tabular-nums",
             }}>
-              {delta >= 0 ? "+" : ""}{formatCount(Math.abs(delta))}
+              {delta >= 0 ? "+" : ""}{format.number(Math.abs(delta), "compact")}
             </Text>
             <Text style={{ fontSize: 9, color: "#737373" }}>vs last month</Text>
           </Box>
@@ -247,7 +246,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
         <Group gap={5} align="center">
           <Box style={{ width: 6, height: 6, borderRadius: "50%", background: dot }} />
           <Text style={{ fontSize: 9, color: "#A3A3A3" }}>
-            IOM DTM via HAPI &middot; {formatMonth(lastUpdated)}
+            IOM DTM via HAPI &middot; {formatMonth(format, lastUpdated)}
           </Text>
         </Group>
         <Box

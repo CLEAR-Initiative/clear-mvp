@@ -40,7 +40,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
@@ -1474,6 +1474,7 @@ function InvitationsPanel() {
   const t = useTranslations("admin.invitations");
   const tRoles = useTranslations("admin.roles");
   const tActions = useTranslations("common.actions");
+  const format = useFormatter();
   const { data: orgs } = api.teams.myOrganisations.useQuery(undefined, {
     staleTime: 30_000,
   });
@@ -1718,7 +1719,7 @@ function InvitationsPanel() {
                           color: colors.textMuted,
                         }}
                       >
-                        {new Date(invite.expiresAt).toLocaleDateString()}
+                        {format.dateTime(new Date(invite.expiresAt), "short")}
                       </Text>
                     </Table.Td>
                     <Table.Td>
@@ -2033,20 +2034,6 @@ const DATA_GROUPS: DataGroup[] = [
   },
 ];
 
-function freshnessLabel(isoDate: string | null | undefined): string {
-  if (!isoDate) return "No data yet";
-  const diff = Date.now() - new Date(isoDate).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  return `${months}mo ago`;
-}
-
 function DataSourceCard({
   source,
   signalCount,
@@ -2061,6 +2048,7 @@ function DataSourceCard({
   isActive: boolean | null;
 }) {
   const t = useTranslations("admin.data");
+  const format = useFormatter();
   const typeBadgeColor = source.type === "api" ? "blue" : source.type === "direct" ? "violet" : "gray";
   const typeLabel = t(`types.${source.type}`);
   const barWidth = signalCount && maxCount > 0 ? Math.max((signalCount / maxCount) * 100, 2) : 0;
@@ -2117,7 +2105,7 @@ function DataSourceCard({
                 }} />
               </Box>
               <Text style={{ fontSize: fontSizesPx.xs, color: latestAt ? colors.textSecondary : colors.border }}>
-                {freshnessLabel(latestAt)}
+                {latestAt ? format.relativeTime(new Date(latestAt)) : t("noDataYet")}
               </Text>
             </>
           ) : (

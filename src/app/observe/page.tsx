@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   IconMapPin,
   IconX,
@@ -187,18 +187,9 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 
 /* ── Signals list ───────────────────────────────────────────── */
 
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
-
 function SignalCard({ signal }: { signal: GqlSignal }) {
   const t = useTranslations("observe.signals");
+  const format = useFormatter();
   const location = signal.generalLocation ?? signal.originLocation;
   const hasEvents = signal.events.length > 0;
 
@@ -210,7 +201,7 @@ function SignalCard({ signal }: { signal: GqlSignal }) {
         <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-accent)", background: "var(--color-accent-light)", padding: "2px 8px", borderRadius: 10 }}>
           {signal.source.name}
         </span>
-        <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{timeAgo(signal.publishedAt)}</span>
+        <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{format.relativeTime(new Date(signal.publishedAt))}</span>
       </div>
 
       {signal.title && <div style={{ fontWeight: 700, fontSize: 15, color: "var(--color-text-primary)", marginBottom: 4, lineHeight: 1.35 }}>{signal.title}</div>}

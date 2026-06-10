@@ -1,21 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Avatar, Badge, Textarea, Button, Skeleton, ActionIcon, Menu } from "@mantine/core";
 import { IconMessageCircle, IconSend, IconDots, IconTrash, IconArrowBack } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { GqlUserComment } from "~/lib/types/graphql";
-
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 function getInitials(name: string | null): string {
   if (!name) return "?";
@@ -50,6 +40,9 @@ interface CommentRowProps {
 }
 
 function CommentRow({ comment, isLast, currentUserId, onReply, onDelete, isDeleting }: CommentRowProps) {
+  const t = useTranslations("common.comments");
+  const tActions = useTranslations("common.actions");
+  const format = useFormatter();
   const isOwn = currentUserId === comment.user.id;
 
   return (
@@ -81,15 +74,15 @@ function CommentRow({ comment, isLast, currentUserId, onReply, onDelete, isDelet
           <Group gap={8} mb={4} justify="space-between">
             <Group gap={8}>
               <Text size="xs" fw={600} c="var(--color-text-primary)">
-                {comment.user.name ?? "Unknown"}
+                {comment.user.name ?? t("unknownUser")}
               </Text>
               {comment.isCommentReply && (
                 <Badge size="xs" variant="light" color="neutral" leftSection={<IconArrowBack size={9} />}>
-                  Reply
+                  {t("replyBadge")}
                 </Badge>
               )}
               <Text size="xs" c="var(--color-text-muted)">
-                {formatTimeAgo(comment.createdAt)}
+                {format.relativeTime(new Date(comment.createdAt))}
               </Text>
             </Group>
             <Group gap={4}>
@@ -98,7 +91,7 @@ function CommentRow({ comment, isLast, currentUserId, onReply, onDelete, isDelet
                 variant="subtle"
                 color="neutral"
                 onClick={() => onReply(comment)}
-                title="Reply"
+                title={t("replyAction")}
               >
                 <IconArrowBack size={12} />
               </ActionIcon>
@@ -115,7 +108,7 @@ function CommentRow({ comment, isLast, currentUserId, onReply, onDelete, isDelet
                       leftSection={<IconTrash size={12} />}
                       onClick={() => onDelete(comment.id)}
                     >
-                      Delete
+                      {tActions("delete")}
                     </Menu.Item>
                   </Menu.Dropdown>
                 </Menu>
@@ -146,6 +139,7 @@ interface CommentsSectionProps {
 }
 
 export function CommentsSection({ entityId, entityType }: CommentsSectionProps) {
+  const t = useTranslations("common.comments");
   const [draft, setDraft] = useState("");
   const { data: me } = api.auth.me.useQuery();
   const currentUserId = me?.user?.id;
@@ -209,7 +203,7 @@ export function CommentsSection({ entityId, entityType }: CommentsSectionProps) 
         <Group gap={8}>
           <IconMessageCircle size={14} color="var(--color-text-secondary)" />
           <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-            Discussion
+            {t("title")}
           </Text>
           {!query.isLoading && (
             <Badge size="xs" variant="light" color="neutral" style={{ fontWeight: 600 }}>
@@ -228,7 +222,7 @@ export function CommentsSection({ entityId, entityType }: CommentsSectionProps) 
       ) : comments.length === 0 ? (
         <Box px={16} py={20} style={{ textAlign: "center" }}>
           <Text size="sm" c="var(--color-text-muted)">
-            No comments yet. Be the first to add one.
+            {t("empty")}
           </Text>
         </Box>
       ) : (
@@ -251,7 +245,10 @@ export function CommentsSection({ entityId, entityType }: CommentsSectionProps) 
           <Group gap={6} mb={8} p={8} style={{ background: "var(--color-bg-muted)", borderRadius: 4 }}>
             <IconArrowBack size={12} color="var(--color-text-muted)" />
             <Text size="xs" c="var(--color-text-muted)" style={{ flex: 1 }}>
-              Replying to <strong>{replyingTo.user.name}</strong>
+              {t.rich("replyingTo", {
+                name: replyingTo.user.name ?? t("unknownUser"),
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
             </Text>
             <ActionIcon size="xs" variant="subtle" color="neutral" onClick={() => setReplyingTo(null)}>
               ×
@@ -259,7 +256,7 @@ export function CommentsSection({ entityId, entityType }: CommentsSectionProps) 
           </Group>
         )}
         <Textarea
-          placeholder={replyingTo ? `Reply to ${replyingTo.user.name}…` : "Add a comment…"}
+          placeholder={replyingTo ? t("placeholderReply", { name: replyingTo.user.name ?? t("unknownUser") }) : t("placeholderAdd")}
           value={draft}
           onChange={(e) => setDraft(e.currentTarget.value)}
           onKeyDown={handleKeyDown}
@@ -270,7 +267,7 @@ export function CommentsSection({ entityId, entityType }: CommentsSectionProps) 
         />
         <Group justify="space-between" align="center">
           <Text size="xs" c="var(--color-text-muted)">
-            ⌘ + Enter to post
+            {t("shortcutHint")}
           </Text>
           <Button
             size="xs"
@@ -281,7 +278,7 @@ export function CommentsSection({ entityId, entityType }: CommentsSectionProps) 
             color="accent"
             style={{ fontSize: 12 }}
           >
-            Post
+            {t("post")}
           </Button>
         </Group>
       </Box>

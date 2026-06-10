@@ -1,4 +1,4 @@
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Badge, SimpleGrid } from "@mantine/core";
 import { IconAlertTriangle, IconShield } from "@tabler/icons-react";
 import { CardSection, DataTable, Table } from "~/components/ui";
@@ -13,6 +13,7 @@ const SECTOR_COLUMN_KEYS = ["sector", "severity", "affected", "details"] as cons
 
 export function ImpactTab() {
   const t = useTranslations("analysis");
+  const format = useFormatter();
   const tCommon = useTranslations("common");
   return (
     <Box>
@@ -63,7 +64,7 @@ export function ImpactTab() {
                 </Table.Td>
                 <Table.Td>
                   <Text fw={700} c={item.severityColor} style={{ fontSize: 13 }}>
-                    {t(`data.impactAssessment.${item.key}.affected`, { count: item.number.toLocaleString() })}
+                    {t(`data.impactAssessment.${item.key}.affected`, { count: format.number(item.number) })}
                   </Text>
                 </Table.Td>
                 <Table.Td>

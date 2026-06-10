@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Badge, Stack, Modal, List } from "@mantine/core";
 import {
   IconHome2,
@@ -589,6 +589,7 @@ function SummaryText({ text }: { text: string }) {
 
 function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha3w: Ocha3wData | null; hasMsna: boolean }) {
   const t = useTranslations("crisisDetail");
+  const format = useFormatter();
   const tCommon = useTranslations("common");
   const [open, setOpen] = useState(true);
 
@@ -610,7 +611,7 @@ function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha
   }, [crisis.needs]);
 
   const ocha3wDate = ocha3w?.as_of
-    ? new Date(ocha3w.as_of).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+    ? format.dateTime(new Date(ocha3w.as_of), { month: "short", year: "numeric" })
     : null;
 
   return (

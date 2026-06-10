@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -53,35 +53,6 @@ import { severityColors } from "~/lib/constants/severity";
 // Remove and replace with real fields when backend delivers them.
 // ─────────────────────────────────────────────────────────────────────────────
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatDateTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 /** Collect the non-null location fields from a GqlEvent into a flat array. */
 function eventLocations(event: GqlEvent): GqlLocation[] {
   const locs: GqlLocation[] = [];
@@ -111,6 +82,7 @@ export function EventDetailContent({
 
   const t = useTranslations("eventDetail");
   const tCommon = useTranslations("common");
+  const format = useFormatter();
   const router = useRouter();
   const isAlready = (event?.alerts?.length ?? 0) > 0;
   const [promoted, setPromoted] = useState(false);
@@ -433,11 +405,11 @@ export function EventDetailContent({
           )}
           <Group gap={4}>
             <IconCalendar size={13} color="var(--color-text-muted)" />
-            <Text size="xs" c="var(--color-text-secondary)">{formatDate(detectedAt)}</Text>
+            <Text size="xs" c="var(--color-text-secondary)">{format.dateTime(new Date(detectedAt), "short")}</Text>
           </Group>
           <Group gap={4}>
             <IconClock size={13} color="var(--color-text-muted)" />
-            <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(detectedAt)}</Text>
+            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(detectedAt))}</Text>
           </Group>
           <Box style={{ width: 1, height: 12, background: "var(--color-border)", alignSelf: "center" }} />
           <Group gap={4}>
@@ -495,7 +467,7 @@ export function EventDetailContent({
               </Box>
               <Box>
                 <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {event.casualties != null ? event.casualties.toLocaleString() : t("notAvailable")}
+                  {event.casualties != null ? format.number(event.casualties) : t("notAvailable")}
                 </Text>
                 <Text size="xs" c="var(--color-text-muted)" mt={2}>{t("kpi.casualties")}</Text>
               </Box>
@@ -530,7 +502,7 @@ export function EventDetailContent({
               </Box>
               <Box>
                 <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {areaPopulation ? Number(areaPopulation.value).toLocaleString() : t("notAvailable")}
+                  {areaPopulation ? format.number(Number(areaPopulation.value)) : t("notAvailable")}
                 </Text>
                 <Text size="xs" c="var(--color-text-muted)" mt={2}>
                   {areaPopulation ? t("kpi.populationIn", { name: areaPopulation.name }) : t("kpi.populationInArea")}
@@ -570,12 +542,12 @@ export function EventDetailContent({
                   {idpData?.ratio != null
                     ? `${(idpData.ratio * 100).toFixed(1)}%`
                     : idpData?.displaced != null
-                      ? idpData.displaced.toLocaleString()
+                      ? format.number(idpData.displaced)
                       : t("notAvailable")}
                 </Text>
                 <Text size="xs" c="var(--color-text-muted)" mt={2}>
                   {idpData
-                    ? t("kpi.idpPerCapitaIn", { name: idpData.name, count: idpData.displaced.toLocaleString() })
+                    ? t("kpi.idpPerCapitaIn", { name: idpData.name, count: format.number(idpData.displaced) })
                     : t("kpi.idpPerCapita")}
                 </Text>
               </Box>
@@ -686,7 +658,7 @@ export function EventDetailContent({
                                 {t("signals.sourceLink")}
                               </a>
                             )}
-                            <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(sig.publishedAt)}</Text>
+                            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(sig.publishedAt))}</Text>
                           </Group>
                         </Group>
                         <Text fw={500} size="sm" c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }} mb={sigLocation ? 2 : 0}>
@@ -741,7 +713,7 @@ export function EventDetailContent({
                           <Badge size="xs" style={{ background: relBg, color: relColor, fontWeight: 600 }}>
                             {tCommon(`severities.${relSev}`)}
                           </Badge>
-                          <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(related.lastSignalCreatedAt)}</Text>
+                          <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(related.lastSignalCreatedAt))}</Text>
                         </Group>
                         <Text size="sm" fw={500} c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }}>
                           {relTitle}
@@ -915,19 +887,19 @@ export function EventDetailContent({
                         {t("systemData.detected")}
                       </Text>
                       <Text size="xs" fw={500} c="var(--color-text-primary)">
-                        {formatDate(detectedAt)}
+                        {format.dateTime(new Date(detectedAt), "short")}
                       </Text>
                     </Group>
                     <Group justify="space-between">
                       <Text size="xs" c="var(--color-text-muted)">{t("systemData.validFrom")}</Text>
                       <Text size="xs" fw={500}>
-                        {event?.validFrom ? formatDate(event.validFrom) : "-"}
+                        {event?.validFrom ? format.dateTime(new Date(event.validFrom), "short") : "-"}
                       </Text>
                     </Group>
                     <Group justify="space-between">
                       <Text size="xs" c="var(--color-text-muted)">{t("systemData.validUntil")}</Text>
                       <Text size="xs" fw={500}>
-                        {event?.validTo ? formatDate(event.validTo) : "-"}
+                        {event?.validTo ? format.dateTime(new Date(event.validTo), "short") : "-"}
                       </Text>
                     </Group>
                     {locations.some((l) => resolveLocationName(l)) && (
@@ -973,7 +945,7 @@ export function EventDetailContent({
                           {t("systemData.created")}
                         </Text>
                         <Text size="xs" fw={500} c="var(--color-text-primary)">
-                          {formatDateTime(eventCreatedAt)}
+                          {format.dateTime(new Date(eventCreatedAt), "dateTime")}
                         </Text>
                       </Group>
                     </Box>
@@ -982,7 +954,7 @@ export function EventDetailContent({
                         {t("systemData.updated")}
                       </Text>
                       <Text size="xs" fw={500} c="var(--color-text-primary)">
-                        {formatDateTime(eventUpdatedAt)}
+                        {format.dateTime(new Date(eventUpdatedAt), "dateTime")}
                       </Text>
                     </Group>
                   </Stack>

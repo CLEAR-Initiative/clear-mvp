@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -35,6 +35,7 @@ interface HumChatSidebarProps {
 
 export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
   const t = useTranslations("knowledge.humchat");
+  const format = useFormatter();
   // welcomeMessage.content is resolved via i18n at render time
   const welcome: ChatMessage = { ...welcomeMessage, content: t("welcome") };
   const [messages, setMessages] = useState<ChatMessage[]>([welcome]);
@@ -241,7 +242,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
               </Box>
               {message.role === "assistant" && (
                 <Text c="var(--color-text-muted)" style={{ fontSize: 9, marginTop: 4 }}>
-                  {message.timestamp.toLocaleString([], { month: "numeric", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  {format.dateTime(message.timestamp, "dateTime")}
                 </Text>
               )}
             </Box>
