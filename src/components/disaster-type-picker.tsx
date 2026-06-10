@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   Box, Text, Stack, Group, Checkbox, Popover, ScrollArea, UnstyledButton, Collapse, Input,
 } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { IconChevronRight, IconChevronDown, IconSelector } from "@tabler/icons-react";
 
 export interface HierarchyLevel1 {
@@ -41,6 +42,7 @@ export function DisasterTypePicker({
   onChange,
   size = "xs",
 }: DisasterTypePickerProps) {
+  const t = useTranslations("common.disasterTypePicker");
   const [opened, setOpened] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -81,8 +83,8 @@ export function DisasterTypePicker({
     });
 
   const summary = selected.length === 0
-    ? "Select disaster types"
-    : `${selected.length} type${selected.length === 1 ? "" : "s"} selected`;
+    ? t("placeholder")
+    : t("selected", { count: selected.length });
 
   const height = size === "xs" ? 30 : 36;
   const fontSize = size === "xs" ? 13 : 14;
@@ -135,7 +137,7 @@ export function DisasterTypePicker({
             <Stack gap={0} p={4}>
               {hierarchy.length === 0 && (
                 <Text size="xs" c="var(--color-text-muted)" px={8} py={8} style={{ fontSize: 11 }}>
-                  Loading types...
+                  {t("loading")}
                 </Text>
               )}
               {hierarchy.map((l1) => {

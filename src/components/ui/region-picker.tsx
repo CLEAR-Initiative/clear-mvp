@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import {
   Box, Text, Stack, Popover, ScrollArea, UnstyledButton, Collapse, Input, TextInput,
 } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { IconChevronRight, IconChevronDown, IconSelector, IconSearch, IconX } from "@tabler/icons-react";
 
 interface District {
@@ -24,18 +25,19 @@ interface RegionPickerProps {
   label?: string;
 }
 
-function getDisplayName(value: string | null, states: StateNode[]): string {
-  if (!value) return "All Regions";
+function getDisplayName(value: string | null, states: StateNode[]): string | null {
+  if (!value) return null;
   for (const state of states) {
     if (state.id === value) return state.name;
     for (const district of state.districts) {
       if (district.id === value) return `${district.name}, ${state.name}`;
     }
   }
-  return "All Regions";
+  return null;
 }
 
 export function RegionPicker({ states, value, onChange, label }: RegionPickerProps) {
+  const t = useTranslations("common.regionPicker");
   const [opened, setOpened] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
@@ -79,7 +81,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
     setQuery("");
   };
 
-  const summary = getDisplayName(value, states);
+  const summary = getDisplayName(value, states) ?? t("allRegions");
 
   return (
     <Input.Wrapper
@@ -128,7 +130,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
         <Popover.Dropdown p={0} onMouseDown={(e) => e.stopPropagation()}>
           <Box p={6} style={{ borderBottom: "1px solid var(--color-border)" }}>
             <TextInput
-              placeholder="Search regions..."
+              placeholder={t("searchPlaceholder")}
               value={query}
               onChange={(e) => setQuery(e.currentTarget.value)}
               leftSection={<IconSearch size={12} color="var(--color-text-muted)" />}
@@ -159,7 +161,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
                     textAlign: "left",
                   }}
                 >
-                  All Regions
+                  {t("allRegions")}
                 </UnstyledButton>
               )}
 
@@ -226,7 +228,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
 
               {filteredStates.length === 0 && q && (
                 <Text size="xs" c="var(--color-text-muted)" px={8} py={6} style={{ fontSize: 11 }}>
-                  No regions match &ldquo;{query}&rdquo;
+                  {t("noMatch", { query })}
                 </Text>
               )}
             </Stack>

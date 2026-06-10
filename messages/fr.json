@@ -3,6 +3,284 @@
     "title": "CLEAR : Crisis Learning, Early-warning, Anticipation & Response",
     "description": "Plateforme humanitaire d'aide à la décision"
   },
+  "acceptInvite": {
+    "errors": {
+      "noToken": "Aucun jeton d'invitation trouvé dans l'URL.",
+      "invalid": "Lien d'invitation invalide. Il a peut-être été annulé.",
+      "accepted": "Cette invitation a déjà été acceptée.",
+      "expired": "Cette invitation a expiré. Veuillez contacter votre administrateur pour en obtenir une nouvelle.",
+      "nameRequired": "Veuillez saisir votre nom",
+      "tooShort": "Le mot de passe doit comporter au moins 8 caractères",
+      "mismatch": "Les mots de passe ne correspondent pas",
+      "failed": "Échec de l'acceptation de l'invitation"
+    },
+    "loading": "Chargement de l'invitation...",
+    "title": "Accepter l'invitation",
+    "invitedToJoin": "Vous avez été invité à rejoindre :",
+    "team": "Équipe :",
+    "role": "Rôle : {role}",
+    "fullName": "Nom complet",
+    "fullNamePlaceholder": "Saisissez votre nom",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "8 caractères minimum",
+    "confirmPassword": "Confirmer le mot de passe",
+    "confirmPlaceholder": "Saisissez à nouveau votre mot de passe",
+    "submit": "Accepter et créer le compte",
+    "goToSignIn": "Aller à la connexion",
+    "goHome": "Retour à l'accueil"
+  },
+  "admin": {
+    "header": {
+      "title": "Administration",
+      "subtitle": "Configuration de la plateforme, gestion des utilisateurs et des organisations"
+    },
+    "tabs": {
+      "users": "Utilisateurs",
+      "organisations": "Organisations",
+      "invitations": "Invitations",
+      "features": "Fonctionnalités",
+      "data": "Données"
+    },
+    "hold": {
+      "holding": "Maintenez…",
+      "confirm": "Maintenir pour confirmer",
+      "remove": "Maintenir pour retirer",
+      "delete": "Maintenir pour supprimer"
+    },
+    "confirm": {
+      "removeTitle": "Retirer de l'équipe",
+      "roleTitle": "Confirmer le changement de rôle",
+      "removeBody": "Êtes-vous sûr de vouloir retirer <b>{name}</b> de votre équipe ? Cette action est irréversible.",
+      "roleBody": "Changer le rôle de <b>{name}</b> de <b>{from}</b> à <b>{to}</b> ?",
+      "holdHint": "Maintenez le bouton ci-dessous enfoncé pour confirmer."
+    },
+    "roles": {
+      "member": "Membre",
+      "admin": "Admin",
+      "owner": "Propriétaire",
+      "viewer": "Lecteur",
+      "analyst": "Analyste",
+      "lead": "Responsable"
+    },
+    "users": {
+      "roles": {
+        "field": "Terrain",
+        "analyst": "Analyste",
+        "orgAdmin": "Admin d'organisation",
+        "admin": "Admin"
+      },
+      "unauthorized": "Vous devez disposer de privilèges administrateur pour accéder à la gestion des utilisateurs.",
+      "stats": {
+        "total": "Total des utilisateurs",
+        "admins": "Admins",
+        "active": "Actifs"
+      },
+      "filterAll": "Tous les utilisateurs",
+      "filterPending": "En attente d'approbation",
+      "allOrgs": "Toutes les organisations",
+      "allTeams": "Toutes les équipes",
+      "columns": {
+        "user": "Utilisateur",
+        "role": "Rôle",
+        "email": "E-mail",
+        "org": "Org",
+        "team": "Équipe",
+        "status": "Statut"
+      },
+      "emptyPending": "Aucun utilisateur en attente d'approbation",
+      "empty": "Aucun utilisateur trouvé",
+      "verified": "Vérifié",
+      "unverified": "Non vérifié",
+      "statusActive": "Actif",
+      "statusPending": "En attente",
+      "activate": "Activer"
+    },
+    "features": {
+      "stats": {
+        "total": "Total des fonctionnalités",
+        "enabled": "Activées",
+        "disabled": "Désactivées"
+      }
+    },
+    "orgs": {
+      "statsTotal": "Total des organisations",
+      "title": "Organisations",
+      "create": "Créer une organisation",
+      "columns": {
+        "name": "Nom",
+        "slug": "Slug",
+        "teams": "Équipes",
+        "members": "Membres"
+      },
+      "empty": "Aucune organisation pour le moment. Créez-en une pour commencer.",
+      "teamsCount": "{count, plural, one {# équipe} other {# équipes}}",
+      "membersCount": "{count, plural, one {# membre} other {# membres}}",
+      "teamBadge": "équipe",
+      "manage": "Gérer",
+      "deleteOrgTooltip": "Supprimer l'organisation",
+      "deleteTeamTooltip": "Supprimer l'équipe",
+      "wizard": {
+        "stepTitle": "Étape {step} : {label}",
+        "steps": {
+          "organisation": "Organisation",
+          "team": "Équipe",
+          "invite": "Inviter des utilisateurs"
+        },
+        "createOrgFailed": "Échec de la création de l'organisation",
+        "createTeamFailed": "Échec de la création de l'équipe",
+        "unknownError": "Erreur inconnue",
+        "orgNameLabel": "Nom de l'organisation",
+        "orgNamePlaceholder": "p. ex. NRC Sudan",
+        "slugLabel": "Slug",
+        "orgSlugPlaceholder": "p. ex. nrc-sudan",
+        "createNext": "Créer et continuer",
+        "teamIntro": "Créez la première équipe pour <b>{org}</b>.",
+        "teamNameLabel": "Nom de l'équipe",
+        "teamNamePlaceholder": "p. ex. Sudan Monitoring",
+        "teamSlugPlaceholder": "p. ex. sudan-monitoring",
+        "descriptionLabel": "Description (facultatif)",
+        "descriptionPlaceholder": "Que surveille cette équipe ?",
+        "skip": "Passer",
+        "createTeamNext": "Créer l'équipe et continuer",
+        "inviteIntro": "Invitez des utilisateurs à rejoindre <b>{org}</b>. Séparez les adresses par des virgules ou des retours à la ligne.",
+        "inviteIntroTeam": "Invitez des utilisateurs à rejoindre <b>{org}</b> et l'équipe que vous venez de créer. Séparez les adresses par des virgules ou des retours à la ligne.",
+        "noEmails": "Veuillez saisir au moins une adresse e-mail",
+        "needTeam": "Créez une équipe à l'étape précédente avant d'inviter des membres",
+        "invitesSent": "{count, plural, one {# invitation envoyée avec succès} other {# invitations envoyées avec succès}}",
+        "emailsLabel": "Adresses e-mail",
+        "emailsPlaceholder": "user1@example.com, user2@example.com",
+        "orgRoleLabel": "Rôle dans l'organisation",
+        "teamRoleLabel": "Rôle dans l'équipe",
+        "done": "Terminé",
+        "skipClose": "Passer et fermer",
+        "send": "Envoyer les invitations"
+      },
+      "deleteModal": {
+        "titleOrg": "Supprimer l'organisation",
+        "titleTeam": "Supprimer l'équipe",
+        "body": "Êtes-vous sûr de vouloir supprimer <b>{name}</b> ?",
+        "consequenceOrg": "Cela supprimera définitivement l'organisation, toutes ses équipes, ses membres et ses invitations.",
+        "consequenceTeam": "Cela supprimera définitivement l'équipe et tous ses membres."
+      }
+    },
+    "invitations": {
+      "orgLabel": "Organisation",
+      "orgPlaceholder": "Sélectionnez une organisation",
+      "inviteUser": "Inviter un utilisateur",
+      "pendingTitle": "Invitations en attente",
+      "columns": {
+        "email": "E-mail",
+        "orgRole": "Rôle org",
+        "team": "Équipe",
+        "invitedBy": "Invité par",
+        "expires": "Expire"
+      },
+      "empty": "Aucune invitation en attente",
+      "resend": "Renvoyer",
+      "cancel": "Annuler",
+      "modal": {
+        "title": "Inviter un utilisateur",
+        "emailLabel": "Adresse e-mail",
+        "emailPlaceholder": "utilisateur@exemple.org",
+        "orgRoleLabel": "Rôle dans l'organisation",
+        "teamsLabel": "Équipes",
+        "noTeams": "Cette organisation n'a aucune équipe. Créez-en une avant d'envoyer des invitations.",
+        "selectAtLeastOneTeam": "Sélectionnez au moins une équipe",
+        "send": "Envoyer l'invitation"
+      }
+    },
+    "data": {
+      "demoTitle": "Données de démonstration",
+      "demoBadge": "Dév uniquement",
+      "demoDescription": "Marqueurs de démonstration, épingles de crise et statistiques d'exemple superposés au tableau de bord. Désactivez pour n'afficher que les données réelles.",
+      "loading": "Chargement des données sources...",
+      "types": {
+        "api": "API pipeline",
+        "direct": "Requête directe",
+        "manual": "Saisie manuelle"
+      },
+      "inactive": "Inactive",
+      "provider": "Fournisseur :",
+      "cadence": "Fréquence :",
+      "docs": "docs",
+      "signalsUnit": "signaux",
+      "directQuery": "Requête directe",
+      "noSignals": "Aucun signal pour le moment",
+      "cadences": {
+        "realTime": "Temps réel",
+        "weekly": "Hebdomadaire",
+        "monthly": "Mensuelle",
+        "annual": "Annuelle",
+        "adHoc": "Ponctuelle"
+      },
+      "groups": {
+        "earlyWarning": {
+          "label": "Alerte précoce et signaux",
+          "description": "Flux de détection d'événements en temps réel et quasi réel"
+        },
+        "displacement": {
+          "label": "Déplacements et mouvements de population",
+          "description": "Suivi des personnes déplacées internes et des flux de population"
+        },
+        "risk": {
+          "label": "Indices de risque et de vulnérabilité",
+          "description": "Scores d'indices composites pour l'évaluation des risques au niveau national"
+        },
+        "field": {
+          "label": "Renseignement de terrain",
+          "description": "Rapports produits par des agents de terrain, des partenaires et des sources gouvernementales"
+        }
+      },
+      "sources": {
+        "dataminr": {
+          "name": "Dataminr",
+          "provider": "Dataminr Inc.",
+          "description": "Alertes en temps réel générées par IA à partir de données publiques : réseaux sociaux, presse et sources publiques. Principale source de signaux active."
+        },
+        "acled": {
+          "name": "ACLED",
+          "provider": "Armed Conflict Location & Event Data Project",
+          "description": "Données désagrégées sur les événements de conflit : dates, lieux, acteurs, victimes. Couvre la violence politique et les manifestations dans le monde entier."
+        },
+        "gdacs": {
+          "name": "GDACS",
+          "provider": "Centre commun de recherche de l'UE / UNOCHA",
+          "description": "Alertes mondiales de catastrophes : séismes, inondations, cyclones, volcans, sécheresses. Alertes automatisées en quasi temps réel."
+        },
+        "iomDtm": {
+          "name": "IOM DTM",
+          "provider": "OIM / OCHA HDX",
+          "description": "Displacement Tracking Matrix de l'OIM. Chiffres des déplacés internes liés aux conflits, accessibles via HDX HAPI. Les déplacements liés aux catastrophes ne sont pas inclus - couverts séparément par l'IDMC."
+        },
+        "informRisk": {
+          "name": "INFORM Risk",
+          "provider": "JRC / Commission européenne",
+          "description": "Indice de risque composite annuel : aléas et exposition, vulnérabilité, capacité d'adaptation. 264 indicateurs par pays au niveau des sous-composantes."
+        },
+        "informSeverity": {
+          "name": "INFORM Severity",
+          "provider": "ACAPS",
+          "description": "Indice mensuel de sévérité des crises. Couvre l'impact, les conditions des personnes affectées et la complexité. Score agrégé au niveau national via l'API ACAPS."
+        },
+        "fieldOfficer": {
+          "name": "Rapports des agents de terrain",
+          "provider": "NRC interne",
+          "description": "Signaux soumis directement par les agents de terrain NRC via l'application mobile Observe. Prend en charge le mode hors ligne en cas de faible connectivité."
+        },
+        "partner": {
+          "name": "Rapports des partenaires",
+          "provider": "Partenaires NRC",
+          "description": "Signaux soumis par les organisations partenaires via la plateforme."
+        },
+        "government": {
+          "name": "Sources gouvernementales",
+          "provider": "Agences gouvernementales",
+          "description": "Signaux provenant des autorités gouvernementales ou attribués à celles-ci."
+        }
+      }
+    }
+  },
   "analysis": {
     "page": {
       "title": "Analyses",
@@ -219,6 +497,53 @@
       }
     }
   },
+  "auth": {
+    "login": {
+      "title": "Se connecter",
+      "tagline": "Alerte précoce et réponse aux crises",
+      "email": "E-mail",
+      "emailPlaceholder": "Saisissez votre e-mail",
+      "password": "Mot de passe",
+      "passwordPlaceholder": "Saisissez votre mot de passe",
+      "rememberMe": "Se souvenir de moi",
+      "forgotPassword": "Mot de passe oublié ?",
+      "submit": "Se connecter",
+      "failed": "Échec de la connexion",
+      "unexpectedError": "Une erreur inattendue est survenue",
+      "demo": {
+        "divider": "Comptes de démonstration",
+        "hint": "Comptes de démonstration disponibles (mot de passe : password123) :",
+        "admin": "Admin",
+        "analyst": "Analyste",
+        "viewer": "Lecteur",
+        "line": "{label} - {email}"
+      },
+      "footer": "Norwegian Refugee Council • Système d'alerte précoce pour le Soudan"
+    },
+    "forgot": {
+      "title": "Réinitialiser le mot de passe",
+      "intro": "Saisissez votre e-mail et nous vous enverrons un lien pour réinitialiser votre mot de passe.",
+      "emailRequired": "Veuillez saisir votre adresse e-mail",
+      "email": "E-mail",
+      "emailPlaceholder": "Saisissez votre e-mail",
+      "submit": "Envoyer le lien de réinitialisation",
+      "sent": "Si un compte existe avec cet e-mail, nous avons envoyé un lien de réinitialisation du mot de passe. Vérifiez votre boîte de réception."
+    },
+    "reset": {
+      "title": "Définir un nouveau mot de passe",
+      "invalidLink": "Lien de réinitialisation invalide. Veuillez demander une nouvelle réinitialisation du mot de passe.",
+      "requestNew": "Demander un nouveau lien de réinitialisation",
+      "tooShort": "Le mot de passe doit comporter au moins 8 caractères",
+      "mismatch": "Les mots de passe ne correspondent pas",
+      "success": "Mot de passe réinitialisé avec succès. Redirection vers la connexion...",
+      "newPassword": "Nouveau mot de passe",
+      "newPasswordPlaceholder": "8 caractères minimum",
+      "confirmPassword": "Confirmer le mot de passe",
+      "confirmPlaceholder": "Saisissez à nouveau votre mot de passe",
+      "submit": "Réinitialiser le mot de passe"
+    },
+    "backToSignIn": "Retour à la connexion"
+  },
   "cash": {
     "header": {
       "title": "Ciblage et distribution de l'assistance monétaire",
@@ -397,6 +722,36 @@
       }
     }
   },
+  "changePassword": {
+    "title": "Changer le mot de passe",
+    "subtitle": "Mettez à jour le mot de passe de votre compte",
+    "backToProfile": "Retour au profil",
+    "success": "Mot de passe modifié avec succès.",
+    "errors": {
+      "mismatch": "Les nouveaux mots de passe ne correspondent pas",
+      "tooShort": "Le nouveau mot de passe doit comporter au moins 8 caractères",
+      "failed": "Échec du changement de mot de passe",
+      "unexpected": "Une erreur inattendue est survenue"
+    },
+    "security": "Sécurité",
+    "current": {
+      "label": "Mot de passe actuel",
+      "placeholder": "Saisissez votre mot de passe actuel"
+    },
+    "new": {
+      "label": "Nouveau mot de passe",
+      "placeholder": "Saisissez votre nouveau mot de passe"
+    },
+    "confirm": {
+      "label": "Confirmer le nouveau mot de passe",
+      "placeholder": "Confirmez votre nouveau mot de passe"
+    },
+    "submit": "Mettre à jour le mot de passe",
+    "requirements": {
+      "title": "Exigences du mot de passe",
+      "minLength": "Au moins 8 caractères"
+    }
+  },
   "common": {
     "actions": {
       "save": "Enregistrer",
@@ -427,6 +782,77 @@
       "medium": "Moyenne",
       "low": "Faible",
       "unknown": "Inconnue"
+    },
+    "createSignal": {
+      "detailsTitle": "Créer un signal - Détails",
+      "mediaTitle": "Créer un signal - Ajouter des médias",
+      "successTitle": "Signal créé",
+      "fieldTitle": "Titre",
+      "titlePlaceholder": "p. ex. Inondations signalées dans l'État de Kassala",
+      "fieldDescription": "Description",
+      "descriptionPlaceholder": "Décrivez ce qui a été observé, la source et tout contexte pertinent…",
+      "fieldSource": "Source",
+      "sourcesLoading": "Chargement des sources…",
+      "sourcePlaceholder": "Sélectionnez une source…",
+      "noSources": "Aucune source disponible",
+      "fieldLocation": "Localisation",
+      "locationsLoading": "Chargement des localisations…",
+      "locationPlaceholder": "Rechercher une localisation…",
+      "noMatchingLocation": "Aucune localisation correspondante",
+      "fieldSeverity": "Sévérité",
+      "severityPlaceholder": "Sélectionnez la sévérité…",
+      "severityWarning": "Les signaux de sévérité {level} peuvent déclencher une alerte et notifier les membres de l'équipe abonnés aux alertes de ce niveau.",
+      "next": "Suivant : Ajouter des médias",
+      "dropzone": "Déposez des fichiers ici ou cliquez pour parcourir",
+      "fileTypes": "PDF, Word, Excel, CSV, fichiers texte",
+      "skipSubmit": "Passer et soumettre",
+      "submit": "Soumettre le signal",
+      "successHeading": "Signal créé",
+      "successText": "Votre signal a été soumis et est désormais visible par votre équipe.",
+      "done": "Terminé",
+      "uploadFailed": "Échec du téléversement du fichier",
+      "createFailed": "Échec de la création du signal"
+    },
+    "disasterTypePicker": {
+      "placeholder": "Sélectionnez les types de catastrophe",
+      "selected": "{count, plural, one {# type sélectionné} other {# types sélectionnés}}",
+      "loading": "Chargement des types..."
+    },
+    "feedback": {
+      "title": "Partager un retour",
+      "thanks": "Merci !",
+      "received": "Votre retour a bien été reçu.",
+      "type": "Type",
+      "types": {
+        "bug": "Bug",
+        "feature": "Demande de fonctionnalité",
+        "general": "Général"
+      },
+      "message": "Message",
+      "placeholderBug": "Décrivez ce qui s'est passé et comment le reproduire...",
+      "placeholderFeature": "Que souhaiteriez-vous voir ?",
+      "placeholderGeneral": "Qu'avez-vous en tête ?",
+      "consoleNote": "Les erreurs/avertissements de console ({count}) seront joints automatiquement.",
+      "error": "Une erreur est survenue. Veuillez réessayer.",
+      "send": "Envoyer le retour"
+    },
+    "filters": {
+      "country": "Pays",
+      "region": "Région",
+      "date": "Date"
+    },
+    "regionPicker": {
+      "allRegions": "Toutes les régions",
+      "searchPlaceholder": "Rechercher des régions...",
+      "noMatch": "Aucune région ne correspond à « {query} »"
+    },
+    "toasts": {
+      "saved": "Enregistré",
+      "error": "Erreur"
+    },
+    "toolbar": {
+      "searchPlaceholder": "Rechercher...",
+      "newItems": "{count, plural, one {# nouvel élément} other {# nouveaux éléments}} - actualiser"
     }
   },
   "crisisDetail": {
@@ -1326,6 +1752,123 @@
     "settings": "Paramètres",
     "signOut": "Se déconnecter"
   },
+  "noAccess": {
+    "title": "En attente d'accès",
+    "message": "Vous êtes connecté mais vous n'avez pas encore été affecté à une organisation. Contactez votre administrateur pour recevoir une invitation.",
+    "signOut": "Se déconnecter",
+    "footer": "Norwegian Refugee Council • Plateforme CLEAR"
+  },
+  "notificationPreferences": {
+    "title": "Préférences de notification",
+    "subtitle": "Gérez la manière dont vous recevez les alertes et les mises à jour",
+    "backToProfile": "Retour au profil",
+    "email": {
+      "title": "Notifications par e-mail",
+      "enable": "Activer les alertes par e-mail",
+      "description": "Recevez les alertes de crise et les notifications système par e-mail"
+    },
+    "internal": {
+      "title": "Notifications internes",
+      "crisisAlerts": "Alertes de crise",
+      "crisisAlertsDescription": "Nouvelles alertes et changements de sévérité",
+      "system": "Notifications système",
+      "systemDescription": "Statut du pipeline, attribution des tâches",
+      "updates": "Mises à jour et rapports",
+      "updatesDescription": "Synthèses hebdomadaires et rapports d'analyse"
+    },
+    "display": {
+      "title": "Paramètres d'affichage",
+      "desktop": "Notifications de bureau",
+      "desktopDescription": "Afficher les notifications push du navigateur",
+      "sound": "Alertes sonores",
+      "soundDescription": "Émettre un son pour les alertes critiques"
+    },
+    "quietHours": {
+      "title": "Heures de silence",
+      "enable": "Activer les heures de silence",
+      "description": "Suspendre les notifications non critiques pendant les heures définies"
+    },
+    "save": "Enregistrer les préférences"
+  },
+  "observe": {
+    "metadata": {
+      "title": "Observe - CLEAR",
+      "description": "Soumettez un signal de terrain à la plateforme d'intelligence humanitaire CLEAR"
+    },
+    "header": {
+      "appName": "Signaux de terrain",
+      "queued": "{count} en attente"
+    },
+    "tabs": {
+      "submit": "Soumettre",
+      "signals": "Signaux"
+    },
+    "welcome": {
+      "heading": "Pour soumettre un signal :",
+      "bullet1": "La 1re ligne de votre message sera le <strong>titre</strong>, le reste constitue la <strong>description</strong>. Utilisez Entrée pour passer à la ligne.",
+      "bullet2": "Utilisez <strong>@</strong> pour indiquer une localisation, ou appuyez sur <locationIcon></locationIcon> pour laisser l'application vous localiser.",
+      "bullet3": "Joignez des images ou des vidéos avec le bouton <mediaIcon></mediaIcon>."
+    },
+    "signals": {
+      "loading": "Chargement des signaux…",
+      "empty": "Aucun signal pour le moment",
+      "events": "{count, plural, one {# événement} other {# événements}}"
+    },
+    "replies": {
+      "queued": "Bien reçu. Votre signal a été enregistré localement et sera transmis automatiquement à votre équipe dès que vous serez de nouveau en ligne.",
+      "success": "Signal reçu. Une nouvelle entrée a été ajoutée à la liste des signaux de votre équipe.",
+      "error": "Une erreur est survenue et votre signal n'a pas été soumis. Veuillez réessayer."
+    },
+    "compose": {
+      "placeholder": "Qu'avez-vous observé ?",
+      "captureLocation": "Capturer la localisation",
+      "addMedia": "Ajouter une photo ou une vidéo"
+    }
+  },
+  "onboarding": {
+    "title": "Bienvenue sur CLEAR",
+    "subtitle": "Configurons votre organisation, votre équipe et vos zones de surveillance.",
+    "steps": {
+      "org": {
+        "label": "Organisation",
+        "description": "Créer ou rejoindre"
+      },
+      "team": {
+        "label": "Équipe",
+        "description": "Créer une équipe"
+      },
+      "locations": {
+        "label": "Localisations",
+        "description": "Choisir le périmètre de surveillance"
+      }
+    },
+    "org": {
+      "nameLabel": "Nom de l'organisation",
+      "namePlaceholder": "p. ex. NRC East Africa",
+      "slugLabel": "Slug",
+      "slugPlaceholder": "nrc-east-africa",
+      "create": "Créer une organisation"
+    },
+    "team": {
+      "nameLabel": "Nom de l'équipe",
+      "namePlaceholder": "p. ex. Sudan Response",
+      "slugLabel": "Slug",
+      "slugPlaceholder": "sudan-response",
+      "descriptionLabel": "Description (facultatif)",
+      "descriptionPlaceholder": "Que surveille cette équipe ?",
+      "create": "Créer l'équipe"
+    },
+    "locations": {
+      "intro": "Sélectionnez les pays et régions que votre équipe surveillera.",
+      "skip": "Passer",
+      "save": "Enregistrer les localisations"
+    },
+    "done": {
+      "title": "Tout est prêt !",
+      "text": "Votre organisation et votre équipe sont prêtes. Rendez-vous sur le tableau de bord pour commencer la surveillance.",
+      "cta": "Aller au tableau de bord"
+    }
+  },
   "operations": {
     "header": {
       "title": "Centre des opérations",
@@ -1450,6 +1993,208 @@
       "timezone": "Fuseau horaire",
       "timezoneKhartoum": "Soudan (Khartoum)",
       "timezoneUtc": "UTC"
+    },
+    "page": {
+      "notAuthenticated": "Non authentifié. Veuillez vous connecter.",
+      "title": "Paramètres",
+      "tabs": {
+        "account": "Compte",
+        "notifications": "Notifications"
+      }
+    },
+    "info": {
+      "title": "Informations",
+      "name": "Nom",
+      "notSet": "Non renseigné",
+      "email": "E-mail",
+      "changePassword": "Changer le mot de passe",
+      "mobile": "Mobile",
+      "mobilePlaceholder": "912 345 678",
+      "mobileUpdated": "Numéro de mobile mis à jour."
+    },
+    "orgRoles": {
+      "title": "Organisation et rôles",
+      "empty": "Aucune appartenance à une équipe trouvée.",
+      "columns": {
+        "organisation": "Organisation",
+        "team": "Équipe",
+        "role": "Rôle"
+      },
+      "active": "Active",
+      "setActive": "Définir comme active",
+      "switchedTitle": "Équipe active mise à jour",
+      "switchedMessage": "Vous consultez désormais {team}."
+    },
+    "preferences": {
+      "title": "Préférences",
+      "appearance": "Apparence",
+      "language": "Langue",
+      "languageValue": "Français",
+      "timezone": "Fuseau horaire"
+    },
+    "channels": {
+      "title": "Canaux de notification",
+      "updated": "Canaux de notification mis à jour.",
+      "email": "Notifications par e-mail",
+      "emailDescription": "Recevez les alertes de crise et les synthèses par e-mail",
+      "sms": "Notifications par SMS",
+      "smsComingSoon": "Bientôt disponible"
+    },
+    "subscriptions": {
+      "title": "Abonnements aux alertes",
+      "add": "Ajouter",
+      "new": "Nouvel abonnement",
+      "location": "Localisation",
+      "locationPlaceholder": "Sélectionnez une ou plusieurs localisations",
+      "alertTypes": "Types d'alerte (laisser vide pour tous)",
+      "minSeverity": "Sévérité minimale",
+      "severityOptions": {
+        "all": "Toutes (minimale et plus)",
+        "low": "Faible et plus",
+        "medium": "Moyenne et plus",
+        "high": "Élevée et plus",
+        "critical": "Critique uniquement"
+      },
+      "frequency": "Fréquence",
+      "frequencyOptions": {
+        "immediately": "Immédiatement",
+        "daily": "Synthèse quotidienne",
+        "weekly": "Synthèse hebdomadaire",
+        "monthly": "Synthèse mensuelle"
+      },
+      "subscribe": "S'abonner",
+      "subscribedTitle": "Abonné",
+      "subscribedMessage": "Abonnements aux alertes créés.",
+      "failed": "Échec",
+      "empty": "Aucun abonnement aux alertes pour le moment. Cliquez sur « Ajouter » pour commencer.",
+      "severityLabels": {
+        "s1": "Toutes sévérités",
+        "s2": "Faible+",
+        "s3": "Moyenne+",
+        "s4": "Élevée+",
+        "s5": "Critique uniquement"
+      },
+      "severityFallback": "Sévérité {value}+",
+      "levels": {
+        "country": "Pays",
+        "state": "État",
+        "district": "District"
+      },
+      "allTypes": "Tous les types",
+      "moreTypes": "{labels} +{count} autres",
+      "pause": "Suspendre",
+      "resume": "Reprendre",
+      "delete": "Supprimer l'abonnement"
+    }
+  },
+  "settings": {
+    "org": {
+      "title": "Paramètres de l'organisation",
+      "newOrg": "Nouvelle organisation",
+      "noOrgs": "Vous n'appartenez encore à aucune organisation.",
+      "createOrg": "Créer une organisation",
+      "orgSelectLabel": "Organisation",
+      "createModal": {
+        "title": "Créer une organisation",
+        "nameLabel": "Nom",
+        "namePlaceholder": "p. ex. ACME Relief",
+        "slugLabel": "Slug",
+        "slugPlaceholder": "acme-relief",
+        "create": "Créer"
+      },
+      "details": {
+        "title": "Détails",
+        "name": "Nom :",
+        "slug": "Slug :",
+        "status": "Statut :",
+        "nameLabel": "Nom",
+        "slugLabel": "Slug",
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "members": {
+        "title": "Membres",
+        "inviteUser": "Inviter un utilisateur",
+        "columns": {
+          "name": "Nom",
+          "email": "E-mail",
+          "role": "Rôle"
+        },
+        "selectUserPlaceholder": "Sélectionnez un utilisateur à ajouter",
+        "noUsersAvailable": "Aucun utilisateur disponible",
+        "add": "Ajouter"
+      },
+      "teams": {
+        "title": "Équipes",
+        "addTeam": "Ajouter une équipe",
+        "manage": "Gérer",
+        "nameLabel": "Nom de l'équipe",
+        "namePlaceholder": "p. ex. Sudan Response",
+        "slugLabel": "Slug",
+        "slugPlaceholder": "sudan-response",
+        "descriptionLabel": "Description (facultatif)",
+        "descriptionPlaceholder": "Que surveille cette équipe ?",
+        "createTeam": "Créer l'équipe"
+      },
+      "invite": {
+        "title": "Inviter un utilisateur",
+        "emailLabel": "E-mail",
+        "emailPlaceholder": "utilisateur@exemple.org",
+        "orgRoleLabel": "Rôle dans l'organisation",
+        "roles": {
+          "member": "Membre",
+          "admin": "Admin",
+          "owner": "Propriétaire"
+        },
+        "teamsLabel": "Équipes",
+        "noTeams": "Cette organisation n'a aucune équipe. Créez-en une avant d'envoyer des invitations.",
+        "teamRoles": {
+          "viewer": "Lecteur",
+          "analyst": "Analyste",
+          "lead": "Responsable"
+        },
+        "selectAtLeastOneTeam": "Sélectionnez au moins une équipe",
+        "send": "Envoyer l'invitation"
+      }
+    },
+    "team": {
+      "notFound": "Équipe introuvable.",
+      "backToOrg": "Retour à l'organisation",
+      "details": {
+        "title": "Détails",
+        "nameLabel": "Nom",
+        "slugLabel": "Slug",
+        "descriptionLabel": "Description",
+        "name": "Nom :",
+        "slug": "Slug :",
+        "description": "Description :"
+      },
+      "members": {
+        "title": "Membres",
+        "columns": {
+          "name": "Nom",
+          "email": "E-mail",
+          "role": "Rôle"
+        },
+        "addMemberLabel": "Ajouter un membre",
+        "loadingPlaceholder": "Chargement…",
+        "allInTeam": "Tous les membres de l'organisation font déjà partie de cette équipe",
+        "selectUserPlaceholder": "Sélectionnez un utilisateur",
+        "noMatchingUsers": "Aucun utilisateur correspondant",
+        "roleLabel": "Rôle",
+        "add": "Ajouter"
+      },
+      "locations": {
+        "title": "Périmètre géographique",
+        "save": "Enregistrer les localisations",
+        "none": "Aucune localisation sélectionnée"
+      },
+      "danger": {
+        "title": "Zone de danger",
+        "warning": "La suppression de cette équipe est définitive et irréversible.",
+        "delete": "Supprimer l'équipe",
+        "confirm": "Êtes-vous sûr de vouloir supprimer cette équipe ? Cette action est irréversible."
+      }
     }
   },
   "signalDetail": {
@@ -1505,5 +2250,20 @@
       "collected": "Collecté",
       "affectedAreas": "Zones affectées"
     }
+  },
+  "verifyEmail": {
+    "verifying": "Vérification de votre e-mail...",
+    "success": {
+      "title": "E-mail vérifié",
+      "text": "Votre e-mail a été vérifié avec succès. Vous pouvez désormais recevoir des notifications par e-mail."
+    },
+    "already": {
+      "title": "Déjà vérifié",
+      "text": "Votre e-mail est déjà vérifié. Aucune action supplémentaire n'est nécessaire."
+    },
+    "failed": "Échec de la vérification",
+    "resent": "Un nouvel e-mail de vérification a été envoyé. Veuillez vérifier votre boîte de réception.",
+    "resend": "Renvoyer l'e-mail de vérification",
+    "goToProfile": "Aller au profil"
   }
 }

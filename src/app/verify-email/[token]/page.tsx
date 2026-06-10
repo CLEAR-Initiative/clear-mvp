@@ -11,6 +11,7 @@ import {
   Stack,
   Center,
 } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import {
   IconCircleCheck,
   IconAlertCircle,
@@ -22,6 +23,7 @@ import { api } from "~/trpc/react";
 type VerifyState = "loading" | "success" | "already_verified" | "error";
 
 export default function VerifyEmailPage() {
+  const t = useTranslations("verifyEmail");
   const params = useParams<{ token: string }>();
   const router = useRouter();
   const [state, setState] = useState<VerifyState>("loading");
@@ -44,7 +46,7 @@ export default function VerifyEmailPage() {
 
   const resendMutation = api.auth.requestEmailVerification.useMutation({
     onSuccess: () => {
-      setResendMessage("A new verification email has been sent. Please check your inbox.");
+      setResendMessage(t("resent"));
     },
     onError: (err) => {
       setResendMessage("");
@@ -81,7 +83,7 @@ export default function VerifyEmailPage() {
           <Stack align="center" gap={16}>
             <Loader size="lg" color="gray" />
             <Text size="sm" c="var(--color-text-muted)">
-              Verifying your email...
+              {t("verifying")}
             </Text>
           </Stack>
         )}
@@ -99,11 +101,10 @@ export default function VerifyEmailPage() {
               <IconCircleCheck size={32} color="#059669" />
             </Center>
             <Text size="lg" fw={700} c="var(--color-text-primary)" ta="center">
-              Email Verified
+              {t("success.title")}
             </Text>
             <Text size="sm" c="var(--color-text-muted)" ta="center">
-              Your email has been verified successfully. You can now receive
-              email notifications.
+              {t("success.text")}
             </Text>
             <Button
               color="dark"
@@ -112,7 +113,7 @@ export default function VerifyEmailPage() {
               rightSection={<IconArrowRight size={16} />}
               onClick={() => router.push("/profile")}
             >
-              Go to Profile
+              {t("goToProfile")}
             </Button>
           </Stack>
         )}
@@ -130,10 +131,10 @@ export default function VerifyEmailPage() {
               <IconCircleCheck size={32} color="#3B82F6" />
             </Center>
             <Text size="lg" fw={700} c="var(--color-text-primary)" ta="center">
-              Already Verified
+              {t("already.title")}
             </Text>
             <Text size="sm" c="var(--color-text-muted)" ta="center">
-              Your email is already verified. No further action needed.
+              {t("already.text")}
             </Text>
             <Button
               color="dark"
@@ -142,7 +143,7 @@ export default function VerifyEmailPage() {
               rightSection={<IconArrowRight size={16} />}
               onClick={() => router.push("/profile")}
             >
-              Go to Profile
+              {t("goToProfile")}
             </Button>
           </Stack>
         )}
@@ -160,7 +161,7 @@ export default function VerifyEmailPage() {
               <IconAlertCircle size={32} color="#DC2626" />
             </Center>
             <Text size="lg" fw={700} c="var(--color-text-primary)" ta="center">
-              Verification Failed
+              {t("failed")}
             </Text>
             <Text size="sm" c="var(--color-text-muted)" ta="center">
               {errorMessage}
@@ -178,7 +179,7 @@ export default function VerifyEmailPage() {
                 loading={resendMutation.isPending}
                 onClick={() => resendMutation.mutate()}
               >
-                Resend Verification Email
+                {t("resend")}
               </Button>
               <Button
                 variant="outline"
@@ -186,7 +187,7 @@ export default function VerifyEmailPage() {
                 fullWidth
                 onClick={() => router.push("/profile")}
               >
-                Go to Profile
+                {t("goToProfile")}
               </Button>
             </Stack>
           </Stack>

@@ -11,10 +11,13 @@ import {
   Loader,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { useTranslations } from "next-intl";
 import { IconBell, IconMail, IconPhone } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 
 export function NotificationPreferencesSection() {
+  const t = useTranslations("profile.channels");
+  const tToasts = useTranslations("common.toasts");
   const utils = api.useUtils();
   const prefsQuery = api.auth.myUserDetails.useQuery();
 
@@ -30,8 +33,8 @@ export function NotificationPreferencesSection() {
   const updatePrefs = api.auth.updateNotificationPrefs.useMutation({
     onSuccess: () => {
       notifications.show({
-        title: "Saved",
-        message: "Notification channels updated.",
+        title: tToasts("saved"),
+        message: t("updated"),
         color: "green",
         autoClose: 2000,
       });
@@ -41,7 +44,7 @@ export function NotificationPreferencesSection() {
       // Revert on failure
       setEmailEnabled(prefsQuery.data?.emailEnabled ?? false);
       notifications.show({
-        title: "Error",
+        title: tToasts("error"),
         message: err.message,
         color: "red",
       });
@@ -61,7 +64,7 @@ export function NotificationPreferencesSection() {
           tt="uppercase"
           style={{ letterSpacing: "0.05em", fontSize: 11 }}
         >
-          Notification Channels
+          {t("title")}
         </Text>
       </Group>
 
@@ -75,11 +78,11 @@ export function NotificationPreferencesSection() {
               <Group gap={6}>
                 <IconMail size={14} color="var(--color-text-muted)" />
                 <Text size="sm" fw={500}>
-                  Email Notifications
+                  {t("email")}
                 </Text>
               </Group>
               <Text size="xs" c="var(--color-text-muted)">
-                Receive crisis alerts and digests via email
+                {t("emailDescription")}
               </Text>
             </Box>
             <Switch
@@ -100,11 +103,11 @@ export function NotificationPreferencesSection() {
               <Group gap={6}>
                 <IconPhone size={14} color="var(--color-text-muted)" />
                 <Text size="sm" fw={500}>
-                  SMS Notifications
+                  {t("sms")}
                 </Text>
               </Group>
               <Text size="xs" c="var(--color-text-muted)">
-                Coming soon
+                {t("smsComingSoon")}
               </Text>
             </Box>
             <Switch checked={false} disabled color="teal" tabIndex={-1} />

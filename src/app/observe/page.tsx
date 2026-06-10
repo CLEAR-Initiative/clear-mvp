@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import {
   IconMapPin,
   IconX,
@@ -197,6 +198,7 @@ function timeAgo(iso: string) {
 }
 
 function SignalCard({ signal }: { signal: GqlSignal }) {
+  const t = useTranslations("observe.signals");
   const location = signal.generalLocation ?? signal.originLocation;
   const hasEvents = signal.events.length > 0;
 
@@ -216,7 +218,7 @@ function SignalCard({ signal }: { signal: GqlSignal }) {
       {(location ?? hasEvents) && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
           {location && <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--color-text-muted)", fontSize: 12 }}><IconMapPin size={11} strokeWidth={2.5} /><span>{location.name}</span></div>}
-          {hasEvents && <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-info)", background: "var(--color-info-light)", padding: "2px 7px", borderRadius: 8 }}>{signal.events.length} event{signal.events.length !== 1 ? "s" : ""}</span>}
+          {hasEvents && <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-info)", background: "var(--color-info-light)", padding: "2px 7px", borderRadius: 8 }}>{t("events", { count: signal.events.length })}</span>}
         </div>
       )}
     </div>
@@ -224,13 +226,14 @@ function SignalCard({ signal }: { signal: GqlSignal }) {
 }
 
 function SignalsList() {
+  const t = useTranslations("observe.signals");
   const signalsQuery = api.signals.list.useQuery(undefined, { staleTime: 1000 * 60 });
 
   if (signalsQuery.isLoading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, color: "var(--color-text-muted)", fontSize: 14 }}>
         <IconLoader2 size={20} style={{ animation: "spin 1s linear infinite", marginRight: 8 }} />
-        Loading signals…
+        {t("loading")}
       </div>
     );
   }
@@ -241,7 +244,7 @@ function SignalsList() {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, color: "var(--color-text-muted)", fontSize: 14, gap: 8 }}>
         <IconPhoto size={32} strokeWidth={1.5} />
-        No signals yet
+        {t("empty")}
       </div>
     );
   }
@@ -255,19 +258,20 @@ function SignalsList() {
 
 /* ── Main page ──────────────────────────────────────────────── */
 
-function makeWelcome(): ChatMessage {
+function makeWelcome(t: ReturnType<typeof useTranslations<"observe">>): ChatMessage {
   const iconChip: React.CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: 6, background: "rgba(255,255,255,0.15)", verticalAlign: "middle", margin: "0 2px", flexShrink: 0 };
+  const strong = (chunks: ReactNode) => <strong>{chunks}</strong>;
   return {
     id: "welcome",
     kind: "received",
     variant: "welcome",
     content: (
       <div style={{ fontSize: 14, lineHeight: 1.55 }}>
-        <div style={{ fontWeight: 700, marginBottom: 8 }}>To submit a signal:</div>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>{t("welcome.heading")}</div>
         <ul style={{ margin: 0, paddingLeft: 0, display: "flex", flexDirection: "column", gap: 8, listStyle: "none" }}>
-          <li style={{ display: "flex", gap: 8 }}><span>•</span><span>The 1st line of your message will be the <strong>title</strong>, the rest is the <strong>description</strong>. Use Enter to go to a new line.</span></li>
-          <li style={{ display: "flex", gap: 8 }}><span>•</span><span>Use <strong>@</strong> to tag a location, or tap <span style={iconChip}><IconMapPin size={13} strokeWidth={2.5} /></span> to let the app locate you.</span></li>
-          <li style={{ display: "flex", gap: 8 }}><span>•</span><span>Attach images or videos with the <span style={iconChip}><IconPhoto size={13} strokeWidth={2.5} /></span> button.</span></li>
+          <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet1", { strong })}</span></li>
+          <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet2", { strong, locationIcon: () => <span style={iconChip}><IconMapPin size={13} strokeWidth={2.5} /></span> })}</span></li>
+          <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet3", { mediaIcon: () => <span style={iconChip}><IconPhoto size={13} strokeWidth={2.5} /></span> })}</span></li>
         </ul>
       </div>
     ),
@@ -275,8 +279,9 @@ function makeWelcome(): ChatMessage {
 }
 
 export default function ObservePage() {
+  const t = useTranslations("observe");
   const [activeTab, setActiveTab] = useState<"submit" | "signals">("submit");
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [makeWelcome()]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [makeWelcome(t)]);
   const [draft, setDraft] = useState("");
   const [draftMedia, setDraftMedia] = useState<{ file: File; id: string; preview: string; isVideo: boolean }[]>([]);
   const [locationId, setLocationId] = useState("");
@@ -435,14 +440,14 @@ export default function ObservePage() {
       await dbQueue(payload);
       setPendingCount((n) => n + 1);
       setTimeout(() => {
-        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "queued", text: "Got it. Your signal has been saved locally and will be sent to your team automatically once you are back online." });
+        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "queued", text: t("replies.queued") });
         setSubmitting(false);
       }, 1200);
       return;
     }
 
     try {
-      // Upload media files if any — returns S3 keys (presigned URLs generated at read time)
+      // Upload media files if any - returns S3 keys (presigned URLs generated at read time)
       let mediaKeys: string[] | undefined;
       if (draftMedia.length > 0) {
         const formData = new FormData();
@@ -460,7 +465,7 @@ export default function ObservePage() {
 
       await createSignal.mutateAsync({ ...payload, mediaUrls: mediaKeys });
       void utils.signals.list.invalidate();
-      pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "success", text: "Signal received. A new entry has been added to your team's signal list." });
+      pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "success", text: t("replies.success") });
     } catch (err) {
       const isNetworkError = err instanceof Error && (
         err.message.toLowerCase().includes("fetch") ||
@@ -470,9 +475,9 @@ export default function ObservePage() {
       if (isNetworkError) {
         await dbQueue(payload);
         setPendingCount((n) => n + 1);
-        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "queued", text: "Got it. Your signal has been saved locally and will be sent to your team automatically once you are back online." });
+        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "queued", text: t("replies.queued") });
       } else {
-        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "error", text: "Something went wrong and your signal was not submitted. Please try again." });
+        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "error", text: t("replies.error") });
       }
     }
 
@@ -490,11 +495,11 @@ export default function ObservePage() {
         <Image src="/nrc-logo-square.svg" alt="NRC" width={34} height={34} />
         <span style={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-primary)", letterSpacing: "-0.02em", fontFamily: "Calibri, 'Trebuchet MS', sans-serif" }}>CLEAR</span>
         <span style={{ color: "var(--color-border-dark)", fontSize: 17, margin: "0 2px" }}>|</span>
-        <span style={{ fontSize: 15, fontWeight: 300, color: "var(--color-text-secondary)" }}>Field Signals</span>
+        <span style={{ fontSize: 15, fontWeight: 300, color: "var(--color-text-secondary)" }}>{t("header.appName")}</span>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
           {pendingCount > 0 && (
             <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-warning)", background: "var(--color-warning-light)", padding: "2px 7px", borderRadius: 10 }}>
-              {pendingCount} queued
+              {t("header.queued", { count: pendingCount })}
             </span>
           )}
         </div>
@@ -518,7 +523,7 @@ export default function ObservePage() {
               transition: "background 150ms, color 150ms",
             }}
           >
-            {tab === "submit" ? "Submit" : "Signals"}
+            {t(`tabs.${tab}`)}
           </button>
         ))}
       </div>
@@ -584,12 +589,12 @@ export default function ObservePage() {
         {/* Input row */}
         <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
 
-          <button onClick={captureGPS} disabled={gpsLoading} title="Capture location"
+          <button onClick={captureGPS} disabled={gpsLoading} title={t("compose.captureLocation")}
             style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", background: hasLocation ? "var(--color-accent-light)" : "transparent", border: "none", borderRadius: "50%", color: hasLocation ? "var(--color-accent)" : "var(--color-text-muted)", cursor: gpsLoading ? "default" : "pointer", flexShrink: 0, transition: "background 150ms, color 150ms" }}>
             {gpsLoading ? <IconLoader2 size={20} style={{ animation: "spin 1s linear infinite" }} /> : <IconMapPin size={20} />}
           </button>
 
-          <button onClick={() => mediaInputRef.current?.click()} title="Add photo or video"
+          <button onClick={() => mediaInputRef.current?.click()} title={t("compose.addMedia")}
             style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", background: hasMedia ? "var(--color-accent-light)" : "transparent", border: "none", borderRadius: "50%", color: hasMedia ? "var(--color-accent)" : "var(--color-text-muted)", cursor: "pointer", flexShrink: 0, transition: "background 150ms, color 150ms", position: "relative" }}>
             <IconPhoto size={20} />
             {hasMedia && (
@@ -601,7 +606,7 @@ export default function ObservePage() {
 
           <textarea
             ref={textareaRef}
-            placeholder="What did you observe?"
+            placeholder={t("compose.placeholder")}
             value={draft}
             onChange={(e) => {
               handleDraftChange(e.currentTarget.value);

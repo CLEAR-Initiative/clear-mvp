@@ -16,6 +16,7 @@ import {
   Loader,
   Badge,
 } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { IconAlertCircle, IconCheck, IconArrowLeft } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { authClient } from "~/lib/auth-client";
@@ -29,6 +30,7 @@ export default function AcceptInvitePage() {
 }
 
 function AcceptInviteForm() {
+  const t = useTranslations("acceptInvite");
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -47,7 +49,7 @@ function AcceptInviteForm() {
   const acceptMutation = api.invitations.accept.useMutation();
 
   if (!token) {
-    return <ErrorState message="No invitation token found in the URL." />;
+    return <ErrorState message={t("errors.noToken")} />;
   }
 
   if (inviteQuery.isLoading) {
@@ -56,7 +58,7 @@ function AcceptInviteForm() {
         <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
           <Stack align="center" gap={16}>
             <Loader size="sm" />
-            <Text size="sm" c="var(--color-text-muted)">Loading invitation...</Text>
+            <Text size="sm" c="var(--color-text-muted)">{t("loading")}</Text>
           </Stack>
         </Card>
       </CenteredBox>
@@ -66,15 +68,15 @@ function AcceptInviteForm() {
   const invite = inviteQuery.data;
 
   if (!invite) {
-    return <ErrorState message="Invalid invitation link. It may have been cancelled." />;
+    return <ErrorState message={t("errors.invalid")} />;
   }
 
   if (invite.status === "accepted") {
-    return <ErrorState message="This invitation has already been accepted." showLogin />;
+    return <ErrorState message={t("errors.accepted")} showLogin />;
   }
 
   if (invite.status === "expired") {
-    return <ErrorState message="This invitation has expired. Please contact your administrator for a new one." />;
+    return <ErrorState message={t("errors.expired")} />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,15 +84,15 @@ function AcceptInviteForm() {
     setError("");
 
     if (!name.trim()) {
-      setError("Please enter your name");
+      setError(t("errors.nameRequired"));
       return;
     }
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("errors.tooShort"));
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("errors.mismatch"));
       return;
     }
 
@@ -103,7 +105,7 @@ function AcceptInviteForm() {
         password,
       });
 
-      // Try auto-login — signIn goes through BFF proxy which sets session cookie
+      // Try auto-login - signIn goes through BFF proxy which sets session cookie
       try {
         const { error: signInError } = await authClient.signIn.email({
           email: invite.email,
@@ -119,10 +121,10 @@ function AcceptInviteForm() {
         console.warn("[accept-invite] Auto-login exception:", loginErr);
       }
 
-      // Fallback: redirect to login — account is created, user just needs to sign in
+      // Fallback: redirect to login - account is created, user just needs to sign in
       router.push("/auth/login");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to accept invitation");
+      setError(err instanceof Error ? err.message : t("errors.failed"));
       setAccepting(false);
     }
   };
@@ -135,7 +137,7 @@ function AcceptInviteForm() {
             CLEAR
           </Text>
           <Text size="lg" fw={600} c="var(--color-text-primary)">
-            Accept Invitation
+            {t("title")}
           </Text>
         </Stack>
 
@@ -143,18 +145,18 @@ function AcceptInviteForm() {
         <Box p={16} mb={20} style={{ backgroundColor: "#F5F5F5", borderRadius: 8 }}>
           <Stack gap={8}>
             <Text size="sm" c="var(--color-text-secondary)">
-              You&apos;ve been invited to join:
+              {t("invitedToJoin")}
             </Text>
             <Text size="md" fw={600} c="var(--color-text-primary)">
               {invite.organisationName}
             </Text>
             {invite.teamName && (
               <Text size="sm" c="var(--color-text-secondary)">
-                Team: <Text component="span" fw={600} c="var(--color-text-primary)">{invite.teamName}</Text>
+                {t("team")} <Text component="span" fw={600} c="var(--color-text-primary)">{invite.teamName}</Text>
               </Text>
             )}
             <Badge size="sm" variant="light" color="blue" w="fit-content">
-              Role: {invite.role}
+              {t("role", { role: invite.role })}
               {invite.teamRole ? ` / ${invite.teamRole}` : ""}
             </Badge>
           </Stack>
@@ -169,8 +171,8 @@ function AcceptInviteForm() {
         <form onSubmit={(e) => void handleSubmit(e)}>
           <Stack gap={12}>
             <TextInput
-              label="Full Name"
-              placeholder="Enter your name"
+              label={t("fullName")}
+              placeholder={t("fullNamePlaceholder")}
               value={name}
               onChange={(e) => setName(e.currentTarget.value)}
               required
@@ -183,7 +185,7 @@ function AcceptInviteForm() {
             />
 
             <TextInput
-              label="Email"
+              label={t("email")}
               value={invite.email}
               disabled
               styles={{
@@ -193,8 +195,8 @@ function AcceptInviteForm() {
             />
 
             <PasswordInput
-              label="Password"
-              placeholder="Min 8 characters"
+              label={t("password")}
+              placeholder={t("passwordPlaceholder")}
               value={password}
               onChange={(e) => setPassword(e.currentTarget.value)}
               required
@@ -206,8 +208,8 @@ function AcceptInviteForm() {
             />
 
             <PasswordInput
-              label="Confirm Password"
-              placeholder="Re-enter your password"
+              label={t("confirmPassword")}
+              placeholder={t("confirmPlaceholder")}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.currentTarget.value)}
               required
@@ -227,7 +229,7 @@ function AcceptInviteForm() {
               mt={8}
               style={{ fontWeight: 600, fontSize: 14 }}
             >
-              Accept & Create Account
+              {t("submit")}
             </Button>
           </Stack>
         </form>
@@ -253,6 +255,7 @@ function CenteredBox({ children }: { children: React.ReactNode }) {
 }
 
 function ErrorState({ message, showLogin }: { message: string; showLogin?: boolean }) {
+  const t = useTranslations("acceptInvite");
   return (
     <CenteredBox>
       <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
@@ -263,7 +266,7 @@ function ErrorState({ message, showLogin }: { message: string; showLogin?: boole
           </Alert>
           <Anchor component={Link} href={showLogin ? "/auth/login" : "/"} size="sm" c="#E85D3D" fw={500}>
             <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginRight: 4 }} />
-            {showLogin ? "Go to Sign In" : "Go Home"}
+            {showLogin ? t("goToSignIn") : t("goHome")}
           </Anchor>
         </Stack>
       </Card>

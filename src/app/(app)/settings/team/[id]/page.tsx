@@ -18,11 +18,14 @@ import {
   Textarea,
   Title,
 } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { TeamLocation } from "~/lib/types/teams";
 
 export default function TeamSettingsPage() {
+  const t = useTranslations("settings.team");
+  const tCommon = useTranslations("common.actions");
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const teamQuery = api.teams.team.useQuery({ id });
@@ -78,7 +81,7 @@ export default function TeamSettingsPage() {
   if (!team) {
     return (
       <Box p="xl">
-        <Text c="dimmed">Team not found.</Text>
+        <Text c="dimmed">{t("notFound")}</Text>
       </Box>
     );
   }
@@ -138,7 +141,7 @@ export default function TeamSettingsPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Are you sure you want to delete this team? This cannot be undone.")) return;
+    if (!confirm(t("danger.confirm"))) return;
     await deleteTeam.mutateAsync({ id });
     router.push("/settings/org");
   }
@@ -153,7 +156,7 @@ export default function TeamSettingsPage() {
           </Text>
         </Box>
         <Button variant="subtle" size="xs" component="a" href="/settings/org">
-          Back to Organisation
+          {t("backToOrg")}
         </Button>
       </Group>
 
@@ -161,45 +164,45 @@ export default function TeamSettingsPage() {
         {/* ── Details ──────────────────────────── */}
         <Box>
           <Group justify="space-between" mb="sm">
-            <Title order={4}>Details</Title>
+            <Title order={4}>{t("details.title")}</Title>
             {!editing && (
               <Button variant="subtle" size="xs" onClick={startEditing}>
-                Edit
+                {tCommon("edit")}
               </Button>
             )}
           </Group>
           {editing ? (
             <Stack gap="sm">
-              <TextInput label="Name" value={editName} onChange={(e) => setEditName(e.currentTarget.value)} />
-              <TextInput label="Slug" value={editSlug} onChange={(e) => setEditSlug(e.currentTarget.value)} />
-              <Textarea label="Description" value={editDesc} onChange={(e) => setEditDesc(e.currentTarget.value)} />
+              <TextInput label={t("details.nameLabel")} value={editName} onChange={(e) => setEditName(e.currentTarget.value)} />
+              <TextInput label={t("details.slugLabel")} value={editSlug} onChange={(e) => setEditSlug(e.currentTarget.value)} />
+              <Textarea label={t("details.descriptionLabel")} value={editDesc} onChange={(e) => setEditDesc(e.currentTarget.value)} />
               <Group>
                 <Button size="xs" onClick={saveDetails} loading={updateTeam.isPending}>
-                  Save
+                  {tCommon("save")}
                 </Button>
                 <Button size="xs" variant="subtle" onClick={() => setEditing(false)}>
-                  Cancel
+                  {tCommon("cancel")}
                 </Button>
               </Group>
             </Stack>
           ) : (
             <Stack gap={4}>
-              <Text><Text span fw={600}>Name:</Text> {team.name}</Text>
-              <Text><Text span fw={600}>Slug:</Text> {team.slug}</Text>
-              <Text><Text span fw={600}>Description:</Text> {team.description ?? "-"}</Text>
+              <Text><Text span fw={600}>{t("details.name")}</Text> {team.name}</Text>
+              <Text><Text span fw={600}>{t("details.slug")}</Text> {team.slug}</Text>
+              <Text><Text span fw={600}>{t("details.description")}</Text> {team.description ?? "-"}</Text>
             </Stack>
           )}
         </Box>
 
         {/* ── Members ─────────────────────────── */}
         <Box>
-          <Title order={4} mb="sm">Members</Title>
+          <Title order={4} mb="sm">{t("members.title")}</Title>
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Name</Table.Th>
-                <Table.Th>Email</Table.Th>
-                <Table.Th>Role</Table.Th>
+                <Table.Th>{t("members.columns.name")}</Table.Th>
+                <Table.Th>{t("members.columns.email")}</Table.Th>
+                <Table.Th>{t("members.columns.role")}</Table.Th>
                 <Table.Th />
               </Table.Tr>
             </Table.Thead>
@@ -234,13 +237,13 @@ export default function TeamSettingsPage() {
           </Table>
           <Group mt="sm" gap="sm" align="flex-end">
             <Select
-              label="Add member"
+              label={t("members.addMemberLabel")}
               placeholder={
                 orgQuery.isLoading
-                  ? "Loading…"
+                  ? t("members.loadingPlaceholder")
                   : addableMembers.length === 0
-                    ? "All org members already in this team"
-                    : "Select a user"
+                    ? t("members.allInTeam")
+                    : t("members.selectUserPlaceholder")
               }
               data={addableMembers}
               value={newMemberId || null}
@@ -248,11 +251,11 @@ export default function TeamSettingsPage() {
               disabled={orgQuery.isLoading || addableMembers.length === 0}
               size="xs"
               searchable
-              nothingFoundMessage="No matching users"
+              nothingFoundMessage={t("members.noMatchingUsers")}
               w={280}
             />
             <Select
-              label="Role"
+              label={t("members.roleLabel")}
               data={["lead", "analyst", "viewer"]}
               value={newMemberRole}
               onChange={(v) => setNewMemberRole(v ?? "analyst")}
@@ -266,7 +269,7 @@ export default function TeamSettingsPage() {
               loading={addMember.isPending}
               disabled={!newMemberId}
             >
-              Add
+              {t("members.add")}
             </Button>
           </Group>
         </Box>
@@ -274,10 +277,10 @@ export default function TeamSettingsPage() {
         {/* ── Location Scope ──────────────────── */}
         <Box>
           <Group justify="space-between" mb="sm">
-            <Title order={4}>Location Scope</Title>
+            <Title order={4}>{t("locations.title")}</Title>
             {!editingLocations && (
               <Button variant="subtle" size="xs" onClick={startEditingLocations}>
-                Edit
+                {tCommon("edit")}
               </Button>
             )}
           </Group>
@@ -294,10 +297,10 @@ export default function TeamSettingsPage() {
               )}
               <Group>
                 <Button size="xs" onClick={saveLocations} loading={setLocations.isPending}>
-                  Save Locations
+                  {t("locations.save")}
                 </Button>
                 <Button size="xs" variant="subtle" onClick={() => setEditingLocations(false)}>
-                  Cancel
+                  {tCommon("cancel")}
                 </Button>
               </Group>
             </Stack>
@@ -311,7 +314,7 @@ export default function TeamSettingsPage() {
                 ))
               ) : (
                 <Text size="sm" c="dimmed">
-                  No locations selected
+                  {t("locations.none")}
                 </Text>
               )}
             </Group>
@@ -328,13 +331,13 @@ export default function TeamSettingsPage() {
           }}
         >
           <Title order={4} c="red" mb="xs">
-            Danger Zone
+            {t("danger.title")}
           </Title>
           <Text size="sm" mb="sm">
-            Deleting this team is permanent and cannot be undone.
+            {t("danger.warning")}
           </Text>
           <Button color="red" variant="outline" size="xs" onClick={handleDelete} loading={deleteTeam.isPending}>
-            Delete Team
+            {t("danger.delete")}
           </Button>
         </Box>
       </Stack>

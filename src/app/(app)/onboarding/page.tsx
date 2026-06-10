@@ -14,6 +14,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTeam } from "~/providers/team-provider";
@@ -27,6 +28,7 @@ function slugify(value: string) {
 }
 
 export default function OnboardingPage() {
+  const t = useTranslations("onboarding");
   const router = useRouter();
   const queryClient = useQueryClient();
   const { switchTeam } = useTeam();
@@ -98,18 +100,18 @@ export default function OnboardingPage() {
   return (
     <Box p="xl" maw={640} mx="auto" mt="xl">
       <Title order={2} mb="xl">
-        Welcome to CLEAR
+        {t("title")}
       </Title>
       <Text c="dimmed" mb="xl">
-        Let&apos;s set up your organisation, team, and monitoring locations.
+        {t("subtitle")}
       </Text>
 
       <Stepper active={active} size="sm" mb="xl">
-        <Stepper.Step label="Organisation" description="Create or join">
+        <Stepper.Step label={t("steps.org.label")} description={t("steps.org.description")}>
           <Stack gap="sm" mt="md">
             <TextInput
-              label="Organisation name"
-              placeholder="e.g. NRC East Africa"
+              label={t("org.nameLabel")}
+              placeholder={t("org.namePlaceholder")}
               value={orgName}
               onChange={(e) => {
                 setOrgName(e.currentTarget.value);
@@ -118,8 +120,8 @@ export default function OnboardingPage() {
               required
             />
             <TextInput
-              label="Slug"
-              placeholder="nrc-east-africa"
+              label={t("org.slugLabel")}
+              placeholder={t("org.slugPlaceholder")}
               value={orgSlug}
               onChange={(e) => setOrgSlug(e.currentTarget.value)}
               required
@@ -131,17 +133,17 @@ export default function OnboardingPage() {
             )}
             <Group justify="flex-end">
               <Button onClick={handleCreateOrg} loading={createOrg.isPending} disabled={!orgName || !orgSlug}>
-                Create Organisation
+                {t("org.create")}
               </Button>
             </Group>
           </Stack>
         </Stepper.Step>
 
-        <Stepper.Step label="Team" description="Create a team">
+        <Stepper.Step label={t("steps.team.label")} description={t("steps.team.description")}>
           <Stack gap="sm" mt="md">
             <TextInput
-              label="Team name"
-              placeholder="e.g. Sudan Response"
+              label={t("team.nameLabel")}
+              placeholder={t("team.namePlaceholder")}
               value={teamName}
               onChange={(e) => {
                 setTeamName(e.currentTarget.value);
@@ -150,15 +152,15 @@ export default function OnboardingPage() {
               required
             />
             <TextInput
-              label="Slug"
-              placeholder="sudan-response"
+              label={t("team.slugLabel")}
+              placeholder={t("team.slugPlaceholder")}
               value={teamSlug}
               onChange={(e) => setTeamSlug(e.currentTarget.value)}
               required
             />
             <TextInput
-              label="Description (optional)"
-              placeholder="What does this team monitor?"
+              label={t("team.descriptionLabel")}
+              placeholder={t("team.descriptionPlaceholder")}
               value={teamDescription}
               onChange={(e) => setTeamDescription(e.currentTarget.value)}
             />
@@ -169,16 +171,16 @@ export default function OnboardingPage() {
             )}
             <Group justify="flex-end">
               <Button onClick={handleCreateTeam} loading={createTeam.isPending} disabled={!teamName || !teamSlug}>
-                Create Team
+                {t("team.create")}
               </Button>
             </Group>
           </Stack>
         </Stepper.Step>
 
-        <Stepper.Step label="Locations" description="Choose monitoring scope">
+        <Stepper.Step label={t("steps.locations.label")} description={t("steps.locations.description")}>
           <Stack gap="sm" mt="md">
             <Text size="sm" c="dimmed">
-              Select the countries and regions your team will monitor.
+              {t("locations.intro")}
             </Text>
             {locationsQuery.isLoading ? (
               <Loader size="sm" />
@@ -199,14 +201,14 @@ export default function OnboardingPage() {
                 variant="subtle"
                 onClick={() => setActive(3)}
               >
-                Skip
+                {t("locations.skip")}
               </Button>
               <Button
                 onClick={handleSetLocations}
                 loading={setLocations.isPending}
                 disabled={selectedLocationIds.length === 0}
               >
-                Save Locations
+                {t("locations.save")}
               </Button>
             </Group>
           </Stack>
@@ -214,12 +216,12 @@ export default function OnboardingPage() {
 
         <Stepper.Completed>
           <Stack gap="md" mt="md" align="center">
-            <Title order={3}>You&apos;re all set!</Title>
+            <Title order={3}>{t("done.title")}</Title>
             <Text c="dimmed">
-              Your organisation and team are ready. Head to the dashboard to start monitoring.
+              {t("done.text")}
             </Text>
             <Button onClick={handleFinish} loading={isSaving}>
-              Go to Dashboard
+              {t("done.cta")}
             </Button>
           </Stack>
         </Stepper.Completed>
