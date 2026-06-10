@@ -220,7 +220,7 @@ export function EventsTab({
                             {pill.label}
                           </span>
                         ))}
-                        <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>
+                        <Text size="xs" c="var(--color-text-muted)" style={{ marginInlineStart: "auto" }}>
                           {t("feed.signalCount", { count: event.signals.length })}
                         </Text>
                       </Group>

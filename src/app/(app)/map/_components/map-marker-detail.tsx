@@ -23,7 +23,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
   return (
     <Box
       className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
-      style={{ top: 80, right: 16, width: 320, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+      /* intentionally physical: map overlay */ style={{ top: 80, right: 16, width: 320, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
     >
       {/* Header */}
       <Group justify="space-between" px={16} py={12} className="border-b border-[var(--color-border)]">
@@ -49,7 +49,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
             </Badge>
           </Box>
           {marker.shockTypeName && (
-            <Box style={{ textAlign: "right" }}>
+            <Box style={{ textAlign: "end" }}>
               <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ fontSize: 10 }}>{t("detail.type")}</Text>
               <Text fw={600} size="sm" mt={4}>{marker.shockTypeName}</Text>
             </Box>

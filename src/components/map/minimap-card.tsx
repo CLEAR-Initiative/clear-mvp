@@ -132,7 +132,7 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, location,
         />
 
         {/* Layers toggle button */}
-        <Box style={{ position: "absolute", top: 6, left: 6, zIndex: 10 }}>
+        <Box style={{ position: "absolute", top: 6, left: 6, zIndex: 10 }} /* intentionally physical: map overlay */>
           <button
             title={t("panels.layers")}
             onClick={() => setLayersOpen((o) => !o)}
@@ -152,7 +152,7 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, location,
           {layersOpen && (
             <Box
               style={{
-                position: "absolute", top: 30, left: 0,
+                position: "absolute", top: 30, left: 0, /* intentionally physical: map overlay */
                 width: 180,
                 background: "var(--color-bg-white)",
                 border: "1px solid var(--color-border)",

@@ -364,7 +364,7 @@ function LocationTree({
             onChange={() => onToggle(loc.id)}
           />
           {loc.children?.length > 0 && (
-            <Box ml="lg" mt={4}>
+            <Box ms="lg" mt={4}>
               <LocationTree
                 locations={loc.children}
                 selectedIds={selectedIds}

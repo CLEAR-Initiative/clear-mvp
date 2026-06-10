@@ -295,7 +295,7 @@ export function EventDetailContent({
         style={{
           background: isAlready || promoted ? "var(--color-critical-light)" : "var(--color-bg-white)",
           borderBottom: "1px solid var(--color-border)",
-          borderLeft: `4px solid ${sevColor}`,
+          borderInlineStart: `4px solid ${sevColor}`,
         }}
       >
         {/* Severity badge */}

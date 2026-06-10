@@ -101,7 +101,7 @@ export function MapPanelBar({
   const toggle = (id: PanelId) => setActive((prev) => (prev === id ? null : id));
 
   return (
-    <Box className="absolute z-10" style={{ top: 80, left: 16 }}>
+    <Box className="absolute z-10" style={{ top: 80, left: 16 }} /* intentionally physical: map overlay */>
       <Group gap={4} align="flex-start" wrap="nowrap">
 
         {/* Icon column */}

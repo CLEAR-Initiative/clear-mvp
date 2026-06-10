@@ -44,7 +44,7 @@ export function InsightsTab() {
                 p={16}
                 style={{
                   background: "var(--color-bg-muted)",
-                  borderLeft: `3px solid ${insight.borderColor}`,
+                  borderInlineStart: `3px solid ${insight.borderColor}`,
                 }}
               >
                 <Group gap={8} mb={8}>

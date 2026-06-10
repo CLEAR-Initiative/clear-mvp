@@ -32,7 +32,7 @@ export function CashMapSection({ mapMarkers, center, onMarkerClick }: CashMapSec
           />
 
           {/* Map Legend */}
-          <Box style={{ position: "absolute", top: 12, left: 12, background: "var(--color-bg-white)", border: "1px solid var(--color-border)", padding: "10px 14px", zIndex: 5 }}>
+          <Box /* intentionally physical: map overlay */ style={{ position: "absolute", top: 12, left: 12, background: "var(--color-bg-white)", border: "1px solid var(--color-border)", padding: "10px 14px", zIndex: 5 }}>
             <Box style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 11 }}>
               {([
                 { color: "#DC2626", labelKey: "critical" },

@@ -213,7 +213,7 @@ export function ExecutiveSummary({
               </Button>
             </Group>
           </Box>
-          <Box style={{ textAlign: "right", flexShrink: 0 }}>
+          <Box style={{ textAlign: "end", flexShrink: 0 }}>
             <Text size="xs" c="var(--color-text-muted)">
               {alertsDataUpdatedAt
                 ? t("executiveSummary.updatedAt", { time: format.dateTime(new Date(alertsDataUpdatedAt), "time") })

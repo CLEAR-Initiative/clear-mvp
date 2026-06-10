@@ -3,6 +3,11 @@
     "title": "CLEAR: Crisis Learning, Early-warning, Anticipation & Response",
     "description": "Humanitarian decision-support platform"
   },
+  "manifest": {
+    "name": "CLEAR Observe",
+    "shortName": "Observe",
+    "description": "Submit field signals for the CLEAR humanitarian intelligence platform"
+  },
   "acceptInvite": {
     "errors": {
       "noToken": "No invitation token found in the URL.",

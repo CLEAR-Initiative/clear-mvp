@@ -22,7 +22,7 @@ export function StrategyTab() {
         style={{ marginBottom: 24 }}
       >
         {responsePhases.map((phase) => (
-          <Box key={phase.name} mb={20} p={16} style={{ border: `1px solid ${phase.color}30`, borderLeft: `4px solid ${phase.color}`, background: `${phase.colorBg}30` }}>
+          <Box key={phase.name} mb={20} p={16} style={{ border: `1px solid ${phase.color}30`, borderInlineStart: `4px solid ${phase.color}`, background: `${phase.colorBg}30` }}>
             <Group justify="space-between" mb={12}>
               <Box>
                 <Text fw={600} c="var(--color-text-primary)">{phase.name}</Text>

@@ -155,7 +155,7 @@ export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelP
                 </Group>
               ))}
 
-              <Box mt={16} p={12} style={{ background: "#F0F9FF", borderLeft: "3px solid #3B82F6" }}>
+              <Box mt={16} p={12} style={{ background: "#F0F9FF", borderInlineStart: "3px solid #3B82F6" }}>
                 <Text size="xs" fw={600} c="#3B82F6" mb={4}>{t("market.recommendation")}</Text>
                 <Text size="xs" c="var(--color-text-secondary)">{t("market.recommendationText")}</Text>
               </Box>

@@ -125,7 +125,7 @@ export function NavSidebar() {
       style={{
         position: "fixed",
         top: 12,
-        left: 12,
+        insetInlineStart: 12,
         zIndex: 200,
       }}
     >
@@ -197,7 +197,7 @@ export function NavSidebar() {
                     cursor: isDisabled ? "not-allowed" : "pointer",
                     opacity: isDisabled ? 0.45 : 1,
                     background: isActive ? colors.accentLight : "transparent",
-                    borderLeft: isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
+                    borderInlineStart: isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
                     color: isActive ? colors.accent : colors.textSecondary,
                     minHeight: 44,
                   }}
@@ -259,7 +259,7 @@ export function NavSidebar() {
         display:       "flex",
         flexDirection: "column",
         background:    colors.bgWhite,
-        borderRight:   `1px solid ${colors.border}`,
+        borderInlineEnd:   `1px solid ${colors.border}`,
         transition:    `width ${TRANSITION}, min-width ${TRANSITION}`,
         overflow:      "hidden",
         flexShrink:    0,
@@ -370,7 +370,7 @@ export function NavSidebar() {
                     cursor:         isDisabled ? "not-allowed" : "pointer",
                     opacity:        isDisabled ? 0.45 : 1,
                     background:     isActive ? colors.accentLight : "transparent",
-                    borderLeft:     isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
+                    borderInlineStart:     isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
                     transition:     "none",
                     textDecoration: "none",
                     color:          isActive ? colors.accent : colors.textSecondary,

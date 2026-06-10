@@ -500,7 +500,7 @@ export function CrisisDetailContent({
         style={{
           background: "var(--color-bg-white)",
           borderBottom: "1px solid var(--color-border)",
-          borderLeft: `4px solid ${sevColor}`,
+          borderInlineStart: `4px solid ${sevColor}`,
         }}
       >
         <Group gap={6} mb={10}>
@@ -622,12 +622,12 @@ export function CrisisDetailContent({
           <Box px={isCompact ? 16 : 24} pt={isCompact ? 16 : 24}>
             <Box style={{ display: "flex", background: "var(--color-bg-white)", border: "1px solid var(--color-border)", borderRadius: 8, overflow: "hidden" }}>
               {/* Impact */}
-              <Box style={{ flex: 1, borderRight: "1px solid var(--color-border)" }}>
+              <Box style={{ flex: 1, borderInlineEnd: "1px solid var(--color-border)" }}>
                 <Box px={12} py={6} style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-bg-muted)" }}>
                   <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>{t("kpi.impact")}</Text>
                 </Box>
                 <Box style={{ display: "flex" }}>
-                  <Box style={{ flex: 1, borderRight: "1px solid var(--color-border)" }}>
+                  <Box style={{ flex: 1, borderInlineEnd: "1px solid var(--color-border)" }}>
                     <ImpactRow
                       icon={<IconUsers size={14} color="var(--color-accent)" />}
                       iconBg="var(--color-accent-light)"
@@ -651,7 +651,7 @@ export function CrisisDetailContent({
                   <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>{t("kpi.areaContext")}</Text>
                 </Box>
                 <Box style={{ display: "flex" }}>
-                  <Box style={{ flex: 1, borderRight: "1px solid var(--color-border)" }}>
+                  <Box style={{ flex: 1, borderInlineEnd: "1px solid var(--color-border)" }}>
                     <ImpactRow
                       icon={<IconUsersGroup size={14} color="var(--color-info)" />}
                       iconBg="var(--color-info-light)"
@@ -1207,7 +1207,7 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
                   background: "none", border: "1px solid var(--color-border)",
                   borderRadius: 4, padding: "4px 10px", cursor: uploading ? "default" : "pointer",
                   color: uploading ? "var(--color-text-muted)" : "var(--color-text-secondary)",
-                  fontSize: 12, fontWeight: 600, marginLeft: "auto",
+                  fontSize: 12, fontWeight: 600, marginInlineStart: "auto",
                   opacity: uploading ? 0.6 : 1,
                 }}
                 className={uploading ? undefined : "hover:bg-[var(--color-bg-muted)]"}
@@ -1401,7 +1401,7 @@ function NeedRow({ need, isLast }: { need: ClusterNeed; isLast: boolean }) {
         </Box>
 
         {/* PiN + coverage (right-aligned, stable width) */}
-        <Box style={{ textAlign: "right", flexShrink: 0, minWidth: 110 }}>
+        <Box style={{ textAlign: "end", flexShrink: 0, minWidth: 110 }}>
           {need.peopleInNeed !== undefined ? (
             <>
               <Text fw={700} size="sm" c="var(--color-text-primary)" style={{ letterSpacing: "-0.01em" }}>
@@ -1528,7 +1528,7 @@ function DemographyPanel({ crisis }: { crisis: GqlCrisis }) {
             <Text fw={600} size="sm" c="var(--color-text-primary)">{a2.name}</Text>
             <Text size="xs" c="var(--color-text-muted)">{t("demography.source", { year: src?.year ?? 2026, release: src?.release ? ` ${src.release}` : "" })}</Text>
           </Box>
-          <Box style={{ textAlign: "right" }}>
+          <Box style={{ textAlign: "end" }}>
             <Text fw={700} size="sm" c="var(--color-text-primary)">{fmt(totalPop)}</Text>
             <Text size="xs" c="var(--color-text-muted)">{t("demography.total")}</Text>
           </Box>
@@ -1865,7 +1865,7 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
             {colIdx < CONFIDENCE_COLS.length - 1 && (
               <Box style={{
                 position: "absolute",
-                right: -5,
+                insetInlineEnd: -5,
                 top: "50%",
                 transform: "translateY(-50%)",
                 zIndex: 2,
@@ -1904,8 +1904,8 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
               <Box style={{
                 position: "absolute",
                 top: "50%",
-                left:  colIdx === 0 ? "50%" : 0,
-                right: colIdx === CONFIDENCE_COLS.length - 1 ? "50%" : 0,
+                insetInlineStart: colIdx === 0 ? "50%" : 0,
+                insetInlineEnd:   colIdx === CONFIDENCE_COLS.length - 1 ? "50%" : 0,
                 height: 1,
                 background: "var(--color-border-dark)",
                 transform: "translateY(-50%)",
@@ -2068,7 +2068,7 @@ function TimelineRow({
       {/* Date column - vertically centred to align with the rail dot. */}
       <Box
         style={{
-          textAlign: "right",
+          textAlign: "end",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
@@ -2209,7 +2209,7 @@ function TimelineRow({
               style={{
                 position: "absolute",
                 top: 6,
-                right: 6,
+                insetInlineEnd: 6,
                 opacity: hovered ? 1 : 0,
                 transition: "opacity 100ms",
                 pointerEvents: hovered ? "auto" : "none",

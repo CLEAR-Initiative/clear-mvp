@@ -206,7 +206,7 @@ export function SignalsTab({
                             <Text size="xs" c="var(--color-text-muted)">{resolveLocationName(location)}</Text>
                           </Group>
                         )}
-                        <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>{format.dateTime(new Date(signal.publishedAt), "short")}</Text>
+                        <Text size="xs" c="var(--color-text-muted)" style={{ marginInlineStart: "auto" }}>{format.dateTime(new Date(signal.publishedAt), "short")}</Text>
                         {signal.url && (
                           <a href={signal.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
                             style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--color-accent)", textDecoration: "none" }}>

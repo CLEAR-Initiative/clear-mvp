@@ -114,8 +114,8 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
   const renderMarkdown = (content: string) => {
     const html = content
       .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:600">$1</strong>')
-      .replace(/^- (.*$)/gim, '<div style="margin-left:12px;font-size:13px">• $1</div>')
-      .replace(/^\d+\. (.*$)/gim, '<div style="margin-left:12px;font-size:13px">$&</div>')
+      .replace(/^- (.*$)/gim, '<div style="margin-inline-start:12px;font-size:13px">• $1</div>')
+      .replace(/^\d+\. (.*$)/gim, '<div style="margin-inline-start:12px;font-size:13px">$&</div>')
       .replace(/\n\n/g, '<div style="height:8px"></div>')
       .replace(/\n/g, "<br />");
     return <div dangerouslySetInnerHTML={{ __html: html }} />;
@@ -126,7 +126,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
       <Box
         style={{
           position: "fixed",
-          right: 0,
+          insetInlineEnd: 0,
           top: "50%",
           transform: "translateY(-50%)",
           zIndex: 50,
@@ -155,7 +155,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
   }
 
   return (
-    <Box style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--color-bg-white)", borderLeft: "1px solid var(--color-border)" }}>
+    <Box style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--color-bg-white)", borderInlineStart: "1px solid var(--color-border)" }}>
       {/* Header */}
       <Box px={16} py={12} className="border-b border-[var(--color-border)]" style={{ background: "var(--color-bg-muted)" }}>
         <Group justify="space-between">
@@ -229,7 +229,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
               <Box
                 style={{
                   display: "inline-block",
-                  textAlign: "left",
+                  textAlign: "start",
                   padding: "8px 12px",
                   fontSize: 13,
                   background: message.role === "assistant" ? "#F9FAFB" : "#E85D3D",
@@ -294,7 +294,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
             <UnstyledButton
               key={q}
               onClick={() => void handleSendMessage(t(`examples.${q}`))}
-              style={{ fontSize: 11, color: "#737373", textAlign: "left", padding: "2px 0" }}
+              style={{ fontSize: 11, color: "#737373", textAlign: "start", padding: "2px 0" }}
               className="hover:text-[#E85D3D]"
             >
               &ldquo;{t(`examples.${q}`)}&rdquo;

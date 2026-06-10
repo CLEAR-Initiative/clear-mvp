@@ -163,7 +163,7 @@ function ResetPasswordForm() {
 
                 <Text ta="center" size="sm" mt={8}>
                   <Anchor component={Link} href="/auth/login" c="var(--color-text-muted)" fw={500} size="sm">
-                    <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginRight: 4 }} />
+                    <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginInlineEnd: 4 }} />
                     {t("backToSignIn")}
                   </Anchor>
                 </Text>

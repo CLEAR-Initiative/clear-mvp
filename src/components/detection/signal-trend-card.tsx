@@ -91,7 +91,7 @@ export function SignalTrendCard({ alerts, events }: SignalTrendCardProps) {
               {events.length}
             </Text>
           </Group>
-          <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500, paddingLeft: 13 }}>Events</Text>
+          <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500, paddingInlineStart: 13 }}>Events</Text>
         </Box>
         <Box>
           <Group gap={6} align="center" mb={1}>
@@ -100,7 +100,7 @@ export function SignalTrendCard({ alerts, events }: SignalTrendCardProps) {
               {alerts.length}
             </Text>
           </Group>
-          <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500, paddingLeft: 13 }}>Alerts</Text>
+          <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500, paddingInlineStart: 13 }}>Alerts</Text>
         </Box>
       </Group>
 

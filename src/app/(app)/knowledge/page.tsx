@@ -157,7 +157,7 @@ export default function KnowledgePage() {
               {hasActiveFilters && (
                 <UnstyledButton
                   onClick={clearFilters}
-                  ml="auto"
+                  ms="auto"
                   style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#737373" }}
                   className="hover:text-[#E85D3D]"
                 >
@@ -198,7 +198,7 @@ export default function KnowledgePage() {
                 style={{ minWidth: 160 }}
                 styles={{ label: { fontSize: 11, color: "#737373", fontWeight: 500 } }}
               />
-              <Box style={{ borderLeft: "1px solid #E5E5E5", height: 32, margin: "auto 4px" }} />
+              <Box style={{ borderInlineStart: "1px solid #E5E5E5", height: 32, margin: "auto 4px" }} />
               <Select
                 label={t("filters.type")}
                 size="xs"

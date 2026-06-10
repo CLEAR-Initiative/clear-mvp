@@ -265,7 +265,7 @@ function ErrorState({ message, showLogin }: { message: string; showLogin?: boole
             {message}
           </Alert>
           <Anchor component={Link} href={showLogin ? "/auth/login" : "/"} size="sm" c="#E85D3D" fw={500}>
-            <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginRight: 4 }} />
+            <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginInlineEnd: 4 }} />
             {showLogin ? t("goToSignIn") : t("goHome")}
           </Anchor>
         </Stack>

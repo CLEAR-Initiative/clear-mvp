@@ -300,7 +300,7 @@ export function SignalDetailContent({
         style={{
           background: "var(--color-bg-white)",
           borderBottom: "1px solid var(--color-border)",
-          borderLeft: "4px solid var(--color-text-muted)",
+          borderInlineStart: "4px solid var(--color-text-muted)",
         }}
       >
         {/* Severity badge */}
@@ -712,7 +712,7 @@ export function SignalDetailContent({
                         component="span"
                         size="10px"
                         c="var(--color-text-muted)"
-                        ml={6}
+                        ms={6}
                         style={{ fontWeight: 400 }}
                       >
                         {t("actions.comingSoon")}

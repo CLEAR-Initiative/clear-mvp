@@ -486,7 +486,7 @@ export function MapSection({
       {/* Legend - anchored just above the timeline, grows upward when open */}
       <Box
         className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
-        style={{ bottom: 104, left: 16, minWidth: 168 }}
+        style={{ bottom: 104, left: 16, minWidth: 168 }} /* intentionally physical: map overlay */
         visibleFrom="sm"
       >
         {/* Header - always visible, click to collapse/expand */}

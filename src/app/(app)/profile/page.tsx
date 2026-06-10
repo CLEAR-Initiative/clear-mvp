@@ -135,7 +135,7 @@ function MobileNumberField() {
       background: readOnly ? "transparent" : undefined,
       border: readOnly ? "1px solid transparent" : undefined,
       cursor: readOnly ? "default" : undefined,
-      paddingLeft: readOnly ? 0 : undefined,
+      paddingInlineStart: readOnly ? 0 : undefined,
     },
   };
 
@@ -157,7 +157,7 @@ function MobileNumberField() {
               background: readOnly ? "transparent" : undefined,
               border: readOnly ? "1px solid transparent" : undefined,
               cursor: readOnly ? "default" : undefined,
-              paddingLeft: readOnly ? 0 : undefined,
+              paddingInlineStart: readOnly ? 0 : undefined,
             },
           }}
           rightSection={readOnly ? null : undefined}
@@ -259,7 +259,7 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
                 <Table.Td>
                   <Badge size="xs" variant="light" color="gray" tt="capitalize">{row.role}</Badge>
                 </Table.Td>
-                <Table.Td style={{ textAlign: "right" }}>
+                <Table.Td style={{ textAlign: "end" }}>
                   {row.isActive ? (
                     <Group gap={4} justify="flex-end">
                       <IconCheck size={13} color="var(--color-success)" />

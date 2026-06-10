@@ -89,7 +89,7 @@ export function ImpactTab() {
               p={12}
               style={{
                 background: "#FEF3C7",
-                borderLeft: "3px solid #F59E0B",
+                borderInlineStart: "3px solid #F59E0B",
               }}
             >
               <Text size="xs" fw={700} c="var(--color-warning)" tt="uppercase" mb={4}>
@@ -103,7 +103,7 @@ export function ImpactTab() {
               p={12}
               style={{
                 background: "#DBEAFE",
-                borderLeft: "3px solid #3B82F6",
+                borderInlineStart: "3px solid #3B82F6",
               }}
             >
               <Text size="xs" fw={700} c="var(--color-info)" tt="uppercase" mb={4}>
@@ -117,7 +117,7 @@ export function ImpactTab() {
               p={12}
               style={{
                 background: "#FEE2E2",
-                borderLeft: "3px solid #DC2626",
+                borderInlineStart: "3px solid #DC2626",
               }}
             >
               <Text size="xs" fw={700} c="var(--color-critical)" tt="uppercase" mb={4}>
@@ -145,7 +145,7 @@ export function ImpactTab() {
                 wrap="nowrap"
                 style={{
                   background: "#F5F3FF",
-                  borderLeft: "3px solid #7C3AED",
+                  borderInlineStart: "3px solid #7C3AED",
                 }}
               >
                 <IconShield

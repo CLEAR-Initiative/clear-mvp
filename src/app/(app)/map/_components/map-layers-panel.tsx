@@ -21,7 +21,7 @@ export function MapLayersPanel({
   return (
     <Box
       className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
-      style={{ top: 80, left: 16, width: 200 }}
+      style={{ top: 80, left: 16, width: 200 }} /* intentionally physical: map overlay */
     >
       <Group gap={8} px={12} py={10} className="border-b border-[var(--color-border)]">
         <IconLayersLinked size={14} color="#737373" />

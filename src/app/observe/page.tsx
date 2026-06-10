@@ -125,7 +125,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
     const isError = msg.variant === "error";
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", marginBottom: 12 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-muted)", marginBottom: 4, paddingLeft: 4, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-muted)", marginBottom: 4, paddingInlineStart: 4, letterSpacing: "0.05em", textTransform: "uppercase" }}>
           CLEAR
         </span>
         <div style={{
@@ -223,7 +223,7 @@ function SignalsList() {
   if (signalsQuery.isLoading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, color: "var(--color-text-muted)", fontSize: 14 }}>
-        <IconLoader2 size={20} style={{ animation: "spin 1s linear infinite", marginRight: 8 }} />
+        <IconLoader2 size={20} style={{ animation: "spin 1s linear infinite", marginInlineEnd: 8 }} />
         {t("loading")}
       </div>
     );
@@ -259,7 +259,7 @@ function makeWelcome(t: ReturnType<typeof useTranslations<"observe">>): ChatMess
     content: (
       <div style={{ fontSize: 14, lineHeight: 1.55 }}>
         <div style={{ fontWeight: 700, marginBottom: 8 }}>{t("welcome.heading")}</div>
-        <ul style={{ margin: 0, paddingLeft: 0, display: "flex", flexDirection: "column", gap: 8, listStyle: "none" }}>
+        <ul style={{ margin: 0, paddingInlineStart: 0, display: "flex", flexDirection: "column", gap: 8, listStyle: "none" }}>
           <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet1", { strong })}</span></li>
           <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet2", { strong, locationIcon: () => <span style={iconChip}><IconMapPin size={13} strokeWidth={2.5} /></span> })}</span></li>
           <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet3", { mediaIcon: () => <span style={iconChip}><IconPhoto size={13} strokeWidth={2.5} /></span> })}</span></li>
@@ -487,7 +487,7 @@ export default function ObservePage() {
         <span style={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-primary)", letterSpacing: "-0.02em", fontFamily: "Calibri, 'Trebuchet MS', sans-serif" }}>CLEAR</span>
         <span style={{ color: "var(--color-border-dark)", fontSize: 17, margin: "0 2px" }}>|</span>
         <span style={{ fontSize: 15, fontWeight: 300, color: "var(--color-text-secondary)" }}>{t("header.appName")}</span>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ marginInlineStart: "auto", display: "flex", alignItems: "center", gap: 8 }}>
           {pendingCount > 0 && (
             <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-warning)", background: "var(--color-warning-light)", padding: "2px 7px", borderRadius: 10 }}>
               {t("header.queued", { count: pendingCount })}
@@ -538,7 +538,7 @@ export default function ObservePage() {
             <button
               key={loc.value}
               onClick={() => selectLocationFromAt(loc)}
-              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 16px", background: "none", border: "none", borderBottom: "1px solid var(--color-border)", cursor: "pointer", color: "var(--color-text-primary)", fontSize: 15, textAlign: "left" }}
+              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 16px", background: "none", border: "none", borderBottom: "1px solid var(--color-border)", cursor: "pointer", color: "var(--color-text-primary)", fontSize: 15, textAlign: "start" }}
             >
               <IconMapPin size={15} color="var(--color-accent)" strokeWidth={2.5} />
               {loc.label}
@@ -569,7 +569,7 @@ export default function ObservePage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   : <img src={m.preview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 }
-                <button onClick={() => removeDraftMedia(m.id)} style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.55)", border: "none", borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white", padding: 0 }}>
+                <button onClick={() => removeDraftMedia(m.id)} style={{ position: "absolute", top: 2, insetInlineEnd: 2, background: "rgba(0,0,0,0.55)", border: "none", borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white", padding: 0 }}>
                   <IconX size={9} />
                 </button>
               </div>
@@ -589,7 +589,7 @@ export default function ObservePage() {
             style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", background: hasMedia ? "var(--color-accent-light)" : "transparent", border: "none", borderRadius: "50%", color: hasMedia ? "var(--color-accent)" : "var(--color-text-muted)", cursor: "pointer", flexShrink: 0, transition: "background 150ms, color 150ms", position: "relative" }}>
             <IconPhoto size={20} />
             {hasMedia && (
-              <span style={{ position: "absolute", top: 6, right: 6, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", color: "white", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ position: "absolute", top: 6, insetInlineEnd: 6, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", color: "white", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {draftMedia.length}
               </span>
             )}

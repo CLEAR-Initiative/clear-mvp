@@ -415,7 +415,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
           />
 
           {formData.amount && (
-            <Box p={16} style={{ background: "#F0F9FF", borderLeft: "4px solid #E85D3D" }}>
+            <Box p={16} style={{ background: "#F0F9FF", borderInlineStart: "4px solid #E85D3D" }}>
               <Text size="xs" fw={600} c="#E85D3D" tt="uppercase" mb={4}>{t("transferStep.estimatedBudget")}</Text>
               <Text size="xl" fw={700} style={{ fontFamily: "monospace" }}>
                 {format.number(estimatedBudget)} {formData.currency}

@@ -411,8 +411,8 @@ function SectorRow({
             borderBottom: isLast ? undefined : "1px solid var(--color-border)",
             paddingTop: 14,
             paddingBottom: 14,
-            paddingRight: 16,
-            paddingLeft: 58, // 16px outer + 32px icon + 10px gap = aligns with sector name
+            paddingInlineEnd: 16,
+            paddingInlineStart: 58, // 16px outer + 32px icon + 10px gap = aligns with sector name
           }}
         >
           <Stack gap={14}>

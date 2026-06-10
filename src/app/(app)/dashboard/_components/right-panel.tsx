@@ -503,7 +503,7 @@ export function RightPanel({
                   key={team.id}
                   py={8}
                   px={12}
-                  style={{ background: "#F0FDF4", borderLeft: "2px solid #059669" }}
+                  style={{ background: "#F0FDF4", borderInlineStart: "2px solid #059669" }}
                 >
                   <Group justify="space-between">
                     <Group gap={8}>
@@ -522,7 +522,7 @@ export function RightPanel({
                 </Box>
               ))}
               {/* TODO(demo): hardcoded additional team entry - remove when real deployment data is available */}
-              <Box py={8} px={12} style={{ background: "#FFFBEB", borderLeft: "2px solid #F59E0B" }}>
+              <Box py={8} px={12} style={{ background: "#FFFBEB", borderInlineStart: "2px solid #F59E0B" }}>
                 <Group justify="space-between">
                   <Group gap={8}>
                     <Box w={8} h={8} style={{ background: "#F59E0B" }} />
@@ -581,7 +581,7 @@ export function RightPanel({
               {t("rightPanel.countryOffice")}
             </Text>
             <Stack gap={8} mb={16}>
-              <Box py={8} px={12} style={{ background: "#FFF7F5", borderLeft: "2px solid #E85D3D" }}>
+              <Box py={8} px={12} style={{ background: "#FFF7F5", borderInlineStart: "2px solid #E85D3D" }}>
                 <Group justify="space-between">
                   <Group gap={8}>
                     <Box w={8} h={8} style={{ background: "#E85D3D" }} />
@@ -753,7 +753,7 @@ export function RightPanel({
                           border: "none",
                           borderBottom: idx < locations.length - 1 ? "1px solid #F0F0F0" : "none",
                           cursor: "pointer",
-                          textAlign: "left",
+                          textAlign: "start",
                         }}
                         className="hover:bg-[#F0F0F0] transition-colors"
                       >

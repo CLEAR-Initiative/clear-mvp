@@ -26,7 +26,7 @@ export function MapLegendPanel({ eventTypes = [] }: MapLegendPanelProps) {
     <Box
       className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
       p={12}
-      style={{ bottom: 100, left: 16, minWidth: 140 }}
+      style={{ bottom: 100, left: 16, minWidth: 140 }} /* intentionally physical: map overlay */
     >
       <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em" }} mb={8}>
         {t("panels.legend")}

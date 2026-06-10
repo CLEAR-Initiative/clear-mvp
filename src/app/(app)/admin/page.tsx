@@ -170,7 +170,7 @@ function HoldToConfirmButton({
       <Box
         style={{
           position: "absolute",
-          left: 0,
+          insetInlineStart: 0,
           top: 0,
           bottom: 0,
           width: `${progress}%`,
@@ -1078,7 +1078,7 @@ function OrganisationsPanel() {
                       key={`team-${team.id}`}
                       style={{ background: "rgba(0,0,0,0.015)" }}
                     >
-                      <Table.Td pl={48}>
+                      <Table.Td ps={48}>
                         <Text
                           style={{
                             fontSize: fontSizesPx.sm,
@@ -2086,7 +2086,7 @@ function DataSourceCard({
           </Group>
         </Box>
 
-        <Box style={{ width: 130, flexShrink: 0, textAlign: "right" }}>
+        <Box style={{ width: 130, flexShrink: 0, textAlign: "end" }}>
           {signalCount !== null ? (
             <>
               <Text fw={700} style={{ fontSize: 20, color: signalCount > 0 ? colors.textPrimary : colors.textSecondary }}>

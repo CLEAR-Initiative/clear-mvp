@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
-import { useFormatter } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 
 const HAPI_BASE = "https://hapi.humdata.org/api/v2";
 const HAPI_APP_ID = "Y2xlYXItbXZwOmRldkBzeW50cm8uZmk=";
@@ -110,6 +110,9 @@ interface IdpCardProps {
 
 export function IdpCard({ locationCode }: IdpCardProps) {
   const format = useFormatter();
+  const t = useTranslations("detection");
+  const tCommon = useTranslations("common");
+  const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>;
   const query = useQuery({
     queryKey: ["hapi", "idpTrend", locationCode],
     queryFn: () => fetchIdpTrend(locationCode),
@@ -120,7 +123,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
 
   const cardLabel = (
     <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A3A3A3", marginBottom: 16 }}>
-      IDP Displacement
+      {t("kpi.idp.title")}
     </Text>
   );
 
@@ -143,7 +146,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
         {cardLabel}
         <Box style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
           <IconWifiOff size={24} color="#6B7280" />
-          <Text style={{ fontSize: 12, color: "#6B7280" }}>Data unavailable</Text>
+          <Text style={{ fontSize: 12, color: "#6B7280" }}>{t("kpi.idp.unavailable")}</Text>
           <button
             onClick={() => void query.refetch()}
             style={{
@@ -153,7 +156,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
               display: "flex", alignItems: "center", gap: 4,
             }}
           >
-            <IconRefresh size={10} /> Retry
+            <IconRefresh size={10} /> {tCommon("actions.retry")}
           </button>
         </Box>
       </Box>
@@ -168,13 +171,13 @@ export function IdpCard({ locationCode }: IdpCardProps) {
         {cardLabel}
         <Box style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, textAlign: "center" }}>
           <Text style={{ fontSize: 22, color: "rgba(0,0,0,0.1)" }}>&#8862;</Text>
-          <Text style={{ fontSize: 13, color: "#525252", fontWeight: 600 }}>No displacement data</Text>
+          <Text style={{ fontSize: 13, color: "#525252", fontWeight: 600 }}>{t("kpi.idp.noData")}</Text>
           <Text style={{ fontSize: 11, color: "#737373", lineHeight: 1.4 }}>
-            {locationCode} is not tracked in IOM DTM
+            {t("kpi.idp.notTracked", { code: locationCode })}
           </Text>
           {/* TODO: show UNHCR fallback estimate when API access is available */}
           <Text style={{ fontSize: 10, color: "#A3A3A3", fontStyle: "italic", marginTop: 4 }}>
-            Coverage varies by country
+            {t("kpi.idp.coverageVaries")}
           </Text>
         </Box>
       </Box>
@@ -198,7 +201,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
             {format.number(current, "compact")}
           </Text>
           <Text style={{ fontSize: 11, color: "#737373", marginTop: 3 }}>
-            Internally Displaced &middot; {locationName}
+            {t("kpi.idp.internallyDisplaced")} &middot; {locationName}
           </Text>
         </Box>
         {delta !== null && (
@@ -214,7 +217,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
             }}>
               {delta >= 0 ? "+" : ""}{format.number(Math.abs(delta), "compact")}
             </Text>
-            <Text style={{ fontSize: 9, color: "#737373" }}>vs last month</Text>
+            <Text style={{ fontSize: 9, color: "#737373" }}>{t("kpi.idp.vsLastMonth")}</Text>
           </Box>
         )}
       </Group>
@@ -246,7 +249,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
         <Group gap={5} align="center">
           <Box style={{ width: 6, height: 6, borderRadius: "50%", background: dot }} />
           <Text style={{ fontSize: 9, color: "#A3A3A3" }}>
-            IOM DTM via HAPI &middot; {formatMonth(format, lastUpdated)}
+            {t("kpi.idp.sourceLine")} &middot; {formatMonth(format, lastUpdated)}
           </Text>
         </Group>
         <Box
@@ -262,7 +265,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
       <Modal
         opened={infoOpened}
         onClose={closeInfo}
-        title="IDP Displacement: Methodology"
+        title={t("kpi.idp.modal.title")}
         size="md"
         styles={{
           title: { fontSize: 14, fontWeight: 700, color: "#171717" },
@@ -270,27 +273,25 @@ export function IdpCard({ locationCode }: IdpCardProps) {
         }}
       >
         <Text style={{ fontSize: 13, color: "#525252", marginBottom: 12, lineHeight: 1.6 }}>
-          This card shows the total number of <strong>conflict-induced internally displaced persons (IDPs)</strong> tracked
-          by IOM&apos;s Displacement Tracking Matrix (DTM) for the selected country. The figure reflects the latest
-          available snapshot, not a cumulative total.
+          {t.rich("kpi.idp.modal.intro", { strong })}
         </Text>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>What the numbers mean</Text>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.idp.modal.numbersHeading")}</Text>
         <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
-          <List.Item><strong>Current count</strong>: most recent IDP figure from IOM DTM for the country.</List.Item>
-          <List.Item><strong>Month-over-month delta</strong>: change in reported IDPs compared to the previous month&apos;s data point.</List.Item>
-          <List.Item><strong>Trend sparkline</strong>: historical monthly IDP counts showing displacement trajectory.</List.Item>
-          <List.Item><strong>Freshness dot</strong>: green if updated within 30 days, amber within 90 days, red if older.</List.Item>
+          <List.Item>{t.rich("kpi.idp.modal.numberCurrent", { strong })}</List.Item>
+          <List.Item>{t.rich("kpi.idp.modal.numberDelta", { strong })}</List.Item>
+          <List.Item>{t.rich("kpi.idp.modal.numberTrend", { strong })}</List.Item>
+          <List.Item>{t.rich("kpi.idp.modal.numberFreshness", { strong })}</List.Item>
         </List>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>Limitations</Text>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.idp.modal.limitationsHeading")}</Text>
         <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
-          <List.Item>Flood and disaster displacement is <strong>not included</strong>. IOM DTM in this context tracks conflict-induced displacement only.</List.Item>
-          <List.Item>Coverage is limited to IOM DTM&apos;s monitoring footprint, which may not capture all displacement situations within a country.</List.Item>
-          <List.Item>Data may lag 4 to 8 weeks behind real-world conditions depending on the country operation.</List.Item>
+          <List.Item>{t.rich("kpi.idp.modal.limitationFloods", { strong })}</List.Item>
+          <List.Item>{t("kpi.idp.modal.limitationCoverage")}</List.Item>
+          <List.Item>{t("kpi.idp.modal.limitationLag")}</List.Item>
         </List>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>Source</Text>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.idp.modal.sourceHeading")}</Text>
         <Group gap={6} align="center">
           <Anchor
             href="https://hapi.humdata.org"
@@ -298,12 +299,12 @@ export function IdpCard({ locationCode }: IdpCardProps) {
             rel="noopener noreferrer"
             style={{ fontSize: 12, color: "#E85D3D" }}
           >
-            HAPI: Humanitarian API (humdata.org)
+            {t("kpi.idp.modal.sourceLink")}
           </Anchor>
           <IconExternalLink size={11} color="#E85D3D" />
         </Group>
         <Text style={{ fontSize: 11, color: "#A3A3A3", marginTop: 4 }}>
-          HAPI aggregates IOM DTM data alongside other humanitarian datasets under OCHA&apos;s stewardship.
+          {t("kpi.idp.modal.sourceNote")}
         </Text>
       </Modal>
     </Box>

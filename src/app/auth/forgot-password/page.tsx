@@ -73,7 +73,7 @@ export default function ForgotPasswordPage() {
                 {t("forgot.sent")}
               </Alert>
               <Anchor component={Link} href="/auth/login" size="sm" c="#E85D3D" fw={500}>
-                <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginRight: 4 }} />
+                <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginInlineEnd: 4 }} />
                 {t("backToSignIn")}
               </Anchor>
             </Stack>
@@ -108,7 +108,7 @@ export default function ForgotPasswordPage() {
 
                 <Text ta="center" size="sm" mt={8}>
                   <Anchor component={Link} href="/auth/login" c="var(--color-text-muted)" fw={500} size="sm">
-                    <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginRight: 4 }} />
+                    <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginInlineEnd: 4 }} />
                     {t("backToSignIn")}
                   </Anchor>
                 </Text>

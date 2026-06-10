@@ -3,6 +3,11 @@
     "title": "CLEAR : Crisis Learning, Early-warning, Anticipation & Response",
     "description": "Plateforme humanitaire d'aide à la décision"
   },
+  "manifest": {
+    "name": "CLEAR Observe",
+    "shortName": "Observe",
+    "description": "Soumettez des signaux de terrain pour la plateforme d'intelligence humanitaire CLEAR"
+  },
   "acceptInvite": {
     "errors": {
       "noToken": "Aucun jeton d'invitation trouvé dans l'URL.",

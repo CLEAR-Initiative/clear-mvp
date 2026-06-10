@@ -108,8 +108,8 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
               justifyContent: "space-between",
               minWidth: 130,
               height: 30,
-              paddingLeft: 10,
-              paddingRight: 8,
+              paddingInlineStart: 10,
+              paddingInlineEnd: 8,
               border: "1px solid var(--color-border-dark)",
               borderRadius: 0,
               fontSize: 13,
@@ -120,7 +120,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
               cursor: "pointer",
             }}
           >
-            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 4 }}>
+            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginInlineEnd: 4 }}>
               {summary}
             </span>
             <IconSelector size={14} style={{ flexShrink: 0, color: "var(--color-text-muted)" }} />
@@ -142,7 +142,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
                 ) : null
               }
               size="xs"
-              styles={{ input: { fontSize: 12, border: "none", background: "transparent", paddingLeft: 28 } }}
+              styles={{ input: { fontSize: 12, border: "none", background: "transparent", paddingInlineStart: 28 } }}
             />
           </Box>
 
@@ -158,7 +158,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
                     fontWeight: !value ? 600 : 400,
                     color: !value ? "var(--color-accent)" : "var(--color-text-primary)",
                     background: !value ? "var(--color-accent-light)" : "transparent",
-                    textAlign: "left",
+                    textAlign: "start",
                   }}
                 >
                   {t("allRegions")}
@@ -191,7 +191,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
                           fontWeight: isSelected ? 600 : 500,
                           color: isSelected ? "var(--color-accent)" : "var(--color-text-primary)",
                           background: isSelected ? "var(--color-accent-light)" : "transparent",
-                          textAlign: "left",
+                          textAlign: "start",
                         }}
                       >
                         {state.name}
@@ -199,7 +199,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
                     </Box>
 
                     <Collapse in={isExpanded}>
-                      <Stack gap={0} pl={22} pb={2}>
+                      <Stack gap={0} ps={22} pb={2}>
                         {state.districts.map((district) => {
                           const isDistrictSelected = value === district.id;
                           return (
@@ -213,7 +213,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
                                 fontWeight: isDistrictSelected ? 600 : 400,
                                 color: isDistrictSelected ? "var(--color-accent)" : "var(--color-text-secondary)",
                                 background: isDistrictSelected ? "var(--color-accent-light)" : "transparent",
-                                textAlign: "left",
+                                textAlign: "start",
                               }}
                             >
                               {district.name}

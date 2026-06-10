@@ -20,7 +20,7 @@ function CommentSkeleton() {
         <Box style={{ flex: 1 }}>
           <Group gap={8} mb={6}>
             <Skeleton height={10} width={80} />
-            <Skeleton height={10} width={40} style={{ marginLeft: "auto" }} />
+            <Skeleton height={10} width={40} style={{ marginInlineStart: "auto" }} />
           </Group>
           <Skeleton height={10} width="90%" mb={4} />
           <Skeleton height={10} width="60%" />

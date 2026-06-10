@@ -114,8 +114,8 @@ export function DisasterTypePicker({
               justifyContent: "space-between",
               width: "100%",
               height,
-              paddingLeft: 10,
-              paddingRight: 8,
+              paddingInlineStart: 10,
+              paddingInlineEnd: 8,
               border: "1px solid var(--color-border-dark)",
               borderRadius: 0,
               fontSize,
@@ -129,7 +129,7 @@ export function DisasterTypePicker({
             <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {summary}
             </span>
-            <IconSelector size={14} style={{ flexShrink: 0, marginLeft: 4, color: "var(--color-text-muted)" }} />
+            <IconSelector size={14} style={{ flexShrink: 0, marginInlineStart: 4, color: "var(--color-text-muted)" }} />
           </UnstyledButton>
         </Popover.Target>
         <Popover.Dropdown p={0} onMouseDown={(e) => e.stopPropagation()}>
@@ -164,11 +164,11 @@ export function DisasterTypePicker({
                             {l1.name}
                           </Text>
                         }
-                        styles={{ label: { paddingLeft: 4 } }}
+                        styles={{ label: { paddingInlineStart: 4 } }}
                       />
                     </Group>
                     <Collapse in={isExpanded}>
-                      <Stack gap={0} pl={30} pb={2}>
+                      <Stack gap={0} ps={30} pb={2}>
                         {l1.groups.map((l2) => (
                           <Checkbox
                             key={l2.name}
@@ -180,7 +180,7 @@ export function DisasterTypePicker({
                                 {l2.name}
                               </Text>
                             }
-                            styles={{ label: { paddingLeft: 4 }, body: { padding: "3px 4px" } }}
+                            styles={{ label: { paddingInlineStart: 4 }, body: { padding: "3px 4px" } }}
                           />
                         ))}
                       </Stack>
