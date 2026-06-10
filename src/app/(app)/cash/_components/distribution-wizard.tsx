@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -144,40 +145,46 @@ interface DistributionData {
   startDate: string;
   endDate: string;
   verificationMethod: string;
-  targetCriteria: string[];
+  targetCriteria: TargetingCriterion[];
   notes: string;
 }
 
+// titleKey: i18n keys under cash.wizard.steps.* - resolved via t() at render time.
 const WIZARD_STEPS = [
-  { title: "Target Locations", description: "Select distribution areas" },
-  { title: "Transfer Details", description: "Configure amount and modality" },
-  { title: "Schedule & Criteria", description: "Set timing and targeting" },
-  { title: "Review & Confirm", description: "Verify distribution plan" },
-];
+  { titleKey: "locations", description: "Select distribution areas" },
+  { titleKey: "transfer", description: "Configure amount and modality" },
+  { titleKey: "schedule", description: "Set timing and targeting" },
+  { titleKey: "review", description: "Verify distribution plan" },
+] as const;
 
+// labelKey: i18n keys under cash.wizard.transferStep.modalities.*
 const modalityOptions = [
-  { value: "mobile-money", label: "Mobile Money Transfer", icon: IconPhone },
-  { value: "cash-in-hand", label: "Cash-in-Hand Distribution", icon: IconCurrencyDollar },
-  { value: "bank-transfer", label: "Bank Account Transfer", icon: IconBuildingBank },
-  { value: "voucher", label: "E-Voucher / Paper Voucher", icon: IconCreditCard },
-];
+  { value: "mobile-money", labelKey: "mobileMoney", icon: IconPhone },
+  { value: "cash-in-hand", labelKey: "cashInHand", icon: IconCurrencyDollar },
+  { value: "bank-transfer", labelKey: "bankTransfer", icon: IconBuildingBank },
+  { value: "voucher", labelKey: "voucher", icon: IconCreditCard },
+] as const;
 
+// labelKey: i18n keys under cash.wizard.scheduleStep.verifications.*
 const verificationOptions = [
-  { value: "biometric", label: "Biometric Verification" },
-  { value: "id-card", label: "ID Card + PIN" },
-  { value: "token", label: "Token-Based Distribution" },
-  { value: "community", label: "Community-Based Verification" },
-];
+  { value: "biometric", labelKey: "biometric" },
+  { value: "id-card", labelKey: "idCard" },
+  { value: "token", labelKey: "token" },
+  { value: "community", labelKey: "community" },
+] as const;
 
+// i18n keys under cash.wizard.scheduleStep.criteriaOptions.*
 const targetingCriteria = [
-  "Female-headed households",
-  "Child-headed households",
-  "Elderly single-person households",
-  "Households with disabled members",
-  "Households with chronic illness",
-  "Inadequate housing (tents/temporary)",
-  "High persons per room (>4)",
-];
+  "femaleHeaded",
+  "childHeaded",
+  "elderlySingle",
+  "disability",
+  "chronicIllness",
+  "inadequateHousing",
+  "highOccupancy",
+] as const;
+
+type TargetingCriterion = (typeof targetingCriteria)[number];
 
 // ============================================================================
 // WIZARD COMPONENT
@@ -189,6 +196,8 @@ interface NewDistributionWizardProps {
 }
 
 export function NewDistributionWizard({ opened, onClose }: NewDistributionWizardProps) {
+  const t = useTranslations("cash.wizard");
+  const tActions = useTranslations("common.actions");
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<DistributionData>({
@@ -217,7 +226,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
     }));
   };
 
-  const toggleCriteria = (criterion: string) => {
+  const toggleCriteria = (criterion: TargetingCriterion) => {
     setFormData((prev) => ({
       ...prev,
       targetCriteria: prev.targetCriteria.includes(criterion)
@@ -259,18 +268,22 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
     <Modal
       opened={opened}
       onClose={onClose}
-      title="New Cash Distribution"
+      title={t("title")}
       size="lg"
       centered
     >
       {/* Step Indicator */}
       <Box mb={24}>
         <Text size="xs" c="var(--color-text-muted)" mb={16}>
-          Step {currentStep + 1} of 4: {WIZARD_STEPS[currentStep]?.title}
+          {t("stepIndicator", {
+            current: currentStep + 1,
+            total: WIZARD_STEPS.length,
+            title: WIZARD_STEPS[currentStep] ? t(`steps.${WIZARD_STEPS[currentStep].titleKey}`) : "",
+          })}
         </Text>
         <Stepper active={currentStep} size="xs" color="#E85D3D">
           {WIZARD_STEPS.map((step) => (
-            <Stepper.Step key={step.title} label={step.title} />
+            <Stepper.Step key={step.titleKey} label={t(`steps.${step.titleKey}`)} />
           ))}
         </Stepper>
       </Box>
@@ -279,7 +292,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
       {currentStep === 0 && (
         <Box>
           <Text size="sm" c="var(--color-text-secondary)" mb={16}>
-            Select the locations where cash assistance will be distributed. You can select multiple locations.
+            {t("locationsStep.intro")}
           </Text>
           <SimpleGrid cols={2} spacing={12}>
             {locations.map((location) => (
@@ -300,7 +313,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
                 <Group justify="space-between">
                   <Box>
                     <Text fw={600} size="sm">{location.name}</Text>
-                    <Text size="xs" c="var(--color-text-muted)">{location.affected.toLocaleString()} affected</Text>
+                    <Text size="xs" c="var(--color-text-muted)">{t("locationsStep.affected", { count: location.affected.toLocaleString() })}</Text>
                   </Box>
                   <Group gap={8}>
                     <Badge size="xs" style={{ background: location.severityColor, color: "white" }}>
@@ -317,9 +330,12 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
           {formData.locations.length > 0 && (
             <Box mt={16} p={12} style={{ background: "var(--color-bg-muted)" }}>
               <Text size="sm">
-                <Text span fw={700}>{formData.locations.length}</Text> location(s) selected{" \u2022 "}
-                <Text span fw={700}>{totalAffected.toLocaleString()}</Text> total affected{" \u2022 "}
-                ~<Text span fw={700}>{estimatedHouseholds.toLocaleString()}</Text> estimated households
+                {t.rich("locationsStep.summary", {
+                  b: (chunks) => <Text span fw={700}>{chunks}</Text>,
+                  locations: formData.locations.length,
+                  affected: totalAffected.toLocaleString(),
+                  households: estimatedHouseholds.toLocaleString(),
+                })}
               </Text>
             </Box>
           )}
@@ -330,11 +346,11 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
       {currentStep === 1 && (
         <Box>
           <Text size="sm" c="var(--color-text-secondary)" mb={16}>
-            Configure the transfer modality and amount for this distribution.
+            {t("transferStep.intro")}
           </Text>
 
           <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={8} style={{ letterSpacing: "0.5px" }}>
-            Transfer Modality
+            {t("transferStep.modality")}
           </Text>
           <SimpleGrid cols={2} spacing={12} mb={20}>
             {modalityOptions.map((option) => {
@@ -356,7 +372,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
                   }}
                 >
                   <Icon size={20} color="#737373" />
-                  <Text size="sm" fw={500}>{option.label}</Text>
+                  <Text size="sm" fw={500}>{t(`transferStep.modalities.${option.labelKey}`)}</Text>
                 </Box>
               );
             })}
@@ -364,8 +380,8 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
 
           <SimpleGrid cols={2} spacing={12} mb={20}>
             <TextInput
-              label="Amount per Household"
-              placeholder="e.g., 580"
+              label={t("transferStep.amount")}
+              placeholder={t("transferStep.amountPlaceholder")}
               value={formData.amount}
               onChange={(e) => updateFormData({ amount: e.currentTarget.value })}
               type="number"
@@ -373,25 +389,25 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
               styles={{ label: { fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", color: "#737373", fontWeight: 600 } }}
             />
             <Select
-              label="Currency"
+              label={t("transferStep.currency")}
               value={formData.currency}
               onChange={(val) => updateFormData({ currency: val ?? "ETB" })}
               data={[
-                { value: "ETB", label: "Ethiopian Birr (ETB)" },
-                { value: "USD", label: "US Dollar (USD)" },
+                { value: "ETB", label: t("transferStep.currencies.etb") },
+                { value: "USD", label: t("transferStep.currencies.usd") },
               ]}
               styles={{ label: { fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", color: "#737373", fontWeight: 600 } }}
             />
           </SimpleGrid>
 
           <Select
-            label="Distribution Frequency"
+            label={t("transferStep.frequency")}
             value={formData.frequency}
             onChange={(val) => updateFormData({ frequency: val ?? "one-time" })}
             data={[
-              { value: "one-time", label: "One-time Distribution" },
-              { value: "monthly", label: "Monthly (3 months)" },
-              { value: "bi-weekly", label: "Bi-weekly (6 weeks)" },
+              { value: "one-time", label: t("transferStep.frequencies.oneTime") },
+              { value: "monthly", label: t("transferStep.frequencies.monthly") },
+              { value: "bi-weekly", label: t("transferStep.frequencies.biWeekly") },
             ]}
             mb={20}
             styles={{ label: { fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", color: "#737373", fontWeight: 600 } }}
@@ -399,12 +415,16 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
 
           {formData.amount && (
             <Box p={16} style={{ background: "#F0F9FF", borderLeft: "4px solid #E85D3D" }}>
-              <Text size="xs" fw={600} c="#E85D3D" tt="uppercase" mb={4}>Estimated Budget</Text>
+              <Text size="xs" fw={600} c="#E85D3D" tt="uppercase" mb={4}>{t("transferStep.estimatedBudget")}</Text>
               <Text size="xl" fw={700} style={{ fontFamily: "monospace" }}>
                 {estimatedBudget.toLocaleString()} {formData.currency}
               </Text>
               <Text size="xs" c="var(--color-text-secondary)" mt={4}>
-                Based on ~{estimatedHouseholds.toLocaleString()} households at {formData.amount} {formData.currency} each
+                {t("transferStep.budgetBasis", {
+                  households: estimatedHouseholds.toLocaleString(),
+                  amount: formData.amount,
+                  currency: formData.currency,
+                })}
               </Text>
             </Box>
           )}
@@ -415,12 +435,12 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
       {currentStep === 2 && (
         <Box>
           <Text size="sm" c="var(--color-text-secondary)" mb={16}>
-            Set the distribution schedule and targeting criteria.
+            {t("scheduleStep.intro")}
           </Text>
 
           <SimpleGrid cols={2} spacing={12} mb={20}>
             <TextInput
-              label="Start Date"
+              label={t("scheduleStep.startDate")}
               type="date"
               value={formData.startDate}
               onChange={(e) => updateFormData({ startDate: e.currentTarget.value })}
@@ -428,7 +448,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
               styles={{ label: { fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", color: "#737373", fontWeight: 600 } }}
             />
             <TextInput
-              label="End Date"
+              label={t("scheduleStep.endDate")}
               type="date"
               value={formData.endDate}
               onChange={(e) => updateFormData({ endDate: e.currentTarget.value })}
@@ -437,7 +457,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
           </SimpleGrid>
 
           <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={8} style={{ letterSpacing: "0.5px" }}>
-            Verification Method <Text span c="#DC2626">*</Text>
+            {t("scheduleStep.verification")} <Text span c="#DC2626">*</Text>
           </Text>
           <SimpleGrid cols={2} spacing={12} mb={20}>
             {verificationOptions.map((option) => (
@@ -453,19 +473,19 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
                   cursor: "pointer",
                 }}
               >
-                <Text size="sm" fw={500}>{option.label}</Text>
+                <Text size="sm" fw={500}>{t(`scheduleStep.verifications.${option.labelKey}`)}</Text>
               </Box>
             ))}
           </SimpleGrid>
 
           <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={8} style={{ letterSpacing: "0.5px" }}>
-            Targeting Criteria (Optional)
+            {t("scheduleStep.criteria")}
           </Text>
           <Box style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {targetingCriteria.map((criterion) => (
               <Checkbox
                 key={criterion}
-                label={criterion}
+                label={t(`scheduleStep.criteriaOptions.${criterion}`)}
                 checked={formData.targetCriteria.includes(criterion)}
                 onChange={() => toggleCriteria(criterion)}
                 size="sm"
@@ -480,12 +500,12 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
       {currentStep === 3 && (
         <Box>
           <Text size="sm" c="var(--color-text-secondary)" mb={16}>
-            Review the distribution plan before creating.
+            {t("reviewStep.intro")}
           </Text>
 
           <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
             <Box p={16} className="border-b border-[var(--color-border)]">
-              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={8}>Target Locations</Text>
+              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={8}>{t("steps.locations")}</Text>
               <Group gap={8}>
                 {selectedLocations.map((loc) => (
                   <Text key={loc.id} px={8} py={4} size="sm" fw={500} style={{ background: "var(--color-bg-muted)" }}>
@@ -494,19 +514,25 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
                 ))}
               </Group>
               <Text size="xs" c="var(--color-text-muted)" mt={8}>
-                {totalAffected.toLocaleString()} affected {"\u2022"} ~{estimatedHouseholds.toLocaleString()} households
+                {t("reviewStep.summary", {
+                  affected: totalAffected.toLocaleString(),
+                  households: estimatedHouseholds.toLocaleString(),
+                })}
               </Text>
             </Box>
 
             <SimpleGrid cols={2} spacing={0}>
               <Box p={16} className="border-b border-r border-[var(--color-border)]">
-                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={4}>Transfer Modality</Text>
+                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={4}>{t("transferStep.modality")}</Text>
                 <Text size="sm" fw={500}>
-                  {modalityOptions.find((o) => o.value === formData.modality)?.label}
+                  {(() => {
+                    const selected = modalityOptions.find((o) => o.value === formData.modality);
+                    return selected ? t(`transferStep.modalities.${selected.labelKey}`) : "";
+                  })()}
                 </Text>
               </Box>
               <Box p={16} className="border-b border-[var(--color-border)]">
-                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={4}>Amount per HH</Text>
+                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={4}>{t("reviewStep.amountPerHh")}</Text>
                 <Text size="sm" fw={500} style={{ fontFamily: "monospace" }}>
                   {formData.amount} {formData.currency}
                 </Text>
@@ -515,26 +541,31 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
 
             <SimpleGrid cols={2} spacing={0}>
               <Box p={16} className="border-b border-r border-[var(--color-border)]">
-                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={4}>Distribution Period</Text>
+                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={4}>{t("reviewStep.period")}</Text>
                 <Text size="sm" fw={500}>
-                  {formData.startDate} {formData.endDate ? `to ${formData.endDate}` : "(single day)"}
+                  {formData.endDate
+                    ? t("reviewStep.periodRange", { start: formData.startDate, end: formData.endDate })
+                    : t("reviewStep.periodSingle", { start: formData.startDate })}
                 </Text>
               </Box>
               <Box p={16} className="border-b border-[var(--color-border)]">
-                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={4}>Verification</Text>
+                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={4}>{t("reviewStep.verification")}</Text>
                 <Text size="sm" fw={500}>
-                  {verificationOptions.find((o) => o.value === formData.verificationMethod)?.label}
+                  {(() => {
+                    const selected = verificationOptions.find((o) => o.value === formData.verificationMethod);
+                    return selected ? t(`scheduleStep.verifications.${selected.labelKey}`) : "";
+                  })()}
                 </Text>
               </Box>
             </SimpleGrid>
 
             {formData.targetCriteria.length > 0 && (
               <Box p={16} className="border-b border-[var(--color-border)]">
-                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={8}>Targeting Criteria</Text>
+                <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={8}>{t("reviewStep.criteria")}</Text>
                 <Group gap={8}>
                   {formData.targetCriteria.map((c) => (
                     <Text key={c} px={8} py={4} size="xs" style={{ background: "#FEF3C7", color: "#92400E" }}>
-                      {c}
+                      {t(`scheduleStep.criteriaOptions.${c}`)}
                     </Text>
                   ))}
                 </Group>
@@ -542,7 +573,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
             )}
 
             <Box p={16} style={{ background: "#D1FAE5" }}>
-              <Text size="xs" fw={600} c="#059669" tt="uppercase" mb={4}>Total Estimated Budget</Text>
+              <Text size="xs" fw={600} c="#059669" tt="uppercase" mb={4}>{t("reviewStep.totalBudget")}</Text>
               <Text size="xl" fw={700} c="#059669" style={{ fontFamily: "monospace" }}>
                 {estimatedBudget.toLocaleString()} {formData.currency}
               </Text>
@@ -550,8 +581,8 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
           </Card>
 
           <Textarea
-            label="Additional Notes"
-            placeholder="Any additional instructions or notes for field coordinators..."
+            label={t("reviewStep.notes")}
+            placeholder={t("reviewStep.notesPlaceholder")}
             value={formData.notes}
             onChange={(e) => updateFormData({ notes: e.currentTarget.value })}
             rows={3}
@@ -571,7 +602,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
           onClick={currentStep === 0 ? onClose : () => setCurrentStep((s) => s - 1)}
           style={{ fontSize: 13 }}
         >
-          {currentStep === 0 ? "Cancel" : "Back"}
+          {currentStep === 0 ? tActions("cancel") : tActions("back")}
         </Button>
 
         {currentStep < 3 ? (
@@ -582,7 +613,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
             disabled={!canProceed()}
             style={{ background: canProceed() ? "#E85D3D" : undefined, borderColor: canProceed() ? "#E85D3D" : undefined, fontSize: 13 }}
           >
-            Next
+            {t("next")}
           </Button>
         ) : (
           <Button
@@ -592,7 +623,7 @@ export function NewDistributionWizard({ opened, onClose }: NewDistributionWizard
             loading={isSubmitting}
             style={{ background: "#059669", borderColor: "#059669", fontSize: 13 }}
           >
-            Create Distribution
+            {t("createDistribution")}
           </Button>
         )}
       </Group>

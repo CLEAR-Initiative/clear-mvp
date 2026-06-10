@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Box, Button, Tabs } from "@mantine/core";
 import { IconUsers, IconCircleCheck } from "@tabler/icons-react";
-import { PageHeader, StatsGrid } from "~/components/ui";
+import { PageHeader, StatsGrid, type StatItem } from "~/components/ui";
 import { stats } from "./_components/operations-data";
 import { ActiveOpsTab } from "./_components/active-ops-tab";
 import { StrategyTab } from "./_components/strategy-tab";
@@ -11,11 +12,14 @@ import { ResourcesTab } from "./_components/resources-tab";
 import { CoordinationTab } from "./_components/coordination-tab";
 
 export default function OperationsPage() {
+  const t = useTranslations("operations");
   const [activeTab, setActiveTab] = useState<string | null>("active");
+
+  const statItems: StatItem[] = stats.map((s) => ({ ...s, label: t(`stats.${s.labelKey}`) }));
 
   return (
     <Box>
-      <PageHeader title="Operations Center">
+      <PageHeader title={t("header.title")}>
         <Button
           variant="outline"
           color="gray"
@@ -23,14 +27,14 @@ export default function OperationsPage() {
           leftSection={<IconUsers size={14} />}
           style={{ fontSize: 13 }}
         >
-          Team Directory
+          {t("header.teamDirectory")}
         </Button>
         <Button
           size="xs"
           leftSection={<IconCircleCheck size={14} />}
           style={{ background: "#E85D3D", borderColor: "#E85D3D", fontSize: 13 }}
         >
-          Activate Response
+          {t("header.activateResponse")}
         </Button>
       </PageHeader>
 
@@ -42,14 +46,14 @@ export default function OperationsPage() {
           styles={{ tab: { fontSize: 13, fontWeight: 500 } }}
         >
           <Tabs.List>
-            <Tabs.Tab value="active">Active Operations</Tabs.Tab>
-            <Tabs.Tab value="strategy">Response Strategy</Tabs.Tab>
-            <Tabs.Tab value="resources">Resources & Budget</Tabs.Tab>
-            <Tabs.Tab value="coordination">Coordination</Tabs.Tab>
+            <Tabs.Tab value="active">{t("tabs.active")}</Tabs.Tab>
+            <Tabs.Tab value="strategy">{t("tabs.strategy")}</Tabs.Tab>
+            <Tabs.Tab value="resources">{t("tabs.resources")}</Tabs.Tab>
+            <Tabs.Tab value="coordination">{t("tabs.coordination")}</Tabs.Tab>
           </Tabs.List>
         </Tabs>
 
-        <StatsGrid stats={stats} />
+        <StatsGrid stats={statItems} />
 
         {activeTab === "active" && <ActiveOpsTab />}
         {activeTab === "strategy" && <StrategyTab />}

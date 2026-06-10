@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Box, Text, Group, Badge } from "@mantine/core";
 import { IconCircleCheck, IconAlertTriangle } from "@tabler/icons-react";
 import { CardSection, DataTable, Table, Timeline, type TimelineItem } from "~/components/ui";
@@ -10,12 +11,14 @@ const timelineItems: TimelineItem[] = timeline.map((item) => ({
 }));
 
 export function StrategyTab() {
+  const t = useTranslations("operations");
+
   return (
     <Box>
       {/* Phased Response Strategy */}
       <CardSection
-        title="Phased Response Strategy"
-        subtitle="Cholera Outbreak Response - Somali Region"
+        title={t("strategy.title")}
+        subtitle={t("strategy.subtitle")}
         style={{ marginBottom: 24 }}
       >
         {responsePhases.map((phase) => (
@@ -41,8 +44,8 @@ export function StrategyTab() {
 
       {/* Implementation Timeline */}
       <CardSection
-        title="Implementation Timeline"
-        subtitle="Key milestones"
+        title={t("timeline.title")}
+        subtitle={t("timeline.subtitle")}
         style={{ marginBottom: 24 }}
       >
         <Timeline items={timelineItems} />
@@ -50,17 +53,17 @@ export function StrategyTab() {
 
       {/* Risk Assessment */}
       <CardSection
-        title="Risk Assessment"
-        subtitle="Identified risks and mitigations"
+        title={t("risks.title")}
+        subtitle={t("risks.subtitle")}
         icon={<IconAlertTriangle size={16} color="#F59E0B" />}
         noPadding
       >
         <DataTable
           columns={[
-            { label: "Risk" },
-            { label: "Severity" },
-            { label: "Description" },
-            { label: "Mitigation" },
+            { label: t("risks.columns.risk") },
+            { label: t("risks.columns.severity") },
+            { label: t("risks.columns.description") },
+            { label: t("risks.columns.mitigation") },
           ]}
           data={riskAssessment}
           renderRow={(r) => (

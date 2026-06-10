@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -33,7 +34,10 @@ interface HumChatSidebarProps {
 }
 
 export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage]);
+  const t = useTranslations("knowledge.humchat");
+  // welcomeMessage.content is resolved via i18n at render time
+  const welcome: ChatMessage = { ...welcomeMessage, content: t("welcome") };
+  const [messages, setMessages] = useState<ChatMessage[]>([welcome]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -169,21 +173,21 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
             </Box>
             <Box>
               <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>HumChat AI</Text>
-              <Text c="var(--color-text-muted)" style={{ fontSize: 10 }}>Humanitarian AI Assistant</Text>
+              <Text c="var(--color-text-muted)" style={{ fontSize: 10 }}>{t("subtitle")}</Text>
             </Box>
           </Group>
           <Group gap={4}>
             <Badge size="xs" color="green" variant="light" leftSection={
               <Box style={{ width: 6, height: 6, background: "#059669", borderRadius: "50%" }} />
             }>
-              Online
+              {t("online")}
             </Badge>
             <ActionIcon
               size="sm"
               variant="subtle"
               color="gray"
-              onClick={() => setMessages([welcomeMessage])}
-              title="Clear chat"
+              onClick={() => setMessages([welcome])}
+              title={t("clearChat")}
             >
               <IconRefresh size={14} />
             </ActionIcon>
@@ -192,7 +196,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
               variant="subtle"
               color="gray"
               onClick={onToggle}
-              title="Collapse panel"
+              title={t("collapse")}
             >
               <IconChevronRight size={16} />
             </ActionIcon>
@@ -267,7 +271,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
             value={inputValue}
             onChange={(e) => setInputValue(e.currentTarget.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about humanitarian response..."
+            placeholder={t("inputPlaceholder")}
             size="xs"
             style={{ flex: 1 }}
             disabled={isTyping}
@@ -285,14 +289,14 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
           </ActionIcon>
         </Group>
         <Box mt={8} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {exampleQuestions.map((q, i) => (
+          {exampleQuestions.map((q) => (
             <UnstyledButton
-              key={i}
-              onClick={() => void handleSendMessage(q)}
+              key={q}
+              onClick={() => void handleSendMessage(t(`examples.${q}`))}
               style={{ fontSize: 11, color: "#737373", textAlign: "left", padding: "2px 0" }}
               className="hover:text-[#E85D3D]"
             >
-              &ldquo;{q}&rdquo;
+              &ldquo;{t(`examples.${q}`)}&rdquo;
             </UnstyledButton>
           ))}
         </Box>

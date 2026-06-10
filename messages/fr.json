@@ -3,6 +3,184 @@
     "title": "CLEAR : Crisis Learning, Early-warning, Anticipation & Response",
     "description": "Plateforme humanitaire d'aide à la décision"
   },
+  "cash": {
+    "header": {
+      "title": "Ciblage et distribution de l'assistance monétaire",
+      "exportData": "Exporter les données",
+      "newDistribution": "Nouvelle distribution"
+    },
+    "banner": {
+      "label": "Crise active :",
+      "crisis": "Épidémie de choléra - région Somali • Jijiga, Kebridehar",
+      "window": "Fenêtre d'intervention de 46 h"
+    },
+    "stats": {
+      "affectedPopulation": "Population affectée",
+      "cashTransferPerHh": "Transfert monétaire/ménage",
+      "eligibleHh": "Ménages éligibles (IA)",
+      "totalBudget": "Budget total"
+    },
+    "mapping": {
+      "title": "Cartographie et évaluation de l'assistance monétaire",
+      "subtitle": "Cliquez sur les cartes de localisation pour consulter les données démographiques détaillées, l'analyse de marché et les contributions des coordinateurs de terrain",
+      "markerAffected": "{count} personnes affectées",
+      "markerSeverity": "Sévérité : {severity}"
+    },
+    "legend": {
+      "critical": "Exposition critique",
+      "high": "Exposition élevée",
+      "moderate": "Exposition modérée"
+    },
+    "sources": {
+      "title": "Sources de données",
+      "rapidAssessment": {
+        "title": "Évaluation rapide",
+        "org": "NRC/UNHCR",
+        "date": "21/10/2025"
+      },
+      "censusProjection": {
+        "title": "Projection de recensement",
+        "org": "Statistiques nationales",
+        "date": "Référence 2024"
+      }
+    },
+    "details": {
+      "totalAffected": "Total des personnes affectées",
+      "exportReport": "Exporter le rapport d'évaluation monétaire (PDF)",
+      "tabs": {
+        "demographics": "Démographie",
+        "market": "Marché",
+        "field": "Données terrain"
+      },
+      "demographics": {
+        "gender": "Répartition par genre",
+        "male": "Hommes",
+        "female": "Femmes",
+        "age": "Répartition par âge",
+        "vulnerability": "Indicateurs de vulnérabilité (ménages)",
+        "housing": "Conditions de logement (ménages)",
+        "personsPerRoom": "Moy. personnes/pièce"
+      },
+      "market": {
+        "functionality": "Fonctionnement des marchés",
+        "operational": "Marchés opérationnels",
+        "operationalNote": "3 des 4 principaux marchés de la zone fonctionnent normalement. Un marché a réduit ses horaires en raison de problèmes de sécurité.",
+        "vendors": "Disponibilité des commerçants",
+        "vendorLabels": {
+          "food": "Commerçants alimentaires",
+          "nfi": "Commerçants d'articles non alimentaires",
+          "mobileMoney": "Agents d'argent mobile"
+        },
+        "vendorActive": "{count} actifs",
+        "prices": "Stabilité des prix",
+        "priceLabels": {
+          "stapleFoods": "Denrées de base",
+          "water": "Eau (20 L)",
+          "transport": "Transport"
+        },
+        "priceVsBaseline": "{change} par rapport à la référence",
+        "recommendation": "Recommandation",
+        "recommendationText": "Le transfert monétaire est viable. Envisagez des restrictions par bons d'achat pour les achats d'eau en raison de l'inflation des prix."
+      },
+      "field": {
+        "notes": "Notes du coordinateur",
+        "quote": "Les leaders communautaires ont été consultés et soutiennent la distribution monétaire. Les groupes de femmes préfèrent l'argent mobile pour des raisons de sécurité liées aux espèces. Distributions matinales recommandées pour éviter la chaleur de l'après-midi.",
+        "attribution": "Ahmed M., coordinateur de terrain, 14 déc.",
+        "accessibility": "Accessibilité",
+        "accessLabels": {
+          "road": "Accès routier",
+          "network": "Réseau mobile",
+          "points": "Points de distribution"
+        },
+        "accessValues": {
+          "good": "Bon",
+          "intermittent": "Intermittent",
+          "pointsIdentified": "{count} identifiés"
+        },
+        "security": "Considérations de sécurité",
+        "moderateRisk": "Risque modéré",
+        "securityNote": "Évitez les grands rassemblements. Horaires de distribution échelonnés et points de distribution multiples et plus petits recommandés.",
+        "lastVisit": "Dernière visite de terrain"
+      }
+    },
+    "wizard": {
+      "title": "Nouvelle distribution monétaire",
+      "stepIndicator": "Étape {current} sur {total} : {title}",
+      "steps": {
+        "locations": "Lieux ciblés",
+        "transfer": "Détails du transfert",
+        "schedule": "Calendrier et critères",
+        "review": "Vérification et confirmation"
+      },
+      "next": "Suivant",
+      "createDistribution": "Créer la distribution",
+      "locationsStep": {
+        "intro": "Sélectionnez les lieux où l'assistance monétaire sera distribuée. Vous pouvez sélectionner plusieurs lieux.",
+        "affected": "{count} personnes affectées",
+        "summary": "<b>{locations}</b> lieu(x) sélectionné(s) • <b>{affected}</b> personnes affectées au total • ~<b>{households}</b> ménages estimés"
+      },
+      "transferStep": {
+        "intro": "Configurez la modalité de transfert et le montant pour cette distribution.",
+        "modality": "Modalité de transfert",
+        "modalities": {
+          "mobileMoney": "Transfert par argent mobile",
+          "cashInHand": "Distribution d'espèces",
+          "bankTransfer": "Virement bancaire",
+          "voucher": "Bon d'achat électronique / papier"
+        },
+        "amount": "Montant par ménage",
+        "amountPlaceholder": "p. ex. 580",
+        "currency": "Devise",
+        "currencies": {
+          "etb": "Birr éthiopien (ETB)",
+          "usd": "Dollar américain (USD)"
+        },
+        "frequency": "Fréquence de distribution",
+        "frequencies": {
+          "oneTime": "Distribution unique",
+          "monthly": "Mensuelle (3 mois)",
+          "biWeekly": "Toutes les deux semaines (6 semaines)"
+        },
+        "estimatedBudget": "Budget estimé",
+        "budgetBasis": "Sur la base d'environ {households} ménages à {amount} {currency} chacun"
+      },
+      "scheduleStep": {
+        "intro": "Définissez le calendrier de distribution et les critères de ciblage.",
+        "startDate": "Date de début",
+        "endDate": "Date de fin",
+        "verification": "Méthode de vérification",
+        "verifications": {
+          "biometric": "Vérification biométrique",
+          "idCard": "Pièce d'identité + code PIN",
+          "token": "Distribution par jeton",
+          "community": "Vérification communautaire"
+        },
+        "criteria": "Critères de ciblage (facultatif)",
+        "criteriaOptions": {
+          "femaleHeaded": "Ménages dirigés par une femme",
+          "childHeaded": "Ménages dirigés par un enfant",
+          "elderlySingle": "Ménages de personnes âgées seules",
+          "disability": "Ménages comptant des membres en situation de handicap",
+          "chronicIllness": "Ménages touchés par une maladie chronique",
+          "inadequateHousing": "Logement inadéquat (tentes/temporaire)",
+          "highOccupancy": "Forte occupation par pièce (>4)"
+        }
+      },
+      "reviewStep": {
+        "intro": "Vérifiez le plan de distribution avant de le créer.",
+        "summary": "{affected} personnes affectées • ~{households} ménages",
+        "amountPerHh": "Montant par ménage",
+        "period": "Période de distribution",
+        "periodRange": "Du {start} au {end}",
+        "periodSingle": "{start} (jour unique)",
+        "verification": "Vérification",
+        "criteria": "Critères de ciblage",
+        "totalBudget": "Budget total estimé",
+        "notes": "Notes complémentaires",
+        "notesPlaceholder": "Instructions ou notes supplémentaires pour les coordinateurs de terrain..."
+      }
+    }
+  },
   "common": {
     "actions": {
       "save": "Enregistrer",
@@ -377,6 +555,68 @@
       }
     }
   },
+  "knowledge": {
+    "header": {
+      "title": "Centre de connaissances",
+      "searchPlaceholder": "Rechercher des documents...",
+      "upload": "Téléverser"
+    },
+    "filters": {
+      "title": "Filtrer par lieu et type",
+      "clear": "Effacer les filtres",
+      "region": "Région",
+      "country": "Pays",
+      "zone": "Zone",
+      "type": "Type",
+      "allRegions": "Toutes les régions",
+      "allCountries": "Tous les pays",
+      "allZones": "Toutes les zones"
+    },
+    "types": {
+      "all": "Toutes les ressources",
+      "protocol": "Protocoles",
+      "guideline": "Directives",
+      "template": "Modèles",
+      "contact": "Contacts",
+      "training": "Formation"
+    },
+    "crisisResources": {
+      "title": "Ressources pour les crises actives",
+      "subtitle": "{count, plural, one {# crise active} other {# crises actives}} dans le lieu sélectionné"
+    },
+    "documents": {
+      "title": "Bibliothèque de documents",
+      "found": "{count, plural, one {# document trouvé} other {# documents trouvés}}",
+      "empty": "Aucun document ne correspond à vos filtres",
+      "download": "Télécharger",
+      "columns": {
+        "document": "Document",
+        "type": "Type",
+        "sector": "Secteur",
+        "updated": "Mis à jour"
+      }
+    },
+    "contacts": {
+      "title": "Contacts clés",
+      "count": "{count, plural, one {# contact} other {# contacts}}",
+      "email": "E-mail",
+      "call": "Appeler",
+      "empty": "Aucun contact trouvé pour ce lieu"
+    },
+    "humchat": {
+      "subtitle": "Assistant IA humanitaire",
+      "online": "En ligne",
+      "clearChat": "Effacer la conversation",
+      "collapse": "Réduire le panneau",
+      "inputPlaceholder": "Posez une question sur la réponse humanitaire...",
+      "welcome": "Bonjour ! Je suis **HumChat**, votre assistant IA pour les opérations humanitaires. Je suis entraîné sur les directives de l'IASC, les standards Sphère et le contexte humanitaire spécifique à l'Éthiopie.\n\nJe peux vous aider avec :\n- **Analyse de situation** et notes de crise\n- **Planification de la réponse** et allocation des ressources\n- **Orientations sur les protocoles** d'urgence\n- **Appui à la coordination** et communications\n\nQuel défi humanitaire puis-je vous aider à relever aujourd'hui ?",
+      "examples": {
+        "displacement": "Analyser les tendances de déplacement dans la région Somali",
+        "interventions": "Quelles sont les interventions prioritaires pour les urgences sanitaires ?",
+        "assessment": "Générer un plan d'évaluation rapide pour les risques de protection"
+      }
+    }
+  },
   "map": {
     "filters": {
       "country": "Pays",
@@ -457,6 +697,108 @@
     "admin": "Admin",
     "settings": "Paramètres",
     "signOut": "Se déconnecter"
+  },
+  "operations": {
+    "header": {
+      "title": "Centre des opérations",
+      "teamDirectory": "Annuaire des équipes",
+      "activateResponse": "Activer la réponse"
+    },
+    "tabs": {
+      "active": "Opérations actives",
+      "strategy": "Stratégie de réponse",
+      "resources": "Ressources et budget",
+      "coordination": "Coordination"
+    },
+    "stats": {
+      "activeOperations": "Opérations actives",
+      "fieldTeamsDeployed": "Équipes de terrain déployées",
+      "staffMobilized": "Personnel mobilisé",
+      "partnerOrgs": "Organisations partenaires"
+    },
+    "capacity": {
+      "title": "Capacité de NRC Éthiopie",
+      "established": "Établi en {year}",
+      "totalStaff": "Effectif total",
+      "national": "National",
+      "international": "International",
+      "offices": "Bureaux",
+      "activePrograms": "Programmes actifs"
+    },
+    "advantage": {
+      "title": "Avantage comparatif de NRC",
+      "subtitle": "Compétences clés en Éthiopie"
+    },
+    "activeOps": {
+      "title": "Opérations de réponse actives",
+      "subtitle": "Réponses actuellement mobilisées",
+      "activatedLine": "Activée {time} • ID de l'opération : {id}",
+      "viewDetails": "Voir les détails",
+      "labels": {
+        "teams": "Équipes",
+        "staff": "Personnel",
+        "coverage": "Couverture",
+        "budget": "Budget"
+      }
+    },
+    "fieldTeams": {
+      "title": "Équipes de terrain",
+      "subtitle": "Actuellement déployées",
+      "deployTeam": "+ Déployer une équipe",
+      "columns": {
+        "team": "Équipe",
+        "location": "Localisation",
+        "status": "Statut",
+        "lastCheckin": "Dernier contact"
+      }
+    },
+    "resourceStatus": {
+      "title": "État des ressources",
+      "subtitle": "Fournitures critiques",
+      "requestResources": "Demander des ressources"
+    },
+    "budget": {
+      "title": "Aperçu du budget",
+      "totalSubtitle": "Total : 565 000 $"
+    },
+    "materialResources": {
+      "title": "Ressources matérielles",
+      "subtitle": "État des fournitures critiques"
+    },
+    "humanResources": {
+      "title": "Ressources humaines",
+      "subtitle": "Répartition du personnel déployé"
+    },
+    "strategy": {
+      "title": "Stratégie de réponse par phases",
+      "subtitle": "Réponse à l'épidémie de choléra - région Somali"
+    },
+    "timeline": {
+      "title": "Calendrier de mise en œuvre",
+      "subtitle": "Jalons clés"
+    },
+    "risks": {
+      "title": "Évaluation des risques",
+      "subtitle": "Risques identifiés et mesures d'atténuation",
+      "columns": {
+        "risk": "Risque",
+        "severity": "Sévérité",
+        "description": "Description",
+        "mitigation": "Atténuation"
+      }
+    },
+    "coordination": {
+      "title": "Partenaires de coordination",
+      "subtitle": "Organisations participant à la réponse",
+      "addPartner": "+ Ajouter un partenaire",
+      "columns": {
+        "organization": "Organisation",
+        "role": "Rôle",
+        "coverage": "Zone de couverture",
+        "contact": "Contact",
+        "status": "Statut"
+      }
+    }
   },
   "profile": {
     "edit": {

@@ -1,11 +1,10 @@
-import type { StatItem } from "~/components/ui";
-
-export const stats: StatItem[] = [
-  { label: "Active Operations", value: "2", color: "#2563EB" },
-  { label: "Field Teams Deployed", value: "12" },
-  { label: "Staff Mobilized", value: "67" },
-  { label: "Partner Orgs", value: "8" },
-];
+// labelKey: i18n keys under operations.stats.* - resolved via t() at render time.
+export const stats = [
+  { labelKey: "activeOperations", value: "2", color: "#2563EB" },
+  { labelKey: "fieldTeamsDeployed", value: "12" },
+  { labelKey: "staffMobilized", value: "67" },
+  { labelKey: "partnerOrgs", value: "8" },
+] as const;
 
 export const operations = [
   {

@@ -3,6 +3,184 @@
     "title": "CLEAR: Crisis Learning, Early-warning, Anticipation & Response",
     "description": "Humanitarian decision-support platform"
   },
+  "cash": {
+    "header": {
+      "title": "Cash Assistance Targeting & Distribution",
+      "exportData": "Export Data",
+      "newDistribution": "New Distribution"
+    },
+    "banner": {
+      "label": "Active Crisis:",
+      "crisis": "Cholera Outbreak - Somali Region • Jijiga, Kebridehar",
+      "window": "46h intervention window"
+    },
+    "stats": {
+      "affectedPopulation": "Affected Population",
+      "cashTransferPerHh": "Cash Transfer/HH",
+      "eligibleHh": "Eligible HH (AI)",
+      "totalBudget": "Total Budget"
+    },
+    "mapping": {
+      "title": "Cash Assistance Mapping & Assessment",
+      "subtitle": "Click on location cards to view detailed population demographics, market analysis, and field coordinator inputs",
+      "markerAffected": "{count} affected",
+      "markerSeverity": "Severity: {severity}"
+    },
+    "legend": {
+      "critical": "Critical Exposure",
+      "high": "High Exposure",
+      "moderate": "Moderate Exposure"
+    },
+    "sources": {
+      "title": "Data Sources",
+      "rapidAssessment": {
+        "title": "Rapid Assessment",
+        "org": "NRC/UNHCR",
+        "date": "10/21/2025"
+      },
+      "censusProjection": {
+        "title": "Census Projection",
+        "org": "National Statistics",
+        "date": "2024 Baseline"
+      }
+    },
+    "details": {
+      "totalAffected": "Total Affected",
+      "exportReport": "Export Cash Assessment Report (PDF)",
+      "tabs": {
+        "demographics": "Demographics",
+        "market": "Market",
+        "field": "Field Input"
+      },
+      "demographics": {
+        "gender": "Gender Distribution",
+        "male": "Male",
+        "female": "Female",
+        "age": "Age Distribution",
+        "vulnerability": "Vulnerability Indicators (HH)",
+        "housing": "Housing Conditions (HH)",
+        "personsPerRoom": "Avg. Persons/Room"
+      },
+      "market": {
+        "functionality": "Market Functionality",
+        "operational": "Markets Operational",
+        "operationalNote": "3 of 4 major markets in the area are functioning normally. One market has reduced hours due to security concerns.",
+        "vendors": "Vendor Availability",
+        "vendorLabels": {
+          "food": "Food vendors",
+          "nfi": "NFI vendors",
+          "mobileMoney": "Mobile money agents"
+        },
+        "vendorActive": "{count} active",
+        "prices": "Price Stability",
+        "priceLabels": {
+          "stapleFoods": "Staple foods",
+          "water": "Water (20L)",
+          "transport": "Transport"
+        },
+        "priceVsBaseline": "{change} vs baseline",
+        "recommendation": "Recommendation",
+        "recommendationText": "Cash transfer is viable. Consider voucher restrictions for water purchases due to price inflation."
+      },
+      "field": {
+        "notes": "Coordinator Notes",
+        "quote": "Community leaders have been consulted and are supportive of cash distribution. Women's groups prefer mobile money due to safety concerns with physical cash. Recommend morning distributions to avoid afternoon heat.",
+        "attribution": "Ahmed M., Field Coordinator, Dec 14",
+        "accessibility": "Accessibility",
+        "accessLabels": {
+          "road": "Road access",
+          "network": "Mobile network",
+          "points": "Distribution points"
+        },
+        "accessValues": {
+          "good": "Good",
+          "intermittent": "Intermittent",
+          "pointsIdentified": "{count} identified"
+        },
+        "security": "Security Considerations",
+        "moderateRisk": "Moderate Risk",
+        "securityNote": "Avoid large gatherings. Recommend staggered distribution times and multiple smaller distribution points.",
+        "lastVisit": "Last Field Visit"
+      }
+    },
+    "wizard": {
+      "title": "New Cash Distribution",
+      "stepIndicator": "Step {current} of {total}: {title}",
+      "steps": {
+        "locations": "Target Locations",
+        "transfer": "Transfer Details",
+        "schedule": "Schedule & Criteria",
+        "review": "Review & Confirm"
+      },
+      "next": "Next",
+      "createDistribution": "Create Distribution",
+      "locationsStep": {
+        "intro": "Select the locations where cash assistance will be distributed. You can select multiple locations.",
+        "affected": "{count} affected",
+        "summary": "<b>{locations}</b> location(s) selected • <b>{affected}</b> total affected • ~<b>{households}</b> estimated households"
+      },
+      "transferStep": {
+        "intro": "Configure the transfer modality and amount for this distribution.",
+        "modality": "Transfer Modality",
+        "modalities": {
+          "mobileMoney": "Mobile Money Transfer",
+          "cashInHand": "Cash-in-Hand Distribution",
+          "bankTransfer": "Bank Account Transfer",
+          "voucher": "E-Voucher / Paper Voucher"
+        },
+        "amount": "Amount per Household",
+        "amountPlaceholder": "e.g., 580",
+        "currency": "Currency",
+        "currencies": {
+          "etb": "Ethiopian Birr (ETB)",
+          "usd": "US Dollar (USD)"
+        },
+        "frequency": "Distribution Frequency",
+        "frequencies": {
+          "oneTime": "One-time Distribution",
+          "monthly": "Monthly (3 months)",
+          "biWeekly": "Bi-weekly (6 weeks)"
+        },
+        "estimatedBudget": "Estimated Budget",
+        "budgetBasis": "Based on ~{households} households at {amount} {currency} each"
+      },
+      "scheduleStep": {
+        "intro": "Set the distribution schedule and targeting criteria.",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "verification": "Verification Method",
+        "verifications": {
+          "biometric": "Biometric Verification",
+          "idCard": "ID Card + PIN",
+          "token": "Token-Based Distribution",
+          "community": "Community-Based Verification"
+        },
+        "criteria": "Targeting Criteria (Optional)",
+        "criteriaOptions": {
+          "femaleHeaded": "Female-headed households",
+          "childHeaded": "Child-headed households",
+          "elderlySingle": "Elderly single-person households",
+          "disability": "Households with disabled members",
+          "chronicIllness": "Households with chronic illness",
+          "inadequateHousing": "Inadequate housing (tents/temporary)",
+          "highOccupancy": "High persons per room (>4)"
+        }
+      },
+      "reviewStep": {
+        "intro": "Review the distribution plan before creating.",
+        "summary": "{affected} affected • ~{households} households",
+        "amountPerHh": "Amount per HH",
+        "period": "Distribution Period",
+        "periodRange": "{start} to {end}",
+        "periodSingle": "{start} (single day)",
+        "verification": "Verification",
+        "criteria": "Targeting Criteria",
+        "totalBudget": "Total Estimated Budget",
+        "notes": "Additional Notes",
+        "notesPlaceholder": "Any additional instructions or notes for field coordinators..."
+      }
+    }
+  },
   "common": {
     "actions": {
       "save": "Save",
@@ -377,6 +555,68 @@
       }
     }
   },
+  "knowledge": {
+    "header": {
+      "title": "Knowledge Hub",
+      "searchPlaceholder": "Search documents...",
+      "upload": "Upload"
+    },
+    "filters": {
+      "title": "Filter by Location & Type",
+      "clear": "Clear filters",
+      "region": "Region",
+      "country": "Country",
+      "zone": "Zone",
+      "type": "Type",
+      "allRegions": "All Regions",
+      "allCountries": "All Countries",
+      "allZones": "All Zones"
+    },
+    "types": {
+      "all": "All Resources",
+      "protocol": "Protocols",
+      "guideline": "Guidelines",
+      "template": "Templates",
+      "contact": "Contacts",
+      "training": "Training"
+    },
+    "crisisResources": {
+      "title": "Active Crisis Resources",
+      "subtitle": "{count, plural, one {# active crisis} other {# active crises}} in selected location"
+    },
+    "documents": {
+      "title": "Document Library",
+      "found": "{count, plural, one {# document found} other {# documents found}}",
+      "empty": "No documents found matching your filters",
+      "download": "Download",
+      "columns": {
+        "document": "Document",
+        "type": "Type",
+        "sector": "Sector",
+        "updated": "Updated"
+      }
+    },
+    "contacts": {
+      "title": "Key Contacts",
+      "count": "{count, plural, one {# contact} other {# contacts}}",
+      "email": "Email",
+      "call": "Call",
+      "empty": "No contacts found for this location"
+    },
+    "humchat": {
+      "subtitle": "Humanitarian AI Assistant",
+      "online": "Online",
+      "clearChat": "Clear chat",
+      "collapse": "Collapse panel",
+      "inputPlaceholder": "Ask about humanitarian response...",
+      "welcome": "Hello! I'm **HumChat**, your AI assistant for humanitarian operations. I'm trained on IASC guidelines, Sphere standards, and Ethiopia-specific humanitarian context.\n\nI can help you with:\n- **Situation analysis** and crisis briefs\n- **Response planning** and resource allocation\n- **Protocol guidance** for emergencies\n- **Coordination** support and communications\n\nWhat humanitarian challenge can I help you address today?",
+      "examples": {
+        "displacement": "Analyze displacement trends in Somali Region",
+        "interventions": "What are the priority interventions for health emergencies?",
+        "assessment": "Generate a rapid assessment plan for protection risks"
+      }
+    }
+  },
   "map": {
     "filters": {
       "country": "Country",
@@ -457,6 +697,108 @@
     "admin": "Admin",
     "settings": "Settings",
     "signOut": "Sign out"
+  },
+  "operations": {
+    "header": {
+      "title": "Operations Center",
+      "teamDirectory": "Team Directory",
+      "activateResponse": "Activate Response"
+    },
+    "tabs": {
+      "active": "Active Operations",
+      "strategy": "Response Strategy",
+      "resources": "Resources & Budget",
+      "coordination": "Coordination"
+    },
+    "stats": {
+      "activeOperations": "Active Operations",
+      "fieldTeamsDeployed": "Field Teams Deployed",
+      "staffMobilized": "Staff Mobilized",
+      "partnerOrgs": "Partner Orgs"
+    },
+    "capacity": {
+      "title": "NRC Ethiopia Capacity",
+      "established": "Established {year}",
+      "totalStaff": "Total Staff",
+      "national": "National",
+      "international": "International",
+      "offices": "Offices",
+      "activePrograms": "Active Programs"
+    },
+    "advantage": {
+      "title": "NRC Comparative Advantage",
+      "subtitle": "Core competencies in Ethiopia"
+    },
+    "activeOps": {
+      "title": "Active Response Operations",
+      "subtitle": "Currently mobilized responses",
+      "activatedLine": "Activated {time} • Operation ID: {id}",
+      "viewDetails": "View Details",
+      "labels": {
+        "teams": "Teams",
+        "staff": "Staff",
+        "coverage": "Coverage",
+        "budget": "Budget"
+      }
+    },
+    "fieldTeams": {
+      "title": "Field Teams",
+      "subtitle": "Currently deployed",
+      "deployTeam": "+ Deploy Team",
+      "columns": {
+        "team": "Team",
+        "location": "Location",
+        "status": "Status",
+        "lastCheckin": "Last Check-in"
+      }
+    },
+    "resourceStatus": {
+      "title": "Resource Status",
+      "subtitle": "Critical supplies",
+      "requestResources": "Request Resources"
+    },
+    "budget": {
+      "title": "Budget Overview",
+      "totalSubtitle": "Total: $565,000"
+    },
+    "materialResources": {
+      "title": "Material Resources",
+      "subtitle": "Critical supplies status"
+    },
+    "humanResources": {
+      "title": "Human Resources",
+      "subtitle": "Staff deployment breakdown"
+    },
+    "strategy": {
+      "title": "Phased Response Strategy",
+      "subtitle": "Cholera Outbreak Response - Somali Region"
+    },
+    "timeline": {
+      "title": "Implementation Timeline",
+      "subtitle": "Key milestones"
+    },
+    "risks": {
+      "title": "Risk Assessment",
+      "subtitle": "Identified risks and mitigations",
+      "columns": {
+        "risk": "Risk",
+        "severity": "Severity",
+        "description": "Description",
+        "mitigation": "Mitigation"
+      }
+    },
+    "coordination": {
+      "title": "Coordination Partners",
+      "subtitle": "Organizations in the response",
+      "addPartner": "+ Add Partner",
+      "columns": {
+        "organization": "Organization",
+        "role": "Role",
+        "coverage": "Coverage Area",
+        "contact": "Contact",
+        "status": "Status"
+      }
+    }
   },
   "profile": {
     "edit": {
