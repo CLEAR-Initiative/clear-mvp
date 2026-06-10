@@ -36,7 +36,7 @@ function EnrichmentLoadingScreen() {
         }}
       >
         <Link
-          href="/analysis"
+          href="/insights"
           style={{
             display: "inline-flex",
             alignItems: "center",
