@@ -27,6 +27,163 @@
       "demo": "Démo"
     }
   },
+  "detection": {
+    "header": {
+      "title": "Détection d'événements",
+      "breadcrumb": "Détection"
+    },
+    "tabs": {
+      "alerts": "Alertes",
+      "events": "Événements",
+      "signals": "Signaux",
+      "history": "Historique"
+    },
+    "actions": {
+      "createSignal": "Créer un signal"
+    },
+    "filters": {
+      "filter": "Filtrer",
+      "title": "Filtres",
+      "clearAll": "Tout effacer",
+      "severity": "Sévérité",
+      "eventType": "Type d'événement",
+      "source": "Source",
+      "region": "Région",
+      "severities": {
+        "critical": "Critique",
+        "high": "Élevée",
+        "medium": "Moyenne",
+        "low": "Faible"
+      }
+    },
+    "sort": {
+      "sevDesc": "Sévérité : décroissante",
+      "sevAsc": "Sévérité : croissante",
+      "newest": "Plus récents d'abord",
+      "oldest": "Plus anciens d'abord"
+    },
+    "feed": {
+      "crisisMap": "Carte des crises",
+      "firstSignal": "Premier signal : {time}",
+      "signalCount": "{count, plural, one {# signal} other {# signaux}}",
+      "sourceLink": "Source",
+      "alertBadge": "Alerte",
+      "alerts": {
+        "title": "Alertes",
+        "empty": "Aucune alerte active pour le moment.",
+        "noMatch": "Aucune alerte ne correspond à vos filtres.",
+        "untitled": "Alerte sans titre",
+        "allLoaded": "{count, plural, one {# alerte chargée} other {# alertes chargées}}"
+      },
+      "events": {
+        "title": "Événements",
+        "empty": "Aucun événement trouvé.",
+        "noMatch": "Aucun événement ne correspond à vos filtres.",
+        "untitled": "Événement sans titre",
+        "allLoaded": "{count, plural, one {# événement chargé} other {# événements chargés}}"
+      },
+      "signals": {
+        "title": "Signaux",
+        "empty": "Aucun signal trouvé.",
+        "noMatch": "Aucun signal ne correspond à vos filtres.",
+        "untitled": "Signal sans titre",
+        "allLoaded": "{count, plural, one {# signal chargé} other {# signaux chargés}}"
+      }
+    },
+    "history": {
+      "title": "Historique",
+      "searchCount": "{filtered} sur {loaded} chargés",
+      "empty": "Aucun historique disponible.",
+      "noMatch": "Aucun élément ne correspond à votre recherche.",
+      "loadMore": "Charger plus",
+      "untitled": "Sans titre",
+      "columns": {
+        "title": "Titre",
+        "class": "Classe",
+        "type": "Type",
+        "severity": "Sévérité",
+        "source": "Source",
+        "date": "Date",
+        "location": "Localisation"
+      },
+      "classes": {
+        "alert": "Alerte",
+        "event": "Événement",
+        "signal": "Signal"
+      }
+    },
+    "kpi": {
+      "activeAlerts": {
+        "title": "Alertes actives",
+        "unit": "alertes"
+      },
+      "trend": {
+        "title": "Tendance",
+        "window7": "fenêtre de 7 jours",
+        "window30": "fenêtre de 30 jours",
+        "days7": "7 j",
+        "days30": "30 j",
+        "escalating": "En aggravation",
+        "improving": "En amélioration",
+        "stable": "Stable"
+      },
+      "coverage": {
+        "title": "Couverture des événements",
+        "flagged": "en alerte",
+        "events": "Événements",
+        "total": "au total",
+        "alerted": "{count} en alerte",
+        "monitoring": "{count} sous surveillance",
+        "totalSignals": "Total des signaux",
+        "avgPerEvent": "Moy. / événement"
+      },
+      "inform": {
+        "title": "Sévérité INFORM",
+        "noData": "Aucune donnée pour {country}",
+        "impact": "Impact",
+        "conditions": "Conditions",
+        "complexity": "Complexité",
+        "updated": "Mise à jour : {date}"
+      }
+    },
+    "createAlert": {
+      "title": "Créer une alerte manuelle",
+      "success": "Alerte créée avec succès.",
+      "sectionContent": "Contenu de l'alerte",
+      "sectionClassification": "Classification",
+      "fieldTitle": "Titre",
+      "titlePlaceholder": "Titre de l'alerte",
+      "fieldDescription": "Description",
+      "descriptionPlaceholder": "Contenu principal et détails de l'alerte",
+      "fieldSeverity": "Sévérité",
+      "severityPlaceholder": "Sélectionnez la sévérité",
+      "fieldStatus": "Statut",
+      "statusDraft": "Brouillon",
+      "statusPublished": "Publiée",
+      "severityOptions": {
+        "low": "1 - Faible",
+        "moderate": "2 - Modérée",
+        "high": "3 - Élevée",
+        "veryHigh": "4 - Très élevée",
+        "critical": "5 - Critique"
+      },
+      "submit": "Créer l'alerte"
+    },
+    "dataSources": {
+      "title": "Sources de données connectées",
+      "subtitle": "{count, plural, one {# source alimente} other {# sources alimentent}} le moteur de détection",
+      "connectSource": "+ Connecter une source",
+      "online": "En ligne",
+      "offline": "Hors ligne",
+      "columns": {
+        "source": "Source",
+        "type": "Type",
+        "status": "Statut",
+        "frequency": "Fréquence",
+        "variables": "Variables"
+      }
+    }
+  },
   "nav": {
     "sections": {
       "main": "Principal",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -33,11 +34,12 @@ const CrisisMap = dynamic(
 
 export type EventSortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
 
-export const EVENT_SORT_LABELS: Record<EventSortOrder, string> = {
-  "sev-desc": "Severity: High to Low",
-  "sev-asc":  "Severity: Low to High",
-  "newest":   "Newest first",
-  "oldest":   "Oldest first",
+// i18n keys under detection.sort.* - resolved via t() at render time.
+export const EVENT_SORT_LABEL_KEYS: Record<EventSortOrder, "sevDesc" | "sevAsc" | "newest" | "oldest"> = {
+  "sev-desc": "sevDesc",
+  "sev-asc":  "sevAsc",
+  "newest":   "newest",
+  "oldest":   "oldest",
 };
 
 interface EventsTabProps {
@@ -93,6 +95,7 @@ export function EventsTab({
   expandedTypeCodes: expandedTypeCodesProp,
   activeSources: activeSourcesProp,
 }: EventsTabProps) {
+  const t = useTranslations("detection");
   const [search, setSearch] = useState("");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
   const [showPopulation, setShowPopulation] = useState(false);
@@ -148,13 +151,13 @@ export function EventsTab({
       {/* Left: Event list */}
       <Box style={{ flex: 1, minWidth: 0 }}>
         <FeedToolbar
-          title="Events"
+          title={t("feed.events.title")}
           count={loading ? "..." : countLabel}
           loading={loading}
           search={search}
           onSearchChange={setSearch}
           sortOrder={sortOrder}
-          sortLabels={EVENT_SORT_LABELS}
+          sortLabels={Object.fromEntries(Object.entries(EVENT_SORT_LABEL_KEYS).map(([k, v]) => [k, t(`sort.${v}`)]))}
           onSortChange={(o) => onSortChange(o as EventSortOrder)}
           newCount={newCount}
           onRefresh={onRefresh}
@@ -165,7 +168,7 @@ export function EventsTab({
             {filtered.length === 0 && !loading && (
               <Box px={16} py={32} style={{ textAlign: "center" }}>
                 <Text c="var(--color-text-muted)" size="sm">
-                  {events.length === 0 ? "No events found." : "No events match your filters."}
+                  {events.length === 0 ? t("feed.events.empty") : t("feed.events.noMatch")}
                 </Text>
               </Box>
             )}
@@ -176,7 +179,7 @@ export function EventsTab({
               const sevBg = severityColors[sev]?.bg ?? "var(--color-bg-muted)";
               const location = event.generalLocation ?? event.originLocation ?? event.destinationLocation;
               const sourceName = event.signals[0]?.source?.name;
-              const displayTitle = event.title ?? event.description ?? event.types[0] ?? "Untitled event";
+              const displayTitle = event.title ?? event.description ?? event.types[0] ?? t("feed.events.untitled");
               const isAlert = event.alerts.length > 0;
 
               return (
@@ -195,10 +198,10 @@ export function EventsTab({
                           <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 700 }}>
                             {severityLabels[sev]}
                           </Badge>
-                          {isAlert && <Badge size="xs" variant="outline" style={{ fontSize: 10, borderColor: "var(--color-critical)", color: "var(--color-critical)" }}>Alert</Badge>}
+                          {isAlert && <Badge size="xs" variant="outline" style={{ fontSize: 10, borderColor: "var(--color-critical)", color: "var(--color-critical)" }}>{t("feed.alertBadge")}</Badge>}
                           {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
                         </Group>
-                        <Text size="xs" c="var(--color-text-muted)" title={`First signal: ${formatTimeAgo(event.firstSignalCreatedAt)}`}>
+                        <Text size="xs" c="var(--color-text-muted)" title={t("feed.firstSignal", { time: formatTimeAgo(event.firstSignalCreatedAt) })}>
                           {formatTimeAgo(event.lastSignalCreatedAt)}
                         </Text>
                       </Group>
@@ -218,7 +221,7 @@ export function EventsTab({
                           </span>
                         ))}
                         <Text size="xs" c="var(--color-text-muted)" style={{ marginLeft: "auto" }}>
-                          {event.signals.length} signal{event.signals.length !== 1 ? "s" : ""}
+                          {t("feed.signalCount", { count: event.signals.length })}
                         </Text>
                       </Group>
                     </Box>
@@ -239,7 +242,7 @@ export function EventsTab({
             {!hasMore && events.length > 0 && (
               <Box py={10} style={{ textAlign: "center" }}>
                 <Text size="xs" c="var(--color-text-muted)">
-                  All {totalCount.toLocaleString()} events loaded
+                  {t("feed.events.allLoaded", { count: totalCount })}
                 </Text>
               </Box>
             )}
@@ -250,7 +253,7 @@ export function EventsTab({
       {/* Right: Crisis Map */}
       <Box style={{ width: 480, flexShrink: 0 }}>
         <Group mb={12} justify="space-between" align="center" style={{ minHeight: 32 }}>
-          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Crisis Map</Text>
+          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>{t("feed.crisisMap")}</Text>
           {onBoundaryLevelChange && (
             <MapSettingsPopover boundaryLevel={boundaryLevel} onBoundaryLevelChange={onBoundaryLevelChange} />
           )}

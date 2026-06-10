@@ -27,6 +27,163 @@
       "demo": "Demo"
     }
   },
+  "detection": {
+    "header": {
+      "title": "Event Detection",
+      "breadcrumb": "Detection"
+    },
+    "tabs": {
+      "alerts": "Alerts",
+      "events": "Events",
+      "signals": "Signals",
+      "history": "History"
+    },
+    "actions": {
+      "createSignal": "Create Signal"
+    },
+    "filters": {
+      "filter": "Filter",
+      "title": "Filters",
+      "clearAll": "Clear all",
+      "severity": "Severity",
+      "eventType": "Event Type",
+      "source": "Source",
+      "region": "Region",
+      "severities": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      }
+    },
+    "sort": {
+      "sevDesc": "Severity: High to Low",
+      "sevAsc": "Severity: Low to High",
+      "newest": "Newest first",
+      "oldest": "Oldest first"
+    },
+    "feed": {
+      "crisisMap": "Crisis Map",
+      "firstSignal": "First signal: {time}",
+      "signalCount": "{count, plural, one {# signal} other {# signals}}",
+      "sourceLink": "Source",
+      "alertBadge": "Alert",
+      "alerts": {
+        "title": "Alerts",
+        "empty": "No active alerts at this time.",
+        "noMatch": "No alerts match your filters.",
+        "untitled": "Untitled alert",
+        "allLoaded": "All {count, plural, one {# alert} other {# alerts}} loaded"
+      },
+      "events": {
+        "title": "Events",
+        "empty": "No events found.",
+        "noMatch": "No events match your filters.",
+        "untitled": "Untitled event",
+        "allLoaded": "All {count, plural, one {# event} other {# events}} loaded"
+      },
+      "signals": {
+        "title": "Signals",
+        "empty": "No signals found.",
+        "noMatch": "No signals match your filters.",
+        "untitled": "Untitled signal",
+        "allLoaded": "All {count, plural, one {# signal} other {# signals}} loaded"
+      }
+    },
+    "history": {
+      "title": "History",
+      "searchCount": "{filtered} of {loaded} loaded",
+      "empty": "No history available.",
+      "noMatch": "No items match your search.",
+      "loadMore": "Load more",
+      "untitled": "Untitled",
+      "columns": {
+        "title": "Title",
+        "class": "Class",
+        "type": "Type",
+        "severity": "Severity",
+        "source": "Source",
+        "date": "Date",
+        "location": "Location"
+      },
+      "classes": {
+        "alert": "Alert",
+        "event": "Event",
+        "signal": "Signal"
+      }
+    },
+    "kpi": {
+      "activeAlerts": {
+        "title": "Active Alerts",
+        "unit": "alerts"
+      },
+      "trend": {
+        "title": "Trend",
+        "window7": "7-day window",
+        "window30": "30-day window",
+        "days7": "7d",
+        "days30": "30d",
+        "escalating": "Escalating",
+        "improving": "Improving",
+        "stable": "Stable"
+      },
+      "coverage": {
+        "title": "Event Coverage",
+        "flagged": "flagged",
+        "events": "Events",
+        "total": "total",
+        "alerted": "{count} alerted",
+        "monitoring": "{count} monitoring",
+        "totalSignals": "Total signals",
+        "avgPerEvent": "Avg / event"
+      },
+      "inform": {
+        "title": "INFORM Severity",
+        "noData": "No data for {country}",
+        "impact": "Impact",
+        "conditions": "Conditions",
+        "complexity": "Complexity",
+        "updated": "Updated {date}"
+      }
+    },
+    "createAlert": {
+      "title": "Create Manual Alert",
+      "success": "Alert created successfully.",
+      "sectionContent": "Alert Content",
+      "sectionClassification": "Classification",
+      "fieldTitle": "Title",
+      "titlePlaceholder": "Alert title/headline",
+      "fieldDescription": "Description",
+      "descriptionPlaceholder": "Main alert content and details",
+      "fieldSeverity": "Severity",
+      "severityPlaceholder": "Select severity",
+      "fieldStatus": "Status",
+      "statusDraft": "Draft",
+      "statusPublished": "Published",
+      "severityOptions": {
+        "low": "1 - Low",
+        "moderate": "2 - Moderate",
+        "high": "3 - High",
+        "veryHigh": "4 - Very High",
+        "critical": "5 - Critical"
+      },
+      "submit": "Create Alert"
+    },
+    "dataSources": {
+      "title": "Connected Data Sources",
+      "subtitle": "{count, plural, one {# source} other {# sources}} feeding the detection engine",
+      "connectSource": "+ Connect Source",
+      "online": "Online",
+      "offline": "Offline",
+      "columns": {
+        "source": "Source",
+        "type": "Type",
+        "status": "Status",
+        "frequency": "Frequency",
+        "variables": "Variables"
+      }
+    }
+  },
   "nav": {
     "sections": {
       "main": "Main",

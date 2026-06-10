@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -33,11 +34,12 @@ const CrisisMap = dynamic(
 // All options are handled server-side via the SignalOrderBy enum.
 export type SignalSortOrder = "newest" | "oldest" | "sev-desc" | "sev-asc";
 
-export const SIGNAL_SORT_LABELS: Record<SignalSortOrder, string> = {
-  "newest":   "Newest first",
-  "oldest":   "Oldest first",
-  "sev-desc": "Severity: High to Low",
-  "sev-asc":  "Severity: Low to High",
+// i18n keys under detection.sort.* - resolved via t() at render time.
+export const SIGNAL_SORT_LABEL_KEYS: Record<SignalSortOrder, "sevDesc" | "sevAsc" | "newest" | "oldest"> = {
+  "newest":   "newest",
+  "oldest":   "oldest",
+  "sev-desc": "sevDesc",
+  "sev-asc":  "sevAsc",
 };
 
 function formatDate(dateStr: string): string {
@@ -99,6 +101,7 @@ export function SignalsTab({
   activeSeverities: activeSeveritiesProp,
   activeSources: activeSourcesProp,
 }: SignalsTabProps) {
+  const t = useTranslations("detection");
   const [search, setSearch] = useState("");
   const activeSources = activeSourcesProp ?? null;
   const activeSeverities = activeSeveritiesProp ?? new Set(["critical", "high", "medium", "low"]);
@@ -149,13 +152,13 @@ export function SignalsTab({
     <Box style={{ display: "flex", gap: 24 }}>
       <Box style={{ flex: 1, minWidth: 0 }}>
         <FeedToolbar
-          title="Signals"
+          title={t("feed.signals.title")}
           count={loading ? "..." : countLabel}
           loading={loading}
           search={search}
           onSearchChange={setSearch}
           sortOrder={sortOrder}
-          sortLabels={SIGNAL_SORT_LABELS}
+          sortLabels={Object.fromEntries(Object.entries(SIGNAL_SORT_LABEL_KEYS).map(([k, v]) => [k, t(`sort.${v}`)]))}
           onSortChange={(o) => onSortChange(o as SignalSortOrder)}
           newCount={newCount}
           onRefresh={onRefresh}
@@ -166,7 +169,7 @@ export function SignalsTab({
             {filtered.length === 0 && !loading && (
               <Box px={16} py={32} style={{ textAlign: "center" }}>
                 <Text c="var(--color-text-muted)" size="sm">
-                  {signals.length === 0 ? "No signals found." : "No signals match your filters."}
+                  {signals.length === 0 ? t("feed.signals.empty") : t("feed.signals.noMatch")}
                 </Text>
               </Box>
             )}
@@ -180,7 +183,7 @@ export function SignalsTab({
                 signal.title ??
                 (signal.description
                   ? signal.description.slice(0, 120) + (signal.description.length > 120 ? "..." : "")
-                  : "Untitled signal");
+                  : t("feed.signals.untitled"));
 
               return (
                 <Link key={signal.id} href={`/signal/${signal.id}`} style={{ textDecoration: "none", color: "inherit" }}>
@@ -216,7 +219,7 @@ export function SignalsTab({
                           <a href={signal.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
                             style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--color-accent)", textDecoration: "none" }}>
                             <IconExternalLink size={11} />
-                            Source
+                            {t("feed.sourceLink")}
                           </a>
                         )}
                       </Group>
@@ -236,7 +239,7 @@ export function SignalsTab({
 
             {!hasMore && signals.length > 0 && (
               <Box py={10} style={{ textAlign: "center" }}>
-                <Text size="xs" c="var(--color-text-muted)">All {totalCount.toLocaleString()} signals loaded</Text>
+                <Text size="xs" c="var(--color-text-muted)">{t("feed.signals.allLoaded", { count: totalCount })}</Text>
               </Box>
             )}
           </Box>
@@ -245,7 +248,7 @@ export function SignalsTab({
 
       <Box style={{ width: 480, flexShrink: 0 }}>
         <Group mb={12} justify="space-between" align="center" style={{ minHeight: 32 }}>
-          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Crisis Map</Text>
+          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>{t("feed.crisisMap")}</Text>
           {onBoundaryLevelChange && (
             <MapSettingsPopover boundaryLevel={boundaryLevel} onBoundaryLevelChange={onBoundaryLevelChange} />
           )}
