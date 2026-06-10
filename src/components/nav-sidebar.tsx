@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSelectedLayoutSegments } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Box, Text, Badge, UnstyledButton, Tooltip, Menu, Drawer } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { FeedbackModal } from "~/components/feedback-modal";
@@ -22,6 +22,7 @@ import {
   IconSpeakerphone,
   IconChevronLeft,
   IconChevronRight,
+  IconLanguage,
   IconMenu2,
 } from "@tabler/icons-react";
 import { cn } from "~/lib/utils";
@@ -30,6 +31,7 @@ import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
+import { locales, localeLabels, type Locale } from "~/i18n/config";
 
 type NavItemKey =
   | "overview"
@@ -106,6 +108,19 @@ export function NavSidebar() {
     sessionStorage.clear();
     // Hard redirect to clear all in-memory state and let the server handle cookie cleanup
     window.location.href = "/auth/login";
+  };
+
+  const currentLocale = useLocale();
+  const handleLocaleSwitch = async (next: Locale) => {
+    if (next === currentLocale) return;
+    try {
+      await fetch("/api/locale", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale: next }),
+      });
+      router.refresh();
+    } catch { /* ignore - keep current locale */ }
   };
 
   // Text labels: fade out instantly on collapse, fade in after drawer has widened
@@ -435,6 +450,51 @@ export function NavSidebar() {
 
       {/* Bottom actions */}
       <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3], flexShrink: 0 }}>
+        {/* Language switcher */}
+        {(() => {
+          const target = (
+            <UnstyledButton
+              style={{
+                display:        "flex",
+                alignItems:     "center",
+                gap:            spacingPx[3],
+                padding:        spacingPx[3],
+                width:          "100%",
+                borderRadius:   6,
+                background:     "transparent",
+                color:          colors.textSecondary,
+                transition:     "background 150ms",
+                marginBottom:   spacingPx[1],
+              }}
+              className="hover:bg-[var(--color-bg-muted)] transition-colors"
+            >
+              <IconLanguage size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
+              <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>{localeLabels[currentLocale]}</Text>
+            </UnstyledButton>
+          );
+          return (
+            <Menu position="right-end" withArrow offset={6}>
+              <Menu.Target>
+                {collapsed ? (
+                  <Tooltip label={t("language")} position="right" withArrow>{target}</Tooltip>
+                ) : target}
+              </Menu.Target>
+              <Menu.Dropdown>
+                {locales.map((locale) => (
+                  <Menu.Item
+                    key={locale}
+                    fw={locale === currentLocale ? 600 : 400}
+                    onClick={() => void handleLocaleSwitch(locale)}
+                    style={{ fontSize: fontSizesPx.base }}
+                  >
+                    {localeLabels[locale]}
+                  </Menu.Item>
+                ))}
+              </Menu.Dropdown>
+            </Menu>
+          );
+        })()}
+
         {/* Feedback */}
         {(() => {
           const inner = (

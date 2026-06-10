@@ -47,6 +47,31 @@
     "feedback": "Retours",
     "admin": "Admin",
     "settings": "Paramètres",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "language": "Langue"
+  },
+  "profile": {
+    "edit": {
+      "loading": "Chargement du profil...",
+      "notAuthenticated": "Non authentifié. Veuillez vous connecter.",
+      "title": "Modifier le profil",
+      "subtitle": "Mettez à jour vos informations personnelles et vos préférences",
+      "backToProfile": "Retour au profil",
+      "updateSuccess": "Profil mis à jour avec succès.",
+      "nameRequired": "Le nom est requis",
+      "unexpectedError": "Une erreur inattendue est survenue",
+      "personalInformation": "Informations personnelles",
+      "firstName": "Prénom",
+      "firstNamePlaceholder": "Saisissez le prénom",
+      "lastName": "Nom",
+      "lastNamePlaceholder": "Saisissez le nom",
+      "email": "E-mail",
+      "emailPlaceholder": "vous@exemple.org",
+      "preferences": "Préférences",
+      "language": "Langue",
+      "timezone": "Fuseau horaire",
+      "timezoneKhartoum": "Soudan (Khartoum)",
+      "timezoneUtc": "UTC"
+    }
   }
 }

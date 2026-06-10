@@ -47,6 +47,31 @@
     "feedback": "Feedback",
     "admin": "Admin",
     "settings": "Settings",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "language": "Language"
+  },
+  "profile": {
+    "edit": {
+      "loading": "Loading profile...",
+      "notAuthenticated": "Not authenticated. Please sign in.",
+      "title": "Edit Profile",
+      "subtitle": "Update your personal information and preferences",
+      "backToProfile": "Back to Profile",
+      "updateSuccess": "Profile updated successfully.",
+      "nameRequired": "Name is required",
+      "unexpectedError": "An unexpected error occurred",
+      "personalInformation": "Personal Information",
+      "firstName": "First Name",
+      "firstNamePlaceholder": "Enter first name",
+      "lastName": "Last Name",
+      "lastNamePlaceholder": "Enter last name",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "preferences": "Preferences",
+      "language": "Language",
+      "timezone": "Timezone",
+      "timezoneKhartoum": "Sudan (Khartoum)",
+      "timezoneUtc": "UTC"
+    }
   }
 }

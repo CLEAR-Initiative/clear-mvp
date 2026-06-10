@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import {
   Box,
   Card,
@@ -20,6 +22,7 @@ import {
   IconArrowLeft,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { defaultLocale, defaultTimeZone, isLocale, localeLabels, locales } from "~/i18n/config";
 
 const inputStyles = {
   label: {
@@ -32,12 +35,13 @@ const inputStyles = {
 };
 
 export default function ProfileEditPage() {
+  const t = useTranslations("profile.edit");
   const { data, isLoading } = api.auth.me.useQuery();
 
   if (isLoading) {
     return (
       <Box p={32}>
-        <Text c="var(--color-text-muted)">Loading profile...</Text>
+        <Text c="var(--color-text-muted)">{t("loading")}</Text>
       </Box>
     );
   }
@@ -45,7 +49,7 @@ export default function ProfileEditPage() {
   if (!data?.authenticated || !data.user) {
     return (
       <Box p={32}>
-        <Text c="var(--color-text-muted)">Not authenticated. Please sign in.</Text>
+        <Text c="var(--color-text-muted)">{t("notAuthenticated")}</Text>
       </Box>
     );
   }
@@ -58,31 +62,53 @@ interface ProfileEditFormProps {
     id: string;
     name: string;
     email: string;
-    preferred_language?: string;
-    timezone?: string;
   };
 }
 
 function ProfileEditForm({ user }: ProfileEditFormProps) {
+  const t = useTranslations("profile.edit");
+  const tActions = useTranslations("common.actions");
+  const router = useRouter();
+  // Locale/timezone live in cookies (read by src/i18n/request.ts), not in
+  // the user record. TODO: when clear-api persists preferred_language /
+  // timezone on the user, seed these from the profile and save them via
+  // updateProfile as well.
+  const currentLocale = useLocale();
+  const currentTimeZone = useTimeZone();
+
   const [firstName, setFirstName] = useState(user.name?.split(" ")[0] ?? "");
   const [lastName, setLastName] = useState(
     user.name?.split(" ").slice(1).join(" ") ?? "",
   );
   const [email, setEmail] = useState(user.email ?? "");
-  const [language, setLanguage] = useState(user.preferred_language ?? "en");
-  const [tz, setTz] = useState(user.timezone ?? "Africa/Khartoum");
+  const [language, setLanguage] = useState(
+    isLocale(currentLocale) ? currentLocale : defaultLocale,
+  );
+  const [tz, setTz] = useState(currentTimeZone ?? defaultTimeZone);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   const utils = api.useUtils();
   const updateProfile = api.auth.updateProfile.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      try {
+        await fetch("/api/locale", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ locale: language, timezone: tz }),
+        });
+      } catch {
+        // Cookie update is best-effort; the profile save itself succeeded.
+      }
       setSuccess(true);
       setError("");
       void utils.auth.me.invalidate();
+      // Re-render server components with the new request config so the
+      // whole UI picks up the locale without a full reload.
+      router.refresh();
     },
     onError: (err: { message?: string }) => {
-      setError(err.message ?? "An unexpected error occurred");
+      setError(err.message ?? t("unexpectedError"));
       setSuccess(false);
     },
   });
@@ -96,7 +122,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
       .filter(Boolean)
       .join(" ");
     if (!fullName) {
-      setError("Name is required");
+      setError(t("nameRequired"));
       return;
     }
 
@@ -108,10 +134,10 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
       <Group justify="space-between" mb={24}>
         <Box>
           <Text size="xl" fw={700} c="var(--color-text-primary)">
-            Edit Profile
+            {t("title")}
           </Text>
           <Text size="sm" c="var(--color-text-muted)">
-            Update your personal information and preferences
+            {t("subtitle")}
           </Text>
         </Box>
         <Button
@@ -122,7 +148,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
           size="sm"
           leftSection={<IconArrowLeft size={14} />}
         >
-          Back to Profile
+          {t("backToProfile")}
         </Button>
       </Group>
 
@@ -134,7 +160,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
           mb={16}
           styles={{ message: { fontSize: 13 } }}
         >
-          Profile updated successfully.
+          {t("updateSuccess")}
         </Alert>
       )}
 
@@ -160,15 +186,15 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
               tt="uppercase"
               style={{ letterSpacing: "0.05em", fontSize: 11 }}
             >
-              Personal Information
+              {t("personalInformation")}
             </Text>
           </Group>
 
           <Stack gap={12}>
             <Group grow>
               <TextInput
-                label="First Name"
-                placeholder="Enter first name"
+                label={t("firstName")}
+                placeholder={t("firstNamePlaceholder")}
                 value={firstName}
                 onChange={(e) => {
                   setFirstName(e.currentTarget.value);
@@ -177,8 +203,8 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
                 styles={inputStyles}
               />
               <TextInput
-                label="Last Name"
-                placeholder="Enter last name"
+                label={t("lastName")}
+                placeholder={t("lastNamePlaceholder")}
                 value={lastName}
                 onChange={(e) => {
                   setLastName(e.currentTarget.value);
@@ -189,8 +215,8 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
             </Group>
 
             <TextInput
-              label="Email"
-              placeholder="you@example.com"
+              label={t("email")}
+              placeholder={t("emailPlaceholder")}
               type="email"
               value={email}
               onChange={(e) => {
@@ -212,35 +238,35 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
               tt="uppercase"
               style={{ letterSpacing: "0.05em", fontSize: 11 }}
             >
-              Preferences
+              {t("preferences")}
             </Text>
           </Group>
 
           <Stack gap={12}>
             <Select
-              label="Language"
+              label={t("language")}
               value={language}
               onChange={(v) => {
-                setLanguage(v ?? "en");
+                setLanguage(isLocale(v) ? v : defaultLocale);
                 setSuccess(false);
               }}
-              data={[
-                { value: "en", label: "English" },
-                { value: "ar", label: "Arabic" },
-              ]}
+              data={locales.map((locale) => ({
+                value: locale,
+                label: localeLabels[locale],
+              }))}
               styles={inputStyles}
             />
 
             <Select
-              label="Timezone"
+              label={t("timezone")}
               value={tz}
               onChange={(v) => {
-                setTz(v ?? "Africa/Khartoum");
+                setTz(v ?? defaultTimeZone);
                 setSuccess(false);
               }}
               data={[
-                { value: "Africa/Khartoum", label: "Sudan (Khartoum)" },
-                { value: "UTC", label: "UTC" },
+                { value: "Africa/Khartoum", label: t("timezoneKhartoum") },
+                { value: "UTC", label: t("timezoneUtc") },
               ]}
               styles={inputStyles}
             />
@@ -254,7 +280,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
             variant="outline"
             color="gray"
           >
-            Cancel
+            {tActions("cancel")}
           </Button>
           <Button
             type="submit"
@@ -262,7 +288,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
             loading={updateProfile.isPending}
             style={{ fontWeight: 600 }}
           >
-            Save Changes
+            {tActions("saveChanges")}
           </Button>
         </Group>
       </form>
