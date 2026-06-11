@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Box,
   Card,
@@ -19,7 +20,7 @@ import {
   Select,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { useTranslations } from "next-intl";
+import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import {
   IconUser,
   IconBell,
@@ -35,6 +36,7 @@ import {
 } from "@tabler/icons-react";
 import { ColorSchemeToggle } from "~/components/ui";
 import { api } from "~/trpc/react";
+import { defaultTimeZone, isLocale, localeLabels, locales } from "~/i18n/config";
 import { useTeam } from "~/providers/team-provider";
 import { COUNTRIES_BY_DIAL_LENGTH, COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
 import { NotificationPreferencesSection } from "./_components/NotificationPreferencesSection";
@@ -287,6 +289,22 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
 
 function SettingsContent({ user }: { user: ProfileUser }) {
   const t = useTranslations("profile");
+  const router = useRouter();
+  const currentLocale = useLocale();
+  const currentTimeZone = useTimeZone() ?? defaultTimeZone;
+
+  // Locale/timezone live in cookies (read by src/i18n/request.ts); changes
+  // apply immediately via the locale route + a server-component refresh.
+  const applyLocalePrefs = async (locale: string, timezone: string) => {
+    try {
+      await fetch("/api/locale", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale, timezone }),
+      });
+      router.refresh();
+    } catch { /* keep current preference on failure */ }
+  };
   const [activeTab, setActiveTab] = useState<string | null>("account");
 
   return (
@@ -376,7 +394,19 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                   <IconLanguage size={14} color="var(--color-text-muted)" />
                   <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>{t("preferences.language")}</Text>
                 </Group>
-                <Text size="sm" fw={500}>{t("preferences.languageValue")}</Text>
+                <Select
+                  size="sm"
+                  value={currentLocale}
+                  onChange={(v) => {
+                    if (isLocale(v)) void applyLocalePrefs(v, currentTimeZone);
+                  }}
+                  data={locales.map((locale) => ({
+                    value: locale,
+                    label: localeLabels[locale],
+                  }))}
+                  allowDeselect={false}
+                  styles={{ input: { borderColor: "var(--color-border)" } }}
+                />
               </Box>
               <Divider orientation="vertical" color="var(--color-border)" />
               <Box px={24}>
@@ -384,7 +414,19 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                   <IconClock size={14} color="var(--color-text-muted)" />
                   <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>{t("preferences.timezone")}</Text>
                 </Group>
-                <Text size="sm" fw={500}>UTC</Text>
+                <Select
+                  size="sm"
+                  value={currentTimeZone}
+                  onChange={(v) => {
+                    if (v) void applyLocalePrefs(currentLocale, v);
+                  }}
+                  data={[
+                    { value: "Africa/Khartoum", label: t("edit.timezoneKhartoum") },
+                    { value: "UTC", label: t("edit.timezoneUtc") },
+                  ]}
+                  allowDeselect={false}
+                  styles={{ input: { borderColor: "var(--color-border)" } }}
+                />
               </Box>
             </Group>
           </Card>
