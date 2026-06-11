@@ -69,10 +69,10 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
   const t = useTranslations("profile.edit");
   const tActions = useTranslations("common.actions");
   const router = useRouter();
-  // Locale/timezone live in cookies (read by src/i18n/request.ts), not in
-  // the user record. TODO: when clear-api persists preferred_language /
-  // timezone on the user, seed these from the profile and save them via
-  // updateProfile as well.
+  // Language persists to the user profile (clear-api user.language) plus the
+  // locale cookie; timezone is cookie-only until the backend has a field for
+  // it. Initial values come from the active request config (cookie-seeded
+  // from the profile by LocaleSync at login).
   const currentLocale = useLocale();
   const currentTimeZone = useTimeZone();
 
@@ -103,6 +103,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
       setSuccess(true);
       setError("");
       void utils.auth.me.invalidate();
+      void utils.auth.myUserDetails.invalidate();
       // Re-render server components with the new request config so the
       // whole UI picks up the locale without a full reload.
       router.refresh();
@@ -126,7 +127,7 @@ function ProfileEditForm({ user }: ProfileEditFormProps) {
       return;
     }
 
-    updateProfile.mutate({ name: fullName });
+    updateProfile.mutate({ name: fullName, language });
   };
 
   return (

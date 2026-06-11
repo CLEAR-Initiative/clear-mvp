@@ -292,9 +292,15 @@ function SettingsContent({ user }: { user: ProfileUser }) {
   const router = useRouter();
   const currentLocale = useLocale();
   const currentTimeZone = useTimeZone() ?? defaultTimeZone;
+  const utils = api.useUtils();
+  const updateLanguage = api.auth.updateProfile.useMutation({
+    onSuccess: () => void utils.auth.myUserDetails.invalidate(),
+  });
 
-  // Locale/timezone live in cookies (read by src/i18n/request.ts); changes
-  // apply immediately via the locale route + a server-component refresh.
+  // Language persists to the user profile (clear-api user.language) and to
+  // the locale cookie read by src/i18n/request.ts; timezone is cookie-only
+  // until the backend has a field for it. Changes apply immediately via a
+  // server-component refresh.
   const applyLocalePrefs = async (locale: string, timezone: string) => {
     try {
       await fetch("/api/locale", {
@@ -398,7 +404,10 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                   size="sm"
                   value={currentLocale}
                   onChange={(v) => {
-                    if (isLocale(v)) void applyLocalePrefs(v, currentTimeZone);
+                    if (isLocale(v)) {
+                      updateLanguage.mutate({ language: v });
+                      void applyLocalePrefs(v, currentTimeZone);
+                    }
                   }}
                   data={locales.map((locale) => ({
                     value: locale,

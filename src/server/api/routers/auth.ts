@@ -64,6 +64,7 @@ const GET_USER_DETAILS = `
     user(id: $id) {
       enableEmailNotification
       phoneNumber
+      language
     }
   }
 `;
@@ -130,11 +131,16 @@ export const authRouter = createTRPCRouter({
 
   myUserDetails: protectedProcedure.query(async ({ ctx }) => {
     const data = await graphqlFetch<{
-      user: { enableEmailNotification: boolean; phoneNumber: string | null } | null;
+      user: {
+        enableEmailNotification: boolean;
+        phoneNumber: string | null;
+        language: string;
+      } | null;
     }>(GET_USER_DETAILS, { id: ctx.user.id }, cookieHeaders(ctx));
     return {
       emailEnabled: data.user?.enableEmailNotification ?? false,
       phoneNumber: data.user?.phoneNumber ?? null,
+      language: data.user?.language ?? "en",
     };
   }),
 
@@ -162,6 +168,7 @@ export const authRouter = createTRPCRouter({
         name: z.string().optional(),
         phoneNumber: z.string().optional(),
         image: z.string().optional(),
+        language: z.enum(["en", "fr"]).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
