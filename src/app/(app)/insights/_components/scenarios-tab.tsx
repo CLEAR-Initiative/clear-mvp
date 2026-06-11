@@ -4,7 +4,7 @@ import { CardSection } from "~/components/ui";
 import { scenarios } from "./analysis-data";
 
 export function ScenariosTab() {
-  const t = useTranslations("analysis");
+  const t = useTranslations("insights");
   return (
     <CardSection
       title={t("scenarios.title")}

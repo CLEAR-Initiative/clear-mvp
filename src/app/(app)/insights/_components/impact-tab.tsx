@@ -12,7 +12,7 @@ import {
 const SECTOR_COLUMN_KEYS = ["sector", "severity", "affected", "details"] as const;
 
 export function ImpactTab() {
-  const t = useTranslations("analysis");
+  const t = useTranslations("insights");
   const format = useFormatter();
   const tCommon = useTranslations("common");
   return (

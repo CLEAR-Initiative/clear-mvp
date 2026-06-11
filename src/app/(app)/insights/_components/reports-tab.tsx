@@ -23,7 +23,7 @@ export function ReportsTab({
   selectedRegion,
   summaryStats,
 }: ReportsTabProps) {
-  const t = useTranslations("analysis");
+  const t = useTranslations("insights");
   const tCommon = useTranslations("common");
   const crisesQuery = api.crises.list.useQuery();
   const crises = crisesQuery.data ?? [];

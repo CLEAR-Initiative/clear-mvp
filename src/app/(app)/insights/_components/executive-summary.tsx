@@ -77,7 +77,7 @@ export function ExecutiveSummary({
   llmMutation,
   selectedCountry,
 }: ExecutiveSummaryProps) {
-  const t = useTranslations("analysis");
+  const t = useTranslations("insights");
   const format = useFormatter();
   const needs = DEFAULT_NEEDS;
 

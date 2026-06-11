@@ -14,7 +14,7 @@ const DATA_QUALITY_COLUMN_KEYS = [
 ] as const;
 
 export function InsightsTab() {
-  const t = useTranslations("analysis");
+  const t = useTranslations("insights");
   return (
     <Box>
       {/* AI Insights */}

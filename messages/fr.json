@@ -1,4 +1,220 @@
 {
+  "insights": {
+    "page": {
+      "title": "Analyses",
+      "breadcrumb": "Analyses",
+      "tabs": {
+        "crisis": "Vue d'ensemble de la crise",
+        "situation": "Analyse de situation"
+      },
+      "situationPlaceholder": {
+        "title": "Analyse de situation",
+        "description": "Rapports de situation générés par IA bientôt disponibles."
+      }
+    },
+    "reports": {
+      "activeCrises": "Crises actives",
+      "criticalBadge": "{count} critique(s)",
+      "untitledCrisis": "Crise sans titre",
+      "eventCount": "{count, plural, one {# événement} other {# événements}}",
+      "empty": "Aucune crise active."
+    },
+    "executiveSummary": {
+      "priorityAnalysis": "Analyse prioritaire",
+      "criticalBadge": "{count} critique(s)",
+      "activeBadge": "{count} active(s)",
+      "situationReport": "Rapport de situation - {country}",
+      "defaultReportTitle": "Crise de déplacement liée au conflit armé - {country}",
+      "activeAlerts": "Alertes actives",
+      "totalAlerts": "Total des alertes",
+      "trend": "Tendance",
+      "needs": {
+        "shelter": {
+          "label": "Abris",
+          "description": "Logement et déplacement"
+        },
+        "wash": {
+          "label": "WASH",
+          "description": "Eau et assainissement"
+        },
+        "protection": {
+          "label": "Protection",
+          "description": "Droits et sécurité"
+        },
+        "health": {
+          "label": "Santé",
+          "description": "Réponse médicale"
+        },
+        "foodSecurity": {
+          "label": "Sécurité alimentaire",
+          "description": "Accès à la nutrition"
+        }
+      },
+      "viewFullReport": "Voir le rapport complet",
+      "downloadPdf": "Télécharger le PDF",
+      "updatedAt": "Mise à jour {time}",
+      "updatedFallback": "Mise à jour il y a 2 heures",
+      "confidence": "Confiance : {pct} %",
+      "aiGeneratedAnalysis": "Analyse générée par IA",
+      "generating": "Génération d'une analyse complète à partir de {count} alertes actives...",
+      "generateFailed": "Échec de la génération de l'analyse. Veuillez réessayer."
+    },
+    "insights": {
+      "title": "Constats générés par IA",
+      "subtitle": "Détection de tendances et recommandations",
+      "filters": {
+        "epidemiological": "Épidémiologique",
+        "allTypes": "Tous les types",
+        "logistics": "Logistique"
+      },
+      "dataQualityTitle": "Qualité des données d'analyse",
+      "dataQualitySubtitle": "Indicateurs de fiabilité des sources",
+      "columns": {
+        "dataSource": "Source de données",
+        "completeness": "Complétude",
+        "timeliness": "Actualité",
+        "confidence": "Confiance",
+        "lastUpdate": "Dernière mise à jour"
+      }
+    },
+    "impact": {
+      "title": "Évaluation de l'impact sectoriel",
+      "subtitle": "Besoins humanitaires par secteur",
+      "columns": {
+        "sector": "Secteur",
+        "severity": "Sévérité",
+        "affected": "Affectés",
+        "details": "Détails"
+      },
+      "environmental": {
+        "title": "Facteurs environnementaux",
+        "subtitle": "Risques climatiques et environnementaux",
+        "floodRisk": "Risque d'inondation",
+        "rainfallForecast": "Prévisions de précipitations",
+        "secondaryRisk": "Risque secondaire"
+      },
+      "protection": {
+        "title": "Préoccupations de protection",
+        "subtitle": "Vulnérabilités identifiées"
+      },
+      "secondaryEffects": {
+        "title": "Effets secondaires",
+        "subtitle": "Impacts en cascade anticipés"
+      }
+    },
+    "scenarios": {
+      "title": "Comparaison de scénarios",
+      "subtitle": "Comparez les résultats projetés"
+    },
+    "data": {
+      "insights": {
+        "waterClustering": {
+          "type": "Schéma critique",
+          "title": "Regroupement des sources d'eau",
+          "description": "87 % des cas à moins de 500 m de 3 points d'eau. Tests et traitement immédiats recommandés."
+        },
+        "peakTiming": {
+          "type": "Sensible au facteur temps",
+          "title": "Prédiction du pic de transmission",
+          "description": "Les tendances historiques suggèrent un pic de transmission 14 à 21 jours après le début de l'épidémie. Actuellement : jour 8."
+        },
+        "resourceOptimization": {
+          "type": "Opportunité",
+          "title": "Optimisation des ressources",
+          "description": "Les stocks de SRO à Dire Dawa peuvent atteindre les zones affectées en 6 heures. Prépositionnement possible."
+        }
+      },
+      "dataQuality": {
+        "mohPhem": {
+          "source": "Données MOH PHEM",
+          "timeliness": "Temps réel",
+          "confidence": "Élevée",
+          "lastUpdate": "il y a 3 min"
+        },
+        "whoEwarn": {
+          "source": "EWARN de l'OMS",
+          "timeliness": "Toutes les heures",
+          "confidence": "Élevée",
+          "lastUpdate": "il y a 1 h"
+        },
+        "fieldReports": {
+          "source": "Rapports de terrain",
+          "timeliness": "Quotidienne",
+          "confidence": "Moyenne",
+          "lastUpdate": "il y a 4 h"
+        },
+        "satellite": {
+          "source": "Imagerie satellite",
+          "timeliness": "Cycle de 6 h",
+          "confidence": "Élevée",
+          "lastUpdate": "il y a 2 h"
+        }
+      },
+      "scenarios": {
+        "bestCase": {
+          "name": "Meilleur cas",
+          "sub": "Scénario d'endiguement rapide",
+          "description": "Une intervention précoce avec une couverture WASH complète permet un endiguement en 2 semaines. Personnes affectées estimées : 2 400."
+        },
+        "mostLikely": {
+          "name": "Le plus probable",
+          "sub": "Scénario de propagation modérée",
+          "description": "Endiguement partiel avec transmission persistante dans 3 woredas. Pic dans 3 à 4 semaines. Personnes affectées estimées : 8 500."
+        },
+        "worstCase": {
+          "name": "Pire cas",
+          "sub": "Scénario de propagation régionale",
+          "description": "Transmission généralisée dans plus de 8 woredas avec saturation du système de santé. Personnes affectées estimées : plus de 24 000."
+        }
+      },
+      "impactAssessment": {
+        "shelter": {
+          "sector": "Abris",
+          "affected": "{count} personnes",
+          "description": "45 % des abris endommagés ou détruits dans les zones touchées par les inondations"
+        },
+        "wash": {
+          "sector": "WASH",
+          "affected": "{count} personnes",
+          "description": "3 stations de traitement de l'eau hors service, contamination détectée"
+        },
+        "protection": {
+          "sector": "Protection",
+          "affected": "{count} personnes",
+          "description": "Risques de VBG accrus, préoccupations de protection de l'enfance dans les sites de déplacement"
+        },
+        "health": {
+          "sector": "Santé",
+          "affected": "{count} cas",
+          "description": "Épidémie de choléra avec un taux de létalité de 2,1 %, au-dessus du seuil d'urgence"
+        },
+        "foodSecurity": {
+          "sector": "Sécurité alimentaire",
+          "affected": "{count} personnes",
+          "description": "Insécurité alimentaire IPC Phase 3+ dans 5 woredas, perturbation des marchés en cours"
+        }
+      },
+      "environmentalFactors": {
+        "floodRisk": "GloFAS indique une probabilité de 75 % de niveaux fluviaux supérieurs à la normale dans les 14 prochains jours",
+        "rainfallForecast": "150 à 200 mm attendus dans la région Somali au cours de la semaine à venir, soit 40 % au-dessus de la moyenne saisonnière",
+        "secondaryRisk": "Risque ÉLEVÉ d'épidémie de maladies d'origine hydrique en raison de la contamination des sources d'eau par les inondations"
+      },
+      "protectionConcerns": {
+        "gbv": "Risques de VBG accrus dans les sites de déplacement surpeuplés, en particulier pour les femmes et les filles",
+        "separatedChildren": "Enfants séparés et non accompagnés identifiés dans 3 sites de déplacement",
+        "disabilities": "Obstacles à l'accès aux services pour les personnes en situation de handicap dans les abris temporaires",
+        "documentation": "La perte de documents d'identité compromet l'accès aux services de base pour les populations déplacées"
+      },
+      "secondaryEffects": {
+        "market": "La perturbation des marchés entraîne une hausse de 28 % des prix alimentaires dans les zones affectées",
+        "schools": "Fermetures d'écoles affectant 15 000 enfants dans 23 établissements",
+        "livestock": "Pertes de bétail estimées à 2,3 M$ affectant les moyens de subsistance pastoraux",
+        "transport": "Les perturbations des axes de transport retardent les chaînes d'approvisionnement humanitaire de 48 à 72 heures",
+        "mentalHealth": "Impacts sur la santé mentale signalés dans 60 % des ménages déplacés",
+        "agriculture": "La perturbation de la saison agricole menace la prochaine récolte dans 4 woredas"
+      }
+    }
+  },
   "metadata": {
     "title": "CLEAR : Crisis Learning, Early-warning, Anticipation & Response",
     "description": "Plateforme humanitaire d'aide à la décision"
@@ -284,222 +500,6 @@
           "provider": "Agences gouvernementales",
           "description": "Signaux provenant des autorités gouvernementales ou attribués à celles-ci."
         }
-      }
-    }
-  },
-  "analysis": {
-    "page": {
-      "title": "Analyses",
-      "breadcrumb": "Analyses",
-      "tabs": {
-        "crisis": "Vue d'ensemble de la crise",
-        "situation": "Analyse de situation"
-      },
-      "situationPlaceholder": {
-        "title": "Analyse de situation",
-        "description": "Rapports de situation générés par IA bientôt disponibles."
-      }
-    },
-    "reports": {
-      "activeCrises": "Crises actives",
-      "criticalBadge": "{count} critique(s)",
-      "untitledCrisis": "Crise sans titre",
-      "eventCount": "{count, plural, one {# événement} other {# événements}}",
-      "empty": "Aucune crise active."
-    },
-    "executiveSummary": {
-      "priorityAnalysis": "Analyse prioritaire",
-      "criticalBadge": "{count} critique(s)",
-      "activeBadge": "{count} active(s)",
-      "situationReport": "Rapport de situation - {country}",
-      "defaultReportTitle": "Crise de déplacement liée au conflit armé - {country}",
-      "activeAlerts": "Alertes actives",
-      "totalAlerts": "Total des alertes",
-      "trend": "Tendance",
-      "needs": {
-        "shelter": {
-          "label": "Abris",
-          "description": "Logement et déplacement"
-        },
-        "wash": {
-          "label": "WASH",
-          "description": "Eau et assainissement"
-        },
-        "protection": {
-          "label": "Protection",
-          "description": "Droits et sécurité"
-        },
-        "health": {
-          "label": "Santé",
-          "description": "Réponse médicale"
-        },
-        "foodSecurity": {
-          "label": "Sécurité alimentaire",
-          "description": "Accès à la nutrition"
-        }
-      },
-      "viewFullReport": "Voir le rapport complet",
-      "downloadPdf": "Télécharger le PDF",
-      "updatedAt": "Mise à jour {time}",
-      "updatedFallback": "Mise à jour il y a 2 heures",
-      "confidence": "Confiance : {pct} %",
-      "aiGeneratedAnalysis": "Analyse générée par IA",
-      "generating": "Génération d'une analyse complète à partir de {count} alertes actives...",
-      "generateFailed": "Échec de la génération de l'analyse. Veuillez réessayer."
-    },
-    "insights": {
-      "title": "Constats générés par IA",
-      "subtitle": "Détection de tendances et recommandations",
-      "filters": {
-        "epidemiological": "Épidémiologique",
-        "allTypes": "Tous les types",
-        "logistics": "Logistique"
-      },
-      "dataQualityTitle": "Qualité des données d'analyse",
-      "dataQualitySubtitle": "Indicateurs de fiabilité des sources",
-      "columns": {
-        "dataSource": "Source de données",
-        "completeness": "Complétude",
-        "timeliness": "Actualité",
-        "confidence": "Confiance",
-        "lastUpdate": "Dernière mise à jour"
-      }
-    },
-    "impact": {
-      "title": "Évaluation de l'impact sectoriel",
-      "subtitle": "Besoins humanitaires par secteur",
-      "columns": {
-        "sector": "Secteur",
-        "severity": "Sévérité",
-        "affected": "Affectés",
-        "details": "Détails"
-      },
-      "environmental": {
-        "title": "Facteurs environnementaux",
-        "subtitle": "Risques climatiques et environnementaux",
-        "floodRisk": "Risque d'inondation",
-        "rainfallForecast": "Prévisions de précipitations",
-        "secondaryRisk": "Risque secondaire"
-      },
-      "protection": {
-        "title": "Préoccupations de protection",
-        "subtitle": "Vulnérabilités identifiées"
-      },
-      "secondaryEffects": {
-        "title": "Effets secondaires",
-        "subtitle": "Impacts en cascade anticipés"
-      }
-    },
-    "scenarios": {
-      "title": "Comparaison de scénarios",
-      "subtitle": "Comparez les résultats projetés"
-    },
-    "data": {
-      "insights": {
-        "waterClustering": {
-          "type": "Schéma critique",
-          "title": "Regroupement des sources d'eau",
-          "description": "87 % des cas à moins de 500 m de 3 points d'eau. Tests et traitement immédiats recommandés."
-        },
-        "peakTiming": {
-          "type": "Sensible au facteur temps",
-          "title": "Prédiction du pic de transmission",
-          "description": "Les tendances historiques suggèrent un pic de transmission 14 à 21 jours après le début de l'épidémie. Actuellement : jour 8."
-        },
-        "resourceOptimization": {
-          "type": "Opportunité",
-          "title": "Optimisation des ressources",
-          "description": "Les stocks de SRO à Dire Dawa peuvent atteindre les zones affectées en 6 heures. Prépositionnement possible."
-        }
-      },
-      "dataQuality": {
-        "mohPhem": {
-          "source": "Données MOH PHEM",
-          "timeliness": "Temps réel",
-          "confidence": "Élevée",
-          "lastUpdate": "il y a 3 min"
-        },
-        "whoEwarn": {
-          "source": "EWARN de l'OMS",
-          "timeliness": "Toutes les heures",
-          "confidence": "Élevée",
-          "lastUpdate": "il y a 1 h"
-        },
-        "fieldReports": {
-          "source": "Rapports de terrain",
-          "timeliness": "Quotidienne",
-          "confidence": "Moyenne",
-          "lastUpdate": "il y a 4 h"
-        },
-        "satellite": {
-          "source": "Imagerie satellite",
-          "timeliness": "Cycle de 6 h",
-          "confidence": "Élevée",
-          "lastUpdate": "il y a 2 h"
-        }
-      },
-      "scenarios": {
-        "bestCase": {
-          "name": "Meilleur cas",
-          "sub": "Scénario d'endiguement rapide",
-          "description": "Une intervention précoce avec une couverture WASH complète permet un endiguement en 2 semaines. Personnes affectées estimées : 2 400."
-        },
-        "mostLikely": {
-          "name": "Le plus probable",
-          "sub": "Scénario de propagation modérée",
-          "description": "Endiguement partiel avec transmission persistante dans 3 woredas. Pic dans 3 à 4 semaines. Personnes affectées estimées : 8 500."
-        },
-        "worstCase": {
-          "name": "Pire cas",
-          "sub": "Scénario de propagation régionale",
-          "description": "Transmission généralisée dans plus de 8 woredas avec saturation du système de santé. Personnes affectées estimées : plus de 24 000."
-        }
-      },
-      "impactAssessment": {
-        "shelter": {
-          "sector": "Abris",
-          "affected": "{count} personnes",
-          "description": "45 % des abris endommagés ou détruits dans les zones touchées par les inondations"
-        },
-        "wash": {
-          "sector": "WASH",
-          "affected": "{count} personnes",
-          "description": "3 stations de traitement de l'eau hors service, contamination détectée"
-        },
-        "protection": {
-          "sector": "Protection",
-          "affected": "{count} personnes",
-          "description": "Risques de VBG accrus, préoccupations de protection de l'enfance dans les sites de déplacement"
-        },
-        "health": {
-          "sector": "Santé",
-          "affected": "{count} cas",
-          "description": "Épidémie de choléra avec un taux de létalité de 2,1 %, au-dessus du seuil d'urgence"
-        },
-        "foodSecurity": {
-          "sector": "Sécurité alimentaire",
-          "affected": "{count} personnes",
-          "description": "Insécurité alimentaire IPC Phase 3+ dans 5 woredas, perturbation des marchés en cours"
-        }
-      },
-      "environmentalFactors": {
-        "floodRisk": "GloFAS indique une probabilité de 75 % de niveaux fluviaux supérieurs à la normale dans les 14 prochains jours",
-        "rainfallForecast": "150 à 200 mm attendus dans la région Somali au cours de la semaine à venir, soit 40 % au-dessus de la moyenne saisonnière",
-        "secondaryRisk": "Risque ÉLEVÉ d'épidémie de maladies d'origine hydrique en raison de la contamination des sources d'eau par les inondations"
-      },
-      "protectionConcerns": {
-        "gbv": "Risques de VBG accrus dans les sites de déplacement surpeuplés, en particulier pour les femmes et les filles",
-        "separatedChildren": "Enfants séparés et non accompagnés identifiés dans 3 sites de déplacement",
-        "disabilities": "Obstacles à l'accès aux services pour les personnes en situation de handicap dans les abris temporaires",
-        "documentation": "La perte de documents d'identité compromet l'accès aux services de base pour les populations déplacées"
-      },
-      "secondaryEffects": {
-        "market": "La perturbation des marchés entraîne une hausse de 28 % des prix alimentaires dans les zones affectées",
-        "schools": "Fermetures d'écoles affectant 15 000 enfants dans 23 établissements",
-        "livestock": "Pertes de bétail estimées à 2,3 M$ affectant les moyens de subsistance pastoraux",
-        "transport": "Les perturbations des axes de transport retardent les chaînes d'approvisionnement humanitaire de 48 à 72 heures",
-        "mentalHealth": "Impacts sur la santé mentale signalés dans 60 % des ménages déplacés",
-        "agriculture": "La perturbation de la saison agricole menace la prochaine récolte dans 4 woredas"
       }
     }
   },

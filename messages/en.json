@@ -1,4 +1,220 @@
 {
+  "insights": {
+    "page": {
+      "title": "Insights",
+      "breadcrumb": "Insights",
+      "tabs": {
+        "crisis": "Crisis Overview",
+        "situation": "Situation Analysis"
+      },
+      "situationPlaceholder": {
+        "title": "Situation Analysis",
+        "description": "AI-generated situation reports coming soon."
+      }
+    },
+    "reports": {
+      "activeCrises": "Active Crises",
+      "criticalBadge": "{count} Critical",
+      "untitledCrisis": "Untitled crisis",
+      "eventCount": "{count, plural, one {# event} other {# events}}",
+      "empty": "No active crises."
+    },
+    "executiveSummary": {
+      "priorityAnalysis": "Priority Analysis",
+      "criticalBadge": "{count} Critical",
+      "activeBadge": "{count} Active",
+      "situationReport": "Situation Report - {country}",
+      "defaultReportTitle": "Armed Conflict Displacement Crisis - {country}",
+      "activeAlerts": "Active Alerts",
+      "totalAlerts": "Total Alerts",
+      "trend": "Trend",
+      "needs": {
+        "shelter": {
+          "label": "Shelter",
+          "description": "Housing & displacement"
+        },
+        "wash": {
+          "label": "WASH",
+          "description": "Water & sanitation"
+        },
+        "protection": {
+          "label": "Protection",
+          "description": "Rights & safety"
+        },
+        "health": {
+          "label": "Health",
+          "description": "Medical response"
+        },
+        "foodSecurity": {
+          "label": "Food Security",
+          "description": "Nutrition access"
+        }
+      },
+      "viewFullReport": "View Full Report",
+      "downloadPdf": "Download PDF",
+      "updatedAt": "Updated {time}",
+      "updatedFallback": "Updated 2 hours ago",
+      "confidence": "Confidence: {pct}%",
+      "aiGeneratedAnalysis": "AI-Generated Analysis",
+      "generating": "Generating comprehensive analysis from {count} active alerts...",
+      "generateFailed": "Failed to generate analysis. Please try again."
+    },
+    "insights": {
+      "title": "AI-Generated Insights",
+      "subtitle": "Pattern detection and recommendations",
+      "filters": {
+        "epidemiological": "Epidemiological",
+        "allTypes": "All Types",
+        "logistics": "Logistics"
+      },
+      "dataQualityTitle": "Analysis Data Quality",
+      "dataQualitySubtitle": "Source reliability metrics",
+      "columns": {
+        "dataSource": "Data Source",
+        "completeness": "Completeness",
+        "timeliness": "Timeliness",
+        "confidence": "Confidence",
+        "lastUpdate": "Last Update"
+      }
+    },
+    "impact": {
+      "title": "Sector Impact Assessment",
+      "subtitle": "Humanitarian needs by sector",
+      "columns": {
+        "sector": "Sector",
+        "severity": "Severity",
+        "affected": "Affected",
+        "details": "Details"
+      },
+      "environmental": {
+        "title": "Environmental Factors",
+        "subtitle": "Climate and environmental risks",
+        "floodRisk": "Flood Risk",
+        "rainfallForecast": "Rainfall Forecast",
+        "secondaryRisk": "Secondary Risk"
+      },
+      "protection": {
+        "title": "Protection Concerns",
+        "subtitle": "Identified vulnerabilities"
+      },
+      "secondaryEffects": {
+        "title": "Secondary Effects",
+        "subtitle": "Anticipated cascading impacts"
+      }
+    },
+    "scenarios": {
+      "title": "Scenario Comparison",
+      "subtitle": "Compare projected outcomes"
+    },
+    "data": {
+      "insights": {
+        "waterClustering": {
+          "type": "Critical Pattern",
+          "title": "Water Source Clustering",
+          "description": "87% of cases within 500m of 3 water points. Immediate testing and treatment recommended."
+        },
+        "peakTiming": {
+          "type": "Time Sensitive",
+          "title": "Peak Timing Prediction",
+          "description": "Historical patterns suggest peak transmission 14-21 days from outbreak start. Current: Day 8."
+        },
+        "resourceOptimization": {
+          "type": "Opportunity",
+          "title": "Resource Optimization",
+          "description": "ORS supplies in Dire Dawa can reach affected areas within 6 hours. Pre-positioning available."
+        }
+      },
+      "dataQuality": {
+        "mohPhem": {
+          "source": "MOH PHEM Data",
+          "timeliness": "Real-time",
+          "confidence": "High",
+          "lastUpdate": "3 min ago"
+        },
+        "whoEwarn": {
+          "source": "WHO EWARN",
+          "timeliness": "Hourly",
+          "confidence": "High",
+          "lastUpdate": "1h ago"
+        },
+        "fieldReports": {
+          "source": "Field Reports",
+          "timeliness": "Daily",
+          "confidence": "Medium",
+          "lastUpdate": "4h ago"
+        },
+        "satellite": {
+          "source": "Satellite Imagery",
+          "timeliness": "6h cycle",
+          "confidence": "High",
+          "lastUpdate": "2h ago"
+        }
+      },
+      "scenarios": {
+        "bestCase": {
+          "name": "Best Case",
+          "sub": "Rapid containment scenario",
+          "description": "Early intervention with full WASH coverage achieves containment within 2 weeks. Estimated affected: 2,400 people."
+        },
+        "mostLikely": {
+          "name": "Most Likely",
+          "sub": "Moderate spread scenario",
+          "description": "Partial containment with ongoing transmission in 3 woredas. Peak in 3-4 weeks. Estimated affected: 8,500 people."
+        },
+        "worstCase": {
+          "name": "Worst Case",
+          "sub": "Regional spread scenario",
+          "description": "Widespread transmission across 8+ woredas with health system strain. Estimated affected: 24,000+ people."
+        }
+      },
+      "impactAssessment": {
+        "shelter": {
+          "sector": "Shelter",
+          "affected": "{count} people",
+          "description": "45% of shelters damaged or destroyed in flood-affected areas"
+        },
+        "wash": {
+          "sector": "WASH",
+          "affected": "{count} people",
+          "description": "3 water treatment facilities non-functional, contamination detected"
+        },
+        "protection": {
+          "sector": "Protection",
+          "affected": "{count} people",
+          "description": "GBV risks elevated, child protection concerns in displacement sites"
+        },
+        "health": {
+          "sector": "Health",
+          "affected": "{count} cases",
+          "description": "Cholera outbreak with Case Fatality Rate of 2.1%, above emergency threshold"
+        },
+        "foodSecurity": {
+          "sector": "Food Security",
+          "affected": "{count} people",
+          "description": "IPC Phase 3+ food insecurity in 5 woredas, market disruption ongoing"
+        }
+      },
+      "environmentalFactors": {
+        "floodRisk": "GloFAS indicates 75% probability of above-normal river levels in next 14 days",
+        "rainfallForecast": "150-200mm expected in Somali Region over next week, 40% above seasonal average",
+        "secondaryRisk": "Waterborne disease outbreak risk HIGH due to flood contamination of water sources"
+      },
+      "protectionConcerns": {
+        "gbv": "Increased GBV risks in overcrowded displacement sites, particularly for women and girls",
+        "separatedChildren": "Separated and unaccompanied children identified in 3 displacement sites",
+        "disabilities": "Barriers to accessing services for persons with disabilities in temporary shelters",
+        "documentation": "Documentation loss affecting access to basic services for displaced populations"
+      },
+      "secondaryEffects": {
+        "market": "Market disruption causing 28% food price increase in affected areas",
+        "schools": "School closures affecting 15,000 children across 23 schools",
+        "livestock": "Livestock losses estimated at $2.3M impacting pastoral livelihoods",
+        "transport": "Transport route disruptions delaying humanitarian supply chains by 48-72 hours",
+        "mentalHealth": "Mental health impacts reported in 60% of displaced households",
+        "agriculture": "Agricultural season disruption threatening next harvest in 4 woredas"
+      }
+    }
+  },
   "metadata": {
     "title": "CLEAR: Crisis Learning, Early-warning, Anticipation & Response",
     "description": "Humanitarian decision-support platform"
@@ -284,222 +500,6 @@
           "provider": "Government Agencies",
           "description": "Signals sourced from or attributed to government authorities."
         }
-      }
-    }
-  },
-  "analysis": {
-    "page": {
-      "title": "Insights",
-      "breadcrumb": "Insights",
-      "tabs": {
-        "crisis": "Crisis Overview",
-        "situation": "Situation Analysis"
-      },
-      "situationPlaceholder": {
-        "title": "Situation Analysis",
-        "description": "AI-generated situation reports coming soon."
-      }
-    },
-    "reports": {
-      "activeCrises": "Active Crises",
-      "criticalBadge": "{count} Critical",
-      "untitledCrisis": "Untitled crisis",
-      "eventCount": "{count, plural, one {# event} other {# events}}",
-      "empty": "No active crises."
-    },
-    "executiveSummary": {
-      "priorityAnalysis": "Priority Analysis",
-      "criticalBadge": "{count} Critical",
-      "activeBadge": "{count} Active",
-      "situationReport": "Situation Report - {country}",
-      "defaultReportTitle": "Armed Conflict Displacement Crisis - {country}",
-      "activeAlerts": "Active Alerts",
-      "totalAlerts": "Total Alerts",
-      "trend": "Trend",
-      "needs": {
-        "shelter": {
-          "label": "Shelter",
-          "description": "Housing & displacement"
-        },
-        "wash": {
-          "label": "WASH",
-          "description": "Water & sanitation"
-        },
-        "protection": {
-          "label": "Protection",
-          "description": "Rights & safety"
-        },
-        "health": {
-          "label": "Health",
-          "description": "Medical response"
-        },
-        "foodSecurity": {
-          "label": "Food Security",
-          "description": "Nutrition access"
-        }
-      },
-      "viewFullReport": "View Full Report",
-      "downloadPdf": "Download PDF",
-      "updatedAt": "Updated {time}",
-      "updatedFallback": "Updated 2 hours ago",
-      "confidence": "Confidence: {pct}%",
-      "aiGeneratedAnalysis": "AI-Generated Analysis",
-      "generating": "Generating comprehensive analysis from {count} active alerts...",
-      "generateFailed": "Failed to generate analysis. Please try again."
-    },
-    "insights": {
-      "title": "AI-Generated Insights",
-      "subtitle": "Pattern detection and recommendations",
-      "filters": {
-        "epidemiological": "Epidemiological",
-        "allTypes": "All Types",
-        "logistics": "Logistics"
-      },
-      "dataQualityTitle": "Analysis Data Quality",
-      "dataQualitySubtitle": "Source reliability metrics",
-      "columns": {
-        "dataSource": "Data Source",
-        "completeness": "Completeness",
-        "timeliness": "Timeliness",
-        "confidence": "Confidence",
-        "lastUpdate": "Last Update"
-      }
-    },
-    "impact": {
-      "title": "Sector Impact Assessment",
-      "subtitle": "Humanitarian needs by sector",
-      "columns": {
-        "sector": "Sector",
-        "severity": "Severity",
-        "affected": "Affected",
-        "details": "Details"
-      },
-      "environmental": {
-        "title": "Environmental Factors",
-        "subtitle": "Climate and environmental risks",
-        "floodRisk": "Flood Risk",
-        "rainfallForecast": "Rainfall Forecast",
-        "secondaryRisk": "Secondary Risk"
-      },
-      "protection": {
-        "title": "Protection Concerns",
-        "subtitle": "Identified vulnerabilities"
-      },
-      "secondaryEffects": {
-        "title": "Secondary Effects",
-        "subtitle": "Anticipated cascading impacts"
-      }
-    },
-    "scenarios": {
-      "title": "Scenario Comparison",
-      "subtitle": "Compare projected outcomes"
-    },
-    "data": {
-      "insights": {
-        "waterClustering": {
-          "type": "Critical Pattern",
-          "title": "Water Source Clustering",
-          "description": "87% of cases within 500m of 3 water points. Immediate testing and treatment recommended."
-        },
-        "peakTiming": {
-          "type": "Time Sensitive",
-          "title": "Peak Timing Prediction",
-          "description": "Historical patterns suggest peak transmission 14-21 days from outbreak start. Current: Day 8."
-        },
-        "resourceOptimization": {
-          "type": "Opportunity",
-          "title": "Resource Optimization",
-          "description": "ORS supplies in Dire Dawa can reach affected areas within 6 hours. Pre-positioning available."
-        }
-      },
-      "dataQuality": {
-        "mohPhem": {
-          "source": "MOH PHEM Data",
-          "timeliness": "Real-time",
-          "confidence": "High",
-          "lastUpdate": "3 min ago"
-        },
-        "whoEwarn": {
-          "source": "WHO EWARN",
-          "timeliness": "Hourly",
-          "confidence": "High",
-          "lastUpdate": "1h ago"
-        },
-        "fieldReports": {
-          "source": "Field Reports",
-          "timeliness": "Daily",
-          "confidence": "Medium",
-          "lastUpdate": "4h ago"
-        },
-        "satellite": {
-          "source": "Satellite Imagery",
-          "timeliness": "6h cycle",
-          "confidence": "High",
-          "lastUpdate": "2h ago"
-        }
-      },
-      "scenarios": {
-        "bestCase": {
-          "name": "Best Case",
-          "sub": "Rapid containment scenario",
-          "description": "Early intervention with full WASH coverage achieves containment within 2 weeks. Estimated affected: 2,400 people."
-        },
-        "mostLikely": {
-          "name": "Most Likely",
-          "sub": "Moderate spread scenario",
-          "description": "Partial containment with ongoing transmission in 3 woredas. Peak in 3-4 weeks. Estimated affected: 8,500 people."
-        },
-        "worstCase": {
-          "name": "Worst Case",
-          "sub": "Regional spread scenario",
-          "description": "Widespread transmission across 8+ woredas with health system strain. Estimated affected: 24,000+ people."
-        }
-      },
-      "impactAssessment": {
-        "shelter": {
-          "sector": "Shelter",
-          "affected": "{count} people",
-          "description": "45% of shelters damaged or destroyed in flood-affected areas"
-        },
-        "wash": {
-          "sector": "WASH",
-          "affected": "{count} people",
-          "description": "3 water treatment facilities non-functional, contamination detected"
-        },
-        "protection": {
-          "sector": "Protection",
-          "affected": "{count} people",
-          "description": "GBV risks elevated, child protection concerns in displacement sites"
-        },
-        "health": {
-          "sector": "Health",
-          "affected": "{count} cases",
-          "description": "Cholera outbreak with Case Fatality Rate of 2.1%, above emergency threshold"
-        },
-        "foodSecurity": {
-          "sector": "Food Security",
-          "affected": "{count} people",
-          "description": "IPC Phase 3+ food insecurity in 5 woredas, market disruption ongoing"
-        }
-      },
-      "environmentalFactors": {
-        "floodRisk": "GloFAS indicates 75% probability of above-normal river levels in next 14 days",
-        "rainfallForecast": "150-200mm expected in Somali Region over next week, 40% above seasonal average",
-        "secondaryRisk": "Waterborne disease outbreak risk HIGH due to flood contamination of water sources"
-      },
-      "protectionConcerns": {
-        "gbv": "Increased GBV risks in overcrowded displacement sites, particularly for women and girls",
-        "separatedChildren": "Separated and unaccompanied children identified in 3 displacement sites",
-        "disabilities": "Barriers to accessing services for persons with disabilities in temporary shelters",
-        "documentation": "Documentation loss affecting access to basic services for displaced populations"
-      },
-      "secondaryEffects": {
-        "market": "Market disruption causing 28% food price increase in affected areas",
-        "schools": "School closures affecting 15,000 children across 23 schools",
-        "livestock": "Livestock losses estimated at $2.3M impacting pastoral livelihoods",
-        "transport": "Transport route disruptions delaying humanitarian supply chains by 48-72 hours",
-        "mentalHealth": "Mental health impacts reported in 60% of displaced households",
-        "agriculture": "Agricultural season disruption threatening next harvest in 4 woredas"
       }
     }
   },

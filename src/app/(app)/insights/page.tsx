@@ -7,7 +7,7 @@ import { PageHeader } from "~/components/ui";
 import { ReportsTab } from "./_components/reports-tab";
 
 export default function InsightsPage() {
-  const t = useTranslations("analysis");
+  const t = useTranslations("insights");
   const tBadges = useTranslations("common.badges");
   const [activeTab, setActiveTab] = useState<string | null>("crisis");
 
