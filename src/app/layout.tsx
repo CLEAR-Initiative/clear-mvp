@@ -1,7 +1,7 @@
 import "~/styles/globals.css";
 
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Noto_Sans_Arabic } from "next/font/google";
 import {
   MantineProvider,
   ColorSchemeScript,
@@ -18,6 +18,12 @@ import { localeDirection, isLocale, defaultLocale } from "~/i18n/config";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+});
+
+const notoSansArabic = Noto_Sans_Arabic({
+  subsets: ["arabic"],
+  variable: "--font-arabic",
+  weight: ["400", "500", "600", "700"],
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -58,7 +64,7 @@ export default async function RootLayout({
       <head>
         <ColorSchemeScript defaultColorScheme="auto" />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${notoSansArabic.variable} font-sans antialiased`}>
         <DirectionProvider initialDirection={dir} detectDirection={false}>
           <MantineProvider theme={clearTheme} defaultColorScheme="auto">
             <NextIntlClientProvider locale={locale} messages={messages}>

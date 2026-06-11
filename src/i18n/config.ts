@@ -1,4 +1,4 @@
-export const locales = ["en", "fr"] as const;
+export const locales = ["en", "fr", "ar"] as const;
 export type Locale = (typeof locales)[number];
 
 export const defaultLocale: Locale = "en";
@@ -8,18 +8,16 @@ export const TIMEZONE_COOKIE = "CLEAR_TZ";
 
 export const defaultTimeZone = "Africa/Khartoum";
 
-/**
- * Text direction per locale. Adding an RTL language later (e.g. Arabic)
- * only requires a new entry here plus its messages/<locale>.json file.
- */
 export const localeDirection: Record<Locale, "ltr" | "rtl"> = {
   en: "ltr",
   fr: "ltr",
+  ar: "rtl",
 };
 
 export const localeLabels: Record<Locale, string> = {
   en: "English",
   fr: "Français",
+  ar: "العربية",
 };
 
 export function isLocale(value: unknown): value is Locale {

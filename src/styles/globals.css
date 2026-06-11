@@ -341,3 +341,8 @@ body {
 nextjs-portal {
   display: none !important;
 }
+
+/* Arabic locale: use Noto Sans Arabic for all text */
+:lang(ar) {
+  font-family: var(--font-arabic), sans-serif;
+}
