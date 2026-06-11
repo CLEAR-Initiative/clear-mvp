@@ -1,8 +1,8 @@
 {
   "insights": {
     "page": {
-      "title": "Analyses",
-      "breadcrumb": "Analyses",
+      "title": "Constats",
+      "breadcrumb": "Constats",
       "tabs": {
         "crisis": "Vue d'ensemble de la crise",
         "situation": "Analyse de situation"
@@ -1786,7 +1786,7 @@
       "overview": "Vue d'ensemble",
       "detection": "Détection",
       "map": "Carte",
-      "insights": "Analyses",
+      "insights": "Constats",
       "operations": "Opérations",
       "cash": "Assistance monétaire",
       "knowledge": "Centre de connaissances"
