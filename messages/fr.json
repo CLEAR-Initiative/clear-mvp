@@ -1352,7 +1352,10 @@
         "high": "Élevée",
         "medium": "Moyenne",
         "low": "Faible"
-      }
+      },
+      "last7days": "7 derniers jours",
+      "last30days": "30 derniers jours",
+      "last90days": "90 derniers jours"
     },
     "sort": {
       "sevDesc": "Sévérité : décroissante",

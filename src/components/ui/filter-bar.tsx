@@ -33,7 +33,7 @@ interface FilterBarProps {
   regionsContent?: ReactNode;
   date?: string;
   onDateChange?: (value: string) => void;
-  dateOptions?: string[];
+  dateOptions?: Array<string | { value: string; label: string }>;
   children?: ReactNode;
 }
 
