@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Box, Text, Group } from "@mantine/core";
 import { CardSection } from "~/components/ui";
 import { type Contact } from "./knowledge-data";
@@ -7,10 +8,12 @@ interface ContactsPanelProps {
 }
 
 export function ContactsPanel({ filteredContacts }: ContactsPanelProps) {
+  const t = useTranslations("knowledge.contacts");
+
   return (
     <CardSection
-      title="Key Contacts"
-      subtitle={`${filteredContacts.length} contacts`}
+      title={t("title")}
+      subtitle={t("count", { count: filteredContacts.length })}
       noPadding
     >
       <Box style={{ maxHeight: 400, overflowY: "auto" }}>
@@ -20,15 +23,15 @@ export function ContactsPanel({ filteredContacts }: ContactsPanelProps) {
             <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>{contact.org}</Text>
             <Text c="#E85D3D" mt={4} style={{ fontSize: 12 }}>{contact.role}</Text>
             <Group gap={8} mt={8}>
-              <Text c="var(--color-text-muted)" style={{ fontSize: 11, cursor: "pointer" }} className="hover:text-[#E85D3D]">Email</Text>
+              <Text c="var(--color-text-muted)" style={{ fontSize: 11, cursor: "pointer" }} className="hover:text-[#E85D3D]">{t("email")}</Text>
               <Text c="var(--color-border)">&bull;</Text>
-              <Text c="var(--color-text-muted)" style={{ fontSize: 11, cursor: "pointer" }} className="hover:text-[#E85D3D]">Call</Text>
+              <Text c="var(--color-text-muted)" style={{ fontSize: 11, cursor: "pointer" }} className="hover:text-[#E85D3D]">{t("call")}</Text>
             </Group>
           </Box>
         ))}
         {filteredContacts.length === 0 && (
           <Box p={24}>
-            <Text ta="center" c="var(--color-text-muted)" style={{ fontSize: 13 }}>No contacts found for this location</Text>
+            <Text ta="center" c="var(--color-text-muted)" style={{ fontSize: 13 }}>{t("empty")}</Text>
           </Box>
         )}
       </Box>

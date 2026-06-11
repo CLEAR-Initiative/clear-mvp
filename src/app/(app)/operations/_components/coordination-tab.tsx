@@ -1,22 +1,25 @@
+import { useTranslations } from "next-intl";
 import { Text, Button } from "@mantine/core";
 import { CardSection, DataTable, Table, StatusIndicator } from "~/components/ui";
 import { partners } from "./operations-data";
 
 export function CoordinationTab() {
+  const t = useTranslations("operations.coordination");
+
   return (
     <CardSection
-      title="Coordination Partners"
-      subtitle="Organizations in the response"
-      action={<Button size="xs" variant="outline" color="gray">+ Add Partner</Button>}
+      title={t("title")}
+      subtitle={t("subtitle")}
+      action={<Button size="xs" variant="outline" color="gray">{t("addPartner")}</Button>}
       noPadding
     >
       <DataTable
         columns={[
-          { label: "Organization" },
-          { label: "Role" },
-          { label: "Coverage Area" },
-          { label: "Contact" },
-          { label: "Status" },
+          { label: t("columns.organization") },
+          { label: t("columns.role") },
+          { label: t("columns.coverage") },
+          { label: t("columns.contact") },
+          { label: t("columns.status") },
         ]}
         data={partners}
         renderRow={(p) => (

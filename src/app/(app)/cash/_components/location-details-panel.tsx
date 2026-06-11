@@ -11,6 +11,7 @@ import {
   SimpleGrid,
   Tabs,
 } from "@mantine/core";
+import { useFormatter, useTranslations } from "next-intl";
 import { IconMapPin, IconShieldCheck } from "@tabler/icons-react";
 import type { LocationData } from "./distribution-wizard";
 
@@ -19,6 +20,8 @@ interface LocationDetailsPanelProps {
 }
 
 export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelProps) {
+  const t = useTranslations("cash.details");
+  const format = useFormatter();
   const [detailTab, setDetailTab] = useState<string | null>("demographics");
   const d = selectedLocation.demographics;
   const total = d.male + d.female;
@@ -37,8 +40,8 @@ export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelP
         <Box px={20} py={16} className="border-b border-[var(--color-border)]">
           <Group justify="space-between">
             <Box>
-              <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ letterSpacing: "0.5px" }} mb={4}>Total Affected</Text>
-              <Text size="xl" fw={700} style={{ fontFamily: "monospace" }}>{selectedLocation.affected.toLocaleString()}</Text>
+              <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ letterSpacing: "0.5px" }} mb={4}>{t("totalAffected")}</Text>
+              <Text size="xl" fw={700} style={{ fontFamily: "monospace" }}>{format.number(selectedLocation.affected)}</Text>
             </Box>
             <Badge size="lg" style={{ background: selectedLocation.severityColor, color: "white", fontWeight: 600 }}>
               {selectedLocation.severity}
@@ -48,29 +51,29 @@ export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelP
 
         {/* Export button */}
         <Box px={20} py={12} className="border-b border-[var(--color-border)]">
-          <Button fullWidth size="sm" style={{ background: "#E85D3D", borderColor: "#E85D3D", fontSize: 13 }}>Export Cash Assessment Report (PDF)</Button>
+          <Button fullWidth size="sm" style={{ background: "#E85D3D", borderColor: "#E85D3D", fontSize: 13 }}>{t("exportReport")}</Button>
         </Box>
 
         {/* Detail Tabs */}
         <Tabs value={detailTab} onChange={setDetailTab} styles={{ tab: { fontSize: 13, fontWeight: 500 } }}>
           <Tabs.List>
-            <Tabs.Tab value="demographics" style={{ flex: 1 }}>Demographics</Tabs.Tab>
-            <Tabs.Tab value="market" style={{ flex: 1 }}>Market</Tabs.Tab>
-            <Tabs.Tab value="field" style={{ flex: 1 }}>Field Input</Tabs.Tab>
+            <Tabs.Tab value="demographics" style={{ flex: 1 }}>{t("tabs.demographics")}</Tabs.Tab>
+            <Tabs.Tab value="market" style={{ flex: 1 }}>{t("tabs.market")}</Tabs.Tab>
+            <Tabs.Tab value="field" style={{ flex: 1 }}>{t("tabs.field")}</Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="demographics">
             <Box p={16}>
               {/* Gender */}
-              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={10}>Gender Distribution</Text>
+              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={10}>{t("demographics.gender")}</Text>
               {[
-                { label: "Male", value: d.male, pct: Math.round((d.male / total) * 100) },
-                { label: "Female", value: d.female, pct: Math.round((d.female / total) * 100) },
+                { label: t("demographics.male"), value: d.male, pct: Math.round((d.male / total) * 100) },
+                { label: t("demographics.female"), value: d.female, pct: Math.round((d.female / total) * 100) },
               ].map((g) => (
                 <Box key={g.label} mb={8}>
                   <Group justify="space-between" mb={4}>
                     <Text size="xs">{g.label}</Text>
-                    <Text size="xs" style={{ fontFamily: "monospace" }}>{g.value.toLocaleString()} ({g.pct}%)</Text>
+                    <Text size="xs" style={{ fontFamily: "monospace" }}>{format.number(g.value)} ({g.pct}%)</Text>
                   </Group>
                   <Box style={{ height: 6, background: "var(--color-bg-muted)" }}>
                     <Box style={{ height: "100%", width: `${g.pct}%`, background: "#525252" }} />
@@ -79,18 +82,18 @@ export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelP
               ))}
 
               {/* Age Distribution */}
-              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mt={20} mb={10}>Age Distribution</Text>
+              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mt={20} mb={10}>{t("demographics.age")}</Text>
               <SimpleGrid cols={4} spacing={8}>
                 {Object.entries(d.ages).map(([label, value]) => (
                   <Box key={label} p={10} style={{ background: "var(--color-bg-muted)", textAlign: "center" }}>
                     <Text size="xs" c="var(--color-text-muted)" mb={4}>{label}</Text>
-                    <Text size="sm" fw={600} style={{ fontFamily: "monospace" }}>{value.toLocaleString()}</Text>
+                    <Text size="sm" fw={600} style={{ fontFamily: "monospace" }}>{format.number(value)}</Text>
                   </Box>
                 ))}
               </SimpleGrid>
 
               {/* Vulnerability */}
-              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mt={20} mb={10}>Vulnerability Indicators (HH)</Text>
+              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mt={20} mb={10}>{t("demographics.vulnerability")}</Text>
               {Object.entries(d.vulnerability).map(([label, value]) => (
                 <Group key={label} justify="space-between" py={6} className="border-b border-[var(--color-border)]">
                   <Text size="xs">{label}</Text>
@@ -99,7 +102,7 @@ export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelP
               ))}
 
               {/* Housing */}
-              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mt={20} mb={10}>Housing Conditions (HH)</Text>
+              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mt={20} mb={10}>{t("demographics.housing")}</Text>
               {Object.entries(d.housing).map(([label, value]) => (
                 <Group key={label} justify="space-between" py={6} className="border-b border-[var(--color-border)]">
                   <Text size="xs">{label}</Text>
@@ -109,7 +112,7 @@ export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelP
 
               {/* Avg Persons/Room */}
               <Box mt={16} p={12} style={{ background: "var(--color-bg-muted)" }}>
-                <Text size="xs" c="var(--color-text-muted)" mb={4}>Avg. Persons/Room</Text>
+                <Text size="xs" c="var(--color-text-muted)" mb={4}>{t("demographics.personsPerRoom")}</Text>
                 <Text size="lg" fw={700} style={{ fontFamily: "monospace" }}>{d.personsPerRoom}</Text>
               </Box>
             </Box>
@@ -117,22 +120,22 @@ export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelP
 
           <Tabs.Panel value="market">
             <Box p={16}>
-              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={10}>Market Functionality</Text>
+              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={10}>{t("market.functionality")}</Text>
               <Box p={12} mb={8} style={{ background: "#D1FAE5" }}>
                 <Group gap={8}>
                   <Box style={{ width: 8, height: 8, background: "#059669" }} />
-                  <Text size="sm" fw={500} c="#059669">Markets Operational</Text>
+                  <Text size="sm" fw={500} c="#059669">{t("market.operational")}</Text>
                 </Group>
               </Box>
               <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }} mb={20}>
-                3 of 4 major markets in the area are functioning normally. One market has reduced hours due to security concerns.
+                {t("market.operationalNote")}
               </Text>
 
-              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={10}>Vendor Availability</Text>
+              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={10}>{t("market.vendors")}</Text>
               {[
-                { label: "Food vendors", value: "12 active", color: "#059669" },
-                { label: "NFI vendors", value: "8 active", color: "#059669" },
-                { label: "Mobile money agents", value: "3 active", color: "#F59E0B" },
+                { label: t("market.vendorLabels.food"), value: t("market.vendorActive", { count: 12 }), color: "#059669" },
+                { label: t("market.vendorLabels.nfi"), value: t("market.vendorActive", { count: 8 }), color: "#059669" },
+                { label: t("market.vendorLabels.mobileMoney"), value: t("market.vendorActive", { count: 3 }), color: "#F59E0B" },
               ].map((v) => (
                 <Group key={v.label} justify="space-between" py={6} className="border-b border-[var(--color-border)]">
                   <Text size="xs">{v.label}</Text>
@@ -140,11 +143,11 @@ export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelP
                 </Group>
               ))}
 
-              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mt={20} mb={10}>Price Stability</Text>
+              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mt={20} mb={10}>{t("market.prices")}</Text>
               {[
-                { label: "Staple foods", value: "+12% vs baseline", color: "#F59E0B" },
-                { label: "Water (20L)", value: "+28% vs baseline", color: "#DC2626" },
-                { label: "Transport", value: "+5% vs baseline", color: "#059669" },
+                { label: t("market.priceLabels.stapleFoods"), value: t("market.priceVsBaseline", { change: "+12%" }), color: "#F59E0B" },
+                { label: t("market.priceLabels.water"), value: t("market.priceVsBaseline", { change: "+28%" }), color: "#DC2626" },
+                { label: t("market.priceLabels.transport"), value: t("market.priceVsBaseline", { change: "+5%" }), color: "#059669" },
               ].map((p) => (
                 <Group key={p.label} justify="space-between" py={6} className="border-b border-[var(--color-border)]">
                   <Text size="xs">{p.label}</Text>
@@ -152,28 +155,28 @@ export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelP
                 </Group>
               ))}
 
-              <Box mt={16} p={12} style={{ background: "#F0F9FF", borderLeft: "3px solid #3B82F6" }}>
-                <Text size="xs" fw={600} c="#3B82F6" mb={4}>Recommendation</Text>
-                <Text size="xs" c="var(--color-text-secondary)">Cash transfer is viable. Consider voucher restrictions for water purchases due to price inflation.</Text>
+              <Box mt={16} p={12} style={{ background: "#F0F9FF", borderInlineStart: "3px solid #3B82F6" }}>
+                <Text size="xs" fw={600} c="#3B82F6" mb={4}>{t("market.recommendation")}</Text>
+                <Text size="xs" c="var(--color-text-secondary)">{t("market.recommendationText")}</Text>
               </Box>
             </Box>
           </Tabs.Panel>
 
           <Tabs.Panel value="field">
             <Box p={16}>
-              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={10}>Coordinator Notes</Text>
+              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={10}>{t("field.notes")}</Text>
               <Box p={12} mb={20} style={{ background: "var(--color-bg-muted)" }}>
                 <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.6 }}>
-                  &ldquo;Community leaders have been consulted and are supportive of cash distribution. Women&apos;s groups prefer mobile money due to safety concerns with physical cash. Recommend morning distributions to avoid afternoon heat.&rdquo;
+                  &ldquo;{t("field.quote")}&rdquo;
                 </Text>
-                <Text size="xs" c="var(--color-text-muted)" mt={8}>&mdash; Ahmed M., Field Coordinator, Dec 14</Text>
+                <Text size="xs" c="var(--color-text-muted)" mt={8}>&mdash; {t("field.attribution")}</Text>
               </Box>
 
-              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={10}>Accessibility</Text>
+              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mb={10}>{t("field.accessibility")}</Text>
               {[
-                { label: "Road access", value: "Good", color: "#059669" },
-                { label: "Mobile network", value: "Intermittent", color: "#F59E0B" },
-                { label: "Distribution points", value: "2 identified", color: undefined },
+                { label: t("field.accessLabels.road"), value: t("field.accessValues.good"), color: "#059669" },
+                { label: t("field.accessLabels.network"), value: t("field.accessValues.intermittent"), color: "#F59E0B" },
+                { label: t("field.accessLabels.points"), value: t("field.accessValues.pointsIdentified", { count: 2 }), color: undefined },
               ].map((a) => (
                 <Group key={a.label} justify="space-between" py={6} className="border-b border-[var(--color-border)]">
                   <Text size="xs">{a.label}</Text>
@@ -182,19 +185,19 @@ export function LocationDetailsPanel({ selectedLocation }: LocationDetailsPanelP
               ))}
 
               {/* Security Considerations */}
-              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mt={20} mb={10}>Security Considerations</Text>
+              <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" mt={20} mb={10}>{t("field.security")}</Text>
               <Box p={12} mb={8} style={{ background: "#FEF3C7" }}>
                 <Group gap={8}>
                   <IconShieldCheck size={16} color="#D97706" />
-                  <Text size="sm" fw={500} c="#D97706">Moderate Risk</Text>
+                  <Text size="sm" fw={500} c="#D97706">{t("field.moderateRisk")}</Text>
                 </Group>
               </Box>
               <Text size="xs" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }} mb={16}>
-                Avoid large gatherings. Recommend staggered distribution times and multiple smaller distribution points.
+                {t("field.securityNote")}
               </Text>
 
               <Box mt={16} p={12} style={{ background: "var(--color-bg-muted)" }}>
-                <Text size="xs" c="var(--color-text-muted)" mb={4}>Last Field Visit</Text>
+                <Text size="xs" c="var(--color-text-muted)" mb={4}>{t("field.lastVisit")}</Text>
                 <Text size="sm" fw={600}>December 12, 2024</Text>
               </Box>
             </Box>

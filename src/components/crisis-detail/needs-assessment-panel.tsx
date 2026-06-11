@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Badge, Stack, Modal, List } from "@mantine/core";
 import {
   IconHome2,
@@ -40,6 +41,17 @@ const SAF_ORDER: Record<string, number> = {
   Unknown: 5,
 };
 
+// Known SAF level values -> i18n keys under crisisDetail.needs.saf.*
+// Unrecognised values coming from the API fall back to the raw string.
+const SAF_LABEL_KEYS: Record<string, "catastrophic" | "extreme" | "severe" | "stressed" | "minimal" | "unknown"> = {
+  Catastrophic: "catastrophic",
+  Extreme: "extreme",
+  Severe: "severe",
+  Stressed: "stressed",
+  Minimal: "minimal",
+  Unknown: "unknown",
+};
+
 // ── MSNA types ────────────────────────────────────────────────────────────────
 
 interface MsnaSectorEntry {
@@ -68,8 +80,12 @@ interface Ocha3wData {
 
 type SectorIcon = React.ComponentType<{ size?: number; color?: string }>;
 
+// key doubles as the i18n key under crisisDetail.needs.sectors.*;
+// label stays English because it is also the lookup key into the pipeline `needs.sector` payload.
+type SectorKey = "shelter" | "wash" | "protection" | "health" | "food" | "education";
+
 const SECTORS: {
-  key: string;
+  key: SectorKey;
   label: string;
   icon: SectorIcon;
   ochaCodes: string[];
@@ -217,15 +233,17 @@ function matchOchasector(ochaSectors: Ocha3wSector[], codes: string[]): Ocha3wSe
 type AssessmentLevel = 1 | 2 | 3;
 type Precision = "District" | "Locality";
 
-const LEVEL_STYLE: Record<AssessmentLevel, { label: string; color: string; bg: string }> = {
-  1: { label: "Baseline",  color: "var(--color-text-muted)", bg: "var(--color-bg-muted)"   },
-  2: { label: "AI Review", color: "var(--color-ai)",         bg: "var(--color-ai-light)"   },
-  3: { label: "RNA",       color: "var(--color-info)",       bg: "var(--color-info-light)" },
+// labelKey: i18n keys under crisisDetail.needs.levels.* - resolved via t() at render time.
+const LEVEL_STYLE: Record<AssessmentLevel, { labelKey: "baseline" | "aiReview" | "rna"; color: string; bg: string }> = {
+  1: { labelKey: "baseline", color: "var(--color-text-muted)", bg: "var(--color-bg-muted)"   },
+  2: { labelKey: "aiReview", color: "var(--color-ai)",         bg: "var(--color-ai-light)"   },
+  3: { labelKey: "rna",      color: "var(--color-info)",       bg: "var(--color-info-light)" },
 };
 
 // ── Assessment bar ────────────────────────────────────────────────────────────
 
 function AssessmentBar({ level }: { level: AssessmentLevel }) {
+  const t = useTranslations("crisisDetail");
   const s = LEVEL_STYLE[level];
   return (
     <Box style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -243,7 +261,7 @@ function AssessmentBar({ level }: { level: AssessmentLevel }) {
         ))}
       </Box>
       <Text style={{ fontSize: 11, fontWeight: 600, color: s.color, lineHeight: 1 }}>
-        {s.label}
+        {t(`needs.levels.${s.labelKey}`)}
       </Text>
     </Box>
   );
@@ -278,9 +296,13 @@ function SectorRow({
   precision: Precision | null;
   isLast: boolean;
 }) {
+  const t = useTranslations("crisisDetail");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const saf = getSafColors(severity);
-  const displayLevel = severity ?? "Unknown";
+  const rawLevel = severity ?? "Unknown";
+  const safKey = SAF_LABEL_KEYS[rawLevel];
+  const displayLevel = safKey ? t(`needs.saf.${safKey}`) : rawLevel;
   const Chevron = open ? IconChevronDown : IconChevronRight;
 
   return (
@@ -343,7 +365,7 @@ function SectorRow({
               </Text>
               {pinIsApprox && (
                 <Text style={{ fontSize: 9, color: "var(--color-text-muted)", lineHeight: 1, marginTop: 2 }}>
-                  est. child share
+                  {t("needs.estChildShare")}
                 </Text>
               )}
             </Box>
@@ -370,7 +392,7 @@ function SectorRow({
         <Box>
           {precision ? (
             <Text style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-muted)" }}>
-              {precision}
+              {t(`needs.precision.${precision === "District" ? "district" : "locality"}`)}
             </Text>
           ) : (
             <Text size="xs" c="var(--color-text-muted)">-</Text>
@@ -389,8 +411,8 @@ function SectorRow({
             borderBottom: isLast ? undefined : "1px solid var(--color-border)",
             paddingTop: 14,
             paddingBottom: 14,
-            paddingRight: 16,
-            paddingLeft: 58, // 16px outer + 32px icon + 10px gap = aligns with sector name
+            paddingInlineEnd: 16,
+            paddingInlineStart: 58, // 16px outer + 32px icon + 10px gap = aligns with sector name
           }}
         >
           <Stack gap={14}>
@@ -398,10 +420,10 @@ function SectorRow({
             <Box>
               <Group gap={6} mb={6} align="center">
                 <Text size="xs" fw={700} c="var(--color-text-secondary)" tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>
-                  Summary
+                  {t("needs.summaryTitle")}
                 </Text>
                 <Badge size="xs" style={{ background: "var(--color-ai-light)", color: "var(--color-ai)", border: "1px solid var(--color-ai-border)", fontWeight: 600 }}>
-                  ✦ AI generated
+                  {tCommon("badges.aiGenerated")}
                 </Badge>
               </Group>
               {description ? (
@@ -410,7 +432,7 @@ function SectorRow({
                 </Text>
               ) : (
                 <Text size="xs" c="var(--color-text-muted)" style={{ fontStyle: "italic" }}>
-                  AI generated summary coming soon.
+                  {t("needs.aiSummaryComingSoon")}
                 </Text>
               )}
             </Box>
@@ -420,12 +442,12 @@ function SectorRow({
               <Group gap={6}>
                 {responseGap === true && (
                   <Badge size="xs" style={{ background: "var(--color-critical-light)", color: "var(--color-critical)" }}>
-                    Response gap
+                    {t("needs.responseGap")}
                   </Badge>
                 )}
                 {nrcRelevant === true && (
                   <Badge size="xs" style={{ background: "var(--color-info-light)", color: "var(--color-info)" }}>
-                    NRC mandate
+                    {t("needs.nrcMandate")}
                   </Badge>
                 )}
               </Group>
@@ -435,7 +457,7 @@ function SectorRow({
             {ochaData?.organizations && ochaData.organizations.length > 0 && (
               <Stack gap={4}>
                 <Text size="xs" fw={700} c="var(--color-text-secondary)" tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }} mb={4}>
-                  Organisations active in this area
+                  {t("needs.orgsActive")}
                 </Text>
                 {ochaData.organizations.slice(0, 10).map((org) => (
                   <Group key={org.acronym} gap={8} wrap="nowrap">
@@ -447,7 +469,7 @@ function SectorRow({
                   </Group>
                 ))}
                 {ochaData.organizations.length > 10 && (
-                  <Text size="xs" c="var(--color-text-muted)" mt={4}>+{ochaData.organizations.length - 10} more</Text>
+                  <Text size="xs" c="var(--color-text-muted)" mt={4}>{t("needs.moreOrgs", { count: ochaData.organizations.length - 10 })}</Text>
                 )}
               </Stack>
             )}
@@ -494,7 +516,7 @@ function ColHeader({ children, style }: { children: React.ReactNode; style?: Rea
 // ── Needs summary card ────────────────────────────────────────────────────────
 
 interface SectorRowData {
-  key: string;
+  key: SectorKey;
   label: string;
   icon: SectorIcon;
   severity: string | null;
@@ -566,6 +588,9 @@ function SummaryText({ text }: { text: string }) {
 }
 
 function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha3w: Ocha3wData | null; hasMsna: boolean }) {
+  const t = useTranslations("crisisDetail");
+  const format = useFormatter();
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(true);
 
   const generalSummary = useMemo(() => {
@@ -586,7 +611,7 @@ function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha
   }, [crisis.needs]);
 
   const ocha3wDate = ocha3w?.as_of
-    ? new Date(ocha3w.as_of).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+    ? format.dateTime(new Date(ocha3w.as_of), { month: "short", year: "numeric" })
     : null;
 
   return (
@@ -606,7 +631,7 @@ function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha
         }}
       >
         <Group gap={8} align="center">
-          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Summary</Text>
+          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>{t("needs.summaryTitle")}</Text>
           <Badge
             size="xs"
             style={{
@@ -616,7 +641,7 @@ function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha
               fontWeight: 600,
             }}
           >
-            ✦ AI generated
+            {tCommon("badges.aiGenerated")}
           </Badge>
         </Group>
         {open
@@ -630,12 +655,10 @@ function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha
           {(ocha3wDate ?? hasMsna) && (
             <Text size="xs" c="var(--color-text-muted)" mb={10} style={{ lineHeight: 1.4 }}>
               {hasMsna && (
-                <>Sector severity from <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>MSNA Aug 2025</span>.</>
+                <>{t.rich("needs.severityFromMsna", { b: (chunks) => <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>{chunks}</span> })}</>
               )}
               {ocha3wDate && (
-                <>{hasMsna ? " " : ""}Operational presence from{" "}
-                  <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>OCHA 3W {ocha3wDate}</span>.
-                </>
+                <>{hasMsna ? " " : ""}{t.rich("needs.presenceFromOcha", { date: ocha3wDate, b: (chunks) => <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>{chunks}</span> })}</>
               )}
             </Text>
           )}
@@ -649,7 +672,7 @@ function NeedsSummaryCard({ crisis, ocha3w, hasMsna }: { crisis: GqlCrisis; ocha
             <SummaryText text={generalSummary} />
           ) : (
             <Text size="xs" c="var(--color-text-muted)">
-              Needs analysis is being generated...
+              {t("needs.generating")}
             </Text>
           )}
         </Box>
@@ -665,6 +688,7 @@ interface NeedsAssessmentPanelProps {
 }
 
 export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
+  const t = useTranslations("crisisDetail");
   const ocha3w = useMemo(() => parseOcha3w(crisis), [crisis]);
   const msna = useMemo(() => parseMsna(crisis), [crisis]);
   const a2 = useMemo(() => resolveA2(crisis), [crisis]);
@@ -728,7 +752,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
           <Group justify="space-between" align="center" wrap="nowrap">
             <Group gap={8} align="center">
               <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                Sectors
+                {t("needs.sectorsTitle")}
               </Text>
               {a2 && (
                 <Badge size="xs" style={{ background: "var(--color-info-light)", color: "var(--color-info)" }}>
@@ -751,25 +775,25 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
             background: "var(--color-bg-muted)",
           }}
         >
-          <ColHeader>Sector</ColHeader>
+          <ColHeader>{t("needs.columns.sector")}</ColHeader>
           <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <ColHeader>Severity</ColHeader>
+            <ColHeader>{t("needs.columns.severity")}</ColHeader>
             <InfoButton onClick={() => setSeverityInfoOpen(true)} />
           </Box>
           <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <ColHeader>People in Need</ColHeader>
+            <ColHeader>{t("needs.columns.pin")}</ColHeader>
             <InfoButton onClick={() => setPinInfoOpen(true)} />
           </Box>
           <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <ColHeader>Op. Presence</ColHeader>
+            <ColHeader>{t("needs.columns.presence")}</ColHeader>
             <InfoButton onClick={() => setPresenceInfoOpen(true)} />
           </Box>
           <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <ColHeader>Assessment</ColHeader>
+            <ColHeader>{t("needs.columns.assessment")}</ColHeader>
             <InfoButton onClick={() => setAssessmentInfoOpen(true)} />
           </Box>
           <Box style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <ColHeader>Precision</ColHeader>
+            <ColHeader>{t("needs.columns.precision")}</ColHeader>
             <InfoButton onClick={() => setPrecisionInfoOpen(true)} />
           </Box>
           <Box />
@@ -779,7 +803,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
         {rows.map((row, idx) => (
           <SectorRow
             key={row.key}
-            label={row.label}
+            label={t(`needs.sectors.${row.key}`)}
             Icon={row.icon}
             severity={row.severity}
             description={row.description}
@@ -799,38 +823,38 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
       <Modal
         opened={severityInfoOpen}
         onClose={() => setSeverityInfoOpen(false)}
-        title={<Text fw={700} size="sm" c="var(--color-text-primary)">Sector Severity</Text>}
+        title={<Text fw={700} size="sm" c="var(--color-text-primary)">{t("needs.severityModal.title")}</Text>}
         size="sm"
       >
         <Stack gap={16}>
           <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
-            Each sector is scored 0-100 using weighted combinations of MSNA survey indicators across three dimensions: disruption to living standards (access, availability, and quality of essential services), coping mechanisms adopted by affected populations, and physical and mental wellbeing outcomes.
+            {t("needs.severityModal.intro")}
           </Text>
 
           <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
             <Box style={{ display: "grid", gridTemplateColumns: "90px 1fr", background: "var(--color-bg-muted)", padding: "6px 12px", borderBottom: "1px solid var(--color-border)" }}>
-              <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Score</Text>
-              <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Level</Text>
+              <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>{t("needs.severityModal.score")}</Text>
+              <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>{t("needs.severityModal.level")}</Text>
             </Box>
             {([
-              { range: "80-100", level: "Catastrophic", color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
-              { range: "65-79",  level: "Extreme",      color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
-              { range: "45-64",  level: "Severe",       color: "var(--color-warning)",   bg: "var(--color-warning-light)"  },
-              { range: "25-44",  level: "Stressed",     color: "var(--color-info)",      bg: "var(--color-info-light)"     },
-              { range: "0-24",   level: "Minimal",      color: "var(--color-success)",   bg: "var(--color-success-light)"  },
-              { range: "No data",level: "Unknown",      color: "var(--color-text-muted)",bg: "var(--color-bg-muted)"       },
+              { range: "80-100", levelKey: "catastrophic", color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
+              { range: "65-79",  levelKey: "extreme",      color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
+              { range: "45-64",  levelKey: "severe",       color: "var(--color-warning)",   bg: "var(--color-warning-light)"  },
+              { range: "25-44",  levelKey: "stressed",     color: "var(--color-info)",      bg: "var(--color-info-light)"     },
+              { range: "0-24",   levelKey: "minimal",      color: "var(--color-success)",   bg: "var(--color-success-light)"  },
+              { range: null,     levelKey: "unknown",      color: "var(--color-text-muted)",bg: "var(--color-bg-muted)"       },
             ] as const).map((row) => (
-              <Box key={row.level} style={{ display: "grid", gridTemplateColumns: "90px 1fr", padding: "8px 12px", borderTop: "1px solid var(--color-border)", alignItems: "center" }}>
-                <Text size="xs" c="var(--color-text-secondary)">{row.range}</Text>
+              <Box key={row.levelKey} style={{ display: "grid", gridTemplateColumns: "90px 1fr", padding: "8px 12px", borderTop: "1px solid var(--color-border)", alignItems: "center" }}>
+                <Text size="xs" c="var(--color-text-secondary)">{row.range ?? t("needs.severityModal.noData")}</Text>
                 <span style={{ display: "inline-block", padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", background: row.bg, color: row.color }}>
-                  {row.level}
+                  {t(`needs.saf.${row.levelKey}`)}
                 </span>
               </Box>
             ))}
           </Box>
 
           <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
-            Thresholds are prototype-stage and pending validation against JIAF cluster standards and NRC benchmarks.
+            {t("needs.severityModal.footnote")}
           </Text>
         </Stack>
       </Modal>
@@ -839,23 +863,23 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
       <Modal
         opened={pinInfoOpen}
         onClose={() => setPinInfoOpen(false)}
-        title={<Text fw={700} size="sm" c="var(--color-text-primary)">People in Need</Text>}
+        title={<Text fw={700} size="sm" c="var(--color-text-primary)">{t("needs.pinModal.title")}</Text>}
         size="sm"
       >
         <Stack gap={12}>
           <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
-            Estimated from the sector severity score using the same weighted composite formula that drives the severity label:
+            {t("needs.pinModal.intro")}
           </Text>
           <Box style={{ border: "1px solid var(--color-border)", padding: "10px 14px", background: "var(--color-bg-muted)" }}>
             <Text size="xs" fw={600} c="var(--color-text-primary)" style={{ fontFamily: "monospace", letterSpacing: "0.02em" }}>
-              PIN = (score / 100) x district population
+              {t("needs.pinModal.formula")}
             </Text>
           </Box>
           <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
-            Population data: WorldPop 2026 constrained estimates. Education applies an 18% child population share since the sector score represents school-age children only.
+            {t("needs.pinModal.population")}
           </Text>
           <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
-            Education child share will be replaced by WorldPop age-sex breakdown when available.
+            {t("needs.pinModal.footnote")}
           </Text>
         </Stack>
       </Modal>
@@ -864,29 +888,29 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
       <Modal
         opened={assessmentInfoOpen}
         onClose={() => setAssessmentInfoOpen(false)}
-        title={<Text fw={700} size="sm" c="var(--color-text-primary)">Assessment Level</Text>}
+        title={<Text fw={700} size="sm" c="var(--color-text-primary)">{t("needs.assessmentModal.title")}</Text>}
         size="sm"
       >
         <Stack gap={16}>
           <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
-            Indicates how the sector assessment was produced and which data sources it draws on.
+            {t("needs.assessmentModal.intro")}
           </Text>
           <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
             {([
               {
-                level: "1  Baseline",
+                level: t("needs.assessmentModal.level1Label"),
                 color: "var(--color-text-muted)",
-                desc: "Sourced from MSNA (Multi-Sector Needs Assessment) survey data, August 2025. District-level coverage only. No AI review has been applied.",
+                desc: t("needs.assessmentModal.level1Description"),
               },
               {
-                level: "2  AI Review",
+                level: t("needs.assessmentModal.level2Label"),
                 color: "var(--color-ai)",
-                desc: "An AI model has reviewed available signals and reports alongside the MSNA baseline to produce an updated severity assessment and written sector summary.",
+                desc: t("needs.assessmentModal.level2Description"),
               },
               {
-                level: "3  RNA",
+                level: t("needs.assessmentModal.level3Label"),
                 color: "var(--color-info)",
-                desc: "A Rapid Needs Assessment conducted in-field provides direct on-the-ground data, superseding remote-sensing and survey estimates.",
+                desc: t("needs.assessmentModal.level3Description"),
               },
             ]).map((row, i) => (
               <Box key={row.level} style={{ padding: "10px 14px", borderTop: i > 0 ? "1px solid var(--color-border)" : undefined }}>
@@ -902,17 +926,17 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
       <Modal
         opened={precisionInfoOpen}
         onClose={() => setPrecisionInfoOpen(false)}
-        title={<Text fw={700} size="sm" c="var(--color-text-primary)">Precision</Text>}
+        title={<Text fw={700} size="sm" c="var(--color-text-primary)">{t("needs.precisionModal.title")}</Text>}
         size="sm"
       >
         <Stack gap={16}>
           <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
-            Indicates the finest geographic granularity at which the assessment data was collected.
+            {t("needs.precisionModal.intro")}
           </Text>
           <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
             {([
-              { label: "District", desc: "Data collected at administrative level 2 (A2 district). This is the current granularity of the MSNA dataset." },
-              { label: "Locality", desc: "Data collected at sub-district (locality) level, providing finer resolution. Requires field validation or higher-resolution data sources not yet integrated." },
+              { label: t("needs.precisionModal.districtLabel"), desc: t("needs.precisionModal.districtDescription") },
+              { label: t("needs.precisionModal.localityLabel"), desc: t("needs.precisionModal.localityDescription") },
             ]).map((row, i) => (
               <Box key={row.label} style={{ padding: "10px 14px", borderTop: i > 0 ? "1px solid var(--color-border)" : undefined }}>
                 <Text size="xs" fw={700} c="var(--color-text-primary)" mb={4}>{row.label}</Text>
@@ -921,7 +945,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
             ))}
           </Box>
           <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
-            Most current assessments are at District level. Locality precision will become available as finer data sources are integrated.
+            {t("needs.precisionModal.footnote")}
           </Text>
         </Stack>
       </Modal>
@@ -930,26 +954,26 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
       <Modal
         opened={presenceInfoOpen}
         onClose={() => setPresenceInfoOpen(false)}
-        title={<Text fw={700} size="sm" c="var(--color-text-primary)">Operational Presence</Text>}
+        title={<Text fw={700} size="sm" c="var(--color-text-primary)">{t("needs.presenceModal.title")}</Text>}
         size="sm"
       >
         <Stack gap={16}>
           <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
-            Sourced from OCHA&apos;s 3W (Who does What Where) dataset. Shows humanitarian organizations actively operating in the district, broken down by organization type.
+            {t("needs.presenceModal.intro")}
           </Text>
 
           <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
             {([
-              { abbrev: "UN",    label: "United Nations agencies"   },
-              { abbrev: "INGO",  label: "International NGOs"        },
-              { abbrev: "NNGO",  label: "National NGOs"             },
-              { abbrev: "Gov",   label: "Government bodies"         },
-              { abbrev: "RCRC",  label: "Red Cross / Red Crescent"  },
-              { abbrev: "Other", label: "Other organizations"       },
+              { abbrev: "UN",    labelKey: "un"    },
+              { abbrev: "INGO",  labelKey: "ingo"  },
+              { abbrev: "NNGO",  labelKey: "nngo"  },
+              { abbrev: "Gov",   labelKey: "gov"   },
+              { abbrev: "RCRC",  labelKey: "rcrc"  },
+              { abbrev: "Other", labelKey: "other" },
             ] as const).map((row, i) => (
               <Box key={row.abbrev} style={{ display: "grid", gridTemplateColumns: "56px 1fr", padding: "8px 12px", borderTop: i > 0 ? "1px solid var(--color-border)" : undefined, alignItems: "center" }}>
                 <Text size="xs" fw={700} c="var(--color-text-primary)">{row.abbrev}</Text>
-                <Text size="xs" c="var(--color-text-secondary)">{row.label}</Text>
+                <Text size="xs" c="var(--color-text-secondary)">{t(`needs.presenceModal.types.${row.labelKey}`)}</Text>
               </Box>
             ))}
           </Box>

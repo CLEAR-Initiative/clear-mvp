@@ -59,109 +59,82 @@ export const situationReports = [
 ];
 
 /* ========== Scenarios ========== */
+// key: i18n keys under analysis.data.scenarios.* - resolved via t() at render time.
 export const scenarios = [
   {
-    name: "Best Case",
-    sub: "Rapid containment scenario",
+    key: "bestCase",
     likelihood: "25% likely",
     likelihoodBg: "#D1FAE5",
     likelihoodColor: "#059669",
-    description:
-      "Early intervention with full WASH coverage achieves containment within 2 weeks. Estimated affected: 2,400 people.",
     highlighted: false,
   },
   {
-    name: "Most Likely",
-    sub: "Moderate spread scenario",
+    key: "mostLikely",
     likelihood: "55% likely",
     likelihoodBg: "#DBEAFE",
     likelihoodColor: "#2563EB",
-    description:
-      "Partial containment with ongoing transmission in 3 woredas. Peak in 3-4 weeks. Estimated affected: 8,500 people.",
     highlighted: true,
   },
   {
-    name: "Worst Case",
-    sub: "Regional spread scenario",
+    key: "worstCase",
     likelihood: "20% likely",
     likelihoodBg: "#FEE2E2",
     likelihoodColor: "#DC2626",
-    description:
-      "Widespread transmission across 8+ woredas with health system strain. Estimated affected: 24,000+ people.",
     highlighted: false,
   },
-];
+] as const;
 
 /* ========== AI Insights ========== */
+// key: i18n keys under analysis.data.insights.* - resolved via t() at render time.
 export const insights = [
   {
-    type: "Critical Pattern",
+    key: "waterClustering",
     typeColor: "#DC2626",
     icon: IconAlertTriangle,
-    title: "Water Source Clustering",
-    description:
-      "87% of cases within 500m of 3 water points. Immediate testing and treatment recommended.",
     borderColor: "#DC2626",
   },
   {
-    type: "Time Sensitive",
+    key: "peakTiming",
     typeColor: "#F59E0B",
     icon: IconClock,
-    title: "Peak Timing Prediction",
-    description:
-      "Historical patterns suggest peak transmission 14-21 days from outbreak start. Current: Day 8.",
     borderColor: "#F59E0B",
   },
   {
-    type: "Opportunity",
+    key: "resourceOptimization",
     typeColor: "#059669",
     icon: IconCircleCheck,
-    title: "Resource Optimization",
-    description:
-      "ORS supplies in Dire Dawa can reach affected areas within 6 hours. Pre-positioning available.",
     borderColor: "#059669",
   },
-];
+] as const;
 
 /* ========== Data Quality ========== */
+// key: i18n keys under analysis.data.dataQuality.* - resolved via t() at render time.
 export const dataQuality = [
   {
-    source: "MOH PHEM Data",
+    key: "mohPhem",
     completeness: 94,
-    timeliness: "Real-time",
     timelinessColor: "#059669",
-    confidence: "High",
     confidenceColor: "#059669",
-    lastUpdate: "3 min ago",
   },
   {
-    source: "WHO EWARN",
+    key: "whoEwarn",
     completeness: 88,
-    timeliness: "Hourly",
     timelinessColor: "#059669",
-    confidence: "High",
     confidenceColor: "#059669",
-    lastUpdate: "1h ago",
   },
   {
-    source: "Field Reports",
+    key: "fieldReports",
     completeness: 76,
-    timeliness: "Daily",
     timelinessColor: "#D97706",
-    confidence: "Medium",
     confidenceColor: "#D97706",
-    lastUpdate: "4h ago",
   },
   {
-    source: "Satellite Imagery",
+    key: "satellite",
     completeness: 92,
-    timeliness: "6h cycle",
     timelinessColor: "#059669",
-    confidence: "High",
     confidenceColor: "#059669",
-    lastUpdate: "2h ago",
   },
-];
+] as const;
 
 /* ========== Current Situation ========== */
 export const currentSituation = [
@@ -185,88 +158,66 @@ export const populationImpact = {
 };
 
 /* ========== Impact Assessment ========== */
+// key: i18n keys under analysis.data.impactAssessment.* - resolved via t() at render time.
 export const impactAssessment = [
   {
-    sector: "Shelter",
+    key: "shelter",
     icon: IconHome,
     severity: "critical" as const,
     severityColor: "#DC2626",
     severityBg: "#FEE2E2",
     number: 12500,
-    unit: "people",
-    description:
-      "45% of shelters damaged or destroyed in flood-affected areas",
   },
   {
-    sector: "WASH",
+    key: "wash",
     icon: IconDroplet,
     severity: "critical" as const,
     severityColor: "#DC2626",
     severityBg: "#FEE2E2",
     number: 45000,
-    unit: "people",
-    description:
-      "3 water treatment facilities non-functional, contamination detected",
   },
   {
-    sector: "Protection",
+    key: "protection",
     icon: IconShield,
     severity: "high" as const,
     severityColor: "#F59E0B",
     severityBg: "#FEF3C7",
     number: 8200,
-    unit: "people",
-    description:
-      "GBV risks elevated, child protection concerns in displacement sites",
   },
   {
-    sector: "Health",
+    key: "health",
     icon: IconHeart,
     severity: "critical" as const,
     severityColor: "#DC2626",
     severityBg: "#FEE2E2",
     number: 847,
-    unit: "cases",
-    description:
-      "Cholera outbreak with Case Fatality Rate of 2.1%, above emergency threshold",
   },
   {
-    sector: "Food Security",
+    key: "foodSecurity",
     icon: IconToolsKitchen2,
     severity: "high" as const,
     severityColor: "#F59E0B",
     severityBg: "#FEF3C7",
     number: 32000,
-    unit: "people",
-    description:
-      "IPC Phase 3+ food insecurity in 5 woredas, market disruption ongoing",
   },
-];
-
-/* ========== Environmental Factors ========== */
-export const environmentalFactors = {
-  floodRisk:
-    "GloFAS indicates 75% probability of above-normal river levels in next 14 days",
-  rainfallForecast:
-    "150-200mm expected in Somali Region over next week, 40% above seasonal average",
-  secondaryRisk:
-    "Waterborne disease outbreak risk HIGH due to flood contamination of water sources",
-};
+] as const;
 
 /* ========== Protection Concerns ========== */
+// i18n keys under analysis.data.protectionConcerns.* - resolved via t() at render time.
 export const protectionConcerns = [
-  "Increased GBV risks in overcrowded displacement sites, particularly for women and girls",
-  "Separated and unaccompanied children identified in 3 displacement sites",
-  "Barriers to accessing services for persons with disabilities in temporary shelters",
-  "Documentation loss affecting access to basic services for displaced populations",
-];
+  "gbv",
+  "separatedChildren",
+  "disabilities",
+  "documentation",
+] as const;
 
 /* ========== Secondary Effects ========== */
+// i18n keys under analysis.data.secondaryEffects.* - resolved via t() at render time.
 export const secondaryEffects = [
-  "Market disruption causing 28% food price increase in affected areas",
-  "School closures affecting 15,000 children across 23 schools",
-  "Livestock losses estimated at $2.3M impacting pastoral livelihoods",
-  "Transport route disruptions delaying humanitarian supply chains by 48-72 hours",
-  "Mental health impacts reported in 60% of displaced households",
-  "Agricultural season disruption threatening next harvest in 4 woredas",
-];
+  "market",
+  "schools",
+  "livestock",
+  "transport",
+  "mentalHealth",
+  "agriculture",
+] as const;

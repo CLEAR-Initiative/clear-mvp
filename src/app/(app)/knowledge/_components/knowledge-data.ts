@@ -32,14 +32,15 @@ export const locationData = {
 };
 
 /* ========== Content Type Options ========== */
+// labelKey: i18n keys under knowledge.types.* - resolved via t() at render time.
 export const contentTypes = [
-  { value: "all", label: "All Resources" },
-  { value: "protocol", label: "Protocols" },
-  { value: "guideline", label: "Guidelines" },
-  { value: "template", label: "Templates" },
-  { value: "contact", label: "Contacts" },
-  { value: "training", label: "Training" },
-];
+  { value: "all", labelKey: "all" },
+  { value: "protocol", labelKey: "protocol" },
+  { value: "guideline", labelKey: "guideline" },
+  { value: "template", labelKey: "template" },
+  { value: "contact", labelKey: "contact" },
+  { value: "training", labelKey: "training" },
+] as const;
 
 /* ========== Active Crises Data ========== */
 export interface CrisisResource {
@@ -166,11 +167,8 @@ export function getTypeColor(type: string): { color: string; bg: string } {
 }
 
 /* ========== HumChat Example Questions ========== */
-export const exampleQuestions = [
-  "Analyze displacement trends in Somali Region",
-  "What are the priority interventions for health emergencies?",
-  "Generate a rapid assessment plan for protection risks",
-];
+// i18n keys under knowledge.humchat.examples.* - resolved via t() at render time.
+export const exampleQuestions = ["displacement", "interventions", "assessment"] as const;
 
 /* ========== HumChat Response Generator (Fallback) ========== */
 export const generateResponse = (userMessage: string): string => {
@@ -256,17 +254,10 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+// content is resolved via the knowledge.humchat.welcome i18n key at render time.
 export const welcomeMessage: ChatMessage = {
   id: "welcome",
   role: "assistant",
-  content: `Hello! I'm **HumChat**, your AI assistant for humanitarian operations. I'm trained on IASC guidelines, Sphere standards, and Ethiopia-specific humanitarian context.
-
-I can help you with:
-- **Situation analysis** and crisis briefs
-- **Response planning** and resource allocation
-- **Protocol guidance** for emergencies
-- **Coordination** support and communications
-
-What humanitarian challenge can I help you address today?`,
+  content: "",
   timestamp: new Date(),
 };

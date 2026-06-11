@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { geometryBounds } from "~/lib/geo/country-mask";
 import { useIsDark } from "~/hooks/use-is-dark";
@@ -211,6 +212,7 @@ export function CrisisMap({
   hoveredMarkerId,
   fitBoundsOnFocus = true,
 }: CrisisMapProps) {
+  const t = useTranslations("map");
   const isDark = useIsDark();
   const mapStyle = isDark
     ? "mapbox://styles/mapbox/dark-v11"
@@ -1002,7 +1004,7 @@ export function CrisisMap({
       <div
         className={`bg-bg-muted border border-border flex items-center justify-center text-text-muted text-sm ${className ?? ""}`}
       >
-        Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env
+        {t("tokenMissing")}
       </div>
     );
   }

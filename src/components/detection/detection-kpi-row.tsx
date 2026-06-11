@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Box, Text, Group, Collapse, ActionIcon } from "@mantine/core";
 import { IconChevronUp, IconChevronDown } from "@tabler/icons-react";
+import { useTranslations } from "next-intl";
 import type { GqlAlert, GqlEvent } from "~/lib/types/graphql";
 import { SignalTrendCard }      from "./signal-trend-card";
 import { CoverageRingsCard }    from "./coverage-rings-card";
@@ -38,6 +39,7 @@ interface DetectionKpiRowProps {
 }
 
 export function DetectionKpiRow({ country, alerts, events, onNavigateToAlerts }: DetectionKpiRowProps) {
+  const t = useTranslations("detection");
   const iso3 = ISO3[country] ?? "SDN";
   const [expanded, setExpanded] = useState(false);
 
@@ -51,7 +53,7 @@ export function DetectionKpiRow({ country, alerts, events, onNavigateToAlerts }:
         onClick={() => setExpanded((v) => !v)}
       >
         <Text fw={600} c="var(--color-text-secondary)" style={{ fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-          Indicators
+          {t("kpi.indicators")}
         </Text>
         <ActionIcon
           variant="subtle"

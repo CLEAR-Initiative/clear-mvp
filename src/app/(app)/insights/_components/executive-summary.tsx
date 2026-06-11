@@ -1,5 +1,6 @@
 "use client";
 
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -32,13 +33,14 @@ const SECTOR_CONFIG: Record<string, { icon: IconComponent; description: string }
   food: { icon: IconToolsKitchen2, description: "Nutrition access" },
 };
 
+// labelKey: i18n keys under analysis.executiveSummary.needs.* - resolved via t() at render time.
 const DEFAULT_NEEDS = [
-  { label: "Shelter", icon: IconHome, description: "Housing & displacement" },
-  { label: "WASH", icon: IconDroplet, description: "Water & sanitation" },
-  { label: "Protection", icon: IconShield, description: "Rights & safety" },
-  { label: "Health", icon: IconHeart, description: "Medical response" },
-  { label: "Food Security", icon: IconToolsKitchen2, description: "Nutrition access" },
-];
+  { labelKey: "shelter", icon: IconHome },
+  { labelKey: "wash", icon: IconDroplet },
+  { labelKey: "protection", icon: IconShield },
+  { labelKey: "health", icon: IconHeart },
+  { labelKey: "foodSecurity", icon: IconToolsKitchen2 },
+] as const;
 
 interface SummaryStats {
   critical: number;
@@ -75,6 +77,8 @@ export function ExecutiveSummary({
   llmMutation,
   selectedCountry,
 }: ExecutiveSummaryProps) {
+  const t = useTranslations("insights");
+  const format = useFormatter();
   const needs = DEFAULT_NEEDS;
 
   return (
@@ -111,7 +115,7 @@ export function ExecutiveSummary({
                 tt="uppercase"
                 style={{ letterSpacing: "0.05em" }}
               >
-                Priority Analysis
+                {t("executiveSummary.priorityAnalysis")}
               </Text>
               {summaryStats.critical > 0 && (
                 <Badge
@@ -122,7 +126,7 @@ export function ExecutiveSummary({
                     border: "1px solid #FCA5A5",
                   }}
                 >
-                  {summaryStats.critical} Critical
+                  {t("executiveSummary.criticalBadge", { count: summaryStats.critical })}
                 </Badge>
               )}
               {summaryStats.total > 0 && (
@@ -130,14 +134,14 @@ export function ExecutiveSummary({
                   size="xs"
                   style={{ background: "var(--color-critical)", color: "white" }}
                 >
-                  {summaryStats.total} Active
+                  {t("executiveSummary.activeBadge", { count: summaryStats.total })}
                 </Badge>
               )}
             </Group>
             <Text fw={600} c="var(--color-text-primary)" mb={12}>
               {allAlerts.length > 0
-                ? `Situation Report - ${selectedCountry}`
-                : `Armed Conflict Displacement Crisis - ${selectedCountry}`}
+                ? t("executiveSummary.situationReport", { country: selectedCountry })
+                : t("executiveSummary.defaultReportTitle", { country: selectedCountry })}
             </Text>
 
             <Group gap={24} mb={16}>
@@ -146,7 +150,7 @@ export function ExecutiveSummary({
                   {overview?.active_alerts ?? "-"}
                 </Text>
                 <Text size="xs" c="var(--color-text-muted)" tt="uppercase">
-                  Active Alerts
+                  {t("executiveSummary.activeAlerts")}
                 </Text>
               </Box>
               <Box style={{ textAlign: "center" }}>
@@ -154,7 +158,7 @@ export function ExecutiveSummary({
                   {overview?.total_alerts ?? "-"}
                 </Text>
                 <Text size="xs" c="var(--color-text-muted)" tt="uppercase">
-                  Total Alerts
+                  {t("executiveSummary.totalAlerts")}
                 </Text>
               </Box>
               <Box style={{ textAlign: "center" }}>
@@ -164,7 +168,7 @@ export function ExecutiveSummary({
                     : "+12%"}
                 </Text>
                 <Text size="xs" c="var(--color-text-muted)" tt="uppercase">
-                  Trend
+                  {t("executiveSummary.trend")}
                 </Text>
               </Box>
             </Group>
@@ -175,7 +179,7 @@ export function ExecutiveSummary({
                 const Icon = need.icon;
                 return (
                   <Box
-                    key={need.label}
+                    key={need.labelKey}
                     px={10}
                     py={8}
                     style={{
@@ -187,10 +191,10 @@ export function ExecutiveSummary({
                   >
                     <Icon size={16} color="var(--color-accent)" />
                     <Text size="xs" fw={600} c="var(--color-text-primary)" mt={4} mb={2}>
-                      {need.label}
+                      {t(`executiveSummary.needs.${need.labelKey}.label`)}
                     </Text>
                     <Text style={{ fontSize: 10 }} c="var(--color-text-muted)" lh={1.3}>
-                      {need.description}
+                      {t(`executiveSummary.needs.${need.labelKey}.description`)}
                     </Text>
                   </Box>
                 );
@@ -202,21 +206,21 @@ export function ExecutiveSummary({
                 size="xs"
                 style={{ background: "var(--color-accent)", borderColor: "var(--color-accent)" }}
               >
-                View Full Report
+                {t("executiveSummary.viewFullReport")}
               </Button>
               <Button size="xs" variant="outline" color="gray">
-                Download PDF
+                {t("executiveSummary.downloadPdf")}
               </Button>
             </Group>
           </Box>
-          <Box style={{ textAlign: "right", flexShrink: 0 }}>
+          <Box style={{ textAlign: "end", flexShrink: 0 }}>
             <Text size="xs" c="var(--color-text-muted)">
               {alertsDataUpdatedAt
-                ? `Updated ${new Date(alertsDataUpdatedAt).toLocaleTimeString()}`
-                : "Updated 2 hours ago"}
+                ? t("executiveSummary.updatedAt", { time: format.dateTime(new Date(alertsDataUpdatedAt), "time") })
+                : t("executiveSummary.updatedFallback")}
             </Text>
             <Text size="xs" c="var(--color-text-muted)" mt={4}>
-              Confidence: 94%
+              {t("executiveSummary.confidence", { pct: 94 })}
             </Text>
           </Box>
         </Group>
@@ -242,7 +246,7 @@ export function ExecutiveSummary({
               tt="uppercase"
               style={{ letterSpacing: "0.05em" }}
             >
-              AI-Generated Analysis
+              {t("executiveSummary.aiGeneratedAnalysis")}
             </Text>
             {llmMutation.data && (
               <Badge size="xs" variant="light" color="violet">
@@ -255,8 +259,7 @@ export function ExecutiveSummary({
             <Group gap={8}>
               <Loader size={16} />
               <Text size="sm" c="var(--color-text-muted)">
-                Generating comprehensive analysis from {allAlerts.length} active
-                alerts...
+                {t("executiveSummary.generating", { count: allAlerts.length })}
               </Text>
             </Group>
           ) : generatedAnalysis ? (
@@ -271,7 +274,7 @@ export function ExecutiveSummary({
           ) : null}
           {llmMutation.isError && (
             <Text size="xs" c="#DC2626" mt={4}>
-              Failed to generate analysis. Please try again.
+              {t("executiveSummary.generateFailed")}
             </Text>
           )}
         </Card>

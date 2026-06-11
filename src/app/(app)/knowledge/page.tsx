@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
   Box,
   Card,
@@ -32,6 +33,7 @@ import { DocumentLibrary } from "./_components/document-library";
 import { ContactsPanel } from "./_components/contacts-panel";
 
 export default function KnowledgePage() {
+  const t = useTranslations("knowledge");
   const [isChatExpanded, setIsChatExpanded] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -44,26 +46,26 @@ export default function KnowledgePage() {
   // Available countries based on selected region
   const availableCountries = useMemo(() => {
     const region = selectedRegion ?? "all";
-    if (region === "all") return [{ value: "all", label: "All Countries" }];
+    if (region === "all") return [{ value: "all", label: t("filters.allCountries") }];
     const regionData = locationData.regions.find((r) => r.id === region);
-    if (!regionData) return [{ value: "all", label: "All Countries" }];
+    if (!regionData) return [{ value: "all", label: t("filters.allCountries") }];
     return [
-      { value: "all", label: "All Countries" },
+      { value: "all", label: t("filters.allCountries") },
       ...regionData.countries.map((c) => ({ value: c, label: locationData.countries[c]?.name ?? c })),
     ];
-  }, [selectedRegion]);
+  }, [selectedRegion, t]);
 
   // Available zones based on selected country
   const availableZones = useMemo(() => {
     const country = selectedCountry ?? "all";
-    if (country === "all") return [{ value: "all", label: "All Zones" }];
+    if (country === "all") return [{ value: "all", label: t("filters.allZones") }];
     const countryData = locationData.countries[country];
-    if (!countryData) return [{ value: "all", label: "All Zones" }];
+    if (!countryData) return [{ value: "all", label: t("filters.allZones") }];
     return [
-      { value: "all", label: "All Zones" },
+      { value: "all", label: t("filters.allZones") },
       ...countryData.zones.map((z) => ({ value: z, label: locationData.zones[z]?.name ?? z })),
     ];
-  }, [selectedCountry]);
+  }, [selectedCountry, t]);
 
   // Reset dependent filters when parent changes
   useEffect(() => {
@@ -132,17 +134,17 @@ export default function KnowledgePage() {
     <Box style={{ display: "flex", height: "100vh" }}>
       {/* Main Content */}
       <Box style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", transition: "all 0.3s ease" }}>
-        <PageHeader title="Knowledge Hub">
+        <PageHeader title={t("header.title")}>
           <TextInput
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.currentTarget.value)}
-            placeholder="Search documents..."
+            placeholder={t("header.searchPlaceholder")}
             size="xs"
             leftSection={<IconSearch size={14} />}
             style={{ width: 200 }}
           />
           <Button size="xs" leftSection={<IconUpload size={14} />} style={{ background: "#E85D3D", borderColor: "#E85D3D", fontSize: 13 }}>
-            Upload
+            {t("header.upload")}
           </Button>
         </PageHeader>
 
@@ -151,33 +153,33 @@ export default function KnowledgePage() {
           <Card p={16} mb={24} style={{ border: "1px solid #E5E5E5" }}>
             <Group gap={8} mb={12}>
               <IconMapPin size={16} color="#E85D3D" />
-              <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>Filter by Location & Type</Text>
+              <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>{t("filters.title")}</Text>
               {hasActiveFilters && (
                 <UnstyledButton
                   onClick={clearFilters}
-                  ml="auto"
+                  ms="auto"
                   style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#737373" }}
                   className="hover:text-[#E85D3D]"
                 >
-                  <IconX size={12} /> Clear filters
+                  <IconX size={12} /> {t("filters.clear")}
                 </UnstyledButton>
               )}
             </Group>
             <Group gap={12}>
               <Select
-                label="Region"
+                label={t("filters.region")}
                 size="xs"
                 value={selectedRegion}
                 onChange={setSelectedRegion}
                 data={[
-                  { value: "all", label: "All Regions" },
+                  { value: "all", label: t("filters.allRegions") },
                   ...locationData.regions.map((r) => ({ value: r.id, label: r.name })),
                 ]}
                 style={{ minWidth: 180 }}
                 styles={{ label: { fontSize: 11, color: "#737373", fontWeight: 500 } }}
               />
               <Select
-                label="Country"
+                label={t("filters.country")}
                 size="xs"
                 value={selectedCountry}
                 onChange={setSelectedCountry}
@@ -187,7 +189,7 @@ export default function KnowledgePage() {
                 styles={{ label: { fontSize: 11, color: "#737373", fontWeight: 500 } }}
               />
               <Select
-                label="Zone"
+                label={t("filters.zone")}
                 size="xs"
                 value={selectedZone}
                 onChange={setSelectedZone}
@@ -196,13 +198,13 @@ export default function KnowledgePage() {
                 style={{ minWidth: 160 }}
                 styles={{ label: { fontSize: 11, color: "#737373", fontWeight: 500 } }}
               />
-              <Box style={{ borderLeft: "1px solid #E5E5E5", height: 32, margin: "auto 4px" }} />
+              <Box style={{ borderInlineStart: "1px solid #E5E5E5", height: 32, margin: "auto 4px" }} />
               <Select
-                label="Type"
+                label={t("filters.type")}
                 size="xs"
                 value={selectedType}
                 onChange={setSelectedType}
-                data={contentTypes}
+                data={contentTypes.map((ct) => ({ value: ct.value, label: t(`types.${ct.labelKey}`) }))}
                 style={{ minWidth: 140 }}
                 styles={{ label: { fontSize: 11, color: "#737373", fontWeight: 500 } }}
               />

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Box, Text, Group, Stack, ActionIcon, UnstyledButton, Select } from "@mantine/core";
 import {
   IconPlayerSkipBack,
@@ -67,12 +68,13 @@ const timelineMonths = [
   { label: "Feb", hasEvent: false },
 ];
 
+// labelKey: i18n keys under dashboard.mapSection.views.* - resolved via t() at render time.
 const views = [
-  { key: "single", label: "\u25FB Single" },
-  { key: "compare", label: "\u25EB Compare" },
-  { key: "timelapse", label: "\u25B6 Time" },
-  { key: "nrc-global", label: "\uD83C\uDF0D NRC" },
-];
+  { key: "single", labelKey: "single" },
+  { key: "compare", labelKey: "compare" },
+  { key: "timelapse", labelKey: "time" },
+  { key: "nrc-global", labelKey: "nrc" },
+] as const;
 
 /* ========== Marker helpers ========== */
 
@@ -109,6 +111,7 @@ function addCrisisMarkersToMap(
   map: MapboxGLAny,
   pins: CrisisPin[],
   markersRef: React.MutableRefObject<MapboxGLAny[]>,
+  labels: Record<string, string>,
 ) {
   markersRef.current.forEach((m: MapboxGLAny) => m.remove());
   markersRef.current = [];
@@ -127,19 +130,19 @@ function addCrisisMarkersToMap(
     const isCritical = pin.severity === "critical";
     const rows: string[] = [];
     if (pin.cases) {
-      rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #E5E5E5;"><span style="font-size:13px;color:#525252;">Cases</span><span style="font-size:13px;font-weight:700;color:#DC2626;">${pin.cases}</span></div>`);
+      rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #E5E5E5;"><span style="font-size:13px;color:#525252;">${labels.cases}</span><span style="font-size:13px;font-weight:700;color:#DC2626;">${pin.cases}</span></div>`);
     }
     if (pin.affectedPopulation) {
-      rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #E5E5E5;"><span style="font-size:13px;color:#525252;">Affected</span><span style="font-size:13px;font-weight:700;color:#DC2626;">${(pin.affectedPopulation / 1000).toFixed(0)}k</span></div>`);
+      rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #E5E5E5;"><span style="font-size:13px;color:#525252;">${labels.affected}</span><span style="font-size:13px;font-weight:700;color:#DC2626;">${(pin.affectedPopulation / 1000).toFixed(0)}k</span></div>`);
     }
     if (pin.members) {
-      rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #E5E5E5;"><span style="font-size:13px;color:#525252;">Members</span><span style="font-size:13px;font-weight:700;">${pin.members}</span></div>`);
+      rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #E5E5E5;"><span style="font-size:13px;color:#525252;">${labels.members}</span><span style="font-size:13px;font-weight:700;">${pin.members}</span></div>`);
     }
     if (pin.trend ?? pin.status) {
-      rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #E5E5E5;"><span style="font-size:13px;color:#525252;">${pin.cases ? "Trend" : "Status"}</span><span style="font-size:13px;font-weight:700;${isCritical ? "color:#DC2626;" : ""}">${pin.trend ?? pin.status ?? ""}</span></div>`);
+      rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #E5E5E5;"><span style="font-size:13px;color:#525252;">${pin.cases ? labels.trend : labels.status}</span><span style="font-size:13px;font-weight:700;${isCritical ? "color:#DC2626;" : ""}">${pin.trend ?? pin.status ?? ""}</span></div>`);
     }
     if (pin.region) {
-      rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;"><span style="font-size:13px;color:#525252;">Region</span><span style="font-size:13px;font-weight:700;">${pin.region}</span></div>`);
+      rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;"><span style="font-size:13px;color:#525252;">${labels.region}</span><span style="font-size:13px;font-weight:700;">${pin.region}</span></div>`);
     }
 
     const popupHtml = `
@@ -164,6 +167,7 @@ function addNRCMarkersToMap(
   locations: NRCLocation[],
   nrcMarkersRef: React.MutableRefObject<MapboxGLAny[]>,
   onCountryClick: (country: string) => void,
+  labels: Record<string, string>,
 ) {
   nrcMarkersRef.current.forEach((m: MapboxGLAny) => m.remove());
   nrcMarkersRef.current = [];
@@ -186,7 +190,7 @@ function addNRCMarkersToMap(
             .slice(0, 4)
             .map((t) => t.replace("Legal Assistance (ICLA)", "ICLA"))
             .join(", ")
-        : "Operations active";
+        : labels.operationsActive;
 
     const popupHtml = `
       <div style="padding: 12px 16px; font-family: Inter, -apple-system, sans-serif; min-width: 220px;">
@@ -194,7 +198,7 @@ function addNRCMarkersToMap(
         <div style="font-size: 11px; color: ${regionColor}; font-weight: 600; margin-bottom: 10px;">${location.region}</div>
         ${location.description ? `<p style="font-size: 12px; color: #525252; margin-bottom: 10px; line-height: 1.5;">${location.description}</p>` : ""}
         <div style="font-size: 11px; color: #737373; border-top: 1px solid #E5E5E5; padding-top: 10px;">
-          <strong style="color: #525252;">Core Activities:</strong><br/>
+          <strong style="color: #525252;">${labels.coreActivities}</strong><br/>
           <span style="color: #525252;">${operationsList}</span>
         </div>
       </div>
@@ -242,6 +246,7 @@ export function MapSection({
   countries,
   regionOptions,
 }: MapSectionProps) {
+  const t = useTranslations("dashboard");
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxGLAny>(null);
   const mbRef = useRef<MapboxGLAny>(null);
@@ -324,6 +329,10 @@ export function MapSection({
         getOperationalLocations(),
         nrcMarkersRef,
         (country) => onCountryChangeRef.current(country),
+        {
+          operationsActive: t("mapSection.popup.operationsActive"),
+          coreActivities: t("mapSection.popup.coreActivities"),
+        },
       );
       map.current.flyTo({ center: [20, 15], zoom: 2, duration: 1500 });
     } else {
@@ -332,13 +341,20 @@ export function MapSection({
       nrcMarkersRef.current = [];
       if (CRISIS_COUNTRIES.has(selectedCountry)) {
         const pins = getCrisisPins(selectedCountry).filter((p) => activeTypes.has(p.type));
-        addCrisisMarkersToMap(mapboxgl, map.current, pins, markersRef);
+        addCrisisMarkersToMap(mapboxgl, map.current, pins, markersRef, {
+          cases: t("mapSection.popup.cases"),
+          affected: t("mapSection.popup.affected"),
+          members: t("mapSection.popup.members"),
+          trend: t("mapSection.popup.trend"),
+          status: t("mapSection.popup.status"),
+          region: t("mapSection.popup.region"),
+        });
       } else {
         markersRef.current.forEach((m: MapboxGLAny) => m.remove());
         markersRef.current = [];
       }
     }
-  }, [loaded, selectedCountry, activeView, activeTypes]);
+  }, [loaded, selectedCountry, activeView, activeTypes, t]);
 
   useEffect(() => {
     updateMarkers();
@@ -365,7 +381,7 @@ export function MapSection({
   if (!MAPBOX_TOKEN) {
     return (
       <Box className="relative h-[50vh] sm:min-h-0 sm:h-full flex-1 bg-[var(--color-bg-muted)] flex items-center justify-center text-sm text-[#737373]">
-        Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env
+        {t("mapSection.tokenMissing")}
       </Box>
     );
   }
@@ -395,7 +411,7 @@ export function MapSection({
             }}
             label={
               <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 10 }}>
-                Country
+                {t("mapSection.country")}
               </Text>
             }
           />
@@ -412,13 +428,13 @@ export function MapSection({
             }}
             label={
               <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 10 }}>
-                Region
+                {t("mapSection.region")}
               </Text>
             }
           />
           <Box>
             <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 10, marginBottom: 5 }}>
-              Date
+              {t("mapSection.date")}
             </Text>
             <Box
               style={{
@@ -458,7 +474,7 @@ export function MapSection({
                   : "bg-transparent text-[#171717] hover:bg-[var(--color-bg-muted)]",
               )}
             >
-              {view.label}
+              {t(`mapSection.views.${view.labelKey}`)}
             </UnstyledButton>
           ))}
         </Group>
@@ -470,7 +486,7 @@ export function MapSection({
       {/* Legend - anchored just above the timeline, grows upward when open */}
       <Box
         className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
-        style={{ bottom: 104, left: 16, minWidth: 168 }}
+        style={{ bottom: 104, left: 16, minWidth: 168 }} /* intentionally physical: map overlay */
         visibleFrom="sm"
       >
         {/* Header - always visible, click to collapse/expand */}
@@ -486,7 +502,7 @@ export function MapSection({
           }}
         >
           <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ letterSpacing: "0.05em", fontSize: 10 }}>
-            {activeView === "nrc-global" ? "NRC Regions" : "Legend"}
+            {activeView === "nrc-global" ? t("mapSection.nrcRegions") : t("mapSection.legend")}
           </Text>
           {legendOpen ? <IconChevronDown size={12} color="#737373" /> : <IconChevronUp size={12} color="#737373" />}
         </UnstyledButton>
@@ -496,53 +512,65 @@ export function MapSection({
             {activeView === "nrc-global" ? (
               <Stack gap={6}>
                 {(
+                  // Second element: i18n key under dashboard.mapSection.regionShort.* - resolved via t() at render time.
                   [
-                    ["East Africa and Yemen", "E. Africa & Yemen"],
-                    ["Central and West Africa", "Central & W. Africa"],
-                    ["Southern Africa", "Southern Africa"],
-                    ["Middle East", "Middle East"],
-                    ["Asia", "Asia"],
-                    ["Europe", "Europe"],
-                    ["Americas", "Americas"],
-                  ] as [keyof typeof regionColors, string][]
-                ).map(([key, label]) => (
+                    ["East Africa and Yemen", "eastAfricaYemen"],
+                    ["Central and West Africa", "centralWestAfrica"],
+                    ["Southern Africa", "southernAfrica"],
+                    ["Middle East", "middleEast"],
+                    ["Asia", "asia"],
+                    ["Europe", "europe"],
+                    ["Americas", "americas"],
+                  ] as [
+                    keyof typeof regionColors,
+                    "eastAfricaYemen" | "centralWestAfrica" | "southernAfrica" | "middleEast" | "asia" | "europe" | "americas",
+                  ][]
+                ).map(([key, labelKey]) => (
                   <Group key={key} gap={8}>
                     <Box w={10} h={10} style={{ backgroundColor: regionColors[key], borderRadius: "50%", flexShrink: 0 }} />
-                    <Text style={{ fontSize: 10 }}>{label}</Text>
+                    <Text style={{ fontSize: 10 }}>{t(`mapSection.regionShort.${labelKey}`)}</Text>
                   </Group>
                 ))}
               </Stack>
             ) : (
               <Stack gap={3}>
-                <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.05em", marginBottom: 2 }}>Severity</Text>
-                {[
-                  { label: "Critical", color: "#DC2626" },
-                  { label: "High",     color: "#F59E0B" },
-                  { label: "Medium",   color: "#D97706" },
-                  { label: "Teams",    color: "#059669" },
-                ].map((item) => (
-                  <Group key={item.label} gap={6}>
+                <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.05em", marginBottom: 2 }}>{t("mapSection.severity")}</Text>
+                {(
+                  // labelKey: i18n keys under dashboard.mapSection.severities.* - resolved via t() at render time.
+                  [
+                    { labelKey: "critical", color: "#DC2626" },
+                    { labelKey: "high",     color: "#F59E0B" },
+                    { labelKey: "medium",   color: "#D97706" },
+                    { labelKey: "teams",    color: "#059669" },
+                  ] as const
+                ).map((item) => (
+                  <Group key={item.labelKey} gap={6}>
                     <Box w={10} h={10} style={{ backgroundColor: item.color, flexShrink: 0 }} />
-                    <Text style={{ fontSize: 10 }}>{item.label}</Text>
+                    <Text style={{ fontSize: 10 }}>{t(`mapSection.severities.${item.labelKey}`)}</Text>
                   </Group>
                 ))}
 
-                <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.05em", marginTop: 6, marginBottom: 2 }}>Event Type</Text>
+                <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.05em", marginTop: 6, marginBottom: 2 }}>{t("mapSection.eventType")}</Text>
                 {(
+                  // labelKey: i18n keys under dashboard.mapSection.eventTypes.* - resolved via t() at render time.
                   [
-                    { IconComponent: IconAlertCircle, label: "Crisis",   type: "crisis"   },
-                    { IconComponent: IconSword,        label: "Conflict", type: "conflict" },
-                    { IconComponent: IconGrain,        label: "Famine",   type: "famine"   },
-                    { IconComponent: IconVirus,        label: "Disease",  type: "cholera"  },
-                    { IconComponent: IconDroplets,     label: "Flood",    type: "flood"    },
-                    { IconComponent: IconSun,          label: "Drought",  type: "drought"  },
-                    { IconComponent: IconUsers,        label: "Response", type: "team"     },
-                  ] as { IconComponent: React.ComponentType<{ size: number; color: string }>; label: string; type: string }[]
-                ).map(({ IconComponent, label, type }) => {
+                    { IconComponent: IconAlertCircle, labelKey: "crisis",   type: "crisis"   },
+                    { IconComponent: IconSword,        labelKey: "conflict", type: "conflict" },
+                    { IconComponent: IconGrain,        labelKey: "famine",   type: "famine"   },
+                    { IconComponent: IconVirus,        labelKey: "disease",  type: "cholera"  },
+                    { IconComponent: IconDroplets,     labelKey: "flood",    type: "flood"    },
+                    { IconComponent: IconSun,          labelKey: "drought",  type: "drought"  },
+                    { IconComponent: IconUsers,        labelKey: "response", type: "team"     },
+                  ] as {
+                    IconComponent: React.ComponentType<{ size: number; color: string }>;
+                    labelKey: "crisis" | "conflict" | "famine" | "disease" | "flood" | "drought" | "response";
+                    type: string;
+                  }[]
+                ).map(({ IconComponent, labelKey, type }) => {
                   const active = activeTypes.has(type);
                   return (
                     <UnstyledButton
-                      key={label}
+                      key={type}
                       onClick={() => toggleType(type)}
                       style={{
                         display: "flex",
@@ -555,7 +583,7 @@ export function MapSection({
                     >
                       <IconComponent size={12} color={active ? "#525252" : "#A0A0A0"} />
                       <Text style={{ fontSize: 10, textDecoration: active ? "none" : "line-through", color: active ? "#171717" : "#A0A0A0" }}>
-                        {label}
+                        {t(`mapSection.eventTypes.${labelKey}`)}
                       </Text>
                     </UnstyledButton>
                   );
@@ -574,7 +602,7 @@ export function MapSection({
       >
         <Group justify="space-between" mb={12}>
           <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
-            Timeline
+            {t("mapSection.timeline")}
           </Text>
           <Group gap={8}>
             <ActionIcon variant="light" color="gray" size="sm">

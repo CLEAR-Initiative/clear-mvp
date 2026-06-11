@@ -18,6 +18,7 @@ import {
   Anchor,
   Group,
 } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { IconAlertCircle, IconLogin } from "@tabler/icons-react";
 import { authClient } from "~/lib/auth-client";
 
@@ -30,6 +31,7 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
+  const t = useTranslations("auth.login");
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawCallback = searchParams.get("callbackUrl") ?? "/dashboard";
@@ -54,22 +56,23 @@ function LoginForm() {
         password,
       });
       if (signInError) {
-        setError(signInError.message ?? "Login failed");
+        setError(signInError.message ?? t("failed"));
       } else {
         router.push(callbackUrl);
       }
     } catch {
-      setError("An unexpected error occurred");
+      setError(t("unexpectedError"));
     } finally {
       setLoading(false);
     }
   };
 
+  // labelKey: i18n keys under auth.login.demo.* - resolved via t() at render time.
   const demoUsers = [
-    { label: "Admin", email: "admin@clear.dev" },
-    { label: "Analyst", email: "analyst@clear.dev" },
-    { label: "Viewer", email: "viewer@clear.dev" },
-  ];
+    { labelKey: "admin", email: "admin@clear.dev" },
+    { labelKey: "analyst", email: "analyst@clear.dev" },
+    { labelKey: "viewer", email: "viewer@clear.dev" },
+  ] as const;
 
   return (
     <Box
@@ -89,10 +92,10 @@ function LoginForm() {
               CLEAR
             </Text>
             <Text size="lg" fw={600} c="var(--color-text-primary)">
-              Sign In
+              {t("title")}
             </Text>
             <Text size="sm" c="var(--color-text-muted)">
-              Crisis Early Warning & Response
+              {t("tagline")}
             </Text>
           </Stack>
 
@@ -113,8 +116,8 @@ function LoginForm() {
           <form onSubmit={(e) => void handleSubmit(e)}>
             <Stack gap={12}>
               <TextInput
-                label="Email"
-                placeholder="Enter your email"
+                label={t("email")}
+                placeholder={t("emailPlaceholder")}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.currentTarget.value)}
@@ -128,8 +131,8 @@ function LoginForm() {
               />
 
               <PasswordInput
-                label="Password"
-                placeholder="Enter your password"
+                label={t("password")}
+                placeholder={t("passwordPlaceholder")}
                 value={password}
                 onChange={(e) => setPassword(e.currentTarget.value)}
                 required
@@ -142,7 +145,7 @@ function LoginForm() {
 
               <Group justify="space-between">
                 <Checkbox
-                  label="Remember me"
+                  label={t("rememberMe")}
                   size="sm"
                   styles={{ label: { fontSize: 13, color: "var(--color-text-secondary)" } }}
                 />
@@ -153,7 +156,7 @@ function LoginForm() {
                   c="#E85D3D"
                   fw={500}
                 >
-                  Forgot password?
+                  {t("forgotPassword")}
                 </Anchor>
               </Group>
 
@@ -166,16 +169,16 @@ function LoginForm() {
                 mt={8}
                 style={{ fontWeight: 600, fontSize: 14 }}
               >
-                Sign In
+                {t("submit")}
               </Button>
             </Stack>
           </form>
 
           {/* Demo Users */}
-          <Divider my={20} label="Demo Users" labelPosition="center" />
+          <Divider my={20} label={t("demo.divider")} labelPosition="center" />
           <Box p={12} style={{ backgroundColor: "var(--color-bg-muted)" }}>
             <Text size="xs" c="var(--color-text-muted)" mb={8}>
-              Available demo accounts (all use password: password123):
+              {t("demo.hint")}
             </Text>
             <SimpleGrid cols={1} spacing={4}>
               {demoUsers.map((user) => (
@@ -187,7 +190,7 @@ function LoginForm() {
                   style={{ cursor: "pointer" }}
                   onClick={() => setEmail(user.email)}
                 >
-                  {user.label} — {user.email}
+                  {t("demo.line", { label: t(`demo.${user.labelKey}`), email: user.email })}
                 </Text>
               ))}
             </SimpleGrid>
@@ -196,7 +199,7 @@ function LoginForm() {
 
         {/* Footer */}
         <Text ta="center" size="xs" c="var(--color-text-muted)" mt={16}>
-          Norwegian Refugee Council &bull; Early Warning and Alert System for Sudan
+          {t("footer")}
         </Text>
       </Box>
     </Box>

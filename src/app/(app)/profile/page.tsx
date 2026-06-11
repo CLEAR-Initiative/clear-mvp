@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Box,
   Card,
@@ -19,6 +20,7 @@ import {
   Select,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import {
   IconUser,
   IconBell,
@@ -34,12 +36,14 @@ import {
 } from "@tabler/icons-react";
 import { ColorSchemeToggle } from "~/components/ui";
 import { api } from "~/trpc/react";
+import { defaultTimeZone, isLocale, localeLabels, locales } from "~/i18n/config";
 import { useTeam } from "~/providers/team-provider";
 import { COUNTRIES_BY_DIAL_LENGTH, COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
 import { NotificationPreferencesSection } from "./_components/NotificationPreferencesSection";
 import { AlertSubscriptionsSection } from "./_components/AlertSubscriptionsSection";
 
 export default function ProfilePage() {
+  const t = useTranslations("profile.page");
   const { data, isLoading } = api.auth.me.useQuery();
 
   if (isLoading) {
@@ -53,7 +57,7 @@ export default function ProfilePage() {
   if (!data?.authenticated || !data.user) {
     return (
       <Box p={32}>
-        <Text c="var(--color-text-muted)">Not authenticated. Please sign in.</Text>
+        <Text c="var(--color-text-muted)">{t("notAuthenticated")}</Text>
       </Box>
     );
   }
@@ -75,6 +79,9 @@ function parseE164(e164: string): { iso: string; local: string } {
 }
 
 function MobileNumberField() {
+  const t = useTranslations("profile.info");
+  const tToasts = useTranslations("common.toasts");
+  const tActions = useTranslations("common.actions");
   const utils = api.useUtils();
   const phoneQuery = api.auth.myUserDetails.useQuery();
   const [editing, setEditing] = useState(false);
@@ -101,10 +108,10 @@ function MobileNumberField() {
     onSuccess: () => {
       setEditing(false);
       void utils.auth.myUserDetails.invalidate();
-      notifications.show({ title: "Saved", message: "Mobile number updated.", color: "green", autoClose: 2000 });
+      notifications.show({ title: tToasts("saved"), message: t("mobileUpdated"), color: "green", autoClose: 2000 });
     },
     onError: (err) => {
-      notifications.show({ title: "Error", message: err.message, color: "red" });
+      notifications.show({ title: tToasts("error"), message: err.message, color: "red" });
     },
   });
 
@@ -130,13 +137,13 @@ function MobileNumberField() {
       background: readOnly ? "transparent" : undefined,
       border: readOnly ? "1px solid transparent" : undefined,
       cursor: readOnly ? "default" : undefined,
-      paddingLeft: readOnly ? 0 : undefined,
+      paddingInlineStart: readOnly ? 0 : undefined,
     },
   };
 
   return (
     <Box>
-      <Text size="xs" c="var(--color-text-muted)" mb={4}>Mobile</Text>
+      <Text size="xs" c="var(--color-text-muted)" mb={4}>{t("mobile")}</Text>
       <Group gap={8} align="center" wrap="nowrap">
         <Select
           data={COUNTRY_SELECT_DATA}
@@ -152,7 +159,7 @@ function MobileNumberField() {
               background: readOnly ? "transparent" : undefined,
               border: readOnly ? "1px solid transparent" : undefined,
               cursor: readOnly ? "default" : undefined,
-              paddingLeft: readOnly ? 0 : undefined,
+              paddingInlineStart: readOnly ? 0 : undefined,
             },
           }}
           rightSection={readOnly ? null : undefined}
@@ -161,7 +168,7 @@ function MobileNumberField() {
         <TextInput
           value={localNumber}
           onChange={(e) => setLocalNumber(e.currentTarget.value)}
-          placeholder={readOnly ? (savedE164 ? undefined : "Not set") : "912 345 678"}
+          placeholder={readOnly ? (savedE164 ? undefined : t("notSet")) : t("mobilePlaceholder")}
           size="xs"
           readOnly={readOnly}
           style={{ flex: 1 }}
@@ -177,7 +184,7 @@ function MobileNumberField() {
         {editing && (
           <>
             <Button size="xs" variant="subtle" color="gray" onClick={handleCancel} leftSection={<IconX size={12} />}>
-              Cancel
+              {tActions("cancel")}
             </Button>
             <Button
               size="xs"
@@ -186,7 +193,7 @@ function MobileNumberField() {
               disabled={!isDirty}
               onClick={handleSave}
             >
-              Save
+              {tActions("save")}
             </Button>
           </>
         )}
@@ -196,6 +203,7 @@ function MobileNumberField() {
 }
 
 function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) {
+  const t = useTranslations("profile.orgRoles");
   const { activeTeamId, switchTeam } = useTeam();
   const teamsQuery = api.teams.myTeams.useQuery();
 
@@ -217,8 +225,8 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
   function handleSetActive(teamId: string, teamName: string) {
     switchTeam(teamId);
     notifications.show({
-      title: "Active team updated",
-      message: `Now viewing ${teamName}.`,
+      title: t("switchedTitle"),
+      message: t("switchedMessage", { team: teamName }),
       color: "green",
       autoClose: 2000,
     });
@@ -229,19 +237,19 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
       <Group gap={8} mb={16}>
         <IconBuilding size={18} color="var(--color-accent)" />
         <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
-          Organisation & Roles
+          {t("title")}
         </Text>
       </Group>
 
       {rows.length === 0 ? (
-        <Text size="sm" c="var(--color-text-muted)">No team memberships found.</Text>
+        <Text size="sm" c="var(--color-text-muted)">{t("empty")}</Text>
       ) : (
         <Table horizontalSpacing="md" verticalSpacing="sm" style={{ fontSize: 13 }}>
           <Table.Thead>
             <Table.Tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-              <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>Organisation</Table.Th>
-              <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>Team</Table.Th>
-              <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>Role</Table.Th>
+              <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>{t("columns.organisation")}</Table.Th>
+              <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>{t("columns.team")}</Table.Th>
+              <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>{t("columns.role")}</Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -253,11 +261,11 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
                 <Table.Td>
                   <Badge size="xs" variant="light" color="gray" tt="capitalize">{row.role}</Badge>
                 </Table.Td>
-                <Table.Td style={{ textAlign: "right" }}>
+                <Table.Td style={{ textAlign: "end" }}>
                   {row.isActive ? (
                     <Group gap={4} justify="flex-end">
                       <IconCheck size={13} color="var(--color-success)" />
-                      <Text size="xs" c="var(--color-success)" fw={600}>Active</Text>
+                      <Text size="xs" c="var(--color-success)" fw={600}>{t("active")}</Text>
                     </Group>
                   ) : (
                     <Button
@@ -266,7 +274,7 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
                       color="gray"
                       onClick={() => handleSetActive(row.teamId, row.teamName)}
                     >
-                      Set Active
+                      {t("setActive")}
                     </Button>
                   )}
                 </Table.Td>
@@ -280,11 +288,34 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
 }
 
 function SettingsContent({ user }: { user: ProfileUser }) {
+  const t = useTranslations("profile");
+  const router = useRouter();
+  const currentLocale = useLocale();
+  const currentTimeZone = useTimeZone() ?? defaultTimeZone;
+  const utils = api.useUtils();
+  const updateLanguage = api.auth.updateProfile.useMutation({
+    onSuccess: () => void utils.auth.myUserDetails.invalidate(),
+  });
+
+  // Language persists to the user profile (clear-api user.language) and to
+  // the locale cookie read by src/i18n/request.ts; timezone is cookie-only
+  // until the backend has a field for it. Changes apply immediately via a
+  // server-component refresh.
+  const applyLocalePrefs = async (locale: string, timezone: string) => {
+    try {
+      await fetch("/api/locale", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale, timezone }),
+      });
+      router.refresh();
+    } catch { /* keep current preference on failure */ }
+  };
   const [activeTab, setActiveTab] = useState<string | null>("account");
 
   return (
     <Box p={32} style={{ maxWidth: 800 }}>
-      <Text size="xl" fw={700} c="var(--color-text-primary)" mb={24}>Settings</Text>
+      <Text size="xl" fw={700} c="var(--color-text-primary)" mb={24}>{t("page.title")}</Text>
 
       <Tabs
         value={activeTab}
@@ -293,8 +324,8 @@ function SettingsContent({ user }: { user: ProfileUser }) {
         styles={{ tab: { fontSize: 13, fontWeight: 500 } }}
       >
         <Tabs.List>
-          <Tabs.Tab value="account" leftSection={<IconUser size={14} />}>Account</Tabs.Tab>
-          <Tabs.Tab value="notifications" leftSection={<IconBell size={14} />}>Notifications</Tabs.Tab>
+          <Tabs.Tab value="account" leftSection={<IconUser size={14} />}>{t("page.tabs.account")}</Tabs.Tab>
+          <Tabs.Tab value="notifications" leftSection={<IconBell size={14} />}>{t("page.tabs.notifications")}</Tabs.Tab>
         </Tabs.List>
       </Tabs>
 
@@ -305,15 +336,15 @@ function SettingsContent({ user }: { user: ProfileUser }) {
             <Group gap={8} mb={20}>
               <IconUser size={18} color="var(--color-accent)" />
               <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
-                Information
+                {t("info.title")}
               </Text>
             </Group>
 
             <Stack gap={20}>
               {/* Name */}
               <Box>
-                <Text size="xs" c="var(--color-text-muted)" mb={4}>Name</Text>
-                <Text size="sm" fw={500}>{user.name || "Not set"}</Text>
+                <Text size="xs" c="var(--color-text-muted)" mb={4}>{t("info.name")}</Text>
+                <Text size="sm" fw={500}>{user.name || t("info.notSet")}</Text>
               </Box>
 
               <Divider color="var(--color-border)" />
@@ -321,7 +352,7 @@ function SettingsContent({ user }: { user: ProfileUser }) {
               {/* Email + Change Password */}
               <Group justify="space-between" align="center">
                 <Box>
-                  <Text size="xs" c="var(--color-text-muted)" mb={4}>Email</Text>
+                  <Text size="xs" c="var(--color-text-muted)" mb={4}>{t("info.email")}</Text>
                   <Text size="sm" fw={500}>{user.email}</Text>
                 </Box>
                 <Button
@@ -333,7 +364,7 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                   size="xs"
                   style={{ fontSize: 12 }}
                 >
-                  Change Password
+                  {t("info.changePassword")}
                 </Button>
               </Group>
 
@@ -352,13 +383,13 @@ function SettingsContent({ user }: { user: ProfileUser }) {
             <Group gap={8} mb={20}>
               <IconSettings size={18} color="var(--color-accent)" />
               <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
-                Preferences
+                {t("preferences.title")}
               </Text>
             </Group>
             <Box px={4} mb={16}>
               <Group gap={6} mb={8}>
                 <IconPalette size={14} color="var(--color-text-muted)" />
-                <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>Appearance</Text>
+                <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>{t("preferences.appearance")}</Text>
               </Group>
               <ColorSchemeToggle />
             </Box>
@@ -367,17 +398,44 @@ function SettingsContent({ user }: { user: ProfileUser }) {
               <Box px={4}>
                 <Group gap={6} mb={6}>
                   <IconLanguage size={14} color="var(--color-text-muted)" />
-                  <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>Language</Text>
+                  <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>{t("preferences.language")}</Text>
                 </Group>
-                <Text size="sm" fw={500}>English</Text>
+                <Select
+                  size="sm"
+                  value={currentLocale}
+                  onChange={(v) => {
+                    if (isLocale(v)) {
+                      updateLanguage.mutate({ language: v });
+                      void applyLocalePrefs(v, currentTimeZone);
+                    }
+                  }}
+                  data={locales.map((locale) => ({
+                    value: locale,
+                    label: localeLabels[locale],
+                  }))}
+                  allowDeselect={false}
+                  styles={{ input: { borderColor: "var(--color-border)" } }}
+                />
               </Box>
               <Divider orientation="vertical" color="var(--color-border)" />
               <Box px={24}>
                 <Group gap={6} mb={6}>
                   <IconClock size={14} color="var(--color-text-muted)" />
-                  <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>Timezone</Text>
+                  <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>{t("preferences.timezone")}</Text>
                 </Group>
-                <Text size="sm" fw={500}>UTC</Text>
+                <Select
+                  size="sm"
+                  value={currentTimeZone}
+                  onChange={(v) => {
+                    if (v) void applyLocalePrefs(currentLocale, v);
+                  }}
+                  data={[
+                    { value: "Africa/Khartoum", label: t("edit.timezoneKhartoum") },
+                    { value: "UTC", label: t("edit.timezoneUtc") },
+                  ]}
+                  allowDeselect={false}
+                  styles={{ input: { borderColor: "var(--color-border)" } }}
+                />
               </Box>
             </Group>
           </Card>

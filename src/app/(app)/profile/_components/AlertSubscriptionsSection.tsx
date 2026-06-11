@@ -6,29 +6,29 @@ import {
   MultiSelect, Select, ActionIcon, Loader, Divider,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { useTranslations } from "next-intl";
 import { IconBellRinging, IconPlus, IconTrash, IconCheck, IconPlayerPause, IconPlayerPlay } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
 import { getDisasterPills } from "~/lib/disaster-types";
 
-const SEVERITY_LABELS: Record<number, string> = {
-  1: "All severities",
-  2: "Low+",
-  3: "Medium+",
-  4: "High+",
-  5: "Critical only",
+// i18n keys under profile.subscriptions.* - resolved via t() at render time.
+const SEVERITY_LABEL_KEYS: Record<number, "s1" | "s2" | "s3" | "s4" | "s5"> = {
+  1: "s1",
+  2: "s2",
+  3: "s3",
+  4: "s4",
+  5: "s5",
 };
 
-const FREQUENCY_LABELS: Record<string, string> = {
-  immediately: "Immediately",
-  daily:       "Daily digest",
-  weekly:      "Weekly digest",
-  monthly:     "Monthly digest",
-};
+const FREQUENCY_KEYS = ["immediately", "daily", "weekly", "monthly"] as const;
 
-const LEVEL_GROUP: Record<number, string> = { 0: "Country", 1: "State", 2: "District" };
+const LEVEL_KEYS: Record<number, "country" | "state" | "district"> = { 0: "country", 1: "state", 2: "district" };
 
 export function AlertSubscriptionsSection() {
+  const t = useTranslations("profile.subscriptions");
+  const tToasts = useTranslations("common.toasts");
+  const tActions = useTranslations("common.actions");
   const utils = api.useUtils();
   const subsQuery = api.subscriptions.list.useQuery();
   const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
@@ -57,7 +57,7 @@ export function AlertSubscriptionsSection() {
       .filter((l) => l.level === level)
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((l) => ({ value: l.id, label: l.name }));
-    return items.length > 0 ? [{ group: LEVEL_GROUP[level]!, items }] : [];
+    return items.length > 0 ? [{ group: t(`levels.${LEVEL_KEYS[level]}`), items }] : [];
   });
 
   // Group subscriptions by (locationId, frequency, minSeverity) - each group = one card
@@ -107,14 +107,14 @@ export function AlertSubscriptionsSection() {
           }),
         ),
       );
-      notifications.show({ title: "Subscribed", message: "Alert subscriptions created.", color: "green" });
+      notifications.show({ title: t("subscribedTitle"), message: t("subscribedMessage"), color: "green" });
       void utils.subscriptions.list.invalidate();
       setShowForm(false);
       setFormLocationIds([]);
       setFormAlertTypes([]);
       setFormMinSeverity("4");
     } catch (err: unknown) {
-      notifications.show({ title: "Error", message: err instanceof Error ? err.message : "Failed", color: "red" });
+      notifications.show({ title: tToasts("error"), message: err instanceof Error ? err.message : t("failed"), color: "red" });
     }
   }
 
@@ -146,7 +146,7 @@ export function AlertSubscriptionsSection() {
         <Group gap={8}>
           <IconBellRinging size={18} color="var(--color-accent)" />
           <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
-            Alert Subscriptions
+            {t("title")}
           </Text>
           {groups.length > 0 && (
             <Badge size="xs" color="teal" variant="light">{groups.length}</Badge>
@@ -160,7 +160,7 @@ export function AlertSubscriptionsSection() {
             leftSection={<IconPlus size={12} />}
             onClick={() => setShowForm(true)}
           >
-            Add
+            {t("add")}
           </Button>
         )}
       </Group>
@@ -169,12 +169,12 @@ export function AlertSubscriptionsSection() {
       {showForm && (
         <Card p="sm" mb={16} style={{ background: "var(--color-bg-muted)", border: "1px solid var(--color-border)" }}>
           <Text size="xs" fw={600} mb={12} tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 10 }}>
-            New Subscription
+            {t("new")}
           </Text>
           <Stack gap={10}>
             <MultiSelect
-              label="Location"
-              placeholder="Select one or more locations"
+              label={t("location")}
+              placeholder={t("locationPlaceholder")}
               data={locationOptions}
               value={formLocationIds}
               onChange={setFormLocationIds}
@@ -184,39 +184,34 @@ export function AlertSubscriptionsSection() {
               styles={{ groupLabel: { paddingTop: 12, paddingBottom: 4 } }}
             />
             <DisasterTypePicker
-              label="Alert Types (leave empty for all)"
+              label={t("alertTypes")}
               hierarchy={hierarchy}
               selected={formAlertTypes}
               onChange={setFormAlertTypes}
             />
             <Select
-              label="Minimum Severity"
+              label={t("minSeverity")}
               data={[
-                { value: "1", label: "All (Minimal and above)" },
-                { value: "2", label: "Low and above" },
-                { value: "3", label: "Medium and above" },
-                { value: "4", label: "High and above" },
-                { value: "5", label: "Critical only" },
+                { value: "1", label: t("severityOptions.all") },
+                { value: "2", label: t("severityOptions.low") },
+                { value: "3", label: t("severityOptions.medium") },
+                { value: "4", label: t("severityOptions.high") },
+                { value: "5", label: t("severityOptions.critical") },
               ]}
               value={formMinSeverity}
               onChange={(v) => v && setFormMinSeverity(v)}
               size="xs"
             />
             <Select
-              label="Frequency"
-              data={[
-                { value: "immediately", label: "Immediately" },
-                { value: "daily",       label: "Daily digest" },
-                { value: "weekly",      label: "Weekly digest" },
-                { value: "monthly",     label: "Monthly digest" },
-              ]}
+              label={t("frequency")}
+              data={FREQUENCY_KEYS.map((key) => ({ value: key, label: t(`frequencyOptions.${key}`) }))}
               value={formFrequency}
               onChange={setFormFrequency}
               size="xs"
             />
             <Group gap={8} justify="flex-end" mt={4}>
               <Button size="xs" variant="subtle" color="gray" onClick={() => setShowForm(false)}>
-                Cancel
+                {tActions("cancel")}
               </Button>
               <Button
                 size="xs"
@@ -226,7 +221,7 @@ export function AlertSubscriptionsSection() {
                 disabled={formLocationIds.length === 0}
                 onClick={() => void handleSubscribe()}
               >
-                Subscribe
+                {t("subscribe")}
               </Button>
             </Group>
           </Stack>
@@ -238,17 +233,17 @@ export function AlertSubscriptionsSection() {
         <Box py={16} style={{ textAlign: "center" }}><Loader size={16} /></Box>
       ) : groups.length === 0 ? (
         <Text size="sm" c="var(--color-text-muted)">
-          No alert subscriptions yet. Click &quot;Add&quot; to get started.
+          {t("empty")}
         </Text>
       ) : (
         <Stack gap={8}>
           {groups.map((group) => {
             const pills = getDisasterPills(group.types);
             const typeLabel = pills.length === 0
-              ? "All types"
+              ? t("allTypes")
               : pills.length <= 3
               ? pills.map((p) => p.label).join(", ")
-              : `${pills.slice(0, 2).map((p) => p.label).join(", ")} +${pills.length - 2} more`;
+              : t("moreTypes", { labels: pills.slice(0, 2).map((p) => p.label).join(", "), count: pills.length - 2 });
 
             const isDeleting = deletingGroup === group.ids[0];
             const isToggling = togglingGroup === group.ids[0];
@@ -270,15 +265,15 @@ export function AlertSubscriptionsSection() {
                         {group.locationName}
                       </Text>
                       <Badge size="xs" variant="light" color="gray" style={{ fontSize: 9, textTransform: "uppercase" }}>
-                        {["Country", "State", "District"][group.locationLevel] ?? ""}
+                        {LEVEL_KEYS[group.locationLevel] ? t(`levels.${LEVEL_KEYS[group.locationLevel]}`) : ""}
                       </Badge>
                     </Group>
                     <Group gap={6}>
                       <Text size="xs" c="var(--color-text-muted)">{typeLabel}</Text>
                       <Divider orientation="vertical" />
-                      <Text size="xs" c="var(--color-text-muted)">{SEVERITY_LABELS[group.minSeverity] ?? `Severity ${group.minSeverity}+`}</Text>
+                      <Text size="xs" c="var(--color-text-muted)">{SEVERITY_LABEL_KEYS[group.minSeverity] ? t(`severityLabels.${SEVERITY_LABEL_KEYS[group.minSeverity]}`) : t("severityFallback", { value: group.minSeverity })}</Text>
                       <Divider orientation="vertical" />
-                      <Text size="xs" c="var(--color-text-muted)">{FREQUENCY_LABELS[group.frequency] ?? group.frequency}</Text>
+                      <Text size="xs" c="var(--color-text-muted)">{(FREQUENCY_KEYS as readonly string[]).includes(group.frequency) ? t(`frequencyOptions.${group.frequency as (typeof FREQUENCY_KEYS)[number]}`) : group.frequency}</Text>
                     </Group>
                   </Box>
                   <Group gap={4} wrap="nowrap">
@@ -287,7 +282,7 @@ export function AlertSubscriptionsSection() {
                       variant="subtle"
                       color={group.active ? "gray" : "teal"}
                       loading={isToggling}
-                      title={group.active ? "Pause" : "Resume"}
+                      title={group.active ? t("pause") : t("resume")}
                       onClick={() => void handleToggleGroup(group.ids, group.active)}
                     >
                       {group.active
@@ -299,7 +294,7 @@ export function AlertSubscriptionsSection() {
                       variant="subtle"
                       color="red"
                       loading={isDeleting}
-                      title="Delete subscription"
+                      title={t("delete")}
                       onClick={() => void handleDeleteGroup(group.ids)}
                     >
                       <IconTrash size={13} />

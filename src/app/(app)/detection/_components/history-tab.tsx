@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   Box,
@@ -17,11 +18,12 @@ import { resolveLocationName } from "~/lib/location";
 
 export type HistorySortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
 
-export const HISTORY_SORT_LABELS: Record<HistorySortOrder, string> = {
-  "sev-desc": "Severity: High to Low",
-  "sev-asc":  "Severity: Low to High",
-  "newest":   "Newest first",
-  "oldest":   "Oldest first",
+// i18n keys under detection.sort.* - resolved via t() at render time.
+export const HISTORY_SORT_LABEL_KEYS: Record<HistorySortOrder, "sevDesc" | "sevAsc" | "newest" | "oldest"> = {
+  "sev-desc": "sevDesc",
+  "sev-asc":  "sevAsc",
+  "newest":   "newest",
+  "oldest":   "oldest",
 };
 
 // Discriminated union for a unified history row
@@ -61,23 +63,18 @@ interface HistoryTabProps {
   onSortChange: (order: HistorySortOrder) => void;
 }
 
-const CLASS_STYLES: Record<string, { bg: string; color: string; label: string }> = {
-  alert:  { bg: "var(--color-critical-light)",  color: "var(--color-critical)",   label: "Alert" },
-  event:  { bg: "var(--color-warning-light)",   color: "var(--color-warning)",    label: "Event" },
-  signal: { bg: "var(--color-info-light)",      color: "var(--color-info)",       label: "Signal" },
+const CLASS_STYLES: Record<string, { bg: string; color: string }> = {
+  alert:  { bg: "var(--color-critical-light)",  color: "var(--color-critical)" },
+  event:  { bg: "var(--color-warning-light)",   color: "var(--color-warning)" },
+  signal: { bg: "var(--color-info-light)",      color: "var(--color-info)" },
 };
 
-const columns = [
-  { label: "Title" },
-  { label: "Class" },
-  { label: "Type" },
-  { label: "Severity" },
-  { label: "Source" },
-  { label: "Date" },
-  { label: "Location" },
-];
+// i18n keys under detection.history.columns.* - resolved via t() at render time.
+const COLUMN_KEYS = ["title", "class", "type", "severity", "source", "date", "location"] as const;
 
 export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchingMore, totalCount, onLoadMore, sortOrder, onSortChange }: HistoryTabProps) {
+  const t = useTranslations("detection");
+  const format = useFormatter();
   const [search, setSearch] = useState("");
 
   // Build the unified row list - alerts take priority; events already shown as
@@ -132,7 +129,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
   const total = totalCount ?? loadedCount;
   const isSearched = search.trim() !== "";
   const count = isSearched
-    ? `${filtered.length} of ${loadedCount} loaded`
+    ? t("history.searchCount", { filtered: filtered.length, loaded: loadedCount })
     : loadedCount < total
       ? `${loadedCount} / ${total}`
       : `${loadedCount}`;
@@ -140,28 +137,28 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
   return (
     <Box>
       <FeedToolbar
-        title="History"
+        title={t("history.title")}
         count={count}
         loading={loading}
         search={search}
         onSearchChange={setSearch}
         sortOrder={sortOrder}
-        sortLabels={HISTORY_SORT_LABELS}
+        sortLabels={Object.fromEntries(Object.entries(HISTORY_SORT_LABEL_KEYS).map(([k, v]) => [k, t(`sort.${v}`)]))}
         onSortChange={(o) => onSortChange(o as HistorySortOrder)}
       />
 
       <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
         <DataTable
-          columns={columns}
+          columns={COLUMN_KEYS.map((k) => ({ label: t(`history.columns.${k}`) }))}
           data={filtered}
           loading={loading}
-          emptyMessage={loadedCount === 0 ? "No history available." : "No items match your search."}
+          emptyMessage={loadedCount === 0 ? t("history.empty") : t("history.noMatch")}
           renderRow={(row) => {
             const sev = rowSeverity(row);
             const cls = CLASS_STYLES[row.kind]!;
 
             let href = "#";
-            let title = "Untitled";
+            let title = t("history.untitled");
             let types: string[] = [];
             let sources: string[] = [];
             let date = "";
@@ -170,7 +167,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
             if (row.kind === "alert") {
               const e = row.data.event;
               href = `/event/${e.id}`;
-              title = e.title ?? e.description ?? e.types[0] ?? "Untitled";
+              title = e.title ?? e.description ?? e.types[0] ?? t("history.untitled");
               types = e.types;
               sources = [...new Set(e.signals.map((s) => s.source.name))];
               date = e.firstSignalCreatedAt;
@@ -178,7 +175,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
             } else if (row.kind === "event") {
               const e = row.data;
               href = `/event/${e.id}`;
-              title = e.title ?? e.description ?? e.types[0] ?? "Untitled";
+              title = e.title ?? e.description ?? e.types[0] ?? t("history.untitled");
               types = e.types;
               sources = [...new Set(e.signals.map((s) => s.source.name))];
               date = e.firstSignalCreatedAt;
@@ -186,7 +183,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
             } else {
               const s = row.data;
               href = `/signal/${s.id}`;
-              title = s.title ?? s.description ?? "Untitled signal";
+              title = s.title ?? s.description ?? t("feed.signals.untitled");
               sources = [s.source.name];
               date = s.publishedAt;
               location = resolveLocationName(s.generalLocation ?? s.originLocation ?? s.destinationLocation);
@@ -215,7 +212,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
                     background: cls.bg,
                     color: cls.color,
                   }}>
-                    {cls.label}
+                    {t(`history.classes.${row.kind}`)}
                   </span>
                 </Table.Td>
                 <Table.Td style={{ minWidth: 80 }}>
@@ -249,7 +246,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
                 </Table.Td>
                 <Table.Td style={{ whiteSpace: "nowrap" }}>
                   <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
-                    {new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    {format.dateTime(new Date(date), "short")}
                   </Text>
                 </Table.Td>
                 <Table.Td style={{ minWidth: 100 }}>
@@ -280,7 +277,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
                   color: "var(--color-text-secondary)",
                 }}
               >
-                Load more
+                {t("history.loadMore")}
               </button>
             )}
           </Box>

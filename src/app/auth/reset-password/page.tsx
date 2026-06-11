@@ -13,6 +13,7 @@ import {
   Stack,
   Anchor,
 } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { IconAlertCircle, IconCheck, IconArrowLeft } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 
@@ -25,6 +26,7 @@ export default function ResetPasswordPage() {
 }
 
 function ResetPasswordForm() {
+  const t = useTranslations("auth");
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -57,10 +59,10 @@ function ResetPasswordForm() {
           <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
             <Stack align="center" gap={16}>
               <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light" styles={{ message: { fontSize: 13 } }}>
-                Invalid reset link. Please request a new password reset.
+                {t("reset.invalidLink")}
               </Alert>
               <Anchor component={Link} href="/auth/forgot-password" size="sm" c="#E85D3D" fw={500}>
-                Request New Reset Link
+                {t("reset.requestNew")}
               </Anchor>
             </Stack>
           </Card>
@@ -74,11 +76,11 @@ function ResetPasswordForm() {
     setError("");
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("reset.tooShort"));
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("reset.mismatch"));
       return;
     }
 
@@ -102,7 +104,7 @@ function ResetPasswordForm() {
               CLEAR
             </Text>
             <Text size="lg" fw={600} c="var(--color-text-primary)">
-              Set New Password
+              {t("reset.title")}
             </Text>
           </Stack>
 
@@ -115,15 +117,15 @@ function ResetPasswordForm() {
           {success ? (
             <Stack align="center" gap={16}>
               <Alert icon={<IconCheck size={16} />} color="green" variant="light" styles={{ message: { fontSize: 13 } }}>
-                Password reset successfully. Redirecting to login...
+                {t("reset.success")}
               </Alert>
             </Stack>
           ) : (
             <form onSubmit={handleSubmit}>
               <Stack gap={12}>
                 <PasswordInput
-                  label="New Password"
-                  placeholder="Min 8 characters"
+                  label={t("reset.newPassword")}
+                  placeholder={t("reset.newPasswordPlaceholder")}
                   value={password}
                   onChange={(e) => setPassword(e.currentTarget.value)}
                   required
@@ -136,8 +138,8 @@ function ResetPasswordForm() {
                 />
 
                 <PasswordInput
-                  label="Confirm Password"
-                  placeholder="Re-enter your password"
+                  label={t("reset.confirmPassword")}
+                  placeholder={t("reset.confirmPlaceholder")}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.currentTarget.value)}
                   required
@@ -156,13 +158,13 @@ function ResetPasswordForm() {
                   mt={8}
                   style={{ fontWeight: 600, fontSize: 14 }}
                 >
-                  Reset Password
+                  {t("reset.submit")}
                 </Button>
 
                 <Text ta="center" size="sm" mt={8}>
                   <Anchor component={Link} href="/auth/login" c="var(--color-text-muted)" fw={500} size="sm">
-                    <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginRight: 4 }} />
-                    Back to Sign In
+                    <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginInlineEnd: 4 }} />
+                    {t("backToSignIn")}
                   </Anchor>
                 </Text>
               </Stack>

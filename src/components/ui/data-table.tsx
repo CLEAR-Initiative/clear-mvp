@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Box, Table, Loader } from "@mantine/core";
+import { useTranslations } from "next-intl";
 
 const TH_STYLE: React.CSSProperties = {
   fontSize: 11,
@@ -16,7 +17,7 @@ interface DataTableColumn {
 
 interface DataTableProps<T> {
   columns: DataTableColumn[];
-  data: T[];
+  data: readonly T[];
   renderRow: (item: T, index: number) => ReactNode;
   loading?: boolean;
   emptyMessage?: string;
@@ -27,8 +28,10 @@ export function DataTable<T>({
   data,
   renderRow,
   loading,
-  emptyMessage = "No data available",
+  emptyMessage,
 }: DataTableProps<T>) {
+  const t = useTranslations("common.states");
+  const resolvedEmptyMessage = emptyMessage ?? t("empty");
   if (loading) {
     return (
       <Box p={32} style={{ textAlign: "center" }}>
@@ -53,7 +56,7 @@ export function DataTable<T>({
           <Table.Tr>
             <Table.Td colSpan={columns.length}>
               <Box py={24} style={{ textAlign: "center", color: "#737373", fontSize: 13 }}>
-                {emptyMessage}
+                {resolvedEmptyMessage}
               </Box>
             </Table.Td>
           </Table.Tr>

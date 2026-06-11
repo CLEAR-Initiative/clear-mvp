@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Box, Text, SimpleGrid } from "@mantine/core";
 import { IconFile } from "@tabler/icons-react";
 import { CardSection } from "~/components/ui";
@@ -8,12 +9,14 @@ interface CrisisResourcesProps {
 }
 
 export function CrisisResources({ filteredCrises }: CrisisResourcesProps) {
+  const t = useTranslations("knowledge.crisisResources");
+
   if (filteredCrises.length === 0) return null;
 
   return (
     <CardSection
-      title="Active Crisis Resources"
-      subtitle={`${filteredCrises.length} active ${filteredCrises.length === 1 ? "crisis" : "crises"} in selected location`}
+      title={t("title")}
+      subtitle={t("subtitle", { count: filteredCrises.length })}
       noPadding
     >
       {filteredCrises.map((crisis, i) => (

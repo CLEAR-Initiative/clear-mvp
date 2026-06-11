@@ -13,6 +13,7 @@ import {
   Box,
   ActionIcon,
 } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import {
   IconCircleCheck,
   IconUpload,
@@ -36,12 +37,13 @@ interface SignalFormData {
   severity: string;
 }
 
+// labelKey: i18n keys under common.severities.* - resolved via t() at render time.
 const SEVERITY_OPTIONS = [
-  { value: "2", label: "Low" },
-  { value: "3", label: "Medium" },
-  { value: "4", label: "High" },
-  { value: "5", label: "Critical" },
-];
+  { value: "2", labelKey: "low" },
+  { value: "3", labelKey: "medium" },
+  { value: "4", labelKey: "high" },
+  { value: "5", labelKey: "critical" },
+] as const;
 
 interface SelectedFile {
   file: File;
@@ -90,14 +92,16 @@ function DetailsStep({
   sourceOptions: { value: string; label: string }[];
   sourcesLoading: boolean;
 }) {
+  const t = useTranslations("common.createSignal");
+  const tSev = useTranslations("common.severities");
   const isValid = form.title.trim().length > 0 && form.sourceId.length > 0;
   const isHighSeverity = form.severity === "4" || form.severity === "5";
 
   return (
     <Stack gap="md">
       <TextInput
-        label={<Text style={LABEL_STYLE}>Title</Text>}
-        placeholder="e.g., Flooding reported in Kassala State"
+        label={<Text style={LABEL_STYLE}>{t("fieldTitle")}</Text>}
+        placeholder={t("titlePlaceholder")}
         value={form.title}
         onChange={(e) => { const v = e.currentTarget.value; setForm((p) => ({ ...p, title: v })); }}
         required
@@ -105,8 +109,8 @@ function DetailsStep({
       />
 
       <Textarea
-        label={<Text style={LABEL_STYLE}>Description</Text>}
-        placeholder="Describe what was observed, source, and any relevant context…"
+        label={<Text style={LABEL_STYLE}>{t("fieldDescription")}</Text>}
+        placeholder={t("descriptionPlaceholder")}
         value={form.description}
         onChange={(e) => { const v = e.currentTarget.value; setForm((p) => ({ ...p, description: v })); }}
         minRows={3}
@@ -115,20 +119,20 @@ function DetailsStep({
       />
 
       <Select
-        label={<Text style={LABEL_STYLE}>Source</Text>}
-        placeholder={sourcesLoading ? "Loading sources…" : "Select a source…"}
+        label={<Text style={LABEL_STYLE}>{t("fieldSource")}</Text>}
+        placeholder={sourcesLoading ? t("sourcesLoading") : t("sourcePlaceholder")}
         data={sourceOptions}
         value={form.sourceId || null}
         onChange={(v) => setForm((p) => ({ ...p, sourceId: v ?? "" }))}
         disabled={sourcesLoading}
         required
         comboboxProps={{ zIndex: 1000 }}
-        nothingFoundMessage="No sources available"
+        nothingFoundMessage={t("noSources")}
       />
 
       <Select
-        label={<Text style={LABEL_STYLE}>Location</Text>}
-        placeholder={locationsLoading ? "Loading locations…" : "Search location…"}
+        label={<Text style={LABEL_STYLE}>{t("fieldLocation")}</Text>}
+        placeholder={locationsLoading ? t("locationsLoading") : t("locationPlaceholder")}
         data={locationOptions}
         value={form.locationId || null}
         onChange={(v) => setForm((p) => ({ ...p, locationId: v ?? "" }))}
@@ -136,14 +140,14 @@ function DetailsStep({
         clearable
         disabled={locationsLoading}
         comboboxProps={{ zIndex: 1000 }}
-        nothingFoundMessage="No matching location"
+        nothingFoundMessage={t("noMatchingLocation")}
       />
 
       <Box>
         <Select
-          label={<Text style={LABEL_STYLE}>Severity</Text>}
-          placeholder="Select severity…"
-          data={SEVERITY_OPTIONS}
+          label={<Text style={LABEL_STYLE}>{t("fieldSeverity")}</Text>}
+          placeholder={t("severityPlaceholder")}
+          data={SEVERITY_OPTIONS.map((o) => ({ value: o.value, label: tSev(o.labelKey) }))}
           value={form.severity || null}
           onChange={(v) => setForm((p) => ({ ...p, severity: v ?? "" }))}
           clearable
@@ -153,7 +157,7 @@ function DetailsStep({
           <Box mt={8} style={{ display: "grid", gridTemplateColumns: "16px 1fr", gap: 6, alignItems: "center" }}>
             <IconAlertTriangle size={14} style={{ color: "var(--color-warning)", justifySelf: "center" }} />
             <Text size="xs" c="var(--color-warning)">
-              {form.severity === "5" ? "Critical" : "High"} severity signals may trigger an alert and notify team members subscribed to alerts at this level.
+              {t("severityWarning", { level: tSev(form.severity === "5" ? "critical" : "high") })}
             </Text>
           </Box>
         )}
@@ -167,7 +171,7 @@ function DetailsStep({
           color="accent"
           style={{ fontSize: 13 }}
         >
-          Next: Add Media
+          {t("next")}
         </Button>
       </Group>
     </Stack>
@@ -191,6 +195,8 @@ function MediaStep({
   onSubmit: () => void;
   isSubmitting: boolean;
 }) {
+  const t = useTranslations("common.createSignal");
+  const tActions = useTranslations("common.actions");
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -235,10 +241,10 @@ function MediaStep({
         />
         <IconUpload size={24} style={{ color: "var(--color-text-muted)", marginBottom: 8 }} />
         <Text size="sm" fw={500} c="var(--color-text-secondary)">
-          Drop files here or click to browse
+          {t("dropzone")}
         </Text>
         <Text size="xs" c="var(--color-text-muted)" mt={4}>
-          PDFs, Word, Excel, CSV, text files
+          {t("fileTypes")}
         </Text>
       </Box>
 
@@ -287,7 +293,7 @@ function MediaStep({
           onClick={onBack}
           style={{ fontSize: 13 }}
         >
-          Back
+          {tActions("back")}
         </Button>
         <Group gap={8}>
           <Button
@@ -298,7 +304,7 @@ function MediaStep({
             disabled={isSubmitting}
             style={{ fontSize: 13 }}
           >
-            Skip & Submit
+            {t("skipSubmit")}
           </Button>
           <Button
             color="accent"
@@ -307,7 +313,7 @@ function MediaStep({
             disabled={isSubmitting}
             style={{ fontSize: 13 }}
           >
-            Submit Signal
+            {t("submit")}
           </Button>
         </Group>
       </Group>
@@ -318,19 +324,20 @@ function MediaStep({
 /* ── Step 3: Success ─────────────────────────────────────────── */
 
 function SuccessStep({ onClose }: { onClose: () => void }) {
+  const t = useTranslations("common.createSignal");
   return (
     <Stack align="center" gap={16} py={24}>
       <IconCircleCheck size={56} color="var(--color-success)" style={{ strokeWidth: 1.5 }} />
       <Box ta="center">
         <Text fw={700} size="lg" c="var(--color-text-primary)">
-          Signal created
+          {t("successHeading")}
         </Text>
         <Text size="sm" c="var(--color-text-muted)" mt={4} maw={280} mx="auto">
-          Your signal has been submitted and is now visible to your team.
+          {t("successText")}
         </Text>
       </Box>
       <Button color="accent" onClick={onClose} mt={8} style={{ fontSize: 13 }}>
-        Done
+        {t("done")}
       </Button>
     </Stack>
   );
@@ -338,13 +345,15 @@ function SuccessStep({ onClose }: { onClose: () => void }) {
 
 /* ── Main Modal ──────────────────────────────────────────────── */
 
-const STEP_TITLES: Record<Step, string> = {
-  details: "Create a Signal - Details",
-  media: "Create a Signal - Add Media",
-  success: "Signal Created",
-};
+// i18n keys under common.createSignal.* - resolved via t() at render time.
+const STEP_TITLE_KEYS = {
+  details: "detailsTitle",
+  media: "mediaTitle",
+  success: "successTitle",
+} as const satisfies Record<Step, string>;
 
 export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
+  const t = useTranslations("common.createSignal");
   const [step, setStep] = useState<Step>("details");
   const [form, setForm] = useState<SignalFormData>({ title: "", description: "", locationId: "", sourceId: "", severity: "" });
   const [files, setFiles] = useState<SelectedFile[]>([]);
@@ -416,7 +425,7 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
           body: formData,
         });
         if (!uploadResp.ok) {
-          throw new Error("File upload failed");
+          throw new Error(t("uploadFailed"));
         }
         const uploadData = (await uploadResp.json()) as { keys: string[] };
         mediaKeys = uploadData.keys;
@@ -433,7 +442,7 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
       void utils.signals.list.invalidate({ teamId: activeTeamId ?? undefined });
       setStep("success");
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Failed to create signal");
+      setErrorMsg(err instanceof Error ? err.message : t("createFailed"));
     }
   }
 
@@ -443,7 +452,7 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
       onClose={handleClose}
       title={
         <Text fw={600} size="sm" c="var(--color-text-primary)">
-          {STEP_TITLES[step]}
+          {t(STEP_TITLE_KEYS[step])}
         </Text>
       }
       size="md"

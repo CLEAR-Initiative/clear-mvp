@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Box, Tabs, Button, Group, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
 import { IconFilter } from "@tabler/icons-react";
 import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
@@ -55,6 +56,7 @@ const VALID_TABS = new Set(["live", "events", "signals", "history"]);
 const TAB_STORAGE_KEY = "detection-active-tab";
 
 function DetectionPageContent() {
+  const t = useTranslations("detection");
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -563,9 +565,9 @@ function DetectionPageContent() {
   return (
     <Box>
       <PageHeader
-        title="Event Detection"
-        subtitle="Event Detection"
-        breadcrumbs={["CLEAR", "Detection"]}
+        title={t("header.title")}
+        subtitle={t("header.title")}
+        breadcrumbs={["CLEAR", t("header.breadcrumb")]}
         loading={eventsQuery.isLoading || alertsQuery.isLoading}
       >
         <FilterBar
@@ -577,7 +579,7 @@ function DetectionPageContent() {
               states={currentCountryStates}
               value={selectedRegionId}
               onChange={setSelectedRegionId}
-              label="Region"
+              label={t("filters.region")}
             />
           }
           date={selectedDate}
@@ -585,18 +587,18 @@ function DetectionPageContent() {
           dateOptions={dateOptions}
         >
           <Box>
-            <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 5 }}>Filter</Text>
+            <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 5 }}>{t("filters.filter")}</Text>
             <Popover opened={filterOpen} onChange={setFilterOpen} position="bottom-start" shadow="md" width={270} withinPortal>
               <Popover.Target>
                 <ActionIcon
                   variant="default" size={30}
                   style={{ position: "relative", border: "1px solid #E5E5E5", borderRadius: 4 }}
                   onClick={() => setFilterOpen((o) => !o)}
-                  title="Filter"
+                  title={t("filters.filter")}
                 >
                   <IconFilter size={13} color={isFiltered ? "var(--color-accent)" : "var(--color-text-muted)"} />
                   {isFiltered && (
-                    <Box style={{ position: "absolute", top: -4, right: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Box style={{ position: "absolute", top: -4, insetInlineEnd: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <Text style={{ fontSize: 9, color: "white", fontWeight: 700, lineHeight: 1 }}>{filterCount}</Text>
                     </Box>
                   )}
@@ -604,14 +606,14 @@ function DetectionPageContent() {
               </Popover.Target>
               <Popover.Dropdown p={14} onMouseDown={(e) => e.stopPropagation()}>
                 <Group justify="space-between" mb={10}>
-                  <Text size="xs" fw={700} tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.06em" }}>Filters</Text>
+                  <Text size="xs" fw={700} tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.06em" }}>{t("filters.title")}</Text>
                   {isFiltered && (
                     <Button size="compact-xs" variant="subtle" color="gray" onClick={() => { setActiveSeverities(new Set(["critical", "high", "medium", "low"])); setSelectedTypeFilters([]); setActiveSources(null); }}>
-                      Clear all
+                      {t("filters.clearAll")}
                     </Button>
                   )}
                 </Group>
-                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Severity</Text>
+                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("filters.severity")}</Text>
                 <Group gap={6} mb={12} wrap="wrap">
                   {(["critical", "high", "medium", "low"] as const).map((sev) => {
                     const active = activeSeverities.has(sev);
@@ -627,18 +629,18 @@ function DetectionPageContent() {
                           return next;
                         })}
                       >
-                        {sev.charAt(0).toUpperCase() + sev.slice(1)}
+                        {t(`filters.severities.${sev}`)}
                       </Badge>
                     );
                   })}
                 </Group>
                 <Divider color="var(--color-border)" mb={10} />
-                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Event Type</Text>
+                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("filters.eventType")}</Text>
                 <DisasterTypePicker hierarchy={hierarchy} selected={selectedTypeFilters} onChange={setSelectedTypeFilters} size="xs" />
                 {allSources.length > 0 && (
                   <>
                     <Divider color="var(--color-border)" my={10} />
-                    <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Source</Text>
+                    <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("filters.source")}</Text>
                     <Group gap={6} wrap="wrap">
                       {allSources.map((src) => {
                         const active = activeSources === null || activeSources.has(src);
@@ -673,7 +675,7 @@ function DetectionPageContent() {
             onClick={openCreateModal}
             style={{ background: "#E85D3D", borderColor: "#E85D3D", fontSize: 13 }}
           >
-            Create Signal
+            {t("actions.createSignal")}
           </Button>
         </Group>
       </PageHeader>
@@ -681,10 +683,10 @@ function DetectionPageContent() {
       <Box p={24}>
         <Tabs value={activeTab} onChange={handleTabChange} mb={24} styles={{ tab: { fontSize: 13, fontWeight: 500 } }}>
           <Tabs.List>
-            <Tabs.Tab value="live">Alerts</Tabs.Tab>
-            <Tabs.Tab value="events">Events</Tabs.Tab>
-            <Tabs.Tab value="signals">Signals</Tabs.Tab>
-            <Tabs.Tab value="history">History</Tabs.Tab>
+            <Tabs.Tab value="live">{t("tabs.alerts")}</Tabs.Tab>
+            <Tabs.Tab value="events">{t("tabs.events")}</Tabs.Tab>
+            <Tabs.Tab value="signals">{t("tabs.signals")}</Tabs.Tab>
+            <Tabs.Tab value="history">{t("tabs.history")}</Tabs.Tab>
           </Tabs.List>
         </Tabs>
 

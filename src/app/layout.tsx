@@ -2,30 +2,40 @@ import "~/styles/globals.css";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import { MantineProvider, ColorSchemeScript } from "@mantine/core";
+import {
+  MantineProvider,
+  ColorSchemeScript,
+  DirectionProvider,
+} from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 
 import { TRPCReactProvider } from "~/trpc/react";
 import { clearTheme } from "~/app/config/themes";
+import { localeDirection, isLocale, defaultLocale } from "~/i18n/config";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
 });
 
-export const metadata: Metadata = {
-  title: "CLEAR: Crisis Learning, Early-warning, Anticipation & Response",
-  description: "Humanitarian decision-support platform",
-  manifest: "/manifest.json",
-  icons: {
-    apple: "/apple-touch-icon.png",
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "CLEAR Observe",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("metadata");
+  return {
+    title: t("title"),
+    description: t("description"),
+    manifest: "/manifest.webmanifest",
+    icons: {
+      apple: "/apple-touch-icon.png",
+    },
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "CLEAR Observe",
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -33,21 +43,30 @@ export const viewport: Viewport = {
   userScalable: true,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const rawLocale = await getLocale();
+  const locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
+  const messages = await getMessages();
+  const dir = localeDirection[locale];
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} dir={dir} suppressHydrationWarning>
       <head>
         <ColorSchemeScript defaultColorScheme="auto" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <MantineProvider theme={clearTheme} defaultColorScheme="auto">
-          <Notifications position="top-right" />
-          <TRPCReactProvider>{children}</TRPCReactProvider>
-        </MantineProvider>
+        <DirectionProvider initialDirection={dir} detectDirection={false}>
+          <MantineProvider theme={clearTheme} defaultColorScheme="auto">
+            <NextIntlClientProvider locale={locale} messages={messages}>
+              <Notifications position="top-right" />
+              <TRPCReactProvider>{children}</TRPCReactProvider>
+            </NextIntlClientProvider>
+          </MantineProvider>
+        </DirectionProvider>
       </body>
     </html>
   );

@@ -88,6 +88,6 @@ export const config = {
     /*
      * Match all paths except static files and Next.js internals.
      */
-    "/((?!_next/static|_next/image|favicon.ico|manifest.json|icons/|images/|api/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|manifest.webmanifest|icons/|images/|api/).*)",
   ],
 };
