@@ -272,7 +272,7 @@ export function RightPanel({
           <List.Item>{t.rich("rightPanel.informModal.pillarCoping", { strong: (chunks) => <strong>{chunks}</strong> })}</List.Item>
         </List>
         <Text style={{ fontSize: 11, color: "#A3A3A3", lineHeight: 1.5 }}>
-          {t("rightPanel.informModal.sourceLabel")} <Anchor href="https://drmkc.jrc.ec.europa.eu/inform-index" target="_blank" size="xs">
+          {t("rightPanel.informModal.sourceLabel")} <Anchor href="https://drmkc.jrc.ec.europa.eu/inform-index" target="_blank" rel="noopener noreferrer" size="xs">
             {t("rightPanel.informModal.sourceLink")}
           </Anchor>{" "}{t("rightPanel.informModal.updatedAnnually")}
         </Text>

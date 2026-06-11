@@ -15,11 +15,17 @@ export async function GET() {
   const cookieLocale = cookieStore.get(LOCALE_COOKIE)?.value;
   const locale = isLocale(cookieLocale) ? cookieLocale : defaultLocale;
 
-  const messages = (
-    (await import(`../../../messages/${locale}.json`)) as {
-      default: typeof enMessages;
-    }
-  ).default;
+  let messages: typeof enMessages;
+  try {
+    messages = (
+      (await import(`../../../messages/${locale}.json`)) as {
+        default: typeof enMessages;
+      }
+    ).default;
+  } catch {
+    // A broken catalog must not break PWA installation - fall back to English.
+    messages = (await import("../../../messages/en.json")).default;
+  }
 
   const manifest = {
     name: messages.manifest.name,
