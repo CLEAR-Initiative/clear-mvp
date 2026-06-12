@@ -1,7 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { isLocale, LOCALE_COOKIE } from "~/i18n/config";
 
 const API_URL = process.env.API_URL ?? "http://localhost:4000";
 const SESSION_VERIFY_TIMEOUT_MS = 3000;
+const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 /**
  * Middleware to protect routes that require authentication.
@@ -38,7 +40,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+
+  // Seed the locale cookie from the user's persisted language preference so
+  // client components never need to trigger a router refresh to apply it.
+  const cookieLang = request.cookies.get(LOCALE_COOKIE)?.value;
+  if (isLocale(session.language) && session.language !== cookieLang) {
+    response.cookies.set(LOCALE_COOKIE, session.language, {
+      path: "/",
+      maxAge: LOCALE_COOKIE_MAX_AGE,
+      sameSite: "lax",
+    });
+  }
+
+  return response;
 }
 
 function redirectToLogin(request: NextRequest, pathname: string) {
@@ -50,7 +65,7 @@ function redirectToLogin(request: NextRequest, pathname: string) {
 async function verifySession(
   cookieName: string,
   cookieValue: string,
-): Promise<{ role: string } | null> {
+): Promise<{ role: string; language: string } | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(
@@ -72,12 +87,15 @@ async function verifySession(
 
     const data = (await res.json()) as {
       session?: { id: string } | null;
-      user?: { role?: string } | null;
+      user?: { role?: string; language?: string } | null;
     };
 
     if (!data.session || !data.user) return null;
 
-    return { role: data.user.role?.toLowerCase() ?? "viewer" };
+    return {
+      role: data.user.role?.toLowerCase() ?? "viewer",
+      language: data.user.language ?? "en",
+    };
   } catch {
     return null;
   }
