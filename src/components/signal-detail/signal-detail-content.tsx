@@ -560,8 +560,11 @@ export function SignalDetailContent({
                   </Box>
                 )}
                 {signal.events.map((ev) => {
-                  const relSev = mapSeverity(ev.rank);
-                  const relColor = severityColor(ev.rank);
+                  // `rank` is a 0-1 urgency score; severity buckets need the
+                  // 1-5 `severity` field. Passing rank would always bucket as
+                  // "low" because rank <= 1 < 3.
+                  const relSev = mapSeverity(ev.severity);
+                  const relColor = severityColor(ev.severity);
                   const relBg = severityColors[relSev]?.bg ?? "var(--color-bg-muted)";
                   const relTitle = ev.title ?? ev.types[0] ?? t("events.fallbackTitle", { id: ev.id });
                   return (
