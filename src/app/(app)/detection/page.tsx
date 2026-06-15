@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Box, Tabs, Button, Group, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
 import { IconFilter } from "@tabler/icons-react";
 import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
@@ -11,7 +11,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { countryConfig, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
+import { countryConfig, parseDateFilter } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
 import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
@@ -57,6 +57,7 @@ const TAB_STORAGE_KEY = "detection-active-tab";
 
 function DetectionPageContent() {
   const t = useTranslations("detection");
+  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -82,6 +83,22 @@ function DetectionPageContent() {
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("Last 30 days");
+  const localizedDateOptions = useMemo(() => {
+    const now = new Date();
+    const englishMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const fmt = new Intl.DateTimeFormat(locale, { month: "short", year: "numeric" });
+    const result: { value: string; label: string }[] = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      result.push({ value: `${englishMonths[d.getMonth()]} ${d.getFullYear()}`, label: fmt.format(d) });
+    }
+    result.push(
+      { value: "Last 7 days",  label: t("filters.last7days") },
+      { value: "Last 30 days", label: t("filters.last30days") },
+      { value: "Last 90 days", label: t("filters.last90days") },
+    );
+    return result;
+  }, [locale, t]);
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [activeSeverities, setActiveSeverities] = useState<Set<string>>(new Set(["critical", "high", "medium", "low"]));
@@ -584,7 +601,7 @@ function DetectionPageContent() {
           }
           date={selectedDate}
           onDateChange={setSelectedDate}
-          dateOptions={dateOptions}
+          dateOptions={localizedDateOptions}
         >
           <Box>
             <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 5 }}>{t("filters.filter")}</Text>

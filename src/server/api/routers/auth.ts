@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import { API_URL, GRAPHQL_API_KEY } from "~/server/env";
+import { locales } from "~/i18n/config";
 
 const BetterAuthUserSchema = z.object({
   id: z.string(),
@@ -168,7 +169,7 @@ export const authRouter = createTRPCRouter({
         name: z.string().optional(),
         phoneNumber: z.string().optional(),
         image: z.string().optional(),
-        language: z.enum(["en", "fr"]).optional(),
+        language: z.enum(locales).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

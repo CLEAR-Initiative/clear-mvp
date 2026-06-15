@@ -1,0 +1,2328 @@
+{
+  "insights": {
+    "page": {
+      "title": "الرؤى",
+      "breadcrumb": "الرؤى",
+      "tabs": {
+        "crisis": "نظرة عامة على الأزمة",
+        "situation": "تحليل الوضع"
+      },
+      "situationPlaceholder": {
+        "title": "تحليل الوضع",
+        "description": "تقارير الوضع المُنشأة بالذكاء الاصطناعي قريباً."
+      }
+    },
+    "reports": {
+      "activeCrises": "الأزمات النشطة",
+      "criticalBadge": "{count} حرجة",
+      "untitledCrisis": "أزمة بلا عنوان",
+      "eventCount": "{count, plural, zero {لا أحداث} one {حدث واحد} two {حدثان} few {# أحداث} many {# حدثاً} other {# حدث}}",
+      "empty": "لا توجد أزمات نشطة."
+    },
+    "executiveSummary": {
+      "priorityAnalysis": "تحليل الأولويات",
+      "criticalBadge": "{count} حرجة",
+      "activeBadge": "{count} نشطة",
+      "situationReport": "تقرير الوضع - {country}",
+      "defaultReportTitle": "أزمة نزوح النزاع المسلح - {country}",
+      "activeAlerts": "التنبيهات النشطة",
+      "totalAlerts": "إجمالي التنبيهات",
+      "trend": "الاتجاه",
+      "needs": {
+        "shelter": {
+          "label": "المأوى",
+          "description": "الإسكان والنزوح"
+        },
+        "wash": {
+          "label": "WASH",
+          "description": "المياه والصرف الصحي"
+        },
+        "protection": {
+          "label": "الحماية",
+          "description": "الحقوق والسلامة"
+        },
+        "health": {
+          "label": "الصحة",
+          "description": "الاستجابة الطبية"
+        },
+        "foodSecurity": {
+          "label": "الأمن الغذائي",
+          "description": "الحصول على التغذية"
+        }
+      },
+      "viewFullReport": "عرض التقرير الكامل",
+      "downloadPdf": "تنزيل PDF",
+      "updatedAt": "تم التحديث {time}",
+      "updatedFallback": "تم التحديث منذ ساعتين",
+      "confidence": "الثقة: {pct}%",
+      "aiGeneratedAnalysis": "تحليل بالذكاء الاصطناعي",
+      "generating": "جارٍ إنشاء التحليل الشامل من {count} تنبيهاً نشطاً...",
+      "generateFailed": "فشل إنشاء التحليل. يرجى المحاولة مجدداً."
+    },
+    "insights": {
+      "title": "رؤى مُنشأة بالذكاء الاصطناعي",
+      "subtitle": "اكتشاف الأنماط والتوصيات",
+      "filters": {
+        "epidemiological": "وبائي",
+        "allTypes": "جميع الأنواع",
+        "logistics": "لوجستي"
+      },
+      "dataQualityTitle": "جودة بيانات التحليل",
+      "dataQualitySubtitle": "مقاييس موثوقية المصدر",
+      "columns": {
+        "dataSource": "مصدر البيانات",
+        "completeness": "الاكتمال",
+        "timeliness": "التوقيت",
+        "confidence": "الثقة",
+        "lastUpdate": "آخر تحديث"
+      }
+    },
+    "impact": {
+      "title": "تقييم تأثير القطاعات",
+      "subtitle": "الاحتياجات الإنسانية حسب القطاع",
+      "columns": {
+        "sector": "القطاع",
+        "severity": "الخطورة",
+        "affected": "المتضررون",
+        "details": "التفاصيل"
+      },
+      "environmental": {
+        "title": "العوامل البيئية",
+        "subtitle": "المخاطر المناخية والبيئية",
+        "floodRisk": "خطر الفيضانات",
+        "rainfallForecast": "توقعات الأمطار",
+        "secondaryRisk": "المخاطر الثانوية"
+      },
+      "protection": {
+        "title": "مخاوف الحماية",
+        "subtitle": "الثغرات المُحددة"
+      },
+      "secondaryEffects": {
+        "title": "الآثار الثانوية",
+        "subtitle": "التداعيات المتوقعة"
+      }
+    },
+    "scenarios": {
+      "title": "مقارنة السيناريوهات",
+      "subtitle": "مقارنة النتائج المتوقعة"
+    },
+    "data": {
+      "insights": {
+        "waterClustering": {
+          "type": "نمط حرج",
+          "title": "تمركز مصادر المياه",
+          "description": "87% من الحالات في نطاق 500 متر من 3 نقاط مائية. يُوصى بإجراء اختبارات ومعالجة فورية."
+        },
+        "peakTiming": {
+          "type": "حساس للوقت",
+          "title": "التنبؤ بذروة الانتشار",
+          "description": "تشير الأنماط التاريخية إلى ذروة الانتقال بين 14 و21 يوماً من بدء تفشي المرض. الوضع الحالي: اليوم 8."
+        },
+        "resourceOptimization": {
+          "type": "فرصة",
+          "title": "تحسين الموارد",
+          "description": "يمكن لإمدادات ORS في Dire Dawa الوصول إلى المناطق المتضررة خلال 6 ساعات. التموضع المسبق متاح."
+        }
+      },
+      "dataQuality": {
+        "mohPhem": {
+          "source": "بيانات MOH PHEM",
+          "timeliness": "آني",
+          "confidence": "عالية",
+          "lastUpdate": "منذ 3 دقائق"
+        },
+        "whoEwarn": {
+          "source": "WHO EWARN",
+          "timeliness": "كل ساعة",
+          "confidence": "عالية",
+          "lastUpdate": "منذ ساعة"
+        },
+        "fieldReports": {
+          "source": "تقارير ميدانية",
+          "timeliness": "يومي",
+          "confidence": "متوسطة",
+          "lastUpdate": "منذ 4 ساعات"
+        },
+        "satellite": {
+          "source": "صور الأقمار الصناعية",
+          "timeliness": "دورة 6 ساعات",
+          "confidence": "عالية",
+          "lastUpdate": "منذ ساعتين"
+        }
+      },
+      "scenarios": {
+        "bestCase": {
+          "name": "أفضل الحالات",
+          "sub": "سيناريو الاحتواء السريع",
+          "description": "تدخل مبكر مع تغطية WASH كاملة يُحقق الاحتواء خلال أسبوعين. العدد المقدر للمتضررين: 2,400 شخص."
+        },
+        "mostLikely": {
+          "name": "الأكثر احتمالاً",
+          "sub": "سيناريو الانتشار المعتدل",
+          "description": "احتواء جزئي مع استمرار الانتقال في 3 ورادات. الذروة خلال 3-4 أسابيع. العدد المقدر للمتضررين: 8,500 شخص."
+        },
+        "worstCase": {
+          "name": "أسوأ الحالات",
+          "sub": "سيناريو الانتشار الإقليمي",
+          "description": "انتشار واسع عبر 8+ ورادات مع ضغط على المنظومة الصحية. العدد المقدر للمتضررين: 24,000+ شخص."
+        }
+      },
+      "impactAssessment": {
+        "shelter": {
+          "sector": "المأوى",
+          "affected": "{count} شخص",
+          "description": "45% من المآوي تضررت أو دُمِّرت في المناطق المتضررة من الفيضانات"
+        },
+        "wash": {
+          "sector": "WASH",
+          "affected": "{count} شخص",
+          "description": "3 منشآت لمعالجة المياه معطلة، رُصد تلوث"
+        },
+        "protection": {
+          "sector": "الحماية",
+          "affected": "{count} شخص",
+          "description": "ارتفاع مخاطر GBV، ومخاوف حماية الطفل في مواقع النزوح"
+        },
+        "health": {
+          "sector": "الصحة",
+          "affected": "{count} حالة",
+          "description": "تفشي الكوليرا بمعدل وفيات 2.1%، يتجاوز حد الطوارئ"
+        },
+        "foodSecurity": {
+          "sector": "الأمن الغذائي",
+          "affected": "{count} شخص",
+          "description": "انعدام أمن غذائي IPC المرحلة 3+ في 5 ورادات، واستمرار اضطراب السوق"
+        }
+      },
+      "environmentalFactors": {
+        "floodRisk": "تشير GloFAS إلى احتمال 75% لمستويات أنهار أعلى من المعتاد خلال 14 يوماً القادمة",
+        "rainfallForecast": "يُتوقع سقوط 150-200 ملم في المنطقة الصومالية خلال الأسبوع القادم، بزيادة 40% عن المعدل الموسمي",
+        "secondaryRisk": "خطر تفشي الأمراض المنقولة بالمياه مرتفع جداً بسبب تلوث مصادر المياه الناجم عن الفيضانات"
+      },
+      "protectionConcerns": {
+        "gbv": "تزايد مخاطر GBV في مواقع النزوح المكتظة، ولا سيما بالنسبة للنساء والفتيات",
+        "separatedChildren": "رُصد أطفال مفصولون وغير مصحوبين في 3 مواقع نزوح",
+        "disabilities": "عقبات أمام وصول ذوي الإعاقة إلى الخدمات في المأوى المؤقت",
+        "documentation": "فقدان الوثائق يؤثر على حصول النازحين على الخدمات الأساسية"
+      },
+      "secondaryEffects": {
+        "market": "اضطراب السوق يُسبب ارتفاع أسعار الغذاء 28% في المناطق المتضررة",
+        "schools": "إغلاق المدارس يؤثر على 15,000 طفل في 23 مدرسة",
+        "livestock": "خسائر الماشية تُقدَّر بـ 2.3 مليون دولار مما يُلحق الضرر بمعيشة الرعاة",
+        "transport": "اضطراب طرق النقل يؤخر سلاسل الإمداد الإنساني 48-72 ساعة",
+        "mentalHealth": "تأثيرات الصحة النفسية موثقة لدى 60% من الأسر النازحة",
+        "agriculture": "اضطراب الموسم الزراعي يهدد الحصاد القادم في 4 ورادات"
+      }
+    }
+  },
+  "metadata": {
+    "title": "CLEAR: التعلم من الأزمات، الإنذار المبكر، الاستباقية والاستجابة",
+    "description": "منصة دعم القرار الإنساني"
+  },
+  "manifest": {
+    "name": "CLEAR Observe",
+    "shortName": "Observe",
+    "description": "إرسال إشارات ميدانية لمنصة CLEAR للاستخبارات الإنسانية"
+  },
+  "acceptInvite": {
+    "errors": {
+      "noToken": "لم يُعثر على رمز دعوة في الرابط.",
+      "invalid": "رابط الدعوة غير صالح. ربما تم إلغاؤه.",
+      "accepted": "تم قبول هذه الدعوة مسبقاً.",
+      "expired": "انتهت صلاحية هذه الدعوة. يرجى التواصل مع المسؤول للحصول على دعوة جديدة.",
+      "nameRequired": "يرجى إدخال اسمك",
+      "tooShort": "يجب أن تكون كلمة المرور 8 أحرف على الأقل",
+      "mismatch": "كلمتا المرور غير متطابقتين",
+      "failed": "فشل قبول الدعوة"
+    },
+    "loading": "جارٍ تحميل الدعوة...",
+    "title": "قبول الدعوة",
+    "invitedToJoin": "لقد دُعيت للانضمام إلى:",
+    "team": "الفريق:",
+    "role": "الدور: {role}",
+    "fullName": "الاسم الكامل",
+    "fullNamePlaceholder": "أدخل اسمك",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "passwordPlaceholder": "8 أحرف على الأقل",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "confirmPlaceholder": "أعد إدخال كلمة المرور",
+    "submit": "قبول وإنشاء حساب",
+    "goToSignIn": "الذهاب إلى تسجيل الدخول",
+    "goHome": "الصفحة الرئيسية"
+  }
+,
+  "admin": {
+    "header": {
+      "title": "المدير",
+      "subtitle": "إعداد المنصة وإدارة المستخدمين والمنظمات"
+    },
+    "tabs": {
+      "users": "المستخدمون",
+      "organisations": "المنظمات",
+      "invitations": "الدعوات",
+      "features": "الميزات",
+      "data": "البيانات"
+    },
+    "hold": {
+      "holding": "جارٍ التثبيت...",
+      "confirm": "اضغط مطولاً للتأكيد",
+      "remove": "اضغط مطولاً للإزالة",
+      "delete": "اضغط مطولاً للحذف"
+    },
+    "confirm": {
+      "removeTitle": "إزالة من الفريق",
+      "roleTitle": "تأكيد تغيير الدور",
+      "removeBody": "هل أنت متأكد من إزالة <b>{name}</b> من فريقك؟ لا يمكن التراجع عن هذا الإجراء.",
+      "roleBody": "تغيير دور <b>{name}</b> من <b>{from}</b> إلى <b>{to}</b>؟",
+      "holdHint": "اضغط مطولاً على الزر أدناه للتأكيد."
+    },
+    "roles": {
+      "member": "عضو",
+      "admin": "مدير",
+      "owner": "مالك",
+      "viewer": "مشاهد",
+      "analyst": "محلل",
+      "lead": "قائد"
+    },
+    "users": {
+      "roles": {
+        "field": "ميداني",
+        "analyst": "محلل",
+        "orgAdmin": "مدير المنظمة",
+        "admin": "مدير"
+      },
+      "unauthorized": "تحتاج إلى صلاحيات المدير لعرض إدارة المستخدمين.",
+      "stats": {
+        "total": "إجمالي المستخدمين",
+        "admins": "المدراء",
+        "active": "النشطون"
+      },
+      "filterAll": "جميع المستخدمين",
+      "filterPending": "في انتظار الموافقة",
+      "allOrgs": "جميع المنظمات",
+      "allTeams": "جميع الفرق",
+      "columns": {
+        "user": "المستخدم",
+        "role": "الدور",
+        "email": "البريد الإلكتروني",
+        "org": "المنظمة",
+        "team": "الفريق",
+        "status": "الحالة"
+      },
+      "emptyPending": "لا يوجد مستخدمون في انتظار الموافقة",
+      "empty": "لم يُعثر على مستخدمين",
+      "verified": "محقق",
+      "unverified": "غير محقق",
+      "statusActive": "نشط",
+      "statusPending": "معلق",
+      "activate": "تفعيل"
+    },
+    "features": {
+      "stats": {
+        "total": "إجمالي الميزات",
+        "enabled": "مُفعَّلة",
+        "disabled": "معطلة"
+      }
+    },
+    "orgs": {
+      "statsTotal": "إجمالي المنظمات",
+      "title": "المنظمات",
+      "create": "إنشاء منظمة",
+      "columns": {
+        "name": "الاسم",
+        "slug": "المعرّف",
+        "teams": "الفرق",
+        "members": "الأعضاء"
+      },
+      "empty": "لا توجد منظمات بعد. أنشئ واحدة للبدء.",
+      "teamsCount": "{count, plural, zero {لا فرق} one {فريق واحد} two {فريقان} few {# فرق} many {# فريقاً} other {# فريق}}",
+      "membersCount": "{count, plural, zero {لا أعضاء} one {عضو واحد} two {عضوان} few {# أعضاء} many {# عضواً} other {# عضو}}",
+      "teamBadge": "فريق",
+      "manage": "إدارة",
+      "deleteOrgTooltip": "حذف المنظمة",
+      "deleteTeamTooltip": "حذف الفريق",
+      "wizard": {
+        "stepTitle": "الخطوة {step}: {label}",
+        "steps": {
+          "organisation": "المنظمة",
+          "team": "الفريق",
+          "invite": "دعوة المستخدمين"
+        },
+        "createOrgFailed": "فشل إنشاء المنظمة",
+        "createTeamFailed": "فشل إنشاء الفريق",
+        "unknownError": "خطأ غير معروف",
+        "orgNameLabel": "اسم المنظمة",
+        "orgNamePlaceholder": "مثال: NRC السودان",
+        "slugLabel": "المعرّف",
+        "orgSlugPlaceholder": "مثال: nrc-sudan",
+        "createNext": "إنشاء والمتابعة",
+        "teamIntro": "أنشئ الفريق الأول لـ <b>{org}</b>.",
+        "teamNameLabel": "اسم الفريق",
+        "teamNamePlaceholder": "مثال: فريق رصد السودان",
+        "teamSlugPlaceholder": "مثال: sudan-monitoring",
+        "descriptionLabel": "الوصف (اختياري)",
+        "descriptionPlaceholder": "ما الذي يرصده هذا الفريق؟",
+        "skip": "تخطي",
+        "createTeamNext": "إنشاء الفريق والمتابعة",
+        "inviteIntro": "دعوة مستخدمين إلى <b>{org}</b>. افصل بين عناوين البريد الإلكتروني بفواصل أو أسطر جديدة.",
+        "inviteIntroTeam": "دعوة مستخدمين إلى <b>{org}</b> والفريق الذي أنشأته للتو. افصل بين عناوين البريد الإلكتروني بفواصل أو أسطر جديدة.",
+        "noEmails": "يرجى إدخال عنوان بريد إلكتروني واحد على الأقل",
+        "needTeam": "أنشئ فريقاً في الخطوة السابقة قبل دعوة الأعضاء",
+        "invitesSent": "{count, plural, zero {لم تُرسل دعوات} one {أُرسلت دعوة واحدة بنجاح} two {أُرسلت دعوتان بنجاح} few {أُرسلت # دعوات بنجاح} many {أُرسل # دعوةً بنجاح} other {أُرسل # دعوة بنجاح}}",
+        "emailsLabel": "عناوين البريد الإلكتروني",
+        "emailsPlaceholder": "user1@example.com, user2@example.com",
+        "orgRoleLabel": "دور المنظمة",
+        "teamRoleLabel": "دور الفريق",
+        "done": "تم",
+        "skipClose": "تخطي وإغلاق",
+        "send": "إرسال الدعوات"
+      },
+      "deleteModal": {
+        "titleOrg": "حذف المنظمة",
+        "titleTeam": "حذف الفريق",
+        "body": "هل أنت متأكد من حذف <b>{name}</b>؟",
+        "consequenceOrg": "سيؤدي هذا إلى إزالة المنظمة وجميع فرقها وأعضائها ودعواتها نهائياً.",
+        "consequenceTeam": "سيؤدي هذا إلى إزالة الفريق وجميع أعضائه نهائياً."
+      }
+    },
+    "invitations": {
+      "orgLabel": "المنظمة",
+      "orgPlaceholder": "اختر منظمة",
+      "inviteUser": "دعوة مستخدم",
+      "pendingTitle": "الدعوات المعلقة",
+      "columns": {
+        "email": "البريد الإلكتروني",
+        "orgRole": "دور المنظمة",
+        "team": "الفريق",
+        "invitedBy": "مُرسَل من",
+        "expires": "ينتهي في"
+      },
+      "empty": "لا توجد دعوات معلقة",
+      "resend": "إعادة الإرسال",
+      "cancel": "إلغاء",
+      "modal": {
+        "title": "دعوة مستخدم",
+        "emailLabel": "عنوان البريد الإلكتروني",
+        "emailPlaceholder": "user@example.com",
+        "orgRoleLabel": "دور المنظمة",
+        "teamsLabel": "الفرق",
+        "noTeams": "لا توجد فرق في هذه المنظمة. أنشئ فريقاً قبل الدعوة.",
+        "selectAtLeastOneTeam": "اختر فريقاً واحداً على الأقل",
+        "send": "إرسال الدعوة"
+      }
+    },
+    "data": {
+      "demoTitle": "بيانات تجريبية",
+      "demoBadge": "للتطوير فقط",
+      "demoDescription": "علامات تجريبية مُبرمجة مسبقاً وإحصاءات عينة معروضة على لوحة المعلومات. عطّل لعرض البيانات الحية فقط.",
+      "loading": "جارٍ تحميل بيانات المصدر...",
+      "types": {
+        "api": "Pipeline API",
+        "direct": "استعلام مباشر",
+        "manual": "إدخال يدوي"
+      },
+      "inactive": "غير نشط",
+      "provider": "المزود:",
+      "cadence": "الدورية:",
+      "docs": "توثيق",
+      "signalsUnit": "إشارات",
+      "directQuery": "استعلام مباشر",
+      "noSignals": "لا توجد إشارات بعد",
+      "noDataYet": "لا توجد بيانات بعد",
+      "cadences": {
+        "realTime": "آني",
+        "weekly": "أسبوعي",
+        "monthly": "شهري",
+        "annual": "سنوي",
+        "adHoc": "عند الطلب"
+      },
+      "groups": {
+        "earlyWarning": {
+          "label": "الإنذار المبكر والإشارات",
+          "description": "تغذيات الكشف عن الأحداث الآنية وشبه الآنية"
+        },
+        "displacement": {
+          "label": "النزوح وحركة السكان",
+          "description": "بيانات تتبع النازحين وتدفقات السكان"
+        },
+        "risk": {
+          "label": "مؤشرات المخاطر والهشاشة",
+          "description": "درجات المؤشرات المركبة لتقييم المخاطر على مستوى البلد"
+        },
+        "field": {
+          "label": "الاستخبارات الميدانية",
+          "description": "تقارير بشرية من ضباط ميدانيين وشركاء ومصادر حكومية"
+        }
+      },
+      "sources": {
+        "dataminr": {
+          "name": "Dataminr",
+          "provider": "Dataminr Inc.",
+          "description": "تنبيهات آنية مدعومة بالذكاء الاصطناعي من البيانات العامة: وسائل التواصل الاجتماعي والأخبار والمصادر العامة. المصدر الرئيسي للإشارات النشطة."
+        },
+        "acled": {
+          "name": "ACLED",
+          "provider": "مشروع بيانات مواقع وأحداث النزاعات المسلحة",
+          "description": "بيانات أحداث النزاعات المُفصَّلة: التواريخ والمواقع والأطراف والوفيات. يغطي العنف السياسي والاحتجاجات عالمياً."
+        },
+        "gdacs": {
+          "name": "GDACS",
+          "provider": "مركز JRC الأوروبي / UNOCHA",
+          "description": "تنبيهات الكوارث العالمية: الزلازل والفيضانات والأعاصير والبراكين والجفاف. تنبيهات آلية شبه آنية."
+        },
+        "iomDtm": {
+          "name": "IOM DTM",
+          "provider": "IOM / OCHA HDX",
+          "description": "مصفوفة تتبع النزوح التابعة لـ IOM. أرقام النازحين الداخليين الناجمة عن النزاعات عبر HDX HAPI. لا يشمل نزوح الكوارث - تتولاه IDMC بشكل منفصل."
+        },
+        "informRisk": {
+          "name": "INFORM Risk",
+          "provider": "JRC / المفوضية الأوروبية",
+          "description": "مؤشر مخاطر مُركَّب سنوي: المخاطر والتعرض، الهشاشة، قدرة التكيف. 264 مؤشراً لكل بلد على المستوى الفرعي المُركَّب."
+        },
+        "informSeverity": {
+          "name": "INFORM Severity",
+          "provider": "ACAPS",
+          "description": "مؤشر شدة الأزمات الشهري. يغطي التأثير وظروف المتضررين والتعقيد. درجة إجمالية على مستوى البلد عبر ACAPS API."
+        },
+        "fieldOfficer": {
+          "name": "تقارير الضباط الميدانيين",
+          "provider": "NRC داخلي",
+          "description": "إرسال إشارات مباشر من ضباط NRC الميدانيين عبر تطبيق Observe للجوال. يتضمن دعماً للعمل بلا إنترنت في بيئات الاتصال المحدود."
+        },
+        "partner": {
+          "name": "تقارير الشركاء",
+          "provider": "شركاء NRC",
+          "description": "إشارات مُرسَلة من منظمات شريكة عبر المنصة."
+        },
+        "government": {
+          "name": "المصادر الحكومية",
+          "provider": "الجهات الحكومية",
+          "description": "إشارات مصدرها أو منسوبة إلى الجهات الحكومية."
+        }
+      }
+    }
+  }
+,
+  "auth": {
+    "login": {
+      "title": "تسجيل الدخول",
+      "tagline": "الإنذار المبكر للأزمات والاستجابة",
+      "email": "البريد الإلكتروني",
+      "emailPlaceholder": "أدخل بريدك الإلكتروني",
+      "password": "كلمة المرور",
+      "passwordPlaceholder": "أدخل كلمة المرور",
+      "rememberMe": "تذكرني",
+      "forgotPassword": "نسيت كلمة المرور؟",
+      "submit": "تسجيل الدخول",
+      "failed": "فشل تسجيل الدخول",
+      "unexpectedError": "حدث خطأ غير متوقع",
+      "demo": {
+        "divider": "مستخدمو التجربة",
+        "hint": "حسابات تجريبية متاحة (كلمة المرور: password123):",
+        "admin": "مدير",
+        "analyst": "محلل",
+        "viewer": "مشاهد",
+        "line": "{label} - {email}"
+      },
+      "footer": "المجلس النرويجي للاجئين - نظام الإنذار المبكر والتنبيه للسودان"
+    },
+    "forgot": {
+      "title": "إعادة تعيين كلمة المرور",
+      "intro": "أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور.",
+      "emailRequired": "يرجى إدخال عنوان بريدك الإلكتروني",
+      "email": "البريد الإلكتروني",
+      "emailPlaceholder": "أدخل بريدك الإلكتروني",
+      "submit": "إرسال رابط الإعادة",
+      "sent": "إذا كان هناك حساب بهذا البريد الإلكتروني، فقد أرسلنا رابط إعادة تعيين كلمة المرور. تحقق من صندوق الوارد."
+    },
+    "reset": {
+      "title": "تعيين كلمة مرور جديدة",
+      "invalidLink": "رابط إعادة التعيين غير صالح. يرجى طلب إعادة تعيين كلمة مرور جديدة.",
+      "requestNew": "طلب رابط إعادة تعيين جديد",
+      "tooShort": "يجب أن تكون كلمة المرور 8 أحرف على الأقل",
+      "mismatch": "كلمتا المرور غير متطابقتين",
+      "success": "تم إعادة تعيين كلمة المرور بنجاح. جارٍ التحويل إلى صفحة تسجيل الدخول...",
+      "newPassword": "كلمة المرور الجديدة",
+      "newPasswordPlaceholder": "8 أحرف على الأقل",
+      "confirmPassword": "تأكيد كلمة المرور",
+      "confirmPlaceholder": "أعد إدخال كلمة المرور",
+      "submit": "إعادة تعيين كلمة المرور"
+    },
+    "backToSignIn": "العودة إلى تسجيل الدخول"
+  },
+  "cash": {
+    "header": {
+      "title": "استهداف المساعدة النقدية وتوزيعها",
+      "exportData": "تصدير البيانات",
+      "newDistribution": "توزيع جديد"
+    },
+    "banner": {
+      "label": "الأزمة النشطة:",
+      "crisis": "تفشي الكوليرا - المنطقة الصومالية - جيجيغا، كبريدهار",
+      "window": "نافذة تدخل 46 ساعة"
+    },
+    "stats": {
+      "affectedPopulation": "السكان المتضررون",
+      "cashTransferPerHh": "التحويل النقدي/أسرة",
+      "eligibleHh": "الأسر المؤهلة (ذكاء اصطناعي)",
+      "totalBudget": "إجمالي الميزانية"
+    },
+    "mapping": {
+      "title": "رسم خرائط المساعدة النقدية وتقييمها",
+      "subtitle": "انقر على بطاقات المواقع لعرض بيانات السكان التفصيلية وتحليل السوق ومدخلات منسق الميدان",
+      "markerAffected": "{count} متضرر",
+      "markerSeverity": "الخطورة: {severity}"
+    },
+    "legend": {
+      "critical": "تعرض حرج",
+      "high": "تعرض مرتفع",
+      "moderate": "تعرض معتدل"
+    },
+    "sources": {
+      "title": "مصادر البيانات",
+      "rapidAssessment": {
+        "title": "التقييم السريع",
+        "org": "NRC/UNHCR",
+        "date": "21/10/2025"
+      },
+      "censusProjection": {
+        "title": "توقعات التعداد",
+        "org": "الإحصاء الوطني",
+        "date": "خط الأساس 2024"
+      }
+    },
+    "details": {
+      "totalAffected": "إجمالي المتضررين",
+      "exportReport": "تصدير تقرير تقييم المساعدة النقدية (PDF)",
+      "tabs": {
+        "demographics": "الديموغرافيا",
+        "market": "السوق",
+        "field": "المدخل الميداني"
+      },
+      "demographics": {
+        "gender": "التوزيع الجنسي",
+        "male": "ذكر",
+        "female": "أنثى",
+        "age": "التوزيع العمري",
+        "vulnerability": "مؤشرات الهشاشة (أسرة)",
+        "housing": "أوضاع السكن (أسرة)",
+        "personsPerRoom": "متوسط الأشخاص/غرفة"
+      },
+      "market": {
+        "functionality": "وظيفة السوق",
+        "operational": "الأسواق العاملة",
+        "operationalNote": "3 من أصل 4 أسواق رئيسية في المنطقة تعمل بشكل طبيعي. يعمل أحد الأسواق بساعات مخفضة بسبب مخاوف أمنية.",
+        "vendors": "توافر البائعين",
+        "vendorLabels": {
+          "food": "بائعو الغذاء",
+          "nfi": "بائعو NFI",
+          "mobileMoney": "وكلاء المحافظ الإلكترونية"
+        },
+        "vendorActive": "{count} نشط",
+        "prices": "استقرار الأسعار",
+        "priceLabels": {
+          "stapleFoods": "الأغذية الأساسية",
+          "water": "المياه (20 لتر)",
+          "transport": "النقل"
+        },
+        "priceVsBaseline": "{change} مقارنة بالخط الأساسي",
+        "recommendation": "التوصية",
+        "recommendationText": "التحويل النقدي قابل للتطبيق. يُوصى بقيود القسيمة على مشتريات المياه بسبب ارتفاع الأسعار."
+      },
+      "field": {
+        "notes": "ملاحظات المنسق",
+        "quote": "تمت استشارة قادة المجتمع وهم يدعمون توزيع النقد. تُفضّل مجموعات النساء المحافظ الإلكترونية بسبب المخاوف الأمنية المتعلقة بالنقد المادي. يُوصى بالتوزيع صباحاً لتجنب حرارة الظهيرة.",
+        "attribution": "أحمد م.، منسق ميداني، 14 ديسمبر",
+        "accessibility": "إمكانية الوصول",
+        "accessLabels": {
+          "road": "الوصول البري",
+          "network": "الشبكة المحمولة",
+          "points": "نقاط التوزيع"
+        },
+        "accessValues": {
+          "good": "جيد",
+          "intermittent": "متقطع",
+          "pointsIdentified": "{count} مُحدَّدة"
+        },
+        "security": "الاعتبارات الأمنية",
+        "moderateRisk": "مخاطر معتدلة",
+        "securityNote": "تجنب التجمعات الكبيرة. يُوصى بجداول توزيع متدرجة ونقاط توزيع أصغر متعددة.",
+        "lastVisit": "آخر زيارة ميدانية"
+      }
+    },
+    "wizard": {
+      "title": "توزيع نقدي جديد",
+      "stepIndicator": "الخطوة {current} من {total}: {title}",
+      "steps": {
+        "locations": "المواقع المستهدفة",
+        "transfer": "تفاصيل التحويل",
+        "schedule": "الجدول والمعايير",
+        "review": "المراجعة والتأكيد"
+      },
+      "next": "التالي",
+      "createDistribution": "إنشاء التوزيع",
+      "locationsStep": {
+        "intro": "اختر المواقع التي سيتم توزيع المساعدة النقدية فيها. يمكنك اختيار عدة مواقع.",
+        "affected": "{count} متضرر",
+        "summary": "<b>{locations}</b> موقع مُحدد - <b>{affected}</b> إجمالي متضررين - ~<b>{households}</b> أسرة مُقدَّرة"
+      },
+      "transferStep": {
+        "intro": "حدد آلية التحويل والمبلغ لهذا التوزيع.",
+        "modality": "آلية التحويل",
+        "modalities": {
+          "mobileMoney": "تحويل عبر المحفظة الإلكترونية",
+          "cashInHand": "توزيع نقدي مباشر",
+          "bankTransfer": "تحويل بنكي",
+          "voucher": "قسيمة إلكترونية / ورقية"
+        },
+        "amount": "المبلغ لكل أسرة",
+        "amountPlaceholder": "مثال: 580",
+        "currency": "العملة",
+        "currencies": {
+          "etb": "البر الإثيوبي (ETB)",
+          "usd": "الدولار الأمريكي (USD)"
+        },
+        "frequency": "دورية التوزيع",
+        "frequencies": {
+          "oneTime": "توزيع مرة واحدة",
+          "monthly": "شهري (3 أشهر)",
+          "biWeekly": "كل أسبوعين (6 أسابيع)"
+        },
+        "estimatedBudget": "الميزانية التقديرية",
+        "budgetBasis": "استناداً إلى ~{households} أسرة بمبلغ {amount} {currency} لكل منها"
+      },
+      "scheduleStep": {
+        "intro": "حدد جدول التوزيع ومعايير الاستهداف.",
+        "startDate": "تاريخ البدء",
+        "endDate": "تاريخ الانتهاء",
+        "verification": "طريقة التحقق",
+        "verifications": {
+          "biometric": "التحقق البيومتري",
+          "idCard": "بطاقة الهوية + رقم PIN",
+          "token": "توزيع قائم على الرمز",
+          "community": "تحقق مجتمعي"
+        },
+        "criteria": "معايير الاستهداف (اختياري)",
+        "criteriaOptions": {
+          "femaleHeaded": "أسر تعولها نساء",
+          "childHeaded": "أسر يعولها أطفال",
+          "elderlySingle": "أسر فردية من كبار السن",
+          "disability": "أسر تضم أفراداً من ذوي الإعاقة",
+          "chronicIllness": "أسر تضم مرضى مزمنين",
+          "inadequateHousing": "سكن غير ملائم (خيام/مؤقت)",
+          "highOccupancy": "ازدحام شديد (+4 أشخاص/غرفة)"
+        }
+      },
+      "reviewStep": {
+        "intro": "راجع خطة التوزيع قبل الإنشاء.",
+        "summary": "{affected} متضرر - ~{households} أسرة",
+        "amountPerHh": "المبلغ لكل أسرة",
+        "period": "فترة التوزيع",
+        "periodRange": "من {start} إلى {end}",
+        "periodSingle": "{start} (يوم واحد)",
+        "verification": "التحقق",
+        "criteria": "معايير الاستهداف",
+        "totalBudget": "إجمالي الميزانية التقديرية",
+        "notes": "ملاحظات إضافية",
+        "notesPlaceholder": "أي تعليمات أو ملاحظات إضافية للمنسقين الميدانيين..."
+      }
+    }
+  }
+,
+  "changePassword": {
+    "title": "تغيير كلمة المرور",
+    "subtitle": "تحديث كلمة مرور حسابك",
+    "backToProfile": "العودة إلى الملف الشخصي",
+    "success": "تم تغيير كلمة المرور بنجاح.",
+    "errors": {
+      "mismatch": "كلمتا المرور الجديدتان غير متطابقتين",
+      "tooShort": "يجب أن تكون كلمة المرور الجديدة 8 أحرف على الأقل",
+      "failed": "فشل تغيير كلمة المرور",
+      "unexpected": "حدث خطأ غير متوقع"
+    },
+    "security": "الأمان",
+    "current": {
+      "label": "كلمة المرور الحالية",
+      "placeholder": "أدخل كلمة مرورك الحالية"
+    },
+    "new": {
+      "label": "كلمة المرور الجديدة",
+      "placeholder": "أدخل كلمة مرورك الجديدة"
+    },
+    "confirm": {
+      "label": "تأكيد كلمة المرور الجديدة",
+      "placeholder": "أكد كلمة مرورك الجديدة"
+    },
+    "submit": "تحديث كلمة المرور",
+    "requirements": {
+      "title": "متطلبات كلمة المرور",
+      "minLength": "8 أحرف على الأقل"
+    }
+  },
+  "common": {
+    "actions": {
+      "save": "حفظ",
+      "saveChanges": "حفظ التغييرات",
+      "cancel": "إلغاء",
+      "close": "إغلاق",
+      "back": "رجوع",
+      "search": "بحث",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "confirm": "تأكيد",
+      "retry": "إعادة المحاولة"
+    },
+    "states": {
+      "loading": "جارٍ التحميل...",
+      "error": "حدث خطأ ما",
+      "empty": "لا توجد بيانات",
+      "comingSoon": "قريباً"
+    },
+    "badges": {
+      "soon": "قريباً",
+      "demo": "تجريبي",
+      "aiGenerated": "✦ مُنشأ بالذكاء الاصطناعي"
+    },
+    "severities": {
+      "critical": "حرج",
+      "high": "مرتفع",
+      "medium": "متوسط",
+      "low": "منخفض",
+      "unknown": "غير معروف"
+    },
+    "comments": {
+      "title": "النقاش",
+      "replyBadge": "رد",
+      "replyAction": "رد",
+      "unknownUser": "مجهول",
+      "empty": "لا توجد تعليقات بعد. كن أول من يُضيف تعليقاً.",
+      "replyingTo": "رداً على <strong>{name}</strong>",
+      "placeholderReply": "الرد على {name}...",
+      "placeholderAdd": "أضف تعليقاً...",
+      "shortcutHint": "⌘ + Enter للنشر",
+      "post": "نشر"
+    },
+    "feedbackSection": {
+      "question": {
+        "event": "هل كان هذا الحدث مفيداً؟",
+        "signal": "هل كانت هذه الإشارة مفيدة؟"
+      },
+      "thanksInline": "شكراً على ملاحظاتك!",
+      "issues": "مشكلات",
+      "helpful": "مفيد",
+      "modalTitle": "ما المشكلة؟",
+      "thankYou": "شكراً لك!",
+      "thanksBody": {
+        "event": "ملاحظاتك تساعد في تحسين جودة الأحداث للفريق بأكمله.",
+        "signal": "ملاحظاتك تساعد في تحسين جودة الإشارات للفريق بأكمله."
+      },
+      "selectIssues": "اختر جميع المشكلات المنطبقة - هذا يساعدنا في تحسين خط أنابيب الكشف.",
+      "reasons": {
+        "notRelevant": "غير ذي صلة",
+        "alreadyKnown": "معروف مسبقاً",
+        "wrongArea": "منطقة خاطئة",
+        "wrongSeverity": "خطورة خاطئة",
+        "inaccurate": "غير دقيق"
+      },
+      "commentsLabel": "تعليقات إضافية (اختياري)",
+      "commentsPlaceholder": {
+        "event": "هل هناك شيء آخر يجب أن نعرفه عن هذا الحدث...",
+        "signal": "هل هناك شيء آخر يجب أن نعرفه عن هذه الإشارة..."
+      },
+      "send": "إرسال الملاحظات"
+    },
+    "createSignal": {
+      "detailsTitle": "إنشاء إشارة - التفاصيل",
+      "mediaTitle": "إنشاء إشارة - إضافة وسائط",
+      "successTitle": "تم إنشاء الإشارة",
+      "fieldTitle": "العنوان",
+      "titlePlaceholder": "مثال: رُصدت فيضانات في ولاية كسلا",
+      "fieldDescription": "الوصف",
+      "descriptionPlaceholder": "صف ما رُصد والمصدر وأي سياق ذي صلة...",
+      "fieldSource": "المصدر",
+      "sourcesLoading": "جارٍ تحميل المصادر...",
+      "sourcePlaceholder": "اختر مصدراً...",
+      "noSources": "لا توجد مصادر متاحة",
+      "fieldLocation": "الموقع",
+      "locationsLoading": "جارٍ تحميل المواقع...",
+      "locationPlaceholder": "ابحث عن موقع...",
+      "noMatchingLocation": "لا يوجد موقع مطابق",
+      "fieldSeverity": "الخطورة",
+      "severityPlaceholder": "اختر مستوى الخطورة...",
+      "severityWarning": "قد تؤدي إشارات خطورة {level} إلى إطلاق تنبيه وإخطار أعضاء الفريق المشتركين في تنبيهات هذا المستوى.",
+      "next": "التالي: إضافة وسائط",
+      "dropzone": "أفلت الملفات هنا أو انقر للاستعراض",
+      "fileTypes": "PDF، Word، Excel، CSV، ملفات نصية",
+      "skipSubmit": "تخطي وإرسال",
+      "submit": "إرسال الإشارة",
+      "successHeading": "تم إنشاء الإشارة",
+      "successText": "تم إرسال إشارتك وأصبحت مرئية لفريقك.",
+      "done": "تم",
+      "uploadFailed": "فشل رفع الملف",
+      "createFailed": "فشل إنشاء الإشارة"
+    },
+    "disasterTypePicker": {
+      "placeholder": "اختر أنواع الكوارث",
+      "selected": "{count, plural, zero {لا أنواع} one {نوع واحد مُحدَّد} two {نوعان مُحدَّدان} few {# أنواع مُحدَّدة} many {# نوعاً مُحدَّداً} other {# نوع مُحدَّد}}",
+      "loading": "جارٍ تحميل الأنواع..."
+    },
+    "feedback": {
+      "title": "مشاركة الملاحظات",
+      "thanks": "شكراً!",
+      "received": "تم استلام ملاحظاتك.",
+      "type": "النوع",
+      "types": {
+        "bug": "خلل تقني",
+        "feature": "طلب ميزة",
+        "general": "عام"
+      },
+      "message": "الرسالة",
+      "placeholderBug": "صف ما حدث وكيفية إعادة إنتاجه...",
+      "placeholderFeature": "ما الذي تود رؤيته؟",
+      "placeholderGeneral": "ما الذي يدور في ذهنك؟",
+      "consoleNote": "سيتم إرفاق أخطاء/تحذيرات وحدة التحكم ({count}) تلقائياً.",
+      "error": "حدث خطأ ما. يرجى المحاولة مجدداً.",
+      "send": "إرسال الملاحظات"
+    },
+    "filters": {
+      "country": "الدولة",
+      "region": "المنطقة",
+      "date": "التاريخ"
+    },
+    "regionPicker": {
+      "allRegions": "جميع المناطق",
+      "searchPlaceholder": "ابحث في المناطق...",
+      "noMatch": "لا توجد مناطق مطابقة لـ \"{query}\""
+    },
+    "toasts": {
+      "saved": "تم الحفظ",
+      "error": "خطأ"
+    },
+    "toolbar": {
+      "searchPlaceholder": "بحث...",
+      "newItems": "{count, plural, zero {لا عناصر جديدة} one {عنصر جديد واحد} two {عنصران جديدان} few {# عناصر جديدة} many {# عنصراً جديداً} other {# عنصر جديد}} - تحديث"
+    }
+  }
+,
+  "crisisDetail": {
+    "backToAnalysis": "العودة إلى التحليل",
+    "viewOnCrisisMap": "عرض على خريطة الأزمات",
+    "switchCrisis": "تبديل الأزمة",
+    "untitledCrisis": "أزمة بلا عنوان",
+    "crisisBadge": "أزمة",
+    "eventFallback": "حدث",
+    "updatedDate": "تم التحديث {date}",
+    "eventCount": "{count, plural, zero {لا أحداث} one {حدث واحد} two {حدثان} few {# أحداث} many {# حدثاً} other {# حدث}}",
+    "enrichment": {
+      "preparingTitle": "جارٍ إعداد المعلومات",
+      "preparingDescription": "جارٍ إنشاء العنوان والملخص والسيناريوهات وتقييم الاحتياجات..."
+    },
+    "notFound": {
+      "title": "الأزمة غير موجودة",
+      "description": "ربما تم حذف هذه الأزمة أو أن المعرّف غير صالح."
+    },
+    "deleteModal": {
+      "title": "حذف الأزمة",
+      "confirm": "حذف <strong>{title}</strong> نهائياً؟ لا يمكن التراجع عن هذا الإجراء.",
+      "fallbackName": "هذه الأزمة",
+      "menuItem": "حذف الأزمة"
+    },
+    "tabs": {
+      "overview": "نظرة عامة",
+      "needs": "تقييم الاحتياجات",
+      "events": "الأحداث",
+      "demography": "الديموغرافيا",
+      "sources": "المصادر",
+      "confidence": "مستوى الثقة"
+    },
+    "kpi": {
+      "impact": "التأثير",
+      "areaContext": "سياق المنطقة",
+      "peopleAffected": "المتضررون",
+      "peopleDisplaced": "النازحون",
+      "peopleInArea": "السكان في المنطقة",
+      "idpPerCapitaIn": "النازح الداخلي للفرد في {name}",
+      "idpPerCapita": "النازح الداخلي للفرد"
+    },
+    "summary": {
+      "title": "الملخص",
+      "empty": "لا يوجد ملخص متاح بعد."
+    },
+    "scenario": {
+      "title": "تحليل السيناريوهات",
+      "empty": "لم تُنشأ سيناريوهات لهذه الأزمة بعد.",
+      "labels": {
+        "bestCase": "أفضل الحالات",
+        "mostLikely": "الأكثر احتمالاً",
+        "worstCase": "أسوأ الحالات"
+      }
+    },
+    "documents": {
+      "title": "المستندات",
+      "removeModalTitle": "إزالة مستند",
+      "removeConfirm": "إزالة <strong>{name}</strong>؟ لا يمكن التراجع عن هذا الإجراء.",
+      "remove": "إزالة",
+      "empty": "لا توجد مستندات مرفقة.",
+      "upload": "رفع",
+      "uploading": "جارٍ الرفع...",
+      "uploadFailed": "فشل الرفع. يرجى المحاولة مجدداً.",
+      "removeFailed": "فشل الإزالة. يرجى المحاولة مجدداً."
+    },
+    "demography": {
+      "noData": "لا توجد بيانات ديموغرافية لهذا الموقع.",
+      "notYetAvailable": "البيانات الديموغرافية غير متاحة بعد لـ {name}.",
+      "source": "WorldPop {year}{release} مُقيَّد",
+      "total": "إجمالي",
+      "vulnerableGroups": "الفئات الهشة",
+      "groups": {
+        "childrenUnder5": "أطفال دون 5 سنوات",
+        "children5to14": "أطفال من 5 إلى 14 سنة",
+        "women15to49": "نساء من 15 إلى 49 سنة",
+        "elderly60plus": "كبار السن 60+"
+      },
+      "genderSplit": "التوزيع الجنسي",
+      "male": "ذكر",
+      "female": "أنثى"
+    },
+    "sources": {
+      "underlyingSignals": "الإشارات الأساسية",
+      "enrichmentSection": "الإثراء",
+      "contextData": "بيانات السياق",
+      "noSignalSources": "لا توجد مصادر إشارات مرتبطة.",
+      "viaAggregator": "{publisher} عبر {aggregator}",
+      "asOf": "كما في {date}",
+      "signalCount": "{count, plural, zero {لا إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارةً} other {# إشارة}}",
+      "noEnrichment": "لا توجد مصادر إثراء خارجية مُدمَجة بعد. ستظهر هنا تقارير الوضع من ReliefWeb وتحليل الإشارات التاريخية عند توافرها.",
+      "noContextData": "لا توجد بيانات سياق لهذا الموقع.",
+      "context": {
+        "population": "السكان",
+        "populationDetail": "{value} - WorldPop {year} مُقيَّد{release}",
+        "demographics": "الديموغرافيا",
+        "demographicsDetail": "ذكر {malePct}% / أنثى {femalePct}% - توزيع WorldPop {year} حسب الفئة العمرية والجنس",
+        "idp": "النازحون الداخليون",
+        "round": "الجولة {number}",
+        "needsBaseline": "خط أساس تقييم الاحتياجات"
+      }
+    },
+    "confidence": {
+      "legend": "المفتاح",
+      "modalTitle": "مستويات الثقة",
+      "cols": {
+        "baseline": {
+          "label": "الخط الأساسي",
+          "description": "محتوى مُنشأ فقط من بيانات إشارات خط الأنابيب - الأحداث والخطورة والمواقع المُستوعَبة من المصادر المتصلة."
+        },
+        "enriched": {
+          "label": "مُثرى بالذكاء الاصطناعي",
+          "description": "دمج خط الأنابيب بيانات سياق خارجية (ديموغرافيا WorldPop، نزوح IOM DTM، درجات مخاطر INFORM) عند إنشاء هذا المحتوى."
+        },
+        "reviewed": {
+          "label": "مُراجَع من محلل",
+          "description": "راجع محلل CLEAR المحتوى وصادق عليه مقارنةً بمعرفته الميدانية."
+        },
+        "validated": {
+          "label": "مُتحقَّق ميدانياً",
+          "description": "تم تأكيد المحتوى عبر تغذية راجعة مباشرة من المجتمع أو الفريق الميداني."
+        }
+      },
+      "rows": {
+        "description": "الوصف",
+        "scenarios": "السيناريوهات",
+        "needs": "تقييم الاحتياجات"
+      }
+    },
+    "events": {
+      "empty": "لا توجد أحداث مرتبطة بهذه الأزمة.",
+      "removeModalTitle": "إزالة حدث من الأزمة",
+      "removeConfirm": "إزالة <strong>{title}</strong> من الأزمة؟",
+      "fallbackName": "هذا الحدث",
+      "lastEventWarning": "هذا هو الحدث الأخير. ستؤدي إزالته إلى حذف الأزمة بأكملها.",
+      "removeAndDelete": "إزالة وحذف الأزمة",
+      "remove": "إزالة",
+      "removeFromCrisis": "إزالة من الأزمة"
+    },
+    "needs": {
+      "saf": {
+        "catastrophic": "كارثي",
+        "extreme": "شديد الحدة",
+        "severe": "حاد",
+        "stressed": "متوتر",
+        "minimal": "أدنى",
+        "unknown": "غير معروف"
+      },
+      "sectors": {
+        "shelter": "المأوى",
+        "wash": "WASH",
+        "protection": "الحماية",
+        "health": "الصحة",
+        "food": "الأمن الغذائي",
+        "education": "التعليم"
+      },
+      "levels": {
+        "baseline": "الخط الأساسي",
+        "aiReview": "مراجعة ذكاء اصطناعي",
+        "rna": "RNA"
+      },
+      "precision": {
+        "district": "المقاطعة",
+        "locality": "المحلية"
+      },
+      "estChildShare": "الحصة التقديرية للأطفال",
+      "sectorsTitle": "القطاعات",
+      "columns": {
+        "sector": "القطاع",
+        "severity": "الخطورة",
+        "pin": "المحتاجون",
+        "presence": "الحضور العملياتي",
+        "assessment": "التقييم",
+        "precision": "الدقة"
+      },
+      "summaryTitle": "الملخص",
+      "severityFromMsna": "خطورة القطاع من <b>MSNA أغسطس 2025</b>.",
+      "presenceFromOcha": "الحضور العملياتي من <b>OCHA 3W {date}</b>.",
+      "generating": "جارٍ إنشاء تحليل الاحتياجات...",
+      "aiSummaryComingSoon": "ملخص مُنشأ بالذكاء الاصطناعي قريباً.",
+      "responseGap": "فجوة الاستجابة",
+      "nrcMandate": "ولاية NRC",
+      "orgsActive": "المنظمات النشطة في هذه المنطقة",
+      "moreOrgs": "+{count} أخرى",
+      "severityModal": {
+        "title": "خطورة القطاع",
+        "intro": "تُسجَّل درجة كل قطاع من 0 إلى 100 باستخدام تركيبات مرجحة من مؤشرات استطلاع MSNA عبر ثلاثة محاور: الاضطراب في مستوى المعيشة (الوصول والتوافر وجودة الخدمات الأساسية)، وآليات التكيف التي تنتهجها المجتمعات المتضررة، ونتائج الرفاه الجسدي والنفسي.",
+        "score": "الدرجة",
+        "level": "المستوى",
+        "noData": "لا توجد بيانات",
+        "footnote": "العتبات في مرحلة النموذج الأولي وتستلزم التحقق مقابل معايير مجموعات JIAF ومعايير NRC."
+      },
+      "pinModal": {
+        "title": "المحتاجون",
+        "intro": "تقدير مستند إلى درجة خطورة القطاع باستخدام الصيغة المُركَّبة الموزونة ذاتها التي تُحدد مستوى الخطورة:",
+        "formula": "عدد المحتاجين = (الدرجة / 100) × عدد سكان المقاطعة",
+        "population": "بيانات السكان: تقديرات WorldPop 2026 المُقيَّدة. يُطبق على التعليم حصة 18% من سكان الأطفال إذ تمثل درجة القطاع الأطفال في سن المدرسة فحسب.",
+        "footnote": "ستُستبدل حصة الأطفال في التعليم بتوزيع WorldPop حسب الفئة العمرية والجنس عند توافره."
+      },
+      "assessmentModal": {
+        "title": "مستوى التقييم",
+        "intro": "يُشير إلى كيفية إعداد تقييم القطاع ومصادر البيانات التي يستند إليها.",
+        "level1Label": "1  الخط الأساسي",
+        "level1Description": "مستند إلى بيانات استطلاع MSNA (تقييم الاحتياجات متعدد القطاعات)، أغسطس 2025. تغطية على مستوى المقاطعة فقط. لم تُطبَّق أي مراجعة بالذكاء الاصطناعي.",
+        "level2Label": "2  مراجعة ذكاء اصطناعي",
+        "level2Description": "راجع نموذج ذكاء اصطناعي الإشارات والتقارير المتاحة إلى جانب خط MSNA الأساسي لإنتاج تقييم خطورة مُحدَّث وملخص قطاعي مكتوب.",
+        "level3Label": "3  RNA",
+        "level3Description": "يوفر تقييم الاحتياجات السريع المُجرى ميدانياً بيانات مباشرة على أرض الواقع، متجاوزاً تقديرات الاستشعار عن بُعد والاستطلاع."
+      },
+      "precisionModal": {
+        "title": "الدقة الجغرافية",
+        "intro": "يُشير إلى أدق مستوى جغرافي جُمعت منه بيانات التقييم.",
+        "districtLabel": "المقاطعة",
+        "districtDescription": "بيانات مجمعة على المستوى الإداري 2 (مقاطعة A2). هذا هو مستوى تفاصيل مجموعة بيانات MSNA الحالية.",
+        "localityLabel": "المحلية",
+        "localityDescription": "بيانات مجمعة على مستوى ما دون المقاطعة (المحلية)، مما يوفر دقة أعلى. يتطلب تحققاً ميدانياً أو مصادر بيانات عالية الدقة لم تُدمج بعد.",
+        "footnote": "معظم التقييمات الحالية على مستوى المقاطعة. ستصبح دقة المحلية متاحة مع دمج مصادر بيانات أكثر تفصيلاً."
+      },
+      "presenceModal": {
+        "title": "الحضور العملياتي",
+        "intro": "مصدره مجموعة بيانات 3W (من يفعل ماذا وأين) التابعة لـ OCHA. يُظهر المنظمات الإنسانية العاملة بنشاط في المقاطعة مُصنَّفةً حسب نوع المنظمة.",
+        "types": {
+          "un": "وكالات الأمم المتحدة",
+          "ingo": "المنظمات غير الحكومية الدولية",
+          "nngo": "المنظمات غير الحكومية الوطنية",
+          "gov": "الجهات الحكومية",
+          "rcrc": "الصليب الأحمر / الهلال الأحمر",
+          "other": "منظمات أخرى"
+        }
+      }
+    }
+  }
+,
+  "dashboard": {
+    "rightPanel": {
+      "nrcOpsBadge": "عمليات NRC",
+      "nrcOffice": "مكتب NRC",
+      "pillars": {
+        "hazard": "المخاطر",
+        "vulnerability": "الهشاشة",
+        "coping": "قدرة التكيف"
+      },
+      "informOverall": "INFORM Risk الإجمالي - {edition}",
+      "informModal": {
+        "title": "مؤشر INFORM للمخاطر: المنهجية",
+        "intro": "يُنتج <strong>مؤشر INFORM للمخاطر</strong> مركز JRC للبحوث المشترك التابع للاتحاد الأوروبي بالشراكة مع اللجنة الدائمة المشتركة بين الوكالات (IASC). يقيس مخاطر الأزمات الإنسانية والكوارث التي يمكن أن تتجاوز قدرة الاستجابة الوطنية. تتراوح الدرجات بين <strong>0 و10</strong> (الأعلى = المزيد من المخاطر).",
+        "pillarsHeading": "الركائز الثلاث",
+        "pillarHazard": "<strong>المخاطر والتعرض</strong>: احتمالية الأحداث المادية (المخاطر الطبيعية والنزاعات) التي تؤثر على السكان.",
+        "pillarVulnerability": "<strong>الهشاشة</strong>: العوامل الاجتماعية والاقتصادية التي تُضعف قدرة المجتمعات على التكيف، بما فيها الفقر والتفاوت والنزوح.",
+        "pillarCoping": "<strong>ضعف قدرة التكيف</strong>: قدرة المؤسسات والبنية التحتية على الاستجابة - الحوكمة والمنظومة الصحية والاتصالات.",
+        "sourceLabel": "المصدر:",
+        "sourceLink": "مؤشر JRC INFORM للمخاطر",
+        "updatedAnnually": "- يُحدَّث سنوياً."
+      },
+      "activeCrises": "الأزمات النشطة ({count})",
+      "fieldFallback": "ميداني",
+      "casesCount": "{count, plural, zero {لا حالات} one {حالة واحدة} two {حالتان} few {# حالات} many {# حالةً} other {# حالة}}",
+      "affectedShort": "{count} ألف متضرر",
+      "severities": {
+        "critical": "حرج",
+        "high": "مرتفع",
+        "medium": "متوسط",
+        "response": "استجابة"
+      },
+      "nrcCoreActivities": "الأنشطة الأساسية لـ NRC ({count})",
+      "activeBadge": "نشط",
+      "countryRisks": "مخاطر البلد",
+      "locationOverview": "نظرة عامة على الموقع",
+      "loadingRisk": "جارٍ تحميل بيانات المخاطر...",
+      "riskSource": "المصدر: {edition}",
+      "riskUnavailable": "بيانات المخاطر غير متاحة لهذا البلد.",
+      "defaultCountryDescription": "تعمل NRC في {country} لتقديم المساعدة الإنسانية للسكان النازحين والفئات الهشة.",
+      "establishedIn": "أسست NRC عملياتها في {year}",
+      "multiSectorResponse": "وتواصل تقديم الاستجابة الإنسانية متعددة القطاعات بما فيها {activities}.",
+      "locationDetails": "تفاصيل الموقع",
+      "capital": "العاصمة",
+      "region": "المنطقة",
+      "latitude": "خط العرض",
+      "longitude": "خط الطول",
+      "noLocationInfo": "لا تتوفر معلومات تفصيلية لهذا الموقع.",
+      "responseStatus": "حالة الاستجابة",
+      "nrcPresence": "حضور NRC",
+      "activeDeployments": "النشرات النشطة",
+      "membersCount": "{count, plural, zero {لا أعضاء} one {عضو واحد} two {عضوان} few {# أعضاء} many {# عضواً} other {# عضو}}",
+      "assessmentTeam": "فريق التقييم",
+      "enRouteGode": "في الطريق إلى Gode",
+      "transitBadge": "عبور",
+      "criticalResources": "الموارد الحرجة",
+      "resources": {
+        "ivFluids": "محاليل وريدية",
+        "orsPackets": "أكياس ORS",
+        "waterPurification": "تنقية المياه"
+      },
+      "viewOperations": "عرض مركز العمليات",
+      "countryOffice": "المكتب القطري",
+      "regionalContext": "السياق الإقليمي",
+      "nrcRegion": "منطقة NRC",
+      "countriesInRegion": "الدول في المنطقة",
+      "activePrograms": "البرامج النشطة",
+      "otherRegionCountries": "دول {region} الأخرى",
+      "noResponseData": "لا تتوفر بيانات استجابة.",
+      "nrcGlobalOperations": "عمليات NRC العالمية ({count})",
+      "stats": {
+        "countries": "الدول",
+        "regions": "المناطق",
+        "staff": "الموظفون"
+      },
+      "viewingGlobalMap": "عرض الخريطة العالمية",
+      "viewAllOnMap": "عرض الكل على الخريطة",
+      "selectedBadge": "مُحدَّد",
+      "coreCompetencies": "الكفاءات الأساسية",
+      "competencies": {
+        "education": "التعليم",
+        "foodSecurity": "الأمن الغذائي",
+        "icla": "ICLA",
+        "shelter": "المأوى",
+        "wash": "WASH",
+        "campMgmt": "إدارة المخيمات"
+      },
+      "createSignal": "إنشاء إشارة",
+      "footer": {
+        "data": "البيانات:",
+        "aiAnalysis": "تحليل ذكاء اصطناعي",
+        "updated": "التحديث: منذ 30 دقيقة"
+      }
+    },
+    "mapSection": {
+      "tokenMissing": "لم يُهيَّأ رمز Mapbox. عيّن NEXT_PUBLIC_MAPBOX_TOKEN في ملف .env",
+      "country": "الدولة",
+      "region": "المنطقة",
+      "date": "التاريخ",
+      "views": {
+        "single": "◻ مفرد",
+        "compare": "◫ مقارنة",
+        "time": "▶ الزمن",
+        "nrc": "🌍 NRC"
+      },
+      "legend": "المفتاح",
+      "nrcRegions": "مناطق NRC",
+      "severity": "الخطورة",
+      "severities": {
+        "critical": "حرج",
+        "high": "مرتفع",
+        "medium": "متوسط",
+        "teams": "الفرق"
+      },
+      "eventType": "نوع الحدث",
+      "eventTypes": {
+        "crisis": "أزمة",
+        "conflict": "نزاع",
+        "famine": "مجاعة",
+        "disease": "مرض",
+        "flood": "فيضان",
+        "drought": "جفاف",
+        "response": "استجابة"
+      },
+      "regionShort": {
+        "eastAfricaYemen": "شرق أفريقيا واليمن",
+        "centralWestAfrica": "وسط وغرب أفريقيا",
+        "southernAfrica": "جنوب أفريقيا",
+        "middleEast": "الشرق الأوسط",
+        "asia": "آسيا",
+        "europe": "أوروبا",
+        "americas": "الأمريكيتان"
+      },
+      "timeline": "الجدول الزمني",
+      "popup": {
+        "cases": "الحالات",
+        "affected": "المتضررون",
+        "members": "الأعضاء",
+        "trend": "الاتجاه",
+        "status": "الحالة",
+        "region": "المنطقة",
+        "coreActivities": "الأنشطة الأساسية:",
+        "operationsActive": "العمليات نشطة"
+      }
+    },
+    "createAlert": {
+      "steps": {
+        "selectEvents": "إنشاء تنبيه - اختر الأحداث",
+        "createEvent": "إنشاء تنبيه - حدث جديد",
+        "details": "إنشاء تنبيه - التفاصيل"
+      },
+      "success": "تم إنشاء التنبيه بنجاح!",
+      "selectEventsPrompt": "اختر الأحداث لتضمينها في التنبيه",
+      "noEvents": "لم تُعثر على أحداث. أنشئ حدثاً أولاً.",
+      "signalCount": "{count, plural, zero {لا إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارةً} other {# إشارة}}",
+      "alertBadge": "تنبيه",
+      "createNewEvent": "إنشاء حدث جديد",
+      "nextDetails": "التالي: تفاصيل التنبيه ({count} مُحدَّد)",
+      "backToEvents": "العودة إلى الأحداث",
+      "selectSignalsPrompt": "اختر الإشارات لتجميعها في حدث جديد",
+      "noAvailableSignals": "لا توجد إشارات متاحة. أنشئ إشارة أدناه.",
+      "sourceLabel": "المصدر: {name}",
+      "createManualSignal": "إنشاء إشارة يدوية",
+      "fieldDataSource": "مصدر البيانات",
+      "dataSourcePlaceholder": "اختر مصدر البيانات",
+      "fieldTitle": "العنوان",
+      "titlePlaceholder": "مثال: تفشي الكوليرا في الفاشر",
+      "createSignal": "إنشاء إشارة",
+      "createEventCount": "إنشاء حدث ({count, plural, zero {بدون إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارةً} other {# إشارة}})",
+      "selectedEvents": "الأحداث المُحدَّدة ({count})",
+      "fieldAlertTitle": "عنوان التنبيه",
+      "alertTitlePlaceholder": "مثال: تنبيه الأزمة الإنسانية في دارفور",
+      "fieldDescription": "الوصف",
+      "descriptionPlaceholder": "صف التنبيه وسياقه والإجراءات الموصى بها...",
+      "fieldSeverity": "الخطورة",
+      "severityPlaceholder": "اختر مستوى الخطورة",
+      "severityOptions": {
+        "low": "1 - منخفض",
+        "moderate": "2 - معتدل",
+        "high": "3 - مرتفع",
+        "veryHigh": "4 - مرتفع جداً",
+        "critical": "5 - حرج"
+      },
+      "fieldStatus": "الحالة",
+      "statusDraft": "مسودة",
+      "statusPublished": "منشور",
+      "submit": "إنشاء التنبيه",
+      "errors": {
+        "createEvent": "فشل إنشاء الحدث",
+        "createSignal": "فشل إنشاء الإشارة",
+        "createAlert": "فشل إنشاء التنبيه"
+      }
+    }
+  }
+,
+  "detection": {
+    "header": {
+      "title": "كشف الأحداث",
+      "breadcrumb": "الكشف"
+    },
+    "tabs": {
+      "alerts": "التنبيهات",
+      "events": "الأحداث",
+      "signals": "الإشارات",
+      "history": "السجل"
+    },
+    "actions": {
+      "createSignal": "إنشاء إشارة"
+    },
+    "filters": {
+      "filter": "تصفية",
+      "title": "المرشحات",
+      "clearAll": "مسح الكل",
+      "severity": "الخطورة",
+      "eventType": "نوع الحدث",
+      "source": "المصدر",
+      "region": "المنطقة",
+      "severities": {
+        "critical": "حرج",
+        "high": "مرتفع",
+        "medium": "متوسط",
+        "low": "منخفض"
+      },
+      "last7days": "آخر 7 أيام",
+      "last30days": "آخر 30 يوماً",
+      "last90days": "آخر 90 يوماً"
+    },
+    "sort": {
+      "sevDesc": "الخطورة: من الأعلى إلى الأدنى",
+      "sevAsc": "الخطورة: من الأدنى إلى الأعلى",
+      "newest": "الأحدث أولاً",
+      "oldest": "الأقدم أولاً"
+    },
+    "feed": {
+      "crisisMap": "خريطة الأزمات",
+      "firstSignal": "أول إشارة: {time}",
+      "signalCount": "{count, plural, zero {لا إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارةً} other {# إشارة}}",
+      "sourceLink": "المصدر",
+      "alertBadge": "تنبيه",
+      "alerts": {
+        "title": "التنبيهات",
+        "empty": "لا توجد تنبيهات نشطة حالياً.",
+        "noMatch": "لا توجد تنبيهات تطابق مرشحاتك.",
+        "untitled": "تنبيه بلا عنوان",
+        "allLoaded": "تم تحميل {count, plural, zero {جميع التنبيهات} one {جميع التنبيهات (واحد)} two {جميع التنبيهات (اثنان)} few {جميع # التنبيهات} many {جميع # التنبيهات} other {جميع # التنبيهات}}"
+      },
+      "events": {
+        "title": "الأحداث",
+        "empty": "لم تُعثر على أحداث.",
+        "noMatch": "لا توجد أحداث تطابق مرشحاتك.",
+        "untitled": "حدث بلا عنوان",
+        "allLoaded": "تم تحميل {count, plural, zero {جميع الأحداث} one {جميع الأحداث (واحد)} two {جميع الأحداث (اثنان)} few {جميع # الأحداث} many {جميع # الأحداث} other {جميع # الأحداث}}"
+      },
+      "signals": {
+        "title": "الإشارات",
+        "empty": "لم تُعثر على إشارات.",
+        "noMatch": "لا توجد إشارات تطابق مرشحاتك.",
+        "untitled": "إشارة بلا عنوان",
+        "allLoaded": "تم تحميل {count, plural, zero {جميع الإشارات} one {جميع الإشارات (واحدة)} two {جميع الإشارتين} few {جميع # الإشارات} many {جميع # الإشارات} other {جميع # الإشارات}}"
+      }
+    },
+    "history": {
+      "title": "السجل",
+      "searchCount": "{filtered} من {loaded} محملة",
+      "empty": "لا يوجد سجل متاح.",
+      "noMatch": "لا توجد عناصر تطابق بحثك.",
+      "loadMore": "تحميل المزيد",
+      "untitled": "بلا عنوان",
+      "columns": {
+        "title": "العنوان",
+        "class": "الفئة",
+        "type": "النوع",
+        "severity": "الخطورة",
+        "source": "المصدر",
+        "date": "التاريخ",
+        "location": "الموقع"
+      },
+      "classes": {
+        "alert": "تنبيه",
+        "event": "حدث",
+        "signal": "إشارة"
+      }
+    },
+    "kpi": {
+      "activeAlerts": {
+        "title": "التنبيهات النشطة",
+        "unit": "تنبيهات"
+      },
+      "trend": {
+        "title": "الاتجاه",
+        "window7": "نافذة 7 أيام",
+        "window30": "نافذة 30 يوماً",
+        "days7": "7 أيام",
+        "days30": "30 يوماً",
+        "escalating": "تصاعدي",
+        "improving": "تحسّن",
+        "stable": "مستقر"
+      },
+      "coverage": {
+        "title": "تغطية الأحداث",
+        "flagged": "مُعلَّم",
+        "events": "الأحداث",
+        "total": "إجمالي",
+        "alerted": "{count} منبَّه",
+        "monitoring": "{count} مراقَب",
+        "totalSignals": "إجمالي الإشارات",
+        "avgPerEvent": "متوسط/حدث"
+      },
+      "inform": {
+        "title": "INFORM Severity",
+        "noData": "لا توجد بيانات لـ {country}",
+        "impact": "التأثير",
+        "conditions": "الظروف",
+        "complexity": "التعقيد",
+        "updated": "تم التحديث {date}",
+        "acapsLine": "ACAPS - {month}",
+        "modal": {
+          "title": "مؤشر INFORM Severity: المنهجية",
+          "intro": "مؤشر <strong>INFORM Severity</strong> نتاج مشترك لمركز JRC للبحوث المشترك الأوروبي وACАPS وOCHA. تملك JRC المنهجية؛ تجمع ACAPS البيانات وتنتج الدرجات الشهرية؛ وتنسق OCHA المبادرة. اعتباراً من إصدار فبراير 2026 (منهجية الإصدار 2026)، تستخدم الدرجات مقياساً مستمراً من <strong>0 إلى 10</strong>، أُعيد تغييره من النطاق السابق 0 إلى 5 للاتساق مع منتجات INFORM الأخرى. تُصنَّف الدرجات في خمس فئات للخطورة. تُدرج فقط الدول التي تمر بأزمة إنسانية نشطة.",
+          "dimensionsHeading": "أبعاد الدرجة (كل بُعد من 0 إلى 10)",
+          "dimImpact": "<strong>التأثير</strong>: حجم وعمق الاحتياجات الإنسانية، بما فيها المتضررون والنزوح والوفيات.",
+          "dimConditions": "<strong>ظروف المتضررين</strong>: مستوى المعيشة والأمن الغذائي والصحة والمياه والصرف الصحي وبيئة الحماية.",
+          "dimComplexity": "<strong>التعقيد</strong>: العوامل التي تُعيق الاستجابة كشدة النزاع وقيود الوصول والاضطراب السياسي.",
+          "categoriesHeading": "فئات الخطورة",
+          "cat1": "<strong>1 / منخفض</strong>",
+          "cat2": "<strong>2 / متوسط</strong>",
+          "cat3": "<strong>3 / مرتفع</strong>",
+          "cat4": "<strong>4 / مرتفع جداً</strong>",
+          "cat5": "<strong>5 / شديد الخطورة</strong>",
+          "limitationsHeading": "القيود",
+          "limitationJudgement": "تعكس الدرجات الحكم التحليلي لـ ACAPS وقد تتأخر 4 إلى 8 أسابيع عن المواقف المتطورة بسرعة.",
+          "limitationCoverage": "يغطي المؤشر الأزمات الإنسانية النشطة فقط. الدول الخالية من أزمة نشطة غير مشمولة.",
+          "sourceHeading": "المصدر",
+          "sourceJrc": "مؤشر INFORM Severity (بوابة JRC/الاتحاد الأوروبي الرسمية)",
+          "sourceAcaps": "مؤشر ACAPS INFORM Severity (البيانات وAPI)",
+          "sourceNote": "تُجلب البيانات من ACAPS API وهي مطابقة لمجموعة بيانات JRC الشهرية المنشورة. قد تتأخر بوابة JRC إصداراً واحداً؛ ACAPS وHDX هما المرجع للدرجات الأحدث. يُحدَّث شهرياً."
+        }
+      },
+      "indicators": "المؤشرات",
+      "activity": {
+        "title": "نشاط الأحداث",
+        "events": "الأحداث",
+        "alerts": "التنبيهات"
+      },
+      "analysisCoverage": {
+        "title": "تغطية التحليل",
+        "covered": "مُغطَّى",
+        "analysed": "مُحلَّل",
+        "unanalysed": "غير مُحلَّل",
+        "alerts": "التنبيهات",
+        "withoutAnalysis": "{count, plural, zero {لا تنبيهات} one {تنبيه واحد} two {تنبيهان} few {# تنبيهات} many {# تنبيهاً} other {# تنبيه}} بدون تحليل",
+        "allCovered": "جميع التنبيهات مُغطَّاة"
+      },
+      "idp": {
+        "title": "نزوح النازحين الداخليين",
+        "unavailable": "البيانات غير متاحة",
+        "noData": "لا توجد بيانات نزوح",
+        "notTracked": "لا تتبع IOM DTM بلد رمزه {code}",
+        "coverageVaries": "التغطية تتفاوت حسب البلد",
+        "internallyDisplaced": "نازحون داخلياً",
+        "vsLastMonth": "مقارنة بالشهر الماضي",
+        "sourceLine": "IOM DTM عبر HAPI",
+        "modal": {
+          "title": "نزوح النازحين الداخليين: المنهجية",
+          "intro": "تُظهر هذه البطاقة إجمالي عدد <strong>النازحين الداخليين الناجمين عن النزاعات</strong> الذين ترصدهم مصفوفة تتبع النزوح (DTM) التابعة لـ IOM للبلد المُختار. يعكس الرقم أحدث لقطة متاحة لا إجمالياً تراكمياً.",
+          "numbersHeading": "ما تعنيه الأرقام",
+          "numberCurrent": "<strong>العدد الحالي</strong>: أحدث رقم للنازحين الداخليين من IOM DTM للبلد.",
+          "numberDelta": "<strong>التغير شهرياً</strong>: التغير في عدد النازحين الداخليين المُبلَّغ عنه مقارنة بنقطة بيانات الشهر السابق.",
+          "numberTrend": "<strong>خط الاتجاه</strong>: أعداد النازحين الداخليين الشهرية التاريخية تُظهر مسار النزوح.",
+          "numberFreshness": "<strong>مؤشر الحداثة</strong>: أخضر إذا تم التحديث خلال 30 يوماً، عنبري خلال 90 يوماً، أحمر إذا كان أقدم.",
+          "limitationsHeading": "القيود",
+          "limitationFloods": "نزوح الفيضانات والكوارث <strong>غير مشمول</strong>. IOM DTM في هذا السياق يتتبع النزوح الناجم عن النزاعات فقط.",
+          "limitationCoverage": "التغطية محدودة بنطاق رصد IOM DTM الذي قد لا يشمل جميع حالات النزوح داخل البلد.",
+          "limitationLag": "قد تتأخر البيانات 4 إلى 8 أسابيع عن الأوضاع الفعلية اعتماداً على عملية البلد.",
+          "sourceHeading": "المصدر",
+          "sourceLink": "HAPI: Humanitarian API (humdata.org)",
+          "sourceNote": "تجمع HAPI بيانات IOM DTM إلى جانب مجموعات البيانات الإنسانية الأخرى تحت إشراف OCHA."
+        }
+      }
+    },
+    "createSignalModal": {
+      "stepTitles": {
+        "details": "إنشاء إشارة - التفاصيل",
+        "media": "إنشاء إشارة - إضافة وسائط",
+        "success": "تم إنشاء الإشارة"
+      },
+      "fields": {
+        "title": "العنوان",
+        "titlePlaceholder": "مثال: رُصدت فيضانات في ولاية كسلا",
+        "description": "الوصف",
+        "descriptionPlaceholder": "صف ما رُصد والمصدر وأي سياق ذي صلة...",
+        "source": "المصدر",
+        "sourcePlaceholderLoading": "جارٍ تحميل المصادر...",
+        "sourcePlaceholder": "اختر مصدراً...",
+        "noSources": "لا توجد مصادر متاحة",
+        "location": "الموقع",
+        "locationPlaceholderLoading": "جارٍ تحميل المواقع...",
+        "locationPlaceholder": "ابحث عن موقع...",
+        "noLocation": "لا يوجد موقع مطابق",
+        "severity": "الخطورة",
+        "severityPlaceholder": "اختر مستوى الخطورة..."
+      },
+      "severityWarning": "قد تؤدي إشارات خطورة {severity} إلى إطلاق تنبيه وإخطار أعضاء الفريق المشتركين في تنبيهات هذا المستوى.",
+      "nextAddMedia": "التالي: إضافة وسائط",
+      "media": {
+        "dropzone": "أفلت الملفات هنا أو انقر للاستعراض",
+        "fileTypes": "PDF، Word، Excel، CSV، ملفات نصية",
+        "skipSubmit": "تخطي وإرسال",
+        "submit": "إرسال الإشارة"
+      },
+      "success": {
+        "title": "تم إنشاء الإشارة",
+        "message": "تم إرسال إشارتك وأصبحت مرئية لفريقك.",
+        "done": "تم"
+      },
+      "uploadError": "فشل رفع الملف",
+      "submitError": "فشل إنشاء الإشارة"
+    },
+    "createAlert": {
+      "title": "إنشاء تنبيه يدوي",
+      "success": "تم إنشاء التنبيه بنجاح.",
+      "sectionContent": "محتوى التنبيه",
+      "sectionClassification": "التصنيف",
+      "fieldTitle": "العنوان",
+      "titlePlaceholder": "عنوان/رأس التنبيه",
+      "fieldDescription": "الوصف",
+      "descriptionPlaceholder": "المحتوى الرئيسي للتنبيه وتفاصيله",
+      "fieldSeverity": "الخطورة",
+      "severityPlaceholder": "اختر مستوى الخطورة",
+      "fieldStatus": "الحالة",
+      "statusDraft": "مسودة",
+      "statusPublished": "منشور",
+      "severityOptions": {
+        "low": "1 - منخفض",
+        "moderate": "2 - معتدل",
+        "high": "3 - مرتفع",
+        "veryHigh": "4 - مرتفع جداً",
+        "critical": "5 - حرج"
+      },
+      "submit": "إنشاء التنبيه"
+    },
+    "dataSources": {
+      "title": "مصادر البيانات المتصلة",
+      "subtitle": "{count, plural, zero {لا مصادر} one {مصدر واحد} two {مصدران} few {# مصادر} many {# مصدراً} other {# مصدر}} تُغذي محرك الكشف",
+      "connectSource": "+ توصيل مصدر",
+      "online": "متصل",
+      "offline": "غير متصل",
+      "columns": {
+        "source": "المصدر",
+        "type": "النوع",
+        "status": "الحالة",
+        "frequency": "الدورية",
+        "variables": "المتغيرات"
+      }
+    }
+  }
+,
+  "eventDetail": {
+    "notFound": {
+      "title": "الحدث غير موجود",
+      "description": "ربما تم حذف هذا الحدث أو أن المعرّف غير صالح."
+    },
+    "backToEvents": "العودة إلى نظرة عامة على الأحداث",
+    "viewOnCrisisMap": "عرض على خريطة الأزمات",
+    "status": {
+      "active": "نشط",
+      "resolved": "محلول"
+    },
+    "signalCount": "{count, plural, zero {لا إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارةً} other {# إشارة}}",
+    "sourceCount": "{count, plural, zero {لا مصادر} one {مصدر واحد} two {مصدران} few {# مصادر} many {# مصدراً} other {# مصدر}}",
+    "notAvailable": "غير متاح",
+    "kpi": {
+      "casualties": "الضحايا",
+      "populationIn": "السكان في {name}",
+      "populationInArea": "السكان في المنطقة",
+      "idpPerCapitaIn": "النازحون الداخليون للفرد في {name} ({count} نازح)",
+      "idpPerCapita": "النازح الداخلي للفرد"
+    },
+    "summary": {
+      "title": "الملخص",
+      "empty": "لا يوجد ملخص متاح."
+    },
+    "signals": {
+      "title": "الإشارات ({count})",
+      "subtitle": "الاستخبارات المصدرية التي أطلقت هذا الحدث",
+      "empty": "لا توجد إشارات مرفقة",
+      "sourceLink": "المصدر",
+      "fallbackTitle": "إشارة {id}"
+    },
+    "related": {
+      "title": "الأحداث ذات الصلة",
+      "empty": "لم تُعثر على أحداث ذات صلة"
+    },
+    "actions": {
+      "title": "الإجراءات",
+      "alert": "تنبيه",
+      "confirmPrompt": "رفع هذا الحدث كتنبيه؟",
+      "failed": "فشل. حاول مجدداً.",
+      "turnIntoAlert": "تحويل إلى تنبيه"
+    },
+    "systemData": {
+      "title": "بيانات النظام",
+      "eventId": "معرّف الحدث",
+      "source": "المصدر",
+      "detected": "تم الكشف",
+      "validFrom": "صالح من",
+      "validUntil": "صالح حتى",
+      "affectedAreas": "المناطق المتضررة",
+      "created": "تم الإنشاء",
+      "updated": "تم التحديث"
+    },
+    "drawer": {
+      "title": "تفاصيل الحدث",
+      "openFullPage": "فتح كصفحة كاملة"
+    },
+    "addToCrisis": {
+      "button": "إضافة إلى أزمة",
+      "createNew": "إنشاء أزمة جديدة",
+      "loading": "جارٍ تحميل الأزمات...",
+      "empty": "لا توجد أزمات حالية بعد.",
+      "untitledCrisis": "أزمة بلا عنوان",
+      "eventCount": "{count, plural, zero {لا أحداث} one {حدث واحد} two {حدثان} few {# أحداث} many {# حدثاً} other {# حدث}}",
+      "linkedTitle": "تم ربط الحدث",
+      "linkedMessage": "تمت إضافته إلى الأزمة.",
+      "linkErrorTitle": "تعذّر ربط الحدث",
+      "createdTitle": "تم إنشاء الأزمة",
+      "createdMessage": "سيُنشئ خط الأنابيب العنوان والملخص قريباً.",
+      "createErrorTitle": "تعذّر إنشاء الأزمة"
+    }
+  },
+  "knowledge": {
+    "header": {
+      "title": "مركز المعرفة",
+      "searchPlaceholder": "ابحث في المستندات...",
+      "upload": "رفع"
+    },
+    "filters": {
+      "title": "تصفية حسب الموقع والنوع",
+      "clear": "مسح المرشحات",
+      "region": "المنطقة",
+      "country": "الدولة",
+      "zone": "المنطقة الفرعية",
+      "type": "النوع",
+      "allRegions": "جميع المناطق",
+      "allCountries": "جميع الدول",
+      "allZones": "جميع المناطق الفرعية"
+    },
+    "types": {
+      "all": "جميع الموارد",
+      "protocol": "البروتوكولات",
+      "guideline": "الإرشادات",
+      "template": "القوالب",
+      "contact": "جهات الاتصال",
+      "training": "التدريب"
+    },
+    "crisisResources": {
+      "title": "موارد الأزمات النشطة",
+      "subtitle": "{count, plural, zero {لا أزمات نشطة} one {أزمة نشطة واحدة} two {أزمتان نشطتان} few {# أزمات نشطة} many {# أزمةً نشطةً} other {# أزمة نشطة}} في الموقع المُحدَّد"
+    },
+    "documents": {
+      "title": "مكتبة المستندات",
+      "found": "{count, plural, zero {لم يُعثر على مستندات} one {عُثر على مستند واحد} two {عُثر على مستندين} few {عُثر على # مستندات} many {عُثر على # مستنداً} other {عُثر على # مستند}}",
+      "empty": "لم تُعثر على مستندات تطابق مرشحاتك",
+      "download": "تنزيل",
+      "columns": {
+        "document": "المستند",
+        "type": "النوع",
+        "sector": "القطاع",
+        "updated": "التحديث"
+      }
+    },
+    "contacts": {
+      "title": "جهات الاتصال الرئيسية",
+      "count": "{count, plural, zero {لا جهات اتصال} one {جهة اتصال واحدة} two {جهتا اتصال} few {# جهات اتصال} many {# جهة اتصالٍ} other {# جهة اتصال}}",
+      "email": "البريد الإلكتروني",
+      "call": "اتصال",
+      "empty": "لم تُعثر على جهات اتصال لهذا الموقع"
+    },
+    "humchat": {
+      "subtitle": "مساعد الذكاء الاصطناعي الإنساني",
+      "online": "متصل",
+      "clearChat": "مسح المحادثة",
+      "collapse": "طي اللوحة",
+      "inputPlaceholder": "اسأل عن الاستجابة الإنسانية...",
+      "welcome": "مرحباً! أنا **HumChat**، مساعدك الذكي للعمليات الإنسانية. لقد دُرِّبتُ على إرشادات IASC ومعايير سفير والسياق الإنساني الخاص بإثيوبيا.\n\nيمكنني مساعدتك في:\n- **تحليل الأوضاع** وإعداد موجزات الأزمات\n- **تخطيط الاستجابة** وتخصيص الموارد\n- **توجيه البروتوكولات** في حالات الطوارئ\n- دعم **التنسيق** والاتصالات\n\nما التحدي الإنساني الذي يمكنني مساعدتك في معالجته اليوم؟",
+      "examples": {
+        "displacement": "تحليل اتجاهات النزوح في المنطقة الصومالية",
+        "interventions": "ما أولويات التدخل في حالات الطوارئ الصحية؟",
+        "assessment": "إنشاء خطة تقييم سريع لمخاطر الحماية"
+      }
+    }
+  }
+,
+  "map": {
+    "filters": {
+      "country": "الدولة",
+      "region": "المنطقة",
+      "crisisType": "نوع الأزمة",
+      "allCountries": "جميع الدول",
+      "allRegions": "جميع المناطق"
+    },
+    "panels": {
+      "layers": "الطبقات",
+      "legend": "المفتاح",
+      "clearData": "بيانات CLEAR",
+      "boundaries": "الحدود",
+      "markers": "العلامات",
+      "severity": "الخطورة",
+      "eventType": "نوع الحدث",
+      "population": "السكان"
+    },
+    "severities": {
+      "critical": "حرج",
+      "high": "مرتفع",
+      "medium": "متوسط",
+      "low": "منخفض",
+      "unknown": "غير معروف"
+    },
+    "dataViews": {
+      "none": "لا شيء",
+      "crisis": "أزمة",
+      "alert": "تنبيه",
+      "event": "حدث"
+    },
+    "boundaries": {
+      "none": "لا شيء",
+      "a0": "A0 - الدولة",
+      "a1": "A1 - الولايات",
+      "a2": "A2 - المقاطعات"
+    },
+    "settings": {
+      "tooltip": "إعدادات الخريطة",
+      "title": "إعدادات الخريطة",
+      "showBoundaries": "إظهار الحدود",
+      "populationLayer": "طبقة السكان",
+      "a2Resolution": "دقة مقاطعات A2"
+    },
+    "detail": {
+      "severity": "الخطورة",
+      "type": "النوع",
+      "location": "الموقع",
+      "dataSource": "مصدر البيانات",
+      "shockDate": "تاريخ الصدمة",
+      "coordinates": "الإحداثيات",
+      "viewDetails": "عرض التفاصيل"
+    },
+    "minimap": {
+      "location": "الموقع",
+      "fullMap": "الخريطة الكاملة"
+    },
+    "tokenMissing": "لم يُهيَّأ رمز Mapbox. عيّن NEXT_PUBLIC_MAPBOX_TOKEN في ملف .env"
+  },
+  "nav": {
+    "sections": {
+      "main": "رئيسي",
+      "resources": "الموارد"
+    },
+    "items": {
+      "overview": "نظرة عامة",
+      "detection": "الكشف",
+      "map": "الخريطة",
+      "insights": "الرؤى",
+      "operations": "العمليات",
+      "cash": "المساعدة النقدية",
+      "knowledge": "مركز المعرفة"
+    },
+    "itemSoon": "{label} (قريباً)",
+    "expand": "توسيع",
+    "collapse": "طي",
+    "feedback": "ملاحظات",
+    "admin": "المدير",
+    "settings": "الإعدادات",
+    "signOut": "تسجيل الخروج"
+  },
+  "noAccess": {
+    "title": "في انتظار الوصول",
+    "message": "لقد سجّلت دخولك لكنك لم تُعيَّن إلى منظمة بعد. تواصل مع المسؤول للحصول على دعوة.",
+    "signOut": "تسجيل الخروج",
+    "footer": "المجلس النرويجي للاجئين - منصة CLEAR"
+  },
+  "notificationPreferences": {
+    "title": "تفضيلات الإشعارات",
+    "subtitle": "إدارة طريقة تلقي التنبيهات والتحديثات",
+    "backToProfile": "العودة إلى الملف الشخصي",
+    "email": {
+      "title": "إشعارات البريد الإلكتروني",
+      "enable": "تفعيل تنبيهات البريد الإلكتروني",
+      "description": "استقبال تنبيهات الأزمات وإشعارات النظام عبر البريد الإلكتروني"
+    },
+    "internal": {
+      "title": "الإشعارات الداخلية",
+      "crisisAlerts": "تنبيهات الأزمات",
+      "crisisAlertsDescription": "التنبيهات الجديدة وتغييرات مستوى الخطورة",
+      "system": "إشعارات النظام",
+      "systemDescription": "حالة خط الأنابيب وتعيينات المهام",
+      "updates": "التحديثات والتقارير",
+      "updatesDescription": "الملخصات الأسبوعية وتقارير التحليل"
+    },
+    "display": {
+      "title": "إعدادات العرض",
+      "desktop": "إشعارات سطح المكتب",
+      "desktopDescription": "إظهار إشعارات المتصفح",
+      "sound": "تنبيهات صوتية",
+      "soundDescription": "تشغيل صوت للتنبيهات الحرجة"
+    },
+    "quietHours": {
+      "title": "ساعات الهدوء",
+      "enable": "تفعيل ساعات الهدوء",
+      "description": "تعليق الإشعارات غير الحرجة خلال الساعات المحددة"
+    },
+    "save": "حفظ التفضيلات"
+  },
+  "observe": {
+    "metadata": {
+      "title": "Observe - CLEAR",
+      "description": "إرسال إشارة ميدانية إلى منصة CLEAR للاستخبارات الإنسانية"
+    },
+    "header": {
+      "appName": "الإشارات الميدانية",
+      "queued": "{count} في الطابور"
+    },
+    "tabs": {
+      "submit": "إرسال",
+      "signals": "الإشارات"
+    },
+    "welcome": {
+      "heading": "لإرسال إشارة:",
+      "bullet1": "السطر الأول من رسالتك سيكون <strong>العنوان</strong>، والباقي هو <strong>الوصف</strong>. اضغط Enter للانتقال إلى سطر جديد.",
+      "bullet2": "استخدم <strong>@</strong> لوضع علامة على موقع، أو اضغط <locationIcon></locationIcon> للسماح للتطبيق بتحديد موقعك.",
+      "bullet3": "أرفق صوراً أو مقاطع فيديو بزر <mediaIcon></mediaIcon>."
+    },
+    "signals": {
+      "loading": "جارٍ تحميل الإشارات...",
+      "empty": "لا توجد إشارات بعد",
+      "events": "{count, plural, zero {لا أحداث} one {حدث واحد} two {حدثان} few {# أحداث} many {# حدثاً} other {# حدث}}"
+    },
+    "replies": {
+      "queued": "تم الاستلام. تم حفظ إشارتك محلياً وستُرسَل إلى فريقك تلقائياً حين تعود متصلاً بالإنترنت.",
+      "success": "تم استلام الإشارة. تمت إضافة إدخال جديد إلى قائمة إشارات فريقك.",
+      "error": "حدث خطأ ما ولم تُرسَل إشارتك. يرجى المحاولة مجدداً."
+    },
+    "compose": {
+      "placeholder": "ما الذي رصدته؟",
+      "captureLocation": "تحديد الموقع",
+      "addMedia": "إضافة صورة أو فيديو"
+    }
+  },
+  "onboarding": {
+    "title": "مرحباً بك في CLEAR",
+    "subtitle": "دعنا نُعِدّ منظمتك وفريقك ومواقع المراقبة.",
+    "steps": {
+      "org": {
+        "label": "المنظمة",
+        "description": "إنشاء أو الانضمام"
+      },
+      "team": {
+        "label": "الفريق",
+        "description": "إنشاء فريق"
+      },
+      "locations": {
+        "label": "المواقع",
+        "description": "اختيار نطاق المراقبة"
+      }
+    },
+    "org": {
+      "nameLabel": "اسم المنظمة",
+      "namePlaceholder": "مثال: NRC شرق أفريقيا",
+      "slugLabel": "المعرّف",
+      "slugPlaceholder": "nrc-east-africa",
+      "create": "إنشاء منظمة"
+    },
+    "team": {
+      "nameLabel": "اسم الفريق",
+      "namePlaceholder": "مثال: استجابة السودان",
+      "slugLabel": "المعرّف",
+      "slugPlaceholder": "sudan-response",
+      "descriptionLabel": "الوصف (اختياري)",
+      "descriptionPlaceholder": "ما الذي يرصده هذا الفريق؟",
+      "create": "إنشاء فريق"
+    },
+    "locations": {
+      "intro": "اختر الدول والمناطق التي سيراقبها فريقك.",
+      "skip": "تخطي",
+      "save": "حفظ المواقع"
+    },
+    "done": {
+      "title": "أنت مستعد!",
+      "text": "منظمتك وفريقك جاهزان. اذهب إلى لوحة المعلومات لبدء المراقبة.",
+      "cta": "الذهاب إلى لوحة المعلومات"
+    }
+  }
+,
+  "operations": {
+    "header": {
+      "title": "مركز العمليات",
+      "teamDirectory": "دليل الفريق",
+      "activateResponse": "تفعيل الاستجابة"
+    },
+    "tabs": {
+      "active": "العمليات النشطة",
+      "strategy": "استراتيجية الاستجابة",
+      "resources": "الموارد والميزانية",
+      "coordination": "التنسيق"
+    },
+    "stats": {
+      "activeOperations": "العمليات النشطة",
+      "fieldTeamsDeployed": "الفرق الميدانية المنتشرة",
+      "staffMobilized": "الموظفون المُعبَّأون",
+      "partnerOrgs": "المنظمات الشريكة"
+    },
+    "capacity": {
+      "title": "طاقة NRC إثيوبيا",
+      "established": "تأسست {year}",
+      "totalStaff": "إجمالي الموظفين",
+      "national": "وطني",
+      "international": "دولي",
+      "offices": "المكاتب",
+      "activePrograms": "البرامج النشطة"
+    },
+    "advantage": {
+      "title": "الميزة النسبية لـ NRC",
+      "subtitle": "الكفاءات الأساسية في إثيوبيا"
+    },
+    "activeOps": {
+      "title": "عمليات الاستجابة النشطة",
+      "subtitle": "الاستجابات المُعبَّأة حالياً",
+      "activatedLine": "تم التفعيل {time} - معرّف العملية: {id}",
+      "viewDetails": "عرض التفاصيل",
+      "labels": {
+        "teams": "الفرق",
+        "staff": "الموظفون",
+        "coverage": "التغطية",
+        "budget": "الميزانية"
+      }
+    },
+    "fieldTeams": {
+      "title": "الفرق الميدانية",
+      "subtitle": "المنتشرة حالياً",
+      "deployTeam": "+ نشر فريق",
+      "columns": {
+        "team": "الفريق",
+        "location": "الموقع",
+        "status": "الحالة",
+        "lastCheckin": "آخر تسجيل حضور"
+      }
+    },
+    "resourceStatus": {
+      "title": "حالة الموارد",
+      "subtitle": "الإمدادات الحرجة",
+      "requestResources": "طلب موارد"
+    },
+    "budget": {
+      "title": "نظرة عامة على الميزانية",
+      "totalSubtitle": "الإجمالي: $565,000"
+    },
+    "materialResources": {
+      "title": "الموارد المادية",
+      "subtitle": "حالة الإمدادات الحرجة"
+    },
+    "humanResources": {
+      "title": "الموارد البشرية",
+      "subtitle": "توزيع انتشار الموظفين"
+    },
+    "strategy": {
+      "title": "استراتيجية الاستجابة المرحلية",
+      "subtitle": "استجابة تفشي الكوليرا - المنطقة الصومالية"
+    },
+    "timeline": {
+      "title": "الجدول الزمني للتنفيذ",
+      "subtitle": "المعالم الرئيسية"
+    },
+    "risks": {
+      "title": "تقييم المخاطر",
+      "subtitle": "المخاطر المُحددة وإجراءات التخفيف",
+      "columns": {
+        "risk": "المخاطرة",
+        "severity": "الخطورة",
+        "description": "الوصف",
+        "mitigation": "التخفيف"
+      }
+    },
+    "coordination": {
+      "title": "شركاء التنسيق",
+      "subtitle": "المنظمات في الاستجابة",
+      "addPartner": "+ إضافة شريك",
+      "columns": {
+        "organization": "المنظمة",
+        "role": "الدور",
+        "coverage": "منطقة التغطية",
+        "contact": "جهة الاتصال",
+        "status": "الحالة"
+      }
+    }
+  },
+  "profile": {
+    "edit": {
+      "loading": "جارٍ تحميل الملف الشخصي...",
+      "notAuthenticated": "غير مُصادَق عليه. يرجى تسجيل الدخول.",
+      "title": "تعديل الملف الشخصي",
+      "subtitle": "تحديث معلوماتك الشخصية وتفضيلاتك",
+      "backToProfile": "العودة إلى الملف الشخصي",
+      "updateSuccess": "تم تحديث الملف الشخصي بنجاح.",
+      "nameRequired": "الاسم مطلوب",
+      "unexpectedError": "حدث خطأ غير متوقع",
+      "personalInformation": "المعلومات الشخصية",
+      "firstName": "الاسم الأول",
+      "firstNamePlaceholder": "أدخل الاسم الأول",
+      "lastName": "اسم العائلة",
+      "lastNamePlaceholder": "أدخل اسم العائلة",
+      "email": "البريد الإلكتروني",
+      "emailPlaceholder": "you@example.com",
+      "preferences": "التفضيلات",
+      "language": "اللغة",
+      "timezone": "المنطقة الزمنية",
+      "timezoneKhartoum": "السودان (الخرطوم)",
+      "timezoneUtc": "UTC"
+    },
+    "page": {
+      "notAuthenticated": "غير مُصادَق عليه. يرجى تسجيل الدخول.",
+      "title": "الإعدادات",
+      "tabs": {
+        "account": "الحساب",
+        "notifications": "الإشعارات"
+      }
+    },
+    "info": {
+      "title": "المعلومات",
+      "name": "الاسم",
+      "notSet": "غير مُحدَّد",
+      "email": "البريد الإلكتروني",
+      "changePassword": "تغيير كلمة المرور",
+      "mobile": "الجوال",
+      "mobilePlaceholder": "912 345 678",
+      "mobileUpdated": "تم تحديث رقم الجوال."
+    },
+    "orgRoles": {
+      "title": "المنظمة والأدوار",
+      "empty": "لم تُعثر على عضويات فريق.",
+      "columns": {
+        "organisation": "المنظمة",
+        "team": "الفريق",
+        "role": "الدور"
+      },
+      "active": "نشط",
+      "setActive": "تعيين نشطاً",
+      "switchedTitle": "تم تحديث الفريق النشط",
+      "switchedMessage": "أنت الآن تعرض {team}."
+    },
+    "preferences": {
+      "title": "التفضيلات",
+      "appearance": "المظهر",
+      "language": "اللغة",
+      "timezone": "المنطقة الزمنية"
+    },
+    "channels": {
+      "title": "قنوات الإشعارات",
+      "updated": "تم تحديث قنوات الإشعارات.",
+      "email": "إشعارات البريد الإلكتروني",
+      "emailDescription": "استقبال تنبيهات الأزمات والملخصات عبر البريد الإلكتروني",
+      "sms": "إشعارات الرسائل النصية",
+      "smsComingSoon": "قريباً"
+    },
+    "subscriptions": {
+      "title": "اشتراكات التنبيهات",
+      "add": "إضافة",
+      "new": "اشتراك جديد",
+      "location": "الموقع",
+      "locationPlaceholder": "اختر موقعاً أو أكثر",
+      "alertTypes": "أنواع التنبيهات (اتركه فارغاً للكل)",
+      "minSeverity": "الحد الأدنى للخطورة",
+      "severityOptions": {
+        "all": "الكل (الأدنى فما فوق)",
+        "low": "منخفض فما فوق",
+        "medium": "متوسط فما فوق",
+        "high": "مرتفع فما فوق",
+        "critical": "حرج فقط"
+      },
+      "frequency": "الدورية",
+      "frequencyOptions": {
+        "immediately": "فوري",
+        "daily": "ملخص يومي",
+        "weekly": "ملخص أسبوعي",
+        "monthly": "ملخص شهري"
+      },
+      "subscribe": "اشتراك",
+      "subscribedTitle": "تم الاشتراك",
+      "subscribedMessage": "تم إنشاء اشتراكات التنبيهات.",
+      "failed": "فشل",
+      "empty": "لا توجد اشتراكات تنبيهات بعد. انقر \"إضافة\" للبدء.",
+      "severityLabels": {
+        "s1": "جميع مستويات الخطورة",
+        "s2": "منخفض+",
+        "s3": "متوسط+",
+        "s4": "مرتفع+",
+        "s5": "حرج فقط"
+      },
+      "severityFallback": "خطورة {value}+",
+      "levels": {
+        "country": "الدولة",
+        "state": "الولاية",
+        "district": "المقاطعة"
+      },
+      "allTypes": "جميع الأنواع",
+      "moreTypes": "{labels} +{count} أخرى",
+      "pause": "إيقاف مؤقت",
+      "resume": "استئناف",
+      "delete": "حذف الاشتراك"
+    }
+  }
+,
+  "settings": {
+    "org": {
+      "title": "إعدادات المنظمة",
+      "newOrg": "منظمة جديدة",
+      "noOrgs": "أنت لست عضواً في أي منظمة بعد.",
+      "createOrg": "إنشاء منظمة",
+      "orgSelectLabel": "المنظمة",
+      "createModal": {
+        "title": "إنشاء منظمة",
+        "nameLabel": "الاسم",
+        "namePlaceholder": "مثال: ACME Relief",
+        "slugLabel": "المعرّف",
+        "slugPlaceholder": "acme-relief",
+        "create": "إنشاء"
+      },
+      "details": {
+        "title": "التفاصيل",
+        "name": "الاسم:",
+        "slug": "المعرّف:",
+        "status": "الحالة:",
+        "nameLabel": "الاسم",
+        "slugLabel": "المعرّف",
+        "active": "نشط",
+        "inactive": "غير نشط"
+      },
+      "members": {
+        "title": "الأعضاء",
+        "inviteUser": "دعوة مستخدم",
+        "columns": {
+          "name": "الاسم",
+          "email": "البريد الإلكتروني",
+          "role": "الدور"
+        },
+        "selectUserPlaceholder": "اختر مستخدماً للإضافة",
+        "noUsersAvailable": "لا يوجد مستخدمون متاحون",
+        "add": "إضافة"
+      },
+      "teams": {
+        "title": "الفرق",
+        "addTeam": "إضافة فريق",
+        "manage": "إدارة",
+        "nameLabel": "اسم الفريق",
+        "namePlaceholder": "مثال: استجابة السودان",
+        "slugLabel": "المعرّف",
+        "slugPlaceholder": "sudan-response",
+        "descriptionLabel": "الوصف (اختياري)",
+        "descriptionPlaceholder": "ما الذي يرصده هذا الفريق؟",
+        "createTeam": "إنشاء فريق"
+      },
+      "invite": {
+        "title": "دعوة مستخدم",
+        "emailLabel": "البريد الإلكتروني",
+        "emailPlaceholder": "user@example.com",
+        "orgRoleLabel": "دور المنظمة",
+        "roles": {
+          "member": "عضو",
+          "admin": "مدير",
+          "owner": "مالك"
+        },
+        "teamsLabel": "الفرق",
+        "noTeams": "لا توجد فرق في هذه المنظمة. أنشئ فريقاً قبل الدعوة.",
+        "teamRoles": {
+          "viewer": "مشاهد",
+          "analyst": "محلل",
+          "lead": "قائد"
+        },
+        "selectAtLeastOneTeam": "اختر فريقاً واحداً على الأقل",
+        "send": "إرسال الدعوة"
+      }
+    },
+    "team": {
+      "notFound": "الفريق غير موجود.",
+      "backToOrg": "العودة إلى المنظمة",
+      "details": {
+        "title": "التفاصيل",
+        "nameLabel": "الاسم",
+        "slugLabel": "المعرّف",
+        "descriptionLabel": "الوصف",
+        "name": "الاسم:",
+        "slug": "المعرّف:",
+        "description": "الوصف:"
+      },
+      "members": {
+        "title": "الأعضاء",
+        "columns": {
+          "name": "الاسم",
+          "email": "البريد الإلكتروني",
+          "role": "الدور"
+        },
+        "addMemberLabel": "إضافة عضو",
+        "loadingPlaceholder": "جارٍ التحميل...",
+        "allInTeam": "جميع أعضاء المنظمة موجودون في هذا الفريق",
+        "selectUserPlaceholder": "اختر مستخدماً",
+        "noMatchingUsers": "لا يوجد مستخدمون مطابقون",
+        "roleLabel": "الدور",
+        "add": "إضافة"
+      },
+      "locations": {
+        "title": "نطاق المواقع",
+        "save": "حفظ المواقع",
+        "none": "لم تُحدَّد مواقع"
+      },
+      "danger": {
+        "title": "منطقة الخطر",
+        "warning": "حذف هذا الفريق نهائي ولا يمكن التراجع عنه.",
+        "delete": "حذف الفريق",
+        "confirm": "هل أنت متأكد من حذف هذا الفريق؟ لا يمكن التراجع عن هذا الإجراء."
+      }
+    }
+  },
+  "signalDetail": {
+    "notFound": {
+      "title": "الإشارة غير موجودة",
+      "description": "ربما تم حذف هذه الإشارة أو أن المعرّف غير صالح."
+    },
+    "backToEvents": "العودة إلى نظرة عامة على الأحداث",
+    "viewOnCrisisMap": "عرض على خريطة الأزمات",
+    "signalBadge": "إشارة",
+    "fallbackTitleWithLocation": "إشارة - {location}",
+    "fallbackTitle": "إشارة",
+    "unknownSourceType": "غير معروف",
+    "viaSource": "عبر {name}",
+    "viewOriginal": "عرض الأصل",
+    "viewSource": "عرض المصدر",
+    "description": {
+      "title": "الوصف",
+      "empty": "لا يوجد وصف متاح."
+    },
+    "source": {
+      "title": "تفاصيل المصدر",
+      "name": "اسم المصدر",
+      "type": "نوع المصدر",
+      "activity": "نشاط المصدر",
+      "signalsFrom": "{count, plural, zero {لا إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارةً} other {# إشارة}} من {name}",
+      "activityContext": "في سياق الكشف الحالي",
+      "infoUrl": "رابط المعلومات"
+    },
+    "media": {
+      "title": "الوسائط ({count})"
+    },
+    "events": {
+      "title": "جزء من الأحداث ({count})",
+      "empty": "لم تُعيَّن إلى أي حدث بعد",
+      "fallbackTitle": "حدث {id}"
+    },
+    "similar": {
+      "title": "إشارات مشابهة ({count})",
+      "empty": "لم تُعثر على إشارات مُكتشَفة مشتركة",
+      "fallbackTitle": "إشارة {id}"
+    },
+    "actions": {
+      "title": "الإجراءات",
+      "addToCrisis": "إضافة إلى أزمة",
+      "comingSoon": "قريباً"
+    },
+    "details": {
+      "title": "التفاصيل",
+      "signalId": "معرّف الإشارة",
+      "source": "المصدر",
+      "published": "تم النشر",
+      "collected": "تم الجمع",
+      "affectedAreas": "المناطق المتضررة"
+    }
+  },
+  "verifyEmail": {
+    "verifying": "جارٍ التحقق من بريدك الإلكتروني...",
+    "success": {
+      "title": "تم التحقق من البريد الإلكتروني",
+      "text": "تم التحقق من بريدك الإلكتروني بنجاح. يمكنك الآن استقبال إشعارات البريد الإلكتروني."
+    },
+    "already": {
+      "title": "تم التحقق مسبقاً",
+      "text": "بريدك الإلكتروني محقق بالفعل. لا حاجة لإجراء آخر."
+    },
+    "failed": "فشل التحقق",
+    "resent": "تم إرسال بريد إلكتروني للتحقق جديد. يرجى مراجعة صندوق الوارد.",
+    "resend": "إعادة إرسال بريد التحقق",
+    "goToProfile": "الذهاب إلى الملف الشخصي"
+  }
+}
