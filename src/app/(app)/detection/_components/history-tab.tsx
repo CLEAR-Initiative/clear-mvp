@@ -9,7 +9,13 @@ import {
   Card,
   Loader,
   Group,
+  Popover,
+  ActionIcon,
+  Badge,
+  Button,
+  Divider,
 } from "@mantine/core";
+import { IconFilter } from "@tabler/icons-react";
 import { mapSeverity } from "~/lib/types/graphql";
 import type { GqlAlert, GqlEvent, GqlSignal } from "~/lib/types/graphql";
 import { DataTable, Table, SeverityBadge, FeedToolbar } from "~/components/ui";
@@ -72,10 +78,32 @@ const CLASS_STYLES: Record<string, { bg: string; color: string }> = {
 // i18n keys under detection.history.columns.* - resolved via t() at render time.
 const COLUMN_KEYS = ["title", "class", "type", "severity", "source", "date", "location"] as const;
 
+// Class filter is multi-select over the three discriminated row kinds.
+type HistoryClass = HistoryRow["kind"];
+const ALL_CLASSES: readonly HistoryClass[] = ["alert", "event", "signal"];
+
 export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchingMore, totalCount, onLoadMore, sortOrder, onSortChange }: HistoryTabProps) {
   const t = useTranslations("detection");
   const format = useFormatter();
   const [search, setSearch] = useState("");
+
+  // Tab-local filters. These narrow the rows further on top of whatever the
+  // page-level filter already applied to the underlying queries — so a user
+  // can e.g. flip between "alerts only" and "signals only" without losing
+  // their global severity/region/date filters.
+  //
+  // Default to alerts-only: most history users are scanning escalated items,
+  // not raw signals/events. They can broaden via the chip filter.
+  const [activeClasses, setActiveClasses] = useState<Set<HistoryClass>>(
+    () => new Set<HistoryClass>(["alert"]),
+  );
+  // null = "all sources allowed"; an empty Set explicitly excludes everything.
+  const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
+  // Stored as L1 disaster *labels* (e.g. "Conflict", "Flood") — same string
+  // the table cell renders via getDisasterPills, so the chip text the user
+  // clicks and the pill text they see in the row line up exactly. null = all.
+  const [activeEventTypes, setActiveEventTypes] = useState<Set<string> | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   // Build the unified row list - alerts take priority; events already shown as
   // alerts are excluded; signals are always included separately.
@@ -90,9 +118,80 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
     ];
   }, [alerts, events, signals]);
 
+  // Source names for every row in the merged feed — fed into the source
+  // filter chips and into the search/filter passes below.
+  const rowSources = (row: HistoryRow): string[] => {
+    if (row.kind === "alert") return row.data.event.signals.map((s) => s.source.name);
+    if (row.kind === "event") return row.data.signals.map((s) => s.source.name);
+    return [row.data.source.name];
+  };
+
+  // Event-type tags. Signal rows have no `types` field, so they return [].
+  const rowEventTypes = (row: HistoryRow): string[] => {
+    if (row.kind === "alert") return row.data.event.types;
+    if (row.kind === "event") return row.data.types;
+    return [];
+  };
+
+  // Derived option lists for the filter chips, taken from whatever data is
+  // currently loaded. New sources/types appear as soon as a row that
+  // mentions them lands in the merged feed.
+  const allDataSources = useMemo(() => {
+    const set = new Set<string>();
+    for (const row of allRows) for (const s of rowSources(row)) set.add(s);
+    return [...set].sort();
+  }, [allRows]);
+
+  // L1 disaster labels for each row. Mirrors the cell renderer below
+  // (getDisasterPills(types).map(p => p.label)) so the filter dedupes the
+  // same way the table does — e.g. "ec" and "ac" both surface as a single
+  // "Conflict" chip / cell pill instead of two raw codes.
+  const rowEventLabels = (row: HistoryRow): string[] =>
+    getDisasterPills(rowEventTypes(row)).map((p) => p.label);
+
+  const allEventTypes = useMemo(() => {
+    const set = new Set<string>();
+    for (const row of allRows) for (const label of rowEventLabels(row)) set.add(label);
+    return [...set].sort();
+  }, [allRows]);
+
+  // Whether the type-filter section is even reachable. Alerts wrap events
+  // and carry the same `types[]`, so the filter is meaningful whenever
+  // either class is in scope. Signals contribute no types — when only
+  // signals are selected the section is hidden because there's nothing to
+  // narrow against.
+  const typeFilterApplicable = activeClasses.has("event") || activeClasses.has("alert");
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let result = allRows;
+
+    // Class filter — short-circuit early so source/type passes operate on
+    // a smaller set when classes are narrowed.
+    if (activeClasses.size < ALL_CLASSES.length) {
+      result = result.filter((row) => activeClasses.has(row.kind));
+    }
+
+    // Source filter (null = no filter). A row passes if any of its sources
+    // is in the active set; multi-signal events therefore stay visible as
+    // long as one of their signals came from a permitted source.
+    if (activeSources !== null) {
+      result = result.filter((row) => rowSources(row).some((s) => activeSources.has(s)));
+    }
+
+    // Type filter — only meaningful when an "event" row could be in scope.
+    // When typeFilterApplicable is false (signal-only view), this whole
+    // block is skipped so toggling type chips while looking at signals
+    // can't produce surprising hides. Compared against L1 *labels* so the
+    // filter and the cell pill key off the same string.
+    if (activeEventTypes !== null && typeFilterApplicable) {
+      result = result.filter((row) => {
+        // Signal rows have no types — they pass through untouched so the
+        // event-type filter doesn't hide them when class includes signal.
+        if (row.kind === "signal") return true;
+        return rowEventLabels(row).some((label) => activeEventTypes.has(label));
+      });
+    }
 
     if (q) {
       result = result.filter((row) => {
@@ -123,7 +222,27 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
       if (sortOrder === "newest")   return rowDate(b) - rowDate(a);
       return rowDate(a) - rowDate(b);
     });
-  }, [allRows, search, sortOrder]);
+  }, [allRows, search, sortOrder, activeClasses, activeSources, activeEventTypes, typeFilterApplicable]);
+
+  // Compact summary of which filters are narrowing the view — drives the
+  // badge counter on the filter button and the "Clear all" affordance.
+  // "Filtering" means "narrower than show-everything", so the alerts-only
+  // default reads as one active filter on first render and the badge
+  // disappears once the user hits Clear all (which opens every class).
+  const filterCount =
+    (activeClasses.size < ALL_CLASSES.length ? 1 : 0) +
+    (activeSources !== null ? 1 : 0) +
+    (activeEventTypes !== null && typeFilterApplicable ? 1 : 0);
+  const isFiltered = filterCount > 0;
+
+  const resetFilters = () => {
+    // True "clear all" — opens every class, drops the source and type
+    // filters. The alerts-only default applies on mount only; once the user
+    // chooses to clear, we don't re-impose it.
+    setActiveClasses(new Set<HistoryClass>(ALL_CLASSES));
+    setActiveSources(null);
+    setActiveEventTypes(null);
+  };
 
   const loadedCount = allRows.length;
   const total = totalCount ?? loadedCount;
@@ -133,6 +252,131 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
     : loadedCount < total
       ? `${loadedCount} / ${total}`
       : `${loadedCount}`;
+
+  const filterPopover = (
+    <Popover opened={filterOpen} onChange={setFilterOpen} position="bottom-end" shadow="md" width={280} withinPortal>
+      <Popover.Target>
+        <ActionIcon
+          variant="default"
+          size={30}
+          style={{ position: "relative", border: "1px solid var(--color-border)", borderRadius: 4 }}
+          onClick={() => setFilterOpen((o) => !o)}
+          title={t("filters.filter")}
+        >
+          <IconFilter size={13} color={isFiltered ? "var(--color-accent)" : "var(--color-text-muted)"} />
+          {isFiltered && (
+            <Box style={{ position: "absolute", top: -4, insetInlineEnd: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontSize: 9, color: "white", fontWeight: 700, lineHeight: 1 }}>{filterCount}</Text>
+            </Box>
+          )}
+        </ActionIcon>
+      </Popover.Target>
+          <Popover.Dropdown p={14} onMouseDown={(e) => e.stopPropagation()}>
+            <Group justify="space-between" mb={10}>
+              <Text size="xs" fw={700} tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.06em" }}>{t("filters.title")}</Text>
+              {isFiltered && (
+                <Button size="compact-xs" variant="subtle" color="gray" onClick={resetFilters}>
+                  {t("filters.clearAll")}
+                </Button>
+              )}
+            </Group>
+
+            {/* Class — always shown */}
+            <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("history.columns.class")}</Text>
+            <Group gap={6} mb={12} wrap="wrap">
+              {ALL_CLASSES.map((cls) => {
+                const active = activeClasses.has(cls);
+                return (
+                  <Badge
+                    key={cls}
+                    size="sm"
+                    variant={active ? "filled" : "light"}
+                    color="dark"
+                    style={{ cursor: "pointer", textTransform: "capitalize" }}
+                    onClick={() => setActiveClasses((prev) => {
+                      const next = new Set(prev);
+                      // Don't allow zero classes — that would render an empty view
+                      // with no clear way back. Re-arm the toggled class instead.
+                      if (next.has(cls) && next.size === 1) return next;
+                      if (next.has(cls)) next.delete(cls);
+                      else next.add(cls);
+                      return next;
+                    })}
+                  >
+                    {t(`history.classes.${cls}`)}
+                  </Badge>
+                );
+              })}
+            </Group>
+
+            {/* Source — derived from currently loaded rows */}
+            {allDataSources.length > 0 && (
+              <>
+                <Divider color="var(--color-border)" mb={10} />
+                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("history.columns.source")}</Text>
+                <Group gap={6} mb={12} wrap="wrap">
+                  {allDataSources.map((src) => {
+                    // Mirrors the page-level pattern: `null` means "all sources
+                    // included", any explicit Set narrows. Toggling the last
+                    // remaining source flips back to null so the chip stays
+                    // visually active.
+                    const active = activeSources === null || activeSources.has(src);
+                    return (
+                      <Badge
+                        key={src}
+                        size="sm"
+                        variant={active ? "filled" : "light"}
+                        color={active ? "dark" : "gray"}
+                        style={{ cursor: "pointer", textTransform: "none" }}
+                        onClick={() => setActiveSources((prev) => {
+                          const base = prev ?? new Set(allDataSources);
+                          const next = new Set(base);
+                          if (next.has(src)) next.delete(src);
+                          else next.add(src);
+                          return next.size === allDataSources.length ? null : next;
+                        })}
+                      >
+                        {src}
+                      </Badge>
+                    );
+                  })}
+                </Group>
+              </>
+            )}
+
+            {/* Type — only when "event" class is in scope */}
+            {typeFilterApplicable && allEventTypes.length > 0 && (
+              <>
+                <Divider color="var(--color-border)" mb={10} />
+                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("history.columns.type")}</Text>
+                <Group gap={6} wrap="wrap">
+                  {allEventTypes.map((label) => {
+                    const active = activeEventTypes === null || activeEventTypes.has(label);
+                    return (
+                      <Badge
+                        key={label}
+                        size="sm"
+                        variant={active ? "filled" : "light"}
+                        color={active ? "dark" : "gray"}
+                        style={{ cursor: "pointer", textTransform: "none" }}
+                        onClick={() => setActiveEventTypes((prev) => {
+                          const base = prev ?? new Set(allEventTypes);
+                          const next = new Set(base);
+                          if (next.has(label)) next.delete(label);
+                          else next.add(label);
+                          return next.size === allEventTypes.length ? null : next;
+                        })}
+                      >
+                        {label}
+                      </Badge>
+                    );
+                  })}
+                </Group>
+              </>
+            )}
+      </Popover.Dropdown>
+    </Popover>
+  );
 
   return (
     <Box>
@@ -145,6 +389,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
         sortOrder={sortOrder}
         sortLabels={Object.fromEntries(Object.entries(HISTORY_SORT_LABEL_KEYS).map(([k, v]) => [k, t(`sort.${v}`)]))}
         onSortChange={(o) => onSortChange(o as HistorySortOrder)}
+        rightSlot={filterPopover}
       />
 
       <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
