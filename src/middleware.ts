@@ -3,7 +3,24 @@ import { isLocale, LOCALE_COOKIE } from "~/i18n/config";
 
 const API_URL = process.env.API_URL ?? "http://localhost:4000";
 const SESSION_VERIFY_TIMEOUT_MS = 3000;
+const MAX_VERIFY_ATTEMPTS = 2;
 const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
+/**
+ * verifySession returns a tri-state so middleware can distinguish
+ *   - "unauthorized": cookie genuinely rejected by the backend → logout
+ *   - "transient":    backend unreachable / 5xx after retries → fail-open
+ *   - { ok: true }:   verified session
+ *
+ * Failing open on transient errors is deliberate: a backend deploy or DB
+ * blip should not kick every signed-in user back to /auth/login.
+ * Downstream resolvers still enforce auth via the cookie on every request,
+ * so a fail-open here just means "don't preemptively log them out".
+ */
+type SessionResult =
+  | { ok: true; role: string; language: string }
+  | { ok: false; reason: "unauthorized" }
+  | { ok: false; reason: "transient" };
 
 /**
  * Middleware to protect routes that require authentication.
@@ -28,15 +45,31 @@ export async function middleware(request: NextRequest) {
     return redirectToLogin(request, pathname);
   }
 
-  // Validate the session by calling the auth backend
-  const session = await verifySession(sessionCookie.name, sessionCookie.value);
+  // Forward the full Cookie header so Better Auth can use its in-cookie
+  // session-data cache (configured in src/lib/auth.ts cookieCache). Forwarding
+  // just the session_token forces every middleware call to hit the DB, which
+  // is the root cause of timeout-driven logouts under load.
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  const result = await verifySession(cookieHeader);
 
-  if (!session) {
+  if (!result.ok && result.reason === "unauthorized") {
     return redirectToLogin(request, pathname);
   }
 
+  // Transient backend failure → let the request through. Downstream resolvers
+  // enforce auth via the same cookie, so a real intruder still can't read data.
+  if (!result.ok) {
+    // result.reason === "transient"
+    // Don't escalate to /admin without a verified role; bounce admins-only
+    // paths to /dashboard so the page still loads instead of looping.
+    if (pathname.startsWith("/admin")) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    return NextResponse.next();
+  }
+
   // Server-side admin route protection
-  if (pathname.startsWith("/admin") && session.role !== "admin") {
+  if (pathname.startsWith("/admin") && result.role !== "admin") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
@@ -45,8 +78,8 @@ export async function middleware(request: NextRequest) {
   // Seed the locale cookie from the user's persisted language preference so
   // client components never need to trigger a router refresh to apply it.
   const cookieLang = request.cookies.get(LOCALE_COOKIE)?.value;
-  if (isLocale(session.language) && session.language !== cookieLang) {
-    response.cookies.set(LOCALE_COOKIE, session.language, {
+  if (isLocale(result.language) && result.language !== cookieLang) {
+    response.cookies.set(LOCALE_COOKIE, result.language, {
       path: "/",
       maxAge: LOCALE_COOKIE_MAX_AGE,
       sameSite: "lax",
@@ -62,43 +95,65 @@ function redirectToLogin(request: NextRequest, pathname: string) {
   return NextResponse.redirect(loginUrl);
 }
 
-async function verifySession(
-  cookieName: string,
-  cookieValue: string,
-): Promise<{ role: string; language: string } | null> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      SESSION_VERIFY_TIMEOUT_MS,
-    );
+async function verifySession(cookieHeader: string): Promise<SessionResult> {
+  let lastFailure: string | null = null;
 
-    let res: Response;
+  for (let attempt = 1; attempt <= MAX_VERIFY_ATTEMPTS; attempt++) {
     try {
-      res = await fetch(`${API_URL}/api/auth/get-session`, {
-        headers: { Cookie: `${cookieName}=${cookieValue}` },
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeout);
+      const controller = new AbortController();
+      const timeout = setTimeout(
+        () => controller.abort(),
+        SESSION_VERIFY_TIMEOUT_MS,
+      );
+
+      let res: Response;
+      try {
+        res = await fetch(`${API_URL}/api/auth/get-session`, {
+          headers: { Cookie: cookieHeader },
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      // Cookie really is bad — short-circuit, don't retry.
+      if (res.status === 401 || res.status === 403) {
+        return { ok: false, reason: "unauthorized" };
+      }
+
+      // 5xx / unexpected status — retry once, then fail open so a transient
+      // backend issue doesn't log everyone out.
+      if (!res.ok) {
+        lastFailure = `status=${res.status}`;
+        continue;
+      }
+
+      const data = (await res.json()) as {
+        session?: { id: string } | null;
+        user?: { role?: string; language?: string } | null;
+      };
+
+      // No session/user payload from the backend = cookie didn't resolve to a
+      // valid session. Treat as unauthorized (not transient).
+      if (!data.session || !data.user) {
+        return { ok: false, reason: "unauthorized" };
+      }
+
+      return {
+        ok: true,
+        role: data.user.role?.toLowerCase() ?? "viewer",
+        language: data.user.language ?? "en",
+      };
+    } catch (err) {
+      // Abort/timeout or network error — retry.
+      lastFailure = err instanceof Error ? err.message : String(err);
     }
-
-    if (!res.ok) return null;
-
-    const data = (await res.json()) as {
-      session?: { id: string } | null;
-      user?: { role?: string; language?: string } | null;
-    };
-
-    if (!data.session || !data.user) return null;
-
-    return {
-      role: data.user.role?.toLowerCase() ?? "viewer",
-      language: data.user.language ?? "en",
-    };
-  } catch {
-    return null;
   }
+
+  console.warn(
+    `[middleware] get-session failed after ${MAX_VERIFY_ATTEMPTS} attempts (${lastFailure}); failing open`,
+  );
+  return { ok: false, reason: "transient" };
 }
 
 export const config = {
