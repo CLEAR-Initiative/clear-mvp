@@ -16,6 +16,13 @@ export interface CrisisMarker extends MapMarker {
   eventId?: string;
   /** Determines which detail page "View Details" navigates to */
   markerKind?: "event" | "signal" | "crisis";
+  /**
+   * ISO timestamp the marker actually happened at — events use
+   * firstSignalCreatedAt, signals use publishedAt. Crisis markers don't
+   * carry a date today, so the timeline filter skips them by treating
+   * `undefined` as "always visible".
+   */
+  occurredAt?: string;
   affectedPopulation?: number;
   cases?: number;
   status?: string;
@@ -96,6 +103,7 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
         eventId: event.id,
         markerKind: "event",
         status: event.alerts[0]?.status,
+        occurredAt: event.firstSignalCreatedAt,
       });
     } else {
       // No point on the event itself - fall back to signal point locations.
@@ -119,6 +127,7 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
                 eventId: event.id,
                 markerKind: "event",
                 status: event.alerts[0]?.status,
+                occurredAt: event.firstSignalCreatedAt,
               });
               break;
             }
@@ -155,6 +164,7 @@ export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
             dataSource: signal.source.name,
             eventId: signal.id,
             markerKind: "signal",
+            occurredAt: signal.publishedAt,
           });
           break;
         }

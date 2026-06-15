@@ -1778,6 +1778,10 @@
       "location": "Localisation",
       "fullMap": "Carte complète"
     },
+    "timeline": {
+      "title": "Chronologie",
+      "allTime": "Toute la période"
+    },
     "tokenMissing": "Jeton Mapbox non configuré. Définissez NEXT_PUBLIC_MAPBOX_TOKEN dans .env"
   },
   "nav": {

@@ -1786,6 +1786,10 @@
       "location": "الموقع",
       "fullMap": "الخريطة الكاملة"
     },
+    "timeline": {
+      "title": "الجدول الزمني",
+      "allTime": "كل الفترات"
+    },
     "tokenMissing": "لم يُهيَّأ رمز Mapbox. عيّن NEXT_PUBLIC_MAPBOX_TOKEN في ملف .env"
   },
   "nav": {
