@@ -107,7 +107,7 @@ function MobileNumberField() {
   const updateProfile = api.auth.updateProfile.useMutation({
     onSuccess: () => {
       setEditing(false);
-      void utils.auth.myUserDetails.invalidate();
+      void utils.invalidate();
       notifications.show({ title: tToasts("saved"), message: t("mobileUpdated"), color: "green", autoClose: 2000 });
     },
     onError: (err) => {
