@@ -53,14 +53,27 @@ export default getRequestConfig(async () => {
     }
   }
 
-  return {
-    locale,
-    timeZone,
-    messages: (
+  // Load the catalog for the active locale, falling back to English
+  // when one is missing. New locales (fa/ps for the AFG launch) can
+  // be added to `locales` in config.ts before their catalogs ship —
+  // the UI chrome stays English in the meantime while backend-
+  // translated content (crisis titles, event descriptions) still
+  // appears in the user's chosen locale.
+  let messages: typeof enMessages;
+  try {
+    messages = (
       (await import(`../../messages/${locale}.json`)) as {
         default: typeof enMessages;
       }
-    ).default,
+    ).default;
+  } catch {
+    messages = (await import("../../messages/en.json")).default;
+  }
+
+  return {
+    locale,
+    timeZone,
+    messages,
     formats: {
       dateTime: {
         short: { day: "numeric", month: "short", year: "numeric" },
