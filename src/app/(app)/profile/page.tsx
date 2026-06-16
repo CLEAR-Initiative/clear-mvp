@@ -293,14 +293,7 @@ function SettingsContent({ user }: { user: ProfileUser }) {
   const currentLocale = useLocale();
   const currentTimeZone = useTimeZone() ?? defaultTimeZone;
   const utils = api.useUtils();
-  const updateLanguage = api.auth.updateProfile.useMutation({
-    onSuccess: () => void utils.auth.myUserDetails.invalidate(),
-  });
 
-  // Language persists to the user profile (clear-api user.language) and to
-  // the locale cookie read by src/i18n/request.ts; timezone is cookie-only
-  // until the backend has a field for it. Changes apply immediately via a
-  // server-component refresh.
   const applyLocalePrefs = async (locale: string, timezone: string) => {
     try {
       await fetch("/api/locale", {
@@ -311,6 +304,18 @@ function SettingsContent({ user }: { user: ProfileUser }) {
       router.refresh();
     } catch { /* keep current preference on failure */ }
   };
+
+  // Language: save to backend first, then apply the locale cookie + refresh.
+  // Order matters: the middleware overwrites the locale cookie from the session
+  // on every request, so router.refresh() must fire after the backend has
+  // persisted the new language - otherwise the middleware resets the cookie
+  // back to the old value and the first pick appears to do nothing.
+  const updateLanguage = api.auth.updateProfile.useMutation({
+    onSuccess: (_, variables) => {
+      void utils.auth.myUserDetails.invalidate();
+      if (variables.language) void applyLocalePrefs(variables.language, currentTimeZone);
+    },
+  });
   const [activeTab, setActiveTab] = useState<string | null>("account");
 
   return (
@@ -404,10 +409,7 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                   size="sm"
                   value={currentLocale}
                   onChange={(v) => {
-                    if (isLocale(v)) {
-                      updateLanguage.mutate({ language: v });
-                      void applyLocalePrefs(v, currentTimeZone);
-                    }
+                    if (isLocale(v)) updateLanguage.mutate({ language: v });
                   }}
                   data={locales.map((locale) => ({
                     value: locale,
