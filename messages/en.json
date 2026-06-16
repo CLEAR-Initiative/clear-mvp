@@ -1778,6 +1778,10 @@
       "location": "Location",
       "fullMap": "Full map"
     },
+    "timeline": {
+      "title": "Timeline",
+      "allTime": "All time"
+    },
     "tokenMissing": "Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env"
   },
   "nav": {

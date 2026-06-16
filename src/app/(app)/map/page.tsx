@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -52,6 +52,7 @@ function FilterLabel({ children }: { children: string }) {
 
 export default function MapPage() {
   const t = useTranslations("map");
+  const format = useFormatter();
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>("alert");
 
@@ -59,8 +60,13 @@ export default function MapPage() {
   const { activeTeamId, activeTeam } = useTeam();
   const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
 
+  // Fetch every alert (published + archived) instead of just the currently-
+  // active ones. The timeline panel below lets the user scrub back through
+  // previous months, which only works if historical alerts are loaded; the
+  // active-only filter is still available downstream via the per-marker
+  // `status` field if a "current alerts only" toggle ever gets added.
   const alertsQuery = api.alerts.getAlerts.useQuery(
-    { activeOnly: true, teamId: activeTeamId },
+    { teamId: activeTeamId },
     { enabled: dataView === "alert" },
   );
   const eventsQuery = api.alerts.getEvents.useQuery(
@@ -128,16 +134,22 @@ export default function MapPage() {
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
 
-  // Resolve Sudan's location ID for scoping admin boundary queries.
-  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
+  // Resolve the currently-selected country's L0 ID for scoping admin
+  // boundary queries and for the country highlight overlay. Null when the
+  // user picked "All Countries" — in that case every country-scoped query
+  // below is disabled and the highlight overlay is dropped.
+  const focusCountryId = useMemo(
+    () => (selectedCountry !== "All Countries" ? getLocationId(selectedCountry) : null),
+    [selectedCountry, getLocationId],
+  );
 
   const a1Query = api.locations.getAdminBoundaries.useQuery(
-    { level: 1, countryId: sudanId ?? undefined },
-    { enabled: boundaryLevel === "A1" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    { level: 1, countryId: focusCountryId ?? undefined },
+    { enabled: boundaryLevel === "A1" && !!focusCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const a2Query = api.locations.getAdminBoundaries.useQuery(
-    { level: 2, countryId: sudanId ?? undefined },
-    { enabled: boundaryLevel === "A2" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    { level: 2, countryId: focusCountryId ?? undefined },
+    { enabled: boundaryLevel === "A2" && !!focusCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
 
   const adminBoundaries = useMemo(() => {
@@ -150,20 +162,21 @@ export default function MapPage() {
 
   // Population layer: A2 districts with population, lazy-loaded when first enabled.
   const populationQuery = api.locations.getPopulationBoundaries.useQuery(
-    { countryId: sudanId ?? undefined },
-    { enabled: showPopulation && !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+    { countryId: focusCountryId ?? undefined },
+    { enabled: showPopulation && !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
   const populationBoundaries = useMemo(
     () => (showPopulation ? (populationQuery.data ?? []) : []),
     [showPopulation, populationQuery.data],
   );
 
-  // Sudan L0 geometry - used for the country highlight instead of Mapbox's inaccurate tileset.
-  const sudanL0Query = api.locations.getById.useQuery(
-    { id: sudanId! },
-    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  // Country L0 geometry — used for the country highlight instead of Mapbox's
+  // inaccurate tileset. Re-runs whenever the user switches country.
+  const focusCountryL0Query = api.locations.getById.useQuery(
+    { id: focusCountryId! },
+    { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
-  const focusCountryGeometry = sudanL0Query.data?.geometry ?? undefined;
+  const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
 
   // Region zoom: fetch selected region geometry and fit map to it.
   const selectedRegionId = useMemo(
@@ -222,9 +235,22 @@ export default function MapPage() {
     return null;
   }, [selectedCountry, selectedRegion]);
 
-  /* ---- Filtered markers ---- */
-  const currentMarkers: MapMarker[] = useMemo(() => {
-    const filtered = allMarkers.filter((m) => {
+  // Timeline state. Stored as "YYYY-MM"; null means "all time".
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+
+  // Reset month when the data view changes — months derived from alerts
+  // won't match months derived from signals, so a stale selection would
+  // hide everything.
+  useEffect(() => {
+    setSelectedMonth(null);
+  }, [dataView]);
+
+  /* ---- Filtered markers (location + type, before time) ---- */
+  // Split into two passes so the timeline can derive its month chips from
+  // what's left after location/type filtering. That way picking Sudan
+  // doesn't make the timeline show Afghan-only months and vice versa.
+  const markersBeforeTime: CrisisMarker[] = useMemo(() => {
+    return allMarkers.filter((m) => {
       // Location filter (hierarchy + name fallback)
       if (selectedLocationId ?? selectedLocationName) {
         let matchesLocation = false;
@@ -250,13 +276,52 @@ export default function MapPage() {
 
       return true;
     });
-    return filtered;
   }, [
     allMarkers,
     selectedLocationId,
     selectedLocationName,
     selectedTypeCodes,
   ]);
+
+  // Distinct months present in the current location/type slice, sorted newest
+  // first. Markers with no `occurredAt` (e.g. crisis aggregates) are skipped —
+  // they show up regardless of which month is picked.
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of markersBeforeTime) {
+      if (!m.occurredAt) continue;
+      const d = new Date(m.occurredAt);
+      if (Number.isNaN(d.getTime())) continue;
+      // YYYY-MM — UTC so a marker that arrived at 23:30 on Jun 30 doesn't
+      // shift into July on east-of-UTC clients.
+      const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      set.add(ym);
+    }
+    return [...set].sort().reverse();
+  }, [markersBeforeTime]);
+
+  // Auto-clear the month selection if it's no longer in the current option
+  // set (happens when filtering down to a country/region that has no data
+  // for the previously-picked month).
+  useEffect(() => {
+    if (selectedMonth && !availableMonths.includes(selectedMonth)) {
+      setSelectedMonth(null);
+    }
+  }, [availableMonths, selectedMonth]);
+
+  /* ---- Apply timeline filter on top ---- */
+  const currentMarkers: MapMarker[] = useMemo(() => {
+    if (!selectedMonth) return markersBeforeTime;
+    return markersBeforeTime.filter((m) => {
+      // Markers without a known timestamp pass through — see availableMonths
+      // comment. Time-aware markers must match the picked YYYY-MM.
+      if (!m.occurredAt) return true;
+      const d = new Date(m.occurredAt);
+      if (Number.isNaN(d.getTime())) return true;
+      const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      return ym === selectedMonth;
+    });
+  }, [markersBeforeTime, selectedMonth]);
 
   /* ---- Handlers ---- */
   const handleCountryChange = (value: string | null) => {
@@ -375,6 +440,94 @@ export default function MapPage() {
           marker={selectedMarker}
           onClose={() => setSelectedMarker(null)}
         />
+      )}
+
+      {/* ===== Timeline (bottom overlay) ===== */}
+      {availableMonths.length > 0 && (
+        <Box
+          className="absolute bottom-0 left-0 right-0 z-10"
+          px={16}
+          py={10}
+          style={{
+            background: "linear-gradient(to top, var(--map-overlay-from) 60%, var(--map-overlay-to))",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            pointerEvents: "none",
+          }}
+        >
+          <Group
+            gap={8}
+            wrap="nowrap"
+            style={{
+              pointerEvents: "auto",
+              overflowX: "auto",
+              paddingBottom: 2,
+            }}
+          >
+            <Text
+              size="xs"
+              c="var(--color-text-muted)"
+              tt="uppercase"
+              style={{ ...LABEL_STYLE, flexShrink: 0, marginInlineEnd: 8 }}
+            >
+              {t("timeline.title")}
+            </Text>
+
+            {/* "All time" sentinel — clears the month filter */}
+            <button
+              type="button"
+              onClick={() => setSelectedMonth(null)}
+              style={{
+                flexShrink: 0,
+                padding: "4px 12px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                border: "1px solid",
+                borderColor: selectedMonth === null ? "var(--color-accent)" : "var(--color-border-dark)",
+                background: selectedMonth === null ? "var(--color-accent)" : "var(--color-bg-white)",
+                color: selectedMonth === null ? "white" : "var(--color-text-secondary)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {t("timeline.allTime")}
+            </button>
+
+            {/* Months — newest first (already sorted in availableMonths) */}
+            {availableMonths.map((ym) => {
+              // ym is "YYYY-MM"; build a Date on the 1st UTC so format.dateTime
+              // gets a stable instant regardless of viewer timezone.
+              const [yStr, mStr] = ym.split("-");
+              const y = Number(yStr);
+              const mo = Number(mStr);
+              const date = new Date(Date.UTC(y, mo - 1, 1));
+              const active = selectedMonth === ym;
+              return (
+                <button
+                  key={ym}
+                  type="button"
+                  onClick={() => setSelectedMonth(ym)}
+                  style={{
+                    flexShrink: 0,
+                    padding: "4px 12px",
+                    borderRadius: 999,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    border: "1px solid",
+                    borderColor: active ? "var(--color-accent)" : "var(--color-border-dark)",
+                    background: active ? "var(--color-accent)" : "var(--color-bg-white)",
+                    color: active ? "white" : "var(--color-text-secondary)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {format.dateTime(date, { month: "short", year: "numeric" })}
+                </button>
+              );
+            })}
+          </Group>
+        </Box>
       )}
 
       {/* Pulse animation for critical markers */}

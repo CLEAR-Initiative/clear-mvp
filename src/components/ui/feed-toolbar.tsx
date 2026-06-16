@@ -16,6 +16,12 @@ interface FeedToolbarProps {
   onSortChange: (order: string) => void;
   newCount?: number;
   onRefresh?: () => void;
+  /**
+   * Optional slot rendered after the sort menu, in the same toolbar row.
+   * Use for per-tab actions (e.g. a Filter popover) that should sit beside
+   * the sort control rather than stacking on a separate row.
+   */
+  rightSlot?: React.ReactNode;
 }
 
 export function FeedToolbar({
@@ -30,6 +36,7 @@ export function FeedToolbar({
   onSortChange,
   newCount = 0,
   onRefresh,
+  rightSlot,
 }: FeedToolbarProps) {
   const t = useTranslations("common.toolbar");
   const isNonDefault = sortOrder !== defaultSortKey;
@@ -106,6 +113,8 @@ export function FeedToolbar({
             ))}
           </Menu.Dropdown>
         </Menu>
+
+        {rightSlot}
       </Group>
     </>
   );
