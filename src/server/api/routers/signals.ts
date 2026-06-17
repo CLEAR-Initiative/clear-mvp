@@ -26,6 +26,13 @@ const SIGNAL_LIST_QUERY = `
   }
 `;
 
+// signal-detail-content reads `ev.signals` for the "related signals"
+// list and source counts. The nested `signals { ... }` shape stays
+// slim — id/title/description/publishedAt/source only, no locations,
+// no severity, no media. clear-api's Event.signals resolver also caps
+// returned signals at 50 (most recent first), so a signal whose
+// related events have hundreds of siblings doesn't explode the
+// payload.
 const SIGNAL_GET_QUERY = `
   query Signal($id: String!) {
     signal(id: $id) {
@@ -112,10 +119,16 @@ export const signalsRouter = createTRPCRouter({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      // Force English on the signal detail query — translation work
+      // through the SSH tunnel was wedging the page (multi-minute
+      // load + Node fetch timeouts). Product decision: signal detail
+      // renders canonical English for everyone regardless of locale.
+      // The `x-force-locale` header is read by clear-api's
+      // resolveLocale and overrides the cookie / user.language chain.
       const data = await graphqlFetch<{ signal: GqlSignalDetail | null }>(
         SIGNAL_GET_QUERY,
         { id: input.id },
-        cookieHeaders(ctx),
+        { ...cookieHeaders(ctx), "x-force-locale": "en" },
       );
       return data.signal;
     }),

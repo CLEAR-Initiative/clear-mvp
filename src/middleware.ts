@@ -2,7 +2,14 @@ import { type NextRequest, NextResponse } from "next/server";
 import { isLocale, LOCALE_COOKIE } from "~/i18n/config";
 
 const API_URL = process.env.API_URL ?? "http://localhost:4000";
-const SESSION_VERIFY_TIMEOUT_MS = 3000;
+// 8s per attempt × 2 attempts = 16s total budget. Bumped from 3s after
+// observing parallel middleware fan-out (1 page reload = multiple RSC
+// + tRPC requests, each runs middleware) saturate the get-session path
+// when Better Auth's cookieCache misses and falls through to Postgres.
+// Even a slow ~700ms first call comfortably fits, and the eventual cookie-
+// cache hit drops it to ~10ms — so the headroom is paid for by cold paths,
+// not steady state.
+const SESSION_VERIFY_TIMEOUT_MS = 8000;
 const MAX_VERIFY_ATTEMPTS = 2;
 const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 

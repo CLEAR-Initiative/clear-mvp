@@ -9,6 +9,18 @@ const LOCATION_FIELDS = `
   ancestors { id name level }
 `;
 
+// Slim location-fields for *list views*. The events/alerts feed renders
+// `location.name` for the card and `location.geometry` for the map
+// marker; `geometry` is cheap because the resolver caches per-request
+// via a WeakMap. What was expensive was `ancestors { ... }` (recursive
+// resolver) and `metadata` (separate sub-query) — dropping those gets
+// the list query off the heavy path while keeping map markers visible.
+// Detail pages keep using the full LOCATION_FIELDS (they need the
+// ancestor/metadata fallback chain).
+const LOCATION_LIST_FIELDS = `
+  id name level geometry
+`;
+
 const SIGNAL_FIELDS = `
   id
   source { id name type }
@@ -21,6 +33,25 @@ const SIGNAL_FIELDS = `
   generalLocation { ${LOCATION_FIELDS} }
   originLocation { ${LOCATION_FIELDS} }
   destinationLocation { ${LOCATION_FIELDS} }
+`;
+
+// Slim variant for the signals list view (signalsPage). The signals tab
+// only reads name from locations and skips collectedAt entirely; the
+// full SIGNAL_FIELDS for a 100-row history page kicks off 300 nested
+// LOCATION_FIELDS resolutions, each of which fans out into a separate
+// PostGIS query + recursive ancestor lookup — the same wedge that
+// stalled events / alerts at non-English locales.
+const SIGNAL_LIST_FIELDS = `
+  id
+  source { id name type }
+  title
+  description
+  severity
+  url
+  publishedAt
+  generalLocation { ${LOCATION_LIST_FIELDS} }
+  originLocation { ${LOCATION_LIST_FIELDS} }
+  destinationLocation { ${LOCATION_LIST_FIELDS} }
 `;
 
 const EVENT_FIELDS = `
@@ -38,6 +69,49 @@ const EVENT_FIELDS = `
   originLocation { ${LOCATION_FIELDS} }
   destinationLocation { ${LOCATION_FIELDS} }
   signals { ${SIGNAL_FIELDS} }
+  alerts { id status }
+`;
+
+// Slim variant for *list views* (eventsPage / alertsPage). The events
+// feed only reads `signals.length`, `signals[0].source.name`, and
+// `signals.some(s => sources.has(s.source.name))` — fetching the full
+// SIGNAL_FIELDS for every signal of every event in a page of 25 events
+// triggers thousands of nested location resolutions (each signal has
+// general/origin/destination locations, each with a name that, on
+// non-English locales, runs through `translationLoader.load("location",
+// id)`). That fan-out wedged the response for tens of seconds at
+// `locale=ar`. Detail pages and other call sites that *do* render full
+// signal cards keep using EVENT_FIELDS.
+// Slim signal shape nested inside EVENT_LIST_FIELDS. The events feed
+// reads `signals[].source.name` (count + filter), AND the map-marker
+// fallback walks `signals[].{general,origin,destination}Location` when
+// the event itself has a Polygon (not Point) geometry — so signal
+// locations need at minimum geometry + ancestorIds to render markers.
+// We deliberately skip name translation work at the signal level by
+// keeping the shape minimal: id, name, level, geometry, ancestorIds.
+const SIGNAL_NESTED_FOR_EVENT_LIST = `
+  id
+  source { name }
+  generalLocation { id name level geometry ancestorIds }
+  originLocation { id name level geometry ancestorIds }
+  destinationLocation { id name level geometry ancestorIds }
+`;
+
+const EVENT_LIST_FIELDS = `
+  id
+  title
+  description
+  types
+  severity
+  isDummy
+  rank
+  firstSignalCreatedAt
+  lastSignalCreatedAt
+  populationAffected
+  generalLocation { ${LOCATION_LIST_FIELDS} }
+  originLocation { ${LOCATION_LIST_FIELDS} }
+  destinationLocation { ${LOCATION_LIST_FIELDS} }
+  signals { ${SIGNAL_NESTED_FOR_EVENT_LIST} }
   alerts { id status }
 `;
 
@@ -106,7 +180,7 @@ const ALERTS_PAGE_QUERY = `
       items {
         id
         status
-        event { ${EVENT_FIELDS} }
+        event { ${EVENT_LIST_FIELDS} }
       }
     }
   }
@@ -117,7 +191,7 @@ const EVENTS_PAGE_QUERY = `
     eventsPage(input: $input) {
       totalCount
       hasMore
-      items { ${EVENT_FIELDS} }
+      items { ${EVENT_LIST_FIELDS} }
     }
   }
 `;
@@ -127,7 +201,7 @@ const SIGNALS_PAGE_QUERY = `
     signalsPage(input: $input) {
       totalCount
       hasMore
-      items { ${SIGNAL_FIELDS} }
+      items { ${SIGNAL_LIST_FIELDS} }
     }
   }
 `;
