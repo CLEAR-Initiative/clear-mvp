@@ -30,6 +30,24 @@ const LOCATION_FIELDS = `
   ancestors { id name level population metadata { type data } }
 `;
 
+// Slim location shape for nested contexts (signal locations, event
+// locations inside a crisis, locations on the crisis-list view). Drops
+// the recursive ancestors+metadata walk because that's what was making
+// the payload blow past the SSH tunnel's effective throughput on the
+// /detection event-detail page at non-English locales (see 2026-06-17
+// incident). Each nested location now ships ~100B instead of 100KB-MB.
+const NESTED_LOCATION_FIELDS = `
+  id name level geoId ancestorIds geometry population
+  parent { id name }
+  metadata { type data }
+`;
+
+// Slim signal-location shape for map markers — only what
+// crisis-detail-content actually reads.
+const SIGNAL_LOCATION_FIELDS = `
+  id name level geometry
+`;
+
 const SIGNAL_FIELDS = `
   id
   source { id name type baseUrl infoUrl }
@@ -39,9 +57,9 @@ const SIGNAL_FIELDS = `
   url
   publishedAt
   collectedAt
-  generalLocation { ${LOCATION_FIELDS} }
-  originLocation { ${LOCATION_FIELDS} }
-  destinationLocation { ${LOCATION_FIELDS} }
+  generalLocation { ${SIGNAL_LOCATION_FIELDS} }
+  originLocation { ${SIGNAL_LOCATION_FIELDS} }
+  destinationLocation { ${SIGNAL_LOCATION_FIELDS} }
 `;
 
 const EVENT_FIELDS = `
@@ -56,9 +74,9 @@ const EVENT_FIELDS = `
   lastSignalCreatedAt
   populationAffected
   populationDisplaced
-  generalLocation { ${LOCATION_FIELDS} }
-  originLocation { ${LOCATION_FIELDS} }
-  destinationLocation { ${LOCATION_FIELDS} }
+  generalLocation { ${NESTED_LOCATION_FIELDS} }
+  originLocation { ${NESTED_LOCATION_FIELDS} }
+  destinationLocation { ${NESTED_LOCATION_FIELDS} }
   signals { ${SIGNAL_FIELDS} }
   alerts { id status }
 `;
@@ -83,7 +101,7 @@ const CRISIS_LIST_FIELDS = `
   title
   summary
   severity
-  generalLocation { ${LOCATION_FIELDS} }
+  generalLocation { ${NESTED_LOCATION_FIELDS} }
   needs
   populationAffected
   populationInArea

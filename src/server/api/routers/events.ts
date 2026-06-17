@@ -10,6 +10,36 @@ const LOCATION_FIELDS = `
   ancestors { id name level population metadata { type data } }
 `;
 
+// Slim location shape for the event detail page's get-by-id query. We
+// drop the recursive ancestors walk (with per-ancestor metadata) because
+// it pushes the response over the SSH tunnel's effective throughput
+// when admin polygons are large — 3 locations × ~4 ancestors × full
+// metadata at ar locale was causing 5-minute fetch failures.
+//
+// Trade-off: the IDP-displacement fallback on event detail (lines
+// 220-238 of event-detail-content.tsx) walks `loc.ancestors[*].metadata`
+// for `iom_dtm_displacement`. With this slim shape the fallback only
+// finds the metadata when it's on the event's *direct* location, not
+// when only an ancestor has it. Acceptable degradation in exchange for
+// the page actually loading.
+const EVENT_DETAIL_LOCATION_FIELDS = `
+  id name level geoId ancestorIds geometry population
+  parent { id name }
+  metadata { type data }
+`;
+
+// Signal locations on the event-detail page are only used to plot
+// map points (event-detail-content.tsx reads `loc.geometry`/`name` and
+// nothing else from signal locations). Fetching the full LOCATION_FIELDS
+// per signal (ancestors with metadata, parent, population, etc.) ×3
+// per signal ×N signals exploded the resolver fan-out at non-English
+// locales and stalled the detail page. The event's *own* location keeps
+// LOCATION_FIELDS below because the IDP-displacement fallback walks
+// `event.generalLocation.ancestors[*].metadata`.
+const SIGNAL_LOCATION_FIELDS = `
+  id name level geometry
+`;
+
 const SIGNAL_FIELDS = `
   id
   source { id name type }
@@ -19,9 +49,9 @@ const SIGNAL_FIELDS = `
   url
   publishedAt
   collectedAt
-  generalLocation { ${LOCATION_FIELDS} }
-  originLocation { ${LOCATION_FIELDS} }
-  destinationLocation { ${LOCATION_FIELDS} }
+  generalLocation { ${SIGNAL_LOCATION_FIELDS} }
+  originLocation { ${SIGNAL_LOCATION_FIELDS} }
+  destinationLocation { ${SIGNAL_LOCATION_FIELDS} }
 `;
 
 const EVENT_FIELDS = `
@@ -53,10 +83,76 @@ const EVENT_LIST_QUERY = `
   }
 `;
 
+// Slim event shape used only by the `related` procedure. The related
+// matcher reads id/types/validFrom and the (level, ancestors) of any one
+// location to decide whether two events share geography; it does NOT
+// render any event fields directly. Fetching the full EVENT_FIELDS for
+// every event in the system (hundreds–thousands of rows × translation
+// loader + per-location geometry/ancestors) was wedging detail-page
+// loads at non-English locales. Keep this in sync with the matcher
+// logic in `related:` below.
+const EVENT_RELATED_PAGE_QUERY = `
+  query EventsForRelated($input: EventsPageInput) {
+    eventsPage(input: $input) {
+      items {
+        id
+        types
+        validFrom
+        generalLocation { id level ancestors { id level } }
+        originLocation { id level ancestors { id level } }
+        destinationLocation { id level ancestors { id level } }
+      }
+    }
+  }
+`;
+
+// Current event lookup for the `related` matcher: we need its
+// validFrom (to centre the time window), its types (to match disaster
+// category), and one location with ancestors (to derive the geo
+// anchor). Avoids re-finding it inside the windowed result, which
+// would force us to include the centre event in the window query.
+const CURRENT_EVENT_FOR_RELATED = `
+  query CurrentEventForRelated($id: String!) {
+    event(id: $id) {
+      id
+      types
+      validFrom
+      generalLocation { id level ancestors { id level } }
+      originLocation { id level ancestors { id level } }
+      destinationLocation { id level ancestors { id level } }
+    }
+  }
+`;
+
+// Slim EVENT_FIELDS variant for the event detail page. Substitutes
+// EVENT_DETAIL_LOCATION_FIELDS (no recursive ancestors walk) for the
+// 3 event-level location fields. Everything else identical. See the
+// rationale on EVENT_DETAIL_LOCATION_FIELDS.
+const EVENT_DETAIL_FIELDS = `
+  id
+  title
+  description
+  types
+  severity
+  isDummy
+  rank
+  validFrom
+  validTo
+  firstSignalCreatedAt
+  lastSignalCreatedAt
+  populationAffected
+  casualties
+  generalLocation { ${EVENT_DETAIL_LOCATION_FIELDS} }
+  originLocation { ${EVENT_DETAIL_LOCATION_FIELDS} }
+  destinationLocation { ${EVENT_DETAIL_LOCATION_FIELDS} }
+  signals { ${SIGNAL_FIELDS} }
+  alerts { id status }
+`;
+
 const EVENT_GET_QUERY = `
   query Event($id: String!) {
     event(id: $id) {
-      ${EVENT_FIELDS}
+      ${EVENT_DETAIL_FIELDS}
     }
   }
 `;
@@ -102,10 +198,41 @@ export const eventsRouter = createTRPCRouter({
   related: protectedProcedure
     .input(z.object({ id: z.string(), teamId: z.string().nullish() }))
     .query(async ({ ctx, input }) => {
+      // First fetch the current event by id (cheap, one row) so we can
+      // centre the ±5d window on its validFrom. Doing this server-side
+      // instead of having the caller pass validFrom keeps the public
+      // procedure shape unchanged and avoids the detail page needing
+      // to gate this query on its sibling `get` query.
+      const currentData = await graphqlFetch<{ event: GqlEvent | null }>(
+        CURRENT_EVENT_FOR_RELATED,
+        { id: input.id },
+        cookieHeaders(ctx),
+      );
+      const current = currentData.event;
+      if (!current) return [];
+
+      const currentTime = new Date(current.validFrom).getTime();
+      const fiveDays = 5 * 24 * 60 * 60 * 1000;
+      // Pass the window to the API via eventsPage's from/to filter,
+      // which translates to `firstSignalCreatedAt BETWEEN ...`. That's a
+      // close-enough proxy for validFrom in practice (the first signal
+      // typically lands within a day of the event start); the JS filter
+      // below tightens it to a strict validFrom comparison anyway.
+      const from = new Date(currentTime - fiveDays).toISOString();
+      const to = new Date(currentTime + fiveDays).toISOString();
+
       const [eventsData, typesData] = await Promise.all([
-        graphqlFetch<{ events: GqlEvent[] }>(
-          EVENT_LIST_QUERY,
-          { teamId: input.teamId ?? undefined, includeDummy: false },
+        graphqlFetch<{ eventsPage: { items: GqlEvent[] } }>(
+          EVENT_RELATED_PAGE_QUERY,
+          {
+            input: {
+              teamId: input.teamId ?? undefined,
+              includeDummy: false,
+              from,
+              to,
+              limit: 500,
+            },
+          },
           cookieHeaders(ctx),
         ),
         graphqlFetch<{ disasterTypes: { glideNumber: string; level1: string }[] }>(
@@ -115,9 +242,7 @@ export const eventsRouter = createTRPCRouter({
         ),
       ]);
 
-      const allEvents = eventsData.events;
-      const current = allEvents.find((e) => e.id === input.id);
-      if (!current) return [];
+      const candidates = eventsData.eventsPage.items;
 
       const codeToL1 = new Map(typesData.disasterTypes.map((t) => [t.glideNumber, t.level1]));
       // Use only the primary (first) type for matching - secondary types like "ce"
@@ -145,10 +270,7 @@ export const eventsRouter = createTRPCRouter({
         }
       }
 
-      const currentTime = new Date(current.validFrom).getTime();
-      const fiveDays = 5 * 24 * 60 * 60 * 1000;
-
-      return allEvents.filter((e) => {
+      return candidates.filter((e) => {
         if (e.id === input.id) return false;
         if (Math.abs(new Date(e.validFrom).getTime() - currentTime) > fiveDays) return false;
         if (primaryL1) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
-import { httpBatchStreamLink, loggerLink } from "@trpc/client";
+import { httpBatchLink, loggerLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import { type inferRouterInputs, type inferRouterOutputs } from "@trpc/server";
 import { useState } from "react";
@@ -35,7 +35,16 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
             process.env.NODE_ENV === "development" ||
             (op.direction === "down" && op.result instanceof Error),
         }),
-        httpBatchStreamLink({
+        // httpBatchLink waits for all procedures in a batch to finish
+        // before sending the response, vs httpBatchStreamLink which
+        // streams each procedure's result as it completes. We hit a
+        // case at non-English locales where the slow procedures
+        // (locations.tree + signals.get) had their stream chunks
+        // dropped — fast procedures arrived but the slow ones never
+        // resolved on the client, leaving React Query stuck in
+        // isLoading forever. Switching to httpBatchLink trades the
+        // streaming progressiveness for guaranteed delivery.
+        httpBatchLink({
           transformer: SuperJSON,
           url: getBaseUrl() + "/api/trpc",
           headers: () => {
