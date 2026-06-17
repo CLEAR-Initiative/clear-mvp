@@ -54,11 +54,7 @@ export default getRequestConfig(async () => {
   }
 
   // Load the catalog for the active locale, falling back to English
-  // when one is missing. New locales (fa/ps for the AFG launch) can
-  // be added to `locales` in config.ts before their catalogs ship —
-  // the UI chrome stays English in the meantime while backend-
-  // translated content (crisis titles, event descriptions) still
-  // appears in the user's chosen locale.
+  // when one is missing.
   let messages: typeof enMessages;
   try {
     messages = (
