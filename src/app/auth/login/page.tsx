@@ -13,8 +13,6 @@ import {
   Checkbox,
   Alert,
   Stack,
-  SimpleGrid,
-  Divider,
   Anchor,
   Group,
 } from "@mantine/core";
@@ -66,13 +64,6 @@ function LoginForm() {
       setLoading(false);
     }
   };
-
-  // labelKey: i18n keys under auth.login.demo.* - resolved via t() at render time.
-  const demoUsers = [
-    { labelKey: "admin", email: "admin@clear.dev" },
-    { labelKey: "analyst", email: "analyst@clear.dev" },
-    { labelKey: "viewer", email: "viewer@clear.dev" },
-  ] as const;
 
   return (
     <Box
@@ -174,27 +165,6 @@ function LoginForm() {
             </Stack>
           </form>
 
-          {/* Demo Users */}
-          <Divider my={20} label={t("demo.divider")} labelPosition="center" />
-          <Box p={12} style={{ backgroundColor: "var(--color-bg-muted)" }}>
-            <Text size="xs" c="var(--color-text-muted)" mb={8}>
-              {t("demo.hint")}
-            </Text>
-            <SimpleGrid cols={1} spacing={4}>
-              {demoUsers.map((user) => (
-                <Text
-                  key={user.email}
-                  size="xs"
-                  fw={600}
-                  c="var(--color-text-primary)"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => setEmail(user.email)}
-                >
-                  {t("demo.line", { label: t(`demo.${user.labelKey}`), email: user.email })}
-                </Text>
-              ))}
-            </SimpleGrid>
-          </Box>
         </Card>
 
         {/* Footer */}
