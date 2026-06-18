@@ -316,7 +316,20 @@ export const teamsRouter = createTRPCRouter({
     }),
 
   addTeamMember: protectedProcedure
-    .input(z.object({ teamId: z.string(), userId: z.string(), role: z.string().optional() }))
+    .input(z.object({
+      teamId: z.string(),
+      userId: z.string(),
+      role: z
+        .enum([
+          "lead",
+          "analyst",
+          "viewer",
+          "team_admin",
+          "field_coordinator",
+          "team_member",
+        ])
+        .optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ addTeamMember: TeamMember }>(
         ADD_TEAM_MEMBER,
@@ -338,7 +351,18 @@ export const teamsRouter = createTRPCRouter({
     }),
 
   updateTeamMemberRole: protectedProcedure
-    .input(z.object({ teamId: z.string(), userId: z.string(), role: z.string() }))
+    .input(z.object({
+      teamId: z.string(),
+      userId: z.string(),
+      role: z.enum([
+        "lead",
+        "analyst",
+        "viewer",
+        "team_admin",
+        "field_coordinator",
+        "team_member",
+      ]),
+    }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ updateTeamMemberRole: TeamMember }>(
         UPDATE_TEAM_MEMBER_ROLE,

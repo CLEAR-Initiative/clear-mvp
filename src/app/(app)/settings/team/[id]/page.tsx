@@ -23,11 +23,30 @@ import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { TeamLocation } from "~/lib/types/teams";
 
+const TEAM_ROLE_OPTIONS = [
+  "lead",
+  "analyst",
+  "viewer",
+  "team_admin",
+  "field_coordinator",
+  "team_member",
+] as const;
+type TeamRole = (typeof TEAM_ROLE_OPTIONS)[number];
+
+function isTeamRole(v: string): v is TeamRole {
+  return (TEAM_ROLE_OPTIONS as readonly string[]).includes(v);
+}
+
+// Roles with admin-level privileges over a team. Legacy "lead" and new
+// "team_admin" are equivalent for permission checks.
+const TEAM_ADMIN_ROLES = new Set(["lead", "team_admin"]);
+
 export default function TeamSettingsPage() {
   const t = useTranslations("settings.team");
   const tCommon = useTranslations("common.actions");
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const meQuery = api.auth.me.useQuery();
   const teamQuery = api.teams.team.useQuery({ id });
   // Fetch the parent org so we can offer its members as a dropdown for "Add
   // member" - only fires once we know the org id from the team query.
@@ -54,9 +73,35 @@ export default function TeamSettingsPage() {
   const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([]);
 
   const [newMemberId, setNewMemberId] = useState("");
-  const [newMemberRole, setNewMemberRole] = useState("analyst");
+  const [newMemberRole, setNewMemberRole] = useState<TeamRole>("analyst");
 
   const team = teamQuery.data;
+  const currentUser = meQuery.data?.user;
+
+  // Whether the current user may add/remove team members and change their
+  // roles. The clear-api resolvers already gate the underlying mutations
+  // with the same predicate (global admin, org owner/admin, or team
+  // lead/team_admin); this just hides the controls so non-admins don't see
+  // dead UI.
+  const isOrgAdmin = useMemo(() => {
+    if (!currentUser) return false;
+    if (currentUser.role === "admin") return true;
+    const orgMembership = currentUser.organisations?.find(
+      (o) => o.organisationId === orgId,
+    );
+    return Boolean(
+      orgMembership && ["owner", "admin"].includes(orgMembership.role),
+    );
+  }, [currentUser, orgId]);
+
+  const canManageRoles = useMemo(() => {
+    if (isOrgAdmin) return true;
+    if (!currentUser) return false;
+    const teamMembership = team?.members?.find(
+      (m) => m.user.id === currentUser.id,
+    );
+    return Boolean(teamMembership && TEAM_ADMIN_ROLES.has(teamMembership.role));
+  }, [isOrgAdmin, currentUser, team?.members]);
 
   // Org members not yet in the team - Mantine Select shape.
   const addableMembers = useMemo(() => {
@@ -66,7 +111,9 @@ export default function TeamSettingsPage() {
       .filter((m) => !inTeam.has(m.user.id))
       .map((m) => ({
         value: m.user.id,
-        label: m.user.name ? `${m.user.name} (${m.user.email})` : m.user.email,
+        label: m.user.name
+          ? `${m.user.name} (${m.user.email ?? "—"})`
+          : (m.user.email ?? "—"),
       }));
   }, [orgQuery.data, team?.members]);
 
@@ -136,6 +183,7 @@ export default function TeamSettingsPage() {
   }
 
   async function handleRoleChange(userId: string, role: string) {
+    if (!isTeamRole(role)) return;
     await updateRole.mutateAsync({ teamId: id, userId, role });
     void utils.teams.team.invalidate({ id });
   }
@@ -165,7 +213,7 @@ export default function TeamSettingsPage() {
         <Box>
           <Group justify="space-between" mb="sm">
             <Title order={4}>{t("details.title")}</Title>
-            {!editing && (
+            {!editing && canManageRoles && (
               <Button variant="subtle" size="xs" onClick={startEditing}>
                 {tCommon("edit")}
               </Button>
@@ -203,82 +251,92 @@ export default function TeamSettingsPage() {
                 <Table.Th>{t("members.columns.name")}</Table.Th>
                 <Table.Th>{t("members.columns.email")}</Table.Th>
                 <Table.Th>{t("members.columns.role")}</Table.Th>
-                <Table.Th />
+                {canManageRoles && <Table.Th />}
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {team.members?.map((m) => (
                 <Table.Tr key={m.id}>
                   <Table.Td>{m.user.name}</Table.Td>
-                  <Table.Td>{m.user.email}</Table.Td>
+                  <Table.Td>{m.user.email ?? "—"}</Table.Td>
                   <Table.Td>
-                    <Select
-                      data={["lead", "analyst", "viewer"]}
-                      value={m.role}
-                      onChange={(v) => v && handleRoleChange(m.user.id, v)}
-                      size="xs"
-                      w={110}
-                    />
+                    {canManageRoles ? (
+                      <Select
+                        data={[...TEAM_ROLE_OPTIONS]}
+                        value={m.role}
+                        onChange={(v) => v && handleRoleChange(m.user.id, v)}
+                        size="xs"
+                        w={150}
+                      />
+                    ) : (
+                      <Text size="sm">{m.role}</Text>
+                    )}
                   </Table.Td>
-                  <Table.Td>
-                    <ActionIcon
-                      variant="subtle"
-                      color="red"
-                      size="sm"
-                      onClick={() => handleRemoveMember(m.user.id)}
-                      loading={removeMember.isPending}
-                    >
-                      <IconTrash size={14} />
-                    </ActionIcon>
-                  </Table.Td>
+                  {canManageRoles && (
+                    <Table.Td>
+                      <ActionIcon
+                        variant="subtle"
+                        color="red"
+                        size="sm"
+                        onClick={() => handleRemoveMember(m.user.id)}
+                        loading={removeMember.isPending}
+                      >
+                        <IconTrash size={14} />
+                      </ActionIcon>
+                    </Table.Td>
+                  )}
                 </Table.Tr>
               ))}
             </Table.Tbody>
           </Table>
-          <Group mt="sm" gap="sm" align="flex-end">
-            <Select
-              label={t("members.addMemberLabel")}
-              placeholder={
-                orgQuery.isLoading
-                  ? t("members.loadingPlaceholder")
-                  : addableMembers.length === 0
-                    ? t("members.allInTeam")
-                    : t("members.selectUserPlaceholder")
-              }
-              data={addableMembers}
-              value={newMemberId || null}
-              onChange={(v) => setNewMemberId(v ?? "")}
-              disabled={orgQuery.isLoading || addableMembers.length === 0}
-              size="xs"
-              searchable
-              nothingFoundMessage={t("members.noMatchingUsers")}
-              w={280}
-            />
-            <Select
-              label={t("members.roleLabel")}
-              data={["lead", "analyst", "viewer"]}
-              value={newMemberRole}
-              onChange={(v) => setNewMemberRole(v ?? "analyst")}
-              size="xs"
-              w={110}
-            />
-            <Button
-              size="xs"
-              leftSection={<IconPlus size={14} />}
-              onClick={handleAddMember}
-              loading={addMember.isPending}
-              disabled={!newMemberId}
-            >
-              {t("members.add")}
-            </Button>
-          </Group>
+          {canManageRoles && (
+            <Group mt="sm" gap="sm" align="flex-end">
+              <Select
+                label={t("members.addMemberLabel")}
+                placeholder={
+                  orgQuery.isLoading
+                    ? t("members.loadingPlaceholder")
+                    : addableMembers.length === 0
+                      ? t("members.allInTeam")
+                      : t("members.selectUserPlaceholder")
+                }
+                data={addableMembers}
+                value={newMemberId || null}
+                onChange={(v) => setNewMemberId(v ?? "")}
+                disabled={orgQuery.isLoading || addableMembers.length === 0}
+                size="xs"
+                searchable
+                nothingFoundMessage={t("members.noMatchingUsers")}
+                w={280}
+              />
+              <Select
+                label={t("members.roleLabel")}
+                data={[...TEAM_ROLE_OPTIONS]}
+                value={newMemberRole}
+                onChange={(v) =>
+                  setNewMemberRole(v && isTeamRole(v) ? v : "analyst")
+                }
+                size="xs"
+                w={150}
+              />
+              <Button
+                size="xs"
+                leftSection={<IconPlus size={14} />}
+                onClick={handleAddMember}
+                loading={addMember.isPending}
+                disabled={!newMemberId}
+              >
+                {t("members.add")}
+              </Button>
+            </Group>
+          )}
         </Box>
 
         {/* ── Location Scope ──────────────────── */}
         <Box>
           <Group justify="space-between" mb="sm">
             <Title order={4}>{t("locations.title")}</Title>
-            {!editingLocations && (
+            {!editingLocations && canManageRoles && (
               <Button variant="subtle" size="xs" onClick={startEditingLocations}>
                 {tCommon("edit")}
               </Button>
@@ -322,24 +380,26 @@ export default function TeamSettingsPage() {
         </Box>
 
         {/* ── Danger Zone ─────────────────────── */}
-        <Box
-          p="md"
-          style={{
-            border: "1px solid #FCA5A5",
-            borderRadius: 8,
-            background: "#FEF2F2",
-          }}
-        >
-          <Title order={4} c="red" mb="xs">
-            {t("danger.title")}
-          </Title>
-          <Text size="sm" mb="sm">
-            {t("danger.warning")}
-          </Text>
-          <Button color="red" variant="outline" size="xs" onClick={handleDelete} loading={deleteTeam.isPending}>
-            {t("danger.delete")}
-          </Button>
-        </Box>
+        {isOrgAdmin && (
+          <Box
+            p="md"
+            style={{
+              border: "1px solid #FCA5A5",
+              borderRadius: 8,
+              background: "#FEF2F2",
+            }}
+          >
+            <Title order={4} c="red" mb="xs">
+              {t("danger.title")}
+            </Title>
+            <Text size="sm" mb="sm">
+              {t("danger.warning")}
+            </Text>
+            <Button color="red" variant="outline" size="xs" onClick={handleDelete} loading={deleteTeam.isPending}>
+              {t("danger.delete")}
+            </Button>
+          </Box>
+        )}
       </Stack>
     </Box>
   );

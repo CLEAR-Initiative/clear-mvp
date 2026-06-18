@@ -2204,7 +2204,10 @@
         "teamRoles": {
           "viewer": "Viewer",
           "analyst": "Analyst",
-          "lead": "Lead"
+          "lead": "Lead",
+          "team_member": "Team member",
+          "field_coordinator": "Field coordinator",
+          "team_admin": "Team admin"
         },
         "selectAtLeastOneTeam": "Select at least one team",
         "send": "Send Invitation"

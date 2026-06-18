@@ -153,7 +153,14 @@ export const invitationsRouter = createTRPCRouter({
           .array(
             z.object({
               teamId: z.string(),
-              teamRole: z.enum(["lead", "analyst", "viewer"]),
+              teamRole: z.enum([
+                "lead",
+                "analyst",
+                "viewer",
+                "team_admin",
+                "field_coordinator",
+                "team_member",
+              ]),
             }),
           )
           .min(1, "At least one team must be selected"),

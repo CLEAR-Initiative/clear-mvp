@@ -23,7 +23,13 @@ import { useTranslations } from "next-intl";
 import { IconPlus, IconTrash, IconUserPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 
-type TeamRole = "lead" | "analyst" | "viewer";
+type TeamRole =
+  | "lead"
+  | "analyst"
+  | "viewer"
+  | "team_admin"
+  | "field_coordinator"
+  | "team_member";
 
 function slugify(value: string) {
   return value
@@ -206,7 +212,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
   const existingMemberIds = new Set(org.members?.map((m) => m.user.id) ?? []);
   const userOptions = (usersQuery.data?.users ?? [])
     .filter((u) => !existingMemberIds.has(u.id) && u.isActive)
-    .map((u) => ({ value: u.id, label: `${u.name} (${u.email})` }));
+    .map((u) => ({ value: u.id, label: `${u.name} (${u.email ?? "—"})` }));
 
   function startEditing() {
     if (!org) return;
@@ -328,7 +334,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
             {org.members?.map((m) => (
               <Table.Tr key={m.id}>
                 <Table.Td>{m.user.name}</Table.Td>
-                <Table.Td>{m.user.email}</Table.Td>
+                <Table.Td>{m.user.email ?? "—"}</Table.Td>
                 <Table.Td>
                   <Badge size="sm" variant="light">
                     {m.role}
@@ -556,9 +562,12 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
                           { value: "viewer", label: t("invite.teamRoles.viewer") },
                           { value: "analyst", label: t("invite.teamRoles.analyst") },
                           { value: "lead", label: t("invite.teamRoles.lead") },
+                          { value: "team_member", label: t("invite.teamRoles.team_member") },
+                          { value: "field_coordinator", label: t("invite.teamRoles.field_coordinator") },
+                          { value: "team_admin", label: t("invite.teamRoles.team_admin") },
                         ]}
                         disabled={!isSelected}
-                        w={110}
+                        w={140}
                       />
                     </Group>
                   );

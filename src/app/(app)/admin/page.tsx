@@ -576,7 +576,7 @@ function UsersPanel() {
                         color: colors.textSecondary,
                       }}
                     >
-                      {user.email}
+                      {user.email ?? "—"}
                     </Text>
                   </Table.Td>
 
