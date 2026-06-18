@@ -2214,7 +2214,10 @@
         "teamRoles": {
           "viewer": "مشاهد",
           "analyst": "محلل",
-          "lead": "قائد"
+          "lead": "قائد",
+          "team_member": "عضو فريق",
+          "field_coordinator": "منسق ميداني",
+          "team_admin": "مدير الفريق"
         },
         "selectAtLeastOneTeam": "اختر فريقاً واحداً على الأقل",
         "send": "إرسال الدعوة"

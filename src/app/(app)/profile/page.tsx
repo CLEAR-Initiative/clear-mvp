@@ -353,7 +353,7 @@ function SettingsContent({ user }: { user: ProfileUser }) {
               <Group justify="space-between" align="center">
                 <Box>
                   <Text size="xs" c="var(--color-text-muted)" mb={4}>{t("info.email")}</Text>
-                  <Text size="sm" fw={500}>{user.email}</Text>
+                  <Text size="sm" fw={500}>{user.email ?? "—"}</Text>
                 </Box>
                 <Button
                   component={Link}
