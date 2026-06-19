@@ -203,7 +203,12 @@ export default function TeamSettingsPage() {
             {team.organisation.name}
           </Text>
         </Box>
-        <Button variant="subtle" size="xs" component="a" href="/settings/org">
+        <Button
+          variant="subtle"
+          size="xs"
+          component="a"
+          href={`/settings/org?id=${team.organisation.id}`}
+        >
           {t("backToOrg")}
         </Button>
       </Group>
