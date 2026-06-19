@@ -21,6 +21,7 @@ import {
   crisesToMarkers,
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
+import { countryConfig } from "~/lib/constants/country-config";
 import { MapPanelBar } from "./_components/map-panel-bar";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
@@ -415,8 +416,14 @@ export default function MapPage() {
         zoom={mapZoom}
         className="w-full h-full"
         onMarkerClick={handleMarkerClick}
-        focusCountryPCode="SD"
-        focusCountryName="Sudan"
+        focusCountryPCode={
+          selectedCountry !== "All Countries"
+            ? countryConfig[selectedCountry]?.pCode
+            : undefined
+        }
+        focusCountryName={
+          selectedCountry !== "All Countries" ? selectedCountry : undefined
+        }
         focusCountryGeometry={focusCountryGeometry}
         adminBoundaries={adminBoundaries}
         adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}

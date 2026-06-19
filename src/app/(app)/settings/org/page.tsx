@@ -1,7 +1,8 @@
 "use client";
 
-import { type ChangeEvent, useState } from "react";
+import { type ChangeEvent, Suspense, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ActionIcon,
   Badge,
@@ -40,15 +41,31 @@ function slugify(value: string) {
 
 const CAN_CREATE_ORG_ROLES = ["admin", "org_admin"];
 
-export default function OrgSettingsPage() {
+function OrgSettingsPageContent() {
   const t = useTranslations("settings.org");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // `?id=<orgId>` lets external links (e.g. the /admin Organisations
+  // table) deep-link to a specific org. We seed the dropdown from it on
+  // first render; thereafter the dropdown is the source of truth and we
+  // push changes back into the URL so the link remains shareable.
+  const urlOrgId = searchParams.get("id");
   const orgsQuery = api.teams.myOrganisations.useQuery();
   const authQuery = api.auth.me.useQuery();
-  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(urlOrgId);
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
 
   const orgs = orgsQuery.data ?? [];
-  const activeOrg = orgs.find((o) => o.id === selectedOrgId) ?? orgs[0] ?? null;
+  const effectiveOrgId = selectedOrgId ?? urlOrgId;
+  const activeOrg = orgs.find((o) => o.id === effectiveOrgId) ?? orgs[0] ?? null;
+
+  function handleOrgChange(next: string | null) {
+    setSelectedOrgId(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next) params.set("id", next);
+    else params.delete("id");
+    router.replace(`/settings/org${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false });
+  }
   const userRole = authQuery.data?.user?.role ?? "";
   const canCreateOrg = CAN_CREATE_ORG_ROLES.includes(userRole);
 
@@ -92,7 +109,7 @@ export default function OrgSettingsPage() {
           label={t("orgSelectLabel")}
           data={orgs.map((o) => ({ value: o.id, label: o.name }))}
           value={activeOrg.id}
-          onChange={(v) => setSelectedOrgId(v)}
+          onChange={handleOrgChange}
           mb="lg"
           maw={300}
         />
@@ -101,6 +118,14 @@ export default function OrgSettingsPage() {
       <OrgDetail orgId={activeOrg.id} userRole={userRole} />
       <CreateOrgModal opened={createModalOpened} onClose={closeCreateModal} />
     </Box>
+  );
+}
+
+export default function OrgSettingsPage() {
+  return (
+    <Suspense fallback={<Box p="xl" ta="center"><Loader size="sm" /></Box>}>
+      <OrgSettingsPageContent />
+    </Suspense>
   );
 }
 

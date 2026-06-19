@@ -15,7 +15,8 @@ const MY_ORGANISATIONS_QUERY = `
   query MyOrganisations {
     myOrganisations {
       id name slug isActive
-      teams { id name slug }
+      members { id }
+      teams { id name slug members { id } }
     }
   }
 `;

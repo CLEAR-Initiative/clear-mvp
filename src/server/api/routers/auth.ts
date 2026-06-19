@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
-import { API_URL, GRAPHQL_API_KEY } from "~/server/env";
+import { API_URL } from "~/server/env";
 import { locales } from "~/i18n/config";
 
 const BetterAuthUserSchema = z.object({
@@ -179,12 +179,19 @@ export const authRouter = createTRPCRouter({
       return data.updateProfile;
     }),
 
-  listUsers: publicProcedure.query(async () => {
+  // Admin-only on the clear-api side. We forward both Cookie and Authorization
+  // headers so the same endpoint works for browser admins (Better Auth session)
+  // and for scripts calling with a personal API key (`Authorization: Bearer
+  // sk_live_…`). clear-api resolves whichever credential is present and runs
+  // its own `requireRole(["admin"])` gate; field-level PII resolvers
+  // (email/phoneNumber/role/isActive) then surface real values via the
+  // `context.user.role === "admin"` branch in canSeeUserPii.
+  listUsers: publicProcedure.query(async ({ ctx }) => {
     try {
       const data = await graphqlFetch<{ users: z.infer<typeof BetterAuthUserSchema>[] }>(
         `{ users { id email name role isActive emailVerified image organisations { id organisationId role } teamMemberships { id role } } }`,
         undefined,
-        { "x-api-key": GRAPHQL_API_KEY },
+        cookieHeaders(ctx),
       );
       return { users: data.users ?? [], error: null as string | null };
     } catch {
