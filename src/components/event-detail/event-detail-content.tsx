@@ -41,7 +41,7 @@ import { MinimapCard } from "~/components/map/minimap-card";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
-import { getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
+import { getDisasterLabel, getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
@@ -694,7 +694,24 @@ export function EventDetailContent({
                 const relSev = mapSeverity(related.severity);
                 const relColor = severityColor(related.severity);
                 const relBg = severityColors[relSev]?.bg ?? "var(--color-bg-muted)";
-                const relTitle = related.title ?? related.description ?? related.types[0] ?? "";
+                // Resolve the human label for the primary disaster type so the
+                // title fallback shows e.g. "Pandemic" instead of the raw code
+                // "pa", and feed the L1 pill so we can render the disaster
+                // category alongside severity.
+                const primaryTypeCode = related.types?.[0];
+                const primaryTypeLabel = primaryTypeCode
+                  ? getDisasterLabel(primaryTypeCode)
+                  : null;
+                const typePill = getDisasterPills(related.types ?? [])[0];
+                const relTitle =
+                  related.title ?? related.description ?? primaryTypeLabel ?? "";
+                const relDate = related.lastSignalCreatedAt
+                  ? new Date(related.lastSignalCreatedAt)
+                  : null;
+                const relDateLabel =
+                  relDate && !Number.isNaN(relDate.getTime())
+                    ? format.relativeTime(relDate)
+                    : "—";
                 return (
                   <Link
                     key={related.id}
@@ -709,11 +726,24 @@ export function EventDetailContent({
                     >
                       <Box style={{ width: 3, background: relColor, flexShrink: 0, borderRadius: 2 }} />
                       <Box style={{ flex: 1, minWidth: 0 }}>
-                        <Group justify="space-between" mb={2}>
-                          <Badge size="xs" style={{ background: relBg, color: relColor, fontWeight: 600 }}>
-                            {tCommon(`severities.${relSev}`)}
-                          </Badge>
-                          <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(related.lastSignalCreatedAt))}</Text>
+                        <Group justify="space-between" mb={2} wrap="nowrap">
+                          <Group gap={6} wrap="nowrap">
+                            <Badge
+                              size="xs"
+                              style={{ background: relBg, color: relColor, fontWeight: 600 }}
+                            >
+                              {tCommon(`severities.${relSev}`)}
+                            </Badge>
+                            {typePill && (
+                              <Badge
+                                size="xs"
+                                style={{ background: typePill.bg, color: typePill.color, fontWeight: 600 }}
+                              >
+                                {typePill.label}
+                              </Badge>
+                            )}
+                          </Group>
+                          <Text size="xs" c="var(--color-text-muted)">{relDateLabel}</Text>
                         </Group>
                         <Text size="sm" fw={500} c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }}>
                           {relTitle}
