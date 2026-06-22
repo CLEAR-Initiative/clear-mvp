@@ -15,6 +15,7 @@ import {
   IconCurrencyDollar,
   IconBook,
   IconMapPin,
+  IconRobot,
   IconLogout,
   IconSettings,
   IconDoorExit,
@@ -38,7 +39,8 @@ type NavItemKey =
   | "insights"
   | "operations"
   | "cash"
-  | "knowledge";
+  | "knowledge"
+  | "agent";
 
 interface NavItem {
   labelKey: NavItemKey;
@@ -77,6 +79,7 @@ const navSections: NavSection[] = [
     titleKey: "resources",
     items: [
       { labelKey: "knowledge", href: "/knowledge", icon: IconBook, featureKey: "knowledge_hub", comingSoonForNonAdmin: true },
+      { labelKey: "agent",     href: "/agent",     icon: IconRobot, featureKey: "agent" },
     ],
   },
 ];

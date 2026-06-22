@@ -1796,7 +1796,8 @@
       "insights": "Insights",
       "operations": "Operations",
       "cash": "Cash Assistance",
-      "knowledge": "Knowledge Hub"
+      "knowledge": "Knowledge Hub",
+      "agent": "Agent"
     },
     "itemSoon": "{label} (soon)",
     "expand": "Expand",
