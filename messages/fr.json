@@ -1796,7 +1796,8 @@
       "insights": "Constats",
       "operations": "Opérations",
       "cash": "Assistance monétaire",
-      "knowledge": "Centre de connaissances"
+      "knowledge": "Centre de connaissances",
+      "agent": "Agent"
     },
     "itemSoon": "{label} (bientôt)",
     "expand": "Développer",

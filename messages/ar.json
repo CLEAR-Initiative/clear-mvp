@@ -1804,7 +1804,8 @@
       "insights": "الرؤى",
       "operations": "العمليات",
       "cash": "المساعدة النقدية",
-      "knowledge": "مركز المعرفة"
+      "knowledge": "مركز المعرفة",
+      "agent": "الوكيل"
     },
     "itemSoon": "{label} (قريباً)",
     "expand": "توسيع",
