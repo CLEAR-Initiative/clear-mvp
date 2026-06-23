@@ -10,7 +10,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # Owner must be lowercase — Docker rejects mixed-case refs even though GHCR
+  # Owner must be lowercase - Docker rejects mixed-case refs even though GHCR
   # is case-insensitive on the server side. Lowercased below via a step output.
 
 jobs:
@@ -49,7 +49,7 @@ jobs:
 
       - name: Build and push
         # NEXT_PUBLIC_* values are INLINED into the client bundle at build time
-        # — they CANNOT be overridden by docker compose env_file at runtime.
+        # - they CANNOT be overridden by docker compose env_file at runtime.
         # That's why they're passed here as build-args, sourced from per-env
         # GitHub Environment secrets (Settings → Environments → dev/staging).
         # Image is tagged with both the branch name and sha for traceability.
@@ -80,7 +80,6 @@ jobs:
           host: ${{ secrets.APP_VM_HOST }}
           username: ubuntu
           key: ${{ secrets.APP_VM_SSH_KEY }}
-          script_stop: true
           script: |
             set -e
             cd /srv/app
