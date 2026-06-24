@@ -1608,10 +1608,12 @@
     "sourceCount": "{count, plural, zero {لا مصادر} one {مصدر واحد} two {مصدران} few {# مصادر} many {# مصدراً} other {# مصدر}}",
     "notAvailable": "غير متاح",
     "kpi": {
-      "casualties": "الضحايا",
-      "populationIn": "السكان في {name}",
-      "populationInArea": "السكان في المنطقة",
-      "idpPerCapitaIn": "النازحون الداخليون للفرد في {name} ({count} نازح)",
+      "impact": "التأثير",
+      "areaContext": "سياق المنطقة",
+      "peopleAffected": "المتضررون",
+      "peopleDisplaced": "النازحون",
+      "peopleInArea": "السكان في المنطقة",
+      "idpPerCapitaIn": "النازح الداخلي للفرد في {name}",
       "idpPerCapita": "النازح الداخلي للفرد"
     },
     "summary": {

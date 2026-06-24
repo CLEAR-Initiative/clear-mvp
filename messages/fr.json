@@ -1601,10 +1601,12 @@
     "sourceCount": "{count, plural, one {# source} other {# sources}}",
     "notAvailable": "N/D",
     "kpi": {
-      "casualties": "Victimes",
-      "populationIn": "Population dans {name}",
-      "populationInArea": "Population dans la zone",
-      "idpPerCapitaIn": "Déplacés internes par habitant dans {name} ({count} déplacés)",
+      "impact": "Impact",
+      "areaContext": "Contexte de la zone",
+      "peopleAffected": "Personnes affectées",
+      "peopleDisplaced": "Personnes déplacées",
+      "peopleInArea": "Personnes dans la zone",
+      "idpPerCapitaIn": "Déplacés internes par habitant dans {name}",
       "idpPerCapita": "Déplacés internes par habitant"
     },
     "summary": {
