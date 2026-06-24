@@ -64,6 +64,7 @@ import type { MapMarker } from "~/components/map/crisis-map";
 import { MinimapCard } from "~/components/map/minimap-card";
 import { CommentsSection } from "~/components/comments-section";
 import { NeedsAssessmentPanel } from "~/components/crisis-detail/needs-assessment-panel";
+import { KpiStack } from "~/components/ui/kpi-stack";
 
 /** Humanitarian need row - parsed from a crisis's free-form `needs` JSON. */
 interface ClusterNeed {
@@ -620,62 +621,49 @@ export function CrisisDetailContent({
         <>
           {/* Full-width KPI row */}
           <Box px={isCompact ? 16 : 24} pt={isCompact ? 16 : 24}>
-            <Box style={{ display: "flex", background: "var(--color-bg-white)", border: "1px solid var(--color-border)", borderRadius: 8, overflow: "hidden" }}>
-              {/* Impact */}
-              <Box style={{ flex: 1, borderInlineEnd: "1px solid var(--color-border)" }}>
-                <Box px={12} py={6} style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-bg-muted)" }}>
-                  <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>{t("kpi.impact")}</Text>
-                </Box>
-                <Box style={{ display: "flex" }}>
-                  <Box style={{ flex: 1, borderInlineEnd: "1px solid var(--color-border)" }}>
-                    <ImpactRow
-                      icon={<IconUsers size={14} color="var(--color-accent)" />}
-                      iconBg="var(--color-accent-light)"
-                      value={populationAffected !== null ? format.number(populationAffected, "compact") : "-"}
-                      label={t("kpi.peopleAffected")}
-                    />
-                  </Box>
-                  <Box style={{ flex: 1 }}>
-                    <ImpactRow
-                      icon={<IconUsersGroup size={14} color="var(--color-warning)" />}
-                      iconBg="var(--color-warning-light)"
-                      value={populationDisplaced !== null ? format.number(populationDisplaced, "compact") : "-"}
-                      label={t("kpi.peopleDisplaced")}
-                    />
-                  </Box>
-                </Box>
-              </Box>
-              {/* Area Context */}
-              <Box style={{ flex: 1 }}>
-                <Box px={12} py={6} style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-bg-muted)" }}>
-                  <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>{t("kpi.areaContext")}</Text>
-                </Box>
-                <Box style={{ display: "flex" }}>
-                  <Box style={{ flex: 1, borderInlineEnd: "1px solid var(--color-border)" }}>
-                    <ImpactRow
-                      icon={<IconUsersGroup size={14} color="var(--color-info)" />}
-                      iconBg="var(--color-info-light)"
-                      value={populationInArea !== null ? format.number(populationInArea, "compact") : "-"}
-                      label={t("kpi.peopleInArea")}
-                    />
-                  </Box>
-                  <Box style={{ flex: 1 }}>
-                    <ImpactRow
-                      icon={<IconTrendingUp size={14} color="var(--color-text-muted)" />}
-                      iconBg="var(--color-bg-muted)"
-                      value={
+            <KpiStack
+              sections={[
+                {
+                  title: t("kpi.impact"),
+                  items: [
+                    {
+                      icon: <IconUsers size={14} color="var(--color-accent)" />,
+                      iconBg: "var(--color-accent-light)",
+                      value: populationAffected !== null ? format.number(populationAffected, "compact") : "-",
+                      label: t("kpi.peopleAffected"),
+                    },
+                    {
+                      icon: <IconUsersGroup size={14} color="var(--color-warning)" />,
+                      iconBg: "var(--color-warning-light)",
+                      value: populationDisplaced !== null ? format.number(populationDisplaced, "compact") : "-",
+                      label: t("kpi.peopleDisplaced"),
+                    },
+                  ],
+                },
+                {
+                  title: t("kpi.areaContext"),
+                  items: [
+                    {
+                      icon: <IconUsersGroup size={14} color="var(--color-info)" />,
+                      iconBg: "var(--color-info-light)",
+                      value: populationInArea !== null ? format.number(populationInArea, "compact") : "-",
+                      label: t("kpi.peopleInArea"),
+                    },
+                    {
+                      icon: <IconTrendingUp size={14} color="var(--color-text-muted)" />,
+                      iconBg: "var(--color-bg-muted)",
+                      value:
                         crisisIdpData?.ratio != null
                           ? `${(crisisIdpData.ratio * 100).toFixed(1)}%`
                           : crisisIdpData?.displaced != null
                             ? format.number(crisisIdpData.displaced, "compact")
-                            : "-"
-                      }
-                      label={crisisIdpData ? t("kpi.idpPerCapitaIn", { name: crisisIdpData.name }) : t("kpi.idpPerCapita")}
-                    />
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
+                            : "-",
+                      label: crisisIdpData ? t("kpi.idpPerCapitaIn", { name: crisisIdpData.name }) : t("kpi.idpPerCapita"),
+                    },
+                  ],
+                },
+              ]}
+            />
           </Box>
 
           {/* Body: two-column */}
@@ -1224,87 +1212,6 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
 }
 
 // ── Sub-components ───────────────────────────────────────────────────────────
-
-function KpiCard({
-  icon,
-  iconBg,
-  value,
-  label,
-}: {
-  icon: React.ReactNode;
-  iconBg: string;
-  value: string;
-  label: string;
-}) {
-  return (
-    <Box
-      p={16}
-      style={{
-        background: "var(--color-bg-white)",
-        border: "1px solid var(--color-border)",
-        borderRadius: 8,
-        display: "flex",
-        gap: 12,
-        alignItems: "center",
-      }}
-    >
-      <Box
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          background: iconBg,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-        }}
-      >
-        {icon}
-      </Box>
-      <Box style={{ minWidth: 0 }}>
-        <Text
-          fw={700}
-          c="var(--color-text-primary)"
-          style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}
-        >
-          {value}
-        </Text>
-        <Text size="xs" c="var(--color-text-muted)" mt={2} truncate>
-          {label}
-        </Text>
-      </Box>
-    </Box>
-  );
-}
-
-function ImpactRow({
-  icon, iconBg, value, label, border,
-}: {
-  icon: React.ReactNode;
-  iconBg: string;
-  value: string;
-  label: string;
-  border?: boolean;
-}) {
-  return (
-    <Box
-      px={12} py={10}
-      style={{
-        display: "flex", alignItems: "center", gap: 10,
-        borderBottom: border ? "1px solid var(--color-border)" : undefined,
-      }}
-    >
-      <Box style={{ width: 28, height: 28, borderRadius: 6, background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        {icon}
-      </Box>
-      <Box style={{ minWidth: 0 }}>
-        <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 17, lineHeight: 1, letterSpacing: "-0.02em" }}>{value}</Text>
-        <Text size="xs" c="var(--color-text-muted)" mt={2} truncate>{label}</Text>
-      </Box>
-    </Box>
-  );
-}
 
 function DemoBadge() {
   return (

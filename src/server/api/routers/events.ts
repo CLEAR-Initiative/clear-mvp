@@ -67,6 +67,7 @@ const EVENT_FIELDS = `
   firstSignalCreatedAt
   lastSignalCreatedAt
   populationAffected
+  populationDisplaced
   casualties
   generalLocation { ${LOCATION_FIELDS} }
   originLocation { ${LOCATION_FIELDS} }

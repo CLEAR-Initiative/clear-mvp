@@ -29,8 +29,8 @@ import {
   IconExternalLink,
   IconRadar,
   IconUsers,
-  IconShieldExclamation,
-  IconWorld,
+  IconUsersGroup,
+  IconTrendingUp,
   IconBellRinging,
   IconChevronDown,
   IconChevronUp,
@@ -47,11 +47,13 @@ import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { AddToCrisisButton } from "~/components/event-detail/add-to-crisis-button";
 import { severityColors } from "~/lib/constants/severity";
+import { KpiStack } from "~/components/ui/kpi-stack";
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-// These fields don't exist in the current API response.
-// Remove and replace with real fields when backend delivers them.
-// ─────────────────────────────────────────────────────────────────────────────
+function bigIntStrToNumber(s: string | null | undefined): number | null {
+  if (s === null || s === undefined) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
 
 /** Collect the non-null location fields from a GqlEvent into a flat array. */
 function eventLocations(event: GqlEvent): GqlLocation[] {
@@ -431,129 +433,52 @@ export function EventDetailContent({
 
       {/* KPI strip */}
       {!isCompact && (
-        <Box
-          px={24}
-          py={16}
-          style={{ background: "var(--color-bg-primary)", borderBottom: "1px solid var(--color-border)" }}
-        >
-          <Group gap={12}>
-
-            {/* Casualties */}
-            <Box
-              p={16}
-              style={{
-                flex: 1,
-                background: "var(--color-bg-white)",
-                border: "1px solid var(--color-border)",
-                borderRadius: 8,
-                display: "flex",
-                gap: 12,
-                alignItems: "center",
-              }}
-            >
-              <Box
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  background: "var(--color-accent-light)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <IconUsers size={18} color="#E85D3D" />
-              </Box>
-              <Box>
-                <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {event.casualties != null ? format.number(event.casualties) : t("notAvailable")}
-                </Text>
-                <Text size="xs" c="var(--color-text-muted)" mt={2}>{t("kpi.casualties")}</Text>
-              </Box>
-            </Box>
-
-            {/* Population in Area */}
-            <Box
-              p={16}
-              style={{
-                flex: 1,
-                background: "var(--color-bg-white)",
-                border: "1px solid var(--color-border)",
-                borderRadius: 8,
-                display: "flex",
-                gap: 12,
-                alignItems: "center",
-              }}
-            >
-              <Box
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  background: "var(--color-info-light)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <IconWorld size={18} color="#2563EB" />
-              </Box>
-              <Box>
-                <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {areaPopulation ? format.number(Number(areaPopulation.value)) : t("notAvailable")}
-                </Text>
-                <Text size="xs" c="var(--color-text-muted)" mt={2}>
-                  {areaPopulation ? t("kpi.populationIn", { name: areaPopulation.name }) : t("kpi.populationInArea")}
-                </Text>
-              </Box>
-            </Box>
-
-            {/* IDP per capita */}
-            <Box
-              p={16}
-              style={{
-                flex: 1,
-                background: "var(--color-bg-white)",
-                border: "1px solid var(--color-border)",
-                borderRadius: 8,
-                display: "flex",
-                gap: 12,
-                alignItems: "center",
-              }}
-            >
-              <Box
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  background: "var(--color-warning-light)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <IconShieldExclamation size={18} color="#D97706" />
-              </Box>
-              <Box>
-                <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {idpData?.ratio != null
-                    ? `${(idpData.ratio * 100).toFixed(1)}%`
-                    : idpData?.displaced != null
-                      ? format.number(idpData.displaced)
-                      : t("notAvailable")}
-                </Text>
-                <Text size="xs" c="var(--color-text-muted)" mt={2}>
-                  {idpData
-                    ? t("kpi.idpPerCapitaIn", { name: idpData.name, count: format.number(idpData.displaced) })
-                    : t("kpi.idpPerCapita")}
-                </Text>
-              </Box>
-            </Box>
-
-          </Group>
+        <Box px={24} pt={24}>
+          <KpiStack
+            sections={[
+              {
+                title: t("kpi.impact"),
+                items: [
+                  {
+                    icon: <IconUsers size={14} color="var(--color-accent)" />,
+                    iconBg: "var(--color-accent-light)",
+                    value: bigIntStrToNumber(event.populationAffected) !== null ? format.number(bigIntStrToNumber(event.populationAffected)!, "compact") : "-",
+                    label: t("kpi.peopleAffected"),
+                  },
+                  {
+                    icon: <IconUsersGroup size={14} color="var(--color-warning)" />,
+                    iconBg: "var(--color-warning-light)",
+                    value: bigIntStrToNumber(event.populationDisplaced) !== null ? format.number(bigIntStrToNumber(event.populationDisplaced)!, "compact") : "-",
+                    label: t("kpi.peopleDisplaced"),
+                  },
+                ],
+              },
+              {
+                title: t("kpi.areaContext"),
+                items: [
+                  {
+                    icon: <IconUsersGroup size={14} color="var(--color-info)" />,
+                    iconBg: "var(--color-info-light)",
+                    value: areaPopulation ? format.number(Number(areaPopulation.value), "compact") : "-",
+                    label: areaPopulation ? t("kpi.peopleInArea") : t("kpi.peopleInArea"),
+                  },
+                  {
+                    icon: <IconTrendingUp size={14} color="var(--color-text-muted)" />,
+                    iconBg: "var(--color-bg-muted)",
+                    value:
+                      idpData?.ratio != null
+                        ? `${(idpData.ratio * 100).toFixed(1)}%`
+                        : idpData?.displaced != null
+                          ? format.number(idpData.displaced, "compact")
+                          : "-",
+                    label: idpData
+                      ? t("kpi.idpPerCapitaIn", { name: idpData.name })
+                      : t("kpi.idpPerCapita"),
+                  },
+                ],
+              },
+            ]}
+          />
         </Box>
       )}
 
