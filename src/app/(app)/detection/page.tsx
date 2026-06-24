@@ -111,7 +111,7 @@ function DetectionPageContent() {
   const filterCount = (activeSeverities.size < 4 ? 1 : 0) + (selectedTypeFilters.length > 0 ? 1 : 0) + (activeSources !== null ? 1 : 0);
 
   const { activeTeamId } = useTeam();
-  const { countries, getCenter, getZoom, getLocationId, tree } = useLocations();
+  const { countries, getCenter, getZoom, getLocationId, tree, isLoading: isLocationsLoading } = useLocations();
 
   const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
   const selectedCountryId = useMemo(() => getLocationId(selectedCountry), [selectedCountry, getLocationId]);
@@ -152,6 +152,11 @@ function DetectionPageContent() {
     () => selectedRegionId ?? getLocationId(selectedCountry),
     [selectedCountry, selectedRegionId, getLocationId],
   );
+
+  // Don't fire feed queries until the location tree has loaded. Without this
+  // guard, the queries fire with locationId=undefined (no filter) during the
+  // brief window before the tree resolves, returning results from all countries.
+  const locationsReady = !isLocationsLoading || !!selectedLocationId;
 
   const currentCountryStates = useMemo(
     () => tree.find((c) => c.name === selectedCountry)?.states ?? [],
@@ -247,11 +252,11 @@ function DetectionPageContent() {
   // strips it before forwarding to GraphQL - see alerts.ts.
   const eventsQuery = api.alerts.eventsPage.useQuery(
     { ...sharedFilter, orderBy: EVENT_ORDER_MAP[eventsSort], limit: PAGE_SIZE, offset: eventsOffset, _v: eventsVersion },
-    { enabled: activeTab === "events", staleTime: Infinity },
+    { enabled: locationsReady && activeTab === "events", staleTime: Infinity },
   );
   const alertsQuery = api.alerts.alertsPage.useQuery(
     { ...sharedFilter, status: "published", orderBy: ALERT_ORDER_MAP[alertsSort], limit: PAGE_SIZE, offset: alertsOffset, _v: alertsVersion },
-    { enabled: activeTab === "live", staleTime: Infinity },
+    { enabled: locationsReady && activeTab === "live", staleTime: Infinity },
   );
   const signalsQuery = api.alerts.signalsPage.useQuery(
     {
@@ -267,7 +272,7 @@ function DetectionPageContent() {
       offset: signalsOffset,
       _v: signalsVersion,
     },
-    { enabled: activeTab === "signals", staleTime: Infinity },
+    { enabled: locationsReady && activeTab === "signals", staleTime: Infinity },
   );
 
   // ── Accumulation effects ───────────────────────────────────────────────────
@@ -438,7 +443,7 @@ function DetectionPageContent() {
       limit: 1,
       orderBy: "LAST_SIGNAL_DESC",
     },
-    { enabled: activeTab === "events", refetchInterval: 60_000, staleTime: 0 },
+    { enabled: locationsReady && activeTab === "events", refetchInterval: 60_000, staleTime: 0 },
   );
   const alertsNewQuery = api.alerts.alertsPage.useQuery(
     {
@@ -448,7 +453,7 @@ function DetectionPageContent() {
       limit: 1,
       orderBy: "CREATED_DESC",
     },
-    { enabled: activeTab === "live", refetchInterval: 60_000, staleTime: 0 },
+    { enabled: locationsReady && activeTab === "live", refetchInterval: 60_000, staleTime: 0 },
   );
   const signalsNewQuery = api.alerts.signalsPage.useQuery(
     {
@@ -461,7 +466,7 @@ function DetectionPageContent() {
       limit: 1,
       orderBy: "PUBLISHED_DESC",
     },
-    { enabled: activeTab === "signals", refetchInterval: 60_000, staleTime: 0 },
+    { enabled: locationsReady && activeTab === "signals", refetchInterval: 60_000, staleTime: 0 },
   );
 
   const eventsNewCount = eventsNewQuery.data?.totalCount ?? 0;
@@ -471,15 +476,15 @@ function DetectionPageContent() {
   // ── History tab - paginated, 100 per page, all three sources accumulated ──────
   const historyAlertsQuery = api.alerts.alertsPage.useQuery(
     { ...sharedFilter, orderBy: ALERT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
-    { enabled: activeTab === "history", staleTime: Infinity },
+    { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
   );
   const historyEventsQuery = api.alerts.eventsPage.useQuery(
     { ...sharedFilter, orderBy: EVENT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
-    { enabled: activeTab === "history", staleTime: Infinity },
+    { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
   );
   const historySignalsQuery = api.alerts.signalsPage.useQuery(
     { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, orderBy: SIGNAL_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
-    { enabled: activeTab === "history", staleTime: Infinity },
+    { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
   );
 
   // ── History accumulation effects ───────────────────────────────────────────
