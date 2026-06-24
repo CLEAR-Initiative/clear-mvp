@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -144,6 +145,7 @@ export function RightPanel({
   onViewChange,
   activeView,
 }: RightPanelProps) {
+  const t = useTranslations("dashboard");
   const [expandedNRCRegion, setExpandedNRCRegion] = useState<string | null>(null);
   const [signalModalOpen, setSignalModalOpen] = useState(false);
   const [informInfoOpened, { open: openInformInfo, close: closeInformInfo }] = useDisclosure(false);
@@ -180,7 +182,7 @@ export function RightPanel({
               tt="uppercase"
               style={{ fontSize: 10, fontWeight: 700, background: regionColor, color: "white" }}
             >
-              NRC Ops
+              {t("rightPanel.nrcOpsBadge")}
             </Badge>
           ) : null}
         </Group>
@@ -188,7 +190,7 @@ export function RightPanel({
           <Text size="sm" c="#E85D3D" style={{ fontSize: 13 }}>
             {currentNRCLocation.region.split(" ")[0]}{" "}
             <Text component="span" c="var(--color-text-muted)">
-              | NRC Office
+              | {t("rightPanel.nrcOffice")}
             </Text>
           </Text>
         )}
@@ -197,12 +199,12 @@ export function RightPanel({
       {/* INFORM Risk Pillars */}
       <Box className="bg-[var(--color-bg-muted)] border-b border-[var(--color-border)]">
         <Box px={24} pt={16} pb={12} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }}>
-          {[
-            { label: "Hazard", score: riskQuery.data?.pillars.hazard ?? null },
-            { label: "Vulnerability", score: riskQuery.data?.pillars.vulnerability ?? null },
-            { label: "Coping Cap.", score: riskQuery.data?.pillars.coping ?? null },
-          ].map((pillar) => (
-            <Stack key={pillar.label} align="center" gap={2}>
+          {([
+            { labelKey: "hazard", score: riskQuery.data?.pillars.hazard ?? null },
+            { labelKey: "vulnerability", score: riskQuery.data?.pillars.vulnerability ?? null },
+            { labelKey: "coping", score: riskQuery.data?.pillars.coping ?? null },
+          ] as const).map((pillar) => (
+            <Stack key={pillar.labelKey} align="center" gap={2}>
               <Text
                 fw={700}
                 lh={1}
@@ -214,7 +216,7 @@ export function RightPanel({
                 {pillar.score !== null ? pillar.score.toFixed(1) : "-"}
               </Text>
               <Text tt="uppercase" c="var(--color-text-muted)" style={{ letterSpacing: "0.03em", fontSize: 10 }}>
-                {pillar.label}
+                {t(`rightPanel.pillars.${pillar.labelKey}`)}
               </Text>
             </Stack>
           ))}
@@ -223,7 +225,7 @@ export function RightPanel({
           <Group justify="space-between" align="center">
             <Group gap={4} align="center">
               <Text tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em" }}>
-                INFORM Risk Overall - {riskQuery.data?.edition ?? "INFORM Risk 2026"}
+                {t("rightPanel.informOverall", { edition: riskQuery.data?.edition ?? "INFORM Risk 2026" })}
               </Text>
               <Box
                 onClick={openInformInfo}
@@ -256,32 +258,30 @@ export function RightPanel({
       <Modal
         opened={informInfoOpened}
         onClose={closeInformInfo}
-        title="INFORM Risk Index: Methodology"
+        title={t("rightPanel.informModal.title")}
         size="md"
         styles={{ title: { fontSize: 14, fontWeight: 700, color: "#171717" }, body: { paddingTop: 4 } }}
       >
         <Text style={{ fontSize: 13, color: "#525252", marginBottom: 12, lineHeight: 1.6 }}>
-          The <strong>INFORM Risk Index</strong> is produced by the EU Joint Research Centre (JRC) in partnership with
-          the Inter-Agency Standing Committee (IASC). It measures the risk of humanitarian crises and disasters that
-          could overwhelm national response capacity. Scores range from <strong>0 to 10</strong> (higher = more risk).
+          {t.rich("rightPanel.informModal.intro", { strong: (chunks) => <strong>{chunks}</strong> })}
         </Text>
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>The three pillars</Text>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("rightPanel.informModal.pillarsHeading")}</Text>
         <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
-          <List.Item><strong>Hazard and Exposure</strong>: likelihood of physical events (natural hazards, conflict) affecting the population.</List.Item>
-          <List.Item><strong>Vulnerability</strong>: socio-economic factors that make communities less able to cope, including poverty, inequality, and displacement.</List.Item>
-          <List.Item><strong>Lack of Coping Capacity</strong>: institutional and infrastructure capacity to respond - governance, health system, communication.</List.Item>
+          <List.Item>{t.rich("rightPanel.informModal.pillarHazard", { strong: (chunks) => <strong>{chunks}</strong> })}</List.Item>
+          <List.Item>{t.rich("rightPanel.informModal.pillarVulnerability", { strong: (chunks) => <strong>{chunks}</strong> })}</List.Item>
+          <List.Item>{t.rich("rightPanel.informModal.pillarCoping", { strong: (chunks) => <strong>{chunks}</strong> })}</List.Item>
         </List>
         <Text style={{ fontSize: 11, color: "#A3A3A3", lineHeight: 1.5 }}>
-          Source: <Anchor href="https://drmkc.jrc.ec.europa.eu/inform-index" target="_blank" size="xs">
-            JRC INFORM Risk Index
-          </Anchor>{" "}- updated annually.
+          {t("rightPanel.informModal.sourceLabel")} <Anchor href="https://drmkc.jrc.ec.europa.eu/inform-index" target="_blank" rel="noopener noreferrer" size="xs">
+            {t("rightPanel.informModal.sourceLink")}
+          </Anchor>{" "}{t("rightPanel.informModal.updatedAnnually")}
         </Text>
       </Modal>
 
       {/* Active Crises - locked until real crisis data is wired */}
       {hasCrisisData ? (
         <CollapsibleSection
-          title={`Active Crises (${crisisPins.length})`}
+          title={t("rightPanel.activeCrises", { count: crisisPins.length })}
           locked
         >
           <Stack gap={8}>
@@ -311,11 +311,11 @@ export function RightPanel({
                     {pin.name}
                   </Text>
                   <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
-                    {pin.region ?? "Field"} &bull;{" "}
+                    {pin.region ?? t("rightPanel.fieldFallback")} &bull;{" "}
                     {pin.cases
-                      ? `${pin.cases} cases`
+                      ? t("rightPanel.casesCount", { count: pin.cases })
                       : pin.affectedPopulation
-                        ? `${(pin.affectedPopulation / 1000).toFixed(0)}k affected`
+                        ? t("rightPanel.affectedShort", { count: (pin.affectedPopulation / 1000).toFixed(0) })
                         : pin.trend}
                   </Text>
                 </Box>
@@ -336,7 +336,7 @@ export function RightPanel({
                     flexShrink: 0,
                   }}
                 >
-                  {pin.severity}
+                  {t(`rightPanel.severities.${pin.severity}`)}
                 </Badge>
               </Box>
             ))}
@@ -344,7 +344,7 @@ export function RightPanel({
         </CollapsibleSection>
       ) : currentNRCLocation && currentNRCLocation.operationTypes.length > 0 ? (
         <CollapsibleSection
-          title={`NRC Core Activities (${currentNRCLocation.operationTypes.length})`}
+          title={t("rightPanel.nrcCoreActivities", { count: currentNRCLocation.operationTypes.length })}
           defaultOpen
         >
           <Stack gap={8}>
@@ -367,7 +367,7 @@ export function RightPanel({
                     </Text>
                   </Box>
                   <Badge size="xs" style={{ fontSize: 9, fontWeight: 700, background: "#D1FAE5", color: "#059669", flexShrink: 0 }}>
-                    Active
+                    {t("rightPanel.activeBadge")}
                   </Badge>
                 </Group>
               </Box>
@@ -378,13 +378,13 @@ export function RightPanel({
 
       {/* Country Risks (INFORM Risk top indicators) OR Location Overview */}
       <CollapsibleSection
-        title={hasCrisisData ? "Country Risks" : "Location Overview"}
+        title={hasCrisisData ? t("rightPanel.countryRisks") : t("rightPanel.locationOverview")}
         defaultOpen={hasCrisisData}
       >
         {hasCrisisData ? (
           <Box>
             {riskQuery.isLoading ? (
-              <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>Loading risk data&hellip;</Text>
+              <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>{t("rightPanel.loadingRisk")}</Text>
             ) : riskQuery.data?.indicators.length ? (
               <Stack gap={10}>
                 {riskQuery.data.indicators.slice(0, 5).map((indicator) => {
@@ -417,11 +417,11 @@ export function RightPanel({
                   );
                 })}
                 <Text c="var(--color-text-muted)" style={{ fontSize: 10, marginTop: 2 }}>
-                  Source: {riskQuery.data.edition}
+                  {t("rightPanel.riskSource", { edition: riskQuery.data.edition })}
                 </Text>
               </Stack>
             ) : (
-              <Text c="var(--color-text-muted)" style={{ fontSize: 13 }}>Risk data unavailable for this country.</Text>
+              <Text c="var(--color-text-muted)" style={{ fontSize: 13 }}>{t("rightPanel.riskUnavailable")}</Text>
             )}
           </Box>
         ) : currentNRCLocation ? (
@@ -445,57 +445,57 @@ export function RightPanel({
             </Box>
             <Text style={{ fontSize: 13, color: "#525252", lineHeight: 1.6 }}>
               {currentNRCLocation.description ??
-                `NRC operates in ${currentNRCLocation.country} providing humanitarian assistance to displaced and vulnerable populations.`}
+                t("rightPanel.defaultCountryDescription", { country: currentNRCLocation.country })}
             </Text>
             {currentNRCLocation.yearEstablished && (
               <Text mt={16} style={{ fontSize: 13, color: "#525252", lineHeight: 1.6 }}>
                 <Text component="span" style={{ background: "#FEF2F0", padding: "0 4px", fontWeight: 500 }}>
-                  NRC established operations in {currentNRCLocation.yearEstablished}
+                  {t("rightPanel.establishedIn", { year: currentNRCLocation.yearEstablished })}
                 </Text>{" "}
-                and continues to provide multi-sector humanitarian response including{" "}
-                {currentNRCLocation.operationTypes
-                  .slice(0, 3)
-                  .join(", ")
-                  .toLowerCase()}
-                .
+                {t("rightPanel.multiSectorResponse", {
+                  activities: currentNRCLocation.operationTypes
+                    .slice(0, 3)
+                    .join(", ")
+                    .toLowerCase(),
+                })}
               </Text>
             )}
             <Box mt={16} pt={16} style={{ borderTop: "1px solid #F0F0F0" }}>
               <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
-                Location Details
+                {t("rightPanel.locationDetails")}
               </Text>
               <Box style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12 }}>
                 <Group justify="space-between">
-                  <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>Capital</Text>
+                  <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>{t("rightPanel.capital")}</Text>
                   <Text fw={500} style={{ fontSize: 12 }}>{currentNRCLocation.capital}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>Region</Text>
+                  <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>{t("rightPanel.region")}</Text>
                   <Text fw={500} style={{ fontSize: 12 }}>{currentNRCLocation.region.split(" ")[0]}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>Latitude</Text>
+                  <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>{t("rightPanel.latitude")}</Text>
                   <Text fw={500} style={{ fontSize: 12 }}>{currentNRCLocation.latitude.toFixed(2)}°</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>Longitude</Text>
+                  <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>{t("rightPanel.longitude")}</Text>
                   <Text fw={500} style={{ fontSize: 12 }}>{currentNRCLocation.longitude.toFixed(2)}°</Text>
                 </Group>
               </Box>
             </Box>
           </Box>
         ) : (
-          <Text style={{ fontSize: 13, color: "#737373" }}>No detailed information available for this location.</Text>
+          <Text style={{ fontSize: 13, color: "#737373" }}>{t("rightPanel.noLocationInfo")}</Text>
         )}
       </CollapsibleSection>
 
       {/* Response Status OR NRC Presence */}
-      <CollapsibleSection title={hasCrisisData ? "Response Status" : "NRC Presence"} locked>
+      <CollapsibleSection title={hasCrisisData ? t("rightPanel.responseStatus") : t("rightPanel.nrcPresence")} locked>
         {hasCrisisData ? (
           <Box>
             {/* Team Deployments */}
             <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
-              Active Deployments
+              {t("rightPanel.activeDeployments")}
             </Text>
             <Stack gap={8} mb={16}>
               {teamPins.map((team) => (
@@ -503,7 +503,7 @@ export function RightPanel({
                   key={team.id}
                   py={8}
                   px={12}
-                  style={{ background: "#F0FDF4", borderLeft: "2px solid #059669" }}
+                  style={{ background: "#F0FDF4", borderInlineStart: "2px solid #059669" }}
                 >
                   <Group justify="space-between">
                     <Group gap={8}>
@@ -511,30 +511,30 @@ export function RightPanel({
                       <Box>
                         <Text fw={500} style={{ fontSize: 13 }}>{team.name}</Text>
                         <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
-                          {team.region ?? "Field"} &bull; {team.members} members
+                          {team.region ?? t("rightPanel.fieldFallback")} &bull; {t("rightPanel.membersCount", { count: team.members ?? 0 })}
                         </Text>
                       </Box>
                     </Group>
                     <Badge size="xs" style={{ fontSize: 9, fontWeight: 700, background: "#D1FAE5", color: "#059669" }}>
-                      {team.status ?? "Active"}
+                      {team.status ?? t("rightPanel.activeBadge")}
                     </Badge>
                   </Group>
                 </Box>
               ))}
               {/* TODO(demo): hardcoded additional team entry - remove when real deployment data is available */}
-              <Box py={8} px={12} style={{ background: "#FFFBEB", borderLeft: "2px solid #F59E0B" }}>
+              <Box py={8} px={12} style={{ background: "#FFFBEB", borderInlineStart: "2px solid #F59E0B" }}>
                 <Group justify="space-between">
                   <Group gap={8}>
                     <Box w={8} h={8} style={{ background: "#F59E0B" }} />
                     <Box>
-                      <Text fw={500} style={{ fontSize: 13 }}>Assessment Team</Text>
+                      <Text fw={500} style={{ fontSize: 13 }}>{t("rightPanel.assessmentTeam")}</Text>
                       <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
-                        En route to Gode &bull; 4 members
+                        {t("rightPanel.enRouteGode")} &bull; {t("rightPanel.membersCount", { count: 4 })}
                       </Text>
                     </Box>
                   </Group>
                   <Badge size="xs" style={{ fontSize: 9, fontWeight: 700, background: "#FEF3C7", color: "#D97706" }}>
-                    Transit
+                    {t("rightPanel.transitBadge")}
                   </Badge>
                 </Group>
               </Box>
@@ -543,16 +543,16 @@ export function RightPanel({
             {/* Critical Resources */}
             {/* TODO(demo): resource stock percentages are hardcoded - replace with real logistics/stock data from operations API */}
             <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
-              Critical Resources
+              {t("rightPanel.criticalResources")}
             </Text>
             <Stack gap={4} mb={16}>
-              {[
-                { label: "IV Fluids", pct: 32, color: "#DC2626" },
-                { label: "ORS Packets", pct: 58, color: "#F59E0B" },
-                { label: "Water Purification", pct: 74, color: "#059669" },
-              ].map((r) => (
-                <Group key={r.label} justify="space-between" py={4}>
-                  <Text style={{ fontSize: 13 }}>{r.label}</Text>
+              {([
+                { labelKey: "ivFluids", pct: 32, color: "#DC2626" },
+                { labelKey: "orsPackets", pct: 58, color: "#F59E0B" },
+                { labelKey: "waterPurification", pct: 74, color: "#059669" },
+              ] as const).map((r) => (
+                <Group key={r.labelKey} justify="space-between" py={4}>
+                  <Text style={{ fontSize: 13 }}>{t(`rightPanel.resources.${r.labelKey}`)}</Text>
                   <Group gap={8}>
                     <Box w={96} h={8} style={{ background: "#E5E5E5" }}>
                       <Box h={8} style={{ width: `${r.pct}%`, background: r.color }} />
@@ -571,29 +571,29 @@ export function RightPanel({
               style={{ fontSize: 12 }}
               className="no-underline hover:underline"
             >
-              View Operations Center &rarr;
+              {t("rightPanel.viewOperations")} &rarr;
             </Text>
           </Box>
         ) : currentNRCLocation ? (
           <Box>
             {/* Country Office */}
             <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
-              Country Office
+              {t("rightPanel.countryOffice")}
             </Text>
             <Stack gap={8} mb={16}>
-              <Box py={8} px={12} style={{ background: "#FFF7F5", borderLeft: "2px solid #E85D3D" }}>
+              <Box py={8} px={12} style={{ background: "#FFF7F5", borderInlineStart: "2px solid #E85D3D" }}>
                 <Group justify="space-between">
                   <Group gap={8}>
                     <Box w={8} h={8} style={{ background: "#E85D3D" }} />
                     <Box>
                       <Text fw={500} style={{ fontSize: 13 }}>NRC {currentNRCLocation.country}</Text>
                       <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
-                        {currentNRCLocation.capital} &bull; Country Office
+                        {currentNRCLocation.capital} &bull; {t("rightPanel.countryOffice")}
                       </Text>
                     </Box>
                   </Group>
                   <Badge size="xs" style={{ fontSize: 9, fontWeight: 700, background: "#D1FAE5", color: "#059669" }}>
-                    Active
+                    {t("rightPanel.activeBadge")}
                   </Badge>
                 </Group>
               </Box>
@@ -601,16 +601,16 @@ export function RightPanel({
 
             {/* Regional Context */}
             <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
-              Regional Context
+              {t("rightPanel.regionalContext")}
             </Text>
             <Stack gap={0} mb={16}>
               {[
-                { label: "NRC Region", value: currentNRCLocation.region },
+                { label: t("rightPanel.nrcRegion"), value: currentNRCLocation.region },
                 {
-                  label: "Countries in Region",
+                  label: t("rightPanel.countriesInRegion"),
                   value: String(getOperationalLocations().filter((l) => l.region === currentNRCLocation.region).length),
                 },
-                { label: "Active Programs", value: String(currentNRCLocation.operationTypes.length) },
+                { label: t("rightPanel.activePrograms"), value: String(currentNRCLocation.operationTypes.length) },
               ].map((row) => (
                 <Group key={row.label} justify="space-between" py={8} style={{ borderBottom: "1px solid #F0F0F0" }}>
                   <Text style={{ fontSize: 13, color: "#525252" }}>{row.label}</Text>
@@ -621,7 +621,7 @@ export function RightPanel({
 
             {/* Neighboring NRC Countries */}
             <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
-              Other {currentNRCLocation.region.split(" ")[0]} Countries
+              {t("rightPanel.otherRegionCountries", { region: currentNRCLocation.region.split(" ")[0] })}
             </Text>
             <Group gap={4}>
               {getOperationalLocations()
@@ -649,18 +649,18 @@ export function RightPanel({
             </Group>
           </Box>
         ) : (
-          <Text style={{ fontSize: 13, color: "#737373" }}>No response data available.</Text>
+          <Text style={{ fontSize: 13, color: "#737373" }}>{t("rightPanel.noResponseData")}</Text>
         )}
       </CollapsibleSection>
 
       {/* NRC Global Operations */}
-      <CollapsibleSection title={`NRC Global Operations (${nrcStatistics.totalCountries})`} locked>
+      <CollapsibleSection title={t("rightPanel.nrcGlobalOperations", { count: nrcStatistics.totalCountries })} locked>
         {/* Quick Stats */}
         <SimpleGrid cols={3} spacing={8} mb={16}>
           {[
-            { value: String(nrcStatistics.totalCountries), label: "Countries" },
-            { value: String(nrcStatistics.regionCount), label: "Regions" },
-            { value: "~16.5k", label: "Staff" }, // TODO(demo): hardcoded - pull from NRC org data
+            { value: String(nrcStatistics.totalCountries), label: t("rightPanel.stats.countries") },
+            { value: String(nrcStatistics.regionCount), label: t("rightPanel.stats.regions") },
+            { value: "~16.5k", label: t("rightPanel.stats.staff") }, // TODO(demo): hardcoded - pull from NRC org data
           ].map((s) => (
             <Box key={s.label} p={8} style={{ textAlign: "center", background: "#F9FAFB" }}>
               <Text fw={700} c="#E85D3D" style={{ fontSize: 18, lineHeight: 1 }}>{s.value}</Text>
@@ -692,7 +692,7 @@ export function RightPanel({
           }}
         >
           <IconGlobe size={16} />
-          {activeView === "nrc-global" ? "Viewing Global Map" : "View All on Map"}
+          {activeView === "nrc-global" ? t("rightPanel.viewingGlobalMap") : t("rightPanel.viewAllOnMap")}
         </Box>
 
         {/* Region accordions */}
@@ -753,7 +753,7 @@ export function RightPanel({
                           border: "none",
                           borderBottom: idx < locations.length - 1 ? "1px solid #F0F0F0" : "none",
                           cursor: "pointer",
-                          textAlign: "left",
+                          textAlign: "start",
                         }}
                         className="hover:bg-[#F0F0F0] transition-colors"
                       >
@@ -763,7 +763,7 @@ export function RightPanel({
                             <Text fw={500} style={{ fontSize: 12, color: "#171717" }}>{location.country}</Text>
                             {selectedCountry === location.country && (
                               <Badge size="xs" style={{ fontSize: 8, background: "#E85D3D", color: "white" }}>
-                                Selected
+                                {t("rightPanel.selectedBadge")}
                               </Badge>
                             )}
                           </Group>
@@ -810,10 +810,10 @@ export function RightPanel({
         {/* Core Competencies */}
         <Box mt={16} pt={16} style={{ borderTop: "1px solid #F0F0F0" }}>
           <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 8 }}>
-            Core Competencies
+            {t("rightPanel.coreCompetencies")}
           </Text>
           <Group gap={4}>
-            {["Education", "Food Security", "ICLA", "Shelter", "WASH", "Camp Mgmt"].map((comp) => (
+            {(["education", "foodSecurity", "icla", "shelter", "wash", "campMgmt"] as const).map((comp) => (
               <Box
                 key={comp}
                 style={{
@@ -824,7 +824,7 @@ export function RightPanel({
                   border: "1px solid #FECFC7",
                 }}
               >
-                {comp}
+                {t(`rightPanel.competencies.${comp}`)}
               </Box>
             ))}
           </Group>
@@ -854,7 +854,7 @@ export function RightPanel({
             cursor: "pointer",
           }}
         >
-          Create Signal
+          {t("rightPanel.createSignal")}
         </Button>
       </Box>
       <CreateSignalModal opened={signalModalOpen} onClose={() => setSignalModalOpen(false)} />
@@ -862,16 +862,16 @@ export function RightPanel({
       {/* Data source footer - TODO(demo): sources and "Updated" timestamp are hardcoded; derive from active pipeline metadata */}
       <Box px={24} py={16} className="border-t border-[var(--color-border)] bg-[var(--color-bg-muted)]">
         <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 11 }}>
-          Data:{" "}
+          {t("rightPanel.footer.data")}{" "}
           <Text component="span" c="#E85D3D" style={{ fontSize: 11 }}>MOH PHEM</Text>
           {", "}
           <Text component="span" c="#E85D3D" style={{ fontSize: 11 }}>WHO</Text>
           {", "}
           <Text component="span" c="#E85D3D" style={{ fontSize: 11 }}>FEWS</Text>
-          {" | AI Analysis"}
+          {" | "}{t("rightPanel.footer.aiAnalysis")}
         </Text>
         <Text size="xs" c="#A3A3A3" mt={8} style={{ fontSize: 9 }}>
-          Updated: 30m ago
+          {t("rightPanel.footer.updated")}
         </Text>
       </Box>
     </Box>

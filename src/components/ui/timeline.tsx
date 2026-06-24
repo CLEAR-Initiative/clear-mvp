@@ -12,11 +12,11 @@ interface TimelineProps {
 
 export function Timeline({ items }: TimelineProps) {
   return (
-    <Box pl={32} style={{ position: "relative" }}>
+    <Box ps={32} style={{ position: "relative" }}>
       <Box
         style={{
           position: "absolute",
-          left: 28,
+          insetInlineStart: 28,
           top: 16,
           bottom: 16,
           width: 2,

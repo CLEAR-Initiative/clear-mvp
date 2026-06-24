@@ -1,11 +1,13 @@
+import { useTranslations } from "next-intl";
 import { Box, Text, Group, Stack } from "@mantine/core";
 
+// labelKey: i18n keys under map.severities.* - resolved via t() at render time.
 const SEVERITY_ITEMS = [
-  { label: "Critical", color: "#DC2626" },
-  { label: "High",     color: "#D97706" },
-  { label: "Medium",   color: "#FBBF24" },
-  { label: "Low",      color: "#059669" },
-];
+  { labelKey: "critical", color: "#DC2626" },
+  { labelKey: "high",     color: "#D97706" },
+  { labelKey: "medium",   color: "#FBBF24" },
+  { labelKey: "low",      color: "#059669" },
+] as const;
 
 interface DisasterType {
   id: string;
@@ -19,24 +21,25 @@ interface MapLegendPanelProps {
 }
 
 export function MapLegendPanel({ eventTypes = [] }: MapLegendPanelProps) {
+  const t = useTranslations("map");
   return (
     <Box
       className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
       p={12}
-      style={{ bottom: 100, left: 16, minWidth: 140 }}
+      style={{ bottom: 100, left: 16, minWidth: 140 }} /* intentionally physical: map overlay */
     >
       <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 10, letterSpacing: "0.05em" }} mb={8}>
-        Legend
+        {t("panels.legend")}
       </Text>
 
       <Stack gap={4}>
         <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em" }} mb={2}>
-          Severity
+          {t("panels.severity")}
         </Text>
         {SEVERITY_ITEMS.map((item) => (
-          <Group key={item.label} gap={8}>
+          <Group key={item.labelKey} gap={8}>
             <Box w={10} h={10} style={{ borderRadius: "50%", backgroundColor: item.color, flexShrink: 0 }} />
-            <Text size="xs" style={{ fontSize: 11 }}>{item.label}</Text>
+            <Text size="xs" style={{ fontSize: 11 }}>{t(`severities.${item.labelKey}`)}</Text>
           </Group>
         ))}
       </Stack>
@@ -44,7 +47,7 @@ export function MapLegendPanel({ eventTypes = [] }: MapLegendPanelProps) {
       {eventTypes.length > 0 && (
         <Stack gap={4} mt={10}>
           <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em" }} mb={2}>
-            Event Type
+            {t("panels.eventType")}
           </Text>
           {eventTypes.map((dt) => (
             <Group key={dt.id} gap={8}>

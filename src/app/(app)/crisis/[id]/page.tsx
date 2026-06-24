@@ -2,6 +2,7 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Box, Loader, Text } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -17,6 +18,7 @@ function enrichmentPending(crisis: GqlCrisis | null | undefined): boolean {
 }
 
 function EnrichmentLoadingScreen() {
+  const t = useTranslations("crisisDetail");
   return (
     <Box
       style={{
@@ -36,7 +38,7 @@ function EnrichmentLoadingScreen() {
         }}
       >
         <Link
-          href="/analysis"
+          href="/insights"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -47,7 +49,7 @@ function EnrichmentLoadingScreen() {
           }}
         >
           <IconArrowLeft size={14} />
-          Back to Analysis
+          {t("backToAnalysis")}
         </Link>
       </Box>
 
@@ -66,10 +68,10 @@ function EnrichmentLoadingScreen() {
         <Loader size="md" color="var(--color-accent)" />
         <Box style={{ textAlign: "center" }}>
           <Text fw={600} size="sm" c="var(--color-text-primary)" mb={6}>
-            Information is being prepared
+            {t("enrichment.preparingTitle")}
           </Text>
           <Text size="xs" c="var(--color-text-muted)">
-            Generating title, summary, scenarios and needs assessment...
+            {t("enrichment.preparingDescription")}
           </Text>
         </Box>
       </Box>

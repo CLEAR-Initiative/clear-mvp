@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Modal,
   TextInput,
@@ -29,13 +30,14 @@ interface FormData {
   status: "draft" | "published";
 }
 
+// labelKey: i18n keys under detection.createAlert.severityOptions.* - resolved via t() at render time.
 const SEVERITY_OPTIONS = [
-  { value: "1", label: "1 - Low" },
-  { value: "2", label: "2 - Moderate" },
-  { value: "3", label: "3 - High" },
-  { value: "4", label: "4 - Very High" },
-  { value: "5", label: "5 - Critical" },
-];
+  { value: "1", labelKey: "low" },
+  { value: "2", labelKey: "moderate" },
+  { value: "3", labelKey: "high" },
+  { value: "4", labelKey: "veryHigh" },
+  { value: "5", labelKey: "critical" },
+] as const;
 
 const SECTION_LABEL_STYLE = {
   fontSize: 11,
@@ -46,6 +48,7 @@ const SECTION_LABEL_STYLE = {
 };
 
 export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModalProps) {
+  const t = useTranslations("detection");
   const [form, setForm] = useState<FormData>({
     title: "",
     description: "",
@@ -58,7 +61,7 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
 
   const createMutation = api.alerts.createAlert.useMutation({
     onSuccess: () => {
-      setSuccessMsg("Alert created successfully.");
+      setSuccessMsg(t("createAlert.success"));
       setTimeout(() => {
         setSuccessMsg(null);
         resetForm();
@@ -109,7 +112,7 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
       onClose={handleClose}
       title={
         <Text fw={600} size="sm">
-          Create Manual Alert
+          {t("createAlert.title")}
         </Text>
       }
       size="lg"
@@ -130,11 +133,11 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
       <Stack gap="md">
         {/* Section 1 - Alert Content */}
         <Divider />
-        <Text style={SECTION_LABEL_STYLE}>Alert Content</Text>
+        <Text style={SECTION_LABEL_STYLE}>{t("createAlert.sectionContent")}</Text>
 
         <TextInput
-          label={<Text style={SECTION_LABEL_STYLE}>Title</Text>}
-          placeholder="Alert title/headline"
+          label={<Text style={SECTION_LABEL_STYLE}>{t("createAlert.fieldTitle")}</Text>}
+          placeholder={t("createAlert.titlePlaceholder")}
           value={form.title}
           onChange={(e) => {
             const v = e.currentTarget?.value ?? "";
@@ -144,8 +147,8 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
         />
 
         <Textarea
-          label={<Text style={SECTION_LABEL_STYLE}>Description</Text>}
-          placeholder="Main alert content and details"
+          label={<Text style={SECTION_LABEL_STYLE}>{t("createAlert.fieldDescription")}</Text>}
+          placeholder={t("createAlert.descriptionPlaceholder")}
           value={form.description}
           onChange={(e) => {
             const v = e.currentTarget?.value ?? "";
@@ -157,26 +160,26 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
 
         {/* Section 2 - Classification */}
         <Divider />
-        <Text style={SECTION_LABEL_STYLE}>Classification</Text>
+        <Text style={SECTION_LABEL_STYLE}>{t("createAlert.sectionClassification")}</Text>
 
         <Group grow>
           <Select
-            label={<Text style={SECTION_LABEL_STYLE}>Severity</Text>}
-            placeholder="Select severity"
-            data={SEVERITY_OPTIONS}
+            label={<Text style={SECTION_LABEL_STYLE}>{t("createAlert.fieldSeverity")}</Text>}
+            placeholder={t("createAlert.severityPlaceholder")}
+            data={SEVERITY_OPTIONS.map((o) => ({ value: o.value, label: t(`createAlert.severityOptions.${o.labelKey}`) }))}
             value={form.severity}
             onChange={(v) => setForm((p) => ({ ...p, severity: v ?? "" }))}
             required
             comboboxProps={{ zIndex: 1000 }}
           />
           <Stack gap={4}>
-            <Text style={SECTION_LABEL_STYLE}>Status</Text>
+            <Text style={SECTION_LABEL_STYLE}>{t("createAlert.fieldStatus")}</Text>
             <SegmentedControl
               value={form.status}
               onChange={(v) => setForm((p) => ({ ...p, status: v as "draft" | "published" }))}
               data={[
-                { label: "Draft", value: "draft" },
-                { label: "Published", value: "published" },
+                { label: t("createAlert.statusDraft"), value: "draft" },
+                { label: t("createAlert.statusPublished"), value: "published" },
               ]}
               size="xs"
             />
@@ -190,7 +193,7 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
           loading={createMutation.isPending}
           style={{ background: "#E85D3D", borderColor: "#E85D3D" }}
         >
-          Create Alert
+          {t("createAlert.submit")}
         </Button>
       </Stack>
     </Modal>

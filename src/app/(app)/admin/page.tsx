@@ -40,6 +40,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import Link from "next/link";
+import { useFormatter, useTranslations } from "next-intl";
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
@@ -71,12 +72,13 @@ type PendingAction =
   | { type: "role"; user: GqlUser; newRole: string }
   | { type: "delete"; user: GqlUser };
 
+// labelKey: i18n keys under admin.users.roles.* - resolved via t() at render time.
 const ROLES = [
-  { value: "field", label: "Field" },
-  { value: "analyst", label: "Analyst" },
-  { value: "org_admin", label: "Org Admin" },
-  { value: "admin", label: "Admin" },
-];
+  { value: "field", labelKey: "field" },
+  { value: "analyst", labelKey: "analyst" },
+  { value: "org_admin", labelKey: "orgAdmin" },
+  { value: "admin", labelKey: "admin" },
+] as const;
 
 const roleColor: Record<string, string> = {
   admin: "orange",
@@ -90,15 +92,16 @@ const roleColor: Record<string, string> = {
 /* ─── Hold-to-confirm button ──────────────────────────────── */
 function HoldToConfirmButton({
   onConfirm,
-  label = "Hold to confirm",
+  label,
   duration = 2000,
   danger = true,
 }: {
   onConfirm: () => void;
-  label?: string;
+  label: string;
   duration?: number;
   danger?: boolean;
 }) {
+  const t = useTranslations("admin.hold");
   const [progress, setProgress] = useState(0);
   const rafRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -167,7 +170,7 @@ function HoldToConfirmButton({
       <Box
         style={{
           position: "absolute",
-          left: 0,
+          insetInlineStart: 0,
           top: 0,
           bottom: 0,
           width: `${progress}%`,
@@ -176,7 +179,7 @@ function HoldToConfirmButton({
         }}
       />
       <span style={{ position: "relative", zIndex: 1 }}>
-        {progress > 0 ? "Hold…" : label}
+        {progress > 0 ? t("holding") : label}
       </span>
     </button>
   );
@@ -192,34 +195,29 @@ function ConfirmModal({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const t = useTranslations("admin");
+  const tActions = useTranslations("common.actions");
   const isDelete = action?.type === "delete";
 
-  const title = isDelete ? "Remove from team" : "Confirm role change";
+  const title = isDelete ? t("confirm.removeTitle") : t("confirm.roleTitle");
+
+  const b = (chunks: React.ReactNode) => (
+    <Text component="span" fw={600} c={colors.textPrimary}>
+      {chunks}
+    </Text>
+  );
 
   const body = action ? (
     isDelete ? (
-      <>
-        Are you sure you want to remove{" "}
-        <Text component="span" fw={600} c={colors.textPrimary}>
-          {action.user.name}
-        </Text>{" "}
-        from your team? This action cannot be undone.
-      </>
+      <>{t.rich("confirm.removeBody", { b, name: action.user.name })}</>
     ) : (
       <>
-        Change{" "}
-        <Text component="span" fw={600} c={colors.textPrimary}>
-          {action.user.name}
-        </Text>
-        {"'s role from "}
-        <Text component="span" fw={600} c={colors.textPrimary} tt="capitalize">
-          {action.user.role}
-        </Text>
-        {" to "}
-        <Text component="span" fw={600} c={colors.textPrimary} tt="capitalize">
-          {(action as Extract<PendingAction, { type: "role" }>).newRole}
-        </Text>
-        {"?"}
+        {t.rich("confirm.roleBody", {
+          b,
+          name: action.user.name,
+          from: action.user.role,
+          to: (action as Extract<PendingAction, { type: "role" }>).newRole,
+        })}
       </>
     )
   ) : null;
@@ -249,16 +247,16 @@ function ConfirmModal({
         c={colors.textMuted}
         style={{ fontSize: fontSizesPx.sm, marginTop: spacingPx[4] }}
       >
-        Press and hold the button below to confirm.
+        {t("confirm.holdHint")}
       </Text>
 
       <Group justify="flex-end" mt={spacingPx[5]} gap={spacingPx[3]}>
         <Button variant="subtle" color="gray" onClick={onClose}>
-          Cancel
+          {tActions("cancel")}
         </Button>
         <HoldToConfirmButton
           onConfirm={onConfirm}
-          label={isDelete ? "Hold to remove" : "Hold to confirm"}
+          label={isDelete ? t("hold.remove") : t("hold.confirm")}
           danger={isDelete}
         />
       </Group>
@@ -268,6 +266,7 @@ function ConfirmModal({
 
 /* ─── Users panel ─────────────────────────────────────────── */
 function UsersPanel() {
+  const t = useTranslations("admin.users");
   const { data, isLoading } = api.auth.listUsers.useQuery(undefined, {
     staleTime: 30_000,
   });
@@ -382,7 +381,7 @@ function UsersPanel() {
       <Box p={24}>
         <Text c={colors.textMuted} style={{ fontSize: fontSizesPx.base }}>
           {data.error === "Unauthorized"
-            ? "You need admin privileges to view user management."
+            ? t("unauthorized")
             : data.error}
         </Text>
       </Box>
@@ -395,9 +394,9 @@ function UsersPanel() {
   const activeCount = localUsers.filter((u) => u.isActive).length;
 
   const stats: StatItem[] = [
-    { label: "Total Users", value: String(localUsers.length) },
-    { label: "Admins", value: String(adminCount), color: colors.accent },
-    { label: "Active", value: String(activeCount), color: colors.success },
+    { label: t("stats.total"), value: String(localUsers.length) },
+    { label: t("stats.admins"), value: String(adminCount), color: colors.accent },
+    { label: t("stats.active"), value: String(activeCount), color: colors.success },
   ];
 
   return (
@@ -417,8 +416,8 @@ function UsersPanel() {
               value={filter}
               onChange={(v) => v && setFilter(v as FilterMode)}
               data={[
-                { value: "all", label: "All users" },
-                { value: "pending", label: "Pending approval" },
+                { value: "all", label: t("filterAll") },
+                { value: "pending", label: t("filterPending") },
               ]}
               size="xs"
               variant="unstyled"
@@ -433,7 +432,7 @@ function UsersPanel() {
               }}
             />
             <Select
-              placeholder="All orgs"
+              placeholder={t("allOrgs")}
               data={(orgsData?.organisations ?? []).map((o) => ({ value: o.id, label: o.name }))}
               value={selectedOrgId}
               onChange={(v) => { setSelectedOrgId(v); setSelectedTeamId(null); }}
@@ -445,7 +444,7 @@ function UsersPanel() {
             />
             {selectedOrgId && orgTeamOptions.length > 0 && (
               <Select
-                placeholder="All teams"
+                placeholder={t("allTeams")}
                 data={orgTeamOptions}
                 value={selectedTeamId}
                 onChange={setSelectedTeamId}
@@ -472,7 +471,7 @@ function UsersPanel() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr style={{ background: colors.bgPrimary }}>
-              {(["User", "Role", "Email", "Org", "Team", "Status", ""] as const).map((h) => (
+              {(["user", "role", "email", "org", "team", "status", ""] as const).map((h) => (
                 <Table.Th
                   key={h}
                   style={{
@@ -484,7 +483,7 @@ function UsersPanel() {
                     width: h === "" ? 40 : undefined,
                   }}
                 >
-                  {h}
+                  {h === "" ? "" : t(`columns.${h}`)}
                 </Table.Th>
               ))}
             </Table.Tr>
@@ -500,8 +499,8 @@ function UsersPanel() {
                     style={{ fontSize: fontSizesPx.base }}
                   >
                     {filter === "pending"
-                      ? "No users pending approval"
-                      : "No users found"}
+                      ? t("emptyPending")
+                      : t("empty")}
                   </Text>
                 </Table.Td>
               </Table.Tr>
@@ -535,7 +534,7 @@ function UsersPanel() {
                             color: colors.textMuted,
                           }}
                         >
-                          {user.emailVerified ? "Verified" : "Unverified"}
+                          {user.emailVerified ? t("verified") : t("unverified")}
                         </Text>
                       </Box>
                     </Group>
@@ -546,7 +545,7 @@ function UsersPanel() {
                     <Select
                       value={pendingRoles[user.id] ?? user.role}
                       onChange={(val) => handleRoleSelect(user, val)}
-                      data={ROLES}
+                      data={ROLES.map((r) => ({ value: r.value, label: t(`roles.${r.labelKey}`) }))}
                       size="xs"
                       w={110}
                       styles={{
@@ -577,7 +576,7 @@ function UsersPanel() {
                         color: colors.textSecondary,
                       }}
                     >
-                      {user.email}
+                      {user.email ?? "—"}
                     </Text>
                   </Table.Td>
 
@@ -621,7 +620,7 @@ function UsersPanel() {
                         variant="dot"
                         color={user.isActive ? "green" : "orange"}
                       >
-                        {user.isActive ? "Active" : "Pending"}
+                        {user.isActive ? t("statusActive") : t("statusPending")}
                       </Badge>
                       {!user.isActive && (
                         <Button
@@ -631,7 +630,7 @@ function UsersPanel() {
                           leftSection={<IconUserCheck size={12} />}
                           onClick={() => handleActivate(user)}
                         >
-                          Activate
+                          {t("activate")}
                         </Button>
                       )}
                     </Group>
@@ -666,6 +665,7 @@ function UsersPanel() {
 
 /* ─── Features panel ──────────────────────────────────────── */
 function FeaturesPanel() {
+  const t = useTranslations("admin.features");
   const { features, isLoading, toggle } = useFeatureFlags();
 
   if (isLoading || !features.length) {
@@ -680,9 +680,9 @@ function FeaturesPanel() {
   const disabledCount = features.filter((f) => !f.enabled).length;
 
   const stats: StatItem[] = [
-    { label: "Total Features", value: String(features.length) },
-    { label: "Enabled", value: String(enabledCount), color: colors.success },
-    { label: "Disabled", value: String(disabledCount), color: colors.critical },
+    { label: t("stats.total"), value: String(features.length) },
+    { label: t("stats.enabled"), value: String(enabledCount), color: colors.success },
+    { label: t("stats.disabled"), value: String(disabledCount), color: colors.critical },
   ];
 
   return (
@@ -749,6 +749,11 @@ const INPUT_STYLES = {
 } as const;
 
 function OrganisationsPanel() {
+  const t = useTranslations("admin.orgs");
+  const tRoles = useTranslations("admin.roles");
+  const tConfirm = useTranslations("admin.confirm");
+  const tHold = useTranslations("admin.hold");
+  const tActions = useTranslations("common.actions");
   const {
     data: orgs,
     isLoading,
@@ -834,7 +839,7 @@ function OrganisationsPanel() {
       setStep(2);
     } catch (err) {
       setStepError(
-        err instanceof Error ? err.message : "Failed to create organisation",
+        err instanceof Error ? err.message : t("wizard.createOrgFailed"),
       );
     }
   };
@@ -853,7 +858,7 @@ function OrganisationsPanel() {
       setStep(3);
     } catch (err) {
       setStepError(
-        err instanceof Error ? err.message : "Failed to create team",
+        err instanceof Error ? err.message : t("wizard.createTeamFailed"),
       );
     }
   };
@@ -868,12 +873,12 @@ function OrganisationsPanel() {
       .filter(Boolean);
 
     if (emails.length === 0) {
-      setStepError("Please enter at least one email address");
+      setStepError(t("wizard.noEmails"));
       return;
     }
 
     if (!createdTeamId) {
-      setStepError("Create a team in the previous step before inviting members");
+      setStepError(t("wizard.needTeam"));
       return;
     }
 
@@ -895,7 +900,7 @@ function OrganisationsPanel() {
         sent++;
       } catch (err) {
         errors.push(
-          `${email}: ${err instanceof Error ? err.message : "Unknown error"}`,
+          `${email}: ${err instanceof Error ? err.message : t("wizard.unknownError")}`,
         );
       }
     }
@@ -913,14 +918,15 @@ function OrganisationsPanel() {
 
   const orgList = orgs ?? [];
 
-  const stepLabels = ["Organisation", "Team", "Invite Users"];
-  const modalTitle = `Step ${step}: ${stepLabels[step - 1]}`;
+  // i18n keys under admin.orgs.wizard.steps.* - resolved via t() at render time.
+  const stepLabelKeys = ["organisation", "team", "invite"] as const;
+  const modalTitle = t("wizard.stepTitle", { step, label: t(`wizard.steps.${stepLabelKeys[step - 1]}`) });
 
   return (
     <Box p={24}>
       <StatsGrid
         stats={[
-          { label: "Total Organisations", value: String(orgList.length) },
+          { label: t("statsTotal"), value: String(orgList.length) },
         ]}
         cols={1}
         mb={24}
@@ -938,7 +944,7 @@ function OrganisationsPanel() {
             c={colors.textPrimary}
             style={{ fontSize: fontSizesPx.lg }}
           >
-            Organisations
+            {t("title")}
           </Text>
           <Button
             size="xs"
@@ -949,14 +955,14 @@ function OrganisationsPanel() {
               setCreateOpen(true);
             }}
           >
-            Create Organisation
+            {t("create")}
           </Button>
         </Group>
 
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr style={{ background: colors.bgPrimary }}>
-              {["Name", "Slug", "Teams", "Members", ""].map((h) => (
+              {(["name", "slug", "teams", "members", ""] as const).map((h) => (
                 <Table.Th
                   key={h}
                   style={{
@@ -967,7 +973,7 @@ function OrganisationsPanel() {
                     letterSpacing: "0.05em",
                   }}
                 >
-                  {h}
+                  {h === "" ? "" : t(`columns.${h}`)}
                 </Table.Th>
               ))}
             </Table.Tr>
@@ -982,7 +988,7 @@ function OrganisationsPanel() {
                     py={24}
                     style={{ fontSize: fontSizesPx.base }}
                   >
-                    No organisations yet. Create one to get started.
+                    {t("empty")}
                   </Text>
                 </Table.Td>
               </Table.Tr>
@@ -1025,12 +1031,12 @@ function OrganisationsPanel() {
                     </Table.Td>
                     <Table.Td>
                       <Badge size="sm" variant="light" color="blue">
-                        {teams.length} teams
+                        {t("teamsCount", { count: teams.length })}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
                       <Badge size="sm" variant="light" color="gray">
-                        {org.members?.length ?? 0} members
+                        {t("membersCount", { count: org.members?.length ?? 0 })}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
@@ -1046,13 +1052,13 @@ function OrganisationsPanel() {
                             gap: 3,
                           }}
                         >
-                          Manage <IconExternalLink size={11} />
+                          {t("manage")} <IconExternalLink size={11} />
                         </Anchor>
                         <ActionIcon
                           variant="subtle"
                           color="red"
                           size="sm"
-                          title="Delete organisation"
+                          title={t("deleteOrgTooltip")}
                           onClick={() =>
                             setDeleteTarget({
                               type: "org",
@@ -1072,7 +1078,7 @@ function OrganisationsPanel() {
                       key={`team-${team.id}`}
                       style={{ background: "rgba(0,0,0,0.015)" }}
                     >
-                      <Table.Td pl={48}>
+                      <Table.Td ps={48}>
                         <Text
                           style={{
                             fontSize: fontSizesPx.sm,
@@ -1094,13 +1100,12 @@ function OrganisationsPanel() {
                       </Table.Td>
                       <Table.Td>
                         <Badge size="xs" variant="light" color="gray">
-                          team
+                          {t("teamBadge")}
                         </Badge>
                       </Table.Td>
                       <Table.Td>
                         <Badge size="xs" variant="light" color="gray">
-                          {(team.members as unknown[] | undefined)?.length ?? 0}{" "}
-                          members
+                          {t("membersCount", { count: (team.members as unknown[] | undefined)?.length ?? 0 })}
                         </Badge>
                       </Table.Td>
                       <Table.Td>
@@ -1108,7 +1113,7 @@ function OrganisationsPanel() {
                           variant="subtle"
                           color="red"
                           size="sm"
-                          title="Delete team"
+                          title={t("deleteTeamTooltip")}
                           onClick={() =>
                             setDeleteTarget({
                               type: "team",
@@ -1174,8 +1179,8 @@ function OrganisationsPanel() {
               </Alert>
             )}
             <TextInput
-              label="Organisation Name"
-              placeholder="e.g. NRC Sudan"
+              label={t("wizard.orgNameLabel")}
+              placeholder={t("wizard.orgNamePlaceholder")}
               value={newName}
               onChange={(e) => {
                 setNewName(e.currentTarget.value);
@@ -1191,8 +1196,8 @@ function OrganisationsPanel() {
               styles={INPUT_STYLES}
             />
             <TextInput
-              label="Slug"
-              placeholder="e.g. nrc-sudan"
+              label={t("wizard.slugLabel")}
+              placeholder={t("wizard.orgSlugPlaceholder")}
               value={newSlug}
               onChange={(e) => setNewSlug(e.currentTarget.value)}
               required
@@ -1200,7 +1205,7 @@ function OrganisationsPanel() {
             />
             <Group justify="flex-end" mt={8}>
               <Button variant="subtle" color="gray" onClick={handleCloseModal}>
-                Cancel
+                {tActions("cancel")}
               </Button>
               <Button
                 color="dark"
@@ -1208,7 +1213,7 @@ function OrganisationsPanel() {
                 onClick={() => void handleCreateOrg()}
                 disabled={!newName.trim() || !newSlug.trim()}
               >
-                Create & Next
+                {t("wizard.createNext")}
               </Button>
             </Group>
           </Stack>
@@ -1218,11 +1223,14 @@ function OrganisationsPanel() {
         {step === 2 && (
           <Stack gap={12}>
             <Text size="sm" c={colors.textSecondary}>
-              Create the first team for{" "}
-              <Text component="span" fw={600} c={colors.textPrimary}>
-                {createdOrgName}
-              </Text>
-              .
+              {t.rich("wizard.teamIntro", {
+                b: (chunks) => (
+                  <Text component="span" fw={600} c={colors.textPrimary}>
+                    {chunks}
+                  </Text>
+                ),
+                org: createdOrgName,
+              })}
             </Text>
             {stepError && (
               <Alert
@@ -1235,8 +1243,8 @@ function OrganisationsPanel() {
               </Alert>
             )}
             <TextInput
-              label="Team Name"
-              placeholder="e.g. Sudan Monitoring"
+              label={t("wizard.teamNameLabel")}
+              placeholder={t("wizard.teamNamePlaceholder")}
               value={teamName}
               onChange={(e) => {
                 setTeamName(e.currentTarget.value);
@@ -1252,16 +1260,16 @@ function OrganisationsPanel() {
               styles={INPUT_STYLES}
             />
             <TextInput
-              label="Slug"
-              placeholder="e.g. sudan-monitoring"
+              label={t("wizard.slugLabel")}
+              placeholder={t("wizard.teamSlugPlaceholder")}
               value={teamSlug}
               onChange={(e) => setTeamSlug(e.currentTarget.value)}
               required
               styles={INPUT_STYLES}
             />
             <TextInput
-              label="Description (optional)"
-              placeholder="What does this team monitor?"
+              label={t("wizard.descriptionLabel")}
+              placeholder={t("wizard.descriptionPlaceholder")}
               value={teamDesc}
               onChange={(e) => setTeamDesc(e.currentTarget.value)}
               styles={INPUT_STYLES}
@@ -1275,7 +1283,7 @@ function OrganisationsPanel() {
                   setStep(3);
                 }}
               >
-                Skip
+                {t("wizard.skip")}
               </Button>
               <Button
                 color="dark"
@@ -1283,7 +1291,7 @@ function OrganisationsPanel() {
                 onClick={() => void handleCreateTeam()}
                 disabled={!teamName.trim() || !teamSlug.trim()}
               >
-                Create Team & Next
+                {t("wizard.createTeamNext")}
               </Button>
             </Group>
           </Stack>
@@ -1293,12 +1301,14 @@ function OrganisationsPanel() {
         {step === 3 && (
           <Stack gap={12}>
             <Text size="sm" c={colors.textSecondary}>
-              Invite users to{" "}
-              <Text component="span" fw={600} c={colors.textPrimary}>
-                {createdOrgName}
-              </Text>
-              {createdTeamId ? " and the team you just created" : ""}. Separate
-              multiple emails with commas or newlines.
+              {t.rich(createdTeamId ? "wizard.inviteIntroTeam" : "wizard.inviteIntro", {
+                b: (chunks) => (
+                  <Text component="span" fw={600} c={colors.textPrimary}>
+                    {chunks}
+                  </Text>
+                ),
+                org: createdOrgName,
+              })}
             </Text>
 
             {stepError && (
@@ -1336,14 +1346,13 @@ function OrganisationsPanel() {
                 variant="light"
                 styles={{ message: { fontSize: 13 } }}
               >
-                {invitesSent} invitation{invitesSent > 1 ? "s" : ""} sent
-                successfully
+                {t("wizard.invitesSent", { count: invitesSent })}
               </Alert>
             )}
 
             <TextInput
-              label="Email Addresses"
-              placeholder="user1@example.com, user2@example.com"
+              label={t("wizard.emailsLabel")}
+              placeholder={t("wizard.emailsPlaceholder")}
               value={inviteEmails}
               onChange={(e) => setInviteEmails(e.currentTarget.value)}
               styles={INPUT_STYLES}
@@ -1351,25 +1360,25 @@ function OrganisationsPanel() {
 
             <Group gap={12}>
               <Select
-                label="Org Role"
+                label={t("wizard.orgRoleLabel")}
                 value={inviteRole}
                 onChange={(v) => v && setInviteRole(v)}
                 data={[
-                  { value: "member", label: "Member" },
-                  { value: "admin", label: "Admin" },
+                  { value: "member", label: tRoles("member") },
+                  { value: "admin", label: tRoles("admin") },
                 ]}
                 w={140}
                 styles={INPUT_STYLES}
               />
               {createdTeamId && (
                 <Select
-                  label="Team Role"
+                  label={t("wizard.teamRoleLabel")}
                   value={inviteTeamRole}
                   onChange={(v) => v && setInviteTeamRole(v)}
                   data={[
-                    { value: "viewer", label: "Viewer" },
-                    { value: "analyst", label: "Analyst" },
-                    { value: "lead", label: "Lead" },
+                    { value: "viewer", label: tRoles("viewer") },
+                    { value: "analyst", label: tRoles("analyst") },
+                    { value: "lead", label: tRoles("lead") },
                   ]}
                   w={140}
                   styles={INPUT_STYLES}
@@ -1379,7 +1388,7 @@ function OrganisationsPanel() {
 
             <Group justify="flex-end" mt={8}>
               <Button variant="subtle" color="gray" onClick={handleCloseModal}>
-                {invitesSent > 0 ? "Done" : "Skip & Close"}
+                {invitesSent > 0 ? t("wizard.done") : t("wizard.skipClose")}
               </Button>
               <Button
                 color="dark"
@@ -1388,7 +1397,7 @@ function OrganisationsPanel() {
                 onClick={() => void handleSendInvites()}
                 disabled={!inviteEmails.trim()}
               >
-                Send Invitations
+                {t("wizard.send")}
               </Button>
             </Group>
           </Stack>
@@ -1401,7 +1410,7 @@ function OrganisationsPanel() {
         onClose={() => setDeleteTarget(null)}
         title={
           <Text fw={600} style={{ fontSize: fontSizesPx.xl }}>
-            Delete {deleteTarget?.type === "org" ? "Organisation" : "Team"}
+            {deleteTarget?.type === "org" ? t("deleteModal.titleOrg") : t("deleteModal.titleTeam")}
           </Text>
         }
         centered
@@ -1415,20 +1424,23 @@ function OrganisationsPanel() {
           style={{ fontSize: fontSizesPx.base, lineHeight: 1.6 }}
           mt={spacingPx[3]}
         >
-          Are you sure you want to delete{" "}
-          <Text component="span" fw={600} c={colors.textPrimary}>
-            {deleteTarget?.name}
-          </Text>
-          ?
+          {t.rich("deleteModal.body", {
+            b: (chunks) => (
+              <Text component="span" fw={600} c={colors.textPrimary}>
+                {chunks}
+              </Text>
+            ),
+            name: deleteTarget?.name ?? "",
+          })}{" "}
           {deleteTarget?.type === "org"
-            ? " This will permanently remove the organisation, all its teams, members, and invitations."
-            : " This will permanently remove the team and all its members."}
+            ? t("deleteModal.consequenceOrg")
+            : t("deleteModal.consequenceTeam")}
         </Text>
         <Text
           c={colors.textMuted}
           style={{ fontSize: fontSizesPx.sm, marginTop: spacingPx[4] }}
         >
-          Press and hold the button below to confirm.
+          {tConfirm("holdHint")}
         </Text>
         <Group justify="flex-end" mt={spacingPx[5]} gap={spacingPx[3]}>
           <Button
@@ -1436,10 +1448,10 @@ function OrganisationsPanel() {
             color="gray"
             onClick={() => setDeleteTarget(null)}
           >
-            Cancel
+            {tActions("cancel")}
           </Button>
           <HoldToConfirmButton
-            label={`Hold to delete`}
+            label={tHold("delete")}
             danger
             onConfirm={() => {
               if (!deleteTarget) return;
@@ -1459,6 +1471,10 @@ function OrganisationsPanel() {
 
 /* ─── Invitations panel ──────────────────────────────────── */
 function InvitationsPanel() {
+  const t = useTranslations("admin.invitations");
+  const tRoles = useTranslations("admin.roles");
+  const tActions = useTranslations("common.actions");
+  const format = useFormatter();
   const { data: orgs } = api.teams.myOrganisations.useQuery(undefined, {
     staleTime: 30_000,
   });
@@ -1528,11 +1544,11 @@ function InvitationsPanel() {
       {/* Org selector */}
       <Group mb={24} gap={12}>
         <Select
-          label="Organisation"
+          label={t("orgLabel")}
           value={selectedOrgId}
           onChange={setSelectedOrgId}
           data={orgOptions}
-          placeholder="Select organisation"
+          placeholder={t("orgPlaceholder")}
           w={280}
           styles={{
             label: {
@@ -1559,7 +1575,7 @@ function InvitationsPanel() {
           disabled={!selectedOrgId}
           mt={20}
         >
-          Invite User
+          {t("inviteUser")}
         </Button>
       </Group>
 
@@ -1577,7 +1593,7 @@ function InvitationsPanel() {
               c={colors.textPrimary}
               style={{ fontSize: fontSizesPx.lg }}
             >
-              Pending Invitations
+              {t("pendingTitle")}
             </Text>
             <Badge
               size="sm"
@@ -1604,7 +1620,7 @@ function InvitationsPanel() {
           <Table highlightOnHover>
             <Table.Thead>
               <Table.Tr style={{ background: colors.bgPrimary }}>
-                {["Email", "Org Role", "Team", "Invited By", "Expires", ""].map(
+                {(["email", "orgRole", "team", "invitedBy", "expires", ""] as const).map(
                   (h) => (
                     <Table.Th
                       key={h}
@@ -1616,7 +1632,7 @@ function InvitationsPanel() {
                         letterSpacing: "0.05em",
                       }}
                     >
-                      {h}
+                      {h === "" ? "" : t(`columns.${h}`)}
                     </Table.Th>
                   ),
                 )}
@@ -1632,7 +1648,7 @@ function InvitationsPanel() {
                       py={24}
                       style={{ fontSize: fontSizesPx.base }}
                     >
-                      No pending invitations
+                      {t("empty")}
                     </Text>
                   </Table.Td>
                 </Table.Tr>
@@ -1703,7 +1719,7 @@ function InvitationsPanel() {
                           color: colors.textMuted,
                         }}
                       >
-                        {new Date(invite.expiresAt).toLocaleDateString()}
+                        {format.dateTime(new Date(invite.expiresAt), "short")}
                       </Text>
                     </Table.Td>
                     <Table.Td>
@@ -1712,7 +1728,7 @@ function InvitationsPanel() {
                           variant="subtle"
                           color="blue"
                           size="sm"
-                          title="Resend"
+                          title={t("resend")}
                           loading={resendMutation.isPending}
                           onClick={() =>
                             resendMutation.mutate({ id: invite.id })
@@ -1724,7 +1740,7 @@ function InvitationsPanel() {
                           variant="subtle"
                           color="red"
                           size="sm"
-                          title="Cancel"
+                          title={t("cancel")}
                           loading={cancelMutation.isPending}
                           onClick={() =>
                             cancelMutation.mutate({ id: invite.id })
@@ -1751,7 +1767,7 @@ function InvitationsPanel() {
         }}
         title={
           <Text fw={600} style={{ fontSize: fontSizesPx.xl }}>
-            Invite User
+            {t("modal.title")}
           </Text>
         }
         centered
@@ -1768,8 +1784,8 @@ function InvitationsPanel() {
           )}
 
           <TextInput
-            label="Email Address"
-            placeholder="user@example.com"
+            label={t("modal.emailLabel")}
+            placeholder={t("modal.emailPlaceholder")}
             type="email"
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.currentTarget.value)}
@@ -1786,13 +1802,13 @@ function InvitationsPanel() {
           />
 
           <Select
-            label="Organisation Role"
+            label={t("modal.orgRoleLabel")}
             value={inviteRole}
             onChange={(v) => v && setInviteRole(v)}
             data={[
-              { value: "member", label: "Member" },
-              { value: "admin", label: "Admin" },
-              { value: "owner", label: "Owner" },
+              { value: "member", label: tRoles("member") },
+              { value: "admin", label: tRoles("admin") },
+              { value: "owner", label: tRoles("owner") },
             ]}
             styles={{
               label: {
@@ -1814,11 +1830,11 @@ function InvitationsPanel() {
                 marginBottom: 6,
               }}
             >
-              Teams <Text component="span" c={colors.critical}>*</Text>
+              {t("modal.teamsLabel")} <Text component="span" c={colors.critical}>*</Text>
             </Text>
             {teamOptions.length === 0 ? (
               <Text size="sm" c={colors.textMuted}>
-                This organisation has no teams. Create one before inviting.
+                {t("modal.noTeams")}
               </Text>
             ) : (
               <Stack gap={6}>
@@ -1854,9 +1870,9 @@ function InvitationsPanel() {
                           }));
                         }}
                         data={[
-                          { value: "viewer", label: "Viewer" },
-                          { value: "analyst", label: "Analyst" },
-                          { value: "lead", label: "Lead" },
+                          { value: "viewer", label: tRoles("viewer") },
+                          { value: "analyst", label: tRoles("analyst") },
+                          { value: "lead", label: tRoles("lead") },
                         ]}
                         disabled={!isSelected}
                         w={110}
@@ -1874,7 +1890,7 @@ function InvitationsPanel() {
               color="gray"
               onClick={() => setInviteOpen(false)}
             >
-              Cancel
+              {tActions("cancel")}
             </Button>
             <Button
               color="dark"
@@ -1886,7 +1902,7 @@ function InvitationsPanel() {
                   ([teamId, teamRole]) => ({ teamId, teamRole }),
                 );
                 if (teams.length === 0) {
-                  setInviteError("Select at least one team");
+                  setInviteError(t("modal.selectAtLeastOneTeam"));
                   return;
                 }
                 inviteMutation.mutate({
@@ -1902,7 +1918,7 @@ function InvitationsPanel() {
                 Object.keys(inviteTeams).length === 0
               }
             >
-              Send Invitation
+              {t("modal.send")}
             </Button>
           </Group>
         </Stack>
@@ -1913,142 +1929,110 @@ function InvitationsPanel() {
 
 /* ─── Data tab ────────────────────────────────────────────── */
 
+type SourceI18nKey =
+  | "dataminr" | "acled" | "gdacs" | "iomDtm" | "informRisk"
+  | "informSeverity" | "fieldOfficer" | "partner" | "government";
+type CadenceKey = "realTime" | "weekly" | "monthly" | "annual" | "adHoc";
+type GroupI18nKey = "earlyWarning" | "displacement" | "risk" | "field";
+
 interface SourceDef {
-  key?: string;          // matches name in pipeline.getSources; absent for direct-query sources
-  name: string;
-  provider: string;
+  key?: string;             // matches name in pipeline.getSources; absent for direct-query sources
+  i18nKey: SourceI18nKey;   // i18n key under admin.data.sources.* (name/provider/description)
   providerUrl?: string;
-  description: string;
-  cadence: string;
+  cadenceKey: CadenceKey;   // i18n key under admin.data.cadences.*
   type: "api" | "manual" | "direct";
 }
 
 interface DataGroup {
   id: string;
-  label: string;
-  description: string;
+  i18nKey: GroupI18nKey;    // i18n key under admin.data.groups.* (label/description)
   sources: SourceDef[];
 }
 
+// All display strings live in admin.data.* - resolved via t() at render time.
 const DATA_GROUPS: DataGroup[] = [
   {
     id: "early-warning",
-    label: "Early Warning & Signals",
-    description: "Real-time and near-real-time event detection feeds",
+    i18nKey: "earlyWarning",
     sources: [
       {
         key: "dataminr",
-        name: "Dataminr",
-        provider: "Dataminr Inc.",
+        i18nKey: "dataminr",
         providerUrl: "https://www.dataminr.com",
-        description: "Real-time AI-powered alerts from public data: social media, news, and public sources. Primary active signal source.",
-        cadence: "Real-time",
+        cadenceKey: "realTime",
         type: "api",
       },
       {
         key: "acled",
-        name: "ACLED",
-        provider: "Armed Conflict Location & Event Data Project",
+        i18nKey: "acled",
         providerUrl: "https://acleddata.com",
-        description: "Disaggregated conflict event data: dates, locations, actors, fatalities. Covers political violence and protests globally.",
-        cadence: "Weekly",
+        cadenceKey: "weekly",
         type: "api",
       },
       {
         key: "gdacs",
-        name: "GDACS",
-        provider: "EU Joint Research Centre / UNOCHA",
+        i18nKey: "gdacs",
         providerUrl: "https://gdacs.org",
-        description: "Global disaster alerts: earthquakes, floods, cyclones, volcanoes, droughts. Near-real-time automated alerts.",
-        cadence: "Real-time",
+        cadenceKey: "realTime",
         type: "api",
       },
     ],
   },
   {
     id: "displacement",
-    label: "Displacement & Population Movement",
-    description: "IDP tracking and population flow data",
+    i18nKey: "displacement",
     sources: [
       {
-        name: "IOM DTM",
-        provider: "IOM / OCHA HDX",
+        i18nKey: "iomDtm",
         providerUrl: "https://dtm.iom.int",
-        description: "IOM Displacement Tracking Matrix. Conflict-induced IDP figures accessed via HDX HAPI. Disaster displacement not included - covered by IDMC separately.",
-        cadence: "Monthly",
+        cadenceKey: "monthly",
         type: "direct",
       },
     ],
   },
   {
     id: "risk",
-    label: "Risk & Vulnerability Indices",
-    description: "Composite index scores for country-level risk assessment",
+    i18nKey: "risk",
     sources: [
       {
-        name: "INFORM Risk",
-        provider: "JRC / European Commission",
+        i18nKey: "informRisk",
         providerUrl: "https://drmkc.jrc.ec.europa.eu/inform-index",
-        description: "Annual composite risk index: Hazard & Exposure, Vulnerability, Coping Capacity. 264 indicators per country at sub-composite level.",
-        cadence: "Annual",
+        cadenceKey: "annual",
         type: "direct",
       },
       {
-        name: "INFORM Severity",
-        provider: "ACAPS",
+        i18nKey: "informSeverity",
         providerUrl: "https://www.acaps.org",
-        description: "Monthly crisis severity index. Covers impact, conditions of affected people, and complexity. Aggregated country-level score via ACAPS API.",
-        cadence: "Monthly",
+        cadenceKey: "monthly",
         type: "direct",
       },
     ],
   },
   {
     id: "field",
-    label: "Field Intelligence",
-    description: "Human-generated reports from field officers, partners, and government sources",
+    i18nKey: "field",
     sources: [
       {
         key: "field_officer",
-        name: "Field Officer Reports",
-        provider: "NRC Internal",
-        description: "Direct signal submissions from NRC field officers via the Observe mobile app. Includes low-connectivity offline support.",
-        cadence: "Ad hoc",
+        i18nKey: "fieldOfficer",
+        cadenceKey: "adHoc",
         type: "manual",
       },
       {
         key: "partner",
-        name: "Partner Reports",
-        provider: "NRC Partners",
-        description: "Signals submitted by partner organisations through the platform.",
-        cadence: "Ad hoc",
+        i18nKey: "partner",
+        cadenceKey: "adHoc",
         type: "manual",
       },
       {
         key: "government",
-        name: "Government Sources",
-        provider: "Government Agencies",
-        description: "Signals sourced from or attributed to government authorities.",
-        cadence: "Ad hoc",
+        i18nKey: "government",
+        cadenceKey: "adHoc",
         type: "manual",
       },
     ],
   },
 ];
-
-function freshnessLabel(isoDate: string | null | undefined): string {
-  if (!isoDate) return "No data yet";
-  const diff = Date.now() - new Date(isoDate).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  return `${months}mo ago`;
-}
 
 function DataSourceCard({
   source,
@@ -2063,8 +2047,10 @@ function DataSourceCard({
   maxCount: number;
   isActive: boolean | null;
 }) {
+  const t = useTranslations("admin.data");
+  const format = useFormatter();
   const typeBadgeColor = source.type === "api" ? "blue" : source.type === "direct" ? "violet" : "gray";
-  const typeLabel = source.type === "api" ? "Pipeline API" : source.type === "direct" ? "Direct Query" : "Manual Entry";
+  const typeLabel = t(`types.${source.type}`);
   const barWidth = signalCount && maxCount > 0 ? Math.max((signalCount / maxCount) * 100, 2) : 0;
 
   return (
@@ -2072,42 +2058,42 @@ function DataSourceCard({
       <Group justify="space-between" align="flex-start" wrap="nowrap">
         <Box style={{ flex: 1, minWidth: 0 }}>
           <Group gap={8} mb={4} align="center">
-            <Text fw={600} style={{ fontSize: fontSizesPx.base }}>{source.name}</Text>
+            <Text fw={600} style={{ fontSize: fontSizesPx.base }}>{t(`sources.${source.i18nKey}.name`)}</Text>
             <Badge size="xs" color={typeBadgeColor} variant="light" radius="sm">{typeLabel}</Badge>
             {isActive === false && (
-              <Badge size="xs" color="gray" variant="outline" radius="sm">Inactive</Badge>
+              <Badge size="xs" color="gray" variant="outline" radius="sm">{t("inactive")}</Badge>
             )}
           </Group>
           <Text c={colors.textSecondary} style={{ fontSize: fontSizesPx.sm }} mb={6}>
-            {source.description}
+            {t(`sources.${source.i18nKey}.description`)}
           </Text>
           <Group gap={16}>
             <Text style={{ fontSize: fontSizesPx.xs, color: colors.textSecondary }}>
-              Provider: <span style={{ color: colors.textPrimary }}>{source.provider}</span>
+              {t("provider")} <span style={{ color: colors.textPrimary }}>{t(`sources.${source.i18nKey}.provider`)}</span>
             </Text>
             <Text style={{ fontSize: fontSizesPx.xs, color: colors.textSecondary }}>
-              Cadence: <span style={{ color: colors.textPrimary }}>{source.cadence}</span>
+              {t("cadence")} <span style={{ color: colors.textPrimary }}>{t(`cadences.${source.cadenceKey}`)}</span>
             </Text>
             {source.providerUrl && (
               <Anchor href={source.providerUrl} target="_blank"
                 style={{ fontSize: fontSizesPx.xs, color: colors.accent }}>
                 <Group gap={4} align="center">
                   <IconExternalLink size={11} />
-                  docs
+                  {t("docs")}
                 </Group>
               </Anchor>
             )}
           </Group>
         </Box>
 
-        <Box style={{ width: 130, flexShrink: 0, textAlign: "right" }}>
+        <Box style={{ width: 130, flexShrink: 0, textAlign: "end" }}>
           {signalCount !== null ? (
             <>
               <Text fw={700} style={{ fontSize: 20, color: signalCount > 0 ? colors.textPrimary : colors.textSecondary }}>
                 {signalCount}
               </Text>
               <Text style={{ fontSize: fontSizesPx.xs, color: colors.textSecondary }} mb={2}>
-                signals
+                {t("signalsUnit")}
               </Text>
               <Box style={{ height: 4, background: colors.border, borderRadius: 2 }} mb={6}>
                 <Box style={{
@@ -2119,12 +2105,12 @@ function DataSourceCard({
                 }} />
               </Box>
               <Text style={{ fontSize: fontSizesPx.xs, color: latestAt ? colors.textSecondary : colors.border }}>
-                {freshnessLabel(latestAt)}
+                {latestAt ? format.relativeTime(new Date(latestAt)) : t("noDataYet")}
               </Text>
             </>
           ) : (
             <Text style={{ fontSize: fontSizesPx.xs, color: colors.textSecondary }}>
-              {source.type === "direct" ? "Direct query" : "No signals yet"}
+              {source.type === "direct" ? t("directQuery") : t("noSignals")}
             </Text>
           )}
         </Box>
@@ -2134,6 +2120,7 @@ function DataSourceCard({
 }
 
 function DataPanel() {
+  const t = useTranslations("admin.data");
   const [demoEnabled, setDemoEnabled] = useState(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem("clear_demo_data") !== "false";
@@ -2176,11 +2163,11 @@ function DataPanel() {
           <Group justify="space-between" align="center">
             <Box>
               <Group gap={8} mb={4}>
-                <Text fw={600} style={{ fontSize: fontSizesPx.base }}>Demo Data</Text>
-                <Badge size="xs" color="orange" variant="light" radius="sm">Dev only</Badge>
+                <Text fw={600} style={{ fontSize: fontSizesPx.base }}>{t("demoTitle")}</Text>
+                <Badge size="xs" color="orange" variant="light" radius="sm">{t("demoBadge")}</Badge>
               </Group>
               <Text c={colors.textSecondary} style={{ fontSize: fontSizesPx.sm }}>
-                Hardcoded demo markers, crisis pins, and sample statistics overlaid on the dashboard. Disable to show only live data.
+                {t("demoDescription")}
               </Text>
             </Box>
             <Switch
@@ -2195,7 +2182,7 @@ function DataPanel() {
         {isLoading && (
           <Group justify="center" py="xl">
             <Loader size="sm" />
-            <Text c={colors.textSecondary} style={{ fontSize: fontSizesPx.sm }}>Loading source data...</Text>
+            <Text c={colors.textSecondary} style={{ fontSize: fontSizesPx.sm }}>{t("loading")}</Text>
           </Group>
         )}
 
@@ -2204,14 +2191,14 @@ function DataPanel() {
           <Box key={group.id}>
             <Text tt="uppercase" fw={700} mb={2}
               style={{ fontSize: fontSizesPx.xs, letterSpacing: "0.08em", color: colors.textSecondary }}>
-              {group.label}
+              {t(`groups.${group.i18nKey}.label`)}
             </Text>
             <Text mb={8} style={{ fontSize: fontSizesPx.sm, color: colors.textSecondary }}>
-              {group.description}
+              {t(`groups.${group.i18nKey}.description`)}
             </Text>
             <Box style={{ border: `1px solid ${colors.border}` }}>
               {group.sources.map((source, idx) => (
-                <Box key={source.key ?? source.name}>
+                <Box key={source.key ?? source.i18nKey}>
                   {idx > 0 && <Divider />}
                   <DataSourceCard
                     source={source}
@@ -2232,11 +2219,12 @@ function DataPanel() {
 
 /* ─── Page ────────────────────────────────────────────────── */
 export default function AdminPage() {
+  const t = useTranslations("admin");
   return (
     <Box style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <PageHeader
-        title="Admin"
-        subtitle="Platform configuration, user and organisation management"
+        title={t("header.title")}
+        subtitle={t("header.subtitle")}
       />
 
       <Tabs
@@ -2256,35 +2244,35 @@ export default function AdminPage() {
             leftSection={<IconUsers size={16} />}
             style={{ fontSize: fontSizesPx.base }}
           >
-            Users
+            {t("tabs.users")}
           </Tabs.Tab>
           <Tabs.Tab
             value="organisations"
             leftSection={<IconBuilding size={16} />}
             style={{ fontSize: fontSizesPx.base }}
           >
-            Organisations
+            {t("tabs.organisations")}
           </Tabs.Tab>
           <Tabs.Tab
             value="invitations"
             leftSection={<IconUserPlus size={16} />}
             style={{ fontSize: fontSizesPx.base }}
           >
-            Invitations
+            {t("tabs.invitations")}
           </Tabs.Tab>
           <Tabs.Tab
             value="features"
             leftSection={<IconToggleLeft size={16} />}
             style={{ fontSize: fontSizesPx.base }}
           >
-            Features
+            {t("tabs.features")}
           </Tabs.Tab>
           <Tabs.Tab
             value="data"
             leftSection={<IconDatabase size={16} />}
             style={{ fontSize: fontSizesPx.base }}
           >
-            Data
+            {t("tabs.data")}
           </Tabs.Tab>
         </Tabs.List>
 

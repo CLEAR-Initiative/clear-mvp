@@ -5,7 +5,6 @@ import { FeatureFlagsProvider } from "~/components/feature-flags-provider";
 import { TeamProvider } from "~/providers/team-provider";
 import { OnboardingGuard } from "~/components/onboarding-guard";
 import { ConsoleBufferInit } from "~/components/console-buffer-init";
-
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <TeamProvider>

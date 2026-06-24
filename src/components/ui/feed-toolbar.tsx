@@ -1,6 +1,7 @@
 "use client";
 
 import { Group, Text, Badge, Loader, TextInput, Menu, ActionIcon } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { IconSearch, IconSortDescending, IconX, IconRefresh } from "@tabler/icons-react";
 
 interface FeedToolbarProps {
@@ -15,6 +16,12 @@ interface FeedToolbarProps {
   onSortChange: (order: string) => void;
   newCount?: number;
   onRefresh?: () => void;
+  /**
+   * Optional slot rendered after the sort menu, in the same toolbar row.
+   * Use for per-tab actions (e.g. a Filter popover) that should sit beside
+   * the sort control rather than stacking on a separate row.
+   */
+  rightSlot?: React.ReactNode;
 }
 
 export function FeedToolbar({
@@ -29,9 +36,10 @@ export function FeedToolbar({
   onSortChange,
   newCount = 0,
   onRefresh,
+  rightSlot,
 }: FeedToolbarProps) {
+  const t = useTranslations("common.toolbar");
   const isNonDefault = sortOrder !== defaultSortKey;
-  const singular = title.toLowerCase().replace(/s$/, "");
 
   return (
     <>
@@ -43,7 +51,7 @@ export function FeedToolbar({
         >
           <IconRefresh size={13} color="var(--color-accent)" />
           <Text size="xs" fw={600} c="var(--color-accent)">
-            {newCount} new {singular}{newCount !== 1 ? "s" : ""} - refresh
+            {t("newItems", { count: newCount })}
           </Text>
         </Group>
       )}
@@ -58,7 +66,7 @@ export function FeedToolbar({
         </Group>
 
         <TextInput
-          placeholder="Search..."
+          placeholder={t("searchPlaceholder")}
           value={search}
           onChange={(e) => onSearchChange(e.currentTarget.value)}
           leftSection={<IconSearch size={14} color="var(--color-text-muted)" />}
@@ -105,6 +113,8 @@ export function FeedToolbar({
             ))}
           </Menu.Dropdown>
         </Menu>
+
+        {rightSlot}
       </Group>
     </>
   );

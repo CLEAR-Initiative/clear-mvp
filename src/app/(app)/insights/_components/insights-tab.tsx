@@ -1,33 +1,36 @@
+import { useTranslations } from "next-intl";
 import { Box, Text, Group, Button, SimpleGrid, Progress } from "@mantine/core";
 import { IconPointFilled } from "@tabler/icons-react";
 import { CardSection, DataTable, Table } from "~/components/ui";
 import { insights, dataQuality } from "./analysis-data";
 
-const DATA_QUALITY_COLUMNS = [
-  { label: "Data Source" },
-  { label: "Completeness" },
-  { label: "Timeliness" },
-  { label: "Confidence" },
-  { label: "Last Update" },
-];
+// i18n keys under analysis.insights.columns.* - resolved via t() at render time.
+const DATA_QUALITY_COLUMN_KEYS = [
+  "dataSource",
+  "completeness",
+  "timeliness",
+  "confidence",
+  "lastUpdate",
+] as const;
 
 export function InsightsTab() {
+  const t = useTranslations("insights");
   return (
     <Box>
       {/* AI Insights */}
       <CardSection
-        title="AI-Generated Insights"
-        subtitle="Pattern detection and recommendations"
+        title={t("insights.title")}
+        subtitle={t("insights.subtitle")}
         action={
           <Group gap={8}>
             <Button size="xs" variant="outline" color="gray">
-              Epidemiological
+              {t("insights.filters.epidemiological")}
             </Button>
             <Button size="xs" variant="light" color="blue">
-              All Types
+              {t("insights.filters.allTypes")}
             </Button>
             <Button size="xs" variant="outline" color="gray">
-              Logistics
+              {t("insights.filters.logistics")}
             </Button>
           </Group>
         }
@@ -37,11 +40,11 @@ export function InsightsTab() {
             const Icon = insight.icon;
             return (
               <Box
-                key={insight.title}
+                key={insight.key}
                 p={16}
                 style={{
                   background: "var(--color-bg-muted)",
-                  borderLeft: `3px solid ${insight.borderColor}`,
+                  borderInlineStart: `3px solid ${insight.borderColor}`,
                 }}
               >
                 <Group gap={8} mb={8}>
@@ -52,14 +55,14 @@ export function InsightsTab() {
                     c={insight.typeColor}
                     tt="uppercase"
                   >
-                    {insight.type}
+                    {t(`data.insights.${insight.key}.type`)}
                   </Text>
                 </Group>
                 <Text fw={600} c="var(--color-text-primary)" mb={8}>
-                  {insight.title}
+                  {t(`data.insights.${insight.key}.title`)}
                 </Text>
                 <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }}>
-                  {insight.description}
+                  {t(`data.insights.${insight.key}.description`)}
                 </Text>
               </Box>
             );
@@ -69,19 +72,19 @@ export function InsightsTab() {
 
       {/* Data Quality Table */}
       <CardSection
-        title="Analysis Data Quality"
-        subtitle="Source reliability metrics"
+        title={t("insights.dataQualityTitle")}
+        subtitle={t("insights.dataQualitySubtitle")}
         noPadding
         style={{ marginTop: 24 }}
       >
         <DataTable
-          columns={DATA_QUALITY_COLUMNS}
+          columns={DATA_QUALITY_COLUMN_KEYS.map((k) => ({ label: t(`insights.columns.${k}`) }))}
           data={dataQuality}
           renderRow={(row) => (
-            <Table.Tr key={row.source}>
+            <Table.Tr key={row.key}>
               <Table.Td>
                 <Text fw={600} style={{ fontSize: 13 }}>
-                  {row.source}
+                  {t(`data.dataQuality.${row.key}.source`)}
                 </Text>
               </Table.Td>
               <Table.Td>
@@ -101,18 +104,18 @@ export function InsightsTab() {
                 <Group gap={6}>
                   <IconPointFilled size={10} color={row.timelinessColor} />
                   <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
-                    {row.timeliness}
+                    {t(`data.dataQuality.${row.key}.timeliness`)}
                   </Text>
                 </Group>
               </Table.Td>
               <Table.Td>
                 <Text fw={500} c={row.confidenceColor} style={{ fontSize: 13 }}>
-                  {row.confidence}
+                  {t(`data.dataQuality.${row.key}.confidence`)}
                 </Text>
               </Table.Td>
               <Table.Td>
                 <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
-                  {row.lastUpdate}
+                  {t(`data.dataQuality.${row.key}.lastUpdate`)}
                 </Text>
               </Table.Td>
             </Table.Tr>

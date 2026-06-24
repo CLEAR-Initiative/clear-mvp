@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Box, Text, SimpleGrid, Group, Badge, Button } from "@mantine/core";
 import { IconBuildingSkyscraper } from "@tabler/icons-react";
 import { CardSection, DataTable, Table, StatusIndicator, ResourceBar } from "~/components/ui";
@@ -10,44 +11,46 @@ import {
 } from "./operations-data";
 
 export function ActiveOpsTab() {
+  const t = useTranslations("operations");
+
   return (
     <Box>
       {/* NRC Capacity + Comparative Advantage */}
       <SimpleGrid cols={2} spacing={16} mb={24}>
         <CardSection
-          title="NRC Ethiopia Capacity"
-          subtitle={`Established ${nrcCapacity.established}`}
+          title={t("capacity.title")}
+          subtitle={t("capacity.established", { year: nrcCapacity.established })}
           icon={<IconBuildingSkyscraper size={16} color="#2563EB" />}
         >
           <SimpleGrid cols={3} spacing={12} mb={12}>
             <Box p={10} style={{ background: "var(--color-bg-muted)", textAlign: "center" }}>
               <Text size="lg" fw={700} c="var(--color-text-primary)">{nrcCapacity.totalStaff}</Text>
-              <Text size="xs" c="var(--color-text-muted)">Total Staff</Text>
+              <Text size="xs" c="var(--color-text-muted)">{t("capacity.totalStaff")}</Text>
             </Box>
             <Box p={10} style={{ background: "var(--color-bg-muted)", textAlign: "center" }}>
               <Text size="lg" fw={700} c="var(--color-text-primary)">{nrcCapacity.national}</Text>
-              <Text size="xs" c="var(--color-text-muted)">National</Text>
+              <Text size="xs" c="var(--color-text-muted)">{t("capacity.national")}</Text>
             </Box>
             <Box p={10} style={{ background: "var(--color-bg-muted)", textAlign: "center" }}>
               <Text size="lg" fw={700} c="var(--color-text-primary)">{nrcCapacity.international}</Text>
-              <Text size="xs" c="var(--color-text-muted)">International</Text>
+              <Text size="xs" c="var(--color-text-muted)">{t("capacity.international")}</Text>
             </Box>
           </SimpleGrid>
           <Group gap={16}>
             <Box>
-              <Text size="xs" c="var(--color-text-muted)">Offices</Text>
+              <Text size="xs" c="var(--color-text-muted)">{t("capacity.offices")}</Text>
               <Text fw={600}>{nrcCapacity.offices}</Text>
             </Box>
             <Box>
-              <Text size="xs" c="var(--color-text-muted)">Active Programs</Text>
+              <Text size="xs" c="var(--color-text-muted)">{t("capacity.activePrograms")}</Text>
               <Text fw={600}>{nrcCapacity.activePrograms}</Text>
             </Box>
           </Group>
         </CardSection>
 
         <CardSection
-          title="NRC Comparative Advantage"
-          subtitle="Core competencies in Ethiopia"
+          title={t("advantage.title")}
+          subtitle={t("advantage.subtitle")}
         >
           <Box style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {comparativeAdvantages.map((item) => (
@@ -62,8 +65,8 @@ export function ActiveOpsTab() {
 
       {/* Active Response Operations */}
       <CardSection
-        title="Active Response Operations"
-        subtitle="Currently mobilized responses"
+        title={t("activeOps.title")}
+        subtitle={t("activeOps.subtitle")}
         noPadding
         style={{ marginBottom: 24 }}
       >
@@ -78,16 +81,16 @@ export function ActiveOpsTab() {
                       <Text fw={600} c="var(--color-text-primary)">{op.name}</Text>
                       <Badge size="xs" style={{ background: op.severityBg, color: op.severityColor }}>{op.severity}</Badge>
                     </Group>
-                    <Text size="xs" c="var(--color-text-muted)" mt={4}>Activated {op.activated} {"\u2022"} Operation ID: {op.opId}</Text>
+                    <Text size="xs" c="var(--color-text-muted)" mt={4}>{t("activeOps.activatedLine", { time: op.activated, id: op.opId })}</Text>
                   </Box>
-                  <Button size="xs" variant="light" color={op.severity === "Critical" ? "red" : "gray"}>View Details</Button>
+                  <Button size="xs" variant="light" color={op.severity === "Critical" ? "red" : "gray"}>{t("activeOps.viewDetails")}</Button>
                 </Group>
                 <SimpleGrid cols={4} spacing={16} mb={16}>
                   {[
-                    { label: "Teams", value: op.teams },
-                    { label: "Staff", value: op.staff },
-                    { label: "Coverage", value: op.coverage },
-                    { label: "Budget", value: op.budget },
+                    { label: t("activeOps.labels.teams"), value: op.teams },
+                    { label: t("activeOps.labels.staff"), value: op.staff },
+                    { label: t("activeOps.labels.coverage"), value: op.coverage },
+                    { label: t("activeOps.labels.budget"), value: op.budget },
                   ].map((item) => (
                     <Box key={item.label}>
                       <Text size="xs" c="var(--color-text-muted)" tt="uppercase">{item.label}</Text>
@@ -111,17 +114,17 @@ export function ActiveOpsTab() {
       {/* Field Teams + Resource Status */}
       <SimpleGrid cols={2} spacing={16}>
         <CardSection
-          title="Field Teams"
-          subtitle="Currently deployed"
-          action={<Button size="xs" variant="outline" color="gray">+ Deploy Team</Button>}
+          title={t("fieldTeams.title")}
+          subtitle={t("fieldTeams.subtitle")}
+          action={<Button size="xs" variant="outline" color="gray">{t("fieldTeams.deployTeam")}</Button>}
           noPadding
         >
           <DataTable
             columns={[
-              { label: "Team" },
-              { label: "Location" },
-              { label: "Status" },
-              { label: "Last Check-in" },
+              { label: t("fieldTeams.columns.team") },
+              { label: t("fieldTeams.columns.location") },
+              { label: t("fieldTeams.columns.status") },
+              { label: t("fieldTeams.columns.lastCheckin") },
             ]}
             data={fieldTeams}
             renderRow={(team) => (
@@ -141,9 +144,9 @@ export function ActiveOpsTab() {
         </CardSection>
 
         <CardSection
-          title="Resource Status"
-          subtitle="Critical supplies"
-          action={<Button size="xs" variant="outline" color="gray">Request Resources</Button>}
+          title={t("resourceStatus.title")}
+          subtitle={t("resourceStatus.subtitle")}
+          action={<Button size="xs" variant="outline" color="gray">{t("resourceStatus.requestResources")}</Button>}
         >
           {resources.map((res) => (
             <ResourceBar

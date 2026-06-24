@@ -13,6 +13,7 @@ import {
   Group,
   List,
 } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import {
   IconKey,
   IconAlertCircle,
@@ -22,6 +23,7 @@ import {
 import { authClient } from "~/lib/auth-client";
 
 export default function ChangePasswordPage() {
+  const t = useTranslations("changePassword");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword1, setNewPassword1] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
@@ -35,12 +37,12 @@ export default function ChangePasswordPage() {
     setSuccess(false);
 
     if (newPassword1 !== newPassword2) {
-      setError("New passwords do not match");
+      setError(t("errors.mismatch"));
       return;
     }
 
     if (newPassword1.length < 8) {
-      setError("New password must be at least 8 characters");
+      setError(t("errors.tooShort"));
       return;
     }
 
@@ -54,7 +56,7 @@ export default function ChangePasswordPage() {
       });
 
       if (changeError) {
-        setError(changeError.message ?? "Failed to change password");
+        setError(changeError.message ?? t("errors.failed"));
       } else {
         setSuccess(true);
         setCurrentPassword("");
@@ -62,7 +64,7 @@ export default function ChangePasswordPage() {
         setNewPassword2("");
       }
     } catch {
-      setError("An unexpected error occurred");
+      setError(t("errors.unexpected"));
     } finally {
       setLoading(false);
     }
@@ -73,10 +75,10 @@ export default function ChangePasswordPage() {
       <Group justify="space-between" mb={24}>
         <Box>
           <Text size="xl" fw={700} c="var(--color-text-primary)">
-            Change Password
+            {t("title")}
           </Text>
           <Text size="sm" c="var(--color-text-muted)">
-            Update your account password
+            {t("subtitle")}
           </Text>
         </Box>
         <Button
@@ -86,7 +88,7 @@ export default function ChangePasswordPage() {
           color="gray"
           size="sm"
         >
-          Back to Profile
+          {t("backToProfile")}
         </Button>
       </Group>
 
@@ -98,7 +100,7 @@ export default function ChangePasswordPage() {
           mb={16}
           styles={{ message: { fontSize: 13 } }}
         >
-          Password changed successfully.
+          {t("success")}
         </Alert>
       )}
 
@@ -118,15 +120,15 @@ export default function ChangePasswordPage() {
         <Group gap={8} mb={16}>
           <IconKey size={18} color="#E85D3D" />
           <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
-            Security
+            {t("security")}
           </Text>
         </Group>
 
         <form onSubmit={(e) => void handleSubmit(e)}>
           <Stack gap={12}>
             <PasswordInput
-              label="Current Password"
-              placeholder="Enter your current password"
+              label={t("current.label")}
+              placeholder={t("current.placeholder")}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.currentTarget.value)}
               required
@@ -137,8 +139,8 @@ export default function ChangePasswordPage() {
             />
 
             <PasswordInput
-              label="New Password"
-              placeholder="Enter your new password"
+              label={t("new.label")}
+              placeholder={t("new.placeholder")}
               value={newPassword1}
               onChange={(e) => setNewPassword1(e.currentTarget.value)}
               required
@@ -149,8 +151,8 @@ export default function ChangePasswordPage() {
             />
 
             <PasswordInput
-              label="Confirm New Password"
-              placeholder="Confirm your new password"
+              label={t("confirm.label")}
+              placeholder={t("confirm.placeholder")}
               value={newPassword2}
               onChange={(e) => setNewPassword2(e.currentTarget.value)}
               required
@@ -168,7 +170,7 @@ export default function ChangePasswordPage() {
               mt={8}
               style={{ fontWeight: 600 }}
             >
-              Update Password
+              {t("submit")}
             </Button>
           </Stack>
         </form>
@@ -179,11 +181,11 @@ export default function ChangePasswordPage() {
         <Group gap={8} mb={12}>
           <IconInfoCircle size={16} color="#737373" />
           <Text size="xs" fw={600} c="var(--color-text-muted)" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
-            Password Requirements
+            {t("requirements.title")}
           </Text>
         </Group>
         <List size="xs" spacing={4} c="var(--color-text-secondary)">
-          <List.Item>At least 8 characters long</List.Item>
+          <List.Item>{t("requirements.minLength")}</List.Item>
         </List>
       </Card>
     </Box>

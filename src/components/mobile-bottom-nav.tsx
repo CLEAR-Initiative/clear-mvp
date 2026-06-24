@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSelectedLayoutSegments } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Box, Text } from "@mantine/core";
 import {
   IconLayoutDashboard,
@@ -12,13 +13,14 @@ import {
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 
 const bottomNavItems = [
-  { label: "Overview",   href: "/dashboard",    icon: IconLayoutDashboard, segment: "dashboard" },
-  { label: "Detection",  href: "/detection",    icon: IconTarget,          segment: "detection" },
-  { label: "Map",        href: "/map",          icon: IconMapPin,          segment: "map" },
-  { label: "Settings",   href: "/profile",      icon: IconSettings,        segment: "profile" },
-];
+  { labelKey: "items.overview",  href: "/dashboard", icon: IconLayoutDashboard, segment: "dashboard" },
+  { labelKey: "items.detection", href: "/detection", icon: IconTarget,          segment: "detection" },
+  { labelKey: "items.map",       href: "/map",       icon: IconMapPin,          segment: "map" },
+  { labelKey: "settings",        href: "/profile",   icon: IconSettings,        segment: "profile" },
+] as const;
 
 export function MobileBottomNav() {
+  const t = useTranslations("nav");
   const segments = useSelectedLayoutSegments();
   const activeSegment = segments[0] ?? "";
 
@@ -73,7 +75,7 @@ export function MobileBottomNav() {
                 color: isActive ? colors.accent : colors.textMuted,
               }}
             >
-              {item.label}
+              {t(item.labelKey)}
             </Text>
           </Link>
         );

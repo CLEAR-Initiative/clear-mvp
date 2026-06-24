@@ -1,0 +1,2328 @@
+{
+  "insights": {
+    "page": {
+      "title": "Insights",
+      "breadcrumb": "Insights",
+      "tabs": {
+        "crisis": "Crisis Overview",
+        "situation": "Situation Analysis"
+      },
+      "situationPlaceholder": {
+        "title": "Situation Analysis",
+        "description": "AI-generated situation reports coming soon."
+      }
+    },
+    "reports": {
+      "activeCrises": "Active Crises",
+      "criticalBadge": "{count} Critical",
+      "untitledCrisis": "Untitled crisis",
+      "eventCount": "{count, plural, one {# event} other {# events}}",
+      "empty": "No active crises."
+    },
+    "executiveSummary": {
+      "priorityAnalysis": "Priority Analysis",
+      "criticalBadge": "{count} Critical",
+      "activeBadge": "{count} Active",
+      "situationReport": "Situation Report - {country}",
+      "defaultReportTitle": "Armed Conflict Displacement Crisis - {country}",
+      "activeAlerts": "Active Alerts",
+      "totalAlerts": "Total Alerts",
+      "trend": "Trend",
+      "needs": {
+        "shelter": {
+          "label": "Shelter",
+          "description": "Housing & displacement"
+        },
+        "wash": {
+          "label": "WASH",
+          "description": "Water & sanitation"
+        },
+        "protection": {
+          "label": "Protection",
+          "description": "Rights & safety"
+        },
+        "health": {
+          "label": "Health",
+          "description": "Medical response"
+        },
+        "foodSecurity": {
+          "label": "Food Security",
+          "description": "Nutrition access"
+        }
+      },
+      "viewFullReport": "View Full Report",
+      "downloadPdf": "Download PDF",
+      "updatedAt": "Updated {time}",
+      "updatedFallback": "Updated 2 hours ago",
+      "confidence": "Confidence: {pct}%",
+      "aiGeneratedAnalysis": "AI-Generated Analysis",
+      "generating": "Generating comprehensive analysis from {count} active alerts...",
+      "generateFailed": "Failed to generate analysis. Please try again."
+    },
+    "insights": {
+      "title": "AI-Generated Insights",
+      "subtitle": "Pattern detection and recommendations",
+      "filters": {
+        "epidemiological": "Epidemiological",
+        "allTypes": "All Types",
+        "logistics": "Logistics"
+      },
+      "dataQualityTitle": "Analysis Data Quality",
+      "dataQualitySubtitle": "Source reliability metrics",
+      "columns": {
+        "dataSource": "Data Source",
+        "completeness": "Completeness",
+        "timeliness": "Timeliness",
+        "confidence": "Confidence",
+        "lastUpdate": "Last Update"
+      }
+    },
+    "impact": {
+      "title": "Sector Impact Assessment",
+      "subtitle": "Humanitarian needs by sector",
+      "columns": {
+        "sector": "Sector",
+        "severity": "Severity",
+        "affected": "Affected",
+        "details": "Details"
+      },
+      "environmental": {
+        "title": "Environmental Factors",
+        "subtitle": "Climate and environmental risks",
+        "floodRisk": "Flood Risk",
+        "rainfallForecast": "Rainfall Forecast",
+        "secondaryRisk": "Secondary Risk"
+      },
+      "protection": {
+        "title": "Protection Concerns",
+        "subtitle": "Identified vulnerabilities"
+      },
+      "secondaryEffects": {
+        "title": "Secondary Effects",
+        "subtitle": "Anticipated cascading impacts"
+      }
+    },
+    "scenarios": {
+      "title": "Scenario Comparison",
+      "subtitle": "Compare projected outcomes"
+    },
+    "data": {
+      "insights": {
+        "waterClustering": {
+          "type": "Critical Pattern",
+          "title": "Water Source Clustering",
+          "description": "87% of cases within 500m of 3 water points. Immediate testing and treatment recommended."
+        },
+        "peakTiming": {
+          "type": "Time Sensitive",
+          "title": "Peak Timing Prediction",
+          "description": "Historical patterns suggest peak transmission 14-21 days from outbreak start. Current: Day 8."
+        },
+        "resourceOptimization": {
+          "type": "Opportunity",
+          "title": "Resource Optimization",
+          "description": "ORS supplies in Dire Dawa can reach affected areas within 6 hours. Pre-positioning available."
+        }
+      },
+      "dataQuality": {
+        "mohPhem": {
+          "source": "MOH PHEM Data",
+          "timeliness": "Real-time",
+          "confidence": "High",
+          "lastUpdate": "3 min ago"
+        },
+        "whoEwarn": {
+          "source": "WHO EWARN",
+          "timeliness": "Hourly",
+          "confidence": "High",
+          "lastUpdate": "1h ago"
+        },
+        "fieldReports": {
+          "source": "Field Reports",
+          "timeliness": "Daily",
+          "confidence": "Medium",
+          "lastUpdate": "4h ago"
+        },
+        "satellite": {
+          "source": "Satellite Imagery",
+          "timeliness": "6h cycle",
+          "confidence": "High",
+          "lastUpdate": "2h ago"
+        }
+      },
+      "scenarios": {
+        "bestCase": {
+          "name": "Best Case",
+          "sub": "Rapid containment scenario",
+          "description": "Early intervention with full WASH coverage achieves containment within 2 weeks. Estimated affected: 2,400 people."
+        },
+        "mostLikely": {
+          "name": "Most Likely",
+          "sub": "Moderate spread scenario",
+          "description": "Partial containment with ongoing transmission in 3 woredas. Peak in 3-4 weeks. Estimated affected: 8,500 people."
+        },
+        "worstCase": {
+          "name": "Worst Case",
+          "sub": "Regional spread scenario",
+          "description": "Widespread transmission across 8+ woredas with health system strain. Estimated affected: 24,000+ people."
+        }
+      },
+      "impactAssessment": {
+        "shelter": {
+          "sector": "Shelter",
+          "affected": "{count} people",
+          "description": "45% of shelters damaged or destroyed in flood-affected areas"
+        },
+        "wash": {
+          "sector": "WASH",
+          "affected": "{count} people",
+          "description": "3 water treatment facilities non-functional, contamination detected"
+        },
+        "protection": {
+          "sector": "Protection",
+          "affected": "{count} people",
+          "description": "GBV risks elevated, child protection concerns in displacement sites"
+        },
+        "health": {
+          "sector": "Health",
+          "affected": "{count} cases",
+          "description": "Cholera outbreak with Case Fatality Rate of 2.1%, above emergency threshold"
+        },
+        "foodSecurity": {
+          "sector": "Food Security",
+          "affected": "{count} people",
+          "description": "IPC Phase 3+ food insecurity in 5 woredas, market disruption ongoing"
+        }
+      },
+      "environmentalFactors": {
+        "floodRisk": "GloFAS indicates 75% probability of above-normal river levels in next 14 days",
+        "rainfallForecast": "150-200mm expected in Somali Region over next week, 40% above seasonal average",
+        "secondaryRisk": "Waterborne disease outbreak risk HIGH due to flood contamination of water sources"
+      },
+      "protectionConcerns": {
+        "gbv": "Increased GBV risks in overcrowded displacement sites, particularly for women and girls",
+        "separatedChildren": "Separated and unaccompanied children identified in 3 displacement sites",
+        "disabilities": "Barriers to accessing services for persons with disabilities in temporary shelters",
+        "documentation": "Documentation loss affecting access to basic services for displaced populations"
+      },
+      "secondaryEffects": {
+        "market": "Market disruption causing 28% food price increase in affected areas",
+        "schools": "School closures affecting 15,000 children across 23 schools",
+        "livestock": "Livestock losses estimated at $2.3M impacting pastoral livelihoods",
+        "transport": "Transport route disruptions delaying humanitarian supply chains by 48-72 hours",
+        "mentalHealth": "Mental health impacts reported in 60% of displaced households",
+        "agriculture": "Agricultural season disruption threatening next harvest in 4 woredas"
+      }
+    }
+  },
+  "metadata": {
+    "title": "CLEAR: Crisis Learning, Early-warning, Anticipation & Response",
+    "description": "Humanitarian decision-support platform"
+  },
+  "manifest": {
+    "name": "CLEAR Observe",
+    "shortName": "Observe",
+    "description": "Submit field signals for the CLEAR humanitarian intelligence platform"
+  },
+  "acceptInvite": {
+    "errors": {
+      "noToken": "No invitation token found in the URL.",
+      "invalid": "Invalid invitation link. It may have been cancelled.",
+      "accepted": "This invitation has already been accepted.",
+      "expired": "This invitation has expired. Please contact your administrator for a new one.",
+      "nameRequired": "Please enter your name",
+      "tooShort": "Password must be at least 8 characters",
+      "mismatch": "Passwords do not match",
+      "failed": "Failed to accept invitation"
+    },
+    "loading": "Loading invitation...",
+    "title": "Accept Invitation",
+    "invitedToJoin": "You've been invited to join:",
+    "team": "Team:",
+    "role": "Role: {role}",
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "Enter your name",
+    "email": "Email",
+    "password": "Password",
+    "passwordPlaceholder": "Min 8 characters",
+    "confirmPassword": "Confirm Password",
+    "confirmPlaceholder": "Re-enter your password",
+    "submit": "Accept & Create Account",
+    "goToSignIn": "Go to Sign In",
+    "goHome": "Go Home"
+  },
+  "admin": {
+    "header": {
+      "title": "Admin",
+      "subtitle": "Platform configuration, user and organisation management"
+    },
+    "tabs": {
+      "users": "Users",
+      "organisations": "Organisations",
+      "invitations": "Invitations",
+      "features": "Features",
+      "data": "Data"
+    },
+    "hold": {
+      "holding": "Hold…",
+      "confirm": "Hold to confirm",
+      "remove": "Hold to remove",
+      "delete": "Hold to delete"
+    },
+    "confirm": {
+      "removeTitle": "Remove from team",
+      "roleTitle": "Confirm role change",
+      "removeBody": "Are you sure you want to remove <b>{name}</b> from your team? This action cannot be undone.",
+      "roleBody": "Change <b>{name}</b>'s role from <b>{from}</b> to <b>{to}</b>?",
+      "holdHint": "Press and hold the button below to confirm."
+    },
+    "roles": {
+      "member": "Member",
+      "admin": "Admin",
+      "owner": "Owner",
+      "viewer": "Viewer",
+      "analyst": "Analyst",
+      "lead": "Lead"
+    },
+    "users": {
+      "roles": {
+        "field": "Field",
+        "analyst": "Analyst",
+        "orgAdmin": "Org Admin",
+        "admin": "Admin"
+      },
+      "unauthorized": "You need admin privileges to view user management.",
+      "stats": {
+        "total": "Total Users",
+        "admins": "Admins",
+        "active": "Active"
+      },
+      "filterAll": "All users",
+      "filterPending": "Pending approval",
+      "allOrgs": "All orgs",
+      "allTeams": "All teams",
+      "columns": {
+        "user": "User",
+        "role": "Role",
+        "email": "Email",
+        "org": "Org",
+        "team": "Team",
+        "status": "Status"
+      },
+      "emptyPending": "No users pending approval",
+      "empty": "No users found",
+      "verified": "Verified",
+      "unverified": "Unverified",
+      "statusActive": "Active",
+      "statusPending": "Pending",
+      "activate": "Activate"
+    },
+    "features": {
+      "stats": {
+        "total": "Total Features",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      }
+    },
+    "orgs": {
+      "statsTotal": "Total Organisations",
+      "title": "Organisations",
+      "create": "Create Organisation",
+      "columns": {
+        "name": "Name",
+        "slug": "Slug",
+        "teams": "Teams",
+        "members": "Members"
+      },
+      "empty": "No organisations yet. Create one to get started.",
+      "teamsCount": "{count, plural, one {# team} other {# teams}}",
+      "membersCount": "{count, plural, one {# member} other {# members}}",
+      "teamBadge": "team",
+      "manage": "Manage",
+      "deleteOrgTooltip": "Delete organisation",
+      "deleteTeamTooltip": "Delete team",
+      "wizard": {
+        "stepTitle": "Step {step}: {label}",
+        "steps": {
+          "organisation": "Organisation",
+          "team": "Team",
+          "invite": "Invite Users"
+        },
+        "createOrgFailed": "Failed to create organisation",
+        "createTeamFailed": "Failed to create team",
+        "unknownError": "Unknown error",
+        "orgNameLabel": "Organisation Name",
+        "orgNamePlaceholder": "e.g. NRC Sudan",
+        "slugLabel": "Slug",
+        "orgSlugPlaceholder": "e.g. nrc-sudan",
+        "createNext": "Create & Next",
+        "teamIntro": "Create the first team for <b>{org}</b>.",
+        "teamNameLabel": "Team Name",
+        "teamNamePlaceholder": "e.g. Sudan Monitoring",
+        "teamSlugPlaceholder": "e.g. sudan-monitoring",
+        "descriptionLabel": "Description (optional)",
+        "descriptionPlaceholder": "What does this team monitor?",
+        "skip": "Skip",
+        "createTeamNext": "Create Team & Next",
+        "inviteIntro": "Invite users to <b>{org}</b>. Separate multiple emails with commas or newlines.",
+        "inviteIntroTeam": "Invite users to <b>{org}</b> and the team you just created. Separate multiple emails with commas or newlines.",
+        "noEmails": "Please enter at least one email address",
+        "needTeam": "Create a team in the previous step before inviting members",
+        "invitesSent": "{count, plural, one {# invitation sent successfully} other {# invitations sent successfully}}",
+        "emailsLabel": "Email Addresses",
+        "emailsPlaceholder": "user1@example.com, user2@example.com",
+        "orgRoleLabel": "Org Role",
+        "teamRoleLabel": "Team Role",
+        "done": "Done",
+        "skipClose": "Skip & Close",
+        "send": "Send Invitations"
+      },
+      "deleteModal": {
+        "titleOrg": "Delete Organisation",
+        "titleTeam": "Delete Team",
+        "body": "Are you sure you want to delete <b>{name}</b>?",
+        "consequenceOrg": "This will permanently remove the organisation, all its teams, members, and invitations.",
+        "consequenceTeam": "This will permanently remove the team and all its members."
+      }
+    },
+    "invitations": {
+      "orgLabel": "Organisation",
+      "orgPlaceholder": "Select organisation",
+      "inviteUser": "Invite User",
+      "pendingTitle": "Pending Invitations",
+      "columns": {
+        "email": "Email",
+        "orgRole": "Org Role",
+        "team": "Team",
+        "invitedBy": "Invited By",
+        "expires": "Expires"
+      },
+      "empty": "No pending invitations",
+      "resend": "Resend",
+      "cancel": "Cancel",
+      "modal": {
+        "title": "Invite User",
+        "emailLabel": "Email Address",
+        "emailPlaceholder": "user@example.com",
+        "orgRoleLabel": "Organisation Role",
+        "teamsLabel": "Teams",
+        "noTeams": "This organisation has no teams. Create one before inviting.",
+        "selectAtLeastOneTeam": "Select at least one team",
+        "send": "Send Invitation"
+      }
+    },
+    "data": {
+      "demoTitle": "Demo Data",
+      "demoBadge": "Dev only",
+      "demoDescription": "Hardcoded demo markers, crisis pins, and sample statistics overlaid on the dashboard. Disable to show only live data.",
+      "loading": "Loading source data...",
+      "types": {
+        "api": "Pipeline API",
+        "direct": "Direct Query",
+        "manual": "Manual Entry"
+      },
+      "inactive": "Inactive",
+      "provider": "Provider:",
+      "cadence": "Cadence:",
+      "docs": "docs",
+      "signalsUnit": "signals",
+      "directQuery": "Direct query",
+      "noSignals": "No signals yet",
+      "noDataYet": "No data yet",
+      "cadences": {
+        "realTime": "Real-time",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "annual": "Annual",
+        "adHoc": "Ad hoc"
+      },
+      "groups": {
+        "earlyWarning": {
+          "label": "Early Warning & Signals",
+          "description": "Real-time and near-real-time event detection feeds"
+        },
+        "displacement": {
+          "label": "Displacement & Population Movement",
+          "description": "IDP tracking and population flow data"
+        },
+        "risk": {
+          "label": "Risk & Vulnerability Indices",
+          "description": "Composite index scores for country-level risk assessment"
+        },
+        "field": {
+          "label": "Field Intelligence",
+          "description": "Human-generated reports from field officers, partners, and government sources"
+        }
+      },
+      "sources": {
+        "dataminr": {
+          "name": "Dataminr",
+          "provider": "Dataminr Inc.",
+          "description": "Real-time AI-powered alerts from public data: social media, news, and public sources. Primary active signal source."
+        },
+        "acled": {
+          "name": "ACLED",
+          "provider": "Armed Conflict Location & Event Data Project",
+          "description": "Disaggregated conflict event data: dates, locations, actors, fatalities. Covers political violence and protests globally."
+        },
+        "gdacs": {
+          "name": "GDACS",
+          "provider": "EU Joint Research Centre / UNOCHA",
+          "description": "Global disaster alerts: earthquakes, floods, cyclones, volcanoes, droughts. Near-real-time automated alerts."
+        },
+        "iomDtm": {
+          "name": "IOM DTM",
+          "provider": "IOM / OCHA HDX",
+          "description": "IOM Displacement Tracking Matrix. Conflict-induced IDP figures accessed via HDX HAPI. Disaster displacement not included - covered by IDMC separately."
+        },
+        "informRisk": {
+          "name": "INFORM Risk",
+          "provider": "JRC / European Commission",
+          "description": "Annual composite risk index: Hazard & Exposure, Vulnerability, Coping Capacity. 264 indicators per country at sub-composite level."
+        },
+        "informSeverity": {
+          "name": "INFORM Severity",
+          "provider": "ACAPS",
+          "description": "Monthly crisis severity index. Covers impact, conditions of affected people, and complexity. Aggregated country-level score via ACAPS API."
+        },
+        "fieldOfficer": {
+          "name": "Field Officer Reports",
+          "provider": "NRC Internal",
+          "description": "Direct signal submissions from NRC field officers via the Observe mobile app. Includes low-connectivity offline support."
+        },
+        "partner": {
+          "name": "Partner Reports",
+          "provider": "NRC Partners",
+          "description": "Signals submitted by partner organisations through the platform."
+        },
+        "government": {
+          "name": "Government Sources",
+          "provider": "Government Agencies",
+          "description": "Signals sourced from or attributed to government authorities."
+        }
+      }
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign In",
+      "tagline": "Crisis Early Warning & Response",
+      "email": "Email",
+      "emailPlaceholder": "Enter your email",
+      "password": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "rememberMe": "Remember me",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign In",
+      "failed": "Login failed",
+      "unexpectedError": "An unexpected error occurred",
+      "demo": {
+        "divider": "Demo Users",
+        "hint": "Available demo accounts (all use password: password123):",
+        "admin": "Admin",
+        "analyst": "Analyst",
+        "viewer": "Viewer",
+        "line": "{label} - {email}"
+      },
+      "footer": "Norwegian Refugee Council • Early Warning and Alert System for Sudan"
+    },
+    "forgot": {
+      "title": "Reset Password",
+      "intro": "Enter your email and we'll send you a link to reset your password.",
+      "emailRequired": "Please enter your email address",
+      "email": "Email",
+      "emailPlaceholder": "Enter your email",
+      "submit": "Send Reset Link",
+      "sent": "If an account exists with that email, we've sent a password reset link. Check your inbox."
+    },
+    "reset": {
+      "title": "Set New Password",
+      "invalidLink": "Invalid reset link. Please request a new password reset.",
+      "requestNew": "Request New Reset Link",
+      "tooShort": "Password must be at least 8 characters",
+      "mismatch": "Passwords do not match",
+      "success": "Password reset successfully. Redirecting to login...",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Min 8 characters",
+      "confirmPassword": "Confirm Password",
+      "confirmPlaceholder": "Re-enter your password",
+      "submit": "Reset Password"
+    },
+    "backToSignIn": "Back to Sign In"
+  },
+  "cash": {
+    "header": {
+      "title": "Cash Assistance Targeting & Distribution",
+      "exportData": "Export Data",
+      "newDistribution": "New Distribution"
+    },
+    "banner": {
+      "label": "Active Crisis:",
+      "crisis": "Cholera Outbreak - Somali Region • Jijiga, Kebridehar",
+      "window": "46h intervention window"
+    },
+    "stats": {
+      "affectedPopulation": "Affected Population",
+      "cashTransferPerHh": "Cash Transfer/HH",
+      "eligibleHh": "Eligible HH (AI)",
+      "totalBudget": "Total Budget"
+    },
+    "mapping": {
+      "title": "Cash Assistance Mapping & Assessment",
+      "subtitle": "Click on location cards to view detailed population demographics, market analysis, and field coordinator inputs",
+      "markerAffected": "{count} affected",
+      "markerSeverity": "Severity: {severity}"
+    },
+    "legend": {
+      "critical": "Critical Exposure",
+      "high": "High Exposure",
+      "moderate": "Moderate Exposure"
+    },
+    "sources": {
+      "title": "Data Sources",
+      "rapidAssessment": {
+        "title": "Rapid Assessment",
+        "org": "NRC/UNHCR",
+        "date": "10/21/2025"
+      },
+      "censusProjection": {
+        "title": "Census Projection",
+        "org": "National Statistics",
+        "date": "2024 Baseline"
+      }
+    },
+    "details": {
+      "totalAffected": "Total Affected",
+      "exportReport": "Export Cash Assessment Report (PDF)",
+      "tabs": {
+        "demographics": "Demographics",
+        "market": "Market",
+        "field": "Field Input"
+      },
+      "demographics": {
+        "gender": "Gender Distribution",
+        "male": "Male",
+        "female": "Female",
+        "age": "Age Distribution",
+        "vulnerability": "Vulnerability Indicators (HH)",
+        "housing": "Housing Conditions (HH)",
+        "personsPerRoom": "Avg. Persons/Room"
+      },
+      "market": {
+        "functionality": "Market Functionality",
+        "operational": "Markets Operational",
+        "operationalNote": "3 of 4 major markets in the area are functioning normally. One market has reduced hours due to security concerns.",
+        "vendors": "Vendor Availability",
+        "vendorLabels": {
+          "food": "Food vendors",
+          "nfi": "NFI vendors",
+          "mobileMoney": "Mobile money agents"
+        },
+        "vendorActive": "{count} active",
+        "prices": "Price Stability",
+        "priceLabels": {
+          "stapleFoods": "Staple foods",
+          "water": "Water (20L)",
+          "transport": "Transport"
+        },
+        "priceVsBaseline": "{change} vs baseline",
+        "recommendation": "Recommendation",
+        "recommendationText": "Cash transfer is viable. Consider voucher restrictions for water purchases due to price inflation."
+      },
+      "field": {
+        "notes": "Coordinator Notes",
+        "quote": "Community leaders have been consulted and are supportive of cash distribution. Women's groups prefer mobile money due to safety concerns with physical cash. Recommend morning distributions to avoid afternoon heat.",
+        "attribution": "Ahmed M., Field Coordinator, Dec 14",
+        "accessibility": "Accessibility",
+        "accessLabels": {
+          "road": "Road access",
+          "network": "Mobile network",
+          "points": "Distribution points"
+        },
+        "accessValues": {
+          "good": "Good",
+          "intermittent": "Intermittent",
+          "pointsIdentified": "{count} identified"
+        },
+        "security": "Security Considerations",
+        "moderateRisk": "Moderate Risk",
+        "securityNote": "Avoid large gatherings. Recommend staggered distribution times and multiple smaller distribution points.",
+        "lastVisit": "Last Field Visit"
+      }
+    },
+    "wizard": {
+      "title": "New Cash Distribution",
+      "stepIndicator": "Step {current} of {total}: {title}",
+      "steps": {
+        "locations": "Target Locations",
+        "transfer": "Transfer Details",
+        "schedule": "Schedule & Criteria",
+        "review": "Review & Confirm"
+      },
+      "next": "Next",
+      "createDistribution": "Create Distribution",
+      "locationsStep": {
+        "intro": "Select the locations where cash assistance will be distributed. You can select multiple locations.",
+        "affected": "{count} affected",
+        "summary": "<b>{locations}</b> location(s) selected • <b>{affected}</b> total affected • ~<b>{households}</b> estimated households"
+      },
+      "transferStep": {
+        "intro": "Configure the transfer modality and amount for this distribution.",
+        "modality": "Transfer Modality",
+        "modalities": {
+          "mobileMoney": "Mobile Money Transfer",
+          "cashInHand": "Cash-in-Hand Distribution",
+          "bankTransfer": "Bank Account Transfer",
+          "voucher": "E-Voucher / Paper Voucher"
+        },
+        "amount": "Amount per Household",
+        "amountPlaceholder": "e.g., 580",
+        "currency": "Currency",
+        "currencies": {
+          "etb": "Ethiopian Birr (ETB)",
+          "usd": "US Dollar (USD)"
+        },
+        "frequency": "Distribution Frequency",
+        "frequencies": {
+          "oneTime": "One-time Distribution",
+          "monthly": "Monthly (3 months)",
+          "biWeekly": "Bi-weekly (6 weeks)"
+        },
+        "estimatedBudget": "Estimated Budget",
+        "budgetBasis": "Based on ~{households} households at {amount} {currency} each"
+      },
+      "scheduleStep": {
+        "intro": "Set the distribution schedule and targeting criteria.",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "verification": "Verification Method",
+        "verifications": {
+          "biometric": "Biometric Verification",
+          "idCard": "ID Card + PIN",
+          "token": "Token-Based Distribution",
+          "community": "Community-Based Verification"
+        },
+        "criteria": "Targeting Criteria (Optional)",
+        "criteriaOptions": {
+          "femaleHeaded": "Female-headed households",
+          "childHeaded": "Child-headed households",
+          "elderlySingle": "Elderly single-person households",
+          "disability": "Households with disabled members",
+          "chronicIllness": "Households with chronic illness",
+          "inadequateHousing": "Inadequate housing (tents/temporary)",
+          "highOccupancy": "High persons per room (>4)"
+        }
+      },
+      "reviewStep": {
+        "intro": "Review the distribution plan before creating.",
+        "summary": "{affected} affected • ~{households} households",
+        "amountPerHh": "Amount per HH",
+        "period": "Distribution Period",
+        "periodRange": "{start} to {end}",
+        "periodSingle": "{start} (single day)",
+        "verification": "Verification",
+        "criteria": "Targeting Criteria",
+        "totalBudget": "Total Estimated Budget",
+        "notes": "Additional Notes",
+        "notesPlaceholder": "Any additional instructions or notes for field coordinators..."
+      }
+    }
+  },
+  "changePassword": {
+    "title": "Change Password",
+    "subtitle": "Update your account password",
+    "backToProfile": "Back to Profile",
+    "success": "Password changed successfully.",
+    "errors": {
+      "mismatch": "New passwords do not match",
+      "tooShort": "New password must be at least 8 characters",
+      "failed": "Failed to change password",
+      "unexpected": "An unexpected error occurred"
+    },
+    "security": "Security",
+    "current": {
+      "label": "Current Password",
+      "placeholder": "Enter your current password"
+    },
+    "new": {
+      "label": "New Password",
+      "placeholder": "Enter your new password"
+    },
+    "confirm": {
+      "label": "Confirm New Password",
+      "placeholder": "Confirm your new password"
+    },
+    "submit": "Update Password",
+    "requirements": {
+      "title": "Password Requirements",
+      "minLength": "At least 8 characters long"
+    }
+  },
+  "common": {
+    "actions": {
+      "save": "Save",
+      "saveChanges": "Save Changes",
+      "cancel": "Cancel",
+      "close": "Close",
+      "back": "Back",
+      "search": "Search",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirm": "Confirm",
+      "retry": "Retry"
+    },
+    "states": {
+      "loading": "Loading...",
+      "error": "Something went wrong",
+      "empty": "No data available",
+      "comingSoon": "Coming Soon"
+    },
+    "badges": {
+      "soon": "Soon",
+      "demo": "Demo",
+      "aiGenerated": "✦ AI generated"
+    },
+    "severities": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "unknown": "Unknown"
+    },
+    "comments": {
+      "title": "Discussion",
+      "replyBadge": "Reply",
+      "replyAction": "Reply",
+      "unknownUser": "Unknown",
+      "empty": "No comments yet. Be the first to add one.",
+      "replyingTo": "Replying to <strong>{name}</strong>",
+      "placeholderReply": "Reply to {name}…",
+      "placeholderAdd": "Add a comment…",
+      "shortcutHint": "⌘ + Enter to post",
+      "post": "Post"
+    },
+    "feedbackSection": {
+      "question": {
+        "event": "Was this event helpful?",
+        "signal": "Was this signal helpful?"
+      },
+      "thanksInline": "Thanks for the feedback!",
+      "issues": "Issues",
+      "helpful": "Helpful",
+      "modalTitle": "What was the issue?",
+      "thankYou": "Thank you!",
+      "thanksBody": {
+        "event": "Your feedback helps improve event quality for the whole team.",
+        "signal": "Your feedback helps improve signal quality for the whole team."
+      },
+      "selectIssues": "Select all issues that apply - this helps us improve the detection pipeline.",
+      "reasons": {
+        "notRelevant": "Not relevant",
+        "alreadyKnown": "Already known",
+        "wrongArea": "Wrong area",
+        "wrongSeverity": "Wrong severity",
+        "inaccurate": "Inaccurate"
+      },
+      "commentsLabel": "Additional comments (optional)",
+      "commentsPlaceholder": {
+        "event": "Anything else we should know about this event…",
+        "signal": "Anything else we should know about this signal…"
+      },
+      "send": "Send Feedback"
+    },
+    "createSignal": {
+      "detailsTitle": "Create a Signal - Details",
+      "mediaTitle": "Create a Signal - Add Media",
+      "successTitle": "Signal Created",
+      "fieldTitle": "Title",
+      "titlePlaceholder": "e.g., Flooding reported in Kassala State",
+      "fieldDescription": "Description",
+      "descriptionPlaceholder": "Describe what was observed, source, and any relevant context…",
+      "fieldSource": "Source",
+      "sourcesLoading": "Loading sources…",
+      "sourcePlaceholder": "Select a source…",
+      "noSources": "No sources available",
+      "fieldLocation": "Location",
+      "locationsLoading": "Loading locations…",
+      "locationPlaceholder": "Search location…",
+      "noMatchingLocation": "No matching location",
+      "fieldSeverity": "Severity",
+      "severityPlaceholder": "Select severity…",
+      "severityWarning": "{level} severity signals may trigger an alert and notify team members subscribed to alerts at this level.",
+      "next": "Next: Add Media",
+      "dropzone": "Drop files here or click to browse",
+      "fileTypes": "PDFs, Word, Excel, CSV, text files",
+      "skipSubmit": "Skip & Submit",
+      "submit": "Submit Signal",
+      "successHeading": "Signal created",
+      "successText": "Your signal has been submitted and is now visible to your team.",
+      "done": "Done",
+      "uploadFailed": "File upload failed",
+      "createFailed": "Failed to create signal"
+    },
+    "disasterTypePicker": {
+      "placeholder": "Select disaster types",
+      "selected": "{count, plural, one {# type selected} other {# types selected}}",
+      "loading": "Loading types..."
+    },
+    "feedback": {
+      "title": "Share Feedback",
+      "thanks": "Thanks!",
+      "received": "Your feedback has been received.",
+      "type": "Type",
+      "types": {
+        "bug": "Bug",
+        "feature": "Feature Request",
+        "general": "General"
+      },
+      "message": "Message",
+      "placeholderBug": "Describe what happened and how to reproduce it...",
+      "placeholderFeature": "What would you like to see?",
+      "placeholderGeneral": "What's on your mind?",
+      "consoleNote": "Console errors/warnings ({count}) will be attached automatically.",
+      "error": "Something went wrong. Please try again.",
+      "send": "Send Feedback"
+    },
+    "filters": {
+      "country": "Country",
+      "region": "Region",
+      "date": "Date"
+    },
+    "regionPicker": {
+      "allRegions": "All Regions",
+      "searchPlaceholder": "Search regions...",
+      "noMatch": "No regions match “{query}”"
+    },
+    "toasts": {
+      "saved": "Saved",
+      "error": "Error"
+    },
+    "toolbar": {
+      "searchPlaceholder": "Search...",
+      "newItems": "{count, plural, one {# new item} other {# new items}} - refresh"
+    }
+  },
+  "crisisDetail": {
+    "backToAnalysis": "Back to Analysis",
+    "viewOnCrisisMap": "View on Crisis Map",
+    "switchCrisis": "Switch crisis",
+    "untitledCrisis": "Untitled crisis",
+    "crisisBadge": "Crisis",
+    "eventFallback": "Event",
+    "updatedDate": "Updated {date}",
+    "eventCount": "{count, plural, one {# event} other {# events}}",
+    "enrichment": {
+      "preparingTitle": "Information is being prepared",
+      "preparingDescription": "Generating title, summary, scenarios and needs assessment..."
+    },
+    "notFound": {
+      "title": "Crisis not found",
+      "description": "This crisis may have been removed or the ID is invalid."
+    },
+    "deleteModal": {
+      "title": "Delete crisis",
+      "confirm": "Permanently delete <strong>{title}</strong>? This cannot be undone.",
+      "fallbackName": "this crisis",
+      "menuItem": "Delete crisis"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "needs": "Needs Assessment",
+      "events": "Events",
+      "demography": "Demography",
+      "sources": "Sources",
+      "confidence": "Confidence"
+    },
+    "kpi": {
+      "impact": "Impact",
+      "areaContext": "Area Context",
+      "peopleAffected": "People affected",
+      "peopleDisplaced": "People displaced",
+      "peopleInArea": "People in the area",
+      "idpPerCapitaIn": "IDP per capita in {name}",
+      "idpPerCapita": "IDP per capita"
+    },
+    "summary": {
+      "title": "Summary",
+      "empty": "No summary available yet."
+    },
+    "scenario": {
+      "title": "Scenario Analysis",
+      "empty": "Scenarios not yet generated for this crisis.",
+      "labels": {
+        "bestCase": "Best Case",
+        "mostLikely": "Most Likely",
+        "worstCase": "Worst Case"
+      }
+    },
+    "documents": {
+      "title": "Documents",
+      "removeModalTitle": "Remove document",
+      "removeConfirm": "Remove <strong>{name}</strong>? This cannot be undone.",
+      "remove": "Remove",
+      "empty": "No documents attached.",
+      "upload": "Upload",
+      "uploading": "Uploading...",
+      "uploadFailed": "Upload failed. Please try again.",
+      "removeFailed": "Remove failed. Please try again."
+    },
+    "demography": {
+      "noData": "No demographic data available for this location.",
+      "notYetAvailable": "Demographic data not yet available for {name}.",
+      "source": "WorldPop {year}{release} constrained",
+      "total": "total",
+      "vulnerableGroups": "Vulnerable groups",
+      "groups": {
+        "childrenUnder5": "Children under 5",
+        "children5to14": "Children 5-14",
+        "women15to49": "Women 15-49",
+        "elderly60plus": "Elderly 60+"
+      },
+      "genderSplit": "Gender split",
+      "male": "Male",
+      "female": "Female"
+    },
+    "sources": {
+      "underlyingSignals": "Underlying Signals",
+      "enrichmentSection": "Enrichment",
+      "contextData": "Context Data",
+      "noSignalSources": "No signal sources linked.",
+      "viaAggregator": "{publisher} via {aggregator}",
+      "asOf": "As of {date}",
+      "signalCount": "{count, plural, one {# signal} other {# signals}}",
+      "noEnrichment": "No external enrichment sources incorporated yet. ReliefWeb situation reports and historical signal analysis will appear here when available.",
+      "noContextData": "No context data available for this location.",
+      "context": {
+        "population": "Population",
+        "populationDetail": "{value} - WorldPop {year} constrained{release}",
+        "demographics": "Demographics",
+        "demographicsDetail": "Male {malePct}% / Female {femalePct}% - WorldPop {year} age/sex breakdown",
+        "idp": "IDP",
+        "round": "Round {number}",
+        "needsBaseline": "Needs Assessment Baseline"
+      }
+    },
+    "confidence": {
+      "legend": "Legend",
+      "modalTitle": "Confidence levels",
+      "cols": {
+        "baseline": {
+          "label": "Baseline",
+          "description": "Content generated solely from pipeline signal data - events, severities, and locations ingested from connected sources."
+        },
+        "enriched": {
+          "label": "AI enriched",
+          "description": "The pipeline incorporated external context data (WorldPop demographics, IOM DTM displacement, INFORM risk scores) when generating this content."
+        },
+        "reviewed": {
+          "label": "Analyst reviewed",
+          "description": "A CLEAR analyst has reviewed and validated the content against their field knowledge."
+        },
+        "validated": {
+          "label": "Field validated",
+          "description": "Content has been confirmed through direct community or field team feedback."
+        }
+      },
+      "rows": {
+        "description": "Description",
+        "scenarios": "Scenarios",
+        "needs": "Needs Assessment"
+      }
+    },
+    "events": {
+      "empty": "No events linked to this crisis.",
+      "removeModalTitle": "Remove event from crisis",
+      "removeConfirm": "Remove <strong>{title}</strong> from the crisis?",
+      "fallbackName": "this event",
+      "lastEventWarning": "This is the last event. Removing it will delete the entire crisis.",
+      "removeAndDelete": "Remove and delete crisis",
+      "remove": "Remove",
+      "removeFromCrisis": "Remove from crisis"
+    },
+    "needs": {
+      "saf": {
+        "catastrophic": "Catastrophic",
+        "extreme": "Extreme",
+        "severe": "Severe",
+        "stressed": "Stressed",
+        "minimal": "Minimal",
+        "unknown": "Unknown"
+      },
+      "sectors": {
+        "shelter": "Shelter",
+        "wash": "WASH",
+        "protection": "Protection",
+        "health": "Health",
+        "food": "Food Security",
+        "education": "Education"
+      },
+      "levels": {
+        "baseline": "Baseline",
+        "aiReview": "AI Review",
+        "rna": "RNA"
+      },
+      "precision": {
+        "district": "District",
+        "locality": "Locality"
+      },
+      "estChildShare": "est. child share",
+      "sectorsTitle": "Sectors",
+      "columns": {
+        "sector": "Sector",
+        "severity": "Severity",
+        "pin": "People in Need",
+        "presence": "Op. Presence",
+        "assessment": "Assessment",
+        "precision": "Precision"
+      },
+      "summaryTitle": "Summary",
+      "severityFromMsna": "Sector severity from <b>MSNA Aug 2025</b>.",
+      "presenceFromOcha": "Operational presence from <b>OCHA 3W {date}</b>.",
+      "generating": "Needs analysis is being generated...",
+      "aiSummaryComingSoon": "AI generated summary coming soon.",
+      "responseGap": "Response gap",
+      "nrcMandate": "NRC mandate",
+      "orgsActive": "Organisations active in this area",
+      "moreOrgs": "+{count} more",
+      "severityModal": {
+        "title": "Sector Severity",
+        "intro": "Each sector is scored 0-100 using weighted combinations of MSNA survey indicators across three dimensions: disruption to living standards (access, availability, and quality of essential services), coping mechanisms adopted by affected populations, and physical and mental wellbeing outcomes.",
+        "score": "Score",
+        "level": "Level",
+        "noData": "No data",
+        "footnote": "Thresholds are prototype-stage and pending validation against JIAF cluster standards and NRC benchmarks."
+      },
+      "pinModal": {
+        "title": "People in Need",
+        "intro": "Estimated from the sector severity score using the same weighted composite formula that drives the severity label:",
+        "formula": "PIN = (score / 100) x district population",
+        "population": "Population data: WorldPop 2026 constrained estimates. Education applies an 18% child population share since the sector score represents school-age children only.",
+        "footnote": "Education child share will be replaced by WorldPop age-sex breakdown when available."
+      },
+      "assessmentModal": {
+        "title": "Assessment Level",
+        "intro": "Indicates how the sector assessment was produced and which data sources it draws on.",
+        "level1Label": "1  Baseline",
+        "level1Description": "Sourced from MSNA (Multi-Sector Needs Assessment) survey data, August 2025. District-level coverage only. No AI review has been applied.",
+        "level2Label": "2  AI Review",
+        "level2Description": "An AI model has reviewed available signals and reports alongside the MSNA baseline to produce an updated severity assessment and written sector summary.",
+        "level3Label": "3  RNA",
+        "level3Description": "A Rapid Needs Assessment conducted in-field provides direct on-the-ground data, superseding remote-sensing and survey estimates."
+      },
+      "precisionModal": {
+        "title": "Precision",
+        "intro": "Indicates the finest geographic granularity at which the assessment data was collected.",
+        "districtLabel": "District",
+        "districtDescription": "Data collected at administrative level 2 (A2 district). This is the current granularity of the MSNA dataset.",
+        "localityLabel": "Locality",
+        "localityDescription": "Data collected at sub-district (locality) level, providing finer resolution. Requires field validation or higher-resolution data sources not yet integrated.",
+        "footnote": "Most current assessments are at District level. Locality precision will become available as finer data sources are integrated."
+      },
+      "presenceModal": {
+        "title": "Operational Presence",
+        "intro": "Sourced from OCHA's 3W (Who does What Where) dataset. Shows humanitarian organizations actively operating in the district, broken down by organization type.",
+        "types": {
+          "un": "United Nations agencies",
+          "ingo": "International NGOs",
+          "nngo": "National NGOs",
+          "gov": "Government bodies",
+          "rcrc": "Red Cross / Red Crescent",
+          "other": "Other organizations"
+        }
+      }
+    }
+  },
+  "dashboard": {
+    "rightPanel": {
+      "nrcOpsBadge": "NRC Ops",
+      "nrcOffice": "NRC Office",
+      "pillars": {
+        "hazard": "Hazard",
+        "vulnerability": "Vulnerability",
+        "coping": "Coping Cap."
+      },
+      "informOverall": "INFORM Risk Overall - {edition}",
+      "informModal": {
+        "title": "INFORM Risk Index: Methodology",
+        "intro": "The <strong>INFORM Risk Index</strong> is produced by the EU Joint Research Centre (JRC) in partnership with the Inter-Agency Standing Committee (IASC). It measures the risk of humanitarian crises and disasters that could overwhelm national response capacity. Scores range from <strong>0 to 10</strong> (higher = more risk).",
+        "pillarsHeading": "The three pillars",
+        "pillarHazard": "<strong>Hazard and Exposure</strong>: likelihood of physical events (natural hazards, conflict) affecting the population.",
+        "pillarVulnerability": "<strong>Vulnerability</strong>: socio-economic factors that make communities less able to cope, including poverty, inequality, and displacement.",
+        "pillarCoping": "<strong>Lack of Coping Capacity</strong>: institutional and infrastructure capacity to respond - governance, health system, communication.",
+        "sourceLabel": "Source:",
+        "sourceLink": "JRC INFORM Risk Index",
+        "updatedAnnually": "- updated annually."
+      },
+      "activeCrises": "Active Crises ({count})",
+      "fieldFallback": "Field",
+      "casesCount": "{count, plural, one {# case} other {# cases}}",
+      "affectedShort": "{count}k affected",
+      "severities": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "response": "Response"
+      },
+      "nrcCoreActivities": "NRC Core Activities ({count})",
+      "activeBadge": "Active",
+      "countryRisks": "Country Risks",
+      "locationOverview": "Location Overview",
+      "loadingRisk": "Loading risk data...",
+      "riskSource": "Source: {edition}",
+      "riskUnavailable": "Risk data unavailable for this country.",
+      "defaultCountryDescription": "NRC operates in {country} providing humanitarian assistance to displaced and vulnerable populations.",
+      "establishedIn": "NRC established operations in {year}",
+      "multiSectorResponse": "and continues to provide multi-sector humanitarian response including {activities}.",
+      "locationDetails": "Location Details",
+      "capital": "Capital",
+      "region": "Region",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "noLocationInfo": "No detailed information available for this location.",
+      "responseStatus": "Response Status",
+      "nrcPresence": "NRC Presence",
+      "activeDeployments": "Active Deployments",
+      "membersCount": "{count, plural, one {# member} other {# members}}",
+      "assessmentTeam": "Assessment Team",
+      "enRouteGode": "En route to Gode",
+      "transitBadge": "Transit",
+      "criticalResources": "Critical Resources",
+      "resources": {
+        "ivFluids": "IV Fluids",
+        "orsPackets": "ORS Packets",
+        "waterPurification": "Water Purification"
+      },
+      "viewOperations": "View Operations Center",
+      "countryOffice": "Country Office",
+      "regionalContext": "Regional Context",
+      "nrcRegion": "NRC Region",
+      "countriesInRegion": "Countries in Region",
+      "activePrograms": "Active Programs",
+      "otherRegionCountries": "Other {region} Countries",
+      "noResponseData": "No response data available.",
+      "nrcGlobalOperations": "NRC Global Operations ({count})",
+      "stats": {
+        "countries": "Countries",
+        "regions": "Regions",
+        "staff": "Staff"
+      },
+      "viewingGlobalMap": "Viewing Global Map",
+      "viewAllOnMap": "View All on Map",
+      "selectedBadge": "Selected",
+      "coreCompetencies": "Core Competencies",
+      "competencies": {
+        "education": "Education",
+        "foodSecurity": "Food Security",
+        "icla": "ICLA",
+        "shelter": "Shelter",
+        "wash": "WASH",
+        "campMgmt": "Camp Mgmt"
+      },
+      "createSignal": "Create Signal",
+      "footer": {
+        "data": "Data:",
+        "aiAnalysis": "AI Analysis",
+        "updated": "Updated: 30m ago"
+      }
+    },
+    "mapSection": {
+      "tokenMissing": "Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env",
+      "country": "Country",
+      "region": "Region",
+      "date": "Date",
+      "views": {
+        "single": "◻ Single",
+        "compare": "◫ Compare",
+        "time": "▶ Time",
+        "nrc": "🌍 NRC"
+      },
+      "legend": "Legend",
+      "nrcRegions": "NRC Regions",
+      "severity": "Severity",
+      "severities": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "teams": "Teams"
+      },
+      "eventType": "Event Type",
+      "eventTypes": {
+        "crisis": "Crisis",
+        "conflict": "Conflict",
+        "famine": "Famine",
+        "disease": "Disease",
+        "flood": "Flood",
+        "drought": "Drought",
+        "response": "Response"
+      },
+      "regionShort": {
+        "eastAfricaYemen": "E. Africa & Yemen",
+        "centralWestAfrica": "Central & W. Africa",
+        "southernAfrica": "Southern Africa",
+        "middleEast": "Middle East",
+        "asia": "Asia",
+        "europe": "Europe",
+        "americas": "Americas"
+      },
+      "timeline": "Timeline",
+      "popup": {
+        "cases": "Cases",
+        "affected": "Affected",
+        "members": "Members",
+        "trend": "Trend",
+        "status": "Status",
+        "region": "Region",
+        "coreActivities": "Core Activities:",
+        "operationsActive": "Operations active"
+      }
+    },
+    "createAlert": {
+      "steps": {
+        "selectEvents": "Create Alert - Select Events",
+        "createEvent": "Create Alert - New Event",
+        "details": "Create Alert - Details"
+      },
+      "success": "Alert created successfully!",
+      "selectEventsPrompt": "Select events to include in the alert",
+      "noEvents": "No events found. Create an event first.",
+      "signalCount": "{count, plural, one {# signal} other {# signals}}",
+      "alertBadge": "Alert",
+      "createNewEvent": "Create New Event",
+      "nextDetails": "Next: Alert Details ({count} selected)",
+      "backToEvents": "Back to Events",
+      "selectSignalsPrompt": "Select signals to group into a new event",
+      "noAvailableSignals": "No available signals. Create one below.",
+      "sourceLabel": "Source: {name}",
+      "createManualSignal": "Create Manual Signal",
+      "fieldDataSource": "Data Source",
+      "dataSourcePlaceholder": "Select data source",
+      "fieldTitle": "Title",
+      "titlePlaceholder": "e.g., Cholera outbreak in El Fasher",
+      "createSignal": "Create Signal",
+      "createEventCount": "Create Event ({count, plural, one {# signal} other {# signals}})",
+      "selectedEvents": "Selected Events ({count})",
+      "fieldAlertTitle": "Alert Title",
+      "alertTitlePlaceholder": "e.g., Darfur Humanitarian Crisis Alert",
+      "fieldDescription": "Description",
+      "descriptionPlaceholder": "Describe the alert, its context, and recommended actions...",
+      "fieldSeverity": "Severity",
+      "severityPlaceholder": "Select severity",
+      "severityOptions": {
+        "low": "1 - Low",
+        "moderate": "2 - Moderate",
+        "high": "3 - High",
+        "veryHigh": "4 - Very High",
+        "critical": "5 - Critical"
+      },
+      "fieldStatus": "Status",
+      "statusDraft": "Draft",
+      "statusPublished": "Published",
+      "submit": "Create Alert",
+      "errors": {
+        "createEvent": "Failed to create event",
+        "createSignal": "Failed to create signal",
+        "createAlert": "Failed to create alert"
+      }
+    }
+  },
+  "detection": {
+    "header": {
+      "title": "Event Detection",
+      "breadcrumb": "Detection"
+    },
+    "tabs": {
+      "alerts": "Alerts",
+      "events": "Events",
+      "signals": "Signals",
+      "history": "History"
+    },
+    "actions": {
+      "createSignal": "Create Signal"
+    },
+    "filters": {
+      "filter": "Filter",
+      "title": "Filters",
+      "clearAll": "Clear all",
+      "severity": "Severity",
+      "eventType": "Event Type",
+      "source": "Source",
+      "region": "Region",
+      "severities": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      },
+      "last7days": "Last 7 days",
+      "last30days": "Last 30 days",
+      "last90days": "Last 90 days"
+    },
+    "sort": {
+      "sevDesc": "Severity: High to Low",
+      "sevAsc": "Severity: Low to High",
+      "newest": "Newest first",
+      "oldest": "Oldest first"
+    },
+    "feed": {
+      "crisisMap": "Crisis Map",
+      "firstSignal": "First signal: {time}",
+      "signalCount": "{count, plural, one {# signal} other {# signals}}",
+      "sourceLink": "Source",
+      "alertBadge": "Alert",
+      "alerts": {
+        "title": "Alerts",
+        "empty": "No active alerts at this time.",
+        "noMatch": "No alerts match your filters.",
+        "untitled": "Untitled alert",
+        "allLoaded": "All {count, plural, one {# alert} other {# alerts}} loaded"
+      },
+      "events": {
+        "title": "Events",
+        "empty": "No events found.",
+        "noMatch": "No events match your filters.",
+        "untitled": "Untitled event",
+        "allLoaded": "All {count, plural, one {# event} other {# events}} loaded"
+      },
+      "signals": {
+        "title": "Signals",
+        "empty": "No signals found.",
+        "noMatch": "No signals match your filters.",
+        "untitled": "Untitled signal",
+        "allLoaded": "All {count, plural, one {# signal} other {# signals}} loaded"
+      }
+    },
+    "history": {
+      "title": "History",
+      "searchCount": "{filtered} of {loaded} loaded",
+      "empty": "No history available.",
+      "noMatch": "No items match your search.",
+      "loadMore": "Load more",
+      "untitled": "Untitled",
+      "columns": {
+        "title": "Title",
+        "class": "Class",
+        "type": "Type",
+        "severity": "Severity",
+        "source": "Source",
+        "date": "Date",
+        "location": "Location"
+      },
+      "classes": {
+        "alert": "Alert",
+        "event": "Event",
+        "signal": "Signal"
+      }
+    },
+    "kpi": {
+      "activeAlerts": {
+        "title": "Active Alerts",
+        "unit": "alerts"
+      },
+      "trend": {
+        "title": "Trend",
+        "window7": "7-day window",
+        "window30": "30-day window",
+        "days7": "7d",
+        "days30": "30d",
+        "escalating": "Escalating",
+        "improving": "Improving",
+        "stable": "Stable"
+      },
+      "coverage": {
+        "title": "Event Coverage",
+        "flagged": "flagged",
+        "events": "Events",
+        "total": "total",
+        "alerted": "{count} alerted",
+        "monitoring": "{count} monitoring",
+        "totalSignals": "Total signals",
+        "avgPerEvent": "Avg / event"
+      },
+      "inform": {
+        "title": "INFORM Severity",
+        "noData": "No data for {country}",
+        "impact": "Impact",
+        "conditions": "Conditions",
+        "complexity": "Complexity",
+        "updated": "Updated {date}",
+        "acapsLine": "ACAPS · {month}",
+        "modal": {
+          "title": "INFORM Severity Index: Methodology",
+          "intro": "The <strong>INFORM Severity Index</strong> is a joint product of the EU Joint Research Centre (JRC), ACAPS, and OCHA. JRC owns the methodology; ACAPS collects the data and produces the monthly scores; OCHA coordinates the initiative. As of the February 2026 release (Version 2026 methodology), scores use a continuous scale of <strong>0 to 10</strong>, rescaled from the previous 0 to 5 range for consistency with other INFORM products. Scores are grouped into five severity categories. Only countries with an active humanitarian crisis are included.",
+          "dimensionsHeading": "Score dimensions (each 0 to 10)",
+          "dimImpact": "<strong>Impact</strong>: scale and depth of humanitarian needs, including people affected, displacement, and mortality.",
+          "dimConditions": "<strong>Conditions of affected people</strong>: living standards, food security, health, water and sanitation, and protection environment.",
+          "dimComplexity": "<strong>Complexity</strong>: factors constraining response such as conflict intensity, access restrictions, and political instability.",
+          "categoriesHeading": "Severity categories",
+          "cat1": "<strong>1 / Low</strong>",
+          "cat2": "<strong>2 / Medium</strong>",
+          "cat3": "<strong>3 / High</strong>",
+          "cat4": "<strong>4 / Very High</strong>",
+          "cat5": "<strong>5 / Extremely High</strong>",
+          "limitationsHeading": "Limitations",
+          "limitationJudgement": "Scores reflect ACAPS analytical judgement and may lag 4 to 8 weeks behind rapidly evolving situations.",
+          "limitationCoverage": "The index covers active humanitarian crises only. Countries without an active crisis are not included.",
+          "sourceHeading": "Source",
+          "sourceJrc": "INFORM Severity Index (JRC/EU canonical portal)",
+          "sourceAcaps": "ACAPS INFORM Severity Index (data and API)",
+          "sourceNote": "Data is fetched from the ACAPS API, which is identical to the JRC-published monthly dataset. The JRC portal may lag by one release; ACAPS and HDX are authoritative for the latest scores. Updated monthly."
+        }
+      },
+      "indicators": "Indicators",
+      "activity": {
+        "title": "Event Activity",
+        "events": "Events",
+        "alerts": "Alerts"
+      },
+      "analysisCoverage": {
+        "title": "Analysis Coverage",
+        "covered": "COVERED",
+        "analysed": "Analysed",
+        "unanalysed": "Unanalysed",
+        "alerts": "Alerts",
+        "withoutAnalysis": "{count, plural, one {# alert} other {# alerts}} without analysis",
+        "allCovered": "All alerts covered"
+      },
+      "idp": {
+        "title": "IDP Displacement",
+        "unavailable": "Data unavailable",
+        "noData": "No displacement data",
+        "notTracked": "{code} is not tracked in IOM DTM",
+        "coverageVaries": "Coverage varies by country",
+        "internallyDisplaced": "Internally Displaced",
+        "vsLastMonth": "vs last month",
+        "sourceLine": "IOM DTM via HAPI",
+        "modal": {
+          "title": "IDP Displacement: Methodology",
+          "intro": "This card shows the total number of <strong>conflict-induced internally displaced persons (IDPs)</strong> tracked by IOM's Displacement Tracking Matrix (DTM) for the selected country. The figure reflects the latest available snapshot, not a cumulative total.",
+          "numbersHeading": "What the numbers mean",
+          "numberCurrent": "<strong>Current count</strong>: most recent IDP figure from IOM DTM for the country.",
+          "numberDelta": "<strong>Month-over-month delta</strong>: change in reported IDPs compared to the previous month's data point.",
+          "numberTrend": "<strong>Trend sparkline</strong>: historical monthly IDP counts showing displacement trajectory.",
+          "numberFreshness": "<strong>Freshness dot</strong>: green if updated within 30 days, amber within 90 days, red if older.",
+          "limitationsHeading": "Limitations",
+          "limitationFloods": "Flood and disaster displacement is <strong>not included</strong>. IOM DTM in this context tracks conflict-induced displacement only.",
+          "limitationCoverage": "Coverage is limited to IOM DTM's monitoring footprint, which may not capture all displacement situations within a country.",
+          "limitationLag": "Data may lag 4 to 8 weeks behind real-world conditions depending on the country operation.",
+          "sourceHeading": "Source",
+          "sourceLink": "HAPI: Humanitarian API (humdata.org)",
+          "sourceNote": "HAPI aggregates IOM DTM data alongside other humanitarian datasets under OCHA's stewardship."
+        }
+      }
+    },
+    "createSignalModal": {
+      "stepTitles": {
+        "details": "Create a Signal - Details",
+        "media": "Create a Signal - Add Media",
+        "success": "Signal Created"
+      },
+      "fields": {
+        "title": "Title",
+        "titlePlaceholder": "e.g., Flooding reported in Kassala State",
+        "description": "Description",
+        "descriptionPlaceholder": "Describe what was observed, source, and any relevant context…",
+        "source": "Source",
+        "sourcePlaceholderLoading": "Loading sources…",
+        "sourcePlaceholder": "Select a source…",
+        "noSources": "No sources available",
+        "location": "Location",
+        "locationPlaceholderLoading": "Loading locations…",
+        "locationPlaceholder": "Search location…",
+        "noLocation": "No matching location",
+        "severity": "Severity",
+        "severityPlaceholder": "Select severity…"
+      },
+      "severityWarning": "{severity} severity signals may trigger an alert and notify team members subscribed to alerts at this level.",
+      "nextAddMedia": "Next: Add Media",
+      "media": {
+        "dropzone": "Drop files here or click to browse",
+        "fileTypes": "PDFs, Word, Excel, CSV, text files",
+        "skipSubmit": "Skip & Submit",
+        "submit": "Submit Signal"
+      },
+      "success": {
+        "title": "Signal created",
+        "message": "Your signal has been submitted and is now visible to your team.",
+        "done": "Done"
+      },
+      "uploadError": "File upload failed",
+      "submitError": "Failed to create signal"
+    },
+    "createAlert": {
+      "title": "Create Manual Alert",
+      "success": "Alert created successfully.",
+      "sectionContent": "Alert Content",
+      "sectionClassification": "Classification",
+      "fieldTitle": "Title",
+      "titlePlaceholder": "Alert title/headline",
+      "fieldDescription": "Description",
+      "descriptionPlaceholder": "Main alert content and details",
+      "fieldSeverity": "Severity",
+      "severityPlaceholder": "Select severity",
+      "fieldStatus": "Status",
+      "statusDraft": "Draft",
+      "statusPublished": "Published",
+      "severityOptions": {
+        "low": "1 - Low",
+        "moderate": "2 - Moderate",
+        "high": "3 - High",
+        "veryHigh": "4 - Very High",
+        "critical": "5 - Critical"
+      },
+      "submit": "Create Alert"
+    },
+    "dataSources": {
+      "title": "Connected Data Sources",
+      "subtitle": "{count, plural, one {# source} other {# sources}} feeding the detection engine",
+      "connectSource": "+ Connect Source",
+      "online": "Online",
+      "offline": "Offline",
+      "columns": {
+        "source": "Source",
+        "type": "Type",
+        "status": "Status",
+        "frequency": "Frequency",
+        "variables": "Variables"
+      }
+    }
+  },
+  "eventDetail": {
+    "notFound": {
+      "title": "Event not found",
+      "description": "This event may have been removed or the ID is invalid."
+    },
+    "backToEvents": "Back to Events Overview",
+    "viewOnCrisisMap": "View on Crisis Map",
+    "status": {
+      "active": "Active",
+      "resolved": "Resolved"
+    },
+    "signalCount": "{count, plural, one {# signal} other {# signals}}",
+    "sourceCount": "{count, plural, one {# source} other {# sources}}",
+    "notAvailable": "N/A",
+    "kpi": {
+      "impact": "Impact",
+      "areaContext": "Area Context",
+      "peopleAffected": "People affected",
+      "peopleDisplaced": "People displaced",
+      "peopleInArea": "People in the area",
+      "idpPerCapitaIn": "IDP per capita in {name}",
+      "idpPerCapita": "IDP per capita"
+    },
+    "summary": {
+      "title": "Summary",
+      "empty": "No summary available."
+    },
+    "signals": {
+      "title": "Signals ({count})",
+      "subtitle": "Source intelligence that triggered this event",
+      "empty": "No signals attached",
+      "sourceLink": "Source",
+      "fallbackTitle": "Signal {id}"
+    },
+    "related": {
+      "title": "Related Events",
+      "empty": "No related events found"
+    },
+    "actions": {
+      "title": "Actions",
+      "alert": "Alert",
+      "confirmPrompt": "Raise this event as an alert?",
+      "failed": "Failed. Try again.",
+      "turnIntoAlert": "Turn into Alert"
+    },
+    "systemData": {
+      "title": "System Data",
+      "eventId": "Event ID",
+      "source": "Source",
+      "detected": "Detected",
+      "validFrom": "Valid from",
+      "validUntil": "Valid until",
+      "affectedAreas": "Affected Areas",
+      "created": "Created",
+      "updated": "Updated"
+    },
+    "drawer": {
+      "title": "Event Details",
+      "openFullPage": "Open as full page"
+    },
+    "addToCrisis": {
+      "button": "Add to Crisis",
+      "createNew": "Create new Crisis",
+      "loading": "Loading crises...",
+      "empty": "No existing crises yet.",
+      "untitledCrisis": "Untitled crisis",
+      "eventCount": "{count, plural, one {# event} other {# events}}",
+      "linkedTitle": "Event linked",
+      "linkedMessage": "Added to the crisis.",
+      "linkErrorTitle": "Could not link event",
+      "createdTitle": "Crisis created",
+      "createdMessage": "Pipeline will generate the title and summary shortly.",
+      "createErrorTitle": "Could not create crisis"
+    }
+  },
+  "knowledge": {
+    "header": {
+      "title": "Knowledge Hub",
+      "searchPlaceholder": "Search documents...",
+      "upload": "Upload"
+    },
+    "filters": {
+      "title": "Filter by Location & Type",
+      "clear": "Clear filters",
+      "region": "Region",
+      "country": "Country",
+      "zone": "Zone",
+      "type": "Type",
+      "allRegions": "All Regions",
+      "allCountries": "All Countries",
+      "allZones": "All Zones"
+    },
+    "types": {
+      "all": "All Resources",
+      "protocol": "Protocols",
+      "guideline": "Guidelines",
+      "template": "Templates",
+      "contact": "Contacts",
+      "training": "Training"
+    },
+    "crisisResources": {
+      "title": "Active Crisis Resources",
+      "subtitle": "{count, plural, one {# active crisis} other {# active crises}} in selected location"
+    },
+    "documents": {
+      "title": "Document Library",
+      "found": "{count, plural, one {# document found} other {# documents found}}",
+      "empty": "No documents found matching your filters",
+      "download": "Download",
+      "columns": {
+        "document": "Document",
+        "type": "Type",
+        "sector": "Sector",
+        "updated": "Updated"
+      }
+    },
+    "contacts": {
+      "title": "Key Contacts",
+      "count": "{count, plural, one {# contact} other {# contacts}}",
+      "email": "Email",
+      "call": "Call",
+      "empty": "No contacts found for this location"
+    },
+    "humchat": {
+      "subtitle": "Humanitarian AI Assistant",
+      "online": "Online",
+      "clearChat": "Clear chat",
+      "collapse": "Collapse panel",
+      "inputPlaceholder": "Ask about humanitarian response...",
+      "welcome": "Hello! I'm **HumChat**, your AI assistant for humanitarian operations. I'm trained on IASC guidelines, Sphere standards, and Ethiopia-specific humanitarian context.\n\nI can help you with:\n- **Situation analysis** and crisis briefs\n- **Response planning** and resource allocation\n- **Protocol guidance** for emergencies\n- **Coordination** support and communications\n\nWhat humanitarian challenge can I help you address today?",
+      "examples": {
+        "displacement": "Analyze displacement trends in Somali Region",
+        "interventions": "What are the priority interventions for health emergencies?",
+        "assessment": "Generate a rapid assessment plan for protection risks"
+      }
+    }
+  },
+  "map": {
+    "filters": {
+      "country": "Country",
+      "region": "Region",
+      "crisisType": "Crisis Type",
+      "allCountries": "All Countries",
+      "allRegions": "All Regions"
+    },
+    "panels": {
+      "layers": "Layers",
+      "legend": "Legend",
+      "clearData": "CLEAR Data",
+      "boundaries": "Boundaries",
+      "markers": "Markers",
+      "severity": "Severity",
+      "eventType": "Event Type",
+      "population": "Population"
+    },
+    "severities": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "unknown": "Unknown"
+    },
+    "dataViews": {
+      "none": "None",
+      "crisis": "Crisis",
+      "alert": "Alert",
+      "event": "Event"
+    },
+    "boundaries": {
+      "none": "None",
+      "a0": "A0 - Country",
+      "a1": "A1 - States",
+      "a2": "A2 - Districts"
+    },
+    "settings": {
+      "tooltip": "Map settings",
+      "title": "Map Settings",
+      "showBoundaries": "Show boundaries",
+      "populationLayer": "Population layer",
+      "a2Resolution": "A2 district resolution"
+    },
+    "detail": {
+      "severity": "Severity",
+      "type": "Type",
+      "location": "Location",
+      "dataSource": "Data Source",
+      "shockDate": "Shock Date",
+      "coordinates": "Coordinates",
+      "viewDetails": "View Details"
+    },
+    "minimap": {
+      "location": "Location",
+      "fullMap": "Full map"
+    },
+    "timeline": {
+      "title": "Timeline",
+      "allTime": "All time"
+    },
+    "tokenMissing": "Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env"
+  },
+  "nav": {
+    "sections": {
+      "main": "Main",
+      "resources": "Resources"
+    },
+    "items": {
+      "overview": "Overview",
+      "detection": "Detection",
+      "map": "Map",
+      "insights": "Insights",
+      "operations": "Operations",
+      "cash": "Cash Assistance",
+      "knowledge": "Knowledge Hub",
+      "agent": "Agent"
+    },
+    "itemSoon": "{label} (soon)",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "feedback": "Feedback",
+    "admin": "Admin",
+    "settings": "Settings",
+    "signOut": "Sign out"
+  },
+  "noAccess": {
+    "title": "Waiting for Access",
+    "message": "You've signed in but haven't been assigned to an organisation yet. Contact your administrator to receive an invitation.",
+    "signOut": "Sign Out",
+    "footer": "Norwegian Refugee Council • CLEAR Platform"
+  },
+  "notificationPreferences": {
+    "title": "Notification Preferences",
+    "subtitle": "Manage how you receive alerts and updates",
+    "backToProfile": "Back to Profile",
+    "email": {
+      "title": "Email Notifications",
+      "enable": "Enable Email Alerts",
+      "description": "Receive crisis alerts and system notifications via email"
+    },
+    "internal": {
+      "title": "Internal Notifications",
+      "crisisAlerts": "Crisis Alerts",
+      "crisisAlertsDescription": "New alerts and severity changes",
+      "system": "System Notifications",
+      "systemDescription": "Pipeline status, task assignments",
+      "updates": "Updates & Reports",
+      "updatesDescription": "Weekly summaries and analysis reports"
+    },
+    "display": {
+      "title": "Display Settings",
+      "desktop": "Desktop Notifications",
+      "desktopDescription": "Show browser push notifications",
+      "sound": "Sound Alerts",
+      "soundDescription": "Play sound for critical alerts"
+    },
+    "quietHours": {
+      "title": "Quiet Hours",
+      "enable": "Enable Quiet Hours",
+      "description": "Suppress non-critical notifications during set hours"
+    },
+    "save": "Save Preferences"
+  },
+  "observe": {
+    "metadata": {
+      "title": "Observe - CLEAR",
+      "description": "Submit a field signal to the CLEAR humanitarian intelligence platform"
+    },
+    "header": {
+      "appName": "Field Signals",
+      "queued": "{count} queued"
+    },
+    "tabs": {
+      "submit": "Submit",
+      "signals": "Signals"
+    },
+    "welcome": {
+      "heading": "To submit a signal:",
+      "bullet1": "The 1st line of your message will be the <strong>title</strong>, the rest is the <strong>description</strong>. Use Enter to go to a new line.",
+      "bullet2": "Use <strong>@</strong> to tag a location, or tap <locationIcon></locationIcon> to let the app locate you.",
+      "bullet3": "Attach images or videos with the <mediaIcon></mediaIcon> button."
+    },
+    "signals": {
+      "loading": "Loading signals…",
+      "empty": "No signals yet",
+      "events": "{count, plural, one {# event} other {# events}}"
+    },
+    "replies": {
+      "queued": "Got it. Your signal has been saved locally and will be sent to your team automatically once you are back online.",
+      "success": "Signal received. A new entry has been added to your team's signal list.",
+      "error": "Something went wrong and your signal was not submitted. Please try again."
+    },
+    "compose": {
+      "placeholder": "What did you observe?",
+      "captureLocation": "Capture location",
+      "addMedia": "Add photo or video"
+    }
+  },
+  "onboarding": {
+    "title": "Welcome to CLEAR",
+    "subtitle": "Let's set up your organisation, team, and monitoring locations.",
+    "steps": {
+      "org": {
+        "label": "Organisation",
+        "description": "Create or join"
+      },
+      "team": {
+        "label": "Team",
+        "description": "Create a team"
+      },
+      "locations": {
+        "label": "Locations",
+        "description": "Choose monitoring scope"
+      }
+    },
+    "org": {
+      "nameLabel": "Organisation name",
+      "namePlaceholder": "e.g. NRC East Africa",
+      "slugLabel": "Slug",
+      "slugPlaceholder": "nrc-east-africa",
+      "create": "Create Organisation"
+    },
+    "team": {
+      "nameLabel": "Team name",
+      "namePlaceholder": "e.g. Sudan Response",
+      "slugLabel": "Slug",
+      "slugPlaceholder": "sudan-response",
+      "descriptionLabel": "Description (optional)",
+      "descriptionPlaceholder": "What does this team monitor?",
+      "create": "Create Team"
+    },
+    "locations": {
+      "intro": "Select the countries and regions your team will monitor.",
+      "skip": "Skip",
+      "save": "Save Locations"
+    },
+    "done": {
+      "title": "You're all set!",
+      "text": "Your organisation and team are ready. Head to the dashboard to start monitoring.",
+      "cta": "Go to Dashboard"
+    }
+  },
+  "operations": {
+    "header": {
+      "title": "Operations Center",
+      "teamDirectory": "Team Directory",
+      "activateResponse": "Activate Response"
+    },
+    "tabs": {
+      "active": "Active Operations",
+      "strategy": "Response Strategy",
+      "resources": "Resources & Budget",
+      "coordination": "Coordination"
+    },
+    "stats": {
+      "activeOperations": "Active Operations",
+      "fieldTeamsDeployed": "Field Teams Deployed",
+      "staffMobilized": "Staff Mobilized",
+      "partnerOrgs": "Partner Orgs"
+    },
+    "capacity": {
+      "title": "NRC Ethiopia Capacity",
+      "established": "Established {year}",
+      "totalStaff": "Total Staff",
+      "national": "National",
+      "international": "International",
+      "offices": "Offices",
+      "activePrograms": "Active Programs"
+    },
+    "advantage": {
+      "title": "NRC Comparative Advantage",
+      "subtitle": "Core competencies in Ethiopia"
+    },
+    "activeOps": {
+      "title": "Active Response Operations",
+      "subtitle": "Currently mobilized responses",
+      "activatedLine": "Activated {time} • Operation ID: {id}",
+      "viewDetails": "View Details",
+      "labels": {
+        "teams": "Teams",
+        "staff": "Staff",
+        "coverage": "Coverage",
+        "budget": "Budget"
+      }
+    },
+    "fieldTeams": {
+      "title": "Field Teams",
+      "subtitle": "Currently deployed",
+      "deployTeam": "+ Deploy Team",
+      "columns": {
+        "team": "Team",
+        "location": "Location",
+        "status": "Status",
+        "lastCheckin": "Last Check-in"
+      }
+    },
+    "resourceStatus": {
+      "title": "Resource Status",
+      "subtitle": "Critical supplies",
+      "requestResources": "Request Resources"
+    },
+    "budget": {
+      "title": "Budget Overview",
+      "totalSubtitle": "Total: $565,000"
+    },
+    "materialResources": {
+      "title": "Material Resources",
+      "subtitle": "Critical supplies status"
+    },
+    "humanResources": {
+      "title": "Human Resources",
+      "subtitle": "Staff deployment breakdown"
+    },
+    "strategy": {
+      "title": "Phased Response Strategy",
+      "subtitle": "Cholera Outbreak Response - Somali Region"
+    },
+    "timeline": {
+      "title": "Implementation Timeline",
+      "subtitle": "Key milestones"
+    },
+    "risks": {
+      "title": "Risk Assessment",
+      "subtitle": "Identified risks and mitigations",
+      "columns": {
+        "risk": "Risk",
+        "severity": "Severity",
+        "description": "Description",
+        "mitigation": "Mitigation"
+      }
+    },
+    "coordination": {
+      "title": "Coordination Partners",
+      "subtitle": "Organizations in the response",
+      "addPartner": "+ Add Partner",
+      "columns": {
+        "organization": "Organization",
+        "role": "Role",
+        "coverage": "Coverage Area",
+        "contact": "Contact",
+        "status": "Status"
+      }
+    }
+  },
+  "profile": {
+    "edit": {
+      "loading": "Loading profile...",
+      "notAuthenticated": "Not authenticated. Please sign in.",
+      "title": "Edit Profile",
+      "subtitle": "Update your personal information and preferences",
+      "backToProfile": "Back to Profile",
+      "updateSuccess": "Profile updated successfully.",
+      "nameRequired": "Name is required",
+      "unexpectedError": "An unexpected error occurred",
+      "personalInformation": "Personal Information",
+      "firstName": "First Name",
+      "firstNamePlaceholder": "Enter first name",
+      "lastName": "Last Name",
+      "lastNamePlaceholder": "Enter last name",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "preferences": "Preferences",
+      "language": "Language",
+      "timezone": "Timezone",
+      "timezoneKhartoum": "Sudan (Khartoum)",
+      "timezoneUtc": "UTC"
+    },
+    "page": {
+      "notAuthenticated": "Not authenticated. Please sign in.",
+      "title": "Settings",
+      "tabs": {
+        "account": "Account",
+        "notifications": "Notifications"
+      }
+    },
+    "info": {
+      "title": "Information",
+      "name": "Name",
+      "notSet": "Not set",
+      "email": "Email",
+      "changePassword": "Change Password",
+      "mobile": "Mobile",
+      "mobilePlaceholder": "912 345 678",
+      "mobileUpdated": "Mobile number updated."
+    },
+    "orgRoles": {
+      "title": "Organisation & Roles",
+      "empty": "No team memberships found.",
+      "columns": {
+        "organisation": "Organisation",
+        "team": "Team",
+        "role": "Role"
+      },
+      "active": "Active",
+      "setActive": "Set Active",
+      "switchedTitle": "Active team updated",
+      "switchedMessage": "Now viewing {team}."
+    },
+    "preferences": {
+      "title": "Preferences",
+      "appearance": "Appearance",
+      "language": "Language",
+      "timezone": "Timezone"
+    },
+    "channels": {
+      "title": "Notification Channels",
+      "updated": "Notification channels updated.",
+      "email": "Email Notifications",
+      "emailDescription": "Receive crisis alerts and digests via email",
+      "sms": "SMS Notifications",
+      "smsComingSoon": "Coming soon"
+    },
+    "subscriptions": {
+      "title": "Alert Subscriptions",
+      "add": "Add",
+      "new": "New Subscription",
+      "location": "Location",
+      "locationPlaceholder": "Select one or more locations",
+      "alertTypes": "Alert Types (leave empty for all)",
+      "minSeverity": "Minimum Severity",
+      "severityOptions": {
+        "all": "All (Minimal and above)",
+        "low": "Low and above",
+        "medium": "Medium and above",
+        "high": "High and above",
+        "critical": "Critical only"
+      },
+      "frequency": "Frequency",
+      "frequencyOptions": {
+        "immediately": "Immediately",
+        "daily": "Daily digest",
+        "weekly": "Weekly digest",
+        "monthly": "Monthly digest"
+      },
+      "subscribe": "Subscribe",
+      "subscribedTitle": "Subscribed",
+      "subscribedMessage": "Alert subscriptions created.",
+      "failed": "Failed",
+      "empty": "No alert subscriptions yet. Click \"Add\" to get started.",
+      "severityLabels": {
+        "s1": "All severities",
+        "s2": "Low+",
+        "s3": "Medium+",
+        "s4": "High+",
+        "s5": "Critical only"
+      },
+      "severityFallback": "Severity {value}+",
+      "levels": {
+        "country": "Country",
+        "state": "State",
+        "district": "District"
+      },
+      "allTypes": "All types",
+      "moreTypes": "{labels} +{count} more",
+      "pause": "Pause",
+      "resume": "Resume",
+      "delete": "Delete subscription"
+    }
+  },
+  "settings": {
+    "org": {
+      "title": "Organisation Settings",
+      "newOrg": "New Organisation",
+      "noOrgs": "You don't belong to any organisations yet.",
+      "createOrg": "Create Organisation",
+      "orgSelectLabel": "Organisation",
+      "createModal": {
+        "title": "Create Organisation",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. ACME Relief",
+        "slugLabel": "Slug",
+        "slugPlaceholder": "acme-relief",
+        "create": "Create"
+      },
+      "details": {
+        "title": "Details",
+        "name": "Name:",
+        "slug": "Slug:",
+        "status": "Status:",
+        "nameLabel": "Name",
+        "slugLabel": "Slug",
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "members": {
+        "title": "Members",
+        "inviteUser": "Invite User",
+        "columns": {
+          "name": "Name",
+          "email": "Email",
+          "role": "Role"
+        },
+        "selectUserPlaceholder": "Select user to add",
+        "noUsersAvailable": "No users available",
+        "add": "Add"
+      },
+      "teams": {
+        "title": "Teams",
+        "addTeam": "Add Team",
+        "manage": "Manage",
+        "nameLabel": "Team name",
+        "namePlaceholder": "e.g. Sudan Response",
+        "slugLabel": "Slug",
+        "slugPlaceholder": "sudan-response",
+        "descriptionLabel": "Description (optional)",
+        "descriptionPlaceholder": "What does this team monitor?",
+        "createTeam": "Create Team"
+      },
+      "invite": {
+        "title": "Invite User",
+        "emailLabel": "Email",
+        "emailPlaceholder": "user@example.com",
+        "orgRoleLabel": "Organisation Role",
+        "roles": {
+          "member": "Member",
+          "admin": "Admin",
+          "owner": "Owner"
+        },
+        "teamsLabel": "Teams",
+        "noTeams": "This organisation has no teams. Create one before inviting.",
+        "teamRoles": {
+          "viewer": "Viewer",
+          "analyst": "Analyst",
+          "lead": "Lead",
+          "team_member": "Team member",
+          "field_coordinator": "Field coordinator",
+          "team_admin": "Team admin"
+        },
+        "selectAtLeastOneTeam": "Select at least one team",
+        "send": "Send Invitation"
+      }
+    },
+    "team": {
+      "notFound": "Team not found.",
+      "backToOrg": "Back to Organisation",
+      "details": {
+        "title": "Details",
+        "nameLabel": "Name",
+        "slugLabel": "Slug",
+        "descriptionLabel": "Description",
+        "name": "Name:",
+        "slug": "Slug:",
+        "description": "Description:"
+      },
+      "members": {
+        "title": "Members",
+        "columns": {
+          "name": "Name",
+          "email": "Email",
+          "role": "Role"
+        },
+        "addMemberLabel": "Add member",
+        "loadingPlaceholder": "Loading…",
+        "allInTeam": "All org members already in this team",
+        "selectUserPlaceholder": "Select a user",
+        "noMatchingUsers": "No matching users",
+        "roleLabel": "Role",
+        "add": "Add"
+      },
+      "locations": {
+        "title": "Location Scope",
+        "save": "Save Locations",
+        "none": "No locations selected"
+      },
+      "danger": {
+        "title": "Danger Zone",
+        "warning": "Deleting this team is permanent and cannot be undone.",
+        "delete": "Delete Team",
+        "confirm": "Are you sure you want to delete this team? This cannot be undone."
+      }
+    }
+  },
+  "signalDetail": {
+    "notFound": {
+      "title": "Signal not found",
+      "description": "This signal may have been removed or the ID is invalid."
+    },
+    "backToEvents": "Back to Events Overview",
+    "viewOnCrisisMap": "View on Crisis Map",
+    "signalBadge": "Signal",
+    "fallbackTitleWithLocation": "Signal - {location}",
+    "fallbackTitle": "Signal",
+    "unknownSourceType": "Unknown",
+    "viaSource": "via {name}",
+    "viewOriginal": "View original",
+    "viewSource": "View source",
+    "description": {
+      "title": "Description",
+      "empty": "No description available."
+    },
+    "source": {
+      "title": "Source Details",
+      "name": "Source Name",
+      "type": "Source Type",
+      "activity": "Source Activity",
+      "signalsFrom": "{count, plural, one {signal} other {signals}} from {name}",
+      "activityContext": "in current detection context",
+      "infoUrl": "Info URL"
+    },
+    "media": {
+      "title": "Media ({count})"
+    },
+    "events": {
+      "title": "Part of Events ({count})",
+      "empty": "Not assigned to any event yet",
+      "fallbackTitle": "Event {id}"
+    },
+    "similar": {
+      "title": "Similar Signals ({count})",
+      "empty": "No co-detected signals found",
+      "fallbackTitle": "Signal {id}"
+    },
+    "actions": {
+      "title": "Actions",
+      "addToCrisis": "Add to Crisis",
+      "comingSoon": "coming soon"
+    },
+    "details": {
+      "title": "Details",
+      "signalId": "Signal ID",
+      "source": "Source",
+      "published": "Published",
+      "collected": "Collected",
+      "affectedAreas": "Affected Areas"
+    }
+  },
+  "verifyEmail": {
+    "verifying": "Verifying your email...",
+    "success": {
+      "title": "Email Verified",
+      "text": "Your email has been verified successfully. You can now receive email notifications."
+    },
+    "already": {
+      "title": "Already Verified",
+      "text": "Your email is already verified. No further action needed."
+    },
+    "failed": "Verification Failed",
+    "resent": "A new verification email has been sent. Please check your inbox.",
+    "resend": "Resend Verification Email",
+    "goToProfile": "Go to Profile"
+  }
+}

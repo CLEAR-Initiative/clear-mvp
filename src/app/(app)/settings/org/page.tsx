@@ -1,7 +1,8 @@
 "use client";
 
-import { type ChangeEvent, useState } from "react";
+import { type ChangeEvent, Suspense, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ActionIcon,
   Badge,
@@ -19,10 +20,17 @@ import {
   Title,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { useTranslations } from "next-intl";
 import { IconPlus, IconTrash, IconUserPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 
-type TeamRole = "lead" | "analyst" | "viewer";
+type TeamRole =
+  | "lead"
+  | "analyst"
+  | "viewer"
+  | "team_admin"
+  | "field_coordinator"
+  | "team_member";
 
 function slugify(value: string) {
   return value
@@ -33,14 +41,31 @@ function slugify(value: string) {
 
 const CAN_CREATE_ORG_ROLES = ["admin", "org_admin"];
 
-export default function OrgSettingsPage() {
+function OrgSettingsPageContent() {
+  const t = useTranslations("settings.org");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // `?id=<orgId>` lets external links (e.g. the /admin Organisations
+  // table) deep-link to a specific org. We seed the dropdown from it on
+  // first render; thereafter the dropdown is the source of truth and we
+  // push changes back into the URL so the link remains shareable.
+  const urlOrgId = searchParams.get("id");
   const orgsQuery = api.teams.myOrganisations.useQuery();
   const authQuery = api.auth.me.useQuery();
-  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(urlOrgId);
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
 
   const orgs = orgsQuery.data ?? [];
-  const activeOrg = orgs.find((o) => o.id === selectedOrgId) ?? orgs[0] ?? null;
+  const effectiveOrgId = selectedOrgId ?? urlOrgId;
+  const activeOrg = orgs.find((o) => o.id === effectiveOrgId) ?? orgs[0] ?? null;
+
+  function handleOrgChange(next: string | null) {
+    setSelectedOrgId(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next) params.set("id", next);
+    else params.delete("id");
+    router.replace(`/settings/org${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false });
+  }
   const userRole = authQuery.data?.user?.role ?? "";
   const canCreateOrg = CAN_CREATE_ORG_ROLES.includes(userRole);
 
@@ -55,11 +80,11 @@ export default function OrgSettingsPage() {
   if (!activeOrg) {
     return (
       <Box p="xl">
-        <Text c="dimmed" mb="md">You don&apos;t belong to any organisations yet.</Text>
+        <Text c="dimmed" mb="md">{t("noOrgs")}</Text>
         {canCreateOrg && (
           <>
             <Button leftSection={<IconPlus size={16} />} onClick={openCreateModal}>
-              Create Organisation
+              {t("createOrg")}
             </Button>
             <CreateOrgModal opened={createModalOpened} onClose={closeCreateModal} />
           </>
@@ -71,20 +96,20 @@ export default function OrgSettingsPage() {
   return (
     <Box p="xl" maw={900} mx="auto">
       <Group justify="space-between" mb="lg">
-        <Title order={2}>Organisation Settings</Title>
+        <Title order={2}>{t("title")}</Title>
         {canCreateOrg && (
           <Button variant="light" leftSection={<IconPlus size={16} />} onClick={openCreateModal}>
-            New Organisation
+            {t("newOrg")}
           </Button>
         )}
       </Group>
 
       {orgs.length > 1 && (
         <Select
-          label="Organisation"
+          label={t("orgSelectLabel")}
           data={orgs.map((o) => ({ value: o.id, label: o.name }))}
           value={activeOrg.id}
-          onChange={(v) => setSelectedOrgId(v)}
+          onChange={handleOrgChange}
           mb="lg"
           maw={300}
         />
@@ -96,8 +121,18 @@ export default function OrgSettingsPage() {
   );
 }
 
+export default function OrgSettingsPage() {
+  return (
+    <Suspense fallback={<Box p="xl" ta="center"><Loader size="sm" /></Box>}>
+      <OrgSettingsPageContent />
+    </Suspense>
+  );
+}
+
 /* ─── Create Organisation Modal ────────────────────────────── */
 function CreateOrgModal({ opened, onClose }: { opened: boolean; onClose: () => void }) {
+  const t = useTranslations("settings.org.createModal");
+  const tCommon = useTranslations("common.actions");
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const createOrg = api.teams.createOrganisation.useMutation();
@@ -113,11 +148,11 @@ function CreateOrgModal({ opened, onClose }: { opened: boolean; onClose: () => v
   }
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Create Organisation" centered size="sm">
+    <Modal opened={opened} onClose={onClose} title={t("title")} centered size="sm">
       <Stack gap="sm">
         <TextInput
-          label="Name"
-          placeholder="e.g. ACME Relief"
+          label={t("nameLabel")}
+          placeholder={t("namePlaceholder")}
           value={name}
           onChange={(e) => {
             setName(e.currentTarget.value);
@@ -126,8 +161,8 @@ function CreateOrgModal({ opened, onClose }: { opened: boolean; onClose: () => v
           required
         />
         <TextInput
-          label="Slug"
-          placeholder="acme-relief"
+          label={t("slugLabel")}
+          placeholder={t("slugPlaceholder")}
           value={slug}
           onChange={(e) => setSlug(e.currentTarget.value)}
           required
@@ -136,9 +171,9 @@ function CreateOrgModal({ opened, onClose }: { opened: boolean; onClose: () => v
           <Text c="red" size="sm">{createOrg.error.message}</Text>
         )}
         <Group justify="flex-end" mt="sm">
-          <Button variant="subtle" onClick={onClose}>Cancel</Button>
+          <Button variant="subtle" onClick={onClose}>{tCommon("cancel")}</Button>
           <Button onClick={handleCreate} loading={createOrg.isPending} disabled={!name || !slug}>
-            Create
+            {t("create")}
           </Button>
         </Group>
       </Stack>
@@ -148,6 +183,8 @@ function CreateOrgModal({ opened, onClose }: { opened: boolean; onClose: () => v
 
 /* ─── Org Detail ───────────────────────────────────────────── */
 function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
+  const t = useTranslations("settings.org");
+  const tCommon = useTranslations("common.actions");
   const orgQuery = api.teams.organisation.useQuery({ id: orgId });
   const usersQuery = api.auth.listUsers.useQuery(undefined, { staleTime: 60_000 });
   const updateOrg = api.teams.updateOrganisation.useMutation();
@@ -200,7 +237,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
   const existingMemberIds = new Set(org.members?.map((m) => m.user.id) ?? []);
   const userOptions = (usersQuery.data?.users ?? [])
     .filter((u) => !existingMemberIds.has(u.id) && u.isActive)
-    .map((u) => ({ value: u.id, label: `${u.name} (${u.email})` }));
+    .map((u) => ({ value: u.id, label: `${u.name} (${u.email ?? "—"})` }));
 
   function startEditing() {
     if (!org) return;
@@ -253,38 +290,38 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
       {/* ── Details ──────────────────────────────────── */}
       <Box>
         <Group justify="space-between" mb="sm">
-          <Title order={4}>Details</Title>
+          <Title order={4}>{t("details.title")}</Title>
           {canEdit && !editing && (
             <Button variant="subtle" size="xs" onClick={startEditing}>
-              Edit
+              {tCommon("edit")}
             </Button>
           )}
         </Group>
         {editing ? (
           <Stack gap="sm">
-            <TextInput label="Name" value={editName} onChange={(e) => setEditName(e.currentTarget.value)} />
-            <TextInput label="Slug" value={editSlug} onChange={(e) => setEditSlug(e.currentTarget.value)} />
+            <TextInput label={t("details.nameLabel")} value={editName} onChange={(e) => setEditName(e.currentTarget.value)} />
+            <TextInput label={t("details.slugLabel")} value={editSlug} onChange={(e) => setEditSlug(e.currentTarget.value)} />
             <Group>
               <Button size="xs" onClick={saveDetails} loading={updateOrg.isPending}>
-                Save
+                {tCommon("save")}
               </Button>
               <Button size="xs" variant="subtle" onClick={() => setEditing(false)}>
-                Cancel
+                {tCommon("cancel")}
               </Button>
             </Group>
           </Stack>
         ) : (
           <Stack gap={4}>
             <Text>
-              <Text span fw={600}>Name:</Text> {org.name}
+              <Text span fw={600}>{t("details.name")}</Text> {org.name}
             </Text>
             <Text>
-              <Text span fw={600}>Slug:</Text> {org.slug}
+              <Text span fw={600}>{t("details.slug")}</Text> {org.slug}
             </Text>
             <Text>
-              <Text span fw={600}>Status:</Text>{" "}
+              <Text span fw={600}>{t("details.status")}</Text>{" "}
               <Badge size="sm" color={org.isActive ? "green" : "gray"}>
-                {org.isActive ? "Active" : "Inactive"}
+                {org.isActive ? t("details.active") : t("details.inactive")}
               </Badge>
             </Text>
           </Stack>
@@ -294,7 +331,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
       {/* ── Members ─────────────────────────────────── */}
       <Box>
         <Group justify="space-between" mb="sm">
-          <Title order={4}>Members</Title>
+          <Title order={4}>{t("members.title")}</Title>
           {canEdit && (
             <Button
               variant="light"
@@ -305,16 +342,16 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
                 openInvite();
               }}
             >
-              Invite User
+              {t("members.inviteUser")}
             </Button>
           )}
         </Group>
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Name</Table.Th>
-              <Table.Th>Email</Table.Th>
-              <Table.Th>Role</Table.Th>
+              <Table.Th>{t("members.columns.name")}</Table.Th>
+              <Table.Th>{t("members.columns.email")}</Table.Th>
+              <Table.Th>{t("members.columns.role")}</Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -322,7 +359,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
             {org.members?.map((m) => (
               <Table.Tr key={m.id}>
                 <Table.Td>{m.user.name}</Table.Td>
-                <Table.Td>{m.user.email}</Table.Td>
+                <Table.Td>{m.user.email ?? "—"}</Table.Td>
                 <Table.Td>
                   <Badge size="sm" variant="light">
                     {m.role}
@@ -348,14 +385,14 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
         {canEdit && (
           <Group mt="sm" gap="sm">
             <Select
-              placeholder="Select user to add"
+              placeholder={t("members.selectUserPlaceholder")}
               data={userOptions}
               value={selectedUserId}
               onChange={setSelectedUserId}
               searchable
               size="xs"
               w={280}
-              nothingFoundMessage="No users available"
+              nothingFoundMessage={t("members.noUsersAvailable")}
             />
             <Select
               data={["owner", "admin", "member"]}
@@ -371,7 +408,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
               loading={addMember.isPending}
               disabled={!selectedUserId}
             >
-              Add
+              {t("members.add")}
             </Button>
           </Group>
         )}
@@ -380,7 +417,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
       {/* ── Teams ───────────────────────────────────── */}
       <Box>
         <Group justify="space-between" mb="sm">
-          <Title order={4}>Teams</Title>
+          <Title order={4}>{t("teams.title")}</Title>
           {canEdit && !creatingTeam && (
             <Button
               variant="subtle"
@@ -388,28 +425,28 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
               leftSection={<IconPlus size={14} />}
               onClick={() => setCreatingTeam(true)}
             >
-              Add Team
+              {t("teams.addTeam")}
             </Button>
           )}
         </Group>
         <Stack gap="xs">
-          {org.teams?.map((t) => (
-            <Group key={t.id} justify="space-between" p="xs" style={{ border: "1px solid var(--color-border)", borderRadius: 6 }}>
+          {org.teams?.map((team) => (
+            <Group key={team.id} justify="space-between" p="xs" style={{ border: "1px solid var(--color-border)", borderRadius: 6 }}>
               <Box>
-                <Text fw={500}>{t.name}</Text>
-                {t.description && (
+                <Text fw={500}>{team.name}</Text>
+                {team.description && (
                   <Text size="xs" c="dimmed">
-                    {t.description}
+                    {team.description}
                   </Text>
                 )}
               </Box>
               <Button
                 component={Link}
-                href={`/settings/team/${t.id}`}
+                href={`/settings/team/${team.id}`}
                 variant="subtle"
                 size="xs"
               >
-                Manage
+                {t("teams.manage")}
               </Button>
             </Group>
           ))}
@@ -417,8 +454,8 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
             <Box p="xs" style={{ border: "1px solid var(--color-border)", borderRadius: 6 }}>
               <Stack gap="sm">
                 <TextInput
-                  label="Team name"
-                  placeholder="e.g. Sudan Response"
+                  label={t("teams.nameLabel")}
+                  placeholder={t("teams.namePlaceholder")}
                   value={newTeamName}
                   onChange={(e) => {
                     setNewTeamName(e.currentTarget.value);
@@ -427,15 +464,15 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
                   required
                 />
                 <TextInput
-                  label="Slug"
-                  placeholder="sudan-response"
+                  label={t("teams.slugLabel")}
+                  placeholder={t("teams.slugPlaceholder")}
                   value={newTeamSlug}
                   onChange={(e) => setNewTeamSlug(e.currentTarget.value)}
                   required
                 />
                 <TextInput
-                  label="Description (optional)"
-                  placeholder="What does this team monitor?"
+                  label={t("teams.descriptionLabel")}
+                  placeholder={t("teams.descriptionPlaceholder")}
                   value={newTeamDescription}
                   onChange={(e) => setNewTeamDescription(e.currentTarget.value)}
                 />
@@ -455,7 +492,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
                       setNewTeamDescription("");
                     }}
                   >
-                    Cancel
+                    {tCommon("cancel")}
                   </Button>
                   <Button
                     size="xs"
@@ -463,7 +500,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
                     loading={createTeam.isPending}
                     disabled={!newTeamName || !newTeamSlug}
                   >
-                    Create Team
+                    {t("teams.createTeam")}
                   </Button>
                 </Group>
               </Stack>
@@ -479,7 +516,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
           closeInvite();
           setInviteError("");
         }}
-        title="Invite User"
+        title={t("invite.title")}
         centered
         size="md"
       >
@@ -490,50 +527,50 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
             </Text>
           )}
           <TextInput
-            label="Email"
-            placeholder="user@example.com"
+            label={t("invite.emailLabel")}
+            placeholder={t("invite.emailPlaceholder")}
             type="email"
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.currentTarget.value)}
             required
           />
           <Select
-            label="Organisation Role"
+            label={t("invite.orgRoleLabel")}
             value={inviteRole}
             onChange={(v) => v && setInviteRole(v)}
             data={[
-              { value: "member", label: "Member" },
-              { value: "admin", label: "Admin" },
-              { value: "owner", label: "Owner" },
+              { value: "member", label: t("invite.roles.member") },
+              { value: "admin", label: t("invite.roles.admin") },
+              { value: "owner", label: t("invite.roles.owner") },
             ]}
           />
           <Box>
             <Text fw={500} size="sm" mb={6}>
-              Teams <Text component="span" c="red">*</Text>
+              {t("invite.teamsLabel")} <Text component="span" c="red">*</Text>
             </Text>
             {!org.teams || org.teams.length === 0 ? (
               <Text size="sm" c="dimmed">
-                This organisation has no teams. Create one before inviting.
+                {t("invite.noTeams")}
               </Text>
             ) : (
               <Stack gap={6}>
-                {org.teams.map((t) => {
-                  const selectedRole = inviteTeams[t.id];
+                {org.teams.map((team) => {
+                  const selectedRole = inviteTeams[team.id];
                   const isSelected = selectedRole !== undefined;
                   return (
-                    <Group key={t.id} gap={8} wrap="nowrap" align="center">
+                    <Group key={team.id} gap={8} wrap="nowrap" align="center">
                       <Checkbox
                         checked={isSelected}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
                           const checked = e.currentTarget.checked;
                           setInviteTeams((prev) => {
                             const next = { ...prev };
-                            if (checked) next[t.id] = "viewer";
-                            else delete next[t.id];
+                            if (checked) next[team.id] = "viewer";
+                            else delete next[team.id];
                             return next;
                           });
                         }}
-                        label={t.name}
+                        label={team.name}
                       />
                       <Box style={{ flex: 1 }} />
                       <Select
@@ -543,16 +580,19 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
                           if (!v || !isSelected) return;
                           setInviteTeams((prev) => ({
                             ...prev,
-                            [t.id]: v as TeamRole,
+                            [team.id]: v as TeamRole,
                           }));
                         }}
                         data={[
-                          { value: "viewer", label: "Viewer" },
-                          { value: "analyst", label: "Analyst" },
-                          { value: "lead", label: "Lead" },
+                          { value: "viewer", label: t("invite.teamRoles.viewer") },
+                          { value: "analyst", label: t("invite.teamRoles.analyst") },
+                          { value: "lead", label: t("invite.teamRoles.lead") },
+                          { value: "team_member", label: t("invite.teamRoles.team_member") },
+                          { value: "field_coordinator", label: t("invite.teamRoles.field_coordinator") },
+                          { value: "team_admin", label: t("invite.teamRoles.team_admin") },
                         ]}
                         disabled={!isSelected}
-                        w={110}
+                        w={140}
                       />
                     </Group>
                   );
@@ -562,7 +602,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
           </Box>
           <Group justify="flex-end" mt="sm">
             <Button variant="subtle" onClick={closeInvite}>
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button
               leftSection={<IconUserPlus size={14} />}
@@ -573,7 +613,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
                   ([teamId, teamRole]) => ({ teamId, teamRole }),
                 );
                 if (teams.length === 0) {
-                  setInviteError("Select at least one team");
+                  setInviteError(t("invite.selectAtLeastOneTeam"));
                   return;
                 }
                 inviteMutation.mutate({
@@ -587,7 +627,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
                 !inviteEmail.trim() || Object.keys(inviteTeams).length === 0
               }
             >
-              Send Invitation
+              {t("invite.send")}
             </Button>
           </Group>
         </Stack>

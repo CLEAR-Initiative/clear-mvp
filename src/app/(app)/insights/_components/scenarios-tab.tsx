@@ -1,17 +1,19 @@
+import { useTranslations } from "next-intl";
 import { Box, Text, SimpleGrid } from "@mantine/core";
 import { CardSection } from "~/components/ui";
 import { scenarios } from "./analysis-data";
 
 export function ScenariosTab() {
+  const t = useTranslations("insights");
   return (
     <CardSection
-      title="Scenario Comparison"
-      subtitle="Compare projected outcomes"
+      title={t("scenarios.title")}
+      subtitle={t("scenarios.subtitle")}
     >
       <SimpleGrid cols={3} spacing={16}>
         {scenarios.map((scenario) => (
           <Box
-            key={scenario.name}
+            key={scenario.key}
             p={20}
             style={{
               border: `1px solid ${scenario.likelihoodColor}20`,
@@ -22,13 +24,13 @@ export function ScenariosTab() {
               {scenario.likelihood.replace(" likely", "")}
             </Text>
             <Text fw={600} c="var(--color-text-primary)">
-              {scenario.name}
+              {t(`data.scenarios.${scenario.key}.name`)}
             </Text>
             <Text size="xs" c="var(--color-text-secondary)" mb={12}>
-              {scenario.sub}
+              {t(`data.scenarios.${scenario.key}.sub`)}
             </Text>
             <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.5 }}>
-              {scenario.description}
+              {t(`data.scenarios.${scenario.key}.description`)}
             </Text>
           </Box>
         ))}

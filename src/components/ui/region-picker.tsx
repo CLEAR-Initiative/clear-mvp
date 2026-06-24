@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import {
   Box, Text, Stack, Popover, ScrollArea, UnstyledButton, Collapse, Input, TextInput,
 } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { IconChevronRight, IconChevronDown, IconSelector, IconSearch, IconX } from "@tabler/icons-react";
 
 interface District {
@@ -24,18 +25,19 @@ interface RegionPickerProps {
   label?: string;
 }
 
-function getDisplayName(value: string | null, states: StateNode[]): string {
-  if (!value) return "All Regions";
+function getDisplayName(value: string | null, states: StateNode[]): string | null {
+  if (!value) return null;
   for (const state of states) {
     if (state.id === value) return state.name;
     for (const district of state.districts) {
       if (district.id === value) return `${district.name}, ${state.name}`;
     }
   }
-  return "All Regions";
+  return null;
 }
 
 export function RegionPicker({ states, value, onChange, label }: RegionPickerProps) {
+  const t = useTranslations("common.regionPicker");
   const [opened, setOpened] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
@@ -79,7 +81,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
     setQuery("");
   };
 
-  const summary = getDisplayName(value, states);
+  const summary = getDisplayName(value, states) ?? t("allRegions");
 
   return (
     <Input.Wrapper
@@ -106,8 +108,8 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
               justifyContent: "space-between",
               minWidth: 130,
               height: 30,
-              paddingLeft: 10,
-              paddingRight: 8,
+              paddingInlineStart: 10,
+              paddingInlineEnd: 8,
               border: "1px solid var(--color-border-dark)",
               borderRadius: 0,
               fontSize: 13,
@@ -118,7 +120,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
               cursor: "pointer",
             }}
           >
-            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 4 }}>
+            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginInlineEnd: 4 }}>
               {summary}
             </span>
             <IconSelector size={14} style={{ flexShrink: 0, color: "var(--color-text-muted)" }} />
@@ -128,7 +130,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
         <Popover.Dropdown p={0} onMouseDown={(e) => e.stopPropagation()}>
           <Box p={6} style={{ borderBottom: "1px solid var(--color-border)" }}>
             <TextInput
-              placeholder="Search regions..."
+              placeholder={t("searchPlaceholder")}
               value={query}
               onChange={(e) => setQuery(e.currentTarget.value)}
               leftSection={<IconSearch size={12} color="var(--color-text-muted)" />}
@@ -140,7 +142,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
                 ) : null
               }
               size="xs"
-              styles={{ input: { fontSize: 12, border: "none", background: "transparent", paddingLeft: 28 } }}
+              styles={{ input: { fontSize: 12, border: "none", background: "transparent", paddingInlineStart: 28 } }}
             />
           </Box>
 
@@ -156,10 +158,10 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
                     fontWeight: !value ? 600 : 400,
                     color: !value ? "var(--color-accent)" : "var(--color-text-primary)",
                     background: !value ? "var(--color-accent-light)" : "transparent",
-                    textAlign: "left",
+                    textAlign: "start",
                   }}
                 >
-                  All Regions
+                  {t("allRegions")}
                 </UnstyledButton>
               )}
 
@@ -189,7 +191,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
                           fontWeight: isSelected ? 600 : 500,
                           color: isSelected ? "var(--color-accent)" : "var(--color-text-primary)",
                           background: isSelected ? "var(--color-accent-light)" : "transparent",
-                          textAlign: "left",
+                          textAlign: "start",
                         }}
                       >
                         {state.name}
@@ -197,7 +199,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
                     </Box>
 
                     <Collapse in={isExpanded}>
-                      <Stack gap={0} pl={22} pb={2}>
+                      <Stack gap={0} ps={22} pb={2}>
                         {state.districts.map((district) => {
                           const isDistrictSelected = value === district.id;
                           return (
@@ -211,7 +213,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
                                 fontWeight: isDistrictSelected ? 600 : 400,
                                 color: isDistrictSelected ? "var(--color-accent)" : "var(--color-text-secondary)",
                                 background: isDistrictSelected ? "var(--color-accent-light)" : "transparent",
-                                textAlign: "left",
+                                textAlign: "start",
                               }}
                             >
                               {district.name}
@@ -226,7 +228,7 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
 
               {filteredStates.length === 0 && q && (
                 <Text size="xs" c="var(--color-text-muted)" px={8} py={6} style={{ fontSize: 11 }}>
-                  No regions match &ldquo;{query}&rdquo;
+                  {t("noMatch", { query })}
                 </Text>
               )}
             </Stack>

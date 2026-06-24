@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -24,7 +25,6 @@ import { resolveLocationName } from "~/lib/location";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
-import { formatTimeAgo } from "~/lib/utils";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -33,11 +33,12 @@ const CrisisMap = dynamic(
 
 export type AlertSortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
 
-export const ALERT_SORT_LABELS: Record<AlertSortOrder, string> = {
-  "sev-desc": "Severity: High to Low",
-  "sev-asc":  "Severity: Low to High",
-  "newest":   "Newest first",
-  "oldest":   "Oldest first",
+// i18n keys under detection.sort.* - resolved via t() at render time.
+export const ALERT_SORT_LABEL_KEYS: Record<AlertSortOrder, "sevDesc" | "sevAsc" | "newest" | "oldest"> = {
+  "sev-desc": "sevDesc",
+  "sev-asc":  "sevAsc",
+  "newest":   "newest",
+  "oldest":   "oldest",
 };
 
 interface LiveAlertsTabProps {
@@ -93,6 +94,8 @@ export function LiveAlertsTab({
   expandedTypeCodes: expandedTypeCodesProp,
   activeSources: activeSourcesProp,
 }: LiveAlertsTabProps) {
+  const t = useTranslations("detection");
+  const format = useFormatter();
   const [search, setSearch] = useState("");
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
   const [showPopulation, setShowPopulation] = useState(false);
@@ -138,20 +141,20 @@ export function LiveAlertsTab({
   }, [alerts, search, activeSeverities, expandedTypeCodesProp, activeSources]);
 
   const countLabel = search || activeSeverities.size < 4 || activeSources !== null || expandedTypeCodesProp
-    ? `${filtered.length} / ${totalCount.toLocaleString()}`
-    : totalCount.toLocaleString();
+    ? `${filtered.length} / ${format.number(totalCount)}`
+    : format.number(totalCount);
 
   return (
     <Box style={{ display: "flex", gap: 24 }}>
       <Box style={{ flex: 1, minWidth: 0 }}>
         <FeedToolbar
-          title="Alerts"
+          title={t("feed.alerts.title")}
           count={alertsLoading ? "..." : countLabel}
           loading={alertsLoading}
           search={search}
           onSearchChange={setSearch}
           sortOrder={sortOrder}
-          sortLabels={ALERT_SORT_LABELS}
+          sortLabels={Object.fromEntries(Object.entries(ALERT_SORT_LABEL_KEYS).map(([k, v]) => [k, t(`sort.${v}`)]))}
           onSortChange={(o) => onSortChange(o as AlertSortOrder)}
           newCount={newCount}
           onRefresh={onRefresh}
@@ -162,7 +165,7 @@ export function LiveAlertsTab({
             {filtered.length === 0 && !alertsLoading && (
               <Box px={16} py={32} style={{ textAlign: "center" }}>
                 <Text c="var(--color-text-muted)" size="sm">
-                  {alerts.length === 0 ? "No active alerts at this time." : "No alerts match your filters."}
+                  {alerts.length === 0 ? t("feed.alerts.empty") : t("feed.alerts.noMatch")}
                 </Text>
               </Box>
             )}
@@ -173,7 +176,7 @@ export function LiveAlertsTab({
               const sevBg = severityColors[sev]?.bg ?? "var(--color-bg-muted)";
               const location = alert.event.generalLocation ?? alert.event.originLocation ?? alert.event.destinationLocation;
               const sourceName = alert.event.signals[0]?.source?.name;
-              const displayTitle = alert.event.title ?? alert.event.description ?? alert.event.types[0] ?? "Untitled alert";
+              const displayTitle = alert.event.title ?? alert.event.description ?? alert.event.types[0] ?? t("feed.alerts.untitled");
 
               return (
                 <Link key={alert.id} href={`/event/${alert.event.id}`} style={{ textDecoration: "none", color: "inherit" }}>
@@ -191,8 +194,8 @@ export function LiveAlertsTab({
                           <Badge size="xs" style={{ background: sevBg, color: sevCol, fontWeight: 700 }}>{severityLabels[sev]}</Badge>
                           {sourceName && <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{sourceName}</Badge>}
                         </Group>
-                        <Text size="xs" c="var(--color-text-muted)" title={`First signal: ${formatTimeAgo(alert.event.firstSignalCreatedAt)}`}>
-                          {formatTimeAgo(alert.event.lastSignalCreatedAt)}
+                        <Text size="xs" c="var(--color-text-muted)" title={t("feed.firstSignal", { time: format.relativeTime(new Date(alert.event.firstSignalCreatedAt)) })}>
+                          {format.relativeTime(new Date(alert.event.lastSignalCreatedAt))}
                         </Text>
                       </Group>
                       <Text fw={600} size="sm" c="var(--color-text-primary)" lineClamp={1} mb={4}>{displayTitle}</Text>
@@ -225,7 +228,7 @@ export function LiveAlertsTab({
 
             {!hasMore && alerts.length > 0 && (
               <Box py={10} style={{ textAlign: "center" }}>
-                <Text size="xs" c="var(--color-text-muted)">All {totalCount.toLocaleString()} alerts loaded</Text>
+                <Text size="xs" c="var(--color-text-muted)">{t("feed.alerts.allLoaded", { count: totalCount })}</Text>
               </Box>
             )}
           </Box>
@@ -234,7 +237,7 @@ export function LiveAlertsTab({
 
       <Box style={{ width: 480, flexShrink: 0 }}>
         <Group mb={12} justify="space-between" align="center" style={{ minHeight: 32 }}>
-          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>Crisis Map</Text>
+          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>{t("feed.crisisMap")}</Text>
           {onBoundaryLevelChange && (
             <MapSettingsPopover boundaryLevel={boundaryLevel} onBoundaryLevelChange={onBoundaryLevelChange} />
           )}

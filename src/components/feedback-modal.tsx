@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   Modal, Stack, Select, Textarea, Button, Group, Text, Box,
 } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { IconCircleCheck } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { getConsoleBuffer } from "~/lib/console-buffer";
@@ -16,6 +17,8 @@ interface FeedbackModalProps {
 }
 
 export function FeedbackModal({ opened, onClose }: FeedbackModalProps) {
+  const t = useTranslations("common.feedback");
+  const tActions = useTranslations("common.actions");
   const [type, setType] = useState<FeedbackType>("General");
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -56,7 +59,7 @@ export function FeedbackModal({ opened, onClose }: FeedbackModalProps) {
       }
       setSubmitted(true);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(t("error"));
     } finally {
       setLoading(false);
     }
@@ -66,7 +69,7 @@ export function FeedbackModal({ opened, onClose }: FeedbackModalProps) {
     <Modal
       opened={opened}
       onClose={handleClose}
-      title={submitted ? undefined : "Share Feedback"}
+      title={submitted ? undefined : t("title")}
       size="sm"
       centered
       styles={{
@@ -77,31 +80,36 @@ export function FeedbackModal({ opened, onClose }: FeedbackModalProps) {
       {submitted ? (
         <Stack align="center" gap={12} py={28}>
           <IconCircleCheck size={52} color="var(--color-success)" style={{ strokeWidth: 1.5 }} />
-          <Text fw={700} size="lg" c="var(--color-text-primary)">Thanks!</Text>
+          <Text fw={700} size="lg" c="var(--color-text-primary)">{t("thanks")}</Text>
           <Text size="sm" c="var(--color-text-muted)" ta="center" maw={260}>
-            Your feedback has been received.
+            {t("received")}
           </Text>
           <Button variant="subtle" color="gray" size="sm" mt={4} onClick={handleClose}>
-            Close
+            {tActions("close")}
           </Button>
         </Stack>
       ) : (
         <Stack gap={14}>
           <Select
-            label="Type"
-            data={["Bug", "Feature Request", "General"]}
+            label={t("type")}
+            data={[
+              // values are raw API payload values; labels translated for display
+              { value: "Bug", label: t("types.bug") },
+              { value: "Feature Request", label: t("types.feature") },
+              { value: "General", label: t("types.general") },
+            ]}
             value={type}
             onChange={(v) => v && setType(v as FeedbackType)}
             styles={{ label: { fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 4 } }}
           />
           <Textarea
-            label="Message"
+            label={t("message")}
             placeholder={
               type === "Bug"
-                ? "Describe what happened and how to reproduce it..."
+                ? t("placeholderBug")
                 : type === "Feature Request"
-                ? "What would you like to see?"
-                : "What's on your mind?"
+                ? t("placeholderFeature")
+                : t("placeholderGeneral")
             }
             value={message}
             onChange={(e) => setMessage(e.currentTarget.value)}
@@ -121,7 +129,7 @@ export function FeedbackModal({ opened, onClose }: FeedbackModalProps) {
               }}
             >
               <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.5 }}>
-                Console errors/warnings ({getConsoleBuffer().length}) will be attached automatically.
+                {t("consoleNote", { count: getConsoleBuffer().length })}
               </Text>
             </Box>
           )}
@@ -130,7 +138,7 @@ export function FeedbackModal({ opened, onClose }: FeedbackModalProps) {
           )}
           <Group justify="flex-end">
             <Button variant="subtle" color="gray" size="sm" onClick={handleClose}>
-              Cancel
+              {tActions("cancel")}
             </Button>
             <Button
               size="sm"
@@ -139,7 +147,7 @@ export function FeedbackModal({ opened, onClose }: FeedbackModalProps) {
               onClick={() => void handleSubmit()}
               style={{ background: "var(--color-accent)", borderColor: "var(--color-accent)", fontSize: 12 }}
             >
-              Send Feedback
+              {t("send")}
             </Button>
           </Group>
         </Stack>

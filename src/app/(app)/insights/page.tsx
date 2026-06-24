@@ -1,19 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { Box, Tabs, Text } from "@mantine/core";
+import { useTranslations } from "next-intl";
+import { Badge, Box, Group, Tabs, Text } from "@mantine/core";
 import { PageHeader } from "~/components/ui";
 import { ReportsTab } from "./_components/reports-tab";
 
-export default function AnalysisPage() {
+export default function InsightsPage() {
+  const t = useTranslations("insights");
+  const tBadges = useTranslations("common.badges");
   const [activeTab, setActiveTab] = useState<string | null>("crisis");
 
   return (
     <Box>
       <PageHeader
-        title="Analysis"
-        subtitle="Analysis"
-        breadcrumbs={["CLEAR", "Analysis"]}
+        title={t("page.title")}
+        subtitle={t("page.title")}
+        breadcrumbs={["CLEAR", t("page.breadcrumb")]}
       />
 
       <Box p={24}>
@@ -24,8 +27,13 @@ export default function AnalysisPage() {
           styles={{ tab: { fontSize: 13, fontWeight: 500 } }}
         >
           <Tabs.List>
-            <Tabs.Tab value="crisis">Crisis</Tabs.Tab>
-            <Tabs.Tab value="situation">Situation Analysis</Tabs.Tab>
+            <Tabs.Tab value="crisis">{t("page.tabs.crisis")}</Tabs.Tab>
+            <Tabs.Tab value="situation">
+              <Group gap={6} align="center">
+                {t("page.tabs.situation")}
+                <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{tBadges("soon")}</Badge>
+              </Group>
+            </Tabs.Tab>
           </Tabs.List>
         </Tabs>
 
@@ -48,10 +56,10 @@ export default function AnalysisPage() {
             }}
           >
             <Text fw={600} c="var(--color-text-primary)" mb={8}>
-              Situation Analysis
+              {t("page.situationPlaceholder.title")}
             </Text>
             <Text size="sm" c="var(--color-text-muted)">
-              AI-generated situation reports coming soon.
+              {t("page.situationPlaceholder.description")}
             </Text>
           </Box>
         )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -33,7 +34,11 @@ interface HumChatSidebarProps {
 }
 
 export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage]);
+  const t = useTranslations("knowledge.humchat");
+  const format = useFormatter();
+  // welcomeMessage.content is resolved via i18n at render time
+  const welcome: ChatMessage = { ...welcomeMessage, content: t("welcome") };
+  const [messages, setMessages] = useState<ChatMessage[]>([welcome]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -109,8 +114,8 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
   const renderMarkdown = (content: string) => {
     const html = content
       .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:600">$1</strong>')
-      .replace(/^- (.*$)/gim, '<div style="margin-left:12px;font-size:13px">• $1</div>')
-      .replace(/^\d+\. (.*$)/gim, '<div style="margin-left:12px;font-size:13px">$&</div>')
+      .replace(/^- (.*$)/gim, '<div style="margin-inline-start:12px;font-size:13px">• $1</div>')
+      .replace(/^\d+\. (.*$)/gim, '<div style="margin-inline-start:12px;font-size:13px">$&</div>')
       .replace(/\n\n/g, '<div style="height:8px"></div>')
       .replace(/\n/g, "<br />");
     return <div dangerouslySetInnerHTML={{ __html: html }} />;
@@ -121,7 +126,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
       <Box
         style={{
           position: "fixed",
-          right: 0,
+          insetInlineEnd: 0,
           top: "50%",
           transform: "translateY(-50%)",
           zIndex: 50,
@@ -150,7 +155,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
   }
 
   return (
-    <Box style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--color-bg-white)", borderLeft: "1px solid var(--color-border)" }}>
+    <Box style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--color-bg-white)", borderInlineStart: "1px solid var(--color-border)" }}>
       {/* Header */}
       <Box px={16} py={12} className="border-b border-[var(--color-border)]" style={{ background: "var(--color-bg-muted)" }}>
         <Group justify="space-between">
@@ -169,21 +174,21 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
             </Box>
             <Box>
               <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>HumChat AI</Text>
-              <Text c="var(--color-text-muted)" style={{ fontSize: 10 }}>Humanitarian AI Assistant</Text>
+              <Text c="var(--color-text-muted)" style={{ fontSize: 10 }}>{t("subtitle")}</Text>
             </Box>
           </Group>
           <Group gap={4}>
             <Badge size="xs" color="green" variant="light" leftSection={
               <Box style={{ width: 6, height: 6, background: "#059669", borderRadius: "50%" }} />
             }>
-              Online
+              {t("online")}
             </Badge>
             <ActionIcon
               size="sm"
               variant="subtle"
               color="gray"
-              onClick={() => setMessages([welcomeMessage])}
-              title="Clear chat"
+              onClick={() => setMessages([welcome])}
+              title={t("clearChat")}
             >
               <IconRefresh size={14} />
             </ActionIcon>
@@ -192,7 +197,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
               variant="subtle"
               color="gray"
               onClick={onToggle}
-              title="Collapse panel"
+              title={t("collapse")}
             >
               <IconChevronRight size={16} />
             </ActionIcon>
@@ -224,7 +229,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
               <Box
                 style={{
                   display: "inline-block",
-                  textAlign: "left",
+                  textAlign: "start",
                   padding: "8px 12px",
                   fontSize: 13,
                   background: message.role === "assistant" ? "#F9FAFB" : "#E85D3D",
@@ -237,7 +242,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
               </Box>
               {message.role === "assistant" && (
                 <Text c="var(--color-text-muted)" style={{ fontSize: 9, marginTop: 4 }}>
-                  {message.timestamp.toLocaleString([], { month: "numeric", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  {format.dateTime(message.timestamp, "dateTime")}
                 </Text>
               )}
             </Box>
@@ -267,7 +272,7 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
             value={inputValue}
             onChange={(e) => setInputValue(e.currentTarget.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about humanitarian response..."
+            placeholder={t("inputPlaceholder")}
             size="xs"
             style={{ flex: 1 }}
             disabled={isTyping}
@@ -285,14 +290,14 @@ export function HumChatSidebar({ isExpanded, onToggle }: HumChatSidebarProps) {
           </ActionIcon>
         </Group>
         <Box mt={8} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {exampleQuestions.map((q, i) => (
+          {exampleQuestions.map((q) => (
             <UnstyledButton
-              key={i}
-              onClick={() => void handleSendMessage(q)}
-              style={{ fontSize: 11, color: "#737373", textAlign: "left", padding: "2px 0" }}
+              key={q}
+              onClick={() => void handleSendMessage(t(`examples.${q}`))}
+              style={{ fontSize: 11, color: "#737373", textAlign: "start", padding: "2px 0" }}
               className="hover:text-[#E85D3D]"
             >
-              &ldquo;{q}&rdquo;
+              &ldquo;{t(`examples.${q}`)}&rdquo;
             </UnstyledButton>
           ))}
         </Box>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Drawer, Box, Group, Text, ActionIcon } from "@mantine/core";
 import { IconX, IconExternalLink } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -19,6 +20,7 @@ export function EventDetailDrawer({
   opened,
   onClose,
 }: EventDetailDrawerProps) {
+  const t = useTranslations("eventDetail");
   const router = useRouter();
   const originalPathRef = useRef<string | null>(null);
   const { activeTeamId } = useTeam();
@@ -75,7 +77,7 @@ export function EventDetailDrawer({
       >
         <Group justify="space-between">
           <Text fw={600} c="var(--color-text-primary)" size="sm">
-            Event Details
+            {t("drawer.title")}
           </Text>
           <Group gap={8}>
             <ActionIcon
@@ -87,7 +89,7 @@ export function EventDetailDrawer({
                 onClose();
                 router.push(`/event/${eventId}`);
               }}
-              title="Open as full page"
+              title={t("drawer.openFullPage")}
             >
               <IconExternalLink size={16} />
             </ActionIcon>

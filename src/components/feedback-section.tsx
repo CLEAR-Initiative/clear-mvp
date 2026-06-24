@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Box, Text, Group, Stack, Button, Textarea, Modal, Divider } from "@mantine/core";
 import {
   IconThumbUp,
@@ -14,13 +15,15 @@ import {
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 
+// `id` is the raw value sent to the API; `labelKey` resolves the displayed
+// label via common.feedbackSection.reasons.*
 const ISSUE_TAGS = [
-  { id: "not_relevant", label: "Not relevant", icon: IconCircleOff },
-  { id: "already_known", label: "Already known", icon: IconHistory },
-  { id: "wrong_area",     label: "Wrong area",     icon: IconMapPinOff },
-  { id: "wrong_severity", label: "Wrong severity", icon: IconGauge },
-  { id: "inaccurate",     label: "Inaccurate",     icon: IconAlertTriangle },
-];
+  { id: "not_relevant",   labelKey: "notRelevant",   icon: IconCircleOff },
+  { id: "already_known",  labelKey: "alreadyKnown",  icon: IconHistory },
+  { id: "wrong_area",     labelKey: "wrongArea",     icon: IconMapPinOff },
+  { id: "wrong_severity", labelKey: "wrongSeverity", icon: IconGauge },
+  { id: "inaccurate",     labelKey: "inaccurate",    icon: IconAlertTriangle },
+] as const;
 
 interface FeedbackSectionProps {
   entityId: string;
@@ -28,6 +31,8 @@ interface FeedbackSectionProps {
 }
 
 export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) {
+  const t = useTranslations("common.feedbackSection");
+  const tActions = useTranslations("common.actions");
   const [modalOpen, setModalOpen] = useState(false);
   const [modalSubmitted, setModalSubmitted] = useState(false);
   const [helpfulSubmitted, setHelpfulSubmitted] = useState(false);
@@ -66,13 +71,11 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
     }
   }
 
-  const entityLabel = entityType === "event" ? "event" : "signal";
-
   return (
     <>
       <Box px={16} py={10} style={{ borderBottom: "1px solid var(--color-border)" }}>
         <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
-          Was this {entityLabel} helpful?
+          {t(`question.${entityType}`)}
         </Text>
       </Box>
       <Box p={16}>
@@ -80,7 +83,7 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
           <Group gap={6} justify="center">
             <IconCircleCheck size={15} color="var(--color-success)" style={{ strokeWidth: 1.5 }} />
             <Text size="xs" style={{ color: "var(--color-success)" }} fw={500}>
-              Thanks for the feedback!
+              {t("thanksInline")}
             </Text>
           </Group>
         ) : (
@@ -103,7 +106,7 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
               onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-critical-light)")}
             >
               <IconThumbDown size={13} />
-              Issues
+              {t("issues")}
             </button>
             <button
               onClick={handleHelpful}
@@ -120,7 +123,7 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
               onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-success-light)")}
             >
               <IconThumbUp size={13} />
-              Helpful
+              {t("helpful")}
             </button>
           </Group>
         )}
@@ -129,7 +132,7 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
       <Modal
         opened={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={modalSubmitted ? undefined : "What was the issue?"}
+        title={modalSubmitted ? undefined : t("modalTitle")}
         size="sm"
         centered
         styles={{
@@ -141,23 +144,23 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
           <Stack align="center" gap={12} py={32}>
             <IconCircleCheck size={52} color="var(--color-success)" style={{ strokeWidth: 1.5 }} />
             <Text fw={700} size="lg" c="var(--color-text-primary)">
-              Thank you!
+              {t("thankYou")}
             </Text>
             <Text size="sm" c="var(--color-text-muted)" ta="center" maw={260}>
-              Your feedback helps improve {entityLabel} quality for the whole team.
+              {t(`thanksBody.${entityType}`)}
             </Text>
             <Button variant="subtle" color="gray" size="sm" mt={8} onClick={() => setModalOpen(false)}>
-              Close
+              {tActions("close")}
             </Button>
           </Stack>
         ) : (
           <Stack gap={16}>
             <Text size="sm" c="var(--color-text-muted)">
-              Select all issues that apply - this helps us improve the detection pipeline.
+              {t("selectIssues")}
             </Text>
 
             <Stack gap={8}>
-              {ISSUE_TAGS.map(({ id, label, icon: Icon }) => {
+              {ISSUE_TAGS.map(({ id, labelKey, icon: Icon }) => {
                 const active = selectedTags.includes(id);
                 return (
                   <button
@@ -183,7 +186,7 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
                     }}
                   >
                     <Icon size={14} strokeWidth={1.75} />
-                    {label}
+                    {t(`reasons.${labelKey}`)}
                   </button>
                 );
               })}
@@ -192,8 +195,8 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
             <Divider color="var(--color-border)" />
 
             <Textarea
-              label="Additional comments (optional)"
-              placeholder={`Anything else we should know about this ${entityLabel}…`}
+              label={t("commentsLabel")}
+              placeholder={t(`commentsPlaceholder.${entityType}`)}
               value={modalComment}
               onChange={(e) => setModalComment(e.currentTarget.value)}
               minRows={3}
@@ -211,7 +214,7 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
 
             <Group justify="flex-end">
               <Button variant="subtle" color="gray" size="sm" onClick={() => setModalOpen(false)}>
-                Cancel
+                {tActions("cancel")}
               </Button>
               <Button
                 size="sm"
@@ -220,7 +223,7 @@ export function FeedbackSection({ entityId, entityType }: FeedbackSectionProps) 
                 onClick={handleSubmitIssues}
                 style={{ background: "var(--color-accent)", borderColor: "var(--color-accent)", fontSize: 12 }}
               >
-                Send Feedback
+                {t("send")}
               </Button>
             </Group>
           </Stack>

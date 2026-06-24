@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Box, Text, Group, Select, Popover, Switch, Divider } from "@mantine/core";
 import { IconSettings } from "@tabler/icons-react";
 
@@ -13,12 +14,13 @@ interface MapSettingsPopoverProps {
   onShowPopulationChange?: (show: boolean) => void;
 }
 
+// labelKey: i18n keys under map.boundaries.* - resolved via t() at render time.
 const BOUNDARY_OPTIONS = [
-  { value: "none", label: "None" },
-  { value: "A0", label: "A0 - Country" },
-  { value: "A1", label: "A1 - States" },
-  { value: "A2", label: "A2 - Districts" },
-];
+  { value: "none", labelKey: "none" },
+  { value: "A0", labelKey: "a0" },
+  { value: "A1", labelKey: "a1" },
+  { value: "A2", labelKey: "a2" },
+] as const;
 
 export function MapSettingsPopover({
   boundaryLevel,
@@ -26,6 +28,7 @@ export function MapSettingsPopover({
   showPopulation = false,
   onShowPopulationChange,
 }: MapSettingsPopoverProps) {
+  const t = useTranslations("map");
   const [opened, setOpened] = useState(false);
 
   return (
@@ -40,7 +43,7 @@ export function MapSettingsPopover({
       <Popover.Target>
         <button
           onClick={() => setOpened((o) => !o)}
-          title="Map settings"
+          title={t("settings.tooltip")}
           style={{
             display: "flex",
             alignItems: "center",
@@ -68,18 +71,18 @@ export function MapSettingsPopover({
           style={{ fontSize: 10, letterSpacing: "0.05em" }}
           mb={10}
         >
-          Map Settings
+          {t("settings.title")}
         </Text>
 
         <Group justify="space-between" align="center" gap={8} wrap="nowrap">
           <Box style={{ flexShrink: 0 }}>
-            <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>Show boundaries</Text>
+            <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>{t("settings.showBoundaries")}</Text>
           </Box>
           <Select
             size="xs"
             value={boundaryLevel}
             onChange={(v) => onBoundaryLevelChange((v ?? "A1") as BoundaryLevel)}
-            data={BOUNDARY_OPTIONS}
+            data={BOUNDARY_OPTIONS.map((o) => ({ value: o.value, label: t(`boundaries.${o.labelKey}`) }))}
             style={{ minWidth: 130 }}
             styles={{ input: { fontWeight: 600, fontSize: 12 } }}
           />
@@ -90,8 +93,8 @@ export function MapSettingsPopover({
             <Divider color="var(--color-border)" my={10} />
             <Group justify="space-between" align="center" gap={8} wrap="nowrap">
               <Box>
-                <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>Population layer</Text>
-                <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 10 }}>A2 district resolution</Text>
+                <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>{t("settings.populationLayer")}</Text>
+                <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 10 }}>{t("settings.a2Resolution")}</Text>
               </Box>
               <Switch
                 size="xs"

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
 import { Box, Tabs, Button, Group, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
 import { IconFilter } from "@tabler/icons-react";
 import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
@@ -10,7 +11,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { countryConfig, dateOptions, parseDateFilter } from "~/lib/constants/country-config";
+import { countryConfig, parseDateFilter } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
 import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
@@ -55,6 +56,8 @@ const VALID_TABS = new Set(["live", "events", "signals", "history"]);
 const TAB_STORAGE_KEY = "detection-active-tab";
 
 function DetectionPageContent() {
+  const t = useTranslations("detection");
+  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -80,6 +83,22 @@ function DetectionPageContent() {
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("Last 30 days");
+  const localizedDateOptions = useMemo(() => {
+    const now = new Date();
+    const englishMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const fmt = new Intl.DateTimeFormat(locale, { month: "short", year: "numeric" });
+    const result: { value: string; label: string }[] = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      result.push({ value: `${englishMonths[d.getMonth()]} ${d.getFullYear()}`, label: fmt.format(d) });
+    }
+    result.push(
+      { value: "Last 7 days",  label: t("filters.last7days") },
+      { value: "Last 30 days", label: t("filters.last30days") },
+      { value: "Last 90 days", label: t("filters.last90days") },
+    );
+    return result;
+  }, [locale, t]);
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [activeSeverities, setActiveSeverities] = useState<Set<string>>(new Set(["critical", "high", "medium", "low"]));
@@ -92,7 +111,7 @@ function DetectionPageContent() {
   const filterCount = (activeSeverities.size < 4 ? 1 : 0) + (selectedTypeFilters.length > 0 ? 1 : 0) + (activeSources !== null ? 1 : 0);
 
   const { activeTeamId } = useTeam();
-  const { countries, getCenter, getZoom, getLocationId, tree } = useLocations();
+  const { countries, getCenter, getZoom, getLocationId, tree, isLoading: isLocationsLoading } = useLocations();
 
   const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
   const selectedCountryId = useMemo(() => getLocationId(selectedCountry), [selectedCountry, getLocationId]);
@@ -133,6 +152,11 @@ function DetectionPageContent() {
     () => selectedRegionId ?? getLocationId(selectedCountry),
     [selectedCountry, selectedRegionId, getLocationId],
   );
+
+  // Don't fire feed queries until the location tree has loaded. Without this
+  // guard, the queries fire with locationId=undefined (no filter) during the
+  // brief window before the tree resolves, returning results from all countries.
+  const locationsReady = !isLocationsLoading || !!selectedLocationId;
 
   const currentCountryStates = useMemo(
     () => tree.find((c) => c.name === selectedCountry)?.states ?? [],
@@ -228,11 +252,11 @@ function DetectionPageContent() {
   // strips it before forwarding to GraphQL - see alerts.ts.
   const eventsQuery = api.alerts.eventsPage.useQuery(
     { ...sharedFilter, orderBy: EVENT_ORDER_MAP[eventsSort], limit: PAGE_SIZE, offset: eventsOffset, _v: eventsVersion },
-    { enabled: activeTab === "events", staleTime: Infinity },
+    { enabled: locationsReady && activeTab === "events", staleTime: Infinity },
   );
   const alertsQuery = api.alerts.alertsPage.useQuery(
     { ...sharedFilter, status: "published", orderBy: ALERT_ORDER_MAP[alertsSort], limit: PAGE_SIZE, offset: alertsOffset, _v: alertsVersion },
-    { enabled: activeTab === "live", staleTime: Infinity },
+    { enabled: locationsReady && activeTab === "live", staleTime: Infinity },
   );
   const signalsQuery = api.alerts.signalsPage.useQuery(
     {
@@ -248,7 +272,7 @@ function DetectionPageContent() {
       offset: signalsOffset,
       _v: signalsVersion,
     },
-    { enabled: activeTab === "signals", staleTime: Infinity },
+    { enabled: locationsReady && activeTab === "signals", staleTime: Infinity },
   );
 
   // ── Accumulation effects ───────────────────────────────────────────────────
@@ -419,7 +443,7 @@ function DetectionPageContent() {
       limit: 1,
       orderBy: "LAST_SIGNAL_DESC",
     },
-    { enabled: activeTab === "events", refetchInterval: 60_000, staleTime: 0 },
+    { enabled: locationsReady && activeTab === "events", refetchInterval: 60_000, staleTime: 0 },
   );
   const alertsNewQuery = api.alerts.alertsPage.useQuery(
     {
@@ -429,7 +453,7 @@ function DetectionPageContent() {
       limit: 1,
       orderBy: "CREATED_DESC",
     },
-    { enabled: activeTab === "live", refetchInterval: 60_000, staleTime: 0 },
+    { enabled: locationsReady && activeTab === "live", refetchInterval: 60_000, staleTime: 0 },
   );
   const signalsNewQuery = api.alerts.signalsPage.useQuery(
     {
@@ -442,7 +466,7 @@ function DetectionPageContent() {
       limit: 1,
       orderBy: "PUBLISHED_DESC",
     },
-    { enabled: activeTab === "signals", refetchInterval: 60_000, staleTime: 0 },
+    { enabled: locationsReady && activeTab === "signals", refetchInterval: 60_000, staleTime: 0 },
   );
 
   const eventsNewCount = eventsNewQuery.data?.totalCount ?? 0;
@@ -452,15 +476,15 @@ function DetectionPageContent() {
   // ── History tab - paginated, 100 per page, all three sources accumulated ──────
   const historyAlertsQuery = api.alerts.alertsPage.useQuery(
     { ...sharedFilter, orderBy: ALERT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
-    { enabled: activeTab === "history", staleTime: Infinity },
+    { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
   );
   const historyEventsQuery = api.alerts.eventsPage.useQuery(
     { ...sharedFilter, orderBy: EVENT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
-    { enabled: activeTab === "history", staleTime: Infinity },
+    { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
   );
   const historySignalsQuery = api.alerts.signalsPage.useQuery(
     { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, orderBy: SIGNAL_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
-    { enabled: activeTab === "history", staleTime: Infinity },
+    { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
   );
 
   // ── History accumulation effects ───────────────────────────────────────────
@@ -563,9 +587,9 @@ function DetectionPageContent() {
   return (
     <Box>
       <PageHeader
-        title="Event Detection"
-        subtitle="Event Detection"
-        breadcrumbs={["CLEAR", "Detection"]}
+        title={t("header.title")}
+        subtitle={t("header.title")}
+        breadcrumbs={["CLEAR", t("header.breadcrumb")]}
         loading={eventsQuery.isLoading || alertsQuery.isLoading}
       >
         <FilterBar
@@ -577,26 +601,26 @@ function DetectionPageContent() {
               states={currentCountryStates}
               value={selectedRegionId}
               onChange={setSelectedRegionId}
-              label="Region"
+              label={t("filters.region")}
             />
           }
           date={selectedDate}
           onDateChange={setSelectedDate}
-          dateOptions={dateOptions}
+          dateOptions={localizedDateOptions}
         >
           <Box>
-            <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 5 }}>Filter</Text>
+            <Text size="xs" c="#737373" tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.05em", marginBottom: 5 }}>{t("filters.filter")}</Text>
             <Popover opened={filterOpen} onChange={setFilterOpen} position="bottom-start" shadow="md" width={270} withinPortal>
               <Popover.Target>
                 <ActionIcon
                   variant="default" size={30}
                   style={{ position: "relative", border: "1px solid #E5E5E5", borderRadius: 4 }}
                   onClick={() => setFilterOpen((o) => !o)}
-                  title="Filter"
+                  title={t("filters.filter")}
                 >
                   <IconFilter size={13} color={isFiltered ? "var(--color-accent)" : "var(--color-text-muted)"} />
                   {isFiltered && (
-                    <Box style={{ position: "absolute", top: -4, right: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Box style={{ position: "absolute", top: -4, insetInlineEnd: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <Text style={{ fontSize: 9, color: "white", fontWeight: 700, lineHeight: 1 }}>{filterCount}</Text>
                     </Box>
                   )}
@@ -604,14 +628,14 @@ function DetectionPageContent() {
               </Popover.Target>
               <Popover.Dropdown p={14} onMouseDown={(e) => e.stopPropagation()}>
                 <Group justify="space-between" mb={10}>
-                  <Text size="xs" fw={700} tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.06em" }}>Filters</Text>
+                  <Text size="xs" fw={700} tt="uppercase" style={{ fontSize: 10, letterSpacing: "0.06em" }}>{t("filters.title")}</Text>
                   {isFiltered && (
                     <Button size="compact-xs" variant="subtle" color="gray" onClick={() => { setActiveSeverities(new Set(["critical", "high", "medium", "low"])); setSelectedTypeFilters([]); setActiveSources(null); }}>
-                      Clear all
+                      {t("filters.clearAll")}
                     </Button>
                   )}
                 </Group>
-                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Severity</Text>
+                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("filters.severity")}</Text>
                 <Group gap={6} mb={12} wrap="wrap">
                   {(["critical", "high", "medium", "low"] as const).map((sev) => {
                     const active = activeSeverities.has(sev);
@@ -627,18 +651,18 @@ function DetectionPageContent() {
                           return next;
                         })}
                       >
-                        {sev.charAt(0).toUpperCase() + sev.slice(1)}
+                        {t(`filters.severities.${sev}`)}
                       </Badge>
                     );
                   })}
                 </Group>
                 <Divider color="var(--color-border)" mb={10} />
-                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Event Type</Text>
+                <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("filters.eventType")}</Text>
                 <DisasterTypePicker hierarchy={hierarchy} selected={selectedTypeFilters} onChange={setSelectedTypeFilters} size="xs" />
                 {allSources.length > 0 && (
                   <>
                     <Divider color="var(--color-border)" my={10} />
-                    <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>Source</Text>
+                    <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("filters.source")}</Text>
                     <Group gap={6} wrap="wrap">
                       {allSources.map((src) => {
                         const active = activeSources === null || activeSources.has(src);
@@ -673,7 +697,7 @@ function DetectionPageContent() {
             onClick={openCreateModal}
             style={{ background: "#E85D3D", borderColor: "#E85D3D", fontSize: 13 }}
           >
-            Create Signal
+            {t("actions.createSignal")}
           </Button>
         </Group>
       </PageHeader>
@@ -681,10 +705,10 @@ function DetectionPageContent() {
       <Box p={24}>
         <Tabs value={activeTab} onChange={handleTabChange} mb={24} styles={{ tab: { fontSize: 13, fontWeight: 500 } }}>
           <Tabs.List>
-            <Tabs.Tab value="live">Alerts</Tabs.Tab>
-            <Tabs.Tab value="events">Events</Tabs.Tab>
-            <Tabs.Tab value="signals">Signals</Tabs.Tab>
-            <Tabs.Tab value="history">History</Tabs.Tab>
+            <Tabs.Tab value="live">{t("tabs.alerts")}</Tabs.Tab>
+            <Tabs.Tab value="events">{t("tabs.events")}</Tabs.Tab>
+            <Tabs.Tab value="signals">{t("tabs.signals")}</Tabs.Tab>
+            <Tabs.Tab value="history">{t("tabs.history")}</Tabs.Tab>
           </Tabs.List>
         </Tabs>
 

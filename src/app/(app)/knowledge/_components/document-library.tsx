@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Text, Group } from "@mantine/core";
 import { IconFile } from "@tabler/icons-react";
 import { CardSection, DataTable, Table } from "~/components/ui";
@@ -7,25 +8,27 @@ interface DocumentLibraryProps {
   filteredDocuments: Document[];
 }
 
-const columns = [
-  { label: "Document" },
-  { label: "Type", width: 90 },
-  { label: "Sector", width: 90 },
-  { label: "Updated", width: 80 },
-  { label: "", width: 50 },
-];
-
 export function DocumentLibrary({ filteredDocuments }: DocumentLibraryProps) {
+  const t = useTranslations("knowledge.documents");
+
+  const columns = [
+    { label: t("columns.document") },
+    { label: t("columns.type"), width: 90 },
+    { label: t("columns.sector"), width: 90 },
+    { label: t("columns.updated"), width: 80 },
+    { label: "", width: 50 },
+  ];
+
   return (
     <CardSection
-      title="Document Library"
-      subtitle={`${filteredDocuments.length} documents found`}
+      title={t("title")}
+      subtitle={t("found", { count: filteredDocuments.length })}
       noPadding
     >
       <DataTable
         columns={columns}
         data={filteredDocuments}
-        emptyMessage="No documents found matching your filters"
+        emptyMessage={t("empty")}
         renderRow={(doc) => {
           const tc = getTypeColor(doc.type);
           return (
@@ -44,7 +47,7 @@ export function DocumentLibrary({ filteredDocuments }: DocumentLibraryProps) {
               <Table.Td><Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>{doc.sector}</Text></Table.Td>
               <Table.Td><Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>{doc.updated}</Text></Table.Td>
               <Table.Td>
-                <Text c="#2563EB" style={{ cursor: "pointer", fontSize: 12 }}>Download</Text>
+                <Text c="#2563EB" style={{ cursor: "pointer", fontSize: 12 }}>{t("download")}</Text>
               </Table.Td>
             </Table.Tr>
           );

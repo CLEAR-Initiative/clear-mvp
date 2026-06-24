@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Box, Text, Group, Badge, Loader } from "@mantine/core";
 import { IconLayersIntersect } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
-import { severityColors, severityLabels } from "~/lib/constants/severity";
+import { severityColors } from "~/lib/constants/severity";
 import { resolveLocationName } from "~/lib/location";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { CardSection } from "~/components/ui";
@@ -22,6 +23,8 @@ export function ReportsTab({
   selectedRegion,
   summaryStats,
 }: ReportsTabProps) {
+  const t = useTranslations("insights");
+  const tCommon = useTranslations("common");
   const crisesQuery = api.crises.list.useQuery();
   const crises = crisesQuery.data ?? [];
 
@@ -30,16 +33,16 @@ export function ReportsTab({
   return (
     <Box mb={24}>
       <CardSection
-        title="Active Crises"
+        title={t("reports.activeCrises")}
         subtitle={`${selectedCountry}${selectedRegion !== "All Regions" ? ` - ${selectedRegion}` : ""}`}
         action={
           criticalCount > 0 ? (
             <Badge size="xs" style={{ background: "var(--color-critical-light)", color: "var(--color-critical)" }}>
-              {criticalCount} Critical
+              {t("reports.criticalBadge", { count: criticalCount })}
             </Badge>
           ) : summaryStats.critical > 0 ? (
             <Badge size="xs" style={{ background: "var(--color-critical-light)", color: "var(--color-critical)" }}>
-              {summaryStats.critical} Critical
+              {t("reports.criticalBadge", { count: summaryStats.critical })}
             </Badge>
           ) : null
         }
@@ -80,7 +83,7 @@ export function ReportsTab({
                   <Box style={{ flex: 1, minWidth: 0 }}>
                     <Group justify="space-between" mb={6} gap={12} align="flex-start">
                       <Text fw={700} size="sm" c="var(--color-text-primary)">
-                        {crisis.title ?? "Untitled crisis"}
+                        {crisis.title ?? t("reports.untitledCrisis")}
                       </Text>
                       <Badge
                         size="xs"
@@ -93,7 +96,7 @@ export function ReportsTab({
                           flexShrink: 0,
                         }}
                       >
-                        {severityLabels[sev].toUpperCase()}
+                        {tCommon(`severities.${sev}`).toUpperCase()}
                       </Badge>
                     </Group>
 
@@ -137,7 +140,7 @@ export function ReportsTab({
                     <Group gap={6} align="center">
                       <IconLayersIntersect size={13} color="var(--color-text-muted)" />
                       <Text size="xs" c="var(--color-text-muted)" fw={500}>
-                        {eventCount} {eventCount === 1 ? "event" : "events"}
+                        {t("reports.eventCount", { count: eventCount })}
                       </Text>
                     </Group>
                   </Box>
@@ -149,7 +152,7 @@ export function ReportsTab({
 
         {!crisesQuery.isLoading && crises.length === 0 && (
           <Box p={32} style={{ textAlign: "center" }}>
-            <Text size="sm" c="var(--color-text-muted)">No active crises.</Text>
+            <Text size="sm" c="var(--color-text-muted)">{t("reports.empty")}</Text>
           </Box>
         )}
       </CardSection>

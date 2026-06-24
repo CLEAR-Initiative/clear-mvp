@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl,
 } from "@mantine/core";
@@ -11,25 +12,28 @@ export type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 
 type PanelId = "layers" | "legend";
 
+// labelKey: i18n keys under map.severities.* - resolved via t() at render time.
 const SEVERITY_ITEMS = [
-  { label: "Critical", color: "var(--color-critical)" },
-  { label: "High",     color: "var(--color-warning)" },
-  { label: "Medium",   color: "#FBBF24" },
-  { label: "Low",      color: "var(--color-success)" },
-];
+  { labelKey: "critical", color: "var(--color-critical)" },
+  { labelKey: "high",     color: "var(--color-warning)" },
+  { labelKey: "medium",   color: "#FBBF24" },
+  { labelKey: "low",      color: "var(--color-success)" },
+] as const;
 
+// labelKey: i18n keys under map.boundaries.* - resolved via t() at render time.
 const BOUNDARY_OPTIONS = [
-  { value: "none", label: "None" },
-  { value: "A0",   label: "A0 - Country" },
-  { value: "A1",   label: "A1 - States" },
-  { value: "A2",   label: "A2 - Districts" },
-];
+  { value: "none", labelKey: "none" },
+  { value: "A0",   labelKey: "a0" },
+  { value: "A1",   labelKey: "a1" },
+  { value: "A2",   labelKey: "a2" },
+] as const;
 
-const DATA_VIEW_OPTIONS: { label: string; value: DataView }[] = [
-  { label: "None",   value: "none" },
-  { label: "Crisis", value: "crisis" },
-  { label: "Alert",  value: "alert" },
-  { label: "Event",  value: "event" },
+// labelKey: i18n keys under map.dataViews.* - resolved via t() at render time.
+const DATA_VIEW_OPTIONS: { labelKey: DataView; value: DataView }[] = [
+  { labelKey: "none",   value: "none" },
+  { labelKey: "crisis", value: "crisis" },
+  { labelKey: "alert",  value: "alert" },
+  { labelKey: "event",  value: "event" },
 ];
 
 interface MapPanelBarProps {
@@ -92,17 +96,18 @@ export function MapPanelBar({
   showPopulation, onShowPopulationChange,
   boundaryLevel, onBoundaryLevelChange,
 }: MapPanelBarProps) {
+  const t = useTranslations("map");
   const [active, setActive] = useState<PanelId | null>(null);
   const toggle = (id: PanelId) => setActive((prev) => (prev === id ? null : id));
 
   return (
-    <Box className="absolute z-10" style={{ top: 80, left: 16 }}>
+    <Box className="absolute z-10" style={{ top: 80, left: 16 }} /* intentionally physical: map overlay */>
       <Group gap={4} align="flex-start" wrap="nowrap">
 
         {/* Icon column */}
         <Stack gap={4}>
-          <IconBtn icon={IconLayersLinked} active={active === "layers"} title="Layers" onClick={() => toggle("layers")} />
-          <IconBtn icon={IconList}         active={active === "legend"} title="Legend" onClick={() => toggle("legend")} />
+          <IconBtn icon={IconLayersLinked} active={active === "layers"} title={t("panels.layers")} onClick={() => toggle("layers")} />
+          <IconBtn icon={IconList}         active={active === "legend"} title={t("panels.legend")} onClick={() => toggle("legend")} />
         </Stack>
 
         {/* Panel content */}
@@ -118,22 +123,22 @@ export function MapPanelBar({
             {/* Layers */}
             {active === "layers" && (
               <>
-                <PanelHeader>Layers</PanelHeader>
+                <PanelHeader>{t("panels.layers")}</PanelHeader>
                 <Stack gap={0} px={12} py={10}>
-                  <SectionLabel>Boundaries</SectionLabel>
+                  <SectionLabel>{t("panels.boundaries")}</SectionLabel>
                   <Select
                     size="xs"
                     value={boundaryLevel}
                     onChange={(v) => onBoundaryLevelChange((v ?? "A1") as BoundaryLevel)}
-                    data={BOUNDARY_OPTIONS}
+                    data={BOUNDARY_OPTIONS.map((o) => ({ value: o.value, label: t(`boundaries.${o.labelKey}`) }))}
                     mb={10}
                     styles={{ input: { fontWeight: 600, fontSize: 12 } }}
                   />
-                  <SectionLabel>Markers</SectionLabel>
+                  <SectionLabel>{t("panels.markers")}</SectionLabel>
                   <SegmentedControl
                     value={dataView}
                     onChange={(v) => onDataViewChange(v as DataView)}
-                    data={DATA_VIEW_OPTIONS}
+                    data={DATA_VIEW_OPTIONS.map((o) => ({ value: o.value, label: t(`dataViews.${o.labelKey}`) }))}
                     size="xs"
                     fullWidth
                     styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
@@ -151,7 +156,7 @@ export function MapPanelBar({
                       styles={{ input: { cursor: "pointer" } }}
                       onClick={(e) => e.stopPropagation()}
                     />
-                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>Population</Text>
+                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>{t("panels.population")}</Text>
                   </Group>
                 </Stack>
               </>
@@ -160,20 +165,20 @@ export function MapPanelBar({
             {/* Legend */}
             {active === "legend" && (
               <>
-                <PanelHeader>Legend</PanelHeader>
+                <PanelHeader>{t("panels.legend")}</PanelHeader>
                 <Stack gap={4} px={12} py={8}>
-                  <SectionLabel>Severity</SectionLabel>
+                  <SectionLabel>{t("panels.severity")}</SectionLabel>
                   {SEVERITY_ITEMS.map((item) => (
-                    <Group key={item.label} gap={8}>
+                    <Group key={item.labelKey} gap={8}>
                       <Box w={10} h={10} style={{ borderRadius: "50%", backgroundColor: item.color, flexShrink: 0 }} />
-                      <Text size="xs" style={{ fontSize: 11 }}>{item.label}</Text>
+                      <Text size="xs" style={{ fontSize: 11 }}>{t(`severities.${item.labelKey}`)}</Text>
                     </Group>
                   ))}
 
                   {showPopulation && (
                     <>
                       <Divider color="var(--color-bg-muted)" my={4} />
-                      <SectionLabel>Population</SectionLabel>
+                      <SectionLabel>{t("panels.population")}</SectionLabel>
                       <Box
                         style={{
                           height: 10, borderRadius: 3,

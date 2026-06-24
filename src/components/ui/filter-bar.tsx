@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Group, Select, Text } from "@mantine/core";
+import { useTranslations } from "next-intl";
 
 const LABEL_STYLE = {
   fontSize: 10,
@@ -32,7 +33,7 @@ interface FilterBarProps {
   regionsContent?: ReactNode;
   date?: string;
   onDateChange?: (value: string) => void;
-  dateOptions?: string[];
+  dateOptions?: Array<string | { value: string; label: string }>;
   children?: ReactNode;
 }
 
@@ -49,6 +50,7 @@ export function FilterBar({
   dateOptions,
   children,
 }: FilterBarProps) {
+  const t = useTranslations("common.filters");
   return (
     <Group gap={12}>
       <Select
@@ -58,7 +60,7 @@ export function FilterBar({
         data={countries}
         style={{ minWidth: 130 }}
         styles={{ input: INPUT_STYLE }}
-        label={<FilterLabel>Country</FilterLabel>}
+        label={<FilterLabel>{t("country")}</FilterLabel>}
       />
       {regionsContent ?? (region != null && regions != null && onRegionChange != null && (
         <Select
@@ -68,7 +70,7 @@ export function FilterBar({
           data={regions}
           style={{ minWidth: 130 }}
           styles={{ input: INPUT_STYLE }}
-          label={<FilterLabel>Region</FilterLabel>}
+          label={<FilterLabel>{t("region")}</FilterLabel>}
         />
       ))}
       {date != null && onDateChange && dateOptions && (
@@ -79,7 +81,7 @@ export function FilterBar({
           data={dateOptions}
           style={{ minWidth: 120 }}
           styles={{ input: INPUT_STYLE }}
-          label={<FilterLabel>Date</FilterLabel>}
+          label={<FilterLabel>{t("date")}</FilterLabel>}
         />
       )}
       {children}

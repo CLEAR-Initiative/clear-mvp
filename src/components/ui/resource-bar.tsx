@@ -1,4 +1,5 @@
 import { Box, Group, Progress, Text } from "@mantine/core";
+import { useFormatter } from "next-intl";
 
 interface ResourceBarProps {
   name: string;
@@ -19,6 +20,7 @@ export function ResourceBar({
   statusColor,
   showBorder = true,
 }: ResourceBarProps) {
+  const format = useFormatter();
   const pct = (current / total) * 100;
 
   return (
@@ -36,7 +38,7 @@ export function ResourceBar({
       <Group gap={8}>
         <Progress value={pct} size={6} color={color} style={{ flex: 1 }} />
         <Text size="xs" c="var(--color-text-muted)">
-          {current.toLocaleString()} / {total.toLocaleString()}
+          {format.number(current)} / {format.number(total)}
         </Text>
       </Group>
     </Box>

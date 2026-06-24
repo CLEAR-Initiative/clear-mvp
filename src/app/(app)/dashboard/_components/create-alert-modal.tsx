@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Modal,
   TextInput,
@@ -42,13 +43,14 @@ interface CreateAlertModalProps {
 
 /* ========== Severity Options ========== */
 
+// labelKey: i18n keys under dashboard.createAlert.severityOptions.* - resolved via t() at render time.
 const SEVERITY_OPTIONS = [
-  { value: "1", label: "1 - Low" },
-  { value: "2", label: "2 - Moderate" },
-  { value: "3", label: "3 - High" },
-  { value: "4", label: "4 - Very High" },
-  { value: "5", label: "5 - Critical" },
-];
+  { value: "1", labelKey: "low" },
+  { value: "2", labelKey: "moderate" },
+  { value: "3", labelKey: "high" },
+  { value: "4", labelKey: "veryHigh" },
+  { value: "5", labelKey: "critical" },
+] as const;
 
 const LABEL_STYLE = {
   fontSize: 11,
@@ -93,6 +95,7 @@ function EventSelectionStep({
   onCreateEvent: () => void;
   onNext: () => void;
 }) {
+  const t = useTranslations("dashboard");
   const sorted = [...events].sort((a, b) => {
     const aDate = new Date(a.lastSignalCreatedAt).getTime();
     const bDate = new Date(b.lastSignalCreatedAt).getTime();
@@ -102,7 +105,7 @@ function EventSelectionStep({
   return (
     <Stack gap="md">
       <Text fw={600} size="sm" c="var(--color-text-secondary)">
-        Select events to include in the alert
+        {t("createAlert.selectEventsPrompt")}
       </Text>
 
       {eventsLoading ? (
@@ -111,7 +114,7 @@ function EventSelectionStep({
         </Box>
       ) : sorted.length === 0 ? (
         <Alert color="yellow" variant="light">
-          <Text size="sm">No events found. Create an event first.</Text>
+          <Text size="sm">{t("createAlert.noEvents")}</Text>
         </Alert>
       ) : (
         <Stack gap={6} style={{ maxHeight: 340, overflowY: "auto" }}>
@@ -141,12 +144,12 @@ function EventSelectionStep({
                       {eventDisplayTitle(event)}
                     </Text>
                     <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
-                      {eventLocations(event)} &bull; {event.signals.length} signal{event.signals.length !== 1 ? "s" : ""}
+                      {eventLocations(event)} &bull; {t("createAlert.signalCount", { count: event.signals.length })}
                     </Text>
                   </Box>
                   {event.alerts.length > 0 && (
                     <Badge size="xs" variant="light" color="red" style={{ fontSize: 9, flexShrink: 0 }}>
-                      Alert
+                      {t("createAlert.alertBadge")}
                     </Badge>
                   )}
                 </Group>
@@ -163,7 +166,7 @@ function EventSelectionStep({
         leftSection={<IconPlus size={14} />}
         onClick={onCreateEvent}
       >
-        Create New Event
+        {t("createAlert.createNewEvent")}
       </Button>
 
       <Group justify="flex-end" mt="sm">
@@ -172,7 +175,7 @@ function EventSelectionStep({
           disabled={selectedIds.length === 0}
           style={{ background: selectedIds.length > 0 ? "#E85D3D" : undefined }}
         >
-          Next: Alert Details ({selectedIds.length} selected)
+          {t("createAlert.nextDetails", { count: selectedIds.length })}
         </Button>
       </Group>
     </Stack>
@@ -188,6 +191,8 @@ function CreateEventSubFlow({
   onBack: () => void;
   onCreated: (eventId: string) => void;
 }) {
+  const t = useTranslations("dashboard");
+  const tActions = useTranslations("common.actions");
   const { activeTeamId } = useTeam();
   const signalsQuery = api.signals.list.useQuery({ teamId: activeTeamId });
   const sourcesQuery = api.signals.sources.useQuery();
@@ -219,7 +224,7 @@ function CreateEventSubFlow({
       });
       onCreated(result.id);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Failed to create event");
+      setErrorMsg(err instanceof Error ? err.message : t("createAlert.errors.createEvent"));
     }
   }
 
@@ -236,7 +241,7 @@ function CreateEventSubFlow({
       setShowManualSignal(false);
       await signalsQuery.refetch();
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Failed to create signal");
+      setErrorMsg(err instanceof Error ? err.message : t("createAlert.errors.createSignal"));
     }
   }
 
@@ -252,12 +257,12 @@ function CreateEventSubFlow({
           leftSection={<IconArrowLeft size={14} />}
           onClick={onBack}
         >
-          Back to Events
+          {t("createAlert.backToEvents")}
         </Button>
       </Group>
 
       <Text fw={600} size="sm" c="var(--color-text-secondary)">
-        Select signals to group into a new event
+        {t("createAlert.selectSignalsPrompt")}
       </Text>
 
       {errorMsg && (
@@ -272,7 +277,7 @@ function CreateEventSubFlow({
         </Box>
       ) : availableSignals.length === 0 && !showManualSignal ? (
         <Alert color="yellow" variant="light">
-          <Text size="sm">No available signals. Create one below.</Text>
+          <Text size="sm">{t("createAlert.noAvailableSignals")}</Text>
         </Alert>
       ) : (
         <Stack gap={4} style={{ maxHeight: 200, overflowY: "auto" }}>
@@ -302,7 +307,7 @@ function CreateEventSubFlow({
                       {signalDisplayTitle(signal)}
                     </Text>
                     <Text c="var(--color-text-muted)" style={{ fontSize: 10 }}>
-                      Source: {signal.source.name}
+                      {t("createAlert.sourceLabel", { name: signal.source.name })}
                     </Text>
                   </Box>
                 </Group>
@@ -322,7 +327,7 @@ function CreateEventSubFlow({
             leftSection={<IconPlus size={12} />}
             onClick={() => setShowManualSignal(true)}
           >
-            Create Manual Signal
+            {t("createAlert.createManualSignal")}
           </Button>
         </Group>
       )}
@@ -332,20 +337,20 @@ function CreateEventSubFlow({
         <Box>
           <Divider mb={8} />
           <Text style={LABEL_STYLE} mb={8}>
-            Create Manual Signal
+            {t("createAlert.createManualSignal")}
           </Text>
           <Stack gap={8}>
             <Select
-              label={<Text style={LABEL_STYLE}>Data Source</Text>}
-              placeholder="Select data source"
+              label={<Text style={LABEL_STYLE}>{t("createAlert.fieldDataSource")}</Text>}
+              placeholder={t("createAlert.dataSourcePlaceholder")}
               data={sourceOptions}
               value={manualSourceId}
               onChange={setManualSourceId}
               required
             />
             <TextInput
-              label={<Text style={LABEL_STYLE}>Title</Text>}
-              placeholder="e.g., Cholera outbreak in El Fasher"
+              label={<Text style={LABEL_STYLE}>{t("createAlert.fieldTitle")}</Text>}
+              placeholder={t("createAlert.titlePlaceholder")}
               value={manualTitle}
               onChange={(e) => setManualTitle(e.currentTarget.value)}
               required
@@ -358,7 +363,7 @@ function CreateEventSubFlow({
                 loading={isCreatingManual}
                 style={{ background: manualTitle.trim() ? "#E85D3D" : undefined }}
               >
-                Create Signal
+                {t("createAlert.createSignal")}
               </Button>
               <Button
                 variant="subtle"
@@ -369,7 +374,7 @@ function CreateEventSubFlow({
                   setManualTitle("");
                 }}
               >
-                Cancel
+                {tActions("cancel")}
               </Button>
             </Group>
           </Stack>
@@ -383,7 +388,7 @@ function CreateEventSubFlow({
           loading={createEventMutation.isPending}
           style={{ background: selectedSignalIds.length > 0 ? "#E85D3D" : undefined }}
         >
-          Create Event ({selectedSignalIds.length} signal{selectedSignalIds.length !== 1 ? "s" : ""})
+          {t("createAlert.createEventCount", { count: selectedSignalIds.length })}
         </Button>
       </Group>
     </Stack>
@@ -407,6 +412,7 @@ function AlertDetailsStep({
   onSubmit: () => void;
   isSubmitting: boolean;
 }) {
+  const t = useTranslations("dashboard");
   const selectedEvents = events.filter((e) =>
     form.selectedEventIds.includes(e.id),
   );
@@ -427,14 +433,14 @@ function AlertDetailsStep({
           leftSection={<IconArrowLeft size={14} />}
           onClick={onBack}
         >
-          Back to Events
+          {t("createAlert.backToEvents")}
         </Button>
       </Group>
 
       {/* Selected events summary */}
       <Box>
         <Text style={LABEL_STYLE} mb={8}>
-          Selected Events ({selectedEvents.length})
+          {t("createAlert.selectedEvents", { count: selectedEvents.length })}
         </Text>
         <Group gap={4}>
           {selectedEvents.map((event) => (
@@ -454,16 +460,16 @@ function AlertDetailsStep({
       <Divider />
 
       <TextInput
-        label={<Text style={LABEL_STYLE}>Alert Title</Text>}
-        placeholder="e.g., Darfur Humanitarian Crisis Alert"
+        label={<Text style={LABEL_STYLE}>{t("createAlert.fieldAlertTitle")}</Text>}
+        placeholder={t("createAlert.alertTitlePlaceholder")}
         value={form.title}
         onChange={(e) => setForm((prev) => ({ ...prev, title: e.currentTarget.value }))}
         required
       />
 
       <Textarea
-        label={<Text style={LABEL_STYLE}>Description</Text>}
-        placeholder="Describe the alert, its context, and recommended actions..."
+        label={<Text style={LABEL_STYLE}>{t("createAlert.fieldDescription")}</Text>}
+        placeholder={t("createAlert.descriptionPlaceholder")}
         value={form.description}
         onChange={(e) => setForm((prev) => ({ ...prev, description: e.currentTarget.value }))}
         minRows={3}
@@ -472,9 +478,9 @@ function AlertDetailsStep({
 
       <Group grow>
         <Select
-          label={<Text style={LABEL_STYLE}>Severity</Text>}
-          placeholder="Select severity"
-          data={SEVERITY_OPTIONS}
+          label={<Text style={LABEL_STYLE}>{t("createAlert.fieldSeverity")}</Text>}
+          placeholder={t("createAlert.severityPlaceholder")}
+          data={SEVERITY_OPTIONS.map((o) => ({ value: o.value, label: t(`createAlert.severityOptions.${o.labelKey}`) }))}
           value={form.severity}
           onChange={(v) => setForm((prev) => ({ ...prev, severity: v ?? "" }))}
           required
@@ -483,14 +489,14 @@ function AlertDetailsStep({
 
         <Box>
           <Text style={LABEL_STYLE} mb={5}>
-            Status
+            {t("createAlert.fieldStatus")}
           </Text>
           <SegmentedControl
             value={form.status}
             onChange={(v) => setForm((prev) => ({ ...prev, status: v as "draft" | "published" }))}
             data={[
-              { value: "draft", label: "Draft" },
-              { value: "published", label: "Published" },
+              { value: "draft", label: t("createAlert.statusDraft") },
+              { value: "published", label: t("createAlert.statusPublished") },
             ]}
             fullWidth
             size="xs"
@@ -507,7 +513,7 @@ function AlertDetailsStep({
         style={{ background: isValid ? "#E85D3D" : undefined }}
         leftSection={<IconAlertTriangle size={16} />}
       >
-        Create Alert
+        {t("createAlert.submit")}
       </Button>
     </Stack>
   );
@@ -516,6 +522,7 @@ function AlertDetailsStep({
 /* ========== Main Modal ========== */
 
 export function CreateAlertModal({ opened, onClose }: CreateAlertModalProps) {
+  const t = useTranslations("dashboard");
   const [step, setStep] = useState<Step>("select-events");
   const [form, setForm] = useState<AlertFormData>({
     title: "",
@@ -578,21 +585,21 @@ export function CreateAlertModal({ opened, onClose }: CreateAlertModalProps) {
         status: form.status,
         eventIds: form.selectedEventIds,
       });
-      setSuccessMsg("Alert created successfully!");
+      setSuccessMsg(t("createAlert.success"));
       await utils.alerts.getAlerts.invalidate();
       await utils.alerts.getStats.invalidate();
       setTimeout(() => {
         handleClose();
       }, 1000);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Failed to create alert");
+      setErrorMsg(err instanceof Error ? err.message : t("createAlert.errors.createAlert"));
     }
   }
 
   const stepTitles: Record<Step, string> = {
-    "select-events": "Create Alert - Select Events",
-    "create-event": "Create Alert - New Event",
-    "alert-details": "Create Alert - Details",
+    "select-events": t("createAlert.steps.selectEvents"),
+    "create-event": t("createAlert.steps.createEvent"),
+    "alert-details": t("createAlert.steps.details"),
   };
 
   return (

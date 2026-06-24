@@ -7,11 +7,13 @@ import {
   Button,
   Stack,
 } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { IconLock, IconLogout } from "@tabler/icons-react";
 import { authClient } from "~/lib/auth-client";
 import { useRouter } from "next/navigation";
 
 export default function NoAccessPage() {
+  const t = useTranslations("noAccess");
   const router = useRouter();
 
   const handleSignOut = async () => {
@@ -36,11 +38,10 @@ export default function NoAccessPage() {
           <Stack align="center" gap={16}>
             <IconLock size={48} color="#E85D3D" stroke={1.5} />
             <Text size="lg" fw={600} c="var(--color-text-primary)">
-              Waiting for Access
+              {t("title")}
             </Text>
             <Text size="sm" c="var(--color-text-muted)" ta="center" maw={360}>
-              You&apos;ve signed in but haven&apos;t been assigned to an organisation yet.
-              Contact your administrator to receive an invitation.
+              {t("message")}
             </Text>
             <Button
               variant="subtle"
@@ -50,13 +51,13 @@ export default function NoAccessPage() {
               mt={8}
               style={{ fontWeight: 500, fontSize: 13 }}
             >
-              Sign Out
+              {t("signOut")}
             </Button>
           </Stack>
         </Card>
 
         <Text ta="center" size="xs" c="var(--color-text-muted)" mt={16}>
-          Norwegian Refugee Council &bull; CLEAR Platform
+          {t("footer")}
         </Text>
       </Box>
     </Box>

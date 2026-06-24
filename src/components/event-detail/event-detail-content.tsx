@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Box,
   Text,
@@ -28,8 +29,8 @@ import {
   IconExternalLink,
   IconRadar,
   IconUsers,
-  IconShieldExclamation,
-  IconWorld,
+  IconUsersGroup,
+  IconTrendingUp,
   IconBellRinging,
   IconChevronDown,
   IconChevronUp,
@@ -40,45 +41,18 @@ import { MinimapCard } from "~/components/map/minimap-card";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
-import { getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
+import { getDisasterLabel, getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { AddToCrisisButton } from "~/components/event-detail/add-to-crisis-button";
-import { severityColors, severityLabels } from "~/lib/constants/severity";
+import { severityColors } from "~/lib/constants/severity";
+import { KpiStack } from "~/components/ui/kpi-stack";
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-// These fields don't exist in the current API response.
-// Remove and replace with real fields when backend delivers them.
-// ─────────────────────────────────────────────────────────────────────────────
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatDateTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+function bigIntStrToNumber(s: string | null | undefined): number | null {
+  if (s === null || s === undefined) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
 }
 
 /** Collect the non-null location fields from a GqlEvent into a flat array. */
@@ -108,6 +82,9 @@ export function EventDetailContent({
   // TODO: after Prisma migration use event.title directly; remove this fallback
   // TODO: after Prisma migration use event.types (list) instead of eventType
 
+  const t = useTranslations("eventDetail");
+  const tCommon = useTranslations("common");
+  const format = useFormatter();
   const router = useRouter();
   const isAlready = (event?.alerts?.length ?? 0) > 0;
   const [promoted, setPromoted] = useState(false);
@@ -185,10 +162,10 @@ export function EventDetailContent({
           style={{ margin: "0 auto 16px" }}
         />
         <Text fw={600} size="lg">
-          Event not found
+          {t("notFound.title")}
         </Text>
         <Text size="sm" c="var(--color-text-muted)" mt={8}>
-          This event may have been removed or the ID is invalid.
+          {t("notFound.description")}
         </Text>
         {mode === "page" && (
           <Link
@@ -201,7 +178,7 @@ export function EventDetailContent({
               fontWeight: 500,
             }}
           >
-            &larr; Back to Events Overview
+            &larr; {t("backToEvents")}
           </Link>
         )}
       </Box>
@@ -289,7 +266,7 @@ export function EventDetailContent({
               >
                 <IconArrowLeft size={14} color="var(--color-text-secondary)" />
                 <Text size="sm" c="var(--color-text-secondary)" fw={500}>
-                  Back to Events Overview
+                  {t("backToEvents")}
                 </Text>
               </Group>
             </Link>
@@ -304,7 +281,7 @@ export function EventDetailContent({
               >
                 <IconMap size={14} color="#E85D3D" />
                 <Text size="xs" c="#E85D3D" fw={500}>
-                  View on Crisis Map
+                  {t("viewOnCrisisMap")}
                 </Text>
               </Group>
             </Link>
@@ -320,7 +297,7 @@ export function EventDetailContent({
         style={{
           background: isAlready || promoted ? "var(--color-critical-light)" : "var(--color-bg-white)",
           borderBottom: "1px solid var(--color-border)",
-          borderLeft: `4px solid ${sevColor}`,
+          borderInlineStart: `4px solid ${sevColor}`,
         }}
       >
         {/* Severity badge */}
@@ -336,7 +313,7 @@ export function EventDetailContent({
             background: sev === "critical" ? "var(--color-critical-light)" : sev === "low" ? "var(--color-success-light)" : "var(--color-warning-light)",
             color: sev === "critical" ? "var(--color-critical)" : sev === "low" ? "var(--color-success)" : "var(--color-warning)",
           }}>
-            {severityLabels[sev]}
+            {tCommon(`severities.${sev}`)}
           </span>
         </Group>
 
@@ -371,7 +348,7 @@ export function EventDetailContent({
               fw={500}
               c={eventStatus === "published" ? "#059669" : "#737373"}
             >
-              {eventStatus === "published" ? "Active" : "Resolved"}
+              {eventStatus === "published" ? t("status.active") : t("status.resolved")}
             </Text>
           </Group>
         </Group>
@@ -430,24 +407,24 @@ export function EventDetailContent({
           )}
           <Group gap={4}>
             <IconCalendar size={13} color="var(--color-text-muted)" />
-            <Text size="xs" c="var(--color-text-secondary)">{formatDate(detectedAt)}</Text>
+            <Text size="xs" c="var(--color-text-secondary)">{format.dateTime(new Date(detectedAt), "short")}</Text>
           </Group>
           <Group gap={4}>
             <IconClock size={13} color="var(--color-text-muted)" />
-            <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(detectedAt)}</Text>
+            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(detectedAt))}</Text>
           </Group>
           <Box style={{ width: 1, height: 12, background: "var(--color-border)", alignSelf: "center" }} />
           <Group gap={4}>
             <IconRadar size={13} color="var(--color-text-muted)" />
             <Text size="xs" c="var(--color-text-secondary)" fw={500}>
-              {signalCount} signal{signalCount !== 1 ? "s" : ""}
+              {t("signalCount", { count: signalCount })}
             </Text>
           </Group>
           {sourceCount > 0 && (
             <Group gap={4}>
               <IconDatabase size={13} color="var(--color-text-muted)" />
               <Text size="xs" c="var(--color-text-secondary)">
-                {sourceCount} source{sourceCount !== 1 ? "s" : ""}
+                {t("sourceCount", { count: sourceCount })}
               </Text>
             </Group>
           )}
@@ -456,129 +433,52 @@ export function EventDetailContent({
 
       {/* KPI strip */}
       {!isCompact && (
-        <Box
-          px={24}
-          py={16}
-          style={{ background: "var(--color-bg-primary)", borderBottom: "1px solid var(--color-border)" }}
-        >
-          <Group gap={12}>
-
-            {/* Casualties */}
-            <Box
-              p={16}
-              style={{
-                flex: 1,
-                background: "var(--color-bg-white)",
-                border: "1px solid var(--color-border)",
-                borderRadius: 8,
-                display: "flex",
-                gap: 12,
-                alignItems: "center",
-              }}
-            >
-              <Box
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  background: "var(--color-accent-light)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <IconUsers size={18} color="#E85D3D" />
-              </Box>
-              <Box>
-                <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {event.casualties != null ? event.casualties.toLocaleString() : "N/A"}
-                </Text>
-                <Text size="xs" c="var(--color-text-muted)" mt={2}>Casualties</Text>
-              </Box>
-            </Box>
-
-            {/* Population in Area */}
-            <Box
-              p={16}
-              style={{
-                flex: 1,
-                background: "var(--color-bg-white)",
-                border: "1px solid var(--color-border)",
-                borderRadius: 8,
-                display: "flex",
-                gap: 12,
-                alignItems: "center",
-              }}
-            >
-              <Box
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  background: "var(--color-info-light)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <IconWorld size={18} color="#2563EB" />
-              </Box>
-              <Box>
-                <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {areaPopulation ? Number(areaPopulation.value).toLocaleString() : "N/A"}
-                </Text>
-                <Text size="xs" c="var(--color-text-muted)" mt={2}>
-                  {areaPopulation ? `Population in ${areaPopulation.name}` : "Population in area"}
-                </Text>
-              </Box>
-            </Box>
-
-            {/* IDP per capita */}
-            <Box
-              p={16}
-              style={{
-                flex: 1,
-                background: "var(--color-bg-white)",
-                border: "1px solid var(--color-border)",
-                borderRadius: 8,
-                display: "flex",
-                gap: 12,
-                alignItems: "center",
-              }}
-            >
-              <Box
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  background: "var(--color-warning-light)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <IconShieldExclamation size={18} color="#D97706" />
-              </Box>
-              <Box>
-                <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 20, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {idpData?.ratio != null
-                    ? `${(idpData.ratio * 100).toFixed(1)}%`
-                    : idpData?.displaced != null
-                      ? idpData.displaced.toLocaleString()
-                      : "N/A"}
-                </Text>
-                <Text size="xs" c="var(--color-text-muted)" mt={2}>
-                  {idpData
-                    ? `IDPs per capita in ${idpData.name} (${idpData.displaced.toLocaleString()} displaced)`
-                    : "IDP per capita"}
-                </Text>
-              </Box>
-            </Box>
-
-          </Group>
+        <Box px={24} pt={24}>
+          <KpiStack
+            sections={[
+              {
+                title: t("kpi.impact"),
+                items: [
+                  {
+                    icon: <IconUsers size={14} color="var(--color-accent)" />,
+                    iconBg: "var(--color-accent-light)",
+                    value: bigIntStrToNumber(event.populationAffected) !== null ? format.number(bigIntStrToNumber(event.populationAffected)!, "compact") : "-",
+                    label: t("kpi.peopleAffected"),
+                  },
+                  {
+                    icon: <IconUsersGroup size={14} color="var(--color-warning)" />,
+                    iconBg: "var(--color-warning-light)",
+                    value: bigIntStrToNumber(event.populationDisplaced) !== null ? format.number(bigIntStrToNumber(event.populationDisplaced)!, "compact") : "-",
+                    label: t("kpi.peopleDisplaced"),
+                  },
+                ],
+              },
+              {
+                title: t("kpi.areaContext"),
+                items: [
+                  {
+                    icon: <IconUsersGroup size={14} color="var(--color-info)" />,
+                    iconBg: "var(--color-info-light)",
+                    value: areaPopulation ? format.number(Number(areaPopulation.value), "compact") : "-",
+                    label: areaPopulation ? t("kpi.peopleInArea") : t("kpi.peopleInArea"),
+                  },
+                  {
+                    icon: <IconTrendingUp size={14} color="var(--color-text-muted)" />,
+                    iconBg: "var(--color-bg-muted)",
+                    value:
+                      idpData?.ratio != null
+                        ? `${(idpData.ratio * 100).toFixed(1)}%`
+                        : idpData?.displaced != null
+                          ? format.number(idpData.displaced, "compact")
+                          : "-",
+                    label: idpData
+                      ? t("kpi.idpPerCapitaIn", { name: idpData.name })
+                      : t("kpi.idpPerCapita"),
+                  },
+                ],
+              },
+            ]}
+          />
         </Box>
       )}
 
@@ -598,7 +498,7 @@ export function EventDetailContent({
             <Box px={16} py={12} className="border-b border-[var(--color-border)]">
               <Group justify="space-between">
                 <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                  Summary
+                  {t("summary.title")}
                 </Text>
                 <Badge
                   size="xs"
@@ -609,13 +509,13 @@ export function EventDetailContent({
                     fontWeight: 600,
                   }}
                 >
-                  ✦ AI generated
+                  {tCommon("badges.aiGenerated")}
                 </Badge>
               </Group>
             </Box>
             <Box p={16}>
               <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.75 }}>
-                {event.description ?? "No summary available."}
+                {event.description ?? t("summary.empty")}
               </Text>
             </Box>
           </Card>
@@ -631,10 +531,10 @@ export function EventDetailContent({
               <Group justify="space-between">
                 <Group gap={8}>
                   <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                    Signals ({event.signals.length})
+                    {t("signals.title", { count: event.signals.length })}
                   </Text>
                   <Text size="xs" c="var(--color-text-muted)" style={{ fontWeight: 400 }}>
-                    Source intelligence that triggered this event
+                    {t("signals.subtitle")}
                   </Text>
                 </Group>
               </Group>
@@ -642,14 +542,14 @@ export function EventDetailContent({
             <Box>
               {event.signals.length === 0 && (
                 <Box px={16} py={24} style={{ textAlign: "center" }}>
-                  <Text c="var(--color-text-muted)" size="sm">No signals attached</Text>
+                  <Text c="var(--color-text-muted)" size="sm">{t("signals.empty")}</Text>
                 </Box>
               )}
               {event.signals.map((sig) => {
                 const sigLocation = sig.generalLocation ?? sig.originLocation ?? sig.destinationLocation;
                 const sigTitle =
                   sig.title ??
-                  (sig.description ? sig.description.slice(0, 100) + (sig.description.length > 100 ? "…" : "") : `Signal ${sig.id}`);
+                  (sig.description ? sig.description.slice(0, 100) + (sig.description.length > 100 ? "…" : "") : t("signals.fallbackTitle", { id: sig.id }));
                 return (
                   <Box
                     key={sig.id}
@@ -680,10 +580,10 @@ export function EventDetailContent({
                                 style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "#E85D3D", textDecoration: "none" }}
                               >
                                 <IconExternalLink size={11} />
-                                Source
+                                {t("signals.sourceLink")}
                               </a>
                             )}
-                            <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(sig.publishedAt)}</Text>
+                            <Text size="xs" c="var(--color-text-muted)">{format.relativeTime(new Date(sig.publishedAt))}</Text>
                           </Group>
                         </Group>
                         <Text fw={500} size="sm" c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }} mb={sigLocation ? 2 : 0}>
@@ -704,7 +604,7 @@ export function EventDetailContent({
             <Box px={16} py={12} className="border-b border-[var(--color-border)]">
               <Group justify="space-between">
                 <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
-                  Related Events
+                  {t("related.title")}
                 </Text>
                 {relatedLoading && <Loader size={14} />}
               </Group>
@@ -712,14 +612,31 @@ export function EventDetailContent({
             <Box>
               {relatedEvents.length === 0 && !relatedLoading && (
                 <Box px={16} py={24} style={{ textAlign: "center" }}>
-                  <Text c="var(--color-text-muted)" size="sm">No related events found</Text>
+                  <Text c="var(--color-text-muted)" size="sm">{t("related.empty")}</Text>
                 </Box>
               )}
               {relatedEvents.slice(0, 5).map((related) => {
                 const relSev = mapSeverity(related.severity);
                 const relColor = severityColor(related.severity);
                 const relBg = severityColors[relSev]?.bg ?? "var(--color-bg-muted)";
-                const relTitle = related.title ?? related.description ?? related.types[0] ?? "";
+                // Resolve the human label for the primary disaster type so the
+                // title fallback shows e.g. "Pandemic" instead of the raw code
+                // "pa", and feed the L1 pill so we can render the disaster
+                // category alongside severity.
+                const primaryTypeCode = related.types?.[0];
+                const primaryTypeLabel = primaryTypeCode
+                  ? getDisasterLabel(primaryTypeCode)
+                  : null;
+                const typePill = getDisasterPills(related.types ?? [])[0];
+                const relTitle =
+                  related.title ?? related.description ?? primaryTypeLabel ?? "";
+                const relDate = related.lastSignalCreatedAt
+                  ? new Date(related.lastSignalCreatedAt)
+                  : null;
+                const relDateLabel =
+                  relDate && !Number.isNaN(relDate.getTime())
+                    ? format.relativeTime(relDate)
+                    : "—";
                 return (
                   <Link
                     key={related.id}
@@ -734,11 +651,24 @@ export function EventDetailContent({
                     >
                       <Box style={{ width: 3, background: relColor, flexShrink: 0, borderRadius: 2 }} />
                       <Box style={{ flex: 1, minWidth: 0 }}>
-                        <Group justify="space-between" mb={2}>
-                          <Badge size="xs" style={{ background: relBg, color: relColor, fontWeight: 600 }}>
-                            {severityLabels[relSev]}
-                          </Badge>
-                          <Text size="xs" c="var(--color-text-muted)">{formatTimeAgo(related.lastSignalCreatedAt)}</Text>
+                        <Group justify="space-between" mb={2} wrap="nowrap">
+                          <Group gap={6} wrap="nowrap">
+                            <Badge
+                              size="xs"
+                              style={{ background: relBg, color: relColor, fontWeight: 600 }}
+                            >
+                              {tCommon(`severities.${relSev}`)}
+                            </Badge>
+                            {typePill && (
+                              <Badge
+                                size="xs"
+                                style={{ background: typePill.bg, color: typePill.color, fontWeight: 600 }}
+                              >
+                                {typePill.label}
+                              </Badge>
+                            )}
+                          </Group>
+                          <Text size="xs" c="var(--color-text-muted)">{relDateLabel}</Text>
                         </Group>
                         <Text size="sm" fw={500} c="var(--color-text-primary)" lineClamp={2} style={{ lineHeight: 1.4 }}>
                           {relTitle}
@@ -774,7 +704,7 @@ export function EventDetailContent({
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
                 <Box px={16} py={10} className="border-b border-[var(--color-border)]">
                   <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
-                    Actions
+                    {t("actions.title")}
                   </Text>
                 </Box>
                 <Box p={16}>
@@ -794,12 +724,12 @@ export function EventDetailContent({
                           cursor: "default",
                         }}
                       >
-                        Alert
+                        {t("actions.alert")}
                       </Button>
                     ) : confirmPromote ? (
                       <Stack gap={6}>
                         <Text size="xs" c="var(--color-critical)" fw={600} style={{ textAlign: "center" }}>
-                          Raise this event as an alert?
+                          {t("actions.confirmPrompt")}
                         </Text>
                         <Group gap={6} grow>
                           <Button
@@ -809,7 +739,7 @@ export function EventDetailContent({
                             style={{ fontSize: 12 }}
                             onClick={() => setConfirmPromote(false)}
                           >
-                            Cancel
+                            {tCommon("actions.cancel")}
                           </Button>
                           <Button
                             variant="filled"
@@ -819,12 +749,12 @@ export function EventDetailContent({
                             onClick={() => promoteToAlert.mutate({ eventId: event.id })}
                             style={{ fontSize: 12, background: "var(--color-critical)", border: "none" }}
                           >
-                            Confirm
+                            {tCommon("actions.confirm")}
                           </Button>
                         </Group>
                         {promoteToAlert.isError && (
                           <Text size="xs" c="var(--color-critical)" style={{ textAlign: "center" }}>
-                            Failed. Try again.
+                            {t("actions.failed")}
                           </Text>
                         )}
                       </Stack>
@@ -841,7 +771,7 @@ export function EventDetailContent({
                           border: "none",
                         }}
                       >
-                        Turn into Alert
+                        {t("actions.turnIntoAlert")}
                       </Button>
                     )}
                     {/* <Button
@@ -877,7 +807,7 @@ export function EventDetailContent({
                       <Group gap={6}>
                         <IconDatabase size={14} color="var(--color-text-secondary)" />
                         <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
-                          System Data
+                          {t("systemData.title")}
                         </Text>
                       </Group>
                       {systemDataOpen
@@ -891,7 +821,7 @@ export function EventDetailContent({
                   <Stack gap={8}>
                     <Group justify="space-between">
                       <Text size="xs" c="var(--color-text-muted)">
-                        Event ID
+                        {t("systemData.eventId")}
                       </Text>
                       <Text size="xs" fw={500} c="var(--color-text-primary)">
                         #{event.id}
@@ -900,7 +830,7 @@ export function EventDetailContent({
                     {event.signals?.[0]?.source && (
                       <Group justify="space-between">
                         <Text size="xs" c="var(--color-text-muted)">
-                          Source
+                          {t("systemData.source")}
                         </Text>
                         <Text size="xs" fw={500} c="var(--color-text-primary)">
                           {event.signals[0].source.name}
@@ -909,22 +839,22 @@ export function EventDetailContent({
                     )}
                     <Group justify="space-between">
                       <Text size="xs" c="var(--color-text-muted)">
-                        Detected
+                        {t("systemData.detected")}
                       </Text>
                       <Text size="xs" fw={500} c="var(--color-text-primary)">
-                        {formatDate(detectedAt)}
+                        {format.dateTime(new Date(detectedAt), "short")}
                       </Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text size="xs" c="var(--color-text-muted)">Valid from</Text>
+                      <Text size="xs" c="var(--color-text-muted)">{t("systemData.validFrom")}</Text>
                       <Text size="xs" fw={500}>
-                        {event?.validFrom ? formatDate(event.validFrom) : "-"}
+                        {event?.validFrom ? format.dateTime(new Date(event.validFrom), "short") : "-"}
                       </Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text size="xs" c="var(--color-text-muted)">Valid until</Text>
+                      <Text size="xs" c="var(--color-text-muted)">{t("systemData.validUntil")}</Text>
                       <Text size="xs" fw={500}>
-                        {event?.validTo ? formatDate(event.validTo) : "-"}
+                        {event?.validTo ? format.dateTime(new Date(event.validTo), "short") : "-"}
                       </Text>
                     </Group>
                     {locations.some((l) => resolveLocationName(l)) && (
@@ -934,7 +864,7 @@ export function EventDetailContent({
                         mt={2}
                       >
                         <Text size="xs" c="var(--color-text-muted)" mb={6}>
-                          Affected Areas
+                          {t("systemData.affectedAreas")}
                         </Text>
                         <Group gap={6} wrap="wrap">
                           {locations.map((loc) => {
@@ -967,19 +897,19 @@ export function EventDetailContent({
                     >
                       <Group justify="space-between">
                         <Text size="xs" c="var(--color-text-muted)">
-                          Created
+                          {t("systemData.created")}
                         </Text>
                         <Text size="xs" fw={500} c="var(--color-text-primary)">
-                          {formatDateTime(eventCreatedAt)}
+                          {format.dateTime(new Date(eventCreatedAt), "dateTime")}
                         </Text>
                       </Group>
                     </Box>
                     <Group justify="space-between">
                       <Text size="xs" c="var(--color-text-muted)">
-                        Updated
+                        {t("systemData.updated")}
                       </Text>
                       <Text size="xs" fw={500} c="var(--color-text-primary)">
-                        {formatDateTime(eventUpdatedAt)}
+                        {format.dateTime(new Date(eventUpdatedAt), "dateTime")}
                       </Text>
                     </Group>
                   </Stack>
