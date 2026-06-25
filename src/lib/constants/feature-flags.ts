@@ -47,7 +47,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
 
   // Tier 3 - Medium Priority
   {
-    key: "analysis",
+    key: "insights",
     label: "Insights",
     description: "Situation reports, scenario planning, and impact assessment",
     tier: 3,
@@ -57,7 +57,8 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
   {
     key: "operations",
     label: "Operations",
-    description: "Active operations, response strategy, and resource coordination",
+    description:
+      "Active operations, response strategy, and resource coordination",
     tier: 3,
     defaultEnabled: true,
     route: "/operations",
@@ -80,6 +81,14 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     defaultEnabled: true,
     route: "/knowledge",
   },
+  {
+    key: "agent",
+    label: "Agent",
+    description: "NRC Find agent",
+    tier: 4,
+    defaultEnabled: true,
+    route: "/agent",
+  },
 ];
 
 export const TIER_LABELS: Record<number, string> = {
@@ -92,6 +101,6 @@ export const TIER_LABELS: Record<number, string> = {
 /** Build default flags map from the registry */
 export function getDefaultFlags(): Record<string, boolean> {
   return Object.fromEntries(
-    FEATURE_FLAGS.map((f) => [f.key, f.defaultEnabled])
+    FEATURE_FLAGS.map((f) => [f.key, f.defaultEnabled]),
   );
 }
