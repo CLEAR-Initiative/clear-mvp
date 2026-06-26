@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Text } from "@mantine/core";
-import { IconUsers, IconUsersGroup } from "@tabler/icons-react";
+import { IconUsers, IconUsersGroup, IconTrendingUp } from "@tabler/icons-react";
 
 function formatCompact(n: number | null): string {
   if (n === null) return "-";
@@ -46,6 +46,11 @@ function KpiItem({ icon, iconBg, value, label }: KpiItemProps) {
   );
 }
 
+interface Section {
+  title: string;
+  items: KpiItemProps[];
+}
+
 export function PublicKpiStrip({
   affected,
   displaced,
@@ -53,18 +58,40 @@ export function PublicKpiStrip({
   affected: number | null;
   displaced: number | null;
 }) {
-  const items: KpiItemProps[] = [
+  const sections: Section[] = [
     {
-      icon: <IconUsers size={14} color="var(--color-accent)" />,
-      iconBg: "var(--color-accent-light)",
-      value: formatCompact(affected),
-      label: "People affected",
+      title: "Impact",
+      items: [
+        {
+          icon: <IconUsers size={14} color="var(--color-accent)" />,
+          iconBg: "var(--color-accent-light)",
+          value: formatCompact(affected),
+          label: "People affected",
+        },
+        {
+          icon: <IconUsersGroup size={14} color="var(--color-warning)" />,
+          iconBg: "var(--color-warning-light)",
+          value: formatCompact(displaced),
+          label: "People displaced",
+        },
+      ],
     },
     {
-      icon: <IconUsersGroup size={14} color="var(--color-warning)" />,
-      iconBg: "var(--color-warning-light)",
-      value: formatCompact(displaced),
-      label: "People displaced",
+      title: "Area context",
+      items: [
+        {
+          icon: <IconUsersGroup size={14} color="var(--color-info)" />,
+          iconBg: "var(--color-info-light)",
+          value: "-",
+          label: "People in area",
+        },
+        {
+          icon: <IconTrendingUp size={14} color="var(--color-text-muted)" />,
+          iconBg: "var(--color-bg-muted)",
+          value: "-",
+          label: "IDP per capita",
+        },
+      ],
     },
   ];
 
@@ -78,39 +105,48 @@ export function PublicKpiStrip({
         overflow: "hidden",
       }}
     >
-      <Box style={{ flex: 1, minWidth: 0 }}>
+      {sections.map((section, si) => (
         <Box
-          px={12}
-          py={6}
-          style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-bg-muted)" }}
+          key={section.title}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            borderInlineEnd: si < sections.length - 1 ? "1px solid var(--color-border)" : undefined,
+          }}
         >
-          <Text
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.05em",
-              textTransform: "uppercase",
-              color: "var(--color-text-muted)",
-            }}
+          <Box
+            px={12}
+            py={6}
+            style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-bg-muted)" }}
           >
-            Impact
-          </Text>
-        </Box>
-        <Box style={{ display: "flex" }}>
-          {items.map((item, ii) => (
-            <Box
-              key={ii}
+            <Text
               style={{
-                flex: 1,
-                minWidth: 0,
-                borderInlineEnd: ii < items.length - 1 ? "1px solid var(--color-border)" : undefined,
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+                color: "var(--color-text-muted)",
               }}
             >
-              <KpiItem {...item} />
-            </Box>
-          ))}
+              {section.title}
+            </Text>
+          </Box>
+          <Box style={{ display: "flex" }}>
+            {section.items.map((item, ii) => (
+              <Box
+                key={ii}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  borderInlineEnd: ii < section.items.length - 1 ? "1px solid var(--color-border)" : undefined,
+                }}
+              >
+                <KpiItem {...item} />
+              </Box>
+            ))}
+          </Box>
         </Box>
-      </Box>
+      ))}
     </Box>
   );
 }

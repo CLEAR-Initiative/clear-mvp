@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, Text, Group } from "@mantine/core";
 import { IconMapPin } from "@tabler/icons-react";
+import { useIsDark } from "~/hooks/use-is-dark";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -45,6 +46,8 @@ interface PublicEventMapProps {
  * the WebGL canvas is hidden - avoiding the blank-canvas print bug.
  */
 export function PublicEventMap({ center, markerCoords, locationName, markerColor }: PublicEventMapProps) {
+  const isDark = useIsDark();
+  const mapStyle = isDark ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/light-v11";
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const snappedRef = useRef(false);
@@ -60,7 +63,7 @@ export function PublicEventMap({ center, markerCoords, locationName, markerColor
 
       const map = new mapboxgl.Map({
         container: containerRef.current,
-        style: "mapbox://styles/mapbox/light-v11",
+        style: mapStyle,
         center,
         zoom: 5,
         interactive: false,
@@ -100,7 +103,7 @@ export function PublicEventMap({ center, markerCoords, locationName, markerColor
       window.removeEventListener("beforeprint", onBeforePrint);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mapStyle]);
 
   return (
     <Box style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}>
