@@ -5,7 +5,7 @@ import { GRAPHQL_URL } from "~/server/env";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import { getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
 import { PublicEventHeader } from "./_components/public-event-header";
-import { PublicEventMap } from "./_components/public-event-map";
+import { PublicEventMap, type PublicAdminBoundary } from "./_components/public-event-map";
 import { PublicKpiStrip } from "./_components/public-kpi-strip";
 
 interface PublicEvent {
@@ -22,6 +22,56 @@ interface PublicEvent {
   populationDisplaced: string | null;
   sharedAt: string;
   expiresAt: string;
+}
+
+const LOCATIONS_WITH_GEOMETRY_QUERY = `
+  query LocationsWithGeometry($level: Int) {
+    locations(level: $level) {
+      id name pCode ancestorIds geometry
+    }
+  }
+`;
+
+interface GqlLocationWithGeometry {
+  id: string;
+  name: string;
+  pCode: string | null;
+  ancestorIds: string[];
+  geometry: unknown;
+}
+
+async function fetchSudanL0(): Promise<{ id: string; geometry: unknown } | null> {
+  let res: Response;
+  try {
+    res = await fetch(GRAPHQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: LOCATIONS_WITH_GEOMETRY_QUERY, variables: { level: 0 } }),
+      next: { revalidate: 3600 },
+    });
+  } catch { return null; }
+  if (!res.ok) return null;
+  const json = (await res.json()) as { data?: { locations: GqlLocationWithGeometry[] } | null };
+  const locations = json?.data?.locations ?? [];
+  return locations.find((l) => l.pCode === "SD" || l.name === "Sudan") ?? null;
+}
+
+async function fetchA1Boundaries(sudanId: string): Promise<PublicAdminBoundary[]> {
+  let res: Response;
+  try {
+    res = await fetch(GRAPHQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: LOCATIONS_WITH_GEOMETRY_QUERY, variables: { level: 1 } }),
+      next: { revalidate: 3600 },
+    });
+  } catch { return []; }
+  if (!res.ok) return [];
+  const json = (await res.json()) as { data?: { locations: GqlLocationWithGeometry[] } | null };
+  const locations = json?.data?.locations ?? [];
+  return locations
+    .filter((l) => l.ancestorIds.includes(sudanId))
+    .map((l) => ({ id: l.id, geometry: l.geometry }));
 }
 
 async function fetchPublicEvent(eventId: string, token: string): Promise<PublicEvent | null> {
@@ -69,9 +119,14 @@ export default async function PublicEventPage({
   params: Promise<{ eventId: string; token: string }>;
 }) {
   const { eventId, token } = await params;
-  const event = await fetchPublicEvent(eventId, token);
+  const [event, sudan] = await Promise.all([
+    fetchPublicEvent(eventId, token),
+    fetchSudanL0(),
+  ]);
 
   if (!event) notFound();
+
+  const adminBoundaries = sudan ? await fetchA1Boundaries(sudan.id) : [];
 
   const sevTier = mapSeverity(event.severity);
   const sevCol = severityColor(event.severity);
@@ -110,7 +165,7 @@ export default async function PublicEventPage({
               fontSize: 11,
               fontWeight: 700,
               letterSpacing: "0.04em",
-              textTransform: "uppercase",
+              textTransform: "uppercase" as const,
               background:
                 sevTier === "critical"
                   ? "var(--color-critical-light)"
@@ -244,8 +299,10 @@ export default async function PublicEventPage({
           <PublicEventMap
             center={mapCenter}
             markerCoords={event.primaryLocationCoords}
+            markerSeverity={sevTier}
             locationName={event.primaryLocationName}
-            markerColor={sevCol}
+            sudanGeometry={sudan?.geometry ?? null}
+            adminBoundaries={adminBoundaries}
           />
         </Box>
       </Box>

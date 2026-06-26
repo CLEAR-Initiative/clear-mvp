@@ -27,7 +27,7 @@ export interface MapRegion {
   signalPoints?: Array<{ lng: number; lat: number; title: string }>;
 }
 
-interface AdminBoundary {
+export interface AdminBoundary {
   id: string;
   name: string;
   geometry: unknown;
@@ -67,6 +67,8 @@ interface CrisisMapProps {
   hoveredMarkerId?: number | null;
   /** Suppress the automatic fitBounds-to-country when a focus country loads. Default true. */
   fitBoundsOnFocus?: boolean;
+  /** Enable WebGL canvas readback for print snapshots. Has a small GPU memory cost. */
+  preserveDrawingBuffer?: boolean;
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -211,6 +213,7 @@ export function CrisisMap({
   populationBoundaries,
   hoveredMarkerId,
   fitBoundsOnFocus = true,
+  preserveDrawingBuffer = false,
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const isDark = useIsDark();
@@ -257,6 +260,7 @@ export function CrisisMap({
         center,
         zoom,
         interactive,
+        preserveDrawingBuffer,
         attributionControl: false,
       });
 
