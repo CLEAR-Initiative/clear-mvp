@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 
 interface GqlLocationNode {
@@ -92,7 +92,7 @@ export const locationsRouter = createTRPCRouter({
    * name-based fallback. P-Code may be null on many installs, so `pCode`
    * acts as the preferred hint and `name` as the reliable fallback.
    */
-  getCountryByPCode: protectedProcedure
+  getCountryByPCode: publicProcedure
     .input(z.object({ pCode: z.string().optional(), name: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ locations: GqlLocationWithGeometry[] }>(
@@ -166,7 +166,7 @@ export const locationsRouter = createTRPCRouter({
 
   /** Get hierarchical location tree: countries → states → districts.
    *
-   * Fetches only L0/L1/L2 in three parallel queries — the previous
+   * Fetches only L0/L1/L2 in three parallel queries - the previous
    * implementation called `locations(level: null)` which returned every
    * level (2300+ rows, vs the ~640 actually used here), and every
    * returned row's `name` triggered a translation-loader lookup on

@@ -5,7 +5,7 @@ import { GRAPHQL_URL } from "~/server/env";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import { getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
 import { PublicEventHeader } from "./_components/public-event-header";
-import { PublicEventMap, type PublicAdminBoundary } from "./_components/public-event-map";
+import { PublicEventMap, type AdminBoundary } from "./_components/public-event-map";
 import { PublicKpiStrip } from "./_components/public-kpi-strip";
 
 interface PublicEvent {
@@ -56,7 +56,7 @@ async function fetchSudanL0(): Promise<{ id: string; geometry: unknown } | null>
   return locations.find((l) => l.pCode === "SD" || l.name === "Sudan") ?? null;
 }
 
-async function fetchA1Boundaries(sudanId: string): Promise<PublicAdminBoundary[]> {
+async function fetchA1Boundaries(sudanId: string): Promise<AdminBoundary[]> {
   let res: Response;
   try {
     res = await fetch(GRAPHQL_URL, {
@@ -71,7 +71,7 @@ async function fetchA1Boundaries(sudanId: string): Promise<PublicAdminBoundary[]
   const locations = json?.data?.locations ?? [];
   return locations
     .filter((l) => l.ancestorIds.includes(sudanId))
-    .map((l) => ({ id: l.id, geometry: l.geometry }));
+    .map((l) => ({ id: l.id, name: l.name, geometry: l.geometry }));
 }
 
 async function fetchPublicEvent(eventId: string, token: string): Promise<PublicEvent | null> {
