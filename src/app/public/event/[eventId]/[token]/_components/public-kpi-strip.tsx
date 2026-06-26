@@ -54,9 +54,17 @@ interface Section {
 export function PublicKpiStrip({
   affected,
   displaced,
+  locationPopulation,
+  locationPopulationName,
+  locationIdp,
+  locationIdpName,
 }: {
   affected: number | null;
   displaced: number | null;
+  locationPopulation: number | null;
+  locationPopulationName: string | null;
+  locationIdp: number | null;
+  locationIdpName: string | null;
 }) {
   const sections: Section[] = [
     {
@@ -82,14 +90,16 @@ export function PublicKpiStrip({
         {
           icon: <IconUsersGroup size={14} color="var(--color-info)" />,
           iconBg: "var(--color-info-light)",
-          value: "-",
-          label: "People in area",
+          value: formatCompact(locationPopulation),
+          label: locationPopulationName ? `People in ${locationPopulationName}` : "People in area",
         },
         {
           icon: <IconTrendingUp size={14} color="var(--color-text-muted)" />,
           iconBg: "var(--color-bg-muted)",
-          value: "-",
-          label: "IDP per capita",
+          value: locationIdp !== null && locationPopulation
+            ? `${(locationIdp / locationPopulation * 100).toFixed(1)}%`
+            : "-",
+          label: locationIdpName ? `IDP per capita in ${locationIdpName}` : "IDP per capita",
         },
       ],
     },

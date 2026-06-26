@@ -15,6 +15,7 @@ export type { AdminBoundary };
 
 interface PublicEventMapProps {
   center: [number, number];
+  zoom?: number;
   markerCoords: [number, number] | null;
   markerSeverity: "critical" | "high" | "medium" | "low" | "unknown";
   locationName: string | null;
@@ -24,6 +25,7 @@ interface PublicEventMapProps {
 
 export function PublicEventMap({
   center,
+  zoom = 4.5,
   markerCoords,
   markerSeverity,
   locationName,
@@ -62,7 +64,7 @@ export function PublicEventMap({
           <CrisisMap
             markers={markers}
             center={center}
-            zoom={4.5}
+            zoom={zoom}
             className="w-full h-full"
             interactive={false}
             preserveDrawingBuffer={true}

@@ -8,6 +8,12 @@ import { PublicEventHeader } from "./_components/public-event-header";
 import { PublicEventMap, type AdminBoundary } from "./_components/public-event-map";
 import { PublicKpiStrip } from "./_components/public-kpi-strip";
 
+interface PublicEventSignalPoint {
+  name: string | null;
+  lng: number;
+  lat: number;
+}
+
 interface PublicEvent {
   id: string;
   title: string | null;
@@ -18,8 +24,15 @@ interface PublicEvent {
   types: string[];
   primaryLocationName: string | null;
   primaryLocationCoords: [number, number] | null;
+  signalPoints: PublicEventSignalPoint[];
   populationAffected: string | null;
   populationDisplaced: string | null;
+  locationPopulation: string | null;
+  locationPopulationLevel: number | null;
+  locationPopulationName: string | null;
+  locationIdp: string | null;
+  locationIdpLevel: number | null;
+  locationIdpName: string | null;
   sharedAt: string;
   expiresAt: string;
 }
@@ -80,7 +93,10 @@ async function fetchPublicEvent(eventId: string, token: string): Promise<PublicE
       publicEvent(eventId: $eventId, token: $token) {
         id title description severity validFrom validTo types
         primaryLocationName primaryLocationCoords
+        signalPoints { name lng lat }
         populationAffected populationDisplaced
+        locationPopulation locationPopulationLevel locationPopulationName
+        locationIdp locationIdpLevel locationIdpName
         sharedAt expiresAt
       }
     }
@@ -136,7 +152,12 @@ export default async function PublicEventPage({
   const affectedNum = event.populationAffected ? Number(event.populationAffected) : null;
   const displacedNum = event.populationDisplaced ? Number(event.populationDisplaced) : null;
 
-  const mapCenter: [number, number] = event.primaryLocationCoords ?? [30, 15];
+  const firstSignalPoint = event.signalPoints[0] ?? null;
+  const markerCoords: [number, number] | null =
+    event.primaryLocationCoords ??
+    (firstSignalPoint ? [firstSignalPoint.lng, firstSignalPoint.lat] : null);
+  const mapCenter: [number, number] = markerCoords ?? [30, 15];
+  const mapZoom = markerCoords ? 7 : 4.5;
   const disasterPills = getDisasterPills(event.types);
   const disasterL2Pills = getDisasterL2Pills(event.types);
 
@@ -252,7 +273,14 @@ export default async function PublicEventPage({
 
       {/* KPI strip */}
       <Box px={24} pt={24}>
-        <PublicKpiStrip affected={affectedNum} displaced={displacedNum} />
+        <PublicKpiStrip
+          affected={affectedNum}
+          displaced={displacedNum}
+          locationPopulation={event.locationPopulation ? Number(event.locationPopulation) : null}
+          locationPopulationName={event.locationPopulationName}
+          locationIdp={event.locationIdp ? Number(event.locationIdp) : null}
+          locationIdpName={event.locationIdpName}
+        />
       </Box>
 
       {/* Two-column body */}
@@ -298,7 +326,8 @@ export default async function PublicEventPage({
         <Box style={{ width: 300, flexShrink: 0 }}>
           <PublicEventMap
             center={mapCenter}
-            markerCoords={event.primaryLocationCoords}
+            zoom={mapZoom}
+            markerCoords={markerCoords}
             markerSeverity={sevTier}
             locationName={event.primaryLocationName}
             sudanGeometry={sudan?.geometry ?? null}
