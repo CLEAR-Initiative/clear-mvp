@@ -1,8 +1,12 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { graphqlFetch } from "~/server/api/graphql";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
+import { cookieHeaders, graphqlFetch } from "~/server/api/graphql";
 import { FEATURE_FLAGS, getDefaultFlags } from "~/lib/constants/feature-flags";
-import { GRAPHQL_API_KEY } from "~/server/env";
 
 interface GqlFeatureFlag {
   key: string;
@@ -10,14 +14,20 @@ interface GqlFeatureFlag {
 }
 
 export const featureFlagsRouter = createTRPCRouter({
-  getAll: publicProcedure.query(async () => {
+  /**
+   * Public — the nav has to render for unauthenticated visitors too, so
+   * reads stay open. The backend's `featureFlags` query has no auth guard
+   * either, so the cookie passthrough is just a convenience for logged-in
+   * users; no privileged data is returned.
+   */
+  getAll: publicProcedure.query(async ({ ctx }) => {
     const flags = getDefaultFlags();
 
     try {
       const data = await graphqlFetch<{ featureFlags: GqlFeatureFlag[] }>(
         `{ featureFlags { key enabled } }`,
         undefined,
-        { "x-api-key": GRAPHQL_API_KEY },
+        cookieHeaders(ctx),
       );
       for (const f of data.featureFlags) {
         flags[f.key] = f.enabled;
@@ -32,10 +42,28 @@ export const featureFlagsRouter = createTRPCRouter({
     }));
   }),
 
-  toggle: publicProcedure
+  /**
+   * Admin-only. Persists the toggle in clear-api so the change is
+   * org-wide and survives logout, browser switches, and storage clears.
+   * Returns the new enabled state so the caller can update local state
+   * without re-querying.
+   */
+  toggle: protectedProcedure
     .input(z.object({ key: z.string(), enabled: z.boolean() }))
-    .mutation(({ input }) => {
-      // No toggle mutation on the GraphQL backend yet — optimistic UI only
-      return { key: input.key, enabled: input.enabled };
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins can toggle feature flags",
+        });
+      }
+      const data = await graphqlFetch<{ setFeatureFlag: GqlFeatureFlag }>(
+        `mutation SetFeatureFlag($key: String!, $enabled: Boolean!) {
+          setFeatureFlag(key: $key, enabled: $enabled) { key enabled }
+        }`,
+        { key: input.key, enabled: input.enabled },
+        cookieHeaders(ctx),
+      );
+      return data.setFeatureFlag;
     }),
 });
