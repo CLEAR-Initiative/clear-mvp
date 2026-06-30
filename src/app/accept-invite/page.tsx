@@ -133,7 +133,7 @@ function AcceptInviteForm() {
     <CenteredBox>
       <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
         <Stack align="center" gap={4} mb={24}>
-          <Text fw={700} size="xl" c="#E85D3D" style={{ letterSpacing: "-0.025em" }}>
+          <Text fw={700} size="xl" c="var(--color-accent)" style={{ letterSpacing: "-0.025em" }}>
             CLEAR
           </Text>
           <Text size="lg" fw={600} c="var(--color-text-primary)">
@@ -142,7 +142,7 @@ function AcceptInviteForm() {
         </Stack>
 
         {/* Invitation details */}
-        <Box p={16} mb={20} style={{ backgroundColor: "#F5F5F5", borderRadius: 8 }}>
+        <Box p={16} mb={20} style={{ backgroundColor: "var(--color-bg-muted)", borderRadius: 8 }}>
           <Stack gap={8}>
             <Text size="sm" c="var(--color-text-secondary)">
               {t("invitedToJoin")}
@@ -179,7 +179,7 @@ function AcceptInviteForm() {
               autoComplete="name"
               autoFocus
               styles={{
-                label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
+                label: { fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 4 },
                 input: { borderColor: "var(--color-border)", fontSize: 14 },
               }}
             />
@@ -189,8 +189,8 @@ function AcceptInviteForm() {
               value={invite.email}
               disabled
               styles={{
-                label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
-                input: { borderColor: "var(--color-border)", fontSize: 14, color: "#737373" },
+                label: { fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 4 },
+                input: { borderColor: "var(--color-border)", fontSize: 14, color: "var(--color-text-muted)" },
               }}
             />
 
@@ -202,7 +202,7 @@ function AcceptInviteForm() {
               required
               autoComplete="new-password"
               styles={{
-                label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
+                label: { fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 4 },
                 input: { borderColor: "var(--color-border)", fontSize: 14 },
               }}
             />
@@ -215,7 +215,7 @@ function AcceptInviteForm() {
               required
               autoComplete="new-password"
               styles={{
-                label: { fontSize: 13, fontWeight: 500, color: "#171717", marginBottom: 4 },
+                label: { fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 4 },
                 input: { borderColor: "var(--color-border)", fontSize: 14 },
               }}
             />
@@ -260,11 +260,11 @@ function ErrorState({ message, showLogin }: { message: string; showLogin?: boole
     <CenteredBox>
       <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
         <Stack align="center" gap={16}>
-          <Text fw={700} size="xl" c="#E85D3D">CLEAR</Text>
+          <Text fw={700} size="xl" c="var(--color-accent)">CLEAR</Text>
           <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light" styles={{ message: { fontSize: 13 } }}>
             {message}
           </Alert>
-          <Anchor component={Link} href={showLogin ? "/auth/login" : "/"} size="sm" c="#E85D3D" fw={500}>
+          <Anchor component={Link} href={showLogin ? "/auth/login" : "/"} size="sm" c="var(--color-accent)" fw={500}>
             <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginInlineEnd: 4 }} />
             {showLogin ? t("goToSignIn") : t("goHome")}
           </Anchor>
