@@ -1629,7 +1629,8 @@
       "alert": "Alert",
       "confirmPrompt": "Raise this event as an alert?",
       "failed": "Failed. Try again.",
-      "turnIntoAlert": "Turn into Alert"
+      "turnIntoAlert": "Turn into Alert",
+      "noPermission": "Only admins and analysts can raise alerts"
     },
     "systemData": {
       "title": "System Data",
