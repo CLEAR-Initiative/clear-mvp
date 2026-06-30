@@ -105,9 +105,11 @@ export function NavSidebar() {
 
   const handleLogout = async () => {
     try { await authClient.signOut(); } catch { /* ignore */ }
-    localStorage.clear();
-    sessionStorage.clear();
-    // Hard redirect to clear all in-memory state and let the server handle cookie cleanup
+    // Don't wipe localStorage / sessionStorage indiscriminately — that was
+    // erasing the feature-flag overrides cache and any other persisted UI
+    // preferences. Better Auth manages the session cookie, and the hard
+    // redirect below tears down all in-memory React state. If a specific
+    // app key ever needs clearing on sign-out, remove it explicitly here.
     window.location.href = "/auth/login";
   };
 
