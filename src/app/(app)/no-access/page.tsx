@@ -18,8 +18,10 @@ export default function NoAccessPage() {
 
   const handleSignOut = async () => {
     try { await authClient.signOut(); } catch { /* ignore */ }
-    localStorage.clear();
-    sessionStorage.clear();
+    // Mirrors nav-sidebar's handleLogout: don't wipe storage wholesale.
+    // The hard redirect tears down React state and Better Auth manages
+    // the session cookie; targeted removal is the right move if any
+    // specific key ever needs clearing here.
     window.location.href = "/auth/login";
   };
 
