@@ -70,7 +70,7 @@ const navSections: NavSection[] = [
       { labelKey: "overview", href: "/dashboard", icon: IconLayoutDashboard, featureKey: "overview" },
       { labelKey: "detection", href: "/detection", icon: IconTarget, featureKey: "detection" },
       { labelKey: "map", href: "/map", icon: IconMapPin, featureKey: "crisis_map" },
-      { labelKey: "insights", href: "/analysis", icon: IconChartPie, featureKey: "analysis" },
+      { labelKey: "insights", href: "/insights", icon: IconChartPie, featureKey: "analysis" },
       { labelKey: "operations", href: "/operations", icon: IconUser, featureKey: "operations", adminOnly: true },
       { labelKey: "cash", href: "/cash", icon: IconCurrencyDollar, featureKey: "cash_assistance", adminOnly: true },
     ],
