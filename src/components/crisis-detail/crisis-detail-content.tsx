@@ -52,6 +52,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { isPlatformAdmin } from "~/lib/roles";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
@@ -225,7 +226,9 @@ export function CrisisDetailContent({
   const [draftSummary, setDraftSummary] = useState("");
 
   const meQuery = api.auth.me.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
-  const isAdmin = meQuery.data?.user?.role === "admin" || meQuery.data?.user?.role === "org_admin";
+  // Platform admin only. Org-scoped edit rights would need an org lookup;
+  // `org_admin` no longer doubles as a global role after the taxonomy split.
+  const isAdmin = isPlatformAdmin(meQuery.data?.user?.role);
 
   const utils = api.useUtils();
 

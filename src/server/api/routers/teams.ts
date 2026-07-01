@@ -106,6 +106,14 @@ const REMOVE_ORG_MEMBER = `
   }
 `;
 
+const UPDATE_ORG_MEMBER_ROLE = `
+  mutation UpdateOrgMemberRole($orgId: String!, $userId: String!, $role: OrgMemberRole!) {
+    updateOrgMemberRole(orgId: $orgId, userId: $userId, role: $role) {
+      id user { id name email } role
+    }
+  }
+`;
+
 const CREATE_TEAM = `
   mutation CreateTeam($input: CreateTeamInput!) {
     createTeam(input: $input) { id name slug }
@@ -272,6 +280,23 @@ export const teamsRouter = createTRPCRouter({
       return data.removeOrgMember;
     }),
 
+  updateOrgMemberRole: protectedProcedure
+    .input(
+      z.object({
+        orgId: z.string(),
+        userId: z.string(),
+        role: z.enum(["org_admin", "member"]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ updateOrgMemberRole: OrgMember }>(
+        UPDATE_ORG_MEMBER_ROLE,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.updateOrgMemberRole;
+    }),
+
   createTeam: protectedProcedure
     .input(z.object({
       organisationId: z.string(),
@@ -321,14 +346,7 @@ export const teamsRouter = createTRPCRouter({
       teamId: z.string(),
       userId: z.string(),
       role: z
-        .enum([
-          "lead",
-          "analyst",
-          "viewer",
-          "team_admin",
-          "field_coordinator",
-          "team_member",
-        ])
+        .enum(["team_admin", "field_coordinator", "team_member"])
         .optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -355,14 +373,7 @@ export const teamsRouter = createTRPCRouter({
     .input(z.object({
       teamId: z.string(),
       userId: z.string(),
-      role: z.enum([
-        "lead",
-        "analyst",
-        "viewer",
-        "team_admin",
-        "field_coordinator",
-        "team_member",
-      ]),
+      role: z.enum(["team_admin", "field_coordinator", "team_member"]),
     }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ updateTeamMemberRole: TeamMember }>(

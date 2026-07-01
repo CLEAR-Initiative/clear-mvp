@@ -6,6 +6,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { API_URL } from "~/server/env";
+import { isPlatformAdmin } from "~/lib/roles";
 
 interface SessionUser {
   id: string;
@@ -86,15 +87,25 @@ const enforceAuth = t.middleware(async ({ ctx, next }) => {
 export const protectedProcedure = t.procedure.use(enforceAuth);
 
 /**
- * Org-admin procedure — requires admin or org_admin role.
- * Use for actions like creating organisations.
+ * Platform-admin procedure — requires the global `admin` role.
+ *
+ * Previously this middleware also accepted `role === "org_admin"`, treating
+ * `org_admin` as a *global* role — but under the new taxonomy `org_admin` is
+ * an organisation-level role (in `organisationUsers.role`), not a global one.
+ * Actions that require org-scoped admin authority (invite user, change
+ * member role) look up membership in the resolver via `requireOrgAdmin`;
+ * the only remaining caller of this procedure is `createOrganisation`,
+ * which correctly needs platform-level authority.
+ *
+ * Name kept for now to minimise call-site churn; will rename alongside the
+ * global `admin` → `superadmin` rename in a follow-up.
  */
 const enforceOrgAdmin = t.middleware(async ({ ctx, next }) => {
   const user = (ctx as { user?: SessionUser }).user;
-  if (!user || (user.role !== "admin" && user.role !== "org_admin")) {
+  if (!user || !isPlatformAdmin(user.role)) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "You need Organisation Admin privileges for this action",
+      message: "You need platform admin privileges for this action",
     });
   }
   return next({ ctx });

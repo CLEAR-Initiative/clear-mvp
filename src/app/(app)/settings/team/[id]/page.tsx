@@ -22,11 +22,9 @@ import { useTranslations } from "next-intl";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { TeamLocation } from "~/lib/types/teams";
+import { isPlatformAdmin } from "~/lib/roles";
 
 const TEAM_ROLE_OPTIONS = [
-  "lead",
-  "analyst",
-  "viewer",
   "team_admin",
   "field_coordinator",
   "team_member",
@@ -37,9 +35,8 @@ function isTeamRole(v: string): v is TeamRole {
   return (TEAM_ROLE_OPTIONS as readonly string[]).includes(v);
 }
 
-// Roles with admin-level privileges over a team. Legacy "lead" and new
-// "team_admin" are equivalent for permission checks.
-const TEAM_ADMIN_ROLES = new Set(["lead", "team_admin"]);
+// Roles with admin-level privileges over a team.
+const TEAM_ADMIN_ROLES = new Set(["team_admin"]);
 
 export default function TeamSettingsPage() {
   const t = useTranslations("settings.team");
@@ -73,7 +70,7 @@ export default function TeamSettingsPage() {
   const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([]);
 
   const [newMemberId, setNewMemberId] = useState("");
-  const [newMemberRole, setNewMemberRole] = useState<TeamRole>("analyst");
+  const [newMemberRole, setNewMemberRole] = useState<TeamRole>("team_member");
 
   const team = teamQuery.data;
   const currentUser = meQuery.data?.user;
@@ -85,13 +82,11 @@ export default function TeamSettingsPage() {
   // dead UI.
   const isOrgAdmin = useMemo(() => {
     if (!currentUser) return false;
-    if (currentUser.role === "admin") return true;
+    if (isPlatformAdmin(currentUser.role)) return true;
     const orgMembership = currentUser.organisations?.find(
       (o) => o.organisationId === orgId,
     );
-    return Boolean(
-      orgMembership && ["owner", "admin"].includes(orgMembership.role),
-    );
+    return orgMembership?.role === "org_admin";
   }, [currentUser, orgId]);
 
   const canManageRoles = useMemo(() => {
@@ -319,7 +314,7 @@ export default function TeamSettingsPage() {
                 data={[...TEAM_ROLE_OPTIONS]}
                 value={newMemberRole}
                 onChange={(v) =>
-                  setNewMemberRole(v && isTeamRole(v) ? v : "analyst")
+                  setNewMemberRole(v && isTeamRole(v) ? v : "team_member")
                 }
                 size="xs"
                 w={150}
