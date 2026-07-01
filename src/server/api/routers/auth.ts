@@ -12,6 +12,14 @@ const BetterAuthUserSchema = z.object({
   image: z.string().nullable(),
   role: z.string(),
   isActive: z.boolean(),
+  /**
+   * User's default team, used by mutations that need a team scope
+   * without an explicit picker in the UI (e.g. the /observe field-
+   * officer form). Sourced from Better Auth's `additionalFields`
+   * config in clear-api (`user.defaultTeamId`). Nullable because a
+   * newly-created user isn't yet a member of any team.
+   */
+  defaultTeamId: z.string().nullish(),
   organisations: z.array(z.object({
     id: z.string(),
     organisationId: z.string(),

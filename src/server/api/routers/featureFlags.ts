@@ -7,6 +7,7 @@ import {
 } from "~/server/api/trpc";
 import { cookieHeaders, graphqlFetch } from "~/server/api/graphql";
 import { FEATURE_FLAGS, getDefaultFlags } from "~/lib/constants/feature-flags";
+import { isPlatformAdmin } from "~/lib/roles";
 
 interface GqlFeatureFlag {
   key: string;
@@ -51,7 +52,7 @@ export const featureFlagsRouter = createTRPCRouter({
   toggle: protectedProcedure
     .input(z.object({ key: z.string(), enabled: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
+      if (!isPlatformAdmin(ctx.user.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Only admins can toggle feature flags",

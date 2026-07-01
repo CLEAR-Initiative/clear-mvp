@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
+import { isPlatformAdmin } from "~/lib/roles";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 
 /** Shape returned by the backend `crisis` query. */
@@ -294,7 +295,7 @@ export const crisesRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       const user = (ctx as { user?: { role?: string } }).user;
-      if (user?.role !== "admin") {
+      if (!isPlatformAdmin(user?.role)) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
       const { id, ...fields } = input;
