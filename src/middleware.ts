@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { isLocale, LOCALE_COOKIE } from "~/i18n/config";
+import { isPlatformAdmin } from "~/lib/roles";
 
 const API_URL = process.env.API_URL ?? "http://localhost:4000";
 // 8s per attempt × 2 attempts = 16s total budget. Bumped from 3s after
@@ -87,7 +88,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Server-side admin route protection
-  if (pathname.startsWith("/admin") && result.role !== "admin") {
+  if (pathname.startsWith("/admin") && !isPlatformAdmin(result.role)) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

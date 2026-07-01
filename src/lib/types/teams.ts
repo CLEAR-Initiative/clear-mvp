@@ -14,7 +14,7 @@ export interface Organisation {
 export interface OrgMember {
   id: string;
   user: { id: string; name: string; email: string };
-  role: string; // "owner" | "admin" | "member"
+  role: string; // "org_admin" | "member"
   createdAt: string;
 }
 
@@ -33,7 +33,7 @@ export interface Team {
 export interface TeamMember {
   id: string;
   user: { id: string; name: string; email: string };
-  role: string; // "lead" | "analyst" | "viewer"
+  role: string; // "team_admin" | "field_coordinator" | "team_member"
   createdAt: string;
 }
 

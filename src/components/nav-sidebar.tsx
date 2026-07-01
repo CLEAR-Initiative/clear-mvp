@@ -31,6 +31,7 @@ import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
+import { isPlatformAdmin } from "~/lib/roles";
 
 type NavItemKey =
   | "overview"
@@ -100,7 +101,7 @@ export function NavSidebar() {
   const activeSegment = segments[0] ?? "";
   const router = useRouter();
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
-  const isAdmin = authData?.user?.role === "admin";
+  const isAdmin = isPlatformAdmin(authData?.user?.role);
   const { flags } = useFeatureFlags();
 
   const handleLogout = async () => {

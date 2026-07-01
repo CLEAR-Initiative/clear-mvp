@@ -22,6 +22,14 @@ type QueuedPayload = {
   description: string;
   locationId?: string;
   mediaUrls?: string[];
+  /**
+   * Persisted so a signal queued while offline is authorised the same way
+   * on replay as it would have been at submission time. Without this a
+   * field coordinator could file a signal offline, then get FORBIDDEN
+   * hours later when the queue drains because `defaultTeamId` wasn't in
+   * the stored payload.
+   */
+  teamId?: string;
 };
 
 const DB_NAME = "clear-observe";
@@ -290,6 +298,13 @@ export default function ObservePage() {
   const createSignal = api.signals.createManual.useMutation();
   const sourcesQuery = api.signals.sources.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   const locationsQuery = api.locations.list.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
+  // /observe lives outside the (app) group and has no team switcher, so we
+  // fall back to the user's persisted defaultTeamId to satisfy the backend's
+  // team-scoped createManualSignal gate. Field coordinators without a
+  // defaultTeamId (unusual — should be set at onboarding) will hit
+  // FORBIDDEN; a fix on that path is future work.
+  const meQuery = api.auth.me.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
+  const defaultTeamId = meQuery.data?.user?.defaultTeamId ?? undefined;
   const utils = api.useUtils();
 
   const mutateFnRef = useRef(createSignal.mutateAsync);
@@ -425,6 +440,7 @@ export default function ObservePage() {
       title: titleLine || "Field observation",
       description: bodyLines || titleLine || "Field observation",
       locationId: locationId || undefined,
+      teamId: defaultTeamId,
     };
 
     if (!navigator.onLine) {

@@ -278,17 +278,15 @@
     },
     "roles": {
       "member": "Member",
-      "admin": "Admin",
-      "owner": "Owner",
-      "viewer": "Viewer",
-      "analyst": "Analyst",
-      "lead": "Lead"
+      "orgAdmin": "Org Admin",
+      "teamMember": "Team Member",
+      "fieldCoordinator": "Field Coordinator",
+      "teamAdmin": "Team Admin"
     },
     "users": {
       "roles": {
-        "field": "Field",
+        "viewer": "Viewer",
         "analyst": "Analyst",
-        "orgAdmin": "Org Admin",
         "admin": "Admin"
       },
       "unauthorized": "You need admin privileges to view user management.",
@@ -1629,7 +1627,8 @@
       "alert": "Alert",
       "confirmPrompt": "Raise this event as an alert?",
       "failed": "Failed. Try again.",
-      "turnIntoAlert": "Turn into Alert"
+      "turnIntoAlert": "Turn into Alert",
+      "noPermission": "Only admins and analysts can raise alerts"
     },
     "systemData": {
       "title": "System Data",
@@ -2199,15 +2198,11 @@
         "orgRoleLabel": "Organisation Role",
         "roles": {
           "member": "Member",
-          "admin": "Admin",
-          "owner": "Owner"
+          "orgAdmin": "Org Admin"
         },
         "teamsLabel": "Teams",
         "noTeams": "This organisation has no teams. Create one before inviting.",
         "teamRoles": {
-          "viewer": "Viewer",
-          "analyst": "Analyst",
-          "lead": "Lead",
           "team_member": "Team member",
           "field_coordinator": "Field coordinator",
           "team_admin": "Team admin"

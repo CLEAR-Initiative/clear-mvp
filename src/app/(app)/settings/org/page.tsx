@@ -23,14 +23,9 @@ import { useDisclosure } from "@mantine/hooks";
 import { useTranslations } from "next-intl";
 import { IconPlus, IconTrash, IconUserPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { isPlatformAdmin } from "~/lib/roles";
 
-type TeamRole =
-  | "lead"
-  | "analyst"
-  | "viewer"
-  | "team_admin"
-  | "field_coordinator"
-  | "team_member";
+type TeamRole = "team_admin" | "field_coordinator" | "team_member";
 
 function slugify(value: string) {
   return value
@@ -39,7 +34,13 @@ function slugify(value: string) {
     .replace(/^-|-$/g, "");
 }
 
-const CAN_CREATE_ORG_ROLES = ["admin", "org_admin"];
+// Only platform admins can create new organisations. `org_admin` is now an
+// org-level role — someone who admins one org shouldn't get to spawn new
+// ones. Predicate delegates to the shared helper so a future rename of
+// the global admin role doesn't drift here.
+function canCreateOrgFromRole(role: string): boolean {
+  return isPlatformAdmin(role);
+}
 
 function OrgSettingsPageContent() {
   const t = useTranslations("settings.org");
@@ -67,7 +68,7 @@ function OrgSettingsPageContent() {
     router.replace(`/settings/org${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false });
   }
   const userRole = authQuery.data?.user?.role ?? "";
-  const canCreateOrg = CAN_CREATE_ORG_ROLES.includes(userRole);
+  const canCreateOrg = canCreateOrgFromRole(userRole);
 
   if (orgsQuery.isLoading || authQuery.isLoading) {
     return (
@@ -190,6 +191,11 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
   const updateOrg = api.teams.updateOrganisation.useMutation();
   const addMember = api.teams.addOrgMember.useMutation();
   const removeMember = api.teams.removeOrgMember.useMutation();
+  const updateMemberRole = api.teams.updateOrgMemberRole.useMutation({
+    onSuccess: () => {
+      void utils.teams.organisation.invalidate({ id: orgId });
+    },
+  });
   const createTeam = api.teams.createTeam.useMutation();
   const utils = api.useUtils();
 
@@ -227,11 +233,13 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
     return <Loader size="sm" />;
   }
 
-  // User can edit if they're a global admin/org_admin, or an org-level owner/admin
-  const isGlobalPrivileged = userRole === "admin" || userRole === "org_admin";
+  // User can edit if they're a global admin, or an org-level org_admin.
+  // `org_admin` is the sole org-scoped edit role now — `owner` was folded
+  // into `org_admin` when the taxonomy was consolidated.
+  const isGlobalPrivileged = isPlatformAdmin(userRole);
   const currentOrgMember = org.members?.find(() => true); // TODO: match by current user ID when available
-  const isOrgOwnerOrAdmin = currentOrgMember?.role === "owner" || currentOrgMember?.role === "admin";
-  const canEdit = isGlobalPrivileged || isOrgOwnerOrAdmin;
+  const isOrgAdmin = currentOrgMember?.role === "org_admin";
+  const canEdit = isGlobalPrivileged || isOrgAdmin;
 
   // Build user options for the member selector, excluding existing members
   const existingMemberIds = new Set(org.members?.map((m) => m.user.id) ?? []);
@@ -361,9 +369,40 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
                 <Table.Td>{m.user.name}</Table.Td>
                 <Table.Td>{m.user.email ?? "—"}</Table.Td>
                 <Table.Td>
-                  <Badge size="sm" variant="light">
-                    {m.role}
-                  </Badge>
+                  {canEdit ? (
+                    <Select
+                      // The Select accepts only the current org taxonomy;
+                      // any pre-migration value ("owner", "admin") falls
+                      // back to the read-only Badge so we never silently
+                      // rewrite a stale role by round-tripping through the
+                      // dropdown.
+                      data={[
+                        { value: "org_admin", label: t("invite.roles.orgAdmin") },
+                        { value: "member", label: t("invite.roles.member") },
+                      ]}
+                      value={
+                        m.role === "org_admin" || m.role === "member"
+                          ? m.role
+                          : null
+                      }
+                      onChange={(v) => {
+                        if (!v || v === m.role) return;
+                        updateMemberRole.mutate({
+                          orgId,
+                          userId: m.user.id,
+                          role: v as "org_admin" | "member",
+                        });
+                      }}
+                      size="xs"
+                      w={130}
+                      allowDeselect={false}
+                      disabled={updateMemberRole.isPending}
+                    />
+                  ) : (
+                    <Badge size="sm" variant="light">
+                      {m.role}
+                    </Badge>
+                  )}
                 </Table.Td>
                 <Table.Td>
                   {canEdit && (
@@ -395,7 +434,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
               nothingFoundMessage={t("members.noUsersAvailable")}
             />
             <Select
-              data={["owner", "admin", "member"]}
+              data={["org_admin", "member"]}
               value={newMemberRole}
               onChange={(v) => setNewMemberRole(v ?? "member")}
               size="xs"
@@ -540,8 +579,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
             onChange={(v) => v && setInviteRole(v)}
             data={[
               { value: "member", label: t("invite.roles.member") },
-              { value: "admin", label: t("invite.roles.admin") },
-              { value: "owner", label: t("invite.roles.owner") },
+              { value: "org_admin", label: t("invite.roles.orgAdmin") },
             ]}
           />
           <Box>
@@ -565,7 +603,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
                           const checked = e.currentTarget.checked;
                           setInviteTeams((prev) => {
                             const next = { ...prev };
-                            if (checked) next[team.id] = "viewer";
+                            if (checked) next[team.id] = "team_member";
                             else delete next[team.id];
                             return next;
                           });
@@ -575,7 +613,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
                       <Box style={{ flex: 1 }} />
                       <Select
                         size="xs"
-                        value={selectedRole ?? "viewer"}
+                        value={selectedRole ?? "team_member"}
                         onChange={(v) => {
                           if (!v || !isSelected) return;
                           setInviteTeams((prev) => ({
@@ -584,9 +622,6 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
                           }));
                         }}
                         data={[
-                          { value: "viewer", label: t("invite.teamRoles.viewer") },
-                          { value: "analyst", label: t("invite.teamRoles.analyst") },
-                          { value: "lead", label: t("invite.teamRoles.lead") },
                           { value: "team_member", label: t("invite.teamRoles.team_member") },
                           { value: "field_coordinator", label: t("invite.teamRoles.field_coordinator") },
                           { value: "team_admin", label: t("invite.teamRoles.team_admin") },

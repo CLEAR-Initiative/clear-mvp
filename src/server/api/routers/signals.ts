@@ -190,6 +190,13 @@ export const signalsRouter = createTRPCRouter({
         destinationId: z.string().optional(),
         lat: z.number().optional(),
         lng: z.number().optional(),
+        /**
+         * Team the signal is being filed under. Purely an authorisation
+         * hint — the backend uses it to admit team_admin / field_coordinator
+         * callers without a global admin/analyst role. Ignored (harmlessly)
+         * for platform callers, so the UI can always send it.
+         */
+        teamId: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

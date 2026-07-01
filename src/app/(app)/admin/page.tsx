@@ -44,6 +44,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
+import { isPlatformAdmin } from "~/lib/roles";
 import { PageHeader, StatsGrid } from "~/components/ui";
 import type { StatItem } from "~/components/ui";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
@@ -72,19 +73,36 @@ type PendingAction =
   | { type: "role"; user: GqlUser; newRole: string }
   | { type: "delete"; user: GqlUser };
 
+// Global roles only. Org and team roles live in /settings/org and
+// /settings/team/<id>. `org_admin` was previously listed here because it
+// used to double as a global role; under the new taxonomy it's org-scoped.
 // labelKey: i18n keys under admin.users.roles.* - resolved via t() at render time.
 const ROLES = [
-  { value: "field", labelKey: "field" },
+  { value: "viewer", labelKey: "viewer" },
   { value: "analyst", labelKey: "analyst" },
-  { value: "org_admin", labelKey: "orgAdmin" },
   { value: "admin", labelKey: "admin" },
 ] as const;
 
+const GLOBAL_ROLE_SET: ReadonlySet<string> = new Set(
+  ROLES.map((r) => r.value),
+);
+
+/**
+ * Map any stored `user.role` value to a role that's actually in the current
+ * global taxonomy. Legacy values that used to be treated as global
+ * (`org_admin`, `field`, team-role names, etc.) collapse to `"viewer"` so
+ * they don't leak through Mantine's Select trigger as unmatched values —
+ * which would look like the dropdown "contains" them. The stored DB value
+ * is untouched; a separate SQL backfill is the source-of-truth cleanup.
+ */
+function toGlobalRole(role: string | null | undefined): string {
+  if (role && GLOBAL_ROLE_SET.has(role)) return role;
+  return "viewer";
+}
+
 const roleColor: Record<string, string> = {
   admin: "orange",
-  org_admin: "grape",
   analyst: "blue",
-  field: "green",
   viewer: "gray",
   user: "gray",
 };
@@ -388,9 +406,7 @@ function UsersPanel() {
     );
   }
 
-  const adminCount = localUsers.filter(
-    (u) => u.role === "admin" || u.role === "org_admin",
-  ).length;
+  const adminCount = localUsers.filter((u) => isPlatformAdmin(u.role)).length;
   const activeCount = localUsers.filter((u) => u.isActive).length;
 
   const stats: StatItem[] = [
@@ -543,7 +559,7 @@ function UsersPanel() {
                   {/* Role - dropdown */}
                   <Table.Td>
                     <Select
-                      value={pendingRoles[user.id] ?? user.role}
+                      value={pendingRoles[user.id] ?? toGlobalRole(user.role)}
                       onChange={(val) => handleRoleSelect(user, val)}
                       data={ROLES.map((r) => ({ value: r.value, label: t(`roles.${r.labelKey}`) }))}
                       size="xs"
@@ -893,7 +909,7 @@ function OrganisationsPanel() {
           teams: [
             {
               teamId: createdTeamId,
-              teamRole: inviteTeamRole as "lead" | "analyst" | "viewer",
+              teamRole: inviteTeamRole as "team_admin" | "field_coordinator" | "team_member",
             },
           ],
         });
@@ -1365,7 +1381,7 @@ function OrganisationsPanel() {
                 onChange={(v) => v && setInviteRole(v)}
                 data={[
                   { value: "member", label: tRoles("member") },
-                  { value: "admin", label: tRoles("admin") },
+                  { value: "org_admin", label: tRoles("orgAdmin") },
                 ]}
                 w={140}
                 styles={INPUT_STYLES}
@@ -1376,9 +1392,9 @@ function OrganisationsPanel() {
                   value={inviteTeamRole}
                   onChange={(v) => v && setInviteTeamRole(v)}
                   data={[
-                    { value: "viewer", label: tRoles("viewer") },
-                    { value: "analyst", label: tRoles("analyst") },
-                    { value: "lead", label: tRoles("lead") },
+                    { value: "team_member", label: tRoles("teamMember") },
+                    { value: "field_coordinator", label: tRoles("fieldCoordinator") },
+                    { value: "team_admin", label: tRoles("teamAdmin") },
                   ]}
                   w={140}
                   styles={INPUT_STYLES}
@@ -1499,12 +1515,12 @@ function InvitationsPanel() {
   );
 
   // Invite form state
-  type TeamRole = "lead" | "analyst" | "viewer";
+  type TeamRole = "team_admin" | "field_coordinator" | "team_member";
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   // teamId → teamRole map. Selecting/deselecting a team toggles a row;
-  // role per team defaults to "viewer".
+  // role per team defaults to "team_member".
   const [inviteTeams, setInviteTeams] = useState<Record<string, TeamRole>>({});
   const [inviteError, setInviteError] = useState("");
 
@@ -1689,7 +1705,7 @@ function InvitationsPanel() {
                             color: colors.textSecondary,
                           }}
                         >
-                          {invite.team.name} ({invite.teamRole ?? "viewer"})
+                          {invite.team.name} ({invite.teamRole ?? "team_member"})
                         </Text>
                       ) : (
                         <Text
@@ -1807,8 +1823,7 @@ function InvitationsPanel() {
             onChange={(v) => v && setInviteRole(v)}
             data={[
               { value: "member", label: tRoles("member") },
-              { value: "admin", label: tRoles("admin") },
-              { value: "owner", label: tRoles("owner") },
+              { value: "org_admin", label: tRoles("orgAdmin") },
             ]}
             styles={{
               label: {
@@ -1850,7 +1865,7 @@ function InvitationsPanel() {
                           const checked = e.currentTarget.checked;
                           setInviteTeams((prev) => {
                             const next = { ...prev };
-                            if (checked) next[teamId] = "viewer";
+                            if (checked) next[teamId] = "team_member";
                             else delete next[teamId];
                             return next;
                           });
@@ -1861,7 +1876,7 @@ function InvitationsPanel() {
                       <Box style={{ flex: 1 }} />
                       <Select
                         size="xs"
-                        value={selectedRole ?? "viewer"}
+                        value={selectedRole ?? "team_member"}
                         onChange={(v) => {
                           if (!v || !isSelected) return;
                           setInviteTeams((prev) => ({
@@ -1870,9 +1885,9 @@ function InvitationsPanel() {
                           }));
                         }}
                         data={[
-                          { value: "viewer", label: tRoles("viewer") },
-                          { value: "analyst", label: tRoles("analyst") },
-                          { value: "lead", label: tRoles("lead") },
+                          { value: "team_member", label: tRoles("teamMember") },
+                          { value: "field_coordinator", label: tRoles("fieldCoordinator") },
+                          { value: "team_admin", label: tRoles("teamAdmin") },
                         ]}
                         disabled={!isSelected}
                         w={110}

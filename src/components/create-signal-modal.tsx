@@ -438,6 +438,10 @@ export function CreateSignalModal({ opened, onClose }: CreateSignalModalProps) {
         locationId: form.locationId || undefined,
         severity: form.severity ? parseInt(form.severity) : undefined,
         mediaUrls: mediaKeys.length > 0 ? mediaKeys : undefined,
+        // Pass the active team so the backend can admit team_admin /
+        // field_coordinator callers via their team role. Ignored for global
+        // admin/analyst callers — no need to branch here.
+        teamId: activeTeamId ?? undefined,
       });
       void utils.signals.list.invalidate({ teamId: activeTeamId ?? undefined });
       setStep("success");
