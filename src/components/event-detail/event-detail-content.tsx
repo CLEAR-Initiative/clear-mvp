@@ -14,6 +14,7 @@ import {
   Loader,
   Button,
   Collapse,
+  Tooltip,
   UnstyledButton,
 } from "@mantine/core";
 import {
@@ -94,6 +95,12 @@ export function EventDetailContent({
   const promoteToAlert = api.alerts.promoteToAlert.useMutation({
     onSuccess: () => { setPromoted(true); setConfirmPromote(false); },
   });
+  // Promoting an event to an alert is gated to admin/analyst on the backend
+  // (createAlert -> requireRole(["admin", "analyst"])). Mirror that here so
+  // other roles don't see an action that always fails for them.
+  const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
+  const canPromote =
+    authData?.user?.role === "admin" || authData?.user?.role === "analyst";
 
   const mapMarkers = useMemo<MapMarker[]>(() => {
     if (!event) return [];
@@ -637,7 +644,7 @@ export function EventDetailContent({
                 const relDateLabel =
                   relDate && !Number.isNaN(relDate.getTime())
                     ? format.relativeTime(relDate)
-                    : "—";
+                    : "-";
                 return (
                   <Link
                     key={related.id}
@@ -760,20 +767,31 @@ export function EventDetailContent({
                         )}
                       </Stack>
                     ) : (
-                      <Button
-                        variant="filled"
-                        size="xs"
-                        leftSection={<IconBellRinging size={13} />}
-                        fullWidth
-                        onClick={() => setConfirmPromote(true)}
-                        style={{
-                          fontSize: 12,
-                          background: "var(--color-critical)",
-                          border: "none",
-                        }}
+                      <Tooltip
+                        label={t("actions.noPermission")}
+                        disabled={canPromote}
+                        position="top"
+                        withArrow
                       >
-                        {t("actions.turnIntoAlert")}
-                      </Button>
+                        <Button
+                          variant="filled"
+                          size="xs"
+                          leftSection={<IconBellRinging size={13} />}
+                          fullWidth
+                          data-disabled={canPromote ? undefined : true}
+                          onClick={(e) => {
+                            if (!canPromote) { e.preventDefault(); return; }
+                            setConfirmPromote(true);
+                          }}
+                          style={
+                            canPromote
+                              ? { fontSize: 12, background: "var(--color-critical)", border: "none" }
+                              : { fontSize: 12 }
+                          }
+                        >
+                          {t("actions.turnIntoAlert")}
+                        </Button>
+                      </Tooltip>
                     )}
                     {/* <Button
                       variant="light"
