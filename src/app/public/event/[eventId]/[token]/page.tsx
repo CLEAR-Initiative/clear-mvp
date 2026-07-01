@@ -1,16 +1,19 @@
 import { notFound } from "next/navigation";
-import { Box, Stack, Text, Group, Badge, Card } from "@mantine/core";
+import { Box, Stack, Text, Group, Card } from "@mantine/core";
+import { IconMapPin, IconCalendar } from "@tabler/icons-react";
 import { GRAPHQL_URL } from "~/server/env";
-import { getDisasterLabel } from "~/lib/disaster-types";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
-import { severityColors, severityLabels } from "~/lib/constants/severity";
+import { getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
 import { PublicEventHeader } from "./_components/public-event-header";
+import { PublicEventMap, type AdminBoundary } from "./_components/public-event-map";
+import { PublicKpiStrip } from "./_components/public-kpi-strip";
 
-/**
- * Shape of the cached snapshot returned by clear-api's
- * `publicEvent(eventId, token)` query. Kept in sync with the
- * GraphQL `PublicEvent` type.
- */
+interface PublicEventSignalPoint {
+  name: string | null;
+  lng: number;
+  lat: number;
+}
+
 interface PublicEvent {
   id: string;
   title: string | null;
@@ -21,38 +24,80 @@ interface PublicEvent {
   types: string[];
   primaryLocationName: string | null;
   primaryLocationCoords: [number, number] | null;
+  signalPoints: PublicEventSignalPoint[];
   populationAffected: string | null;
   populationDisplaced: string | null;
+  locationPopulation: string | null;
+  locationPopulationLevel: number | null;
+  locationPopulationName: string | null;
+  locationIdp: string | null;
+  locationIdpLevel: number | null;
+  locationIdpName: string | null;
   sharedAt: string;
   expiresAt: string;
 }
 
-/**
- * Fetch the public snapshot directly from clear-api — no cookie, no
- * cross-call retry. The page is unauthenticated so we deliberately
- * avoid going through the tRPC client; this lets the page render even
- * when the visitor has no CLEAR session at all.
- */
-async function fetchPublicEvent(
-  eventId: string,
-  token: string,
-): Promise<PublicEvent | null> {
+const LOCATIONS_WITH_GEOMETRY_QUERY = `
+  query LocationsWithGeometry($level: Int) {
+    locations(level: $level) {
+      id name pCode ancestorIds geometry
+    }
+  }
+`;
+
+interface GqlLocationWithGeometry {
+  id: string;
+  name: string;
+  pCode: string | null;
+  ancestorIds: string[];
+  geometry: unknown;
+}
+
+async function fetchSudanL0(): Promise<{ id: string; geometry: unknown } | null> {
+  let res: Response;
+  try {
+    res = await fetch(GRAPHQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: LOCATIONS_WITH_GEOMETRY_QUERY, variables: { level: 0 } }),
+      next: { revalidate: 3600 },
+    });
+  } catch { return null; }
+  if (!res.ok) return null;
+  const json = (await res.json()) as { data?: { locations: GqlLocationWithGeometry[] } | null };
+  const locations = json?.data?.locations ?? [];
+  return locations.find((l) => l.pCode === "SD" || l.name === "Sudan") ?? null;
+}
+
+async function fetchA1Boundaries(sudanId: string): Promise<AdminBoundary[]> {
+  let res: Response;
+  try {
+    res = await fetch(GRAPHQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: LOCATIONS_WITH_GEOMETRY_QUERY, variables: { level: 1 } }),
+      next: { revalidate: 3600 },
+    });
+  } catch { return []; }
+  if (!res.ok) return [];
+  const json = (await res.json()) as { data?: { locations: GqlLocationWithGeometry[] } | null };
+  const locations = json?.data?.locations ?? [];
+  return locations
+    .filter((l) => l.ancestorIds.includes(sudanId))
+    .map((l) => ({ id: l.id, name: l.name, geometry: l.geometry }));
+}
+
+async function fetchPublicEvent(eventId: string, token: string): Promise<PublicEvent | null> {
   const query = `
     query PublicEvent($eventId: String!, $token: String!) {
       publicEvent(eventId: $eventId, token: $token) {
-        id
-        title
-        description
-        severity
-        validFrom
-        validTo
-        types
-        primaryLocationName
-        primaryLocationCoords
-        populationAffected
-        populationDisplaced
-        sharedAt
-        expiresAt
+        id title description severity validFrom validTo types
+        primaryLocationName primaryLocationCoords
+        signalPoints { name lng lat }
+        populationAffected populationDisplaced
+        locationPopulation locationPopulationLevel locationPopulationName
+        locationIdp locationIdpLevel locationIdpName
+        sharedAt expiresAt
       }
     }
   `;
@@ -62,13 +107,7 @@ async function fetchPublicEvent(
     res = await fetch(GRAPHQL_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query,
-        variables: { eventId, token },
-      }),
-      // Public snapshots are immutable inside Redis for their TTL,
-      // so a short fetch cache is a free latency win for popular
-      // links. Revalidate every 5 min so revocations propagate quickly.
+      body: JSON.stringify({ query, variables: { eventId, token } }),
       next: { revalidate: 300 },
     });
   } catch {
@@ -76,35 +115,18 @@ async function fetchPublicEvent(
   }
 
   if (!res.ok) return null;
-  const json = (await res.json()) as {
-    data?: { publicEvent: PublicEvent | null } | null;
-  } | null;
+  const json = (await res.json()) as { data?: { publicEvent: PublicEvent | null } | null } | null;
   return json?.data?.publicEvent ?? null;
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
+    year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
   });
-}
-
-function formatNumber(s: string | null): string | null {
-  if (!s) return null;
-  const n = Number(s);
-  if (!Number.isFinite(n)) return null;
-  return new Intl.NumberFormat(undefined).format(n);
 }
 
 export default async function PublicEventPage({
@@ -113,149 +135,224 @@ export default async function PublicEventPage({
   params: Promise<{ eventId: string; token: string }>;
 }) {
   const { eventId, token } = await params;
-  const event = await fetchPublicEvent(eventId, token);
+  const [event, sudan] = await Promise.all([
+    fetchPublicEvent(eventId, token),
+    fetchSudanL0(),
+  ]);
 
-  if (!event) {
-    notFound();
-  }
+  if (!event) notFound();
+
+  const adminBoundaries = sudan ? await fetchA1Boundaries(sudan.id) : [];
 
   const sevTier = mapSeverity(event.severity);
   const sevCol = severityColor(event.severity);
-  const sevBg = severityColors[sevTier]?.bg ?? "var(--color-bg-muted)";
-  const sevLabel = severityLabels[sevTier] ?? "Unknown";
 
-  const populationAffected = formatNumber(event.populationAffected);
-  const populationDisplaced = formatNumber(event.populationDisplaced);
+  const title = event.title ?? event.primaryLocationName ?? `CLEAR Event ${event.id}`;
 
-  const title =
-    event.title ?? event.primaryLocationName ?? `CLEAR Event ${event.id}`;
+  const affectedNum = event.populationAffected ? Number(event.populationAffected) : null;
+  const displacedNum = event.populationDisplaced ? Number(event.populationDisplaced) : null;
+
+  const firstSignalPoint = event.signalPoints[0] ?? null;
+  const markerCoords: [number, number] | null =
+    event.primaryLocationCoords ??
+    (firstSignalPoint ? [firstSignalPoint.lng, firstSignalPoint.lat] : null);
+  const mapCenter: [number, number] = markerCoords ?? [30, 15];
+  const mapZoom = markerCoords ? 7 : 4.5;
+  const disasterPills = getDisasterPills(event.types);
+  const disasterL2Pills = getDisasterL2Pills(event.types);
 
   return (
     <Box style={{ minHeight: "100vh", background: "var(--color-bg-primary)" }}>
       <PublicEventHeader title={title} />
 
+      {/* Header - matches private event page header styling */}
       <Box
-        className="public-event-body"
+        px={24}
+        pt={20}
+        pb={20}
         style={{
-          maxWidth: 760,
-          margin: "0 auto",
-          padding: "32px 24px 64px",
+          background: "var(--color-bg-white)",
+          borderBottom: "1px solid var(--color-border)",
+          borderInlineStart: `4px solid ${sevCol}`,
         }}
       >
-        <Stack gap={20}>
-          {/* Title block */}
-          <Stack gap={8}>
-            <Group gap={8}>
-              <Badge
-                size="md"
-                style={{
-                  background: sevBg,
-                  color: sevCol,
-                  fontWeight: 700,
-                }}
-              >
-                {sevLabel}
-              </Badge>
-              {event.types.slice(0, 3).map((t) => (
-                <Badge
-                  key={t}
-                  size="md"
-                  variant="light"
-                  color="gray"
-                  style={{ fontWeight: 500 }}
-                >
-                  {getDisasterLabel(t)}
-                </Badge>
-              ))}
-            </Group>
-            <Text
-              fz={28}
-              fw={700}
-              lh={1.2}
-              style={{ color: "var(--color-text-primary)" }}
-            >
-              {title}
-            </Text>
-            {event.primaryLocationName && (
-              <Text size="sm" c="var(--color-text-muted)">
-                {event.primaryLocationName}
-              </Text>
-            )}
-          </Stack>
-
-          {/* Description */}
-          {event.description && (
-            <Card
-              p={20}
-              radius="md"
-              style={{
-                border: "1px solid var(--color-border)",
-                background: "var(--color-bg-white)",
-              }}
-            >
-              <Text
-                size="md"
-                style={{
-                  whiteSpace: "pre-wrap",
-                  lineHeight: 1.6,
-                  color: "var(--color-text-primary)",
-                }}
-              >
-                {event.description}
-              </Text>
-            </Card>
-          )}
-
-          {/* Facts */}
-          <Card
-            p={20}
-            radius="md"
+        {/* Severity badge */}
+        <Group gap={6} mb={10}>
+          <span
             style={{
-              border: "1px solid var(--color-border)",
-              background: "var(--color-bg-white)",
+              display: "inline-block",
+              padding: "2px 10px",
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase" as const,
+              background:
+                sevTier === "critical"
+                  ? "var(--color-critical-light)"
+                  : sevTier === "low"
+                    ? "var(--color-success-light)"
+                    : "var(--color-warning-light)",
+              color:
+                sevTier === "critical"
+                  ? "var(--color-critical)"
+                  : sevTier === "low"
+                    ? "var(--color-success)"
+                    : "var(--color-warning)",
             }}
           >
-            <Stack gap={12}>
-              <Fact
-                label="Valid period"
-                value={`${formatDate(event.validFrom)} — ${formatDate(event.validTo)}`}
-              />
-              {populationAffected && (
-                <Fact label="Population affected" value={populationAffected} />
-              )}
-              {populationDisplaced && (
-                <Fact label="Population displaced" value={populationDisplaced} />
-              )}
-              <Fact label="Shared on" value={formatDateTime(event.sharedAt)} />
-              <Fact
-                label="Link expires"
-                value={formatDateTime(event.expiresAt)}
-              />
-            </Stack>
-          </Card>
+            {sevTier}
+          </span>
+        </Group>
 
-          <Text
-            size="xs"
-            c="var(--color-text-muted)"
-            ta="center"
-            mt={8}
-            className="public-event-footer-note"
-          >
-            Generated by the CLEAR platform · A snapshot of public event data ·
-            Sharing this URL grants the recipient view access until the link
-            expires.
-          </Text>
-        </Stack>
+        {/* Title */}
+        <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: 22, lineHeight: 1.3 }} mb={10}>
+          {title}
+        </Text>
+
+        {/* Type pills */}
+        <Group gap={6} mb={14} wrap="wrap">
+          {disasterPills.map((pill) => (
+            <span
+              key={pill.label}
+              style={{
+                display: "inline-block",
+                padding: "2px 10px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 600,
+                color: pill.color,
+                background: pill.bg,
+                letterSpacing: "0.01em",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {pill.label}
+            </span>
+          ))}
+          {disasterL2Pills.map((pill) => (
+            <span
+              key={pill.label}
+              style={{
+                display: "inline-block",
+                padding: "2px 10px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 500,
+                color: pill.color,
+                background: "transparent",
+                border: `1px solid ${pill.color}`,
+                letterSpacing: "0.01em",
+                whiteSpace: "nowrap",
+                opacity: 0.75,
+              }}
+            >
+              {pill.label}
+            </span>
+          ))}
+        </Group>
+
+        {/* Meta */}
+        <Group gap={16} wrap="wrap">
+          {event.primaryLocationName && (
+            <Group gap={4}>
+              <IconMapPin size={13} color="var(--color-text-muted)" />
+              <Text size="xs" c="var(--color-text-secondary)" fw={500}>
+                {event.primaryLocationName}
+              </Text>
+            </Group>
+          )}
+          <Group gap={4}>
+            <IconCalendar size={13} color="var(--color-text-muted)" />
+            <Text size="xs" c="var(--color-text-secondary)">
+              {formatDate(event.validFrom)} - {formatDate(event.validTo)}
+            </Text>
+          </Group>
+        </Group>
       </Box>
 
-      {/* Print-specific styles — strip the header/buttons, widen the body,
-          drop the dark backgrounds for ink-friendly output. */}
+      {/* KPI strip */}
+      <Box px={24} pt={24}>
+        <PublicKpiStrip
+          affected={affectedNum}
+          displaced={displacedNum}
+          locationPopulation={event.locationPopulation ? Number(event.locationPopulation) : null}
+          locationPopulationName={event.locationPopulationName}
+          locationIdp={event.locationIdp ? Number(event.locationIdp) : null}
+          locationIdpName={event.locationIdpName}
+        />
+      </Box>
+
+      {/* Two-column body */}
+      <Box p={24} style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+        {/* Left column */}
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Stack gap={20}>
+            {/* Summary */}
+            {event.description && (
+              <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+                <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                  <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
+                    Summary
+                  </Text>
+                </Box>
+                <Box p={16}>
+                  <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.75, whiteSpace: "pre-wrap" }}>
+                    {event.description}
+                  </Text>
+                </Box>
+              </Card>
+            )}
+
+            {/* Details */}
+            <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+              <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
+                  Details
+                </Text>
+              </Box>
+              <Box p={16}>
+                <Stack gap={12}>
+                  <Fact label="Valid period" value={`${formatDate(event.validFrom)} - ${formatDate(event.validTo)}`} />
+                  <Fact label="Shared on" value={formatDateTime(event.sharedAt)} />
+                  <Fact label="Link expires" value={formatDateTime(event.expiresAt)} />
+                </Stack>
+              </Box>
+            </Card>
+          </Stack>
+        </Box>
+
+        {/* Right column */}
+        <Box style={{ width: 300, flexShrink: 0 }}>
+          <PublicEventMap
+            center={mapCenter}
+            zoom={mapZoom}
+            markerCoords={markerCoords}
+            markerSeverity={sevTier}
+            locationName={event.primaryLocationName}
+            sudanGeometry={sudan?.geometry ?? null}
+            adminBoundaries={adminBoundaries}
+          />
+        </Box>
+      </Box>
+
+      <Text
+        size="xs"
+        c="var(--color-text-muted)"
+        ta="center"
+        py={32}
+        className="public-event-footer-note"
+      >
+        Generated by the CLEAR platform - a snapshot of public event data - sharing this URL grants view access until the link expires.
+      </Text>
+
       <style>{`
         @media print {
           @page { margin: 14mm 12mm; }
           .public-event-header { display: none !important; }
           .public-event-footer-note { color: #555 !important; }
-          .public-event-body { padding: 0 !important; max-width: 100% !important; }
+          .public-map-canvas { display: none !important; }
+          .public-map-snapshot { display: block !important; }
           body { background: white !important; }
         }
       `}</style>
@@ -269,12 +366,7 @@ function Fact({ label, value }: { label: string; value: string }) {
       <Text size="sm" c="var(--color-text-muted)" style={{ flexShrink: 0 }}>
         {label}
       </Text>
-      <Text
-        size="sm"
-        fw={500}
-        ta="right"
-        style={{ color: "var(--color-text-primary)" }}
-      >
+      <Text size="sm" fw={500} ta="right" style={{ color: "var(--color-text-primary)" }}>
         {value}
       </Text>
     </Group>
