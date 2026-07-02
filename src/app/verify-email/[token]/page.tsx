@@ -68,13 +68,13 @@ export default function VerifyEmailPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#FAFAFA",
+        background: "var(--color-bg-primary)",
       }}
     >
       <Card
         p="xl"
         style={{
-          border: "1px solid #E5E5E5",
+          border: "1px solid var(--color-border)",
           maxWidth: 440,
           width: "100%",
         }}
@@ -95,10 +95,10 @@ export default function VerifyEmailPage() {
                 width: 56,
                 height: 56,
                 borderRadius: "50%",
-                background: "#ECFDF5",
+                background: "var(--color-success-light)",
               }}
             >
-              <IconCircleCheck size={32} color="#059669" />
+              <IconCircleCheck size={32} color="var(--color-success)" />
             </Center>
             <Text size="lg" fw={700} c="var(--color-text-primary)" ta="center">
               {t("success.title")}
@@ -125,10 +125,10 @@ export default function VerifyEmailPage() {
                 width: 56,
                 height: 56,
                 borderRadius: "50%",
-                background: "#EFF6FF",
+                background: "var(--color-info-light)",
               }}
             >
-              <IconCircleCheck size={32} color="#3B82F6" />
+              <IconCircleCheck size={32} color="var(--color-info)" />
             </Center>
             <Text size="lg" fw={700} c="var(--color-text-primary)" ta="center">
               {t("already.title")}
@@ -155,10 +155,10 @@ export default function VerifyEmailPage() {
                 width: 56,
                 height: 56,
                 borderRadius: "50%",
-                background: "#FEF2F2",
+                background: "var(--color-critical-light)",
               }}
             >
-              <IconAlertCircle size={32} color="#DC2626" />
+              <IconAlertCircle size={32} color="var(--color-critical)" />
             </Center>
             <Text size="lg" fw={700} c="var(--color-text-primary)" ta="center">
               {t("failed")}
