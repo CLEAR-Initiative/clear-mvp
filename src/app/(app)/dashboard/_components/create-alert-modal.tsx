@@ -221,6 +221,9 @@ function CreateEventSubFlow({
     try {
       const result = await createEventMutation.mutateAsync({
         signalIds: selectedSignalIds,
+        // Backend admits team_admin / field_coordinator on this team even
+        // without a global admin/analyst role. No-op for platform callers.
+        teamId: activeTeamId ?? undefined,
       });
       onCreated(result.id);
     } catch (err) {

@@ -6,6 +6,7 @@ import { Button, Menu, Text, Group, Loader } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconLayoutGridAdd, IconChevronDown, IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
 
 interface AddToCrisisButtonProps {
   eventId: string;
@@ -30,6 +31,7 @@ export function AddToCrisisButton({
   const t = useTranslations("eventDetail");
   const router = useRouter();
   const utils = api.useUtils();
+  const { activeTeamId } = useTeam();
 
   const crisesQuery = api.crises.list.useQuery();
 
@@ -98,6 +100,10 @@ export function AddToCrisisButton({
               severity: clampSeverity(defaultSeverity),
               needs: {},
               eventIds: [eventId],
+              // Backend admits team_admin / field_coordinator on this
+              // team even without a global admin/analyst role. No-op for
+              // platform callers.
+              teamId: activeTeamId ?? undefined,
             })
           }
         >
