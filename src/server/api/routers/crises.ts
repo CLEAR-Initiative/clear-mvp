@@ -43,7 +43,7 @@ const NESTED_LOCATION_FIELDS = `
   metadata { type data }
 `;
 
-// Slim signal-location shape for map markers — only what
+// Slim signal-location shape for map markers - only what
 // crisis-detail-content actually reads.
 const SIGNAL_LOCATION_FIELDS = `
   id name level geometry
@@ -106,7 +106,7 @@ const CRISIS_LIST_FIELDS = `
   needs
   populationAffected
   populationInArea
-  events { id title severity rank }
+  events { id title severity rank firstSignalCreatedAt lastSignalCreatedAt }
 `;
 
 const CRISES_LIST_QUERY = `

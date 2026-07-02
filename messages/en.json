@@ -17,7 +17,9 @@
       "criticalBadge": "{count} Critical",
       "untitledCrisis": "Untitled crisis",
       "eventCount": "{count, plural, one {# event} other {# events}}",
-      "empty": "No active crises."
+      "empty": "No active crises.",
+      "firstEvent": "First event: {date}",
+      "lastUpdate": "Last update: {date}"
     },
     "executiveSummary": {
       "priorityAnalysis": "Priority Analysis",

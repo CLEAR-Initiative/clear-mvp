@@ -17,7 +17,9 @@
       "criticalBadge": "{count} حرجة",
       "untitledCrisis": "أزمة بلا عنوان",
       "eventCount": "{count, plural, zero {لا أحداث} one {حدث واحد} two {حدثان} few {# أحداث} many {# حدثاً} other {# حدث}}",
-      "empty": "لا توجد أزمات نشطة."
+      "empty": "لا توجد أزمات نشطة.",
+      "firstEvent": "أول حدث: {date}",
+      "lastUpdate": "آخر تحديث: {date}"
     },
     "executiveSummary": {
       "priorityAnalysis": "تحليل الأولويات",
