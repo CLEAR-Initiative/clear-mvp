@@ -1,3 +1,5 @@
+import "~/styles/detail-navigation.css";
+
 import { Box, Group } from "@mantine/core";
 import { NavSidebar } from "~/components/nav-sidebar";
 import { MobileBottomNav } from "~/components/mobile-bottom-nav";
