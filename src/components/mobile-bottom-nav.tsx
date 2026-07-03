@@ -8,7 +8,7 @@ import {
   IconLayoutDashboard,
   IconTarget,
   IconMapPin,
-  IconRobot,
+  IconSettings,
 } from "@tabler/icons-react";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 
@@ -16,7 +16,7 @@ const bottomNavItems = [
   { labelKey: "items.overview",  href: "/dashboard", icon: IconLayoutDashboard, segment: "dashboard" },
   { labelKey: "items.detection", href: "/detection", icon: IconTarget,          segment: "detection" },
   { labelKey: "items.map",       href: "/map",       icon: IconMapPin,          segment: "map" },
-  { labelKey: "items.agent",     href: "/agent",     icon: IconRobot,           segment: "agent" },
+  { labelKey: "settings",        href: "/profile",   icon: IconSettings,        segment: "profile" },
 ] as const;
 
 export function MobileBottomNav() {
