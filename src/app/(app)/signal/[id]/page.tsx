@@ -1,33 +1,78 @@
 "use client";
 
-import { use } from "react";
+import { use, useCallback, useEffect, useMemo, useRef } from "react";
+import { keepPreviousData } from "@tanstack/react-query";
 import { api } from "~/trpc/react";
 import { SignalDetailContent } from "~/components/signal-detail/signal-detail-content";
+import { useSignalNavigation, getSignalMapCenter } from "~/hooks/use-event-navigation";
+import { deriveEntityPending, useEntityNavigation } from "~/hooks/use-entity-navigation";
 
 export default function SignalDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
+  const paramsId = use(params).id;
+  const utils = api.useUtils();
+  const prefetchedRef = useRef(new Set<string>());
 
-  // staleTime: Infinity prevents the query from refetching on window
-  // focus / remount — for a heavy procedure at non-English locales the
-  // refetch cycle can leave the React Query state stuck in
-  // isLoading=true while subsequent fetches replace the previous one.
-  // retry: false stops auto-retries from chaining a second 10s fetch
-  // when the first eventually completes — historically these chains
-  // looked like "spinner forever" even though the data was on the wire.
-  const signalQuery = api.signals.get.useQuery(
-    { id },
-    { enabled: !!id, staleTime: Infinity, retry: false },
+  const prefetchDetail = useCallback(
+    (id: string) => {
+      void utils.signals.get.prefetch({ id });
+    },
+    [utils],
   );
+
+  const { activeId, navigateTo } = useEntityNavigation({
+    paramsId,
+    routePrefix: "/signal",
+  });
+
+  const navigation = useSignalNavigation(activeId);
+
+  useEffect(() => {
+    for (const id of [navigation.prevId, navigation.nextId]) {
+      if (!id || prefetchedRef.current.has(id)) continue;
+      prefetchedRef.current.add(id);
+      prefetchDetail(id);
+    }
+  }, [navigation.prevId, navigation.nextId, prefetchDetail]);
+
+  const signalQuery = api.signals.get.useQuery(
+    { id: activeId },
+    {
+      enabled: !!activeId,
+      staleTime: Infinity,
+      retry: false,
+      placeholderData: keepPreviousData,
+    },
+  );
+
+  const isPending = deriveEntityPending(activeId, signalQuery.data);
+
+  const navigationMapCenter = useMemo(() => {
+    const item = navigation.listItems.find((s) => s.id === activeId);
+    return item ? getSignalMapCenter(item) ?? undefined : undefined;
+  }, [activeId, navigation.listItems]);
+
+  const navigatePrev = () => {
+    if (navigation.prevId) navigateTo(navigation.prevId);
+  };
+
+  const navigateNext = () => {
+    if (navigation.nextId) navigateTo(navigation.nextId);
+  };
 
   return (
     <SignalDetailContent
       signal={signalQuery.data}
       loading={signalQuery.isLoading}
+      isPending={isPending}
       mode="page"
+      navigation={navigation}
+      onNavigatePrev={navigatePrev}
+      onNavigateNext={navigateNext}
+      navigationMapCenter={navigationMapCenter}
     />
   );
 }

@@ -346,3 +346,34 @@ nextjs-portal {
 :lang(ar) {
   font-family: var(--font-arabic), sans-serif;
 }
+
+/* Skeleton loading animations */
+@keyframes skeleton-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes skeleton-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.skeleton-container {
+  animation: skeleton-fade-in 200ms ease-in;
+}
+
+.content-fade-in {
+  animation: skeleton-fade-in 300ms ease-in;
+}
+
+.skeleton-slot-content {
+  animation: skeleton-fade-in 150ms ease-in;
+}

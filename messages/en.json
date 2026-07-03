@@ -1593,6 +1593,11 @@
     },
     "backToEvents": "Back to Events Overview",
     "viewOnCrisisMap": "View on Crisis Map",
+    "nav": {
+      "previous": "Previous event",
+      "next": "Next event",
+      "position": "Event {current} of {total}"
+    },
     "status": {
       "active": "Active",
       "resolved": "Resolved"
@@ -2260,6 +2265,11 @@
     },
     "backToEvents": "Back to Events Overview",
     "viewOnCrisisMap": "View on Crisis Map",
+    "nav": {
+      "previous": "Previous signal",
+      "next": "Next signal",
+      "position": "Signal {current} of {total}"
+    },
     "signalBadge": "Signal",
     "fallbackTitleWithLocation": "Signal - {location}",
     "fallbackTitle": "Signal",

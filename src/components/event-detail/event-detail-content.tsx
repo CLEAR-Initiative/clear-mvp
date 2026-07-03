@@ -16,6 +16,8 @@ import {
   Collapse,
   Tooltip,
   UnstyledButton,
+  Skeleton,
+  ActionIcon,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -35,6 +37,8 @@ import {
   IconBellRinging,
   IconChevronDown,
   IconChevronUp,
+  IconChevronLeft,
+  IconChevronRight,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useLocations } from "~/hooks/use-locations";
@@ -50,6 +54,20 @@ import { AddToCrisisButton } from "~/components/event-detail/add-to-crisis-butto
 import { ShareEventButton } from "~/components/event-detail/share-event-button";
 import { severityColors } from "~/lib/constants/severity";
 import { KpiStack } from "~/components/ui/kpi-stack";
+import { SkeletonSlot } from "~/components/ui/skeleton-slot";
+import { useNavigationMapDisplay } from "~/hooks/use-navigation-map-display";
+import {
+  ActionsCardSkeleton,
+  DiscussionCardSkeleton,
+  EventHeaderSkeleton,
+  FeedbackCardSkeleton,
+  KpiStripSkeleton,
+  RelatedEventsCardSkeleton,
+  SignalsListCardSkeleton,
+  SummaryCardSkeleton,
+  SystemDataCardSkeleton,
+  MinimapCardSkeleton,
+} from "~/components/ui/detail-navigation-skeletons";
 
 function bigIntStrToNumber(s: string | null | undefined): number | null {
   if (s === null || s === undefined) return null;
@@ -69,17 +87,33 @@ function eventLocations(event: GqlEvent): GqlLocation[] {
 interface EventDetailContentProps {
   event: GqlEvent | null | undefined;
   loading: boolean;
+  isPending?: boolean;
   mode: "page" | "drawer";
   relatedEvents?: GqlEvent[];
   relatedLoading?: boolean;
+  navigation?: {
+    prevId: string | null;
+    nextId: string | null;
+    hasPrev: boolean;
+    hasNext: boolean;
+    position: string;
+  };
+  onNavigatePrev?: () => void;
+  onNavigateNext?: () => void;
+  navigationMapCenter?: [number, number];
 }
 
 export function EventDetailContent({
   event,
   loading,
+  isPending = false,
   mode,
   relatedEvents = [],
   relatedLoading = false,
+  navigation,
+  onNavigatePrev,
+  onNavigateNext,
+  navigationMapCenter,
 }: EventDetailContentProps) {
   // TODO: after Prisma migration use event.title directly; remove this fallback
   // TODO: after Prisma migration use event.types (list) instead of eventType
@@ -145,18 +179,82 @@ export function EventDetailContent({
   );
   const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
 
-  if (loading) {
+  const showPending = isPending && !!event;
+  const hookPrimaryMapLocation =
+    event?.generalLocation ?? event?.originLocation ?? event?.destinationLocation;
+  const hookSevColor = event ? severityColor(event.severity) : "var(--color-text-muted)";
+
+  const {
+    displayMarkers: mapDisplayMarkers,
+    displayLocation: mapDisplayLocation,
+    displaySevColor: headerBorderColor,
+    displayCenter: mapDisplayCenter,
+    holdRegionFit,
+    flyDuration: mapFlyDuration,
+  } = useNavigationMapDisplay({
+    isPending: showPending,
+    mapMarkers,
+    primaryLocation: hookPrimaryMapLocation,
+    sevColor: hookSevColor,
+    navigationMapCenter,
+    resolvedMapCenter: mapCenter,
+  });
+
+  // Show skeleton UI on initial load (no event data yet) - no spinning wheel
+  if (loading && !event) {
     return (
-      <Box
-        p={48}
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: 400,
-        }}
-      >
-        <Loader size="lg" />
+      <Box className="skeleton-container" style={{ background: "var(--color-bg-white)" }}>
+        {mode === "page" && (
+          <Box px={24} py={16} style={{ borderBottom: "1px solid var(--color-border)" }}>
+            <Group gap={16}>
+              <Skeleton height={20} width={120} radius="sm" />
+            </Group>
+          </Box>
+        )}
+
+        {/* Header skeleton */}
+        <Box
+          px={24}
+          py={20}
+          style={{
+            background: "var(--color-bg-white)",
+            borderBottom: "1px solid var(--color-border)",
+            borderInlineStart: "4px solid var(--color-border)",
+          }}
+        >
+          <Skeleton height={18} width={80} mb={10} radius="xl" />
+          <Skeleton height={24} width="85%" mb={12} />
+          <Group gap={6} mb={12}>
+            <Skeleton height={20} width={70} radius="xl" />
+            <Skeleton height={20} width={90} radius="xl" />
+          </Group>
+          <Group gap={12}>
+            <Skeleton height={12} width={100} />
+            <Skeleton height={12} width={120} />
+            <Skeleton height={12} width={90} />
+          </Group>
+        </Box>
+
+        {/* Body with sidebar layout */}
+        <Box p={24} style={{ display: "flex", gap: 20 }}>
+          <Box style={{ flex: 1, minWidth: 0 }}>
+            <KpiStripSkeleton />
+            <SummaryCardSkeleton />
+            <DiscussionCardSkeleton />
+            <SignalsListCardSkeleton />
+          </Box>
+
+          {mode !== "drawer" && (
+            <Box style={{ width: 300, flexShrink: 0 }}>
+              <Stack gap={20}>
+                <MinimapCardSkeleton />
+                <FeedbackCardSkeleton />
+                <ActionsCardSkeleton />
+                <SystemDataCardSkeleton />
+              </Stack>
+            </Box>
+          )}
+        </Box>
       </Box>
     );
   }
@@ -202,7 +300,6 @@ export function EventDetailContent({
   // event.types[0] replaces event.eventType
   const eventType = event.types[0] ?? "";
 
-  const sevColor = severityColor(event.severity);
   const sev = mapSeverity(event.severity);
   const sevBg = severityColors[sev]?.bg ?? "var(--color-bg-muted)";
   const isCompact = mode === "drawer";
@@ -266,18 +363,48 @@ export function EventDetailContent({
           style={{ background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)" }}
         >
           <Group justify="space-between">
-            <Link href="/detection" style={{ textDecoration: "none" }}>
-              <Group
-                gap={6}
-                className="hover:opacity-70"
-                style={{ cursor: "pointer" }}
-              >
-                <IconArrowLeft size={14} color="var(--color-text-secondary)" />
-                <Text size="sm" c="var(--color-text-secondary)" fw={500}>
-                  {t("backToEvents")}
-                </Text>
-              </Group>
-            </Link>
+            <Group gap={16}>
+              <Link href="/detection" style={{ textDecoration: "none" }}>
+                <Group
+                  gap={6}
+                  className="hover:opacity-70"
+                  style={{ cursor: "pointer" }}
+                >
+                  <IconArrowLeft size={14} color="var(--color-text-secondary)" />
+                  <Text size="sm" c="var(--color-text-secondary)" fw={500}>
+                    {t("backToEvents")}
+                  </Text>
+                </Group>
+              </Link>
+              
+              {/* Prev/Next navigation */}
+              {navigation && (
+                <Group gap={8}>
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    onClick={onNavigatePrev}
+                    disabled={!navigation.hasPrev}
+                    title={t("nav.previous")}
+                  >
+                    <IconChevronLeft size={16} />
+                  </ActionIcon>
+                  <Text size="xs" c="var(--color-text-muted)" fw={500} style={{ minWidth: 60, textAlign: "center" }}>
+                    {navigation.position}
+                  </Text>
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    onClick={onNavigateNext}
+                    disabled={!navigation.hasNext}
+                    title={t("nav.next")}
+                  >
+                    <IconChevronRight size={16} />
+                  </ActionIcon>
+                </Group>
+              )}
+            </Group>
+
             <Link
               href={`/map?event=${event.id}`}
               style={{ textDecoration: "none" }}
@@ -305,9 +432,10 @@ export function EventDetailContent({
         style={{
           background: isAlready || promoted ? "var(--color-critical-light)" : "var(--color-bg-white)",
           borderBottom: "1px solid var(--color-border)",
-          borderInlineStart: `4px solid ${sevColor}`,
+          borderInlineStart: `4px solid ${headerBorderColor}`,
         }}
       >
+        <SkeletonSlot pending={showPending} skeleton={<EventHeaderSkeleton isCompact={isCompact} />}>
         {/* Severity badge */}
         <Group gap={6} mb={10}>
           <span style={{
@@ -437,11 +565,13 @@ export function EventDetailContent({
             </Group>
           )}
         </Group>
+        </SkeletonSlot>
       </Box>
 
       {/* KPI strip */}
       {!isCompact && (
         <Box px={24} pt={24}>
+          <SkeletonSlot pending={showPending} skeleton={<KpiStripSkeleton />}>
           <KpiStack
             sections={[
               {
@@ -487,6 +617,7 @@ export function EventDetailContent({
               },
             ]}
           />
+          </SkeletonSlot>
         </Box>
       )}
 
@@ -501,6 +632,7 @@ export function EventDetailContent({
       >
         {/* Left column */}
         <Box style={{ flex: 1, minWidth: 0 }}>
+          <SkeletonSlot pending={showPending} skeleton={<SummaryCardSkeleton />}>
           {/* Summary */}
           <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
             <Box px={16} py={12} className="border-b border-[var(--color-border)]">
@@ -527,12 +659,16 @@ export function EventDetailContent({
               </Text>
             </Box>
           </Card>
+          </SkeletonSlot>
 
+          <SkeletonSlot pending={showPending} skeleton={<DiscussionCardSkeleton />}>
           {/* Discussion */}
           <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
             <CommentsSection entityId={event.id} entityType="event" />
           </Card>
+          </SkeletonSlot>
 
+          <SkeletonSlot pending={showPending} skeleton={<SignalsListCardSkeleton />}>
           {/* Source Signals */}
           <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
             <Box px={16} py={12} className="border-b border-[var(--color-border)]">
@@ -606,7 +742,12 @@ export function EventDetailContent({
               })}
             </Box>
           </Card>
+          </SkeletonSlot>
 
+          <SkeletonSlot
+            pending={showPending || relatedLoading}
+            skeleton={<RelatedEventsCardSkeleton />}
+          >
           {/* Related Events */}
           <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
             <Box px={16} py={12} className="border-b border-[var(--color-border)]">
@@ -688,27 +829,30 @@ export function EventDetailContent({
               })}
             </Box>
           </Card>
+          </SkeletonSlot>
         </Box>
 
         {/* Right sidebar */}
         {!isCompact && (
           <Box style={{ width: 300, flexShrink: 0 }}>
             <Stack gap={20}>
-              {/* Location map */}
               <MinimapCard
-                markers={mapMarkers}
-                center={mapCenter}
+                markers={mapDisplayMarkers}
+                center={mapDisplayCenter}
                 sudanGeometry={sudanGeometry}
                 sudanId={sudanId}
-                location={event.generalLocation ?? event.originLocation ?? event.destinationLocation}
+                location={mapDisplayLocation}
+                holdRegionFit={holdRegionFit}
+                flyDuration={mapFlyDuration}
               />
 
-              {/* Was this event helpful? */}
+              <SkeletonSlot pending={showPending} skeleton={<FeedbackCardSkeleton />}>
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
                 <FeedbackSection entityId={event.id} entityType="event" />
               </Card>
+              </SkeletonSlot>
 
-              {/* Actions */}
+              <SkeletonSlot pending={showPending} skeleton={<ActionsCardSkeleton />}>
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
                 <Box px={16} py={10} className="border-b border-[var(--color-border)]">
                   <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
@@ -815,8 +959,9 @@ export function EventDetailContent({
                   </Stack>
                 </Box>
               </Card>
+              </SkeletonSlot>
 
-              {/* System Data */}
+              <SkeletonSlot pending={showPending} skeleton={<SystemDataCardSkeleton />}>
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
                 <UnstyledButton
                   onClick={() => setSystemDataOpen((o) => !o)}
@@ -936,6 +1081,7 @@ export function EventDetailContent({
                 </Box>
                 </Collapse>
               </Card>
+              </SkeletonSlot>
             </Stack>
           </Box>
         )}

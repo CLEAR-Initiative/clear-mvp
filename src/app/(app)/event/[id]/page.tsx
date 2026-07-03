@@ -1,35 +1,85 @@
 "use client";
 
-import { use } from "react";
+import { use, useCallback, useEffect, useMemo, useRef } from "react";
+import { keepPreviousData } from "@tanstack/react-query";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { EventDetailContent } from "~/components/event-detail/event-detail-content";
+import { useEventNavigation, getEventMapCenter } from "~/hooks/use-event-navigation";
+import { deriveEntityPending, useEntityNavigation } from "~/hooks/use-entity-navigation";
 
 export default function EventDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
+  const paramsId = use(params).id;
   const { activeTeamId } = useTeam();
+  const utils = api.useUtils();
+  const prefetchedRef = useRef(new Set<string>());
+
+  const prefetchDetail = useCallback(
+    (id: string) => {
+      void utils.events.get.prefetch({ id });
+    },
+    [utils],
+  );
+
+  const { activeId, navigateTo } = useEntityNavigation({
+    paramsId,
+    routePrefix: "/event",
+  });
+
+  const navigation = useEventNavigation(activeId);
+
+  useEffect(() => {
+    for (const id of [navigation.prevId, navigation.nextId]) {
+      if (!id || prefetchedRef.current.has(id)) continue;
+      prefetchedRef.current.add(id);
+      prefetchDetail(id);
+    }
+  }, [navigation.prevId, navigation.nextId, prefetchDetail]);
 
   const eventQuery = api.events.get.useQuery(
-    { id },
-    { enabled: !!id },
+    { id: activeId },
+    {
+      enabled: !!activeId,
+      placeholderData: keepPreviousData,
+    },
   );
 
+  const isPending = deriveEntityPending(activeId, eventQuery.data);
+
   const relatedQuery = api.events.related.useQuery(
-    { id, teamId: activeTeamId },
-    { enabled: !!eventQuery.data },
+    { id: activeId, teamId: activeTeamId },
+    { enabled: !!activeId && !!activeTeamId && !isPending },
   );
+
+  const navigationMapCenter = useMemo(() => {
+    const item = navigation.listItems.find((e) => e.id === activeId);
+    return item ? getEventMapCenter(item) ?? undefined : undefined;
+  }, [activeId, navigation.listItems]);
+
+  const navigatePrev = () => {
+    if (navigation.prevId) navigateTo(navigation.prevId);
+  };
+
+  const navigateNext = () => {
+    if (navigation.nextId) navigateTo(navigation.nextId);
+  };
 
   return (
     <EventDetailContent
       event={eventQuery.data}
       loading={eventQuery.isLoading}
+      isPending={isPending}
       mode="page"
-      relatedEvents={relatedQuery.data ?? []}
-      relatedLoading={relatedQuery.isLoading}
+      relatedEvents={isPending ? [] : (relatedQuery.data ?? [])}
+      relatedLoading={isPending || relatedQuery.isLoading}
+      navigation={navigation}
+      onNavigatePrev={navigatePrev}
+      onNavigateNext={navigateNext}
+      navigationMapCenter={navigationMapCenter}
     />
   );
 }
