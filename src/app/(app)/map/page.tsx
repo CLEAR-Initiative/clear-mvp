@@ -30,7 +30,6 @@ import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
-import { MapTourHost } from "~/components/onboarding/map-tour-host";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -58,7 +57,6 @@ function FilterLabel({ children }: { children: string }) {
 export default function MapPage() {
   const t = useTranslations("map");
   const format = useFormatter();
-  const authQuery = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>("alert");
 
@@ -580,13 +578,6 @@ export default function MapPage() {
           50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
         }
       `}</style>
-
-      {authQuery.data?.user?.id && (
-        <MapTourHost
-          userId={authQuery.data.user.id}
-          signalCount={signalsListQuery.data?.length ?? 0}
-        />
-      )}
     </Box>
   );
 }
