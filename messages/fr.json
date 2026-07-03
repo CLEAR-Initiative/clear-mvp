@@ -1747,7 +1747,11 @@
       "markers": "Marqueurs",
       "severity": "Sévérité",
       "eventType": "Type d'événement",
-      "population": "Population"
+      "population": "Population",
+      "dataLayers": "Couches de données",
+      "baseMap": "Fond de carte",
+      "roads": "Routes",
+      "satellite": "Satellite"
     },
     "severities": {
       "critical": "Critique",

@@ -43,7 +43,19 @@ interface MapPanelBarProps {
   onShowPopulationChange: (v: boolean) => void;
   boundaryLevel: BoundaryLevel;
   onBoundaryLevelChange: (v: BoundaryLevel) => void;
+  showBoundaries?: boolean;
+  onShowBoundariesChange?: (v: boolean) => void;
+  showMarkers?: boolean;
+  onShowMarkersChange?: (v: boolean) => void;
+  showRoads?: boolean;
+  onShowRoadsChange?: (v: boolean) => void;
+  showSatellite?: boolean;
+  onShowSatelliteChange?: (v: boolean) => void;
 }
+
+const noop = () => {
+  /* callers that omit layer-toggle handlers get a no-op */
+};
 
 function IconBtn({
   icon: Icon, active, title, onClick,
@@ -95,6 +107,10 @@ export function MapPanelBar({
   dataView, onDataViewChange,
   showPopulation, onShowPopulationChange,
   boundaryLevel, onBoundaryLevelChange,
+  showBoundaries = true, onShowBoundariesChange = noop,
+  showMarkers = true, onShowMarkersChange = noop,
+  showRoads = true, onShowRoadsChange = noop,
+  showSatellite = false, onShowSatelliteChange = noop,
 }: MapPanelBarProps) {
   const t = useTranslations("map");
   const [active, setActive] = useState<PanelId | null>(null);
@@ -134,6 +150,26 @@ export function MapPanelBar({
                     mb={10}
                     styles={{ input: { fontWeight: 600, fontSize: 12 } }}
                   />
+                  
+                  <Group
+                    gap={8} py={4} px={2}
+                    className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
+                    onClick={() => onShowBoundariesChange(!showBoundaries)}
+                    style={{ userSelect: "none" }}
+                  >
+                    <Checkbox
+                      size="xs" checked={showBoundaries}
+                      onChange={(e) => onShowBoundariesChange(e.currentTarget.checked)}
+                      styles={{ input: { cursor: "pointer" } }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
+                      {t("panels.boundaries")}
+                    </Text>
+                  </Group>
+                  
+                  <Divider color="var(--color-bg-muted)" my={10} />
+                  
                   <SectionLabel>{t("panels.markers")}</SectionLabel>
                   <SegmentedControl
                     value={dataView}
@@ -142,8 +178,28 @@ export function MapPanelBar({
                     size="xs"
                     fullWidth
                     styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
+                    mb={6}
                   />
+                  
+                  <Group
+                    gap={8} py={4} px={2}
+                    className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
+                    onClick={() => onShowMarkersChange(!showMarkers)}
+                    style={{ userSelect: "none" }}
+                  >
+                    <Checkbox
+                      size="xs" checked={showMarkers}
+                      onChange={(e) => onShowMarkersChange(e.currentTarget.checked)}
+                      styles={{ input: { cursor: "pointer" } }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
+                      {t("panels.markers")}
+                    </Text>
+                  </Group>
+                  
                   <Divider color="var(--color-bg-muted)" my={10} />
+                  
                   <Group
                     gap={8} py={4} px={2}
                     className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
@@ -157,6 +213,44 @@ export function MapPanelBar({
                       onClick={(e) => e.stopPropagation()}
                     />
                     <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>{t("panels.population")}</Text>
+                  </Group>
+                  
+                  <Divider color="var(--color-bg-muted)" my={10} />
+                  
+                  <SectionLabel>{t("panels.baseMap")}</SectionLabel>
+                  
+                  <Group
+                    gap={8} py={4} px={2}
+                    className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
+                    onClick={() => onShowRoadsChange(!showRoads)}
+                    style={{ userSelect: "none" }}
+                  >
+                    <Checkbox
+                      size="xs" checked={showRoads}
+                      onChange={(e) => onShowRoadsChange(e.currentTarget.checked)}
+                      styles={{ input: { cursor: "pointer" } }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
+                      {t("panels.roads")}
+                    </Text>
+                  </Group>
+                  
+                  <Group
+                    gap={8} py={4} px={2}
+                    className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
+                    onClick={() => onShowSatelliteChange(!showSatellite)}
+                    style={{ userSelect: "none" }}
+                  >
+                    <Checkbox
+                      size="xs" checked={showSatellite}
+                      onChange={(e) => onShowSatelliteChange(e.currentTarget.checked)}
+                      styles={{ input: { cursor: "pointer" } }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
+                      {t("panels.satellite")}
+                    </Text>
                   </Group>
                 </Stack>
               </>

@@ -1,5 +1,6 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Stack, Badge, Button, CloseButton, ScrollArea } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import Link from "next/link";
 import { type CrisisMarker } from "./map-markers-data";
 
@@ -18,12 +19,29 @@ const severityColors: Record<string, { bg: string; color: string }> = {
 export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
   const t = useTranslations("map");
   const format = useFormatter();
+  const isMobile = useMediaQuery("(max-width: 48em)");
   const sev = severityColors[marker.severity] ?? severityColors.medium;
 
   return (
     <Box
       className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
-      /* intentionally physical: map overlay */ style={{ top: 80, right: 16, width: 320, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+      style={isMobile ? {
+        // Mobile: bottom sheet
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: "100%",
+        maxHeight: "45vh",
+        borderRadius: "16px 16px 0 0",
+        boxShadow: "0 -4px 12px rgba(0,0,0,0.15)",
+        borderBottom: "none",
+      } : {
+        // Desktop: top-right overlay
+        top: 80,
+        right: 16,
+        width: 320,
+        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+      }}
     >
       {/* Header */}
       <Group justify="space-between" px={16} py={12} className="border-b border-[var(--color-border)]">
@@ -34,7 +52,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
       </Group>
 
       {/* Body */}
-      <ScrollArea.Autosize mah={400} type="auto">
+      <ScrollArea.Autosize mah={isMobile ? "calc(45vh - 60px)" : 400} type="auto">
       <Box px={16} py={12}>
         {/* Severity */}
         <Group justify="space-between" mb={12}>

@@ -71,6 +71,14 @@ interface CrisisMapProps {
   preserveDrawingBuffer?: boolean;
   /** Duration (ms) for programmatic flyTo when center/zoom props change. */
   flyDuration?: number;
+  /** Show/hide boundaries layer */
+  showBoundaries?: boolean;
+  /** Show/hide markers layer */
+  showMarkers?: boolean;
+  /** Show/hide roads layer */
+  showRoads?: boolean;
+  /** Toggle satellite imagery base map */
+  showSatellite?: boolean;
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -217,12 +225,27 @@ export function CrisisMap({
   fitBoundsOnFocus = true,
   preserveDrawingBuffer = false,
   flyDuration = 1500,
+  showBoundaries = true,
+  showMarkers = true,
+  showRoads = true,
+  showSatellite = false,
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const isDark = useIsDark();
-  const mapStyle = isDark
-    ? "mapbox://styles/mapbox/dark-v11"
-    : "mapbox://styles/mapbox/light-v11";
+  
+  // Calculate map style based on satellite and roads toggles
+  const mapStyle = (() => {
+    if (showSatellite) {
+      // Satellite imagery - with or without roads
+      return showRoads
+        ? "mapbox://styles/mapbox/satellite-streets-v12"
+        : "mapbox://styles/mapbox/satellite-v9";
+    }
+    // Regular street map - light or dark theme
+    return isDark
+      ? "mapbox://styles/mapbox/dark-v11"
+      : "mapbox://styles/mapbox/light-v11";
+  })();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxGLAny>(null);
   const mbRef = useRef<MapboxGLAny>(null);
@@ -596,6 +619,21 @@ export function CrisisMap({
   // ── Markers (donut cluster DOM markers) ─────────────────────────────────
   useEffect(() => {
     if (!map.current || !loaded) return;
+    if (!showMarkers) {
+      // Clear markers if showMarkers is false
+      for (const mk of clusterDomMarkers.current.values()) {
+        try { mk.remove(); } catch { /* ignore */ }
+      }
+      clusterDomMarkers.current.clear();
+      const SOURCE = "crisis-markers";
+      const CLUSTER_GHOST = "cluster-ghost";
+      const POINT_GHOST = "point-ghost";
+      for (const id of [CLUSTER_GHOST, POINT_GHOST]) {
+        try { if (map.current.getLayer(id)) map.current.removeLayer(id); } catch { /* ignore */ }
+      }
+      try { if (map.current.getSource(SOURCE)) map.current.removeSource(SOURCE); } catch { /* ignore */ }
+      return;
+    }
     const m = map.current;
     const mb = mbRef.current;
     const SOURCE = "crisis-markers";
@@ -737,7 +775,7 @@ export function CrisisMap({
       m.off("moveend", debounced);
       m.off("sourcedata", onSourceData);
     };
-  }, [markers, loaded]);
+  }, [markers, loaded, showMarkers]);
 
   // ── Marker hover pulse (synced from list) ────────────────────────────────
   useEffect(() => {
@@ -850,6 +888,9 @@ export function CrisisMap({
     };
 
     cleanup();
+    
+    // Early exit if boundaries are hidden
+    if (!showBoundaries) return;
 
     const features = (adminBoundaries ?? [])
       .filter((b) => b.geometry != null)
@@ -875,7 +916,7 @@ export function CrisisMap({
     } catch { /* ignore */ }
 
     return cleanup;
-  }, [adminBoundaries, adminBoundaryLevel, loaded]);
+  }, [adminBoundaries, adminBoundaryLevel, loaded, showBoundaries]);
 
   // ── Regions (heatmap from signalPoints if present, else feathered fill) ─
   const regionLayerIds = useRef<string[]>([]);

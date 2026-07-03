@@ -1747,7 +1747,11 @@
       "markers": "العلامات",
       "severity": "الخطورة",
       "eventType": "نوع الحدث",
-      "population": "السكان"
+      "population": "السكان",
+      "dataLayers": "طبقات البيانات",
+      "baseMap": "الخريطة الأساسية",
+      "roads": "الطرق",
+      "satellite": "الأقمار الصناعية"
     },
     "severities": {
       "critical": "حرج",

@@ -10,6 +10,7 @@ import {
   Select,
   Loader,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { DisasterTypePicker } from "~/components/disaster-type-picker";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
@@ -19,6 +20,8 @@ import {
   alertsToMarkers,
   eventsToMarkers,
   crisesToMarkers,
+  alertsToRegions,
+  eventsToRegions,
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
 import { countryConfig } from "~/lib/constants/country-config";
@@ -54,6 +57,7 @@ function FilterLabel({ children }: { children: string }) {
 export default function MapPage() {
   const t = useTranslations("map");
   const format = useFormatter();
+  const isMobile = useMediaQuery("(max-width: 48em)");
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>("alert");
 
@@ -93,8 +97,11 @@ export default function MapPage() {
   }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
 
   const allRegions = useMemo(() => {
+    if (dataView === "alert") return alertsToRegions(alertsQuery.data?.alerts ?? []);
+    if (dataView === "event") return eventsToRegions(eventsQuery.data?.events ?? []);
+    // Crises don't have polygon regions in the current data model
     return [];
-  }, []);
+  }, [dataView, alertsQuery.data, eventsQuery.data]);
 
 
 
@@ -134,6 +141,76 @@ export default function MapPage() {
   );
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
+  
+  // Map layer controls - with localStorage persistence
+  const [showBoundaries, setShowBoundaries] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("map-layer-preferences");
+    if (stored) {
+      try {
+        const prefs = JSON.parse(stored);
+        return prefs.showBoundaries ?? true;
+      } catch {
+        return true;
+      }
+    }
+    return true;
+  });
+  
+  const [showMarkers, setShowMarkers] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("map-layer-preferences");
+    if (stored) {
+      try {
+        const prefs = JSON.parse(stored);
+        return prefs.showMarkers ?? true;
+      } catch {
+        return true;
+      }
+    }
+    return true;
+  });
+  
+  const [showRoads, setShowRoads] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("map-layer-preferences");
+    if (stored) {
+      try {
+        const prefs = JSON.parse(stored);
+        return prefs.showRoads ?? true;
+      } catch {
+        return true;
+      }
+    }
+    return true;
+  });
+  
+  const [showSatellite, setShowSatellite] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const stored = localStorage.getItem("map-layer-preferences");
+    if (stored) {
+      try {
+        const prefs = JSON.parse(stored);
+        return prefs.showSatellite ?? false;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+  
+  // Persist map layer preferences to localStorage
+  useEffect(() => {
+    const prefs = {
+      dataView,
+      showPopulation,
+      showBoundaries,
+      showMarkers,
+      showRoads,
+      showSatellite,
+    };
+    localStorage.setItem("map-layer-preferences", JSON.stringify(prefs));
+  }, [dataView, showPopulation, showBoundaries, showMarkers, showRoads, showSatellite]);
 
   // Resolve the currently-selected country's L0 ID for scoping admin
   // boundary queries and for the country highlight overlay. Null when the
@@ -351,7 +428,7 @@ export default function MapPage() {
     <Box
       style={{
         position: "relative",
-        height: "calc(100vh - 60px)",
+        height: isMobile ? "calc(100dvh - 56px - 72px)" : "calc(100vh - 60px)",
         overflow: "hidden",
       }}
     >
@@ -370,7 +447,7 @@ export default function MapPage() {
           pointerEvents: "none",
         }}
       >
-        <Group gap={12} style={{ pointerEvents: "auto" }}>
+        <Group gap={12} style={{ pointerEvents: "auto", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "flex-start", width: isMobile ? "100%" : "auto" }}>
           <Select
             size="xs"
             value={selectedCountry}
@@ -379,7 +456,7 @@ export default function MapPage() {
               // "All Countries" is a logic sentinel - translate display label only.
               c === "All Countries" ? { value: c, label: t("filters.allCountries") } : c,
             )}
-            style={{ minWidth: 140 }}
+            style={{ minWidth: isMobile ? "100%" : 140 }}
             styles={{ input: INPUT_STYLE }}
             label={<FilterLabel>{t("filters.country")}</FilterLabel>}
           />
@@ -391,11 +468,11 @@ export default function MapPage() {
               // "All Regions" is a logic sentinel - translate display label only.
               r === "All Regions" ? { value: r, label: t("filters.allRegions") } : r,
             )}
-            style={{ minWidth: 140 }}
+            style={{ minWidth: isMobile ? "100%" : 140 }}
             styles={{ input: INPUT_STYLE }}
             label={<FilterLabel>{t("filters.region")}</FilterLabel>}
           />
-          <Box style={{ minWidth: 160 }}>
+          <Box style={{ minWidth: isMobile ? "100%" : 160 }}>
             <DisasterTypePicker
               label={t("filters.crisisType")}
               hierarchy={hierarchy}
@@ -429,6 +506,10 @@ export default function MapPage() {
         adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
         fitBoundsGeometry={fitBoundsGeometry}
         populationBoundaries={populationBoundaries}
+        showBoundaries={showBoundaries}
+        showMarkers={showMarkers}
+        showRoads={showRoads}
+        showSatellite={showSatellite}
       />
 
       {/* ===== Left Panel Bar (Layers / Legend / Config) ===== */}
@@ -439,6 +520,14 @@ export default function MapPage() {
         onShowPopulationChange={setShowPopulation}
         boundaryLevel={boundaryLevel}
         onBoundaryLevelChange={setBoundaryLevel}
+        showBoundaries={showBoundaries}
+        onShowBoundariesChange={setShowBoundaries}
+        showMarkers={showMarkers}
+        onShowMarkersChange={setShowMarkers}
+        showRoads={showRoads}
+        onShowRoadsChange={setShowRoads}
+        showSatellite={showSatellite}
+        onShowSatelliteChange={setShowSatellite}
       />
 
       {/* ===== Selected Marker Detail ===== */}
