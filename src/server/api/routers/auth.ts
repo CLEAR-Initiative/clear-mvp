@@ -69,8 +69,8 @@ const UPDATE_PROFILE = `
 `;
 
 const GET_USER_DETAILS = `
-  query GetUserDetails($id: String!) {
-    user(id: $id) {
+  query GetUserDetails {
+    me {
       enableEmailNotification
       phoneNumber
       language
@@ -140,16 +140,16 @@ export const authRouter = createTRPCRouter({
 
   myUserDetails: protectedProcedure.query(async ({ ctx }) => {
     const data = await graphqlFetch<{
-      user: {
+      me: {
         enableEmailNotification: boolean;
         phoneNumber: string | null;
         language: string;
       } | null;
-    }>(GET_USER_DETAILS, { id: ctx.user.id }, cookieHeaders(ctx));
+    }>(GET_USER_DETAILS, undefined, cookieHeaders(ctx));
     return {
-      emailEnabled: data.user?.enableEmailNotification ?? false,
-      phoneNumber: data.user?.phoneNumber ?? null,
-      language: data.user?.language ?? "en",
+      emailEnabled: data.me?.enableEmailNotification ?? false,
+      phoneNumber: data.me?.phoneNumber ?? null,
+      language: data.me?.language ?? "en",
     };
   }),
 

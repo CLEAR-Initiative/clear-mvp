@@ -37,6 +37,7 @@ import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
 import { useSearchParams } from "next/navigation";
 import { getAdjacentItem, orderByProximityTo } from "~/lib/detail-list-nav";
 import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
+import { MapTourHost } from "~/components/onboarding/map-tour-host";
 
 const MAX_OPEN_PANELS = 4;
 
@@ -100,7 +101,7 @@ export default function MapPage() {
   const focusSignalId = searchParams.get("signal");
   const focusCrisisId = searchParams.get("crisis");
   const focusEntityId = focusEventId ?? focusSignalId ?? focusCrisisId;
-
+  const authQuery = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>(() => {
     if (focusSignalId) return "signal";
@@ -1161,6 +1162,10 @@ export default function MapPage() {
           50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
         }
       `}</style>
+
+      {authQuery.data?.user?.id && (
+        <MapTourHost userId={authQuery.data.user.id} signalCount={0} />
+      )}
     </Box>
   );
 }

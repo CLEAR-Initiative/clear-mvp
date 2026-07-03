@@ -1919,6 +1919,61 @@
   "onboarding": {
     "title": "Welcome to CLEAR",
     "subtitle": "Let's set up your organisation, team, and monitoring locations.",
+    "welcome": {
+      "profile": {
+        "title": "Set up your profile",
+        "subtitle": "Tell your team a bit about you before exploring CLEAR.",
+        "name": "Full name",
+        "phone": "Mobile number",
+        "phonePlaceholder": "912 345 678",
+        "phoneOptional": "Optional — you can add this later in Settings.",
+        "appearance": "Appearance",
+        "continue": "Continue"
+      },
+      "settings": {
+        "title": "Quick settings",
+        "subtitle": "Confirm your language and timezone. You can change these anytime.",
+        "team": "Active team",
+        "continue": "Continue to tour"
+      }
+    },
+    "tour": {
+      "back": "Back",
+      "next": "Next",
+      "finish": "Finish",
+      "finishTour": "Finish Tour",
+      "skipTour": "Skip Tour",
+      "exitTour": "Exit Tour",
+      "replay": "Show tour again",
+      "steps": {
+        "signals": {
+          "title": "Understanding Signals",
+          "body": "Signals are early indicators of potential humanitarian crises detected by our AI. They help you stay ahead of emerging situations."
+        },
+        "events": {
+          "title": "Events & Crisis Zones",
+          "body": "When signals are confirmed, they become Events. The Impact Zone shows the estimated geographic perimeter affected by the crisis."
+        },
+        "iconography": {
+          "title": "Iconography & Confidence",
+          "body": "Icons represent different types of signals. The outer rings indicate our AI confidence level: solid for High Confidence (90%+) and dashed for Medium Confidence (60–89%)."
+        },
+        "navigation": {
+          "title": "Navigation & Filters",
+          "body": "Use these filters to narrow down your view by specific countries, regions, or disaster types. You can also toggle between Map and List views in the top right."
+        }
+      },
+      "widgets": {
+        "activeSignals": "Active Signals",
+        "signalLegend": "Signal Legend",
+        "highConfidence": "High Confidence (90%+)",
+        "highConfidenceHint": "Minimal variance detected",
+        "mediumConfidence": "Medium Confidence (60–89%)",
+        "mediumConfidenceHint": "Moderate signal uncertainty",
+        "impactZone": "Impact Zone",
+        "impactZoneHint": "Affected perimeter"
+      }
+    },
     "steps": {
       "org": {
         "label": "Organisation",

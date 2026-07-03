@@ -366,3 +366,39 @@ nextjs-portal {
 :lang(ar) {
   font-family: var(--font-arabic), sans-serif;
 }
+
+/* Product tour — hide driver.js popover; we render Figma-styled TourCard */
+.clear-tour-hidden-popover,
+.driver-popover.clear-tour-hidden-popover {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+/* driver.js sets pointer-events:none on all descendants while active */
+.driver-active .clear-tour-card-root,
+.driver-active .clear-tour-card-root * {
+  pointer-events: auto !important;
+}
+
+/* Lighter scrim — keep the map readable outside the spotlight */
+.driver-active .driver-overlay path {
+  fill: rgb(12, 12, 16) !important;
+  opacity: 0.28 !important;
+}
+
+.driver-overlay {
+  cursor: pointer;
+}
+
+/* Spotlight: bright ring + lift so cutout contrasts with dimmed surround */
+.driver-active .driver-active-element {
+  position: relative;
+  z-index: 10001 !important;
+  filter: brightness(1.14) saturate(1.06) contrast(1.04) !important;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.98),
+    0 0 0 7px rgba(255, 90, 31, 0.55),
+    0 10px 36px rgba(0, 0, 0, 0.22) !important;
+  border-radius: 14px;
+}

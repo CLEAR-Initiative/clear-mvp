@@ -1921,6 +1921,61 @@
   "onboarding": {
     "title": "Bienvenue sur CLEAR",
     "subtitle": "Configurons votre organisation, votre équipe et vos zones de surveillance.",
+    "welcome": {
+      "profile": {
+        "title": "Configurez votre profil",
+        "subtitle": "Présentez-vous à votre équipe avant d'explorer CLEAR.",
+        "name": "Nom complet",
+        "phone": "Numéro de mobile",
+        "phonePlaceholder": "912 345 678",
+        "phoneOptional": "Facultatif — vous pourrez l'ajouter plus tard dans les paramètres.",
+        "appearance": "Apparence",
+        "continue": "Continuer"
+      },
+      "settings": {
+        "title": "Paramètres rapides",
+        "subtitle": "Confirmez votre langue et fuseau horaire. Modifiables à tout moment.",
+        "team": "Équipe active",
+        "continue": "Continuer vers la visite"
+      }
+    },
+    "tour": {
+      "back": "Retour",
+      "next": "Suivant",
+      "finish": "Terminer",
+      "finishTour": "Terminer la visite",
+      "skipTour": "Passer la visite",
+      "exitTour": "Quitter la visite",
+      "replay": "Revoir la visite",
+      "steps": {
+        "signals": {
+          "title": "Comprendre les signaux",
+          "body": "Les signaux sont des indicateurs précoces de crises humanitaires potentielles détectés par notre IA. Ils vous aident à anticiper les situations émergentes."
+        },
+        "events": {
+          "title": "Événements et zones de crise",
+          "body": "Lorsque les signaux sont confirmés, ils deviennent des événements. La zone d'impact montre le périmètre géographique estimé touché par la crise."
+        },
+        "iconography": {
+          "title": "Iconographie et confiance",
+          "body": "Les icônes représentent différents types de signaux. Les anneaux extérieurs indiquent le niveau de confiance de l'IA : plein pour haute confiance (90 %+) et pointillé pour confiance moyenne (60–89 %)."
+        },
+        "navigation": {
+          "title": "Navigation et filtres",
+          "body": "Utilisez ces filtres pour affiner la vue par pays, région ou type de catastrophe. Vous pouvez aussi basculer entre carte et liste en haut à droite."
+        }
+      },
+      "widgets": {
+        "activeSignals": "Signaux actifs",
+        "signalLegend": "Légende des signaux",
+        "highConfidence": "Haute confiance (90 %+)",
+        "highConfidenceHint": "Variance minimale détectée",
+        "mediumConfidence": "Confiance moyenne (60–89 %)",
+        "mediumConfidenceHint": "Incertitude modérée du signal",
+        "impactZone": "Zone d'impact",
+        "impactZoneHint": "Périmètre affecté"
+      }
+    },
     "steps": {
       "org": {
         "label": "Organisation",

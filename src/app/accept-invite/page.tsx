@@ -113,7 +113,7 @@ function AcceptInviteForm() {
         });
 
         if (!signInError) {
-          router.push("/dashboard");
+          router.push("/welcome/profile");
           return;
         }
         console.warn("[accept-invite] Auto-login failed:", signInError.message);

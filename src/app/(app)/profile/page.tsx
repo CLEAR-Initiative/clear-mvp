@@ -524,6 +524,7 @@ function PasswordResetModal({ opened, onClose }: { opened: boolean; onClose: () 
 
 function SettingsContent({ user }: { user: ProfileUser }) {
   const t = useTranslations("profile");
+  const tTour = useTranslations("onboarding.tour");
   const router = useRouter();
   const currentLocale = useLocale();
   const currentTimeZone = useTimeZone() ?? defaultTimeZone;
@@ -881,6 +882,16 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                 />
               </Box>
             </Group>
+            <Button
+              component={Link}
+              href="/map?tour=replay"
+              variant="light"
+              color="orange"
+              size="xs"
+              mt={16}
+            >
+              {tTour("replay")}
+            </Button>
           </Card>
         </>
       )}
