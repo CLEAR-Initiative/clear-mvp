@@ -1764,7 +1764,8 @@
       "none": "لا شيء",
       "crisis": "أزمة",
       "alert": "تنبيه",
-      "event": "حدث"
+      "event": "حدث",
+      "signal": "إشارة"
     },
     "boundaries": {
       "none": "لا شيء",

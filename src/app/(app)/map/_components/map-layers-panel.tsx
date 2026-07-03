@@ -2,7 +2,7 @@ import { useTranslations } from "next-intl";
 import { Box, Text, Stack, Checkbox, Group, Radio, Divider } from "@mantine/core";
 import { IconLayersLinked } from "@tabler/icons-react";
 
-export type DataView = "none" | "crisis" | "alert" | "event";
+export type DataView = "none" | "crisis" | "alert" | "event" | "signal";
 
 interface MapLayersPanelProps {
   dataView: DataView;
@@ -53,7 +53,7 @@ export function MapLayersPanel({
         </Text>
         <Radio.Group value={dataView} onChange={(v) => onDataViewChange(v as DataView)}>
           <Stack gap={0}>
-            {(["crisis", "alert", "event"] as const).map((view) => (
+            {(["crisis", "alert", "event", "signal"] as const).map((view) => (
               <Group
                 key={view}
                 gap={8}

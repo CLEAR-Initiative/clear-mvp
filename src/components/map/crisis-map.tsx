@@ -15,6 +15,7 @@ export interface MapMarker {
   type?: string;
   description?: string;
   popup?: string;
+  markerKind?: "event" | "signal" | "crisis";
 }
 
 export interface MapRegion {
@@ -123,6 +124,23 @@ function hexToRgba(hex: string, alpha: number): string {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function parsePopulation(value: string | number | null | undefined): number {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (!value) return 0;
+  const parsed = Number(value.replace(/[^\d.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isRoadLayerId(id: string): boolean {
+  const lower = id.toLowerCase();
+  return (
+    lower.includes("road") ||
+    lower.includes("street") ||
+    lower.includes("bridge") ||
+    lower.includes("tunnel")
+  );
 }
 
 // ── Donut cluster helpers ────────────────────────────────────────────────────
@@ -670,6 +688,7 @@ export function CrisisMap({
           properties: {
             id: mk.id, title: mk.title, severity: mk.severity,
             type: mk.type ?? "", description: mk.description ?? "",
+            marker_kind: mk.markerKind ?? "",
             is_critical: mk.severity === "critical" ? 1 : 0,
             is_high:     mk.severity === "high"     ? 1 : 0,
             is_medium:   mk.severity === "medium"   ? 1 : 0,
@@ -793,6 +812,19 @@ export function CrisisMap({
     }
   }, [hoveredMarkerId]);
 
+  // ── Roads toggle (Mapbox style layers) ──────────────────────────────────
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const visibility = showRoads ? "visible" : "none";
+    const layers = map.current.getStyle().layers as Array<{ id: string; type: string }> | undefined;
+    for (const layer of layers ?? []) {
+      if (!isRoadLayerId(layer.id)) continue;
+      try {
+        map.current.setLayoutProperty(layer.id, "visibility", visibility);
+      } catch { /* ignore */ }
+    }
+  }, [loaded, showRoads]);
+
   // ── Population choropleth (A2 districts, independent layer) ─────────────
   useEffect(() => {
     if (!map.current || !loaded) return;
@@ -813,7 +845,7 @@ export function CrisisMap({
       .filter((b) => b.geometry != null)
       .map((b) => ({
         type: "Feature" as const,
-        properties: { name: b.name, id: b.id, population: Number(b.population) || 0 },
+        properties: { name: b.name, id: b.id, population: parsePopulation(b.population) },
         geometry: b.geometry,
       }));
 
@@ -834,7 +866,7 @@ export function CrisisMap({
           "fill-color": [
             "case",
             ["==", ["get", "population"], 0],
-            "rgba(0,0,0,0)", // no data: transparent, let basemap show through
+            isDark ? "rgba(96,165,250,0.18)" : "rgba(191,219,254,0.25)",
             [
               "interpolate", ["linear"], ["get", "population"],
               1,       "#EFF7FF",
@@ -845,7 +877,7 @@ export function CrisisMap({
               1200000, "#08306B",
             ],
           ],
-          "fill-opacity": 0.75,
+          "fill-opacity": 0.8,
         },
       }, beforeId);
 
@@ -856,14 +888,14 @@ export function CrisisMap({
         source: SOURCE,
         paint: {
           "line-color": isDark ? "#FB923C" : "#C2410C",
-          "line-width": 0.5,
-          "line-opacity": 0.5,
+          "line-width": 0.9,
+          "line-opacity": 0.75,
         },
       }, beforeId);
     } catch { /* ignore */ }
 
     return cleanup;
-  }, [populationBoundaries, loaded]);
+  }, [isDark, populationBoundaries, loaded]);
 
   // ── Hide country highlight fill when population layer or region highlight is active ──
   useEffect(() => {

@@ -10,7 +10,6 @@ import {
   Select,
   Loader,
 } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks";
 import { DisasterTypePicker } from "~/components/disaster-type-picker";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
@@ -19,6 +18,7 @@ import {
   type CrisisMarker,
   alertsToMarkers,
   eventsToMarkers,
+  signalsToMarkers,
   crisesToMarkers,
   alertsToRegions,
   eventsToRegions,
@@ -30,35 +30,7 @@ import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
-
-const MAP_LAYER_PREFS_KEY = "map-layer-preferences";
-
-type MapLayerPrefs = {
-  dataView?: DataView;
-  showPopulation?: boolean;
-  showBoundaries?: boolean;
-  showMarkers?: boolean;
-  showRoads?: boolean;
-  showSatellite?: boolean;
-};
-
-function readMapLayerPrefs(): MapLayerPrefs {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(MAP_LAYER_PREFS_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as MapLayerPrefs;
-  } catch {
-    return {};
-  }
-}
-
-function initialDataView(): DataView {
-  const v = readMapLayerPrefs().dataView;
-  // "none" hides every marker — ignore stale saves so the map isn't blank on load.
-  if (v === "crisis" || v === "alert" || v === "event") return v;
-  return "alert";
-}
+import { MapTourHost } from "~/components/onboarding/map-tour-host";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -86,9 +58,9 @@ function FilterLabel({ children }: { children: string }) {
 export default function MapPage() {
   const t = useTranslations("map");
   const format = useFormatter();
-  const isMobile = useMediaQuery("(max-width: 48em)");
+  const authQuery = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   /* ---- Core state (must precede queries that depend on it) ---- */
-  const [dataView, setDataView] = useState<DataView>(initialDataView);
+  const [dataView, setDataView] = useState<DataView>("alert");
 
   /* ---- Fetch data ---- */
   const { activeTeamId, activeTeam } = useTeam();
@@ -112,6 +84,10 @@ export default function MapPage() {
     undefined,
     { enabled: dataView === "crisis" },
   );
+  const signalsListQuery = api.signals.list.useQuery(
+    { teamId: activeTeamId ?? undefined },
+    { staleTime: 60_000 },
+  );
   const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
     staleTime: Infinity, refetchOnWindowFocus: false,
   });
@@ -121,14 +97,14 @@ export default function MapPage() {
   const allMarkers: CrisisMarker[] = useMemo(() => {
     if (dataView === "alert")  return alertsToMarkers(alertsQuery.data?.alerts ?? []);
     if (dataView === "event")  return eventsToMarkers(eventsQuery.data?.events ?? []);
+    if (dataView === "signal") return signalsToMarkers(signalsListQuery.data ?? []);
     if (dataView === "crisis") return crisesToMarkers(crisesQuery.data?.crises ?? []);
     return [];
-  }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
+  }, [dataView, alertsQuery.data, eventsQuery.data, signalsListQuery.data, crisesQuery.data]);
 
   const allRegions = useMemo(() => {
     if (dataView === "alert") return alertsToRegions(alertsQuery.data?.alerts ?? []);
     if (dataView === "event") return eventsToRegions(eventsQuery.data?.events ?? []);
-    // Crises don't have polygon regions in the current data model
     return [];
   }, [dataView, alertsQuery.data, eventsQuery.data]);
 
@@ -170,28 +146,10 @@ export default function MapPage() {
   );
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
-  
-  // Map layer controls - with localStorage persistence
-  const [showBoundaries, setShowBoundaries] = useState(() => readMapLayerPrefs().showBoundaries ?? true);
-
-  const [showMarkers, setShowMarkers] = useState(() => readMapLayerPrefs().showMarkers ?? true);
-
-  const [showRoads, setShowRoads] = useState(() => readMapLayerPrefs().showRoads ?? true);
-
-  const [showSatellite, setShowSatellite] = useState(() => readMapLayerPrefs().showSatellite ?? false);
-  
-  // Persist map layer preferences to localStorage
-  useEffect(() => {
-    const prefs = {
-      dataView,
-      showPopulation,
-      showBoundaries,
-      showMarkers,
-      showRoads,
-      showSatellite,
-    };
-    localStorage.setItem(MAP_LAYER_PREFS_KEY, JSON.stringify(prefs));
-  }, [dataView, showPopulation, showBoundaries, showMarkers, showRoads, showSatellite]);
+  const [showBoundaries, setShowBoundaries] = useState(true);
+  const [showMarkers, setShowMarkers] = useState(true);
+  const [showRoads, setShowRoads] = useState(true);
+  const [showSatellite, setShowSatellite] = useState(false);
 
   // Resolve the currently-selected country's L0 ID for scoping admin
   // boundary queries and for the country highlight overlay. Null when the
@@ -220,7 +178,7 @@ export default function MapPage() {
   const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
   // Prefetch A2 population polygons when a country is focused so the toggle
-  // feels instant; the choropleth is only painted when showPopulation is on.
+  // only controls paint visibility rather than waiting on the first fetch.
   const populationQuery = api.locations.getPopulationBoundaries.useQuery(
     { countryId: focusCountryId ?? undefined },
     { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
@@ -405,19 +363,24 @@ export default function MapPage() {
     [allMarkers],
   );
 
-  const isLoading = alertsQuery.isLoading || eventsQuery.isLoading || crisesQuery.isLoading;
+  const isLoading =
+    alertsQuery.isLoading ||
+    eventsQuery.isLoading ||
+    signalsListQuery.isLoading ||
+    crisesQuery.isLoading;
 
   return (
     <Box
       style={{
         position: "relative",
-        height: isMobile ? "calc(100dvh - 56px - 72px)" : "calc(100vh - 60px)",
+        height: "calc(100vh - 60px)",
         overflow: "hidden",
       }}
     >
       {/* ===== Filter Header Overlay ===== */}
       <Box
         className="absolute top-0 left-0 right-0 z-10"
+        data-tour="map-filters"
         px={16}
         py={12}
         style={{
@@ -430,7 +393,7 @@ export default function MapPage() {
           pointerEvents: "none",
         }}
       >
-        <Group gap={12} style={{ pointerEvents: "auto", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "flex-start", width: isMobile ? "100%" : "auto" }}>
+        <Group gap={12} style={{ pointerEvents: "auto" }}>
           <Select
             size="xs"
             value={selectedCountry}
@@ -439,7 +402,7 @@ export default function MapPage() {
               // "All Countries" is a logic sentinel - translate display label only.
               c === "All Countries" ? { value: c, label: t("filters.allCountries") } : c,
             )}
-            style={{ minWidth: isMobile ? "100%" : 140 }}
+            style={{ minWidth: 140 }}
             styles={{ input: INPUT_STYLE }}
             label={<FilterLabel>{t("filters.country")}</FilterLabel>}
           />
@@ -451,11 +414,11 @@ export default function MapPage() {
               // "All Regions" is a logic sentinel - translate display label only.
               r === "All Regions" ? { value: r, label: t("filters.allRegions") } : r,
             )}
-            style={{ minWidth: isMobile ? "100%" : 140 }}
+            style={{ minWidth: 140 }}
             styles={{ input: INPUT_STYLE }}
             label={<FilterLabel>{t("filters.region")}</FilterLabel>}
           />
-          <Box style={{ minWidth: isMobile ? "100%" : 160 }}>
+          <Box style={{ minWidth: 160 }}>
             <DisasterTypePicker
               label={t("filters.crisisType")}
               hierarchy={hierarchy}
@@ -617,6 +580,13 @@ export default function MapPage() {
           50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
         }
       `}</style>
+
+      {authQuery.data?.user?.id && (
+        <MapTourHost
+          userId={authQuery.data.user.id}
+          signalCount={signalsListQuery.data?.length ?? 0}
+        />
+      )}
     </Box>
   );
 }

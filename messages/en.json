@@ -1762,7 +1762,8 @@
       "none": "None",
       "crisis": "Crisis",
       "alert": "Alert",
-      "event": "Event"
+      "event": "Event",
+      "signal": "Signal"
     },
     "boundaries": {
       "none": "None",

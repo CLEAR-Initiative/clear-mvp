@@ -34,6 +34,7 @@ const DATA_VIEW_OPTIONS: { labelKey: DataView; value: DataView }[] = [
   { labelKey: "crisis", value: "crisis" },
   { labelKey: "alert",  value: "alert" },
   { labelKey: "event",  value: "event" },
+  { labelKey: "signal", value: "signal" },
 ];
 
 interface MapPanelBarProps {

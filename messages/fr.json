@@ -1764,7 +1764,8 @@
       "none": "Aucun",
       "crisis": "Crise",
       "alert": "Alerte",
-      "event": "Événement"
+      "event": "Événement",
+      "signal": "Signal"
     },
     "boundaries": {
       "none": "Aucune",

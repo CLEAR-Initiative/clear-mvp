@@ -204,7 +204,16 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
                 ? `/signal/${marker.eventId}`
                 : `/event/${marker.eventId}`
             }
-            style={{ background: "var(--color-text-primary)" }}
+            className="btn-accent"
+            styles={{
+              root: {
+                background: "var(--color-accent)",
+                borderColor: "var(--color-accent)",
+                color: "#FFFFFF",
+                fontWeight: 600,
+                "&:hover": { background: "var(--color-accent-hover)" },
+              },
+            }}
           >
             {t("detail.viewDetails")}
           </Button>
