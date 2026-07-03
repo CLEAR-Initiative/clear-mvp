@@ -2078,7 +2078,12 @@
       "changePassword": "Change Password",
       "mobile": "Mobile",
       "mobilePlaceholder": "912 345 678",
-      "mobileUpdated": "Mobile number updated."
+      "mobileUpdated": "Mobile number updated.",
+      "profilePicture": "Profile Picture",
+      "uploadPhoto": "Upload Photo",
+      "photoRequirements": "JPG, PNG or GIF. Max 5MB.",
+      "namePlaceholder": "Enter your name",
+      "nameUpdated": "Name updated."
     },
     "orgRoles": {
       "title": "Organisation & Roles",
@@ -2152,6 +2157,27 @@
       "pause": "Pause",
       "resume": "Resume",
       "delete": "Delete subscription"
+    },
+    "contact": {
+      "title": "Contact Information",
+      "mobile": "Mobile",
+      "mobilePlaceholder": "912 345 678",
+      "mobileUpdated": "Mobile number updated.",
+      "notSet": "Not set"
+    },
+    "password": {
+      "title": "Password",
+      "description": "Your password",
+      "resetPassword": "Reset Password",
+      "modalTitle": "Reset Password",
+      "currentPassword": "Current Password",
+      "currentPasswordPlaceholder": "Enter current password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter new password",
+      "confirmPassword": "Confirm Password",
+      "confirmPasswordPlaceholder": "Re-enter new password",
+      "passwordUpdated": "Password updated successfully.",
+      "passwordMismatch": "Passwords do not match."
     }
   },
   "settings": {
