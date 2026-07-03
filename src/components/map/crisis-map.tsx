@@ -302,6 +302,7 @@ export function CrisisMap({
 
     return () => {
       cancelled = true;
+      setLoaded(false);
       map.current?.remove();
       map.current = null;
     };

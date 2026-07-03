@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl,
+  Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl, Loader,
 } from "@mantine/core";
 import { IconLayersLinked, IconList } from "@tabler/icons-react";
 import type { DataView } from "./map-layers-panel";
@@ -41,6 +41,7 @@ interface MapPanelBarProps {
   onDataViewChange: (v: DataView) => void;
   showPopulation: boolean;
   onShowPopulationChange: (v: boolean) => void;
+  populationLoading?: boolean;
   boundaryLevel: BoundaryLevel;
   onBoundaryLevelChange: (v: BoundaryLevel) => void;
   showBoundaries?: boolean;
@@ -106,6 +107,7 @@ function SectionLabel({ children }: { children: string }) {
 export function MapPanelBar({
   dataView, onDataViewChange,
   showPopulation, onShowPopulationChange,
+  populationLoading = false,
   boundaryLevel, onBoundaryLevelChange,
   showBoundaries = true, onShowBoundariesChange = noop,
   showMarkers = true, onShowMarkersChange = noop,
@@ -213,6 +215,7 @@ export function MapPanelBar({
                       onClick={(e) => e.stopPropagation()}
                     />
                     <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>{t("panels.population")}</Text>
+                    {populationLoading && <Loader size={12} />}
                   </Group>
                   
                   <Divider color="var(--color-bg-muted)" my={10} />

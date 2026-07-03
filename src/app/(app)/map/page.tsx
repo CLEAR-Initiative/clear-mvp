@@ -31,6 +31,35 @@ import { MapMarkerDetail } from "./_components/map-marker-detail";
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
 
+const MAP_LAYER_PREFS_KEY = "map-layer-preferences";
+
+type MapLayerPrefs = {
+  dataView?: DataView;
+  showPopulation?: boolean;
+  showBoundaries?: boolean;
+  showMarkers?: boolean;
+  showRoads?: boolean;
+  showSatellite?: boolean;
+};
+
+function readMapLayerPrefs(): MapLayerPrefs {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(MAP_LAYER_PREFS_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as MapLayerPrefs;
+  } catch {
+    return {};
+  }
+}
+
+function initialDataView(): DataView {
+  const v = readMapLayerPrefs().dataView;
+  // "none" hides every marker — ignore stale saves so the map isn't blank on load.
+  if (v === "crisis" || v === "alert" || v === "event") return v;
+  return "alert";
+}
+
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
   { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
@@ -59,7 +88,7 @@ export default function MapPage() {
   const format = useFormatter();
   const isMobile = useMediaQuery("(max-width: 48em)");
   /* ---- Core state (must precede queries that depend on it) ---- */
-  const [dataView, setDataView] = useState<DataView>("alert");
+  const [dataView, setDataView] = useState<DataView>(initialDataView);
 
   /* ---- Fetch data ---- */
   const { activeTeamId, activeTeam } = useTeam();
@@ -143,61 +172,13 @@ export default function MapPage() {
   const [showPopulation, setShowPopulation] = useState(false);
   
   // Map layer controls - with localStorage persistence
-  const [showBoundaries, setShowBoundaries] = useState(() => {
-    if (typeof window === "undefined") return true;
-    const stored = localStorage.getItem("map-layer-preferences");
-    if (stored) {
-      try {
-        const prefs = JSON.parse(stored);
-        return prefs.showBoundaries ?? true;
-      } catch {
-        return true;
-      }
-    }
-    return true;
-  });
-  
-  const [showMarkers, setShowMarkers] = useState(() => {
-    if (typeof window === "undefined") return true;
-    const stored = localStorage.getItem("map-layer-preferences");
-    if (stored) {
-      try {
-        const prefs = JSON.parse(stored);
-        return prefs.showMarkers ?? true;
-      } catch {
-        return true;
-      }
-    }
-    return true;
-  });
-  
-  const [showRoads, setShowRoads] = useState(() => {
-    if (typeof window === "undefined") return true;
-    const stored = localStorage.getItem("map-layer-preferences");
-    if (stored) {
-      try {
-        const prefs = JSON.parse(stored);
-        return prefs.showRoads ?? true;
-      } catch {
-        return true;
-      }
-    }
-    return true;
-  });
-  
-  const [showSatellite, setShowSatellite] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const stored = localStorage.getItem("map-layer-preferences");
-    if (stored) {
-      try {
-        const prefs = JSON.parse(stored);
-        return prefs.showSatellite ?? false;
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  });
+  const [showBoundaries, setShowBoundaries] = useState(() => readMapLayerPrefs().showBoundaries ?? true);
+
+  const [showMarkers, setShowMarkers] = useState(() => readMapLayerPrefs().showMarkers ?? true);
+
+  const [showRoads, setShowRoads] = useState(() => readMapLayerPrefs().showRoads ?? true);
+
+  const [showSatellite, setShowSatellite] = useState(() => readMapLayerPrefs().showSatellite ?? false);
   
   // Persist map layer preferences to localStorage
   useEffect(() => {
@@ -209,7 +190,7 @@ export default function MapPage() {
       showRoads,
       showSatellite,
     };
-    localStorage.setItem("map-layer-preferences", JSON.stringify(prefs));
+    localStorage.setItem(MAP_LAYER_PREFS_KEY, JSON.stringify(prefs));
   }, [dataView, showPopulation, showBoundaries, showMarkers, showRoads, showSatellite]);
 
   // Resolve the currently-selected country's L0 ID for scoping admin
@@ -238,15 +219,17 @@ export default function MapPage() {
 
   const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
-  // Population layer: A2 districts with population, lazy-loaded when first enabled.
+  // Prefetch A2 population polygons when a country is focused so the toggle
+  // feels instant; the choropleth is only painted when showPopulation is on.
   const populationQuery = api.locations.getPopulationBoundaries.useQuery(
     { countryId: focusCountryId ?? undefined },
-    { enabled: showPopulation && !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
+    { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
   const populationBoundaries = useMemo(
     () => (showPopulation ? (populationQuery.data ?? []) : []),
     [showPopulation, populationQuery.data],
   );
+  const populationLoading = showPopulation && populationQuery.isFetching && populationBoundaries.length === 0;
 
   // Country L0 geometry — used for the country highlight instead of Mapbox's
   // inaccurate tileset. Re-runs whenever the user switches country.
@@ -518,6 +501,7 @@ export default function MapPage() {
         onDataViewChange={setDataView}
         showPopulation={showPopulation}
         onShowPopulationChange={setShowPopulation}
+        populationLoading={populationLoading}
         boundaryLevel={boundaryLevel}
         onBoundaryLevelChange={setBoundaryLevel}
         showBoundaries={showBoundaries}
