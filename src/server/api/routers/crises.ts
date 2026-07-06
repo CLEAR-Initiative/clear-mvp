@@ -43,7 +43,7 @@ const NESTED_LOCATION_FIELDS = `
   metadata { type data }
 `;
 
-// Slim signal-location shape for map markers — only what
+// Slim signal-location shape for map markers - only what
 // crisis-detail-content actually reads.
 const SIGNAL_LOCATION_FIELDS = `
   id name level geometry
@@ -106,7 +106,7 @@ const CRISIS_LIST_FIELDS = `
   needs
   populationAffected
   populationInArea
-  events { id title severity rank }
+  events { id title severity rank firstSignalCreatedAt lastSignalCreatedAt }
 `;
 
 const CRISES_LIST_QUERY = `
@@ -218,6 +218,11 @@ export const crisesRouter = createTRPCRouter({
         /** Free-form JSON; CLEAR writes ClusterNeed[] shape. */
         needs: z.unknown(),
         eventIds: z.array(z.string()).min(1),
+        /** Team the crisis is filed under. Purely an authorisation hint —
+         *  the backend uses it to admit team_admin / field_coordinator
+         *  callers without a global admin/analyst role. Ignored
+         *  (harmlessly) for platform callers. */
+        teamId: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

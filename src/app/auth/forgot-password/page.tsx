@@ -50,7 +50,7 @@ export default function ForgotPasswordPage() {
       <Box w={400}>
         <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
           <Stack align="center" gap={4} mb={24}>
-            <Text fw={700} size="xl" c="#E85D3D" style={{ letterSpacing: "-0.025em" }}>
+            <Text fw={700} size="xl" c="var(--color-accent)" style={{ letterSpacing: "-0.025em" }}>
               CLEAR
             </Text>
             <Text size="lg" fw={600} c="var(--color-text-primary)">
@@ -72,7 +72,7 @@ export default function ForgotPasswordPage() {
               <Alert icon={<IconCheck size={16} />} color="green" variant="light" styles={{ message: { fontSize: 13 } }}>
                 {t("forgot.sent")}
               </Alert>
-              <Anchor component={Link} href="/auth/login" size="sm" c="#E85D3D" fw={500}>
+              <Anchor component={Link} href="/auth/login" size="sm" c="var(--color-accent)" fw={500}>
                 <IconArrowLeft size={14} style={{ verticalAlign: "middle", marginInlineEnd: 4 }} />
                 {t("backToSignIn")}
               </Anchor>

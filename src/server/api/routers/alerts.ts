@@ -13,12 +13,19 @@ const LOCATION_FIELDS = `
 // `location.name` for the card and `location.geometry` for the map
 // marker; `geometry` is cheap because the resolver caches per-request
 // via a WeakMap. What was expensive was `ancestors { ... }` (recursive
-// resolver) and `metadata` (separate sub-query) — dropping those gets
+// resolver) and `metadata` (separate sub-query) - dropping those gets
 // the list query off the heavy path while keeping map markers visible.
 // Detail pages keep using the full LOCATION_FIELDS (they need the
 // ancestor/metadata fallback chain).
+// `ancestorIds` is a plain array field (not the recursive `ancestors`
+// resolver above) and is cheap for the same reason `geometry` is. It's
+// required by `clipToRegion()` in the Detection page: a point-level
+// signal/event location's own id never equals the selected region id,
+// so region filtering falls through to `ancestorIds.includes(regionId)`.
+// Without it, every point marker silently disappears once a region
+// filter is applied.
 const LOCATION_LIST_FIELDS = `
-  id name level geometry
+  id name level geometry ancestorIds
 `;
 
 const SIGNAL_FIELDS = `
@@ -39,7 +46,7 @@ const SIGNAL_FIELDS = `
 // only reads name from locations and skips collectedAt entirely; the
 // full SIGNAL_FIELDS for a 100-row history page kicks off 300 nested
 // LOCATION_FIELDS resolutions, each of which fans out into a separate
-// PostGIS query + recursive ancestor lookup — the same wedge that
+// PostGIS query + recursive ancestor lookup - the same wedge that
 // stalled events / alerts at non-English locales.
 const SIGNAL_LIST_FIELDS = `
   id
@@ -74,7 +81,7 @@ const EVENT_FIELDS = `
 
 // Slim variant for *list views* (eventsPage / alertsPage). The events
 // feed only reads `signals.length`, `signals[0].source.name`, and
-// `signals.some(s => sources.has(s.source.name))` — fetching the full
+// `signals.some(s => sources.has(s.source.name))` - fetching the full
 // SIGNAL_FIELDS for every signal of every event in a page of 25 events
 // triggers thousands of nested location resolutions (each signal has
 // general/origin/destination locations, each with a name that, on
@@ -85,7 +92,7 @@ const EVENT_FIELDS = `
 // Slim signal shape nested inside EVENT_LIST_FIELDS. The events feed
 // reads `signals[].source.name` (count + filter), AND the map-marker
 // fallback walks `signals[].{general,origin,destination}Location` when
-// the event itself has a Polygon (not Point) geometry — so signal
+// the event itself has a Polygon (not Point) geometry - so signal
 // locations need at minimum geometry + ancestorIds to render markers.
 // We deliberately skip name translation work at the signal level by
 // keeping the shape minimal: id, name, level, geometry, ancestorIds.

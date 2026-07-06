@@ -61,7 +61,7 @@ function ResetPasswordForm() {
               <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light" styles={{ message: { fontSize: 13 } }}>
                 {t("reset.invalidLink")}
               </Alert>
-              <Anchor component={Link} href="/auth/forgot-password" size="sm" c="#E85D3D" fw={500}>
+              <Anchor component={Link} href="/auth/forgot-password" size="sm" c="var(--color-accent)" fw={500}>
                 {t("reset.requestNew")}
               </Anchor>
             </Stack>
@@ -100,7 +100,7 @@ function ResetPasswordForm() {
       <Box w={400}>
         <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
           <Stack align="center" gap={4} mb={24}>
-            <Text fw={700} size="xl" c="#E85D3D" style={{ letterSpacing: "-0.025em" }}>
+            <Text fw={700} size="xl" c="var(--color-accent)" style={{ letterSpacing: "-0.025em" }}>
               CLEAR
             </Text>
             <Text size="lg" fw={600} c="var(--color-text-primary)">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Badge, Loader } from "@mantine/core";
 import { IconLayersIntersect } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -25,10 +25,36 @@ export function ReportsTab({
 }: ReportsTabProps) {
   const t = useTranslations("insights");
   const tCommon = useTranslations("common");
+  const format = useFormatter();
   const crisesQuery = api.crises.list.useQuery();
   const crises = crisesQuery.data ?? [];
 
   const criticalCount = crises.filter((c) => mapSeverity(c.severity) === "critical").length;
+
+  // A crisis has no timestamps of its own, so its "first event" and
+  // "last update" are derived from its events' signal dates (mirrors the
+  // convention in crisis-detail-content).
+  type CrisisItem = (typeof crises)[number];
+  const firstEventAt = (c: CrisisItem): number | null => {
+    const times = (c.events ?? [])
+      .map((e) => e.firstSignalCreatedAt)
+      .filter(Boolean)
+      .map((d) => new Date(d).getTime());
+    return times.length ? Math.min(...times) : null;
+  };
+  const lastUpdateAt = (c: CrisisItem): number | null => {
+    const times = (c.events ?? [])
+      .map((e) => e.lastSignalCreatedAt || e.firstSignalCreatedAt)
+      .filter(Boolean)
+      .map((d) => new Date(d).getTime());
+    return times.length ? Math.max(...times) : null;
+  };
+
+  // Most recently updated crises first; crises with no dated events sink
+  // to the bottom.
+  const crisesSorted = [...crises].sort(
+    (a, b) => (lastUpdateAt(b) ?? 0) - (lastUpdateAt(a) ?? 0),
+  );
 
   return (
     <Box mb={24}>
@@ -55,12 +81,14 @@ export function ReportsTab({
         )}
 
         {!crisesQuery.isLoading && crises.length > 0 &&
-          crises.map((crisis) => {
+          crisesSorted.map((crisis) => {
             const sev = mapSeverity(crisis.severity);
             const colors = severityColors[sev] ?? severityColors.medium!;
             const dotColor = severityColor(crisis.severity);
             const locationName = resolveLocationName(crisis.generalLocation);
             const eventCount = crisis.events?.length ?? 0;
+            const firstAt = firstEventAt(crisis);
+            const lastAt = lastUpdateAt(crisis);
             const allTypes = [...new Set(crisis.events?.flatMap((e) => e.types ?? []) ?? [])];
             const pills = getDisasterPills(allTypes);
 
@@ -137,11 +165,23 @@ export function ReportsTab({
                       </Group>
                     )}
 
-                    <Group gap={6} align="center">
-                      <IconLayersIntersect size={13} color="var(--color-text-muted)" />
-                      <Text size="xs" c="var(--color-text-muted)" fw={500}>
-                        {t("reports.eventCount", { count: eventCount })}
-                      </Text>
+                    <Group gap={16} align="center" wrap="wrap">
+                      <Group gap={6} align="center">
+                        <IconLayersIntersect size={13} color="var(--color-text-muted)" />
+                        <Text size="xs" c="var(--color-text-muted)" fw={500}>
+                          {t("reports.eventCount", { count: eventCount })}
+                        </Text>
+                      </Group>
+                      {firstAt !== null && (
+                        <Text size="xs" c="var(--color-text-muted)" fw={500}>
+                          {t("reports.firstEvent", { date: format.dateTime(new Date(firstAt), "short") })}
+                        </Text>
+                      )}
+                      {lastAt !== null && (
+                        <Text size="xs" c="var(--color-text-muted)" fw={500}>
+                          {t("reports.lastUpdate", { date: format.dateTime(new Date(lastAt), "short") })}
+                        </Text>
+                      )}
                     </Group>
                   </Box>
                 </Box>

@@ -17,7 +17,9 @@
       "criticalBadge": "{count} critique(s)",
       "untitledCrisis": "Crise sans titre",
       "eventCount": "{count, plural, one {# événement} other {# événements}}",
-      "empty": "Aucune crise active."
+      "empty": "Aucune crise active.",
+      "firstEvent": "Premier événement : {date}",
+      "lastUpdate": "Dernière mise à jour : {date}"
     },
     "executiveSummary": {
       "priorityAnalysis": "Analyse prioritaire",

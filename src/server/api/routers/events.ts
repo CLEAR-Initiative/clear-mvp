@@ -295,6 +295,11 @@ export const eventsRouter = createTRPCRouter({
     .input(
       z.object({
         signalIds: z.array(z.string()).min(1),
+        /** Team the event is filed under. Purely an authorisation hint —
+         *  the backend uses it to admit team_admin / field_coordinator
+         *  callers without a global admin/analyst role. Ignored
+         *  (harmlessly) for platform callers. */
+        teamId: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
