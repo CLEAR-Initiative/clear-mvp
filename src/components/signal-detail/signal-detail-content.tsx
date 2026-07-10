@@ -375,6 +375,7 @@ export function SignalDetailContent({
                     onClick={onNavigatePrev}
                     disabled={!navigation.hasPrev}
                     title={t("nav.previous")}
+                    aria-label={t("nav.previous")}
                   >
                     <IconChevronLeft size={16} />
                   </ActionIcon>
@@ -392,6 +393,7 @@ export function SignalDetailContent({
                     onClick={onNavigateNext}
                     disabled={!navigation.hasNext}
                     title={t("nav.next")}
+                    aria-label={t("nav.next")}
                   >
                     <IconChevronRight size={16} />
                   </ActionIcon>

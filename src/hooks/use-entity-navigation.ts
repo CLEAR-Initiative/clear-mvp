@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 /** True when the UI target differs from the entity currently rendered. */
@@ -17,10 +17,12 @@ interface UseEntityNavigationOptions {
 export function useEntityNavigation({ paramsId, routePrefix }: UseEntityNavigationOptions) {
   const router = useRouter();
   const [activeId, setActiveId] = useState(paramsId);
+  const prevParamsIdRef = useRef(paramsId);
 
-  useEffect(() => {
+  if (paramsId !== prevParamsIdRef.current) {
+    prevParamsIdRef.current = paramsId;
     setActiveId(paramsId);
-  }, [paramsId]);
+  }
 
   const navigateTo = useCallback(
     (targetId: string) => {

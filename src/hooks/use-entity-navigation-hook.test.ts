@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 
 const replace = vi.fn();
 
@@ -34,7 +34,7 @@ describe("useEntityNavigation", () => {
     expect(replace).toHaveBeenCalledWith("/signal/sig-2", { scroll: false });
   });
 
-  it("syncs activeId when paramsId changes (browser back/forward)", async () => {
+  it("syncs activeId when paramsId changes (browser back/forward)", () => {
     const { result, rerender } = renderHook(
       ({ paramsId }: { paramsId: string }) =>
         useEntityNavigation({ paramsId, routePrefix: "/event" }),
@@ -50,8 +50,6 @@ describe("useEntityNavigation", () => {
     expect(result.current.activeId).toBe("ev-2");
 
     rerender({ paramsId: "ev-1" });
-    await waitFor(() => {
-      expect(result.current.activeId).toBe("ev-1");
-    });
+    expect(result.current.activeId).toBe("ev-1");
   });
 });

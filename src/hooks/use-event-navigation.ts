@@ -68,8 +68,8 @@ export function useEventNavigation(currentEventId: string): DetailNavigationResu
   // Read detection filter context or use defaults
   const navContext = useMemo(() => {
     const stored = readDetectionNavContext();
-    return stored ?? getDefaultDetectionNavContext(getLocationId);
-  }, [getLocationId]);
+    return stored ?? getDefaultDetectionNavContext(getLocationId, activeTeamId);
+  }, [getLocationId, activeTeamId]);
 
   // Query events with detection filters, limited to 500 (API max)
   const eventsQuery = api.alerts.eventsPage.useQuery({
@@ -150,8 +150,8 @@ export function useSignalNavigation(currentSignalId: string): DetailNavigationRe
   // Read detection filter context or use defaults
   const navContext = useMemo(() => {
     const stored = readDetectionNavContext();
-    return stored ?? getDefaultDetectionNavContext(getLocationId);
-  }, [getLocationId]);
+    return stored ?? getDefaultDetectionNavContext(getLocationId, activeTeamId);
+  }, [getLocationId, activeTeamId]);
 
   // Query signals with detection filters, limited to 500 (API max)
   const signalsQuery = api.alerts.signalsPage.useQuery({

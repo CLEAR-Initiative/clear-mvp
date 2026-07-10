@@ -36,13 +36,16 @@ export function readDetectionNavContext(): DetectionNavContext | null {
   }
 }
 
-export function getDefaultDetectionNavContext(getLocationId: (name: string) => string | null): DetectionNavContext {
+export function getDefaultDetectionNavContext(
+  getLocationId: (name: string) => string | null,
+  teamId: string | null = null,
+): DetectionNavContext {
   const now = new Date();
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(now.getDate() - 30);
   
   return {
-    teamId: null,
+    teamId,
     locationId: getLocationId("Sudan"),
     from: thirtyDaysAgo.toISOString(),
     to: now.toISOString(),

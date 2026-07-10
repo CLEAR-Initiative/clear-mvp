@@ -256,7 +256,7 @@ function DetectionPageContent() {
       signalOrderBy: SIGNAL_ORDER_MAP[signalsSort],
       sourceNames: activeSources ? [...activeSources] : undefined,
     });
-  }, [activeTeamId, selectedLocationId, fromIso, effectiveTo, severityMin, severityMax, expandedTypeCodes, eventsSort, signalsSort, activeSources]);
+  }, [activeTeamId, selectedLocationId, fromIso, effectiveTo, severityMin, severityMax, expandedTypeCodes?.join(","), eventsSort, signalsSort, activeSources]);
 
   // ── Per-feed accumulated items + offset ───────────────────────────────────
   const [eventsItems, setEventsItems] = useState<GqlEvent[]>([]);
