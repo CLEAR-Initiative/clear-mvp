@@ -69,6 +69,8 @@ interface CrisisMapProps {
   fitBoundsOnFocus?: boolean;
   /** Enable WebGL canvas readback for print snapshots. Has a small GPU memory cost. */
   preserveDrawingBuffer?: boolean;
+  /** Duration (ms) for programmatic flyTo when center/zoom props change. */
+  flyDuration?: number;
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -214,6 +216,7 @@ export function CrisisMap({
   hoveredMarkerId,
   fitBoundsOnFocus = true,
   preserveDrawingBuffer = false,
+  flyDuration = 1500,
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const isDark = useIsDark();
@@ -587,8 +590,8 @@ export function CrisisMap({
     ) return;
     prevCenter.current = center;
     prevZoom.current = zoom;
-    map.current.flyTo({ center, zoom, duration: 1500 });
-  }, [center, zoom, loaded, focusCountry]);
+    map.current.flyTo({ center, zoom, duration: flyDuration });
+  }, [center, zoom, loaded, focusCountry, flyDuration]);
 
   // ── Markers (donut cluster DOM markers) ─────────────────────────────────
   useEffect(() => {

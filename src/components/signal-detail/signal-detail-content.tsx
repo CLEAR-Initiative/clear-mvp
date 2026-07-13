@@ -12,6 +12,8 @@ import {
   Stack,
   Loader,
   Button,
+  Skeleton,
+  ActionIcon,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -28,6 +30,8 @@ import {
   IconLink,
   IconPhoto,
   IconFile,
+  IconChevronLeft,
+  IconChevronRight,
 } from "@tabler/icons-react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlSignalDetail, GqlLocation } from "~/lib/types/graphql";
@@ -39,6 +43,19 @@ import type { MapMarker } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
 import { useLocations } from "~/hooks/use-locations";
 import { MinimapCard } from "~/components/map/minimap-card";
+import { SkeletonSlot } from "~/components/ui/skeleton-slot";
+import { useNavigationMapDisplay } from "~/hooks/use-navigation-map-display";
+import {
+  ActionsCardSkeleton,
+  DescriptionCardSkeleton,
+  DiscussionCardSkeleton,
+  EventGridCardsSkeleton,
+  FeedbackCardSkeleton,
+  MinimapCardSkeleton,
+  SignalHeaderSkeleton,
+  SignalSourceCardSkeleton,
+  SystemDataCardSkeleton,
+} from "~/components/ui/detail-navigation-skeletons";
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -111,13 +128,29 @@ function MediaThumbnail({ url, filename }: { url: string; filename: string }) {
 interface SignalDetailContentProps {
   signal: GqlSignalDetail | null | undefined;
   loading: boolean;
+  isPending?: boolean;
   mode: "page" | "drawer";
+  navigation?: {
+    prevId: string | null;
+    nextId: string | null;
+    hasPrev: boolean;
+    hasNext: boolean;
+    position: string;
+  };
+  onNavigatePrev?: () => void;
+  onNavigateNext?: () => void;
+  navigationMapCenter?: [number, number];
 }
 
 export function SignalDetailContent({
   signal,
   loading,
+  isPending = false,
   mode,
+  navigation,
+  onNavigatePrev,
+  onNavigateNext,
+  navigationMapCenter,
 }: SignalDetailContentProps) {
   const t = useTranslations("signalDetail");
   const tCommon = useTranslations("common");
@@ -158,7 +191,7 @@ export function SignalDetailContent({
   );
   const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
 
-  // Collect all signals from sibling events, deduplicated, excluding self
+  // Collect all signals from sibling events
   const relatedSignals = useMemo(() => {
     if (!signal) return [];
     const seen = new Set<string>([signal.id]);
@@ -187,18 +220,80 @@ export function SignalDetailContent({
     return seen.size;
   }, [signal]);
 
-  if (loading) {
+  const showPending = isPending && !!signal;
+  const hookPrimaryMapLocation =
+    signal?.generalLocation ?? signal?.originLocation ?? signal?.destinationLocation;
+
+  const {
+    displayMarkers: mapDisplayMarkers,
+    displayLocation: mapDisplayLocation,
+    displayCenter: mapDisplayCenter,
+    holdRegionFit,
+    flyDuration: mapFlyDuration,
+  } = useNavigationMapDisplay({
+    isPending: showPending,
+    mapMarkers,
+    primaryLocation: hookPrimaryMapLocation,
+    sevColor: "var(--color-text-muted)",
+    navigationMapCenter,
+    resolvedMapCenter: mapCenter,
+  });
+
+  // Show skeleton UI on initial load (no signal data yet) - no spinning wheel
+  if (loading && !signal) {
     return (
-      <Box
-        p={48}
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: 400,
-        }}
-      >
-        <Loader size="lg" />
+      <Box className="skeleton-container" style={{ background: "var(--color-bg-white)" }}>
+        {mode === "page" && (
+          <Box px={24} py={16} style={{ borderBottom: "1px solid var(--color-border)" }}>
+            <Group gap={16}>
+              <Skeleton height={20} width={120} radius="sm" />
+            </Group>
+          </Box>
+        )}
+
+        {/* Header skeleton */}
+        <Box
+          px={24}
+          py={20}
+          style={{
+            background: "var(--color-bg-white)",
+            borderBottom: "1px solid var(--color-border)",
+            borderInlineStart: "4px solid var(--color-border)",
+          }}
+        >
+          <Skeleton height={18} width={80} mb={10} radius="xl" />
+          <Skeleton height={24} width="85%" mb={12} />
+          <Group gap={6} mb={12}>
+            <Skeleton height={20} width={70} radius="xl" />
+            <Skeleton height={20} width={90} radius="xl" />
+          </Group>
+          <Group gap={12}>
+            <Skeleton height={12} width={100} />
+            <Skeleton height={12} width={120} />
+            <Skeleton height={12} width={90} />
+          </Group>
+        </Box>
+
+        {/* Body with sidebar layout */}
+        <Box p={24} style={{ display: "flex", gap: 20 }}>
+          <Box style={{ flex: 1, minWidth: 0 }}>
+            <DescriptionCardSkeleton />
+            <SignalSourceCardSkeleton />
+            <DiscussionCardSkeleton />
+            <EventGridCardsSkeleton />
+          </Box>
+
+          {mode !== "drawer" && (
+            <Box style={{ width: 300, flexShrink: 0 }}>
+              <Stack gap={20}>
+                <MinimapCardSkeleton />
+                <FeedbackCardSkeleton />
+                <ActionsCardSkeleton />
+                <SystemDataCardSkeleton />
+              </Stack>
+            </Box>
+          )}
+        </Box>
       </Box>
     );
   }
@@ -259,18 +354,52 @@ export function SignalDetailContent({
           style={{ background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)" }}
         >
           <Group justify="space-between">
-            <Link href="/detection" style={{ textDecoration: "none" }}>
-              <Group
-                gap={6}
-                className="hover:opacity-70"
-                style={{ cursor: "pointer" }}
-              >
-                <IconArrowLeft size={14} color="var(--color-text-secondary)" />
-                <Text size="sm" c="var(--color-text-secondary)" fw={500}>
-                  {t("backToEvents")}
-                </Text>
-              </Group>
-            </Link>
+            <Group gap={16}>
+              <Link href="/detection" style={{ textDecoration: "none" }}>
+                <Group
+                  gap={6}
+                  className="hover:opacity-70"
+                  style={{ cursor: "pointer" }}
+                >
+                  <IconArrowLeft size={14} color="var(--color-text-secondary)" />
+                  <Text size="sm" c="var(--color-text-secondary)" fw={500}>
+                    {t("backToEvents")}
+                  </Text>
+                </Group>
+              </Link>
+              {navigation && (
+                <Group gap={8}>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    onClick={onNavigatePrev}
+                    disabled={!navigation.hasPrev}
+                    title={t("nav.previous")}
+                    aria-label={t("nav.previous")}
+                  >
+                    <IconChevronLeft size={16} />
+                  </ActionIcon>
+                  <Text
+                    size="xs"
+                    c="var(--color-text-muted)"
+                    fw={500}
+                    style={{ minWidth: 60, textAlign: "center" }}
+                  >
+                    {navigation.position}
+                  </Text>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    onClick={onNavigateNext}
+                    disabled={!navigation.hasNext}
+                    title={t("nav.next")}
+                    aria-label={t("nav.next")}
+                  >
+                    <IconChevronRight size={16} />
+                  </ActionIcon>
+                </Group>
+              )}
+            </Group>
             {locations.length > 0 && (
               <Link
                 href={`/map`}
@@ -303,106 +432,104 @@ export function SignalDetailContent({
           borderInlineStart: "4px solid var(--color-text-muted)",
         }}
       >
-        {/* Severity badge */}
-        <Group gap={6} mb={10}>
-          <span style={{
-            display: "inline-block",
-            padding: "2px 10px",
-            borderRadius: 999,
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-            background: sev === "critical" ? "var(--color-critical-light)" : sev === "low" ? "var(--color-success-light)" : "var(--color-warning-light)",
-            color: sev === "critical" ? "var(--color-critical)" : sev === "low" ? "var(--color-success)" : "var(--color-warning)",
-          }}>
-            {tCommon(`severities.${sev}`)}
-          </span>
-        </Group>
-
-        {/* Title row */}
-        <Group
-          justify="space-between"
-          align="flex-start"
-          mb={10}
-          wrap="nowrap"
-          gap={16}
-        >
-          <Text
-            fw={700}
-            c="var(--color-text-primary)"
-            style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3, flex: 1 }}
-          >
-            {displayTitle}
-          </Text>
-          <Group gap={6} style={{ flexShrink: 0, paddingTop: 3 }} wrap="nowrap">
-            <IconRadar size={13} color="var(--color-text-muted)" />
-            <Text size="xs" fw={500} c="var(--color-text-muted)">
-              {t("signalBadge")}
-            </Text>
+        <SkeletonSlot pending={showPending} skeleton={<SignalHeaderSkeleton isCompact={isCompact} />}>
+          <Group gap={6} mb={10}>
+            <span style={{
+              display: "inline-block",
+              padding: "2px 10px",
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              background: sev === "critical" ? "var(--color-critical-light)" : sev === "low" ? "var(--color-success-light)" : "var(--color-warning-light)",
+              color: sev === "critical" ? "var(--color-critical)" : sev === "low" ? "var(--color-success)" : "var(--color-warning)",
+            }}>
+              {tCommon(`severities.${sev}`)}
+            </span>
           </Group>
-        </Group>
 
-        {/* Source type pill + "via source" + optional original link */}
-        <Group gap={8} mb={14} wrap="wrap" align="center">
-          <Badge
-            size="sm"
-            radius="xl"
-            variant="outline"
-            style={{ color: "var(--color-text-muted)", borderColor: "color-mix(in srgb, var(--color-text-muted) 25%, transparent)", fontWeight: 500 }}
+          <Group
+            justify="space-between"
+            align="flex-start"
+            mb={10}
+            wrap="nowrap"
+            gap={16}
           >
-            {sourceTypeLabel}
-          </Badge>
-          <Text size="xs" c="var(--color-text-secondary)" fw={500}>
-            {t("viaSource", { name: signal.source.name })}
-          </Text>
-          {(signal.url ?? signal.source.infoUrl) && (
-            <>
-              <Text size="xs" c="var(--color-text-muted)">·</Text>
-              <a
-                href={signal.url ?? signal.source.infoUrl ?? ""}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: "#E85D3D",
-                  textDecoration: "none",
-                }}
-              >
-                <IconExternalLink size={12} />
-                {signal.url ? t("viewOriginal") : t("viewSource")}
-              </a>
-            </>
-          )}
-        </Group>
-
-        {/* Meta */}
-        <Group gap={16} wrap="wrap">
-          {locations.some((l) => resolveLocationName(l)) && (
-            <Group gap={4}>
-              <IconMapPin size={13} color="var(--color-text-muted)" />
-              <Text size="xs" c="var(--color-text-secondary)" fw={500}>
-                {locations.map((l) => resolveLocationName(l)).filter(Boolean).join(", ")}
+            <Text
+              fw={700}
+              c="var(--color-text-primary)"
+              style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3, flex: 1 }}
+            >
+              {displayTitle}
+            </Text>
+            <Group gap={6} style={{ flexShrink: 0, paddingTop: 3 }} wrap="nowrap">
+              <IconRadar size={13} color="var(--color-text-muted)" />
+              <Text size="xs" fw={500} c="var(--color-text-muted)">
+                {t("signalBadge")}
               </Text>
             </Group>
-          )}
-          <Group gap={4}>
-            <IconCalendar size={13} color="var(--color-text-muted)" />
-            <Text size="xs" c="var(--color-text-secondary)">
-              {format.dateTime(new Date(signal.publishedAt), "short")}
-            </Text>
           </Group>
-          <Group gap={4}>
-            <IconClock size={13} color="var(--color-text-muted)" />
-            <Text size="xs" c="var(--color-text-muted)">
-              {format.relativeTime(new Date(signal.publishedAt))}
+
+          <Group gap={8} mb={14} wrap="wrap" align="center">
+            <Badge
+              size="sm"
+              radius="xl"
+              variant="outline"
+              style={{ color: "var(--color-text-muted)", borderColor: "color-mix(in srgb, var(--color-text-muted) 25%, transparent)", fontWeight: 500 }}
+            >
+              {sourceTypeLabel}
+            </Badge>
+            <Text size="xs" c="var(--color-text-secondary)" fw={500}>
+              {t("viaSource", { name: signal.source.name })}
             </Text>
+            {(signal.url ?? signal.source.infoUrl) && (
+              <>
+                <Text size="xs" c="var(--color-text-muted)">·</Text>
+                <a
+                  href={signal.url ?? signal.source.infoUrl ?? ""}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: "#E85D3D",
+                    textDecoration: "none",
+                  }}
+                >
+                  <IconExternalLink size={12} />
+                  {signal.url ? t("viewOriginal") : t("viewSource")}
+                </a>
+              </>
+            )}
           </Group>
-        </Group>
+
+          <Group gap={16} wrap="wrap">
+            {locations.some((l) => resolveLocationName(l)) && (
+              <Group gap={4}>
+                <IconMapPin size={13} color="var(--color-text-muted)" />
+                <Text size="xs" c="var(--color-text-secondary)" fw={500}>
+                  {locations.map((l) => resolveLocationName(l)).filter(Boolean).join(", ")}
+                </Text>
+              </Group>
+            )}
+            <Group gap={4}>
+              <IconCalendar size={13} color="var(--color-text-muted)" />
+              <Text size="xs" c="var(--color-text-secondary)">
+                {format.dateTime(new Date(signal.publishedAt), "short")}
+              </Text>
+            </Group>
+            <Group gap={4}>
+              <IconClock size={13} color="var(--color-text-muted)" />
+              <Text size="xs" c="var(--color-text-muted)">
+                {format.relativeTime(new Date(signal.publishedAt))}
+              </Text>
+            </Group>
+          </Group>
+        </SkeletonSlot>
       </Box>
 
       {/* Body */}
@@ -416,6 +543,7 @@ export function SignalDetailContent({
       >
         {/* Left column */}
         <Box style={{ flex: 1, minWidth: 0 }}>
+          <SkeletonSlot pending={showPending} skeleton={<DescriptionCardSkeleton />}>
           {/* Description */}
           <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
             <Box px={16} py={12} className="border-b border-[var(--color-border)]">
@@ -429,7 +557,9 @@ export function SignalDetailContent({
               </Text>
             </Box>
           </Card>
+          </SkeletonSlot>
 
+          <SkeletonSlot pending={showPending} skeleton={<SignalSourceCardSkeleton />}>
           {/* Source details */}
           <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
             <Box px={16} py={12} className="border-b border-[var(--color-border)]">
@@ -507,9 +637,10 @@ export function SignalDetailContent({
               )}
             </Box>
           </Card>
+          </SkeletonSlot>
 
           {/* Media */}
-          {signal.media && signal.media.length > 0 && (
+          {!showPending && signal.media && signal.media.length > 0 && (
             <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
               <Box px={16} py={12} className="border-b border-[var(--color-border)]">
                 <Group gap={8}>
@@ -536,11 +667,14 @@ export function SignalDetailContent({
             </Card>
           )}
 
+          <SkeletonSlot pending={showPending} skeleton={<DiscussionCardSkeleton />}>
           {/* Discussion */}
           <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
             <CommentsSection entityId={signal.id} entityType="signal" />
           </Card>
+          </SkeletonSlot>
 
+          <SkeletonSlot pending={showPending} skeleton={<EventGridCardsSkeleton />}>
           {/* Part of Events + Similar Signals - two columns */}
           <Box style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
 
@@ -658,29 +792,30 @@ export function SignalDetailContent({
             </Card>
 
           </Box>
+          </SkeletonSlot>
         </Box>
 
         {/* Right sidebar */}
         {!isCompact && (
           <Box style={{ width: 300, flexShrink: 0 }}>
             <Stack gap={20}>
-              {/* Location map */}
-              {mapMarkers.length > 0 && (
-                <MinimapCard
-                  markers={mapMarkers}
-                  center={mapCenter}
-                  sudanGeometry={sudanGeometry}
-                  sudanId={sudanId}
-                  location={signal.generalLocation ?? signal.originLocation ?? signal.destinationLocation}
-                />
-              )}
+              <MinimapCard
+                markers={mapDisplayMarkers}
+                center={mapDisplayCenter}
+                sudanGeometry={sudanGeometry}
+                sudanId={sudanId}
+                location={mapDisplayLocation}
+                holdRegionFit={holdRegionFit}
+                flyDuration={mapFlyDuration}
+              />
 
-              {/* Was this signal helpful? */}
+              <SkeletonSlot pending={showPending} skeleton={<FeedbackCardSkeleton />}>
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
                 <FeedbackSection entityId={signal.id} entityType="signal" />
               </Card>
+              </SkeletonSlot>
 
-              {/* Actions */}
+              <SkeletonSlot pending={showPending} skeleton={<ActionsCardSkeleton />}>
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
                 <Box px={16} py={10} className="border-b border-[var(--color-border)]">
                   <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
@@ -724,8 +859,9 @@ export function SignalDetailContent({
                   </Stack>
                 </Box>
               </Card>
+              </SkeletonSlot>
 
-              {/* Signal details */}
+              <SkeletonSlot pending={showPending} skeleton={<SystemDataCardSkeleton />}>
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
                 <Box px={16} py={10} className="border-b border-[var(--color-border)]">
                   <Group gap={6}>
@@ -783,6 +919,7 @@ export function SignalDetailContent({
                   </Stack>
                 </Box>
               </Card>
+              </SkeletonSlot>
             </Stack>
           </Box>
         )}

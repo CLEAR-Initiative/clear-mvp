@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { Box, Text, Group, Select, Checkbox } from "@mantine/core";
@@ -40,13 +40,18 @@ interface MinimapCardProps {
   locationName?: string;
   /** Override the "Full map" href (defaults to "/map"). */
   fullMapHref?: string;
+  /** When true, keep the previous region fit geometry instead of updating from a new location query. */
+  holdRegionFit?: boolean;
+  /** flyTo duration when center changes (ms). */
+  flyDuration?: number;
 }
 
-export function MinimapCard({ markers, center, sudanGeometry, sudanId, location, locationName, fullMapHref = "/map" }: MinimapCardProps) {
+export function MinimapCard({ markers, center, sudanGeometry, sudanId, location, locationName, fullMapHref = "/map", holdRegionFit = false, flyDuration }: MinimapCardProps) {
   const t = useTranslations("map");
   const [layersOpen, setLayersOpen] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A2");
   const [showPopulation, setShowPopulation] = useState(false);
+  const stableFitBoundsRef = useRef<unknown | undefined>(undefined);
 
   // Derive the A1 state ID from the location:
   //   level 1 (state)    -> location itself
@@ -66,6 +71,14 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, location,
   );
 
   const fitBoundsGeometry = stateQuery.data?.geometry ?? undefined;
+
+  if (!holdRegionFit && fitBoundsGeometry !== undefined) {
+    stableFitBoundsRef.current = fitBoundsGeometry;
+  }
+
+  const displayFitBoundsGeometry = holdRegionFit
+    ? stableFitBoundsRef.current
+    : fitBoundsGeometry;
 
   const a1BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
     { level: 1, countryId: sudanId ?? undefined },
@@ -125,10 +138,11 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, location,
           focusCountryName="Sudan"
           focusCountryGeometry={sudanGeometry}
           fitBoundsOnFocus={false}
-          fitBoundsGeometry={fitBoundsGeometry}
+          fitBoundsGeometry={displayFitBoundsGeometry}
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
           populationBoundaries={populationBoundaries}
+          flyDuration={flyDuration}
         />
 
         {/* Layers toggle button */}
