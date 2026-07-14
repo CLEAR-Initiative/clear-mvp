@@ -469,72 +469,126 @@ export function NavSidebar() {
           {/* User Profile Card with Menu */}
           <Menu position="right-start" offset={8} withArrow>
             <Menu.Target>
-              <UnstyledButton
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: spacingPx[3],
-                  padding: spacingPx[2],
-                  borderRadius: 8,
-                  background: "var(--color-bg-elevated)",
-                  border: "1px solid var(--color-border)",
-                  width: "100%",
-                  cursor: "pointer",
-                  transition: "background 150ms",
-                  marginBottom: spacingPx[4],
-                }}
-                className="hover:bg-[var(--color-bg-hover)] transition-colors"
-              >
-                {/* Avatar */}
-                <Box
+              {authData?.user ? (
+                <UnstyledButton
                   style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 9999,
-                    border: "1px solid var(--color-accent)",
-                    background: "var(--color-accent-light)",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
+                    gap: spacingPx[3],
+                    padding: spacingPx[2],
+                    borderRadius: 8,
+                    background: "var(--color-bg-elevated)",
+                    border: "1px solid var(--color-border)",
+                    width: "100%",
+                    cursor: "pointer",
+                    transition: "background 150ms",
+                    marginBottom: spacingPx[4],
                   }}
+                  className="hover:bg-[var(--color-bg-hover)] transition-colors"
                 >
-                  <Text fw={600} size="sm" c="var(--color-accent)">
-                    {authData?.user?.email?.[0]?.toUpperCase() ?? "U"}
-                  </Text>
-                </Box>
-
-                {/* User info - only show when not collapsed */}
-                {!collapsed && (
-                  <Box style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-                    <Text
-                      size="xs"
-                      fw={500}
-                      c="var(--color-text-primary)"
-                      style={{ 
-                        lineHeight: 1.3,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {authData?.user?.email ?? "User"}
-                    </Text>
-                    <Text
-                      size="10px"
-                      c="var(--color-text-muted)"
-                      style={{ 
-                        lineHeight: 1.5,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {isAdmin ? "Admin Account" : "User Account"}
+                  {/* Avatar */}
+                  <Box
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 9999,
+                      border: "1px solid var(--color-accent)",
+                      background: "var(--color-accent-light)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Text fw={600} size="sm" c="var(--color-accent)">
+                      {authData.user.email?.[0]?.toUpperCase() ?? "U"}
                     </Text>
                   </Box>
-                )}
-              </UnstyledButton>
+
+                  {/* User info - only show when not collapsed */}
+                  {!collapsed && (
+                    <Box style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                      <Text
+                        size="xs"
+                        fw={500}
+                        c="var(--color-text-primary)"
+                        style={{ 
+                          lineHeight: 1.3,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {authData.user.email}
+                      </Text>
+                      <Text
+                        size="10px"
+                        c="var(--color-text-muted)"
+                        style={{ 
+                          lineHeight: 1.5,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {isAdmin ? "Admin Account" : "User Account"}
+                      </Text>
+                    </Box>
+                  )}
+                </UnstyledButton>
+              ) : (
+                /* Skeleton UI while loading */
+                <Box
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: spacingPx[3],
+                    padding: spacingPx[2],
+                    borderRadius: 8,
+                    background: "var(--color-bg-elevated)",
+                    border: "1px solid var(--color-border)",
+                    width: "100%",
+                    marginBottom: spacingPx[4],
+                  }}
+                >
+                  {/* Avatar skeleton */}
+                  <Box
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 9999,
+                      background: "var(--color-bg-muted)",
+                      flexShrink: 0,
+                      animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                    }}
+                  />
+
+                  {/* Text skeleton - only show when not collapsed */}
+                  {!collapsed && (
+                    <Box style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+                      <Box
+                        style={{
+                          height: 14,
+                          width: "70%",
+                          borderRadius: 4,
+                          background: "var(--color-bg-muted)",
+                          animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                        }}
+                      />
+                      <Box
+                        style={{
+                          height: 12,
+                          width: "50%",
+                          borderRadius: 4,
+                          background: "var(--color-bg-muted)",
+                          animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                          animationDelay: "150ms",
+                        }}
+                      />
+                    </Box>
+                  )}
+                </Box>
+              )}
             </Menu.Target>
 
             <Menu.Dropdown>
@@ -570,6 +624,14 @@ export function NavSidebar() {
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
+
+          {/* CSS for skeleton pulse animation */}
+          <style>{`
+            @keyframes pulse {
+              0%, 100% { opacity: 1; }
+              50% { opacity: 0.5; }
+            }
+          `}</style>
         </Box>
       </Box>
       <FeedbackModal opened={feedbackOpen} onClose={closeFeedback} />

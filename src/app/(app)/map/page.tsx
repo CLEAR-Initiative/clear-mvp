@@ -28,10 +28,26 @@ import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
+import { MapTourHost } from "~/components/onboarding/map-tour-host";
+import { readMarkerCache, writeMarkerCache } from "~/lib/map-marker-cache";
+import { useIsDark } from "~/hooks/use-is-dark";
+
+function MapLoadingPlaceholder() {
+  const isDark = useIsDark();
+  return (
+    <Box 
+      w="100%" 
+      h="100%" 
+      style={{ 
+        background: isDark ? "var(--mantine-color-dark-7)" : "var(--mantine-color-gray-1)",
+      }} 
+    />
+  );
+}
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
+  { ssr: false, loading: MapLoadingPlaceholder },
 );
 
 /* ========== Label styles ========== */

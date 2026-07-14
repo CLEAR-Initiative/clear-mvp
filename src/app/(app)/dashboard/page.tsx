@@ -18,10 +18,24 @@ import type { DataView } from "~/app/(app)/map/_components/map-layers-panel";
 import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { RightPanel } from "./_components/right-panel";
+import { useIsDark } from "~/hooks/use-is-dark";
+
+function MapLoadingPlaceholder() {
+  const isDark = useIsDark();
+  return (
+    <Box 
+      w="100%" 
+      h="100%" 
+      style={{ 
+        background: isDark ? "var(--mantine-color-dark-7)" : "var(--mantine-color-gray-1)",
+      }} 
+    />
+  );
+}
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box w="100%" h="100%" style={{ background: "var(--color-bg-muted)" }} /> },
+  { ssr: false, loading: MapLoadingPlaceholder },
 );
 
 export default function DashboardPage() {
