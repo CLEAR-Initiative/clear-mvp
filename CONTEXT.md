@@ -33,6 +33,20 @@ construct — turns are *not* sent back to NRC Find, so each question is answere
 independently (see [ADR-0001](docs/adr/0001-agent-is-a-stateless-rag-thread.md)).
 _Avoid_: "conversation history" (implies the backend remembers — it does not).
 
+### Detection detail navigation
+
+**Quick Navigation**:
+Prev/next controls on Signal and Event detail pages that move through the Detection list
+order (including active filter/sort context) without remounting the page shell.
+_Avoid_: full-page navigation flash; treating Quick Navigation as a browser history stack
+of unrelated entities.
+
+**Navigation Transition**:
+The loading behavior during Quick Navigation: stable chrome (back, arrows, position); data
+slots show skeletons while the target entity is pending; resolved content **replaces**
+skeleton with an instant swap (no fade-from-transparent).
+_Avoid_: white overlays; page-level content fade-in; opacity-0 entry animations on resolve.
+
 ## Relationships
 
 - A **Thread** contains many question/**Answer** turns
@@ -47,10 +61,16 @@ _Avoid_: "conversation history" (implies the backend remembers — it does not).
 > sees; every question is a fresh retrieval. A vague follow-up will retrieve against those
 > words alone."
 
+> **Dev:** "Quick Navigation works but content flashes when it loads — keep a fade-in?"
+> **Domain expert:** "No. Instant swap: skeletons → content. Chrome never blinks; no
+> fade-from-transparent."
+
 ## Flagged ambiguities
 
 - "conversation" was used to mean both the visible **Thread** and remembered backend
   history — resolved: only the UI **Thread** exists; there is no server-side history.
+- Quick Navigation post-load flash — resolved: instant skeleton→content swap; no resolve
+  fade-in.
 
 ## Theming language
 

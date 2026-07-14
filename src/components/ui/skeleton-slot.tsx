@@ -15,13 +15,10 @@ interface SkeletonSlotProps {
  * Slot dimensions should be defined by the skeleton shape to prevent layout shift.
  */
 export function SkeletonSlot({ pending, skeleton, children, className }: SkeletonSlotProps) {
+  // Instant swap — no fade-from-transparent on resolve (see Navigation Transition in CONTEXT.md).
   if (pending) {
     return <Box className={className}>{skeleton}</Box>;
   }
 
-  return (
-    <Box className={[className, "skeleton-slot-content"].filter(Boolean).join(" ")}>
-      {children}
-    </Box>
-  );
+  return <Box className={className}>{children}</Box>;
 }
