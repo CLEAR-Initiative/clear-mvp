@@ -1662,6 +1662,11 @@
       "createdTitle": "Crise créée",
       "createdMessage": "Le pipeline va générer le titre et le résumé sous peu.",
       "createErrorTitle": "Impossible de créer la crise"
+    },
+    "nav": {
+      "previous": "Événement précédent",
+      "next": "Événement suivant",
+      "position": "Événement {current} sur {total}"
     }
   },
   "knowledge": {
@@ -1742,7 +1747,11 @@
       "markers": "Marqueurs",
       "severity": "Sévérité",
       "eventType": "Type d'événement",
-      "population": "Population"
+      "population": "Population",
+      "dataLayers": "Couches de données",
+      "baseMap": "Fond de carte",
+      "roads": "Routes",
+      "satellite": "Satellite"
     },
     "severities": {
       "critical": "Critique",
@@ -1755,7 +1764,8 @@
       "none": "Aucun",
       "crisis": "Crise",
       "alert": "Alerte",
-      "event": "Événement"
+      "event": "Événement",
+      "signal": "Signal"
     },
     "boundaries": {
       "none": "Aucune",
@@ -2070,7 +2080,12 @@
       "changePassword": "Changer le mot de passe",
       "mobile": "Mobile",
       "mobilePlaceholder": "912 345 678",
-      "mobileUpdated": "Numéro de mobile mis à jour."
+      "mobileUpdated": "Numéro de mobile mis à jour.",
+      "profilePicture": "Photo de profil",
+      "uploadPhoto": "Téléverser une photo",
+      "photoRequirements": "JPG, PNG ou GIF. 5 Mo max.",
+      "namePlaceholder": "Saisissez votre nom",
+      "nameUpdated": "Nom mis à jour."
     },
     "orgRoles": {
       "title": "Organisation et rôles",
@@ -2144,6 +2159,27 @@
       "pause": "Suspendre",
       "resume": "Reprendre",
       "delete": "Supprimer l'abonnement"
+    },
+    "contact": {
+      "title": "Coordonnées",
+      "mobile": "Mobile",
+      "mobilePlaceholder": "912 345 678",
+      "mobileUpdated": "Numéro de mobile mis à jour.",
+      "notSet": "Non défini"
+    },
+    "password": {
+      "title": "Mot de passe",
+      "description": "Votre mot de passe",
+      "resetPassword": "Réinitialiser le mot de passe",
+      "modalTitle": "Réinitialiser le mot de passe",
+      "currentPassword": "Mot de passe actuel",
+      "currentPasswordPlaceholder": "Saisissez le mot de passe actuel",
+      "newPassword": "Nouveau mot de passe",
+      "newPasswordPlaceholder": "Saisissez le nouveau mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "confirmPasswordPlaceholder": "Saisissez à nouveau le nouveau mot de passe",
+      "passwordUpdated": "Mot de passe mis à jour avec succès.",
+      "passwordMismatch": "Les mots de passe ne correspondent pas."
     }
   },
   "settings": {
@@ -2311,6 +2347,11 @@
       "published": "Publié",
       "collected": "Collecté",
       "affectedAreas": "Zones affectées"
+    },
+    "nav": {
+      "previous": "Signal précédent",
+      "next": "Signal suivant",
+      "position": "Signal {current} sur {total}"
     }
   },
   "verifyEmail": {

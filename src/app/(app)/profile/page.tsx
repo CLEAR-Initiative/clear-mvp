@@ -18,6 +18,8 @@ import {
   Divider,
   Stack,
   Select,
+  Modal,
+  PasswordInput,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useLocale, useTimeZone, useTranslations } from "next-intl";
@@ -36,6 +38,7 @@ import {
 } from "@tabler/icons-react";
 import { ColorSchemeToggle } from "~/components/ui";
 import { api } from "~/trpc/react";
+import { authClient } from "~/lib/auth-client";
 import { defaultTimeZone, isLocale, localeLabels, locales } from "~/i18n/config";
 import { useTeam } from "~/providers/team-provider";
 import { COUNTRIES_BY_DIAL_LENGTH, COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
@@ -78,8 +81,93 @@ function parseE164(e164: string): { iso: string; local: string } {
   return { iso: "SD", local: "" };
 }
 
-function MobileNumberField() {
+function NameField({ userName }: { userName: string }) {
   const t = useTranslations("profile.info");
+  const tToasts = useTranslations("common.toasts");
+  const tActions = useTranslations("common.actions");
+  const utils = api.useUtils();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(userName || "");
+
+  useEffect(() => {
+    if (!editing) {
+      setName(userName || "");
+    }
+  }, [userName, editing]);
+
+  const isDirty = name !== userName;
+
+  const updateProfile = api.auth.updateProfile.useMutation({
+    onSuccess: () => {
+      setEditing(false);
+      void utils.invalidate();
+      notifications.show({ title: tToasts("saved"), message: t("nameUpdated"), color: "green", autoClose: 2000 });
+    },
+    onError: (err) => {
+      notifications.show({ title: tToasts("error"), message: err.message, color: "red" });
+    },
+  });
+
+  function handleCancel() {
+    setName(userName || "");
+    setEditing(false);
+  }
+
+  function handleSave() {
+    updateProfile.mutate({ name: name || undefined });
+  }
+
+  const readOnly = !editing;
+  const inputStyles = {
+    input: {
+      fontSize: 13,
+      background: readOnly ? "transparent" : undefined,
+      border: readOnly ? "1px solid transparent" : undefined,
+      cursor: readOnly ? "default" : undefined,
+      paddingInlineStart: readOnly ? 0 : undefined,
+    },
+  };
+
+  return (
+    <Box>
+      <Text size="xs" c="var(--color-text-muted)" mb={12}>{t("name")}</Text>
+      <TextInput
+        value={name}
+        onChange={(e) => setName(e.currentTarget.value)}
+        placeholder={readOnly ? (userName ? undefined : t("notSet")) : t("namePlaceholder")}
+        size="xs"
+        readOnly={readOnly}
+        styles={inputStyles}
+        rightSection={
+          readOnly ? (
+            <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditing(true)}>
+              <IconPencil size={13} />
+            </ActionIcon>
+          ) : null
+        }
+      />
+      {editing && (
+        <Group gap={8} mt={8}>
+          <Button size="xs" variant="subtle" color="gray" onClick={handleCancel} leftSection={<IconX size={12} />}>
+            {tActions("cancel")}
+          </Button>
+          <Button
+            size="xs"
+            color="dark"
+            loading={updateProfile.isPending}
+            disabled={!isDirty}
+            onClick={handleSave}
+          >
+            {tActions("save")}
+          </Button>
+        </Group>
+      )}
+    </Box>
+  );
+}
+
+function MobileNumberField() {
+  const t = useTranslations("profile.contact");
   const tToasts = useTranslations("common.toasts");
   const tActions = useTranslations("common.actions");
   const utils = api.useUtils();
@@ -287,12 +375,116 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
   );
 }
 
+function PasswordResetModal({ opened, onClose }: { opened: boolean; onClose: () => void }) {
+  const t = useTranslations("profile.password");
+  const tToasts = useTranslations("common.toasts");
+  const tActions = useTranslations("common.actions");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit() {
+    if (newPassword !== confirmPassword) {
+      notifications.show({
+        title: tToasts("error"),
+        message: t("passwordMismatch"),
+        color: "red",
+      });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { error } = await authClient.changePassword({
+        currentPassword,
+        newPassword,
+        revokeOtherSessions: true,
+      });
+      if (error) {
+        notifications.show({
+          title: tToasts("error"),
+          message: error.message ?? tToasts("error"),
+          color: "red",
+        });
+        return;
+      }
+      notifications.show({
+        title: tToasts("saved"),
+        message: t("passwordUpdated"),
+        color: "green",
+        autoClose: 2000,
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleClose() {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    onClose();
+  }
+
+  return (
+    <Modal
+      opened={opened}
+      onClose={handleClose}
+      title={t("modalTitle")}
+      centered
+      size="md"
+    >
+      <Stack gap={16}>
+        <PasswordInput
+          label={t("currentPassword")}
+          placeholder={t("currentPasswordPlaceholder")}
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.currentTarget.value)}
+          size="sm"
+        />
+        <PasswordInput
+          label={t("newPassword")}
+          placeholder={t("newPasswordPlaceholder")}
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.currentTarget.value)}
+          size="sm"
+        />
+        <PasswordInput
+          label={t("confirmPassword")}
+          placeholder={t("confirmPasswordPlaceholder")}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.currentTarget.value)}
+          size="sm"
+        />
+        <Group justify="flex-end" mt={16}>
+          <Button variant="subtle" color="gray" onClick={handleClose}>
+            {tActions("cancel")}
+          </Button>
+          <Button
+            color="dark"
+            onClick={handleSubmit}
+            loading={submitting}
+            disabled={!currentPassword || !newPassword || !confirmPassword}
+          >
+            {t("resetPassword")}
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
+  );
+}
+
 function SettingsContent({ user }: { user: ProfileUser }) {
   const t = useTranslations("profile");
   const router = useRouter();
   const currentLocale = useLocale();
   const currentTimeZone = useTimeZone() ?? defaultTimeZone;
   const utils = api.useUtils();
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
   const applyLocalePrefs = async (locale: string, timezone: string) => {
     try {
@@ -346,35 +538,107 @@ function SettingsContent({ user }: { user: ProfileUser }) {
             </Group>
 
             <Stack gap={20}>
-              {/* Name */}
-              <Box>
-                <Text size="xs" c="var(--color-text-muted)" mb={4}>{t("info.name")}</Text>
-                <Text size="sm" fw={500}>{user.name || t("info.notSet")}</Text>
-              </Box>
+              {/* Name, Email, and Profile Picture - 3 columns */}
+              <Group align="flex-start" wrap="nowrap" gap={24}>
+                {/* Column 1: Name (editable) */}
+                <Box style={{ flex: 1 }}>
+                  <NameField userName={user.name} />
+                </Box>
 
-              <Divider color="var(--color-border)" />
+                {/* Column 2: Email (read-only) */}
+                <Box style={{ flex: 1 }}>
+                  <Text size="xs" c="var(--color-text-muted)" mb={12}>{t("info.email")}</Text>
+                  <Text size="sm" fw={500} c="var(--color-text-primary)">{user.email ?? "—"}</Text>
+                </Box>
 
-              {/* Email + Change Password */}
+                {/* Column 3: Profile Picture */}
+                <Box style={{ flex: 1 }}>
+                  <Text size="xs" c="var(--color-text-muted)" mb={12}>{t("info.profilePicture")}</Text>
+                  <Group gap={16} align="flex-start" wrap="nowrap">
+                    {/* Avatar on the left */}
+                    <Box
+                      style={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: 9999,
+                        border: "2px solid var(--color-accent)",
+                        background: "var(--color-accent-light)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Text fw={700} size="xl" c="var(--color-accent)">
+                        {user.email[0]?.toUpperCase() ?? "U"}
+                      </Text>
+                    </Box>
+                    
+                    {/* Upload button and text on the right */}
+                    <Box>
+                      <Button
+                        variant="outline"
+                        color="gray"
+                        size="xs"
+                        style={{ fontSize: 12 }}
+                        onClick={() => {
+                          // TODO: Wire up file upload
+                          notifications.show({
+                            title: "Coming Soon",
+                            message: "Profile picture upload will be available soon",
+                            color: "blue",
+                          });
+                        }}
+                      >
+                        {t("info.uploadPhoto")}
+                      </Button>
+                      <Text size="10px" c="var(--color-text-muted)" mt={6}>
+                        {t("info.photoRequirements")}
+                      </Text>
+                    </Box>
+                  </Group>
+                </Box>
+              </Group>
+            </Stack>
+          </Card>
+
+          {/* Password Section */}
+          <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
+            <Group gap={8} mb={20}>
+              <IconKey size={18} color="var(--color-accent)" />
+              <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
+                {t("password.title")}
+              </Text>
+            </Group>
+            <Stack gap={20}>
               <Group justify="space-between" align="center">
                 <Box>
-                  <Text size="xs" c="var(--color-text-muted)" mb={4}>{t("info.email")}</Text>
-                  <Text size="sm" fw={500}>{user.email ?? "—"}</Text>
+                  <Text size="xs" c="var(--color-text-muted)" mb={4}>{t("password.description")}</Text>
+                  <Text size="sm" c="var(--color-text-secondary)">••••••••</Text>
                 </Box>
                 <Button
-                  component={Link}
-                  href="/change-password"
                   variant="outline"
                   color="gray"
                   leftSection={<IconKey size={13} />}
                   size="xs"
                   style={{ fontSize: 12 }}
+                  onClick={() => setPasswordModalOpen(true)}
                 >
-                  {t("info.changePassword")}
+                  {t("password.resetPassword")}
                 </Button>
               </Group>
+            </Stack>
+          </Card>
 
-              <Divider color="var(--color-border)" />
-
+          {/* Mobile Number Section */}
+          <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
+            <Group gap={8} mb={20}>
+              <IconUser size={18} color="var(--color-accent)" />
+              <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
+                {t("contact.title")}
+              </Text>
+            </Group>
+            <Stack gap={20}>
               {/* Mobile */}
               <MobileNumberField />
             </Stack>
@@ -450,6 +714,12 @@ function SettingsContent({ user }: { user: ProfileUser }) {
           <AlertSubscriptionsSection />
         </>
       )}
+
+      {/* Password Reset Modal */}
+      <PasswordResetModal
+        opened={passwordModalOpen}
+        onClose={() => setPasswordModalOpen(false)}
+      />
     </Box>
   );
 }

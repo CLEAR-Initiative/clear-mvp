@@ -86,7 +86,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     label: "Agent",
     description: "NRC Find agent",
     tier: 4,
-    defaultEnabled: true,
+    defaultEnabled: false,
     route: "/agent",
   },
 ];

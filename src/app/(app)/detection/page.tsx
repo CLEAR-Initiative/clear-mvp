@@ -16,6 +16,7 @@ import { useLocations } from "~/hooks/use-locations";
 import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
 import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
+import { writeDetectionNavContext } from "~/lib/detection-nav-context";
 
 import { DetectionKpiRow } from "~/components/detection/detection-kpi-row";
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
@@ -240,6 +241,22 @@ function DetectionPageContent() {
   const [alertsSort, setAlertsSort] = useState<AlertSortOrder>("newest");
   const [signalsSort, setSignalsSort] = useState<SignalSortOrder>("newest");
   const [historySortOrder, setHistorySortOrder] = useState<HistorySortOrder>("newest");
+
+  // Write detection nav context for event/signal page prev/next navigation
+  useEffect(() => {
+    writeDetectionNavContext({
+      teamId: activeTeamId,
+      locationId: selectedLocationId,
+      from: fromIso,
+      to: effectiveTo,
+      severityMin,
+      severityMax,
+      eventTypes: expandedTypeCodes ?? undefined,
+      orderBy: EVENT_ORDER_MAP[eventsSort],
+      signalOrderBy: SIGNAL_ORDER_MAP[signalsSort],
+      sourceNames: activeSources ? [...activeSources] : undefined,
+    });
+  }, [activeTeamId, selectedLocationId, fromIso, effectiveTo, severityMin, severityMax, expandedTypeCodes?.join(","), eventsSort, signalsSort, activeSources]);
 
   // ── Per-feed accumulated items + offset ───────────────────────────────────
   const [eventsItems, setEventsItems] = useState<GqlEvent[]>([]);

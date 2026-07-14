@@ -1,5 +1,7 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Stack, Badge, Button, CloseButton, ScrollArea } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import Link from "next/link";
 import { type CrisisMarker } from "./map-markers-data";
 
@@ -15,26 +17,136 @@ const severityColors: Record<string, { bg: string; color: string }> = {
   low:      { bg: "var(--color-success-light)",  color: "#059669" },
 };
 
+interface DragState {
+  pointerId: number;
+  originX: number;
+  originY: number;
+  startOffsetX: number;
+  startOffsetY: number;
+}
+
 export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
   const t = useTranslations("map");
   const format = useFormatter();
+  const isMobile = useMediaQuery("(max-width: 48em)");
   const sev = severityColors[marker.severity] ?? severityColors.medium;
+
+  const boxRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<DragState | null>(null);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+
+  // Reset the dragged position whenever a different marker is selected so the
+  // window snaps back to its anchored spot instead of lingering where it was.
+  useEffect(() => {
+    setOffset({ x: 0, y: 0 });
+  }, [marker.id]);
+
+  // Keep the window inside its positioned container as the offset changes.
+  const clampOffset = useCallback((nextX: number, nextY: number) => {
+    const el = boxRef.current;
+    const parent = el?.offsetParent as HTMLElement | null;
+    if (!el || !parent) return { x: nextX, y: nextY };
+
+    const box = el.getBoundingClientRect();
+    const bounds = parent.getBoundingClientRect();
+    const margin = 8;
+
+    // Current top-left of the element without the pending delta.
+    const baseLeft = box.left - offset.x;
+    const baseTop = box.top - offset.y;
+
+    const minX = bounds.left + margin - baseLeft;
+    const maxX = bounds.right - margin - box.width - baseLeft;
+    const minY = bounds.top + margin - baseTop;
+    const maxY = bounds.bottom - margin - box.height - baseTop;
+
+    return {
+      x: Math.min(Math.max(nextX, minX), Math.max(minX, maxX)),
+      y: Math.min(Math.max(nextY, minY), Math.max(minY, maxY)),
+    };
+  }, [offset.x, offset.y]);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    // Desktop-only drag; ignore secondary buttons and interactive controls.
+    if (isMobile || e.button !== 0) return;
+    if ((e.target as HTMLElement).closest("button, a, input, [data-no-drag]")) return;
+
+    dragRef.current = {
+      pointerId: e.pointerId,
+      originX: e.clientX,
+      originY: e.clientY,
+      startOffsetX: offset.x,
+      startOffsetY: offset.y,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+  }, [isMobile, offset.x, offset.y]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    const nextX = drag.startOffsetX + (e.clientX - drag.originX);
+    const nextY = drag.startOffsetY + (e.clientY - drag.originY);
+    setOffset(clampOffset(nextX, nextY));
+  }, [clampOffset]);
+
+  const endDrag = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current || dragRef.current.pointerId !== e.pointerId) return;
+    dragRef.current = null;
+    setDragging(false);
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+  }, []);
 
   return (
     <Box
+      ref={boxRef}
       className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
-      /* intentionally physical: map overlay */ style={{ top: 80, right: 16, width: 320, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+      style={isMobile ? {
+        // Mobile: bottom sheet
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: "100%",
+        maxHeight: "45vh",
+        borderRadius: "16px 16px 0 0",
+        boxShadow: "0 -4px 12px rgba(0,0,0,0.15)",
+        borderBottom: "none",
+      } : {
+        // Desktop: top-right overlay, draggable via header
+        top: 80,
+        right: 16,
+        width: 320,
+        boxShadow: dragging ? "0 10px 24px rgba(0,0,0,0.18)" : "0 4px 12px rgba(0,0,0,0.1)",
+        transform: `translate(${offset.x}px, ${offset.y}px)`,
+        transition: dragging ? "none" : "box-shadow 120ms ease",
+        touchAction: "none",
+      }}
     >
-      {/* Header */}
-      <Group justify="space-between" px={16} py={12} className="border-b border-[var(--color-border)]">
+      {/* Header — drag handle on desktop */}
+      <Group
+        justify="space-between"
+        px={16}
+        py={12}
+        className="border-b border-[var(--color-border)]"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        style={{
+          cursor: isMobile ? undefined : dragging ? "grabbing" : "grab",
+          userSelect: "none",
+          touchAction: isMobile ? undefined : "none",
+        }}
+      >
         <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
           {marker.title}
         </Text>
-        <CloseButton size="sm" onClick={onClose} />
+        <CloseButton size="sm" onClick={onClose} data-no-drag />
       </Group>
 
       {/* Body */}
-      <ScrollArea.Autosize mah={400} type="auto">
+      <ScrollArea.Autosize mah={isMobile ? "calc(45vh - 60px)" : 400} type="auto">
       <Box px={16} py={12}>
         {/* Severity */}
         <Group justify="space-between" mb={12}>
@@ -92,7 +204,16 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
                 ? `/signal/${marker.eventId}`
                 : `/event/${marker.eventId}`
             }
-            style={{ background: "var(--color-text-primary)" }}
+            className="btn-accent"
+            styles={{
+              root: {
+                background: "var(--color-accent)",
+                borderColor: "var(--color-accent)",
+                color: "#FFFFFF",
+                fontWeight: 600,
+                "&:hover": { background: "var(--color-accent-hover)" },
+              },
+            }}
           >
             {t("detail.viewDetails")}
           </Button>

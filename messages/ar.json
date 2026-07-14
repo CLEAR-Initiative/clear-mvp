@@ -252,8 +252,7 @@
     "submit": "قبول وإنشاء حساب",
     "goToSignIn": "الذهاب إلى تسجيل الدخول",
     "goHome": "الصفحة الرئيسية"
-  }
-,
+  },
   "admin": {
     "header": {
       "title": "المدير",
@@ -505,8 +504,7 @@
         }
       }
     }
-  }
-,
+  },
   "auth": {
     "login": {
       "title": "تسجيل الدخول",
@@ -731,8 +729,7 @@
         "notesPlaceholder": "أي تعليمات أو ملاحظات إضافية للمنسقين الميدانيين..."
       }
     }
-  }
-,
+  },
   "changePassword": {
     "title": "تغيير كلمة المرور",
     "subtitle": "تحديث كلمة مرور حسابك",
@@ -906,8 +903,7 @@
       "searchPlaceholder": "بحث...",
       "newItems": "{count, plural, zero {لا عناصر جديدة} one {عنصر جديد واحد} two {عنصران جديدان} few {# عناصر جديدة} many {# عنصراً جديداً} other {# عنصر جديد}} - تحديث"
     }
-  }
-,
+  },
   "crisisDetail": {
     "backToAnalysis": "العودة إلى التحليل",
     "viewOnCrisisMap": "عرض على خريطة الأزمات",
@@ -1137,8 +1133,7 @@
         }
       }
     }
-  }
-,
+  },
   "dashboard": {
     "rightPanel": {
       "nrcOpsBadge": "عمليات NRC",
@@ -1331,8 +1326,7 @@
         "createAlert": "فشل إنشاء التنبيه"
       }
     }
-  }
-,
+  },
   "detection": {
     "header": {
       "title": "كشف الأحداث",
@@ -1593,8 +1587,7 @@
         "variables": "المتغيرات"
       }
     }
-  }
-,
+  },
   "eventDetail": {
     "notFound": {
       "title": "الحدث غير موجود",
@@ -1669,6 +1662,11 @@
       "createdTitle": "تم إنشاء الأزمة",
       "createdMessage": "سيُنشئ خط الأنابيب العنوان والملخص قريباً.",
       "createErrorTitle": "تعذّر إنشاء الأزمة"
+    },
+    "nav": {
+      "previous": "الحدث السابق",
+      "next": "الحدث التالي",
+      "position": "الحدث {current} من {total}"
     }
   },
   "knowledge": {
@@ -1732,8 +1730,7 @@
         "assessment": "إنشاء خطة تقييم سريع لمخاطر الحماية"
       }
     }
-  }
-,
+  },
   "map": {
     "filters": {
       "country": "الدولة",
@@ -1750,7 +1747,11 @@
       "markers": "العلامات",
       "severity": "الخطورة",
       "eventType": "نوع الحدث",
-      "population": "السكان"
+      "population": "السكان",
+      "dataLayers": "طبقات البيانات",
+      "baseMap": "الخريطة الأساسية",
+      "roads": "الطرق",
+      "satellite": "الأقمار الصناعية"
     },
     "severities": {
       "critical": "حرج",
@@ -1763,7 +1764,8 @@
       "none": "لا شيء",
       "crisis": "أزمة",
       "alert": "تنبيه",
-      "event": "حدث"
+      "event": "حدث",
+      "signal": "إشارة"
     },
     "boundaries": {
       "none": "لا شيء",
@@ -1936,8 +1938,7 @@
       "text": "منظمتك وفريقك جاهزان. اذهب إلى لوحة المعلومات لبدء المراقبة.",
       "cta": "الذهاب إلى لوحة المعلومات"
     }
-  }
-,
+  },
   "operations": {
     "header": {
       "title": "مركز العمليات",
@@ -2079,7 +2080,12 @@
       "changePassword": "تغيير كلمة المرور",
       "mobile": "الجوال",
       "mobilePlaceholder": "912 345 678",
-      "mobileUpdated": "تم تحديث رقم الجوال."
+      "mobileUpdated": "تم تحديث رقم الجوال.",
+      "profilePicture": "الصورة الشخصية",
+      "uploadPhoto": "تحميل صورة",
+      "photoRequirements": "JPG أو PNG أو GIF. الحد الأقصى 5 ميغابايت.",
+      "namePlaceholder": "أدخل اسمك",
+      "nameUpdated": "تم تحديث الاسم."
     },
     "orgRoles": {
       "title": "المنظمة والأدوار",
@@ -2153,9 +2159,29 @@
       "pause": "إيقاف مؤقت",
       "resume": "استئناف",
       "delete": "حذف الاشتراك"
+    },
+    "contact": {
+      "title": "معلومات الاتصال",
+      "mobile": "الجوال",
+      "mobilePlaceholder": "912 345 678",
+      "mobileUpdated": "تم تحديث رقم الجوال.",
+      "notSet": "غير محدد"
+    },
+    "password": {
+      "title": "كلمة المرور",
+      "description": "كلمة المرور الخاصة بك",
+      "resetPassword": "إعادة تعيين كلمة المرور",
+      "modalTitle": "إعادة تعيين كلمة المرور",
+      "currentPassword": "كلمة المرور الحالية",
+      "currentPasswordPlaceholder": "أدخل كلمة المرور الحالية",
+      "newPassword": "كلمة المرور الجديدة",
+      "newPasswordPlaceholder": "أدخل كلمة المرور الجديدة",
+      "confirmPassword": "تأكيد كلمة المرور",
+      "confirmPasswordPlaceholder": "أعد إدخال كلمة المرور الجديدة",
+      "passwordUpdated": "تم تحديث كلمة المرور بنجاح.",
+      "passwordMismatch": "كلمتا المرور غير متطابقتين."
     }
-  }
-,
+  },
   "settings": {
     "org": {
       "title": "إعدادات المنظمة",
@@ -2321,6 +2347,11 @@
       "published": "تم النشر",
       "collected": "تم الجمع",
       "affectedAreas": "المناطق المتضررة"
+    },
+    "nav": {
+      "previous": "الإشارة السابقة",
+      "next": "الإشارة التالية",
+      "position": "الإشارة {current} من {total}"
     }
   },
   "verifyEmail": {
