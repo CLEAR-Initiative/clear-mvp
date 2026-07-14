@@ -72,15 +72,16 @@ export function useEventNavigation(currentEventId: string): DetailNavigationResu
   }, [getLocationId, activeTeamId]);
 
   // Query events with detection filters, limited to 500 (API max)
+  // Remove restrictive filters for map-based navigation
   const eventsQuery = api.alerts.eventsPage.useQuery({
     teamId: undefined, // Don't filter by team for global navigation
-    locationId: navContext.locationId ?? undefined,
-    from: navContext.from,
-    to: navContext.to,
-    severityMin: navContext.severityMin,
-    severityMax: navContext.severityMax,
-    eventTypes: navContext.eventTypes,
-    orderBy: navContext.orderBy,
+    locationId: undefined, // Don't filter by location for global navigation
+    from: undefined, // Don't filter by date range
+    to: undefined,
+    severityMin: undefined,
+    severityMax: undefined,
+    eventTypes: undefined,
+    orderBy: "LAST_SIGNAL_DESC",
     limit: 500,
     offset: 0,
     includeDummy: true, // Include dummy events for testing
