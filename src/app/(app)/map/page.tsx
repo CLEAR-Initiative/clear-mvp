@@ -23,12 +23,11 @@ import {
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
 import { countryConfig } from "~/lib/constants/country-config";
-import { MapPanelBar, type BaseMapType } from "./_components/map-panel-bar";
+import { MapPanelBar } from "./_components/map-panel-bar";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
-import { MapTourHost } from "~/components/onboarding/map-tour-host";
 import { readMarkerCache, writeMarkerCache } from "~/lib/map-marker-cache";
 import { useIsDark } from "~/hooks/use-is-dark";
 
@@ -160,7 +159,6 @@ export default function MapPage() {
   const [showPopulation, setShowPopulation] = useState(false);
   const [showMarkers, setShowMarkers] = useState(true);
   const [showRoads, setShowRoads] = useState(true);
-  const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
 
   // Resolve the currently-selected country's L0 ID for scoping admin
   // boundary queries and for the country highlight overlay. Null when the
@@ -467,7 +465,6 @@ export default function MapPage() {
         showBoundaries={boundaryLevel !== "none"}
         showMarkers={showMarkers}
         showRoads={showRoads}
-        baseMapType={baseMapType}
       />
 
       {/* ===== Left Panel Bar (Layers / Legend / Config) ===== */}
@@ -483,8 +480,6 @@ export default function MapPage() {
         onShowMarkersChange={setShowMarkers}
         showRoads={showRoads}
         onShowRoadsChange={setShowRoads}
-        baseMapType={baseMapType}
-        onBaseMapTypeChange={setBaseMapType}
       />
 
       {/* ===== Selected Marker Detail ===== */}
