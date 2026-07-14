@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
-import { geometryBounds } from "~/lib/geo/country-mask";
+import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
 import { useIsDark } from "~/hooks/use-is-dark";
+
+/** Softer clustering locally so sparse seed data still forms donuts. */
+const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
 
 export interface MapMarker {
   id: number;
@@ -250,7 +253,21 @@ export function CrisisMap({
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const isDark = useIsDark();
-  
+
+  // Skip seed bbox rectangles / point "boundaries"; fall back to Mapbox tiles.
+  const paintableFocusGeometry = useMemo(
+    () => (isPaintableBoundaryGeometry(focusCountryGeometry as never) ? focusCountryGeometry : undefined),
+    [focusCountryGeometry],
+  );
+  const paintableAdminBoundaries = useMemo(
+    () => (adminBoundaries ?? []).filter((b) => isPaintableBoundaryGeometry(b.geometry as never)),
+    [adminBoundaries],
+  );
+  const paintablePopulationBoundaries = useMemo(
+    () => (populationBoundaries ?? []).filter((b) => isPaintableBoundaryGeometry(b.geometry as never)),
+    [populationBoundaries],
+  );
+
   // Calculate map style based on satellite and roads toggles
   const mapStyle = (() => {
     if (showSatellite) {
@@ -397,17 +414,18 @@ export function CrisisMap({
     );
 
     // Blue tint + border for the focus country.
-    // Prefer our own DB geometry (accurate OCHA boundaries) over Mapbox's tileset.
+    // Prefer paintable DB geometry (real OCHA polygons). Seed bboxes fall
+    // through to Mapbox country tiles so local/dev doesn't paint squares.
     const highlightColor = isDark ? "#1E3A5F" : "#1E40AF";
     const highlightOpacity = isDark ? 0.45 : 0.35;
     const borderColor = isDark ? "#60A5FA" : "#1D4ED8";
     const borderWidth = isDark ? 1.5 : 1.25;
     const borderOpacity = isDark ? 0.9 : 0.85;
 
-    if (focusCountryGeometry) {
+    if (paintableFocusGeometry) {
       m.addSource(FOCUS_GEOJSON_SOURCE, {
         type: "geojson",
-        data: { type: "Feature", geometry: focusCountryGeometry as never, properties: {} },
+        data: { type: "Feature", geometry: paintableFocusGeometry as never, properties: {} },
       });
       m.addLayer(
         { id: "focus-highlight-fill", type: "fill", source: FOCUS_GEOJSON_SOURCE,
@@ -466,7 +484,11 @@ export function CrisisMap({
         (id.includes("-1-") || id.endsWith("-1"))
       ) {
         admin1LayerIds.current.push(layer.id);
-        if (adminBoundaryLevel === 1 && (!adminBoundaries || adminBoundaries.length === 0)) {
+        if (
+          showBoundaries &&
+          adminBoundaryLevel === 1 &&
+          paintableAdminBoundaries.length === 0
+        ) {
           try {
             m.setFilter(layer.id, [
               "all",
@@ -548,7 +570,7 @@ export function CrisisMap({
     }
 
     return cleanup;
-  }, [focusIso, focusCountryGeometry, loaded, adminBoundaries, adminBoundaryLevel, isDark]);
+  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries]);
 
   // Fit bounds to the focus country once its backend bbox is available.
   // Skips when fitBoundsGeometry is set (a more specific region is focused).
@@ -698,7 +720,7 @@ export function CrisisMap({
         })),
       },
       cluster: true,
-      clusterMinPoints: 5,
+      clusterMinPoints: CLUSTER_MIN_POINTS,
       clusterMaxZoom: 8,
       clusterRadius: 30,
       clusterProperties: {
@@ -841,8 +863,7 @@ export function CrisisMap({
 
     cleanup();
 
-    const features = (populationBoundaries ?? [])
-      .filter((b) => b.geometry != null)
+    const features = paintablePopulationBoundaries
       .map((b) => ({
         type: "Feature" as const,
         properties: { name: b.name, id: b.id, population: parsePopulation(b.population) },
@@ -895,7 +916,7 @@ export function CrisisMap({
     } catch { /* ignore */ }
 
     return cleanup;
-  }, [isDark, populationBoundaries, loaded]);
+  }, [isDark, paintablePopulationBoundaries, loaded]);
 
   // ── Hide country highlight fill when population layer or region highlight is active ──
   useEffect(() => {
@@ -903,11 +924,11 @@ export function CrisisMap({
     const m = map.current;
     try {
       if (m.getLayer("focus-highlight-fill")) {
-        const hide = (populationBoundaries ?? []).length > 0 || !!fitBoundsGeometry;
+        const hide = paintablePopulationBoundaries.length > 0 || !!fitBoundsGeometry;
         m.setPaintProperty("focus-highlight-fill", "fill-opacity", hide ? 0 : 0.35);
       }
     } catch { /* ignore */ }
-  }, [populationBoundaries, fitBoundsGeometry, loaded]);
+  }, [paintablePopulationBoundaries, fitBoundsGeometry, loaded]);
 
   // ── Admin boundary polygons (A1 / A2 from backend) ─────────────────────
   useEffect(() => {
@@ -925,8 +946,7 @@ export function CrisisMap({
     // Early exit if boundaries are hidden
     if (!showBoundaries) return;
 
-    const features = (adminBoundaries ?? [])
-      .filter((b) => b.geometry != null)
+    const features = paintableAdminBoundaries
       .map((b) => ({ type: "Feature" as const, properties: { name: b.name, id: b.id }, geometry: b.geometry }));
 
     if (features.length === 0) return;
@@ -949,7 +969,7 @@ export function CrisisMap({
     } catch { /* ignore */ }
 
     return cleanup;
-  }, [adminBoundaries, adminBoundaryLevel, loaded, showBoundaries]);
+  }, [paintableAdminBoundaries, adminBoundaryLevel, loaded, showBoundaries, isDark]);
 
   // ── Regions (heatmap from signalPoints if present, else feathered fill) ─
   const regionLayerIds = useRef<string[]>([]);
