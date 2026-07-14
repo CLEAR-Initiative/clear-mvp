@@ -20,8 +20,6 @@ import {
   eventsToMarkers,
   signalsToMarkers,
   crisesToMarkers,
-  alertsToRegions,
-  eventsToRegions,
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
 import { countryConfig } from "~/lib/constants/country-config";
@@ -91,7 +89,7 @@ export default function MapPage() {
   });
   const hierarchy: HierarchyLevel1[] = hierarchyQuery.data ?? [];
 
-  /* ---- Derive markers + regions based on active data view ---- */
+  /* ---- Derive markers based on active data view (markers-only; no region heatmaps) ---- */
   const allMarkers: CrisisMarker[] = useMemo(() => {
     if (dataView === "alert")  return alertsToMarkers(alertsQuery.data?.alerts ?? []);
     if (dataView === "event")  return eventsToMarkers(eventsQuery.data?.events ?? []);
@@ -101,10 +99,8 @@ export default function MapPage() {
   }, [dataView, alertsQuery.data, eventsQuery.data, signalsListQuery.data, crisesQuery.data]);
 
   const allRegions = useMemo(() => {
-    if (dataView === "alert") return alertsToRegions(alertsQuery.data?.alerts ?? []);
-    if (dataView === "event") return eventsToRegions(eventsQuery.data?.events ?? []);
     return [];
-  }, [dataView, alertsQuery.data, eventsQuery.data]);
+  }, []);
 
 
 
