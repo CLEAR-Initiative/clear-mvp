@@ -79,10 +79,10 @@ interface CrisisMapProps {
   showBoundaries?: boolean;
   /** Show/hide markers layer */
   showMarkers?: boolean;
-  /** Show/hide roads layer */
+  /** Show/hide roads overlay (applies to all basemap types) */
   showRoads?: boolean;
-  /** Toggle satellite imagery base map */
-  showSatellite?: boolean;
+  /** Basemap style: simple streets, topography, or satellite */
+  baseMapType?: "simple" | "topography" | "satellite";
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -249,7 +249,7 @@ export function CrisisMap({
   showBoundaries = true,
   showMarkers = true,
   showRoads = true,
-  showSatellite = false,
+  baseMapType = "simple",
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const isDark = useIsDark();
@@ -268,15 +268,17 @@ export function CrisisMap({
     [populationBoundaries],
   );
 
-  // Calculate map style based on satellite and roads toggles
+  // Basemap type picks the Mapbox style; roads are an overlay on every type.
+  // Satellite has no separate road layers, so roads=on uses satellite-streets.
   const mapStyle = (() => {
-    if (showSatellite) {
-      // Satellite imagery - with or without roads
+    if (baseMapType === "satellite") {
       return showRoads
         ? "mapbox://styles/mapbox/satellite-streets-v12"
         : "mapbox://styles/mapbox/satellite-v9";
     }
-    // Regular street map - light or dark theme
+    if (baseMapType === "topography") {
+      return "mapbox://styles/mapbox/outdoors-v12";
+    }
     return isDark
       ? "mapbox://styles/mapbox/dark-v11"
       : "mapbox://styles/mapbox/light-v11";
@@ -292,26 +294,28 @@ export function CrisisMap({
   const markersDataRef = useRef<MapMarker[]>(markers);
   const hoveredMarkerIdRef = useRef<number | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const mapReadyRef = useRef(false);
+  const appliedStyleRef = useRef<string | null>(null);
+  const mapStyleRef = useRef(mapStyle);
+  mapStyleRef.current = mapStyle;
   // Tracks Mapbox built-in admin-1 layer IDs we've mutated so we can reset them.
   const admin1LayerIds = useRef<string[]>([]);
 
-  // Fetch the focus country's geometry (only when requested).
-  const focusQuery = api.locations.getCountryByPCode.useQuery(
-    { pCode: focusCountryPCode, name: focusCountryName },
-    {
-      enabled: !!(focusCountryPCode || focusCountryName),
-      staleTime: 1000 * 60 * 60,
-    },
-  );
-  const focusCountry = focusQuery.data;
+  // Convert focusCountryGeometry prop to a usable format (same structure as the query result).
+  // This avoids the duplicate getCountryByPCode fetch when the page already passes geometry.
+  const focusCountry = useMemo(() => {
+    if (!focusCountryGeometry) return null;
+    if (!isPaintableBoundaryGeometry(focusCountryGeometry as never)) return null;
+    return { geometry: focusCountryGeometry };
+  }, [focusCountryGeometry]);
 
-  // ── Map init ────────────────────────────────────────────────────────────
+  // ── Map init (once) ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapContainer.current || !MAPBOX_TOKEN) return;
     let cancelled = false;
 
     loadMapboxGL().then((mapboxgl) => {
-      if (cancelled || !mapContainer.current) return;
+      if (cancelled || !mapContainer.current || map.current) return;
       mbRef.current = mapboxgl;
       mapboxgl.accessToken = MAPBOX_TOKEN;
 
@@ -326,7 +330,13 @@ export function CrisisMap({
       });
 
       map.current.on("load", () => {
-        if (!cancelled) setLoaded(true);
+        if (!cancelled) {
+          mapReadyRef.current = true;
+          // Track the style the map was constructed with so the first user toggle
+          // (basemap/roads/theme) actually calls setStyle instead of being skipped.
+          appliedStyleRef.current = mapStyleRef.current;
+          setLoaded(true);
+        }
       });
 
       map.current.addControl(
@@ -337,11 +347,29 @@ export function CrisisMap({
 
     return () => {
       cancelled = true;
+      mapReadyRef.current = false;
+      appliedStyleRef.current = null;
       setLoaded(false);
       map.current?.remove();
       map.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Swap basemap style without tearing down the map so custom layers restore.
+  useEffect(() => {
+    if (!map.current || !mapReadyRef.current) return;
+    if (appliedStyleRef.current === mapStyle) return;
+
+    const m = map.current;
+    setLoaded(false);
+    const onStyleLoad = () => setLoaded(true);
+    m.once("style.load", onStyleLoad);
+    appliedStyleRef.current = mapStyle;
+    m.setStyle(mapStyle);
+    return () => {
+      m.off("style.load", onStyleLoad);
+    };
   }, [mapStyle]);
 
   // ── Country focus: dim mask + border glow + bounds ──────────────────────
