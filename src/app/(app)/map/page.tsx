@@ -23,7 +23,7 @@ import {
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
 import { countryConfig } from "~/lib/constants/country-config";
-import { MapPanelBar } from "./_components/map-panel-bar";
+import { MapPanelBar, type BaseMapType } from "./_components/map-panel-bar";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
 import type { DataView } from "./_components/map-layers-panel";
@@ -142,10 +142,9 @@ export default function MapPage() {
   );
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
-  const [showBoundaries, setShowBoundaries] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
   const [showRoads, setShowRoads] = useState(true);
-  const [showSatellite, setShowSatellite] = useState(false);
+  const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
 
   // Resolve the currently-selected country's L0 ID for scoping admin
   // boundary queries and for the country highlight overlay. Null when the
@@ -448,10 +447,10 @@ export default function MapPage() {
         adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
         fitBoundsGeometry={fitBoundsGeometry}
         populationBoundaries={populationBoundaries}
-        showBoundaries={showBoundaries}
+        showBoundaries={boundaryLevel !== "none"}
         showMarkers={showMarkers}
         showRoads={showRoads}
-        showSatellite={showSatellite}
+        baseMapType={baseMapType}
       />
 
       {/* ===== Left Panel Bar (Layers / Legend / Config) ===== */}
@@ -463,14 +462,12 @@ export default function MapPage() {
         populationLoading={populationLoading}
         boundaryLevel={boundaryLevel}
         onBoundaryLevelChange={setBoundaryLevel}
-        showBoundaries={showBoundaries}
-        onShowBoundariesChange={setShowBoundaries}
         showMarkers={showMarkers}
         onShowMarkersChange={setShowMarkers}
         showRoads={showRoads}
         onShowRoadsChange={setShowRoads}
-        showSatellite={showSatellite}
-        onShowSatelliteChange={setShowSatellite}
+        baseMapType={baseMapType}
+        onBaseMapTypeChange={setBaseMapType}
       />
 
       {/* ===== Selected Marker Detail ===== */}

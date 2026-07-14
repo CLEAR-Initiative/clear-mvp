@@ -39,13 +39,12 @@ export default function DashboardPage() {
   const [showPopulation, setShowPopulation] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
 
-  const alertsQuery = api.alerts.getAlerts.useQuery(
+  const alertsQuery = api.alerts.alertsForMap.useQuery(
     { activeOnly: true, teamId: activeTeamId },
     { enabled: dataView === "alert" },
   );
-  const eventsQuery = api.alerts.getEvents.useQuery(
+  const eventsQuery = api.alerts.eventsForMap.useQuery(
     { teamId: activeTeamId ?? undefined },
-    // No team → fetch the global feed (the API resolver permits this).
     { enabled: dataView === "event" },
   );
   const crisesQuery = api.alerts.getCrises.useQuery(
