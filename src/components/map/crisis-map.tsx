@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
-import { geometryBounds } from "~/lib/geo/country-mask";
+import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
 import { useIsDark } from "~/hooks/use-is-dark";
+
+/** Softer clustering locally so sparse seed data still forms donuts. */
+const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
 
 export interface MapMarker {
   id: number;
@@ -15,6 +18,7 @@ export interface MapMarker {
   type?: string;
   description?: string;
   popup?: string;
+  markerKind?: "event" | "signal" | "crisis";
 }
 
 export interface MapRegion {
@@ -71,6 +75,14 @@ interface CrisisMapProps {
   preserveDrawingBuffer?: boolean;
   /** Duration (ms) for programmatic flyTo when center/zoom props change. */
   flyDuration?: number;
+  /** Show/hide boundaries layer */
+  showBoundaries?: boolean;
+  /** Show/hide markers layer */
+  showMarkers?: boolean;
+  /** Show/hide roads layer */
+  showRoads?: boolean;
+  /** Toggle satellite imagery base map */
+  showSatellite?: boolean;
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -115,6 +127,23 @@ function hexToRgba(hex: string, alpha: number): string {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function parsePopulation(value: string | number | null | undefined): number {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (!value) return 0;
+  const parsed = Number(value.replace(/[^\d.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isRoadLayerId(id: string): boolean {
+  const lower = id.toLowerCase();
+  return (
+    lower.includes("road") ||
+    lower.includes("street") ||
+    lower.includes("bridge") ||
+    lower.includes("tunnel")
+  );
 }
 
 // ── Donut cluster helpers ────────────────────────────────────────────────────
@@ -217,12 +246,41 @@ export function CrisisMap({
   fitBoundsOnFocus = true,
   preserveDrawingBuffer = false,
   flyDuration = 1500,
+  showBoundaries = true,
+  showMarkers = true,
+  showRoads = true,
+  showSatellite = false,
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const isDark = useIsDark();
-  const mapStyle = isDark
-    ? "mapbox://styles/mapbox/dark-v11"
-    : "mapbox://styles/mapbox/light-v11";
+
+  // Skip seed bbox rectangles / point "boundaries"; fall back to Mapbox tiles.
+  const paintableFocusGeometry = useMemo(
+    () => (isPaintableBoundaryGeometry(focusCountryGeometry as never) ? focusCountryGeometry : undefined),
+    [focusCountryGeometry],
+  );
+  const paintableAdminBoundaries = useMemo(
+    () => (adminBoundaries ?? []).filter((b) => isPaintableBoundaryGeometry(b.geometry as never)),
+    [adminBoundaries],
+  );
+  const paintablePopulationBoundaries = useMemo(
+    () => (populationBoundaries ?? []).filter((b) => isPaintableBoundaryGeometry(b.geometry as never)),
+    [populationBoundaries],
+  );
+
+  // Calculate map style based on satellite and roads toggles
+  const mapStyle = (() => {
+    if (showSatellite) {
+      // Satellite imagery - with or without roads
+      return showRoads
+        ? "mapbox://styles/mapbox/satellite-streets-v12"
+        : "mapbox://styles/mapbox/satellite-v9";
+    }
+    // Regular street map - light or dark theme
+    return isDark
+      ? "mapbox://styles/mapbox/dark-v11"
+      : "mapbox://styles/mapbox/light-v11";
+  })();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxGLAny>(null);
   const mbRef = useRef<MapboxGLAny>(null);
@@ -279,6 +337,7 @@ export function CrisisMap({
 
     return () => {
       cancelled = true;
+      setLoaded(false);
       map.current?.remove();
       map.current = null;
     };
@@ -355,17 +414,18 @@ export function CrisisMap({
     );
 
     // Blue tint + border for the focus country.
-    // Prefer our own DB geometry (accurate OCHA boundaries) over Mapbox's tileset.
+    // Prefer paintable DB geometry (real OCHA polygons). Seed bboxes fall
+    // through to Mapbox country tiles so local/dev doesn't paint squares.
     const highlightColor = isDark ? "#1E3A5F" : "#1E40AF";
     const highlightOpacity = isDark ? 0.45 : 0.35;
     const borderColor = isDark ? "#60A5FA" : "#1D4ED8";
     const borderWidth = isDark ? 1.5 : 1.25;
     const borderOpacity = isDark ? 0.9 : 0.85;
 
-    if (focusCountryGeometry) {
+    if (paintableFocusGeometry) {
       m.addSource(FOCUS_GEOJSON_SOURCE, {
         type: "geojson",
-        data: { type: "Feature", geometry: focusCountryGeometry as never, properties: {} },
+        data: { type: "Feature", geometry: paintableFocusGeometry as never, properties: {} },
       });
       m.addLayer(
         { id: "focus-highlight-fill", type: "fill", source: FOCUS_GEOJSON_SOURCE,
@@ -424,7 +484,11 @@ export function CrisisMap({
         (id.includes("-1-") || id.endsWith("-1"))
       ) {
         admin1LayerIds.current.push(layer.id);
-        if (adminBoundaryLevel === 1 && (!adminBoundaries || adminBoundaries.length === 0)) {
+        if (
+          showBoundaries &&
+          adminBoundaryLevel === 1 &&
+          paintableAdminBoundaries.length === 0
+        ) {
           try {
             m.setFilter(layer.id, [
               "all",
@@ -506,7 +570,7 @@ export function CrisisMap({
     }
 
     return cleanup;
-  }, [focusIso, focusCountryGeometry, loaded, adminBoundaries, adminBoundaryLevel, isDark]);
+  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries]);
 
   // Fit bounds to the focus country once its backend bbox is available.
   // Skips when fitBoundsGeometry is set (a more specific region is focused).
@@ -596,6 +660,21 @@ export function CrisisMap({
   // ── Markers (donut cluster DOM markers) ─────────────────────────────────
   useEffect(() => {
     if (!map.current || !loaded) return;
+    if (!showMarkers) {
+      // Clear markers if showMarkers is false
+      for (const mk of clusterDomMarkers.current.values()) {
+        try { mk.remove(); } catch { /* ignore */ }
+      }
+      clusterDomMarkers.current.clear();
+      const SOURCE = "crisis-markers";
+      const CLUSTER_GHOST = "cluster-ghost";
+      const POINT_GHOST = "point-ghost";
+      for (const id of [CLUSTER_GHOST, POINT_GHOST]) {
+        try { if (map.current.getLayer(id)) map.current.removeLayer(id); } catch { /* ignore */ }
+      }
+      try { if (map.current.getSource(SOURCE)) map.current.removeSource(SOURCE); } catch { /* ignore */ }
+      return;
+    }
     const m = map.current;
     const mb = mbRef.current;
     const SOURCE = "crisis-markers";
@@ -631,6 +710,7 @@ export function CrisisMap({
           properties: {
             id: mk.id, title: mk.title, severity: mk.severity,
             type: mk.type ?? "", description: mk.description ?? "",
+            marker_kind: mk.markerKind ?? "",
             is_critical: mk.severity === "critical" ? 1 : 0,
             is_high:     mk.severity === "high"     ? 1 : 0,
             is_medium:   mk.severity === "medium"   ? 1 : 0,
@@ -640,7 +720,7 @@ export function CrisisMap({
         })),
       },
       cluster: true,
-      clusterMinPoints: 5,
+      clusterMinPoints: CLUSTER_MIN_POINTS,
       clusterMaxZoom: 8,
       clusterRadius: 30,
       clusterProperties: {
@@ -737,7 +817,7 @@ export function CrisisMap({
       m.off("moveend", debounced);
       m.off("sourcedata", onSourceData);
     };
-  }, [markers, loaded]);
+  }, [markers, loaded, showMarkers]);
 
   // ── Marker hover pulse (synced from list) ────────────────────────────────
   useEffect(() => {
@@ -753,6 +833,19 @@ export function CrisisMap({
       dot?.classList.toggle("active", on);
     }
   }, [hoveredMarkerId]);
+
+  // ── Roads toggle (Mapbox style layers) ──────────────────────────────────
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const visibility = showRoads ? "visible" : "none";
+    const layers = map.current.getStyle().layers as Array<{ id: string; type: string }> | undefined;
+    for (const layer of layers ?? []) {
+      if (!isRoadLayerId(layer.id)) continue;
+      try {
+        map.current.setLayoutProperty(layer.id, "visibility", visibility);
+      } catch { /* ignore */ }
+    }
+  }, [loaded, showRoads]);
 
   // ── Population choropleth (A2 districts, independent layer) ─────────────
   useEffect(() => {
@@ -770,11 +863,10 @@ export function CrisisMap({
 
     cleanup();
 
-    const features = (populationBoundaries ?? [])
-      .filter((b) => b.geometry != null)
+    const features = paintablePopulationBoundaries
       .map((b) => ({
         type: "Feature" as const,
-        properties: { name: b.name, id: b.id, population: Number(b.population) || 0 },
+        properties: { name: b.name, id: b.id, population: parsePopulation(b.population) },
         geometry: b.geometry,
       }));
 
@@ -795,7 +887,7 @@ export function CrisisMap({
           "fill-color": [
             "case",
             ["==", ["get", "population"], 0],
-            "rgba(0,0,0,0)", // no data: transparent, let basemap show through
+            isDark ? "rgba(96,165,250,0.18)" : "rgba(191,219,254,0.25)",
             [
               "interpolate", ["linear"], ["get", "population"],
               1,       "#EFF7FF",
@@ -806,7 +898,7 @@ export function CrisisMap({
               1200000, "#08306B",
             ],
           ],
-          "fill-opacity": 0.75,
+          "fill-opacity": 0.8,
         },
       }, beforeId);
 
@@ -817,14 +909,14 @@ export function CrisisMap({
         source: SOURCE,
         paint: {
           "line-color": isDark ? "#FB923C" : "#C2410C",
-          "line-width": 0.5,
-          "line-opacity": 0.5,
+          "line-width": 0.9,
+          "line-opacity": 0.75,
         },
       }, beforeId);
     } catch { /* ignore */ }
 
     return cleanup;
-  }, [populationBoundaries, loaded]);
+  }, [isDark, paintablePopulationBoundaries, loaded]);
 
   // ── Hide country highlight fill when population layer or region highlight is active ──
   useEffect(() => {
@@ -832,11 +924,11 @@ export function CrisisMap({
     const m = map.current;
     try {
       if (m.getLayer("focus-highlight-fill")) {
-        const hide = (populationBoundaries ?? []).length > 0 || !!fitBoundsGeometry;
+        const hide = paintablePopulationBoundaries.length > 0 || !!fitBoundsGeometry;
         m.setPaintProperty("focus-highlight-fill", "fill-opacity", hide ? 0 : 0.35);
       }
     } catch { /* ignore */ }
-  }, [populationBoundaries, fitBoundsGeometry, loaded]);
+  }, [paintablePopulationBoundaries, fitBoundsGeometry, loaded]);
 
   // ── Admin boundary polygons (A1 / A2 from backend) ─────────────────────
   useEffect(() => {
@@ -850,9 +942,11 @@ export function CrisisMap({
     };
 
     cleanup();
+    
+    // Early exit if boundaries are hidden
+    if (!showBoundaries) return;
 
-    const features = (adminBoundaries ?? [])
-      .filter((b) => b.geometry != null)
+    const features = paintableAdminBoundaries
       .map((b) => ({ type: "Feature" as const, properties: { name: b.name, id: b.id }, geometry: b.geometry }));
 
     if (features.length === 0) return;
@@ -875,7 +969,7 @@ export function CrisisMap({
     } catch { /* ignore */ }
 
     return cleanup;
-  }, [adminBoundaries, adminBoundaryLevel, loaded]);
+  }, [paintableAdminBoundaries, adminBoundaryLevel, loaded, showBoundaries, isDark]);
 
   // ── Regions (heatmap from signalPoints if present, else feathered fill) ─
   const regionLayerIds = useRef<string[]>([]);

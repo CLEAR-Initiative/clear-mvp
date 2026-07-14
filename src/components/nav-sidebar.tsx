@@ -15,7 +15,6 @@ import {
   IconCurrencyDollar,
   IconBook,
   IconMapPin,
-  IconRobot,
   IconLogout,
   IconSettings,
   IconDoorExit,
@@ -40,8 +39,7 @@ type NavItemKey =
   | "insights"
   | "operations"
   | "cash"
-  | "knowledge"
-  | "agent";
+  | "knowledge";
 
 interface NavItem {
   labelKey: NavItemKey;
@@ -80,7 +78,6 @@ const navSections: NavSection[] = [
     titleKey: "resources",
     items: [
       { labelKey: "knowledge", href: "/knowledge", icon: IconBook, featureKey: "knowledge_hub", comingSoonForNonAdmin: true },
-      { labelKey: "agent", href: "/agent", icon: IconRobot, featureKey: "agent" },
     ],
   },
 ];
@@ -468,118 +465,111 @@ export function NavSidebar() {
             return collapsed ? <Tooltip label={t("feedback")} position="right" withArrow>{inner}</Tooltip> : inner;
           })()}
 
-          {/* Admin - only visible to admin role */}
-          {isAdmin && (() => {
-            const isActive = activeSegment === "admin";
-            const inner = (
+
+          {/* User Profile Card with Menu */}
+          <Menu position="right-start" offset={8} withArrow>
+            <Menu.Target>
               <UnstyledButton
-                component={Link}
-                href="/admin"
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: spacingPx[3],
-                  padding: spacingPx[3],
+                  padding: spacingPx[2],
+                  borderRadius: 8,
+                  background: "var(--color-bg-elevated)",
+                  border: "1px solid var(--color-border)",
                   width: "100%",
-                  borderRadius: 6,
-                  textDecoration: "none",
-                  background: isActive ? colors.accentLight : "transparent",
-                  color: isActive ? colors.accent : colors.textSecondary,
+                  cursor: "pointer",
                   transition: "background 150ms",
-                  marginBottom: spacingPx[1],
+                  marginBottom: spacingPx[4],
                 }}
-                className="hover:bg-[var(--color-bg-muted)] transition-colors"
+                className="hover:bg-[var(--color-bg-hover)] transition-colors"
               >
-                <IconShieldCog size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
-                <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>{t("admin")}</Text>
-              </UnstyledButton>
-            );
-            return collapsed ? <Tooltip label={t("admin")} position="right" withArrow>{inner}</Tooltip> : inner;
-          })()}
-
-          {/* Settings + exit row */}
-          <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[2] }}>
-            {/* Settings - takes remaining width */}
-            {(() => {
-              const isActive = activeSegment === "profile";
-              const inner = (
-                <UnstyledButton
-                  component={Link}
-                  href="/profile"
+                {/* Avatar */}
+                <Box
                   style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 9999,
+                    border: "1px solid var(--color-accent)",
+                    background: "var(--color-accent-light)",
                     display: "flex",
                     alignItems: "center",
-                    gap: spacingPx[3],
-                    padding: spacingPx[3],
-                    flex: 1,
-                    borderRadius: 6,
-                    textDecoration: "none",
-                    background: isActive ? colors.accentLight : "transparent",
-                    color: isActive ? colors.accent : colors.textSecondary,
-                    transition: "background 150ms",
+                    justifyContent: "center",
+                    flexShrink: 0,
                   }}
-                  className="hover:bg-[var(--color-bg-muted)] transition-colors"
                 >
-                  <IconSettings size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
-                  <Text fw={500} style={{ fontSize: fontSizesPx.lg, ...labelStyle }}>{t("settings")}</Text>
-                </UnstyledButton>
-              );
-              return collapsed ? <Tooltip label={t("settings")} position="right" withArrow>{inner}</Tooltip> : inner;
-            })()}
+                  <Text fw={600} size="sm" c="var(--color-accent)">
+                    {authData?.user?.email?.[0]?.toUpperCase() ?? "U"}
+                  </Text>
+                </Box>
 
-            {/* Exit menu */}
-            <Menu position="top-end" withArrow offset={6}>
-              <Menu.Target>
-                {collapsed ? (
-                  <Tooltip label={t("signOut")} position="right" withArrow>
-                    <UnstyledButton
-                      style={{
-                        width: 36,
-                        height: 36,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        borderRadius: 6,
-                        color: colors.textMuted,
-                        flexShrink: 0,
-                        transition: "background 150ms",
+                {/* User info - only show when not collapsed */}
+                {!collapsed && (
+                  <Box style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                    <Text
+                      size="xs"
+                      fw={500}
+                      c="var(--color-text-primary)"
+                      style={{ 
+                        lineHeight: 1.3,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
-                      className="hover:bg-[var(--color-bg-muted)] transition-colors"
                     >
-                      <IconDoorExit size={18} />
-                    </UnstyledButton>
-                  </Tooltip>
-                ) : (
-                  <UnstyledButton
-                    style={{
-                      width: 36,
-                      height: 36,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: 6,
-                      color: colors.textMuted,
-                      flexShrink: 0,
-                      transition: "background 150ms",
-                    }}
-                    className="hover:bg-[var(--color-bg-muted)] transition-colors"
-                  >
-                    <IconDoorExit size={18} />
-                  </UnstyledButton>
+                      {authData?.user?.email ?? "User"}
+                    </Text>
+                    <Text
+                      size="10px"
+                      c="var(--color-text-muted)"
+                      style={{ 
+                        lineHeight: 1.5,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {isAdmin ? "Admin Account" : "User Account"}
+                    </Text>
+                  </Box>
                 )}
-              </Menu.Target>
-              <Menu.Dropdown>
+              </UnstyledButton>
+            </Menu.Target>
+
+            <Menu.Dropdown>
+              {/* Admin menu item */}
+              {isAdmin && (
                 <Menu.Item
-                  leftSection={<IconLogout size={14} />}
-                  color="red"
-                  onClick={handleLogout}
-                  style={{ fontSize: fontSizesPx.base }}
+                  component={Link}
+                  href="/admin"
+                  leftSection={<IconShieldCog size={16} />}
                 >
-                  {t("signOut")}
+                  {t("admin")}
                 </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
-          </Box>
+              )}
+
+              {/* Settings menu item */}
+              <Menu.Item
+                component={Link}
+                href="/profile"
+                leftSection={<IconSettings size={16} />}
+              >
+                {t("settings")}
+              </Menu.Item>
+
+              <Menu.Divider />
+
+              {/* Sign out menu item */}
+              <Menu.Item
+                onClick={handleLogout}
+                leftSection={<IconDoorExit size={16} />}
+                color="red"
+              >
+                {t("signOut")}
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
         </Box>
       </Box>
       <FeedbackModal opened={feedbackOpen} onClose={closeFeedback} />

@@ -56,6 +56,76 @@ export function buildCountryMask(geometry: Geometry | null | undefined): MaskPol
 }
 
 /**
+ * Count vertices on all exterior rings (closing duplicate not counted twice).
+ */
+function exteriorVertexCount(geometry: Geometry): number {
+  const rings: Position[][] = [];
+  if (geometry.type === "Polygon") {
+    const outer = (geometry as { coordinates: Position[][] }).coordinates[0];
+    if (outer) rings.push(outer);
+  } else if (geometry.type === "MultiPolygon") {
+    for (const poly of (geometry as { coordinates: Position[][][] }).coordinates) {
+      const outer = poly[0];
+      if (outer) rings.push(outer);
+    }
+  }
+  let count = 0;
+  for (const ring of rings) {
+    if (ring.length === 0) continue;
+    const first = ring[0]!;
+    const last = ring[ring.length - 1]!;
+    const closed =
+      ring.length > 1 && first[0] === last[0] && first[1] === last[1];
+    count += closed ? ring.length - 1 : ring.length;
+  }
+  return count;
+}
+
+/**
+ * True when a polygon is (or looks like) an axis-aligned envelope — the shape
+ * local `clear-api` seed writes for Sudan L0/L1 (`MULTIPOLYGON` with 4 corners).
+ * Real OCHA COD boundaries have far more vertices; those must keep painting.
+ */
+export function isBboxLikeGeometry(geometry: Geometry | null | undefined): boolean {
+  if (!geometry) return false;
+  if (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon") return false;
+
+  const vertices = exteriorVertexCount(geometry);
+  // Seed bboxes are 4 corners (+ optional close). Allow a little slack for
+  // accidental duplicate points, but reject anything resembling a real boundary.
+  if (vertices === 0 || vertices > 6) return false;
+
+  const lngs = new Set<number>();
+  const lats = new Set<number>();
+  const visit = (pt: Position) => {
+    lngs.add(pt[0]);
+    lats.add(pt[1]);
+  };
+
+  if (geometry.type === "Polygon") {
+    for (const ring of (geometry as { coordinates: Position[][] }).coordinates) {
+      for (const pt of ring) visit(pt);
+    }
+  } else {
+    for (const poly of (geometry as { coordinates: Position[][][] }).coordinates) {
+      for (const ring of poly) for (const pt of ring) visit(pt);
+    }
+  }
+
+  // Axis-aligned rectangle: exactly two distinct longitudes and latitudes.
+  return lngs.size === 2 && lats.size === 2;
+}
+
+/** Polygon/MultiPolygon suitable for fill/outline layers (not a seed bbox). */
+export function isPaintableBoundaryGeometry(
+  geometry: Geometry | null | undefined,
+): boolean {
+  if (!geometry) return false;
+  if (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon") return false;
+  return !isBboxLikeGeometry(geometry);
+}
+
+/**
  * Compute a bounding box for a Polygon or MultiPolygon geometry.
  * Returns [west, south, east, north] or null.
  */

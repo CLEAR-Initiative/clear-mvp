@@ -18,6 +18,7 @@ import {
   type CrisisMarker,
   alertsToMarkers,
   eventsToMarkers,
+  signalsToMarkers,
   crisesToMarkers,
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
@@ -79,18 +80,25 @@ export default function MapPage() {
     undefined,
     { enabled: dataView === "crisis" },
   );
+  const signalsListQuery = api.signals.list.useQuery(
+    { teamId: activeTeamId ?? undefined },
+    // Only fetch when Signal view is active — otherwise this lands in the
+    // same tRPC batch as getAlerts and holds marker paint for tens of seconds.
+    { enabled: dataView === "signal", staleTime: 60_000 },
+  );
   const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
     staleTime: Infinity, refetchOnWindowFocus: false,
   });
   const hierarchy: HierarchyLevel1[] = hierarchyQuery.data ?? [];
 
-  /* ---- Derive markers + regions based on active data view ---- */
+  /* ---- Derive markers based on active data view (markers-only; no region heatmaps) ---- */
   const allMarkers: CrisisMarker[] = useMemo(() => {
     if (dataView === "alert")  return alertsToMarkers(alertsQuery.data?.alerts ?? []);
     if (dataView === "event")  return eventsToMarkers(eventsQuery.data?.events ?? []);
+    if (dataView === "signal") return signalsToMarkers(signalsListQuery.data ?? []);
     if (dataView === "crisis") return crisesToMarkers(crisesQuery.data?.crises ?? []);
     return [];
-  }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
+  }, [dataView, alertsQuery.data, eventsQuery.data, signalsListQuery.data, crisesQuery.data]);
 
   const allRegions = useMemo(() => {
     return [];
@@ -134,6 +142,10 @@ export default function MapPage() {
   );
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
+  const [showBoundaries, setShowBoundaries] = useState(true);
+  const [showMarkers, setShowMarkers] = useState(true);
+  const [showRoads, setShowRoads] = useState(true);
+  const [showSatellite, setShowSatellite] = useState(false);
 
   // Resolve the currently-selected country's L0 ID for scoping admin
   // boundary queries and for the country highlight overlay. Null when the
@@ -162,6 +174,7 @@ export default function MapPage() {
   const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
   // Population layer: A2 districts with population, lazy-loaded when first enabled.
+  // Prefetching on country focus was racing the marker batch and bloating map load.
   const populationQuery = api.locations.getPopulationBoundaries.useQuery(
     { countryId: focusCountryId ?? undefined },
     { enabled: showPopulation && !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
@@ -170,6 +183,7 @@ export default function MapPage() {
     () => (showPopulation ? (populationQuery.data ?? []) : []),
     [showPopulation, populationQuery.data],
   );
+  const populationLoading = showPopulation && populationQuery.isFetching && populationBoundaries.length === 0;
 
   // Country L0 geometry — used for the country highlight instead of Mapbox's
   // inaccurate tileset. Re-runs whenever the user switches country.
@@ -345,7 +359,11 @@ export default function MapPage() {
     [allMarkers],
   );
 
-  const isLoading = alertsQuery.isLoading || eventsQuery.isLoading || crisesQuery.isLoading;
+  const isLoading =
+    (dataView === "alert" && alertsQuery.isLoading) ||
+    (dataView === "event" && eventsQuery.isLoading) ||
+    (dataView === "signal" && signalsListQuery.isLoading) ||
+    (dataView === "crisis" && crisesQuery.isLoading);
 
   return (
     <Box
@@ -358,6 +376,7 @@ export default function MapPage() {
       {/* ===== Filter Header Overlay ===== */}
       <Box
         className="absolute top-0 left-0 right-0 z-10"
+        data-tour="map-filters"
         px={16}
         py={12}
         style={{
@@ -429,6 +448,10 @@ export default function MapPage() {
         adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
         fitBoundsGeometry={fitBoundsGeometry}
         populationBoundaries={populationBoundaries}
+        showBoundaries={showBoundaries}
+        showMarkers={showMarkers}
+        showRoads={showRoads}
+        showSatellite={showSatellite}
       />
 
       {/* ===== Left Panel Bar (Layers / Legend / Config) ===== */}
@@ -437,8 +460,17 @@ export default function MapPage() {
         onDataViewChange={setDataView}
         showPopulation={showPopulation}
         onShowPopulationChange={setShowPopulation}
+        populationLoading={populationLoading}
         boundaryLevel={boundaryLevel}
         onBoundaryLevelChange={setBoundaryLevel}
+        showBoundaries={showBoundaries}
+        onShowBoundariesChange={setShowBoundaries}
+        showMarkers={showMarkers}
+        onShowMarkersChange={setShowMarkers}
+        showRoads={showRoads}
+        onShowRoadsChange={setShowRoads}
+        showSatellite={showSatellite}
+        onShowSatelliteChange={setShowSatellite}
       />
 
       {/* ===== Selected Marker Detail ===== */}

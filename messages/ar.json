@@ -1747,7 +1747,11 @@
       "markers": "العلامات",
       "severity": "الخطورة",
       "eventType": "نوع الحدث",
-      "population": "السكان"
+      "population": "السكان",
+      "dataLayers": "طبقات البيانات",
+      "baseMap": "الخريطة الأساسية",
+      "roads": "الطرق",
+      "satellite": "الأقمار الصناعية"
     },
     "severities": {
       "critical": "حرج",
@@ -1760,7 +1764,8 @@
       "none": "لا شيء",
       "crisis": "أزمة",
       "alert": "تنبيه",
-      "event": "حدث"
+      "event": "حدث",
+      "signal": "إشارة"
     },
     "boundaries": {
       "none": "لا شيء",
@@ -2075,7 +2080,12 @@
       "changePassword": "تغيير كلمة المرور",
       "mobile": "الجوال",
       "mobilePlaceholder": "912 345 678",
-      "mobileUpdated": "تم تحديث رقم الجوال."
+      "mobileUpdated": "تم تحديث رقم الجوال.",
+      "profilePicture": "الصورة الشخصية",
+      "uploadPhoto": "تحميل صورة",
+      "photoRequirements": "JPG أو PNG أو GIF. الحد الأقصى 5 ميغابايت.",
+      "namePlaceholder": "أدخل اسمك",
+      "nameUpdated": "تم تحديث الاسم."
     },
     "orgRoles": {
       "title": "المنظمة والأدوار",
@@ -2149,6 +2159,27 @@
       "pause": "إيقاف مؤقت",
       "resume": "استئناف",
       "delete": "حذف الاشتراك"
+    },
+    "contact": {
+      "title": "معلومات الاتصال",
+      "mobile": "الجوال",
+      "mobilePlaceholder": "912 345 678",
+      "mobileUpdated": "تم تحديث رقم الجوال.",
+      "notSet": "غير محدد"
+    },
+    "password": {
+      "title": "كلمة المرور",
+      "description": "كلمة المرور الخاصة بك",
+      "resetPassword": "إعادة تعيين كلمة المرور",
+      "modalTitle": "إعادة تعيين كلمة المرور",
+      "currentPassword": "كلمة المرور الحالية",
+      "currentPasswordPlaceholder": "أدخل كلمة المرور الحالية",
+      "newPassword": "كلمة المرور الجديدة",
+      "newPasswordPlaceholder": "أدخل كلمة المرور الجديدة",
+      "confirmPassword": "تأكيد كلمة المرور",
+      "confirmPasswordPlaceholder": "أعد إدخال كلمة المرور الجديدة",
+      "passwordUpdated": "تم تحديث كلمة المرور بنجاح.",
+      "passwordMismatch": "كلمتا المرور غير متطابقتين."
     }
   },
   "settings": {
