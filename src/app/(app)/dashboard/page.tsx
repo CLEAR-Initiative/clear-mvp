@@ -16,7 +16,7 @@ import { MapMarkerDetail } from "~/app/(app)/map/_components/map-marker-detail";
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
 import type { DataView } from "~/app/(app)/map/_components/map-layers-panel";
 import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
-import type { MapMarker } from "~/components/map/crisis-map";
+import type { MapMarker, MarkerScreenPoint } from "~/components/map/crisis-map";
 import { RightPanel } from "./_components/right-panel";
 import { useIsDark } from "~/hooks/use-is-dark";
 
@@ -49,6 +49,7 @@ export default function DashboardPage() {
   const focusCountryGeometry = sudanL0Query.data?.geometry ?? undefined;
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(null);
+  const [detailAnchor, setDetailAnchor] = useState<MarkerScreenPoint | null>(null);
   const [dataView, setDataView] = useState<DataView>("alert");
   const [showPopulation, setShowPopulation] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
@@ -102,9 +103,10 @@ export default function DashboardPage() {
     return [];
   }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
 
-  const handleMarkerClick = useCallback((marker: MapMarker) => {
+  const handleMarkerClick = useCallback((marker: MapMarker, screenPoint: MarkerScreenPoint) => {
     const full = markers.find((m) => m.id === marker.id);
     setSelectedMarker(full ?? null);
+    setDetailAnchor(screenPoint);
   }, [markers]);
 
 
@@ -135,7 +137,11 @@ export default function DashboardPage() {
         {selectedMarker && (
           <MapMarkerDetail
             marker={selectedMarker}
-            onClose={() => setSelectedMarker(null)}
+            anchor={detailAnchor}
+            onClose={() => {
+              setSelectedMarker(null);
+              setDetailAnchor(null);
+            }}
           />
         )}
         <MapPanelBar

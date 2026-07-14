@@ -1,14 +1,22 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Stack, Badge, Button, CloseButton, ScrollArea } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import Link from "next/link";
 import { type CrisisMarker } from "./map-markers-data";
+import type { MarkerScreenPoint } from "~/components/map/crisis-map";
 
 interface MapMarkerDetailProps {
   marker: CrisisMarker;
   onClose: () => void;
+  /** Marker pixel position inside the map overlay parent. Desktop only. */
+  anchor?: MarkerScreenPoint | null;
 }
+
+const PANEL_WIDTH = 320;
+const PANEL_GAP = 14;
+const PANEL_MARGIN = 8;
+const FALLBACK_HEIGHT = 320;
 
 const severityColors: Record<string, { bg: string; color: string }> = {
   critical: { bg: "var(--color-critical-light)", color: "#DC2626" },
@@ -25,7 +33,26 @@ interface DragState {
   startOffsetY: number;
 }
 
-export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
+/** Place the panel beside the marker: left markers → right side, and vice versa. */
+function placeNearMarker(
+  anchor: MarkerScreenPoint,
+  parent: { width: number; height: number },
+  panel: { width: number; height: number },
+): { left: number; top: number } {
+  const placeOnRight = anchor.x < parent.width / 2;
+  let left = placeOnRight
+    ? anchor.x + PANEL_GAP
+    : anchor.x - panel.width - PANEL_GAP;
+  // Bias slightly above the marker so the header sits near it without covering the pin.
+  let top = anchor.y - Math.min(48, panel.height * 0.25);
+
+  left = Math.min(Math.max(left, PANEL_MARGIN), Math.max(PANEL_MARGIN, parent.width - panel.width - PANEL_MARGIN));
+  top = Math.min(Math.max(top, PANEL_MARGIN), Math.max(PANEL_MARGIN, parent.height - panel.height - PANEL_MARGIN));
+
+  return { left, top };
+}
+
+export function MapMarkerDetail({ marker, onClose, anchor }: MapMarkerDetailProps) {
   const t = useTranslations("map");
   const format = useFormatter();
   const isMobile = useMediaQuery("(max-width: 48em)");
@@ -35,12 +62,34 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
   const dragRef = useRef<DragState | null>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
+  const [basePos, setBasePos] = useState({ left: 16, top: 80 });
 
   // Reset the dragged position whenever a different marker is selected so the
   // window snaps back to its anchored spot instead of lingering where it was.
   useEffect(() => {
     setOffset({ x: 0, y: 0 });
   }, [marker.id]);
+
+  useLayoutEffect(() => {
+    if (isMobile) return;
+    const el = boxRef.current;
+    const parent = el?.offsetParent as HTMLElement | null;
+    if (!parent) return;
+
+    const panelHeight = el.offsetHeight || FALLBACK_HEIGHT;
+    const parentSize = { width: parent.clientWidth, height: parent.clientHeight };
+
+    if (anchor) {
+      setBasePos(placeNearMarker(anchor, parentSize, { width: PANEL_WIDTH, height: panelHeight }));
+      return;
+    }
+
+    // Fallback when no screen anchor is provided: top-right corner.
+    setBasePos({
+      left: Math.max(PANEL_MARGIN, parentSize.width - PANEL_WIDTH - 16),
+      top: 80,
+    });
+  }, [marker.id, anchor, isMobile]);
 
   // Keep the window inside its positioned container as the offset changes.
   const clampOffset = useCallback((nextX: number, nextY: number) => {
@@ -50,7 +99,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
 
     const box = el.getBoundingClientRect();
     const bounds = parent.getBoundingClientRect();
-    const margin = 8;
+    const margin = PANEL_MARGIN;
 
     // Current top-left of the element without the pending delta.
     const baseLeft = box.left - offset.x;
@@ -113,10 +162,10 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
         boxShadow: "0 -4px 12px rgba(0,0,0,0.15)",
         borderBottom: "none",
       } : {
-        // Desktop: top-right overlay, draggable via header
-        top: 80,
-        right: 16,
-        width: 320,
+        // Desktop: beside the marker, draggable via header
+        top: basePos.top,
+        left: basePos.left,
+        width: PANEL_WIDTH,
         boxShadow: dragging ? "0 10px 24px rgba(0,0,0,0.18)" : "0 4px 12px rgba(0,0,0,0.1)",
         transform: `translate(${offset.x}px, ${offset.y}px)`,
         transition: dragging ? "none" : "box-shadow 120ms ease",

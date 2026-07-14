@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { Box, Text, Card, Group } from "@mantine/core";
-import type { MapMarker } from "~/components/map/crisis-map";
+import type { MapMarker, MarkerScreenPoint } from "~/components/map/crisis-map";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -13,7 +13,7 @@ const CrisisMap = dynamic(
 interface CashMapSectionProps {
   mapMarkers: MapMarker[];
   center: [number, number];
-  onMarkerClick: (marker: MapMarker) => void;
+  onMarkerClick: (marker: MapMarker, screenPoint: MarkerScreenPoint) => void;
 }
 
 export function CashMapSection({ mapMarkers, center, onMarkerClick }: CashMapSectionProps) {

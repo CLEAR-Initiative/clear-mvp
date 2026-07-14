@@ -11,7 +11,7 @@ import {
   Loader,
 } from "@mantine/core";
 import { DisasterTypePicker } from "~/components/disaster-type-picker";
-import type { MapMarker } from "~/components/map/crisis-map";
+import type { MapMarker, MarkerScreenPoint } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import {
@@ -178,6 +178,7 @@ export default function MapPage() {
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(
     null,
   );
+  const [detailAnchor, setDetailAnchor] = useState<MarkerScreenPoint | null>(null);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
   const [showMarkers, setShowMarkers] = useState(true);
@@ -376,18 +377,21 @@ export default function MapPage() {
     setSelectedCountry(value ?? "All Countries");
     setSelectedRegion("All Regions");
     setSelectedMarker(null);
+    setDetailAnchor(null);
   };
 
   const handleRegionChange = (value: string | null) => {
     setSelectedRegion(value ?? "All Regions");
     setSelectedMarker(null);
+    setDetailAnchor(null);
   };
 
 
   const handleMarkerClick = useCallback(
-    (marker: MapMarker) => {
+    (marker: MapMarker, screenPoint: MarkerScreenPoint) => {
       const full = allMarkers.find((m) => m.id === marker.id);
       setSelectedMarker(full ?? null);
+      setDetailAnchor(screenPoint);
     },
     [allMarkers],
   );
@@ -528,7 +532,11 @@ export default function MapPage() {
       {selectedMarker && (
         <MapMarkerDetail
           marker={selectedMarker}
-          onClose={() => setSelectedMarker(null)}
+          anchor={detailAnchor}
+          onClose={() => {
+            setSelectedMarker(null);
+            setDetailAnchor(null);
+          }}
         />
       )}
 
