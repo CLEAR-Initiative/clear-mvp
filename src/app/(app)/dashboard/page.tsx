@@ -27,7 +27,7 @@ function MapLoadingPlaceholder() {
       w="100%" 
       h="100%" 
       style={{ 
-        background: isDark ? "var(--mantine-color-dark-7)" : "var(--mantine-color-gray-1)",
+        background: isDark ? "#111111" : "#FAFAFA",
       }} 
     />
   );
@@ -55,15 +55,15 @@ export default function DashboardPage() {
 
   const alertsQuery = api.alerts.alertsForMap.useQuery(
     { activeOnly: true, teamId: activeTeamId },
-    { enabled: dataView === "alert" },
+    { enabled: dataView === "alert", placeholderData: (prev) => prev },
   );
   const eventsQuery = api.alerts.eventsForMap.useQuery(
     { teamId: activeTeamId ?? undefined },
-    { enabled: dataView === "event" },
+    { enabled: dataView === "event", placeholderData: (prev) => prev },
   );
   const crisesQuery = api.alerts.getCrises.useQuery(
     undefined,
-    { enabled: dataView === "crisis" },
+    { enabled: dataView === "crisis", placeholderData: (prev) => prev },
   );
 
   // ── Admin-boundary + population overlay queries ─────────────────────────
@@ -110,7 +110,15 @@ export default function DashboardPage() {
 
   return (
     <Box style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-      <Box style={{ position: "relative", flex: 1, minWidth: 0, overflow: "hidden" }}>
+      <Box 
+        style={{ 
+          position: "relative", 
+          flex: 1, 
+          minWidth: 0, 
+          overflow: "hidden",
+          background: "var(--color-bg-primary)",
+        }}
+      >
         <CrisisMap
           markers={markers}
           center={[30.0, 15.5]}

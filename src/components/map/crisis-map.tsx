@@ -1158,7 +1158,15 @@ export function CrisisMap({
           z-index: 10 !important;
         }
       `}</style>
-      <div ref={mapContainer} className={className} />
+      <div 
+        ref={mapContainer} 
+        className={className}
+        style={{ 
+          width: '100%',
+          height: '100%',
+          background: isDark ? '#111111' : '#FAFAFA',
+        }}
+      />
     </>
   );
 }

@@ -63,6 +63,23 @@ export default async function RootLayout({
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <head>
         <ColorSchemeScript defaultColorScheme="auto" />
+        {/* Critical CSS: Prevent white flash before external CSS loads */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          html, body {
+            background: #FAFAFA;
+            margin: 0;
+            padding: 0;
+          }
+          @media (prefers-color-scheme: dark) {
+            html, body {
+              background: #111111;
+            }
+          }
+          [data-mantine-color-scheme="dark"] html,
+          [data-mantine-color-scheme="dark"] body {
+            background: #111111;
+          }
+        `}} />
       </head>
       <body className={`${inter.variable} ${notoSansArabic.variable} font-sans antialiased`}>
         <DirectionProvider initialDirection={dir} detectDirection={false}>

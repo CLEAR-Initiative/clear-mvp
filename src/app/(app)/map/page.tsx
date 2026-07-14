@@ -39,7 +39,7 @@ function MapLoadingPlaceholder() {
       w="100%" 
       h="100%" 
       style={{ 
-        background: isDark ? "var(--mantine-color-dark-7)" : "var(--mantine-color-gray-1)",
+        background: isDark ? "#111111" : "#FAFAFA",
       }} 
     />
   );
@@ -83,24 +83,24 @@ export default function MapPage() {
   // previous months, which only works if historical alerts are loaded; the
   // active-only filter is still available downstream via the per-marker
   // `status` field if a "current alerts only" toggle ever gets added.
-  const alertsQuery = api.alerts.getAlerts.useQuery(
+  // NOTE: Using slim forMap queries for performance (EVENT_LIST_FIELDS).
+  const alertsQuery = api.alerts.alertsForMap.useQuery(
     { teamId: activeTeamId },
-    { enabled: dataView === "alert" },
+    { enabled: dataView === "alert", placeholderData: (prev) => prev },
   );
-  const eventsQuery = api.alerts.getEvents.useQuery(
+  const eventsQuery = api.alerts.eventsForMap.useQuery(
     { teamId: activeTeamId ?? undefined },
-    // No team → fetch the global feed (the API resolver permits this).
-    { enabled: dataView === "event" },
+    { enabled: dataView === "event", placeholderData: (prev) => prev },
   );
   const crisesQuery = api.alerts.getCrises.useQuery(
     undefined,
-    { enabled: dataView === "crisis" },
+    { enabled: dataView === "crisis", placeholderData: (prev) => prev },
   );
-  const signalsListQuery = api.signals.list.useQuery(
+  const signalsListQuery = api.signals.forMap.useQuery(
     { teamId: activeTeamId ?? undefined },
     // Only fetch when Signal view is active — otherwise this lands in the
     // same tRPC batch as getAlerts and holds marker paint for tens of seconds.
-    { enabled: dataView === "signal", staleTime: 60_000 },
+    { enabled: dataView === "signal", staleTime: 60_000, placeholderData: (prev) => prev },
   );
   const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
     staleTime: Infinity, refetchOnWindowFocus: false,
@@ -386,6 +386,7 @@ export default function MapPage() {
         position: "relative",
         height: "calc(100vh - 60px)",
         overflow: "hidden",
+        background: "var(--color-bg-primary)",
       }}
     >
       {/* ===== Filter Header Overlay ===== */}

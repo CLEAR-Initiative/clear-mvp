@@ -17,7 +17,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <FeatureFlagsProvider>
           <ConsoleBufferInit />
           <OnboardingGuard>
-            <Group gap={0} align="stretch" wrap="nowrap" style={{ minHeight: "100vh" }}>
+            <Group 
+              gap={0} 
+              align="stretch" 
+              wrap="nowrap" 
+              style={{ 
+                minHeight: "100vh",
+                background: "var(--color-bg-primary)",
+              }}
+            >
               <NavSidebar />
               <Box
                 component="main"
