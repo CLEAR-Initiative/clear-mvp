@@ -203,7 +203,7 @@ export function EventDetailContent({
   // Show skeleton UI on initial load (no event data yet) - no spinning wheel
   if (loading && !event) {
     return (
-      <Box className="skeleton-container" style={{ background: "var(--color-bg-white)" }}>
+      <Box style={{ background: "var(--color-bg-white)" }}>
         {mode === "page" && (
           <Box px={24} py={16} style={{ borderBottom: "1px solid var(--color-border)" }}>
             <Group gap={16}>

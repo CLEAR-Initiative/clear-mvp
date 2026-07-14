@@ -34,8 +34,9 @@ describe("SkeletonSlot", () => {
     expect(screen.queryByTestId("skeleton")).not.toBeInTheDocument();
   });
 
-  it("applies fade-in class to resolved content", () => {
+  it("does not apply fade-in class to resolved content", () => {
     const { container } = renderSlot(false);
-    expect(container.querySelector(".skeleton-slot-content")).toBeTruthy();
+    expect(container.querySelector(".skeleton-slot-content")).toBeNull();
+    expect(container.querySelector(".content-fade-in")).toBeNull();
   });
 });

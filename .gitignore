@@ -23,3 +23,4 @@ public/workbox-*.js
 # Local agent-skill configuration (not for the shared repo)
 /CLAUDE.md
 /docs/agents/
+.exponential/
