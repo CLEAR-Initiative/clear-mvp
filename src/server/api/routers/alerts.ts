@@ -153,6 +153,26 @@ const ALERTS_LIST_QUERY = `
   }
 `;
 
+// Slim variant for map — unpaginated, slim fields. Map renders all alerts
+// at once with client-side filtering by location/type/month; pagination
+// doesn't help. The slim EVENT_LIST_FIELDS cuts the heavy ancestor/metadata
+// resolvers that wedged at tens of seconds on non-English locales.
+const ALERTS_FOR_MAP_QUERY = `
+  query AlertsForMap($status: AlertStatus, $teamId: String, $includeDummy: Boolean) {
+    alerts(status: $status, teamId: $teamId, includeDummy: $includeDummy) {
+      id
+      status
+      event { ${EVENT_LIST_FIELDS} }
+    }
+  }
+`;
+
+const EVENTS_FOR_MAP_QUERY = `
+  query EventsForMap($teamId: String) {
+    events(teamId: $teamId) { ${EVENT_LIST_FIELDS} }
+  }
+`;
+
 const ALERT_GET_QUERY = `
   query Alert($id: String!) {
     alert(id: $id) {
@@ -336,6 +356,49 @@ export const alertsRouter = createTRPCRouter({
     );
     return { crises: data.crises };
   }),
+
+  // ─── Slim map procedures ───────────────────────────────────────────────
+  // Map-optimized queries using slim field sets (no ancestor/metadata
+  // resolver fan-out). These fetch all rows (map needs complete marker set
+  // for client-side filtering) but with the lightweight shapes already
+  // proven on detection feeds.
+
+  alertsForMap: protectedProcedure
+    .input(
+      z
+        .object({
+          status: z.enum(["draft", "published", "archived"]).optional(),
+          activeOnly: z.boolean().optional(),
+          teamId: z.string().nullish(),
+          includeDummy: z.boolean().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const status =
+        input?.activeOnly === true ? "published" : input?.status;
+      const data = await graphqlFetch<{ alerts: GqlAlert[] }>(
+        ALERTS_FOR_MAP_QUERY,
+        {
+          ...(status ? { status } : {}),
+          ...(input?.teamId ? { teamId: input.teamId } : {}),
+          includeDummy: input?.includeDummy ?? false,
+        },
+        cookieHeaders(ctx),
+      );
+      return { alerts: data.alerts };
+    }),
+
+  eventsForMap: protectedProcedure
+    .input(z.object({ teamId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ events: GqlEvent[] }>(
+        EVENTS_FOR_MAP_QUERY,
+        { teamId: input.teamId },
+        cookieHeaders(ctx),
+      );
+      return { events: data.events };
+    }),
 
   getShockTypes: publicProcedure.query(() => {
     // Shock types are a Django concept - stub for backward compat

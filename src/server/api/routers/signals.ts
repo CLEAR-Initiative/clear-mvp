@@ -5,6 +5,10 @@ import type { GqlSignal, GqlSignalDetail } from "~/lib/types/graphql";
 
 const LOCATION_FIELDS = `id name level geoId ancestorIds geometry pointType parent { id name } ancestors { id name level }`;
 
+// Slim location fields for map views — drops the recursive ancestors
+// resolver and metadata, keeping only what map markers need.
+const LOCATION_LIST_FIELDS = `id name level geometry ancestorIds`;
+
 const SOURCE_FIELDS = `id name type baseUrl infoUrl`;
 
 const SIGNAL_LIST_QUERY = `
@@ -21,6 +25,27 @@ const SIGNAL_LIST_QUERY = `
       generalLocation { ${LOCATION_FIELDS} }
       originLocation { ${LOCATION_FIELDS} }
       destinationLocation { ${LOCATION_FIELDS} }
+      events { id }
+    }
+  }
+`;
+
+// Slim variant for map — drops recursive ancestor chains and metadata
+// lookups. The map only needs geometry + ancestorIds for marker paint
+// and hierarchy filtering; the heavyweight detail fields are unused.
+const SIGNALS_FOR_MAP_QUERY = `
+  query SignalsForMap($teamId: String, $includeDummy: Boolean) {
+    signals(teamId: $teamId, includeDummy: $includeDummy) {
+      id
+      source { ${SOURCE_FIELDS} }
+      title
+      description
+      severity
+      url
+      publishedAt
+      generalLocation { ${LOCATION_LIST_FIELDS} }
+      originLocation { ${LOCATION_LIST_FIELDS} }
+      destinationLocation { ${LOCATION_LIST_FIELDS} }
       events { id }
     }
   }
@@ -107,6 +132,21 @@ export const signalsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ signals: GqlSignal[] }>(
         SIGNAL_LIST_QUERY,
+        {
+          ...(input?.teamId ? { teamId: input.teamId } : {}),
+          includeDummy: input?.includeDummy ?? false,
+        },
+        cookieHeaders(ctx),
+      );
+      return data.signals;
+    }),
+
+  /** Slim variant for map rendering (no ancestor chain, no collectedAt) */
+  forMap: protectedProcedure
+    .input(z.object({ teamId: z.string().nullish(), includeDummy: z.boolean().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ signals: GqlSignal[] }>(
+        SIGNALS_FOR_MAP_QUERY,
         {
           ...(input?.teamId ? { teamId: input.teamId } : {}),
           includeDummy: input?.includeDummy ?? false,
