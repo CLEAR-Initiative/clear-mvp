@@ -378,6 +378,12 @@ export default function MapPage() {
     (dataView === "signal" && signalsListQuery.isLoading) ||
     (dataView === "crisis" && crisesQuery.isLoading);
 
+  const isUpdating =
+    (dataView === "alert" && alertsQuery.isFetching && !alertsQuery.isLoading) ||
+    (dataView === "event" && eventsQuery.isFetching && !eventsQuery.isLoading) ||
+    (dataView === "signal" && signalsListQuery.isFetching && !signalsListQuery.isLoading) ||
+    (dataView === "crisis" && crisesQuery.isFetching && !crisesQuery.isLoading);
+
   return (
     <Box
       style={{
@@ -387,6 +393,45 @@ export default function MapPage() {
         background: "var(--color-bg-primary)",
       }}
     >
+      {/* Loading Overlay - Full screen feedback during initial load */}
+      {isLoading && (
+        <Box
+          className="absolute inset-0 z-50 flex items-center justify-center"
+          style={{
+            background: "var(--color-bg-primary)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <Box style={{ textAlign: "center", maxWidth: 400 }}>
+            <Loader size="lg" mb="md" />
+            <Text size="lg" fw={600} mb="xs">
+              Loading {dataView === "alert" ? "Alerts" : dataView === "event" ? "Events" : dataView === "signal" ? "Signals" : "Crisis"} Data
+            </Text>
+            <Text size="sm" c="dimmed">
+              Fetching markers from the database...
+            </Text>
+            <Box mt="xl" px="lg">
+              <Box
+                style={{
+                  height: 4,
+                  background: "var(--color-border)",
+                  borderRadius: 2,
+                  overflow: "hidden",
+                }}
+              >
+                <Box
+                  style={{
+                    height: "100%",
+                    background: "var(--color-accent)",
+                    borderRadius: 2,
+                    animation: "loadingBar 2s ease-in-out infinite",
+                  }}
+                />
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      )}
       {/* ===== Filter Header Overlay ===== */}
       <Box
         className="absolute top-0 left-0 right-0 z-10"
@@ -583,6 +628,11 @@ export default function MapPage() {
         @keyframes pulse-dot {
           0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
           50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+        }
+        @keyframes loadingBar {
+          0% { width: 0%; transform: translateX(0); }
+          50% { width: 70%; transform: translateX(0); }
+          100% { width: 100%; transform: translateX(0); }
         }
       `}</style>
     </Box>
