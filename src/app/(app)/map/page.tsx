@@ -82,7 +82,9 @@ export default function MapPage() {
   );
   const signalsListQuery = api.signals.list.useQuery(
     { teamId: activeTeamId ?? undefined },
-    { staleTime: 60_000 },
+    // Only fetch when Signal view is active — otherwise this lands in the
+    // same tRPC batch as getAlerts and holds marker paint for tens of seconds.
+    { enabled: dataView === "signal", staleTime: 60_000 },
   );
   const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
     staleTime: Infinity, refetchOnWindowFocus: false,
@@ -171,11 +173,11 @@ export default function MapPage() {
 
   const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
-  // Prefetch A2 population polygons when a country is focused so the toggle
-  // only controls paint visibility rather than waiting on the first fetch.
+  // Population layer: A2 districts with population, lazy-loaded when first enabled.
+  // Prefetching on country focus was racing the marker batch and bloating map load.
   const populationQuery = api.locations.getPopulationBoundaries.useQuery(
     { countryId: focusCountryId ?? undefined },
-    { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
+    { enabled: showPopulation && !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
   const populationBoundaries = useMemo(
     () => (showPopulation ? (populationQuery.data ?? []) : []),
@@ -358,10 +360,10 @@ export default function MapPage() {
   );
 
   const isLoading =
-    alertsQuery.isLoading ||
-    eventsQuery.isLoading ||
-    signalsListQuery.isLoading ||
-    crisesQuery.isLoading;
+    (dataView === "alert" && alertsQuery.isLoading) ||
+    (dataView === "event" && eventsQuery.isLoading) ||
+    (dataView === "signal" && signalsListQuery.isLoading) ||
+    (dataView === "crisis" && crisesQuery.isLoading);
 
   return (
     <Box
