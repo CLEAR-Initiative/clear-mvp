@@ -149,7 +149,7 @@ export const signalsRouter = createTRPCRouter({
         SIGNALS_FOR_MAP_QUERY,
         {
           ...(input?.teamId ? { teamId: input.teamId } : {}),
-          includeDummy: input?.includeDummy ?? false,
+          includeDummy: input?.includeDummy ?? true,
         },
         cookieHeaders(ctx),
       );

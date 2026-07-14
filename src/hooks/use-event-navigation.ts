@@ -73,7 +73,7 @@ export function useEventNavigation(currentEventId: string): DetailNavigationResu
 
   // Query events with detection filters, limited to 500 (API max)
   const eventsQuery = api.alerts.eventsPage.useQuery({
-    teamId: navContext.teamId ?? undefined,
+    teamId: undefined, // Don't filter by team for global navigation
     locationId: navContext.locationId ?? undefined,
     from: navContext.from,
     to: navContext.to,
@@ -83,6 +83,7 @@ export function useEventNavigation(currentEventId: string): DetailNavigationResu
     orderBy: navContext.orderBy,
     limit: 500,
     offset: 0,
+    includeDummy: true, // Include dummy events for testing
   });
 
   const currentIndex = useMemo(() => {

@@ -157,6 +157,7 @@ const ALERTS_LIST_QUERY = `
 // at once with client-side filtering by location/type/month; pagination
 // doesn't help. The slim EVENT_LIST_FIELDS cuts the heavy ancestor/metadata
 // resolvers that wedged at tens of seconds on non-English locales.
+// Optional date range filtering (startDate/endDate) reduces data transfer.
 const ALERTS_FOR_MAP_QUERY = `
   query AlertsForMap($status: AlertStatus, $teamId: String, $includeDummy: Boolean) {
     alerts(status: $status, teamId: $teamId, includeDummy: $includeDummy) {
@@ -168,8 +169,8 @@ const ALERTS_FOR_MAP_QUERY = `
 `;
 
 const EVENTS_FOR_MAP_QUERY = `
-  query EventsForMap($teamId: String) {
-    events(teamId: $teamId) { ${EVENT_LIST_FIELDS} }
+  query EventsForMap($teamId: String, $includeDummy: Boolean) {
+    events(teamId: $teamId, includeDummy: $includeDummy) { ${EVENT_LIST_FIELDS} }
   }
 `;
 
@@ -382,7 +383,7 @@ export const alertsRouter = createTRPCRouter({
         {
           ...(status ? { status } : {}),
           ...(input?.teamId ? { teamId: input.teamId } : {}),
-          includeDummy: input?.includeDummy ?? false,
+          includeDummy: input?.includeDummy ?? true,
         },
         cookieHeaders(ctx),
       );
@@ -390,11 +391,19 @@ export const alertsRouter = createTRPCRouter({
     }),
 
   eventsForMap: protectedProcedure
-    .input(z.object({ teamId: z.string().optional() }))
+    .input(
+      z.object({
+        teamId: z.string().optional(),
+        includeDummy: z.boolean().optional(),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ events: GqlEvent[] }>(
         EVENTS_FOR_MAP_QUERY,
-        { teamId: input.teamId },
+        {
+          teamId: input.teamId,
+          includeDummy: input.includeDummy ?? true, // Include dummy data by default for testing
+        },
         cookieHeaders(ctx),
       );
       return { events: data.events };

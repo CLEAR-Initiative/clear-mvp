@@ -25,6 +25,7 @@ import { useLocations } from "~/hooks/use-locations";
 import { countryConfig } from "~/lib/constants/country-config";
 import { MapPanelBar } from "./_components/map-panel-bar";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
+import { MapLoadingOverlay } from "./_components/map-loading-overlay";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
@@ -77,18 +78,40 @@ export default function MapPage() {
   const { activeTeamId, activeTeam } = useTeam();
   const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
 
-  // Fetch every alert (published + archived) instead of just the currently-
-  // active ones. The timeline panel below lets the user scrub back through
-  // previous months, which only works if historical alerts are loaded; the
-  // active-only filter is still available downstream via the per-marker
-  // `status` field if a "current alerts only" toggle ever gets added.
-  // NOTE: Using slim forMap queries for performance (EVENT_LIST_FIELDS).
+  // Timeline state. Stored as "YYYY-MM"; null means "all time".
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+
+  // Calculate date range for backend filtering (default: last 6 months, or all time if user clicks "All Time")
+  const dateRangeForBackend = useMemo(() => {
+    // If "All Time" is selected (selectedMonth === null and user clicked it), fetch everything
+    // For initial load, default to last 6 months for performance
+    if (selectedMonth === null) {
+      // Default: last 6 months
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 6);
+      return {
+        startDate: startDate.toISOString().split('T')[0], // YYYY-MM-DD
+        endDate: endDate.toISOString().split('T')[0],
+      };
+    }
+    // If specific month is selected, fetch only that month
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0); // Last day of the month
+    return {
+      startDate: start.toISOString().split('T')[0],
+      endDate: end.toISOString().split('T')[0],
+    };
+  }, [selectedMonth]);
+
+  // Fetch data for active view ONLY (no parallel loading)
   const alertsQuery = api.alerts.alertsForMap.useQuery(
-    { teamId: activeTeamId },
+    { includeDummy: true },
     { enabled: dataView === "alert", placeholderData: (prev) => prev },
   );
   const eventsQuery = api.alerts.eventsForMap.useQuery(
-    { teamId: activeTeamId ?? undefined },
+    { includeDummy: true },
     { enabled: dataView === "event", placeholderData: (prev) => prev },
   );
   const crisesQuery = api.alerts.getCrises.useQuery(
@@ -96,9 +119,7 @@ export default function MapPage() {
     { enabled: dataView === "crisis", placeholderData: (prev) => prev },
   );
   const signalsListQuery = api.signals.forMap.useQuery(
-    { teamId: activeTeamId ?? undefined },
-    // Only fetch when Signal view is active — otherwise this lands in the
-    // same tRPC batch as getAlerts and holds marker paint for tens of seconds.
+    { includeDummy: true },
     { enabled: dataView === "signal", staleTime: 60_000, placeholderData: (prev) => prev },
   );
   const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
@@ -108,11 +129,13 @@ export default function MapPage() {
 
   /* ---- Derive markers based on active data view (markers-only; no region heatmaps) ---- */
   const allMarkers: CrisisMarker[] = useMemo(() => {
-    if (dataView === "alert")  return alertsToMarkers(alertsQuery.data?.alerts ?? []);
-    if (dataView === "event")  return eventsToMarkers(eventsQuery.data?.events ?? []);
-    if (dataView === "signal") return signalsToMarkers(signalsListQuery.data ?? []);
-    if (dataView === "crisis") return crisesToMarkers(crisesQuery.data?.crises ?? []);
-    return [];
+    let markers: CrisisMarker[] = [];
+    if (dataView === "alert")  markers = alertsToMarkers(alertsQuery.data?.alerts ?? []);
+    if (dataView === "event")  markers = eventsToMarkers(eventsQuery.data?.events ?? []);
+    if (dataView === "signal") markers = signalsToMarkers(signalsListQuery.data ?? []);
+    if (dataView === "crisis") markers = crisesToMarkers(crisesQuery.data?.crises ?? []);
+    
+    return markers;
   }, [dataView, alertsQuery.data, eventsQuery.data, signalsListQuery.data, crisesQuery.data]);
 
   const allRegions = useMemo(() => {
@@ -263,9 +286,6 @@ export default function MapPage() {
     return null;
   }, [selectedCountry, selectedRegion]);
 
-  // Timeline state. Stored as "YYYY-MM"; null means "all time".
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-
   // Reset month when the data view changes — months derived from alerts
   // won't match months derived from signals, so a stale selection would
   // hide everything.
@@ -384,6 +404,9 @@ export default function MapPage() {
     (dataView === "signal" && signalsListQuery.isFetching && !signalsListQuery.isLoading) ||
     (dataView === "crisis" && crisesQuery.isFetching && !crisesQuery.isLoading);
 
+  // Show loading overlay only when actively fetching AND map has already rendered once
+  const showLoadingOverlay = isLoading;
+
   return (
     <Box
       style={{
@@ -393,48 +416,9 @@ export default function MapPage() {
         background: "var(--color-bg-primary)",
       }}
     >
-      {/* Loading Overlay - Full screen feedback during initial load */}
-      {isLoading && (
-        <Box
-          className="absolute inset-0 z-50 flex items-center justify-center"
-          style={{
-            background: "var(--color-bg-primary)",
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          <Box style={{ textAlign: "center", maxWidth: 400 }}>
-            <Loader size="lg" mb="md" />
-            <Text size="lg" fw={600} mb="xs">
-              Loading {dataView === "alert" ? "Alerts" : dataView === "event" ? "Events" : dataView === "signal" ? "Signals" : "Crisis"} Data
-            </Text>
-            <Text size="sm" c="dimmed">
-              Fetching markers from the database...
-            </Text>
-            <Box mt="xl" px="lg">
-              <Box
-                style={{
-                  height: 4,
-                  background: "var(--color-border)",
-                  borderRadius: 2,
-                  overflow: "hidden",
-                }}
-              >
-                <Box
-                  style={{
-                    height: "100%",
-                    background: "var(--color-accent)",
-                    borderRadius: 2,
-                    animation: "loadingBar 2s ease-in-out infinite",
-                  }}
-                />
-              </Box>
-            </Box>
-          </Box>
-        </Box>
-      )}
-      {/* ===== Filter Header Overlay ===== */}
+      {/* Top filters bar */}
       <Box
-        className="absolute top-0 left-0 right-0 z-10"
+        className="absolute top-0 left-0 right-0 z-20"
         data-tour="map-filters"
         px={16}
         py={12}
@@ -454,7 +438,6 @@ export default function MapPage() {
             value={selectedCountry}
             onChange={handleCountryChange}
             data={countryOptions.map((c) =>
-              // "All Countries" is a logic sentinel - translate display label only.
               c === "All Countries" ? { value: c, label: t("filters.allCountries") } : c,
             )}
             style={{ minWidth: 140 }}
@@ -466,7 +449,6 @@ export default function MapPage() {
             value={selectedRegion}
             onChange={handleRegionChange}
             data={regionOptions.map((r) =>
-              // "All Regions" is a logic sentinel - translate display label only.
               r === "All Regions" ? { value: r, label: t("filters.allRegions") } : r,
             )}
             style={{ minWidth: 140 }}
@@ -486,31 +468,46 @@ export default function MapPage() {
         </Group>
       </Box>
 
-      {/* ===== Mapbox Map ===== */}
-      <CrisisMap
-        markers={currentMarkers}
-        regions={allRegions}
-        center={mapCenter}
-        zoom={mapZoom}
-        className="w-full h-full"
-        onMarkerClick={handleMarkerClick}
-        focusCountryPCode={
-          selectedCountry !== "All Countries"
-            ? countryConfig[selectedCountry]?.pCode
-            : undefined
-        }
-        focusCountryName={
-          selectedCountry !== "All Countries" ? selectedCountry : undefined
-        }
-        focusCountryGeometry={focusCountryGeometry}
-        adminBoundaries={adminBoundaries}
-        adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-        fitBoundsGeometry={fitBoundsGeometry}
-        populationBoundaries={populationBoundaries}
-        showBoundaries={boundaryLevel !== "none"}
-        showMarkers={showMarkers}
-        showRoads={showRoads}
-      />
+      {/* Map container with loading overlay */}
+      <Box
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 10,
+        }}
+      >
+        {/* ===== Mapbox Map ===== */}
+        <CrisisMap
+          markers={currentMarkers}
+          regions={allRegions}
+          center={mapCenter}
+          zoom={mapZoom}
+          className="w-full h-full"
+          onMarkerClick={handleMarkerClick}
+          focusCountryPCode={
+            selectedCountry !== "All Countries"
+              ? countryConfig[selectedCountry]?.pCode
+              : undefined
+          }
+          focusCountryName={
+            selectedCountry !== "All Countries" ? selectedCountry : undefined
+          }
+          focusCountryGeometry={focusCountryGeometry}
+          adminBoundaries={adminBoundaries}
+          adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+          fitBoundsGeometry={fitBoundsGeometry}
+          populationBoundaries={populationBoundaries}
+          showBoundaries={boundaryLevel !== "none"}
+          showMarkers={showMarkers}
+          showRoads={showRoads}
+        />
+
+        {/* Loading overlay - only shows when map is mounted and data is loading */}
+        {showLoadingOverlay && <MapLoadingOverlay dataView={dataView} />}
+      </Box>
 
       {/* ===== Left Panel Bar (Layers / Legend / Config) ===== */}
       <MapPanelBar
@@ -628,11 +625,6 @@ export default function MapPage() {
         @keyframes pulse-dot {
           0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
           50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
-        }
-        @keyframes loadingBar {
-          0% { width: 0%; transform: translateX(0); }
-          50% { width: 70%; transform: translateX(0); }
-          100% { width: 100%; transform: translateX(0); }
         }
       `}</style>
     </Box>
