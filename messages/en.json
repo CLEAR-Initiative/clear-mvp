@@ -1751,6 +1751,11 @@
       "roads": "Roads",
       "satellite": "Satellite"
     },
+    "baseMaps": {
+      "simple": "Simple",
+      "topography": "Topography",
+      "satellite": "Satellite"
+    },
     "severities": {
       "critical": "Critical",
       "high": "High",

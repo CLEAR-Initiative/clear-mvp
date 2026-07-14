@@ -1753,6 +1753,11 @@
       "roads": "Routes",
       "satellite": "Satellite"
     },
+    "baseMaps": {
+      "simple": "Simple",
+      "topography": "Topographie",
+      "satellite": "Satellite"
+    },
     "severities": {
       "critical": "Critique",
       "high": "Élevée",

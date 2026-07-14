@@ -1753,6 +1753,11 @@
       "roads": "الطرق",
       "satellite": "الأقمار الصناعية"
     },
+    "baseMaps": {
+      "simple": "بسيطة",
+      "topography": "طبوغرافية",
+      "satellite": "الأقمار الصناعية"
+    },
     "severities": {
       "critical": "حرج",
       "high": "مرتفع",
