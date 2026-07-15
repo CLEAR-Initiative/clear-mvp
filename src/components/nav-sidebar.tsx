@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSelectedLayoutSegments } from "next/navigation";
+import { useRouter, useSelectedLayoutSegments, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Box, Text, Badge, UnstyledButton, Tooltip, Menu, Drawer } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
@@ -95,7 +95,16 @@ export function NavSidebar() {
   const [mobileOpen, { open: openMobile, close: closeMobile }] = useDisclosure(false);
   const [feedbackOpen, { open: openFeedback, close: closeFeedback }] = useDisclosure(false);
   const segments = useSelectedLayoutSegments();
+  const searchParams = useSearchParams();
   const activeSegment = segments[0] ?? "";
+  
+  // Check if we're on a detail page (event/signal/crisis) and get the referrer
+  const isDetailPage = ["event", "signal", "crisis"].includes(activeSegment);
+  const referrer = searchParams.get("from");
+  
+  // If on detail page with referrer, use that for highlighting; otherwise use segment
+  const effectiveSegment = isDetailPage && referrer ? referrer : activeSegment;
+  
   const router = useRouter();
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const isAdmin = isPlatformAdmin(authData?.user?.role);
@@ -189,7 +198,7 @@ export function NavSidebar() {
                 {visibleItems.map((item) => {
                   const isDisabled = item.disabled || (!isAdmin && !!item.comingSoonForNonAdmin);
                   const itemSegment = item.href.replace(/^\//, "");
-                  const isActive = !isDisabled && activeSegment === itemSegment;
+                  const isActive = !isDisabled && effectiveSegment === itemSegment;
                   const Icon = item.icon;
                   const content = (
                     <Box
@@ -357,7 +366,7 @@ export function NavSidebar() {
                 {visibleItems.map((item) => {
                   const isDisabled = item.disabled || (!isAdmin && !!item.comingSoonForNonAdmin);
                   const itemSegment = item.href.replace(/^\//, "");
-                  const isActive = !isDisabled && activeSegment === itemSegment;
+                  const isActive = !isDisabled && effectiveSegment === itemSegment;
                   const Icon = item.icon;
 
                   const row = (

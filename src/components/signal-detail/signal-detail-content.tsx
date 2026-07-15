@@ -140,6 +140,7 @@ interface SignalDetailContentProps {
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
   navigationMapCenter?: [number, number];
+  referrer?: string;
 }
 
 export function SignalDetailContent({
@@ -151,6 +152,7 @@ export function SignalDetailContent({
   onNavigatePrev,
   onNavigateNext,
   navigationMapCenter,
+  referrer = "detection",
 }: SignalDetailContentProps) {
   const t = useTranslations("signalDetail");
   const tCommon = useTranslations("common");
@@ -314,7 +316,7 @@ export function SignalDetailContent({
         </Text>
         {mode === "page" && (
           <Link
-            href="/detection"
+            href={referrer === "map" ? "/map" : "/detection"}
             style={{
               display: "inline-block",
               marginTop: 16,
@@ -355,7 +357,7 @@ export function SignalDetailContent({
         >
           <Group justify="space-between">
             <Group gap={16}>
-              <Link href="/detection" style={{ textDecoration: "none" }}>
+              <Link href={referrer === "map" ? "/map" : "/detection"} style={{ textDecoration: "none" }}>
                 <Group
                   gap={6}
                   className="hover:opacity-70"

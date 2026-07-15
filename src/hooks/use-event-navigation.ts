@@ -71,51 +71,41 @@ export function useEventNavigation(currentEventId: string): DetailNavigationResu
     return stored ?? getDefaultDetectionNavContext(getLocationId, activeTeamId);
   }, [getLocationId, activeTeamId]);
 
-  // Query events with detection filters, limited to 500 (API max)
-  // Remove restrictive filters for map-based navigation
-  const eventsQuery = api.alerts.eventsPage.useQuery({
-    teamId: undefined, // Don't filter by team for global navigation
-    locationId: undefined, // Don't filter by location for global navigation
-    from: undefined, // Don't filter by date range
-    to: undefined,
-    severityMin: undefined,
-    severityMax: undefined,
-    eventTypes: undefined,
-    orderBy: "LAST_SIGNAL_DESC",
-    limit: 500,
-    offset: 0,
-    includeDummy: true, // Include dummy events for testing
-  });
+  // SIMPLIFIED: Use the SAME query as the map to ensure consistency
+  const eventsQuery = api.alerts.eventsForMap.useQuery(
+    { includeDummy: true },
+    { staleTime: 60_000 },
+  );
 
   const currentIndex = useMemo(() => {
-    const items = eventsQuery.data?.items ?? [];
+    const items = eventsQuery.data?.events ?? [];
     return items.findIndex((e) => e.id === currentEventId);
   }, [eventsQuery.data, currentEventId]);
 
   const prevId = useMemo(() => {
     if (currentIndex <= 0) return null;
-    const items = eventsQuery.data?.items ?? [];
+    const items = eventsQuery.data?.events ?? [];
     return items[currentIndex - 1]?.id ?? null;
   }, [currentIndex, eventsQuery.data]);
 
   const nextId = useMemo(() => {
-    const items = eventsQuery.data?.items ?? [];
+    const items = eventsQuery.data?.events ?? [];
     if (currentIndex < 0 || currentIndex >= items.length - 1) return null;
     return items[currentIndex + 1]?.id ?? null;
   }, [currentIndex, eventsQuery.data]);
 
-  const totalCount = eventsQuery.data?.totalCount ?? 0;
+  const totalCount = eventsQuery.data?.events?.length ?? 0;
 
   return {
     prevId,
     nextId,
     hasPrev: currentIndex > 0,
-    hasNext: currentIndex >= 0 && currentIndex < (eventsQuery.data?.items.length ?? 0) - 1,
+    hasNext: currentIndex >= 0 && currentIndex < (eventsQuery.data?.events?.length ?? 0) - 1,
     position: currentIndex >= 0 ? `${currentIndex + 1} / ${totalCount}` : "—",
     currentIndex,
     totalCount,
     isLoading: eventsQuery.isLoading,
-    listItems: eventsQuery.data?.items ?? [],
+    listItems: eventsQuery.data?.events ?? [],
   };
 }
 

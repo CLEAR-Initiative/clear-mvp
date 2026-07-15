@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Box, Loader, Text } from "@mantine/core";
@@ -17,8 +18,9 @@ function enrichmentPending(crisis: GqlCrisis | null | undefined): boolean {
   return crisis.title === null && crisis.scenarios === null;
 }
 
-function EnrichmentLoadingScreen() {
+function EnrichmentLoadingScreen({ referrer }: { referrer: string }) {
   const t = useTranslations("crisisDetail");
+  const backHref = referrer === "map" ? "/map" : "/insights";
   return (
     <Box
       style={{
@@ -38,7 +40,7 @@ function EnrichmentLoadingScreen() {
         }}
       >
         <Link
-          href="/insights"
+          href={backHref}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -85,8 +87,12 @@ export default function CrisisDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const searchParams = useSearchParams();
   const [pollingStopped, setPollingStopped] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Track where user came from (map or insights)
+  const referrer = searchParams.get("from") ?? "insights";
 
   const crisisQuery = api.crises.get.useQuery(
     { id },
@@ -128,12 +134,13 @@ export default function CrisisDetailPage({
         loading={true}
         mode="page"
         relatedCrises={[]}
+        referrer={referrer}
       />
     );
   }
 
   if (isPending) {
-    return <EnrichmentLoadingScreen />;
+    return <EnrichmentLoadingScreen referrer={referrer} />;
   }
 
   return (
@@ -142,6 +149,7 @@ export default function CrisisDetailPage({
       loading={false}
       mode="page"
       relatedCrises={related}
+      referrer={referrer}
     />
   );
 }

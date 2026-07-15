@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { keepPreviousData } from "@tanstack/react-query";
 import { api } from "~/trpc/react";
 import { SignalDetailContent } from "~/components/signal-detail/signal-detail-content";
@@ -13,8 +14,12 @@ export default function SignalDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const paramsId = use(params).id;
+  const searchParams = useSearchParams();
   const utils = api.useUtils();
   const prefetchedRef = useRef(new Set<string>());
+
+  // Track where user came from (map or detection)
+  const referrer = searchParams.get("from") ?? "detection";
 
   const prefetchDetail = useCallback(
     (id: string) => {
@@ -26,6 +31,7 @@ export default function SignalDetailPage({
   const { activeId, navigateTo } = useEntityNavigation({
     paramsId,
     routePrefix: "/signal",
+    searchParams,
   });
 
   const navigation = useSignalNavigation(activeId);
@@ -73,6 +79,7 @@ export default function SignalDetailPage({
       onNavigatePrev={navigatePrev}
       onNavigateNext={navigateNext}
       navigationMapCenter={navigationMapCenter}
+      referrer={referrer}
     />
   );
 }

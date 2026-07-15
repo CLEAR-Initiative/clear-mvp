@@ -12,9 +12,10 @@ export function deriveEntityPending(
 interface UseEntityNavigationOptions {
   paramsId: string;
   routePrefix: `/signal` | `/event`;
+  searchParams?: URLSearchParams;
 }
 
-export function useEntityNavigation({ paramsId, routePrefix }: UseEntityNavigationOptions) {
+export function useEntityNavigation({ paramsId, routePrefix, searchParams }: UseEntityNavigationOptions) {
   const router = useRouter();
   const [activeId, setActiveId] = useState(paramsId);
   const prevParamsIdRef = useRef(paramsId);
@@ -27,9 +28,11 @@ export function useEntityNavigation({ paramsId, routePrefix }: UseEntityNavigati
   const navigateTo = useCallback(
     (targetId: string) => {
       setActiveId(targetId);
-      router.replace(`${routePrefix}/${targetId}`, { scroll: false });
+      const queryString = searchParams?.toString();
+      const url = queryString ? `${routePrefix}/${targetId}?${queryString}` : `${routePrefix}/${targetId}`;
+      router.replace(url, { scroll: false });
     },
-    [router, routePrefix],
+    [router, routePrefix, searchParams],
   );
 
   return { activeId, navigateTo };
