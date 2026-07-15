@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlAlert, GqlEvent, GqlSignal, GqlCrisis } from "~/lib/types/graphql";
+import { sanitizeLocationGeometry } from "~/lib/geo/to-map-point";
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry pointType
@@ -224,16 +225,6 @@ const EVENTS_PAGE_QUERY = `
   }
 `;
 
-const SIGNALS_PAGE_QUERY = `
-  query SignalsPage($input: SignalsPageInput) {
-    signalsPage(input: $input) {
-      totalCount
-      hasMore
-      items { ${SIGNAL_LIST_FIELDS} }
-    }
-  }
-`;
-
 const ENTITY_STATS_QUERY = `
   query EntityStats($input: EntityStatsInput!) {
     entityStats(input: $input) {
@@ -258,7 +249,6 @@ const commonFilter = {
 
 const ALERT_ORDER = ["CREATED_DESC", "CREATED_ASC", "SEVERITY_DESC", "SEVERITY_ASC"] as const;
 const EVENT_ORDER = ["LAST_SIGNAL_DESC", "LAST_SIGNAL_ASC", "CREATED_DESC", "CREATED_ASC", "SEVERITY_DESC", "SEVERITY_ASC"] as const;
-const SIGNAL_ORDER = ["PUBLISHED_DESC", "PUBLISHED_ASC", "SEVERITY_DESC", "SEVERITY_ASC"] as const;
 const ENTITY_KIND = ["signal", "event", "alert"] as const;
 const STATS_GROUP_BY = ["none", "type", "severity", "day", "week", "month"] as const;
 
@@ -359,10 +349,9 @@ export const alertsRouter = createTRPCRouter({
   }),
 
   // ─── Slim map procedures ───────────────────────────────────────────────
-  // Map-optimized queries using slim field sets (no ancestor/metadata
-  // resolver fan-out). These fetch all rows (map needs complete marker set
-  // for client-side filtering) but with the lightweight shapes already
-  // proven on detection feeds.
+  // Map-optimized queries that use paginated *Page queries with date filters,
+  // then strip polygon geometries to centroid points before returning to the browser.
+  // This cuts the 12MB polygon payload while preserving marker locations.
 
   alertsForMap: protectedProcedure
     .input(
@@ -371,42 +360,117 @@ export const alertsRouter = createTRPCRouter({
           status: z.enum(["draft", "published", "archived"]).optional(),
           activeOnly: z.boolean().optional(),
           teamId: z.string().nullish(),
+          locationId: z.string().nullish(),
           includeDummy: z.boolean().optional(),
+          from: dateLike,
+          to: dateLike,
         })
         .optional(),
     )
     .query(async ({ ctx, input }) => {
-      const status =
-        input?.activeOnly === true ? "published" : input?.status;
-      const data = await graphqlFetch<{ alerts: GqlAlert[] }>(
-        ALERTS_FOR_MAP_QUERY,
-        {
-          ...(status ? { status } : {}),
-          ...(input?.teamId ? { teamId: input.teamId } : {}),
-          includeDummy: input?.includeDummy ?? true,
-        },
-        cookieHeaders(ctx),
-      );
-      return { alerts: data.alerts };
+      const status = input?.activeOnly === true ? "published" : input?.status;
+      
+      // Paginate through all results using alertsPage
+      const alerts: GqlAlert[] = [];
+      let offset = 0;
+      const limit = 500;
+      let hasMore = true;
+
+      while (hasMore) {
+        const data = await graphqlFetch<{ alertsPage: PaginatedResult<GqlAlert> }>(
+          ALERTS_PAGE_QUERY,
+          {
+            input: {
+              limit,
+              offset,
+              ...(status ? { status } : {}),
+              ...(input?.teamId ? { teamId: input.teamId } : {}),
+              ...(input?.locationId ? { locationId: input.locationId } : {}),
+              ...(input?.from ? { from: input.from } : {}),
+              ...(input?.to ? { to: input.to } : {}),
+              includeDummy: input?.includeDummy ?? true,
+            },
+          },
+          cookieHeaders(ctx),
+        );
+
+        alerts.push(...data.alertsPage.items);
+        hasMore = data.alertsPage.hasMore;
+        offset += limit;
+      }
+
+      // Sanitize geometries: replace Polygon/MultiPolygon with centroid Points
+      for (const alert of alerts) {
+        const event = alert.event;
+        sanitizeLocationGeometry(event.generalLocation);
+        sanitizeLocationGeometry(event.originLocation);
+        sanitizeLocationGeometry(event.destinationLocation);
+        
+        // Also sanitize nested signal locations
+        for (const signal of event.signals ?? []) {
+          sanitizeLocationGeometry(signal.generalLocation);
+          sanitizeLocationGeometry(signal.originLocation);
+          sanitizeLocationGeometry(signal.destinationLocation);
+        }
+      }
+
+      return { alerts };
     }),
 
   eventsForMap: protectedProcedure
     .input(
       z.object({
         teamId: z.string().optional(),
+        locationId: z.string().optional(),
         includeDummy: z.boolean().optional(),
-      }),
+        from: dateLike,
+        to: dateLike,
+      }).optional(),
     )
     .query(async ({ ctx, input }) => {
-      const data = await graphqlFetch<{ events: GqlEvent[] }>(
-        EVENTS_FOR_MAP_QUERY,
-        {
-          teamId: input.teamId,
-          includeDummy: input.includeDummy ?? true, // Include dummy data by default for testing
-        },
-        cookieHeaders(ctx),
-      );
-      return { events: data.events };
+      // Paginate through all results using eventsPage
+      const events: GqlEvent[] = [];
+      let offset = 0;
+      const limit = 500;
+      let hasMore = true;
+
+      while (hasMore) {
+        const data = await graphqlFetch<{ eventsPage: PaginatedResult<GqlEvent> }>(
+          EVENTS_PAGE_QUERY,
+          {
+            input: {
+              limit,
+              offset,
+              ...(input?.teamId ? { teamId: input.teamId } : {}),
+              ...(input?.locationId ? { locationId: input.locationId } : {}),
+              ...(input?.from ? { from: input.from } : {}),
+              ...(input?.to ? { to: input.to } : {}),
+              includeDummy: input?.includeDummy ?? true,
+            },
+          },
+          cookieHeaders(ctx),
+        );
+
+        events.push(...data.eventsPage.items);
+        hasMore = data.eventsPage.hasMore;
+        offset += limit;
+      }
+
+      // Sanitize geometries: replace Polygon/MultiPolygon with centroid Points
+      for (const event of events) {
+        sanitizeLocationGeometry(event.generalLocation);
+        sanitizeLocationGeometry(event.originLocation);
+        sanitizeLocationGeometry(event.destinationLocation);
+        
+        // Also sanitize nested signal locations
+        for (const signal of event.signals ?? []) {
+          sanitizeLocationGeometry(signal.generalLocation);
+          sanitizeLocationGeometry(signal.originLocation);
+          sanitizeLocationGeometry(signal.destinationLocation);
+        }
+      }
+
+      return { events };
     }),
 
   getShockTypes: publicProcedure.query(() => {
@@ -514,35 +578,6 @@ export const alertsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.eventsPage;
-    }),
-
-  signalsPage: protectedProcedure
-    .input(
-      z.object({
-        limit: z.number().int().min(1).max(500).optional(),
-        offset: z.number().int().min(0).optional(),
-        orderBy: z.enum(SIGNAL_ORDER).optional(),
-        // Signals filter shape mirrors commonFilter except `eventTypes` is
-        // replaced by `sourceNames` (signals don't carry the type array).
-        teamId: z.string().nullish(),
-        locationId: z.string().nullish(),
-        sourceNames: z.array(z.string()).optional(),
-        severityMin: z.number().int().min(1).max(5).optional(),
-        severityMax: z.number().int().min(1).max(5).optional(),
-        from: dateLike,
-        to: dateLike,
-        includeDummy: z.boolean().optional(),
-        _v: z.number().int().optional(),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      const { _v: _, ...graphqlInput } = input;
-      const data = await graphqlFetch<{ signalsPage: PaginatedResult<GqlSignal> }>(
-        SIGNALS_PAGE_QUERY,
-        { input: graphqlInput },
-        cookieHeaders(ctx),
-      );
-      return data.signalsPage;
     }),
 
   // ─── Cross-entity stats ────────────────────────────────────────────────

@@ -146,7 +146,7 @@ export function useSignalNavigation(currentSignalId: string): DetailNavigationRe
   }, [getLocationId, activeTeamId]);
 
   // Query signals with detection filters, limited to 500 (API max)
-  const signalsQuery = api.alerts.signalsPage.useQuery({
+  const signalsQuery = api.signals.signalsPage.useQuery({
     teamId: navContext.teamId ?? undefined,
     locationId: navContext.locationId ?? undefined,
     from: navContext.from,
