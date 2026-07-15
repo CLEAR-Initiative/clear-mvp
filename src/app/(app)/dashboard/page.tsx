@@ -16,7 +16,7 @@ import { MapMarkerDetail } from "~/app/(app)/map/_components/map-marker-detail";
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
 import type { DataView } from "~/app/(app)/map/_components/map-layers-panel";
 import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
-import type { MapMarker } from "~/components/map/crisis-map";
+import type { BaseMapType, MapMarker } from "~/components/map/crisis-map";
 import { RightPanel } from "./_components/right-panel";
 import { useIsDark } from "~/hooks/use-is-dark";
 
@@ -52,6 +52,8 @@ export default function DashboardPage() {
   const [dataView, setDataView] = useState<DataView>("alert");
   const [showPopulation, setShowPopulation] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
+  const [showRoads, setShowRoads] = useState(true);
+  const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
 
   const alertsQuery = api.alerts.alertsForMap.useQuery(
     { activeOnly: true, teamId: activeTeamId },
@@ -131,6 +133,8 @@ export default function DashboardPage() {
           populationBoundaries={populationBoundaries}
           className="w-full h-full"
           onMarkerClick={handleMarkerClick}
+          showRoads={showRoads}
+          baseMapType={baseMapType}
         />
         {selectedMarker && (
           <MapMarkerDetail
@@ -145,6 +149,10 @@ export default function DashboardPage() {
           onShowPopulationChange={setShowPopulation}
           boundaryLevel={boundaryLevel}
           onBoundaryLevelChange={setBoundaryLevel}
+          showRoads={showRoads}
+          onShowRoadsChange={setShowRoads}
+          baseMapType={baseMapType}
+          onBaseMapTypeChange={setBaseMapType}
         />
       </Box>
       <RightPanel

@@ -8,6 +8,7 @@ import {
 import { IconLayersLinked, IconList } from "@tabler/icons-react";
 import type { DataView } from "./map-layers-panel";
 import type { BoundaryLevel } from "./map-settings-popover";
+import type { BaseMapType } from "~/components/map/crisis-map";
 export type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 
 type PanelId = "layers" | "legend";
@@ -28,6 +29,13 @@ const BOUNDARY_OPTIONS = [
   { value: "A2",   labelKey: "a2" },
 ] as const;
 
+// labelKey: i18n keys under map.panels.* - resolved via t() at render time.
+const BASE_MAP_OPTIONS: { labelKey: BaseMapType; value: BaseMapType }[] = [
+  { labelKey: "simple",     value: "simple" },
+  { labelKey: "topography", value: "topography" },
+  { labelKey: "satellite",  value: "satellite" },
+];
+
 // labelKey: i18n keys under map.dataViews.* - resolved via t() at render time.
 const DATA_VIEW_OPTIONS: { labelKey: DataView; value: DataView }[] = [
   { labelKey: "none",   value: "none" },
@@ -45,14 +53,10 @@ interface MapPanelBarProps {
   populationLoading?: boolean;
   boundaryLevel: BoundaryLevel;
   onBoundaryLevelChange: (v: BoundaryLevel) => void;
-  showBoundaries?: boolean;
-  onShowBoundariesChange?: (v: boolean) => void;
-  showMarkers?: boolean;
-  onShowMarkersChange?: (v: boolean) => void;
   showRoads?: boolean;
   onShowRoadsChange?: (v: boolean) => void;
-  showSatellite?: boolean;
-  onShowSatelliteChange?: (v: boolean) => void;
+  baseMapType?: BaseMapType;
+  onBaseMapTypeChange?: (v: BaseMapType) => void;
 }
 
 const noop = () => {
@@ -110,10 +114,8 @@ export function MapPanelBar({
   showPopulation, onShowPopulationChange,
   populationLoading = false,
   boundaryLevel, onBoundaryLevelChange,
-  showBoundaries = true, onShowBoundariesChange = noop,
-  showMarkers = true, onShowMarkersChange = noop,
   showRoads = true, onShowRoadsChange = noop,
-  showSatellite = false, onShowSatelliteChange = noop,
+  baseMapType = "simple", onBaseMapTypeChange = noop,
 }: MapPanelBarProps) {
   const t = useTranslations("map");
   const [active, setActive] = useState<PanelId | null>(null);
@@ -144,85 +146,17 @@ export function MapPanelBar({
               <>
                 <PanelHeader>{t("panels.layers")}</PanelHeader>
                 <Stack gap={0} px={12} py={10}>
-                  <SectionLabel>{t("panels.boundaries")}</SectionLabel>
-                  <Select
-                    size="xs"
-                    value={boundaryLevel}
-                    onChange={(v) => onBoundaryLevelChange((v ?? "A1") as BoundaryLevel)}
-                    data={BOUNDARY_OPTIONS.map((o) => ({ value: o.value, label: t(`boundaries.${o.labelKey}`) }))}
-                    mb={10}
-                    styles={{ input: { fontWeight: 600, fontSize: 12 } }}
-                  />
-                  
-                  <Group
-                    gap={8} py={4} px={2}
-                    className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
-                    onClick={() => onShowBoundariesChange(!showBoundaries)}
-                    style={{ userSelect: "none" }}
-                  >
-                    <Checkbox
-                      size="xs" checked={showBoundaries}
-                      onChange={(e) => onShowBoundariesChange(e.currentTarget.checked)}
-                      styles={{ input: { cursor: "pointer" } }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
-                      {t("panels.boundaries")}
-                    </Text>
-                  </Group>
-                  
-                  <Divider color="var(--color-bg-muted)" my={10} />
-                  
-                  <SectionLabel>{t("panels.markers")}</SectionLabel>
+                  <SectionLabel>{t("panels.baseMap")}</SectionLabel>
                   <SegmentedControl
-                    value={dataView}
-                    onChange={(v) => onDataViewChange(v as DataView)}
-                    data={DATA_VIEW_OPTIONS.map((o) => ({ value: o.value, label: t(`dataViews.${o.labelKey}`) }))}
+                    value={baseMapType}
+                    onChange={(v) => onBaseMapTypeChange(v as BaseMapType)}
+                    data={BASE_MAP_OPTIONS.map((o) => ({ value: o.value, label: t(`panels.${o.labelKey}`) }))}
                     size="xs"
                     fullWidth
                     styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
                     mb={6}
                   />
-                  
-                  <Group
-                    gap={8} py={4} px={2}
-                    className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
-                    onClick={() => onShowMarkersChange(!showMarkers)}
-                    style={{ userSelect: "none" }}
-                  >
-                    <Checkbox
-                      size="xs" checked={showMarkers}
-                      onChange={(e) => onShowMarkersChange(e.currentTarget.checked)}
-                      styles={{ input: { cursor: "pointer" } }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
-                      {t("panels.markers")}
-                    </Text>
-                  </Group>
-                  
-                  <Divider color="var(--color-bg-muted)" my={10} />
-                  
-                  <Group
-                    gap={8} py={4} px={2}
-                    className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
-                    onClick={() => onShowPopulationChange(!showPopulation)}
-                    style={{ userSelect: "none" }}
-                  >
-                    <Checkbox
-                      size="xs" checked={showPopulation}
-                      onChange={(e) => onShowPopulationChange(e.currentTarget.checked)}
-                      styles={{ input: { cursor: "pointer" } }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>{t("panels.population")}</Text>
-                    {populationLoading && <Loader size={12} />}
-                  </Group>
-                  
-                  <Divider color="var(--color-bg-muted)" my={10} />
-                  
-                  <SectionLabel>{t("panels.baseMap")}</SectionLabel>
-                  
+
                   <Group
                     gap={8} py={4} px={2}
                     className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
@@ -239,22 +173,47 @@ export function MapPanelBar({
                       {t("panels.roads")}
                     </Text>
                   </Group>
-                  
+
+                  <Divider color="var(--color-bg-muted)" my={10} />
+
+                  <SectionLabel>{t("panels.boundaries")}</SectionLabel>
+                  <Select
+                    size="xs"
+                    value={boundaryLevel}
+                    onChange={(v) => onBoundaryLevelChange((v ?? "A1") as BoundaryLevel)}
+                    data={BOUNDARY_OPTIONS.map((o) => ({ value: o.value, label: t(`boundaries.${o.labelKey}`) }))}
+                    styles={{ input: { fontWeight: 600, fontSize: 12 } }}
+                  />
+
+                  <Divider color="var(--color-bg-muted)" my={10} />
+
+                  <SectionLabel>{t("panels.markers")}</SectionLabel>
+                  <SegmentedControl
+                    value={dataView}
+                    onChange={(v) => onDataViewChange(v as DataView)}
+                    data={DATA_VIEW_OPTIONS.map((o) => ({ value: o.value, label: t(`dataViews.${o.labelKey}`) }))}
+                    size="xs"
+                    fullWidth
+                    styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
+                    mb={6}
+                  />
+
+                  <Divider color="var(--color-bg-muted)" my={10} />
+
                   <Group
                     gap={8} py={4} px={2}
                     className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
-                    onClick={() => onShowSatelliteChange(!showSatellite)}
+                    onClick={() => onShowPopulationChange(!showPopulation)}
                     style={{ userSelect: "none" }}
                   >
                     <Checkbox
-                      size="xs" checked={showSatellite}
-                      onChange={(e) => onShowSatelliteChange(e.currentTarget.checked)}
+                      size="xs" checked={showPopulation}
+                      onChange={(e) => onShowPopulationChange(e.currentTarget.checked)}
                       styles={{ input: { cursor: "pointer" } }}
                       onClick={(e) => e.stopPropagation()}
                     />
-                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
-                      {t("panels.satellite")}
-                    </Text>
+                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>{t("panels.population")}</Text>
+                    {populationLoading && <Loader size={12} />}
                   </Group>
                 </Stack>
               </>
