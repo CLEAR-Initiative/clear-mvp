@@ -81,9 +81,11 @@ interface CrisisMapProps {
   showMarkers?: boolean;
   /** Show/hide roads overlay (applies to all basemap types) */
   showRoads?: boolean;
-  /** Basemap style: simple streets, topography, or satellite */
-  baseMapType?: "simple" | "topography" | "satellite";
+  /** Basemap: simple (theme style), topography (theme style + hillshade relief), or satellite imagery */
+  baseMapType?: BaseMapType;
 }
+
+export type BaseMapType = "simple" | "topography" | "satellite";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -276,9 +278,10 @@ export function CrisisMap({
         ? "mapbox://styles/mapbox/satellite-streets-v12"
         : "mapbox://styles/mapbox/satellite-v9";
     }
-    if (baseMapType === "topography") {
-      return "mapbox://styles/mapbox/outdoors-v12";
-    }
+    // Topography shares the theme style - relief comes from a hillshade
+    // layer (see the terrain-dem effect below) instead of a separate
+    // Mapbox style. outdoors-v12 was tried and rejected: pale landcover,
+    // no dark-mode variant, and boundary overlays drowned in it.
     return isDark
       ? "mapbox://styles/mapbox/dark-v11"
       : "mapbox://styles/mapbox/light-v11";
@@ -372,6 +375,52 @@ export function CrisisMap({
     };
   }, [mapStyle]);
 
+  // Terrain relief: hillshade overlay on the theme basemap ("topography"
+  // mode). Runs before the focus effect below so the dim mask - inserted
+  // at the same road-layer anchor - lands above the relief and dims it
+  // outside the focus country too.
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const cleanup = () => {
+      try { if (m.getLayer("terrain-hillshade")) m.removeLayer("terrain-hillshade"); } catch { /* ignore */ }
+      try { if (m.getSource("terrain-dem")) m.removeSource("terrain-dem"); } catch { /* ignore */ }
+    };
+    cleanup();
+    if (baseMapType !== "topography") return;
+
+    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+    const beforeId =
+      styleLayers.find((l) => isRoadLayerId(l.id))?.id ??
+      styleLayers.find((l) => l.type === "symbol")?.id;
+    try {
+      m.addSource("terrain-dem", {
+        type: "raster-dem",
+        url: "mapbox://mapbox.mapbox-terrain-dem-v1",
+        tileSize: 512,
+        maxzoom: 14,
+      });
+      m.addLayer(
+        { id: "terrain-hillshade", type: "hillshade", source: "terrain-dem",
+          paint: {
+            // Strongest at the Country band (z5-8) where relief must read
+            // at country scale; relaxes toward the Site band where the
+            // street grid takes over (docs/map-design.md).
+            "hillshade-exaggeration": [
+              "interpolate", ["linear"], ["zoom"],
+              4, isDark ? 1 : 0.9,
+              10, isDark ? 0.65 : 0.55,
+              14, 0.35,
+            ] as never,
+            "hillshade-shadow-color": isDark ? "#000000" : "#57534E",
+            "hillshade-highlight-color": isDark ? "#6B6B78" : "#FFFFFF",
+          } },
+        beforeId,
+      );
+    } catch { /* ignore */ }
+    return cleanup;
+  }, [loaded, baseMapType, isDark]);
+
   // ── Country focus: dim mask + border glow + bounds ──────────────────────
   //
   // Uses Mapbox's public `mapbox.country-boundaries-v1` vector tileset for
@@ -406,16 +455,21 @@ export function CrisisMap({
     if (!focusIso) return;
 
     // Layer ordering strategy:
-    //   (1) mask + highlight fills render BELOW admin-1 lines, so state
-    //       borders stay visible inside the focus country.
+    //   (1) mask + highlight fills render BELOW the road network (roads sit
+    //       below admin lines and labels in Mapbox styles, so this also
+    //       keeps state borders and labels above the fills). Anchoring to
+    //       the admin layers instead used to bury every road line under
+    //       the semi-transparent fills.
     //   (2) focus country border line renders ABOVE admin-1 but below
     //       label symbols, so the country outline stays crisp.
     const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+    const firstRoadLayer = styleLayers.find((l) => isRoadLayerId(l.id));
     const firstAdminLayer = styleLayers.find((l) =>
       l.id === "admin-1-boundary-bg" || l.id === "admin-0-boundary-bg",
     );
     const firstSymbolLayer = styleLayers.find((l) => l.type === "symbol");
-    const fillBeforeId: string | undefined = firstAdminLayer?.id ?? firstSymbolLayer?.id;
+    const fillBeforeId: string | undefined =
+      firstRoadLayer?.id ?? firstAdminLayer?.id ?? firstSymbolLayer?.id;
     const borderBeforeId: string | undefined = firstSymbolLayer?.id;
 
     // Mapbox's public country polygons tileset (free with any token).
@@ -425,7 +479,14 @@ export function CrisisMap({
     });
 
     // Mask over every country EXCEPT the focus.
-    // Light: near-white wash. Dark: black overlay so non-focus areas recede further.
+    // Simple: near-white wash (light) / black overlay (dark) so non-focus
+    // areas recede. Terrain/satellite: softer, always-dark mask - a white
+    // wash over imagery reads as fog, and these basemaps carry real
+    // information outside the focus country too.
+    const maskColor =
+      baseMapType === "simple" && !isDark ? "#FFFFFF" : "#000000";
+    const maskOpacity =
+      baseMapType === "simple" ? (isDark ? 0.55 : 0.9) : 0.4;
     m.addLayer(
       {
         id: "focus-mask-fill",
@@ -434,32 +495,41 @@ export function CrisisMap({
         "source-layer": "country_boundaries",
         filter: ["!=", ["get", "iso_3166_1"], focusIso],
         paint: {
-          "fill-color": isDark ? "#000000" : "#FFFFFF",
-          "fill-opacity": isDark ? 0.55 : 0.9,
+          "fill-color": maskColor,
+          "fill-opacity": maskOpacity,
         },
       },
       fillBeforeId,
     );
 
     // Blue tint + border for the focus country.
+    // The tint only earns its keep on the flat "simple" style - on
+    // terrain/satellite it muddies exactly the detail those basemaps
+    // exist to show, so there the focus is carried by border + mask only.
+    const showHighlightFill = baseMapType === "simple";
+    // Overlay lines contrast against the BASEMAP, not the app theme:
+    // satellite imagery is always dark regardless of light/dark mode.
+    const overlayOnDark = baseMapType === "satellite" || isDark;
     // Prefer paintable DB geometry (real OCHA polygons). Seed bboxes fall
     // through to Mapbox country tiles so local/dev doesn't paint squares.
     const highlightColor = isDark ? "#1E3A5F" : "#1E40AF";
     const highlightOpacity = isDark ? 0.45 : 0.35;
-    const borderColor = isDark ? "#60A5FA" : "#1D4ED8";
-    const borderWidth = isDark ? 1.5 : 1.25;
-    const borderOpacity = isDark ? 0.9 : 0.85;
+    const borderColor = overlayOnDark ? "#60A5FA" : "#1D4ED8";
+    const borderWidth = overlayOnDark ? 1.5 : 1.25;
+    const borderOpacity = overlayOnDark ? 0.9 : 0.85;
 
     if (paintableFocusGeometry) {
       m.addSource(FOCUS_GEOJSON_SOURCE, {
         type: "geojson",
         data: { type: "Feature", geometry: paintableFocusGeometry as never, properties: {} },
       });
-      m.addLayer(
-        { id: "focus-highlight-fill", type: "fill", source: FOCUS_GEOJSON_SOURCE,
-          paint: { "fill-color": highlightColor, "fill-opacity": highlightOpacity } },
-        fillBeforeId,
-      );
+      if (showHighlightFill) {
+        m.addLayer(
+          { id: "focus-highlight-fill", type: "fill", source: FOCUS_GEOJSON_SOURCE,
+            paint: { "fill-color": highlightColor, "fill-opacity": highlightOpacity } },
+          fillBeforeId,
+        );
+      }
       m.addLayer(
         { id: "focus-border-line", type: "line", source: FOCUS_GEOJSON_SOURCE,
           paint: { "line-color": borderColor, "line-width": borderWidth, "line-opacity": borderOpacity } },
@@ -467,17 +537,19 @@ export function CrisisMap({
       );
     } else {
       // Fallback: use Mapbox tileset (may have inaccurate boundaries for some countries).
-      m.addLayer(
-        {
-          id: "focus-highlight-fill",
-          type: "fill",
-          source: COUNTRY_SOURCE,
-          "source-layer": "country_boundaries",
-          filter: ["==", ["get", "iso_3166_1"], focusIso],
-          paint: { "fill-color": highlightColor, "fill-opacity": highlightOpacity },
-        },
-        fillBeforeId,
-      );
+      if (showHighlightFill) {
+        m.addLayer(
+          {
+            id: "focus-highlight-fill",
+            type: "fill",
+            source: COUNTRY_SOURCE,
+            "source-layer": "country_boundaries",
+            filter: ["==", ["get", "iso_3166_1"], focusIso],
+            paint: { "fill-color": highlightColor, "fill-opacity": highlightOpacity },
+          },
+          fillBeforeId,
+        );
+      }
       m.addLayer(
         {
           id: "focus-border-line",
@@ -525,7 +597,7 @@ export function CrisisMap({
               ["==", ["get", "iso_3166_1"], focusIso],
             ]);
             m.setLayerZoomRange(layer.id, 0, 24);
-            m.setPaintProperty(layer.id, "line-color", isDark ? "#94A3B8" : "#475569");
+            m.setPaintProperty(layer.id, "line-color", overlayOnDark ? "#94A3B8" : "#475569");
             m.setPaintProperty(layer.id, "line-width", 1.4);
             m.setPaintProperty(layer.id, "line-opacity", 0.85);
             m.setPaintProperty(layer.id, "line-dasharray", [3, 2]);
@@ -598,7 +670,7 @@ export function CrisisMap({
     }
 
     return cleanup;
-  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries]);
+  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries, baseMapType]);
 
   // Fit bounds to the focus country once its backend bbox is available.
   // Skips when fitBoundsGeometry is set (a more specific region is focused).
@@ -863,17 +935,51 @@ export function CrisisMap({
   }, [hoveredMarkerId]);
 
   // ── Roads toggle (Mapbox style layers) ──────────────────────────────────
+  // light-v11/dark-v11 draw roads camouflaged by design: 1-8% lightness off
+  // the land color, 0.45px wide at z5 (0px for minor classes). Toggling
+  // visibility alone therefore shows nothing - when roads are ON we also
+  // boost color and width so the network actually reads. Satellite-streets
+  // styles its own roads properly, so only visibility applies there.
   useEffect(() => {
     if (!map.current || !loaded) return;
+    const m = map.current;
     const visibility = showRoads ? "visible" : "none";
-    const layers = map.current.getStyle().layers as Array<{ id: string; type: string }> | undefined;
+    const boost = showRoads && baseMapType !== "satellite";
+    // Corridor-first palette (docs/map-design.md): trunk corridors in warm
+    // tan - the supply-route color - visible from the Country band (z5-8),
+    // where "which corridor reaches this state" is the actual question.
+    // Minor roads in neutral gray, fading in through the Area band.
+    const corridorColor = isDark ? "hsl(33, 30%, 56%)" : "hsl(28, 35%, 44%)";
+    const minorColor = isDark ? "hsl(0, 0%, 46%)" : "hsl(220, 6%, 70%)";
+    const roadColor = [
+      "match", ["get", "class"],
+      ["motorway", "trunk", "primary"], corridorColor,
+      minorColor,
+    ];
+    const byClass = (mtp: number, st: number, rest: number) =>
+      ["match", ["get", "class"], ["motorway", "trunk", "primary"], mtp, ["secondary", "tertiary"], st, rest];
+    // Width anchors per zoom band. The z5/z8 anchors carry the humanitarian
+    // use case (Country band) - do not tune only the high end.
+    const roadWidth = [
+      "interpolate", ["exponential", 1.5], ["zoom"],
+      5,  byClass(1.8, 0.6, 0),
+      8,  byClass(2.4, 1.2, 0.4),
+      11, byClass(3.0, 1.8, 1.0),
+      14, byClass(4.5, 3.0, 2.0),
+      16, byClass(7, 5, 3.5),
+    ];
+    const layers = m.getStyle().layers as Array<{ id: string; type: string }> | undefined;
     for (const layer of layers ?? []) {
       if (!isRoadLayerId(layer.id)) continue;
       try {
-        map.current.setLayoutProperty(layer.id, "visibility", visibility);
+        m.setLayoutProperty(layer.id, "visibility", visibility);
+        if (boost && layer.type === "line") {
+          m.setPaintProperty(layer.id, "line-color", roadColor as never);
+          m.setPaintProperty(layer.id, "line-width", roadWidth as never);
+        }
       } catch { /* ignore */ }
     }
-  }, [loaded, showRoads]);
+  }, [loaded, showRoads, isDark, baseMapType]);
 
   // ── Population choropleth (A2 districts, independent layer) ─────────────
   useEffect(() => {
@@ -980,7 +1086,10 @@ export function CrisisMap({
     if (features.length === 0) return;
 
     const isA2 = adminBoundaryLevel === 2;
-    const lineColor = isDark ? "#60A5FA" : "#1D4ED8";
+    // Contrast against the basemap, not the app theme - satellite imagery
+    // is always dark.
+    const overlayOnDark = baseMapType === "satellite" || isDark;
+    const lineColor = overlayOnDark ? "#60A5FA" : "#1D4ED8";
     const lineWidth = isA2 ? 1 : 1.5;
     const lineOpacity = isA2 ? 0.7 : 0.85;
 
@@ -997,7 +1106,7 @@ export function CrisisMap({
     } catch { /* ignore */ }
 
     return cleanup;
-  }, [paintableAdminBoundaries, adminBoundaryLevel, loaded, showBoundaries, isDark]);
+  }, [paintableAdminBoundaries, adminBoundaryLevel, loaded, showBoundaries, isDark, baseMapType]);
 
   // ── Regions (heatmap from signalPoints if present, else feathered fill) ─
   const regionLayerIds = useRef<string[]>([]);
