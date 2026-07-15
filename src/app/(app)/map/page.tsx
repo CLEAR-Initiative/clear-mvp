@@ -194,8 +194,10 @@ export default function MapPage() {
   const panelZRef = useRef(10);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
+  const [showBoundaries, setShowBoundaries] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
   const [showRoads, setShowRoads] = useState(true);
+  const [showSatellite, setShowSatellite] = useState(false);
 
   // Resolve the currently-selected country's L0 ID for scoping admin
   // boundary queries and for the country highlight overlay. Null when the
@@ -588,9 +590,10 @@ export default function MapPage() {
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
           fitBoundsGeometry={fitBoundsGeometry}
           populationBoundaries={populationBoundaries}
-          showBoundaries={boundaryLevel !== "none"}
+          showBoundaries={showBoundaries}
           showMarkers={showMarkers}
           showRoads={showRoads}
+          baseMapType={showSatellite ? "satellite" : "simple"}
           hoveredMarkerId={chromeActiveMarkerId}
         />
 
@@ -607,10 +610,14 @@ export default function MapPage() {
         populationLoading={populationLoading}
         boundaryLevel={boundaryLevel}
         onBoundaryLevelChange={setBoundaryLevel}
+        showBoundaries={showBoundaries}
+        onShowBoundariesChange={setShowBoundaries}
         showMarkers={showMarkers}
         onShowMarkersChange={setShowMarkers}
         showRoads={showRoads}
         onShowRoadsChange={setShowRoads}
+        showSatellite={showSatellite}
+        onShowSatelliteChange={setShowSatellite}
         keepPanelsOpen={keepPanelsOpen}
         onKeepPanelsOpenChange={setKeepPanelsOpen}
       />
