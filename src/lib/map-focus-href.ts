@@ -8,5 +8,8 @@ export function mapFocusHref(kind: MapFocusKind, id: string): string {
   return `/map?${kind}=${encodeURIComponent(id)}`;
 }
 
-/** Marker zoom when returning from a detail page — tight enough to read the pin. */
-export const MAP_FOCUS_ZOOM = 10;
+/**
+ * Marker zoom when returning from a detail page via Back / Full Map.
+ * Country overview is ~5–6; 14 is street/neighborhood — pin-dominant framing.
+ */
+export const MAP_FOCUS_ZOOM = 14;

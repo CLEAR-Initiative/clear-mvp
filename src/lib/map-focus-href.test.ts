@@ -12,7 +12,7 @@ describe("mapFocusHref", () => {
     expect(mapFocusHref("event", "a b")).toBe("/map?event=a%20b");
   });
 
-  it("exports a marker-level focus zoom", () => {
-    expect(MAP_FOCUS_ZOOM).toBeGreaterThan(5);
+  it("exports a marker-level focus zoom (much tighter than country overview)", () => {
+    expect(MAP_FOCUS_ZOOM).toBeGreaterThanOrEqual(13);
   });
 });

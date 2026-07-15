@@ -626,8 +626,8 @@ export default function MapPage() {
           focusCountryGeometry={focusCountryGeometry}
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-          fitBoundsGeometry={focusMarker ? null : fitBoundsGeometry}
-          fitBoundsOnFocus={!focusMarker}
+          fitBoundsGeometry={focusEntityId ? null : fitBoundsGeometry}
+          fitBoundsOnFocus={!focusEntityId}
           populationBoundaries={populationBoundaries}
           showBoundaries={showBoundaries}
           showMarkers={showMarkers}

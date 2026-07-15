@@ -690,6 +690,8 @@ export function CrisisMap({
     ) return;
     prevCenter.current = center;
     prevZoom.current = zoom;
+    // Cancel any in-flight country fitBounds so a deep-link marker zoom wins.
+    try { map.current.stop(); } catch { /* ignore */ }
     map.current.flyTo({ center, zoom, duration: flyDuration });
   }, [center, zoom, loaded, focusCountry, flyDuration, fitBoundsOnFocus, fitBoundsGeometry]);
 
