@@ -1766,7 +1766,7 @@
       "operational": "تشغيلي",
       "comingSoon": "قريبًا",
       "blockages": "العوائق",
-      "idp": "مواقع النازحين",
+      "idpDensity": "كثافة النازحين",
       "nrcLocations": "مواقع NRC"
     },
     "baseMaps": {

@@ -111,6 +111,9 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
+/** Shared horizontal metrics so live toggles and stubs share one left edge. */
+const LAYER_ROW_CLASS = "-mx-1 px-1";
+
 /** Standard checkbox row for live layer toggles. */
 function LayerCheckRow({
   label,
@@ -125,15 +128,15 @@ function LayerCheckRow({
 }) {
   return (
     <Group
-      gap={8} py={4} px={2}
-      className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
+      gap={8} py={4} wrap="nowrap" align="center"
+      className={`cursor-pointer hover:bg-[var(--color-bg-muted)] ${LAYER_ROW_CLASS}`}
       onClick={() => onChange(!checked)}
       style={{ userSelect: "none" }}
     >
       <Checkbox
         size="xs" checked={checked}
         onChange={(e) => onChange(e.currentTarget.checked)}
-        styles={{ input: { cursor: "pointer" } }}
+        styles={{ input: { cursor: "pointer" }, root: { width: 18, flexShrink: 0 } }}
         onClick={(e) => e.stopPropagation()}
       />
       <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12, flex: 1 }}>
@@ -144,19 +147,25 @@ function LayerCheckRow({
   );
 }
 
-/** Disabled stub for future operational layers — visible but not interactive. */
+/** Disabled stub — same single-line geometry as LayerCheckRow (peer, not nested). */
 function LayerStubRow({ label, hint }: { label: string; hint: string }) {
   return (
-    <Group gap={8} py={4} px={2} style={{ userSelect: "none", opacity: 0.55 }} title={hint}>
-      <Checkbox size="xs" checked={false} disabled readOnly styles={{ input: { cursor: "not-allowed" } }} />
-      <Box style={{ flex: 1, minWidth: 0 }}>
-        <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
-          {label}
-        </Text>
-        <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 10 }}>
-          {hint}
-        </Text>
-      </Box>
+    <Group
+      gap={8} py={4} wrap="nowrap" align="center"
+      className={LAYER_ROW_CLASS}
+      style={{ userSelect: "none", opacity: 0.55 }}
+      title={hint}
+    >
+      <Checkbox
+        size="xs" checked={false} disabled readOnly
+        styles={{ input: { cursor: "not-allowed" }, root: { width: 18, flexShrink: 0 } }}
+      />
+      <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12, flex: 1 }}>
+        {label}
+      </Text>
+      <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 10, flexShrink: 0 }}>
+        {hint}
+      </Text>
     </Group>
   );
 }
@@ -253,13 +262,13 @@ export function MapPanelBar({
                     onChange={onShowPopulationChange}
                     trailing={populationLoading ? <Loader size={12} /> : undefined}
                   />
+                  <LayerStubRow label={t("panels.idpDensity")} hint={t("panels.comingSoon")} />
 
                   <Divider color="var(--color-bg-muted)" my={10} />
 
                   {/* Future operational aggregations — stubs only */}
                   <SectionLabel>{t("panels.operational")}</SectionLabel>
                   <LayerStubRow label={t("panels.blockages")} hint={t("panels.comingSoon")} />
-                  <LayerStubRow label={t("panels.idp")} hint={t("panels.comingSoon")} />
                   <LayerStubRow label={t("panels.nrcLocations")} hint={t("panels.comingSoon")} />
 
                   {/* Interaction preference — not cartography (desktop only) */}

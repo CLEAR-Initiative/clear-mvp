@@ -1766,7 +1766,7 @@
       "operational": "Opérationnel",
       "comingSoon": "Bientôt disponible",
       "blockages": "Blocages",
-      "idp": "Sites de déplacés",
+      "idpDensity": "Densité IDP",
       "nrcLocations": "Sites NRC"
     },
     "baseMaps": {

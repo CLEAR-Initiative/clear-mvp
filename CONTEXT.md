@@ -124,8 +124,9 @@ _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interacti
 > overlay that works on either basemap. Separate sections."
 
 > **Dev:** "Ship Blockages / IDP / NRC locations toggles now?"
-> **Domain expert:** "Stub them disabled under **Operational** with Coming soon — don't
-> fake live layers. Wire performant aggregations in a later slice."
+> **Domain expert:** "Stub them disabled with Coming soon — don't fake live layers.
+> **IDP Density** sits under **Population**; **Blockages** / **NRC locations** under
+> **Operational**. Wire performant aggregations in a later slice."
 
 > **Dev:** "Four ways back to the map from a detail page — keep View on Crisis Map?"
 > **Domain expert:** "No. Drop the header **View on Crisis Map**. **Back** (when
@@ -149,8 +150,9 @@ _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interacti
 - Surface — resolved: **`/map` only** for this slice.
 - Basemap vs overlay — resolved: **Streets | Satellite** exclusive basemap; **Roads**
   under Overlays.
-- Operational layers — resolved for this slice: **disabled stubs** (Blockages, IDP,
-  NRC locations); live aggregations later.
+- Operational / population stubs — resolved for this slice: **IDP Density** under
+  **Population**; **Blockages** / **NRC locations** under **Operational**; live
+  aggregations later.
 - Detail→map returns — resolved: remove header **View on Crisis Map**; focused
   **Back** / **Full Map** vs default **Map** tab (#108).
 

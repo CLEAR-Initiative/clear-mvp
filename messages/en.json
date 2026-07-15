@@ -1764,7 +1764,7 @@
       "operational": "Operational",
       "comingSoon": "Coming soon",
       "blockages": "Blockages",
-      "idp": "IDP sites",
+      "idpDensity": "IDP Density",
       "nrcLocations": "NRC locations"
     },
     "baseMaps": {
