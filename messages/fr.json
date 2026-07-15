@@ -1767,7 +1767,8 @@
       "comingSoon": "Bientôt disponible",
       "blockages": "Blocages",
       "idpDensity": "Densité IDP",
-      "nrcLocations": "Sites NRC"
+      "nrcLocations": "Sites NRC",
+      "filters": "Filtres"
     },
     "baseMaps": {
       "simple": "Simple",

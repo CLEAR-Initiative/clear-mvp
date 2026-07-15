@@ -5,13 +5,13 @@ import { useTranslations } from "next-intl";
 import {
   Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl, Loader,
 } from "@mantine/core";
-import { IconLayersLinked, IconList } from "@tabler/icons-react";
+import { IconFilter, IconLayersLinked, IconList } from "@tabler/icons-react";
 import type { DataView } from "./map-layers-panel";
 import type { BoundaryLevel } from "./map-settings-popover";
 import type { BaseMapType } from "~/components/map/crisis-map";
 export type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 
-type PanelId = "layers" | "legend";
+type PanelId = "layers" | "legend" | "filters";
 
 // labelKey: i18n keys under map.severities.* - resolved via t() at render time.
 const SEVERITY_ITEMS = [
@@ -60,6 +60,11 @@ interface MapPanelBarProps {
   /** Desktop: accumulate marker detail panels instead of replacing. */
   keepPanelsOpen?: boolean;
   onKeepPanelsOpenChange?: (v: boolean) => void;
+  /**
+   * Mobile-only filter controls (country / region / type / timeframe).
+   * When provided, a Filters icon appears below Legend on small screens.
+   */
+  filters?: ReactNode;
 }
 
 const noop = () => {
@@ -94,7 +99,7 @@ function PanelHeader({ children }: { children: string }) {
   return (
     <Text
       fw={700} tt="uppercase" c="var(--color-text-muted)"
-      style={{ fontSize: 10, letterSpacing: "0.05em" }}
+      style={{ fontSize: 10, letterSpacing: "0.05em", flexShrink: 0 }}
       px={12} pt={10} pb={8}
       className="border-b border-[var(--color-border)]"
     >
@@ -179,26 +184,40 @@ export function MapPanelBar({
   showRoads = true, onShowRoadsChange = noop,
   baseMapType = "simple", onBaseMapTypeChange = noop,
   keepPanelsOpen = false, onKeepPanelsOpenChange = noop,
+  filters,
 }: MapPanelBarProps) {
   const t = useTranslations("map");
   const [active, setActive] = useState<PanelId | null>(null);
   const toggle = (id: PanelId) => setActive((prev) => (prev === id ? null : id));
 
   return (
-    <Box className="absolute z-10" style={{ top: 80, left: 16 }} /* intentionally physical: map overlay */>
+    // Mobile: top-left under app chrome. Desktop: below the horizontal filter bar.
+    <Box className="absolute z-20 top-3 left-4 sm:top-20">
       <Group gap={4} align="flex-start" wrap="nowrap">
 
-        {/* Icon column */}
+        {/* Icon column — Filters is mobile-only (third button under Legend) */}
         <Stack gap={4}>
           <IconBtn icon={IconLayersLinked} active={active === "layers"} title={t("panels.layers")} onClick={() => toggle("layers")} />
           <IconBtn icon={IconList}         active={active === "legend"} title={t("panels.legend")} onClick={() => toggle("legend")} />
+          {filters != null && (
+            <Box hiddenFrom="sm">
+              <IconBtn
+                icon={IconFilter}
+                active={active === "filters"}
+                title={t("panels.filters")}
+                onClick={() => toggle("filters")}
+              />
+            </Box>
+          )}
         </Stack>
 
-        {/* Panel content */}
+        {/* Panel content — capped height + internal scroll on mobile */}
         {active && (
           <Box
+            className="flex flex-col max-h-[min(52vh,calc(100dvh-160px))] sm:max-h-[min(72vh,calc(100vh-120px))]"
             style={{
               width: 260,
+              maxWidth: "calc(100vw - 72px)",
               background: "var(--color-bg-muted)",
               border: "1px solid var(--color-border-dark)",
               boxShadow: "var(--shadow-md)",
@@ -208,6 +227,7 @@ export function MapPanelBar({
             {active === "layers" && (
               <>
                 <PanelHeader>{t("panels.layers")}</PanelHeader>
+                <Box style={{ overflowY: "auto", flex: 1, minHeight: 0, WebkitOverflowScrolling: "touch" }}>
                 <Stack gap={0} px={12} py={10}>
                   <SectionLabel>{t("panels.baseMap")}</SectionLabel>
                   <SegmentedControl
@@ -282,6 +302,7 @@ export function MapPanelBar({
                     />
                   </Box>
                 </Stack>
+                </Box>
               </>
             )}
 
@@ -289,6 +310,7 @@ export function MapPanelBar({
             {active === "legend" && (
               <>
                 <PanelHeader>{t("panels.legend")}</PanelHeader>
+                <Box style={{ overflowY: "auto", flex: 1, minHeight: 0, WebkitOverflowScrolling: "touch" }}>
                 <Stack gap={4} px={12} py={8}>
                   <SectionLabel>{t("panels.severity")}</SectionLabel>
                   {SEVERITY_ITEMS.map((item) => (
@@ -338,6 +360,19 @@ export function MapPanelBar({
                   )}
 
                 </Stack>
+                </Box>
+              </>
+            )}
+
+            {/* Filters — mobile only; desktop keeps the top bar */}
+            {active === "filters" && filters != null && (
+              <>
+                <PanelHeader>{t("panels.filters")}</PanelHeader>
+                <Box style={{ overflowY: "auto", flex: 1, minHeight: 0, WebkitOverflowScrolling: "touch" }}>
+                <Stack gap={10} px={12} py={10}>
+                  {filters}
+                </Stack>
+                </Box>
               </>
             )}
 

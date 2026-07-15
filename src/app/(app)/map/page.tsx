@@ -7,6 +7,7 @@ import {
   Box,
   Text,
   Group,
+  Stack,
   Select,
   Loader,
 } from "@mantine/core";
@@ -527,28 +528,28 @@ export default function MapPage() {
     <Box
       style={{
         position: "relative",
-        height: "calc(100vh - 60px)",
+        flex: 1,
+        minHeight: 0,
+        width: "100%",
         overflow: "hidden",
         background: "var(--color-bg-primary)",
       }}
     >
-      {/* Top filters bar */}
+      {/* Top filters bar — desktop only; mobile uses the Filters icon in MapPanelBar */}
       <Box
+        visibleFrom="sm"
         className="absolute top-0 left-0 right-0 z-20"
         data-tour="map-filters"
         px={16}
         py={12}
         style={{
-          background: "linear-gradient(to bottom, var(--map-overlay-from) 60%, var(--map-overlay-to))",
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
           pointerEvents: "none",
         }}
       >
-        <Group gap={12} style={{ pointerEvents: "auto" }}>
+        <Group gap={12} style={{ pointerEvents: "auto" }} wrap="wrap">
           <Select
             size="xs"
             value={selectedCountry}
@@ -598,7 +599,7 @@ export default function MapPage() {
         </Group>
       </Box>
 
-      {/* Map container with loading overlay */}
+      {/* Map container with loading overlay — above timeline empty space for zoom hit-testing */}
       <Box
         style={{
           position: "absolute",
@@ -641,7 +642,7 @@ export default function MapPage() {
         {showLoadingOverlay && <MapLoadingOverlay dataView={dataView} />}
       </Box>
 
-      {/* ===== Left Panel Bar (Layers / Legend / Config) ===== */}
+      {/* ===== Left Panel Bar (Layers / Legend / mobile Filters) ===== */}
       <MapPanelBar
         dataView={dataView}
         onDataViewChange={setDataView}
@@ -656,6 +657,51 @@ export default function MapPage() {
         onBaseMapTypeChange={setBaseMapType}
         keepPanelsOpen={keepPanelsOpen}
         onKeepPanelsOpenChange={setKeepPanelsOpen}
+        filters={
+          <Stack gap={10}>
+            <Select
+              size="xs"
+              value={selectedCountry}
+              onChange={handleCountryChange}
+              data={countryOptions.map((c) =>
+                c === "All Countries" ? { value: c, label: t("filters.allCountries") } : c,
+              )}
+              styles={{ input: INPUT_STYLE }}
+              label={<FilterLabel>{t("filters.country")}</FilterLabel>}
+            />
+            <Select
+              size="xs"
+              value={selectedRegion}
+              onChange={handleRegionChange}
+              data={regionOptions.map((r) =>
+                r === "All Regions" ? { value: r, label: t("filters.allRegions") } : r,
+              )}
+              styles={{ input: INPUT_STYLE }}
+              label={<FilterLabel>{t("filters.region")}</FilterLabel>}
+            />
+            <DisasterTypePicker
+              label={t("filters.crisisType")}
+              hierarchy={hierarchy}
+              selected={selectedTypes}
+              onChange={setSelectedTypes}
+              size="xs"
+            />
+            <Select
+              size="xs"
+              value={timeframe}
+              onChange={(v) => setTimeframe((v ?? "30d") as typeof timeframe)}
+              data={[
+                { value: "7d",  label: t("filters.last7days") },
+                { value: "30d", label: t("filters.last30days") },
+                { value: "90d", label: t("filters.last90days") },
+                { value: "all", label: t("filters.allTime") },
+              ]}
+              styles={{ input: INPUT_STYLE }}
+              label={<FilterLabel>{t("filters.timeframe")}</FilterLabel>}
+            />
+            {isLoading && <Loader size={14} />}
+          </Stack>
+        }
       />
 
       {/* ===== Marker detail panel(s) ===== */}
@@ -673,16 +719,14 @@ export default function MapPage() {
         />
       ))}
 
-      {/* ===== Timeline (bottom overlay) ===== */}
+      {/* ===== Timeline (bottom overlay) — month chips only, no frosted stripe ===== */}
       {availableMonths.length > 0 && (
         <Box
-          className="absolute bottom-0 left-0 right-0 z-10"
+          className="absolute left-0 right-0 z-20"
           px={16}
           py={10}
           style={{
-            background: "linear-gradient(to top, var(--map-overlay-from) 60%, var(--map-overlay-to))",
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
+            bottom: 12,
             pointerEvents: "none",
           }}
         >
@@ -690,9 +734,12 @@ export default function MapPage() {
             gap={8}
             wrap="nowrap"
             style={{
+              // Fit content so empty space does not cover Mapbox zoom (+/−) on the right.
               pointerEvents: "auto",
               overflowX: "auto",
               paddingBottom: 2,
+              width: "fit-content",
+              maxWidth: "100%",
             }}
           >
             <Text

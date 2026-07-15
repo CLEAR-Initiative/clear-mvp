@@ -1767,7 +1767,8 @@
       "comingSoon": "قريبًا",
       "blockages": "العوائق",
       "idpDensity": "كثافة النازحين",
-      "nrcLocations": "مواقع NRC"
+      "nrcLocations": "مواقع NRC",
+      "filters": "عوامل التصفية"
     },
     "baseMaps": {
       "simple": "بسيطة",
