@@ -1735,7 +1735,12 @@
       "region": "Region",
       "crisisType": "Crisis Type",
       "allCountries": "All Countries",
-      "allRegions": "All Regions"
+      "allRegions": "All Regions",
+      "timeframe": "Timeframe",
+      "last7days": "Last 7 days",
+      "last30days": "Last 30 days",
+      "last90days": "Last 90 days",
+      "allTime": "All time"
     },
     "panels": {
       "layers": "Layers",
@@ -1754,7 +1759,8 @@
       "streets": "Streets",
       "roads": "Roads",
       "satellite": "Satellite",
-      "visible": "Visible",
+      "simple": "Simple",
+      "topography": "Terrain",
       "operational": "Operational",
       "comingSoon": "Coming soon",
       "blockages": "Blockages",

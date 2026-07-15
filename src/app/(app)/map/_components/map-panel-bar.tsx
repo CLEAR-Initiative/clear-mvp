@@ -8,6 +8,7 @@ import {
 import { IconLayersLinked, IconList } from "@tabler/icons-react";
 import type { DataView } from "./map-layers-panel";
 import type { BoundaryLevel } from "./map-settings-popover";
+import type { BaseMapType } from "~/components/map/crisis-map";
 export type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 
 type PanelId = "layers" | "legend";
@@ -28,6 +29,13 @@ const BOUNDARY_OPTIONS = [
   { value: "A2",   labelKey: "a2" },
 ] as const;
 
+// labelKey: i18n keys under map.panels.* - resolved via t() at render time.
+const BASE_MAP_OPTIONS: { labelKey: BaseMapType; value: BaseMapType }[] = [
+  { labelKey: "simple",     value: "simple" },
+  { labelKey: "topography", value: "topography" },
+  { labelKey: "satellite",  value: "satellite" },
+];
+
 // labelKey: i18n keys under map.dataViews.* - resolved via t() at render time.
 const DATA_VIEW_OPTIONS: { labelKey: DataView; value: DataView }[] = [
   { labelKey: "none",   value: "none" },
@@ -45,14 +53,10 @@ interface MapPanelBarProps {
   populationLoading?: boolean;
   boundaryLevel: BoundaryLevel;
   onBoundaryLevelChange: (v: BoundaryLevel) => void;
-  showBoundaries?: boolean;
-  onShowBoundariesChange?: (v: boolean) => void;
-  showMarkers?: boolean;
-  onShowMarkersChange?: (v: boolean) => void;
   showRoads?: boolean;
   onShowRoadsChange?: (v: boolean) => void;
-  showSatellite?: boolean;
-  onShowSatelliteChange?: (v: boolean) => void;
+  baseMapType?: BaseMapType;
+  onBaseMapTypeChange?: (v: BaseMapType) => void;
   /** Desktop: accumulate marker detail panels instead of replacing. */
   keepPanelsOpen?: boolean;
   onKeepPanelsOpenChange?: (v: boolean) => void;
@@ -163,10 +167,8 @@ export function MapPanelBar({
   showPopulation, onShowPopulationChange,
   populationLoading = false,
   boundaryLevel, onBoundaryLevelChange,
-  showBoundaries = true, onShowBoundariesChange = noop,
-  showMarkers = true, onShowMarkersChange = noop,
   showRoads = true, onShowRoadsChange = noop,
-  showSatellite = false, onShowSatelliteChange = noop,
+  baseMapType = "simple", onBaseMapTypeChange = noop,
   keepPanelsOpen = false, onKeepPanelsOpenChange = noop,
 }: MapPanelBarProps) {
   const t = useTranslations("map");
@@ -193,30 +195,44 @@ export function MapPanelBar({
               boxShadow: "var(--shadow-md)",
             }}
           >
-            {/* Layers — grouped by user goal, not by implementation */}
+            {/* Layers — cartography first, then overlays / data, then interaction */}
             {active === "layers" && (
               <>
                 <PanelHeader>{t("panels.layers")}</PanelHeader>
                 <Stack gap={0} px={12} py={10}>
-                  {/* Boundaries: level + visibility */}
+                  <SectionLabel>{t("panels.baseMap")}</SectionLabel>
+                  <SegmentedControl
+                    value={baseMapType}
+                    onChange={(v) => onBaseMapTypeChange(v as BaseMapType)}
+                    data={BASE_MAP_OPTIONS.map((o) => ({ value: o.value, label: t(`panels.${o.labelKey}`) }))}
+                    size="xs"
+                    fullWidth
+                    styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
+                    mb={10}
+                  />
+
+                  <SectionLabel>{t("panels.overlays")}</SectionLabel>
+                  <LayerCheckRow
+                    label={t("panels.roads")}
+                    checked={showRoads}
+                    onChange={onShowRoadsChange}
+                  />
+
+                  <Divider color="var(--color-bg-muted)" my={10} />
+
+                  {/* "None" on the level select turns boundaries off — no separate Visible toggle */}
                   <SectionLabel>{t("panels.boundaries")}</SectionLabel>
                   <Select
                     size="xs"
                     value={boundaryLevel}
                     onChange={(v) => onBoundaryLevelChange((v ?? "A1") as BoundaryLevel)}
                     data={BOUNDARY_OPTIONS.map((o) => ({ value: o.value, label: t(`boundaries.${o.labelKey}`) }))}
-                    mb={6}
                     styles={{ input: { fontWeight: 600, fontSize: 12 } }}
-                  />
-                  <LayerCheckRow
-                    label={t("panels.visible")}
-                    checked={showBoundaries}
-                    onChange={onShowBoundariesChange}
                   />
 
                   <Divider color="var(--color-bg-muted)" my={10} />
 
-                  {/* Markers: exclusive data view + visibility */}
+                  {/* "None" data view hides markers — no separate Visible toggle */}
                   <SectionLabel>{t("panels.markers")}</SectionLabel>
                   <SegmentedControl
                     value={dataView}
@@ -227,15 +243,9 @@ export function MapPanelBar({
                     styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
                     mb={6}
                   />
-                  <LayerCheckRow
-                    label={t("panels.visible")}
-                    checked={showMarkers}
-                    onChange={onShowMarkersChange}
-                  />
 
                   <Divider color="var(--color-bg-muted)" my={10} />
 
-                  {/* Analysis / choropleth */}
                   <SectionLabel>{t("panels.population")}</SectionLabel>
                   <LayerCheckRow
                     label={t("panels.population")}
@@ -251,31 +261,6 @@ export function MapPanelBar({
                   <LayerStubRow label={t("panels.blockages")} hint={t("panels.comingSoon")} />
                   <LayerStubRow label={t("panels.idp")} hint={t("panels.comingSoon")} />
                   <LayerStubRow label={t("panels.nrcLocations")} hint={t("panels.comingSoon")} />
-
-                  <Divider color="var(--color-bg-muted)" my={10} />
-
-                  {/* Basemap: mutually exclusive Streets ↔ Satellite */}
-                  <SectionLabel>{t("panels.baseMap")}</SectionLabel>
-                  <SegmentedControl
-                    value={showSatellite ? "satellite" : "streets"}
-                    onChange={(v) => onShowSatelliteChange(v === "satellite")}
-                    data={[
-                      { value: "streets", label: t("panels.streets") },
-                      { value: "satellite", label: t("panels.satellite") },
-                    ]}
-                    size="xs"
-                    fullWidth
-                    styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
-                    mb={10}
-                  />
-
-                  {/* Overlay on whichever basemap is active — not a basemap itself */}
-                  <SectionLabel>{t("panels.overlays")}</SectionLabel>
-                  <LayerCheckRow
-                    label={t("panels.roads")}
-                    checked={showRoads}
-                    onChange={onShowRoadsChange}
-                  />
 
                   {/* Interaction preference — not cartography (desktop only) */}
                   <Box visibleFrom="sm">
