@@ -101,7 +101,7 @@ export function MapMarkerDetail({
     if (isMobile) return;
     const el = boxRef.current;
     const parent = el?.offsetParent as HTMLElement | null;
-    if (!parent) return;
+    if (!el || !parent) return;
 
     const panelHeight = el.offsetHeight || FALLBACK_HEIGHT;
     const parentSize = { width: parent.clientWidth, height: parent.clientHeight };
