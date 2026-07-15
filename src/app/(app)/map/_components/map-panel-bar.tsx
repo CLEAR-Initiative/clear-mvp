@@ -53,6 +53,9 @@ interface MapPanelBarProps {
   onShowRoadsChange?: (v: boolean) => void;
   showSatellite?: boolean;
   onShowSatelliteChange?: (v: boolean) => void;
+  /** Desktop: accumulate marker detail panels instead of replacing. */
+  keepPanelsOpen?: boolean;
+  onKeepPanelsOpenChange?: (v: boolean) => void;
 }
 
 const noop = () => {
@@ -114,6 +117,7 @@ export function MapPanelBar({
   showMarkers = true, onShowMarkersChange = noop,
   showRoads = true, onShowRoadsChange = noop,
   showSatellite = false, onShowSatelliteChange = noop,
+  keepPanelsOpen = false, onKeepPanelsOpenChange = noop,
 }: MapPanelBarProps) {
   const t = useTranslations("map");
   const [active, setActive] = useState<PanelId | null>(null);
@@ -220,7 +224,29 @@ export function MapPanelBar({
                   </Group>
                   
                   <Divider color="var(--color-bg-muted)" my={10} />
-                  
+
+                  {/* Panels — desktop-only interaction mode (hidden via CSS below sm) */}
+                  <Box visibleFrom="sm">
+                    <SectionLabel>{t("panels.panelsSection")}</SectionLabel>
+                    <Group
+                      gap={8} py={4} px={2}
+                      className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
+                      onClick={() => onKeepPanelsOpenChange(!keepPanelsOpen)}
+                      style={{ userSelect: "none" }}
+                    >
+                      <Checkbox
+                        size="xs" checked={keepPanelsOpen}
+                        onChange={(e) => onKeepPanelsOpenChange(e.currentTarget.checked)}
+                        styles={{ input: { cursor: "pointer" } }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
+                        {t("panels.keepPanelsOpen")}
+                      </Text>
+                    </Group>
+                    <Divider color="var(--color-bg-muted)" my={10} />
+                  </Box>
+
                   <SectionLabel>{t("panels.baseMap")}</SectionLabel>
                   
                   <Group

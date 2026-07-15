@@ -1749,6 +1749,8 @@
       "eventType": "Type d'événement",
       "population": "Population",
       "dataLayers": "Couches de données",
+      "panelsSection": "Panneaux",
+      "keepPanelsOpen": "Garder les panneaux ouverts",
       "baseMap": "Fond de carte",
       "roads": "Routes",
       "satellite": "Satellite"

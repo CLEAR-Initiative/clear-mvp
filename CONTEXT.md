@@ -47,11 +47,38 @@ slots show skeletons while the target entity is pending; resolved content **repl
 skeleton with an instant swap (no fade-from-transparent).
 _Avoid_: white overlays; page-level content fade-in; opacity-0 entry animations on resolve.
 
+### Map marker panels
+
+**Keep panels open**:
+A map Layers toggle in its own **Panels** section (between Boundaries & Markers and Base
+map). When **off** (default), clicking a marker **replaces** the open marker detail panel.
+When **on**, each marker click **adds** another panel so several can sit on the map at once
+for side-by-side inspection. Changing the map **data view** (alert / event / signal /
+crisis) **clears** all open panels — panels are not kept across views. Turning the toggle
+**off** does not dismiss panels already open; it only restores replace-on-click for
+subsequent clicks. Analysts close panels with ✕. Clicking a marker that already has a panel
+**focuses** that panel (bring to front + pin pulse) instead of opening a duplicate. At most
+**four** panels: opening a fifth closes the oldest (FIFO). **Desktop only** — on mobile the
+control is hidden and marker clicks always use a single bottom sheet. Shipped on the **`/map`**
+route only for this slice (dashboard map stays single-panel).
+_Avoid_: "window persistence", "compare mode" (unless we later scope explicit cross-view
+comparison), "pin" (reserved if we add per-panel pinning later), orphan panels that
+outlive their data view; do not nest this control under Base map (cartography only);
+stacking bottom sheets on mobile.
+
+**Marker detail panel**:
+The floating card that shows a map marker's summary and View details CTA. Draggable on
+desktop; bottom sheet on mobile.
+_Avoid_: "popup", "window", "modal" (it is not modal — the map stays interactive).
+
 ## Relationships
 
 - A **Thread** contains many question/**Answer** turns
 - An **Answer** has zero or more **Source documents**
 - Each turn is one independent **NRC Find** call; the **Thread** gives it no prior context
+- With **Keep panels open** off, the map shows at most one **Marker detail panel**; with it
+  on, the map may show up to four (same data view only — view change clears panels). The
+  **Keep panels open** control lives in the Layers **Panels** section.
 
 ## Example dialogue
 
@@ -65,12 +92,48 @@ _Avoid_: white overlays; page-level content fade-in; opacity-0 entry animations 
 > **Domain expert:** "No. Instant swap: skeletons → content. Chrome never blinks; no
 > fade-from-transparent."
 
+> **Dev:** "Should clicking another marker always replace the open **Marker detail panel**?"
+> **Domain expert:** "Only when **Keep panels open** is off. When it's on, new clicks add
+> panels so analysts can compare several markers on the map."
+
+> **Dev:** "User opens an Event panel, switches data view to Signal — keep the Event panel?"
+> **Domain expert:** "No. Data view change clears all **Marker detail panels**. Compare within
+> one view for now."
+
+> **Dev:** "They turn **Keep panels open** off with three panels still on screen — close them?"
+> **Domain expert:** "No. Leave them; only the next click goes back to replace behavior.
+> Close is always ✕ (or a data-view change)."
+
+> **Dev:** "Same marker clicked twice with **Keep panels open** on — second card?"
+> **Domain expert:** "No. Focus the existing **Marker detail panel** and pulse its pin."
+
+> **Dev:** "How many panels before we stop?"
+> **Domain expert:** "Four. A fifth opens by dropping the oldest (FIFO)."
+
+> **Dev:** "Put **Keep panels open** under Base map with roads/satellite?"
+> **Domain expert:** "No. Own **Panels** section — Base map stays cartography only."
+
+> **Dev:** "Four bottom sheets on a phone?"
+> **Domain expert:** "No. **Keep panels open** is desktop-only; mobile stays one sheet."
+
+> **Dev:** "Dashboard map too?"
+> **Domain expert:** "Not this slice — **`/map` only**."
+
 ## Flagged ambiguities
 
 - "conversation" was used to mean both the visible **Thread** and remembered backend
   history — resolved: only the UI **Thread** exists; there is no server-side history.
 - Quick Navigation post-load flash — resolved: instant skeleton→content swap; no resolve
   fade-in.
+- "window persistence" / "compare mode" — resolved: the Layers control is **Keep panels
+  open** (toggle A); naming of deeper compare features left open.
+- Cross–data-view panels — resolved for this slice: **clear all panels** when the data
+  view changes (no orphan Event panels on the Signal map). True event-vs-signal compare
+  needs a later multi-view markers decision.
+- Panel count — resolved: soft max **4**, FIFO eviction.
+- Layers placement — resolved: own **Panels** section; not under Base map.
+- Mobile — resolved: **Keep panels open** desktop-only; single bottom sheet on mobile.
+- Surface — resolved: **`/map` only** for this slice.
 
 ## Theming language
 

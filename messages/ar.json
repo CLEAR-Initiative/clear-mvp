@@ -1749,6 +1749,8 @@
       "eventType": "نوع الحدث",
       "population": "السكان",
       "dataLayers": "طبقات البيانات",
+      "panelsSection": "اللوحات",
+      "keepPanelsOpen": "إبقاء اللوحات مفتوحة",
       "baseMap": "الخريطة الأساسية",
       "roads": "الطرق",
       "satellite": "الأقمار الصناعية"

@@ -21,6 +21,12 @@ export interface MapMarker {
   markerKind?: "event" | "signal" | "crisis";
 }
 
+/** Pixel position of a marker inside the map container (from Mapbox `project`). */
+export interface MarkerScreenPoint {
+  x: number;
+  y: number;
+}
+
 export interface MapRegion {
   id: string;
   /** GeoJSON geometry (Polygon or MultiPolygon) */
@@ -45,7 +51,7 @@ interface CrisisMapProps {
   center?: [number, number];
   zoom?: number;
   className?: string;
-  onMarkerClick?: (marker: MapMarker) => void;
+  onMarkerClick?: (marker: MapMarker, screenPoint: MarkerScreenPoint) => void;
   onMarkerHover?: (marker: MapMarker | null) => void;
   interactive?: boolean;
   /**
@@ -807,7 +813,9 @@ export function CrisisMap({
         }
         el.addEventListener("click", () => {
           const found = markersDataRef.current.find((mk) => mk.id === (props.id as number));
-          if (found) onMarkerClickRef.current?.(found);
+          if (!found) return;
+          const projected = m.project(coords) as { x: number; y: number };
+          onMarkerClickRef.current?.(found, { x: projected.x, y: projected.y });
         });
         el.addEventListener("mouseenter", () => {
           const found = markersDataRef.current.find((mk) => mk.id === (props.id as number));
