@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ElementType, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
   Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl, Loader,
@@ -65,7 +65,7 @@ const noop = () => {
 function IconBtn({
   icon: Icon, active, title, onClick,
 }: {
-  icon: React.ElementType; active: boolean; title: string; onClick: () => void;
+  icon: ElementType; active: boolean; title: string; onClick: () => void;
 }) {
   return (
     <button
@@ -107,6 +107,56 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
+/** Standard checkbox row for live layer toggles. */
+function LayerCheckRow({
+  label,
+  checked,
+  onChange,
+  trailing,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  trailing?: ReactNode;
+}) {
+  return (
+    <Group
+      gap={8} py={4} px={2}
+      className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
+      onClick={() => onChange(!checked)}
+      style={{ userSelect: "none" }}
+    >
+      <Checkbox
+        size="xs" checked={checked}
+        onChange={(e) => onChange(e.currentTarget.checked)}
+        styles={{ input: { cursor: "pointer" } }}
+        onClick={(e) => e.stopPropagation()}
+      />
+      <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12, flex: 1 }}>
+        {label}
+      </Text>
+      {trailing}
+    </Group>
+  );
+}
+
+/** Disabled stub for future operational layers — visible but not interactive. */
+function LayerStubRow({ label, hint }: { label: string; hint: string }) {
+  return (
+    <Group gap={8} py={4} px={2} style={{ userSelect: "none", opacity: 0.55 }} title={hint}>
+      <Checkbox size="xs" checked={false} disabled readOnly styles={{ input: { cursor: "not-allowed" } }} />
+      <Box style={{ flex: 1, minWidth: 0 }}>
+        <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
+          {label}
+        </Text>
+        <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 10 }}>
+          {hint}
+        </Text>
+      </Box>
+    </Group>
+  );
+}
+
 
 export function MapPanelBar({
   dataView, onDataViewChange,
@@ -137,46 +187,36 @@ export function MapPanelBar({
         {active && (
           <Box
             style={{
-              width: 240,
+              width: 260,
               background: "var(--color-bg-muted)",
               border: "1px solid var(--color-border-dark)",
               boxShadow: "var(--shadow-md)",
             }}
           >
-            {/* Layers */}
+            {/* Layers — grouped by user goal, not by implementation */}
             {active === "layers" && (
               <>
                 <PanelHeader>{t("panels.layers")}</PanelHeader>
                 <Stack gap={0} px={12} py={10}>
+                  {/* Boundaries: level + visibility */}
                   <SectionLabel>{t("panels.boundaries")}</SectionLabel>
                   <Select
                     size="xs"
                     value={boundaryLevel}
                     onChange={(v) => onBoundaryLevelChange((v ?? "A1") as BoundaryLevel)}
                     data={BOUNDARY_OPTIONS.map((o) => ({ value: o.value, label: t(`boundaries.${o.labelKey}`) }))}
-                    mb={10}
+                    mb={6}
                     styles={{ input: { fontWeight: 600, fontSize: 12 } }}
                   />
-                  
-                  <Group
-                    gap={8} py={4} px={2}
-                    className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
-                    onClick={() => onShowBoundariesChange(!showBoundaries)}
-                    style={{ userSelect: "none" }}
-                  >
-                    <Checkbox
-                      size="xs" checked={showBoundaries}
-                      onChange={(e) => onShowBoundariesChange(e.currentTarget.checked)}
-                      styles={{ input: { cursor: "pointer" } }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
-                      {t("panels.boundaries")}
-                    </Text>
-                  </Group>
-                  
+                  <LayerCheckRow
+                    label={t("panels.visible")}
+                    checked={showBoundaries}
+                    onChange={onShowBoundariesChange}
+                  />
+
                   <Divider color="var(--color-bg-muted)" my={10} />
-                  
+
+                  {/* Markers: exclusive data view + visibility */}
                   <SectionLabel>{t("panels.markers")}</SectionLabel>
                   <SegmentedControl
                     value={dataView}
@@ -187,101 +227,66 @@ export function MapPanelBar({
                     styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
                     mb={6}
                   />
-                  
-                  <Group
-                    gap={8} py={4} px={2}
-                    className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
-                    onClick={() => onShowMarkersChange(!showMarkers)}
-                    style={{ userSelect: "none" }}
-                  >
-                    <Checkbox
-                      size="xs" checked={showMarkers}
-                      onChange={(e) => onShowMarkersChange(e.currentTarget.checked)}
-                      styles={{ input: { cursor: "pointer" } }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
-                      {t("panels.markers")}
-                    </Text>
-                  </Group>
-                  
-                  <Divider color="var(--color-bg-muted)" my={10} />
-                  
-                  <Group
-                    gap={8} py={4} px={2}
-                    className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
-                    onClick={() => onShowPopulationChange(!showPopulation)}
-                    style={{ userSelect: "none" }}
-                  >
-                    <Checkbox
-                      size="xs" checked={showPopulation}
-                      onChange={(e) => onShowPopulationChange(e.currentTarget.checked)}
-                      styles={{ input: { cursor: "pointer" } }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>{t("panels.population")}</Text>
-                    {populationLoading && <Loader size={12} />}
-                  </Group>
-                  
+                  <LayerCheckRow
+                    label={t("panels.visible")}
+                    checked={showMarkers}
+                    onChange={onShowMarkersChange}
+                  />
+
                   <Divider color="var(--color-bg-muted)" my={10} />
 
-                  {/* Panels — desktop-only interaction mode (hidden via CSS below sm) */}
-                  <Box visibleFrom="sm">
-                    <SectionLabel>{t("panels.panelsSection")}</SectionLabel>
-                    <Group
-                      gap={8} py={4} px={2}
-                      className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
-                      onClick={() => onKeepPanelsOpenChange(!keepPanelsOpen)}
-                      style={{ userSelect: "none" }}
-                    >
-                      <Checkbox
-                        size="xs" checked={keepPanelsOpen}
-                        onChange={(e) => onKeepPanelsOpenChange(e.currentTarget.checked)}
-                        styles={{ input: { cursor: "pointer" } }}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
-                        {t("panels.keepPanelsOpen")}
-                      </Text>
-                    </Group>
-                    <Divider color="var(--color-bg-muted)" my={10} />
-                  </Box>
+                  {/* Analysis / choropleth */}
+                  <SectionLabel>{t("panels.population")}</SectionLabel>
+                  <LayerCheckRow
+                    label={t("panels.population")}
+                    checked={showPopulation}
+                    onChange={onShowPopulationChange}
+                    trailing={populationLoading ? <Loader size={12} /> : undefined}
+                  />
 
+                  <Divider color="var(--color-bg-muted)" my={10} />
+
+                  {/* Future operational aggregations — stubs only */}
+                  <SectionLabel>{t("panels.operational")}</SectionLabel>
+                  <LayerStubRow label={t("panels.blockages")} hint={t("panels.comingSoon")} />
+                  <LayerStubRow label={t("panels.idp")} hint={t("panels.comingSoon")} />
+                  <LayerStubRow label={t("panels.nrcLocations")} hint={t("panels.comingSoon")} />
+
+                  <Divider color="var(--color-bg-muted)" my={10} />
+
+                  {/* Basemap: mutually exclusive Streets ↔ Satellite */}
                   <SectionLabel>{t("panels.baseMap")}</SectionLabel>
-                  
-                  <Group
-                    gap={8} py={4} px={2}
-                    className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
-                    onClick={() => onShowRoadsChange(!showRoads)}
-                    style={{ userSelect: "none" }}
-                  >
-                    <Checkbox
-                      size="xs" checked={showRoads}
-                      onChange={(e) => onShowRoadsChange(e.currentTarget.checked)}
-                      styles={{ input: { cursor: "pointer" } }}
-                      onClick={(e) => e.stopPropagation()}
+                  <SegmentedControl
+                    value={showSatellite ? "satellite" : "streets"}
+                    onChange={(v) => onShowSatelliteChange(v === "satellite")}
+                    data={[
+                      { value: "streets", label: t("panels.streets") },
+                      { value: "satellite", label: t("panels.satellite") },
+                    ]}
+                    size="xs"
+                    fullWidth
+                    styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
+                    mb={10}
+                  />
+
+                  {/* Overlay on whichever basemap is active — not a basemap itself */}
+                  <SectionLabel>{t("panels.overlays")}</SectionLabel>
+                  <LayerCheckRow
+                    label={t("panels.roads")}
+                    checked={showRoads}
+                    onChange={onShowRoadsChange}
+                  />
+
+                  {/* Interaction preference — not cartography (desktop only) */}
+                  <Box visibleFrom="sm">
+                    <Divider color="var(--color-bg-muted)" my={10} />
+                    <SectionLabel>{t("panels.panelsSection")}</SectionLabel>
+                    <LayerCheckRow
+                      label={t("panels.keepPanelsOpen")}
+                      checked={keepPanelsOpen}
+                      onChange={onKeepPanelsOpenChange}
                     />
-                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
-                      {t("panels.roads")}
-                    </Text>
-                  </Group>
-                  
-                  <Group
-                    gap={8} py={4} px={2}
-                    className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
-                    onClick={() => onShowSatelliteChange(!showSatellite)}
-                    style={{ userSelect: "none" }}
-                  >
-                    <Checkbox
-                      size="xs" checked={showSatellite}
-                      onChange={(e) => onShowSatelliteChange(e.currentTarget.checked)}
-                      styles={{ input: { cursor: "pointer" } }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
-                      {t("panels.satellite")}
-                    </Text>
-                  </Group>
+                  </Box>
                 </Stack>
               </>
             )}

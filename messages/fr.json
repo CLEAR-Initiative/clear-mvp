@@ -1752,8 +1752,16 @@
       "panelsSection": "Panneaux",
       "keepPanelsOpen": "Garder les panneaux ouverts",
       "baseMap": "Fond de carte",
+      "overlays": "Superpositions",
+      "streets": "Rues",
       "roads": "Routes",
-      "satellite": "Satellite"
+      "satellite": "Satellite",
+      "visible": "Visible",
+      "operational": "Opérationnel",
+      "comingSoon": "Bientôt disponible",
+      "blockages": "Blocages",
+      "idp": "Sites de déplacés",
+      "nrcLocations": "Sites NRC"
     },
     "baseMaps": {
       "simple": "Simple",

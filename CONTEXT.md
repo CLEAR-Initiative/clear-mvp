@@ -119,6 +119,14 @@ _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interacti
 > **Dev:** "Dashboard map too?"
 > **Domain expert:** "Not this slice — **`/map` only**."
 
+> **Dev:** "Roads and Satellite as peer checkboxes under Base map?"
+> **Domain expert:** "No. **Satellite** is a basemap (Streets ↔ Satellite). **Roads** is an
+> overlay that works on either basemap. Separate sections."
+
+> **Dev:** "Ship Blockages / IDP / NRC locations toggles now?"
+> **Domain expert:** "Stub them disabled under **Operational** with Coming soon — don't
+> fake live layers. Wire performant aggregations in a later slice."
+
 ## Flagged ambiguities
 
 - "conversation" was used to mean both the visible **Thread** and remembered backend
@@ -134,6 +142,10 @@ _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interacti
 - Layers placement — resolved: own **Panels** section; not under Base map.
 - Mobile — resolved: **Keep panels open** desktop-only; single bottom sheet on mobile.
 - Surface — resolved: **`/map` only** for this slice.
+- Basemap vs overlay — resolved: **Streets | Satellite** exclusive basemap; **Roads**
+  under Overlays.
+- Operational layers — resolved for this slice: **disabled stubs** (Blockages, IDP,
+  NRC locations); live aggregations later.
 
 ## Theming language
 

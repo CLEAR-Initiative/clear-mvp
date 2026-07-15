@@ -1750,8 +1750,16 @@
       "panelsSection": "Panels",
       "keepPanelsOpen": "Keep panels open",
       "baseMap": "Base Map",
+      "overlays": "Overlays",
+      "streets": "Streets",
       "roads": "Roads",
-      "satellite": "Satellite"
+      "satellite": "Satellite",
+      "visible": "Visible",
+      "operational": "Operational",
+      "comingSoon": "Coming soon",
+      "blockages": "Blockages",
+      "idp": "IDP sites",
+      "nrcLocations": "NRC locations"
     },
     "baseMaps": {
       "simple": "Simple",
