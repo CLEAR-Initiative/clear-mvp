@@ -32,6 +32,8 @@ import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
 import { readMarkerCache, writeMarkerCache } from "~/lib/map-marker-cache";
 import { useIsDark } from "~/hooks/use-is-dark";
+import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
+import { useSearchParams } from "next/navigation";
 
 const MAX_OPEN_PANELS = 4;
 
@@ -84,8 +86,19 @@ export default function MapPage() {
   const t = useTranslations("map");
   const format = useFormatter();
   const isMobile = useMediaQuery("(max-width: 48em)");
+  const searchParams = useSearchParams();
+  const focusEventId = searchParams.get("event");
+  const focusSignalId = searchParams.get("signal");
+  const focusCrisisId = searchParams.get("crisis");
+  const focusEntityId = focusEventId ?? focusSignalId ?? focusCrisisId;
+
   /* ---- Core state (must precede queries that depend on it) ---- */
-  const [dataView, setDataView] = useState<DataView>("alert");
+  const [dataView, setDataView] = useState<DataView>(() => {
+    if (focusSignalId) return "signal";
+    if (focusCrisisId) return "crisis";
+    if (focusEventId) return "event";
+    return "alert";
+  });
 
   /* ---- Fetch data ---- */
   const { activeTeamId, activeTeam } = useTeam();
@@ -199,6 +212,28 @@ export default function MapPage() {
   const [showRoads, setShowRoads] = useState(true);
   const [showSatellite, setShowSatellite] = useState(false);
 
+  // Deep-link from detail Back / Full Map: align data view + clear filters that
+  // would hide the target marker (#108).
+  useEffect(() => {
+    if (!focusEntityId) return;
+    if (focusSignalId) setDataView("signal");
+    else if (focusCrisisId) setDataView("crisis");
+    else if (focusEventId) setDataView("event");
+    setSelectedMonth(null);
+    setSelectedRegion("All Regions");
+  }, [focusEntityId, focusSignalId, focusCrisisId, focusEventId]);
+
+  const focusMarker = useMemo(() => {
+    if (!focusEntityId) return null;
+    return allMarkers.find((m) => m.eventId === focusEntityId) ?? null;
+  }, [allMarkers, focusEntityId]);
+
+  // Pulse the deep-linked pin once markers are available.
+  useEffect(() => {
+    if (!focusMarker) return;
+    setChromeActiveMarkerId(focusMarker.id);
+  }, [focusMarker]);
+
   // Resolve the currently-selected country's L0 ID for scoping admin
   // boundary queries and for the country highlight overlay. Null when the
   // user picked "All Countries" — in that case every country-scoped query
@@ -271,6 +306,7 @@ export default function MapPage() {
 
   /* ---- Map center ---- */
   const mapCenter: [number, number] = useMemo(() => {
+    if (focusMarker) return [focusMarker.lng, focusMarker.lat];
     if (selectedCountry !== "All Countries") {
       return getCenter(selectedCountry);
     }
@@ -280,14 +316,15 @@ export default function MapPage() {
     const avgLat =
       allMarkers.reduce((sum, m) => sum + m.lat, 0) / allMarkers.length;
     return [avgLng, avgLat];
-  }, [allMarkers, selectedCountry]);
+  }, [allMarkers, selectedCountry, focusMarker, getCenter]);
 
   const mapZoom = useMemo(() => {
+    if (focusMarker) return MAP_FOCUS_ZOOM;
     if (selectedCountry !== "All Countries") {
       return getZoom(selectedCountry);
     }
     return 5;
-  }, [selectedCountry]);
+  }, [selectedCountry, focusMarker, getZoom]);
 
   /* ---- Resolve selected location for filtering ---- */
   const selectedLocationId = useMemo(() => {
@@ -308,8 +345,9 @@ export default function MapPage() {
   useEffect(() => {
     setSelectedMonth(null);
     setOpenPanels([]);
-    setChromeActiveMarkerId(null);
-  }, [dataView]);
+    // Keep deep-link pin pulse when arriving via ?event|signal|crisis= (#108).
+    if (!focusEntityId) setChromeActiveMarkerId(null);
+  }, [dataView, focusEntityId]);
 
   const clearOpenPanels = useCallback(() => {
     setOpenPanels([]);
@@ -588,7 +626,8 @@ export default function MapPage() {
           focusCountryGeometry={focusCountryGeometry}
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-          fitBoundsGeometry={fitBoundsGeometry}
+          fitBoundsGeometry={focusMarker ? null : fitBoundsGeometry}
+          fitBoundsOnFocus={!focusMarker}
           populationBoundaries={populationBoundaries}
           showBoundaries={showBoundaries}
           showMarkers={showMarkers}

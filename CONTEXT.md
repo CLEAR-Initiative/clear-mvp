@@ -127,6 +127,11 @@ _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interacti
 > **Domain expert:** "Stub them disabled under **Operational** with Coming soon — don't
 > fake live layers. Wire performant aggregations in a later slice."
 
+> **Dev:** "Four ways back to the map from a detail page — keep View on Crisis Map?"
+> **Domain expert:** "No. Drop the header **View on Crisis Map**. **Back** (when
+> `from=map`) and **Full Map** deep-link to the marker. Sidebar **Map** tab stays the
+> default overview. See issue #108."
+
 ## Flagged ambiguities
 
 - "conversation" was used to mean both the visible **Thread** and remembered backend
@@ -146,6 +151,8 @@ _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interacti
   under Overlays.
 - Operational layers — resolved for this slice: **disabled stubs** (Blockages, IDP,
   NRC locations); live aggregations later.
+- Detail→map returns — resolved: remove header **View on Crisis Map**; focused
+  **Back** / **Full Map** vs default **Map** tab (#108).
 
 ## Theming language
 

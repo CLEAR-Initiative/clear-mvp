@@ -680,8 +680,9 @@ export function CrisisMap({
   const prevZoom = useRef(zoom);
   useEffect(() => {
     if (!map.current || !loaded) return;
-    // Skip flyTo when a focus country is driving the framing; let fitBounds own it.
-    if (focusCountry) return;
+    // Country fitBounds owns framing unless the caller opts out (e.g. marker
+    // deep-link focus) or a tighter region geometry is already driving the view.
+    if (focusCountry && fitBoundsOnFocus && !fitBoundsGeometry) return;
     if (
       prevCenter.current[0] === center[0] &&
       prevCenter.current[1] === center[1] &&
@@ -690,7 +691,7 @@ export function CrisisMap({
     prevCenter.current = center;
     prevZoom.current = zoom;
     map.current.flyTo({ center, zoom, duration: flyDuration });
-  }, [center, zoom, loaded, focusCountry, flyDuration]);
+  }, [center, zoom, loaded, focusCountry, flyDuration, fitBoundsOnFocus, fitBoundsGeometry]);
 
   // ── Markers (donut cluster DOM markers) ─────────────────────────────────
   useEffect(() => {
