@@ -7,35 +7,29 @@ import type { GqlEvent, GqlLocation, GqlSignal } from "~/lib/types/graphql";
 
 /**
  * Extract first point location from event for map centering.
- * Mirrors eventsToMarkers logic from map-markers-data.ts
+ * Mirrors eventsToMarkers: representativePoint → event Points → signal Points.
  */
 export function getEventMapCenter(event: GqlEvent | null | undefined): [number, number] | null {
   if (!event) return null;
-  
-  const locations: GqlLocation[] = [];
-  if (event.generalLocation) locations.push(event.generalLocation);
-  if (event.originLocation) locations.push(event.originLocation);
-  if (event.destinationLocation) locations.push(event.destinationLocation);
 
-  // Prefer event-level Point locations
-  for (const loc of locations) {
-    const geom = loc.geometry;
-    if (geom?.type === "Point") {
-      const coords = geom.coordinates as [number, number] | undefined;
-      if (coords) return coords;
-    }
+  const tryPoint = (loc: GqlLocation | null | undefined): [number, number] | null => {
+    if (!loc?.geometry || loc.geometry.type !== "Point") return null;
+    const coords = loc.geometry.coordinates as [number, number] | undefined;
+    return coords ?? null;
+  };
+
+  const fromRep = tryPoint(event.representativePoint ?? null);
+  if (fromRep) return fromRep;
+
+  for (const loc of [event.originLocation, event.destinationLocation, event.generalLocation]) {
+    const hit = tryPoint(loc);
+    if (hit) return hit;
   }
 
-  // Fallback to signal locations if event has no points
   for (const signal of event.signals ?? []) {
-    const signalLocs = [signal.generalLocation, signal.originLocation, signal.destinationLocation];
-    for (const loc of signalLocs) {
-      if (!loc) continue;
-      const geom = loc.geometry;
-      if (geom?.type === "Point") {
-        const coords = geom.coordinates as [number, number] | undefined;
-        if (coords) return coords;
-      }
+    for (const loc of [signal.originLocation, signal.destinationLocation, signal.generalLocation]) {
+      const hit = tryPoint(loc);
+      if (hit) return hit;
     }
   }
 

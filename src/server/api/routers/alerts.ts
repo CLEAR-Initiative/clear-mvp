@@ -123,6 +123,28 @@ const EVENT_LIST_FIELDS = `
   alerts { id status }
 `;
 
+// Map-only event shape (clear-api representativePoint). One Location per
+// marker — no nested signal geometries and no admin polygons on the event.
+// Detection list views keep EVENT_LIST_FIELDS (they still need signals[]).
+const MAP_POINT_LOCATION_FIELDS = `
+  id name level geometry ancestorIds
+`;
+
+const EVENT_MAP_FIELDS = `
+  id
+  title
+  description
+  types
+  severity
+  isDummy
+  rank
+  firstSignalCreatedAt
+  lastSignalCreatedAt
+  populationAffected
+  representativePoint { ${MAP_POINT_LOCATION_FIELDS} }
+  alerts { id status }
+`;
+
 const CRISIS_FIELDS = `
   id
   title
@@ -151,27 +173,6 @@ const ALERTS_LIST_QUERY = `
       status
       event { ${EVENT_FIELDS} }
     }
-  }
-`;
-
-// Slim variant for map — unpaginated, slim fields. Map renders all alerts
-// at once with client-side filtering by location/type/month; pagination
-// doesn't help. The slim EVENT_LIST_FIELDS cuts the heavy ancestor/metadata
-// resolvers that wedged at tens of seconds on non-English locales.
-// Optional date range filtering (startDate/endDate) reduces data transfer.
-const ALERTS_FOR_MAP_QUERY = `
-  query AlertsForMap($status: AlertStatus, $teamId: String, $includeDummy: Boolean) {
-    alerts(status: $status, teamId: $teamId, includeDummy: $includeDummy) {
-      id
-      status
-      event { ${EVENT_LIST_FIELDS} }
-    }
-  }
-`;
-
-const EVENTS_FOR_MAP_QUERY = `
-  query EventsForMap($teamId: String, $includeDummy: Boolean) {
-    events(teamId: $teamId, includeDummy: $includeDummy) { ${EVENT_LIST_FIELDS} }
   }
 `;
 
@@ -221,6 +222,33 @@ const EVENTS_PAGE_QUERY = `
       totalCount
       hasMore
       items { ${EVENT_LIST_FIELDS} }
+    }
+  }
+`;
+
+/** Paginated alerts feed for /map — representativePoint only (no signal nest). */
+const ALERTS_FOR_MAP_PAGE_QUERY = `
+  query AlertsForMapPage($input: AlertsPageInput) {
+    alertsPage(input: $input) {
+      totalCount
+      hasMore
+      items {
+        id
+        status
+        representativePoint { ${MAP_POINT_LOCATION_FIELDS} }
+        event { ${EVENT_MAP_FIELDS} }
+      }
+    }
+  }
+`;
+
+/** Paginated events feed for /map — representativePoint only (no signal nest). */
+const EVENTS_FOR_MAP_PAGE_QUERY = `
+  query EventsForMapPage($input: EventsPageInput) {
+    eventsPage(input: $input) {
+      totalCount
+      hasMore
+      items { ${EVENT_MAP_FIELDS} }
     }
   }
 `;
@@ -349,9 +377,10 @@ export const alertsRouter = createTRPCRouter({
   }),
 
   // ─── Slim map procedures ───────────────────────────────────────────────
-  // Map-optimized queries that use paginated *Page queries with date filters,
-  // then strip polygon geometries to centroid points before returning to the browser.
-  // This cuts the 12MB polygon payload while preserving marker locations.
+  // Paginated *Page queries with date filters + clear-api representativePoint
+  // (first-signal Location). No nested signal geometries / admin polygons.
+  // sanitizeLocationGeometry remains a safety net if a point is unexpectedly
+  // a Polygon.
 
   alertsForMap: protectedProcedure
     .input(
@@ -369,8 +398,7 @@ export const alertsRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const status = input?.activeOnly === true ? "published" : input?.status;
-      
-      // Paginate through all results using alertsPage
+
       const alerts: GqlAlert[] = [];
       let offset = 0;
       const limit = 500;
@@ -378,7 +406,7 @@ export const alertsRouter = createTRPCRouter({
 
       while (hasMore) {
         const data = await graphqlFetch<{ alertsPage: PaginatedResult<GqlAlert> }>(
-          ALERTS_PAGE_QUERY,
+          ALERTS_FOR_MAP_PAGE_QUERY,
           {
             input: {
               limit,
@@ -399,19 +427,9 @@ export const alertsRouter = createTRPCRouter({
         offset += limit;
       }
 
-      // Sanitize geometries: replace Polygon/MultiPolygon with centroid Points
       for (const alert of alerts) {
-        const event = alert.event;
-        sanitizeLocationGeometry(event.generalLocation);
-        sanitizeLocationGeometry(event.originLocation);
-        sanitizeLocationGeometry(event.destinationLocation);
-        
-        // Also sanitize nested signal locations
-        for (const signal of event.signals ?? []) {
-          sanitizeLocationGeometry(signal.generalLocation);
-          sanitizeLocationGeometry(signal.originLocation);
-          sanitizeLocationGeometry(signal.destinationLocation);
-        }
+        sanitizeLocationGeometry(alert.representativePoint ?? null);
+        sanitizeLocationGeometry(alert.event.representativePoint ?? null);
       }
 
       return { alerts };
@@ -428,7 +446,6 @@ export const alertsRouter = createTRPCRouter({
       }).optional(),
     )
     .query(async ({ ctx, input }) => {
-      // Paginate through all results using eventsPage
       const events: GqlEvent[] = [];
       let offset = 0;
       const limit = 500;
@@ -436,7 +453,7 @@ export const alertsRouter = createTRPCRouter({
 
       while (hasMore) {
         const data = await graphqlFetch<{ eventsPage: PaginatedResult<GqlEvent> }>(
-          EVENTS_PAGE_QUERY,
+          EVENTS_FOR_MAP_PAGE_QUERY,
           {
             input: {
               limit,
@@ -456,18 +473,8 @@ export const alertsRouter = createTRPCRouter({
         offset += limit;
       }
 
-      // Sanitize geometries: replace Polygon/MultiPolygon with centroid Points
       for (const event of events) {
-        sanitizeLocationGeometry(event.generalLocation);
-        sanitizeLocationGeometry(event.originLocation);
-        sanitizeLocationGeometry(event.destinationLocation);
-        
-        // Also sanitize nested signal locations
-        for (const signal of event.signals ?? []) {
-          sanitizeLocationGeometry(signal.generalLocation);
-          sanitizeLocationGeometry(signal.originLocation);
-          sanitizeLocationGeometry(signal.destinationLocation);
-        }
+        sanitizeLocationGeometry(event.representativePoint ?? null);
       }
 
       return { events };
