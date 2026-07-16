@@ -131,13 +131,13 @@ export function NavSidebar() {
 
   return (
     <>
-      {/* Mobile hamburger button */}
+      {/* Mobile hamburger button — right side so it clears the map Layers stack */}
       <Box
         hiddenFrom="sm"
         style={{
           position: "fixed",
           top: 12,
-          insetInlineStart: 12,
+          insetInlineEnd: 12,
           zIndex: 200,
         }}
       >
@@ -159,10 +159,11 @@ export function NavSidebar() {
         </UnstyledButton>
       </Box>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer — slides in from the left; burger stays on the right */}
       <Drawer
         opened={mobileOpen}
         onClose={closeMobile}
+        position="left"
         size="280px"
         withCloseButton={false}
         hiddenFrom="sm"

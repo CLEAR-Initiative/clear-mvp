@@ -119,6 +119,20 @@ _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interacti
 > **Dev:** "Dashboard map too?"
 > **Domain expert:** "Not this slice — **`/map` only**."
 
+> **Dev:** "Roads and Satellite as peer checkboxes under Base map?"
+> **Domain expert:** "No. **Satellite** is a basemap (Streets ↔ Satellite). **Roads** is an
+> overlay that works on either basemap. Separate sections."
+
+> **Dev:** "Ship Blockages / IDP / NRC locations toggles now?"
+> **Domain expert:** "Stub them disabled with Coming soon — don't fake live layers.
+> **IDP Density** sits under **Population**; **Blockages** / **NRC locations** under
+> **Operational**. Wire performant aggregations in a later slice."
+
+> **Dev:** "Four ways back to the map from a detail page — keep View on Crisis Map?"
+> **Domain expert:** "No. Drop the header **View on Crisis Map**. **Back** (when
+> `from=map`) and **Full Map** deep-link to the marker. Sidebar **Map** tab stays the
+> default overview. See issue #108."
+
 ## Flagged ambiguities
 
 - "conversation" was used to mean both the visible **Thread** and remembered backend
@@ -134,6 +148,13 @@ _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interacti
 - Layers placement — resolved: own **Panels** section; not under Base map.
 - Mobile — resolved: **Keep panels open** desktop-only; single bottom sheet on mobile.
 - Surface — resolved: **`/map` only** for this slice.
+- Basemap vs overlay — resolved: **Streets | Satellite** exclusive basemap; **Roads**
+  under Overlays.
+- Operational / population stubs — resolved for this slice: **IDP Density** under
+  **Population**; **Blockages** / **NRC locations** under **Operational**; live
+  aggregations later.
+- Detail→map returns — resolved: remove header **View on Crisis Map**; focused
+  **Back** / **Full Map** vs default **Map** tab (#108).
 
 ## Theming language
 
