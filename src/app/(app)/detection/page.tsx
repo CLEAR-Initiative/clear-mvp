@@ -321,7 +321,7 @@ function DetectionPageContent() {
     { ...sharedFilter, status: "published", orderBy: ALERT_ORDER_MAP[alertsSort], limit: PAGE_SIZE, offset: alertsOffset, _v: alertsVersion },
     { enabled: locationsReady && activeTab === "live", staleTime: Infinity },
   );
-  const signalsQuery = api.alerts.signalsPage.useQuery(
+  const signalsQuery = api.signals.signalsPage.useQuery(
     {
       teamId: activeTeamId,
       locationId: selectedLocationId ?? undefined,
@@ -518,7 +518,7 @@ function DetectionPageContent() {
     },
     { enabled: locationsReady && activeTab === "live", refetchInterval: 60_000, staleTime: 0 },
   );
-  const signalsNewQuery = api.alerts.signalsPage.useQuery(
+  const signalsNewQuery = api.signals.signalsPage.useQuery(
     {
       teamId: activeTeamId,
       locationId: selectedLocationId ?? undefined,
@@ -545,7 +545,7 @@ function DetectionPageContent() {
     { ...sharedFilter, orderBy: EVENT_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
     { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
   );
-  const historySignalsQuery = api.alerts.signalsPage.useQuery(
+  const historySignalsQuery = api.signals.signalsPage.useQuery(
     { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, orderBy: SIGNAL_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
     { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
   );

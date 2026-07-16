@@ -126,22 +126,16 @@
 }
 
 /* Base styles */
+html {
+  background: var(--color-bg-primary);
+}
+
 body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
   line-height: 1.5;
   font-size: 14px;
-}
-
-/* Map overlay gradient tokens - rgba pairs required for gradient transparency */
-:root {
-  --map-overlay-from: rgba(255, 255, 255, 0.97);
-  --map-overlay-to:   rgba(255, 255, 255, 0);
-}
-[data-mantine-color-scheme="dark"] {
-  --map-overlay-from: rgba(17, 17, 17, 0.97);
-  --map-overlay-to:   rgba(17, 17, 17, 0);
 }
 
 /* Mapbox zoom control dark mode overrides */
@@ -161,9 +155,24 @@ body {
   filter: invert(1);
 }
 
+/* Keep +/- above other map chrome (timeline row is a sibling overlay). */
+.mapboxgl-ctrl-bottom-right {
+  z-index: 30 !important;
+}
+.mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group {
+  pointer-events: auto;
+}
+
 /* Mapbox overrides - ensure map fills container */
 .mapboxgl-map {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--color-bg-primary) !important;
+}
+
+/* Prevent white flash on canvas during Mapbox initialization */
+.mapboxgl-canvas-container,
+.mapboxgl-canvas {
+  background-color: transparent !important;
 }
 
 .mapboxgl-ctrl-logo,

@@ -94,10 +94,12 @@ export async function middleware(request: NextRequest) {
 
   const response = NextResponse.next();
 
-  // Seed the locale cookie from the user's persisted language preference so
-  // client components never need to trigger a router refresh to apply it.
+  // Seed the locale cookie from the user's persisted language preference
+  // ONLY if the cookie is missing. Once set, the cookie is the source of
+  // truth - don't overwrite it on every request, as that would fight user
+  // selections made via /api/locale (profile page language picker).
   const cookieLang = request.cookies.get(LOCALE_COOKIE)?.value;
-  if (isLocale(result.language) && result.language !== cookieLang) {
+  if (!cookieLang && isLocale(result.language)) {
     response.cookies.set(LOCALE_COOKIE, result.language, {
       path: "/",
       maxAge: LOCALE_COOKIE_MAX_AGE,

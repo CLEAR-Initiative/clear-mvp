@@ -17,7 +17,6 @@ import {
 } from "@mantine/core";
 import {
   IconArrowLeft,
-  IconMap,
   IconBookmark,
   IconLayoutGridAdd,
   IconAlertTriangle,
@@ -40,6 +39,7 @@ import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { severityColors } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
+import { mapFocusHref } from "~/lib/map-focus-href";
 import { api } from "~/trpc/react";
 import { useLocations } from "~/hooks/use-locations";
 import { MinimapCard } from "~/components/map/minimap-card";
@@ -140,6 +140,7 @@ interface SignalDetailContentProps {
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
   navigationMapCenter?: [number, number];
+  referrer?: string;
 }
 
 export function SignalDetailContent({
@@ -151,6 +152,7 @@ export function SignalDetailContent({
   onNavigatePrev,
   onNavigateNext,
   navigationMapCenter,
+  referrer = "detection",
 }: SignalDetailContentProps) {
   const t = useTranslations("signalDetail");
   const tCommon = useTranslations("common");
@@ -314,7 +316,7 @@ export function SignalDetailContent({
         </Text>
         {mode === "page" && (
           <Link
-            href="/detection"
+            href={referrer === "map" ? "/map" : "/detection"}
             style={{
               display: "inline-block",
               marginTop: 16,
@@ -355,7 +357,10 @@ export function SignalDetailContent({
         >
           <Group justify="space-between">
             <Group gap={16}>
-              <Link href="/detection" style={{ textDecoration: "none" }}>
+              <Link
+                href={referrer === "map" ? mapFocusHref("signal", signal.id) : "/detection"}
+                style={{ textDecoration: "none" }}
+              >
                 <Group
                   gap={6}
                   className="hover:opacity-70"
@@ -400,23 +405,6 @@ export function SignalDetailContent({
                 </Group>
               )}
             </Group>
-            {locations.length > 0 && (
-              <Link
-                href={`/map`}
-                style={{ textDecoration: "none" }}
-              >
-                <Group
-                  gap={4}
-                  className="hover:opacity-70"
-                  style={{ cursor: "pointer" }}
-                >
-                  <IconMap size={14} color="#E85D3D" />
-                  <Text size="xs" c="#E85D3D" fw={500}>
-                    {t("viewOnCrisisMap")}
-                  </Text>
-                </Group>
-              </Link>
-            )}
           </Group>
         </Box>
       )}
@@ -807,6 +795,7 @@ export function SignalDetailContent({
                 location={mapDisplayLocation}
                 holdRegionFit={holdRegionFit}
                 flyDuration={mapFlyDuration}
+                fullMapHref={mapFocusHref("signal", signal.id)}
               />
 
               <SkeletonSlot pending={showPending} skeleton={<FeedbackCardSkeleton />}>

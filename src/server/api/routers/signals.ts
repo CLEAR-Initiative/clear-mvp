@@ -2,8 +2,13 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlSignal, GqlSignalDetail } from "~/lib/types/graphql";
+import { sanitizeLocationGeometry } from "~/lib/geo/to-map-point";
 
 const LOCATION_FIELDS = `id name level geoId ancestorIds geometry pointType parent { id name } ancestors { id name level }`;
+
+// Slim location fields for map views — drops the recursive ancestors
+// resolver and metadata, keeping only what map markers need.
+const LOCATION_LIST_FIELDS = `id name level geometry ancestorIds`;
 
 const SOURCE_FIELDS = `id name type baseUrl infoUrl`;
 
@@ -24,6 +29,41 @@ const SIGNAL_LIST_QUERY = `
       events { id }
     }
   }
+`;
+
+// Slim variant for map — drops recursive ancestor chains and metadata
+// lookups. The map only needs geometry + ancestorIds for marker paint
+// and hierarchy filtering; the heavyweight detail fields are unused.
+const SIGNALS_FOR_MAP_QUERY = `
+  query SignalsForMap($teamId: String, $includeDummy: Boolean) {
+    signals(teamId: $teamId, includeDummy: $includeDummy) {
+      id
+      source { ${SOURCE_FIELDS} }
+      title
+      description
+      severity
+      url
+      publishedAt
+      generalLocation { ${LOCATION_LIST_FIELDS} }
+      originLocation { ${LOCATION_LIST_FIELDS} }
+      destinationLocation { ${LOCATION_LIST_FIELDS} }
+      events { id }
+    }
+  }
+`;
+
+// Slim signal fields for paginated list views (signalsPage)
+const SIGNAL_LIST_FIELDS = `
+  id
+  source { id name type }
+  title
+  description
+  severity
+  url
+  publishedAt
+  generalLocation { ${LOCATION_LIST_FIELDS} }
+  originLocation { ${LOCATION_LIST_FIELDS} }
+  destinationLocation { ${LOCATION_LIST_FIELDS} }
 `;
 
 // signal-detail-content reads `ev.signals` for the "related signals"
@@ -101,6 +141,27 @@ const CREATE_MANUAL_SIGNAL_MUTATION = `
   }
 `;
 
+// Paginated query for signals list view (moved from alerts.ts for proper architecture)
+const SIGNALS_PAGE_QUERY = `
+  query SignalsPage($input: SignalsPageInput) {
+    signalsPage(input: $input) {
+      totalCount
+      hasMore
+      items { ${SIGNAL_LIST_FIELDS} }
+    }
+  }
+`;
+
+// Constants for pagination and ordering
+const SIGNAL_ORDER = ["PUBLISHED_DESC", "PUBLISHED_ASC", "SEVERITY_DESC", "SEVERITY_ASC"] as const;
+const dateLike = z.union([z.date(), z.string()]).optional();
+
+interface PaginatedResult<T> {
+  items: T[];
+  totalCount: number;
+  hasMore: boolean;
+}
+
 export const signalsRouter = createTRPCRouter({
   list: protectedProcedure
     .input(z.object({ teamId: z.string().nullish(), includeDummy: z.boolean().optional() }).optional())
@@ -114,6 +175,88 @@ export const signalsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.signals;
+    }),
+
+  /** 
+   * Slim variant for map rendering with server-side date/location filtering
+   * and geometry sanitization. Uses signalsPage pagination internally, then
+   * strips polygon geometries to centroid points before returning.
+   */
+  forMap: protectedProcedure
+    .input(
+      z.object({
+        teamId: z.string().nullish(),
+        locationId: z.string().nullish(),
+        includeDummy: z.boolean().optional(),
+        from: dateLike,
+        to: dateLike,
+      }).optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      // Paginate through all results using signalsPage (server-side filtering)
+      const signals: GqlSignal[] = [];
+      let offset = 0;
+      const limit = 500;
+      let hasMore = true;
+
+      while (hasMore) {
+        const data = await graphqlFetch<{ signalsPage: PaginatedResult<GqlSignal> }>(
+          SIGNALS_PAGE_QUERY,
+          {
+            input: {
+              limit,
+              offset,
+              ...(input?.teamId ? { teamId: input.teamId } : {}),
+              ...(input?.locationId ? { locationId: input.locationId } : {}),
+              ...(input?.from ? { from: input.from } : {}),
+              ...(input?.to ? { to: input.to } : {}),
+              includeDummy: input?.includeDummy ?? true,
+            },
+          },
+          cookieHeaders(ctx),
+        );
+
+        signals.push(...data.signalsPage.items);
+        hasMore = data.signalsPage.hasMore;
+        offset += limit;
+      }
+
+      // Sanitize geometries: replace Polygon/MultiPolygon with centroid Points
+      for (const signal of signals) {
+        sanitizeLocationGeometry(signal.generalLocation);
+        sanitizeLocationGeometry(signal.originLocation);
+        sanitizeLocationGeometry(signal.destinationLocation);
+      }
+
+      return signals;
+    }),
+
+  /** Paginated feed for signals list view (Detection page, etc.) */
+  signalsPage: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(500).optional(),
+        offset: z.number().int().min(0).optional(),
+        orderBy: z.enum(SIGNAL_ORDER).optional(),
+        teamId: z.string().nullish(),
+        locationId: z.string().nullish(),
+        sourceNames: z.array(z.string()).optional(),
+        severityMin: z.number().int().min(1).max(5).optional(),
+        severityMax: z.number().int().min(1).max(5).optional(),
+        from: dateLike,
+        to: dateLike,
+        includeDummy: z.boolean().optional(),
+        _v: z.number().int().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { _v: _, ...graphqlInput } = input;
+      const data = await graphqlFetch<{ signalsPage: PaginatedResult<GqlSignal> }>(
+        SIGNALS_PAGE_QUERY,
+        { input: graphqlInput },
+        cookieHeaders(ctx),
+      );
+      return data.signalsPage;
     }),
 
   get: protectedProcedure

@@ -1737,7 +1737,12 @@
       "region": "المنطقة",
       "crisisType": "نوع الأزمة",
       "allCountries": "جميع الدول",
-      "allRegions": "جميع المناطق"
+      "allRegions": "جميع المناطق",
+      "timeframe": "الفترة الزمنية",
+      "last7days": "آخر 7 أيام",
+      "last30days": "آخر 30 يومًا",
+      "last90days": "آخر 90 يومًا",
+      "allTime": "كل الأوقات"
     },
     "panels": {
       "layers": "الطبقات",
@@ -1749,8 +1754,25 @@
       "eventType": "نوع الحدث",
       "population": "السكان",
       "dataLayers": "طبقات البيانات",
+      "panelsSection": "اللوحات",
+      "keepPanelsOpen": "إبقاء اللوحات مفتوحة",
       "baseMap": "الخريطة الأساسية",
+      "overlays": "الطبقات الإضافية",
+      "streets": "الشوارع",
       "roads": "الطرق",
+      "satellite": "الأقمار الصناعية",
+      "simple": "بسيطة",
+      "topography": "تضاريس",
+      "operational": "تشغيلي",
+      "comingSoon": "قريبًا",
+      "blockages": "العوائق",
+      "idpDensity": "كثافة النازحين",
+      "nrcLocations": "مواقع NRC",
+      "filters": "عوامل التصفية"
+    },
+    "baseMaps": {
+      "simple": "بسيطة",
+      "topography": "طبوغرافية",
       "satellite": "الأقمار الصناعية"
     },
     "severities": {

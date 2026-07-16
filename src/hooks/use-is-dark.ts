@@ -12,7 +12,11 @@ import { useState, useEffect } from "react";
  * canvas, WebGL, Chart.js) that CSS variables can't reach.
  */
 export function useIsDark(): boolean {
-  const [isDark, setIsDark] = useState(false);
+  // Initialize with the actual DOM value to prevent flash
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof document === 'undefined') return false;
+    return document.documentElement.getAttribute("data-mantine-color-scheme") === "dark";
+  });
 
   useEffect(() => {
     const update = () =>

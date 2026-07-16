@@ -5,26 +5,41 @@ import { FeatureFlagsProvider } from "~/components/feature-flags-provider";
 import { TeamProvider } from "~/providers/team-provider";
 import { OnboardingGuard } from "~/components/onboarding-guard";
 import { ConsoleBufferInit } from "~/components/console-buffer-init";
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+import { api, HydrateClient } from "~/trpc/server";
+
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  // Prefetch auth.me so the client cache is hydrated on first paint
+  void api.auth.me.prefetch();
+
   return (
-    <TeamProvider>
-      <FeatureFlagsProvider>
-        <ConsoleBufferInit />
-        <OnboardingGuard>
-          <Group gap={0} align="stretch" wrap="nowrap" style={{ minHeight: "100vh" }}>
-            <NavSidebar />
-            <Box
-              component="main"
-              style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", background: "var(--color-bg-primary)" }}
-              pt={{ base: 56, sm: 0 }}
-              pb={{ base: 72, sm: 0 }}
+    <HydrateClient>
+      <TeamProvider>
+        <FeatureFlagsProvider>
+          <ConsoleBufferInit />
+          <OnboardingGuard>
+            <Group 
+              gap={0} 
+              align="stretch" 
+              wrap="nowrap" 
+              style={{ 
+                minHeight: "100vh",
+                background: "var(--color-bg-primary)",
+              }}
             >
-              {children}
-            </Box>
-          </Group>
-          <MobileBottomNav />
-        </OnboardingGuard>
-      </FeatureFlagsProvider>
-    </TeamProvider>
+              <NavSidebar />
+              <Box
+                component="main"
+                style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", background: "var(--color-bg-primary)" }}
+                pt={{ base: 56, sm: 0 }}
+                pb={{ base: 72, sm: 0 }}
+              >
+                {children}
+              </Box>
+            </Group>
+            <MobileBottomNav />
+          </OnboardingGuard>
+        </FeatureFlagsProvider>
+      </TeamProvider>
+    </HydrateClient>
   );
 }

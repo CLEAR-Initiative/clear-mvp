@@ -70,77 +70,74 @@ function hashId(a: string, b: string): number {
   return Math.abs(h);
 }
 
-/** Return the first location on an event that has a usable Point geometry */
+/** Extract lng/lat from a location when its geometry is a usable Point. */
+function pointFromLocation(loc: GqlEvent["generalLocation"] | GqlEvent["representativePoint"]) {
+  if (!loc?.geometry || loc.geometry.type !== "Point") return null;
+  const [lng, lat] = loc.geometry.coordinates as [number, number];
+  if (typeof lng !== "number" || typeof lat !== "number") return null;
+  return { loc, lng, lat };
+}
+
+/**
+ * Prefer clear-api `representativePoint` (first-signal location). Fall back to
+ * event-level Points, then nested signal Points for list payloads that still
+ * embed signals (e.g. Detection).
+ */
 function pointLocation(event: GqlEvent) {
-  const candidates = [event.originLocation, event.destinationLocation, event.generalLocation];
-  for (const loc of candidates) {
-    if (loc?.geometry?.type === "Point") {
-      const [lng, lat] = loc.geometry.coordinates as [number, number];
-      if (typeof lng === "number" && typeof lat === "number") return { loc, lng, lat };
+  const fromRep = pointFromLocation(event.representativePoint ?? null);
+  if (fromRep) return fromRep;
+
+  for (const loc of [event.originLocation, event.destinationLocation, event.generalLocation]) {
+    const hit = pointFromLocation(loc);
+    if (hit) return hit;
+  }
+
+  for (const signal of event.signals ?? []) {
+    for (const loc of [signal.originLocation, signal.destinationLocation, signal.generalLocation]) {
+      const hit = pointFromLocation(loc);
+      if (hit) return hit;
     }
   }
   return null;
+}
+
+function eventToMarker(event: GqlEvent, loc: NonNullable<ReturnType<typeof pointFromLocation>>): CrisisMarker {
+  return {
+    id: hashId(event.id, loc.loc.id),
+    lng: loc.lng,
+    lat: loc.lat,
+    title: event.title ?? event.types[0] ?? "Event",
+    severity: mapSeverity(event.severity),
+    description: event.description ?? undefined,
+    region: resolveLocationName(loc.loc) ?? undefined,
+    locationId: loc.loc.id,
+    ancestorIds: loc.loc.ancestorIds ?? [],
+    eventTypes: event.types.map((t) => t.toLowerCase()),
+    eventId: event.id,
+    markerKind: "event",
+    status: event.alerts[0]?.status,
+    occurredAt: event.firstSignalCreatedAt,
+  };
 }
 
 export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
   for (const event of events) {
     const point = pointLocation(event);
-
-    if (point) {
-      // Event has its own point location - use it directly.
-      const { loc, lng, lat } = point;
-      markers.push({
-        id: hashId(event.id, loc.id),
-        lng, lat,
-        title: event.title ?? event.types[0] ?? "Event",
-        severity: mapSeverity(event.severity),
-        description: event.description ?? undefined,
-        region: resolveLocationName(loc) ?? undefined,
-        locationId: loc.id,
-        ancestorIds: loc.ancestorIds ?? [],
-        eventTypes: event.types.map((t) => t.toLowerCase()),
-        eventId: event.id,
-        markerKind: "event",
-        status: event.alerts[0]?.status,
-        occurredAt: event.firstSignalCreatedAt,
-      });
-    } else {
-      // No point on the event itself - fall back to signal point locations.
-      // One marker per signal, so an event with 3 signals shows 3 markers.
-      for (const signal of (event.signals ?? [])) {
-        const sigCandidates = [signal.originLocation, signal.destinationLocation, signal.generalLocation];
-        for (const loc of sigCandidates) {
-          if (loc?.geometry?.type === "Point") {
-            const [lng, lat] = loc.geometry.coordinates as [number, number];
-            if (typeof lng === "number" && typeof lat === "number") {
-              markers.push({
-                id: hashId(event.id, loc.id),
-                lng, lat,
-                title: event.title ?? event.types[0] ?? "Event",
-                severity: mapSeverity(event.severity),
-                description: event.description ?? undefined,
-                region: resolveLocationName(loc) ?? undefined,
-                locationId: loc.id,
-                ancestorIds: loc.ancestorIds ?? [],
-                eventTypes: event.types.map((t) => t.toLowerCase()),
-                eventId: event.id,
-                markerKind: "event",
-                status: event.alerts[0]?.status,
-                occurredAt: event.firstSignalCreatedAt,
-              });
-              break;
-            }
-          }
-        }
-      }
-    }
+    if (point) markers.push(eventToMarker(event, point));
   }
   return markers;
 }
 
 export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
-  return eventsToMarkers(alerts.map((a) => a.event));
+  // Prefer alert.representativePoint when the event payload omitted it.
+  return eventsToMarkers(
+    alerts.map((a) => ({
+      ...a.event,
+      representativePoint: a.event.representativePoint ?? a.representativePoint ?? null,
+      alerts: a.event.alerts?.length ? a.event.alerts : [{ id: a.id, status: a.status }],
+    })),
+  );
 }
 
 export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {

@@ -27,7 +27,6 @@ import {
 } from "@mantine/core";
 import {
   IconArrowLeft,
-  IconMap,
   IconMapPin,
   IconCalendar,
   IconUsers,
@@ -62,6 +61,7 @@ import { useLocations } from "~/hooks/use-locations";
 import { IASC_CLUSTERS, type IASCClusterCode } from "~/lib/constants/iasc-clusters";
 import type { GqlCrisis } from "~/server/api/routers/crises";
 import type { MapMarker } from "~/components/map/crisis-map";
+import { mapFocusHref } from "~/lib/map-focus-href";
 import { MinimapCard } from "~/components/map/minimap-card";
 import { CommentsSection } from "~/components/comments-section";
 import { NeedsAssessmentPanel } from "~/components/crisis-detail/needs-assessment-panel";
@@ -205,6 +205,7 @@ interface CrisisDetailContentProps {
   loading: boolean;
   mode: "page" | "drawer";
   relatedCrises?: GqlCrisis[];
+  referrer?: string;
 }
 
 export function CrisisDetailContent({
@@ -212,6 +213,7 @@ export function CrisisDetailContent({
   loading,
   mode,
   relatedCrises = [],
+  referrer = "insights",
 }: CrisisDetailContentProps) {
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
@@ -361,7 +363,7 @@ export function CrisisDetailContent({
         </Text>
         {mode === "page" && (
           <Link
-            href="/insights"
+            href={referrer === "map" ? "/map" : "/insights"}
             style={{
               display: "inline-block",
               marginTop: 16,
@@ -441,7 +443,10 @@ export function CrisisDetailContent({
           style={{ background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)" }}
         >
           <Group justify="space-between">
-            <Link href="/insights" style={{ textDecoration: "none" }}>
+            <Link
+              href={referrer === "map" ? mapFocusHref("crisis", crisis.id) : "/insights"}
+              style={{ textDecoration: "none" }}
+            >
               <Group gap={6} className="hover:opacity-70" style={{ cursor: "pointer" }}>
                 <IconArrowLeft size={14} color="var(--color-text-secondary)" />
                 <Text size="sm" c="var(--color-text-secondary)" fw={500}>
@@ -450,14 +455,6 @@ export function CrisisDetailContent({
               </Group>
             </Link>
             <Group gap={12}>
-              <Link href={`/map?crisis=${crisis.id}`} style={{ textDecoration: "none" }}>
-                <Group gap={4} className="hover:opacity-70" style={{ cursor: "pointer" }}>
-                  <IconMap size={14} color="var(--color-accent)" />
-                  <Text size="xs" c="var(--color-accent)" fw={500}>
-                    {t("viewOnCrisisMap")}
-                  </Text>
-                </Group>
-              </Link>
               {relatedCrises.length > 0 && (
                 <Select
                   size="xs"
@@ -756,7 +753,7 @@ export function CrisisDetailContent({
                 sudanId={sudanId ?? null}
                 location={mapZoomLocation}
                 locationName={locationName ?? undefined}
-                fullMapHref={`/map?crisis=${crisis.id}`}
+                fullMapHref={mapFocusHref("crisis", crisis.id)}
               />
             </Box>
           </Box>

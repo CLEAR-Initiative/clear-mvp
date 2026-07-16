@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
+import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
 import { useIsDark } from "~/hooks/use-is-dark";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
@@ -19,6 +20,12 @@ export interface MapMarker {
   description?: string;
   popup?: string;
   markerKind?: "event" | "signal" | "crisis";
+}
+
+/** Pixel position of a marker inside the map container (from Mapbox `project`). */
+export interface MarkerScreenPoint {
+  x: number;
+  y: number;
 }
 
 export interface MapRegion {
@@ -45,7 +52,7 @@ interface CrisisMapProps {
   center?: [number, number];
   zoom?: number;
   className?: string;
-  onMarkerClick?: (marker: MapMarker) => void;
+  onMarkerClick?: (marker: MapMarker, screenPoint: MarkerScreenPoint) => void;
   onMarkerHover?: (marker: MapMarker | null) => void;
   interactive?: boolean;
   /**
@@ -79,11 +86,13 @@ interface CrisisMapProps {
   showBoundaries?: boolean;
   /** Show/hide markers layer */
   showMarkers?: boolean;
-  /** Show/hide roads layer */
+  /** Show/hide roads overlay (applies to all basemap types) */
   showRoads?: boolean;
-  /** Toggle satellite imagery base map */
-  showSatellite?: boolean;
+  /** Basemap: simple (theme style), topography (theme style + hillshade relief), or satellite imagery */
+  baseMapType?: BaseMapType;
 }
+
+export type BaseMapType = "simple" | "topography" | "satellite";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -249,7 +258,7 @@ export function CrisisMap({
   showBoundaries = true,
   showMarkers = true,
   showRoads = true,
-  showSatellite = false,
+  baseMapType = "simple",
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const isDark = useIsDark();
@@ -268,15 +277,18 @@ export function CrisisMap({
     [populationBoundaries],
   );
 
-  // Calculate map style based on satellite and roads toggles
+  // Basemap type picks the Mapbox style; roads are an overlay on every type.
+  // Satellite has no separate road layers, so roads=on uses satellite-streets.
   const mapStyle = (() => {
-    if (showSatellite) {
-      // Satellite imagery - with or without roads
+    if (baseMapType === "satellite") {
       return showRoads
         ? "mapbox://styles/mapbox/satellite-streets-v12"
         : "mapbox://styles/mapbox/satellite-v9";
     }
-    // Regular street map - light or dark theme
+    // Topography shares the theme style - relief comes from a hillshade
+    // layer (see the terrain-dem effect below) instead of a separate
+    // Mapbox style. outdoors-v12 was tried and rejected: pale landcover,
+    // no dark-mode variant, and boundary overlays drowned in it.
     return isDark
       ? "mapbox://styles/mapbox/dark-v11"
       : "mapbox://styles/mapbox/light-v11";
@@ -292,26 +304,28 @@ export function CrisisMap({
   const markersDataRef = useRef<MapMarker[]>(markers);
   const hoveredMarkerIdRef = useRef<number | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const mapReadyRef = useRef(false);
+  const appliedStyleRef = useRef<string | null>(null);
+  const mapStyleRef = useRef(mapStyle);
+  mapStyleRef.current = mapStyle;
   // Tracks Mapbox built-in admin-1 layer IDs we've mutated so we can reset them.
   const admin1LayerIds = useRef<string[]>([]);
 
-  // Fetch the focus country's geometry (only when requested).
-  const focusQuery = api.locations.getCountryByPCode.useQuery(
-    { pCode: focusCountryPCode, name: focusCountryName },
-    {
-      enabled: !!(focusCountryPCode || focusCountryName),
-      staleTime: 1000 * 60 * 60,
-    },
-  );
-  const focusCountry = focusQuery.data;
+  // Convert focusCountryGeometry prop to a usable format (same structure as the query result).
+  // This avoids the duplicate getCountryByPCode fetch when the page already passes geometry.
+  const focusCountry = useMemo(() => {
+    if (!focusCountryGeometry) return null;
+    if (!isPaintableBoundaryGeometry(focusCountryGeometry as never)) return null;
+    return { geometry: focusCountryGeometry };
+  }, [focusCountryGeometry]);
 
-  // ── Map init ────────────────────────────────────────────────────────────
+  // ── Map init (once) ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapContainer.current || !MAPBOX_TOKEN) return;
     let cancelled = false;
 
     loadMapboxGL().then((mapboxgl) => {
-      if (cancelled || !mapContainer.current) return;
+      if (cancelled || !mapContainer.current || map.current) return;
       mbRef.current = mapboxgl;
       mapboxgl.accessToken = MAPBOX_TOKEN;
 
@@ -326,7 +340,13 @@ export function CrisisMap({
       });
 
       map.current.on("load", () => {
-        if (!cancelled) setLoaded(true);
+        if (!cancelled) {
+          mapReadyRef.current = true;
+          // Track the style the map was constructed with so the first user toggle
+          // (basemap/roads/theme) actually calls setStyle instead of being skipped.
+          appliedStyleRef.current = mapStyleRef.current;
+          setLoaded(true);
+        }
       });
 
       map.current.addControl(
@@ -337,12 +357,76 @@ export function CrisisMap({
 
     return () => {
       cancelled = true;
+      mapReadyRef.current = false;
+      appliedStyleRef.current = null;
       setLoaded(false);
       map.current?.remove();
       map.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Swap basemap style without tearing down the map so custom layers restore.
+  useEffect(() => {
+    if (!map.current || !mapReadyRef.current) return;
+    if (appliedStyleRef.current === mapStyle) return;
+
+    const m = map.current;
+    setLoaded(false);
+    const onStyleLoad = () => setLoaded(true);
+    m.once("style.load", onStyleLoad);
+    appliedStyleRef.current = mapStyle;
+    m.setStyle(mapStyle);
+    return () => {
+      m.off("style.load", onStyleLoad);
+    };
   }, [mapStyle]);
+
+  // Terrain relief: hillshade overlay on the theme basemap ("topography"
+  // mode). Runs before the focus effect below so the dim mask - inserted
+  // at the same road-layer anchor - lands above the relief and dims it
+  // outside the focus country too.
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const cleanup = () => {
+      try { if (m.getLayer("terrain-hillshade")) m.removeLayer("terrain-hillshade"); } catch { /* ignore */ }
+      try { if (m.getSource("terrain-dem")) m.removeSource("terrain-dem"); } catch { /* ignore */ }
+    };
+    cleanup();
+    if (baseMapType !== "topography") return;
+
+    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+    const beforeId =
+      styleLayers.find((l) => isRoadLayerId(l.id))?.id ??
+      styleLayers.find((l) => l.type === "symbol")?.id;
+    try {
+      m.addSource("terrain-dem", {
+        type: "raster-dem",
+        url: "mapbox://mapbox.mapbox-terrain-dem-v1",
+        tileSize: 512,
+        maxzoom: 14,
+      });
+      m.addLayer(
+        { id: "terrain-hillshade", type: "hillshade", source: "terrain-dem",
+          paint: {
+            // Strongest at the Country band (z5-8) where relief must read
+            // at country scale; relaxes toward the Site band where the
+            // street grid takes over (docs/map-design.md).
+            "hillshade-exaggeration": [
+              "interpolate", ["linear"], ["zoom"],
+              4, isDark ? 1 : 0.9,
+              10, isDark ? 0.65 : 0.55,
+              14, 0.35,
+            ] as never,
+            "hillshade-shadow-color": isDark ? "#000000" : "#57534E",
+            "hillshade-highlight-color": isDark ? "#6B6B78" : "#FFFFFF",
+          } },
+        beforeId,
+      );
+    } catch { /* ignore */ }
+    return cleanup;
+  }, [loaded, baseMapType, isDark]);
 
   // ── Country focus: dim mask + border glow + bounds ──────────────────────
   //
@@ -378,16 +462,21 @@ export function CrisisMap({
     if (!focusIso) return;
 
     // Layer ordering strategy:
-    //   (1) mask + highlight fills render BELOW admin-1 lines, so state
-    //       borders stay visible inside the focus country.
+    //   (1) mask + highlight fills render BELOW the road network (roads sit
+    //       below admin lines and labels in Mapbox styles, so this also
+    //       keeps state borders and labels above the fills). Anchoring to
+    //       the admin layers instead used to bury every road line under
+    //       the semi-transparent fills.
     //   (2) focus country border line renders ABOVE admin-1 but below
     //       label symbols, so the country outline stays crisp.
     const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+    const firstRoadLayer = styleLayers.find((l) => isRoadLayerId(l.id));
     const firstAdminLayer = styleLayers.find((l) =>
       l.id === "admin-1-boundary-bg" || l.id === "admin-0-boundary-bg",
     );
     const firstSymbolLayer = styleLayers.find((l) => l.type === "symbol");
-    const fillBeforeId: string | undefined = firstAdminLayer?.id ?? firstSymbolLayer?.id;
+    const fillBeforeId: string | undefined =
+      firstRoadLayer?.id ?? firstAdminLayer?.id ?? firstSymbolLayer?.id;
     const borderBeforeId: string | undefined = firstSymbolLayer?.id;
 
     // Mapbox's public country polygons tileset (free with any token).
@@ -397,7 +486,14 @@ export function CrisisMap({
     });
 
     // Mask over every country EXCEPT the focus.
-    // Light: near-white wash. Dark: black overlay so non-focus areas recede further.
+    // Simple: near-white wash (light) / black overlay (dark) so non-focus
+    // areas recede. Terrain/satellite: softer, always-dark mask - a white
+    // wash over imagery reads as fog, and these basemaps carry real
+    // information outside the focus country too.
+    const maskColor =
+      baseMapType === "simple" && !isDark ? "#FFFFFF" : "#000000";
+    const maskOpacity =
+      baseMapType === "simple" ? (isDark ? 0.55 : 0.9) : 0.4;
     m.addLayer(
       {
         id: "focus-mask-fill",
@@ -406,32 +502,41 @@ export function CrisisMap({
         "source-layer": "country_boundaries",
         filter: ["!=", ["get", "iso_3166_1"], focusIso],
         paint: {
-          "fill-color": isDark ? "#000000" : "#FFFFFF",
-          "fill-opacity": isDark ? 0.55 : 0.9,
+          "fill-color": maskColor,
+          "fill-opacity": maskOpacity,
         },
       },
       fillBeforeId,
     );
 
     // Blue tint + border for the focus country.
+    // The tint only earns its keep on the flat "simple" style - on
+    // terrain/satellite it muddies exactly the detail those basemaps
+    // exist to show, so there the focus is carried by border + mask only.
+    const showHighlightFill = baseMapType === "simple";
+    // Overlay lines contrast against the BASEMAP, not the app theme:
+    // satellite imagery is always dark regardless of light/dark mode.
+    const overlayOnDark = baseMapType === "satellite" || isDark;
     // Prefer paintable DB geometry (real OCHA polygons). Seed bboxes fall
     // through to Mapbox country tiles so local/dev doesn't paint squares.
     const highlightColor = isDark ? "#1E3A5F" : "#1E40AF";
     const highlightOpacity = isDark ? 0.45 : 0.35;
-    const borderColor = isDark ? "#60A5FA" : "#1D4ED8";
-    const borderWidth = isDark ? 1.5 : 1.25;
-    const borderOpacity = isDark ? 0.9 : 0.85;
+    const borderColor = overlayOnDark ? "#60A5FA" : "#1D4ED8";
+    const borderWidth = overlayOnDark ? 1.5 : 1.25;
+    const borderOpacity = overlayOnDark ? 0.9 : 0.85;
 
     if (paintableFocusGeometry) {
       m.addSource(FOCUS_GEOJSON_SOURCE, {
         type: "geojson",
         data: { type: "Feature", geometry: paintableFocusGeometry as never, properties: {} },
       });
-      m.addLayer(
-        { id: "focus-highlight-fill", type: "fill", source: FOCUS_GEOJSON_SOURCE,
-          paint: { "fill-color": highlightColor, "fill-opacity": highlightOpacity } },
-        fillBeforeId,
-      );
+      if (showHighlightFill) {
+        m.addLayer(
+          { id: "focus-highlight-fill", type: "fill", source: FOCUS_GEOJSON_SOURCE,
+            paint: { "fill-color": highlightColor, "fill-opacity": highlightOpacity } },
+          fillBeforeId,
+        );
+      }
       m.addLayer(
         { id: "focus-border-line", type: "line", source: FOCUS_GEOJSON_SOURCE,
           paint: { "line-color": borderColor, "line-width": borderWidth, "line-opacity": borderOpacity } },
@@ -439,17 +544,19 @@ export function CrisisMap({
       );
     } else {
       // Fallback: use Mapbox tileset (may have inaccurate boundaries for some countries).
-      m.addLayer(
-        {
-          id: "focus-highlight-fill",
-          type: "fill",
-          source: COUNTRY_SOURCE,
-          "source-layer": "country_boundaries",
-          filter: ["==", ["get", "iso_3166_1"], focusIso],
-          paint: { "fill-color": highlightColor, "fill-opacity": highlightOpacity },
-        },
-        fillBeforeId,
-      );
+      if (showHighlightFill) {
+        m.addLayer(
+          {
+            id: "focus-highlight-fill",
+            type: "fill",
+            source: COUNTRY_SOURCE,
+            "source-layer": "country_boundaries",
+            filter: ["==", ["get", "iso_3166_1"], focusIso],
+            paint: { "fill-color": highlightColor, "fill-opacity": highlightOpacity },
+          },
+          fillBeforeId,
+        );
+      }
       m.addLayer(
         {
           id: "focus-border-line",
@@ -497,7 +604,7 @@ export function CrisisMap({
               ["==", ["get", "iso_3166_1"], focusIso],
             ]);
             m.setLayerZoomRange(layer.id, 0, 24);
-            m.setPaintProperty(layer.id, "line-color", isDark ? "#94A3B8" : "#475569");
+            m.setPaintProperty(layer.id, "line-color", overlayOnDark ? "#94A3B8" : "#475569");
             m.setPaintProperty(layer.id, "line-width", 1.4);
             m.setPaintProperty(layer.id, "line-opacity", 0.85);
             m.setPaintProperty(layer.id, "line-dasharray", [3, 2]);
@@ -570,7 +677,7 @@ export function CrisisMap({
     }
 
     return cleanup;
-  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries]);
+  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries, baseMapType]);
 
   // Fit bounds to the focus country once its backend bbox is available.
   // Skips when fitBoundsGeometry is set (a more specific region is focused).
@@ -645,8 +752,9 @@ export function CrisisMap({
   const prevZoom = useRef(zoom);
   useEffect(() => {
     if (!map.current || !loaded) return;
-    // Skip flyTo when a focus country is driving the framing; let fitBounds own it.
-    if (focusCountry) return;
+    // Country fitBounds owns framing unless the caller opts out (e.g. marker
+    // deep-link focus) or a tighter region geometry is already driving the view.
+    if (focusCountry && fitBoundsOnFocus && !fitBoundsGeometry) return;
     if (
       prevCenter.current[0] === center[0] &&
       prevCenter.current[1] === center[1] &&
@@ -654,42 +762,45 @@ export function CrisisMap({
     ) return;
     prevCenter.current = center;
     prevZoom.current = zoom;
+    // Cancel any in-flight country fitBounds so a deep-link marker zoom wins.
+    try { map.current.stop(); } catch { /* ignore */ }
     map.current.flyTo({ center, zoom, duration: flyDuration });
-  }, [center, zoom, loaded, focusCountry, flyDuration]);
+  }, [center, zoom, loaded, focusCountry, flyDuration, fitBoundsOnFocus, fitBoundsGeometry]);
 
   // ── Markers (donut cluster DOM markers) ─────────────────────────────────
   useEffect(() => {
     if (!map.current || !loaded) return;
-    if (!showMarkers) {
-      // Clear markers if showMarkers is false
-      for (const mk of clusterDomMarkers.current.values()) {
-        try { mk.remove(); } catch { /* ignore */ }
-      }
-      clusterDomMarkers.current.clear();
-      const SOURCE = "crisis-markers";
-      const CLUSTER_GHOST = "cluster-ghost";
-      const POINT_GHOST = "point-ghost";
-      for (const id of [CLUSTER_GHOST, POINT_GHOST]) {
-        try { if (map.current.getLayer(id)) map.current.removeLayer(id); } catch { /* ignore */ }
-      }
-      try { if (map.current.getSource(SOURCE)) map.current.removeSource(SOURCE); } catch { /* ignore */ }
-      return;
-    }
     const m = map.current;
-    const mb = mbRef.current;
     const SOURCE = "crisis-markers";
     const CLUSTER_GHOST = "cluster-ghost";
     const POINT_GHOST = "point-ghost";
 
-    // Keep markersDataRef current for click handlers that close over it.
-    markersDataRef.current = markers;
-
+    // Remove tracked markers, then sweep any orphans left by duplicate
+    // queryRenderedFeatures results (Map.set overwrote the ref without remove).
     const clearDomMarkers = () => {
       for (const mk of clusterDomMarkers.current.values()) {
         try { mk.remove(); } catch { /* ignore */ }
       }
       clusterDomMarkers.current.clear();
+      try {
+        m.getContainer()
+          .querySelectorAll(".mapboxgl-marker")
+          .forEach((el: Element) => el.remove());
+      } catch { /* ignore */ }
     };
+
+    if (!showMarkers) {
+      clearDomMarkers();
+      for (const id of [CLUSTER_GHOST, POINT_GHOST]) {
+        try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
+      }
+      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
+      return;
+    }
+    const mb = mbRef.current;
+
+    // Keep markersDataRef current for click handlers that close over it.
+    markersDataRef.current = markers;
 
     const removeLayers = () => {
       for (const id of [CLUSTER_GHOST, POINT_GHOST]) {
@@ -743,8 +854,16 @@ export function CrisisMap({
     const update = () => {
       clearDomMarkers();
 
-      const clusterFeats = m.queryRenderedFeatures({ layers: [CLUSTER_GHOST] }) as MapboxGLAny[];
-      const pointFeats   = m.queryRenderedFeatures({ layers: [POINT_GHOST] })   as MapboxGLAny[];
+      // Dedupe: Mapbox returns tile-boundary duplicates; creating a Marker per
+      // result then Map.set(sameKey) orphans the previous DOM node forever.
+      const clusterFeats = dedupeByProperty(
+        m.queryRenderedFeatures({ layers: [CLUSTER_GHOST] }) as MapboxGLAny[],
+        "cluster_id",
+      );
+      const pointFeats = dedupeByProperty(
+        m.queryRenderedFeatures({ layers: [POINT_GHOST] }) as MapboxGLAny[],
+        "id",
+      );
 
       for (const feat of clusterFeats) {
         const coords = feat.geometry.coordinates as [number, number];
@@ -772,24 +891,28 @@ export function CrisisMap({
       for (const feat of pointFeats) {
         const coords = feat.geometry.coordinates as [number, number];
         const props  = feat.properties as Record<string, unknown>;
+        // GeoJSON / tile query may stringify numeric properties.
+        const markerId = Number(props.id);
         const el     = buildPointEl(props.severity as string);
-        if (hoveredMarkerIdRef.current != null && (props.id as number) === hoveredMarkerIdRef.current) {
+        if (hoveredMarkerIdRef.current != null && markerId === hoveredMarkerIdRef.current) {
           el.querySelector(".marker-ping-ring")?.classList.add("active");
           el.querySelector(".marker-dot")?.classList.add("active");
         }
         el.addEventListener("click", () => {
-          const found = markersDataRef.current.find((mk) => mk.id === (props.id as number));
-          if (found) onMarkerClickRef.current?.(found);
+          const found = markersDataRef.current.find((mk) => mk.id === markerId);
+          if (!found) return;
+          const projected = m.project(coords) as { x: number; y: number };
+          onMarkerClickRef.current?.(found, { x: projected.x, y: projected.y });
         });
         el.addEventListener("mouseenter", () => {
-          const found = markersDataRef.current.find((mk) => mk.id === (props.id as number));
+          const found = markersDataRef.current.find((mk) => mk.id === markerId);
           if (found) onMarkerHoverRef.current?.(found);
         });
         el.addEventListener("mouseleave", () => {
           onMarkerHoverRef.current?.(null);
         });
         clusterDomMarkers.current.set(
-          `p-${props.id}`,
+          `p-${markerId}`,
           new mb.Marker({ element: el, anchor: "center" }).setLngLat(coords).addTo(m),
         );
       }
@@ -835,17 +958,51 @@ export function CrisisMap({
   }, [hoveredMarkerId]);
 
   // ── Roads toggle (Mapbox style layers) ──────────────────────────────────
+  // light-v11/dark-v11 draw roads camouflaged by design: 1-8% lightness off
+  // the land color, 0.45px wide at z5 (0px for minor classes). Toggling
+  // visibility alone therefore shows nothing - when roads are ON we also
+  // boost color and width so the network actually reads. Satellite-streets
+  // styles its own roads properly, so only visibility applies there.
   useEffect(() => {
     if (!map.current || !loaded) return;
+    const m = map.current;
     const visibility = showRoads ? "visible" : "none";
-    const layers = map.current.getStyle().layers as Array<{ id: string; type: string }> | undefined;
+    const boost = showRoads && baseMapType !== "satellite";
+    // Corridor-first palette (docs/map-design.md): trunk corridors in warm
+    // tan - the supply-route color - visible from the Country band (z5-8),
+    // where "which corridor reaches this state" is the actual question.
+    // Minor roads in neutral gray, fading in through the Area band.
+    const corridorColor = isDark ? "hsl(33, 30%, 56%)" : "hsl(28, 35%, 44%)";
+    const minorColor = isDark ? "hsl(0, 0%, 46%)" : "hsl(220, 6%, 70%)";
+    const roadColor = [
+      "match", ["get", "class"],
+      ["motorway", "trunk", "primary"], corridorColor,
+      minorColor,
+    ];
+    const byClass = (mtp: number, st: number, rest: number) =>
+      ["match", ["get", "class"], ["motorway", "trunk", "primary"], mtp, ["secondary", "tertiary"], st, rest];
+    // Width anchors per zoom band. The z5/z8 anchors carry the humanitarian
+    // use case (Country band) - do not tune only the high end.
+    const roadWidth = [
+      "interpolate", ["exponential", 1.5], ["zoom"],
+      5,  byClass(1.8, 0.6, 0),
+      8,  byClass(2.4, 1.2, 0.4),
+      11, byClass(3.0, 1.8, 1.0),
+      14, byClass(4.5, 3.0, 2.0),
+      16, byClass(7, 5, 3.5),
+    ];
+    const layers = m.getStyle().layers as Array<{ id: string; type: string }> | undefined;
     for (const layer of layers ?? []) {
       if (!isRoadLayerId(layer.id)) continue;
       try {
-        map.current.setLayoutProperty(layer.id, "visibility", visibility);
+        m.setLayoutProperty(layer.id, "visibility", visibility);
+        if (boost && layer.type === "line") {
+          m.setPaintProperty(layer.id, "line-color", roadColor as never);
+          m.setPaintProperty(layer.id, "line-width", roadWidth as never);
+        }
       } catch { /* ignore */ }
     }
-  }, [loaded, showRoads]);
+  }, [loaded, showRoads, isDark, baseMapType]);
 
   // ── Population choropleth (A2 districts, independent layer) ─────────────
   useEffect(() => {
@@ -952,7 +1109,10 @@ export function CrisisMap({
     if (features.length === 0) return;
 
     const isA2 = adminBoundaryLevel === 2;
-    const lineColor = isDark ? "#60A5FA" : "#1D4ED8";
+    // Contrast against the basemap, not the app theme - satellite imagery
+    // is always dark.
+    const overlayOnDark = baseMapType === "satellite" || isDark;
+    const lineColor = overlayOnDark ? "#60A5FA" : "#1D4ED8";
     const lineWidth = isA2 ? 1 : 1.5;
     const lineOpacity = isA2 ? 0.7 : 0.85;
 
@@ -969,7 +1129,7 @@ export function CrisisMap({
     } catch { /* ignore */ }
 
     return cleanup;
-  }, [paintableAdminBoundaries, adminBoundaryLevel, loaded, showBoundaries, isDark]);
+  }, [paintableAdminBoundaries, adminBoundaryLevel, loaded, showBoundaries, isDark, baseMapType]);
 
   // ── Regions (heatmap from signalPoints if present, else feathered fill) ─
   const regionLayerIds = useRef<string[]>([]);
@@ -1130,7 +1290,15 @@ export function CrisisMap({
           z-index: 10 !important;
         }
       `}</style>
-      <div ref={mapContainer} className={className} />
+      <div 
+        ref={mapContainer} 
+        className={className}
+        style={{ 
+          width: '100%',
+          height: '100%',
+          background: isDark ? '#111111' : '#FAFAFA',
+        }}
+      />
     </>
   );
 }

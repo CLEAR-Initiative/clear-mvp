@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { keepPreviousData } from "@tanstack/react-query";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
@@ -14,9 +15,13 @@ export default function EventDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const paramsId = use(params).id;
+  const searchParams = useSearchParams();
   const { activeTeamId } = useTeam();
   const utils = api.useUtils();
   const prefetchedRef = useRef(new Set<string>());
+
+  // Track where user came from (map or detection)
+  const referrer = searchParams.get("from") ?? "detection";
 
   const prefetchDetail = useCallback(
     (id: string) => {
@@ -28,6 +33,7 @@ export default function EventDetailPage({
   const { activeId, navigateTo } = useEntityNavigation({
     paramsId,
     routePrefix: "/event",
+    searchParams,
   });
 
   const navigation = useEventNavigation(activeId);
@@ -80,6 +86,7 @@ export default function EventDetailPage({
       onNavigatePrev={navigatePrev}
       onNavigateNext={navigateNext}
       navigationMapCenter={navigationMapCenter}
+      referrer={referrer}
     />
   );
 }

@@ -1737,7 +1737,12 @@
       "region": "Région",
       "crisisType": "Type de crise",
       "allCountries": "Tous les pays",
-      "allRegions": "Toutes les régions"
+      "allRegions": "Toutes les régions",
+      "timeframe": "Période",
+      "last7days": "7 derniers jours",
+      "last30days": "30 derniers jours",
+      "last90days": "90 derniers jours",
+      "allTime": "Tout"
     },
     "panels": {
       "layers": "Couches",
@@ -1749,8 +1754,25 @@
       "eventType": "Type d'événement",
       "population": "Population",
       "dataLayers": "Couches de données",
+      "panelsSection": "Panneaux",
+      "keepPanelsOpen": "Garder les panneaux ouverts",
       "baseMap": "Fond de carte",
+      "overlays": "Superpositions",
+      "streets": "Rues",
       "roads": "Routes",
+      "satellite": "Satellite",
+      "simple": "Simple",
+      "topography": "Relief",
+      "operational": "Opérationnel",
+      "comingSoon": "Bientôt disponible",
+      "blockages": "Blocages",
+      "idpDensity": "Densité IDP",
+      "nrcLocations": "Sites NRC",
+      "filters": "Filtres"
+    },
+    "baseMaps": {
+      "simple": "Simple",
+      "topography": "Topographie",
       "satellite": "Satellite"
     },
     "severities": {

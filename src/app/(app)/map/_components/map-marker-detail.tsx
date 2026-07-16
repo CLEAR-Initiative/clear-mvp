@@ -1,14 +1,33 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Stack, Badge, Button, CloseButton, ScrollArea } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
+import { IconGripHorizontal } from "@tabler/icons-react";
 import Link from "next/link";
 import { type CrisisMarker } from "./map-markers-data";
+import type { MarkerScreenPoint } from "~/components/map/crisis-map";
 
 interface MapMarkerDetailProps {
   marker: CrisisMarker;
   onClose: () => void;
+  /** Marker pixel position inside the map overlay parent. Desktop only. */
+  anchor?: MarkerScreenPoint | null;
+  /** Fired when the drag chrome is hovered or actively dragged — use to pulse the map pin. */
+  onChromeActiveChange?: (active: boolean) => void;
+  /** Bring this panel above siblings when the user interacts with it. */
+  onActivate?: () => void;
+  /** Stacking order when multiple marker detail panels are open. */
+  stackZIndex?: number;
 }
+
+const PANEL_WIDTH = 320;
+/** Half of typical map pin (~14–18px); gap is measured from pin edge, not center. */
+const MARKER_RADIUS = 10;
+/** Clear air between pin edge and panel — same for every marker. */
+const CLEARANCE = 24;
+const PANEL_GAP = MARKER_RADIUS + CLEARANCE;
+const PANEL_MARGIN = 8;
+const FALLBACK_HEIGHT = 320;
 
 const severityColors: Record<string, { bg: string; color: string }> = {
   critical: { bg: "var(--color-critical-light)", color: "#DC2626" },
@@ -25,7 +44,33 @@ interface DragState {
   startOffsetY: number;
 }
 
-export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
+/** Place the panel beside the marker: left markers → right side, and vice versa. */
+function placeNearMarker(
+  anchor: MarkerScreenPoint,
+  parent: { width: number; height: number },
+  panel: { width: number; height: number },
+): { left: number; top: number } {
+  const placeOnRight = anchor.x < parent.width / 2;
+  let left = placeOnRight
+    ? anchor.x + PANEL_GAP
+    : anchor.x - panel.width - PANEL_GAP;
+  // Keep the header near the pin vertically without covering it.
+  let top = anchor.y - Math.min(56, panel.height * 0.28);
+
+  left = Math.min(Math.max(left, PANEL_MARGIN), Math.max(PANEL_MARGIN, parent.width - panel.width - PANEL_MARGIN));
+  top = Math.min(Math.max(top, PANEL_MARGIN), Math.max(PANEL_MARGIN, parent.height - panel.height - PANEL_MARGIN));
+
+  return { left, top };
+}
+
+export function MapMarkerDetail({
+  marker,
+  onClose,
+  anchor,
+  onChromeActiveChange,
+  onActivate,
+  stackZIndex = 10,
+}: MapMarkerDetailProps) {
   const t = useTranslations("map");
   const format = useFormatter();
   const isMobile = useMediaQuery("(max-width: 48em)");
@@ -35,12 +80,43 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
   const dragRef = useRef<DragState | null>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
+  const [headerHovered, setHeaderHovered] = useState(false);
+  const [basePos, setBasePos] = useState({ left: 16, top: 80 });
+
+  const emphasized = dragging || headerHovered;
+
+  // Pulse the matching map pin while the panel chrome is hovered or dragged.
+  useEffect(() => {
+    onChromeActiveChange?.(emphasized);
+    return () => onChromeActiveChange?.(false);
+  }, [emphasized, onChromeActiveChange]);
 
   // Reset the dragged position whenever a different marker is selected so the
   // window snaps back to its anchored spot instead of lingering where it was.
   useEffect(() => {
     setOffset({ x: 0, y: 0 });
   }, [marker.id]);
+
+  useLayoutEffect(() => {
+    if (isMobile) return;
+    const el = boxRef.current;
+    const parent = el?.offsetParent as HTMLElement | null;
+    if (!el || !parent) return;
+
+    const panelHeight = el.offsetHeight || FALLBACK_HEIGHT;
+    const parentSize = { width: parent.clientWidth, height: parent.clientHeight };
+
+    if (anchor) {
+      setBasePos(placeNearMarker(anchor, parentSize, { width: PANEL_WIDTH, height: panelHeight }));
+      return;
+    }
+
+    // Fallback when no screen anchor is provided: top-right corner.
+    setBasePos({
+      left: Math.max(PANEL_MARGIN, parentSize.width - PANEL_WIDTH - 16),
+      top: 80,
+    });
+  }, [marker.id, anchor, isMobile]);
 
   // Keep the window inside its positioned container as the offset changes.
   const clampOffset = useCallback((nextX: number, nextY: number) => {
@@ -50,7 +126,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
 
     const box = el.getBoundingClientRect();
     const bounds = parent.getBoundingClientRect();
-    const margin = 8;
+    const margin = PANEL_MARGIN;
 
     // Current top-left of the element without the pending delta.
     const baseLeft = box.left - offset.x;
@@ -72,6 +148,8 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
     if (isMobile || e.button !== 0) return;
     if ((e.target as HTMLElement).closest("button, a, input, [data-no-drag]")) return;
 
+    onActivate?.();
+
     dragRef.current = {
       pointerId: e.pointerId,
       originX: e.clientX,
@@ -81,7 +159,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
     };
     e.currentTarget.setPointerCapture(e.pointerId);
     setDragging(true);
-  }, [isMobile, offset.x, offset.y]);
+  }, [isMobile, offset.x, offset.y, onActivate]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
@@ -101,7 +179,7 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
   return (
     <Box
       ref={boxRef}
-      className="absolute z-10 bg-[var(--color-bg-white)] border border-[var(--color-border)]"
+      className="absolute z-10 bg-[var(--color-bg-white)]"
       style={isMobile ? {
         // Mobile: bottom sheet
         left: 0,
@@ -111,39 +189,101 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
         maxHeight: "45vh",
         borderRadius: "16px 16px 0 0",
         boxShadow: "0 -4px 12px rgba(0,0,0,0.15)",
+        border: "1px solid var(--color-border)",
         borderBottom: "none",
       } : {
-        // Desktop: top-right overlay, draggable via header
-        top: 80,
-        right: 16,
-        width: 320,
-        boxShadow: dragging ? "0 10px 24px rgba(0,0,0,0.18)" : "0 4px 12px rgba(0,0,0,0.1)",
+        // Desktop: beside the marker, draggable via grip / header
+        top: basePos.top,
+        left: basePos.left,
+        width: PANEL_WIDTH,
+        borderRadius: 8,
+        border: emphasized
+          ? "1px solid var(--color-border-dark)"
+          : "1px solid var(--color-border)",
+        boxShadow: dragging
+          ? "0 12px 28px rgba(0,0,0,0.18)"
+          : headerHovered
+            ? "0 8px 20px rgba(0,0,0,0.12)"
+            : "0 4px 12px rgba(0,0,0,0.1)",
+        outline: dragging ? "1px solid color-mix(in srgb, var(--color-accent) 28%, transparent)" : undefined,
+        outlineOffset: dragging ? 0 : undefined,
         transform: `translate(${offset.x}px, ${offset.y}px)`,
-        transition: dragging ? "none" : "box-shadow 120ms ease",
+        transition: dragging ? "none" : "box-shadow 140ms ease, border-color 140ms ease, outline 140ms ease",
         touchAction: "none",
+        zIndex: dragging ? Math.max(stackZIndex, 30) : stackZIndex,
       }}
     >
-      {/* Header — drag handle on desktop */}
-      <Group
-        justify="space-between"
-        px={16}
-        py={12}
-        className="border-b border-[var(--color-border)]"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        style={{
-          cursor: isMobile ? undefined : dragging ? "grabbing" : "grab",
-          userSelect: "none",
-          touchAction: isMobile ? undefined : "none",
-        }}
-      >
-        <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
-          {marker.title}
-        </Text>
-        <CloseButton size="sm" onClick={onClose} data-no-drag />
-      </Group>
+      {/* Desktop: drag chrome — grip + title row */}
+      {!isMobile && (
+        <Box
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onMouseEnter={() => setHeaderHovered(true)}
+          onMouseLeave={() => setHeaderHovered(false)}
+          style={{
+            cursor: dragging ? "grabbing" : "grab",
+            userSelect: "none",
+            touchAction: "none",
+            background: emphasized
+              ? "color-mix(in srgb, var(--color-bg-muted) 70%, var(--color-bg-white))"
+              : "transparent",
+            transition: dragging ? "none" : "background 140ms ease",
+            borderRadius: "8px 8px 0 0",
+          }}
+        >
+          {/* Six-dot grip — signals the panel is movable */}
+          <Box
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              paddingTop: 6,
+              paddingBottom: 2,
+            }}
+            aria-hidden
+          >
+            <IconGripHorizontal
+              size={16}
+              stroke={1.5}
+              style={{
+                color: emphasized ? "var(--color-text-secondary)" : "var(--color-text-muted)",
+                opacity: emphasized ? 0.9 : 0.55,
+                transition: "opacity 140ms ease, color 140ms ease",
+              }}
+            />
+          </Box>
+
+          <Group
+            justify="space-between"
+            px={16}
+            pb={12}
+            pt={4}
+            className="border-b border-[var(--color-border)]"
+          >
+            <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
+              {marker.title}
+            </Text>
+            <CloseButton size="sm" onClick={onClose} data-no-drag />
+          </Group>
+        </Box>
+      )}
+
+      {/* Mobile header (no drag) */}
+      {isMobile && (
+        <Group
+          justify="space-between"
+          px={16}
+          py={12}
+          className="border-b border-[var(--color-border)]"
+        >
+          <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
+            {marker.title}
+          </Text>
+          <CloseButton size="sm" onClick={onClose} data-no-drag />
+        </Group>
+      )}
 
       {/* Body */}
       <ScrollArea.Autosize mah={isMobile ? "calc(45vh - 60px)" : 400} type="auto">
@@ -199,10 +339,10 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
             component={Link}
             href={
               marker.markerKind === "crisis"
-                ? `/crisis/${marker.eventId}`
+                ? `/crisis/${marker.eventId}?from=map`
                 : marker.markerKind === "signal"
-                ? `/signal/${marker.eventId}`
-                : `/event/${marker.eventId}`
+                ? `/signal/${marker.eventId}?from=map`
+                : `/event/${marker.eventId}?from=map`
             }
             className="btn-accent"
             styles={{

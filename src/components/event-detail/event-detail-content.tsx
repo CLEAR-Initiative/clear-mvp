@@ -21,7 +21,6 @@ import {
 } from "@mantine/core";
 import {
   IconArrowLeft,
-  IconMap,
   IconBookmark,
   IconLayoutGridAdd,
   IconAlertTriangle,
@@ -44,6 +43,7 @@ import { api } from "~/trpc/react";
 import { useLocations } from "~/hooks/use-locations";
 import { MinimapCard } from "~/components/map/minimap-card";
 import type { MapMarker } from "~/components/map/crisis-map";
+import { mapFocusHref } from "~/lib/map-focus-href";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { getDisasterLabel, getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
@@ -101,6 +101,7 @@ interface EventDetailContentProps {
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
   navigationMapCenter?: [number, number];
+  referrer?: string;
 }
 
 export function EventDetailContent({
@@ -114,6 +115,7 @@ export function EventDetailContent({
   onNavigatePrev,
   onNavigateNext,
   navigationMapCenter,
+  referrer = "detection",
 }: EventDetailContentProps) {
   // TODO: after Prisma migration use event.title directly; remove this fallback
   // TODO: after Prisma migration use event.types (list) instead of eventType
@@ -275,7 +277,7 @@ export function EventDetailContent({
         </Text>
         {mode === "page" && (
           <Link
-            href="/detection"
+            href={referrer === "map" ? "/map" : "/detection"}
             style={{
               display: "inline-block",
               marginTop: 16,
@@ -364,7 +366,10 @@ export function EventDetailContent({
         >
           <Group justify="space-between">
             <Group gap={16}>
-              <Link href="/detection" style={{ textDecoration: "none" }}>
+              <Link
+                href={referrer === "map" ? mapFocusHref("event", event.id) : "/detection"}
+                style={{ textDecoration: "none" }}
+              >
                 <Group
                   gap={6}
                   className="hover:opacity-70"
@@ -406,22 +411,6 @@ export function EventDetailContent({
                 </Group>
               )}
             </Group>
-
-            <Link
-              href={`/map?event=${event.id}`}
-              style={{ textDecoration: "none" }}
-            >
-              <Group
-                gap={4}
-                className="hover:opacity-70"
-                style={{ cursor: "pointer" }}
-              >
-                <IconMap size={14} color="#E85D3D" />
-                <Text size="xs" c="#E85D3D" fw={500}>
-                  {t("viewOnCrisisMap")}
-                </Text>
-              </Group>
-            </Link>
           </Group>
         </Box>
       )}
@@ -846,6 +835,7 @@ export function EventDetailContent({
                 location={mapDisplayLocation}
                 holdRegionFit={holdRegionFit}
                 flyDuration={mapFlyDuration}
+                fullMapHref={mapFocusHref("event", event.id)}
               />
 
               <SkeletonSlot pending={showPending} skeleton={<FeedbackCardSkeleton />}>

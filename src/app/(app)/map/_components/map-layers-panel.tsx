@@ -17,6 +17,8 @@ interface MapLayersPanelProps {
   onShowRoadsChange: (show: boolean) => void;
   showSatellite: boolean;
   onShowSatelliteChange: (show: boolean) => void;
+  keepPanelsOpen?: boolean;
+  onKeepPanelsOpenChange?: (keep: boolean) => void;
 }
 
 export function MapLayersPanel({
@@ -32,6 +34,8 @@ export function MapLayersPanel({
   onShowRoadsChange,
   showSatellite,
   onShowSatelliteChange,
+  keepPanelsOpen = false,
+  onKeepPanelsOpenChange = () => undefined,
 }: MapLayersPanelProps) {
   const t = useTranslations("map");
   return (
@@ -141,6 +145,33 @@ export function MapLayersPanel({
         </Group>
 
         <Divider color="var(--color-border)" my={8} />
+
+        {/* Panels — desktop-only */}
+        <Box visibleFrom="sm">
+          <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em" }} mb={8}>
+            {t("panels.panelsSection")}
+          </Text>
+          <Group
+            gap={8}
+            py={6}
+            px={4}
+            className="cursor-pointer hover:bg-[var(--color-bg-muted)] -mx-1"
+            onClick={() => onKeepPanelsOpenChange(!keepPanelsOpen)}
+            style={{ userSelect: "none" }}
+          >
+            <Checkbox
+              size="xs"
+              checked={keepPanelsOpen}
+              onChange={(e) => onKeepPanelsOpenChange(e.currentTarget.checked)}
+              styles={{ input: { cursor: "pointer" } }}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <Text size="xs" c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
+              {t("panels.keepPanelsOpen")}
+            </Text>
+          </Group>
+          <Divider color="var(--color-border)" my={8} />
+        </Box>
 
         {/* Base Map Section */}
         <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em" }} mb={8}>

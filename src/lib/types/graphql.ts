@@ -105,6 +105,11 @@ export interface GqlEvent {
   originLocation: GqlLocation | null;
   destinationLocation: GqlLocation | null;
   generalLocation: GqlLocation | null;
+  /**
+   * Location of the event's first signal (origin → destination → general cascade).
+   * Preferred map-marker point from clear-api — avoids nesting every signal's geometries.
+   */
+  representativePoint?: GqlLocation | null;
   signals: GqlSignal[];
   /** Non-empty = this event has been flagged as an alert */
   alerts: Array<{ id: string; status: string }>;
@@ -134,6 +139,8 @@ export interface GqlAlert {
   id: string;
   event: GqlEvent;
   status: "draft" | "published" | "archived";
+  /** Same first-signal location as `event.representativePoint` (clear-api convenience). */
+  representativePoint?: GqlLocation | null;
 }
 
 /* ─── Crisis ─── */

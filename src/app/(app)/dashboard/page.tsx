@@ -16,12 +16,26 @@ import { MapMarkerDetail } from "~/app/(app)/map/_components/map-marker-detail";
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
 import type { DataView } from "~/app/(app)/map/_components/map-layers-panel";
 import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
-import type { MapMarker } from "~/components/map/crisis-map";
+import type { BaseMapType, MapMarker, MarkerScreenPoint } from "~/components/map/crisis-map";
 import { RightPanel } from "./_components/right-panel";
+import { useIsDark } from "~/hooks/use-is-dark";
+
+function MapLoadingPlaceholder() {
+  const isDark = useIsDark();
+  return (
+    <Box 
+      w="100%" 
+      h="100%" 
+      style={{ 
+        background: isDark ? "#111111" : "#FAFAFA",
+      }} 
+    />
+  );
+}
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box w="100%" h="100%" style={{ background: "var(--color-bg-muted)" }} /> },
+  { ssr: false, loading: MapLoadingPlaceholder },
 );
 
 export default function DashboardPage() {
@@ -35,22 +49,25 @@ export default function DashboardPage() {
   const focusCountryGeometry = sudanL0Query.data?.geometry ?? undefined;
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(null);
+  const [detailAnchor, setDetailAnchor] = useState<MarkerScreenPoint | null>(null);
+  const [detailChromeActive, setDetailChromeActive] = useState(false);
   const [dataView, setDataView] = useState<DataView>("alert");
   const [showPopulation, setShowPopulation] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
+  const [showRoads, setShowRoads] = useState(true);
+  const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
 
-  const alertsQuery = api.alerts.getAlerts.useQuery(
+  const alertsQuery = api.alerts.alertsForMap.useQuery(
     { activeOnly: true, teamId: activeTeamId },
-    { enabled: dataView === "alert" },
+    { enabled: dataView === "alert", placeholderData: (prev) => prev },
   );
-  const eventsQuery = api.alerts.getEvents.useQuery(
+  const eventsQuery = api.alerts.eventsForMap.useQuery(
     { teamId: activeTeamId ?? undefined },
-    // No team → fetch the global feed (the API resolver permits this).
-    { enabled: dataView === "event" },
+    { enabled: dataView === "event", placeholderData: (prev) => prev },
   );
   const crisesQuery = api.alerts.getCrises.useQuery(
     undefined,
-    { enabled: dataView === "crisis" },
+    { enabled: dataView === "crisis", placeholderData: (prev) => prev },
   );
 
   // ── Admin-boundary + population overlay queries ─────────────────────────
@@ -89,15 +106,24 @@ export default function DashboardPage() {
     return [];
   }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
 
-  const handleMarkerClick = useCallback((marker: MapMarker) => {
+  const handleMarkerClick = useCallback((marker: MapMarker, screenPoint: MarkerScreenPoint) => {
     const full = markers.find((m) => m.id === marker.id);
     setSelectedMarker(full ?? null);
+    setDetailAnchor(screenPoint);
   }, [markers]);
 
 
   return (
     <Box style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-      <Box style={{ position: "relative", flex: 1, minWidth: 0, overflow: "hidden" }}>
+      <Box 
+        style={{ 
+          position: "relative", 
+          flex: 1, 
+          minWidth: 0, 
+          overflow: "hidden",
+          background: "var(--color-bg-primary)",
+        }}
+      >
         <CrisisMap
           markers={markers}
           center={[30.0, 15.5]}
@@ -110,11 +136,22 @@ export default function DashboardPage() {
           populationBoundaries={populationBoundaries}
           className="w-full h-full"
           onMarkerClick={handleMarkerClick}
+          showRoads={showRoads}
+          baseMapType={baseMapType}
+          hoveredMarkerId={
+            detailChromeActive && selectedMarker ? selectedMarker.id : null
+          }
         />
         {selectedMarker && (
           <MapMarkerDetail
             marker={selectedMarker}
-            onClose={() => setSelectedMarker(null)}
+            anchor={detailAnchor}
+            onChromeActiveChange={setDetailChromeActive}
+            onClose={() => {
+              setSelectedMarker(null);
+              setDetailAnchor(null);
+              setDetailChromeActive(false);
+            }}
           />
         )}
         <MapPanelBar
@@ -124,6 +161,10 @@ export default function DashboardPage() {
           onShowPopulationChange={setShowPopulation}
           boundaryLevel={boundaryLevel}
           onBoundaryLevelChange={setBoundaryLevel}
+          showRoads={showRoads}
+          onShowRoadsChange={setShowRoads}
+          baseMapType={baseMapType}
+          onBaseMapTypeChange={setBaseMapType}
         />
       </Box>
       <RightPanel
