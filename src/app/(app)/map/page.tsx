@@ -86,19 +86,35 @@ export default function MapPage() {
   // back through past months. Default is a 30-day window - the archived
   // backlog is ~5x the published set and dominated page load time.
   const [timeframe, setTimeframe] = useState<"7d" | "30d" | "90d" | "all">("30d");
-  const timeframeCutoff = useMemo(() => {
-    if (timeframe === "all") return null;
+  
+  // Compute from/to dates for server-side filtering
+  const timeframeRange = useMemo(() => {
+    if (timeframe === "all") return { from: undefined, to: undefined };
     const days = timeframe === "7d" ? 7 : timeframe === "30d" ? 30 : 90;
-    return Date.now() - days * 24 * 60 * 60 * 1000;
+    const now = new Date();
+    const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    return {
+      from: from.toISOString(),
+      to: now.toISOString(),
+    };
   }, [timeframe]);
 
   // Fetch data for active view ONLY (no parallel loading)
   const alertsQuery = api.alerts.alertsForMap.useQuery(
-    { includeDummy: true, ...(timeframe !== "all" ? { activeOnly: true } : {}) },
+    { 
+      includeDummy: true, 
+      activeOnly: timeframe !== "all",
+      from: timeframeRange.from,
+      to: timeframeRange.to,
+    },
     { enabled: dataView === "alert", placeholderData: (prev) => prev },
   );
   const eventsQuery = api.alerts.eventsForMap.useQuery(
-    { includeDummy: true },
+    { 
+      includeDummy: true,
+      from: timeframeRange.from,
+      to: timeframeRange.to,
+    },
     { enabled: dataView === "event", placeholderData: (prev) => prev },
   );
   const crisesQuery = api.alerts.getCrises.useQuery(
@@ -106,7 +122,11 @@ export default function MapPage() {
     { enabled: dataView === "crisis", placeholderData: (prev) => prev },
   );
   const signalsListQuery = api.signals.forMap.useQuery(
-    { includeDummy: true },
+    { 
+      includeDummy: true,
+      from: timeframeRange.from,
+      to: timeframeRange.to,
+    },
     { enabled: dataView === "signal", staleTime: 60_000, placeholderData: (prev) => prev },
   );
   const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
@@ -309,12 +329,7 @@ export default function MapPage() {
         if (!markerCodes.some((c) => selectedTypeCodes.has(c))) return false;
       }
 
-      // Timeframe window. Markers without a timestamp (e.g. crisis
-      // aggregates) pass through, matching the timeline's behaviour.
-      if (timeframeCutoff !== null && m.occurredAt) {
-        const ts = new Date(m.occurredAt).getTime();
-        if (!Number.isNaN(ts) && ts < timeframeCutoff) return false;
-      }
+      // Timeframe filtering is now handled server-side in the forMap queries
 
       return true;
     });
@@ -323,7 +338,6 @@ export default function MapPage() {
     selectedLocationId,
     selectedLocationName,
     selectedTypeCodes,
-    timeframeCutoff,
   ]);
 
   // Distinct months present in the current location/type slice, sorted newest

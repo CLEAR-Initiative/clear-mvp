@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlAlert, GqlEvent, GqlSignal, GqlCrisis } from "~/lib/types/graphql";
+import { sanitizeLocationGeometry } from "~/lib/geo/to-map-point";
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry pointType
@@ -122,6 +123,28 @@ const EVENT_LIST_FIELDS = `
   alerts { id status }
 `;
 
+// Map-only event shape (clear-api representativePoint). One Location per
+// marker — no nested signal geometries and no admin polygons on the event.
+// Detection list views keep EVENT_LIST_FIELDS (they still need signals[]).
+const MAP_POINT_LOCATION_FIELDS = `
+  id name level geometry ancestorIds
+`;
+
+const EVENT_MAP_FIELDS = `
+  id
+  title
+  description
+  types
+  severity
+  isDummy
+  rank
+  firstSignalCreatedAt
+  lastSignalCreatedAt
+  populationAffected
+  representativePoint { ${MAP_POINT_LOCATION_FIELDS} }
+  alerts { id status }
+`;
+
 const CRISIS_FIELDS = `
   id
   title
@@ -150,27 +173,6 @@ const ALERTS_LIST_QUERY = `
       status
       event { ${EVENT_FIELDS} }
     }
-  }
-`;
-
-// Slim variant for map — unpaginated, slim fields. Map renders all alerts
-// at once with client-side filtering by location/type/month; pagination
-// doesn't help. The slim EVENT_LIST_FIELDS cuts the heavy ancestor/metadata
-// resolvers that wedged at tens of seconds on non-English locales.
-// Optional date range filtering (startDate/endDate) reduces data transfer.
-const ALERTS_FOR_MAP_QUERY = `
-  query AlertsForMap($status: AlertStatus, $teamId: String, $includeDummy: Boolean) {
-    alerts(status: $status, teamId: $teamId, includeDummy: $includeDummy) {
-      id
-      status
-      event { ${EVENT_LIST_FIELDS} }
-    }
-  }
-`;
-
-const EVENTS_FOR_MAP_QUERY = `
-  query EventsForMap($teamId: String, $includeDummy: Boolean) {
-    events(teamId: $teamId, includeDummy: $includeDummy) { ${EVENT_LIST_FIELDS} }
   }
 `;
 
@@ -224,12 +226,29 @@ const EVENTS_PAGE_QUERY = `
   }
 `;
 
-const SIGNALS_PAGE_QUERY = `
-  query SignalsPage($input: SignalsPageInput) {
-    signalsPage(input: $input) {
+/** Paginated alerts feed for /map — representativePoint only (no signal nest). */
+const ALERTS_FOR_MAP_PAGE_QUERY = `
+  query AlertsForMapPage($input: AlertsPageInput) {
+    alertsPage(input: $input) {
       totalCount
       hasMore
-      items { ${SIGNAL_LIST_FIELDS} }
+      items {
+        id
+        status
+        representativePoint { ${MAP_POINT_LOCATION_FIELDS} }
+        event { ${EVENT_MAP_FIELDS} }
+      }
+    }
+  }
+`;
+
+/** Paginated events feed for /map — representativePoint only (no signal nest). */
+const EVENTS_FOR_MAP_PAGE_QUERY = `
+  query EventsForMapPage($input: EventsPageInput) {
+    eventsPage(input: $input) {
+      totalCount
+      hasMore
+      items { ${EVENT_MAP_FIELDS} }
     }
   }
 `;
@@ -258,7 +277,6 @@ const commonFilter = {
 
 const ALERT_ORDER = ["CREATED_DESC", "CREATED_ASC", "SEVERITY_DESC", "SEVERITY_ASC"] as const;
 const EVENT_ORDER = ["LAST_SIGNAL_DESC", "LAST_SIGNAL_ASC", "CREATED_DESC", "CREATED_ASC", "SEVERITY_DESC", "SEVERITY_ASC"] as const;
-const SIGNAL_ORDER = ["PUBLISHED_DESC", "PUBLISHED_ASC", "SEVERITY_DESC", "SEVERITY_ASC"] as const;
 const ENTITY_KIND = ["signal", "event", "alert"] as const;
 const STATS_GROUP_BY = ["none", "type", "severity", "day", "week", "month"] as const;
 
@@ -359,10 +377,10 @@ export const alertsRouter = createTRPCRouter({
   }),
 
   // ─── Slim map procedures ───────────────────────────────────────────────
-  // Map-optimized queries using slim field sets (no ancestor/metadata
-  // resolver fan-out). These fetch all rows (map needs complete marker set
-  // for client-side filtering) but with the lightweight shapes already
-  // proven on detection feeds.
+  // Paginated *Page queries with date filters + clear-api representativePoint
+  // (first-signal Location). No nested signal geometries / admin polygons.
+  // sanitizeLocationGeometry remains a safety net if a point is unexpectedly
+  // a Polygon.
 
   alertsForMap: protectedProcedure
     .input(
@@ -371,42 +389,95 @@ export const alertsRouter = createTRPCRouter({
           status: z.enum(["draft", "published", "archived"]).optional(),
           activeOnly: z.boolean().optional(),
           teamId: z.string().nullish(),
+          locationId: z.string().nullish(),
           includeDummy: z.boolean().optional(),
+          from: dateLike,
+          to: dateLike,
         })
         .optional(),
     )
     .query(async ({ ctx, input }) => {
-      const status =
-        input?.activeOnly === true ? "published" : input?.status;
-      const data = await graphqlFetch<{ alerts: GqlAlert[] }>(
-        ALERTS_FOR_MAP_QUERY,
-        {
-          ...(status ? { status } : {}),
-          ...(input?.teamId ? { teamId: input.teamId } : {}),
-          includeDummy: input?.includeDummy ?? true,
-        },
-        cookieHeaders(ctx),
-      );
-      return { alerts: data.alerts };
+      const status = input?.activeOnly === true ? "published" : input?.status;
+
+      const alerts: GqlAlert[] = [];
+      let offset = 0;
+      const limit = 500;
+      let hasMore = true;
+
+      while (hasMore) {
+        const data = await graphqlFetch<{ alertsPage: PaginatedResult<GqlAlert> }>(
+          ALERTS_FOR_MAP_PAGE_QUERY,
+          {
+            input: {
+              limit,
+              offset,
+              ...(status ? { status } : {}),
+              ...(input?.teamId ? { teamId: input.teamId } : {}),
+              ...(input?.locationId ? { locationId: input.locationId } : {}),
+              ...(input?.from ? { from: input.from } : {}),
+              ...(input?.to ? { to: input.to } : {}),
+              includeDummy: input?.includeDummy ?? true,
+            },
+          },
+          cookieHeaders(ctx),
+        );
+
+        alerts.push(...data.alertsPage.items);
+        hasMore = data.alertsPage.hasMore;
+        offset += limit;
+      }
+
+      for (const alert of alerts) {
+        sanitizeLocationGeometry(alert.representativePoint ?? null);
+        sanitizeLocationGeometry(alert.event.representativePoint ?? null);
+      }
+
+      return { alerts };
     }),
 
   eventsForMap: protectedProcedure
     .input(
       z.object({
         teamId: z.string().optional(),
+        locationId: z.string().optional(),
         includeDummy: z.boolean().optional(),
-      }),
+        from: dateLike,
+        to: dateLike,
+      }).optional(),
     )
     .query(async ({ ctx, input }) => {
-      const data = await graphqlFetch<{ events: GqlEvent[] }>(
-        EVENTS_FOR_MAP_QUERY,
-        {
-          teamId: input.teamId,
-          includeDummy: input.includeDummy ?? true, // Include dummy data by default for testing
-        },
-        cookieHeaders(ctx),
-      );
-      return { events: data.events };
+      const events: GqlEvent[] = [];
+      let offset = 0;
+      const limit = 500;
+      let hasMore = true;
+
+      while (hasMore) {
+        const data = await graphqlFetch<{ eventsPage: PaginatedResult<GqlEvent> }>(
+          EVENTS_FOR_MAP_PAGE_QUERY,
+          {
+            input: {
+              limit,
+              offset,
+              ...(input?.teamId ? { teamId: input.teamId } : {}),
+              ...(input?.locationId ? { locationId: input.locationId } : {}),
+              ...(input?.from ? { from: input.from } : {}),
+              ...(input?.to ? { to: input.to } : {}),
+              includeDummy: input?.includeDummy ?? true,
+            },
+          },
+          cookieHeaders(ctx),
+        );
+
+        events.push(...data.eventsPage.items);
+        hasMore = data.eventsPage.hasMore;
+        offset += limit;
+      }
+
+      for (const event of events) {
+        sanitizeLocationGeometry(event.representativePoint ?? null);
+      }
+
+      return { events };
     }),
 
   getShockTypes: publicProcedure.query(() => {
@@ -514,35 +585,6 @@ export const alertsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.eventsPage;
-    }),
-
-  signalsPage: protectedProcedure
-    .input(
-      z.object({
-        limit: z.number().int().min(1).max(500).optional(),
-        offset: z.number().int().min(0).optional(),
-        orderBy: z.enum(SIGNAL_ORDER).optional(),
-        // Signals filter shape mirrors commonFilter except `eventTypes` is
-        // replaced by `sourceNames` (signals don't carry the type array).
-        teamId: z.string().nullish(),
-        locationId: z.string().nullish(),
-        sourceNames: z.array(z.string()).optional(),
-        severityMin: z.number().int().min(1).max(5).optional(),
-        severityMax: z.number().int().min(1).max(5).optional(),
-        from: dateLike,
-        to: dateLike,
-        includeDummy: z.boolean().optional(),
-        _v: z.number().int().optional(),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      const { _v: _, ...graphqlInput } = input;
-      const data = await graphqlFetch<{ signalsPage: PaginatedResult<GqlSignal> }>(
-        SIGNALS_PAGE_QUERY,
-        { input: graphqlInput },
-        cookieHeaders(ctx),
-      );
-      return data.signalsPage;
     }),
 
   // ─── Cross-entity stats ────────────────────────────────────────────────
