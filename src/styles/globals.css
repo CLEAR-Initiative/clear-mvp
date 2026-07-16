@@ -138,16 +138,6 @@ body {
   font-size: 14px;
 }
 
-/* Map overlay gradient tokens - rgba pairs required for gradient transparency */
-:root {
-  --map-overlay-from: rgba(255, 255, 255, 0.97);
-  --map-overlay-to:   rgba(255, 255, 255, 0);
-}
-[data-mantine-color-scheme="dark"] {
-  --map-overlay-from: rgba(17, 17, 17, 0.97);
-  --map-overlay-to:   rgba(17, 17, 17, 0);
-}
-
 /* Mapbox zoom control dark mode overrides */
 [data-mantine-color-scheme="dark"] .mapboxgl-ctrl-group {
   background: var(--color-bg-muted);
@@ -163,6 +153,14 @@ body {
 }
 [data-mantine-color-scheme="dark"] .mapboxgl-ctrl-icon {
   filter: invert(1);
+}
+
+/* Keep +/- above other map chrome (timeline row is a sibling overlay). */
+.mapboxgl-ctrl-bottom-right {
+  z-index: 30 !important;
+}
+.mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group {
+  pointer-events: auto;
 }
 
 /* Mapbox overrides - ensure map fills container */

@@ -1754,11 +1754,21 @@
       "eventType": "نوع الحدث",
       "population": "السكان",
       "dataLayers": "طبقات البيانات",
+      "panelsSection": "اللوحات",
+      "keepPanelsOpen": "إبقاء اللوحات مفتوحة",
       "baseMap": "الخريطة الأساسية",
+      "overlays": "الطبقات الإضافية",
+      "streets": "الشوارع",
       "roads": "الطرق",
       "satellite": "الأقمار الصناعية",
       "simple": "بسيطة",
-      "topography": "تضاريس"
+      "topography": "تضاريس",
+      "operational": "تشغيلي",
+      "comingSoon": "قريبًا",
+      "blockages": "العوائق",
+      "idpDensity": "كثافة النازحين",
+      "nrcLocations": "مواقع NRC",
+      "filters": "عوامل التصفية"
     },
     "baseMaps": {
       "simple": "بسيطة",

@@ -1,17 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Box,
   Text,
   Group,
+  Stack,
   Select,
   Loader,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { DisasterTypePicker } from "~/components/disaster-type-picker";
-import type { MapMarker } from "~/components/map/crisis-map";
+import type { MapMarker, MarkerScreenPoint } from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import {
@@ -31,6 +33,19 @@ import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
 import type { BaseMapType } from "~/components/map/crisis-map";
 import { useIsDark } from "~/hooks/use-is-dark";
+import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
+import { useSearchParams } from "next/navigation";
+
+const MAX_OPEN_PANELS = 4;
+
+interface OpenMarkerPanel {
+  marker: CrisisMarker;
+  anchor: MarkerScreenPoint;
+  /** FIFO age — set once when the panel is created. */
+  openedAt: number;
+  /** Bring-to-front order — bumped on open/focus/drag. */
+  z: number;
+}
 
 function MapLoadingPlaceholder() {
   const isDark = useIsDark();
@@ -71,8 +86,20 @@ function FilterLabel({ children }: { children: string }) {
 export default function MapPage() {
   const t = useTranslations("map");
   const format = useFormatter();
+  const isMobile = useMediaQuery("(max-width: 48em)");
+  const searchParams = useSearchParams();
+  const focusEventId = searchParams.get("event");
+  const focusSignalId = searchParams.get("signal");
+  const focusCrisisId = searchParams.get("crisis");
+  const focusEntityId = focusEventId ?? focusSignalId ?? focusCrisisId;
+
   /* ---- Core state (must precede queries that depend on it) ---- */
-  const [dataView, setDataView] = useState<DataView>("alert");
+  const [dataView, setDataView] = useState<DataView>(() => {
+    if (focusSignalId) return "signal";
+    if (focusCrisisId) return "crisis";
+    if (focusEventId) return "event";
+    return "alert";
+  });
 
   /* ---- Fetch data ---- */
   const { activeTeamId, activeTeam } = useTeam();
@@ -145,6 +172,11 @@ export default function MapPage() {
     return markers;
   }, [dataView, alertsQuery.data, eventsQuery.data, signalsListQuery.data, crisesQuery.data]);
 
+  const focusMarker = useMemo(() => {
+    if (!focusEntityId) return null;
+    return allMarkers.find((m) => m.eventId === focusEntityId) ?? null;
+  }, [allMarkers, focusEntityId]);
+
   const allRegions = useMemo(() => {
     return [];
   }, []);
@@ -182,13 +214,31 @@ export default function MapPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTeam?.id]);
-  const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(
-    null,
-  );
+  const [openPanels, setOpenPanels] = useState<OpenMarkerPanel[]>([]);
+  const [keepPanelsOpen, setKeepPanelsOpen] = useState(false);
+  const [chromeActiveMarkerId, setChromeActiveMarkerId] = useState<number | null>(null);
+  const panelZRef = useRef(10);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
   const [showRoads, setShowRoads] = useState(true);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
+
+  // Deep-link from detail Back / Full Map: align data view + clear filters that
+  // would hide the target marker (#108).
+  useEffect(() => {
+    if (!focusEntityId) return;
+    if (focusSignalId) setDataView("signal");
+    else if (focusCrisisId) setDataView("crisis");
+    else if (focusEventId) setDataView("event");
+    setSelectedMonth(null);
+    setSelectedRegion("All Regions");
+  }, [focusEntityId, focusSignalId, focusCrisisId, focusEventId]);
+
+  // Pulse the deep-linked pin once markers are available.
+  useEffect(() => {
+    if (!focusMarker) return;
+    setChromeActiveMarkerId(focusMarker.id);
+  }, [focusMarker]);
 
   // Resolve the currently-selected country's L0 ID for scoping admin
   // boundary queries and for the country highlight overlay. Null when the
@@ -262,6 +312,7 @@ export default function MapPage() {
 
   /* ---- Map center ---- */
   const mapCenter: [number, number] = useMemo(() => {
+    if (focusMarker) return [focusMarker.lng, focusMarker.lat];
     if (selectedCountry !== "All Countries") {
       return getCenter(selectedCountry);
     }
@@ -271,14 +322,15 @@ export default function MapPage() {
     const avgLat =
       allMarkers.reduce((sum, m) => sum + m.lat, 0) / allMarkers.length;
     return [avgLng, avgLat];
-  }, [allMarkers, selectedCountry]);
+  }, [allMarkers, selectedCountry, focusMarker, getCenter]);
 
   const mapZoom = useMemo(() => {
+    if (focusMarker) return MAP_FOCUS_ZOOM;
     if (selectedCountry !== "All Countries") {
       return getZoom(selectedCountry);
     }
     return 5;
-  }, [selectedCountry]);
+  }, [selectedCountry, focusMarker, getZoom]);
 
   /* ---- Resolve selected location for filtering ---- */
   const selectedLocationId = useMemo(() => {
@@ -295,10 +347,42 @@ export default function MapPage() {
 
   // Reset month when the data view changes - months derived from alerts
   // won't match months derived from signals, so a stale selection would
-  // hide everything.
+  // hide everything. Also clear marker panels (Keep panels open is same-view only).
   useEffect(() => {
     setSelectedMonth(null);
-  }, [dataView]);
+    setOpenPanels([]);
+    // Keep deep-link pin pulse when arriving via ?event|signal|crisis= (#108).
+    if (!focusEntityId) setChromeActiveMarkerId(null);
+  }, [dataView, focusEntityId]);
+
+  const clearOpenPanels = useCallback(() => {
+    setOpenPanels([]);
+    setChromeActiveMarkerId(null);
+  }, []);
+
+  const bumpPanelZ = useCallback(() => {
+    panelZRef.current += 1;
+    return panelZRef.current;
+  }, []);
+
+  const focusOpenPanel = useCallback((markerId: number) => {
+    const z = bumpPanelZ();
+    setOpenPanels((prev) =>
+      prev.map((p) => (p.marker.id === markerId ? { ...p, z } : p)),
+    );
+  }, [bumpPanelZ]);
+
+  const handlePanelChromeActive = useCallback((markerId: number, active: boolean) => {
+    setChromeActiveMarkerId((prev) => {
+      if (active) return markerId;
+      return prev === markerId ? null : prev;
+    });
+  }, []);
+
+  const closeOpenPanel = useCallback((markerId: number) => {
+    setOpenPanels((prev) => prev.filter((p) => p.marker.id !== markerId));
+    setChromeActiveMarkerId((prev) => (prev === markerId ? null : prev));
+  }, []);
 
   /* ---- Filtered markers (location + type, before time) ---- */
   // Split into two passes so the timeline can derive its month chips from
@@ -384,21 +468,64 @@ export default function MapPage() {
   const handleCountryChange = (value: string | null) => {
     setSelectedCountry(value ?? "All Countries");
     setSelectedRegion("All Regions");
-    setSelectedMarker(null);
+    clearOpenPanels();
   };
 
   const handleRegionChange = (value: string | null) => {
     setSelectedRegion(value ?? "All Regions");
-    setSelectedMarker(null);
+    clearOpenPanels();
   };
 
 
   const handleMarkerClick = useCallback(
-    (marker: MapMarker) => {
+    (marker: MapMarker, screenPoint: MarkerScreenPoint) => {
       const full = allMarkers.find((m) => m.id === marker.id);
-      setSelectedMarker(full ?? null);
+      if (!full) return;
+
+      // Mobile + Keep panels open off: classic single-panel replace.
+      const accumulate = keepPanelsOpen && !isMobile;
+
+      setOpenPanels((prev) => {
+        if (!accumulate) {
+          return [{
+            marker: full,
+            anchor: screenPoint,
+            openedAt: Date.now(),
+            z: bumpPanelZ(),
+          }];
+        }
+
+        const existing = prev.find((p) => p.marker.id === full.id);
+        if (existing) {
+          // Focus existing — no duplicate.
+          return prev.map((p) =>
+            p.marker.id === full.id
+              ? { ...p, anchor: screenPoint, z: bumpPanelZ() }
+              : p,
+          );
+        }
+
+        const next: OpenMarkerPanel[] = [
+          ...prev,
+          {
+            marker: full,
+            anchor: screenPoint,
+            openedAt: Date.now(),
+            z: bumpPanelZ(),
+          },
+        ];
+        // Soft max 4 — drop oldest by openedAt (FIFO).
+        while (next.length > MAX_OPEN_PANELS) {
+          let oldestIdx = 0;
+          for (let i = 1; i < next.length; i++) {
+            if (next[i]!.openedAt < next[oldestIdx]!.openedAt) oldestIdx = i;
+          }
+          next.splice(oldestIdx, 1);
+        }
+        return next;
+      });
     },
-    [allMarkers],
+    [allMarkers, keepPanelsOpen, isMobile, bumpPanelZ],
   );
 
   const isLoading =
@@ -415,28 +542,28 @@ export default function MapPage() {
     <Box
       style={{
         position: "relative",
-        height: "calc(100vh - 60px)",
+        flex: 1,
+        minHeight: 0,
+        width: "100%",
         overflow: "hidden",
         background: "var(--color-bg-primary)",
       }}
     >
-      {/* Top filters bar */}
+      {/* Top filters bar — desktop only; mobile uses the Filters icon in MapPanelBar */}
       <Box
+        visibleFrom="sm"
         className="absolute top-0 left-0 right-0 z-20"
         data-tour="map-filters"
         px={16}
         py={12}
         style={{
-          background: "linear-gradient(to bottom, var(--map-overlay-from) 60%, var(--map-overlay-to))",
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
           pointerEvents: "none",
         }}
       >
-        <Group gap={12} style={{ pointerEvents: "auto" }}>
+        <Group gap={12} style={{ pointerEvents: "auto" }} wrap="wrap">
           <Select
             size="xs"
             value={selectedCountry}
@@ -486,7 +613,7 @@ export default function MapPage() {
         </Group>
       </Box>
 
-      {/* Map container with loading overlay */}
+      {/* Map container with loading overlay — above timeline empty space for zoom hit-testing */}
       <Box
         style={{
           position: "absolute",
@@ -516,18 +643,20 @@ export default function MapPage() {
           focusCountryGeometry={focusCountryGeometry}
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-          fitBoundsGeometry={fitBoundsGeometry}
+          fitBoundsGeometry={focusEntityId ? null : fitBoundsGeometry}
+          fitBoundsOnFocus={!focusEntityId}
           populationBoundaries={populationBoundaries}
           showBoundaries={boundaryLevel !== "none"}
           showRoads={showRoads}
           baseMapType={baseMapType}
+          hoveredMarkerId={chromeActiveMarkerId}
         />
 
         {/* Loading overlay - only shows when map is mounted and data is loading */}
         {showLoadingOverlay && <MapLoadingOverlay dataView={dataView} />}
       </Box>
 
-      {/* ===== Left Panel Bar (Layers / Legend / Config) ===== */}
+      {/* ===== Left Panel Bar (Layers / Legend / mobile Filters) ===== */}
       <MapPanelBar
         dataView={dataView}
         onDataViewChange={setDataView}
@@ -540,26 +669,78 @@ export default function MapPage() {
         onShowRoadsChange={setShowRoads}
         baseMapType={baseMapType}
         onBaseMapTypeChange={setBaseMapType}
+        keepPanelsOpen={keepPanelsOpen}
+        onKeepPanelsOpenChange={setKeepPanelsOpen}
+        filters={
+          <Stack gap={10}>
+            <Select
+              size="xs"
+              value={selectedCountry}
+              onChange={handleCountryChange}
+              data={countryOptions.map((c) =>
+                c === "All Countries" ? { value: c, label: t("filters.allCountries") } : c,
+              )}
+              styles={{ input: INPUT_STYLE }}
+              label={<FilterLabel>{t("filters.country")}</FilterLabel>}
+            />
+            <Select
+              size="xs"
+              value={selectedRegion}
+              onChange={handleRegionChange}
+              data={regionOptions.map((r) =>
+                r === "All Regions" ? { value: r, label: t("filters.allRegions") } : r,
+              )}
+              styles={{ input: INPUT_STYLE }}
+              label={<FilterLabel>{t("filters.region")}</FilterLabel>}
+            />
+            <DisasterTypePicker
+              label={t("filters.crisisType")}
+              hierarchy={hierarchy}
+              selected={selectedTypes}
+              onChange={setSelectedTypes}
+              size="xs"
+            />
+            <Select
+              size="xs"
+              value={timeframe}
+              onChange={(v) => setTimeframe((v ?? "30d") as typeof timeframe)}
+              data={[
+                { value: "7d",  label: t("filters.last7days") },
+                { value: "30d", label: t("filters.last30days") },
+                { value: "90d", label: t("filters.last90days") },
+                { value: "all", label: t("filters.allTime") },
+              ]}
+              styles={{ input: INPUT_STYLE }}
+              label={<FilterLabel>{t("filters.timeframe")}</FilterLabel>}
+            />
+            {isLoading && <Loader size={14} />}
+          </Stack>
+        }
       />
 
-      {/* ===== Selected Marker Detail ===== */}
-      {selectedMarker && (
+      {/* ===== Marker detail panel(s) ===== */}
+      {openPanels.map((panel) => (
         <MapMarkerDetail
-          marker={selectedMarker}
-          onClose={() => setSelectedMarker(null)}
+          key={panel.marker.id}
+          marker={panel.marker}
+          anchor={panel.anchor}
+          stackZIndex={panel.z}
+          onActivate={() => focusOpenPanel(panel.marker.id)}
+          onChromeActiveChange={(active) =>
+            handlePanelChromeActive(panel.marker.id, active)
+          }
+          onClose={() => closeOpenPanel(panel.marker.id)}
         />
-      )}
+      ))}
 
-      {/* ===== Timeline (bottom overlay) ===== */}
+      {/* ===== Timeline (bottom overlay) — month chips only, no frosted stripe ===== */}
       {availableMonths.length > 0 && (
         <Box
-          className="absolute bottom-0 left-0 right-0 z-10"
+          className="absolute left-0 right-0 z-20"
           px={16}
           py={10}
           style={{
-            background: "linear-gradient(to top, var(--map-overlay-from) 60%, var(--map-overlay-to))",
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
+            bottom: 12,
             pointerEvents: "none",
           }}
         >
@@ -567,9 +748,12 @@ export default function MapPage() {
             gap={8}
             wrap="nowrap"
             style={{
+              // Fit content so empty space does not cover Mapbox zoom (+/−) on the right.
               pointerEvents: "auto",
               overflowX: "auto",
               paddingBottom: 2,
+              width: "fit-content",
+              maxWidth: "100%",
             }}
           >
             <Text

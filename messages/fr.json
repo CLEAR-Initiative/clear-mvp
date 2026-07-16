@@ -1754,11 +1754,21 @@
       "eventType": "Type d'événement",
       "population": "Population",
       "dataLayers": "Couches de données",
+      "panelsSection": "Panneaux",
+      "keepPanelsOpen": "Garder les panneaux ouverts",
       "baseMap": "Fond de carte",
+      "overlays": "Superpositions",
+      "streets": "Rues",
       "roads": "Routes",
       "satellite": "Satellite",
       "simple": "Simple",
-      "topography": "Relief"
+      "topography": "Relief",
+      "operational": "Opérationnel",
+      "comingSoon": "Bientôt disponible",
+      "blockages": "Blocages",
+      "idpDensity": "Densité IDP",
+      "nrcLocations": "Sites NRC",
+      "filters": "Filtres"
     },
     "baseMaps": {
       "simple": "Simple",

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
+import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
 import { useIsDark } from "~/hooks/use-is-dark";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
@@ -19,6 +20,12 @@ export interface MapMarker {
   description?: string;
   popup?: string;
   markerKind?: "event" | "signal" | "crisis";
+}
+
+/** Pixel position of a marker inside the map container (from Mapbox `project`). */
+export interface MarkerScreenPoint {
+  x: number;
+  y: number;
 }
 
 export interface MapRegion {
@@ -45,7 +52,7 @@ interface CrisisMapProps {
   center?: [number, number];
   zoom?: number;
   className?: string;
-  onMarkerClick?: (marker: MapMarker) => void;
+  onMarkerClick?: (marker: MapMarker, screenPoint: MarkerScreenPoint) => void;
   onMarkerHover?: (marker: MapMarker | null) => void;
   interactive?: boolean;
   /**
@@ -745,8 +752,9 @@ export function CrisisMap({
   const prevZoom = useRef(zoom);
   useEffect(() => {
     if (!map.current || !loaded) return;
-    // Skip flyTo when a focus country is driving the framing; let fitBounds own it.
-    if (focusCountry) return;
+    // Country fitBounds owns framing unless the caller opts out (e.g. marker
+    // deep-link focus) or a tighter region geometry is already driving the view.
+    if (focusCountry && fitBoundsOnFocus && !fitBoundsGeometry) return;
     if (
       prevCenter.current[0] === center[0] &&
       prevCenter.current[1] === center[1] &&
@@ -754,42 +762,45 @@ export function CrisisMap({
     ) return;
     prevCenter.current = center;
     prevZoom.current = zoom;
+    // Cancel any in-flight country fitBounds so a deep-link marker zoom wins.
+    try { map.current.stop(); } catch { /* ignore */ }
     map.current.flyTo({ center, zoom, duration: flyDuration });
-  }, [center, zoom, loaded, focusCountry, flyDuration]);
+  }, [center, zoom, loaded, focusCountry, flyDuration, fitBoundsOnFocus, fitBoundsGeometry]);
 
   // ── Markers (donut cluster DOM markers) ─────────────────────────────────
   useEffect(() => {
     if (!map.current || !loaded) return;
-    if (!showMarkers) {
-      // Clear markers if showMarkers is false
-      for (const mk of clusterDomMarkers.current.values()) {
-        try { mk.remove(); } catch { /* ignore */ }
-      }
-      clusterDomMarkers.current.clear();
-      const SOURCE = "crisis-markers";
-      const CLUSTER_GHOST = "cluster-ghost";
-      const POINT_GHOST = "point-ghost";
-      for (const id of [CLUSTER_GHOST, POINT_GHOST]) {
-        try { if (map.current.getLayer(id)) map.current.removeLayer(id); } catch { /* ignore */ }
-      }
-      try { if (map.current.getSource(SOURCE)) map.current.removeSource(SOURCE); } catch { /* ignore */ }
-      return;
-    }
     const m = map.current;
-    const mb = mbRef.current;
     const SOURCE = "crisis-markers";
     const CLUSTER_GHOST = "cluster-ghost";
     const POINT_GHOST = "point-ghost";
 
-    // Keep markersDataRef current for click handlers that close over it.
-    markersDataRef.current = markers;
-
+    // Remove tracked markers, then sweep any orphans left by duplicate
+    // queryRenderedFeatures results (Map.set overwrote the ref without remove).
     const clearDomMarkers = () => {
       for (const mk of clusterDomMarkers.current.values()) {
         try { mk.remove(); } catch { /* ignore */ }
       }
       clusterDomMarkers.current.clear();
+      try {
+        m.getContainer()
+          .querySelectorAll(".mapboxgl-marker")
+          .forEach((el: Element) => el.remove());
+      } catch { /* ignore */ }
     };
+
+    if (!showMarkers) {
+      clearDomMarkers();
+      for (const id of [CLUSTER_GHOST, POINT_GHOST]) {
+        try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
+      }
+      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
+      return;
+    }
+    const mb = mbRef.current;
+
+    // Keep markersDataRef current for click handlers that close over it.
+    markersDataRef.current = markers;
 
     const removeLayers = () => {
       for (const id of [CLUSTER_GHOST, POINT_GHOST]) {
@@ -843,8 +854,16 @@ export function CrisisMap({
     const update = () => {
       clearDomMarkers();
 
-      const clusterFeats = m.queryRenderedFeatures({ layers: [CLUSTER_GHOST] }) as MapboxGLAny[];
-      const pointFeats   = m.queryRenderedFeatures({ layers: [POINT_GHOST] })   as MapboxGLAny[];
+      // Dedupe: Mapbox returns tile-boundary duplicates; creating a Marker per
+      // result then Map.set(sameKey) orphans the previous DOM node forever.
+      const clusterFeats = dedupeByProperty(
+        m.queryRenderedFeatures({ layers: [CLUSTER_GHOST] }) as MapboxGLAny[],
+        "cluster_id",
+      );
+      const pointFeats = dedupeByProperty(
+        m.queryRenderedFeatures({ layers: [POINT_GHOST] }) as MapboxGLAny[],
+        "id",
+      );
 
       for (const feat of clusterFeats) {
         const coords = feat.geometry.coordinates as [number, number];
@@ -872,24 +891,28 @@ export function CrisisMap({
       for (const feat of pointFeats) {
         const coords = feat.geometry.coordinates as [number, number];
         const props  = feat.properties as Record<string, unknown>;
+        // GeoJSON / tile query may stringify numeric properties.
+        const markerId = Number(props.id);
         const el     = buildPointEl(props.severity as string);
-        if (hoveredMarkerIdRef.current != null && (props.id as number) === hoveredMarkerIdRef.current) {
+        if (hoveredMarkerIdRef.current != null && markerId === hoveredMarkerIdRef.current) {
           el.querySelector(".marker-ping-ring")?.classList.add("active");
           el.querySelector(".marker-dot")?.classList.add("active");
         }
         el.addEventListener("click", () => {
-          const found = markersDataRef.current.find((mk) => mk.id === (props.id as number));
-          if (found) onMarkerClickRef.current?.(found);
+          const found = markersDataRef.current.find((mk) => mk.id === markerId);
+          if (!found) return;
+          const projected = m.project(coords) as { x: number; y: number };
+          onMarkerClickRef.current?.(found, { x: projected.x, y: projected.y });
         });
         el.addEventListener("mouseenter", () => {
-          const found = markersDataRef.current.find((mk) => mk.id === (props.id as number));
+          const found = markersDataRef.current.find((mk) => mk.id === markerId);
           if (found) onMarkerHoverRef.current?.(found);
         });
         el.addEventListener("mouseleave", () => {
           onMarkerHoverRef.current?.(null);
         });
         clusterDomMarkers.current.set(
-          `p-${props.id}`,
+          `p-${markerId}`,
           new mb.Marker({ element: el, anchor: "center" }).setLngLat(coords).addTo(m),
         );
       }

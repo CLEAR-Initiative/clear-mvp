@@ -1752,11 +1752,21 @@
       "eventType": "Event Type",
       "population": "Population",
       "dataLayers": "Data Layers",
+      "panelsSection": "Panels",
+      "keepPanelsOpen": "Keep panels open",
       "baseMap": "Base Map",
+      "overlays": "Overlays",
+      "streets": "Streets",
       "roads": "Roads",
       "satellite": "Satellite",
       "simple": "Simple",
-      "topography": "Terrain"
+      "topography": "Terrain",
+      "operational": "Operational",
+      "comingSoon": "Coming soon",
+      "blockages": "Blockages",
+      "idpDensity": "IDP Density",
+      "nrcLocations": "NRC locations",
+      "filters": "Filters"
     },
     "baseMaps": {
       "simple": "Simple",
