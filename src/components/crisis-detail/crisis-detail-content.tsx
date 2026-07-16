@@ -205,6 +205,7 @@ interface CrisisDetailContentProps {
   loading: boolean;
   mode: "page" | "drawer";
   relatedCrises?: GqlCrisis[];
+  referrer?: string;
 }
 
 export function CrisisDetailContent({
@@ -212,6 +213,7 @@ export function CrisisDetailContent({
   loading,
   mode,
   relatedCrises = [],
+  referrer = "insights",
 }: CrisisDetailContentProps) {
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
@@ -361,7 +363,7 @@ export function CrisisDetailContent({
         </Text>
         {mode === "page" && (
           <Link
-            href="/insights"
+            href={referrer === "map" ? "/map" : "/insights"}
             style={{
               display: "inline-block",
               marginTop: 16,
@@ -441,7 +443,7 @@ export function CrisisDetailContent({
           style={{ background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)" }}
         >
           <Group justify="space-between">
-            <Link href="/insights" style={{ textDecoration: "none" }}>
+            <Link href={referrer === "map" ? "/map" : "/insights"} style={{ textDecoration: "none" }}>
               <Group gap={6} className="hover:opacity-70" style={{ cursor: "pointer" }}>
                 <IconArrowLeft size={14} color="var(--color-text-secondary)" />
                 <Text size="sm" c="var(--color-text-secondary)" fw={500}>

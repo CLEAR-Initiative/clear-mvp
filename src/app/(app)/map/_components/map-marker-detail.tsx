@@ -199,10 +199,10 @@ export function MapMarkerDetail({ marker, onClose }: MapMarkerDetailProps) {
             component={Link}
             href={
               marker.markerKind === "crisis"
-                ? `/crisis/${marker.eventId}`
+                ? `/crisis/${marker.eventId}?from=map`
                 : marker.markerKind === "signal"
-                ? `/signal/${marker.eventId}`
-                : `/event/${marker.eventId}`
+                ? `/signal/${marker.eventId}?from=map`
+                : `/event/${marker.eventId}?from=map`
             }
             className="btn-accent"
             styles={{

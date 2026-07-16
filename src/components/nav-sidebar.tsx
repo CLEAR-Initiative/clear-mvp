@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSelectedLayoutSegments } from "next/navigation";
+import { useRouter, useSelectedLayoutSegments, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Box, Text, Badge, UnstyledButton, Tooltip, Menu, Drawer } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
@@ -95,7 +95,16 @@ export function NavSidebar() {
   const [mobileOpen, { open: openMobile, close: closeMobile }] = useDisclosure(false);
   const [feedbackOpen, { open: openFeedback, close: closeFeedback }] = useDisclosure(false);
   const segments = useSelectedLayoutSegments();
+  const searchParams = useSearchParams();
   const activeSegment = segments[0] ?? "";
+  
+  // Check if we're on a detail page (event/signal/crisis) and get the referrer
+  const isDetailPage = ["event", "signal", "crisis"].includes(activeSegment);
+  const referrer = searchParams.get("from");
+  
+  // If on detail page with referrer, use that for highlighting; otherwise use segment
+  const effectiveSegment = isDetailPage && referrer ? referrer : activeSegment;
+  
   const router = useRouter();
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const isAdmin = isPlatformAdmin(authData?.user?.role);
@@ -189,7 +198,7 @@ export function NavSidebar() {
                 {visibleItems.map((item) => {
                   const isDisabled = item.disabled || (!isAdmin && !!item.comingSoonForNonAdmin);
                   const itemSegment = item.href.replace(/^\//, "");
-                  const isActive = !isDisabled && activeSegment === itemSegment;
+                  const isActive = !isDisabled && effectiveSegment === itemSegment;
                   const Icon = item.icon;
                   const content = (
                     <Box
@@ -357,7 +366,7 @@ export function NavSidebar() {
                 {visibleItems.map((item) => {
                   const isDisabled = item.disabled || (!isAdmin && !!item.comingSoonForNonAdmin);
                   const itemSegment = item.href.replace(/^\//, "");
-                  const isActive = !isDisabled && activeSegment === itemSegment;
+                  const isActive = !isDisabled && effectiveSegment === itemSegment;
                   const Icon = item.icon;
 
                   const row = (
@@ -469,72 +478,76 @@ export function NavSidebar() {
           {/* User Profile Card with Menu */}
           <Menu position="right-start" offset={8} withArrow>
             <Menu.Target>
-              <UnstyledButton
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: spacingPx[3],
-                  padding: spacingPx[2],
-                  borderRadius: 8,
-                  background: "var(--color-bg-elevated)",
-                  border: "1px solid var(--color-border)",
-                  width: "100%",
-                  cursor: "pointer",
-                  transition: "background 150ms",
-                  marginBottom: spacingPx[4],
-                }}
-                className="hover:bg-[var(--color-bg-hover)] transition-colors"
-              >
-                {/* Avatar */}
-                <Box
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 9999,
-                    border: "1px solid var(--color-accent)",
-                    background: "var(--color-accent-light)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Text fw={600} size="sm" c="var(--color-accent)">
-                    {authData?.user?.email?.[0]?.toUpperCase() ?? "U"}
-                  </Text>
-                </Box>
+              <Box>
+                {authData?.user && (
+                  <UnstyledButton
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: spacingPx[3],
+                      padding: spacingPx[2],
+                      borderRadius: 8,
+                      background: "var(--color-bg-elevated)",
+                      border: "1px solid var(--color-border)",
+                      width: "100%",
+                      cursor: "pointer",
+                      transition: "background 150ms",
+                      marginBottom: spacingPx[4],
+                    }}
+                    className="hover:bg-[var(--color-bg-hover)] transition-colors"
+                  >
+                    {/* Avatar */}
+                    <Box
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 9999,
+                        border: "1px solid var(--color-accent)",
+                        background: "var(--color-accent-light)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Text fw={600} size="sm" c="var(--color-accent)">
+                        {authData.user.email?.[0]?.toUpperCase() ?? "U"}
+                      </Text>
+                    </Box>
 
-                {/* User info - only show when not collapsed */}
-                {!collapsed && (
-                  <Box style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-                    <Text
-                      size="xs"
-                      fw={500}
-                      c="var(--color-text-primary)"
-                      style={{ 
-                        lineHeight: 1.3,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {authData?.user?.email ?? "User"}
-                    </Text>
-                    <Text
-                      size="10px"
-                      c="var(--color-text-muted)"
-                      style={{ 
-                        lineHeight: 1.5,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {isAdmin ? "Admin Account" : "User Account"}
-                    </Text>
-                  </Box>
+                    {/* User info - only show when not collapsed */}
+                    {!collapsed && (
+                      <Box style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                        <Text
+                          size="xs"
+                          fw={500}
+                          c="var(--color-text-primary)"
+                          style={{ 
+                            lineHeight: 1.3,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {authData.user.email}
+                        </Text>
+                        <Text
+                          size="10px"
+                          c="var(--color-text-muted)"
+                          style={{ 
+                            lineHeight: 1.5,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {isAdmin ? "Admin Account" : "User Account"}
+                        </Text>
+                      </Box>
+                    )}
+                  </UnstyledButton>
                 )}
-              </UnstyledButton>
+              </Box>
             </Menu.Target>
 
             <Menu.Dropdown>

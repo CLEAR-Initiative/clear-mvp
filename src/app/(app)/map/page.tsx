@@ -25,13 +25,29 @@ import { useLocations } from "~/hooks/use-locations";
 import { countryConfig } from "~/lib/constants/country-config";
 import { MapPanelBar } from "./_components/map-panel-bar";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
+import { MapLoadingOverlay } from "./_components/map-loading-overlay";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
+import type { BaseMapType } from "~/components/map/crisis-map";
+import { useIsDark } from "~/hooks/use-is-dark";
+
+function MapLoadingPlaceholder() {
+  const isDark = useIsDark();
+  return (
+    <Box 
+      w="100%" 
+      h="100%" 
+      style={{ 
+        background: isDark ? "#111111" : "#FAFAFA",
+      }} 
+    />
+  );
+}
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: () => <Box w="100%" h="100%" bg="#F5F5F5" /> },
+  { ssr: false, loading: MapLoadingPlaceholder },
 );
 
 /* ========== Label styles ========== */
@@ -62,29 +78,56 @@ export default function MapPage() {
   const { activeTeamId, activeTeam } = useTeam();
   const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
 
-  // Fetch every alert (published + archived) instead of just the currently-
-  // active ones. The timeline panel below lets the user scrub back through
-  // previous months, which only works if historical alerts are loaded; the
-  // active-only filter is still available downstream via the per-marker
-  // `status` field if a "current alerts only" toggle ever gets added.
-  const alertsQuery = api.alerts.getAlerts.useQuery(
-    { teamId: activeTeamId },
-    { enabled: dataView === "alert" },
+  // Timeline state. Stored as "YYYY-MM"; null means "all time".
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+
+  // Timeframe window. Rolling windows fetch only active (published) alerts;
+  // "all" additionally pulls archived history so the timeline can scrub
+  // back through past months. Default is a 30-day window - the archived
+  // backlog is ~5x the published set and dominated page load time.
+  const [timeframe, setTimeframe] = useState<"7d" | "30d" | "90d" | "all">("30d");
+  
+  // Compute from/to dates for server-side filtering
+  const timeframeRange = useMemo(() => {
+    if (timeframe === "all") return { from: undefined, to: undefined };
+    const days = timeframe === "7d" ? 7 : timeframe === "30d" ? 30 : 90;
+    const now = new Date();
+    const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    return {
+      from: from.toISOString(),
+      to: now.toISOString(),
+    };
+  }, [timeframe]);
+
+  // Fetch data for active view ONLY (no parallel loading)
+  const alertsQuery = api.alerts.alertsForMap.useQuery(
+    { 
+      includeDummy: true, 
+      activeOnly: timeframe !== "all",
+      from: timeframeRange.from,
+      to: timeframeRange.to,
+    },
+    { enabled: dataView === "alert", placeholderData: (prev) => prev },
   );
-  const eventsQuery = api.alerts.getEvents.useQuery(
-    { teamId: activeTeamId ?? undefined },
-    // No team → fetch the global feed (the API resolver permits this).
-    { enabled: dataView === "event" },
+  const eventsQuery = api.alerts.eventsForMap.useQuery(
+    { 
+      includeDummy: true,
+      from: timeframeRange.from,
+      to: timeframeRange.to,
+    },
+    { enabled: dataView === "event", placeholderData: (prev) => prev },
   );
   const crisesQuery = api.alerts.getCrises.useQuery(
     undefined,
-    { enabled: dataView === "crisis" },
+    { enabled: dataView === "crisis", placeholderData: (prev) => prev },
   );
-  const signalsListQuery = api.signals.list.useQuery(
-    { teamId: activeTeamId ?? undefined },
-    // Only fetch when Signal view is active — otherwise this lands in the
-    // same tRPC batch as getAlerts and holds marker paint for tens of seconds.
-    { enabled: dataView === "signal", staleTime: 60_000 },
+  const signalsListQuery = api.signals.forMap.useQuery(
+    { 
+      includeDummy: true,
+      from: timeframeRange.from,
+      to: timeframeRange.to,
+    },
+    { enabled: dataView === "signal", staleTime: 60_000, placeholderData: (prev) => prev },
   );
   const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
     staleTime: Infinity, refetchOnWindowFocus: false,
@@ -93,11 +136,13 @@ export default function MapPage() {
 
   /* ---- Derive markers based on active data view (markers-only; no region heatmaps) ---- */
   const allMarkers: CrisisMarker[] = useMemo(() => {
-    if (dataView === "alert")  return alertsToMarkers(alertsQuery.data?.alerts ?? []);
-    if (dataView === "event")  return eventsToMarkers(eventsQuery.data?.events ?? []);
-    if (dataView === "signal") return signalsToMarkers(signalsListQuery.data ?? []);
-    if (dataView === "crisis") return crisesToMarkers(crisesQuery.data?.crises ?? []);
-    return [];
+    let markers: CrisisMarker[] = [];
+    if (dataView === "alert")  markers = alertsToMarkers(alertsQuery.data?.alerts ?? []);
+    if (dataView === "event")  markers = eventsToMarkers(eventsQuery.data?.events ?? []);
+    if (dataView === "signal") markers = signalsToMarkers(signalsListQuery.data ?? []);
+    if (dataView === "crisis") markers = crisesToMarkers(crisesQuery.data?.crises ?? []);
+    
+    return markers;
   }, [dataView, alertsQuery.data, eventsQuery.data, signalsListQuery.data, crisesQuery.data]);
 
   const allRegions = useMemo(() => {
@@ -142,14 +187,12 @@ export default function MapPage() {
   );
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
-  const [showBoundaries, setShowBoundaries] = useState(true);
-  const [showMarkers, setShowMarkers] = useState(true);
   const [showRoads, setShowRoads] = useState(true);
-  const [showSatellite, setShowSatellite] = useState(false);
+  const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
 
   // Resolve the currently-selected country's L0 ID for scoping admin
   // boundary queries and for the country highlight overlay. Null when the
-  // user picked "All Countries" — in that case every country-scoped query
+  // user picked "All Countries" - in that case every country-scoped query
   // below is disabled and the highlight overlay is dropped.
   const focusCountryId = useMemo(
     () => (selectedCountry !== "All Countries" ? getLocationId(selectedCountry) : null),
@@ -185,7 +228,7 @@ export default function MapPage() {
   );
   const populationLoading = showPopulation && populationQuery.isFetching && populationBoundaries.length === 0;
 
-  // Country L0 geometry — used for the country highlight instead of Mapbox's
+  // Country L0 geometry - used for the country highlight instead of Mapbox's
   // inaccurate tileset. Re-runs whenever the user switches country.
   const focusCountryL0Query = api.locations.getById.useQuery(
     { id: focusCountryId! },
@@ -250,10 +293,7 @@ export default function MapPage() {
     return null;
   }, [selectedCountry, selectedRegion]);
 
-  // Timeline state. Stored as "YYYY-MM"; null means "all time".
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-
-  // Reset month when the data view changes — months derived from alerts
+  // Reset month when the data view changes - months derived from alerts
   // won't match months derived from signals, so a stale selection would
   // hide everything.
   useEffect(() => {
@@ -289,6 +329,8 @@ export default function MapPage() {
         if (!markerCodes.some((c) => selectedTypeCodes.has(c))) return false;
       }
 
+      // Timeframe filtering is now handled server-side in the forMap queries
+
       return true;
     });
   }, [
@@ -299,7 +341,7 @@ export default function MapPage() {
   ]);
 
   // Distinct months present in the current location/type slice, sorted newest
-  // first. Markers with no `occurredAt` (e.g. crisis aggregates) are skipped —
+  // first. Markers with no `occurredAt` (e.g. crisis aggregates) are skipped -
   // they show up regardless of which month is picked.
   const availableMonths = useMemo(() => {
     const set = new Set<string>();
@@ -307,7 +349,7 @@ export default function MapPage() {
       if (!m.occurredAt) continue;
       const d = new Date(m.occurredAt);
       if (Number.isNaN(d.getTime())) continue;
-      // YYYY-MM — UTC so a marker that arrived at 23:30 on Jun 30 doesn't
+      // YYYY-MM - UTC so a marker that arrived at 23:30 on Jun 30 doesn't
       // shift into July on east-of-UTC clients.
       const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
       set.add(ym);
@@ -328,7 +370,7 @@ export default function MapPage() {
   const currentMarkers: MapMarker[] = useMemo(() => {
     if (!selectedMonth) return markersBeforeTime;
     return markersBeforeTime.filter((m) => {
-      // Markers without a known timestamp pass through — see availableMonths
+      // Markers without a known timestamp pass through - see availableMonths
       // comment. Time-aware markers must match the picked YYYY-MM.
       if (!m.occurredAt) return true;
       const d = new Date(m.occurredAt);
@@ -365,17 +407,22 @@ export default function MapPage() {
     (dataView === "signal" && signalsListQuery.isLoading) ||
     (dataView === "crisis" && crisesQuery.isLoading);
 
+  // Show loading overlay only on the initial fetch; timeframe/status
+  // refetches keep the previous markers visible via placeholderData.
+  const showLoadingOverlay = isLoading;
+
   return (
     <Box
       style={{
         position: "relative",
         height: "calc(100vh - 60px)",
         overflow: "hidden",
+        background: "var(--color-bg-primary)",
       }}
     >
-      {/* ===== Filter Header Overlay ===== */}
+      {/* Top filters bar */}
       <Box
-        className="absolute top-0 left-0 right-0 z-10"
+        className="absolute top-0 left-0 right-0 z-20"
         data-tour="map-filters"
         px={16}
         py={12}
@@ -395,7 +442,6 @@ export default function MapPage() {
             value={selectedCountry}
             onChange={handleCountryChange}
             data={countryOptions.map((c) =>
-              // "All Countries" is a logic sentinel - translate display label only.
               c === "All Countries" ? { value: c, label: t("filters.allCountries") } : c,
             )}
             style={{ minWidth: 140 }}
@@ -407,7 +453,6 @@ export default function MapPage() {
             value={selectedRegion}
             onChange={handleRegionChange}
             data={regionOptions.map((r) =>
-              // "All Regions" is a logic sentinel - translate display label only.
               r === "All Regions" ? { value: r, label: t("filters.allRegions") } : r,
             )}
             style={{ minWidth: 140 }}
@@ -423,36 +468,64 @@ export default function MapPage() {
               size="xs"
             />
           </Box>
+          <Select
+            size="xs"
+            value={timeframe}
+            onChange={(v) => setTimeframe((v ?? "30d") as typeof timeframe)}
+            data={[
+              { value: "7d",  label: t("filters.last7days") },
+              { value: "30d", label: t("filters.last30days") },
+              { value: "90d", label: t("filters.last90days") },
+              { value: "all", label: t("filters.allTime") },
+            ]}
+            style={{ minWidth: 130 }}
+            styles={{ input: INPUT_STYLE }}
+            label={<FilterLabel>{t("filters.timeframe")}</FilterLabel>}
+          />
           {isLoading && <Loader size={14} mt={20} />}
         </Group>
       </Box>
 
-      {/* ===== Mapbox Map ===== */}
-      <CrisisMap
-        markers={currentMarkers}
-        regions={allRegions}
-        center={mapCenter}
-        zoom={mapZoom}
-        className="w-full h-full"
-        onMarkerClick={handleMarkerClick}
-        focusCountryPCode={
-          selectedCountry !== "All Countries"
-            ? countryConfig[selectedCountry]?.pCode
-            : undefined
-        }
-        focusCountryName={
-          selectedCountry !== "All Countries" ? selectedCountry : undefined
-        }
-        focusCountryGeometry={focusCountryGeometry}
-        adminBoundaries={adminBoundaries}
-        adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-        fitBoundsGeometry={fitBoundsGeometry}
-        populationBoundaries={populationBoundaries}
-        showBoundaries={showBoundaries}
-        showMarkers={showMarkers}
-        showRoads={showRoads}
-        showSatellite={showSatellite}
-      />
+      {/* Map container with loading overlay */}
+      <Box
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 10,
+        }}
+      >
+        {/* ===== Mapbox Map ===== */}
+        <CrisisMap
+          markers={currentMarkers}
+          regions={allRegions}
+          center={mapCenter}
+          zoom={mapZoom}
+          className="w-full h-full"
+          onMarkerClick={handleMarkerClick}
+          focusCountryPCode={
+            selectedCountry !== "All Countries"
+              ? countryConfig[selectedCountry]?.pCode
+              : undefined
+          }
+          focusCountryName={
+            selectedCountry !== "All Countries" ? selectedCountry : undefined
+          }
+          focusCountryGeometry={focusCountryGeometry}
+          adminBoundaries={adminBoundaries}
+          adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+          fitBoundsGeometry={fitBoundsGeometry}
+          populationBoundaries={populationBoundaries}
+          showBoundaries={boundaryLevel !== "none"}
+          showRoads={showRoads}
+          baseMapType={baseMapType}
+        />
+
+        {/* Loading overlay - only shows when map is mounted and data is loading */}
+        {showLoadingOverlay && <MapLoadingOverlay dataView={dataView} />}
+      </Box>
 
       {/* ===== Left Panel Bar (Layers / Legend / Config) ===== */}
       <MapPanelBar
@@ -463,14 +536,10 @@ export default function MapPage() {
         populationLoading={populationLoading}
         boundaryLevel={boundaryLevel}
         onBoundaryLevelChange={setBoundaryLevel}
-        showBoundaries={showBoundaries}
-        onShowBoundariesChange={setShowBoundaries}
-        showMarkers={showMarkers}
-        onShowMarkersChange={setShowMarkers}
         showRoads={showRoads}
         onShowRoadsChange={setShowRoads}
-        showSatellite={showSatellite}
-        onShowSatelliteChange={setShowSatellite}
+        baseMapType={baseMapType}
+        onBaseMapTypeChange={setBaseMapType}
       />
 
       {/* ===== Selected Marker Detail ===== */}
@@ -512,7 +581,7 @@ export default function MapPage() {
               {t("timeline.title")}
             </Text>
 
-            {/* "All time" sentinel — clears the month filter */}
+            {/* "All time" sentinel - clears the month filter */}
             <button
               type="button"
               onClick={() => setSelectedMonth(null)}
@@ -533,7 +602,7 @@ export default function MapPage() {
               {t("timeline.allTime")}
             </button>
 
-            {/* Months — newest first (already sorted in availableMonths) */}
+            {/* Months - newest first (already sorted in availableMonths) */}
             {availableMonths.map((ym) => {
               // ym is "YYYY-MM"; build a Date on the 1st UTC so format.dateTime
               // gets a stable instant regardless of viewer timezone.

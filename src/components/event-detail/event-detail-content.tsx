@@ -101,6 +101,7 @@ interface EventDetailContentProps {
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
   navigationMapCenter?: [number, number];
+  referrer?: string;
 }
 
 export function EventDetailContent({
@@ -114,6 +115,7 @@ export function EventDetailContent({
   onNavigatePrev,
   onNavigateNext,
   navigationMapCenter,
+  referrer = "detection",
 }: EventDetailContentProps) {
   // TODO: after Prisma migration use event.title directly; remove this fallback
   // TODO: after Prisma migration use event.types (list) instead of eventType
@@ -275,7 +277,7 @@ export function EventDetailContent({
         </Text>
         {mode === "page" && (
           <Link
-            href="/detection"
+            href={referrer === "map" ? "/map" : "/detection"}
             style={{
               display: "inline-block",
               marginTop: 16,
@@ -364,7 +366,7 @@ export function EventDetailContent({
         >
           <Group justify="space-between">
             <Group gap={16}>
-              <Link href="/detection" style={{ textDecoration: "none" }}>
+              <Link href={referrer === "map" ? "/map" : "/detection"} style={{ textDecoration: "none" }}>
                 <Group
                   gap={6}
                   className="hover:opacity-70"

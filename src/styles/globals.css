@@ -126,6 +126,10 @@
 }
 
 /* Base styles */
+html {
+  background: var(--color-bg-primary);
+}
+
 body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--color-bg-primary);
@@ -164,6 +168,13 @@ body {
 /* Mapbox overrides - ensure map fills container */
 .mapboxgl-map {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--color-bg-primary) !important;
+}
+
+/* Prevent white flash on canvas during Mapbox initialization */
+.mapboxgl-canvas-container,
+.mapboxgl-canvas {
+  background-color: transparent !important;
 }
 
 .mapboxgl-ctrl-logo,
