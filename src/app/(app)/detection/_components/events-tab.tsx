@@ -183,7 +183,7 @@ export function EventsTab({
               const isAlert = event.alerts.length > 0;
 
               return (
-                <Link key={event.id} href={`/event/${event.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                <Link key={event.id} href={`/event/${event.id}?from=detection`} style={{ textDecoration: "none", color: "inherit" }}>
                   <Box
                     px={16} py={12}
                     className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"

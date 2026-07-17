@@ -411,7 +411,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
 
             if (row.kind === "alert") {
               const e = row.data.event;
-              href = `/event/${e.id}`;
+              href = `/event/${e.id}?from=detection`;
               title = e.title ?? e.description ?? e.types[0] ?? t("history.untitled");
               types = e.types;
               sources = [...new Set(e.signals.map((s) => s.source.name))];
@@ -419,7 +419,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
               location = resolveLocationName(e.generalLocation ?? e.originLocation ?? e.destinationLocation);
             } else if (row.kind === "event") {
               const e = row.data;
-              href = `/event/${e.id}`;
+              href = `/event/${e.id}?from=detection`;
               title = e.title ?? e.description ?? e.types[0] ?? t("history.untitled");
               types = e.types;
               sources = [...new Set(e.signals.map((s) => s.source.name))];
@@ -427,7 +427,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
               location = resolveLocationName(e.generalLocation ?? e.originLocation ?? e.destinationLocation);
             } else {
               const s = row.data;
-              href = `/signal/${s.id}`;
+              href = `/signal/${s.id}?from=detection`;
               title = s.title ?? s.description ?? t("feed.signals.untitled");
               sources = [s.source.name];
               date = s.publishedAt;
