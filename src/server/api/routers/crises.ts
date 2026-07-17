@@ -24,15 +24,8 @@ export interface GqlCrisis {
   events: GqlEvent[];
 }
 
-/** Slim create response — enough to navigate + detect enrichment. */
-export interface GqlCrisisCreateResult {
-  id: string;
-  title: string | null;
-  summary: string | null;
-  severity: number;
-  needs: unknown;
-  scenarios: unknown;
-}
+/** Create response — basically the same as GqlCrisis now, just explicit. */
+export interface GqlCrisisCreateResult extends GqlCrisis {}
 
 /** Slim poll shape while the enrichment pipeline fills title/scenarios. */
 export interface GqlCrisisEnrichmentStatus {
@@ -191,6 +184,28 @@ const CREATE_CRISIS_FROM_EVENTS_MUTATION = `
       severity
       needs
       scenarios
+      generalLocation { ${NESTED_LOCATION_FIELDS} }
+      populationAffected
+      populationInArea
+      events {
+        id
+        title
+        description
+        types
+        severity
+        rank
+        isDummy
+        firstSignalCreatedAt
+        lastSignalCreatedAt
+        populationAffected
+        populationDisplaced
+        generalLocation { ${NESTED_LOCATION_FIELDS} }
+        originLocation { ${NESTED_LOCATION_FIELDS} }
+        destinationLocation { ${NESTED_LOCATION_FIELDS} }
+        signals { ${SIGNAL_FIELDS} }
+        alerts { id status }
+      }
+      attachments
     }
   }
 `;
