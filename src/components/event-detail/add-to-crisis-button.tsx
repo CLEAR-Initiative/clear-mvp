@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Menu, Text, Group, Loader } from "@mantine/core";
@@ -32,18 +33,25 @@ export function AddToCrisisButton({
   const router = useRouter();
   const utils = api.useUtils();
   const { activeTeamId } = useTeam();
+  const [menuOpened, setMenuOpened] = useState(false);
 
-  const crisesQuery = api.crises.list.useQuery();
+  // Lazy + slim — only fetch when the dropdown opens.
+  const crisesQuery = api.crises.listMenu.useQuery(undefined, {
+    enabled: menuOpened,
+  });
 
   const addEvent = api.crises.addEvent.useMutation({
-    onSuccess: async (_data, vars) => {
+    onSuccess: (_data, vars) => {
       notifications.show({
         color: "teal",
         title: t("addToCrisis.linkedTitle"),
         message: t("addToCrisis.linkedMessage"),
       });
-      await utils.crises.list.invalidate();
-      await utils.crises.get.invalidate({ id: vars.crisisId });
+      void Promise.all([
+        utils.crises.list.invalidate(),
+        utils.crises.listMenu.invalidate(),
+        utils.crises.get.invalidate({ id: vars.crisisId }),
+      ]);
     },
     onError: (err) => {
       notifications.show({
@@ -55,13 +63,25 @@ export function AddToCrisisButton({
   });
 
   const createCrisis = api.crises.createFromEvents.useMutation({
-    onSuccess: async (crisis) => {
+    onSuccess: (crisis) => {
       notifications.show({
         color: "teal",
         title: t("addToCrisis.createdTitle"),
         message: t("addToCrisis.createdMessage"),
       });
-      await utils.crises.list.invalidate();
+      // Seed slim enrichment status so the crisis page can show the
+      // preparing screen without a fat get round-trip first.
+      utils.crises.enrichmentStatus.setData(
+        { id: crisis.id },
+        {
+          id: crisis.id,
+          title: crisis.title,
+          summary: crisis.summary,
+          scenarios: crisis.scenarios,
+        },
+      );
+      void utils.crises.list.invalidate();
+      void utils.crises.listMenu.invalidate();
       router.push(`/crisis/${crisis.id}`);
     },
     onError: (err) => {
@@ -76,7 +96,13 @@ export function AddToCrisisButton({
   const pending = addEvent.isPending || createCrisis.isPending;
 
   return (
-    <Menu position="bottom-end" width={260} disabled={pending}>
+    <Menu
+      position="bottom-end"
+      width={260}
+      disabled={pending}
+      opened={menuOpened}
+      onChange={setMenuOpened}
+    >
       <Menu.Target>
         <Button
           variant="light"

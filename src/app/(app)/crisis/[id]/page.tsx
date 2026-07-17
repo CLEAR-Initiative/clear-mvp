@@ -8,14 +8,16 @@ import { Box, Loader, Text } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { CrisisDetailContent } from "~/components/crisis-detail/crisis-detail-content";
-import type { GqlCrisis } from "~/server/api/routers/crises";
+import type { GqlCrisisEnrichmentStatus } from "~/server/api/routers/crises";
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 90_000;
 
-function enrichmentPending(crisis: GqlCrisis | null | undefined): boolean {
-  if (!crisis) return false;
-  return crisis.title === null && crisis.scenarios === null;
+function enrichmentPending(
+  status: GqlCrisisEnrichmentStatus | null | undefined,
+): boolean {
+  if (!status) return false;
+  return status.title === null && status.scenarios === null;
 }
 
 function EnrichmentLoadingScreen({ referrer }: { referrer: string }) {
@@ -94,22 +96,37 @@ export default function CrisisDetailPage({
   // Track where user came from (map or insights)
   const referrer = searchParams.get("from") ?? "insights";
 
-  const crisisQuery = api.crises.get.useQuery(
+  // Slim status first — polls cheaply while enrichment runs. Seeded by
+  // createFromEvents so post-create navigation skips a fat get.
+  const statusQuery = api.crises.enrichmentStatus.useQuery(
     { id },
     {
       enabled: !!id,
       refetchInterval: (query) => {
         if (pollingStopped) return false;
-        const data = query.state.data;
-        if (enrichmentPending(data)) return POLL_INTERVAL_MS;
+        if (enrichmentPending(query.state.data)) return POLL_INTERVAL_MS;
         return false;
       },
     },
   );
 
+  const isEnriching =
+    !pollingStopped && enrichmentPending(statusQuery.data);
+  const canLoadFull =
+    !!id &&
+    !!statusQuery.data &&
+    (pollingStopped || !enrichmentPending(statusQuery.data));
+
+  const crisisQuery = api.crises.get.useQuery(
+    { id },
+    {
+      enabled: canLoadFull,
+    },
+  );
+
   // Start a 90s safety timeout once we detect enrichment is pending
   useEffect(() => {
-    if (!enrichmentPending(crisisQuery.data)) return;
+    if (!enrichmentPending(statusQuery.data)) return;
     if (timeoutRef.current) return; // already started
     timeoutRef.current = setTimeout(() => setPollingStopped(true), POLL_TIMEOUT_MS);
     return () => {
@@ -118,16 +135,14 @@ export default function CrisisDetailPage({
         timeoutRef.current = null;
       }
     };
-  }, [crisisQuery.data]);
+  }, [statusQuery.data]);
 
   const relatedQuery = api.crises.list.useQuery(undefined, {
-    enabled: !!crisisQuery.data && !enrichmentPending(crisisQuery.data),
+    enabled: canLoadFull && !isEnriching,
   });
   const related = (relatedQuery.data ?? []).filter((c) => c.id !== id);
 
-  const isPending = !pollingStopped && enrichmentPending(crisisQuery.data);
-
-  if (crisisQuery.isLoading) {
+  if (statusQuery.isLoading && !statusQuery.data) {
     return (
       <CrisisDetailContent
         crisis={null}
@@ -139,8 +154,20 @@ export default function CrisisDetailPage({
     );
   }
 
-  if (isPending) {
+  if (isEnriching) {
     return <EnrichmentLoadingScreen referrer={referrer} />;
+  }
+
+  if (crisisQuery.isLoading && !crisisQuery.data) {
+    return (
+      <CrisisDetailContent
+        crisis={null}
+        loading={true}
+        mode="page"
+        relatedCrises={[]}
+        referrer={referrer}
+      />
+    );
   }
 
   return (

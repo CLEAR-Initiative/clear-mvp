@@ -24,6 +24,31 @@ export interface GqlCrisis {
   events: GqlEvent[];
 }
 
+/** Slim create response — enough to navigate + detect enrichment. */
+export interface GqlCrisisCreateResult {
+  id: string;
+  title: string | null;
+  summary: string | null;
+  severity: number;
+  needs: unknown;
+  scenarios: unknown;
+}
+
+/** Slim poll shape while the enrichment pipeline fills title/scenarios. */
+export interface GqlCrisisEnrichmentStatus {
+  id: string;
+  title: string | null;
+  summary: string | null;
+  scenarios: unknown;
+}
+
+/** Tiny row for the Add-to-Crisis menu — ids + title only. */
+export interface GqlCrisisMenuItem {
+  id: string;
+  title: string | null;
+  events: { id: string }[];
+}
+
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry population
   parent { id name }
@@ -117,10 +142,32 @@ const CRISES_LIST_QUERY = `
   }
 `;
 
+/** Menu-only list — avoids locations/needs/summary on every event-detail open. */
+const CRISES_LIST_MENU_QUERY = `
+  query CrisesMenu {
+    crises {
+      id
+      title
+      events { id }
+    }
+  }
+`;
+
 const CRISIS_GET_QUERY = `
   query Crisis($id: String!) {
     crisis(id: $id) {
       ${CRISIS_FIELDS}
+    }
+  }
+`;
+
+const CRISIS_ENRICHMENT_STATUS_QUERY = `
+  query CrisisEnrichmentStatus($id: String!) {
+    crisis(id: $id) {
+      id
+      title
+      summary
+      scenarios
     }
   }
 `;
@@ -138,7 +185,12 @@ const UPDATE_CRISIS_META_MUTATION = `
 const CREATE_CRISIS_FROM_EVENTS_MUTATION = `
   mutation CreateCrisisFromEvents($input: CreateCrisisFromEventsInput!) {
     createCrisisFromEvents(input: $input) {
-      ${CRISIS_FIELDS}
+      id
+      title
+      summary
+      severity
+      needs
+      scenarios
     }
   }
 `;
@@ -197,6 +249,16 @@ export const crisesRouter = createTRPCRouter({
     return data.crises;
   }),
 
+  /** Tiny list for Add-to-Crisis dropdown — fetch only when the menu opens. */
+  listMenu: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{ crises: GqlCrisisMenuItem[] }>(
+      CRISES_LIST_MENU_QUERY,
+      undefined,
+      cookieHeaders(ctx),
+    );
+    return data.crises;
+  }),
+
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -205,6 +267,16 @@ export const crisesRouter = createTRPCRouter({
         { id: input.id },
         cookieHeaders(ctx),
       );
+      return data.crisis;
+    }),
+
+  /** Poll-friendly status while enrichment fills title/scenarios. */
+  enrichmentStatus: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{
+        crisis: GqlCrisisEnrichmentStatus | null;
+      }>(CRISIS_ENRICHMENT_STATUS_QUERY, { id: input.id }, cookieHeaders(ctx));
       return data.crisis;
     }),
 
@@ -226,11 +298,9 @@ export const crisesRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const data = await graphqlFetch<{ createCrisisFromEvents: GqlCrisis }>(
-        CREATE_CRISIS_FROM_EVENTS_MUTATION,
-        { input },
-        cookieHeaders(ctx),
-      );
+      const data = await graphqlFetch<{
+        createCrisisFromEvents: GqlCrisisCreateResult;
+      }>(CREATE_CRISIS_FROM_EVENTS_MUTATION, { input }, cookieHeaders(ctx));
       return data.createCrisisFromEvents;
     }),
 
