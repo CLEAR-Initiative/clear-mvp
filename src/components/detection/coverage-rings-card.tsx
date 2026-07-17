@@ -46,7 +46,7 @@ export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: Covera
 
   return (
     <Box style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A3A3A3", marginBottom: 12 }}>
+      <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-muted)", marginBottom: 12 }}>
         {t("kpi.analysisCoverage.title")}
       </Text>
 
@@ -74,11 +74,11 @@ export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: Covera
               />
             )}
 
-            {/* Centre labels */}
+            {/* Centre labels — theme tokens so dark mode stays legible */}
             <text
               x={CX} y={CY - 24}
               textAnchor="middle" dominantBaseline="middle"
-              fill="#171717" fontSize="21" fontWeight="800"
+              fill="var(--color-text-primary)" fontSize="21" fontWeight="800"
               fontFamily="system-ui, -apple-system, sans-serif"
             >
               {coveragePct}%
@@ -86,7 +86,7 @@ export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: Covera
             <text
               x={CX} y={CY - 10}
               textAnchor="middle" dominantBaseline="middle"
-              fill="#A3A3A3" fontSize="8" fontWeight="600" letterSpacing="0.1em"
+              fill="var(--color-text-muted)" fontSize="8" fontWeight="600" letterSpacing="0.1em"
               fontFamily="system-ui, -apple-system, sans-serif"
             >
               {t("kpi.analysisCoverage.covered")}
@@ -104,11 +104,11 @@ export function CoverageRingsCard({ alerts, events, onNavigateToAlerts }: Covera
             <Box key={label} style={{ textAlign: "center" }}>
               <Group gap={4} justify="center" mb={2}>
                 <Box style={{ width: 6, height: 6, borderRadius: "50%", background: dot, flexShrink: 0 }} />
-                <Text style={{ fontSize: 17, fontWeight: 700, color: "#171717", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+                <Text style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
                   {value}
                 </Text>
               </Group>
-              <Text style={{ fontSize: 10, color: "#A3A3A3" }}>{label}</Text>
+              <Text style={{ fontSize: 10, color: "var(--color-text-muted)" }}>{label}</Text>
             </Box>
           ))}
         </Group>

@@ -96,8 +96,8 @@ function SparkTooltip({ active, payload, label }: SparkTooltipProps) {
       borderRadius: 6, padding: "6px 10px",
       boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
     }}>
-      <Text style={{ color: "#A3A3A3", fontSize: 10 }}>{label != null ? formatMonth(format, label) : ""}</Text>
-      <Text style={{ color: "#171717", fontSize: 12, fontWeight: 700 }}>
+      <Text style={{ color: "var(--color-text-muted)", fontSize: 10 }}>{label != null ? formatMonth(format, label) : ""}</Text>
+      <Text style={{ color: "var(--color-text-primary)", fontSize: 12, fontWeight: 700 }}>
         {payload[0].value !== undefined ? format.number(payload[0].value, "compact") : ""}
       </Text>
     </Box>
@@ -122,7 +122,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
   const [infoOpened, { open: openInfo, close: closeInfo }] = useDisclosure(false);
 
   const cardLabel = (
-    <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A3A3A3", marginBottom: 16 }}>
+    <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-muted)", marginBottom: 16 }}>
       {t("kpi.idp.title")}
     </Text>
   );
@@ -145,12 +145,12 @@ export function IdpCard({ locationCode }: IdpCardProps) {
       <Box style={{ height: "100%", display: "flex", flexDirection: "column" }}>
         {cardLabel}
         <Box style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <IconWifiOff size={24} color="#6B7280" />
-          <Text style={{ fontSize: 12, color: "#6B7280" }}>{t("kpi.idp.unavailable")}</Text>
+          <IconWifiOff size={24} color="var(--color-text-muted)" />
+          <Text style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{t("kpi.idp.unavailable")}</Text>
           <button
             onClick={() => void query.refetch()}
             style={{
-              fontSize: 10, fontWeight: 600, color: "#6B7280",
+              fontSize: 10, fontWeight: 600, color: "var(--color-text-muted)",
               background: "var(--color-bg-muted)", border: "1px solid var(--color-border)",
               borderRadius: 5, padding: "4px 10px", cursor: "pointer",
               display: "flex", alignItems: "center", gap: 4,
@@ -170,13 +170,13 @@ export function IdpCard({ locationCode }: IdpCardProps) {
       <Box style={{ height: "100%", display: "flex", flexDirection: "column" }}>
         {cardLabel}
         <Box style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, textAlign: "center" }}>
-          <Text style={{ fontSize: 22, color: "rgba(0,0,0,0.1)" }}>&#8862;</Text>
-          <Text style={{ fontSize: 13, color: "#525252", fontWeight: 600 }}>{t("kpi.idp.noData")}</Text>
-          <Text style={{ fontSize: 11, color: "#737373", lineHeight: 1.4 }}>
+          <Text style={{ fontSize: 22, color: "var(--color-text-muted)", opacity: 0.35 }}>&#8862;</Text>
+          <Text style={{ fontSize: 13, color: "var(--color-text-secondary)", fontWeight: 600 }}>{t("kpi.idp.noData")}</Text>
+          <Text style={{ fontSize: 11, color: "var(--color-text-muted)", lineHeight: 1.4 }}>
             {t("kpi.idp.notTracked", { code: locationCode })}
           </Text>
           {/* TODO: show UNHCR fallback estimate when API access is available */}
-          <Text style={{ fontSize: 10, color: "#A3A3A3", fontStyle: "italic", marginTop: 4 }}>
+          <Text style={{ fontSize: 10, color: "var(--color-text-muted)", fontStyle: "italic", marginTop: 4 }}>
             {t("kpi.idp.coverageVaries")}
           </Text>
         </Box>
@@ -195,12 +195,12 @@ export function IdpCard({ locationCode }: IdpCardProps) {
       <Group justify="space-between" align="flex-start" mb={4}>
         <Box>
           <Text style={{
-            fontSize: 34, fontWeight: 800, color: "#171717", lineHeight: 1,
+            fontSize: 34, fontWeight: 800, color: "var(--color-text-primary)", lineHeight: 1,
             fontVariantNumeric: "tabular-nums", letterSpacing: "-0.03em",
           }}>
             {format.number(current, "compact")}
           </Text>
-          <Text style={{ fontSize: 11, color: "#737373", marginTop: 3 }}>
+          <Text style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 3 }}>
             {t("kpi.idp.internallyDisplaced")} &middot; {locationName}
           </Text>
         </Box>
@@ -217,7 +217,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
             }}>
               {delta >= 0 ? "+" : ""}{format.number(Math.abs(delta), "compact")}
             </Text>
-            <Text style={{ fontSize: 9, color: "#737373" }}>{t("kpi.idp.vsLastMonth")}</Text>
+            <Text style={{ fontSize: 9, color: "var(--color-text-muted)" }}>{t("kpi.idp.vsLastMonth")}</Text>
           </Box>
         )}
       </Group>
@@ -248,15 +248,15 @@ export function IdpCard({ locationCode }: IdpCardProps) {
       <Group justify="space-between" align="center" mt={10}>
         <Group gap={5} align="center">
           <Box style={{ width: 6, height: 6, borderRadius: "50%", background: dot }} />
-          <Text style={{ fontSize: 9, color: "#A3A3A3" }}>
+          <Text style={{ fontSize: 9, color: "var(--color-text-muted)" }}>
             {t("kpi.idp.sourceLine")} &middot; {formatMonth(format, lastUpdated)}
           </Text>
         </Group>
         <Box
           onClick={openInfo}
-          style={{ cursor: "pointer", color: "#A3A3A3", display: "flex", transition: "color 0.15s" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#525252")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "#A3A3A3")}
+          style={{ cursor: "pointer", color: "var(--color-text-muted)", display: "flex", transition: "color 0.15s" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-text-secondary)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}
         >
           <IconInfoCircle size={13} />
         </Box>
@@ -268,30 +268,30 @@ export function IdpCard({ locationCode }: IdpCardProps) {
         title={t("kpi.idp.modal.title")}
         size="md"
         styles={{
-          title: { fontSize: 14, fontWeight: 700, color: "#171717" },
+          title: { fontSize: 14, fontWeight: 700, color: "var(--color-text-primary)" },
           body: { paddingTop: 4 },
         }}
       >
-        <Text style={{ fontSize: 13, color: "#525252", marginBottom: 12, lineHeight: 1.6 }}>
+        <Text style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 12, lineHeight: 1.6 }}>
           {t.rich("kpi.idp.modal.intro", { strong })}
         </Text>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.idp.modal.numbersHeading")}</Text>
-        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 6 }}>{t("kpi.idp.modal.numbersHeading")}</Text>
+        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.6 } }}>
           <List.Item>{t.rich("kpi.idp.modal.numberCurrent", { strong })}</List.Item>
           <List.Item>{t.rich("kpi.idp.modal.numberDelta", { strong })}</List.Item>
           <List.Item>{t.rich("kpi.idp.modal.numberTrend", { strong })}</List.Item>
           <List.Item>{t.rich("kpi.idp.modal.numberFreshness", { strong })}</List.Item>
         </List>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.idp.modal.limitationsHeading")}</Text>
-        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 6 }}>{t("kpi.idp.modal.limitationsHeading")}</Text>
+        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.6 } }}>
           <List.Item>{t.rich("kpi.idp.modal.limitationFloods", { strong })}</List.Item>
           <List.Item>{t("kpi.idp.modal.limitationCoverage")}</List.Item>
           <List.Item>{t("kpi.idp.modal.limitationLag")}</List.Item>
         </List>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.idp.modal.sourceHeading")}</Text>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 6 }}>{t("kpi.idp.modal.sourceHeading")}</Text>
         <Group gap={6} align="center">
           <Anchor
             href="https://hapi.humdata.org"
@@ -303,7 +303,7 @@ export function IdpCard({ locationCode }: IdpCardProps) {
           </Anchor>
           <IconExternalLink size={11} color="#E85D3D" />
         </Group>
-        <Text style={{ fontSize: 11, color: "#A3A3A3", marginTop: 4 }}>
+        <Text style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 4 }}>
           {t("kpi.idp.modal.sourceNote")}
         </Text>
       </Modal>

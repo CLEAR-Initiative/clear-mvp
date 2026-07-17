@@ -1,178 +1,155 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import { Box } from "@mantine/core";
-import dynamic from "next/dynamic";
-import { api } from "~/trpc/react";
-import { useTeam } from "~/providers/team-provider";
-import { useLocations } from "~/hooks/use-locations";
+import { useState } from "react";
+import { Box, Text } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
+import { useTranslations } from "next-intl";
+import { useOverviewSituations } from "~/hooks/use-overview-situations";
+import { AttentionQueue } from "./_components/attention-queue";
 import {
-  alertsToMarkers,
-  eventsToMarkers,
-  crisesToMarkers,
-  type CrisisMarker,
-} from "~/app/(app)/map/_components/map-markers-data";
-import { MapMarkerDetail } from "~/app/(app)/map/_components/map-marker-detail";
-import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
-import type { DataView } from "~/app/(app)/map/_components/map-layers-panel";
-import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
-import type { BaseMapType, MapMarker, MarkerScreenPoint } from "~/components/map/crisis-map";
-import { RightPanel } from "./_components/right-panel";
-import { useIsDark } from "~/hooks/use-is-dark";
+  OverviewContext,
+  OverviewSituationChips,
+} from "./_components/overview-context";
+import { OverviewGlobe } from "./_components/overview-globe";
+import { OverviewQuickStats } from "./_components/overview-quick-stats";
 
-function MapLoadingPlaceholder() {
-  const isDark = useIsDark();
-  return (
-    <Box 
-      w="100%" 
-      h="100%" 
-      style={{ 
-        background: isDark ? "#111111" : "#FAFAFA",
-      }} 
-    />
-  );
-}
-
-const CrisisMap = dynamic(
-  () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
-  { ssr: false, loading: MapLoadingPlaceholder },
-);
-
+/**
+ * Overview — left: indicators + queue; right: chips → globe → Selected Context.
+ * Mobile: indicators → chips + context → queue (no globe).
+ */
 export default function DashboardPage() {
-  const { activeTeamId } = useTeam();
-  const { getLocationId } = useLocations();
-  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
-  const sudanL0Query = api.locations.getById.useQuery(
-    { id: sudanId! },
-    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
-  );
-  const focusCountryGeometry = sudanL0Query.data?.geometry ?? undefined;
+  const t = useTranslations("dashboard");
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [selectedCountry, setSelectedCountry] = useState("Sudan");
-  const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(null);
-  const [detailAnchor, setDetailAnchor] = useState<MarkerScreenPoint | null>(null);
-  const [detailChromeActive, setDetailChromeActive] = useState(false);
-  const [dataView, setDataView] = useState<DataView>("alert");
-  const [showPopulation, setShowPopulation] = useState(false);
-  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
-  const [showRoads, setShowRoads] = useState(true);
-  const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
-
-  const alertsQuery = api.alerts.alertsForMap.useQuery(
-    { activeOnly: true, teamId: activeTeamId },
-    { enabled: dataView === "alert", placeholderData: (prev) => prev },
-  );
-  const eventsQuery = api.alerts.eventsForMap.useQuery(
-    { teamId: activeTeamId ?? undefined },
-    { enabled: dataView === "event", placeholderData: (prev) => prev },
-  );
-  const crisesQuery = api.alerts.getCrises.useQuery(
-    undefined,
-    { enabled: dataView === "crisis", placeholderData: (prev) => prev },
-  );
-
-  // ── Admin-boundary + population overlay queries ─────────────────────────
-  // Mirrors the /map page so the layers panel here behaves identically.
-  // Each query is gated on the corresponding panel state to avoid burning
-  // bandwidth when the layer is off.
-  const a1Query = api.locations.getAdminBoundaries.useQuery(
-    { level: 1, countryId: sudanId ?? undefined },
-    { enabled: boundaryLevel === "A1" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
-  );
-  const a2Query = api.locations.getAdminBoundaries.useQuery(
-    { level: 2, countryId: sudanId ?? undefined },
-    { enabled: boundaryLevel === "A2" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
-  );
-  const adminBoundaries = useMemo(() => {
-    if (boundaryLevel === "A1") return a1Query.data ?? [];
-    if (boundaryLevel === "A2") return a2Query.data ?? [];
-    return [];
-  }, [boundaryLevel, a1Query.data, a2Query.data]);
-  const adminBoundaryLevel =
-    boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
-
-  const populationQuery = api.locations.getPopulationBoundaries.useQuery(
-    { countryId: sudanId ?? undefined },
-    { enabled: showPopulation && !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
-  );
-  const populationBoundaries = useMemo(
-    () => (showPopulation ? (populationQuery.data ?? []) : []),
-    [showPopulation, populationQuery.data],
-  );
-
-  const markers = useMemo(() => {
-    if (dataView === "alert")  return alertsToMarkers(alertsQuery.data?.alerts ?? []);
-    if (dataView === "event")  return eventsToMarkers(eventsQuery.data?.events ?? []);
-    if (dataView === "crisis") return crisesToMarkers(crisesQuery.data?.crises ?? []);
-    return [];
-  }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
-
-  const handleMarkerClick = useCallback((marker: MapMarker, screenPoint: MarkerScreenPoint) => {
-    const full = markers.find((m) => m.id === marker.id);
-    setSelectedMarker(full ?? null);
-    setDetailAnchor(screenPoint);
-  }, [markers]);
-
+  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
+  const {
+    situations,
+    isLoading,
+    escalatingCount,
+    draftCount,
+    events,
+    alerts,
+  } = useOverviewSituations(selectedCountry);
 
   return (
-    <Box style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-      <Box 
-        style={{ 
-          position: "relative", 
-          flex: 1, 
-          minWidth: 0, 
-          overflow: "hidden",
-          background: "var(--color-bg-primary)",
-        }}
+    <Box
+      className="flex h-full flex-col overflow-hidden"
+      style={{ background: "var(--color-bg-primary)" }}
+    >
+      <Box
+        px={{ base: 12, sm: 32 }}
+        py={{ base: 10, sm: 14 }}
+        style={{ borderBottom: "1px solid var(--color-border)", flexShrink: 0 }}
       >
-        <CrisisMap
-          markers={markers}
-          center={[30.0, 15.5]}
-          zoom={5.0}
-          focusCountryPCode="SD"
-          focusCountryName="Sudan"
-          focusCountryGeometry={focusCountryGeometry}
-          adminBoundaries={adminBoundaries}
-          adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-          populationBoundaries={populationBoundaries}
-          className="w-full h-full"
-          onMarkerClick={handleMarkerClick}
-          showRoads={showRoads}
-          baseMapType={baseMapType}
-          hoveredMarkerId={
-            detailChromeActive && selectedMarker ? selectedMarker.id : null
-          }
-        />
-        {selectedMarker && (
-          <MapMarkerDetail
-            marker={selectedMarker}
-            anchor={detailAnchor}
-            onChromeActiveChange={setDetailChromeActive}
-            onClose={() => {
-              setSelectedMarker(null);
-              setDetailAnchor(null);
-              setDetailChromeActive(false);
-            }}
-          />
-        )}
-        <MapPanelBar
-          dataView={dataView}
-          onDataViewChange={setDataView}
-          showPopulation={showPopulation}
-          onShowPopulationChange={setShowPopulation}
-          boundaryLevel={boundaryLevel}
-          onBoundaryLevelChange={setBoundaryLevel}
-          showRoads={showRoads}
-          onShowRoadsChange={setShowRoads}
-          baseMapType={baseMapType}
-          onBaseMapTypeChange={setBaseMapType}
-        />
+        <Text
+          fw={700}
+          style={{
+            fontSize: 18,
+            letterSpacing: "-0.02em",
+            color: "var(--color-text-primary)",
+          }}
+        >
+          {t("overview.title")}
+        </Text>
       </Box>
-      <RightPanel
-        selectedCountry={selectedCountry}
-        onCountryChange={setSelectedCountry}
-        onViewChange={() => {}}
-        activeView="single"
-      />
+
+      <Box
+        className="min-h-0 flex-1 overflow-y-auto"
+        data-overview-scroll=""
+        style={{ containerType: "size" }}
+      >
+        <Box className="flex min-h-full flex-col items-stretch lg:flex-row lg:items-start">
+          {/* Left: indicators + attention queue */}
+          <Box
+            className="min-w-0 flex-1"
+            style={{
+              minWidth: 0,
+              borderRight: isDesktop ? "1px solid var(--color-border)" : undefined,
+            }}
+          >
+            <Box
+              px={{ base: 12, sm: 24 }}
+              style={{ borderBottom: "1px solid var(--color-border)" }}
+            >
+              <OverviewQuickStats
+                country={selectedCountry}
+                alerts={alerts}
+                events={events}
+              />
+            </Box>
+
+            {!isDesktop ? (
+              <Box
+                px={12}
+                pt={12}
+                style={{ borderBottom: "1px solid var(--color-border)" }}
+              >
+                <Box mb={10}>
+                  <OverviewSituationChips
+                    escalatingCount={escalatingCount}
+                    draftCount={draftCount}
+                  />
+                </Box>
+                <OverviewContext
+                  selectedCountry={selectedCountry}
+                  onCountryChange={setSelectedCountry}
+                />
+              </Box>
+            ) : null}
+
+            <AttentionQueue
+              situations={situations}
+              isLoading={isLoading}
+              hoveredEventId={hoveredEventId}
+              onHover={setHoveredEventId}
+              embedScroll
+            />
+          </Box>
+
+          {/* Right: Escalating/Drafts → Operational Globe → Selected Context */}
+          {isDesktop ? (
+            <Box
+              className="flex flex-col"
+              data-overview-globe-sticky=""
+              style={{
+                flex: "0 0 400px",
+                width: 400,
+                position: "sticky",
+                top: 0,
+                maxHeight: "100cqh",
+                alignSelf: "flex-start",
+                padding: "16px 20px 20px",
+                boxSizing: "border-box",
+                overflowY: "auto",
+                background: "var(--color-bg-primary)",
+              }}
+            >
+              <Box mb={12}>
+                <OverviewSituationChips
+                  escalatingCount={escalatingCount}
+                  draftCount={draftCount}
+                />
+              </Box>
+              <OverviewGlobe
+                situations={situations}
+                selectedCountry={selectedCountry}
+                hoveredEventId={hoveredEventId}
+                onHover={setHoveredEventId}
+              />
+              <Box
+                pt={16}
+                w="100%"
+                style={{ borderTop: "1px solid var(--color-border)" }}
+              >
+                <OverviewContext
+                  selectedCountry={selectedCountry}
+                  onCountryChange={setSelectedCountry}
+                />
+              </Box>
+            </Box>
+          ) : null}
+        </Box>
+      </Box>
     </Box>
   );
 }

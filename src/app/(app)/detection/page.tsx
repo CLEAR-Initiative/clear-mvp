@@ -18,7 +18,6 @@ import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
 import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
 import { writeDetectionNavContext } from "~/lib/detection-nav-context";
 
-import { DetectionKpiRow } from "~/components/detection/detection-kpi-row";
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
 import { HistoryTab, type HistorySortOrder } from "./_components/history-tab";
 import { EventsTab, type EventSortOrder } from "./_components/events-tab";
@@ -317,8 +316,11 @@ function DetectionPageContent() {
     { ...sharedFilter, orderBy: EVENT_ORDER_MAP[eventsSort], limit: PAGE_SIZE, offset: eventsOffset, _v: eventsVersion },
     { enabled: locationsReady && activeTab === "events", staleTime: Infinity },
   );
+  // Overview Drafts chip deep-links with ?status=draft; default remains published.
+  const alertStatus =
+    searchParams.get("status") === "draft" ? ("draft" as const) : ("published" as const);
   const alertsQuery = api.alerts.alertsPage.useQuery(
-    { ...sharedFilter, status: "published", orderBy: ALERT_ORDER_MAP[alertsSort], limit: PAGE_SIZE, offset: alertsOffset, _v: alertsVersion },
+    { ...sharedFilter, status: alertStatus, orderBy: ALERT_ORDER_MAP[alertsSort], limit: PAGE_SIZE, offset: alertsOffset, _v: alertsVersion },
     { enabled: locationsReady && activeTab === "live", staleTime: Infinity },
   );
   const signalsQuery = api.signals.signalsPage.useQuery(
@@ -774,13 +776,6 @@ function DetectionPageContent() {
             <Tabs.Tab value="history">{t("tabs.history")}</Tabs.Tab>
           </Tabs.List>
         </Tabs>
-
-        <DetectionKpiRow
-          country={selectedCountry}
-          alerts={alertsItems}
-          events={eventsItems}
-          onNavigateToAlerts={() => handleTabChange("live")}
-        />
 
         {activeTab === "live" && (
           <LiveAlertsTab

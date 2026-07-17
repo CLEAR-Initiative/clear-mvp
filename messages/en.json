@@ -1133,6 +1133,30 @@
     }
   },
   "dashboard": {
+    "overview": {
+      "title": "Overview"
+    },
+    "quickStats": {
+      "title": "Country pulse",
+      "subtitle": "Key indicators for {country}"
+    },
+    "situationStrip": {
+      "selectedContext": "Selected Context:",
+      "activeSituations": "Active Situations",
+      "escalatingChip": "{count} Escalating",
+      "draftsChip": "{count} Drafts"
+    },
+    "attentionQueue": {
+      "title": "Attention Queue",
+      "countLabel": "{count, plural, one {# situation} other {# situations}}",
+      "viewOnMap": "View on Map",
+      "empty": "No situations need attention for this country right now."
+    },
+    "overviewGlobe": {
+      "title": "Operational Globe",
+      "openMap": "Open Map",
+      "unavailable": "Globe preview unavailable in this browser. Use Open Map for spatial exploration."
+    },
     "rightPanel": {
       "nrcOpsBadge": "NRC Ops",
       "nrcOffice": "NRC Office",

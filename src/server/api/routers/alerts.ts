@@ -116,6 +116,7 @@ const EVENT_LIST_FIELDS = `
   firstSignalCreatedAt
   lastSignalCreatedAt
   populationAffected
+  representativePoint { id name level geometry ancestorIds }
   generalLocation { ${LOCATION_LIST_FIELDS} }
   originLocation { ${LOCATION_LIST_FIELDS} }
   destinationLocation { ${LOCATION_LIST_FIELDS} }
@@ -249,6 +250,30 @@ const EVENTS_FOR_MAP_PAGE_QUERY = `
       totalCount
       hasMore
       items { ${EVENT_MAP_FIELDS} }
+    }
+  }
+`;
+
+// Overview attention queue: map-slim event + signal geometries for lava-heatmap
+// (event + signal points). Skips names/admin polygons Detection still needs.
+const OVERVIEW_SIGNAL_POINT_FIELDS = `
+  id
+  generalLocation { geometry }
+  originLocation { geometry }
+  destinationLocation { geometry }
+`;
+
+const EVENT_OVERVIEW_FIELDS = `
+  ${EVENT_MAP_FIELDS}
+  signals { ${OVERVIEW_SIGNAL_POINT_FIELDS} }
+`;
+
+const EVENTS_FOR_OVERVIEW_PAGE_QUERY = `
+  query EventsForOverviewPage($input: EventsPageInput) {
+    eventsPage(input: $input) {
+      totalCount
+      hasMore
+      items { ${EVENT_OVERVIEW_FIELDS} }
     }
   }
 `;
@@ -478,6 +503,30 @@ export const alertsRouter = createTRPCRouter({
       }
 
       return { events };
+    }),
+
+  /** Paginated events for Overview situations — representativePoint + signal ids. */
+  eventsForOverview: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(500).optional(),
+        offset: z.number().int().min(0).optional(),
+        orderBy: z.enum(EVENT_ORDER).optional(),
+        _v: z.number().int().optional(),
+        ...commonFilter,
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { _v: _, ...graphqlInput } = input;
+      const data = await graphqlFetch<{ eventsPage: PaginatedResult<GqlEvent> }>(
+        EVENTS_FOR_OVERVIEW_PAGE_QUERY,
+        { input: graphqlInput },
+        cookieHeaders(ctx),
+      );
+      for (const event of data.eventsPage.items) {
+        sanitizeLocationGeometry(event.representativePoint ?? null);
+      }
+      return data.eventsPage;
     }),
 
   getShockTypes: publicProcedure.query(() => {

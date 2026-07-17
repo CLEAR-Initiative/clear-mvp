@@ -1135,6 +1135,30 @@
     }
   },
   "dashboard": {
+    "overview": {
+      "title": "نظرة عامة"
+    },
+    "quickStats": {
+      "title": "نبض البلد",
+      "subtitle": "مؤشرات رئيسية لـ {country}"
+    },
+    "situationStrip": {
+      "selectedContext": "السياق المحدد:",
+      "activeSituations": "الحالات النشطة",
+      "escalatingChip": "{count} متصاعدة",
+      "draftsChip": "{count} مسودات"
+    },
+    "attentionQueue": {
+      "title": "قائمة الانتباه",
+      "countLabel": "{count, plural, one {حالة واحدة} other {# حالات}}",
+      "viewOnMap": "عرض على الخريطة",
+      "empty": "لا توجد حالات تحتاج انتباهًا لهذا البلد الآن."
+    },
+    "overviewGlobe": {
+      "title": "الكرة التشغيلية",
+      "openMap": "فتح الخريطة",
+      "unavailable": "معاينة الكرة غير متاحة في هذا المتصفح. استخدم فتح الخريطة للاستكشاف المكاني."
+    },
     "rightPanel": {
       "nrcOpsBadge": "عمليات NRC",
       "nrcOffice": "مكتب NRC",

@@ -5,6 +5,11 @@ import { useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
 import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
+import {
+  createLavaBlobs,
+  stepLavaBlobs,
+  type LavaBlob,
+} from "~/lib/map/lava-heatmap";
 import { useIsDark } from "~/hooks/use-is-dark";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
@@ -43,6 +48,18 @@ export interface AdminBoundary {
   name: string;
   geometry: unknown;
   population?: string | null;
+}
+
+/** Weighted point for Overview situation heatmaps (and similar). */
+export interface HeatmapPoint {
+  lng: number;
+  lat: number;
+  /** 0–1 preferred; higher = hotter. */
+  weight: number;
+  /** Optional id for hover highlight sync (e.g. eventId). */
+  id?: string;
+  /** Situation / group id — lava blobs morph toward the hovered group. */
+  groupId?: string;
 }
 
 interface CrisisMapProps {
@@ -90,6 +107,21 @@ interface CrisisMapProps {
   showRoads?: boolean;
   /** Basemap: simple (theme style), topography (theme style + hillshade relief), or satellite imagery */
   baseMapType?: BaseMapType;
+  /** Mapbox projection. Overview uses `globe`; `/map` stays mercator. */
+  projection?: "mercator" | "globe";
+  /** Show Mapbox zoom control. Default true. */
+  showNavigationControl?: boolean;
+  /** Aggregate markers into severity donuts (map density mode). Default true. */
+  clusterMarkers?: boolean;
+  /** Override the map container fill (e.g. transparent on Overview). */
+  canvasBackground?: string;
+  /**
+   * Weighted heatmap points (e.g. Overview situations). When set and non-empty,
+   * renders a heatmap layer; pair with `showMarkers={false}` to replace pins.
+   */
+  heatmapPoints?: HeatmapPoint[];
+  /** Heatmap point id to emphasize (queue↔globe hover sync). */
+  hoveredHeatmapId?: string | null;
 }
 
 export type BaseMapType = "simple" | "topography" | "satellite";
@@ -259,6 +291,12 @@ export function CrisisMap({
   showMarkers = true,
   showRoads = true,
   baseMapType = "simple",
+  projection = "mercator",
+  showNavigationControl = true,
+  clusterMarkers = true,
+  canvasBackground,
+  heatmapPoints,
+  hoveredHeatmapId = null,
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const isDark = useIsDark();
@@ -337,6 +375,7 @@ export function CrisisMap({
         interactive,
         preserveDrawingBuffer,
         attributionControl: false,
+        projection,
       });
 
       map.current.on("load", () => {
@@ -345,14 +384,21 @@ export function CrisisMap({
           // Track the style the map was constructed with so the first user toggle
           // (basemap/roads/theme) actually calls setStyle instead of being skipped.
           appliedStyleRef.current = mapStyleRef.current;
+          try {
+            map.current?.setProjection(projection);
+          } catch {
+            /* ignore unsupported builds */
+          }
           setLoaded(true);
         }
       });
 
-      map.current.addControl(
-        new mapboxgl.NavigationControl({ showCompass: false }),
-        "bottom-right",
-      );
+      if (showNavigationControl) {
+        map.current.addControl(
+          new mapboxgl.NavigationControl({ showCompass: false }),
+          "bottom-right",
+        );
+      }
     });
 
     return () => {
@@ -365,6 +411,56 @@ export function CrisisMap({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep projection in sync (Overview globe ↔ Map mercator).
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !loaded) return;
+    try {
+      m.setProjection(projection);
+    } catch {
+      // Older mapbox-gl builds may not support setProjection — ignore.
+    }
+  }, [loaded, projection]);
+
+  // Blend globe "space" with the page so Overview doesn't show a black well
+  // around the sphere. Only when canvasBackground is provided.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !loaded || projection !== "globe" || canvasBackground == null) return;
+
+    const resolveSpace = () => {
+      if (!canvasBackground || canvasBackground === "transparent" || canvasBackground.startsWith("var(")) {
+        return (
+          getComputedStyle(document.documentElement)
+            .getPropertyValue("--color-bg-primary")
+            .trim() || (isDark ? "#111111" : "#FAFAFA")
+        );
+      }
+      return canvasBackground;
+    };
+    const space = resolveSpace();
+
+    try {
+      m.setFog({
+        color: space,
+        "high-color": space,
+        "space-color": space,
+        "horizon-blend": 0.02,
+        "star-intensity": 0,
+      });
+    } catch {
+      /* fog unsupported */
+    }
+
+    try {
+      if (m.getLayer("background")) {
+        m.setPaintProperty("background", "background-color", space);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [loaded, projection, canvasBackground, isDark, mapStyle]);
 
   // Swap basemap style without tearing down the map so custom layers restore.
   useEffect(() => {
@@ -830,16 +926,20 @@ export function CrisisMap({
           geometry: { type: "Point" as const, coordinates: [mk.lng, mk.lat] },
         })),
       },
-      cluster: true,
-      clusterMinPoints: CLUSTER_MIN_POINTS,
-      clusterMaxZoom: 8,
-      clusterRadius: 30,
-      clusterProperties: {
-        critical: ["+", ["get", "is_critical"]],
-        high:     ["+", ["get", "is_high"]],
-        medium:   ["+", ["get", "is_medium"]],
-        low:      ["+", ["get", "is_low"]],
-      },
+      cluster: clusterMarkers,
+      ...(clusterMarkers
+        ? {
+            clusterMinPoints: CLUSTER_MIN_POINTS,
+            clusterMaxZoom: 8,
+            clusterRadius: 30,
+            clusterProperties: {
+              critical: ["+", ["get", "is_critical"]],
+              high:     ["+", ["get", "is_high"]],
+              medium:   ["+", ["get", "is_medium"]],
+              low:      ["+", ["get", "is_low"]],
+            },
+          }
+        : {}),
     });
 
     // Ghost layers (opacity 0) - required for queryRenderedFeatures to return
@@ -940,7 +1040,7 @@ export function CrisisMap({
       m.off("moveend", debounced);
       m.off("sourcedata", onSourceData);
     };
-  }, [markers, loaded, showMarkers]);
+  }, [markers, loaded, showMarkers, clusterMarkers]);
 
   // ── Marker hover pulse (synced from list) ────────────────────────────────
   useEffect(() => {
@@ -1131,6 +1231,137 @@ export function CrisisMap({
     return cleanup;
   }, [paintableAdminBoundaries, adminBoundaryLevel, loaded, showBoundaries, isDark, baseMapType]);
 
+  // ── Situation lava-heatmap (home-anchored; hover = intensity, not relocate) ─
+  const HEAT_SOURCE = "overview-heatmap";
+  const HEAT_LAYER = "overview-heatmap-layer";
+  const hoveredHeatmapIdRef = useRef<string | null>(hoveredHeatmapId ?? null);
+  hoveredHeatmapIdRef.current = hoveredHeatmapId ?? null;
+  const lavaSim = useRef<{
+    blobs: LavaBlob[];
+    raf: number;
+    lastTs: number;
+    focusId: string | null;
+    focusSince: number;
+  }>({
+    blobs: [],
+    raf: 0,
+    lastTs: 0,
+    focusId: null,
+    focusSince: 0,
+  });
+
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const points = heatmapPoints ?? [];
+
+    const stop = () => {
+      cancelAnimationFrame(lavaSim.current.raf);
+      lavaSim.current.raf = 0;
+      try { if (m.getLayer(HEAT_LAYER)) m.removeLayer(HEAT_LAYER); } catch { /* ignore */ }
+      try { if (m.getSource(HEAT_SOURCE)) m.removeSource(HEAT_SOURCE); } catch { /* ignore */ }
+    };
+
+    stop();
+    if (points.length === 0) return stop;
+
+    const anchors = points.map((p) => ({
+      lng: p.lng,
+      lat: p.lat,
+      weight: Math.max(0.05, Math.min(1, p.weight)),
+      groupId: p.groupId ?? p.id ?? "",
+    }));
+    // Reseed only when the point set rebuilds — hover must not reset homes.
+    lavaSim.current.blobs = createLavaBlobs(anchors);
+    lavaSim.current.lastTs = performance.now();
+    lavaSim.current.focusId = hoveredHeatmapIdRef.current;
+    lavaSim.current.focusSince = performance.now();
+
+    try {
+      m.addSource(HEAT_SOURCE, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      m.addLayer({
+        id: HEAT_LAYER,
+        type: "heatmap",
+        source: HEAT_SOURCE,
+        paint: {
+          "heatmap-weight": [
+            "interpolate", ["linear"], ["get", "weight"],
+            0, 0,
+            1, 1.15,
+          ],
+          "heatmap-intensity": [
+            "interpolate", ["linear"], ["zoom"],
+            0, 0.95,
+            2, 1.35,
+            5, 2.0,
+          ],
+          "heatmap-color": [
+            "interpolate", ["linear"], ["heatmap-density"],
+            0, "rgba(0,0,0,0)",
+            0.12, "rgba(232,93,61,0.1)",
+            0.3, "rgba(245,158,11,0.32)",
+            0.5, "rgba(239,68,68,0.5)",
+            0.75, "rgba(220,38,38,0.72)",
+            1, "rgba(255,236,220,0.88)",
+          ],
+          "heatmap-radius": [
+            "interpolate", ["linear"], ["zoom"],
+            0, 30,
+            2, 42,
+            5, 60,
+          ],
+          "heatmap-opacity": 0.9,
+        },
+      });
+    } catch {
+      return stop;
+    }
+
+    const pushBlobs = () => {
+      try {
+        (m.getSource(HEAT_SOURCE) as MapboxGLAny).setData({
+          type: "FeatureCollection",
+          features: lavaSim.current.blobs.map((b) => ({
+            type: "Feature",
+            properties: { weight: b.weight },
+            geometry: { type: "Point", coordinates: [b.lng, b.lat] },
+          })),
+        });
+      } catch { /* ignore */ }
+    };
+
+    const tick = (ts: number) => {
+      lavaSim.current.raf = 0;
+      if (!map.current?.getSource(HEAT_SOURCE)) return;
+
+      const dt = (ts - lavaSim.current.lastTs) / 1000;
+      lavaSim.current.lastTs = ts;
+
+      const focusId = hoveredHeatmapIdRef.current;
+      if (focusId !== lavaSim.current.focusId) {
+        lavaSim.current.focusId = focusId;
+        lavaSim.current.focusSince = ts;
+      }
+
+      stepLavaBlobs(lavaSim.current.blobs, dt, {
+        focusId,
+        focusAgeMs: ts - lavaSim.current.focusSince,
+        nowMs: ts,
+      });
+      pushBlobs();
+
+      lavaSim.current.raf = requestAnimationFrame(tick);
+    };
+
+    pushBlobs();
+    lavaSim.current.raf = requestAnimationFrame(tick);
+
+    return stop;
+  }, [heatmapPoints, loaded]);
+
   // ── Regions (heatmap from signalPoints if present, else feathered fill) ─
   const regionLayerIds = useRef<string[]>([]);
   const regionMarkerRefs = useRef<MapboxGLAny[]>([]);
@@ -1296,7 +1527,7 @@ export function CrisisMap({
         style={{ 
           width: '100%',
           height: '100%',
-          background: isDark ? '#111111' : '#FAFAFA',
+          background: canvasBackground ?? (isDark ? '#111111' : '#FAFAFA'),
         }}
       />
     </>

@@ -19,16 +19,16 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <Box style={{
-      background: "#1F2937",
-      border: "1px solid rgba(255,255,255,0.08)",
+      background: "var(--color-bg-elevated, var(--color-bg-muted))",
+      border: "1px solid var(--color-border)",
       borderRadius: 6,
       padding: "6px 10px",
     }}>
-      <Text style={{ color: "#9CA3AF", fontSize: 9, marginBottom: 4 }}>{label}</Text>
+      <Text style={{ color: "var(--color-text-muted)", fontSize: 9, marginBottom: 4 }}>{label}</Text>
       {payload.map((entry, i) => (
         <Group key={i} gap={5} mb={1}>
           <Box style={{ width: 5, height: 5, borderRadius: "50%", background: entry.color, flexShrink: 0 }} />
-          <Text style={{ color: "#E5E7EB", fontSize: 10, fontWeight: 600 }}>
+          <Text style={{ color: "var(--color-text-primary)", fontSize: 10, fontWeight: 600 }}>
             {entry.value} {entry.name}
           </Text>
         </Group>
@@ -61,7 +61,7 @@ export function SignalTrendCard({ alerts, events }: SignalTrendCardProps) {
 
       {/* ── Header ── */}
       <Group justify="space-between" align="center" mb={14}>
-        <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A3A3A3" }}>
+        <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
           {t("kpi.activity.title")}
         </Text>
         <Group gap={4}>
@@ -73,8 +73,8 @@ export function SignalTrendCard({ alerts, events }: SignalTrendCardProps) {
                 fontSize: 10, fontWeight: 700, padding: "3px 9px",
                 borderRadius: 20, border: "1px solid", cursor: "pointer",
                 background:  period === p ? "#E85D3D"   : "transparent",
-                color:       period === p ? "#fff"      : "#A3A3A3",
-                borderColor: period === p ? "#E85D3D"   : "#E5E5E5",
+                color:       period === p ? "#fff"      : "var(--color-text-muted)",
+                borderColor: period === p ? "#E85D3D"   : "var(--color-border)",
                 transition: "all 0.15s ease",
               }}
             >
@@ -89,20 +89,20 @@ export function SignalTrendCard({ alerts, events }: SignalTrendCardProps) {
         <Box>
           <Group gap={6} align="center" mb={1}>
             <Box style={{ width: 7, height: 7, borderRadius: "50%", background: "#F59E0B", flexShrink: 0 }} />
-            <Text style={{ fontSize: 28, fontWeight: 800, color: "#171717", lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.03em" }}>
+            <Text style={{ fontSize: 28, fontWeight: 800, color: "var(--color-text-primary)", lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.03em" }}>
               {events.length}
             </Text>
           </Group>
-          <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500, paddingInlineStart: 13 }}>{t("kpi.activity.events")}</Text>
+          <Text style={{ fontSize: 10, color: "var(--color-text-muted)", fontWeight: 500, paddingInlineStart: 13 }}>{t("kpi.activity.events")}</Text>
         </Box>
         <Box>
           <Group gap={6} align="center" mb={1}>
             <Box style={{ width: 7, height: 7, borderRadius: "50%", background: "#E85D3D", flexShrink: 0 }} />
-            <Text style={{ fontSize: 28, fontWeight: 800, color: "#171717", lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.03em" }}>
+            <Text style={{ fontSize: 28, fontWeight: 800, color: "var(--color-text-primary)", lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.03em" }}>
               {alerts.length}
             </Text>
           </Group>
-          <Text style={{ fontSize: 10, color: "#A3A3A3", fontWeight: 500, paddingInlineStart: 13 }}>{t("kpi.activity.alerts")}</Text>
+          <Text style={{ fontSize: 10, color: "var(--color-text-muted)", fontWeight: 500, paddingInlineStart: 13 }}>{t("kpi.activity.alerts")}</Text>
         </Box>
       </Group>
 

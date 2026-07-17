@@ -47,6 +47,73 @@ slots show skeletons while the target entity is pending; resolved content **repl
 skeleton with an instant swap (no fade-from-transparent).
 _Avoid_: white overlays; page-level content fade-in; opacity-0 entry animations on resolve.
 
+### App surfaces
+
+**Overview**:
+The `/dashboard` surface — a **hybrid operational briefing** for analysts: a thin
+situation strip (risk/context), always-visible **Overview quick stats** (country pulse /
+Indicators), a small **interactive globe** for geographic orientation, and a small **live
+queue** of actionable situations. The queue uses an **attention lens**: ranked by what
+needs the analyst now (new / severity jumps / escalating / drafts). Each **situation** is
+one event with its linked alerts/signals (not a multi-event cluster) — not Detection’s
+chronological feed and not Map’s full spatial canvas.
+On **mobile**, the same briefing is the full scrollable page. It is **not** a full Map
+replacement and **not** the full Detection feed.
+_Avoid_: "dashboard" as the product name (route may stay `/dashboard`; the feature is
+**Overview**); treating Overview as a second Map (`CrisisMap` / flat Detection-style map)
+or a second Detection; Create Signal as Overview primary CTA; brochure-only NRC/global-ops
+blocks with no path into live work; time-sorted dump of hundreds of rows; burying
+Indicators inside Detection.
+
+**Overview globe**:
+A small interactive 3D globe on Overview (**desktop**) for world/country orientation and
+situation pins — not a flat Mapbox map and not a substitute for `/map`. Linked to the
+attention queue (place select filters the queue; hover highlights). Pin click → smart
+detail; explicit handoff opens `/map` focused. **Hidden on mobile** — mobile uses country
+selector + queue only. Implementation preference: **lightweight 3D** (fast load, low CPU/GPU),
+prefer **no new dependencies** (Canvas/WebGL with existing stack) over cobe/three/globe.gl.
+_Avoid_: embedding the full Map experience; Detection-style flat map as the Overview
+spatial chrome; globe-only navigation with no queue; forcing the globe on small screens;
+heavy Three.js globe stacks for this surface.
+
+**Situation** (Overview queue unit):
+One **event** with its nested alerts and signals. Not several events rolled into one
+row, and not an orphan signal. Same entity analysts open in Detection/Event detail;
+Overview only ranks and caps which ones surface first.
+_Avoid_: treating “situation” as a new backend entity; multi-event clusters; conflating
+with **Situation Analysis** (AI/report enrichment) or ReliefWeb sitreps.
+
+**Overview attention queue**:
+The live, ranked list on Overview of **situations** that need attention. Ranked by
+**severity × freshness**, with boosts for draft/escalating / new-since-last-visit
+(per-browser last-seen on Overview, falling back to last 24h). Soft cap **~8**, scoped
+to the selected country or globe filter — never a world dump. Orphan signals without an
+event stay in Detection — not on Overview.
+_Avoid_: calling this the Detection feed; infinite scroll of the full corpus; mixed
+orphan-signal rows competing with situations; unpublished-only inbox; requiring
+server-side last-visit for v1.
+
+**Overview quick stats** (Indicators):
+Country pulse at the **top** of Overview: event/alert activity trend, analysis coverage,
+IDP displacement, and INFORM Severity — scoped to Selected Context. Not Detection chrome.
+_Avoid_: hiding Indicators behind a Detection accordion; treating quick stats as a second Map.
+
+**Overview context** (Selected Context):
+Country selector, compact INFORM risk, and **Active situations** chips (escalating /
+drafts → Detection). On **desktop** this sits **below** the Operational Globe in the
+right rail; on **mobile** above the Attention Queue.
+_Avoid_: promoting NRC Global Ops / demo Response Status as primary Overview content.
+
+**Map**:
+The `/map` surface — full interactive crisis/signal spatial exploration.
+_Avoid_: embedding a full Map experience inside Overview.
+
+**Detection**:
+The feed of signals and events analysts browse and open for detail — workspace for triage
+and drill-down, not the home for country Indicators / INFORM Severity pulse.
+_Avoid_: "inbox", "timeline" for this surface; re-adding Overview Indicators as Detection
+header chrome.
+
 ### Map marker panels
 
 **Keep panels open**:
@@ -60,7 +127,7 @@ subsequent clicks. Analysts close panels with ✕. Clicking a marker that alread
 **focuses** that panel (bring to front + pin pulse) instead of opening a duplicate. At most
 **four** panels: opening a fifth closes the oldest (FIFO). **Desktop only** — on mobile the
 control is hidden and marker clicks always use a single bottom sheet. Shipped on the **`/map`**
-route only for this slice (dashboard map stays single-panel).
+route only (**Overview** has no map pane).
 _Avoid_: "window persistence", "compare mode" (unless we later scope explicit cross-view
 comparison), "pin" (reserved if we add per-panel pinning later), orphan panels that
 outlive their data view; do not nest this control under Base map (cartography only);
@@ -79,6 +146,10 @@ _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interacti
 - With **Keep panels open** off, the map shows at most one **Marker detail panel**; with it
   on, the map may show up to four (same data view only — view change clears panels). The
   **Keep panels open** control lives in the Layers **Panels** section.
+- **Overview** points analysts to **Detection** and **Map**; it does not duplicate **Map**
+  or the full Detection feed — its live queue uses a distinct lens; country **Indicators**
+  live in **Overview quick stats**; spatial orientation uses the **Overview globe**, not a
+  second CrisisMap
 
 ## Example dialogue
 

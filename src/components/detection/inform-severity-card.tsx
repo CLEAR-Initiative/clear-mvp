@@ -7,11 +7,11 @@ import { useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 
 const INFORM_COLORS = {
-  5: { accent: "#DC2626", badge: "#FEF2F2", badgeBorder: "#FECACA", badgeText: "#DC2626" },
-  4: { accent: "#EA580C", badge: "#FFF7ED", badgeBorder: "#FED7AA", badgeText: "#EA580C" },
-  3: { accent: "#D97706", badge: "#FFFBEB", badgeBorder: "#FDE68A", badgeText: "#D97706" },
-  2: { accent: "#16A34A", badge: "#F0FDF4", badgeBorder: "#BBF7D0", badgeText: "#16A34A" },
-  1: { accent: "#16A34A", badge: "#F0FDF4", badgeBorder: "#BBF7D0", badgeText: "#16A34A" },
+  5: { accent: "#DC2626", badge: "rgba(220,38,38,0.14)", badgeBorder: "rgba(220,38,38,0.35)", badgeText: "#DC2626" },
+  4: { accent: "#EA580C", badge: "rgba(234,88,12,0.14)", badgeBorder: "rgba(234,88,12,0.35)", badgeText: "#EA580C" },
+  3: { accent: "#D97706", badge: "rgba(217,119,6,0.14)", badgeBorder: "rgba(217,119,6,0.35)", badgeText: "#D97706" },
+  2: { accent: "#16A34A", badge: "rgba(22,163,74,0.14)", badgeBorder: "rgba(22,163,74,0.35)", badgeText: "#16A34A" },
+  1: { accent: "#16A34A", badge: "rgba(22,163,74,0.14)", badgeBorder: "rgba(22,163,74,0.35)", badgeText: "#16A34A" },
 } as const;
 
 function ScoreBar({ value, max = 10, color }: { value: number; max?: number; color: string }) {
@@ -37,8 +37,8 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
 
   const cardLabel = (
     <Group gap={6} mb={16}>
-      <Box style={{ color: "#A3A3A3" }}><IconChartBar size={13} /></Box>
-      <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A3A3A3" }}>
+      <Box style={{ color: "var(--color-text-muted)" }}><IconChartBar size={13} /></Box>
+      <Text style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
         {t("kpi.inform.title")}
       </Text>
     </Group>
@@ -64,7 +64,7 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
       <Box style={{ height: "100%", display: "flex", flexDirection: "column" }}>
         {cardLabel}
         <Box style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ fontSize: 11, color: "#737373" }}>{t("kpi.inform.noData", { country })}</Text>
+          <Text style={{ fontSize: 11, color: "var(--color-text-muted)" }}>{t("kpi.inform.noData", { country })}</Text>
         </Box>
       </Box>
     );
@@ -97,7 +97,7 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
         </Box>
       </Group>
 
-      <Text style={{ fontSize: 10, color: "#737373", fontWeight: 500, marginBottom: 14, lineHeight: 1.3 }}
+      <Text style={{ fontSize: 10, color: "var(--color-text-muted)", fontWeight: 500, marginBottom: 14, lineHeight: 1.3 }}
         lineClamp={2}>
         {inform.crisisName}
       </Text>
@@ -111,8 +111,8 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
         ].map(({ label, value }) => (
           <Box key={label}>
             <Group justify="space-between" mb={3}>
-              <Text style={{ fontSize: 10, color: "#737373", fontWeight: 500 }}>{label}</Text>
-              <Text style={{ fontSize: 10, fontWeight: 700, color: "#525252", fontVariantNumeric: "tabular-nums" }}>
+              <Text style={{ fontSize: 10, color: "var(--color-text-muted)", fontWeight: 500 }}>{label}</Text>
+              <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-secondary)", fontVariantNumeric: "tabular-nums" }}>
                 {value.toFixed(1)}
               </Text>
             </Group>
@@ -123,18 +123,18 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
 
       {/* footer */}
       <Group justify="space-between" mt={12} align="center">
-        <Text style={{ fontSize: 9, color: "#A3A3A3" }}>
+        <Text style={{ fontSize: 9, color: "var(--color-text-muted)" }}>
           {t("kpi.inform.updated", { date: inform.lastUpdated })}
         </Text>
         <Group gap={6} align="center">
-          <Text style={{ fontSize: 9, color: "#A3A3A3", fontWeight: 600 }}>
+          <Text style={{ fontSize: 9, color: "var(--color-text-muted)", fontWeight: 600 }}>
             {t("kpi.inform.acapsLine", { month: inform.month })}
           </Text>
           <Box
             onClick={openInfo}
-            style={{ cursor: "pointer", color: "#A3A3A3", display: "flex", transition: "color 0.15s" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#525252")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#A3A3A3")}
+            style={{ cursor: "pointer", color: "var(--color-text-muted)", display: "flex", transition: "color 0.15s" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-text-secondary)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}
           >
             <IconInfoCircle size={13} />
           </Box>
@@ -147,23 +147,23 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
         title={t("kpi.inform.modal.title")}
         size="md"
         styles={{
-          title: { fontSize: 14, fontWeight: 700, color: "#171717" },
+          title: { fontSize: 14, fontWeight: 700, color: "var(--color-text-primary)" },
           body: { paddingTop: 4 },
         }}
       >
-        <Text style={{ fontSize: 13, color: "#525252", marginBottom: 12, lineHeight: 1.6 }}>
+        <Text style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 12, lineHeight: 1.6 }}>
           {t.rich("kpi.inform.modal.intro", { strong })}
         </Text>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.inform.modal.dimensionsHeading")}</Text>
-        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 6 }}>{t("kpi.inform.modal.dimensionsHeading")}</Text>
+        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.6 } }}>
           <List.Item>{t.rich("kpi.inform.modal.dimImpact", { strong })}</List.Item>
           <List.Item>{t.rich("kpi.inform.modal.dimConditions", { strong })}</List.Item>
           <List.Item>{t.rich("kpi.inform.modal.dimComplexity", { strong })}</List.Item>
         </List>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.inform.modal.categoriesHeading")}</Text>
-        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 6 }}>{t("kpi.inform.modal.categoriesHeading")}</Text>
+        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.6 } }}>
           <List.Item>{t.rich("kpi.inform.modal.cat1", { strong })}</List.Item>
           <List.Item>{t.rich("kpi.inform.modal.cat2", { strong })}</List.Item>
           <List.Item>{t.rich("kpi.inform.modal.cat3", { strong })}</List.Item>
@@ -171,13 +171,13 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
           <List.Item>{t.rich("kpi.inform.modal.cat5", { strong })}</List.Item>
         </List>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.inform.modal.limitationsHeading")}</Text>
-        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 6 }}>{t("kpi.inform.modal.limitationsHeading")}</Text>
+        <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.6 } }}>
           <List.Item>{t("kpi.inform.modal.limitationJudgement")}</List.Item>
           <List.Item>{t("kpi.inform.modal.limitationCoverage")}</List.Item>
         </List>
 
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("kpi.inform.modal.sourceHeading")}</Text>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 6 }}>{t("kpi.inform.modal.sourceHeading")}</Text>
         <Group gap={6} align="center" mb={6}>
           <Anchor
             href="https://drmkc.jrc.ec.europa.eu/inform-index/INFORM-Severity"
@@ -200,7 +200,7 @@ export function InformSeverityCard({ country }: InformSeverityCardProps) {
           </Anchor>
           <IconExternalLink size={11} color="#E85D3D" />
         </Group>
-        <Text style={{ fontSize: 11, color: "#A3A3A3", marginTop: 6 }}>
+        <Text style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 6 }}>
           {t("kpi.inform.modal.sourceNote")}
         </Text>
       </Modal>

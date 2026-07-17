@@ -1135,6 +1135,30 @@
     }
   },
   "dashboard": {
+    "overview": {
+      "title": "Vue d'ensemble"
+    },
+    "quickStats": {
+      "title": "Pulse pays",
+      "subtitle": "Indicateurs clés pour {country}"
+    },
+    "situationStrip": {
+      "selectedContext": "Contexte sélectionné :",
+      "activeSituations": "Situations actives",
+      "escalatingChip": "{count} en escalation",
+      "draftsChip": "{count} brouillons"
+    },
+    "attentionQueue": {
+      "title": "File d'attention",
+      "countLabel": "{count, plural, one {# situation} other {# situations}}",
+      "viewOnMap": "Voir sur la carte",
+      "empty": "Aucune situation ne nécessite d'attention pour ce pays pour le moment."
+    },
+    "overviewGlobe": {
+      "title": "Globe opérationnel",
+      "openMap": "Ouvrir la carte",
+      "unavailable": "Aperçu du globe indisponible dans ce navigateur. Utilisez Ouvrir la carte pour l'exploration spatiale."
+    },
     "rightPanel": {
       "nrcOpsBadge": "Ops NRC",
       "nrcOffice": "Bureau NRC",
