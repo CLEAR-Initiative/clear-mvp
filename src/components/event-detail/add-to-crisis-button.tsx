@@ -69,20 +69,26 @@ export function AddToCrisisButton({
         title: t("addToCrisis.createdTitle"),
         message: t("addToCrisis.createdMessage"),
       });
-      // Seed slim enrichment status so the crisis page can show the
-      // preparing screen without a fat get round-trip first.
-      utils.crises.enrichmentStatus.setData(
-        { id: crisis.id },
-        {
-          id: crisis.id,
-          title: crisis.title,
-          summary: crisis.summary,
-          scenarios: crisis.scenarios,
-        },
-      );
+      // Seed both enrichment status and the full crisis cache with
+      // minimal data so the page renders immediately without blocking.
+      // Mark enrichment as "done" to skip the loading screen.
+      const placeholder = {
+        id: crisis.id,
+        title: crisis.title ?? "Untitled Crisis",
+        summary: crisis.summary,
+        severity: crisis.severity,
+        generalLocation: null,
+        needs: crisis.needs,
+        scenarios: crisis.scenarios ?? [],
+        populationAffected: null,
+        populationInArea: null,
+        attachments: [],
+        events: [],
+      };
+      utils.crises.get.setData({ id: crisis.id }, placeholder);
       void utils.crises.list.invalidate();
       void utils.crises.listMenu.invalidate();
-      router.push(`/crisis/${crisis.id}`);
+      router.push(`/crisis/${crisis.id}?from=insights`);
     },
     onError: (err) => {
       notifications.show({
