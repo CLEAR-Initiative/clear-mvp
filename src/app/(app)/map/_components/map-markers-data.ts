@@ -120,17 +120,31 @@ function eventToMarker(event: GqlEvent, loc: NonNullable<ReturnType<typeof point
   };
 }
 
+/** One map pin per entity — duplicate rows inflate Supercluster `point_count`. */
+function dedupeMarkersByEntity(markers: CrisisMarker[]): CrisisMarker[] {
+  const seen = new Set<string>();
+  const out: CrisisMarker[] = [];
+  for (const m of markers) {
+    const key = m.eventId ?? String(m.id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(m);
+  }
+  return out;
+}
+
 export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
   for (const event of events) {
     const point = pointLocation(event);
     if (point) markers.push(eventToMarker(event, point));
   }
-  return markers;
+  return dedupeMarkersByEntity(markers);
 }
 
 export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
   // Prefer alert.representativePoint when the event payload omitted it.
+  // Multiple alerts can wrap the same event — dedupe happens in eventsToMarkers.
   return eventsToMarkers(
     alerts.map((a) => ({
       ...a.event,
@@ -168,7 +182,7 @@ export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
       }
     }
   }
-  return markers;
+  return dedupeMarkersByEntity(markers);
 }
 
 /* ========== Extract polygon regions from events ========== */
@@ -249,7 +263,7 @@ export function crisesToMarkers(crises: GqlCrisis[]): CrisisMarker[] {
       }
     }
   }
-  return markers;
+  return dedupeMarkersByEntity(markers);
 }
 
 /* ========== Derive filter options from markers ========== */

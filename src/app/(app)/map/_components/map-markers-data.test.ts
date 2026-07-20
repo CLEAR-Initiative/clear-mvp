@@ -88,4 +88,18 @@ describe("eventsToMarkers / representativePoint", () => {
     expect(markers[0]?.lat).toBe(13);
     expect(markers[0]?.status).toBe("published");
   });
+
+  it("dedupes multiple alerts that wrap the same event (avoids inflated donut counts)", () => {
+    const event = baseEvent({
+      id: "evt-shared",
+      generalLocation: pointLoc("gen", 30, 14),
+    });
+    const markers = alertsToMarkers([
+      { id: "a1", status: "published", representativePoint: null, event },
+      { id: "a2", status: "draft", representativePoint: null, event },
+      { id: "a3", status: "published", representativePoint: null, event },
+    ]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.eventId).toBe("evt-shared");
+  });
 });
