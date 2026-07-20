@@ -217,7 +217,83 @@ export default function MapPage() {
   const [openPanels, setOpenPanels] = useState<OpenMarkerPanel[]>([]);
   const [keepPanelsOpen, setKeepPanelsOpen] = useState(false);
   const [chromeActiveMarkerId, setChromeActiveMarkerId] = useState<number | null>(null);
+  /** When set, camera flies to this marker; closing restores `returnCamera`. */
+  const [markerFocus, setMarkerFocus] = useState<{ lng: number; lat: number; zoom: number } | null>(null);
+  /** Camera to restore when closing a marker sheet (usually the prior cluster/donut layer). */
+  const [returnCamera, setReturnCamera] = useState<{ center: [number, number]; zoom: number } | null>(null);
+  const [globeIntro, setGlobeIntro] = useState(false);
+  /** Bumped when we need an explicit country fitBounds after closing a lone marker. */
+  const [countryFitNonce, setCountryFitNonce] = useState(0);
+  /** Bumped on detail close so CrisisMap always flies back to returnCamera. */
+  const [forceFlyToken, setForceFlyToken] = useState(0);
   const panelZRef = useRef(10);
+  /** Live browse camera from Mapbox (includes cluster fitBounds not tracked by React props). */
+  const browseCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  /** Last browse camera while not in marker focus. */
+  const layerCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  /** Donut-level camera captured when a cluster is tapped (before expand). */
+  const donutCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  /** True after a donut cluster is expanded (until detail closes / panels clear). */
+  const openedFromClusterRef = useRef(false);
+  /** How many markers were in the last expanded cluster (0 = none). */
+  const clusterLeafCountRef = useRef(0);
+  /**
+   * Camera to restore when the last detail panel closes.
+   * Set only for group pins (post-expand group zoom). Lonely pins leave this
+   * null and use country fitBounds on close for a true global zoom-out.
+   * Decided at open — never mutated inside a setState updater (Strict Mode safe).
+   */
+  const detailRestoreCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  /** True when the open detail should close back to group zoom (not global). */
+  const detailCloseIsGroupRef = useRef(false);
+  const openPanelsRef = useRef(openPanels);
+  openPanelsRef.current = openPanels;
+  const returnCameraRef = useRef(returnCamera);
+  returnCameraRef.current = returnCamera;
+  const markerFocusRef = useRef(markerFocus);
+  markerFocusRef.current = markerFocus;
+
+  // Mobile: brief globe intro once per browser session on first map visit.
+  useEffect(() => {
+    if (isMobile !== true) return;
+    try {
+      if (sessionStorage.getItem("map-globe-intro") === "1") return;
+    } catch { /* private mode */ }
+    setGlobeIntro(true);
+  }, [isMobile]);
+
+  const handleGlobeIntroComplete = useCallback(() => {
+    setGlobeIntro(false);
+    try { sessionStorage.setItem("map-globe-intro", "1"); } catch { /* ignore */ }
+  }, []);
+
+  const handleCameraChange = useCallback((camera: { center: [number, number]; zoom: number }) => {
+    // Track browse camera only while not in a marker-detail focus fly.
+    if (markerFocusRef.current) return;
+    browseCameraRef.current = camera;
+    layerCameraRef.current = camera;
+    // If the user zooms back out to donut/regional depth, drop group context
+    // so the next pin is treated as lonely (close → global).
+    const donut = donutCameraRef.current;
+    if (
+      openedFromClusterRef.current &&
+      donut &&
+      camera.zoom <= donut.zoom + 0.5
+    ) {
+      openedFromClusterRef.current = false;
+      clusterLeafCountRef.current = 0;
+      donutCameraRef.current = null;
+    }
+  }, []);
+
+  const handleClusterExpand = useCallback((
+    camera: { center: [number, number]; zoom: number },
+    leafCount: number,
+  ) => {
+    donutCameraRef.current = camera;
+    openedFromClusterRef.current = true;
+    clusterLeafCountRef.current = leafCount;
+  }, []);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
   const [showRoads, setShowRoads] = useState(true);
@@ -312,6 +388,8 @@ export default function MapPage() {
 
   /* ---- Map center ---- */
   const mapCenter: [number, number] = useMemo(() => {
+    if (markerFocus) return [markerFocus.lng, markerFocus.lat];
+    if (returnCamera) return returnCamera.center;
     if (focusMarker) return [focusMarker.lng, focusMarker.lat];
     if (selectedCountry !== "All Countries") {
       return getCenter(selectedCountry);
@@ -322,15 +400,19 @@ export default function MapPage() {
     const avgLat =
       allMarkers.reduce((sum, m) => sum + m.lat, 0) / allMarkers.length;
     return [avgLng, avgLat];
-  }, [allMarkers, selectedCountry, focusMarker, getCenter]);
+  }, [allMarkers, selectedCountry, focusMarker, markerFocus, returnCamera, getCenter]);
 
   const mapZoom = useMemo(() => {
+    if (markerFocus) return markerFocus.zoom;
+    if (returnCamera) return returnCamera.zoom;
     if (focusMarker) return MAP_FOCUS_ZOOM;
     if (selectedCountry !== "All Countries") {
-      return getZoom(selectedCountry);
+      const baseZoom = getZoom(selectedCountry);
+      // Reduce zoom on mobile to show full country view
+      return isMobile ? Math.max(baseZoom - 1, 4) : baseZoom;
     }
-    return 5;
-  }, [selectedCountry, focusMarker, getZoom]);
+    return isMobile ? 4 : 5;
+  }, [selectedCountry, focusMarker, markerFocus, returnCamera, getZoom, isMobile]);
 
   /* ---- Resolve selected location for filtering ---- */
   const selectedLocationId = useMemo(() => {
@@ -351,13 +433,30 @@ export default function MapPage() {
   useEffect(() => {
     setSelectedMonth(null);
     setOpenPanels([]);
+    openPanelsRef.current = [];
+    setMarkerFocus(null);
+    markerFocusRef.current = null;
+    setReturnCamera(null);
+    detailRestoreCameraRef.current = null;
+    detailCloseIsGroupRef.current = false;
+    openedFromClusterRef.current = false;
+    clusterLeafCountRef.current = 0;
     // Keep deep-link pin pulse when arriving via ?event|signal|crisis= (#108).
     if (!focusEntityId) setChromeActiveMarkerId(null);
   }, [dataView, focusEntityId]);
 
   const clearOpenPanels = useCallback(() => {
     setOpenPanels([]);
+    openPanelsRef.current = [];
     setChromeActiveMarkerId(null);
+    setMarkerFocus(null);
+    markerFocusRef.current = null;
+    setReturnCamera(null);
+    donutCameraRef.current = null;
+    openedFromClusterRef.current = false;
+    clusterLeafCountRef.current = 0;
+    detailRestoreCameraRef.current = null;
+    detailCloseIsGroupRef.current = false;
   }, []);
 
   const bumpPanelZ = useCallback(() => {
@@ -380,8 +479,48 @@ export default function MapPage() {
   }, []);
 
   const closeOpenPanel = useCallback((markerId: number) => {
-    setOpenPanels((prev) => prev.filter((p) => p.marker.id !== markerId));
+    const nextPanels = openPanelsRef.current.filter((p) => p.marker.id !== markerId);
+    const closingLast =
+      nextPanels.length === 0 && openPanelsRef.current.some((p) => p.marker.id === markerId);
+
+    openPanelsRef.current = nextPanels;
+    setOpenPanels(nextPanels);
     setChromeActiveMarkerId((prev) => (prev === markerId ? null : prev));
+
+    if (!closingLast) return;
+
+    const restore = detailRestoreCameraRef.current;
+    const wasGroup = detailCloseIsGroupRef.current;
+    detailRestoreCameraRef.current = null;
+    detailCloseIsGroupRef.current = false;
+
+    // Keep cluster context after a group close so sibling pins still restore
+    // group zoom; clear it after a lonely close.
+    if (!wasGroup) {
+      openedFromClusterRef.current = false;
+      clusterLeafCountRef.current = 0;
+      donutCameraRef.current = null;
+    }
+
+    setMarkerFocus(null);
+    markerFocusRef.current = null;
+
+    if (wasGroup && restore) {
+      // Group pin → fly back to the expanded-group zoom.
+      const target = {
+        center: [restore.center[0], restore.center[1]] as [number, number],
+        zoom: restore.zoom,
+      };
+      setReturnCamera(target);
+      returnCameraRef.current = target;
+      setForceFlyToken((n) => n + 1);
+      return;
+    }
+
+    // Lonely pin → hard global/country fitBounds (wider than flyTo countryZoom).
+    setReturnCamera(null);
+    returnCameraRef.current = null;
+    setCountryFitNonce((n) => n + 1);
   }, []);
 
   /* ---- Filtered markers (location + type, before time) ---- */
@@ -478,9 +617,49 @@ export default function MapPage() {
 
 
   const handleMarkerClick = useCallback(
-    (marker: MapMarker, screenPoint: MarkerScreenPoint) => {
+    (
+      marker: MapMarker,
+      screenPoint: MarkerScreenPoint,
+      camera?: { center: [number, number]; zoom: number },
+    ) => {
       const full = allMarkers.find((m) => m.id === marker.id);
       if (!full) return;
+
+      // Click-time camera = group framing after donut expand, or country overview.
+      const prior = camera ?? browseCameraRef.current ?? layerCameraRef.current;
+
+      const countryZoom =
+        selectedCountry !== "All Countries"
+          ? (isMobile ? Math.max(getZoom(selectedCountry) - 1, 4) : getZoom(selectedCountry))
+          : (isMobile ? 4 : 5);
+
+      // Group (≥2 markers from a donut): close returns to this group zoom.
+      // Lonely pin: close uses country fitBounds (global) — no pin-depth snapshot.
+      const fromGroup =
+        openedFromClusterRef.current &&
+        clusterLeafCountRef.current >= 2 &&
+        prior != null;
+
+      detailCloseIsGroupRef.current = fromGroup;
+      if (fromGroup) {
+        const restore = {
+          center: [prior.center[0], prior.center[1]] as [number, number],
+          zoom: prior.zoom,
+        };
+        detailRestoreCameraRef.current = restore;
+        setReturnCamera(restore);
+        returnCameraRef.current = restore;
+      } else {
+        detailRestoreCameraRef.current = null;
+        // Clear so close can enable fitBoundsOnFocus for a true global zoom-out.
+        setReturnCamera(null);
+        returnCameraRef.current = null;
+      }
+
+      // Zoom in past the current layer so close clearly returns outward.
+      const focusZoom = Math.min(14.5, (prior?.zoom ?? countryZoom) + 2.5);
+      setMarkerFocus({ lng: full.lng, lat: full.lat, zoom: focusZoom });
+      markerFocusRef.current = { lng: full.lng, lat: full.lat, zoom: focusZoom };
 
       // Mobile + Keep panels open off: classic single-panel replace.
       const accumulate = keepPanelsOpen && !isMobile;
@@ -525,7 +704,7 @@ export default function MapPage() {
         return next;
       });
     },
-    [allMarkers, keepPanelsOpen, isMobile, bumpPanelZ],
+    [allMarkers, keepPanelsOpen, isMobile, bumpPanelZ, selectedCountry, getZoom],
   );
 
   const isLoading =
@@ -643,8 +822,21 @@ export default function MapPage() {
           focusCountryGeometry={focusCountryGeometry}
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-          fitBoundsGeometry={focusEntityId ? null : fitBoundsGeometry}
-          fitBoundsOnFocus={!focusEntityId}
+          fitBoundsGeometry={focusEntityId || markerFocus ? null : fitBoundsGeometry}
+          fitBoundsOnFocus={!focusEntityId && !markerFocus && !returnCamera && !globeIntro}
+          countryFitNonce={countryFitNonce}
+          forceFlyToken={forceFlyToken}
+          flyDuration={markerFocus ? 500 : 650}
+          // Keep pin above the ~45vh sheet + breathing room.
+          flyPaddingBottom={
+            markerFocus && isMobile
+              ? Math.round((typeof window !== "undefined" ? window.innerHeight : 700) * 0.45) + 72
+              : 0
+          }
+          playGlobeIntro={globeIntro}
+          onGlobeIntroComplete={handleGlobeIntroComplete}
+          onCameraChange={handleCameraChange}
+          onClusterExpand={handleClusterExpand}
           populationBoundaries={populationBoundaries}
           showBoundaries={boundaryLevel !== "none"}
           showRoads={showRoads}
@@ -734,7 +926,8 @@ export default function MapPage() {
       ))}
 
       {/* ===== Timeline (bottom overlay) — month chips only, no frosted stripe ===== */}
-      {availableMonths.length > 0 && (
+      {/* Hide under marker detail sheet on mobile so chips don't cover the panel. */}
+      {availableMonths.length > 0 && !(isMobile && openPanels.length > 0) && (
         <Box
           className="absolute left-0 right-0 z-20"
           px={16}

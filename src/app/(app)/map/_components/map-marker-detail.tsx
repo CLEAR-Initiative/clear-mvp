@@ -78,8 +78,11 @@ export function MapMarkerDetail({
 
   const boxRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  const swipeRef = useRef<{ pointerId: number; startY: number } | null>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
+  const [swipeY, setSwipeY] = useState(0);
+  const [dismissing, setDismissing] = useState(false);
   const [headerHovered, setHeaderHovered] = useState(false);
   const [basePos, setBasePos] = useState({ left: 16, top: 80 });
 
@@ -95,6 +98,8 @@ export function MapMarkerDetail({
   // window snaps back to its anchored spot instead of lingering where it was.
   useEffect(() => {
     setOffset({ x: 0, y: 0 });
+    setSwipeY(0);
+    setDismissing(false);
   }, [marker.id]);
 
   useLayoutEffect(() => {
@@ -176,12 +181,41 @@ export function MapMarkerDetail({
     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
   }, []);
 
+  // Mobile: swipe-down from the sheet header to dismiss.
+  const handleSwipeDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isMobile || e.button !== 0) return;
+    if ((e.target as HTMLElement).closest("button, a, [data-no-drag]")) return;
+    swipeRef.current = { pointerId: e.pointerId, startY: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, [isMobile]);
+
+  const handleSwipeMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const swipe = swipeRef.current;
+    if (!swipe || swipe.pointerId !== e.pointerId) return;
+    setSwipeY(Math.max(0, e.clientY - swipe.startY));
+  }, []);
+
+  const handleSwipeEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const swipe = swipeRef.current;
+    if (!swipe || swipe.pointerId !== e.pointerId) return;
+    swipeRef.current = null;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+
+    if (swipeY > 80) {
+      setDismissing(true);
+      setSwipeY(420);
+      window.setTimeout(() => onClose(), 180);
+      return;
+    }
+    setSwipeY(0);
+  }, [onClose, swipeY]);
+
   return (
     <Box
       ref={boxRef}
       className="absolute z-10 bg-[var(--color-bg-white)]"
       style={isMobile ? {
-        // Mobile: bottom sheet
+        // Mobile: bottom sheet — above timeline (z-20)
         left: 0,
         right: 0,
         bottom: 0,
@@ -191,6 +225,10 @@ export function MapMarkerDetail({
         boxShadow: "0 -4px 12px rgba(0,0,0,0.15)",
         border: "1px solid var(--color-border)",
         borderBottom: "none",
+        zIndex: Math.max(stackZIndex, 40),
+        transform: `translateY(${swipeY}px)`,
+        transition: dismissing || swipeY === 0 ? "transform 180ms ease-out" : "none",
+        touchAction: "none",
       } : {
         // Desktop: beside the marker, draggable via grip / header
         top: basePos.top,
@@ -270,19 +308,38 @@ export function MapMarkerDetail({
         </Box>
       )}
 
-      {/* Mobile header (no drag) */}
+      {/* Mobile header — swipe down to dismiss */}
       {isMobile && (
-        <Group
-          justify="space-between"
-          px={16}
-          py={12}
-          className="border-b border-[var(--color-border)]"
+        <Box
+          onPointerDown={handleSwipeDown}
+          onPointerMove={handleSwipeMove}
+          onPointerUp={handleSwipeEnd}
+          onPointerCancel={handleSwipeEnd}
+          style={{ touchAction: "none", cursor: "grab" }}
         >
-          <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
-            {marker.title}
-          </Text>
-          <CloseButton size="sm" onClick={onClose} data-no-drag />
-        </Group>
+          <Box py={8} style={{ display: "flex", justifyContent: "center" }}>
+            <Box
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 999,
+                background: "var(--color-border-dark)",
+                opacity: 0.7,
+              }}
+            />
+          </Box>
+          <Group
+            justify="space-between"
+            px={16}
+            pb={12}
+            className="border-b border-[var(--color-border)]"
+          >
+            <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
+              {marker.title}
+            </Text>
+            <CloseButton size="sm" onClick={onClose} data-no-drag />
+          </Group>
+        </Box>
       )}
 
       {/* Body */}
