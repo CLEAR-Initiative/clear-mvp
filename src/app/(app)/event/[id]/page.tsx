@@ -8,6 +8,7 @@ import { useTeam } from "~/providers/team-provider";
 import { EventDetailContent } from "~/components/event-detail/event-detail-content";
 import { useEventNavigation, getEventMapCenter } from "~/hooks/use-event-navigation";
 import { deriveEntityPending, useEntityNavigation } from "~/hooks/use-entity-navigation";
+import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
 
 export default function EventDetailPage({
   params,
@@ -66,13 +67,20 @@ export default function EventDetailPage({
     return item ? getEventMapCenter(item) ?? undefined : undefined;
   }, [activeId, navigation.listItems]);
 
-  const navigatePrev = () => {
+  const navigatePrev = useCallback(() => {
     if (navigation.prevId) navigateTo(navigation.prevId);
-  };
+  }, [navigation.prevId, navigateTo]);
 
-  const navigateNext = () => {
+  const navigateNext = useCallback(() => {
     if (navigation.nextId) navigateTo(navigation.nextId);
-  };
+  }, [navigation.nextId, navigateTo]);
+
+  useDetailKeyboardNav({
+    hasPrev: navigation.hasPrev,
+    hasNext: navigation.hasNext,
+    onPrev: navigatePrev,
+    onNext: navigateNext,
+  });
 
   return (
     <EventDetailContent

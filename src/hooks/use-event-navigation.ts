@@ -3,6 +3,7 @@ import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { useLocations } from "~/hooks/use-locations";
 import { readDetectionNavContext, getDefaultDetectionNavContext } from "~/lib/detection-nav-context";
+import { getListNavigation } from "~/lib/detail-list-nav";
 import type { GqlEvent, GqlLocation, GqlSignal } from "~/lib/types/graphql";
 
 /**
@@ -59,47 +60,36 @@ export function useEventNavigation(currentEventId: string): DetailNavigationResu
   const { activeTeamId } = useTeam();
   const { getLocationId } = useLocations();
 
-  // Read detection filter context or use defaults
   const navContext = useMemo(() => {
     const stored = readDetectionNavContext();
     return stored ?? getDefaultDetectionNavContext(getLocationId, activeTeamId);
   }, [getLocationId, activeTeamId]);
 
-  // SIMPLIFIED: Use the SAME query as the map to ensure consistency
-  const eventsQuery = api.alerts.eventsForMap.useQuery(
-    { includeDummy: true },
-    { staleTime: 60_000 },
+  // Same filtered/ordered page as Detection Events tab (capped at API max).
+  const eventsQuery = api.alerts.eventsPage.useQuery({
+    teamId: navContext.teamId ?? undefined,
+    locationId: navContext.locationId ?? undefined,
+    from: navContext.from,
+    to: navContext.to,
+    severityMin: navContext.severityMin,
+    severityMax: navContext.severityMax,
+    eventTypes: navContext.eventTypes,
+    orderBy: navContext.orderBy,
+    limit: 500,
+    offset: 0,
+  });
+
+  const items = eventsQuery.data?.items ?? [];
+  const ids = useMemo(() => items.map((e) => e.id), [items]);
+  const nav = useMemo(
+    () => getListNavigation(ids, currentEventId),
+    [ids, currentEventId],
   );
 
-  const currentIndex = useMemo(() => {
-    const items = eventsQuery.data?.events ?? [];
-    return items.findIndex((e) => e.id === currentEventId);
-  }, [eventsQuery.data, currentEventId]);
-
-  const prevId = useMemo(() => {
-    if (currentIndex <= 0) return null;
-    const items = eventsQuery.data?.events ?? [];
-    return items[currentIndex - 1]?.id ?? null;
-  }, [currentIndex, eventsQuery.data]);
-
-  const nextId = useMemo(() => {
-    const items = eventsQuery.data?.events ?? [];
-    if (currentIndex < 0 || currentIndex >= items.length - 1) return null;
-    return items[currentIndex + 1]?.id ?? null;
-  }, [currentIndex, eventsQuery.data]);
-
-  const totalCount = eventsQuery.data?.events?.length ?? 0;
-
   return {
-    prevId,
-    nextId,
-    hasPrev: currentIndex > 0,
-    hasNext: currentIndex >= 0 && currentIndex < (eventsQuery.data?.events?.length ?? 0) - 1,
-    position: currentIndex >= 0 ? `${currentIndex + 1} / ${totalCount}` : "—",
-    currentIndex,
-    totalCount,
+    ...nav,
     isLoading: eventsQuery.isLoading,
-    listItems: eventsQuery.data?.events ?? [],
+    listItems: items,
   };
 }
 
@@ -108,7 +98,7 @@ export function useEventNavigation(currentEventId: string): DetailNavigationResu
  */
 export function getSignalMapCenter(signal: GqlSignal | null | undefined): [number, number] | null {
   if (!signal) return null;
-  
+
   const locations: GqlLocation[] = [];
   if (signal.generalLocation) locations.push(signal.generalLocation);
   if (signal.originLocation) locations.push(signal.originLocation);
@@ -133,13 +123,11 @@ export function useSignalNavigation(currentSignalId: string): DetailNavigationRe
   const { activeTeamId } = useTeam();
   const { getLocationId } = useLocations();
 
-  // Read detection filter context or use defaults
   const navContext = useMemo(() => {
     const stored = readDetectionNavContext();
     return stored ?? getDefaultDetectionNavContext(getLocationId, activeTeamId);
   }, [getLocationId, activeTeamId]);
 
-  // Query signals with detection filters, limited to 500 (API max)
   const signalsQuery = api.signals.signalsPage.useQuery({
     teamId: navContext.teamId ?? undefined,
     locationId: navContext.locationId ?? undefined,
@@ -153,34 +141,16 @@ export function useSignalNavigation(currentSignalId: string): DetailNavigationRe
     offset: 0,
   });
 
-  const currentIndex = useMemo(() => {
-    const items = signalsQuery.data?.items ?? [];
-    return items.findIndex((s) => s.id === currentSignalId);
-  }, [signalsQuery.data, currentSignalId]);
-
-  const prevId = useMemo(() => {
-    if (currentIndex <= 0) return null;
-    const items = signalsQuery.data?.items ?? [];
-    return items[currentIndex - 1]?.id ?? null;
-  }, [currentIndex, signalsQuery.data]);
-
-  const nextId = useMemo(() => {
-    const items = signalsQuery.data?.items ?? [];
-    if (currentIndex < 0 || currentIndex >= items.length - 1) return null;
-    return items[currentIndex + 1]?.id ?? null;
-  }, [currentIndex, signalsQuery.data]);
-
-  const totalCount = signalsQuery.data?.totalCount ?? 0;
+  const items = signalsQuery.data?.items ?? [];
+  const ids = useMemo(() => items.map((s) => s.id), [items]);
+  const nav = useMemo(
+    () => getListNavigation(ids, currentSignalId),
+    [ids, currentSignalId],
+  );
 
   return {
-    prevId,
-    nextId,
-    hasPrev: currentIndex > 0,
-    hasNext: currentIndex >= 0 && currentIndex < (signalsQuery.data?.items.length ?? 0) - 1,
-    position: currentIndex >= 0 ? `${currentIndex + 1} / ${totalCount}` : "—",
-    currentIndex,
-    totalCount,
+    ...nav,
     isLoading: signalsQuery.isLoading,
-    listItems: signalsQuery.data?.items ?? [],
+    listItems: items,
   };
 }

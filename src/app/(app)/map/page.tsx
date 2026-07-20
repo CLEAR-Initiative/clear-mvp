@@ -35,12 +35,15 @@ import type { BaseMapType } from "~/components/map/crisis-map";
 import { useIsDark } from "~/hooks/use-is-dark";
 import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
 import { useSearchParams } from "next/navigation";
+import { getAdjacentItem } from "~/lib/detail-list-nav";
+import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
 
 const MAX_OPEN_PANELS = 4;
 
 interface OpenMarkerPanel {
   marker: CrisisMarker;
-  anchor: MarkerScreenPoint;
+  /** Null after arrow-nav until the user re-clicks a pin (fallback panel placement). */
+  anchor: MarkerScreenPoint | null;
   /** FIFO age — set once when the panel is created. */
   openedAt: number;
   /** Bring-to-front order — bumped on open/focus/drag. */
@@ -217,6 +220,8 @@ export default function MapPage() {
   const [openPanels, setOpenPanels] = useState<OpenMarkerPanel[]>([]);
   const [keepPanelsOpen, setKeepPanelsOpen] = useState(false);
   const [chromeActiveMarkerId, setChromeActiveMarkerId] = useState<number | null>(null);
+  /** Camera target while stepping marker panels with prev/next. */
+  const [panelNavFocus, setPanelNavFocus] = useState<CrisisMarker | null>(null);
   const panelZRef = useRef(10);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
@@ -311,8 +316,10 @@ export default function MapPage() {
   );
 
   /* ---- Map center ---- */
+  const cameraMarker = panelNavFocus ?? focusMarker;
+
   const mapCenter: [number, number] = useMemo(() => {
-    if (focusMarker) return [focusMarker.lng, focusMarker.lat];
+    if (cameraMarker) return [cameraMarker.lng, cameraMarker.lat];
     if (selectedCountry !== "All Countries") {
       return getCenter(selectedCountry);
     }
@@ -322,15 +329,15 @@ export default function MapPage() {
     const avgLat =
       allMarkers.reduce((sum, m) => sum + m.lat, 0) / allMarkers.length;
     return [avgLng, avgLat];
-  }, [allMarkers, selectedCountry, focusMarker, getCenter]);
+  }, [allMarkers, selectedCountry, cameraMarker, getCenter]);
 
   const mapZoom = useMemo(() => {
-    if (focusMarker) return MAP_FOCUS_ZOOM;
+    if (cameraMarker) return MAP_FOCUS_ZOOM;
     if (selectedCountry !== "All Countries") {
       return getZoom(selectedCountry);
     }
     return 5;
-  }, [selectedCountry, focusMarker, getZoom]);
+  }, [selectedCountry, cameraMarker, getZoom]);
 
   /* ---- Resolve selected location for filtering ---- */
   const selectedLocationId = useMemo(() => {
@@ -351,6 +358,7 @@ export default function MapPage() {
   useEffect(() => {
     setSelectedMonth(null);
     setOpenPanels([]);
+    setPanelNavFocus(null);
     // Keep deep-link pin pulse when arriving via ?event|signal|crisis= (#108).
     if (!focusEntityId) setChromeActiveMarkerId(null);
   }, [dataView, focusEntityId]);
@@ -358,6 +366,7 @@ export default function MapPage() {
   const clearOpenPanels = useCallback(() => {
     setOpenPanels([]);
     setChromeActiveMarkerId(null);
+    setPanelNavFocus(null);
   }, []);
 
   const bumpPanelZ = useCallback(() => {
@@ -382,6 +391,7 @@ export default function MapPage() {
   const closeOpenPanel = useCallback((markerId: number) => {
     setOpenPanels((prev) => prev.filter((p) => p.marker.id !== markerId));
     setChromeActiveMarkerId((prev) => (prev === markerId ? null : prev));
+    setPanelNavFocus((prev) => (prev?.id === markerId ? null : prev));
   }, []);
 
   /* ---- Filtered markers (location + type, before time) ---- */
@@ -451,7 +461,7 @@ export default function MapPage() {
   }, [availableMonths, selectedMonth]);
 
   /* ---- Apply timeline filter on top ---- */
-  const currentMarkers: MapMarker[] = useMemo(() => {
+  const currentMarkers: CrisisMarker[] = useMemo(() => {
     if (!selectedMonth) return markersBeforeTime;
     return markersBeforeTime.filter((m) => {
       // Markers without a known timestamp pass through - see availableMonths
@@ -463,6 +473,75 @@ export default function MapPage() {
       return ym === selectedMonth;
     });
   }, [markersBeforeTime, selectedMonth]);
+
+  const stepOpenPanelMarker = useCallback(
+    (fromMarkerId: number, direction: "prev" | "next") => {
+      const { prev, next } = getAdjacentItem(
+        currentMarkers,
+        fromMarkerId,
+        (m) => m.id,
+      );
+      const target = direction === "prev" ? prev : next;
+      if (!target) return;
+
+      setOpenPanels((panels) => {
+        const alreadyOpen = panels.some((p) => p.marker.id === target.id);
+        if (alreadyOpen) {
+          const z = bumpPanelZ();
+          return panels
+            .filter((p) => p.marker.id !== fromMarkerId)
+            .map((p) => (p.marker.id === target.id ? { ...p, z } : p));
+        }
+        const z = bumpPanelZ();
+        return panels.map((p) =>
+          p.marker.id === fromMarkerId
+            ? { ...p, marker: target, anchor: null, z }
+            : p,
+        );
+      });
+      setPanelNavFocus(target);
+      setChromeActiveMarkerId(target.id);
+    },
+    [currentMarkers, bumpPanelZ],
+  );
+
+  const topOpenPanel = useMemo(() => {
+    if (openPanels.length === 0) return null;
+    return openPanels.reduce((best, p) => (p.z >= best.z ? p : best));
+  }, [openPanels]);
+
+  const topPanelAdjacent = useMemo(() => {
+    if (!topOpenPanel) {
+      return { hasPrev: false, hasNext: false, position: "—" as const };
+    }
+    const { prev, next, currentIndex, totalCount } = getAdjacentItem(
+      currentMarkers,
+      topOpenPanel.marker.id,
+      (m) => m.id,
+    );
+    return {
+      hasPrev: prev != null,
+      hasNext: next != null,
+      position:
+        currentIndex >= 0 ? `${currentIndex + 1} / ${totalCount}` : ("—" as const),
+    };
+  }, [topOpenPanel, currentMarkers]);
+
+  const navigateTopPanelPrev = useCallback(() => {
+    if (topOpenPanel) stepOpenPanelMarker(topOpenPanel.marker.id, "prev");
+  }, [topOpenPanel, stepOpenPanelMarker]);
+
+  const navigateTopPanelNext = useCallback(() => {
+    if (topOpenPanel) stepOpenPanelMarker(topOpenPanel.marker.id, "next");
+  }, [topOpenPanel, stepOpenPanelMarker]);
+
+  useDetailKeyboardNav({
+    enabled: topOpenPanel != null,
+    hasPrev: topPanelAdjacent.hasPrev,
+    hasNext: topPanelAdjacent.hasNext,
+    onPrev: navigateTopPanelPrev,
+    onNext: navigateTopPanelNext,
+  });
 
   /* ---- Handlers ---- */
   const handleCountryChange = (value: string | null) => {
@@ -481,6 +560,8 @@ export default function MapPage() {
     (marker: MapMarker, screenPoint: MarkerScreenPoint) => {
       const full = allMarkers.find((m) => m.id === marker.id);
       if (!full) return;
+
+      setPanelNavFocus(null);
 
       // Mobile + Keep panels open off: classic single-panel replace.
       const accumulate = keepPanelsOpen && !isMobile;
@@ -643,8 +724,8 @@ export default function MapPage() {
           focusCountryGeometry={focusCountryGeometry}
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-          fitBoundsGeometry={focusEntityId ? null : fitBoundsGeometry}
-          fitBoundsOnFocus={!focusEntityId}
+          fitBoundsGeometry={focusEntityId || panelNavFocus ? null : fitBoundsGeometry}
+          fitBoundsOnFocus={!focusEntityId && !panelNavFocus}
           populationBoundaries={populationBoundaries}
           showBoundaries={boundaryLevel !== "none"}
           showRoads={showRoads}
@@ -719,19 +800,37 @@ export default function MapPage() {
       />
 
       {/* ===== Marker detail panel(s) ===== */}
-      {openPanels.map((panel) => (
-        <MapMarkerDetail
-          key={panel.marker.id}
-          marker={panel.marker}
-          anchor={panel.anchor}
-          stackZIndex={panel.z}
-          onActivate={() => focusOpenPanel(panel.marker.id)}
-          onChromeActiveChange={(active) =>
-            handlePanelChromeActive(panel.marker.id, active)
-          }
-          onClose={() => closeOpenPanel(panel.marker.id)}
-        />
-      ))}
+      {openPanels.map((panel) => {
+        const adjacent = getAdjacentItem(
+          currentMarkers,
+          panel.marker.id,
+          (m) => m.id,
+        );
+        const position =
+          adjacent.currentIndex >= 0
+            ? `${adjacent.currentIndex + 1} / ${adjacent.totalCount}`
+            : "—";
+        return (
+          <MapMarkerDetail
+            key={panel.marker.id}
+            marker={panel.marker}
+            anchor={panel.anchor}
+            stackZIndex={panel.z}
+            navigation={{
+              position,
+              hasPrev: adjacent.prev != null,
+              hasNext: adjacent.next != null,
+            }}
+            onNavigatePrev={() => stepOpenPanelMarker(panel.marker.id, "prev")}
+            onNavigateNext={() => stepOpenPanelMarker(panel.marker.id, "next")}
+            onActivate={() => focusOpenPanel(panel.marker.id)}
+            onChromeActiveChange={(active) =>
+              handlePanelChromeActive(panel.marker.id, active)
+            }
+            onClose={() => closeOpenPanel(panel.marker.id)}
+          />
+        );
+      })}
 
       {/* ===== Timeline (bottom overlay) — month chips only, no frosted stripe ===== */}
       {availableMonths.length > 0 && (
