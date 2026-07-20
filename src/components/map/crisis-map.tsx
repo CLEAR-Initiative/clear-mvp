@@ -7,6 +7,15 @@ import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-m
 import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
 import { useIsDark } from "~/hooks/use-is-dark";
 import { countryConfig } from "~/lib/constants/country-config";
+import {
+  aggregationModeForZoom,
+  donutCenterCount,
+  donutCenterLabel,
+  donutSeveritySegments,
+  type DensityAggregationMode,
+  DENSITY_DONUT_MAX_ZOOM,
+  DENSITY_HEATMAP_MAX_ZOOM,
+} from "~/lib/map/marker-density";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
 const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
@@ -185,8 +194,6 @@ function isRoadLayerId(id: string): boolean {
 
 // ── Donut cluster helpers ────────────────────────────────────────────────────
 
-const SEVERITY_ORDER = ["critical", "high", "medium", "low"] as const;
-
 function arcSegment(
   cx: number, cy: number,
   outerR: number, innerR: number,
@@ -202,15 +209,16 @@ function arcSegment(
 }
 
 function buildDonutEl(props: Record<string, number>): HTMLDivElement {
-  const total = props.point_count ?? 0;
+  const total = donutCenterCount(props);
   const size  = total < 10 ? 40 : total < 50 ? 46 : total < 200 ? 52 : 58;
   const outerR = size / 2 - 2;
   const innerR = outerR * 0.58;
   const cx = size / 2, cy = size / 2;
 
-  const segments = SEVERITY_ORDER
-    .map((s) => ({ color: severityColors[s], count: Math.max(0, props[s] ?? 0) }))
-    .filter((s) => s.count > 0);
+  const segments = donutSeveritySegments(props).map((s) => ({
+    color: severityColors[s.severity],
+    count: s.count,
+  }));
 
   const denom = segments.reduce((sum, s) => sum + s.count, 0) || 1;
 
@@ -230,14 +238,21 @@ function buildDonutEl(props: Record<string, number>): HTMLDivElement {
     }
   }
 
-  const fontSize = size < 44 ? 11 : size < 50 ? 12 : 13;
-  const label = total > 999 ? "999+" : String(total);
+  const fontSize = size < 44 ? 10 : size < 50 ? 11 : 12;
+  const label = donutCenterLabel(props);
+  // Count sits on the top-right of the ring (hollow center stays open).
+  const midR = (outerR + innerR) / 2;
+  const badgeAngle = -Math.PI / 4; // NE
+  const bx = cx + midR * Math.cos(badgeAngle);
+  const by = cy + midR * Math.sin(badgeAngle);
+  const badgeR = Math.max(8, fontSize * 0.85);
 
   const el = document.createElement("div");
   el.style.cssText = `cursor:pointer;width:${size}px;height:${size}px;filter:drop-shadow(0 2px 5px rgba(0,0,0,0.22));`;
   el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     ${arcs}
-    <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="#1F2937" font-weight="700" font-size="${fontSize}" font-family="system-ui,-apple-system,sans-serif">${label}</text>
+    <circle cx="${bx}" cy="${by}" r="${badgeR}" fill="#111827" stroke="#FFFFFF" stroke-width="1.5"/>
+    <text x="${bx}" y="${by}" text-anchor="middle" dominant-baseline="central" fill="#FFFFFF" font-weight="700" font-size="${fontSize}" font-family="system-ui,-apple-system,sans-serif">${label}</text>
   </svg>`;
   return el;
 }
@@ -865,21 +880,24 @@ export function CrisisMap({
     });
   }, [center, zoom, loaded, focusCountry, flyDuration, fitBoundsOnFocus, fitBoundsGeometry, flyPaddingBottom, forceFlyToken]);
 
-  // ── Markers (donut cluster DOM markers) ─────────────────────────────────
+  // ── Markers (density ladder: heatmap → donuts → points) ─────────────────
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
     const SOURCE = "crisis-markers";
+    const HEAT_SOURCE = "crisis-markers-density-heat";
+    const HEAT_LAYER = "crisis-markers-density-heat-layer";
     const CLUSTER_GHOST = "cluster-ghost";
     const POINT_GHOST = "point-ghost";
 
-    // Remove tracked markers, then sweep any orphans left by duplicate
-    // queryRenderedFeatures results (Map.set overwrote the ref without remove).
-    const clearDomMarkers = () => {
+    // Remove tracked markers. Orphan sweep only on full teardown — sweeping
+    // every frame during zoom caused empty flashes between heatmap ↔ donuts.
+    const clearDomMarkers = (sweepOrphans = false) => {
       for (const mk of clusterDomMarkers.current.values()) {
         try { mk.remove(); } catch { /* ignore */ }
       }
       clusterDomMarkers.current.clear();
+      if (!sweepOrphans) return;
       try {
         m.getContainer()
           .querySelectorAll(".mapboxgl-marker")
@@ -887,12 +905,18 @@ export function CrisisMap({
       } catch { /* ignore */ }
     };
 
-    if (!showMarkers) {
-      clearDomMarkers();
-      for (const id of [CLUSTER_GHOST, POINT_GHOST]) {
+    const removeLayers = () => {
+      for (const id of [HEAT_LAYER, CLUSTER_GHOST, POINT_GHOST]) {
         try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
       }
-      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
+      for (const id of [HEAT_SOURCE, SOURCE]) {
+        try { if (m.getSource(id)) m.removeSource(id); } catch { /* ignore */ }
+      }
+    };
+
+    if (!showMarkers) {
+      clearDomMarkers(true);
+      removeLayers();
       return;
     }
     const mb = mbRef.current;
@@ -900,43 +924,72 @@ export function CrisisMap({
     // Keep markersDataRef current for click handlers that close over it.
     markersDataRef.current = markers;
 
-    const removeLayers = () => {
-      for (const id of [CLUSTER_GHOST, POINT_GHOST]) {
-        try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
-      }
-      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
-    };
-
-    clearDomMarkers();
+    clearDomMarkers(true);
     removeLayers();
+
+    const features = markers.map((mk) => ({
+      type: "Feature" as const,
+      properties: {
+        id: mk.id, title: mk.title, severity: mk.severity,
+        type: mk.type ?? "", description: mk.description ?? "",
+        marker_kind: mk.markerKind ?? "",
+        is_critical: mk.severity === "critical" ? 1 : 0,
+        is_high:     mk.severity === "high"     ? 1 : 0,
+        is_medium:   mk.severity === "medium"   ? 1 : 0,
+        is_low:      mk.severity === "low"      ? 1 : 0,
+        // Weight denser severity slightly so critical hotspots read at global zoom.
+        heat_weight: mk.severity === "critical" ? 1 : mk.severity === "high" ? 0.85 : 0.65,
+      },
+      geometry: { type: "Point" as const, coordinates: [mk.lng, mk.lat] },
+    }));
 
     m.addSource(SOURCE, {
       type: "geojson",
-      data: {
-        type: "FeatureCollection",
-        features: markers.map((mk) => ({
-          type: "Feature" as const,
-          properties: {
-            id: mk.id, title: mk.title, severity: mk.severity,
-            type: mk.type ?? "", description: mk.description ?? "",
-            marker_kind: mk.markerKind ?? "",
-            is_critical: mk.severity === "critical" ? 1 : 0,
-            is_high:     mk.severity === "high"     ? 1 : 0,
-            is_medium:   mk.severity === "medium"   ? 1 : 0,
-            is_low:      mk.severity === "low"      ? 1 : 0,
-          },
-          geometry: { type: "Point" as const, coordinates: [mk.lng, mk.lat] },
-        })),
-      },
+      data: { type: "FeatureCollection", features },
       cluster: true,
       clusterMinPoints: CLUSTER_MIN_POINTS,
-      clusterMaxZoom: 8,
+      clusterMaxZoom: DENSITY_DONUT_MAX_ZOOM,
       clusterRadius: 30,
       clusterProperties: {
         critical: ["+", ["get", "is_critical"]],
         high:     ["+", ["get", "is_high"]],
         medium:   ["+", ["get", "is_medium"]],
         low:      ["+", ["get", "is_low"]],
+      },
+    });
+
+    // Separate unclustered source so the global heatmap sees every active marker.
+    m.addSource(HEAT_SOURCE, {
+      type: "geojson",
+      data: { type: "FeatureCollection", features },
+    });
+    m.addLayer({
+      id: HEAT_LAYER,
+      type: "heatmap",
+      source: HEAT_SOURCE,
+      maxzoom: DENSITY_HEATMAP_MAX_ZOOM + 1,
+      paint: {
+        "heatmap-weight": ["coalesce", ["get", "heat_weight"], 0.7],
+        "heatmap-intensity": [
+          "interpolate", ["linear"], ["zoom"],
+          0, 0.7,
+          DENSITY_HEATMAP_MAX_ZOOM, 1.35,
+        ],
+        "heatmap-color": [
+          "interpolate", ["linear"], ["heatmap-density"],
+          0, "rgba(0,0,0,0)",
+          0.15, "rgba(251,191,36,0.25)",
+          0.4, "rgba(217,119,6,0.45)",
+          0.7, "rgba(220,38,38,0.7)",
+          1, "rgba(153,27,27,0.9)",
+        ],
+        "heatmap-radius": [
+          "interpolate", ["linear"], ["zoom"],
+          0, 12,
+          DENSITY_HEATMAP_MAX_ZOOM, 28,
+        ],
+        // Opacity is driven in JS from the settled mode (no zoom-overlap band).
+        "heatmap-opacity": 0.85,
       },
     });
 
@@ -949,11 +1002,58 @@ export function CrisisMap({
       filter: ["!", ["has", "point_count"]],
       paint: { "circle-radius": 1, "circle-opacity": 0, "circle-stroke-opacity": 0 } });
 
-    const update = () => {
-      clearDomMarkers();
+    const isValidLngLat = (coords: unknown): coords is [number, number] => {
+      if (!Array.isArray(coords) || coords.length < 2) return false;
+      const lng = Number(coords[0]);
+      const lat = Number(coords[1]);
+      return (
+        Number.isFinite(lng) &&
+        Number.isFinite(lat) &&
+        Math.abs(lng) <= 180 &&
+        Math.abs(lat) <= 90
+      );
+    };
 
-      // Dedupe: Mapbox returns tile-boundary duplicates; creating a Marker per
-      // result then Map.set(sameKey) orphans the previous DOM node forever.
+    // Settled mode only — ignore mid-gesture zoom so heatmap/donuts never overlap.
+    let settledMode: DensityAggregationMode = aggregationModeForZoom(m.getZoom());
+    let heatFadeRaf = 0;
+    let heatFadeFrom = 0.85;
+    let heatTarget = settledMode === "heatmap" ? 0.85 : 0;
+
+    const setHeatOpacity = (opacity: number) => {
+      try {
+        if (m.getLayer(HEAT_LAYER)) {
+          m.setPaintProperty(HEAT_LAYER, "heatmap-opacity", opacity);
+        }
+      } catch { /* ignore */ }
+    };
+    setHeatOpacity(heatTarget);
+
+    const fadeHeatmapTo = (target: number, ms = 180) => {
+      if (heatFadeRaf) cancelAnimationFrame(heatFadeRaf);
+      const start = performance.now();
+      const from = heatFadeFrom;
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - start) / ms);
+        // ease-out
+        const eased = 1 - (1 - t) * (1 - t);
+        const value = from + (target - from) * eased;
+        heatFadeFrom = value;
+        setHeatOpacity(value);
+        if (t < 1) {
+          heatFadeRaf = requestAnimationFrame(tick);
+        } else {
+          heatFadeRaf = 0;
+          heatFadeFrom = target;
+        }
+      };
+      heatFadeRaf = requestAnimationFrame(tick);
+    };
+
+    const renderMarkersForMode = (mode: DensityAggregationMode) => {
+      clearDomMarkers(false);
+      if (mode === "heatmap") return;
+
       const clusterFeats = dedupeByProperty(
         m.queryRenderedFeatures({ layers: [CLUSTER_GHOST] }) as MapboxGLAny[],
         "cluster_id",
@@ -963,42 +1063,46 @@ export function CrisisMap({
         "id",
       );
 
-      for (const feat of clusterFeats) {
-        const coords = feat.geometry.coordinates as [number, number];
-        const props  = feat.properties as Record<string, number>;
-        const cid    = props.cluster_id;
-        const el     = buildDonutEl(props);
-        el.addEventListener("click", () => {
-          // Snapshot donut-level camera + cluster size before expanding.
-          const c = m.getCenter();
-          const leafCount = Number(props.point_count) || 0;
-          onClusterExpandRef.current?.(
-            { center: [c.lng, c.lat], zoom: m.getZoom() },
-            leafCount,
-          );
-          // Fetch all leaves so we can fitBounds to the full set - guarantees
-          // every member of the cluster is visible after expanding.
-          (m.getSource(SOURCE) as MapboxGLAny).getClusterLeaves(cid, Infinity, 0, (err: unknown, leaves: MapboxGLAny[]) => {
-            if (err || !leaves?.length) return;
-            const lngs = leaves.map((f: MapboxGLAny) => f.geometry.coordinates[0] as number);
-            const lats = leaves.map((f: MapboxGLAny) => f.geometry.coordinates[1] as number);
-            const sw: [number, number] = [Math.min(...lngs), Math.min(...lats)];
-            const ne: [number, number] = [Math.max(...lngs), Math.max(...lats)];
-            m.fitBounds([sw, ne], { padding: 80, maxZoom: 13, duration: 600 });
+      if (mode === "donut") {
+        for (const feat of clusterFeats) {
+          const coords = feat.geometry?.coordinates;
+          const props  = feat.properties as Record<string, number>;
+          const cid    = props.cluster_id;
+          if (!isValidLngLat(coords) || cid == null || !Number.isFinite(Number(cid))) continue;
+          const el = buildDonutEl(props);
+          el.addEventListener("click", () => {
+            // Snapshot donut-level camera + cluster size before expanding.
+            const c = m.getCenter();
+            const leafCount = Number(props.point_count) || 0;
+            onClusterExpandRef.current?.(
+              { center: [c.lng, c.lat], zoom: m.getZoom() },
+              leafCount,
+            );
+            // Fetch all leaves so we can fitBounds to the full set - guarantees
+            // every member of the cluster is visible after expanding.
+            (m.getSource(SOURCE) as MapboxGLAny).getClusterLeaves(cid, Infinity, 0, (err: unknown, leaves: MapboxGLAny[]) => {
+              if (err || !leaves?.length) return;
+              const lngs = leaves.map((f: MapboxGLAny) => f.geometry.coordinates[0] as number);
+              const lats = leaves.map((f: MapboxGLAny) => f.geometry.coordinates[1] as number);
+              const sw: [number, number] = [Math.min(...lngs), Math.min(...lats)];
+              const ne: [number, number] = [Math.max(...lngs), Math.max(...lats)];
+              m.fitBounds([sw, ne], { padding: 80, maxZoom: 13, duration: 600 });
+            });
           });
-        });
-        clusterDomMarkers.current.set(
-          `c-${cid}`,
-          new mb.Marker({ element: el, anchor: "center" }).setLngLat(coords).addTo(m),
-        );
+          clusterDomMarkers.current.set(
+            `c-${cid}`,
+            new mb.Marker({ element: el, anchor: "center" }).setLngLat(coords).addTo(m),
+          );
+        }
       }
 
       for (const feat of pointFeats) {
-        const coords = feat.geometry.coordinates as [number, number];
+        const coords = feat.geometry?.coordinates;
+        if (!isValidLngLat(coords)) continue;
         const props  = feat.properties as Record<string, unknown>;
-        // GeoJSON / tile query may stringify numeric properties.
         const markerId = Number(props.id);
-        const el     = buildPointEl(props.severity as string);
+        if (!Number.isFinite(markerId)) continue;
+        const el = buildPointEl(props.severity as string);
         if (hoveredMarkerIdRef.current != null && markerId === hoveredMarkerIdRef.current) {
           el.querySelector(".marker-ping-ring")?.classList.add("active");
           el.querySelector(".marker-dot")?.classList.add("active");
@@ -1027,26 +1131,58 @@ export function CrisisMap({
       }
     };
 
+    const applySettledMode = (mode: DensityAggregationMode) => {
+      const prev = settledMode;
+      settledMode = mode;
+      const wantHeat = mode === "heatmap" ? 0.85 : 0;
+      if (wantHeat !== heatTarget) {
+        heatTarget = wantHeat;
+        fadeHeatmapTo(wantHeat);
+      }
+      // Switching into heatmap: drop donuts immediately so they never overlap.
+      // Leaving heatmap: rebuild after a short beat so heatmap can fade first.
+      if (mode === "heatmap") {
+        clearDomMarkers(false);
+        return;
+      }
+      if (prev === "heatmap") {
+        window.setTimeout(() => {
+          if (settledMode === mode) renderMarkersForMode(mode);
+        }, 90);
+        return;
+      }
+      renderMarkersForMode(mode);
+    };
+
+    const settle = () => {
+      applySettledMode(aggregationModeForZoom(m.getZoom()));
+    };
+
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const debounced = () => {
+    const debouncedSettle = () => {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(update, 60);
+      timer = setTimeout(settle, 48);
     };
 
     // sourcedata fires when cluster tiles finish computing - this drives the
     // initial render and any post-load updates.
     const onSourceData = (e: MapboxGLAny) => {
-      if (e.sourceId === SOURCE && e.isSourceLoaded) debounced();
+      if (e.sourceId === SOURCE && e.isSourceLoaded) debouncedSettle();
     };
 
-    m.on("moveend", debounced);
+    // Mode changes only when the camera settles — mid-zoom keeps the prior mode.
+    m.on("moveend", debouncedSettle);
+    m.on("zoomend", debouncedSettle);
     m.on("sourcedata", onSourceData);
+    settle();
 
     return () => {
       if (timer) clearTimeout(timer);
-      clearDomMarkers();
+      if (heatFadeRaf) cancelAnimationFrame(heatFadeRaf);
+      clearDomMarkers(true);
       removeLayers();
-      m.off("moveend", debounced);
+      m.off("moveend", debouncedSettle);
+      m.off("zoomend", debouncedSettle);
       m.off("sourcedata", onSourceData);
     };
   }, [markers, loaded, showMarkers]);
