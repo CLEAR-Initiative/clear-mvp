@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
-import Image from "next/image";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   IconMapPin,
@@ -11,6 +10,7 @@ import {
   IconSend,
   IconVideo,
 } from "@tabler/icons-react";
+import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { api } from "~/trpc/react";
 import type { GqlSignal } from "~/lib/types/graphql";
 
@@ -499,7 +499,7 @@ export default function ObservePage() {
 
       {/* Top bar */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 20px", height: 58, background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)", flexShrink: 0 }}>
-        <Image src="/nrc-logo-square.svg" alt="NRC" width={34} height={34} />
+        <NrcLogoMark size={34} />
         <span style={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-primary)", letterSpacing: "-0.02em", fontFamily: "Calibri, 'Trebuchet MS', sans-serif" }}>CLEAR</span>
         <span style={{ color: "var(--color-border-dark)", fontSize: 17, margin: "0 2px" }}>|</span>
         <span style={{ fontSize: 15, fontWeight: 300, color: "var(--color-text-secondary)" }}>{t("header.appName")}</span>
