@@ -191,8 +191,8 @@ export function MapPanelBar({
   const toggle = (id: PanelId) => setActive((prev) => (prev === id ? null : id));
 
   return (
-    // Mobile: top-left under app chrome. Desktop: below the horizontal filter bar.
-    <Box className="absolute z-20 top-3 left-4 sm:top-20">
+    // Mobile: clear the status/safe area + floating burger. Desktop: below the filter bar.
+    <Box className="absolute z-20 top-14 left-4 sm:top-20">
       <Group gap={4} align="flex-start" wrap="nowrap">
 
         {/* Icon column — Filters is mobile-only (third button under Legend) */}

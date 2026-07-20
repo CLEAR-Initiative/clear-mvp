@@ -1,0 +1,40 @@
+/*
+  Mobile marker detail sheet.
+  Slides up from behind the fixed bottom nav (nav z-index 100), then
+  rests flush on the nav's top edge (bottom: 64px = nav height).
+  Transform-only — compositor-friendly.
+*/
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sheetMobile {
+  position: fixed;
+  left: 0;
+  right: 0;
+  /* Match MobileBottomNav height so sheet bottom edge = nav top edge. */
+  bottom: 64px;
+  width: 100%;
+  max-height: 45vh;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  /* Below MobileBottomNav (z-index 100) — enter/exit travel behind the nav. */
+  z-index: 90;
+  touch-action: none;
+  background: var(--color-bg-white);
+  animation: slideUp 280ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheetMobile {
+    animation: none;
+  }
+}

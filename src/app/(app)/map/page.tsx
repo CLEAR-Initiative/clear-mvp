@@ -717,8 +717,16 @@ export default function MapPage() {
   // refetches keep the previous markers visible via placeholderData.
   const showLoadingOverlay = isLoading;
 
+  // App shell reserves pt/pb gutters for mobile chrome; bleed the map through
+  // them so the canvas fills the viewport edge-to-edge under the overlays.
+  const mobileTopGutter = 56;
+  const mobileBottomGutter = 72;
+
   return (
     <Box
+      mt={{ base: -mobileTopGutter, sm: 0 }}
+      mb={{ base: -mobileBottomGutter, sm: 0 }}
+      h="100dvh"
       style={{
         position: "relative",
         flex: 1,
@@ -933,7 +941,8 @@ export default function MapPage() {
           px={16}
           py={10}
           style={{
-            bottom: 12,
+            // Sit above the fixed bottom nav once the map bleeds full-viewport.
+            bottom: isMobile ? mobileBottomGutter + 12 : 12,
             pointerEvents: "none",
           }}
         >

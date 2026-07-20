@@ -163,6 +163,13 @@ body {
   pointer-events: auto;
 }
 
+/* Mobile map is full-bleed under the bottom nav — keep zoom controls clear of it. */
+@media (max-width: 48em) {
+  .mapboxgl-ctrl-bottom-right {
+    bottom: 76px !important;
+  }
+}
+
 /* Mapbox overrides - ensure map fills container */
 .mapboxgl-map {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;

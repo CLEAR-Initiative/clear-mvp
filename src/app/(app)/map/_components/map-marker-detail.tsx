@@ -6,6 +6,7 @@ import { IconGripHorizontal } from "@tabler/icons-react";
 import Link from "next/link";
 import { type CrisisMarker } from "./map-markers-data";
 import type { MarkerScreenPoint } from "~/components/map/crisis-map";
+import styles from "./map-marker-detail.module.css";
 
 interface MapMarkerDetailProps {
   marker: CrisisMarker;
@@ -79,10 +80,9 @@ export function MapMarkerDetail({
   const boxRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const swipeRef = useRef<{ pointerId: number; startY: number } | null>(null);
+  const swipeYRef = useRef(0);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
-  const [swipeY, setSwipeY] = useState(0);
-  const [dismissing, setDismissing] = useState(false);
   const [headerHovered, setHeaderHovered] = useState(false);
   const [basePos, setBasePos] = useState({ left: 16, top: 80 });
 
@@ -94,12 +94,10 @@ export function MapMarkerDetail({
     return () => onChromeActiveChange?.(false);
   }, [emphasized, onChromeActiveChange]);
 
-  // Reset the dragged position whenever a different marker is selected so the
-  // window snaps back to its anchored spot instead of lingering where it was.
+  // Reset desktop drag offset when the marker changes.
   useEffect(() => {
     setOffset({ x: 0, y: 0 });
-    setSwipeY(0);
-    setDismissing(false);
+    swipeYRef.current = 0;
   }, [marker.id]);
 
   useLayoutEffect(() => {
@@ -182,17 +180,27 @@ export function MapMarkerDetail({
   }, []);
 
   // Mobile: swipe-down from the sheet header to dismiss.
+  // Transform is written directly to the DOM (no React re-render per move).
   const handleSwipeDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!isMobile || e.button !== 0) return;
     if ((e.target as HTMLElement).closest("button, a, [data-no-drag]")) return;
     swipeRef.current = { pointerId: e.pointerId, startY: e.clientY };
+    const el = boxRef.current;
+    if (el) {
+      el.style.animation = "none";
+      el.style.transition = "none";
+    }
     e.currentTarget.setPointerCapture(e.pointerId);
   }, [isMobile]);
 
   const handleSwipeMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const swipe = swipeRef.current;
     if (!swipe || swipe.pointerId !== e.pointerId) return;
-    setSwipeY(Math.max(0, e.clientY - swipe.startY));
+    const y = Math.max(0, e.clientY - swipe.startY);
+    swipeYRef.current = y;
+    if (boxRef.current) {
+      boxRef.current.style.transform = `translateY(${y}px)`;
+    }
   }, []);
 
   const handleSwipeEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -201,35 +209,30 @@ export function MapMarkerDetail({
     swipeRef.current = null;
     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
 
-    if (swipeY > 80) {
-      setDismissing(true);
-      setSwipeY(420);
-      window.setTimeout(() => onClose(), 180);
+    const el = boxRef.current;
+    const ease = "transform 220ms cubic-bezier(0.32, 0.72, 0, 1)";
+
+    if (swipeYRef.current > 80) {
+      if (el) {
+        el.style.transition = ease;
+        el.style.transform = "translateY(100%)";
+      }
+      window.setTimeout(() => onClose(), 220);
       return;
     }
-    setSwipeY(0);
-  }, [onClose, swipeY]);
+
+    if (el) {
+      el.style.transition = ease;
+      el.style.transform = "translateY(0)";
+    }
+    swipeYRef.current = 0;
+  }, [onClose]);
 
   return (
     <Box
       ref={boxRef}
-      className="absolute z-10 bg-[var(--color-bg-white)]"
-      style={isMobile ? {
-        // Mobile: bottom sheet — above timeline (z-20)
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: "100%",
-        maxHeight: "45vh",
-        borderRadius: "16px 16px 0 0",
-        boxShadow: "0 -4px 12px rgba(0,0,0,0.15)",
-        border: "1px solid var(--color-border)",
-        borderBottom: "none",
-        zIndex: Math.max(stackZIndex, 40),
-        transform: `translateY(${swipeY}px)`,
-        transition: dismissing || swipeY === 0 ? "transform 180ms ease-out" : "none",
-        touchAction: "none",
-      } : {
+      className={isMobile ? styles.sheetMobile : "absolute z-10 bg-[var(--color-bg-white)]"}
+      style={isMobile ? undefined : {
         // Desktop: beside the marker, draggable via grip / header
         top: basePos.top,
         left: basePos.left,
