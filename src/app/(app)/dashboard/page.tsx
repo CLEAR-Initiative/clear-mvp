@@ -167,12 +167,14 @@ export default function DashboardPage() {
           onBaseMapTypeChange={setBaseMapType}
         />
       </Box>
-      <RightPanel
-        selectedCountry={selectedCountry}
-        onCountryChange={setSelectedCountry}
-        onViewChange={() => {}}
-        activeView="single"
-      />
+      <Box hiddenFrom="base" visibleFrom="sm">
+        <RightPanel
+          selectedCountry={selectedCountry}
+          onCountryChange={setSelectedCountry}
+          onViewChange={() => {}}
+          activeView="single"
+        />
+      </Box>
     </Box>
   );
 }

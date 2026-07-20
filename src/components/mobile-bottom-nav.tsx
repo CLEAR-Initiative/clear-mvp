@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useSelectedLayoutSegments } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -23,6 +24,7 @@ export function MobileBottomNav() {
   const t = useTranslations("nav");
   const segments = useSelectedLayoutSegments();
   const activeSegment = segments[0] ?? "";
+  const [optimisticSegment, setOptimisticSegment] = useState<string | null>(null);
 
   return (
     <Box
@@ -44,13 +46,14 @@ export function MobileBottomNav() {
       hiddenFrom="sm"
     >
       {bottomNavItems.map((item) => {
-        const isActive = activeSegment === item.segment;
+        const isActive = (optimisticSegment ?? activeSegment) === item.segment;
         const Icon = item.icon;
 
         return (
           <Link
             key={item.href}
             href={item.href}
+            onClick={() => setOptimisticSegment(item.segment)}
             style={{
               display: "flex",
               flexDirection: "column",
@@ -66,6 +69,7 @@ export function MobileBottomNav() {
               style={{
                 color: isActive ? colors.accent : colors.textMuted,
                 strokeWidth: isActive ? 2.2 : 1.8,
+                transition: "color 150ms ease-out, stroke-width 150ms ease-out",
               }}
             />
             <Text
@@ -73,6 +77,7 @@ export function MobileBottomNav() {
                 fontSize: fontSizesPx["2xs"],
                 fontWeight: isActive ? 600 : 500,
                 color: isActive ? colors.accent : colors.textMuted,
+                transition: "color 150ms ease-out, font-weight 150ms ease-out",
               }}
             >
               {t(item.labelKey)}
