@@ -24,17 +24,6 @@ export interface GqlCrisis {
   events: GqlEvent[];
 }
 
-/** Create response — basically the same as GqlCrisis now, just explicit. */
-export interface GqlCrisisCreateResult extends GqlCrisis {}
-
-/** Slim poll shape while the enrichment pipeline fills title/scenarios. */
-export interface GqlCrisisEnrichmentStatus {
-  id: string;
-  title: string | null;
-  summary: string | null;
-  scenarios: unknown;
-}
-
 /** Tiny row for the Add-to-Crisis menu — ids + title only. */
 export interface GqlCrisisMenuItem {
   id: string;
@@ -150,17 +139,6 @@ const CRISIS_GET_QUERY = `
   query Crisis($id: String!) {
     crisis(id: $id) {
       ${CRISIS_FIELDS}
-    }
-  }
-`;
-
-const CRISIS_ENRICHMENT_STATUS_QUERY = `
-  query CrisisEnrichmentStatus($id: String!) {
-    crisis(id: $id) {
-      id
-      title
-      summary
-      scenarios
     }
   }
 `;
@@ -285,16 +263,6 @@ export const crisesRouter = createTRPCRouter({
       return data.crisis;
     }),
 
-  /** Poll-friendly status while enrichment fills title/scenarios. */
-  enrichmentStatus: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .query(async ({ ctx, input }) => {
-      const data = await graphqlFetch<{
-        crisis: GqlCrisisEnrichmentStatus | null;
-      }>(CRISIS_ENRICHMENT_STATUS_QUERY, { id: input.id }, cookieHeaders(ctx));
-      return data.crisis;
-    }),
-
   createFromEvents: protectedProcedure
     .input(
       z.object({
@@ -314,7 +282,7 @@ export const crisesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{
-        createCrisisFromEvents: GqlCrisisCreateResult;
+        createCrisisFromEvents: GqlCrisis;
       }>(CREATE_CRISIS_FROM_EVENTS_MUTATION, { input }, cookieHeaders(ctx));
       return data.createCrisisFromEvents;
     }),
