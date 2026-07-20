@@ -260,12 +260,13 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
           variant="default"
           size={30}
           style={{ position: "relative", border: "1px solid var(--color-border)", borderRadius: 4 }}
+          styles={{ root: { overflow: "visible" } }}
           onClick={() => setFilterOpen((o) => !o)}
           title={t("filters.filter")}
         >
           <IconFilter size={13} color={isFiltered ? "var(--color-accent)" : "var(--color-text-muted)"} />
           {isFiltered && (
-            <Box style={{ position: "absolute", top: -4, insetInlineEnd: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Box style={{ position: "absolute", top: -4, insetInlineEnd: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
               <Text style={{ fontSize: 9, color: "white", fontWeight: 700, lineHeight: 1 }}>{filterCount}</Text>
             </Box>
           )}
@@ -392,7 +393,9 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
         rightSlot={filterPopover}
       />
 
-      <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+      <Card p={0} style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
+        <Box style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+          <Box style={{ minWidth: 760 }}>
         <DataTable
           columns={COLUMN_KEYS.map((k) => ({ label: t(`history.columns.${k}`) }))}
           data={filtered}
@@ -503,6 +506,8 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
             );
           }}
         />
+          </Box>
+        </Box>
 
         {(hasMore || isFetchingMore) && (
           <Box px={16} py={12} style={{ borderTop: "1px solid var(--color-border)", display: "flex", justifyContent: "center" }}>

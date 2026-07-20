@@ -238,7 +238,7 @@ export function SignalsTab({
         </Card>
       </Box>
 
-      <Box style={{ width: 480, flexShrink: 0 }}>
+      <Box style={{ width: 480, flexShrink: 0 }} hiddenFrom="base" visibleFrom="sm">
         <Group mb={12} justify="space-between" align="center" style={{ minHeight: 32 }}>
           <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>{t("feed.crisisMap")}</Text>
           {onBoundaryLevelChange && (

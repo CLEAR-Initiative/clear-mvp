@@ -56,7 +56,7 @@ export function FeedToolbar({
         </Group>
       )}
 
-      <Group gap={8} mb={12} align="center" style={{ minHeight: 32 }}>
+      <Group gap={8} mb={12} align="center" wrap="wrap" style={{ minHeight: 32 }}>
         <Group gap={6} style={{ flexShrink: 0 }}>
           <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>{title}</Text>
           <Badge size="xs" style={{ background: "var(--color-bg-muted)", color: "var(--color-text-secondary)", fontWeight: 600 }}>
@@ -78,7 +78,7 @@ export function FeedToolbar({
             ) : null
           }
           size="xs"
-          style={{ flex: 1 }}
+          style={{ flex: "1 1 140px", minWidth: 0 }}
           styles={{ input: { fontSize: 13 } }}
         />
 
