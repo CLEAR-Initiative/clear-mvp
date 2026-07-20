@@ -1809,9 +1809,7 @@
       "dataSource": "مصدر البيانات",
       "shockDate": "تاريخ الصدمة",
       "coordinates": "الإحداثيات",
-      "viewDetails": "عرض التفاصيل",
-      "previous": "العلامة السابقة",
-      "next": "العلامة التالية"
+      "viewDetails": "عرض التفاصيل"
     },
     "minimap": {
       "location": "الموقع",

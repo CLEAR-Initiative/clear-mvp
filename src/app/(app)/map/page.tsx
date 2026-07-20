@@ -35,7 +35,7 @@ import type { BaseMapType } from "~/components/map/crisis-map";
 import { useIsDark } from "~/hooks/use-is-dark";
 import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
 import { useSearchParams } from "next/navigation";
-import { getAdjacentItem } from "~/lib/detail-list-nav";
+import { getAdjacentItem, orderByProximityTo } from "~/lib/detail-list-nav";
 import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
 
 const MAX_OPEN_PANELS = 4;
@@ -48,6 +48,11 @@ interface OpenMarkerPanel {
   openedAt: number;
   /** Bring-to-front order — bumped on open/focus/drag. */
   z: number;
+  /**
+   * Frozen proximity walk from the pin that opened/focused this panel:
+   * origin first, then nearest → farthest. Stepping does not rebuild.
+   */
+  proximityOrderIds: number[];
 }
 
 function MapLoadingPlaceholder() {
@@ -474,13 +479,38 @@ export default function MapPage() {
     });
   }, [markersBeforeTime, selectedMonth]);
 
+  /** Resolve a panel's frozen proximity order against the live filtered set. */
+  const markersForPanelNav = useCallback(
+    (panel: OpenMarkerPanel): CrisisMarker[] => {
+      const byId = new Map(currentMarkers.map((m) => [m.id, m]));
+      const ordered: CrisisMarker[] = [];
+      for (const id of panel.proximityOrderIds) {
+        const hit = byId.get(id);
+        if (hit) ordered.push(hit);
+      }
+      // Any new filter members not in the frozen order append by proximity to current.
+      if (ordered.length < currentMarkers.length) {
+        const seen = new Set(ordered.map((m) => m.id));
+        const extras = currentMarkers.filter((m) => !seen.has(m.id));
+        if (extras.length > 0 && ordered[0]) {
+          ordered.push(
+            ...orderByProximityTo(extras, ordered[0].id, (m) => m.id),
+          );
+        } else {
+          ordered.push(...extras);
+        }
+      }
+      return ordered;
+    },
+    [currentMarkers],
+  );
+
   const stepOpenPanelMarker = useCallback(
     (fromMarkerId: number, direction: "prev" | "next") => {
-      const { prev, next } = getAdjacentItem(
-        currentMarkers,
-        fromMarkerId,
-        (m) => m.id,
-      );
+      const panel = openPanels.find((p) => p.marker.id === fromMarkerId);
+      if (!panel) return;
+      const ordered = markersForPanelNav(panel);
+      const { prev, next } = getAdjacentItem(ordered, fromMarkerId, (m) => m.id);
       const target = direction === "prev" ? prev : next;
       if (!target) return;
 
@@ -495,14 +525,21 @@ export default function MapPage() {
         const z = bumpPanelZ();
         return panels.map((p) =>
           p.marker.id === fromMarkerId
-            ? { ...p, marker: target, anchor: null, z }
+            ? {
+                ...p,
+                marker: target,
+                anchor: null,
+                z,
+                // Keep the frozen proximity walk — do not re-anchor mid-tour.
+                proximityOrderIds: p.proximityOrderIds,
+              }
             : p,
         );
       });
       setPanelNavFocus(target);
       setChromeActiveMarkerId(target.id);
     },
-    [currentMarkers, bumpPanelZ],
+    [openPanels, markersForPanelNav, bumpPanelZ],
   );
 
   const topOpenPanel = useMemo(() => {
@@ -512,20 +549,19 @@ export default function MapPage() {
 
   const topPanelAdjacent = useMemo(() => {
     if (!topOpenPanel) {
-      return { hasPrev: false, hasNext: false, position: "—" as const };
+      return { hasPrev: false, hasNext: false };
     }
-    const { prev, next, currentIndex, totalCount } = getAdjacentItem(
-      currentMarkers,
+    const ordered = markersForPanelNav(topOpenPanel);
+    const { prev, next } = getAdjacentItem(
+      ordered,
       topOpenPanel.marker.id,
       (m) => m.id,
     );
     return {
       hasPrev: prev != null,
       hasNext: next != null,
-      position:
-        currentIndex >= 0 ? `${currentIndex + 1} / ${totalCount}` : ("—" as const),
     };
-  }, [topOpenPanel, currentMarkers]);
+  }, [topOpenPanel, markersForPanelNav]);
 
   const navigateTopPanelPrev = useCallback(() => {
     if (topOpenPanel) stepOpenPanelMarker(topOpenPanel.marker.id, "prev");
@@ -558,10 +594,19 @@ export default function MapPage() {
 
   const handleMarkerClick = useCallback(
     (marker: MapMarker, screenPoint: MarkerScreenPoint) => {
-      const full = allMarkers.find((m) => m.id === marker.id);
+      const full =
+        currentMarkers.find((m) => m.id === marker.id) ??
+        allMarkers.find((m) => m.id === marker.id);
       if (!full) return;
 
       setPanelNavFocus(null);
+
+      // Re-anchor proximity walk from the clicked pin (nearest cluster first).
+      const proximityOrderIds = orderByProximityTo(
+        currentMarkers.length > 0 ? currentMarkers : [full],
+        full.id,
+        (m) => m.id,
+      ).map((m) => m.id);
 
       // Mobile + Keep panels open off: classic single-panel replace.
       const accumulate = keepPanelsOpen && !isMobile;
@@ -573,15 +618,16 @@ export default function MapPage() {
             anchor: screenPoint,
             openedAt: Date.now(),
             z: bumpPanelZ(),
+            proximityOrderIds,
           }];
         }
 
         const existing = prev.find((p) => p.marker.id === full.id);
         if (existing) {
-          // Focus existing — no duplicate.
+          // Focus existing — no duplicate; refresh proximity origin.
           return prev.map((p) =>
             p.marker.id === full.id
-              ? { ...p, anchor: screenPoint, z: bumpPanelZ() }
+              ? { ...p, anchor: screenPoint, z: bumpPanelZ(), proximityOrderIds }
               : p,
           );
         }
@@ -593,6 +639,7 @@ export default function MapPage() {
             anchor: screenPoint,
             openedAt: Date.now(),
             z: bumpPanelZ(),
+            proximityOrderIds,
           },
         ];
         // Soft max 4 — drop oldest by openedAt (FIFO).
@@ -606,7 +653,7 @@ export default function MapPage() {
         return next;
       });
     },
-    [allMarkers, keepPanelsOpen, isMobile, bumpPanelZ],
+    [allMarkers, currentMarkers, keepPanelsOpen, isMobile, bumpPanelZ],
   );
 
   const isLoading =
@@ -800,37 +847,19 @@ export default function MapPage() {
       />
 
       {/* ===== Marker detail panel(s) ===== */}
-      {openPanels.map((panel) => {
-        const adjacent = getAdjacentItem(
-          currentMarkers,
-          panel.marker.id,
-          (m) => m.id,
-        );
-        const position =
-          adjacent.currentIndex >= 0
-            ? `${adjacent.currentIndex + 1} / ${adjacent.totalCount}`
-            : "—";
-        return (
-          <MapMarkerDetail
-            key={panel.marker.id}
-            marker={panel.marker}
-            anchor={panel.anchor}
-            stackZIndex={panel.z}
-            navigation={{
-              position,
-              hasPrev: adjacent.prev != null,
-              hasNext: adjacent.next != null,
-            }}
-            onNavigatePrev={() => stepOpenPanelMarker(panel.marker.id, "prev")}
-            onNavigateNext={() => stepOpenPanelMarker(panel.marker.id, "next")}
-            onActivate={() => focusOpenPanel(panel.marker.id)}
-            onChromeActiveChange={(active) =>
-              handlePanelChromeActive(panel.marker.id, active)
-            }
-            onClose={() => closeOpenPanel(panel.marker.id)}
-          />
-        );
-      })}
+      {openPanels.map((panel) => (
+        <MapMarkerDetail
+          key={panel.marker.id}
+          marker={panel.marker}
+          anchor={panel.anchor}
+          stackZIndex={panel.z}
+          onActivate={() => focusOpenPanel(panel.marker.id)}
+          onChromeActiveChange={(active) =>
+            handlePanelChromeActive(panel.marker.id, active)
+          }
+          onClose={() => closeOpenPanel(panel.marker.id)}
+        />
+      ))}
 
       {/* ===== Timeline (bottom overlay) — month chips only, no frosted stripe ===== */}
       {availableMonths.length > 0 && (

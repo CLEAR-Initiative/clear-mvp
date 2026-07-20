@@ -1809,9 +1809,7 @@
       "dataSource": "Source de données",
       "shockDate": "Date du choc",
       "coordinates": "Coordonnées",
-      "viewDetails": "Voir les détails",
-      "previous": "Marqueur précédent",
-      "next": "Marqueur suivant"
+      "viewDetails": "Voir les détails"
     },
     "minimap": {
       "location": "Localisation",

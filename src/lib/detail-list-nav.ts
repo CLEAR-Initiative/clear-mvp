@@ -74,6 +74,45 @@ export function getAdjacentItem<T>(
   };
 }
 
+export interface GeoPoint {
+  lng: number;
+  lat: number;
+}
+
+/** Squared planar distance — fine for local marker proximity ordering. */
+export function geoDistance2(a: GeoPoint, b: GeoPoint): number {
+  const dLng = a.lng - b.lng;
+  const dLat = a.lat - b.lat;
+  return dLng * dLng + dLat * dLat;
+}
+
+/**
+ * Order markers for map panel arrow nav: origin first, then everyone else by
+ * distance to that origin (nearest → farthest). Nearby clusters are exhausted
+ * before jumping to distant markers. Freeze this list while stepping.
+ */
+export function orderByProximityTo<T extends GeoPoint>(
+  items: readonly T[],
+  originKey: string | number,
+  getKey: (item: T) => string | number,
+): T[] {
+  const origin = items.find((item) => getKey(item) === originKey);
+  if (!origin) return [...items];
+
+  const others = items.filter((item) => getKey(item) !== originKey);
+  others.sort((a, b) => {
+    const da = geoDistance2(origin, a);
+    const db = geoDistance2(origin, b);
+    if (da !== db) return da - db;
+    // Stable tie-break so equal coords don't reshuffle.
+    const ka = String(getKey(a));
+    const kb = String(getKey(b));
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  });
+
+  return [origin, ...others];
+}
+
 /** True when keyboard arrows should not hijack typing / form focus. */
 export function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;

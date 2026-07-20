@@ -3,6 +3,7 @@ import {
   getAdjacentItem,
   getListNavigation,
   isTypingTarget,
+  orderByProximityTo,
 } from "~/lib/detail-list-nav";
 
 describe("getListNavigation", () => {
@@ -93,5 +94,39 @@ describe("isTypingTarget", () => {
     expect(isTypingTarget(div)).toBe(true);
     expect(isTypingTarget(document.createElement("button"))).toBe(false);
     expect(isTypingTarget(null)).toBe(false);
+  });
+});
+
+describe("orderByProximityTo", () => {
+  const markers = [
+    { id: 1, lng: 0, lat: 0, title: "origin" },
+    { id: 2, lng: 10, lat: 0, title: "far" },
+    { id: 3, lng: 0.1, lat: 0, title: "near-a" },
+    { id: 4, lng: 0.2, lat: 0, title: "near-b" },
+  ];
+
+  it("puts origin first, then nearest cluster before far markers", () => {
+    const ordered = orderByProximityTo(markers, 1, (m) => m.id);
+    expect(ordered.map((m) => m.title)).toEqual([
+      "origin",
+      "near-a",
+      "near-b",
+      "far",
+    ]);
+  });
+
+  it("re-anchors when a nearby marker is the origin", () => {
+    const ordered = orderByProximityTo(markers, 3, (m) => m.id);
+    expect(ordered[0]?.title).toBe("near-a");
+    // origin (0,0) and near-b (0.2) are both close; far is last
+    expect(ordered[ordered.length - 1]?.title).toBe("far");
+    expect(ordered.map((m) => m.id)).toContain(1);
+    expect(ordered.map((m) => m.id)).toContain(4);
+  });
+
+  it("returns a copy of items when origin is missing", () => {
+    const ordered = orderByProximityTo(markers, 999, (m) => m.id);
+    expect(ordered).toHaveLength(markers.length);
+    expect(ordered).not.toBe(markers);
   });
 });

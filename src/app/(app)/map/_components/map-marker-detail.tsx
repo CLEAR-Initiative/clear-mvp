@@ -1,27 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import {
-  ActionIcon,
-  Box,
-  Text,
-  Group,
-  Stack,
-  Badge,
-  Button,
-  CloseButton,
-  ScrollArea,
-} from "@mantine/core";
+import { Box, Text, Group, Stack, Badge, Button, CloseButton, ScrollArea } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { IconChevronLeft, IconChevronRight, IconGripHorizontal } from "@tabler/icons-react";
+import { IconGripHorizontal } from "@tabler/icons-react";
 import Link from "next/link";
 import { type CrisisMarker } from "./map-markers-data";
 import type { MarkerScreenPoint } from "~/components/map/crisis-map";
-
-interface MarkerPanelNavigation {
-  position: string;
-  hasPrev: boolean;
-  hasNext: boolean;
-}
 
 interface MapMarkerDetailProps {
   marker: CrisisMarker;
@@ -34,9 +18,6 @@ interface MapMarkerDetailProps {
   onActivate?: () => void;
   /** Stacking order when multiple marker detail panels are open. */
   stackZIndex?: number;
-  navigation?: MarkerPanelNavigation;
-  onNavigatePrev?: () => void;
-  onNavigateNext?: () => void;
 }
 
 const PANEL_WIDTH = 320;
@@ -89,9 +70,6 @@ export function MapMarkerDetail({
   onChromeActiveChange,
   onActivate,
   stackZIndex = 10,
-  navigation,
-  onNavigatePrev,
-  onNavigateNext,
 }: MapMarkerDetailProps) {
   const t = useTranslations("map");
   const format = useFormatter();
@@ -283,44 +261,10 @@ export function MapMarkerDetail({
             pb={12}
             pt={4}
             className="border-b border-[var(--color-border)]"
-            wrap="nowrap"
-            gap={8}
           >
-            <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1, minWidth: 0 }}>
+            <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
               {marker.title}
             </Text>
-            {navigation && (
-              <Group gap={4} wrap="nowrap" data-no-drag>
-                <ActionIcon
-                  size="sm"
-                  variant="subtle"
-                  onClick={onNavigatePrev}
-                  disabled={!navigation.hasPrev}
-                  title={t("detail.previous")}
-                  aria-label={t("detail.previous")}
-                >
-                  <IconChevronLeft size={16} />
-                </ActionIcon>
-                <Text
-                  size="xs"
-                  c="var(--color-text-muted)"
-                  fw={500}
-                  style={{ minWidth: 48, textAlign: "center" }}
-                >
-                  {navigation.position}
-                </Text>
-                <ActionIcon
-                  size="sm"
-                  variant="subtle"
-                  onClick={onNavigateNext}
-                  disabled={!navigation.hasNext}
-                  title={t("detail.next")}
-                  aria-label={t("detail.next")}
-                >
-                  <IconChevronRight size={16} />
-                </ActionIcon>
-              </Group>
-            )}
             <CloseButton size="sm" onClick={onClose} data-no-drag />
           </Group>
         </Box>
@@ -333,44 +277,10 @@ export function MapMarkerDetail({
           px={16}
           py={12}
           className="border-b border-[var(--color-border)]"
-          wrap="nowrap"
-          gap={8}
         >
-          <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1, minWidth: 0 }}>
+          <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
             {marker.title}
           </Text>
-          {navigation && (
-            <Group gap={4} wrap="nowrap">
-              <ActionIcon
-                size="sm"
-                variant="subtle"
-                onClick={onNavigatePrev}
-                disabled={!navigation.hasPrev}
-                title={t("detail.previous")}
-                aria-label={t("detail.previous")}
-              >
-                <IconChevronLeft size={16} />
-              </ActionIcon>
-              <Text
-                size="xs"
-                c="var(--color-text-muted)"
-                fw={500}
-                style={{ minWidth: 48, textAlign: "center" }}
-              >
-                {navigation.position}
-              </Text>
-              <ActionIcon
-                size="sm"
-                variant="subtle"
-                onClick={onNavigateNext}
-                disabled={!navigation.hasNext}
-                title={t("detail.next")}
-                aria-label={t("detail.next")}
-              >
-                <IconChevronRight size={16} />
-              </ActionIcon>
-            </Group>
-          )}
           <CloseButton size="sm" onClick={onClose} data-no-drag />
         </Group>
       )}
