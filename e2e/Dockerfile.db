@@ -1,0 +1,24 @@
+# Postgres image for the hermetic E2E stack.
+#
+# Ships BOTH extensions the CLEAR schema can require:
+#   - postgis  — clear-api migration 20260307173809 runs `CREATE EXTENSION postgis`
+#                and the schema declares geometry(Geometry, 4326) columns; the seed
+#                calls ST_GeomFromText(). A plain `postgres` image fails migrate/seed.
+#   - vector (pgvector) — NOT currently enabled by any clear-api migration on `dev`,
+#                but bundled per the E2E spec and for forward-compat (embedding
+#                columns are on the roadmap). Installed-but-unused is harmless: no
+#                migration runs `CREATE EXTENSION vector`, so it simply sits available.
+#
+# Built on the official, MULTI-ARCH `postgres` image (arm64 for local Apple-Silicon
+# dev, amd64 for CI) rather than `postgis/postgis` (whose tags are amd64-only). The
+# official image already has the PGDG apt repo configured, so both extensions are a
+# single apt install away. Keep the PG major version (16) in sync with the package
+# names below if the base tag is bumped.
+FROM postgres:16-bookworm
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      postgresql-16-postgis-3 \
+      postgresql-16-postgis-3-scripts \
+      postgresql-16-pgvector \
+ && rm -rf /var/lib/apt/lists/*
