@@ -21,8 +21,16 @@ test.describe("Create crisis from event (case 2)", () => {
     await page.getByRole("menuitem", { name: "Create new Crisis" }).click();
 
     await page.waitForURL("**/crisis/**");
+    // Assert the crisis is created but NOT yet enriched (enrichment is pipeline
+    // work, out of the stack). Two equivalent un-enriched renders exist depending
+    // on timing: the full-screen "Information is being prepared" loader (crisis
+    // title still null) or the detail view with a placeholder "Untitled Crisis"
+    // title and "No summary available yet." Either proves navigation + not-
+    // completion; assert whichever appears.
     await expect(
-      page.getByText("Information is being prepared"),
+      page
+        .getByText("Information is being prepared")
+        .or(page.getByText("No summary available yet")),
     ).toBeVisible();
   });
 });
