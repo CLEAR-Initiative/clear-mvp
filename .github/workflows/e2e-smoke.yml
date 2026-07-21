@@ -62,6 +62,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
+      # The type=gha cache backend needs ACTIONS_CACHE_URL / ACTIONS_RUNTIME_TOKEN
+      # to authenticate. GitHub only exposes those to actions built on the
+      # Actions toolkit (e.g. actions/cache) — a plain `run:` step (our
+      # `docker compose build`) can't see them without this shim re-exporting
+      # them as env vars. Without it, `type=gha` silently misses on every run.
+      - name: Expose GitHub Actions cache variables to the runner
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
+
       # Builds the DB (postgis+pgvector), clear-api, and clear-mvp images, waits
       # for all to be healthy, then seeds the DB. `docker-compose.e2e.yml`
       # references ../clear-api, which resolves to the sibling checkout above.
