@@ -12,10 +12,14 @@ import {
   donutCenterCount,
   donutCenterLabel,
   donutSeveritySegments,
+  heatmapOpacityForZoom,
+  markerOpacityForZoom,
+  markersShouldMount,
   type DensityAggregationMode,
   DENSITY_COUNTRY_BAND_MIN_ZOOM,
   DENSITY_DONUT_MAX_ZOOM,
   DENSITY_HEATMAP_MAX_ZOOM,
+  DENSITY_HEATMAP_PEAK_OPACITY,
 } from "~/lib/map/marker-density";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
@@ -968,8 +972,8 @@ export function CrisisMap({
       id: HEAT_LAYER,
       type: "heatmap",
       source: HEAT_SOURCE,
-      // Mapbox hides the layer at zoom >= maxzoom — align with donut/roads floor.
-      maxzoom: DENSITY_COUNTRY_BAND_MIN_ZOOM,
+      // No Mapbox maxzoom — opacity is driven from zoom so the layer can
+      // crossfade with donuts instead of vanishing mid-gesture.
       paint: {
         "heatmap-weight": ["coalesce", ["get", "heat_weight"], 0.7],
         "heatmap-intensity": [
@@ -990,8 +994,7 @@ export function CrisisMap({
           0, 12,
           DENSITY_HEATMAP_MAX_ZOOM, 28,
         ],
-        // Opacity is driven in JS from the settled mode (no zoom-overlap band).
-        "heatmap-opacity": 0.85,
+        "heatmap-opacity": DENSITY_HEATMAP_PEAK_OPACITY,
       },
     });
 
@@ -1016,11 +1019,10 @@ export function CrisisMap({
       );
     };
 
-    // Settled mode only — ignore mid-gesture zoom so heatmap/donuts never overlap.
-    let settledMode: DensityAggregationMode = aggregationModeForZoom(m.getZoom());
-    let heatFadeRaf = 0;
-    let heatFadeFrom = 0.85;
-    let heatTarget = settledMode === "heatmap" ? 0.85 : 0;
+    // Zoom-driven crossfade: heatmap opacity ↔ DOM marker opacity stay
+    // complementary across the country-band floor so zoom never blanks.
+    let mountedMode: DensityAggregationMode | "none" = "none";
+    let zoomRaf = 0;
 
     const setHeatOpacity = (opacity: number) => {
       try {
@@ -1029,32 +1031,22 @@ export function CrisisMap({
         }
       } catch { /* ignore */ }
     };
-    setHeatOpacity(heatTarget);
 
-    const fadeHeatmapTo = (target: number, ms = 180) => {
-      if (heatFadeRaf) cancelAnimationFrame(heatFadeRaf);
-      const start = performance.now();
-      const from = heatFadeFrom;
-      const tick = (now: number) => {
-        const t = Math.min(1, (now - start) / ms);
-        // ease-out
-        const eased = 1 - (1 - t) * (1 - t);
-        const value = from + (target - from) * eased;
-        heatFadeFrom = value;
-        setHeatOpacity(value);
-        if (t < 1) {
-          heatFadeRaf = requestAnimationFrame(tick);
-        } else {
-          heatFadeRaf = 0;
-          heatFadeFrom = target;
-        }
-      };
-      heatFadeRaf = requestAnimationFrame(tick);
+    const setDomMarkerOpacity = (opacity: number) => {
+      for (const mk of clusterDomMarkers.current.values()) {
+        try {
+          const el = (mk as MapboxGLAny).getElement?.() as HTMLElement | undefined;
+          if (el) el.style.opacity = String(opacity);
+        } catch { /* ignore */ }
+      }
     };
 
     const renderMarkersForMode = (mode: DensityAggregationMode) => {
       clearDomMarkers(false);
-      if (mode === "heatmap") return;
+      if (mode === "heatmap") {
+        mountedMode = "none";
+        return;
+      }
 
       const clusterFeats = dedupeByProperty(
         m.queryRenderedFeatures({ layers: [CLUSTER_GHOST] }) as MapboxGLAny[],
@@ -1072,6 +1064,7 @@ export function CrisisMap({
           const cid    = props.cluster_id;
           if (!isValidLngLat(coords) || cid == null || !Number.isFinite(Number(cid))) continue;
           const el = buildDonutEl(props);
+          el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
           el.addEventListener("click", () => {
             // Snapshot donut-level camera + cluster size before expanding.
             const c = m.getCenter();
@@ -1105,6 +1098,7 @@ export function CrisisMap({
         const markerId = Number(props.id);
         if (!Number.isFinite(markerId)) continue;
         const el = buildPointEl(props.severity as string);
+        el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
         if (hoveredMarkerIdRef.current != null && markerId === hoveredMarkerIdRef.current) {
           el.querySelector(".marker-ping-ring")?.classList.add("active");
           el.querySelector(".marker-dot")?.classList.add("active");
@@ -1131,60 +1125,76 @@ export function CrisisMap({
           new mb.Marker({ element: el, anchor: "center" }).setLngLat(coords).addTo(m),
         );
       }
+
+      mountedMode = clusterDomMarkers.current.size > 0 ? mode : "none";
     };
 
-    const applySettledMode = (mode: DensityAggregationMode) => {
-      const prev = settledMode;
-      settledMode = mode;
-      const wantHeat = mode === "heatmap" ? 0.85 : 0;
-      if (wantHeat !== heatTarget) {
-        heatTarget = wantHeat;
-        fadeHeatmapTo(wantHeat);
-      }
-      // Switching into heatmap: drop donuts immediately so they never overlap.
-      // Leaving heatmap: rebuild after a short beat so heatmap can fade first.
-      if (mode === "heatmap") {
-        clearDomMarkers(false);
+    const syncDensityVisuals = (rebuildMarkers: boolean) => {
+      const z = m.getZoom();
+      const heatOp = heatmapOpacityForZoom(z);
+      const markerOp = markerOpacityForZoom(z);
+      setHeatOpacity(heatOp);
+      setDomMarkerOpacity(markerOp);
+
+      const wantMount = markersShouldMount(z);
+      const mode = aggregationModeForZoom(z);
+      // In the crossfade below the floor, settled mode is still "heatmap" but
+      // markers must already be mounted (as donuts) so they can fade in.
+      const renderMode: DensityAggregationMode =
+        mode === "heatmap" ? "donut" : mode;
+
+      if (!wantMount) {
+        // Heatmap is already carrying the view — safe to drop DOM.
+        if (clusterDomMarkers.current.size > 0) clearDomMarkers(false);
+        mountedMode = "none";
         return;
       }
-      if (prev === "heatmap") {
-        window.setTimeout(() => {
-          if (settledMode === mode) renderMarkersForMode(mode);
-        }, 90);
-        return;
+
+      const needsMount =
+        rebuildMarkers ||
+        mountedMode === "none" ||
+        clusterDomMarkers.current.size === 0 ||
+        mountedMode !== renderMode;
+
+      if (needsMount) {
+        renderMarkersForMode(renderMode);
+        setDomMarkerOpacity(markerOp);
       }
-      renderMarkersForMode(mode);
     };
 
-    const settle = () => {
-      applySettledMode(aggregationModeForZoom(m.getZoom()));
+    const onZoomFrame = () => {
+      zoomRaf = 0;
+      // Opacity every frame; rebuild only when cluster tiles likely moved.
+      syncDensityVisuals(false);
     };
 
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const debouncedSettle = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(settle, 48);
+    const scheduleZoomSync = () => {
+      if (zoomRaf) return;
+      zoomRaf = requestAnimationFrame(onZoomFrame);
     };
 
-    // sourcedata fires when cluster tiles finish computing - this drives the
-    // initial render and any post-load updates.
+    const onZoomEnd = () => {
+      syncDensityVisuals(true);
+    };
+
+    // sourcedata fires when cluster tiles finish computing - rebuild markers.
     const onSourceData = (e: MapboxGLAny) => {
-      if (e.sourceId === SOURCE && e.isSourceLoaded) debouncedSettle();
+      if (e.sourceId === SOURCE && e.isSourceLoaded) syncDensityVisuals(true);
     };
 
-    // Mode changes only when the camera settles — mid-zoom keeps the prior mode.
-    m.on("moveend", debouncedSettle);
-    m.on("zoomend", debouncedSettle);
+    m.on("zoom", scheduleZoomSync);
+    m.on("zoomend", onZoomEnd);
+    m.on("moveend", onZoomEnd);
     m.on("sourcedata", onSourceData);
-    settle();
+    syncDensityVisuals(true);
 
     return () => {
-      if (timer) clearTimeout(timer);
-      if (heatFadeRaf) cancelAnimationFrame(heatFadeRaf);
+      if (zoomRaf) cancelAnimationFrame(zoomRaf);
       clearDomMarkers(true);
       removeLayers();
-      m.off("moveend", debouncedSettle);
-      m.off("zoomend", debouncedSettle);
+      m.off("zoom", scheduleZoomSync);
+      m.off("zoomend", onZoomEnd);
+      m.off("moveend", onZoomEnd);
       m.off("sourcedata", onSourceData);
     };
   }, [markers, loaded, showMarkers]);
