@@ -85,6 +85,7 @@ export function FeedToolbar({
         <Menu shadow="md" width={200} position="bottom-end">
           <Menu.Target>
             <button
+              data-testid="feed-sort-trigger"
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
                 width: 30, height: 30, borderRadius: 6,
