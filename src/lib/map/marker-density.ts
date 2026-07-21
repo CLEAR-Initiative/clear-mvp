@@ -1,21 +1,36 @@
 /**
  * Marker density mode zoom ladder for `/map`.
  *
- * Deterministic bands (no overlap — one mode at a time from the settled zoom):
- * - heatmap  z ≤ 4
- * - donut    4 < z ≤ 8
+ * Deterministic bands (no overlap — one mode at a time from the settled zoom).
+ * Heatmap → donut shares the Country-band floor with road visibility
+ * (`docs/map-design.md`: Region 0–4, Country 5–8, Area 9–11).
+ *
+ * - heatmap  z < 5
+ * - donut    5 ≤ z ≤ 8
  * - point    z > 8
  */
 
-/** Inclusive upper bound for heatmap-only mode. */
-export const DENSITY_HEATMAP_MAX_ZOOM = 4;
+/**
+ * Country-band floor — trunk road corridors become readable and heatmap
+ * yields to numbered donuts at this zoom (same moment).
+ */
+export const DENSITY_COUNTRY_BAND_MIN_ZOOM = 5;
+
+/**
+ * Inclusive upper bound used in heatmap paint stops (intensity/radius).
+ * Mode switching uses `zoom < DENSITY_COUNTRY_BAND_MIN_ZOOM` so donuts and
+ * roads appear together at the country-band floor.
+ */
+export const DENSITY_HEATMAP_MAX_ZOOM = DENSITY_COUNTRY_BAND_MIN_ZOOM;
+
 /** Mapbox `clusterMaxZoom` — clusters expand to points above this. */
 export const DENSITY_DONUT_MAX_ZOOM = 8;
 
 export type DensityAggregationMode = "heatmap" | "donut" | "point";
 
 export function aggregationModeForZoom(zoom: number): DensityAggregationMode {
-  if (zoom <= DENSITY_HEATMAP_MAX_ZOOM) return "heatmap";
+  // Strictly below country band → heatmap; at the floor → donuts (+ roads).
+  if (zoom < DENSITY_COUNTRY_BAND_MIN_ZOOM) return "heatmap";
   if (zoom <= DENSITY_DONUT_MAX_ZOOM) return "donut";
   return "point";
 }

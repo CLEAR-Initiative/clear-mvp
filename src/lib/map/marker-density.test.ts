@@ -4,18 +4,18 @@ import {
   donutCenterCount,
   donutCenterLabel,
   donutSeveritySegments,
+  DENSITY_COUNTRY_BAND_MIN_ZOOM,
   DENSITY_DONUT_MAX_ZOOM,
-  DENSITY_HEATMAP_MAX_ZOOM,
 } from "./marker-density";
 
 describe("aggregationModeForZoom", () => {
-  it("is heatmap at and below the cutoff (inclusive)", () => {
+  it("is heatmap strictly below the country-band / roads floor", () => {
     expect(aggregationModeForZoom(0)).toBe("heatmap");
-    expect(aggregationModeForZoom(DENSITY_HEATMAP_MAX_ZOOM)).toBe("heatmap");
+    expect(aggregationModeForZoom(DENSITY_COUNTRY_BAND_MIN_ZOOM - 0.01)).toBe("heatmap");
   });
 
-  it("switches to donuts strictly above the heatmap cutoff (no overlap band)", () => {
-    expect(aggregationModeForZoom(DENSITY_HEATMAP_MAX_ZOOM + 0.01)).toBe("donut");
+  it("switches to donuts at the same zoom roads become visible", () => {
+    expect(aggregationModeForZoom(DENSITY_COUNTRY_BAND_MIN_ZOOM)).toBe("donut");
     expect(aggregationModeForZoom(5)).toBe("donut");
     expect(aggregationModeForZoom(DENSITY_DONUT_MAX_ZOOM)).toBe("donut");
   });
@@ -25,12 +25,12 @@ describe("aggregationModeForZoom", () => {
     expect(aggregationModeForZoom(12)).toBe("point");
   });
 
-  it("is mutually exclusive at the heatmap/donut boundary", () => {
-    const atCut = aggregationModeForZoom(DENSITY_HEATMAP_MAX_ZOOM);
-    const justAbove = aggregationModeForZoom(DENSITY_HEATMAP_MAX_ZOOM + 0.001);
-    expect(atCut).toBe("heatmap");
-    expect(justAbove).toBe("donut");
-    expect(atCut).not.toBe(justAbove);
+  it("is mutually exclusive at the heatmap/donut (roads) boundary", () => {
+    const justBelow = aggregationModeForZoom(DENSITY_COUNTRY_BAND_MIN_ZOOM - 0.001);
+    const atFloor = aggregationModeForZoom(DENSITY_COUNTRY_BAND_MIN_ZOOM);
+    expect(justBelow).toBe("heatmap");
+    expect(atFloor).toBe("donut");
+    expect(justBelow).not.toBe(atFloor);
   });
 });
 

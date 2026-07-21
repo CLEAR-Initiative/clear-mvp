@@ -13,6 +13,7 @@ import {
   donutCenterLabel,
   donutSeveritySegments,
   type DensityAggregationMode,
+  DENSITY_COUNTRY_BAND_MIN_ZOOM,
   DENSITY_DONUT_MAX_ZOOM,
   DENSITY_HEATMAP_MAX_ZOOM,
 } from "~/lib/map/marker-density";
@@ -967,7 +968,8 @@ export function CrisisMap({
       id: HEAT_LAYER,
       type: "heatmap",
       source: HEAT_SOURCE,
-      maxzoom: DENSITY_HEATMAP_MAX_ZOOM + 1,
+      // Mapbox hides the layer at zoom >= maxzoom — align with donut/roads floor.
+      maxzoom: DENSITY_COUNTRY_BAND_MIN_ZOOM,
       paint: {
         "heatmap-weight": ["coalesce", ["get", "heat_weight"], 0.7],
         "heatmap-intensity": [
@@ -1226,11 +1228,11 @@ export function CrisisMap({
     ];
     const byClass = (mtp: number, st: number, rest: number) =>
       ["match", ["get", "class"], ["motorway", "trunk", "primary"], mtp, ["secondary", "tertiary"], st, rest];
-    // Width anchors per zoom band. The z5/z8 anchors carry the humanitarian
-    // use case (Country band) - do not tune only the high end.
+    // Width anchors per zoom band. First stop = country-band floor — same
+    // zoom where heatmap yields to donuts (DENSITY_COUNTRY_BAND_MIN_ZOOM).
     const roadWidth = [
       "interpolate", ["exponential", 1.5], ["zoom"],
-      5,  byClass(1.8, 0.6, 0),
+      DENSITY_COUNTRY_BAND_MIN_ZOOM, byClass(1.8, 0.6, 0),
       8,  byClass(2.4, 1.2, 0.4),
       11, byClass(3.0, 1.8, 1.0),
       14, byClass(4.5, 3.0, 2.0),
