@@ -13,24 +13,15 @@
  * the UI hides a section instead of rendering an empty one.
  */
 
-/** SAF severity scale. `null` = not assessed. */
-export type SaSeverity =
-  | "critical"
-  | "severe"
-  | "serious"
-  | "high"
-  | "moderate"
-  | "low"
-  | null;
+/**
+ * Severity scale. Mirrors the `Severity` Literal in the pipeline's
+ * `situation/schemas.py` exactly - it emits only these four values, and the
+ * generator is instructed to return null rather than hedge to `medium` when
+ * the evidence is too thin to judge. `null` = not assessed.
+ */
+export type SaSeverity = "critical" | "high" | "medium" | "low" | null;
 
-const KNOWN_SEVERITIES: readonly string[] = [
-  "critical",
-  "severe",
-  "serious",
-  "high",
-  "moderate",
-  "low",
-];
+const KNOWN_SEVERITIES: readonly string[] = ["critical", "high", "medium", "low"];
 
 // ─── Raw payload (schemaVersion v1) ──────────────────────────────────────────
 
