@@ -37,7 +37,9 @@ export default function EventDetailPage({
     searchParams,
   });
 
-  const navigation = useEventNavigation(activeId);
+  const navigation = useEventNavigation(activeId, {
+    listSource: referrer === "map" ? "map" : "detection",
+  });
 
   useEffect(() => {
     for (const id of [navigation.prevId, navigation.nextId]) {
