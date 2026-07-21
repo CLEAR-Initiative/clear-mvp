@@ -6,10 +6,6 @@
       "tabs": {
         "crisis": "Vue d'ensemble de la crise",
         "situation": "Analyse de situation"
-      },
-      "situationPlaceholder": {
-        "title": "Analyse de situation",
-        "description": "Rapports de situation générés par IA bientôt disponibles."
       }
     },
     "reports": {
@@ -214,6 +210,66 @@
         "transport": "Les perturbations des axes de transport retardent les chaînes d'approvisionnement humanitaire de 48 à 72 heures",
         "mentalHealth": "Impacts sur la santé mentale signalés dans 60 % des ménages déplacés",
         "agriculture": "La perturbation de la saison agricole menace la prochaine récolte dans 4 woredas"
+      }
+    },
+    "situation": {
+      "country": "Pays",
+      "error": "Impossible de charger l'analyse de situation. Veuillez réessayer.",
+      "tabs": {
+        "overview": "Vue d'ensemble",
+        "sectors": "Secteurs",
+        "sources": "Sources"
+      },
+      "empty": {
+        "title": "Aucune analyse de situation",
+        "description": "Aucun instantané n'a encore été généré pour {country}. Les analyses sont régénérées chaque semaine."
+      },
+      "meta": {
+        "generated": "Généré le {date} par {model} · {reports} rapports"
+      },
+      "summary": {
+        "title": "Résumé de situation par IA"
+      },
+      "stats": {
+        "displaced": "Personnes déplacées",
+        "affected": "Personnes affectées",
+        "inNeed": "Personnes dans le besoin",
+        "returnees": "Retournés",
+        "fundingRequired": "Financement requis",
+        "fundingReceived": "Financement reçu"
+      },
+      "sections": {
+        "contextRisks": "Risques contextuels",
+        "hazards": "Aléas et vulnérabilités pré-crise",
+        "displacement": "Déplacement"
+      },
+      "hazards": {
+        "current": "Aléas actuels",
+        "precrisis": "Vulnérabilités pré-crise"
+      },
+      "displacement": {
+        "push": "Facteurs de départ",
+        "return": "Intentions de retour"
+      },
+      "sectors": {
+        "listTitle": "Secteurs",
+        "listSubtitle": "{count} secteurs · sélectionner pour voir l'analyse complète",
+        "notAssessed": "Non évalué",
+        "detailMeta": "{needs} besoins · {interventions} interventions",
+        "noAnalysis": "Aucune analyse disponible pour ce secteur.",
+        "impact": "Impact",
+        "humanitarian": "Conditions humanitaires",
+        "atRisk": "Populations à risque",
+        "needs": "Besoins prioritaires",
+        "interventions": "Interventions prioritaires",
+        "coverage": "Couverture de l'information",
+        "coverageScore": "{score}/10 · {reports} rapports",
+        "empty": "Aucun secteur analysé."
+      },
+      "sources": {
+        "visit": "Consulter la source",
+        "published": "Publié le {date}",
+        "empty": "Aucune source enregistrée pour cet instantané."
       }
     }
   },

@@ -6,10 +6,6 @@
       "tabs": {
         "crisis": "Crisis Overview",
         "situation": "Situation Analysis"
-      },
-      "situationPlaceholder": {
-        "title": "Situation Analysis",
-        "description": "AI-generated situation reports coming soon."
       }
     },
     "reports": {
@@ -214,6 +210,66 @@
         "transport": "Transport route disruptions delaying humanitarian supply chains by 48-72 hours",
         "mentalHealth": "Mental health impacts reported in 60% of displaced households",
         "agriculture": "Agricultural season disruption threatening next harvest in 4 woredas"
+      }
+    },
+    "situation": {
+      "country": "Country",
+      "error": "Unable to load the situation analysis. Please try again.",
+      "tabs": {
+        "overview": "Overview",
+        "sectors": "Sectors",
+        "sources": "Sources"
+      },
+      "empty": {
+        "title": "No situation analysis yet",
+        "description": "No snapshot has been generated for {country} yet. Analyses are regenerated weekly."
+      },
+      "meta": {
+        "generated": "Generated {date} by {model} · {reports} reports"
+      },
+      "summary": {
+        "title": "AI Situation Summary"
+      },
+      "stats": {
+        "displaced": "Displaced",
+        "affected": "Affected",
+        "inNeed": "In Need",
+        "returnees": "Returnees",
+        "fundingRequired": "Funding Required",
+        "fundingReceived": "Funding Received"
+      },
+      "sections": {
+        "contextRisks": "Context Risks",
+        "hazards": "Hazards & Pre-Crisis Vulnerabilities",
+        "displacement": "Displacement"
+      },
+      "hazards": {
+        "current": "Current Hazards",
+        "precrisis": "Pre-Crisis Vulnerabilities"
+      },
+      "displacement": {
+        "push": "Push Factors",
+        "return": "Return Intentions"
+      },
+      "sectors": {
+        "listTitle": "Sectors",
+        "listSubtitle": "{count} sectors · select to view full analysis",
+        "notAssessed": "Not assessed",
+        "detailMeta": "{needs} needs · {interventions} interventions",
+        "noAnalysis": "No analysis available for this sector.",
+        "impact": "Impact",
+        "humanitarian": "Humanitarian Conditions",
+        "atRisk": "At Risk",
+        "needs": "Top Needs",
+        "interventions": "Priority Interventions",
+        "coverage": "Information Coverage",
+        "coverageScore": "{score}/10 · {reports} reports",
+        "empty": "No sectors analysed."
+      },
+      "sources": {
+        "visit": "Visit source",
+        "published": "Published {date}",
+        "empty": "No sources recorded for this snapshot."
       }
     }
   },
