@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSelectedLayoutSegments } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -25,6 +25,12 @@ export function MobileBottomNav() {
   const segments = useSelectedLayoutSegments();
   const activeSegment = segments[0] ?? "";
   const [optimisticSegment, setOptimisticSegment] = useState<string | null>(null);
+
+  // Drop tap optimism once the route (or burger nav) updates the real segment,
+  // otherwise bottom-nav stays stuck on the last tapped tab.
+  useEffect(() => {
+    setOptimisticSegment(null);
+  }, [activeSegment]);
 
   return (
     <Box
