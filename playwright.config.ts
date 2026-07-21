@@ -33,7 +33,7 @@ export default defineConfig({
   workers: 2,
 
   reporter: isCI
-    ? [["list"], ["html", { open: "never" }]]
+    ? [["list"], ["html", { open: "never" }], ["github"]]
     : [["list"], ["html", { open: "never" }]],
 
   timeout: 60_000,

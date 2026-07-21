@@ -28,6 +28,11 @@ test.describe("Subscribe by region + type (case 5)", () => {
 
     await page.getByRole("button", { name: "Subscribe" }).click();
 
+    // The form (with its own "Kassala" location pill) must close before we can
+    // trust a "Kassala" match to be the new subscription card and not a
+    // false-positive match against the still-open form.
+    await expect(page.getByRole("button", { name: "Subscribe" })).not.toBeVisible();
+
     // The new subscription card renders the region name.
     await expect(
       page.getByText("Kassala", { exact: true }).first(),
