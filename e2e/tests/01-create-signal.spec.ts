@@ -16,21 +16,26 @@ test.describe("Create signal (case 1)", () => {
       .fill(title);
 
     // Source is required (not auto-selected); pick the seeded manual source.
+    // Select options by specific name (not .first()) so overlapping Mantine
+    // portals under parallel load can't hand us a stale option.
     await page.getByPlaceholder("Select a source").click();
-    await page.getByRole("option").first().click();
+    await page.getByRole("option", { name: "Field Team" }).click();
 
     // Give the signal a location so it clears the location-scoped signal feed
     // (the list is filtered to the team's locations).
     await page.getByPlaceholder("Search location").click();
     await page.getByPlaceholder("Search location").fill("Khartoum");
-    await page.getByRole("option").first().click();
+    await page.getByRole("option", { name: "Khartoum (Sudan)", exact: true }).click();
 
     // Pick a severity so the new signal clears the list's default severity filter
     // (severity is otherwise pipeline-assigned, which is out of scope here).
     await page.getByPlaceholder("Select severity").click();
     await page.getByRole("option", { name: "High", exact: true }).click();
 
-    await page.getByRole("button", { name: "Next: Add Media" }).click();
+    // Guard: the modal only advances once Title + Source are set.
+    const next = page.getByRole("button", { name: "Next: Add Media" });
+    await expect(next).toBeEnabled();
+    await next.click();
     await page.getByRole("button", { name: "Skip & Submit" }).click();
 
     // Success step — the Done button only renders once the signal is filed.
@@ -39,8 +44,11 @@ test.describe("Create signal (case 1)", () => {
 
     // New signals surface behind a "N new items - refresh" banner rather than
     // auto-inserting; reload so the created signal loads as part of the feed.
-    await page.reload({ waitUntil: "domcontentloaded" });
-    await page.getByRole("tab", { name: "Signals" }).click();
-    await expect(page.getByText(title)).toBeVisible();
+    // Poll with reloads to absorb feed-fetch latency under parallel load.
+    await expect(async () => {
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.getByRole("tab", { name: "Signals" }).click();
+      await expect(page.getByText(title)).toBeVisible({ timeout: 5_000 });
+    }).toPass({ timeout: 30_000 });
   });
 });

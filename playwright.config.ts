@@ -23,11 +23,14 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
 
   // Specs are independent (seeded state + what each creates), so run in parallel.
+  // Parallelism is capped low on purpose: the whole suite drives one shared
+  // backend, so high worker counts overload it and make the heavier pages
+  // (/map, the signal feed) flake. 2 workers keeps it deterministic.
   fullyParallel: true,
   forbidOnly: isCI,
   // Per the PRD/feature spec: CI retries failed tests up to twice; locally none.
   retries: isCI ? 2 : 0,
-  workers: isCI ? 2 : undefined,
+  workers: 2,
 
   reporter: isCI
     ? [["list"], ["html", { open: "never" }]]
