@@ -1,0 +1,37 @@
+# CI-only overlay for docker-compose.e2e.yml: adds GitHub Actions layer
+# caching (type=gha) to each image build. Never referenced by local `bun run
+# e2e` (see e2e/run-local.sh) — only the e2e-smoke workflow adds this file
+# with an extra `-f`, so local runs are completely unaffected.
+#
+# Requires a docker-container buildx builder to be active (docker/setup-
+# buildx-action in the workflow) — the default "docker" driver doesn't
+# support the gha cache backend.
+
+services:
+  db:
+    build:
+      cache_from:
+        - type=gha,scope=e2e-db
+      cache_to:
+        - type=gha,mode=max,scope=e2e-db
+
+  api:
+    build:
+      cache_from:
+        - type=gha,scope=e2e-api
+      cache_to:
+        - type=gha,mode=max,scope=e2e-api
+
+  seed:
+    build:
+      cache_from:
+        - type=gha,scope=e2e-seed
+      cache_to:
+        - type=gha,mode=max,scope=e2e-seed
+
+  web:
+    build:
+      cache_from:
+        - type=gha,scope=e2e-web
+      cache_to:
+        - type=gha,mode=max,scope=e2e-web
