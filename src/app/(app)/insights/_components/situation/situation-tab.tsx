@@ -8,9 +8,9 @@ import { SituationOverview } from "./situation-overview";
 import { SituationSectors } from "./situation-sectors";
 import { SituationSources } from "./situation-sources";
 
-/** Initial country when the user has not chosen one. Sudan is the first
- *  deployment target, and is the only country the pipeline generates for
- *  today. Falls back to the first available country if absent. */
+/** Fallback default when the user's teams carry no country scope (global
+ *  monitoring). Sudan is the first deployment target and the only country the
+ *  pipeline generates for today. */
 const DEFAULT_COUNTRY = "Sudan";
 
 type SubTab = "overview" | "sectors" | "sources";
@@ -24,35 +24,62 @@ export function SituationTab() {
 
   const { data: countries, isLoading: countriesLoading } =
     api.situationAnalysis.countries.useQuery();
+  const { data: teams, isLoading: teamsLoading } = api.teams.myTeams.useQuery();
+
+  // Country ids the user's teams are scoped to (level 0 = country). An empty
+  // scope across every team means global monitoring - offer all countries.
+  const scopedCountryIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const team of teams ?? []) {
+      for (const loc of team.locations) {
+        if (loc.level === 0) ids.add(loc.id);
+      }
+    }
+    return ids;
+  }, [teams]);
+
+  // The countries this user may switch between: their scoped set, or every
+  // country when they monitor globally.
+  const options = useMemo(() => {
+    if (!countries?.length) return [];
+    if (scopedCountryIds.size === 0) return countries;
+    return countries.filter((c) => scopedCountryIds.has(c.id));
+  }, [countries, scopedCountryIds]);
 
   // Resolve the effective country without an effect: the selector is
-  // uncontrolled until the user picks, so the default tracks the loaded list.
+  // uncontrolled until the user picks, so the default tracks the scoped list.
   const country = useMemo(() => {
-    if (!countries?.length) return null;
-    if (countryId) return countries.find((c) => c.id === countryId) ?? null;
-    return countries.find((c) => c.name === DEFAULT_COUNTRY) ?? countries[0] ?? null;
-  }, [countries, countryId]);
+    if (!options.length) return null;
+    if (countryId) return options.find((c) => c.id === countryId) ?? options[0] ?? null;
+    return options.find((c) => c.name === DEFAULT_COUNTRY) ?? options[0] ?? null;
+  }, [options, countryId]);
 
   const { data, isLoading, isError } = api.situationAnalysis.get.useQuery(
     { countryLocationId: country?.id ?? "", countryName: country?.name ?? "" },
     { enabled: Boolean(country) },
   );
 
-  const selector = (
-    <Select
-      value={country?.id ?? null}
-      onChange={setCountryId}
-      data={(countries ?? []).map((c) => ({ value: c.id, label: c.name }))}
-      disabled={countriesLoading}
-      placeholder={t("country")}
-      searchable
-      size="xs"
-      w={200}
-      aria-label={t("country")}
-    />
-  );
+  // A switcher only earns its place when there's a real choice. A team scoped
+  // to one country sees its name, not a single-option dropdown.
+  const selector =
+    options.length > 1 ? (
+      <Select
+        value={country?.id ?? null}
+        onChange={setCountryId}
+        data={options.map((c) => ({ value: c.id, label: c.name }))}
+        placeholder={t("country")}
+        searchable
+        size="xs"
+        w={200}
+        aria-label={t("country")}
+      />
+    ) : country ? (
+      <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
+        {country.name}
+      </Text>
+    ) : null;
 
-  if (countriesLoading || (isLoading && country)) {
+  if (countriesLoading || teamsLoading || (isLoading && country)) {
     return (
       <Box>
         <Group justify="flex-end" mb={16}>
@@ -70,7 +97,7 @@ export function SituationTab() {
       <Group justify="space-between" align="center" mb={16} wrap="nowrap">
         <Box>
           {data && (
-            <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
+            <Text c="var(--color-text-secondary)" style={{ fontSize: 11 }}>
               {t("meta.generated", {
                 date: format.dateTime(new Date(data.crisis.generatedAt), {
                   year: "numeric",
@@ -88,7 +115,7 @@ export function SituationTab() {
 
       {isError && (
         <Center mih="30vh">
-          <Text c="var(--color-text-muted)" style={{ fontSize: 13 }}>
+          <Text c="var(--color-text-primary)" style={{ fontSize: 13 }}>
             {t("error")}
           </Text>
         </Center>
@@ -106,7 +133,7 @@ export function SituationTab() {
           <Text fw={600} c="var(--color-text-primary)" mb={8}>
             {t("empty.title")}
           </Text>
-          <Text c="var(--color-text-muted)" style={{ fontSize: 13 }}>
+          <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
             {t("empty.description", { country: country?.name ?? "" })}
           </Text>
         </Box>
