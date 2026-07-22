@@ -780,7 +780,7 @@ export function CrisisMap({
     countryFitNonce,
   ]);
 
-  // Mobile first-load: upright globe, slow spin, then country zoom.
+  // Mobile first-load: globe spins on the polar axis, then country zoom.
   const globeIntroStarted = useRef(false);
   const onGlobeIntroCompleteRef = useRef(onGlobeIntroComplete);
   onGlobeIntroCompleteRef.current = onGlobeIntroComplete;
@@ -796,32 +796,35 @@ export function CrisisMap({
     const m = map.current;
     const bounds = geometryBounds(focusCountry.geometry as never);
     let finished = false;
-    let spinRaf = 0;
     const finish = () => {
       if (finished) return;
       finished = true;
-      if (spinRaf) cancelAnimationFrame(spinRaf);
+      try { m.stop(); } catch { /* ignore */ }
       try { m.setPitch(0); } catch { /* ignore */ }
+      try { m.setBearing(0); } catch { /* ignore */ }
       try { m.setProjection("mercator"); } catch { /* ignore */ }
       onGlobeIntroCompleteRef.current?.();
     };
 
     try { m.setProjection("globe"); } catch { /* ignore */ }
     try { m.stop(); } catch { /* ignore */ }
-    // Straight-on globe (no tilt) — slow yaw only.
+    // North-up, pitch 0 — rotate by shifting longitude (Earth's polar axis).
     m.jumpTo({ center: [25, 12], zoom: 1.2, bearing: 0, pitch: 0 });
 
-    const spin = () => {
-      if (finished || !map.current) return;
-      try { m.setBearing(m.getBearing() + 0.08); } catch { /* ignore */ }
-      spinRaf = requestAnimationFrame(spin);
-    };
-    spinRaf = requestAnimationFrame(spin);
+    // Brief polar-axis spin (~half prior visual speed), then settle into country.
+    const introCenter = m.getCenter();
+    m.easeTo({
+      center: [introCenter.lng - 3, introCenter.lat],
+      duration: 1000,
+      easing: (t: number) => t,
+      bearing: 0,
+      pitch: 0,
+    });
 
-    // ~1s of slow spin, then settle into the country.
     const zoomTimer = window.setTimeout(() => {
-      if (spinRaf) cancelAnimationFrame(spinRaf);
+      try { m.stop(); } catch { /* ignore */ }
       try { m.setPitch(0); } catch { /* ignore */ }
+      try { m.setBearing(0); } catch { /* ignore */ }
       if (bounds) {
         m.fitBounds(
           [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
@@ -835,68 +838,101 @@ export function CrisisMap({
     }, 1000);
 
     return () => {
-      if (spinRaf) cancelAnimationFrame(spinRaf);
+      try { m.stop(); } catch { /* ignore */ }
       window.clearTimeout(zoomTimer);
     };
   }, [loaded, playGlobeIntro, focusCountry]);
 
-  // Slow upright globe spin only while zoomed out past country level.
+  // Idle globe spin: longitude along the polar axis (not camera bearing).
+  // RAF + progressive speed by zoom so rotation eases in *during* zoom-out —
+  // no post-zoom delay. Pause only while the user pans (not while zooming).
   useEffect(() => {
     if (!map.current || !loaded || playGlobeIntro) return;
     const m = map.current;
+    /** Above this → no spin (country / regional view). */
+    const SPIN_START_ZOOM = 3.0;
+    /** At/below this → full spin speed. */
+    const SPIN_FULL_ZOOM = 1.5;
+    /** Full-speed period: one revolution ~4 minutes. */
+    const DEG_PER_SEC = 360 / 240;
+
     let raf = 0;
-    let spinning = false;
-    const GLOBE_ZOOM = 2.6;
+    let lastTs = 0;
+    let dragging = false;
+    let globeOn = false;
 
-    const stopSpin = () => {
-      spinning = false;
-      if (raf) cancelAnimationFrame(raf);
-      raf = 0;
+    const speedFactor = (z: number) => {
+      if (z >= SPIN_START_ZOOM) return 0;
+      if (z <= SPIN_FULL_ZOOM) return 1;
+      const t = (SPIN_START_ZOOM - z) / (SPIN_START_ZOOM - SPIN_FULL_ZOOM);
+      // Smoothstep — acceleration feels natural as the user zooms out.
+      return t * t * (3 - 2 * t);
     };
 
-    const tick = () => {
-      if (!spinning || !map.current) return;
-      try { m.setBearing(m.getBearing() + 0.045); } catch { /* ignore */ }
-      raf = requestAnimationFrame(tick);
-    };
-
-    const syncSpin = () => {
-      const z = m.getZoom();
-      if (z < GLOBE_ZOOM) {
-        try { m.setProjection("globe"); } catch { /* ignore */ }
-        try { m.setPitch(0); } catch { /* ignore */ }
-        if (!spinning) {
-          spinning = true;
-          raf = requestAnimationFrame(tick);
-        }
-      } else {
-        stopSpin();
+    /** Nudge longitude without stopping an in-flight zoom animation. */
+    const applyLngDelta = (deg: number) => {
+      const c = m.getCenter();
+      const nextLng = c.lng - deg;
+      if (m.isZooming()) {
+        // setCenter/jumpTo call stop() and would kill the zoom-out ease.
+        // Mutate the transform so spin accumulates while zoom continues.
         try {
-          if (m.getProjection()?.name === "globe") m.setProjection("mercator");
-        } catch { /* ignore */ }
+          const mb = mbRef.current as { LngLat?: new (lng: number, lat: number) => unknown } | null;
+          const tr = (m as unknown as { transform?: { setCenter?: (ll: unknown) => void } }).transform;
+          if (tr?.setCenter && mb?.LngLat) {
+            tr.setCenter(new mb.LngLat(nextLng, c.lat));
+            m.triggerRepaint();
+            return;
+          }
+        } catch { /* fall through */ }
       }
+      try { m.setCenter([nextLng, c.lat]); } catch { /* ignore */ }
     };
 
-    // Pause spin while the user is interacting so taps stay easy.
-    const pause = () => stopSpin();
-    const resume = () => { window.setTimeout(syncSpin, 400); };
+    const tick = (ts: number) => {
+      raf = requestAnimationFrame(tick);
+      if (!lastTs) lastTs = ts;
+      const dt = Math.min(0.05, (ts - lastTs) / 1000);
+      lastTs = ts;
 
-    m.on("zoom", syncSpin);
-    m.on("zoomend", syncSpin);
-    m.on("mousedown", pause);
-    m.on("touchstart", pause);
-    m.on("mouseup", resume);
-    m.on("touchend", resume);
-    syncSpin();
+      // Pan only — pinch/scroll/button zoom-out must keep spinning mid-gesture.
+      if (dragging) return;
+
+      const z = m.getZoom();
+      const factor = speedFactor(z);
+
+      if (factor <= 0) {
+        if (globeOn) {
+          globeOn = false;
+          try {
+            if (m.getProjection()?.name === "globe") m.setProjection("mercator");
+          } catch { /* ignore */ }
+        }
+        return;
+      }
+
+      if (!globeOn) {
+        globeOn = true;
+        try { m.setProjection("globe"); } catch { /* ignore */ }
+      }
+
+      applyLngDelta(DEG_PER_SEC * factor * dt);
+    };
+
+    const onDragStart = () => { dragging = true; };
+    const onDragEnd = () => {
+      dragging = false;
+      lastTs = 0;
+    };
+
+    m.on("dragstart", onDragStart);
+    m.on("dragend", onDragEnd);
+    raf = requestAnimationFrame(tick);
 
     return () => {
-      stopSpin();
-      m.off("zoom", syncSpin);
-      m.off("zoomend", syncSpin);
-      m.off("mousedown", pause);
-      m.off("touchstart", pause);
-      m.off("mouseup", resume);
-      m.off("touchend", resume);
+      if (raf) cancelAnimationFrame(raf);
+      m.off("dragstart", onDragStart);
+      m.off("dragend", onDragEnd);
     };
   }, [loaded, playGlobeIntro]);
 

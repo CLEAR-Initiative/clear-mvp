@@ -23,6 +23,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconMenu2,
+  IconX,
 } from "@tabler/icons-react";
 import { cn } from "~/lib/utils";
 import { authClient } from "~/lib/auth-client";
@@ -92,7 +93,7 @@ export function NavSidebar() {
   const t = useTranslations("nav");
   const tBadges = useTranslations("common.badges");
   const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, { open: openMobile, close: closeMobile }] = useDisclosure(false);
+  const [mobileOpen, { close: closeMobile, toggle: toggleMobile }] = useDisclosure(false);
   const [feedbackOpen, { open: openFeedback, close: closeFeedback }] = useDisclosure(false);
   const segments = useSelectedLayoutSegments();
   const searchParams = useSearchParams();
@@ -131,18 +132,20 @@ export function NavSidebar() {
 
   return (
     <>
-      {/* Mobile hamburger button — right side so it clears the map Layers stack */}
+      {/* Mobile hamburger — right side; sits above the drawer so it can toggle closed */}
       <Box
         hiddenFrom="sm"
         style={{
           position: "fixed",
           top: 12,
           insetInlineEnd: 12,
-          zIndex: 200,
+          zIndex: 401,
         }}
       >
         <UnstyledButton
-          onClick={openMobile}
+          onClick={toggleMobile}
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileOpen}
           style={{
             width: 40,
             height: 40,
@@ -155,7 +158,11 @@ export function NavSidebar() {
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
           }}
         >
-          <IconMenu2 size={22} style={{ color: colors.textSecondary }} />
+          {mobileOpen ? (
+            <IconX size={22} style={{ color: colors.textSecondary }} />
+          ) : (
+            <IconMenu2 size={22} style={{ color: colors.textSecondary }} />
+          )}
         </UnstyledButton>
       </Box>
 
@@ -167,6 +174,7 @@ export function NavSidebar() {
         size="280px"
         withCloseButton={false}
         hiddenFrom="sm"
+        zIndex={400}
         styles={{
           body: { padding: 0, height: "100%", display: "flex", flexDirection: "column" },
           content: { background: colors.bgWhite },

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import {
   Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl, Loader,
 } from "@mantine/core";
+import { useClickOutside } from "@mantine/hooks";
 import { IconFilter, IconLayersLinked, IconList } from "@tabler/icons-react";
 import type { DataView } from "./map-layers-panel";
 import type { BoundaryLevel } from "./map-settings-popover";
@@ -189,10 +190,12 @@ export function MapPanelBar({
   const t = useTranslations("map");
   const [active, setActive] = useState<PanelId | null>(null);
   const toggle = (id: PanelId) => setActive((prev) => (prev === id ? null : id));
+  // Dismiss layers / legend / filters when tapping the map (or anywhere outside).
+  const panelRef = useClickOutside<HTMLDivElement>(() => setActive(null));
 
   return (
     // Mobile: clear the status/safe area + floating burger. Desktop: below the filter bar.
-    <Box className="absolute z-20 top-14 left-4 sm:top-20">
+    <Box ref={panelRef} className="absolute z-20 top-14 left-4 sm:top-20">
       <Group gap={4} align="flex-start" wrap="nowrap">
 
         {/* Icon column — Filters is mobile-only (third button under Legend) */}
