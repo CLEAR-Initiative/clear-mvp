@@ -221,7 +221,6 @@ export default function MapPage() {
   const [markerFocus, setMarkerFocus] = useState<{ lng: number; lat: number; zoom: number } | null>(null);
   /** Camera to restore when closing a marker sheet (usually the prior cluster/donut layer). */
   const [returnCamera, setReturnCamera] = useState<{ center: [number, number]; zoom: number } | null>(null);
-  const [globeIntro, setGlobeIntro] = useState(false);
   /** Bumped on detail close so CrisisMap always flies back to returnCamera. */
   const [forceFlyToken, setForceFlyToken] = useState(0);
   const panelZRef = useRef(10);
@@ -249,20 +248,6 @@ export default function MapPage() {
   returnCameraRef.current = returnCamera;
   const markerFocusRef = useRef(markerFocus);
   markerFocusRef.current = markerFocus;
-
-  // Mobile: brief globe intro once per browser session on first map visit.
-  useEffect(() => {
-    if (isMobile !== true) return;
-    try {
-      if (sessionStorage.getItem("map-globe-intro") === "1") return;
-    } catch { /* private mode */ }
-    setGlobeIntro(true);
-  }, [isMobile]);
-
-  const handleGlobeIntroComplete = useCallback(() => {
-    setGlobeIntro(false);
-    try { sessionStorage.setItem("map-globe-intro", "1"); } catch { /* ignore */ }
-  }, []);
 
   const handleCameraChange = useCallback((camera: { center: [number, number]; zoom: number }) => {
     // Track browse camera only while not in a marker-detail focus fly.
@@ -404,9 +389,9 @@ export default function MapPage() {
     if (returnCamera) return returnCamera.zoom;
     if (focusMarker) return MAP_FOCUS_ZOOM;
     if (selectedCountry !== "All Countries") {
-      const baseZoom = getZoom(selectedCountry);
-      // Reduce zoom on mobile to show full country view
-      return isMobile ? Math.max(baseZoom - 1, 4) : baseZoom;
+      // Same country zoom on mobile and desktop — fitBounds owns framing when
+      // geometry/bbox is available; this is the fallback before that lands.
+      return getZoom(selectedCountry);
     }
     return isMobile ? 4 : 5;
   }, [selectedCountry, focusMarker, markerFocus, returnCamera, getZoom, isMobile]);
@@ -637,7 +622,7 @@ export default function MapPage() {
 
       const countryZoom =
         selectedCountry !== "All Countries"
-          ? (isMobile ? Math.max(getZoom(selectedCountry) - 1, 4) : getZoom(selectedCountry))
+          ? getZoom(selectedCountry)
           : (isMobile ? 4 : 5);
 
       // Group (≥2 markers from a donut): close returns to this group zoom.
@@ -855,7 +840,7 @@ export default function MapPage() {
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
           fitBoundsGeometry={focusEntityId || markerFocus ? null : fitBoundsGeometry}
-          fitBoundsOnFocus={!focusEntityId && !markerFocus && !returnCamera && !globeIntro}
+          fitBoundsOnFocus={!focusEntityId && !markerFocus && !returnCamera}
           forceFlyToken={forceFlyToken}
           flyDuration={markerFocus ? 500 : 650}
           // Keep pin above the ~45vh sheet + breathing room.
@@ -864,8 +849,6 @@ export default function MapPage() {
               ? Math.round((typeof window !== "undefined" ? window.innerHeight : 700) * 0.45) + 72
               : 0
           }
-          playGlobeIntro={globeIntro}
-          onGlobeIntroComplete={handleGlobeIntroComplete}
           onCameraChange={handleCameraChange}
           onClusterExpand={handleClusterExpand}
           populationBoundaries={populationBoundaries}

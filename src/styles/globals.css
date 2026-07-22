@@ -128,6 +128,8 @@
 /* Base styles */
 html {
   background: var(--color-bg-primary);
+  /* Disable double-tap zoom on the shell; Mapbox canvas sets its own touch-action. */
+  touch-action: manipulation;
 }
 
 body {
@@ -136,6 +138,8 @@ body {
   color: var(--color-text-primary);
   line-height: 1.5;
   font-size: 14px;
+  touch-action: manipulation;
+  overflow-x: hidden;
 }
 
 /* Mapbox zoom control dark mode overrides */

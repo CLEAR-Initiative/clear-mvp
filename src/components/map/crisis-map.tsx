@@ -100,14 +100,6 @@ interface CrisisMapProps {
    * appear unchanged (used when closing a marker detail sheet).
    */
   forceFlyToken?: number;
-  /**
-   * Mobile first-load: briefly show a rotating globe, then zoom into the
-   * focus country in under ~1s. Caller should set `fitBoundsOnFocus={false}`
-   * while this is true so the intro owns framing.
-   */
-  playGlobeIntro?: boolean;
-  /** Fired once the globe intro finishes (or is skipped). */
-  onGlobeIntroComplete?: () => void;
   /** Fired when the camera settles (pan/zoom/cluster fitBounds). */
   onCameraChange?: (camera: { center: [number, number]; zoom: number }) => void;
   /**
@@ -294,8 +286,6 @@ export function CrisisMap({
   flyDuration = 1500,
   flyPaddingBottom = 0,
   forceFlyToken = 0,
-  playGlobeIntro = false,
-  onGlobeIntroComplete,
   onCameraChange,
   onClusterExpand,
   showBoundaries = true,
@@ -739,19 +729,17 @@ export function CrisisMap({
 
   // Fit bounds to the focus country once its backend bbox is available.
   // Skips when fitBoundsGeometry is set (a more specific region is focused).
-  // Also skips while the mobile globe intro owns the camera.
-  // A countryFitNonce bump always wins (lone-pin detail close → global overview),
+  // A countryFitNonce bump always wins (lone-pin detail close → country overview),
   // even if fitBoundsOnFocus is briefly false in the same render batch.
   const prevCountryFitNonce = useRef(countryFitNonce);
   useEffect(() => {
     if (!map.current || !loaded || fitBoundsGeometry) return;
-    if (playGlobeIntro) return;
     const nonceBumped = countryFitNonce !== prevCountryFitNonce.current;
     prevCountryFitNonce.current = countryFitNonce;
     if (!fitBoundsOnFocus && !nonceBumped) return;
 
-    // Prefer live geometry; fall back to static country bbox so lonely-pin
-    // close still reaches global framing if the API geometry isn't ready.
+    // Prefer live geometry; fall back to static country bbox so framing still
+    // lands at country level if the API geometry isn't ready yet.
     const geoBounds = focusCountry
       ? geometryBounds(focusCountry.geometry as never)
       : null;
@@ -764,11 +752,16 @@ export function CrisisMap({
       : null);
     if (!bounds) return;
 
+    // Narrow viewports: less padding so country fit stays country-level
+    // (80px on a phone shrinks the usable canvas and looks global).
+    const narrow =
+      typeof window !== "undefined" && window.matchMedia("(max-width: 48em)").matches;
+    const padding = narrow ? 36 : 80;
+
     try { map.current.stop(); } catch { /* ignore */ }
     map.current.fitBounds(
       [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
-      // Generous padding so lonely-pin close lands at a clear global/country view.
-      { padding: 80, duration: 800 },
+      { padding, duration: 800 },
     );
   }, [
     focusCountry,
@@ -776,78 +769,15 @@ export function CrisisMap({
     loaded,
     fitBoundsGeometry,
     fitBoundsOnFocus,
-    playGlobeIntro,
     countryFitNonce,
   ]);
 
-  // Mobile first-load: globe spins on the polar axis, then country zoom.
-  const globeIntroStarted = useRef(false);
-  const onGlobeIntroCompleteRef = useRef(onGlobeIntroComplete);
-  onGlobeIntroCompleteRef.current = onGlobeIntroComplete;
-  useEffect(() => {
-    if (!map.current || !loaded || !playGlobeIntro || globeIntroStarted.current) return;
-    if (!focusCountry) {
-      try { map.current.setProjection("globe"); } catch { /* ignore */ }
-      map.current.jumpTo({ center: [25, 12], zoom: 1.2, bearing: 0, pitch: 0 });
-      return;
-    }
-
-    globeIntroStarted.current = true;
-    const m = map.current;
-    const bounds = geometryBounds(focusCountry.geometry as never);
-    let finished = false;
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      try { m.stop(); } catch { /* ignore */ }
-      try { m.setPitch(0); } catch { /* ignore */ }
-      try { m.setBearing(0); } catch { /* ignore */ }
-      try { m.setProjection("mercator"); } catch { /* ignore */ }
-      onGlobeIntroCompleteRef.current?.();
-    };
-
-    try { m.setProjection("globe"); } catch { /* ignore */ }
-    try { m.stop(); } catch { /* ignore */ }
-    // North-up, pitch 0 — rotate by shifting longitude (Earth's polar axis).
-    m.jumpTo({ center: [25, 12], zoom: 1.2, bearing: 0, pitch: 0 });
-
-    // Brief polar-axis spin (~half prior visual speed), then settle into country.
-    const introCenter = m.getCenter();
-    m.easeTo({
-      center: [introCenter.lng - 3, introCenter.lat],
-      duration: 1000,
-      easing: (t: number) => t,
-      bearing: 0,
-      pitch: 0,
-    });
-
-    const zoomTimer = window.setTimeout(() => {
-      try { m.stop(); } catch { /* ignore */ }
-      try { m.setPitch(0); } catch { /* ignore */ }
-      try { m.setBearing(0); } catch { /* ignore */ }
-      if (bounds) {
-        m.fitBounds(
-          [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
-          { padding: 40, duration: 650, essential: true, pitch: 0, bearing: 0 },
-        );
-        m.once("moveend", finish);
-      } else {
-        finish();
-      }
-      window.setTimeout(finish, 900);
-    }, 1000);
-
-    return () => {
-      try { m.stop(); } catch { /* ignore */ }
-      window.clearTimeout(zoomTimer);
-    };
-  }, [loaded, playGlobeIntro, focusCountry]);
-
   // Idle globe spin: longitude along the polar axis (not camera bearing).
+  // Same on mobile + desktop — activates once the user zooms out past country.
   // RAF + progressive speed by zoom so rotation eases in *during* zoom-out —
   // no post-zoom delay. Pause only while the user pans (not while zooming).
   useEffect(() => {
-    if (!map.current || !loaded || playGlobeIntro) return;
+    if (!map.current || !loaded) return;
     const m = map.current;
     /** Above this → no spin (country / regional view). */
     const SPIN_START_ZOOM = 3.0;
@@ -934,7 +864,7 @@ export function CrisisMap({
       m.off("dragstart", onDragStart);
       m.off("dragend", onDragEnd);
     };
-  }, [loaded, playGlobeIntro]);
+  }, [loaded]);
 
   // Fit bounds to a specific geometry (e.g. selected region).
   useEffect(() => {

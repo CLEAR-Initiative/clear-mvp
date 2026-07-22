@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ElementType, type ReactNode } from "react";
+import { useCallback, useState, type ElementType, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
   Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl, Loader,
@@ -73,13 +73,14 @@ const noop = () => {
 };
 
 function IconBtn({
-  icon: Icon, active, title, onClick,
+  icon: Icon, active, title, onClick, testId,
 }: {
-  icon: ElementType; active: boolean; title: string; onClick: () => void;
+  icon: ElementType; active: boolean; title: string; onClick: () => void; testId?: string;
 }) {
   return (
     <button
       title={title}
+      data-testid={testId}
       onClick={onClick}
       style={{
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -190,8 +191,28 @@ export function MapPanelBar({
   const t = useTranslations("map");
   const [active, setActive] = useState<PanelId | null>(null);
   const toggle = (id: PanelId) => setActive((prev) => (prev === id ? null : id));
-  // Dismiss layers / legend / filters when tapping the map (or anywhere outside).
-  const panelRef = useClickOutside<HTMLDivElement>(() => setActive(null));
+  // Dismiss layers / legend / filters when tapping the map — but ignore
+  // Mantine Select/Popover portals (they render outside this panel; closing
+  // on those taps prevented country/region picks on mobile).
+  const dismissIfOutside = useCallback((event: Event) => {
+    const target = event.target;
+    if (
+      target instanceof Element &&
+      target.closest(
+        [
+          ".mantine-Select-dropdown",
+          ".mantine-Combobox-dropdown",
+          ".mantine-Popover-dropdown",
+          ".mantine-Menu-dropdown",
+          "[data-combobox-dropdown]",
+        ].join(", "),
+      )
+    ) {
+      return;
+    }
+    setActive(null);
+  }, []);
+  const panelRef = useClickOutside<HTMLDivElement>(dismissIfOutside);
 
   return (
     // Mobile: clear the status/safe area + floating burger. Desktop: below the filter bar.
@@ -200,7 +221,7 @@ export function MapPanelBar({
 
         {/* Icon column — Filters is mobile-only (third button under Legend) */}
         <Stack gap={4}>
-          <IconBtn icon={IconLayersLinked} active={active === "layers"} title={t("panels.layers")} onClick={() => toggle("layers")} />
+          <IconBtn icon={IconLayersLinked} active={active === "layers"} title={t("panels.layers")} onClick={() => toggle("layers")} testId="map-layers-toggle" />
           <IconBtn icon={IconList}         active={active === "legend"} title={t("panels.legend")} onClick={() => toggle("legend")} />
           {filters != null && (
             <Box hiddenFrom="sm">
