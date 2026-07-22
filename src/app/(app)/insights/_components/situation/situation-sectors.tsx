@@ -55,7 +55,7 @@ export function SituationSectors({ sectors }: { sectors: SaSector[] }) {
               <Group gap={10} wrap="nowrap">
                 <Text
                   fw={700}
-                  c="var(--color-text-muted)"
+                  c="var(--color-text-secondary)"
                   style={{ fontSize: 10, letterSpacing: "0.5px", width: 20 }}
                 >
                   {s.code}
@@ -88,7 +88,7 @@ function PillarList({ label, items }: { label: string; items: string[] }) {
       <Text
         fw={700}
         tt="uppercase"
-        c="var(--color-text-muted)"
+        c="var(--color-text-secondary)"
         mb={8}
         style={{ fontSize: 10, letterSpacing: "0.5px" }}
       >
@@ -99,7 +99,7 @@ function PillarList({ label, items }: { label: string; items: string[] }) {
           <Text c="var(--color-text-muted)" style={{ fontSize: 13, lineHeight: 1.5 }}>
             &bull;
           </Text>
-          <Text c="var(--color-text-secondary)" style={{ fontSize: 13, lineHeight: 1.5 }}>
+          <Text c="var(--color-text-primary)" style={{ fontSize: 13, lineHeight: 1.5 }}>
             {item}
           </Text>
         </Group>
@@ -126,7 +126,7 @@ function SectorDetail({ sector }: { sector: SaSector }) {
             <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
               {sector.name}
             </Text>
-            <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
+            <Text c="var(--color-text-secondary)" style={{ fontSize: 11 }}>
               {t("sectors.detailMeta", {
                 needs: sector.needs.length,
                 interventions: sector.interventions.length,
@@ -145,7 +145,7 @@ function SectorDetail({ sector }: { sector: SaSector }) {
 
       <Box p={16}>
         {isEmpty && (
-          <Text c="var(--color-text-muted)" style={{ fontSize: 13 }}>
+          <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
             {t("sectors.noAnalysis")}
           </Text>
         )}
@@ -161,7 +161,7 @@ function SectorDetail({ sector }: { sector: SaSector }) {
             <Text
               fw={700}
               tt="uppercase"
-              c="var(--color-text-muted)"
+              c="var(--color-text-secondary)"
               mb={8}
               style={{ fontSize: 10, letterSpacing: "0.5px" }}
             >
@@ -170,10 +170,10 @@ function SectorDetail({ sector }: { sector: SaSector }) {
             {sector.coverage.map((c, i) => (
               <Box key={i} mb={10}>
                 <Group justify="space-between" mb={4} wrap="nowrap">
-                  <Text c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
+                  <Text c="var(--color-text-primary)" style={{ fontSize: 12 }}>
                     {c.area}
                   </Text>
-                  <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
+                  <Text c="var(--color-text-secondary)" style={{ fontSize: 11 }}>
                     {t("sectors.coverageScore", {
                       score: c.score,
                       reports: c.reportCount,

@@ -53,7 +53,7 @@ export function BulletCard({
           <Text c={color} style={{ fontSize: 13, lineHeight: 1.5 }}>
             &bull;
           </Text>
-          <Text c="var(--color-text-secondary)" style={{ fontSize: 13, lineHeight: 1.5 }}>
+          <Text c="var(--color-text-primary)" style={{ fontSize: 13, lineHeight: 1.5 }}>
             {item}
           </Text>
         </Group>

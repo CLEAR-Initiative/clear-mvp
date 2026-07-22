@@ -35,7 +35,7 @@ export function SituationSources({ sources }: { sources: SaSource[] }) {
           </Group>
 
           {s.publishedAt && (
-            <Text c="var(--color-text-muted)" mb={8} style={{ fontSize: 11 }}>
+            <Text c="var(--color-text-secondary)" mb={8} style={{ fontSize: 11 }}>
               {t("sources.published", {
                 date: format.dateTime(new Date(s.publishedAt), {
                   year: "numeric",

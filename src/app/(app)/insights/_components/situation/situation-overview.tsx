@@ -51,7 +51,7 @@ export function SituationOverview({ data }: { data: SituationAnalysis }) {
               {t("summary.title")}
             </Text>
           </Group>
-          <Text c="var(--color-text-secondary)" style={{ fontSize: 13, lineHeight: 1.6 }}>
+          <Text c="var(--color-text-primary)" style={{ fontSize: 13, lineHeight: 1.6 }}>
             {summary}
           </Text>
         </Card>
@@ -83,7 +83,7 @@ export function SituationOverview({ data }: { data: SituationAnalysis }) {
                   {risk.items.map((item, j) => (
                     <Text
                       key={j}
-                      c="var(--color-text-secondary)"
+                      c="var(--color-text-primary)"
                       style={{ fontSize: 13, lineHeight: 1.5 }}
                     >
                       {item}
