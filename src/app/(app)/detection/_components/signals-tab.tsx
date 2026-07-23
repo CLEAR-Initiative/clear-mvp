@@ -178,7 +178,7 @@ export function SignalsTab({
                   : t("feed.signals.untitled"));
 
               return (
-                <Link key={signal.id} href={`/signal/${signal.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                <Link key={signal.id} href={`/signal/${signal.id}?from=detection`} style={{ textDecoration: "none", color: "inherit" }}>
                   <Box
                     px={16} py={12}
                     className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"

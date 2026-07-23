@@ -72,13 +72,14 @@ const noop = () => {
 };
 
 function IconBtn({
-  icon: Icon, active, title, onClick,
+  icon: Icon, active, title, onClick, testId,
 }: {
-  icon: ElementType; active: boolean; title: string; onClick: () => void;
+  icon: ElementType; active: boolean; title: string; onClick: () => void; testId?: string;
 }) {
   return (
     <button
       title={title}
+      data-testid={testId}
       onClick={onClick}
       style={{
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -197,7 +198,7 @@ export function MapPanelBar({
 
         {/* Icon column — Filters is mobile-only (third button under Legend) */}
         <Stack gap={4}>
-          <IconBtn icon={IconLayersLinked} active={active === "layers"} title={t("panels.layers")} onClick={() => toggle("layers")} />
+          <IconBtn icon={IconLayersLinked} active={active === "layers"} title={t("panels.layers")} onClick={() => toggle("layers")} testId="map-layers-toggle" />
           <IconBtn icon={IconList}         active={active === "legend"} title={t("panels.legend")} onClick={() => toggle("legend")} />
           {filters != null && (
             <Box hiddenFrom="sm">
