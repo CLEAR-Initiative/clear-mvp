@@ -17,15 +17,20 @@ cd "$(dirname "$0")/.."   # repo root
 
 COMPOSE=(docker compose -f docker-compose.e2e.yml)
 
-# Load NEXT_PUBLIC_MAPBOX_TOKEN (and friends) so the web image build can
-# inline them. Without this, localhost:3000 during e2e shows
-# "Mapbox token not configured" — which is easy to mistake for a broken
-# .env.local (the e2e stack owns :3000 while it's up).
+# Pull ONLY the Mapbox token from .env.local for the web image build.
+# Do NOT source the whole file — a host API_URL pointing at remote
+# (dev-api.clearinitiative.io) must not leak into this hermetic stack.
 if [[ -f .env.local ]]; then
-  set -a
   # shellcheck disable=SC1091
-  source .env.local
-  set +a
+  NEXT_PUBLIC_MAPBOX_TOKEN="$(
+    # Prefer an explicit export already in the environment; else parse .env.local.
+    if [[ -n "${NEXT_PUBLIC_MAPBOX_TOKEN:-}" ]]; then
+      printf '%s' "$NEXT_PUBLIC_MAPBOX_TOKEN"
+    else
+      sed -n 's/^NEXT_PUBLIC_MAPBOX_TOKEN=//p' .env.local | tail -n1 | tr -d '"' | tr -d "'"
+    fi
+  )"
+  export NEXT_PUBLIC_MAPBOX_TOKEN
 fi
 
 cleanup() {
