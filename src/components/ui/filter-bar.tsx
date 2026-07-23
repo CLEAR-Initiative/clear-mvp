@@ -52,13 +52,13 @@ export function FilterBar({
 }: FilterBarProps) {
   const t = useTranslations("common.filters");
   return (
-    <Group gap={12}>
+    <Group gap={12} wrap="wrap" align="flex-end">
       <Select
         size="xs"
         value={country}
         onChange={(v) => onCountryChange(v ?? country)}
         data={countries}
-        style={{ minWidth: 130 }}
+        style={{ minWidth: 130, flex: "1 1 130px", maxWidth: 200 }}
         styles={{ input: INPUT_STYLE }}
         label={<FilterLabel>{t("country")}</FilterLabel>}
       />
@@ -68,7 +68,7 @@ export function FilterBar({
           value={region}
           onChange={(v) => onRegionChange(v ?? "All Regions")}
           data={regions}
-          style={{ minWidth: 130 }}
+          style={{ minWidth: 130, flex: "1 1 130px", maxWidth: 200 }}
           styles={{ input: INPUT_STYLE }}
           label={<FilterLabel>{t("region")}</FilterLabel>}
         />
@@ -79,7 +79,7 @@ export function FilterBar({
           value={date}
           onChange={(v) => onDateChange(v ?? date)}
           data={dateOptions}
-          style={{ minWidth: 120 }}
+          style={{ minWidth: 120, flex: "1 1 120px", maxWidth: 180 }}
           styles={{ input: INPUT_STYLE }}
           label={<FilterLabel>{t("date")}</FilterLabel>}
         />

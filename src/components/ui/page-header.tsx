@@ -56,7 +56,9 @@ export function PageHeader({ title, subtitle, breadcrumbs, loading, children }: 
       )}
 
       {subtitle && children && (
-        <Group justify="space-between">{children}</Group>
+        <Group justify="space-between" align="flex-start" wrap="wrap" gap={12}>
+          {children}
+        </Group>
       )}
     </Box>
   );

@@ -43,10 +43,16 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+// Lock page/layout scale on all devices so pinch-zoom can't blow up the shell
+// (map canvas still handles its own gestures via Mapbox). Also resets a stuck
+// browser zoom on refresh so the bottom nav stays on-screen.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  userScalable: true,
+  minimumScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({

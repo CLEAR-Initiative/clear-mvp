@@ -6,6 +6,7 @@ import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
 import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
 import { useIsDark } from "~/hooks/use-is-dark";
+import { countryConfig } from "~/lib/constants/country-config";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
 const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
@@ -52,7 +53,12 @@ interface CrisisMapProps {
   center?: [number, number];
   zoom?: number;
   className?: string;
-  onMarkerClick?: (marker: MapMarker, screenPoint: MarkerScreenPoint) => void;
+  onMarkerClick?: (
+    marker: MapMarker,
+    screenPoint: MarkerScreenPoint,
+    /** Live Mapbox camera at click time (pre-focus), for layered zoom restore. */
+    camera?: { center: [number, number]; zoom: number },
+  ) => void;
   onMarkerHover?: (marker: MapMarker | null) => void;
   interactive?: boolean;
   /**
@@ -78,10 +84,32 @@ interface CrisisMapProps {
   hoveredMarkerId?: number | null;
   /** Suppress the automatic fitBounds-to-country when a focus country loads. Default true. */
   fitBoundsOnFocus?: boolean;
+  /** Bump to re-run country fitBounds (e.g. after closing a lone-marker detail). */
+  countryFitNonce?: number;
   /** Enable WebGL canvas readback for print snapshots. Has a small GPU memory cost. */
   preserveDrawingBuffer?: boolean;
   /** Duration (ms) for programmatic flyTo when center/zoom props change. */
   flyDuration?: number;
+  /**
+   * Extra bottom padding (px) for flyTo — keeps a focused marker above a
+   * mobile bottom sheet instead of under it.
+   */
+  flyPaddingBottom?: number;
+  /**
+   * Bump to force a flyTo to the current center/zoom props even when they
+   * appear unchanged (used when closing a marker detail sheet).
+   */
+  forceFlyToken?: number;
+  /** Fired when the camera settles (pan/zoom/cluster fitBounds). */
+  onCameraChange?: (camera: { center: [number, number]; zoom: number }) => void;
+  /**
+   * Fired when a donut cluster is tapped, with the camera *before* expand
+   * and the number of markers in that cluster.
+   */
+  onClusterExpand?: (
+    camera: { center: [number, number]; zoom: number },
+    leafCount: number,
+  ) => void;
   /** Show/hide boundaries layer */
   showBoundaries?: boolean;
   /** Show/hide markers layer */
@@ -253,8 +281,13 @@ export function CrisisMap({
   populationBoundaries,
   hoveredMarkerId,
   fitBoundsOnFocus = true,
+  countryFitNonce = 0,
   preserveDrawingBuffer = false,
   flyDuration = 1500,
+  flyPaddingBottom = 0,
+  forceFlyToken = 0,
+  onCameraChange,
+  onClusterExpand,
   showBoundaries = true,
   showMarkers = true,
   showRoads = true,
@@ -298,8 +331,12 @@ export function CrisisMap({
   const mbRef = useRef<MapboxGLAny>(null);
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMarkerHoverRef = useRef(onMarkerHover);
+  const onCameraChangeRef = useRef(onCameraChange);
+  const onClusterExpandRef = useRef(onClusterExpand);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMarkerHoverRef.current = onMarkerHover; }, [onMarkerHover]);
+  useEffect(() => { onCameraChangeRef.current = onCameraChange; }, [onCameraChange]);
+  useEffect(() => { onClusterExpandRef.current = onClusterExpand; }, [onClusterExpand]);
   const clusterDomMarkers = useRef<Map<string, MapboxGLAny>>(new Map());
   const markersDataRef = useRef<MapMarker[]>(markers);
   const hoveredMarkerIdRef = useRef<number | null>(null);
@@ -347,6 +384,17 @@ export function CrisisMap({
           appliedStyleRef.current = mapStyleRef.current;
           setLoaded(true);
         }
+      });
+
+      // Report settled camera so the page can restore prior zoom layers
+      // (e.g. cluster view after closing a marker detail sheet).
+      map.current.on("moveend", () => {
+        if (cancelled || !map.current) return;
+        const c = map.current.getCenter();
+        onCameraChangeRef.current?.({
+          center: [c.lng, c.lat],
+          zoom: map.current.getZoom(),
+        });
       });
 
       map.current.addControl(
@@ -681,15 +729,48 @@ export function CrisisMap({
 
   // Fit bounds to the focus country once its backend bbox is available.
   // Skips when fitBoundsGeometry is set (a more specific region is focused).
+  // A countryFitNonce bump always wins (lone-pin detail close → country overview),
+  // even if fitBoundsOnFocus is briefly false in the same render batch.
+  const prevCountryFitNonce = useRef(countryFitNonce);
   useEffect(() => {
-    if (!map.current || !loaded || !focusCountry || fitBoundsGeometry || !fitBoundsOnFocus) return;
-    const bounds = geometryBounds(focusCountry.geometry as never);
+    if (!map.current || !loaded || fitBoundsGeometry) return;
+    const nonceBumped = countryFitNonce !== prevCountryFitNonce.current;
+    prevCountryFitNonce.current = countryFitNonce;
+    if (!fitBoundsOnFocus && !nonceBumped) return;
+
+    // Prefer live geometry; fall back to static country bbox so framing still
+    // lands at country level if the API geometry isn't ready yet.
+    const geoBounds = focusCountry
+      ? geometryBounds(focusCountry.geometry as never)
+      : null;
+    const cfgBbox =
+      focusCountryName && countryConfig[focusCountryName]
+        ? countryConfig[focusCountryName].bbox
+        : null;
+    const bounds = geoBounds ?? (cfgBbox
+      ? [cfgBbox[0], cfgBbox[1], cfgBbox[2], cfgBbox[3]] as const
+      : null);
     if (!bounds) return;
+
+    // Narrow viewports: less padding so country fit stays country-level
+    // (80px on a phone shrinks the usable canvas and looks global).
+    const narrow =
+      typeof window !== "undefined" && window.matchMedia("(max-width: 48em)").matches;
+    const padding = narrow ? 36 : 80;
+
+    try { map.current.stop(); } catch { /* ignore */ }
     map.current.fitBounds(
       [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
-      { padding: 40, duration: 800 },
+      { padding, duration: 800 },
     );
-  }, [focusCountry, loaded, fitBoundsGeometry, fitBoundsOnFocus]);
+  }, [
+    focusCountry,
+    focusCountryName,
+    loaded,
+    fitBoundsGeometry,
+    fitBoundsOnFocus,
+    countryFitNonce,
+  ]);
 
   // Fit bounds to a specific geometry (e.g. selected region).
   useEffect(() => {
@@ -750,22 +831,39 @@ export function CrisisMap({
   // ── FlyTo on center/zoom prop change ────────────────────────────────────
   const prevCenter = useRef(center);
   const prevZoom = useRef(zoom);
+  const prevPadding = useRef(flyPaddingBottom);
+  const prevForceFly = useRef(forceFlyToken);
   useEffect(() => {
     if (!map.current || !loaded) return;
+    const forced = forceFlyToken !== prevForceFly.current;
+    prevForceFly.current = forceFlyToken;
     // Country fitBounds owns framing unless the caller opts out (e.g. marker
     // deep-link focus) or a tighter region geometry is already driving the view.
-    if (focusCountry && fitBoundsOnFocus && !fitBoundsGeometry) return;
+    // A forced restore (closing marker detail) always wins.
+    if (!forced && focusCountry && fitBoundsOnFocus && !fitBoundsGeometry) return;
+    const paddingChanged = prevPadding.current !== flyPaddingBottom;
     if (
+      !forced &&
       prevCenter.current[0] === center[0] &&
       prevCenter.current[1] === center[1] &&
-      prevZoom.current === zoom
+      prevZoom.current === zoom &&
+      !paddingChanged
     ) return;
     prevCenter.current = center;
     prevZoom.current = zoom;
+    prevPadding.current = flyPaddingBottom;
     // Cancel any in-flight country fitBounds so a deep-link marker zoom wins.
     try { map.current.stop(); } catch { /* ignore */ }
-    map.current.flyTo({ center, zoom, duration: flyDuration });
-  }, [center, zoom, loaded, focusCountry, flyDuration, fitBoundsOnFocus, fitBoundsGeometry]);
+    map.current.flyTo({
+      center,
+      zoom,
+      duration: flyDuration,
+      pitch: 0,
+      padding: flyPaddingBottom > 0
+        ? { top: 48, bottom: flyPaddingBottom, left: 24, right: 24 }
+        : { top: 0, bottom: 0, left: 0, right: 0 },
+    });
+  }, [center, zoom, loaded, focusCountry, flyDuration, fitBoundsOnFocus, fitBoundsGeometry, flyPaddingBottom, forceFlyToken]);
 
   // ── Markers (donut cluster DOM markers) ─────────────────────────────────
   useEffect(() => {
@@ -871,6 +969,13 @@ export function CrisisMap({
         const cid    = props.cluster_id;
         const el     = buildDonutEl(props);
         el.addEventListener("click", () => {
+          // Snapshot donut-level camera + cluster size before expanding.
+          const c = m.getCenter();
+          const leafCount = Number(props.point_count) || 0;
+          onClusterExpandRef.current?.(
+            { center: [c.lng, c.lat], zoom: m.getZoom() },
+            leafCount,
+          );
           // Fetch all leaves so we can fitBounds to the full set - guarantees
           // every member of the cluster is visible after expanding.
           (m.getSource(SOURCE) as MapboxGLAny).getClusterLeaves(cid, Infinity, 0, (err: unknown, leaves: MapboxGLAny[]) => {
@@ -902,7 +1007,11 @@ export function CrisisMap({
           const found = markersDataRef.current.find((mk) => mk.id === markerId);
           if (!found) return;
           const projected = m.project(coords) as { x: number; y: number };
-          onMarkerClickRef.current?.(found, { x: projected.x, y: projected.y });
+          const c = m.getCenter();
+          onMarkerClickRef.current?.(found, { x: projected.x, y: projected.y }, {
+            center: [c.lng, c.lat],
+            zoom: m.getZoom(),
+          });
         });
         el.addEventListener("mouseenter", () => {
           const found = markersDataRef.current.find((mk) => mk.id === markerId);

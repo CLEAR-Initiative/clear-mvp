@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { Box } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import dynamic from "next/dynamic";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
@@ -19,6 +20,10 @@ import type { BoundaryLevel } from "~/app/(app)/map/_components/map-settings-pop
 import type { BaseMapType, MapMarker, MarkerScreenPoint } from "~/components/map/crisis-map";
 import { RightPanel } from "./_components/right-panel";
 import { useIsDark } from "~/hooks/use-is-dark";
+
+/** App shell reserves these gutters for mobile chrome — bleed the map through them. */
+const MOBILE_TOP_GUTTER = 56;
+const MOBILE_BOTTOM_GUTTER = 72;
 
 function MapLoadingPlaceholder() {
   const isDark = useIsDark();
@@ -41,6 +46,7 @@ const CrisisMap = dynamic(
 export default function DashboardPage() {
   const { activeTeamId } = useTeam();
   const { getLocationId } = useLocations();
+  const isMobile = useMediaQuery("(max-width: 48em)") === true;
   const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
   const sudanL0Query = api.locations.getById.useQuery(
     { id: sudanId! },
@@ -114,7 +120,14 @@ export default function DashboardPage() {
 
 
   return (
-    <Box style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+    <Box
+      style={{ display: "flex", overflow: "hidden" }}
+      // Match /map: bleed through app-shell gutters so fitBounds frames the
+      // visible viewport instead of a 100vh canvas clipped by chrome.
+      mt={{ base: -MOBILE_TOP_GUTTER, sm: 0 }}
+      mb={{ base: -MOBILE_BOTTOM_GUTTER, sm: 0 }}
+      h={{ base: "100dvh", sm: "100vh" }}
+    >
       <Box 
         style={{ 
           position: "relative", 
@@ -127,7 +140,7 @@ export default function DashboardPage() {
         <CrisisMap
           markers={markers}
           center={[30.0, 15.5]}
-          zoom={5.0}
+          zoom={isMobile ? 4 : 5}
           focusCountryPCode="SD"
           focusCountryName="Sudan"
           focusCountryGeometry={focusCountryGeometry}
@@ -167,12 +180,14 @@ export default function DashboardPage() {
           onBaseMapTypeChange={setBaseMapType}
         />
       </Box>
-      <RightPanel
-        selectedCountry={selectedCountry}
-        onCountryChange={setSelectedCountry}
-        onViewChange={() => {}}
-        activeView="single"
-      />
+      <Box hiddenFrom="base" visibleFrom="sm">
+        <RightPanel
+          selectedCountry={selectedCountry}
+          onCountryChange={setSelectedCountry}
+          onViewChange={() => {}}
+          activeView="single"
+        />
+      </Box>
     </Box>
   );
 }

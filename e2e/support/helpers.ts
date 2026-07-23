@@ -10,7 +10,8 @@ export async function gotoDetectionEvents(page: Page) {
   if (await eventsTab.isVisible().catch(() => false)) {
     await eventsTab.click();
   }
-  // The event rows are anchors to /event/<id>.
+  // Event rows are anchors to /event/<id>. Waiting for one also proves the
+  // page has hydrated and the feed query succeeded (not pending-role empty).
   await expect(page.locator('a[href^="/event/"]').first()).toBeVisible();
 }
 

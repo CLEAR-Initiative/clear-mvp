@@ -110,8 +110,12 @@ services:
   web:
     build:
       context: .
-      # NEXT_PUBLIC_MAPBOX_TOKEN is intentionally omitted — case 9 asserts map
-      # controls only, never the WebGL canvas, so no token is needed.
+      # NEXT_PUBLIC_* is inlined at build time. Pass through from the host so
+      # local `bun run e2e` can reuse .env.local's Mapbox token (run-local.sh
+      # loads only that key). CI may leave this empty — case 9 asserts layer
+      # controls only, never the WebGL canvas.
+      args:
+        NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
     image: clear-e2e-web:latest
     environment:
       # API_URL is read at runtime by src/server/env.ts (NOT inlined at build),

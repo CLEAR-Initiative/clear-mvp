@@ -524,7 +524,7 @@
         "viewer": "Viewer",
         "line": "{label} - {email}"
       },
-      "footer": "Norwegian Refugee Council • Early Warning and Alert System for Sudan"
+      "footer": "Norwegian Refugee Council • Early Warning and Alert System"
     },
     "forgot": {
       "title": "Reset Password",
@@ -899,6 +899,7 @@
     },
     "toolbar": {
       "searchPlaceholder": "Search...",
+      "sort": "Sort",
       "newItems": "{count, plural, one {# new item} other {# new items}} - refresh"
     }
   },
