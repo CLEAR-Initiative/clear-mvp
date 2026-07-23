@@ -112,8 +112,8 @@ services:
       context: .
       # NEXT_PUBLIC_* is inlined at build time. Pass through from the host so
       # local `bun run e2e` can reuse .env.local's Mapbox token (run-local.sh
-      # sources it). CI may leave this empty — case 9 asserts layer controls
-      # only, never the WebGL canvas.
+      # loads only that key). CI may leave this empty — case 9 asserts layer
+      # controls only, never the WebGL canvas.
       args:
         NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
     image: clear-e2e-web:latest

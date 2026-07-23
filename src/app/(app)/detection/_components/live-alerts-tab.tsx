@@ -179,7 +179,7 @@ export function LiveAlertsTab({
               const displayTitle = alert.event.title ?? alert.event.description ?? alert.event.types[0] ?? t("feed.alerts.untitled");
 
               return (
-                <Link key={alert.id} href={`/event/${alert.event.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                <Link key={alert.id} href={`/event/${alert.event.id}?from=detection`} style={{ textDecoration: "none", color: "inherit" }}>
                   <Box
                     px={16} py={12}
                     className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"

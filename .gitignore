@@ -25,7 +25,12 @@ public/workbox-*.js
 /docs/agents/
 .exponential/
 
-# Playwright E2E
+# Playwright E2E artifacts
 /e2e/.auth/
-/playwright-report/
 /test-results/
+/playwright-report/
+/playwright/.cache/
+/blob-report/
+
+# Local-only compose override (points builds at a worktree)
+docker-compose.e2e.override.yml
