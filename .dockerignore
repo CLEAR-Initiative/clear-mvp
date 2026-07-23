@@ -43,3 +43,9 @@ public/workbox-*.js
 # Docker bootstrap files themselves
 Dockerfile
 .dockerignore
+
+# E2E suite runs on the host against the stack — not inside the Next image
+e2e
+playwright.config.ts
+playwright-report
+test-results

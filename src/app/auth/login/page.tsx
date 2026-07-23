@@ -73,9 +73,11 @@ function LoginForm() {
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: "var(--color-bg-primary)",
+        // Thin side inset on phone so the card and footer don't kiss the edges.
+        paddingInline: 16,
       }}
     >
-      <Box w={400}>
+      <Box w={400} maw="100%">
         <Card p="xl" style={{ border: "1px solid var(--color-border)" }}>
           {/* Branding */}
           <Stack align="center" gap={4} mb={24}>

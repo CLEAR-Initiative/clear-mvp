@@ -1,6 +1,7 @@
 "use client";
 
 import { Box, Text } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import type { ReactNode } from "react";
 
 export interface KpiItem {
@@ -45,10 +46,13 @@ function ImpactRow({ icon, iconBg, value, label }: KpiItem) {
 }
 
 export function KpiStack({ sections }: { sections: KpiSection[] }) {
+  const isMobile = useMediaQuery("(max-width: 48em)");
+
   return (
     <Box
       style={{
         display: "flex",
+        flexDirection: isMobile ? "column" : "row",
         background: "var(--color-bg-white)",
         border: "1px solid var(--color-border)",
         borderRadius: 8,
@@ -61,7 +65,10 @@ export function KpiStack({ sections }: { sections: KpiSection[] }) {
           style={{
             flex: 1,
             minWidth: 0,
-            borderInlineEnd: si < sections.length - 1 ? "1px solid var(--color-border)" : undefined,
+            borderInlineEnd:
+              !isMobile && si < sections.length - 1 ? "1px solid var(--color-border)" : undefined,
+            borderBottom:
+              isMobile && si < sections.length - 1 ? "1px solid var(--color-border)" : undefined,
           }}
         >
           <Box

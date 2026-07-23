@@ -8,43 +8,42 @@ import { test, expect } from "../support/test";
 test.describe("Create signal (case 1)", () => {
   test("a created signal appears in the Signals list", async ({ page }) => {
     await page.goto("/detection", { waitUntil: "domcontentloaded" });
+    // Wait for hydration + feed before clicking — a pre-hydrate click is a no-op
+    // on the React onClick handler and the modal never opens.
+    await expect(page.locator('a[href^="/event/"]').first()).toBeVisible();
+
     await page.getByRole("button", { name: "Create Signal" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
 
     const title = `E2E Smoke Signal ${Date.now()}`;
-    await page
-      .getByPlaceholder("Flooding reported in Kassala")
+    // Placeholders match messages/en.json → common.createSignal.*
+    await dialog
+      .getByPlaceholder("e.g., Flooding reported in Kassala State")
       .fill(title);
 
-    // Source is required (not auto-selected); pick the seeded manual source.
-    // Select options by specific name (not .first()) so overlapping Mantine
-    // portals under parallel load can't hand us a stale option.
-    await page.getByPlaceholder("Select a source").click();
+    // field_officer is auto-selected when present; still pick explicitly so the
+    // assertion doesn't depend on the race with sourcesQuery.
+    await dialog.getByPlaceholder("Select a source…").click();
     await page.getByRole("option", { name: "Field Team" }).click();
 
-    // Give the signal a location so it clears the location-scoped signal feed
-    // (the list is filtered to the team's locations).
-    await page.getByPlaceholder("Search location").click();
-    await page.getByPlaceholder("Search location").fill("Khartoum");
-    await page.getByRole("option", { name: "Khartoum (Sudan)", exact: true }).click();
+    await dialog.getByPlaceholder("Search location…").click();
+    await dialog.getByPlaceholder("Search location…").fill("Khartoum");
+    await page.getByRole("option", { name: /Khartoum/ }).first().click();
 
-    // Pick a severity so the new signal clears the list's default severity filter
-    // (severity is otherwise pipeline-assigned, which is out of scope here).
-    await page.getByPlaceholder("Select severity").click();
+    await dialog.getByPlaceholder("Select severity…").click();
     await page.getByRole("option", { name: "High", exact: true }).click();
 
-    // Guard: the modal only advances once Title + Source are set.
-    const next = page.getByRole("button", { name: "Next: Add Media" });
+    const next = dialog.getByRole("button", { name: "Next: Add Media" });
     await expect(next).toBeEnabled();
     await next.click();
-    await page.getByRole("button", { name: "Skip & Submit" }).click();
+    await dialog.getByRole("button", { name: "Skip & Submit" }).click();
 
-    // Success step — the Done button only renders once the signal is filed.
-    await expect(page.getByRole("button", { name: "Done" })).toBeVisible();
-    await page.getByRole("button", { name: "Done" }).click();
+    await expect(dialog.getByRole("button", { name: "Done" })).toBeVisible();
+    await dialog.getByRole("button", { name: "Done" }).click();
 
     // New signals surface behind a "N new items - refresh" banner rather than
     // auto-inserting; reload so the created signal loads as part of the feed.
-    // Poll with reloads to absorb feed-fetch latency under parallel load.
     await expect(async () => {
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.getByRole("tab", { name: "Signals" }).click();

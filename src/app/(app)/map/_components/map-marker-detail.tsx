@@ -6,6 +6,7 @@ import { IconGripHorizontal } from "@tabler/icons-react";
 import Link from "next/link";
 import { type CrisisMarker } from "./map-markers-data";
 import type { MarkerScreenPoint } from "~/components/map/crisis-map";
+import styles from "./map-marker-detail.module.css";
 
 interface MapMarkerDetailProps {
   marker: CrisisMarker;
@@ -18,6 +19,10 @@ interface MapMarkerDetailProps {
   onActivate?: () => void;
   /** Stacking order when multiple marker detail panels are open. */
   stackZIndex?: number;
+  /** Mobile: swipe right → previous event in the filtered map list. */
+  onSwipePrev?: () => void;
+  /** Mobile: swipe left → next event in the filtered map list. */
+  onSwipeNext?: () => void;
 }
 
 const PANEL_WIDTH = 320;
@@ -70,6 +75,8 @@ export function MapMarkerDetail({
   onChromeActiveChange,
   onActivate,
   stackZIndex = 10,
+  onSwipePrev,
+  onSwipeNext,
 }: MapMarkerDetailProps) {
   const t = useTranslations("map");
   const format = useFormatter();
@@ -78,6 +85,8 @@ export function MapMarkerDetail({
 
   const boxRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  const swipeRef = useRef<{ pointerId: number; startX: number; startY: number } | null>(null);
+  const swipeDeltaRef = useRef({ x: 0, y: 0 });
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [headerHovered, setHeaderHovered] = useState(false);
@@ -91,11 +100,16 @@ export function MapMarkerDetail({
     return () => onChromeActiveChange?.(false);
   }, [emphasized, onChromeActiveChange]);
 
-  // Reset the dragged position whenever a different marker is selected so the
-  // window snaps back to its anchored spot instead of lingering where it was.
+  // Reset desktop drag offset / mobile swipe when the marker changes.
   useEffect(() => {
     setOffset({ x: 0, y: 0 });
-  }, [marker.id]);
+    swipeDeltaRef.current = { x: 0, y: 0 };
+    const el = boxRef.current;
+    if (el && isMobile) {
+      el.style.transition = "none";
+      el.style.transform = "translate(0, 0)";
+    }
+  }, [marker.id, isMobile]);
 
   useLayoutEffect(() => {
     if (isMobile) return;
@@ -176,22 +190,94 @@ export function MapMarkerDetail({
     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
   }, []);
 
+  // Mobile: vertical swipe-down dismisses; horizontal swipe goes prev/next.
+  // Transform is written directly to the DOM (no React re-render per move).
+  const handleSwipeStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isMobile || e.button !== 0) return;
+    if ((e.target as HTMLElement).closest("button, a, [data-no-drag]")) return;
+    swipeRef.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY };
+    swipeDeltaRef.current = { x: 0, y: 0 };
+    const el = boxRef.current;
+    if (el) {
+      el.style.animation = "none";
+      el.style.transition = "none";
+    }
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, [isMobile]);
+
+  const handleSwipeMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const swipe = swipeRef.current;
+    if (!swipe || swipe.pointerId !== e.pointerId) return;
+    const dx = e.clientX - swipe.startX;
+    const dy = e.clientY - swipe.startY;
+    // Lock to the dominant axis once the gesture commits (~12px).
+    const committed = Math.abs(dx) > 12 || Math.abs(dy) > 12;
+    const horizontal = committed ? Math.abs(dx) > Math.abs(dy) : false;
+    const x = horizontal ? dx : 0;
+    const y = horizontal ? 0 : Math.max(0, dy);
+    swipeDeltaRef.current = { x, y };
+    if (boxRef.current) {
+      boxRef.current.style.transform = `translate(${x}px, ${y}px)`;
+    }
+  }, []);
+
+  const handleSwipeEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const swipe = swipeRef.current;
+    if (!swipe || swipe.pointerId !== e.pointerId) return;
+    swipeRef.current = null;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+
+    const el = boxRef.current;
+    const ease = "transform 220ms cubic-bezier(0.32, 0.72, 0, 1)";
+    const { x, y } = swipeDeltaRef.current;
+    const absX = Math.abs(x);
+    const absY = Math.abs(y);
+
+    // Horizontal win → next / previous event.
+    if (absX > 56 && absX > absY) {
+      const goNext = x < 0;
+      const canNavigate = goNext ? Boolean(onSwipeNext) : Boolean(onSwipePrev);
+      if (canNavigate) {
+        if (el) {
+          el.style.transition = ease;
+          el.style.transform = `translate(${goNext ? "-110%" : "110%"}, 0)`;
+        }
+        window.setTimeout(() => {
+          if (goNext) onSwipeNext?.();
+          else onSwipePrev?.();
+        }, 180);
+        swipeDeltaRef.current = { x: 0, y: 0 };
+        return;
+      }
+    }
+
+    // Vertical win → dismiss.
+    if (y > 80) {
+      if (el) {
+        el.style.transition = ease;
+        el.style.transform = "translateY(100%)";
+      }
+      window.setTimeout(() => onClose(), 220);
+      swipeDeltaRef.current = { x: 0, y: 0 };
+      return;
+    }
+
+    if (el) {
+      el.style.transition = ease;
+      el.style.transform = "translate(0, 0)";
+    }
+    swipeDeltaRef.current = { x: 0, y: 0 };
+  }, [onClose, onSwipeNext, onSwipePrev]);
+
   return (
     <Box
       ref={boxRef}
-      className="absolute z-10 bg-[var(--color-bg-white)]"
-      style={isMobile ? {
-        // Mobile: bottom sheet
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: "100%",
-        maxHeight: "45vh",
-        borderRadius: "16px 16px 0 0",
-        boxShadow: "0 -4px 12px rgba(0,0,0,0.15)",
-        border: "1px solid var(--color-border)",
-        borderBottom: "none",
-      } : {
+      className={isMobile ? styles.sheetMobile : "absolute z-10 bg-[var(--color-bg-white)]"}
+      onPointerDown={isMobile ? handleSwipeStart : undefined}
+      onPointerMove={isMobile ? handleSwipeMove : undefined}
+      onPointerUp={isMobile ? handleSwipeEnd : undefined}
+      onPointerCancel={isMobile ? handleSwipeEnd : undefined}
+      style={isMobile ? { touchAction: "none", cursor: "grab" } : {
         // Desktop: beside the marker, draggable via grip / header
         top: basePos.top,
         left: basePos.left,
@@ -270,19 +356,32 @@ export function MapMarkerDetail({
         </Box>
       )}
 
-      {/* Mobile header (no drag) */}
+      {/* Mobile header — drag handle + title (gestures on whole sheet) */}
       {isMobile && (
-        <Group
-          justify="space-between"
-          px={16}
-          py={12}
-          className="border-b border-[var(--color-border)]"
-        >
-          <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
-            {marker.title}
-          </Text>
-          <CloseButton size="sm" onClick={onClose} data-no-drag />
-        </Group>
+        <Box>
+          <Box py={8} style={{ display: "flex", justifyContent: "center" }}>
+            <Box
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 999,
+                background: "var(--color-border-dark)",
+                opacity: 0.7,
+              }}
+            />
+          </Box>
+          <Group
+            justify="space-between"
+            px={16}
+            pb={12}
+            className="border-b border-[var(--color-border)]"
+          >
+            <Text fw={600} size="sm" lineClamp={2} style={{ flex: 1 }}>
+              {marker.title}
+            </Text>
+            <CloseButton size="sm" onClick={onClose} data-no-drag />
+          </Group>
+        </Box>
       )}
 
       {/* Body */}
