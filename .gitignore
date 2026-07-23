@@ -24,3 +24,8 @@ public/workbox-*.js
 /CLAUDE.md
 /docs/agents/
 .exponential/
+
+# Playwright E2E
+/e2e/.auth/
+/playwright-report/
+/test-results/

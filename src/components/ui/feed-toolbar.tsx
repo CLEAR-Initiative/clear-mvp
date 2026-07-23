@@ -85,6 +85,10 @@ export function FeedToolbar({
         <Menu shadow="md" width={200} position="bottom-end">
           <Menu.Target>
             <button
+              type="button"
+              data-testid="feed-sort-trigger"
+              title={t("sort")}
+              aria-label={t("sort")}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
                 width: 30, height: 30, borderRadius: 6,

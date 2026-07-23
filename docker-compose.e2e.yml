@@ -1,0 +1,132 @@
+# Hermetic E2E stack for the Playwright smoke suite (V1).
+#
+# Four long-lived services (db, redis, api, web) + one one-shot `seed` step.
+# No Celery/LLM pipeline worker: clear-api dispatches tasks fire-and-forget to
+# Redis (LPUSH), nothing consumes them, so the async smoke flows assert
+# "action initiated + UI reacted", never final materialisation.
+#
+# Bring-up order is enforced by healthchecks:
+#   db + redis healthy  ->  api (runs `prisma migrate deploy` then serves :4000)
+#   api healthy         ->  seed (populates domain data)  +  web (Next standalone :3000)
+#
+# Usage: see e2e/run-local.sh (wired to `bun run e2e`).
+#
+# Everything is ephemeral — the db uses a tmpfs data dir, so every `up` starts
+# from an empty database that migrations + seed rebuild deterministically.
+
+name: clear-e2e
+
+services:
+  db:
+    build:
+      context: ./e2e
+      dockerfile: Dockerfile.db
+    image: clear-e2e-db:latest
+    environment:
+      POSTGRES_USER: clear
+      POSTGRES_PASSWORD: clear
+      POSTGRES_DB: clear
+    # Ephemeral storage — no volume, no persistence between runs. Faster and
+    # guarantees a clean slate every time.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clear -d clear"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+  api:
+    build:
+      context: ../clear-api
+    image: clear-e2e-api:latest
+    environment:
+      DATABASE_URL: postgres://clear:clear@db:5432/clear
+      # Better Auth needs a >=32-char secret; value is throwaway (local/CI only).
+      BETTER_AUTH_SECRET: E2E_SMOKE_BETTER_AUTH_SECRET_0123456789abcdef
+      # Mirrors clear-api's known-good local config (BETTER_AUTH_URL points at
+      # the API's own origin; CORS_ORIGINS / trustedOrigins is the browser origin).
+      BETTER_AUTH_URL: http://localhost:4000
+      # The web BFF proxy (src/app/api/auth/[...path]/route.ts) rewrites the
+      # Origin header to API_URL before forwarding to Better Auth. In-compose
+      # that's http://api:4000 (not localhost:4000 as in local dev), so it must
+      # be in trustedOrigins or Better Auth rejects login with INVALID_ORIGIN.
+      CORS_ORIGINS: http://localhost:3000,http://api:4000
+      FRONTEND_URL: http://localhost:3000
+      CELERY_BROKER_URL: redis://redis:6379/0
+      ADMIN_EMAIL: admin@clear.dev
+      ADMIN_PASSWORD: password123
+      NODE_ENV: production
+      PORT: "4000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # oven/bun image has neither curl nor wget; use bun's global fetch.
+      test: ["CMD-SHELL", "bun -e \"process.exit((await fetch('http://127.0.0.1:4000/health')).ok?0:1)\" || exit 1"]
+      interval: 3s
+      timeout: 10s
+      retries: 40
+      start_period: 15s
+
+  # One-shot: seeds analyst@clear.dev/viewer/admin, Sudan locations, 4 events,
+  # 3 alerts (South Darfur Displacement Crisis is the sole alert-free event),
+  # comments, subscriptions. Runs after the api has migrated.
+  #
+  # Built from clear-api's `build` stage (NOT `production`): the seed imports
+  # ../src/lib/* and ../src/utils/* source, which only the build stage carries.
+  # Run directly with `bun` (native TS) rather than the package `seed` script,
+  # whose `tsx` shim doesn't resolve under bun in this image.
+  seed:
+    build:
+      context: ../clear-api
+      target: build
+    image: clear-e2e-seed:latest
+    command: ["bun", "prisma/seed.ts"]
+    environment:
+      DATABASE_URL: postgres://clear:clear@db:5432/clear
+      BETTER_AUTH_SECRET: E2E_SMOKE_BETTER_AUTH_SECRET_0123456789abcdef
+      BETTER_AUTH_URL: http://localhost:4000
+      CELERY_BROKER_URL: redis://redis:6379/0
+      ADMIN_EMAIL: admin@clear.dev
+      ADMIN_PASSWORD: password123
+      NODE_ENV: production
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: "no"
+
+  web:
+    build:
+      context: .
+      # NEXT_PUBLIC_* is inlined at build time. Pass through from the host so
+      # local `bun run e2e` can reuse .env.local's Mapbox token (run-local.sh
+      # sources it). CI may leave this empty — case 9 asserts layer controls
+      # only, never the WebGL canvas.
+      args:
+        NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
+    image: clear-e2e-web:latest
+    environment:
+      # API_URL is read at runtime by src/server/env.ts (NOT inlined at build),
+      # so the same image works locally and in CI.
+      API_URL: http://api:4000
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    # Healthcheck is inherited from the image (wget http://127.0.0.1:3000/).

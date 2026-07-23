@@ -899,6 +899,7 @@
     },
     "toolbar": {
       "searchPlaceholder": "Search...",
+      "sort": "Sort",
       "newItems": "{count, plural, one {# new item} other {# new items}} - refresh"
     }
   },

@@ -901,6 +901,7 @@
     },
     "toolbar": {
       "searchPlaceholder": "Rechercher...",
+      "sort": "Trier",
       "newItems": "{count, plural, one {# nouvel élément} other {# nouveaux éléments}} - actualiser"
     }
   },

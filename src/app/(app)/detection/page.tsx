@@ -680,6 +680,7 @@ function DetectionPageContent() {
                   styles={{ root: { overflow: "visible" } }}
                   onClick={() => setFilterOpen((o) => !o)}
                   title={t("filters.filter")}
+                  aria-label={t("filters.filter")}
                 >
                   <IconFilter size={13} color={isFiltered ? "var(--color-accent)" : "var(--color-text-muted)"} />
                   {isFiltered && (

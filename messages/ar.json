@@ -901,6 +901,7 @@
     },
     "toolbar": {
       "searchPlaceholder": "بحث...",
+      "sort": "ترتيب",
       "newItems": "{count, plural, zero {لا عناصر جديدة} one {عنصر جديد واحد} two {عنصران جديدان} few {# عناصر جديدة} many {# عنصراً جديداً} other {# عنصر جديد}} - تحديث"
     }
   },
