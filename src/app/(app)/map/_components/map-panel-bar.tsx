@@ -73,14 +73,15 @@ const noop = () => {
 };
 
 function IconBtn({
-  icon: Icon, active, title, onClick, testId,
+  icon: Icon, active, title, onClick, testId, tourId,
 }: {
-  icon: ElementType; active: boolean; title: string; onClick: () => void; testId?: string;
+  icon: ElementType; active: boolean; title: string; onClick: () => void; testId?: string; tourId?: string;
 }) {
   return (
     <button
       title={title}
       data-testid={testId}
+      data-tour={tourId}
       onClick={onClick}
       style={{
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -230,6 +231,7 @@ export function MapPanelBar({
                 active={active === "filters"}
                 title={t("panels.filters")}
                 onClick={() => toggle("filters")}
+                tourId="map-filters"
               />
             </Box>
           )}

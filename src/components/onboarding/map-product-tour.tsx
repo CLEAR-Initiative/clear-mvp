@@ -8,6 +8,7 @@ import { driver, type Driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import { TourCard } from "~/components/onboarding/tour-card";
 import { MAP_TOUR_STEPS } from "~/lib/onboarding/map-tour-steps";
+import { resolveTourTarget } from "~/lib/onboarding/resolve-tour-target";
 import { markTourComplete } from "~/lib/onboarding/storage";
 
 interface MapProductTourProps {
@@ -35,7 +36,7 @@ export function MapProductTour({ userId, active, onComplete }: MapProductTourPro
   finishRef.current = finish;
 
   const positionCard = useCallback((selector: string) => {
-    const el = document.querySelector(selector);
+    const el = resolveTourTarget(selector);
     if (!el) {
       setCardPos({ top: window.innerHeight / 2 - 120, left: window.innerWidth / 2 - 170 });
       return;
@@ -80,7 +81,8 @@ export function MapProductTour({ userId, active, onComplete }: MapProductTourPro
     if (!active) return;
 
     const steps = MAP_TOUR_STEPS.map((step) => ({
-      element: step.target,
+      // Resolve painted target so desktop/mobile twins don't spotlight a hidden node.
+      element: () => resolveTourTarget(step.target) ?? document.body,
       popover: { popoverClass: "clear-tour-hidden-popover" },
     }));
 
