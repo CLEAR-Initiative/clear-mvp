@@ -37,8 +37,6 @@ import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
 import { useSearchParams } from "next/navigation";
 import { getAdjacentItem, orderByProximityTo } from "~/lib/detail-list-nav";
 import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
-import { MapTourHost } from "~/components/onboarding/map-tour-host";
-
 const MAX_OPEN_PANELS = 4;
 
 interface OpenMarkerPanel {
@@ -101,7 +99,6 @@ export default function MapPage() {
   const focusSignalId = searchParams.get("signal");
   const focusCrisisId = searchParams.get("crisis");
   const focusEntityId = focusEventId ?? focusSignalId ?? focusCrisisId;
-  const authQuery = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>(() => {
     if (focusSignalId) return "signal";
@@ -924,6 +921,7 @@ export default function MapPage() {
 
       {/* Map container with loading overlay — above timeline empty space for zoom hit-testing */}
       <Box
+        data-tour="map-canvas"
         style={{
           position: "absolute",
           top: 0,
@@ -1163,9 +1161,6 @@ export default function MapPage() {
         }
       `}</style>
 
-      {authQuery.data?.user?.id && (
-        <MapTourHost userId={authQuery.data.user.id} signalCount={0} />
-      )}
     </Box>
   );
 }

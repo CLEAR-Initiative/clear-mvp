@@ -1,25 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { MAP_TOUR_STEPS } from "~/lib/onboarding/map-tour-steps";
+import { PRODUCT_TOUR_STEPS } from "~/lib/onboarding/product-tour-steps";
 
-describe("MAP_TOUR_STEPS", () => {
-  it("registers four map stops with stable data-tour targets", () => {
-    expect(MAP_TOUR_STEPS.map((s) => s.id)).toEqual([
-      "signals",
-      "events",
-      "iconography",
-      "navigation",
-    ]);
-    for (const step of MAP_TOUR_STEPS) {
-      expect(step.target).toMatch(/^\[data-tour="/);
-    }
+describe("PRODUCT_TOUR_STEPS", () => {
+  it("covers Detection, Insights, and Map with 2–3 stops each", () => {
+    const count = (page: string) => PRODUCT_TOUR_STEPS.filter((s) => s.page === page).length;
+    expect(count("detection")).toBeGreaterThanOrEqual(2);
+    expect(count("detection")).toBeLessThanOrEqual(3);
+    expect(count("insights")).toBeGreaterThanOrEqual(2);
+    expect(count("insights")).toBeLessThanOrEqual(3);
+    expect(count("map")).toBeGreaterThanOrEqual(2);
+    expect(count("map")).toBeLessThanOrEqual(3);
   });
 
-  it("only the first step hides Back and only the last finishes", () => {
-    expect(MAP_TOUR_STEPS[0]?.showBack).toBe(false);
-    expect(MAP_TOUR_STEPS[0]?.primaryAction).toBe("next");
-    expect(MAP_TOUR_STEPS.at(-1)?.primaryAction).toBe("finish");
-    expect(MAP_TOUR_STEPS.slice(1, -1).every((s) => s.showBack && s.primaryAction === "next")).toBe(
-      true,
-    );
+  it("ends on Map so Finish leaves the user on the map tab", () => {
+    const last = PRODUCT_TOUR_STEPS.at(-1);
+    expect(last?.page).toBe("map");
+    expect(last?.route).toBe("/map");
+    expect(last?.primaryAction).toBe("finish");
+  });
+
+  it("registers stable data-tour targets and visits pages in order", () => {
+    for (const step of PRODUCT_TOUR_STEPS) {
+      expect(step.target).toMatch(/^\[data-tour="/);
+    }
+    const pages = PRODUCT_TOUR_STEPS.map((s) => s.page);
+    expect(pages.indexOf("detection")).toBeLessThan(pages.indexOf("insights"));
+    expect(pages.indexOf("insights")).toBeLessThan(pages.indexOf("map"));
   });
 });

@@ -11,12 +11,26 @@ export type OnboardingRedirectTarget =
   | "/welcome/settings"
   | null;
 
-export interface MapTourStep {
-  id: "signals" | "events" | "iconography" | "navigation";
-  bodyKey: string;
+export type TourPage = "detection" | "insights" | "map";
+
+export type ProductTourStepId =
+  | "detectionTabs"
+  | "detectionFilters"
+  | "detectionCreate"
+  | "insightsTabs"
+  | "insightsCrises"
+  | "mapLayers"
+  | "mapFilters"
+  | "mapCanvas";
+
+export interface ProductTourStep {
+  id: ProductTourStepId;
+  /** i18n key under onboarding.tour.steps.<id> */
+  page: TourPage;
+  /** App route for this stop (tour navigates here before spotlighting). */
+  route: "/detection" | "/insights" | "/map";
   /** CSS selector for driver.js spotlight */
   target: string;
-  /** Popover placement relative to target */
   side?: "top" | "bottom" | "left" | "right" | "over";
   primaryAction: "next" | "finish";
   showBack: boolean;

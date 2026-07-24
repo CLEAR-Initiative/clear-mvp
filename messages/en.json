@@ -1946,21 +1946,37 @@
       "exitTour": "Exit Tour",
       "replay": "Show tour again",
       "steps": {
-        "signals": {
-          "title": "Understanding Signals",
-          "body": "Signals are early indicators of potential humanitarian crises detected by our AI. They help you stay ahead of emerging situations."
+        "detectionTabs": {
+          "title": "Detection tabs",
+          "body": "Switch between Live Alerts, Events, Signals, and History to triage what needs attention."
         },
-        "events": {
-          "title": "Events & Crisis Zones",
-          "body": "When signals are confirmed, they become Events. The Impact Zone shows the estimated geographic perimeter affected by the crisis."
+        "detectionFilters": {
+          "title": "Narrow the feed",
+          "body": "Filter by country, region, date, severity, and type so the queue matches your area of responsibility."
         },
-        "iconography": {
-          "title": "Iconography & Confidence",
-          "body": "Icons represent different types of signals. The outer rings indicate our AI confidence level: solid for High Confidence (90%+) and dashed for Medium Confidence (60–89%)."
+        "detectionCreate": {
+          "title": "Submit a signal",
+          "body": "Use Create Signal when field teams or analysts need to report a new early indicator."
         },
-        "navigation": {
-          "title": "Navigation & Filters",
-          "body": "Use these filters to narrow down your view by specific countries, regions, or disaster types. You can also toggle between Map and List views in the top right."
+        "insightsTabs": {
+          "title": "Insights",
+          "body": "Insights rolls up crises and analysis for briefing — start on the Crisis overview tab."
+        },
+        "insightsCrises": {
+          "title": "Active crises",
+          "body": "Open a crisis here to review linked events, severity, and the latest updates for decision-making."
+        },
+        "mapLayers": {
+          "title": "Map layers",
+          "body": "Toggle data views, roads, population, and boundaries from Layers to shape what you see on the map."
+        },
+        "mapFilters": {
+          "title": "Map filters",
+          "body": "Focus the map by country, region, crisis type, and timeframe — same lens as Detection, spatial view."
+        },
+        "mapCanvas": {
+          "title": "Explore the map",
+          "body": "Pins and clusters show what is happening where. You are ready to monitor from here — the tour ends on Map."
         }
       },
       "widgets": {

@@ -4,6 +4,7 @@ import { MobileBottomNav } from "~/components/mobile-bottom-nav";
 import { FeatureFlagsProvider } from "~/components/feature-flags-provider";
 import { TeamProvider } from "~/providers/team-provider";
 import { OnboardingGuard } from "~/components/onboarding-guard";
+import { ProductTourHost } from "~/components/onboarding/product-tour-host";
 import { ConsoleBufferInit } from "~/components/console-buffer-init";
 import { api, HydrateClient } from "~/trpc/server";
 
@@ -37,6 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               </Box>
             </Group>
             <MobileBottomNav />
+            <ProductTourHost />
           </OnboardingGuard>
         </FeatureFlagsProvider>
       </TeamProvider>

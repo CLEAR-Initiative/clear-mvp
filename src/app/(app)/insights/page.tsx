@@ -26,7 +26,7 @@ export default function InsightsPage() {
           mb={24}
           styles={{ tab: { fontSize: 13, fontWeight: 500 } }}
         >
-          <Tabs.List>
+          <Tabs.List data-tour="insights-tabs">
             <Tabs.Tab value="crisis">{t("page.tabs.crisis")}</Tabs.Tab>
             <Tabs.Tab value="situation">
               <Group gap={6} align="center">
@@ -38,12 +38,14 @@ export default function InsightsPage() {
         </Tabs>
 
         {activeTab === "crisis" && (
-          <ReportsTab
-            selectedCountry="Sudan"
-            selectedRegion="All Regions"
-            summaryStats={{ critical: 0, total: 0, types: [] }}
-            realSituationItems={null}
-          />
+          <Box data-tour="insights-crises">
+            <ReportsTab
+              selectedCountry="Sudan"
+              selectedRegion="All Regions"
+              summaryStats={{ critical: 0, total: 0, types: [] }}
+              realSituationItems={null}
+            />
+          </Box>
         )}
 
         {activeTab === "situation" && (

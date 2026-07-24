@@ -1948,21 +1948,37 @@
       "exitTour": "Quitter la visite",
       "replay": "Revoir la visite",
       "steps": {
-        "signals": {
-          "title": "Comprendre les signaux",
-          "body": "Les signaux sont des indicateurs précoces de crises humanitaires potentielles détectés par notre IA. Ils vous aident à anticiper les situations émergentes."
+        "detectionTabs": {
+          "title": "Onglets Détection",
+          "body": "Passez entre Alertes, Événements, Signaux et Historique pour trier ce qui demande votre attention."
         },
-        "events": {
-          "title": "Événements et zones de crise",
-          "body": "Lorsque les signaux sont confirmés, ils deviennent des événements. La zone d'impact montre le périmètre géographique estimé touché par la crise."
+        "detectionFilters": {
+          "title": "Affiner le flux",
+          "body": "Filtrez par pays, région, date, sévérité et type pour aligner la file sur votre zone de responsabilité."
         },
-        "iconography": {
-          "title": "Iconographie et confiance",
-          "body": "Les icônes représentent différents types de signaux. Les anneaux extérieurs indiquent le niveau de confiance de l'IA : plein pour haute confiance (90 %+) et pointillé pour confiance moyenne (60–89 %)."
+        "detectionCreate": {
+          "title": "Soumettre un signal",
+          "body": "Utilisez Créer un signal lorsque les équipes terrain ou les analystes doivent signaler un nouvel indicateur précoce."
         },
-        "navigation": {
-          "title": "Navigation et filtres",
-          "body": "Utilisez ces filtres pour affiner la vue par pays, région ou type de catastrophe. Vous pouvez aussi basculer entre carte et liste en haut à droite."
+        "insightsTabs": {
+          "title": "Insights",
+          "body": "Insights regroupe crises et analyses pour le briefing — commencez par l’onglet vue d’ensemble Crises."
+        },
+        "insightsCrises": {
+          "title": "Crises actives",
+          "body": "Ouvrez une crise ici pour revoir les événements liés, la sévérité et les dernières mises à jour pour décider."
+        },
+        "mapLayers": {
+          "title": "Couches de carte",
+          "body": "Activez vues de données, routes, population et limites depuis Couches pour façonner la carte."
+        },
+        "mapFilters": {
+          "title": "Filtres carte",
+          "body": "Focalisez la carte par pays, région, type de crise et période — même logique que Détection, vue spatiale."
+        },
+        "mapCanvas": {
+          "title": "Explorer la carte",
+          "body": "Épingles et clusters montrent ce qui se passe où. Vous pouvez surveiller depuis ici — la visite se termine sur la Carte."
         }
       },
       "widgets": {

@@ -367,7 +367,7 @@ nextjs-portal {
   font-family: var(--font-arabic), sans-serif;
 }
 
-/* Product tour — hide driver.js popover; we render Figma-styled TourCard */
+/* Product tour — hide driver.js popover; we render TourCard */
 .clear-tour-hidden-popover,
 .driver-popover.clear-tour-hidden-popover {
   display: none !important;
@@ -381,24 +381,24 @@ nextjs-portal {
   pointer-events: auto !important;
 }
 
-/* Lighter scrim — keep the map readable outside the spotlight */
+/* Neutral scrim — keep the page readable outside the spotlight */
 .driver-active .driver-overlay path {
-  fill: rgb(12, 12, 16) !important;
-  opacity: 0.28 !important;
+  fill: rgb(9, 9, 11) !important;
+  opacity: 0.4 !important;
 }
 
 .driver-overlay {
-  cursor: pointer;
+  cursor: default;
 }
 
-/* Spotlight: bright ring + lift so cutout contrasts with dimmed surround */
+/* Spotlight: high-contrast white ring, no orange accent border */
 .driver-active .driver-active-element {
   position: relative;
   z-index: 10001 !important;
-  filter: brightness(1.14) saturate(1.06) contrast(1.04) !important;
+  filter: brightness(1.08) contrast(1.05) !important;
   box-shadow:
-    0 0 0 3px rgba(255, 255, 255, 0.98),
-    0 0 0 7px rgba(255, 90, 31, 0.55),
-    0 10px 36px rgba(0, 0, 0, 0.22) !important;
-  border-radius: 14px;
+    0 0 0 2px #ffffff,
+    0 0 0 4px rgba(9, 9, 11, 0.85),
+    0 8px 28px rgba(0, 0, 0, 0.28) !important;
+  border-radius: 10px;
 }

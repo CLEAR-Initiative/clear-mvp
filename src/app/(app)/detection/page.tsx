@@ -654,6 +654,7 @@ function DetectionPageContent() {
         breadcrumbs={["CLEAR", t("header.breadcrumb")]}
         loading={eventsQuery.isLoading || alertsQuery.isLoading}
       >
+        <Box data-tour="detection-filters">
         <FilterBar
           country={selectedCountry}
           onCountryChange={(v) => { setSelectedCountry(v); setSelectedRegionId(null); }}
@@ -754,7 +755,8 @@ function DetectionPageContent() {
             </Popover>
           </Box>
         </FilterBar>
-        <Group gap={8}>
+        </Box>
+        <Group gap={8} data-tour="detection-create">
           <Button
             size="xs"
             leftSection={<IconPlus size={14} />}
@@ -792,7 +794,7 @@ function DetectionPageContent() {
             },
           }}
         >
-          <Tabs.List style={{ position: "relative", display: "flex", width: "100%" }}>
+          <Tabs.List data-tour="detection-tabs" style={{ position: "relative", display: "flex", width: "100%" }}>
             <Tabs.Tab value="live">{t("tabs.alerts")}</Tabs.Tab>
             <Tabs.Tab value="events">{t("tabs.events")}</Tabs.Tab>
             <Tabs.Tab value="signals">{t("tabs.signals")}</Tabs.Tab>
