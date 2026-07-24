@@ -154,8 +154,20 @@ export function SituationTab() {
             </Tabs.List>
           </Tabs>
 
-          {subTab === "overview" && <SituationOverview data={data} />}
-          {subTab === "sectors" && <SituationSectors sectors={data.sectors} />}
+          {subTab === "overview" && (
+            <SituationOverview
+              data={data}
+              countryLocationId={country?.id ?? ""}
+              onOpenSources={() => setSubTab("sources")}
+            />
+          )}
+          {subTab === "sectors" && (
+            <SituationSectors
+              sectors={data.sectors}
+              sources={data.sources}
+              onOpenSources={() => setSubTab("sources")}
+            />
+          )}
           {subTab === "sources" && <SituationSources sources={data.sources} />}
         </>
       )}

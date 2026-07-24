@@ -7,16 +7,26 @@ import { CardSection } from "~/components/ui";
 import type { SituationAnalysis } from "~/server/api/mappers/situation-analysis";
 import { BulletCard } from "./bullet-card";
 import { SituationKpis } from "./situation-kpis";
+import { Citations } from "./citations";
+import { SituationChanged } from "./situation-changed";
 
 /**
  * Situation Analysis -> Overview. Every block is conditional: the pipeline
  * routinely resolves only a subset of the payload, and an empty section is
  * hidden rather than rendered as a placeholder.
  */
-export function SituationOverview({ data }: { data: SituationAnalysis }) {
+export function SituationOverview({
+  data,
+  countryLocationId,
+  onOpenSources,
+}: {
+  data: SituationAnalysis;
+  countryLocationId: string;
+  onOpenSources?: () => void;
+}) {
   const t = useTranslations("insights.situation");
 
-  const { hazards, displacement, contextRisks, summary } = data;
+  const { hazards, displacement, contextRisks, summary, sources } = data;
   const hasHazards = hazards.hazards.length > 0 || hazards.vulnerabilities.length > 0;
   const hasDisplacement = displacement.push.length > 0 || displacement.return.length > 0;
 
@@ -27,7 +37,6 @@ export function SituationOverview({ data }: { data: SituationAnalysis }) {
       {summary && (
         <Card
           p={16}
-          mb={24}
           style={{
             border: "1px solid var(--color-ai-border)",
             background: "var(--color-ai-light)",
@@ -47,7 +56,14 @@ export function SituationOverview({ data }: { data: SituationAnalysis }) {
           <Text c="var(--color-text-primary)" style={{ fontSize: 13, lineHeight: 1.6 }}>
             {summary}
           </Text>
+          <Citations refs={data.summaryRefs} sources={sources} onOpen={onOpenSources} />
         </Card>
+      )}
+
+      {summary && (
+        <Box mb={24}>
+          <SituationChanged data={data} countryLocationId={countryLocationId} />
+        </Box>
       )}
 
       {contextRisks.length > 0 && (
@@ -82,6 +98,7 @@ export function SituationOverview({ data }: { data: SituationAnalysis }) {
                       {item}
                     </Text>
                   ))}
+                  <Citations refs={risk.refs} sources={sources} onOpen={onOpenSources} />
                 </Box>
               </Group>
             ))}
@@ -106,6 +123,7 @@ export function SituationOverview({ data }: { data: SituationAnalysis }) {
               />
             )}
           </SimpleGrid>
+          <Citations refs={hazards.refs} sources={sources} onOpen={onOpenSources} />
         </Box>
       )}
 
@@ -126,6 +144,7 @@ export function SituationOverview({ data }: { data: SituationAnalysis }) {
               />
             )}
           </SimpleGrid>
+          <Citations refs={displacement.refs} sources={sources} onOpen={onOpenSources} />
         </Box>
       )}
     </Box>

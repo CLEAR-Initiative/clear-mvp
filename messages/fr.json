@@ -264,7 +264,12 @@
         "interventions": "Interventions prioritaires",
         "coverage": "Couverture de l'information",
         "coverageScore": "{score}/10 · {reports} rapports",
-        "empty": "Aucun secteur analysé."
+        "empty": "Aucun secteur analysé.",
+        "snapshot": "En bref",
+        "topNeed": "Besoin prioritaire",
+        "mostVulnerable": "Plus vulnérables",
+        "evidence": "Preuves",
+        "evidenceCount": "{reports, plural, one {# rapport} other {# rapports}}"
       },
       "sources": {
         "visit": "Consulter la source",
@@ -275,6 +280,22 @@
         "informSeverity": "Sévérité INFORM",
         "evidenceBase": "D'après la dernière analyse · {reports} rapports",
         "freshest": "plus récent {date}"
+      },
+      "citations": {
+        "label": "Sources",
+        "report": "Rapport {n}"
+      },
+      "changed": {
+        "label": "Ce qui a changé depuis {period}",
+        "compareTo": "Comparer à",
+        "noPrior": "Aucun instantané n'existait {period}. Cette vue se remplit à mesure que les analyses hebdomadaires s'accumulent.",
+        "noChange": "Aucun chiffre suivi n'a changé sur cette période.",
+        "numbersOnly": "Chiffres uniquement. Un récit des changements arrivera avec le pipeline.",
+        "periods": {
+          "1m": "il y a 1 mois",
+          "3m": "il y a 3 mois",
+          "yearStart": "début de l'année"
+        }
       }
     }
   },

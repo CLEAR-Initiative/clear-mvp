@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box, Card, Group, Progress, SimpleGrid, Text, UnstyledButton } from "@mantine/core";
 import { CardSection, SeverityBadge } from "~/components/ui";
-import type { SaSector } from "~/server/api/mappers/situation-analysis";
+import type { SaSector, SaSource } from "~/server/api/mappers/situation-analysis";
 import { toAppSeverity } from "./severity";
+import { Citations } from "./citations";
 
 /**
  * Situation Analysis -> Sectors: a selectable list beside the full analysis of
@@ -17,7 +18,15 @@ import { toAppSeverity } from "./severity";
  * badges sourced from one value would imply a precision the data does not
  * have.
  */
-export function SituationSectors({ sectors }: { sectors: SaSector[] }) {
+export function SituationSectors({
+  sectors,
+  sources,
+  onOpenSources,
+}: {
+  sectors: SaSector[];
+  sources: SaSource[];
+  onOpenSources?: () => void;
+}) {
   const t = useTranslations("insights.situation");
   const [selected, setSelected] = useState<string | undefined>(() => sectors[0]?.id);
 
@@ -76,7 +85,7 @@ export function SituationSectors({ sectors }: { sectors: SaSector[] }) {
         ))}
       </CardSection>
 
-      <SectorDetail sector={sector} />
+      <SectorDetail sector={sector} sources={sources} onOpenSources={onOpenSources} />
     </SimpleGrid>
   );
 }
@@ -108,7 +117,15 @@ function PillarList({ label, items }: { label: string; items: string[] }) {
   );
 }
 
-function SectorDetail({ sector }: { sector: SaSector }) {
+function SectorDetail({
+  sector,
+  sources,
+  onOpenSources,
+}: {
+  sector: SaSector;
+  sources: SaSource[];
+  onOpenSources?: () => void;
+}) {
   const t = useTranslations("insights.situation");
 
   const isEmpty =
@@ -117,6 +134,10 @@ function SectorDetail({ sector }: { sector: SaSector }) {
     sector.atRisk.length === 0 &&
     sector.needs.length === 0 &&
     sector.interventions.length === 0;
+
+  const topNeed = sector.needs[0];
+  const mostVulnerable = sector.atRisk[0];
+  const hasSnapshot = !isEmpty && (topNeed != null || mostVulnerable != null);
 
   return (
     <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
@@ -148,6 +169,36 @@ function SectorDetail({ sector }: { sector: SaSector }) {
           <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
             {t("sectors.noAnalysis")}
           </Text>
+        )}
+
+        {hasSnapshot && (
+          <Box
+            mb={16}
+            p={13}
+            style={{
+              background: "var(--color-bg-muted)",
+              borderRadius: 8,
+              borderLeft: "3px solid var(--color-accent)",
+            }}
+          >
+            <Text
+              fw={700}
+              tt="uppercase"
+              c="var(--color-accent)"
+              mb={8}
+              style={{ fontSize: 10, letterSpacing: "0.06em" }}
+            >
+              {t("sectors.snapshot")}
+            </Text>
+            {topNeed && <SnapshotRow label={t("sectors.topNeed")} value={topNeed} />}
+            {mostVulnerable && (
+              <SnapshotRow label={t("sectors.mostVulnerable")} value={mostVulnerable} />
+            )}
+            <SnapshotRow
+              label={t("sectors.evidence")}
+              value={t("sectors.evidenceCount", { reports: sector.reportCount })}
+            />
+          </Box>
         )}
 
         <PillarList label={t("sectors.impact")} items={sector.impact} />
@@ -189,7 +240,26 @@ function SectorDetail({ sector }: { sector: SaSector }) {
             ))}
           </Box>
         )}
+
+        <Citations refs={sector.refs} sources={sources} onOpen={onOpenSources} />
       </Box>
     </Card>
+  );
+}
+
+function SnapshotRow({ label, value }: { label: string; value: string }) {
+  return (
+    <Group gap={8} align="flex-start" wrap="nowrap" mb={5}>
+      <Text
+        c="var(--color-text-secondary)"
+        fw={600}
+        style={{ fontSize: 12, width: 104, flexShrink: 0 }}
+      >
+        {label}
+      </Text>
+      <Text c="var(--color-text-primary)" style={{ fontSize: 12.5, lineHeight: 1.45 }}>
+        {value}
+      </Text>
+    </Group>
   );
 }

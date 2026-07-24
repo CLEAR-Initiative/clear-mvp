@@ -264,7 +264,12 @@
         "interventions": "Priority Interventions",
         "coverage": "Information Coverage",
         "coverageScore": "{score}/10 · {reports} reports",
-        "empty": "No sectors analysed."
+        "empty": "No sectors analysed.",
+        "snapshot": "At a glance",
+        "topNeed": "Top need",
+        "mostVulnerable": "Most vulnerable",
+        "evidence": "Evidence",
+        "evidenceCount": "{reports, plural, one {# report} other {# reports}}"
       },
       "sources": {
         "visit": "Visit source",
@@ -275,6 +280,22 @@
         "informSeverity": "INFORM Severity",
         "evidenceBase": "From the latest analysis · {reports} reports",
         "freshest": "freshest {date}"
+      },
+      "citations": {
+        "label": "Sources",
+        "report": "Report {n}"
+      },
+      "changed": {
+        "label": "What changed since {period}",
+        "compareTo": "Compare to",
+        "noPrior": "No snapshot existed {period}. This view fills in as weekly analyses accumulate.",
+        "noChange": "No tracked figures changed over this period.",
+        "numbersOnly": "Numbers only. A narrative of what changed is coming with the pipeline.",
+        "periods": {
+          "1m": "1 month ago",
+          "3m": "3 months ago",
+          "yearStart": "start of the year"
+        }
       }
     }
   },

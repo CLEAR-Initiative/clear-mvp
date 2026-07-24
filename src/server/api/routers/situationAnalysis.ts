@@ -18,8 +18,8 @@ import {
  */
 
 const SITUATION_ANALYSIS_QUERY = `
-  query SituationAnalysis($countryLocationId: String!, $year: Int) {
-    situationAnalysis(countryLocationId: $countryLocationId, year: $year) {
+  query SituationAnalysis($countryLocationId: String!, $year: Int, $asOf: DateTime) {
+    situationAnalysis(countryLocationId: $countryLocationId, year: $year, asOf: $asOf) {
       id
       countryLocationId
       windowStart
@@ -76,6 +76,9 @@ export const situationAnalysisRouter = createTRPCRouter({
         countryLocationId: z.string().min(1),
         countryName: z.string().min(1),
         year: z.number().int().optional(),
+        /** Historical read: the version current at this ISO timestamp. Used by
+         *  the "what changed" comparison to fetch a prior snapshot. */
+        asOf: z.string().datetime().optional(),
       }),
     )
     .query(async ({ ctx, input }): Promise<SituationAnalysis | null> => {
@@ -86,6 +89,7 @@ export const situationAnalysisRouter = createTRPCRouter({
         {
           countryLocationId: input.countryLocationId,
           ...(input.year != null ? { year: input.year } : {}),
+          ...(input.asOf != null ? { asOf: input.asOf } : {}),
         },
         cookieHeaders(ctx),
       );

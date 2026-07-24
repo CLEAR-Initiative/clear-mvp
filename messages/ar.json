@@ -264,7 +264,12 @@
         "interventions": "التدخلات ذات الأولوية",
         "coverage": "تغطية المعلومات",
         "coverageScore": "{score}/10 · {reports} تقارير",
-        "empty": "لا توجد قطاعات محللة."
+        "empty": "لا توجد قطاعات محللة.",
+        "snapshot": "نظرة سريعة",
+        "topNeed": "الحاجة الأولى",
+        "mostVulnerable": "الأكثر ضعفاً",
+        "evidence": "الأدلة",
+        "evidenceCount": "{reports, plural, zero {# تقرير} one {# تقرير} two {تقريران} few {# تقارير} many {# تقريراً} other {# تقرير}}"
       },
       "sources": {
         "visit": "زيارة المصدر",
@@ -275,6 +280,22 @@
         "informSeverity": "شدة INFORM",
         "evidenceBase": "من أحدث تحليل · {reports} تقارير",
         "freshest": "الأحدث {date}"
+      },
+      "citations": {
+        "label": "المصادر",
+        "report": "تقرير {n}"
+      },
+      "changed": {
+        "label": "ما الذي تغيّر منذ {period}",
+        "compareTo": "مقارنة بـ",
+        "noPrior": "لم توجد لقطة {period}. تمتلئ هذه الطريقة العرض مع تراكم التحليلات الأسبوعية.",
+        "noChange": "لم تتغيّر أي أرقام متتبَّعة خلال هذه الفترة.",
+        "numbersOnly": "الأرقام فقط. سيأتي سرد لما تغيّر مع خط المعالجة.",
+        "periods": {
+          "1m": "قبل شهر",
+          "3m": "قبل 3 أشهر",
+          "yearStart": "بداية العام"
+        }
       }
     }
   },

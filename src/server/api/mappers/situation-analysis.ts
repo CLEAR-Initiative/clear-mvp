@@ -136,6 +136,8 @@ export interface SaContextRisk {
   key: string;
   label: string;
   items: string[];
+  /** Citation numbers (1-based, into `sources`) this domain drew on. */
+  refs: number[];
 }
 
 export interface SaCoverage {
@@ -156,6 +158,10 @@ export interface SaSector {
   needs: string[];
   interventions: string[];
   coverage: SaCoverage[];
+  /** Citation numbers (1-based, into `sources`) this sector drew on. */
+  refs: number[];
+  /** Distinct contributing reports - a plain evidence-count signal. */
+  reportCount: number;
 }
 
 export interface SaSource {
@@ -168,10 +174,15 @@ export interface SaSource {
 export interface SituationAnalysis {
   crisis: SaCrisis;
   summary: string | null;
+  /** Citation numbers the AI summary drew on. */
+  summaryRefs: number[];
   stats: SaStat[];
+  /** Raw numeric datapoints, keyed for the "what changed" numeric diff. Null
+   *  where the pipeline did not resolve a value. */
+  figures: Record<SaStatKey, number | null>;
   contextRisks: SaContextRisk[];
-  hazards: { hazards: string[]; vulnerabilities: string[] };
-  displacement: { push: string[]; return: string[] };
+  hazards: { hazards: string[]; vulnerabilities: string[]; refs: number[] };
+  displacement: { push: string[]; return: string[]; refs: number[] };
   sectors: SaSector[];
   sources: SaSource[];
 }
@@ -239,6 +250,28 @@ function cleanStrings(items: string[] | undefined): string[] {
   return (items ?? []).map((s) => s?.trim()).filter((s): s is string => Boolean(s));
 }
 
+/** Union the `source_report_ids` off a list of sourced bullets. */
+function bulletRefIds(items: RawDescribed[] | undefined): string[] {
+  return (items ?? []).flatMap((i) => i.source_report_ids ?? []);
+}
+
+/** Build a `report_id -> citation number` index from the ordered source list,
+ *  and return a resolver that turns a component's report ids into sorted,
+ *  de-duplicated 1-based citation numbers. Report ids with no matching source
+ *  row are dropped (they can't be cited if they aren't in the list). */
+function makeRefResolver(sources: SaSource[]): (ids: string[] | undefined) => number[] {
+  const index = new Map<string, number>();
+  sources.forEach((s, i) => index.set(s.id, i + 1));
+  return (ids) => {
+    const nums = new Set<number>();
+    for (const id of ids ?? []) {
+      const n = index.get(id);
+      if (n != null) nums.add(n);
+    }
+    return [...nums].sort((a, b) => a - b);
+  };
+}
+
 // ─── Mapper ──────────────────────────────────────────────────────────────────
 
 /**
@@ -270,7 +303,10 @@ function mapStats(dp: SaPayload["datapoints"]): SaStat[] {
   return stats;
 }
 
-function mapSectors(raw: SaPayload["sectors"]): SaSector[] {
+function mapSectors(
+  raw: SaPayload["sectors"],
+  refsFrom: (ids: string[] | undefined) => number[],
+): SaSector[] {
   if (!raw) return [];
 
   return Object.entries(raw)
@@ -291,6 +327,8 @@ function mapSectors(raw: SaPayload["sectors"]): SaSector[] {
           score: c.rating_out_of_10 ?? 0,
           reportCount: c.report_count ?? 0,
         })),
+      refs: refsFrom(s?.source_report_ids),
+      reportCount: new Set(s?.source_report_ids ?? []).size,
     }))
     .sort((a, b) => {
       const ai = SECTOR_ORDER.indexOf(a.id);
@@ -302,13 +340,17 @@ function mapSectors(raw: SaPayload["sectors"]): SaSector[] {
     });
 }
 
-function mapContextRisks(raw: SaPayload["context_risks"]): SaContextRisk[] {
+function mapContextRisks(
+  raw: SaPayload["context_risks"],
+  refsFrom: (ids: string[] | undefined) => number[],
+): SaContextRisk[] {
   if (!raw) return [];
   return Object.entries(raw)
     .map(([key, v]) => ({
       key,
       label: titleise(key),
       items: cleanStrings(v?.bullets),
+      refs: refsFrom(v?.source_report_ids),
     }))
     // A risk category with no bullets carries no information - drop it rather
     // than render an empty row.
@@ -333,6 +375,13 @@ export function mapSituationAnalysis(
 ): SituationAnalysis {
   const data = row.data ?? {};
   const envelope = data.datapoints?.envelope;
+  const dp = data.datapoints;
+
+  // Sources first: the citation index keys off their order, and every
+  // component resolves its `source_report_ids` through the same resolver so
+  // the numbers are stable across the whole analysis.
+  const sources = mapSources(data.sources);
+  const refsFrom = makeRefResolver(sources);
 
   return {
     crisis: {
@@ -346,19 +395,36 @@ export function mapSituationAnalysis(
       freshestSourceAt: envelope?.newest_source_at ?? null,
     },
     summary: data.ai_summary?.text?.trim() ?? null,
-    stats: mapStats(data.datapoints),
-    contextRisks: mapContextRisks(data.context_risks),
+    summaryRefs: refsFrom(data.ai_summary?.source_report_ids),
+    stats: mapStats(dp),
+    figures: {
+      displaced: dp?.population_displaced ?? null,
+      affected: dp?.population_affected ?? null,
+      inNeed: dp?.population_in_need ?? null,
+      returnees: dp?.returnees ?? null,
+      fundingRequired: dp?.funding_required_usd ?? null,
+      fundingReceived: dp?.funding_received_usd ?? null,
+    },
+    contextRisks: mapContextRisks(data.context_risks, refsFrom),
     hazards: {
       hazards: descriptions(data.hazards_and_vulnerabilities?.hazards),
       vulnerabilities: descriptions(
         data.hazards_and_vulnerabilities?.vulnerabilities,
       ),
+      refs: refsFrom([
+        ...bulletRefIds(data.hazards_and_vulnerabilities?.hazards),
+        ...bulletRefIds(data.hazards_and_vulnerabilities?.vulnerabilities),
+      ]),
     },
     displacement: {
       push: descriptions(data.displacement?.push_factors),
       return: descriptions(data.displacement?.return_intention),
+      refs: refsFrom([
+        ...bulletRefIds(data.displacement?.push_factors),
+        ...bulletRefIds(data.displacement?.return_intention),
+      ]),
     },
-    sectors: mapSectors(data.sectors),
-    sources: mapSources(data.sources),
+    sectors: mapSectors(data.sectors, refsFrom),
+    sources,
   };
 }
