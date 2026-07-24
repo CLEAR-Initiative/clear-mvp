@@ -3,9 +3,10 @@
 import { useTranslations } from "next-intl";
 import { Box, Card, Group, SimpleGrid, Text } from "@mantine/core";
 import { IconSparkles } from "@tabler/icons-react";
-import { CardSection, StatsGrid } from "~/components/ui";
+import { CardSection } from "~/components/ui";
 import type { SituationAnalysis } from "~/server/api/mappers/situation-analysis";
 import { BulletCard } from "./bullet-card";
+import { SituationKpis } from "./situation-kpis";
 
 /**
  * Situation Analysis -> Overview. Every block is conditional: the pipeline
@@ -15,21 +16,13 @@ import { BulletCard } from "./bullet-card";
 export function SituationOverview({ data }: { data: SituationAnalysis }) {
   const t = useTranslations("insights.situation");
 
-  const { hazards, displacement, contextRisks, stats, summary } = data;
+  const { hazards, displacement, contextRisks, summary } = data;
   const hasHazards = hazards.hazards.length > 0 || hazards.vulnerabilities.length > 0;
   const hasDisplacement = displacement.push.length > 0 || displacement.return.length > 0;
 
   return (
     <Box>
-      {stats.length > 0 && (
-        <StatsGrid
-          cols={Math.min(stats.length, 4)}
-          stats={stats.map((s) => ({
-            label: t(`stats.${s.key}`),
-            value: s.value,
-          }))}
-        />
-      )}
+      <SituationKpis data={data} />
 
       {summary && (
         <Card

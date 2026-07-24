@@ -128,6 +128,8 @@ export interface SaCrisis {
   schemaVersion: string;
   reportCount: number | null;
   qualityScore: number | null;
+  /** Newest contributing source date, for the "freshest 5 days ago" line. */
+  freshestSourceAt: string | null;
 }
 
 export interface SaContextRisk {
@@ -341,6 +343,7 @@ export function mapSituationAnalysis(
       schemaVersion: row.schemaVersion,
       reportCount: envelope?.report_count ?? null,
       qualityScore: envelope?.quality_score ?? null,
+      freshestSourceAt: envelope?.newest_source_at ?? null,
     },
     summary: data.ai_summary?.text?.trim() ?? null,
     stats: mapStats(data.datapoints),

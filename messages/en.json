@@ -270,6 +270,11 @@
         "visit": "Visit source",
         "published": "Published {date}",
         "empty": "No sources recorded for this snapshot."
+      },
+      "kpi": {
+        "informSeverity": "INFORM Severity",
+        "evidenceBase": "From the latest analysis · {reports} reports",
+        "freshest": "freshest {date}"
       }
     }
   },

@@ -270,6 +270,11 @@
         "visit": "زيارة المصدر",
         "published": "نُشر في {date}",
         "empty": "لا توجد مصادر مسجلة لهذه اللقطة."
+      },
+      "kpi": {
+        "informSeverity": "شدة INFORM",
+        "evidenceBase": "من أحدث تحليل · {reports} تقارير",
+        "freshest": "الأحدث {date}"
       }
     }
   },

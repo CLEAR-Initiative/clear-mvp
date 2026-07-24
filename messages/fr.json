@@ -270,6 +270,11 @@
         "visit": "Consulter la source",
         "published": "Publié le {date}",
         "empty": "Aucune source enregistrée pour cet instantané."
+      },
+      "kpi": {
+        "informSeverity": "Sévérité INFORM",
+        "evidenceBase": "D'après la dernière analyse · {reports} rapports",
+        "freshest": "plus récent {date}"
       }
     }
   },
