@@ -20,6 +20,9 @@ export const countryConfig: Record<string, CountryConfig> = {
   Iraq:         { center: [44.4, 33.3], zoom: 5.5, pCode: "IQ",                       bbox: [38.8, 29.1, 48.6, 37.4], regions: ["All Regions", "Baghdad", "Erbil", "Mosul", "Basra"] },
   Syria:        { center: [38.9, 34.8], zoom: 6,   pCode: "SY",                       bbox: [35.7, 32.3, 42.4, 37.3], regions: ["All Regions", "Damascus", "Aleppo", "Idlib", "Homs"] },
   Colombia:     { center: [-74.3, 4.6], zoom: 5,   pCode: "CO",                       bbox: [-79.0,-4.2, -66.9,13.4], regions: ["All Regions", "Bogota", "Medellin", "Cali"] },
+  // Team Venezuela — must stay in sync with locations.tree or country switch
+  // falls back to Sudan center and needs multiple clicks to settle (GH #112).
+  Venezuela:    { center: [-66.6, 6.4], zoom: 5,   pCode: "VE", hasCrisisData: true,  bbox: [-73.4, 0.6, -59.8, 12.2], regions: ["All Regions", "Distrito Capital", "Zulia", "Miranda", "Carabobo", "Lara"] },
 };
 
 export const countries = Object.keys(countryConfig).sort();
