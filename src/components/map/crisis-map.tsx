@@ -1077,6 +1077,14 @@ export function CrisisMap({
             // every member of the cluster is visible after expanding.
             (m.getSource(SOURCE) as MapboxGLAny).getClusterLeaves(cid, Infinity, 0, (err: unknown, leaves: MapboxGLAny[]) => {
               if (err || !leaves?.length) return;
+              // Contract: donut badge (point_count) must equal expanded pin count.
+              if (process.env.NODE_ENV !== "production" && leaves.length !== leafCount) {
+                console.error("[map-density] cluster badge/pin mismatch", {
+                  badge: leafCount,
+                  pins: leaves.length,
+                  clusterId: cid,
+                });
+              }
               const lngs = leaves.map((f: MapboxGLAny) => f.geometry.coordinates[0] as number);
               const lats = leaves.map((f: MapboxGLAny) => f.geometry.coordinates[1] as number);
               const sw: [number, number] = [Math.min(...lngs), Math.min(...lats)];

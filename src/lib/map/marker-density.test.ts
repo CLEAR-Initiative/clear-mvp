@@ -83,6 +83,7 @@ describe("donut center count (active-view semantics)", () => {
     expect(donutCenterCount({})).toBe(0);
     expect(donutCenterCount({ point_count: null })).toBe(0);
     expect(donutCenterLabel({ point_count: undefined })).toBe("0");
+    expect(donutCenterCount({ point_count: Number.NaN })).toBe(0);
   });
 
   it("caps the visible label at 999+", () => {

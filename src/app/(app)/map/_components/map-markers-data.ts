@@ -143,10 +143,22 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
 }
 
 export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
-  // Prefer alert.representativePoint when the event payload omitted it.
-  // Multiple alerts can wrap the same event — dedupe happens in eventsToMarkers.
+  // Multiple alerts can wrap the same event — keep the entry with the best
+  // representative point before dedupe (first-wins) in eventsToMarkers.
+  const bestByEvent = new Map<string, GqlAlert>();
+  for (const a of alerts) {
+    const existing = bestByEvent.get(a.event.id);
+    if (!existing) {
+      bestByEvent.set(a.event.id, a);
+      continue;
+    }
+    const existingPoint =
+      existing.event.representativePoint ?? existing.representativePoint ?? null;
+    const nextPoint = a.event.representativePoint ?? a.representativePoint ?? null;
+    if (!existingPoint && nextPoint) bestByEvent.set(a.event.id, a);
+  }
   return eventsToMarkers(
-    alerts.map((a) => ({
+    [...bestByEvent.values()].map((a) => ({
       ...a.event,
       representativePoint: a.event.representativePoint ?? a.representativePoint ?? null,
       alerts: a.event.alerts?.length ? a.event.alerts : [{ id: a.id, status: a.status }],

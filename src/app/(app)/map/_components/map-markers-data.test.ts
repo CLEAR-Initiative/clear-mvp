@@ -102,4 +102,39 @@ describe("eventsToMarkers / representativePoint", () => {
     expect(markers).toHaveLength(1);
     expect(markers[0]?.eventId).toBe("evt-shared");
   });
+
+  it("keeps one pin per unique event so cluster badges match expanded pins (6 alerts -> 3 events)", () => {
+    // Reviewer scenario on PR #121: badge showed 6 while only 3 events existed.
+    // Six alerts wrapping three events must feed Supercluster exactly three
+    // features — otherwise point_count inflates vs zoomed pins.
+    const events = [
+      baseEvent({ id: "evt-a", generalLocation: pointLoc("a", 30.0, 14.0) }),
+      baseEvent({ id: "evt-b", generalLocation: pointLoc("b", 30.01, 14.01) }),
+      baseEvent({ id: "evt-c", generalLocation: pointLoc("c", 30.02, 14.02) }),
+    ];
+    const alerts = events.flatMap((event) => [
+      { id: `a-${event.id}-1`, status: "published" as const, representativePoint: null, event },
+      { id: `a-${event.id}-2`, status: "draft" as const, representativePoint: null, event },
+    ]);
+    expect(alerts).toHaveLength(6);
+    const markers = alertsToMarkers(alerts);
+    expect(markers).toHaveLength(3);
+    expect(new Set(markers.map((m) => m.eventId))).toEqual(new Set(["evt-a", "evt-b", "evt-c"]));
+  });
+
+  it("prefers a non-null representativePoint when deduping alerts for one event", () => {
+    const event = baseEvent({ id: "evt-point", generalLocation: null });
+    const markers = alertsToMarkers([
+      { id: "a1", status: "published", representativePoint: null, event },
+      {
+        id: "a2",
+        status: "draft",
+        representativePoint: pointLoc("alert-rep", 28, 12),
+        event,
+      },
+    ]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.lng).toBe(28);
+    expect(markers[0]?.lat).toBe(12);
+  });
 });

@@ -91,14 +91,15 @@ export type DonutSeverity = (typeof SEVERITY_ORDER)[number];
  * Caps display at 999+ for dense clusters.
  */
 export function donutCenterLabel(props: { point_count?: number | null }): string {
-  const total = Math.max(0, Number(props.point_count ?? 0));
+  const total = donutCenterCount(props);
   if (total > 999) return "999+";
   return String(total);
 }
 
 /** Active-view cluster size used for donut sizing / count semantics. */
 export function donutCenterCount(props: { point_count?: number | null }): number {
-  return Math.max(0, Number(props.point_count ?? 0));
+  const n = Number(props.point_count ?? 0);
+  return Math.max(0, Number.isFinite(n) ? n : 0);
 }
 
 export interface DonutSeveritySegment {
