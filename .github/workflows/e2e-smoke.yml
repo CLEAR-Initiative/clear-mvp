@@ -1,0 +1,108 @@
+name: E2E smoke
+
+# Runs the nine-flow Playwright smoke suite (V1) against the hermetic
+# docker-compose stack (Postgres+PostGIS+pgvector, Redis, clear-api, clear-mvp)
+# on every PR to dev. Both repos are BUILT FROM SOURCE in the job: clear-mvp from
+# the PR head, clear-api from its `dev` branch (public repo → no token needed).
+# The suite runs with retries: 2 (see playwright.config.ts CI branch).
+#
+# ── ESCAPE HATCH ────────────────────────────────────────────────────────────
+# If early flake outweighs real catches, downgrade from BLOCKING to advisory
+# WITHOUT deleting this workflow — either:
+#   (a) remove "E2E smoke / E2E smoke suite" from the required status checks in
+#       dev branch protection (repo-admin), or
+#   (b) add `continue-on-error: true` to the `e2e` job below so it reports but
+#       never fails the PR.
+# Re-enable once the suite has stabilised.
+
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: E2E smoke suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout clear-mvp (PR head)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          path: clear-mvp
+
+      # clear-api is public, so no token is required. Its `dev` includes the seed
+      # fix that lets `bun run seed` create demo users on a fresh DB.
+      - name: Checkout clear-api (dev)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: CLEAR-Initiative/clear-api
+          ref: dev
+          path: clear-api
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.1
+
+      - name: Install suite deps + Chromium
+        working-directory: clear-mvp
+        run: |
+          bun install --frozen-lockfile
+          bunx playwright install --with-deps chromium
+
+      # docker-container driver (not the default "docker" one) is required for
+      # the `type=gha` cache backend used by docker-compose.e2e.ci.yml below.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      # The type=gha cache backend needs ACTIONS_CACHE_URL / ACTIONS_RUNTIME_TOKEN
+      # to authenticate. GitHub only exposes those to actions built on the
+      # Actions toolkit (e.g. actions/cache) — a plain `run:` step (our
+      # `docker compose build`) can't see them without this shim re-exporting
+      # them as env vars. Without it, `type=gha` silently misses on every run.
+      - name: Expose GitHub Actions cache variables to the runner
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
+
+      # Builds the DB (postgis+pgvector), clear-api, and clear-mvp images, waits
+      # for all to be healthy, then seeds the DB. `docker-compose.e2e.yml`
+      # references ../clear-api, which resolves to the sibling checkout above.
+      # docker-compose.e2e.ci.yml is a CI-only overlay adding GHA layer caching
+      # (local `bun run e2e` never passes it, so it doesn't affect local runs).
+      - name: Bring up stack (build both repos) + seed
+        working-directory: clear-mvp
+        run: |
+          docker compose -f docker-compose.e2e.yml -f docker-compose.e2e.ci.yml up -d --build --wait db redis api web || \
+            (docker compose -f docker-compose.e2e.yml logs --no-color --tail=200; exit 1)
+          docker compose -f docker-compose.e2e.yml -f docker-compose.e2e.ci.yml run --rm seed
+
+      - name: Run Playwright smoke suite
+        working-directory: clear-mvp
+        run: bunx playwright test
+
+      - name: Upload Playwright report + traces
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report
+          path: |
+            clear-mvp/playwright-report/
+            clear-mvp/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Dump stack logs (on failure)
+        if: ${{ failure() }}
+        working-directory: clear-mvp
+        run: docker compose -f docker-compose.e2e.yml logs --no-color --tail=300
+
+      - name: Tear down
+        if: ${{ always() }}
+        working-directory: clear-mvp
+        run: docker compose -f docker-compose.e2e.yml down -v --remove-orphans

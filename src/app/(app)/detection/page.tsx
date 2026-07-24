@@ -18,7 +18,6 @@ import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
 import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
 import { writeDetectionNavContext } from "~/lib/detection-nav-context";
 
-import { DetectionKpiRow } from "~/components/detection/detection-kpi-row";
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
 import { HistoryTab, type HistorySortOrder } from "./_components/history-tab";
 import { EventsTab, type EventSortOrder } from "./_components/events-tab";
@@ -678,12 +677,14 @@ function DetectionPageContent() {
                 <ActionIcon
                   variant="default" size={30}
                   style={{ position: "relative", border: "1px solid #E5E5E5", borderRadius: 4 }}
+                  styles={{ root: { overflow: "visible" } }}
                   onClick={() => setFilterOpen((o) => !o)}
                   title={t("filters.filter")}
+                  aria-label={t("filters.filter")}
                 >
                   <IconFilter size={13} color={isFiltered ? "var(--color-accent)" : "var(--color-text-muted)"} />
                   {isFiltered && (
-                    <Box style={{ position: "absolute", top: -4, insetInlineEnd: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Box style={{ position: "absolute", top: -4, insetInlineEnd: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
                       <Text style={{ fontSize: 9, color: "white", fontWeight: 700, lineHeight: 1 }}>{filterCount}</Text>
                     </Box>
                   )}
@@ -765,22 +766,54 @@ function DetectionPageContent() {
         </Group>
       </PageHeader>
 
-      <Box p={24}>
-        <Tabs value={activeTab} onChange={handleTabChange} mb={24} styles={{ tab: { fontSize: 13, fontWeight: 500 } }}>
-          <Tabs.List>
+      <Box px={{ base: 12, sm: 24 }} py={{ base: 16, sm: 24 }}>
+        <Tabs
+          value={activeTab}
+          onChange={handleTabChange}
+          mb={{ base: 16, sm: 24 }}
+          styles={{
+            tab: {
+              fontSize: 13,
+              fontWeight: 500,
+              flex: 1,
+              border: "none",
+              paddingInline: 8,
+              transition: "background-color 800ms cubic-bezier(0.4, 0, 0.2, 1)",
+              "&[data-active]": {
+                backgroundColor: "#f1f3f5",
+              },
+              "&:hover:not([data-active])": {
+                backgroundColor: "#f8f9fa",
+                transition: "background-color 200ms ease-out",
+              },
+            },
+            list: {
+              borderBottom: "none",
+            },
+          }}
+        >
+          <Tabs.List style={{ position: "relative", display: "flex", width: "100%" }}>
             <Tabs.Tab value="live">{t("tabs.alerts")}</Tabs.Tab>
             <Tabs.Tab value="events">{t("tabs.events")}</Tabs.Tab>
             <Tabs.Tab value="signals">{t("tabs.signals")}</Tabs.Tab>
             <Tabs.Tab value="history">{t("tabs.history")}</Tabs.Tab>
+            <Box
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left:
+                  activeTab === "live" ? "0%" :
+                  activeTab === "events" ? "25%" :
+                  activeTab === "signals" ? "50%" : "75%",
+                width: "25%",
+                height: 2,
+                background: "var(--color-accent)",
+                transition: "left 350ms cubic-bezier(0.4, 0, 0.2, 1)",
+                zIndex: 10,
+              }}
+            />
           </Tabs.List>
         </Tabs>
-
-        <DetectionKpiRow
-          country={selectedCountry}
-          alerts={alertsItems}
-          events={eventsItems}
-          onNavigateToAlerts={() => handleTabChange("live")}
-        />
 
         {activeTab === "live" && (
           <LiveAlertsTab

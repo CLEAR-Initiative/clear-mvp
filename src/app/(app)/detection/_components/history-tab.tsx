@@ -260,12 +260,13 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
           variant="default"
           size={30}
           style={{ position: "relative", border: "1px solid var(--color-border)", borderRadius: 4 }}
+          styles={{ root: { overflow: "visible" } }}
           onClick={() => setFilterOpen((o) => !o)}
           title={t("filters.filter")}
         >
           <IconFilter size={13} color={isFiltered ? "var(--color-accent)" : "var(--color-text-muted)"} />
           {isFiltered && (
-            <Box style={{ position: "absolute", top: -4, insetInlineEnd: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Box style={{ position: "absolute", top: -4, insetInlineEnd: -4, width: 14, height: 14, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
               <Text style={{ fontSize: 9, color: "white", fontWeight: 700, lineHeight: 1 }}>{filterCount}</Text>
             </Box>
           )}
@@ -392,7 +393,9 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
         rightSlot={filterPopover}
       />
 
-      <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+      <Card p={0} style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
+        <Box style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+          <Box style={{ minWidth: 760 }}>
         <DataTable
           columns={COLUMN_KEYS.map((k) => ({ label: t(`history.columns.${k}`) }))}
           data={filtered}
@@ -411,7 +414,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
 
             if (row.kind === "alert") {
               const e = row.data.event;
-              href = `/event/${e.id}`;
+              href = `/event/${e.id}?from=detection`;
               title = e.title ?? e.description ?? e.types[0] ?? t("history.untitled");
               types = e.types;
               sources = [...new Set(e.signals.map((s) => s.source.name))];
@@ -419,7 +422,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
               location = resolveLocationName(e.generalLocation ?? e.originLocation ?? e.destinationLocation);
             } else if (row.kind === "event") {
               const e = row.data;
-              href = `/event/${e.id}`;
+              href = `/event/${e.id}?from=detection`;
               title = e.title ?? e.description ?? e.types[0] ?? t("history.untitled");
               types = e.types;
               sources = [...new Set(e.signals.map((s) => s.source.name))];
@@ -427,7 +430,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
               location = resolveLocationName(e.generalLocation ?? e.originLocation ?? e.destinationLocation);
             } else {
               const s = row.data;
-              href = `/signal/${s.id}`;
+              href = `/signal/${s.id}?from=detection`;
               title = s.title ?? s.description ?? t("feed.signals.untitled");
               sources = [s.source.name];
               date = s.publishedAt;
@@ -503,6 +506,8 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
             );
           }}
         />
+          </Box>
+        </Box>
 
         {(hasMore || isFetchingMore) && (
           <Box px={16} py={12} style={{ borderTop: "1px solid var(--color-border)", display: "flex", justifyContent: "center" }}>

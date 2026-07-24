@@ -3,6 +3,7 @@ import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { useLocations } from "~/hooks/use-locations";
 import { readDetectionNavContext, getDefaultDetectionNavContext } from "~/lib/detection-nav-context";
+import { getListNavigation } from "~/lib/detail-list-nav";
 import type { GqlEvent, GqlLocation, GqlSignal } from "~/lib/types/graphql";
 
 /**
@@ -51,55 +52,73 @@ export interface DetailNavigationResult<TItem = GqlEvent> {
 /** @deprecated Use DetailNavigationResult */
 export type EventNavigationResult = DetailNavigationResult<GqlEvent>;
 
+/** Which ordered list powers detail prev/next. */
+export type DetailListSource = "detection" | "map";
+
+export interface DetailNavigationOptions {
+  /**
+   * `detection` (default): Detection Events/Signals tab order + session filters.
+   * `map`: map feed (`eventsForMap` / `signals.forMap`) so map → detail arrows work
+   * even when the entity is outside the Detection filter window.
+   */
+  listSource?: DetailListSource;
+}
+
 /**
- * Hook for event prev/next navigation using Detection list order.
- * Reads filter context from sessionStorage (written by detection page).
+ * Hook for event prev/next navigation.
+ * Detection entry uses Detection list order; map entry uses the map events feed.
  */
-export function useEventNavigation(currentEventId: string): DetailNavigationResult<GqlEvent> {
+export function useEventNavigation(
+  currentEventId: string,
+  options?: DetailNavigationOptions,
+): DetailNavigationResult<GqlEvent> {
+  const listSource = options?.listSource ?? "detection";
+  const fromMap = listSource === "map";
   const { activeTeamId } = useTeam();
   const { getLocationId } = useLocations();
 
-  // Read detection filter context or use defaults
   const navContext = useMemo(() => {
     const stored = readDetectionNavContext();
     return stored ?? getDefaultDetectionNavContext(getLocationId, activeTeamId);
   }, [getLocationId, activeTeamId]);
 
-  // SIMPLIFIED: Use the SAME query as the map to ensure consistency
-  const eventsQuery = api.alerts.eventsForMap.useQuery(
-    { includeDummy: true },
-    { staleTime: 60_000 },
+  // Same filtered/ordered page as Detection Events tab (capped at API max).
+  const detectionQuery = api.alerts.eventsPage.useQuery(
+    {
+      teamId: navContext.teamId ?? undefined,
+      locationId: navContext.locationId ?? undefined,
+      from: navContext.from,
+      to: navContext.to,
+      severityMin: navContext.severityMin,
+      severityMax: navContext.severityMax,
+      eventTypes: navContext.eventTypes,
+      orderBy: navContext.orderBy,
+      limit: 500,
+      offset: 0,
+    },
+    { enabled: !fromMap },
   );
 
-  const currentIndex = useMemo(() => {
-    const items = eventsQuery.data?.events ?? [];
-    return items.findIndex((e) => e.id === currentEventId);
-  }, [eventsQuery.data, currentEventId]);
+  // Map feed — no Detection location/severity filters so the opened pin is present.
+  const mapQuery = api.alerts.eventsForMap.useQuery(
+    { includeDummy: true },
+    { enabled: fromMap, staleTime: 60_000 },
+  );
 
-  const prevId = useMemo(() => {
-    if (currentIndex <= 0) return null;
-    const items = eventsQuery.data?.events ?? [];
-    return items[currentIndex - 1]?.id ?? null;
-  }, [currentIndex, eventsQuery.data]);
-
-  const nextId = useMemo(() => {
-    const items = eventsQuery.data?.events ?? [];
-    if (currentIndex < 0 || currentIndex >= items.length - 1) return null;
-    return items[currentIndex + 1]?.id ?? null;
-  }, [currentIndex, eventsQuery.data]);
-
-  const totalCount = eventsQuery.data?.events?.length ?? 0;
+  const items = useMemo(
+    () => (fromMap ? (mapQuery.data?.events ?? []) : (detectionQuery.data?.items ?? [])),
+    [fromMap, mapQuery.data?.events, detectionQuery.data?.items],
+  );
+  const ids = useMemo(() => items.map((e) => e.id), [items]);
+  const nav = useMemo(
+    () => getListNavigation(ids, currentEventId),
+    [ids, currentEventId],
+  );
 
   return {
-    prevId,
-    nextId,
-    hasPrev: currentIndex > 0,
-    hasNext: currentIndex >= 0 && currentIndex < (eventsQuery.data?.events?.length ?? 0) - 1,
-    position: currentIndex >= 0 ? `${currentIndex + 1} / ${totalCount}` : "—",
-    currentIndex,
-    totalCount,
-    isLoading: eventsQuery.isLoading,
-    listItems: eventsQuery.data?.events ?? [],
+    ...nav,
+    isLoading: fromMap ? mapQuery.isLoading : detectionQuery.isLoading,
+    listItems: items,
   };
 }
 
@@ -108,7 +127,7 @@ export function useEventNavigation(currentEventId: string): DetailNavigationResu
  */
 export function getSignalMapCenter(signal: GqlSignal | null | undefined): [number, number] | null {
   if (!signal) return null;
-  
+
   const locations: GqlLocation[] = [];
   if (signal.generalLocation) locations.push(signal.generalLocation);
   if (signal.originLocation) locations.push(signal.originLocation);
@@ -126,61 +145,57 @@ export function getSignalMapCenter(signal: GqlSignal | null | undefined): [numbe
 }
 
 /**
- * Hook for signal prev/next navigation using Detection signals list order.
- * Reads filter context from sessionStorage (written by detection page).
+ * Hook for signal prev/next navigation.
+ * Detection entry uses Detection list order; map entry uses the map signals feed.
  */
-export function useSignalNavigation(currentSignalId: string): DetailNavigationResult<GqlSignal> {
+export function useSignalNavigation(
+  currentSignalId: string,
+  options?: DetailNavigationOptions,
+): DetailNavigationResult<GqlSignal> {
+  const listSource = options?.listSource ?? "detection";
+  const fromMap = listSource === "map";
   const { activeTeamId } = useTeam();
   const { getLocationId } = useLocations();
 
-  // Read detection filter context or use defaults
   const navContext = useMemo(() => {
     const stored = readDetectionNavContext();
     return stored ?? getDefaultDetectionNavContext(getLocationId, activeTeamId);
   }, [getLocationId, activeTeamId]);
 
-  // Query signals with detection filters, limited to 500 (API max)
-  const signalsQuery = api.signals.signalsPage.useQuery({
-    teamId: navContext.teamId ?? undefined,
-    locationId: navContext.locationId ?? undefined,
-    from: navContext.from,
-    to: navContext.to,
-    severityMin: navContext.severityMin,
-    severityMax: navContext.severityMax,
-    sourceNames: navContext.sourceNames,
-    orderBy: navContext.signalOrderBy ?? "PUBLISHED_DESC",
-    limit: 500,
-    offset: 0,
-  });
+  const detectionQuery = api.signals.signalsPage.useQuery(
+    {
+      teamId: navContext.teamId ?? undefined,
+      locationId: navContext.locationId ?? undefined,
+      from: navContext.from,
+      to: navContext.to,
+      severityMin: navContext.severityMin,
+      severityMax: navContext.severityMax,
+      sourceNames: navContext.sourceNames,
+      orderBy: navContext.signalOrderBy ?? "PUBLISHED_DESC",
+      limit: 500,
+      offset: 0,
+    },
+    { enabled: !fromMap },
+  );
 
-  const currentIndex = useMemo(() => {
-    const items = signalsQuery.data?.items ?? [];
-    return items.findIndex((s) => s.id === currentSignalId);
-  }, [signalsQuery.data, currentSignalId]);
+  const mapQuery = api.signals.forMap.useQuery(
+    { includeDummy: true },
+    { enabled: fromMap, staleTime: 60_000 },
+  );
 
-  const prevId = useMemo(() => {
-    if (currentIndex <= 0) return null;
-    const items = signalsQuery.data?.items ?? [];
-    return items[currentIndex - 1]?.id ?? null;
-  }, [currentIndex, signalsQuery.data]);
-
-  const nextId = useMemo(() => {
-    const items = signalsQuery.data?.items ?? [];
-    if (currentIndex < 0 || currentIndex >= items.length - 1) return null;
-    return items[currentIndex + 1]?.id ?? null;
-  }, [currentIndex, signalsQuery.data]);
-
-  const totalCount = signalsQuery.data?.totalCount ?? 0;
+  const items = useMemo(
+    () => (fromMap ? (mapQuery.data ?? []) : (detectionQuery.data?.items ?? [])),
+    [fromMap, mapQuery.data, detectionQuery.data?.items],
+  );
+  const ids = useMemo(() => items.map((s) => s.id), [items]);
+  const nav = useMemo(
+    () => getListNavigation(ids, currentSignalId),
+    [ids, currentSignalId],
+  );
 
   return {
-    prevId,
-    nextId,
-    hasPrev: currentIndex > 0,
-    hasNext: currentIndex >= 0 && currentIndex < (signalsQuery.data?.items.length ?? 0) - 1,
-    position: currentIndex >= 0 ? `${currentIndex + 1} / ${totalCount}` : "—",
-    currentIndex,
-    totalCount,
-    isLoading: signalsQuery.isLoading,
-    listItems: signalsQuery.data?.items ?? [],
+    ...nav,
+    isLoading: fromMap ? mapQuery.isLoading : detectionQuery.isLoading,
+    listItems: items,
   };
 }

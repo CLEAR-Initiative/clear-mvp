@@ -128,6 +128,8 @@
 /* Base styles */
 html {
   background: var(--color-bg-primary);
+  /* Disable double-tap zoom on the shell; Mapbox canvas sets its own touch-action. */
+  touch-action: manipulation;
 }
 
 body {
@@ -136,6 +138,8 @@ body {
   color: var(--color-text-primary);
   line-height: 1.5;
   font-size: 14px;
+  touch-action: manipulation;
+  overflow-x: hidden;
 }
 
 /* Mapbox zoom control dark mode overrides */
@@ -161,6 +165,13 @@ body {
 }
 .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group {
   pointer-events: auto;
+}
+
+/* Mobile map is full-bleed under the bottom nav — keep zoom controls clear of it. */
+@media (max-width: 48em) {
+  .mapboxgl-ctrl-bottom-right {
+    bottom: 76px !important;
+  }
 }
 
 /* Mapbox overrides - ensure map fills container */

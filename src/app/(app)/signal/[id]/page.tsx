@@ -34,7 +34,9 @@ export default function SignalDetailPage({
     searchParams,
   });
 
-  const navigation = useSignalNavigation(activeId);
+  const navigation = useSignalNavigation(activeId, {
+    listSource: referrer === "map" ? "map" : "detection",
+  });
 
   useEffect(() => {
     for (const id of [navigation.prevId, navigation.nextId]) {

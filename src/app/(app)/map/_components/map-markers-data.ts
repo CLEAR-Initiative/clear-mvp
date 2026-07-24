@@ -120,19 +120,45 @@ function eventToMarker(event: GqlEvent, loc: NonNullable<ReturnType<typeof point
   };
 }
 
+/** One map pin per entity — duplicate rows inflate Supercluster `point_count`. */
+function dedupeMarkersByEntity(markers: CrisisMarker[]): CrisisMarker[] {
+  const seen = new Set<string>();
+  const out: CrisisMarker[] = [];
+  for (const m of markers) {
+    const key = m.eventId ?? String(m.id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(m);
+  }
+  return out;
+}
+
 export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
   for (const event of events) {
     const point = pointLocation(event);
     if (point) markers.push(eventToMarker(event, point));
   }
-  return markers;
+  return dedupeMarkersByEntity(markers);
 }
 
 export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
-  // Prefer alert.representativePoint when the event payload omitted it.
+  // Multiple alerts can wrap the same event — keep the entry with the best
+  // representative point before dedupe (first-wins) in eventsToMarkers.
+  const bestByEvent = new Map<string, GqlAlert>();
+  for (const a of alerts) {
+    const existing = bestByEvent.get(a.event.id);
+    if (!existing) {
+      bestByEvent.set(a.event.id, a);
+      continue;
+    }
+    const existingPoint =
+      existing.event.representativePoint ?? existing.representativePoint ?? null;
+    const nextPoint = a.event.representativePoint ?? a.representativePoint ?? null;
+    if (!existingPoint && nextPoint) bestByEvent.set(a.event.id, a);
+  }
   return eventsToMarkers(
-    alerts.map((a) => ({
+    [...bestByEvent.values()].map((a) => ({
       ...a.event,
       representativePoint: a.event.representativePoint ?? a.representativePoint ?? null,
       alerts: a.event.alerts?.length ? a.event.alerts : [{ id: a.id, status: a.status }],
@@ -168,7 +194,7 @@ export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
       }
     }
   }
-  return markers;
+  return dedupeMarkersByEntity(markers);
 }
 
 /* ========== Extract polygon regions from events ========== */
@@ -249,7 +275,7 @@ export function crisesToMarkers(crises: GqlCrisis[]): CrisisMarker[] {
       }
     }
   }
-  return markers;
+  return dedupeMarkersByEntity(markers);
 }
 
 /* ========== Derive filter options from markers ========== */

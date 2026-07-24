@@ -24,6 +24,13 @@ export interface GqlCrisis {
   events: GqlEvent[];
 }
 
+/** Tiny row for the Add-to-Crisis menu — ids + title only. */
+export interface GqlCrisisMenuItem {
+  id: string;
+  title: string | null;
+  events: { id: string }[];
+}
+
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry population
   parent { id name }
@@ -117,6 +124,17 @@ const CRISES_LIST_QUERY = `
   }
 `;
 
+/** Menu-only list — avoids locations/needs/summary on every event-detail open. */
+const CRISES_LIST_MENU_QUERY = `
+  query CrisesMenu {
+    crises {
+      id
+      title
+      events { id }
+    }
+  }
+`;
+
 const CRISIS_GET_QUERY = `
   query Crisis($id: String!) {
     crisis(id: $id) {
@@ -138,7 +156,34 @@ const UPDATE_CRISIS_META_MUTATION = `
 const CREATE_CRISIS_FROM_EVENTS_MUTATION = `
   mutation CreateCrisisFromEvents($input: CreateCrisisFromEventsInput!) {
     createCrisisFromEvents(input: $input) {
-      ${CRISIS_FIELDS}
+      id
+      title
+      summary
+      severity
+      needs
+      scenarios
+      generalLocation { ${NESTED_LOCATION_FIELDS} }
+      populationAffected
+      populationInArea
+      events {
+        id
+        title
+        description
+        types
+        severity
+        rank
+        isDummy
+        firstSignalCreatedAt
+        lastSignalCreatedAt
+        populationAffected
+        populationDisplaced
+        generalLocation { ${NESTED_LOCATION_FIELDS} }
+        originLocation { ${NESTED_LOCATION_FIELDS} }
+        destinationLocation { ${NESTED_LOCATION_FIELDS} }
+        signals { ${SIGNAL_FIELDS} }
+        alerts { id status }
+      }
+      attachments
     }
   }
 `;
@@ -197,6 +242,16 @@ export const crisesRouter = createTRPCRouter({
     return data.crises;
   }),
 
+  /** Tiny list for Add-to-Crisis dropdown — fetch only when the menu opens. */
+  listMenu: protectedProcedure.query(async ({ ctx }) => {
+    const data = await graphqlFetch<{ crises: GqlCrisisMenuItem[] }>(
+      CRISES_LIST_MENU_QUERY,
+      undefined,
+      cookieHeaders(ctx),
+    );
+    return data.crises;
+  }),
+
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -226,11 +281,9 @@ export const crisesRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const data = await graphqlFetch<{ createCrisisFromEvents: GqlCrisis }>(
-        CREATE_CRISIS_FROM_EVENTS_MUTATION,
-        { input },
-        cookieHeaders(ctx),
-      );
+      const data = await graphqlFetch<{
+        createCrisisFromEvents: GqlCrisis;
+      }>(CREATE_CRISIS_FROM_EVENTS_MUTATION, { input }, cookieHeaders(ctx));
       return data.createCrisisFromEvents;
     }),
 

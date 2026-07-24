@@ -321,7 +321,7 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
   }
 
   return (
-    <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
+    <Card p={{ base: 12, sm: "lg" }} mb={16} mx={{ base: 8, sm: 0 }} style={{ border: "1px solid var(--color-border)" }}>
       <Group gap={8} mb={16}>
         <IconBuilding size={18} color="var(--color-accent)" />
         <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
@@ -332,44 +332,88 @@ function OrganisationRolesSection({ currentUserId }: { currentUserId: string }) 
       {rows.length === 0 ? (
         <Text size="sm" c="var(--color-text-muted)">{t("empty")}</Text>
       ) : (
-        <Table horizontalSpacing="md" verticalSpacing="sm" style={{ fontSize: 13 }}>
-          <Table.Thead>
-            <Table.Tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-              <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>{t("columns.organisation")}</Table.Th>
-              <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>{t("columns.team")}</Table.Th>
-              <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>{t("columns.role")}</Table.Th>
-              <Table.Th />
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {rows.map((row) => (
-              <Table.Tr key={row.teamId} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                <Table.Td c="var(--color-text-primary)" fw={500}>{row.orgName}</Table.Td>
-                <Table.Td c="var(--color-text-secondary)">{row.teamName}</Table.Td>
-                <Table.Td>
-                  <Badge size="xs" variant="light" color="gray" tt="capitalize">{row.role}</Badge>
-                </Table.Td>
-                <Table.Td style={{ textAlign: "end" }}>
-                  {row.isActive ? (
-                    <Group gap={4} justify="flex-end">
-                      <IconCheck size={13} color="var(--color-success)" />
-                      <Text size="xs" c="var(--color-success)" fw={600}>{t("active")}</Text>
-                    </Group>
-                  ) : (
-                    <Button
-                      size="xs"
-                      variant="subtle"
-                      color="gray"
-                      onClick={() => handleSetActive(row.teamId, row.teamName)}
-                    >
-                      {t("setActive")}
-                    </Button>
-                  )}
-                </Table.Td>
+        <Box style={{ overflowX: "auto", margin: "-12px", padding: "12px" }} hiddenFrom="sm">
+          <Table horizontalSpacing="xs" verticalSpacing="xs" style={{ fontSize: 12, minWidth: 500 }}>
+            <Table.Thead>
+              <Table.Tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+                <Table.Th style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>{t("columns.organisation")}</Table.Th>
+                <Table.Th style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>{t("columns.team")}</Table.Th>
+                <Table.Th style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>{t("columns.role")}</Table.Th>
+                <Table.Th style={{ whiteSpace: "nowrap" }} />
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+            </Table.Thead>
+            <Table.Tbody>
+              {rows.map((row) => (
+                <Table.Tr key={row.teamId} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                  <Table.Td c="var(--color-text-primary)" fw={500} style={{ whiteSpace: "nowrap" }}>{row.orgName}</Table.Td>
+                  <Table.Td c="var(--color-text-secondary)" style={{ whiteSpace: "nowrap" }}>{row.teamName}</Table.Td>
+                  <Table.Td>
+                    <Badge size="xs" variant="light" color="gray" tt="capitalize">{row.role}</Badge>
+                  </Table.Td>
+                  <Table.Td style={{ whiteSpace: "nowrap" }}>
+                    {row.isActive ? (
+                      <Group gap={4} justify="flex-end" wrap="nowrap">
+                        <IconCheck size={13} color="var(--color-success)" />
+                        <Text size="xs" c="var(--color-success)" fw={600}>{t("active")}</Text>
+                      </Group>
+                    ) : (
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        color="gray"
+                        onClick={() => handleSetActive(row.teamId, row.teamName)}
+                      >
+                        {t("setActive")}
+                      </Button>
+                    )}
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Box>
+      )}
+      {rows.length > 0 && (
+        <Box visibleFrom="sm">
+          <Table horizontalSpacing="md" verticalSpacing="sm" style={{ fontSize: 13 }}>
+            <Table.Thead>
+              <Table.Tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+                <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>{t("columns.organisation")}</Table.Th>
+                <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>{t("columns.team")}</Table.Th>
+                <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-muted)" }}>{t("columns.role")}</Table.Th>
+                <Table.Th />
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {rows.map((row) => (
+                <Table.Tr key={row.teamId} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                  <Table.Td c="var(--color-text-primary)" fw={500}>{row.orgName}</Table.Td>
+                  <Table.Td c="var(--color-text-secondary)">{row.teamName}</Table.Td>
+                  <Table.Td>
+                    <Badge size="xs" variant="light" color="gray" tt="capitalize">{row.role}</Badge>
+                  </Table.Td>
+                  <Table.Td style={{ textAlign: "end" }}>
+                    {row.isActive ? (
+                      <Group gap={4} justify="flex-end">
+                        <IconCheck size={13} color="var(--color-success)" />
+                        <Text size="xs" c="var(--color-success)" fw={600}>{t("active")}</Text>
+                      </Group>
+                    ) : (
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        color="gray"
+                        onClick={() => handleSetActive(row.teamId, row.teamName)}
+                      >
+                        {t("setActive")}
+                      </Button>
+                    )}
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Box>
       )}
     </Card>
   );
@@ -511,25 +555,71 @@ function SettingsContent({ user }: { user: ProfileUser }) {
   const [activeTab, setActiveTab] = useState<string | null>("account");
 
   return (
-    <Box p={32} style={{ maxWidth: 800 }}>
+    <Box p={{ base: 16, sm: 32 }} style={{ maxWidth: 800 }}>
       <Text size="xl" fw={700} c="var(--color-text-primary)" mb={24}>{t("page.title")}</Text>
 
       <Tabs
         value={activeTab}
         onChange={setActiveTab}
         mb={24}
-        styles={{ tab: { fontSize: 13, fontWeight: 500 } }}
+        styles={{
+          tab: { 
+            fontSize: 13, 
+            fontWeight: 500,
+            flex: 1,
+            "&[data-active]": {
+              borderBottomColor: "transparent",
+            },
+          },
+          list: { 
+            borderBottom: "2px solid var(--color-border)",
+            display: "flex",
+          },
+        }}
+        style={{
+          "--tabs-list-border-size": "0px",
+          "--tabs-list-border-color": "transparent",
+        } as React.CSSProperties}
       >
-        <Tabs.List>
-          <Tabs.Tab value="account" leftSection={<IconUser size={14} />}>{t("page.tabs.account")}</Tabs.Tab>
-          <Tabs.Tab value="notifications" leftSection={<IconBell size={14} />}>{t("page.tabs.notifications")}</Tabs.Tab>
+        <Tabs.List
+          style={{
+            position: "relative",
+            width: "100%",
+          }}
+        >
+          <Tabs.Tab 
+            value="account" 
+            leftSection={<IconUser size={14} />}
+            style={{ justifyContent: "flex-start" }}
+          >
+            {t("page.tabs.account")}
+          </Tabs.Tab>
+          <Tabs.Tab 
+            value="notifications" 
+            leftSection={<IconBell size={14} />}
+            style={{ justifyContent: "flex-end" }}
+          >
+            {t("page.tabs.notifications")}
+          </Tabs.Tab>
+          <Box
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: activeTab === "account" ? "5%" : "55%",
+              width: "40%",
+              height: 2,
+              background: "var(--color-accent)",
+              transition: "left 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+              zIndex: 1,
+            }}
+          />
         </Tabs.List>
       </Tabs>
 
       {activeTab === "account" && (
         <>
           {/* Information */}
-          <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
+          <Card p={{ base: 12, sm: "lg" }} mb={16} mx={{ base: 8, sm: 0 }} style={{ border: "1px solid var(--color-border)" }}>
             <Group gap={8} mb={20}>
               <IconUser size={18} color="var(--color-accent)" />
               <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
@@ -537,8 +627,57 @@ function SettingsContent({ user }: { user: ProfileUser }) {
               </Text>
             </Group>
 
-            <Stack gap={20}>
-              {/* Name, Email, and Profile Picture - 3 columns */}
+            {/* Mobile layout: pfp top right, fields on left */}
+            <Box hiddenFrom="sm" style={{ position: "relative" }}>
+              {/* Profile Picture - top right corner */}
+              <Box style={{ position: "absolute", top: 0, right: 0 }}>
+                <Stack gap={8} align="center">
+                  <Box
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: 9999,
+                      border: "2px solid var(--color-accent)",
+                      background: "var(--color-accent-light)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text fw={700} size="lg" c="var(--color-accent)">
+                      {user.email[0]?.toUpperCase() ?? "U"}
+                    </Text>
+                  </Box>
+                  <Button
+                    variant="outline"
+                    color="gray"
+                    size="xs"
+                    style={{ fontSize: 10, padding: "4px 8px" }}
+                    onClick={() => {
+                      notifications.show({
+                        title: "Coming Soon",
+                        message: "Profile picture upload will be available soon",
+                        color: "blue",
+                      });
+                    }}
+                  >
+                    {t("info.uploadPhoto")}
+                  </Button>
+                </Stack>
+              </Box>
+
+              {/* Left side: Name and Email stacked */}
+              <Stack gap={16} style={{ paddingRight: 80 }}>
+                <NameField userName={user.name} />
+                <Box>
+                  <Text size="xs" c="var(--color-text-muted)" mb={12}>{t("info.email")}</Text>
+                  <Text size="sm" fw={500} c="var(--color-text-primary)">{user.email ?? "—"}</Text>
+                </Box>
+              </Stack>
+            </Box>
+
+            {/* Desktop layout: 3 columns */}
+            <Stack gap={20} visibleFrom="sm">
               <Group align="flex-start" wrap="nowrap" gap={24}>
                 {/* Column 1: Name (editable) */}
                 <Box style={{ flex: 1 }}>
@@ -555,7 +694,6 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                 <Box style={{ flex: 1 }}>
                   <Text size="xs" c="var(--color-text-muted)" mb={12}>{t("info.profilePicture")}</Text>
                   <Group gap={16} align="flex-start" wrap="nowrap">
-                    {/* Avatar on the left */}
                     <Box
                       style={{
                         width: 80,
@@ -573,8 +711,6 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                         {user.email[0]?.toUpperCase() ?? "U"}
                       </Text>
                     </Box>
-                    
-                    {/* Upload button and text on the right */}
                     <Box>
                       <Button
                         variant="outline"
@@ -582,7 +718,6 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                         size="xs"
                         style={{ fontSize: 12 }}
                         onClick={() => {
-                          // TODO: Wire up file upload
                           notifications.show({
                             title: "Coming Soon",
                             message: "Profile picture upload will be available soon",
@@ -603,7 +738,7 @@ function SettingsContent({ user }: { user: ProfileUser }) {
           </Card>
 
           {/* Password Section */}
-          <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
+          <Card p={{ base: 12, sm: "lg" }} mb={16} mx={{ base: 8, sm: 0 }} style={{ border: "1px solid var(--color-border)" }}>
             <Group gap={8} mb={20}>
               <IconKey size={18} color="var(--color-accent)" />
               <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
@@ -631,7 +766,7 @@ function SettingsContent({ user }: { user: ProfileUser }) {
           </Card>
 
           {/* Mobile Number Section */}
-          <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
+          <Card p={{ base: 12, sm: "lg" }} mb={16} mx={{ base: 8, sm: 0 }} style={{ border: "1px solid var(--color-border)" }}>
             <Group gap={8} mb={20}>
               <IconUser size={18} color="var(--color-accent)" />
               <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
@@ -648,7 +783,7 @@ function SettingsContent({ user }: { user: ProfileUser }) {
           <OrganisationRolesSection currentUserId={user.id} />
 
           {/* Preferences */}
-          <Card p="lg" mb={16} style={{ border: "1px solid var(--color-border)" }}>
+          <Card p={{ base: 12, sm: "lg" }} mb={16} mx={{ base: 8, sm: 0 }} style={{ border: "1px solid var(--color-border)" }}>
             <Group gap={8} mb={20}>
               <IconSettings size={18} color="var(--color-accent)" />
               <Text fw={700} size="sm" tt="uppercase" style={{ letterSpacing: "0.05em", fontSize: 11 }}>
@@ -663,9 +798,51 @@ function SettingsContent({ user }: { user: ProfileUser }) {
               <ColorSchemeToggle />
             </Box>
             <Divider color="var(--color-border)" mb={16} />
-            <Group gap={0} grow>
+            <Stack gap={16} hiddenFrom="sm">
+              {/* Mobile: stacked layout */}
               <Box px={4}>
-                <Group gap={6} mb={6}>
+                <Group gap={6} mb={6} align="center">
+                  <IconLanguage size={14} color="var(--color-text-muted)" />
+                  <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>{t("preferences.language")}</Text>
+                </Group>
+                <Select
+                  size="sm"
+                  value={currentLocale}
+                  onChange={(v) => {
+                    if (isLocale(v)) updateLanguage.mutate({ language: v });
+                  }}
+                  data={locales.map((locale) => ({
+                    value: locale,
+                    label: localeLabels[locale],
+                  }))}
+                  allowDeselect={false}
+                  styles={{ input: { borderColor: "var(--color-border)" } }}
+                />
+              </Box>
+              <Box px={4}>
+                <Group gap={6} mb={6} align="center">
+                  <IconClock size={14} color="var(--color-text-muted)" />
+                  <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>{t("preferences.timezone")}</Text>
+                </Group>
+                <Select
+                  size="sm"
+                  value={currentTimeZone}
+                  onChange={(v) => {
+                    if (v) void applyLocalePrefs(currentLocale, v);
+                  }}
+                  data={[
+                    { value: "Africa/Khartoum", label: t("edit.timezoneKhartoum") },
+                    { value: "UTC", label: t("edit.timezoneUtc") },
+                  ]}
+                  allowDeselect={false}
+                  styles={{ input: { borderColor: "var(--color-border)" } }}
+                />
+              </Box>
+            </Stack>
+            <Group gap={0} grow visibleFrom="sm">
+              {/* Desktop: side-by-side layout */}
+              <Box px={4}>
+                <Group gap={6} mb={6} align="center">
                   <IconLanguage size={14} color="var(--color-text-muted)" />
                   <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>{t("preferences.language")}</Text>
                 </Group>
@@ -685,7 +862,7 @@ function SettingsContent({ user }: { user: ProfileUser }) {
               </Box>
               <Divider orientation="vertical" color="var(--color-border)" />
               <Box px={24}>
-                <Group gap={6} mb={6}>
+                <Group gap={6} mb={6} align="center">
                   <IconClock size={14} color="var(--color-text-muted)" />
                   <Text size="xs" c="var(--color-text-muted)" fw={600} tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>{t("preferences.timezone")}</Text>
                 </Group>

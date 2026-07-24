@@ -526,7 +526,7 @@
         "viewer": "Lecteur",
         "line": "{label} - {email}"
       },
-      "footer": "Norwegian Refugee Council • Système d'alerte précoce pour le Soudan"
+      "footer": "Norwegian Refugee Council • Système d'alerte précoce"
     },
     "forgot": {
       "title": "Réinitialiser le mot de passe",
@@ -901,6 +901,7 @@
     },
     "toolbar": {
       "searchPlaceholder": "Rechercher...",
+      "sort": "Trier",
       "newItems": "{count, plural, one {# nouvel élément} other {# nouveaux éléments}} - actualiser"
     }
   },

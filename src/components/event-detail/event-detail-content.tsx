@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
+import { useMediaQuery } from "@mantine/hooks";
 import {
   Box,
   Text,
@@ -117,6 +118,8 @@ export function EventDetailContent({
   navigationMapCenter,
   referrer = "detection",
 }: EventDetailContentProps) {
+  const isMobile = useMediaQuery("(max-width: 48em)") === true;
+
   // TODO: after Prisma migration use event.title directly; remove this fallback
   // TODO: after Prisma migration use event.types (list) instead of eventType
 
@@ -238,7 +241,14 @@ export function EventDetailContent({
         </Box>
 
         {/* Body with sidebar layout */}
-        <Box p={24} style={{ display: "flex", gap: 20 }}>
+        <Box
+          p={{ base: 16, sm: 24 }}
+          style={{
+            display: "flex",
+            gap: 20,
+            flexDirection: isMobile ? "column" : "row",
+          }}
+        >
           <Box style={{ flex: 1, minWidth: 0 }}>
             <KpiStripSkeleton />
             <SummaryCardSkeleton />
@@ -247,7 +257,7 @@ export function EventDetailContent({
           </Box>
 
           {mode !== "drawer" && (
-            <Box style={{ width: 300, flexShrink: 0 }}>
+            <Box style={{ width: isMobile ? "100%" : 300, flexShrink: 0 }}>
               <Stack gap={20}>
                 <MinimapCardSkeleton />
                 <FeedbackCardSkeleton />
@@ -304,7 +314,9 @@ export function EventDetailContent({
 
   const sev = mapSeverity(event.severity);
   const sevBg = severityColors[sev]?.bg ?? "var(--color-bg-muted)";
+  // Drawer is always compact; page mode stacks the sidebar under ~48em.
   const isCompact = mode === "drawer";
+  const isStacked = isCompact || isMobile;
 
   // signal.publishedAt replaces signal.source.detectedAt
   const detectedAt =
@@ -360,12 +372,12 @@ export function EventDetailContent({
       {/* Back nav */}
       {mode === "page" && (
         <Box
-          px={24}
+          px={{ base: 12, sm: 24 }}
           py={10}
           style={{ background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)" }}
         >
-          <Group justify="space-between">
-            <Group gap={16}>
+          <Group justify="space-between" wrap="wrap" gap={8}>
+            <Group gap={12} wrap="wrap">
               <Link
                 href={referrer === "map" ? mapFocusHref("event", event.id) : "/detection"}
                 style={{ textDecoration: "none" }}
@@ -381,7 +393,7 @@ export function EventDetailContent({
                   </Text>
                 </Group>
               </Link>
-              
+
               {/* Prev/Next navigation */}
               {navigation && (
                 <Group gap={8}>
@@ -417,9 +429,9 @@ export function EventDetailContent({
 
       {/* Header */}
       <Box
-        px={isCompact ? 20 : 24}
-        pt={isCompact ? 16 : 20}
-        pb={isCompact ? 16 : 20}
+        px={isStacked ? 16 : 24}
+        pt={isStacked ? 16 : 20}
+        pb={isStacked ? 16 : 20}
         style={{
           background: isAlready || promoted ? "var(--color-critical-light)" : "var(--color-bg-white)",
           borderBottom: "1px solid var(--color-border)",
@@ -449,13 +461,18 @@ export function EventDetailContent({
           justify="space-between"
           align="flex-start"
           mb={10}
-          wrap="nowrap"
-          gap={16}
+          wrap={isMobile ? "wrap" : "nowrap"}
+          gap={12}
         >
           <Text
             fw={700}
             c="var(--color-text-primary)"
-            style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3, flex: 1 }}
+            style={{
+              fontSize: isStacked ? 18 : 22,
+              lineHeight: 1.3,
+              flex: "1 1 200px",
+              minWidth: 0,
+            }}
           >
             {displayTitle}
           </Text>
@@ -561,7 +578,7 @@ export function EventDetailContent({
 
       {/* KPI strip */}
       {!isCompact && (
-        <Box px={24} pt={24}>
+        <Box px={{ base: 12, sm: 24 }} pt={{ base: 16, sm: 24 }}>
           <SkeletonSlot pending={showPending} skeleton={<KpiStripSkeleton />}>
           <KpiStack
             sections={[
@@ -614,11 +631,11 @@ export function EventDetailContent({
 
       {/* Body */}
       <Box
-        p={isCompact ? 16 : 24}
+        p={isStacked ? 16 : 24}
         style={{
           display: "flex",
-          gap: isCompact ? 16 : 24,
-          flexDirection: isCompact ? "column" : "row",
+          gap: isStacked ? 16 : 24,
+          flexDirection: isStacked ? "column" : "row",
         }}
       >
         {/* Left column */}
@@ -823,9 +840,9 @@ export function EventDetailContent({
           </SkeletonSlot>
         </Box>
 
-        {/* Right sidebar */}
+        {/* Right sidebar — full-width under main column on phone */}
         {!isCompact && (
-          <Box style={{ width: 300, flexShrink: 0 }}>
+          <Box style={{ width: isMobile ? "100%" : 300, flexShrink: 0 }}>
             <Stack gap={20}>
               <MinimapCard
                 markers={mapDisplayMarkers}

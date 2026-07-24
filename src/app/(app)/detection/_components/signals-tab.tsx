@@ -178,7 +178,7 @@ export function SignalsTab({
                   : t("feed.signals.untitled"));
 
               return (
-                <Link key={signal.id} href={`/signal/${signal.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                <Link key={signal.id} href={`/signal/${signal.id}?from=detection`} style={{ textDecoration: "none", color: "inherit" }}>
                   <Box
                     px={16} py={12}
                     className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"
@@ -238,7 +238,7 @@ export function SignalsTab({
         </Card>
       </Box>
 
-      <Box style={{ width: 480, flexShrink: 0 }}>
+      <Box style={{ width: 480, flexShrink: 0 }} hiddenFrom="base" visibleFrom="sm">
         <Group mb={12} justify="space-between" align="center" style={{ minHeight: 32 }}>
           <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>{t("feed.crisisMap")}</Text>
           {onBoundaryLevelChange && (
