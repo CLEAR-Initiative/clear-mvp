@@ -21,6 +21,7 @@ import {
   DENSITY_HEATMAP_MAX_ZOOM,
   DENSITY_HEATMAP_PEAK_OPACITY,
 } from "~/lib/map/marker-density";
+import { spiderfyCoincidentLngLats } from "~/lib/map/spiderfy-coincident";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
 const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
@@ -1077,19 +1078,45 @@ export function CrisisMap({
             // every member of the cluster is visible after expanding.
             (m.getSource(SOURCE) as MapboxGLAny).getClusterLeaves(cid, Infinity, 0, (err: unknown, leaves: MapboxGLAny[]) => {
               if (err || !leaves?.length) return;
-              // Contract: donut badge (point_count) must equal expanded pin count.
-              if (process.env.NODE_ENV !== "production" && leaves.length !== leafCount) {
-                console.error("[map-density] cluster badge/pin mismatch", {
-                  badge: leafCount,
-                  pins: leaves.length,
-                  clusterId: cid,
-                });
-              }
               const lngs = leaves.map((f: MapboxGLAny) => f.geometry.coordinates[0] as number);
               const lats = leaves.map((f: MapboxGLAny) => f.geometry.coordinates[1] as number);
+              if (process.env.NODE_ENV !== "production") {
+                // Manual QA helper: badge vs leaves vs what the eye can resolve.
+                const positions = new Set(
+                  leaves.map((f: MapboxGLAny) => {
+                    const [lng, lat] = f.geometry.coordinates as [number, number];
+                    // ~11m grid — stacked/near-identical pins collapse for the eye.
+                    return `${lng.toFixed(4)},${lat.toFixed(4)}`;
+                  }),
+                );
+                const propIds = leaves.map((f: MapboxGLAny) => String(f.properties?.id ?? ""));
+                const uniquePropIds = new Set(propIds);
+                const titles = leaves.map((f: MapboxGLAny) => String(f.properties?.title ?? ""));
+                const diag = {
+                  badge: leafCount,
+                  leaves: leaves.length,
+                  uniquePositions: positions.size,
+                  uniquePropIds: uniquePropIds.size,
+                  zoom: m.getZoom(),
+                  titles,
+                };
+                // Use console.log so Default/Info filters in DevTools still show it.
+                if (leaves.length !== leafCount || uniquePropIds.size < leaves.length) {
+                  console.error("[map-density] cluster count anomaly", diag);
+                } else if (positions.size < leaves.length) {
+                  console.warn("[map-density] stacked pins (badge > visible dots)", diag);
+                } else {
+                  console.log("[map-density] cluster expand", diag);
+                }
+              }
               const sw: [number, number] = [Math.min(...lngs), Math.min(...lats)];
               const ne: [number, number] = [Math.max(...lngs), Math.max(...lats)];
-              m.fitBounds([sw, ne], { padding: 80, maxZoom: 13, duration: 600 });
+              // Past donut band (z>8) so expand lands on individual pins, not re-clustered donuts.
+              m.fitBounds([sw, ne], {
+                padding: 80,
+                maxZoom: 13,
+                duration: 600,
+              });
             });
           });
           clusterDomMarkers.current.set(
@@ -1099,12 +1126,25 @@ export function CrisisMap({
         }
       }
 
+      // Fan out coincident leaves so a badge of N can resolve to N visible pins
+      // (shared representativePoint otherwise stacks them on one pixel).
+      const spiderfyPoints: Array<{ id: number; lng: number; lat: number }> = [];
       for (const feat of pointFeats) {
         const coords = feat.geometry?.coordinates;
         if (!isValidLngLat(coords)) continue;
+        const markerId = Number((feat.properties as Record<string, unknown> | null)?.id);
+        if (!Number.isFinite(markerId)) continue;
+        spiderfyPoints.push({ id: markerId, lng: coords[0], lat: coords[1] });
+      }
+      const displayLngLat = spiderfyCoincidentLngLats(spiderfyPoints);
+
+      for (const feat of pointFeats) {
+        const rawCoords = feat.geometry?.coordinates;
+        if (!isValidLngLat(rawCoords)) continue;
         const props  = feat.properties as Record<string, unknown>;
         const markerId = Number(props.id);
         if (!Number.isFinite(markerId)) continue;
+        const coords = displayLngLat.get(markerId) ?? rawCoords;
         const el = buildPointEl(props.severity as string);
         el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
         if (hoveredMarkerIdRef.current != null && markerId === hoveredMarkerIdRef.current) {
