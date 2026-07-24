@@ -145,28 +145,30 @@ export function EventDetailContent({
     if (!event) return [];
     const markers: MapMarker[] = [];
     let idx = 0;
-    // Prefer event-level Point locations; if none exist (e.g. all Polygons), use signal locations.
-    const eventLocs = eventLocations(event);
-    const hasEventPoints = eventLocs.some((l) => l.geometry?.type === "Point");
-    const sourceLocs: GqlLocation[] = hasEventPoints
-      ? eventLocs
-      : (event.signals ?? []).flatMap((s) =>
-          [s.generalLocation, s.originLocation, s.destinationLocation].filter((l): l is GqlLocation => !!l),
-        );
-    for (const loc of sourceLocs) {
-      const geom = loc.geometry;
-      if (!geom || geom.type !== "Point") continue;
+    const pushPoint = (loc: GqlLocation | null | undefined, title?: string | null) => {
+      const geom = loc?.geometry;
+      if (!geom || geom.type !== "Point") return;
       const coords = geom.coordinates as [number, number] | undefined;
-      if (!coords) continue;
+      if (!coords) return;
       const [lng, lat] = coords;
+      const label = title ?? loc?.name ?? event.title ?? "Event";
       markers.push({
         id: idx++,
         lng,
         lat,
-        title: loc.name,
+        title: label,
         severity: mapSeverity(event.severity),
-        description: loc.name,
+        description: label,
       });
+    };
+
+    // Prefer API representativePoint (avoids nesting every signal geometry).
+    pushPoint(event.representativePoint ?? null, event.title);
+    if (markers.length > 0) return markers;
+
+    // Fallback: any Point still present on the event's own locations.
+    for (const loc of eventLocations(event)) {
+      pushPoint(loc);
     }
     return markers;
   }, [event]);
