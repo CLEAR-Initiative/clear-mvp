@@ -6,7 +6,7 @@ import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
 import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
 import { useIsDark } from "~/hooks/use-is-dark";
-import { countryConfig } from "~/lib/constants/country-config";
+import { countryConfig, staticCountryBounds } from "~/lib/constants/country-config";
 import {
   aggregationModeForZoom,
   donutCenterCount,
@@ -371,10 +371,17 @@ export function CrisisMap({
 
   // Convert focusCountryGeometry prop to a usable format (same structure as the query result).
   // This avoids the duplicate getCountryByPCode fetch when the page already passes geometry.
+  // Paint layers still require isPaintableBoundaryGeometry; framing uses any polygon
+  // (including seed bboxes) so countries without rich COD boundaries still fitBounds.
   const focusCountry = useMemo(() => {
     if (!focusCountryGeometry) return null;
     if (!isPaintableBoundaryGeometry(focusCountryGeometry as never)) return null;
     return { geometry: focusCountryGeometry };
+  }, [focusCountryGeometry]);
+
+  const focusCountryFitBounds = useMemo(() => {
+    if (!focusCountryGeometry) return null;
+    return geometryBounds(focusCountryGeometry as never);
   }, [focusCountryGeometry]);
 
   // ── Map init (once) ─────────────────────────────────────────────────────
@@ -748,30 +755,29 @@ export function CrisisMap({
     return cleanup;
   }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries, baseMapType]);
 
-  // Fit bounds to the focus country once its backend bbox is available.
+  // Frame the focus country instantly from static countryConfig.
+  // L0 GeoJSON (focusCountryFitBounds) is for highlight paint only — waiting
+  // on it made Venezuela feel like a 2–5s "flight" (GH #112).
   // Skips when fitBoundsGeometry is set (a more specific region is focused).
   // A countryFitNonce bump always wins (lone-pin detail close → country overview),
   // even if fitBoundsOnFocus is briefly false in the same render batch.
   const prevCountryFitNonce = useRef(countryFitNonce);
+  const prevFramedCountry = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!map.current || !loaded || fitBoundsGeometry) return;
     const nonceBumped = countryFitNonce !== prevCountryFitNonce.current;
     prevCountryFitNonce.current = countryFitNonce;
     if (!fitBoundsOnFocus && !nonceBumped) return;
 
-    // Prefer live geometry; fall back to static country bbox so framing still
-    // lands at country level if the API geometry isn't ready yet.
-    const geoBounds = focusCountry
-      ? geometryBounds(focusCountry.geometry as never)
-      : null;
-    const cfgBbox =
-      focusCountryName && countryConfig[focusCountryName]
-        ? countryConfig[focusCountryName].bbox
-        : null;
-    const bounds = geoBounds ?? (cfgBbox
-      ? [cfgBbox[0], cfgBbox[1], cfgBbox[2], cfgBbox[3]] as const
-      : null);
+    const cfgBounds = staticCountryBounds(focusCountryName);
+    // Static config first (instant). Live bounds only if the country is missing
+    // from countryConfig — never let late geometry restart a finished flight.
+    const bounds = cfgBounds ?? focusCountryFitBounds;
     if (!bounds) return;
+
+    const framedKey = focusCountryName ?? `bounds:${bounds.join(",")}`;
+    if (!nonceBumped && prevFramedCountry.current === framedKey) return;
+    prevFramedCountry.current = framedKey;
 
     // Narrow viewports: less padding so country fit stays country-level
     // (80px on a phone shrinks the usable canvas and looks global).
@@ -785,7 +791,7 @@ export function CrisisMap({
       { padding, duration: 800 },
     );
   }, [
-    focusCountry,
+    focusCountryFitBounds,
     focusCountryName,
     loaded,
     fitBoundsGeometry,
@@ -858,10 +864,11 @@ export function CrisisMap({
     if (!map.current || !loaded) return;
     const forced = forceFlyToken !== prevForceFly.current;
     prevForceFly.current = forceFlyToken;
-    // Country fitBounds owns framing unless the caller opts out (e.g. marker
-    // deep-link focus) or a tighter region geometry is already driving the view.
-    // A forced restore (closing marker detail) always wins.
-    if (!forced && focusCountry && fitBoundsOnFocus && !fitBoundsGeometry) return;
+    // Country fitBounds owns framing whenever a focus country is selected —
+    // including while L0 geometry is still loading. Otherwise flyTo races to
+    // a wrong fallback center (e.g. Sudan for Venezuela) and fitBounds has to
+    // restart mid-flight (GH #112). Forced restore always wins.
+    if (!forced && focusCountryName && fitBoundsOnFocus && !fitBoundsGeometry) return;
     const paddingChanged = prevPadding.current !== flyPaddingBottom;
     if (
       !forced &&
@@ -884,7 +891,7 @@ export function CrisisMap({
         ? { top: 48, bottom: flyPaddingBottom, left: 24, right: 24 }
         : { top: 0, bottom: 0, left: 0, right: 0 },
     });
-  }, [center, zoom, loaded, focusCountry, flyDuration, fitBoundsOnFocus, fitBoundsGeometry, flyPaddingBottom, forceFlyToken]);
+  }, [center, zoom, loaded, focusCountryName, flyDuration, fitBoundsOnFocus, fitBoundsGeometry, flyPaddingBottom, forceFlyToken]);
 
   // ── Markers (density ladder: heatmap → donuts → points) ─────────────────
   useEffect(() => {

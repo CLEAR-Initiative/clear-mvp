@@ -20,9 +20,59 @@ export const countryConfig: Record<string, CountryConfig> = {
   Iraq:         { center: [44.4, 33.3], zoom: 5.5, pCode: "IQ",                       bbox: [38.8, 29.1, 48.6, 37.4], regions: ["All Regions", "Baghdad", "Erbil", "Mosul", "Basra"] },
   Syria:        { center: [38.9, 34.8], zoom: 6,   pCode: "SY",                       bbox: [35.7, 32.3, 42.4, 37.3], regions: ["All Regions", "Damascus", "Aleppo", "Idlib", "Homs"] },
   Colombia:     { center: [-74.3, 4.6], zoom: 5,   pCode: "CO",                       bbox: [-79.0,-4.2, -66.9,13.4], regions: ["All Regions", "Bogota", "Medellin", "Cali"] },
+  // Team Venezuela — must stay in sync with locations.tree or country switch
+  // falls back to Sudan center and needs multiple clicks to settle (GH #112).
+  Venezuela:    { center: [-66.6, 6.4], zoom: 5,   pCode: "VE", hasCrisisData: true,  bbox: [-73.4, 0.6, -59.8, 12.2], regions: ["All Regions", "Distrito Capital", "Zulia", "Miranda", "Carabobo", "Lara"] },
 };
 
 export const countries = Object.keys(countryConfig).sort();
+
+/**
+ * Official / COD names that differ from our short countryConfig keys.
+ * locations.tree uses UN-style names (e.g. Venezuela); config keys stay short.
+ */
+const COUNTRY_NAME_ALIASES: Record<string, keyof typeof countryConfig> = {
+  "Venezuela (Bolivarian Republic of)": "Venezuela",
+  "Bolivarian Republic of Venezuela": "Venezuela",
+};
+
+/**
+ * Map an API / dropdown country name to a countryConfig entry.
+ * Exact → alias → "Name (…)" / "Name …" prefix match (longest key wins so
+ * "South Sudan" is not swallowed by "Sudan").
+ */
+export function resolveCountryConfig(
+  countryName: string | undefined,
+): CountryConfig | undefined {
+  if (!countryName) return undefined;
+  const direct = countryConfig[countryName];
+  if (direct) return direct;
+
+  const aliased = COUNTRY_NAME_ALIASES[countryName];
+  if (aliased) return countryConfig[aliased];
+
+  const lower = countryName.toLowerCase();
+  let bestKey: string | undefined;
+  for (const key of Object.keys(countryConfig)) {
+    const k = key.toLowerCase();
+    if (lower === k || lower.startsWith(`${k} (`) || lower.startsWith(`${k} `)) {
+      if (!bestKey || key.length > bestKey.length) bestKey = key;
+    }
+  }
+  return bestKey ? countryConfig[bestKey] : undefined;
+}
+
+/**
+ * Instant country framing for the map switcher.
+ * Camera must not wait on L0 GeoJSON — borders/highlight paint later.
+ */
+export function staticCountryBounds(
+  countryName: string | undefined,
+): [number, number, number, number] | null {
+  const bbox = resolveCountryConfig(countryName)?.bbox;
+  if (!bbox) return null;
+  return [bbox[0], bbox[1], bbox[2], bbox[3]];
+}
 
 /** Generate dynamic date filter options based on the current date */
 function buildDateOptions(): string[] {

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { api } from "~/trpc/react";
-import { countryConfig } from "~/lib/constants/country-config";
+import { countryConfig, resolveCountryConfig } from "~/lib/constants/country-config";
 
 interface LocationNode {
   id: string;
@@ -49,7 +49,7 @@ export function useLocations() {
         return ["All Regions", ...country.states.map((s) => s.name).sort()];
       }
       // Fallback
-      return countryConfig[countryName]?.regions ?? ["All Regions"];
+      return resolveCountryConfig(countryName)?.regions ?? ["All Regions"];
     };
   }, [tree]);
 
@@ -82,10 +82,10 @@ export function useLocations() {
 
   /** Map center for a country (from hardcoded config for now) */
   const getCenter = (countryName: string): [number, number] =>
-    countryConfig[countryName]?.center ?? [30.0, 15.5];
+    resolveCountryConfig(countryName)?.center ?? [30.0, 15.5];
 
   const getZoom = (countryName: string): number =>
-    countryConfig[countryName]?.zoom ?? 5;
+    resolveCountryConfig(countryName)?.zoom ?? 5;
 
   return {
     countries,

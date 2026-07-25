@@ -24,7 +24,7 @@ import {
   crisesToMarkers,
 } from "./_components/map-markers-data";
 import { useLocations } from "~/hooks/use-locations";
-import { countryConfig } from "~/lib/constants/country-config";
+import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { MapPanelBar } from "./_components/map-panel-bar";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapLoadingOverlay } from "./_components/map-loading-overlay";
@@ -344,13 +344,17 @@ export default function MapPage() {
   );
   const populationLoading = showPopulation && populationQuery.isFetching && populationBoundaries.length === 0;
 
-  // Country L0 geometry - used for the country highlight instead of Mapbox's
-  // inaccurate tileset. Re-runs whenever the user switches country.
+  // Country L0 geometry - country highlight paint only. Camera framing uses
+  // static countryConfig so switches don't wait on this (often 2–5s) fetch.
   const focusCountryL0Query = api.locations.getById.useQuery(
     { id: focusCountryId! },
     { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
-  const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
+  // Ignore stale prior-country payloads while the new id is in flight.
+  const focusCountryGeometry =
+    focusCountryL0Query.data?.id === focusCountryId
+      ? (focusCountryL0Query.data.geometry ?? undefined)
+      : undefined;
 
   // Region zoom: fetch selected region geometry and fit map to it.
   const selectedRegionId = useMemo(
@@ -938,7 +942,7 @@ export default function MapPage() {
           onMarkerClick={handleMarkerClick}
           focusCountryPCode={
             selectedCountry !== "All Countries"
-              ? countryConfig[selectedCountry]?.pCode
+              ? resolveCountryConfig(selectedCountry)?.pCode
               : undefined
           }
           focusCountryName={
