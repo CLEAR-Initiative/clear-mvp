@@ -6,7 +6,7 @@ import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
 import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
 import { useIsDark } from "~/hooks/use-is-dark";
-import { countryConfig } from "~/lib/constants/country-config";
+import { countryConfig, staticCountryBounds } from "~/lib/constants/country-config";
 import {
   aggregationModeForZoom,
   donutCenterCount,
@@ -755,27 +755,29 @@ export function CrisisMap({
     return cleanup;
   }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries, baseMapType]);
 
-  // Fit bounds to the focus country once its backend bbox is available.
+  // Frame the focus country instantly from static countryConfig.
+  // L0 GeoJSON (focusCountryFitBounds) is for highlight paint only — waiting
+  // on it made Venezuela feel like a 2–5s "flight" (GH #112).
   // Skips when fitBoundsGeometry is set (a more specific region is focused).
   // A countryFitNonce bump always wins (lone-pin detail close → country overview),
   // even if fitBoundsOnFocus is briefly false in the same render batch.
   const prevCountryFitNonce = useRef(countryFitNonce);
+  const prevFramedCountry = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!map.current || !loaded || fitBoundsGeometry) return;
     const nonceBumped = countryFitNonce !== prevCountryFitNonce.current;
     prevCountryFitNonce.current = countryFitNonce;
     if (!fitBoundsOnFocus && !nonceBumped) return;
 
-    // Prefer live geometry (including seed bboxes); fall back to static
-    // countryConfig bbox so framing still lands if the API isn't ready yet.
-    const cfgBbox =
-      focusCountryName && countryConfig[focusCountryName]
-        ? countryConfig[focusCountryName].bbox
-        : null;
-    const bounds = focusCountryFitBounds ?? (cfgBbox
-      ? [cfgBbox[0], cfgBbox[1], cfgBbox[2], cfgBbox[3]] as const
-      : null);
+    const cfgBounds = staticCountryBounds(focusCountryName);
+    // Static config first (instant). Live bounds only if the country is missing
+    // from countryConfig — never let late geometry restart a finished flight.
+    const bounds = cfgBounds ?? focusCountryFitBounds;
     if (!bounds) return;
+
+    const framedKey = focusCountryName ?? `bounds:${bounds.join(",")}`;
+    if (!nonceBumped && prevFramedCountry.current === framedKey) return;
+    prevFramedCountry.current = framedKey;
 
     // Narrow viewports: less padding so country fit stays country-level
     // (80px on a phone shrinks the usable canvas and looks global).

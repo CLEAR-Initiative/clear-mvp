@@ -11,7 +11,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { countryConfig, parseDateFilter } from "~/lib/constants/country-config";
+import { parseDateFilter, resolveCountryConfig } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
 import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
@@ -627,7 +627,7 @@ function DetectionPageContent() {
     return [...s].sort();
   }, [alertsItems, eventsItems, signalsItems]);
 
-  const focusCountryPCode = countryConfig[selectedCountry]?.pCode;
+  const focusCountryPCode = resolveCountryConfig(selectedCountry)?.pCode;
   const focusCountryName = selectedCountry;
 
   const clipToRegion = useCallback((markers: CrisisMarker[]): CrisisMarker[] => {
