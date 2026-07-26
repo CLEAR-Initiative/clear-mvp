@@ -61,6 +61,14 @@ interface MapPanelBarProps {
   onShowRoadsChange?: (v: boolean) => void;
   showNrcLocations?: boolean;
   onShowNrcLocationsChange?: (v: boolean) => void;
+  /**
+   * When set, Blockages is a live toggle (dev smoke / future #277).
+   * When omitted, Blockages stays a Coming-soon stub.
+   */
+  showBlockages?: boolean;
+  onShowBlockagesChange?: (v: boolean) => void;
+  blockagesHint?: string;
+  blockagesLoading?: boolean;
   baseMapType?: BaseMapType;
   onBaseMapTypeChange?: (v: BaseMapType) => void;
   /** Desktop: accumulate marker detail panels instead of replacing. */
@@ -191,10 +199,15 @@ export function MapPanelBar({
   boundaryLevel, onBoundaryLevelChange,
   showRoads = true, onShowRoadsChange = noop,
   showNrcLocations = false, onShowNrcLocationsChange = noop,
+  showBlockages,
+  onShowBlockagesChange = noop,
+  blockagesHint,
+  blockagesLoading = false,
   baseMapType = "simple", onBaseMapTypeChange = noop,
   keepPanelsOpen = false, onKeepPanelsOpenChange = noop,
   filters,
 }: MapPanelBarProps) {
+  const blockagesEnabled = showBlockages !== undefined;
   const t = useTranslations("map");
   const [active, setActive] = useState<PanelId | null>(null);
   // Toggle-only: map pan/zoom/click must not dismiss — analysts keep the card
@@ -306,9 +319,26 @@ export function MapPanelBar({
 
                   <Divider color="var(--color-bg-muted)" my={10} />
 
-                  {/* Future operational aggregations — Blockages still stubbed */}
+                  {/* Operational: Blockages live when enabled; NRC locations always toggleable */}
                   <SectionLabel>{t("panels.operational")}</SectionLabel>
-                  <LayerStubRow label={t("panels.blockages")} hint={t("panels.comingSoon")} />
+                  {blockagesEnabled ? (
+                    <LayerCheckRow
+                      label={t("panels.blockages")}
+                      checked={showBlockages}
+                      onChange={onShowBlockagesChange}
+                      trailing={
+                        blockagesLoading ? (
+                          <Loader size={12} />
+                        ) : blockagesHint ? (
+                          <Text size="10px" c="var(--color-text-muted)" style={{ maxWidth: 120 }} truncate>
+                            {blockagesHint}
+                          </Text>
+                        ) : undefined
+                      }
+                    />
+                  ) : (
+                    <LayerStubRow label={t("panels.blockages")} hint={t("panels.comingSoon")} />
+                  )}
                   <LayerCheckRow
                     label={t("panels.nrcLocations")}
                     checked={showNrcLocations}

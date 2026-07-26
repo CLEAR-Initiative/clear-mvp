@@ -157,6 +157,19 @@ interface CrisisMapProps {
    * Report 2025 — not street-level premises).
    */
   showNrcLocations?: boolean;
+  /**
+   * DEV / future #277: LogIE Blockages (roads + bridges). Inline FeatureCollection
+   * from `/api/dev/logie-blockages` (smoke) or clear-api ingest (prod).
+   */
+  showBlockages?: boolean;
+  blockagesGeoJson?: {
+    type: "FeatureCollection";
+    features: Array<{
+      type: "Feature";
+      geometry: unknown;
+      properties: Record<string, unknown>;
+    }>;
+  } | null;
   /** Basemap: simple (theme style), topography (theme style + hillshade relief), or satellite imagery */
   baseMapType?: BaseMapType;
   /**
@@ -219,6 +232,14 @@ function parsePopulation(value: string | number | null | undefined): number {
   if (!value) return 0;
   const parsed = Number(value.replace(/[^\d.-]/g, ""));
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function isRoadLayerId(id: string): boolean {
@@ -346,6 +367,8 @@ export function CrisisMap({
   showMarkers = true,
   showRoads = true,
   showNrcLocations = false,
+  showBlockages = false,
+  blockagesGeoJson = null,
   baseMapType = "simple",
   mapApiRef,
   onMapMove,
@@ -1438,6 +1461,204 @@ export function CrisisMap({
       } catch { /* ignore */ }
     }
   }, [loaded, showRoads, isDark, baseMapType]);
+
+  // ── LogIE Blockages (roads + bridges) — smoke / future #277 ─────────────
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const SOURCE = "logie-blockages";
+    const LINE_LAYER = "logie-blockages-line";
+    const LINE_HIT = "logie-blockages-line-hit";
+    const POINT_LAYER = "logie-blockages-point";
+    const HOVER_LAYERS = [LINE_HIT, LINE_LAYER, POINT_LAYER];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mb = (window as unknown as { mapboxgl?: any }).mapboxgl;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let popup: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const onMove = (e: any) => {
+      const feats = m.queryRenderedFeatures(e.point, { layers: HOVER_LAYERS }) as Array<{
+        properties?: Record<string, unknown>;
+      }>;
+      if (!feats.length) {
+        popup?.remove();
+        m.getCanvas().style.cursor = "";
+        return;
+      }
+      m.getCanvas().style.cursor = "pointer";
+      const p = feats[0]?.properties ?? {};
+      const title = escapeHtml(String(p.label || p.name || "Access constraint"));
+      const kind =
+        p.feature_type === "bridge"
+          ? "Bridge"
+          : p.feature_type === "road"
+            ? "Road"
+            : "Segment";
+      const status = escapeHtml(String(p.status ?? "—"));
+      const asOf = p.status_as_of
+        ? escapeHtml(String(p.status_as_of).slice(0, 10))
+        : null;
+      const remark =
+        typeof p.status_remark === "string" && p.status_remark.trim()
+          ? escapeHtml(p.status_remark.trim().slice(0, 160))
+          : null;
+      // Explicit hex — Mapbox popup chrome doesn't inherit app CSS variables reliably.
+      const bg = isDark ? "#0f172a" : "#ffffff";
+      const titleColor = isDark ? "#f8fafc" : "#0f172a";
+      const secondary = isDark ? "#cbd5e1" : "#334155";
+      const muted = isDark ? "#94a3b8" : "#64748b";
+      const partner =
+        typeof p.source_name === "string" && p.source_name.trim()
+          ? escapeHtml(p.source_name.trim())
+          : null;
+      const html = `
+        <div style="padding:10px 12px;font-family:system-ui,-apple-system,sans-serif;min-width:180px;max-width:260px;background:${bg};color:${titleColor};border-radius:6px;">
+          <div style="font-weight:700;font-size:13px;color:${titleColor};line-height:1.3;margin-bottom:6px;">${title}</div>
+          <div style="font-size:11px;color:${secondary};margin-bottom:4px;">
+            <span style="font-weight:600;">${kind}</span>
+            <span style="opacity:0.55;"> · </span>
+            <span>${status}</span>
+          </div>
+          ${asOf ? `<div style="font-size:10px;color:${muted};">As of ${asOf}</div>` : ""}
+          ${remark && remark !== title ? `<div style="font-size:10px;color:${muted};margin-top:6px;line-height:1.4;">${remark}</div>` : ""}
+          <div style="font-size:10px;color:${muted};margin-top:8px;padding-top:6px;border-top:1px solid ${isDark ? "rgba(148,163,184,0.25)" : "rgba(15,23,42,0.08)"};">
+            Source: LogIE (WFP Logistics Cluster)${partner ? ` · ${partner}` : ""}
+          </div>
+        </div>
+      `;
+      if (!popup && mb?.Popup) {
+        popup = new mb.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          offset: 10,
+          maxWidth: "280px",
+          className: isDark
+            ? "logie-blockages-popup logie-blockages-popup--dark"
+            : "logie-blockages-popup logie-blockages-popup--light",
+        });
+      }
+      popup?.setLngLat(e.lngLat).setHTML(html).addTo(m);
+    };
+    const onLeave = () => {
+      popup?.remove();
+      m.getCanvas().style.cursor = "";
+    };
+
+    const cleanup = () => {
+      for (const id of HOVER_LAYERS) {
+        m.off("mousemove", id, onMove);
+        m.off("mouseleave", id, onLeave);
+      }
+      popup?.remove();
+      popup = null;
+      try { if (m.getLayer(LINE_LAYER)) m.removeLayer(LINE_LAYER); } catch { /* ignore */ }
+      try { if (m.getLayer(LINE_HIT)) m.removeLayer(LINE_HIT); } catch { /* ignore */ }
+      try { if (m.getLayer(POINT_LAYER)) m.removeLayer(POINT_LAYER); } catch { /* ignore */ }
+      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
+      m.getCanvas().style.cursor = "";
+    };
+
+    cleanup();
+
+    if (!showBlockages || !blockagesGeoJson?.features?.length) return;
+
+    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+    const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
+
+    try {
+      m.addSource(SOURCE, {
+        type: "geojson",
+        data: blockagesGeoJson as never,
+      });
+
+      // Not Passable = stronger; restricted = amber.
+      const lineColor = [
+        "match",
+        ["get", "status_code"],
+        4, "#B91C1C",
+        3, "#D97706",
+        "#DC2626",
+      ] as never;
+
+      const lineFilter = [
+        "in",
+        ["geometry-type"],
+        ["literal", ["LineString", "MultiLineString"]],
+      ] as never;
+
+      // Wider invisible hit target so thin roads are easy to hover.
+      m.addLayer(
+        {
+          id: LINE_HIT,
+          type: "line",
+          source: SOURCE,
+          filter: lineFilter,
+          paint: {
+            "line-color": "#000000",
+            "line-opacity": 0,
+            "line-width": 14,
+          },
+          layout: { "line-cap": "round", "line-join": "round" },
+        },
+        beforeId,
+      );
+
+      m.addLayer(
+        {
+          id: LINE_LAYER,
+          type: "line",
+          source: SOURCE,
+          filter: lineFilter,
+          paint: {
+            "line-color": lineColor,
+            "line-width": [
+              "interpolate", ["linear"], ["zoom"],
+              4, 1.5,
+              8, 3,
+              12, 5,
+            ],
+            "line-opacity": 0.9,
+          },
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+          },
+        },
+        beforeId,
+      );
+
+      // Bridges (and any Point leftovers) as circles.
+      m.addLayer(
+        {
+          id: POINT_LAYER,
+          type: "circle",
+          source: SOURCE,
+          filter: ["==", ["geometry-type"], "Point"],
+          paint: {
+            "circle-radius": [
+              "interpolate", ["linear"], ["zoom"],
+              4, 3,
+              10, 6,
+            ],
+            "circle-color": lineColor,
+            "circle-stroke-width": 1.5,
+            "circle-stroke-color": isDark ? "#0f172a" : "#ffffff",
+          },
+        },
+        beforeId,
+      );
+
+      for (const id of HOVER_LAYERS) {
+        m.on("mousemove", id, onMove);
+        m.on("mouseleave", id, onLeave);
+      }
+    } catch {
+      /* style may be mid-swap */
+    }
+
+    return cleanup;
+  }, [loaded, showBlockages, blockagesGeoJson, isDark]);
 
   // ── Population choropleth (A2 districts, independent layer) ─────────────
   useEffect(() => {

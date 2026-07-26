@@ -418,3 +418,51 @@ nextjs-portal {
     0 8px 28px rgba(0, 0, 0, 0.28) !important;
   border-radius: 10px;
 }
+
+/* LogIE Blockages hover popup — theme chrome (Mapbox defaults to white) */
+.logie-blockages-popup .mapboxgl-popup-content {
+  padding: 0;
+  border-radius: 6px;
+}
+.logie-blockages-popup--light .mapboxgl-popup-content {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+}
+.logie-blockages-popup--dark .mapboxgl-popup-content {
+  background: #0f172a;
+  color: #f8fafc;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+.logie-blockages-popup--light.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+.logie-blockages-popup--light.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+.logie-blockages-popup--light.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+  border-bottom-color: #ffffff;
+}
+.logie-blockages-popup--light.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+.logie-blockages-popup--light.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+.logie-blockages-popup--light.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+  border-top-color: #ffffff;
+}
+.logie-blockages-popup--light.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
+  border-right-color: #ffffff;
+}
+.logie-blockages-popup--light.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+  border-left-color: #ffffff;
+}
+.logie-blockages-popup--dark.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+.logie-blockages-popup--dark.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+.logie-blockages-popup--dark.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+  border-bottom-color: #0f172a;
+}
+.logie-blockages-popup--dark.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+.logie-blockages-popup--dark.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+.logie-blockages-popup--dark.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+  border-top-color: #0f172a;
+}
+.logie-blockages-popup--dark.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
+  border-right-color: #0f172a;
+}
+.logie-blockages-popup--dark.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+  border-left-color: #0f172a;
+}

@@ -453,6 +453,62 @@ function MapPageContent() {
   const [showRoads, setShowRoads] = useState(true);
   const [showNrcLocations, setShowNrcLocations] = useState(false);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
+  /** Dev smoke for LogIE Blockages — prod keeps Coming soon until ingest + #277. */
+  const blockagesSmokeEnabled = process.env.NODE_ENV === "development";
+  const [showBlockages, setShowBlockages] = useState(false);
+  const [blockagesLoading, setBlockagesLoading] = useState(false);
+  const [blockagesHint, setBlockagesHint] = useState<string | undefined>();
+  const [blockagesGeoJson, setBlockagesGeoJson] = useState<{
+    type: "FeatureCollection";
+    features: Array<{
+      type: "Feature";
+      geometry: unknown;
+      properties: Record<string, unknown>;
+    }>;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!blockagesSmokeEnabled || !showBlockages) {
+      setBlockagesGeoJson(null);
+      setBlockagesHint(undefined);
+      setBlockagesLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setBlockagesLoading(true);
+    setBlockagesHint(undefined);
+    fetch("/api/dev/logie-blockages")
+      .then(async (res) => {
+        const body = (await res.json()) as {
+          error?: string;
+          features?: unknown[];
+          meta?: { bytes_in?: number; bytes_out?: number; feature_count?: number };
+        };
+        if (!res.ok) {
+          throw new Error(body.error ?? `HTTP ${res.status}`);
+        }
+        if (cancelled) return;
+        setBlockagesGeoJson(body as typeof blockagesGeoJson);
+        const kin = body.meta?.bytes_in ?? 0;
+        const kout = body.meta?.bytes_out ?? 0;
+        const n = body.meta?.feature_count ?? body.features?.length ?? 0;
+        const pct = kin > 0 ? Math.round((1 - kout / kin) * 100) : 0;
+        setBlockagesHint(`${n} · −${pct}%`);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setBlockagesGeoJson(null);
+        setBlockagesHint(
+          err instanceof Error ? err.message : "Failed to load",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setBlockagesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [blockagesSmokeEnabled, showBlockages]);
 
   // Deep-link from detail Back / Full Map: align Layers data-view chrome only.
   // Markers come from the solo focus queries — do not widen timeframe or wipe
@@ -1226,6 +1282,8 @@ function MapPageContent() {
           showBoundaries={boundaryLevel !== "none"}
           showRoads={showRoads}
           showNrcLocations={showNrcLocations}
+          showBlockages={blockagesSmokeEnabled && showBlockages}
+          blockagesGeoJson={blockagesGeoJson}
           baseMapType={baseMapType}
           hoveredMarkerId={chromeActiveMarkerId}
         />
@@ -1249,6 +1307,10 @@ function MapPageContent() {
         onShowRoadsChange={setShowRoads}
         showNrcLocations={showNrcLocations}
         onShowNrcLocationsChange={setShowNrcLocations}
+        showBlockages={blockagesSmokeEnabled ? showBlockages : undefined}
+        onShowBlockagesChange={setShowBlockages}
+        blockagesHint={blockagesSmokeEnabled ? blockagesHint : undefined}
+        blockagesLoading={blockagesSmokeEnabled && blockagesLoading}
         baseMapType={baseMapType}
         onBaseMapTypeChange={setBaseMapType}
         keepPanelsOpen={keepPanelsOpen}
