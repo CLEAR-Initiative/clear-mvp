@@ -40,10 +40,12 @@ After a spike pull:
 
 ```bash
 npm run dev
-# /map → Layers → Blockages (development only)
+# /map → Layers → Blockages (development; hint shows “spike”)
 ```
 
-Dev route: `GET /api/dev/logie-blockages` → filters/simplifies via `src/lib/map/logie-blockages.ts`.
+Dev route: `GET /api/dev/logie-blockages` → filters/simplifies via `src/lib/map/logie-blockages.ts`.  
+Fetch entry: `src/lib/map/fetch-blockages.ts`. One clear-mvp PR — see
+[`docs/logie-blockages-delivery.md`](../../docs/logie-blockages-delivery.md).
 
 ## Note
 

@@ -55,7 +55,11 @@ clear-mvp already shapes Blockages via `src/lib/map/logie-blockages.ts` (`toBloc
 
 Ingest should either apply this server-side or return an equivalent contract so the map never downloads full LogIE dumps (~450KB blocked SDN today; roads dominate).
 
-**Local smoke (not prod):** `GET /api/dev/logie-blockages` (development only) reads `scripts/logie/out/sdn_access_blocked.geojson`, applies the transform, and powers the Layers → Blockages toggle on `/map`.
+**Local smoke (not a second FE PR):** `GET /api/dev/logie-blockages` reads the spike
+dump and powers Layers → Blockages in development. clear-mvp fetches via
+`src/lib/map/fetch-blockages.ts`. After this ticket, set
+`NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` to the slim API URL — same map code. Delivery model:
+[`docs/logie-blockages-delivery.md`](./logie-blockages-delivery.md).
 
 ### Shape sketch (from spike)
 
