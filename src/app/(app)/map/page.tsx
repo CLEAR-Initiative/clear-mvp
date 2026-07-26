@@ -13,7 +13,12 @@ import {
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { DisasterTypePicker } from "~/components/disaster-type-picker";
-import type { MapMarker, MarkerScreenPoint } from "~/components/map/crisis-map";
+import type {
+  CrisisMapApi,
+  MapMarker,
+  MarkerScreenPoint,
+  BaseMapType,
+} from "~/components/map/crisis-map";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import {
@@ -29,9 +34,12 @@ import { MapPanelBar } from "./_components/map-panel-bar";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapLoadingOverlay } from "./_components/map-loading-overlay";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
+import {
+  MapPanelConnectors,
+  type PanelGeometry,
+} from "./_components/map-panel-connectors";
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
-import type { BaseMapType } from "~/components/map/crisis-map";
 import { useIsDark } from "~/hooks/use-is-dark";
 import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
 import { useSearchParams } from "next/navigation";
@@ -228,6 +236,12 @@ export default function MapPage() {
   const [openPanels, setOpenPanels] = useState<OpenMarkerPanel[]>([]);
   const [keepPanelsOpen, setKeepPanelsOpen] = useState(false);
   const [chromeActiveMarkerId, setChromeActiveMarkerId] = useState<number | null>(null);
+  /** Desktop panel boxes for spaghetti connectors (marker id → geometry). */
+  const [panelGeometries, setPanelGeometries] = useState<Record<number, PanelGeometry>>({});
+  /** Live pin screen positions for open panels (reprojected on map move). */
+  const [connectorPins, setConnectorPins] = useState<Record<number, MarkerScreenPoint>>({});
+  const mapApiRef = useRef<CrisisMapApi | null>(null);
+  const connectorRafRef = useRef<number | null>(null);
   /** When set, camera flies to this marker; closing restores `returnCamera`. */
   const [markerFocus, setMarkerFocus] = useState<{ lng: number; lat: number; zoom: number } | null>(null);
   /** Camera to restore when closing a marker sheet (usually the prior cluster/donut layer). */
@@ -259,6 +273,72 @@ export default function MapPage() {
   returnCameraRef.current = returnCamera;
   const markerFocusRef = useRef(markerFocus);
   markerFocusRef.current = markerFocus;
+
+  const refreshConnectorPins = useCallback(() => {
+    const api = mapApiRef.current;
+    const panels = openPanelsRef.current;
+    if (!api || panels.length === 0) {
+      setConnectorPins((prev) => (Object.keys(prev).length === 0 ? prev : {}));
+      return;
+    }
+    const next: Record<number, MarkerScreenPoint> = {};
+    for (const panel of panels) {
+      const pt = api.projectMarker(panel.marker.id, panel.marker.lng, panel.marker.lat);
+      if (pt) next[panel.marker.id] = pt;
+    }
+    setConnectorPins(next);
+  }, []);
+
+  const handleMapMove = useCallback(() => {
+    if (openPanelsRef.current.length === 0) return;
+    if (connectorRafRef.current != null) return;
+    connectorRafRef.current = window.requestAnimationFrame(() => {
+      connectorRafRef.current = null;
+      refreshConnectorPins();
+    });
+  }, [refreshConnectorPins]);
+
+  useEffect(() => {
+    refreshConnectorPins();
+  }, [openPanels, refreshConnectorPins]);
+
+  useEffect(() => {
+    return () => {
+      if (connectorRafRef.current != null) {
+        window.cancelAnimationFrame(connectorRafRef.current);
+      }
+    };
+  }, []);
+
+  // Drop geometry for panels that closed (unmount also clears via callback).
+  useEffect(() => {
+    const openIds = new Set(openPanels.map((p) => p.marker.id));
+    setPanelGeometries((prev) => {
+      let changed = false;
+      const next: Record<number, PanelGeometry> = {};
+      for (const [idStr, geom] of Object.entries(prev)) {
+        const id = Number(idStr);
+        if (openIds.has(id)) next[id] = geom;
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [openPanels]);
+
+  const handlePanelGeometryChange = useCallback(
+    (markerId: number, geometry: PanelGeometry | null) => {
+      setPanelGeometries((prev) => {
+        if (geometry == null) {
+          if (!(markerId in prev)) return prev;
+          const next = { ...prev };
+          delete next[markerId];
+          return next;
+        }
+        return { ...prev, [markerId]: geometry };
+      });
+    },
+    [],
+  );
 
   const handleCameraChange = useCallback((camera: { center: [number, number]; zoom: number }) => {
     // Track browse camera only while not in a marker-detail focus fly.
@@ -685,6 +765,22 @@ export default function MapPage() {
     return openPanels.reduce((best, p) => (p.z >= best.z ? p : best));
   }, [openPanels]);
 
+  const connectorLinks = useMemo(() => {
+    if (isMobile || openPanels.length === 0) return [];
+    const topZ = topOpenPanel?.z ?? 0;
+    return openPanels.flatMap((panel) => {
+      const pin = connectorPins[panel.marker.id];
+      const geom = panelGeometries[panel.marker.id];
+      if (!pin || !geom) return [];
+      return [{
+        id: panel.marker.id,
+        pin,
+        panel: geom,
+        emphasized: panel.z === topZ,
+      }];
+    });
+  }, [isMobile, openPanels, topOpenPanel, connectorPins, panelGeometries]);
+
   const topPanelAdjacent = useMemo(() => {
     if (!topOpenPanel) {
       return { hasPrev: false, hasNext: false };
@@ -787,6 +883,18 @@ export default function MapPage() {
       const accumulate = keepPanelsOpen && !isMobile;
 
       setOpenPanels((prev) => {
+        const existing = prev.find((p) => p.marker.id === full.id);
+        if (existing) {
+          // Same pin again: focus only — keep placement so the panel does not jump.
+          const z = bumpPanelZ();
+          if (!accumulate) {
+            return [{ ...existing, z, proximityOrderIds }];
+          }
+          return prev.map((p) =>
+            p.marker.id === full.id ? { ...p, z, proximityOrderIds } : p,
+          );
+        }
+
         if (!accumulate) {
           return [{
             marker: full,
@@ -795,16 +903,6 @@ export default function MapPage() {
             z: bumpPanelZ(),
             proximityOrderIds,
           }];
-        }
-
-        const existing = prev.find((p) => p.marker.id === full.id);
-        if (existing) {
-          // Focus existing — no duplicate; refresh proximity from this pin.
-          return prev.map((p) =>
-            p.marker.id === full.id
-              ? { ...p, anchor: screenPoint, z: bumpPanelZ(), proximityOrderIds }
-              : p,
-          );
         }
 
         const next: OpenMarkerPanel[] = [
@@ -1035,6 +1133,8 @@ export default function MapPage() {
               : 0
           }
           onCameraChange={handleCameraChange}
+          onMapMove={handleMapMove}
+          mapApiRef={mapApiRef}
           onClusterExpand={handleClusterExpand}
           populationBoundaries={populationBoundaries}
           showBoundaries={boundaryLevel !== "none"}
@@ -1109,6 +1209,9 @@ export default function MapPage() {
         }
       />
 
+      {/* ===== Spaghetti connectors (desktop; cleared with panels / data view) ===== */}
+      {!isMobile && <MapPanelConnectors links={connectorLinks} />}
+
       {/* ===== Marker detail panel(s) ===== */}
       {openPanels.map((panel) => {
         const ordered = markersForPanelNav(panel);
@@ -1122,10 +1225,14 @@ export default function MapPage() {
             key={panel.marker.id}
             marker={panel.marker}
             anchor={panel.anchor}
+            livePin={connectorPins[panel.marker.id] ?? null}
             stackZIndex={panel.z}
             onActivate={() => focusOpenPanel(panel.marker.id)}
             onChromeActiveChange={(active) =>
               handlePanelChromeActive(panel.marker.id, active)
+            }
+            onGeometryChange={(geometry) =>
+              handlePanelGeometryChange(panel.marker.id, geometry)
             }
             onClose={() => closeOpenPanel(panel.marker.id)}
             onSwipePrev={

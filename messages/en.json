@@ -1808,6 +1808,7 @@
       "dataSource": "Data Source",
       "shockDate": "Shock Date",
       "coordinates": "Coordinates",
+      "copied": "Copied",
       "viewDetails": "View Details"
     },
     "minimap": {

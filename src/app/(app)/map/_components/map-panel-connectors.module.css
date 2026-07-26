@@ -1,0 +1,16 @@
+/* Marching-ants dash drift along spaghetti connectors. */
+@keyframes spaghettiDash {
+  to {
+    stroke-dashoffset: -12; /* matches 7 + 5 dasharray period */
+  }
+}
+
+.line {
+  animation: spaghettiDash 1.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line {
+    animation: none;
+  }
+}
