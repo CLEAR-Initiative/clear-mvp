@@ -98,7 +98,7 @@ export function NavSidebar() {
   const segments = useSelectedLayoutSegments();
   const searchParams = useSearchParams();
   const activeSegment = segments[0] ?? "";
-  
+
   // Check if we're on a detail page (event/signal/crisis) and get the referrer
   const isDetailPage = ["event", "signal", "crisis"].includes(activeSegment);
   const referrer = searchParams.get("from");
@@ -132,7 +132,7 @@ export function NavSidebar() {
 
   return (
     <>
-      {/* Mobile hamburger — right side; sits above the drawer so it can toggle closed */}
+      {/* Mobile hamburger — right side; sits above the sheet so it can toggle closed */}
       <Box
         hiddenFrom="sm"
         style={{
@@ -166,22 +166,40 @@ export function NavSidebar() {
         </UnstyledButton>
       </Box>
 
-      {/* Mobile drawer — slides in from the left; burger stays on the right */}
+      {/* Mobile menu — fullscreen sheet, bottom → top (not a side drawer). */}
       <Drawer
         opened={mobileOpen}
         onClose={closeMobile}
-        position="left"
-        size="280px"
+        position="bottom"
+        size="100%"
         withCloseButton={false}
         hiddenFrom="sm"
         zIndex={400}
+        transitionProps={{ transition: "slide-up", duration: 280, timingFunction: "cubic-bezier(0.32, 0.72, 0, 1)" }}
         styles={{
           body: { padding: 0, height: "100%", display: "flex", flexDirection: "column" },
-          content: { background: colors.bgWhite },
+          content: {
+            background: colors.bgWhite,
+            borderRadius: 0,
+            maxHeight: "100dvh",
+          },
+          inner: { padding: 0 },
         }}
       >
-        {/* Mobile drawer header */}
-        <Box style={{ height: 64, borderBottom: `1px solid ${colors.border}`, display: "flex", alignItems: "center", padding: spacingPx[5], gap: spacingPx[5] }}>
+        {/* Mobile sheet header — leave room for the floating close (burger) button */}
+        <Box
+          style={{
+            height: 64,
+            borderBottom: `1px solid ${colors.border}`,
+            display: "flex",
+            alignItems: "center",
+            padding: spacingPx[5],
+            paddingInlineEnd: 56,
+            paddingTop: "max(12px, env(safe-area-inset-top, 0px))",
+            gap: spacingPx[5],
+            flexShrink: 0,
+          }}
+        >
           <NrcLogoMark size={32} />
           <Text fw={700} style={{ fontSize: fontSizesPx.xl, color: colors.textPrimary, fontFamily: "Calibri, 'Trebuchet MS', sans-serif" }}>CLEAR</Text>
         </Box>
