@@ -368,6 +368,7 @@ export function NavSidebar() {
       {/* Desktop sidebar */}
       <Box
         component="aside"
+        data-tour="nav-sidebar"
         visibleFrom="sm"
         style={{
           width: collapsed ? COLLAPSED_W : EXPANDED_W,

@@ -272,12 +272,13 @@ export function MapMarkerDetail({
   return (
     <Box
       ref={boxRef}
+      data-tour="map-marker-detail"
       className={isMobile ? styles.sheetMobile : "absolute z-10 bg-[var(--color-bg-white)]"}
       onPointerDown={isMobile ? handleSwipeStart : undefined}
       onPointerMove={isMobile ? handleSwipeMove : undefined}
       onPointerUp={isMobile ? handleSwipeEnd : undefined}
       onPointerCancel={isMobile ? handleSwipeEnd : undefined}
-      style={isMobile ? { touchAction: "none", cursor: "grab" } : {
+      style={isMobile ? { touchAction: "none", cursor: "grab", zIndex: 20 } : {
         // Desktop: beside the marker, draggable via grip / header
         top: basePos.top,
         left: basePos.left,
@@ -296,7 +297,7 @@ export function MapMarkerDetail({
         transform: `translate(${offset.x}px, ${offset.y}px)`,
         transition: dragging ? "none" : "box-shadow 140ms ease, border-color 140ms ease, outline 140ms ease",
         touchAction: "none",
-        zIndex: dragging ? Math.max(stackZIndex, 30) : stackZIndex,
+        zIndex: dragging ? Math.max(stackZIndex, 30) : Math.max(stackZIndex, 20),
       }}
     >
       {/* Desktop: drag chrome — grip + title row */}

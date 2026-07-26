@@ -73,14 +73,15 @@ const noop = () => {
 };
 
 function IconBtn({
-  icon: Icon, active, title, onClick, testId,
+  icon: Icon, active, title, onClick, testId, tourId,
 }: {
-  icon: ElementType; active: boolean; title: string; onClick: () => void; testId?: string;
+  icon: ElementType; active: boolean; title: string; onClick: () => void; testId?: string; tourId?: string;
 }) {
   return (
     <button
       title={title}
       data-testid={testId}
+      data-tour={tourId}
       onClick={onClick}
       style={{
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -221,7 +222,7 @@ export function MapPanelBar({
 
         {/* Icon column — Filters is mobile-only (third button under Legend) */}
         <Stack gap={4}>
-          <IconBtn icon={IconLayersLinked} active={active === "layers"} title={t("panels.layers")} onClick={() => toggle("layers")} testId="map-layers-toggle" />
+          <IconBtn icon={IconLayersLinked} active={active === "layers"} title={t("panels.layers")} onClick={() => toggle("layers")} testId="map-layers-toggle" tourId="map-layers" />
           <IconBtn icon={IconList}         active={active === "legend"} title={t("panels.legend")} onClick={() => toggle("legend")} />
           {filters != null && (
             <Box hiddenFrom="sm">
@@ -230,6 +231,7 @@ export function MapPanelBar({
                 active={active === "filters"}
                 title={t("panels.filters")}
                 onClick={() => toggle("filters")}
+                tourId="map-filters"
               />
             </Box>
           )}
@@ -239,6 +241,7 @@ export function MapPanelBar({
         {active && (
           <Box
             className="flex flex-col max-h-[min(52vh,calc(100dvh-160px))] sm:max-h-[min(72vh,calc(100vh-120px))]"
+            data-tour={active === "layers" ? "map-layers-panel" : undefined}
             style={{
               width: 260,
               maxWidth: "calc(100vw - 72px)",

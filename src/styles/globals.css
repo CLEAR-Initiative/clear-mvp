@@ -366,3 +366,39 @@ nextjs-portal {
 :lang(ar) {
   font-family: var(--font-arabic), sans-serif;
 }
+
+/* Product tour — hide driver.js popover; we render TourCard */
+.clear-tour-hidden-popover,
+.driver-popover.clear-tour-hidden-popover {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+/* driver.js sets pointer-events:none on all descendants while active */
+.driver-active .clear-tour-card-root,
+.driver-active .clear-tour-card-root * {
+  pointer-events: auto !important;
+}
+
+/* Neutral scrim — keep the page readable outside the spotlight */
+.driver-active .driver-overlay path {
+  fill: rgb(9, 9, 11) !important;
+  opacity: 0.4 !important;
+}
+
+.driver-overlay {
+  cursor: default;
+}
+
+/* Spotlight: high-contrast white ring, no orange accent border */
+.driver-active .driver-active-element {
+  position: relative;
+  z-index: 10001 !important;
+  filter: brightness(1.08) contrast(1.05) !important;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 4px rgba(9, 9, 11, 0.85),
+    0 8px 28px rgba(0, 0, 0, 0.28) !important;
+  border-radius: 10px;
+}

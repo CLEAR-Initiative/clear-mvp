@@ -1921,6 +1921,61 @@
   "onboarding": {
     "title": "Bienvenue sur CLEAR",
     "subtitle": "Configurons votre organisation, votre équipe et vos zones de surveillance.",
+    "welcome": {
+      "profile": {
+        "title": "Configurez votre profil",
+        "subtitle": "Présentez-vous à votre équipe avant d'explorer CLEAR.",
+        "name": "Nom complet",
+        "phone": "Numéro de mobile",
+        "phonePlaceholder": "912 345 678",
+        "phoneOptional": "Facultatif — vous pourrez l'ajouter plus tard dans les paramètres.",
+        "appearance": "Apparence",
+        "continue": "Continuer"
+      },
+      "settings": {
+        "title": "Paramètres rapides",
+        "subtitle": "Confirmez votre langue et fuseau horaire. Modifiables à tout moment.",
+        "team": "Équipe active",
+        "continue": "Continuer vers la visite"
+      }
+    },
+    "tour": {
+      "back": "Retour",
+      "next": "Suivant",
+      "finish": "Terminer",
+      "finishTour": "Terminer la visite",
+      "skipTour": "Passer la visite",
+      "exitTour": "Quitter la visite",
+      "replay": "Revoir la visite",
+      "steps": {
+        "detectionAlerts": {
+          "title": "Les alertes d’abord",
+          "body": "Cet onglet liste les alertes publiées — ce sur quoi votre équipe agit. Commencez ici dans Détection."
+        },
+        "detectionEvents": {
+          "title": "Les événements sont les incidents",
+          "body": "Un événement regroupe un ou plusieurs signaux en un incident. Quand il compte, élevez-le en alerte."
+        },
+        "mapLayers": {
+          "title": "Façonnez la carte",
+          "body": "Utilisez Couches pour les contrôles actifs : vue de données, fond (Simple, Topographie ou Satellite), routes et limites."
+        },
+        "mapCanvas": {
+          "title": "Déplacez-vous et ouvrez un marqueur",
+          "body": "Faites glisser pour parcourir la carte. Cliquez une épingle ou un cluster pour ouvrir sa fiche — essayez celle ouverte pour vous."
+        }
+      },
+      "widgets": {
+        "activeSignals": "Signaux actifs",
+        "signalLegend": "Légende des signaux",
+        "highConfidence": "Haute confiance (90 %+)",
+        "highConfidenceHint": "Variance minimale détectée",
+        "mediumConfidence": "Confiance moyenne (60–89 %)",
+        "mediumConfidenceHint": "Incertitude modérée du signal",
+        "impactZone": "Zone d'impact",
+        "impactZoneHint": "Périmètre affecté"
+      }
+    },
     "steps": {
       "org": {
         "label": "Organisation",

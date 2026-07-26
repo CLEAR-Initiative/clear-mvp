@@ -1919,6 +1919,61 @@
   "onboarding": {
     "title": "Welcome to CLEAR",
     "subtitle": "Let's set up your organisation, team, and monitoring locations.",
+    "welcome": {
+      "profile": {
+        "title": "Set up your profile",
+        "subtitle": "Tell your team a bit about you before exploring CLEAR.",
+        "name": "Full name",
+        "phone": "Mobile number",
+        "phonePlaceholder": "912 345 678",
+        "phoneOptional": "Optional — you can add this later in Settings.",
+        "appearance": "Appearance",
+        "continue": "Continue"
+      },
+      "settings": {
+        "title": "Quick settings",
+        "subtitle": "Confirm your language and timezone. You can change these anytime.",
+        "team": "Active team",
+        "continue": "Continue to tour"
+      }
+    },
+    "tour": {
+      "back": "Back",
+      "next": "Next",
+      "finish": "Finish",
+      "finishTour": "Finish Tour",
+      "skipTour": "Skip Tour",
+      "exitTour": "Exit Tour",
+      "replay": "Show tour again",
+      "steps": {
+        "detectionAlerts": {
+          "title": "Alerts need your attention first",
+          "body": "This tab lists published alerts — the items your team acts on. Start here when you open Detection."
+        },
+        "detectionEvents": {
+          "title": "Events are the incidents",
+          "body": "Events group one or more signals into a single incident. When an event matters, raise it to an alert."
+        },
+        "mapLayers": {
+          "title": "Shape what you see on the map",
+          "body": "Use Layers for the live controls: data view, basemap (Simple, Topography, or Satellite), roads, and boundaries."
+        },
+        "mapCanvas": {
+          "title": "Pan, zoom, and open a marker",
+          "body": "Drag to move around the map. Click a pin or cluster to open its detail window — try the one we opened for you."
+        }
+      },
+      "widgets": {
+        "activeSignals": "Active Signals",
+        "signalLegend": "Signal Legend",
+        "highConfidence": "High Confidence (90%+)",
+        "highConfidenceHint": "Minimal variance detected",
+        "mediumConfidence": "Medium Confidence (60–89%)",
+        "mediumConfidenceHint": "Moderate signal uncertainty",
+        "impactZone": "Impact Zone",
+        "impactZoneHint": "Affected perimeter"
+      }
+    },
     "steps": {
       "org": {
         "label": "Organisation",
