@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
@@ -42,6 +42,19 @@ export interface MapMarker {
 export interface MarkerScreenPoint {
   x: number;
   y: number;
+}
+
+/** Imperative helpers for overlays that track pins (e.g. spaghetti connectors). */
+export interface CrisisMapApi {
+  /**
+   * Project a marker to container pixels. Prefers the live Mapbox Marker
+   * (spiderfy display position) when mounted; otherwise falls back to lng/lat.
+   */
+  projectMarker: (
+    id: number,
+    lng: number,
+    lat: number,
+  ) => MarkerScreenPoint | null;
 }
 
 export interface MapRegion {
@@ -133,6 +146,13 @@ interface CrisisMapProps {
   showRoads?: boolean;
   /** Basemap: simple (theme style), topography (theme style + hillshade relief), or satellite imagery */
   baseMapType?: BaseMapType;
+  /**
+   * Mutable ref filled with project helpers while the map is mounted.
+   * Cleared on unmount. Used by `/map` spaghetti connectors.
+   */
+  mapApiRef?: MutableRefObject<CrisisMapApi | null>;
+  /** Fired on every camera frame during pan/zoom/fly (not only moveend). */
+  onMapMove?: () => void;
 }
 
 export type BaseMapType = "simple" | "topography" | "satellite";
@@ -313,6 +333,8 @@ export function CrisisMap({
   showMarkers = true,
   showRoads = true,
   baseMapType = "simple",
+  mapApiRef,
+  onMapMove,
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const isDark = useIsDark();
@@ -354,11 +376,15 @@ export function CrisisMap({
   const onMarkerHoverRef = useRef(onMarkerHover);
   const onCameraChangeRef = useRef(onCameraChange);
   const onClusterExpandRef = useRef(onClusterExpand);
+  const onMapMoveRef = useRef(onMapMove);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMarkerHoverRef.current = onMarkerHover; }, [onMarkerHover]);
   useEffect(() => { onCameraChangeRef.current = onCameraChange; }, [onCameraChange]);
   useEffect(() => { onClusterExpandRef.current = onClusterExpand; }, [onClusterExpand]);
+  useEffect(() => { onMapMoveRef.current = onMapMove; }, [onMapMove]);
   const clusterDomMarkers = useRef<Map<string, MapboxGLAny>>(new Map());
+  /** Spiderfy display lng/lat by marker id — kept in sync with mounted pins. */
+  const displayLngLatRef = useRef<Map<number, [number, number]>>(new Map());
   const markersDataRef = useRef<MapMarker[]>(markers);
   const hoveredMarkerIdRef = useRef<number | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -425,6 +451,12 @@ export function CrisisMap({
         });
       });
 
+      // Continuous frames for overlays (spaghetti connectors) during pan/fly.
+      map.current.on("move", () => {
+        if (cancelled) return;
+        onMapMoveRef.current?.();
+      });
+
       map.current.addControl(
         new mapboxgl.NavigationControl({ showCompass: false }),
         "bottom-right",
@@ -436,6 +468,7 @@ export function CrisisMap({
       mapReadyRef.current = false;
       appliedStyleRef.current = null;
       setLoaded(false);
+      if (mapApiRef) mapApiRef.current = null;
       map.current?.remove();
       map.current = null;
     };
@@ -910,6 +943,7 @@ export function CrisisMap({
         try { mk.remove(); } catch { /* ignore */ }
       }
       clusterDomMarkers.current.clear();
+      displayLngLatRef.current = new Map();
       if (!sweepOrphans) return;
       try {
         m.getContainer()
@@ -1144,6 +1178,21 @@ export function CrisisMap({
         spiderfyPoints.push({ id: markerId, lng: coords[0], lat: coords[1] });
       }
       const displayLngLat = spiderfyCoincidentLngLats(spiderfyPoints);
+      const nextDisplay = new Map<number, [number, number]>();
+      for (const [id, ll] of displayLngLat) {
+        const numericId = Number(id);
+        if (!Number.isFinite(numericId)) continue;
+        nextDisplay.set(numericId, [ll[0], ll[1]]);
+      }
+      // Also record non-spiderfied singles so projectMarker can prefer them.
+      for (const feat of pointFeats) {
+        const rawCoords = feat.geometry?.coordinates;
+        if (!isValidLngLat(rawCoords)) continue;
+        const markerId = Number((feat.properties as Record<string, unknown> | null)?.id);
+        if (!Number.isFinite(markerId) || nextDisplay.has(markerId)) continue;
+        nextDisplay.set(markerId, [rawCoords[0], rawCoords[1]]);
+      }
+      displayLngLatRef.current = nextDisplay;
 
       for (const feat of pointFeats) {
         const rawCoords = feat.geometry?.coordinates;
@@ -1571,6 +1620,52 @@ export function CrisisMap({
       regionMarkerRefs.current = [];
     };
   }, [regions, loaded]);
+
+  // Sidebar collapse / flex layout changes grow the container without a window
+  // resize — Mapbox keeps the old canvas width unless we call resize().
+  useEffect(() => {
+    if (!loaded || !mapContainer.current || !map.current) return;
+    const el = mapContainer.current;
+    const ro = new ResizeObserver(() => {
+      try {
+        map.current?.resize();
+        onMapMoveRef.current?.();
+      } catch {
+        /* ignore */
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [loaded]);
+
+  // Expose project helpers for overlays (spaghetti connectors on /map).
+  useEffect(() => {
+    if (!mapApiRef) return;
+    if (!loaded) {
+      mapApiRef.current = null;
+      return;
+    }
+    mapApiRef.current = {
+      projectMarker: (id, lng, lat) => {
+        const m = map.current;
+        if (!m) return null;
+        const mounted = clusterDomMarkers.current.get(`p-${id}`);
+        if (mounted?.getLngLat) {
+          const ll = mounted.getLngLat() as { lng: number; lat: number };
+          const p = m.project([ll.lng, ll.lat]) as { x: number; y: number };
+          return { x: p.x, y: p.y };
+        }
+        const display = displayLngLatRef.current.get(id);
+        const coords = display ?? ([lng, lat] as [number, number]);
+        if (!Number.isFinite(coords[0]) || !Number.isFinite(coords[1])) return null;
+        const p = m.project(coords) as { x: number; y: number };
+        return { x: p.x, y: p.y };
+      },
+    };
+    return () => {
+      mapApiRef.current = null;
+    };
+  }, [loaded, mapApiRef]);
 
   if (!MAPBOX_TOKEN) {
     return (
