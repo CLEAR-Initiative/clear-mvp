@@ -12,6 +12,8 @@ interface TourCardProps {
   primaryLabel: string;
   primaryDark?: boolean;
   skipLabel: string;
+  /** Scene around the card is still loading (map demo, spotlight target, …). */
+  scenePending?: boolean;
   onBack: () => void;
   onPrimary: () => void;
   onSkip: () => void;
@@ -45,6 +47,7 @@ export function TourCard({
   primaryLabel,
   primaryDark = false,
   skipLabel,
+  scenePending = false,
   onBack,
   onPrimary,
   onSkip,
@@ -61,13 +64,22 @@ export function TourCard({
         boxShadow: "0 16px 40px -12px rgba(0, 0, 0, 0.28)",
         overflow: "hidden",
         pointerEvents: "auto",
+        opacity: 0.9,
       }}
     >
       <Stack gap={12} p={20} pb={14}>
         <Text fw={700} size="md" c="#09090b" lh="24px">
           {title}
         </Text>
-        <Text size="sm" c="#3f3f46" lh="22px">
+        <Text
+          size="sm"
+          c="#3f3f46"
+          lh="22px"
+          style={{
+            opacity: scenePending ? 0.72 : 1,
+            transition: "opacity 160ms ease",
+          }}
+        >
           {body}
         </Text>
         <Group justify="space-between" align="center" pt={4} wrap="nowrap">

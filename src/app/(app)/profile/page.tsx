@@ -884,7 +884,7 @@ function SettingsContent({ user }: { user: ProfileUser }) {
             </Group>
             <Button
               component={Link}
-              href="/detection?tour=replay"
+              href="/detection?tour=replay&tab=live"
               variant="light"
               color="orange"
               size="xs"

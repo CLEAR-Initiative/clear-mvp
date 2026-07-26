@@ -11,16 +11,18 @@ export type OnboardingRedirectTarget =
   | "/welcome/settings"
   | null;
 
-export type TourPage = "detection" | "insights" | "map";
+/** Options when the Product Tour completes (Finish/Skip vs in-app exit). */
+export type TourCompleteOptions = {
+  /** When true (default), land on `/map` without `tour`. False leaves the current route (e.g. View details). */
+  landOnMap?: boolean;
+};
+
+export type TourPage = "detection" | "map";
 
 export type ProductTourStepId =
-  | "detectionTabs"
-  | "detectionFilters"
-  | "detectionCreate"
-  | "insightsTabs"
-  | "insightsCrises"
+  | "detectionAlerts"
+  | "detectionEvents"
   | "mapLayers"
-  | "mapFilters"
   | "mapCanvas";
 
 export interface ProductTourStep {
@@ -28,10 +30,20 @@ export interface ProductTourStep {
   /** i18n key under onboarding.tour.steps.<id> */
   page: TourPage;
   /** App route for this stop (tour navigates here before spotlighting). */
-  route: "/detection" | "/insights" | "/map";
+  route: "/detection" | "/map";
+  /**
+   * Optional Detection `tab` query (`live` = Alerts, `events`, …).
+   * Merged into navigation as `?tour=1&tab=…`.
+   */
+  tab?: "live" | "events" | "signals" | "history";
   /** CSS selector for driver.js spotlight */
   target: string;
-  side?: "top" | "bottom" | "left" | "right" | "over";
+  side?: "top" | "bottom" | "left" | "right" | "over" | "bottom-left" | "top-right";
   primaryAction: "next" | "finish";
   showBack: boolean;
+  /**
+   * open-map-layers — open the Layers panel before spotlighting.
+   * demo-map-explore — close Layers, zoom into a cluster area, open a marker detail.
+   */
+  prepare?: "open-map-layers" | "demo-map-explore";
 }

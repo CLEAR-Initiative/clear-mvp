@@ -37,6 +37,11 @@ import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
 import { useSearchParams } from "next/navigation";
 import { getAdjacentItem, orderByProximityTo } from "~/lib/detail-list-nav";
 import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
+import {
+  pickTourDemoMarker,
+  TOUR_MAP_DEMO_EVENT,
+  type TourMapDemoDetail,
+} from "~/lib/onboarding/tour-map-demo";
 const MAX_OPEN_PANELS = 4;
 
 interface OpenMarkerPanel {
@@ -825,6 +830,75 @@ export default function MapPage() {
     },
     [allMarkers, currentMarkers, keepPanelsOpen, isMobile, bumpPanelZ, selectedCountry, getZoom],
   );
+
+  const currentMarkersRef = useRef(currentMarkers);
+  currentMarkersRef.current = currentMarkers;
+  const handleMarkerClickRef = useRef(handleMarkerClick);
+  handleMarkerClickRef.current = handleMarkerClick;
+  const clearOpenPanelsRef = useRef(clearOpenPanels);
+  clearOpenPanelsRef.current = clearOpenPanels;
+
+  // Product Tour step 4: zoom into a dense area and open a marker detail panel.
+  // Re-entry (4→3→4) must clear then force-fly: CrisisMap skips flyTo when
+  // center/zoom match prev props, and closing with fitBoundsOnFocus can leave
+  // those prev props stuck on the first demo focus.
+  useEffect(() => {
+    let startTimer: number | null = null;
+
+    const runDemoStart = () => {
+      const markers = currentMarkersRef.current;
+      const pick = pickTourDemoMarker(markers);
+      if (!pick) return;
+
+      const nearby = markers.filter(
+        (o) => o.id !== pick.id && Math.hypot(o.lng - pick.lng, o.lat - pick.lat) < 0.4,
+      ).length;
+      const clusterZoom = nearby >= 1 ? 9.2 : 10.5;
+      // Anchor on the right half so the detail panel opens to the LEFT of the pin
+      // (placeNearMarker: x >= midpoint → panel on left) and does not cover it.
+      const screenPoint: MarkerScreenPoint = {
+        x: Math.round((typeof window !== "undefined" ? window.innerWidth : 1200) * 0.72),
+        y: Math.round((typeof window !== "undefined" ? window.innerHeight : 800) * 0.38),
+      };
+
+      handleMarkerClickRef.current(pick, screenPoint, {
+        center: [pick.lng, pick.lat],
+        zoom: clusterZoom,
+      });
+      setForceFlyToken((n) => n + 1);
+    };
+
+    const onTourDemo = (event: Event) => {
+      const detail = (event as CustomEvent<TourMapDemoDetail>).detail;
+      if (detail?.action === "stop") {
+        if (startTimer != null) {
+          window.clearTimeout(startTimer);
+          startTimer = null;
+        }
+        clearOpenPanelsRef.current();
+        setForceFlyToken((n) => n + 1);
+        return;
+      }
+      if (detail?.action !== "start") return;
+
+      if (startTimer != null) {
+        window.clearTimeout(startTimer);
+        startTimer = null;
+      }
+      // Reset first so markerFocus null commits; then re-open (works every visit).
+      clearOpenPanelsRef.current();
+      startTimer = window.setTimeout(() => {
+        startTimer = null;
+        runDemoStart();
+      }, 50);
+    };
+
+    window.addEventListener(TOUR_MAP_DEMO_EVENT, onTourDemo);
+    return () => {
+      if (startTimer != null) window.clearTimeout(startTimer);
+      window.removeEventListener(TOUR_MAP_DEMO_EVENT, onTourDemo);
+    };
+  }, []);
 
   const isLoading =
     (dataView === "alert" && alertsQuery.isLoading) ||

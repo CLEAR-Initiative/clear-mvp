@@ -2,14 +2,26 @@ import { describe, expect, it } from "vitest";
 import { PRODUCT_TOUR_STEPS } from "~/lib/onboarding/product-tour-steps";
 
 describe("PRODUCT_TOUR_STEPS", () => {
-  it("covers Detection, Insights, and Map with 2–3 stops each", () => {
-    const count = (page: string) => PRODUCT_TOUR_STEPS.filter((s) => s.page === page).length;
-    expect(count("detection")).toBeGreaterThanOrEqual(2);
-    expect(count("detection")).toBeLessThanOrEqual(3);
-    expect(count("insights")).toBeGreaterThanOrEqual(2);
-    expect(count("insights")).toBeLessThanOrEqual(3);
-    expect(count("map")).toBeGreaterThanOrEqual(2);
-    expect(count("map")).toBeLessThanOrEqual(3);
+  it("is a 4-stop Alert → Event → Layers → canvas tour", () => {
+    expect(PRODUCT_TOUR_STEPS.map((s) => s.id)).toEqual([
+      "detectionAlerts",
+      "detectionEvents",
+      "mapLayers",
+      "mapCanvas",
+    ]);
+    expect(PRODUCT_TOUR_STEPS[2]?.prepare).toBe("open-map-layers");
+    expect(PRODUCT_TOUR_STEPS[3]?.prepare).toBe("demo-map-explore");
+    expect(PRODUCT_TOUR_STEPS[3]?.side).toBe("left");
+  });
+
+  it("teaches Detection urgency then finishes on Map (no Insights)", () => {
+    expect(
+      PRODUCT_TOUR_STEPS.every((s) => s.page === "detection" || s.page === "map"),
+    ).toBe(true);
+    expect(PRODUCT_TOUR_STEPS.filter((s) => s.page === "detection")).toHaveLength(2);
+    expect(PRODUCT_TOUR_STEPS.filter((s) => s.page === "map")).toHaveLength(2);
+    expect(PRODUCT_TOUR_STEPS[0]?.tab).toBe("live");
+    expect(PRODUCT_TOUR_STEPS[1]?.tab).toBe("events");
   });
 
   it("ends on Map so Finish leaves the user on the map tab", () => {
@@ -19,12 +31,11 @@ describe("PRODUCT_TOUR_STEPS", () => {
     expect(last?.primaryAction).toBe("finish");
   });
 
-  it("registers stable data-tour targets and visits pages in order", () => {
+  it("registers stable data-tour targets and visits Detection before Map", () => {
     for (const step of PRODUCT_TOUR_STEPS) {
       expect(step.target).toMatch(/^\[data-tour="/);
     }
     const pages = PRODUCT_TOUR_STEPS.map((s) => s.page);
-    expect(pages.indexOf("detection")).toBeLessThan(pages.indexOf("insights"));
-    expect(pages.indexOf("insights")).toBeLessThan(pages.indexOf("map"));
+    expect(pages.indexOf("detection")).toBeLessThan(pages.indexOf("map"));
   });
 });

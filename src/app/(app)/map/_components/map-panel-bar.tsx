@@ -241,6 +241,7 @@ export function MapPanelBar({
         {active && (
           <Box
             className="flex flex-col max-h-[min(52vh,calc(100dvh-160px))] sm:max-h-[min(72vh,calc(100vh-120px))]"
+            data-tour={active === "layers" ? "map-layers-panel" : undefined}
             style={{
               width: 260,
               maxWidth: "calc(100vw - 72px)",

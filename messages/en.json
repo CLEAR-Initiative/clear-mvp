@@ -1946,37 +1946,21 @@
       "exitTour": "Exit Tour",
       "replay": "Show tour again",
       "steps": {
-        "detectionTabs": {
-          "title": "Detection tabs",
-          "body": "Switch between Live Alerts, Events, Signals, and History to triage what needs attention."
+        "detectionAlerts": {
+          "title": "Alerts need your attention first",
+          "body": "This tab lists published alerts — the items your team acts on. Start here when you open Detection."
         },
-        "detectionFilters": {
-          "title": "Narrow the feed",
-          "body": "Filter by country, region, date, severity, and type so the queue matches your area of responsibility."
-        },
-        "detectionCreate": {
-          "title": "Submit a signal",
-          "body": "Use Create Signal when field teams or analysts need to report a new early indicator."
-        },
-        "insightsTabs": {
-          "title": "Insights",
-          "body": "Insights rolls up crises and analysis for briefing — start on the Crisis overview tab."
-        },
-        "insightsCrises": {
-          "title": "Active crises",
-          "body": "Open a crisis here to review linked events, severity, and the latest updates for decision-making."
+        "detectionEvents": {
+          "title": "Events are the incidents",
+          "body": "Events group one or more signals into a single incident. When an event matters, raise it to an alert."
         },
         "mapLayers": {
-          "title": "Map layers",
-          "body": "Toggle data views, roads, population, and boundaries from Layers to shape what you see on the map."
-        },
-        "mapFilters": {
-          "title": "Map filters",
-          "body": "Focus the map by country, region, crisis type, and timeframe — same lens as Detection, spatial view."
+          "title": "Shape what you see on the map",
+          "body": "Use Layers for the live controls: data view, basemap (Simple, Topography, or Satellite), roads, and boundaries."
         },
         "mapCanvas": {
-          "title": "Explore the map",
-          "body": "Pins and clusters show what is happening where. You are ready to monitor from here — the tour ends on Map."
+          "title": "Pan, zoom, and open a marker",
+          "body": "Drag to move around the map. Click a pin or cluster to open its detail window — try the one we opened for you."
         }
       },
       "widgets": {

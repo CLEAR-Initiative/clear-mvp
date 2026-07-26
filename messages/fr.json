@@ -1948,37 +1948,21 @@
       "exitTour": "Quitter la visite",
       "replay": "Revoir la visite",
       "steps": {
-        "detectionTabs": {
-          "title": "Onglets Détection",
-          "body": "Passez entre Alertes, Événements, Signaux et Historique pour trier ce qui demande votre attention."
+        "detectionAlerts": {
+          "title": "Les alertes d’abord",
+          "body": "Cet onglet liste les alertes publiées — ce sur quoi votre équipe agit. Commencez ici dans Détection."
         },
-        "detectionFilters": {
-          "title": "Affiner le flux",
-          "body": "Filtrez par pays, région, date, sévérité et type pour aligner la file sur votre zone de responsabilité."
-        },
-        "detectionCreate": {
-          "title": "Soumettre un signal",
-          "body": "Utilisez Créer un signal lorsque les équipes terrain ou les analystes doivent signaler un nouvel indicateur précoce."
-        },
-        "insightsTabs": {
-          "title": "Insights",
-          "body": "Insights regroupe crises et analyses pour le briefing — commencez par l’onglet vue d’ensemble Crises."
-        },
-        "insightsCrises": {
-          "title": "Crises actives",
-          "body": "Ouvrez une crise ici pour revoir les événements liés, la sévérité et les dernières mises à jour pour décider."
+        "detectionEvents": {
+          "title": "Les événements sont les incidents",
+          "body": "Un événement regroupe un ou plusieurs signaux en un incident. Quand il compte, élevez-le en alerte."
         },
         "mapLayers": {
-          "title": "Couches de carte",
-          "body": "Activez vues de données, routes, population et limites depuis Couches pour façonner la carte."
-        },
-        "mapFilters": {
-          "title": "Filtres carte",
-          "body": "Focalisez la carte par pays, région, type de crise et période — même logique que Détection, vue spatiale."
+          "title": "Façonnez la carte",
+          "body": "Utilisez Couches pour les contrôles actifs : vue de données, fond (Simple, Topographie ou Satellite), routes et limites."
         },
         "mapCanvas": {
-          "title": "Explorer la carte",
-          "body": "Épingles et clusters montrent ce qui se passe où. Vous pouvez surveiller depuis ici — la visite se termine sur la Carte."
+          "title": "Déplacez-vous et ouvrez un marqueur",
+          "body": "Faites glisser pour parcourir la carte. Cliquez une épingle ou un cluster pour ouvrir sa fiche — essayez celle ouverte pour vous."
         }
       },
       "widgets": {

@@ -95,6 +95,14 @@ function DetectionPageContent() {
     return "events";
   });
 
+  // Keep tab in sync when the Product Tour (or shareable links) change `?tab=`.
+  useEffect(() => {
+    const fromUrl = searchParams.get("tab");
+    if (!fromUrl || !VALID_TABS.has(fromUrl) || fromUrl === activeTab) return;
+    setActiveTab(fromUrl);
+    try { sessionStorage.setItem(TAB_STORAGE_KEY, fromUrl); } catch { /* ignore */ }
+  }, [searchParams, activeTab]);
+
   const handleTabChange = useCallback((tab: string | null) => {
     if (!tab) return;
     setActiveTab(tab);
@@ -795,8 +803,8 @@ function DetectionPageContent() {
           }}
         >
           <Tabs.List data-tour="detection-tabs" style={{ position: "relative", display: "flex", width: "100%" }}>
-            <Tabs.Tab value="live">{t("tabs.alerts")}</Tabs.Tab>
-            <Tabs.Tab value="events">{t("tabs.events")}</Tabs.Tab>
+            <Tabs.Tab value="live" data-tour="detection-tab-alerts">{t("tabs.alerts")}</Tabs.Tab>
+            <Tabs.Tab value="events" data-tour="detection-tab-events">{t("tabs.events")}</Tabs.Tab>
             <Tabs.Tab value="signals">{t("tabs.signals")}</Tabs.Tab>
             <Tabs.Tab value="history">{t("tabs.history")}</Tabs.Tab>
             <Box
