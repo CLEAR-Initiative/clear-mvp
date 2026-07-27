@@ -611,6 +611,12 @@ full SDN GeoJSON dumps into the app tree by default.
 - Spike docs — resolved: **`docs/logie-spike-sudan.md`** + **`docs/clear-api-logie-ingest.md`**.
 - Spike artifact path — resolved: **`scripts/logie/out/`** (gitignored; optional tiny
   samples in git if full pull is huge).
+- Blockages freshness UX — resolved: show exact `status_as_of` + relative age; at
+  **≥ 15 days** demote + warn (**do not hide**). Ingest must persist freshness + source
+  fields and `pulled_at`.
+- Displacement camp locations / real-time satellite — **open research** on branch
+  `research/displacement-camps-satellite` (not part of #280 done). May later double-check
+  LogIE road constraints against imagery; feasibility unknown.
 - Follow-ups (not #280 done): LogIE sprite/`download_icons`; Overpass if `fclass` thin;
   Access IA comps ticket if still needed after findings.
 - Detail→map returns — resolved: remove header **View on Crisis Map**; focused

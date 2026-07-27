@@ -96,6 +96,15 @@ Working hypothesis updated with SDN counts:
 2. `npm run dev` → `/map` → Layers → **Blockages** (enabled only in `NODE_ENV=development`)
 3. Toggle loads `GET /api/dev/logie-blockages` → roads+bridges, slim props, simplified lines
 4. Hint shows feature count and approximate byte reduction vs full spike dump
+5. Freshness: tooltip shows exact status date + age; features ≥ **15 days** old are
+   dashed / lower opacity with a “may no longer be accurate” warning (never hidden)
+
+## Freshness / source notes (SDN)
+
+On a 2026-07-27 pull, blocked road+bridge statuses were typically **≥15–30+ days** old;
+`currinforely` was usually null; reporter strings were messy `WFP-LC` / `LC` variants.
+Policy: **warn + demote at 15 days**, always show exact date; authoritative refresh is
+scheduled LogIE re-pull (#317), not a second public feed.
 
 Prod still shows Blockages as Coming soon until **LogIE ingest** + #277. Same transform module (`src/lib/map/logie-blockages.ts`) is the contract ingest should match.
 

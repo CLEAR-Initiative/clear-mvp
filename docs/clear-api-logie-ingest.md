@@ -1,24 +1,72 @@
-# clear-api: LogIE GeoJSON ingest (draft)
+# clear-api: LogIE GeoJSON ingest — backend requirements
 
-> **Status:** Opened as Expo **#317** (`cms2d9w3z0001l804uk12eixw`).
-> Blocked by **#280** (spike); blocks Expo **#277** (Blockages wire-up). Do not fold into #277.
+> **Expo #317** (`cms2d9w3z0001l804uk12eixw`) · Blocked by **#280** · Blocks **#277**  
+> Do **not** fold into #277. Do **not** expose ArcGIS LogIE to the browser.
 
-## Problem
+This is the handoff brief for clear-api. Frontend contract lives in
+`src/lib/map/logie-blockages.ts` and is smoke-tested via
+`GET /api/dev/logie-blockages` (development only).
 
-CLEAR’s BFF (`clear-mvp`) owns no domain data. The TypeScript LogIE pull under
-`scripts/logie/` can produce Access-constraint GeoJSON for Sudan, but **clear-api has no
-ingest / persistence path** for that GeoJSON. Live **Blockages** on `/map` cannot ship
-until the API can store and serve LogIE features.
+---
 
-## Source of truth
+## Goal
 
-- WFP Logistics Cluster **LogIE** (public ArcGIS Feature Services)
-- Geometry: OSM-derived (`osmid` join where present)
-- Status: partner-reported, IMO-validated; **per-layer** status fields + coded domains
-- Reference: [logie.py gist](https://gist.github.com/eoglethorpe/90f2b9e645d43fe8d74c7b442d7e9ce9)
-- Spike evidence: `scripts/logie/` + [`docs/logie-spike-sudan.md`](./logie-spike-sudan.md)
+Pull LogIE access-issue features into **clear-api**, persist them, and serve a
+**map-ready slim GeoJSON** that clear-mvp can fetch with the same shape as today’s
+spike smoke — so `/map` → Blockages never calls LogIE ArcGIS from the client.
 
-## Sudan inventory (spike, 2026-07-26)
+## Trust / precision (product)
+
+| Field | Meaning |
+|-------|---------|
+| `pulled_at` | When CLEAR last synced from LogIE (ingest job) |
+| `status_as_of` | When partners last reported that segment’s status (LogIE) |
+
+LogIE is Access **source of truth** (ADR-0003), not near-real-time. Scheduled
+re-pull keeps CLEAR’s copy current with LogIE; it does **not** invent fresher
+corridor status than upstream. FE demotes features with `status_as_of` ≥ **15 days**
+(dashed / warn) and **never hides** them. Satellite cross-check is **out of scope**
+for #317 (parked research).
+
+---
+
+## Must do
+
+1. **Server-side pull** of LogIE (or accept a controlled upload from the spike script
+   shape) for at least `iso3=SDN`. Credentials / ArcGIS URLs stay in clear-api.
+2. **Persist** (see field map below) and expose an authenticated map endpoint that
+   returns the **slim Blockages FeatureCollection** (or raw persist + transform to
+   that contract before response).
+3. Include **`pulled_at`** (and preferably a run / job id) on the response `meta`
+   and/or headers so FE can distinguish sync age vs feature status age.
+4. **Auth / ACL** consistent with other CLEAR operational data — not a public
+   unauthenticated dump.
+5. Document refresh cadence (cron / queue). Prefer scheduled job over on-demand
+   browser triggers.
+
+## Must not
+
+- Proxy raw LogIE Feature Services through Next.js / the browser.
+- Require Overpass, icon sprites, or Access IA comps for v1.
+- Invent `source_reliability` when LogIE leaves `currinforely` null.
+- Drop stale features server-side because FE demotes them (hiding ≈ “road open”).
+- Block #317 on satellite imagery or camp detection.
+
+---
+
+## v1 scope
+
+| Topic | Expectation |
+|-------|-------------|
+| Country | `iso3=SDN` first; multi-country later |
+| Blockages layers | **road + bridge** only (blocked codes per layer) |
+| Later layers | crossing, aerodrome; port/PAC as data allows — separate FE toggles |
+| Status model | Persist status field name, code, resolved label, `status_as_of` |
+| Identity | `feature_type` + `route_id` (`osmid` when present) |
+| Class | Persist `fclass` when present (optional; ~8% on SDN blocked) |
+| Serving | Slim GeoJSON for map; vector tiles later if needed |
+
+### Sudan spike inventory (2026-07-26 / re-pulled 2026-07-27)
 
 | Layer | Blocked | All |
 |-------|--------:|----:|
@@ -29,77 +77,120 @@ until the API can store and serve LogIE features.
 | port | 0 | 5 |
 | pac_report | 0 | — |
 
-`fclass` present on ~8% of blocked features (roads only) — optional enrichment later.
+Blocked road+bridge statuses on the spike were typically **≥15–30+ days** old —
+expected; FE treats that as demoted, not missing.
 
-## Proposed ingest scope (v1)
+### LogIE → persist field map
 
-| Topic | Expectation |
-|-------|-------------|
-| Country | `iso3=SDN` first; multi-country later |
-| Layers for Blockages | **road + bridge** (blocked codes per layer) |
-| Later layers | crossing, aerodrome; port/PAC as data allows |
-| Status model | Persist `status_field`, `status_code`, resolved `status` label, `status_as_of` |
-| Identity | `feature_type` + `route_id` (`osmid` when present) |
-| Class | Persist `fclass` when present; Overpass not required for v1 |
-| Refresh | Scheduled job preferred; document freshness from `currasofdate` |
-| Serving | **Map-ready slim GeoJSON** (see below) for clear-mvp — BFF does not own ArcGIS pulls at runtime. Vector tiles later if multi-country / denser networks need it. |
+| Persist / serve | LogIE / notes |
+|-----------------|---------------|
+| `feature_type` | Spike-shaped layer: `road` \| `bridge` \| … |
+| `route_id` | `osmid` when present |
+| `name` | `routenameen` / name (often null on SDN roads) |
+| `status_field` | e.g. `currstatus_physical` (road/bridge) |
+| `status_code` | Layer domain code (road/bridge blocked `{3,4}`) |
+| `status` | Domain label; fix LogIE typo `Damanged` → `Damaged` if convenient |
+| `status_as_of` | `currasofdate` — **required** for freshness UX |
+| `status_remark` | Remark / description |
+| `source_name` | `currsourcename` (often `WFP-LC` / messy variants) |
+| `source_reliability_code` | `currinforely` 0–4 when present |
+| `fclass` | Optional |
+| `pulled_at` | Ingest job timestamp (CLEAR metadata) |
+| `geometry` | GeoJSON; simplify LineStrings for map (RDP ~0.0008°) |
 
-### Map payload contract (required for #277)
+Road/bridge **blocked** codes (spike): `{3,4}` on `currstatus_physical`  
+(3 = Passable with restrictions/Damaged, 4 = Not Passable).  
+Aerodrome live domain uses `{2,3}` — not needed for Blockages v1.
 
-clear-mvp already shapes Blockages via `src/lib/map/logie-blockages.ts` (`toBlockagesMapCollection`):
+---
 
-1. **Filter** to `road` + `bridge` only (Blockages v1)
-2. **Slim properties** — `feature_type`, `route_id`, `name`, `label`, `status_code`,
-   `status`, `status_as_of`, `status_remark`, optional `source_name`
-3. **Simplify** LineString / MultiLineString (RDP, default ~0.0008°)
+## Map response contract (required for #277)
 
-Ingest should either apply this server-side or return an equivalent contract so the map never downloads full LogIE dumps (~450KB blocked SDN today; roads dominate).
+clear-mvp expects a **FeatureCollection** matching
+`BlockagesMapCollection` in `src/lib/map/logie-blockages.ts`.
 
-**Local smoke (not a second FE PR):** `GET /api/dev/logie-blockages` reads the spike
-dump and powers Layers → Blockages in development. clear-mvp fetches via
-`src/lib/map/fetch-blockages.ts`. After this ticket, set
-`NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` to the slim API URL — same map code. Delivery model:
-[`docs/logie-blockages-delivery.md`](./logie-blockages-delivery.md).
+Either:
 
-### Shape sketch (from spike)
+- **A.** clear-api applies the same slim/simplify transform server-side, or  
+- **B.** clear-api returns persisted features and clear-mvp runs `toBlockagesMapCollection`
+  once on the payload (still no ArcGIS in the browser).
+
+Prefer **A** so clients never download fat dumps (~450KB blocked SDN → ~60KB slim).
+
+### Feature properties (slim)
 
 ```ts
 {
-  feature_type: "road" | "bridge" | /* … */,
-  route_id: string | number | null, // osmid when present
+  feature_type: "road" | "bridge",
+  route_id: string | number | null,
   name: string | null,
-  iso3: string | null,
-  status_field: string,
+  label: string, // always set: name → remark snippet → "Road · {status}"
   status_code: number,
-  status: string, // domain label
-  status_as_of: string | null, // ISO timestamp
-  fclass: string | null,
-  geometry: GeoJSON
+  status: string,
+  status_as_of: string | null, // ISO
+  status_remark: string | null,
+  source_name: string | null,
+  source_label: string | null, // optional normalized LC / partner label
+  source_reliability_code: number | null,
+  source_reliability: string | null,
+  age_days: number | null, // whole days since status_as_of
+  stale: 0 | 1, // 1 when age_days >= 15
+  // geometry: LineString | MultiLineString | Point (bridges)
 }
 ```
 
-## Expo ticket draft
+### Collection `meta` (recommended)
 
-**Title:** LogIE → clear-api GeoJSON ingest / persist
+```ts
+{
+  source: "logie-ingest",
+  feature_types: ["road", "bridge"],
+  feature_count: number,
+  simplify_tolerance_deg?: number,
+  pulled_at: string, // ISO — CLEAR sync time
+  iso3?: "SDN"
+}
+```
 
-**Depends on:** Expo #280 LogIE spike (this doc + Sudan findings)
+### Paint semantics (FE — do not change server-side)
 
-**Blocks:** Expo #277 Blockages wire-up
+| Signal | Meaning |
+|--------|---------|
+| Color dark red `#B91C1C` | Not passable (`status_code` 4) |
+| Color amber `#D97706` | Restricted / damaged (`status_code` 3) |
+| Solid line | `stale === 0` (`age_days` < 15) |
+| Dashed + lower opacity | `stale === 1` (`age_days` ≥ 15) |
 
-**Acceptance:**
+### Client wiring after #317
+
+```bash
+NEXT_PUBLIC_LOGIE_BLOCKAGES_URL=<auth’d clear-api slim blockages URL>
+```
+
+Swap point: `src/lib/map/fetch-blockages.ts`. Without that env, production keeps
+Blockages as **Coming soon**; development uses `/api/dev/logie-blockages`.
+
+Delivery model: [`docs/logie-blockages-delivery.md`](./logie-blockages-delivery.md).
+
+---
+
+## Acceptance (Expo #317)
 
 1. clear-api can pull (or accept) LogIE access-issue features for at least SDN.
-2. Persists geometry, identity (`feature_type` + `route_id`/`osmid`), per-layer status
-   code + label, `status_as_of`, and `fclass` when present.
-3. Documented refresh path; provenance noted (LogIE / OSM).
-4. clear-mvp can fetch persisted features for map paint without embedding ArcGIS pulls in
-   the Next.js request path.
-5. Map endpoint returns (or is transformable to) the slim Blockages contract in
-   `src/lib/map/logie-blockages.ts` — not full LogIE dumps.
-6. Out of scope: nested Access IA comps; Overpass; icon sprites; painting #277 itself.
+2. Persists geometry, identity, status code + label, `status_as_of`, `source_name`,
+   `source_reliability_code` when present, `fclass` when present, and ingest
+   `pulled_at`.
+3. Documented refresh path; provenance = LogIE / OSM.
+4. clear-mvp can fetch persisted slim features **without** embedding ArcGIS in Next.js.
+5. Response matches (or transforms to) `src/lib/map/logie-blockages.ts`, including
+   freshness fields at the **15-day** threshold.
+6. Out of scope: Access IA comps; Overpass; sprites; #277 paint work; inventing
+   reliability; satellite double-check.
 
 ## Related
 
-- Findings: [`docs/logie-spike-sudan.md`](./logie-spike-sudan.md)
-- Run spike: `npm run logie:spike` → `scripts/logie/out/`
+- Spike findings: [`docs/logie-spike-sudan.md`](./logie-spike-sudan.md)
+- ADR: [`docs/adr/0003-logie-is-access-constraint-source.md`](./adr/0003-logie-is-access-constraint-source.md)
+- Local pull: `npm run logie:spike` → `scripts/logie/out/` (gitignored)
+- Reference gist: https://gist.github.com/eoglethorpe/90f2b9e645d43fe8d74c7b442d7e9ce9
 - CONTEXT.md: **LogIE**, **LogIE spike**, **LogIE ingest**, **Blockages**

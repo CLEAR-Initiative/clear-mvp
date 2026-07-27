@@ -419,50 +419,51 @@ nextjs-portal {
   border-radius: 10px;
 }
 
-/* LogIE Blockages hover popup — theme chrome (Mapbox defaults to white) */
+/* LogIE Blockages hover popup — beat Mapbox’s default white chrome */
 .logie-blockages-popup .mapboxgl-popup-content {
-  padding: 0;
-  border-radius: 6px;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  border: none !important;
 }
 .logie-blockages-popup--light .mapboxgl-popup-content {
-  background: #ffffff;
-  color: #0f172a;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12) !important;
 }
 .logie-blockages-popup--dark .mapboxgl-popup-content {
-  background: #0f172a;
-  color: #f8fafc;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
 }
 .logie-blockages-popup--light.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
 .logie-blockages-popup--light.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
 .logie-blockages-popup--light.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
-  border-bottom-color: #ffffff;
+  border-bottom-color: #ffffff !important;
 }
 .logie-blockages-popup--light.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
 .logie-blockages-popup--light.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
 .logie-blockages-popup--light.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
-  border-top-color: #ffffff;
+  border-top-color: #ffffff !important;
 }
 .logie-blockages-popup--light.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
-  border-right-color: #ffffff;
+  border-right-color: #ffffff !important;
 }
 .logie-blockages-popup--light.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
-  border-left-color: #ffffff;
+  border-left-color: #ffffff !important;
 }
 .logie-blockages-popup--dark.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
 .logie-blockages-popup--dark.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
 .logie-blockages-popup--dark.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
-  border-bottom-color: #0f172a;
+  border-bottom-color: #0f172a !important;
 }
 .logie-blockages-popup--dark.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
 .logie-blockages-popup--dark.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
 .logie-blockages-popup--dark.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
-  border-top-color: #0f172a;
+  border-top-color: #0f172a !important;
 }
 .logie-blockages-popup--dark.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
-  border-right-color: #0f172a;
+  border-right-color: #0f172a !important;
 }
 .logie-blockages-popup--dark.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
-  border-left-color: #0f172a;
+  border-left-color: #0f172a !important;
 }

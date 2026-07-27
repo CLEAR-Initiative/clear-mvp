@@ -1767,6 +1767,13 @@
       "operational": "Opérationnel",
       "comingSoon": "Bientôt disponible",
       "blockages": "Blocages",
+      "blockagesCurrent": "Plein · < 15 j",
+      "blockagesStale": "Pointillé · ≥ 15 j",
+      "blockagesStaleNote": "Survolez pour la date exacte. Le pointillé peut encore être contraint.",
+      "blockagesStatus": "Couleur du statut",
+      "blockagesNotPassable": "Non praticable",
+      "blockagesRestricted": "Restreint",
+      "blockagesFreshness": "Fraîcheur",
       "idpDensity": "Densité IDP",
       "nrcLocations": "Sites NRC",
       "filters": "Filtres"

@@ -1767,6 +1767,13 @@
       "operational": "تشغيلي",
       "comingSoon": "قريبًا",
       "blockages": "العوائق",
+      "blockagesCurrent": "متصل · < 15 يومًا",
+      "blockagesStale": "متقطع · ≥ 15 يومًا",
+      "blockagesStaleNote": "مرّر للتاريخ. المتقطع قد يظل مقيدًا.",
+      "blockagesStatus": "لون الحالة",
+      "blockagesNotPassable": "غير قابل للمرور",
+      "blockagesRestricted": "مقيد",
+      "blockagesFreshness": "الحداثة",
       "idpDensity": "كثافة النازحين",
       "nrcLocations": "مواقع NRC",
       "filters": "عوامل التصفية"

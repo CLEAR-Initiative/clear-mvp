@@ -1,19 +1,19 @@
 /**
  * Blockages data source — single swap point for spike → clear-api.
  *
- * ## Delivery model (one clear-mvp PR)
+ * ## Delivery model (one clear-mvp paint path)
  *
- * This branch ships everything the map needs to paint Blockages against a
- * **stable contract** (`BlockagesMapCollection` from `logie-blockages.ts`).
+ * The map paints against a **stable contract** (`BlockagesMapCollection`).
+ * Do **not** call LogIE ArcGIS from the browser. After Expo **#317**, the client
+ * only talks to **clear-api** (auth’d / server-persisted slim GeoJSON) via
+ * `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` (or a future BFF proxy). Hold shipping this
+ * layer to shared environments until that ingest path exists.
  *
  * | Phase | Source | UI |
  * |-------|--------|-----|
- * | Now (review/QA) | `GET /api/dev/logie-blockages` (spike GeoJSON on disk) | Layers toggle in development |
- * | After Expo #317 | Set `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` to clear-api slim endpoint | Same toggle; works in preview/prod when URL is set |
- *
- * There is **no** second clear-mvp PR that rewrites the map layer. Expo #277 is
- * “point at ingest + enable for all environments” — ideally just env + a short
- * checklist, not a parallel FE stack.
+ * | Local spike (#280) | `GET /api/dev/logie-blockages` (disk dump) | Layers toggle in **development only** |
+ * | After Expo #317 | clear-api slim Blockages URL | Same toggle when env URL is set |
+ * | Expo #277 | Env + checklist | Enable outside local spike — **not** a FE rewrite |
  *
  * Spec: `docs/clear-api-logie-ingest.md` · ADR-0003
  */
@@ -22,16 +22,19 @@ import type { BlockagesMapCollection } from "~/lib/map/logie-blockages";
 
 const SPIKE_PATH = "/api/dev/logie-blockages";
 
-/** True when Layers → Blockages should be an interactive toggle (not Coming soon). */
+/**
+ * True when Layers → Blockages should be an interactive toggle (not Coming soon).
+ * Production / preview stay Coming soon unless clear-api URL is configured —
+ * never expose the local spike route as the prod data path.
+ */
 export function isBlockagesUiEnabled(): boolean {
-  if (process.env.NEXT_PUBLIC_LOGIE_BLOCKAGES_URL) return true;
+  if (process.env.NEXT_PUBLIC_LOGIE_BLOCKAGES_URL?.trim()) return true;
   return process.env.NODE_ENV === "development";
 }
 
 /**
  * Resolve the GeoJSON URL. Prefer clear-api when configured; otherwise spike route.
- * Production without `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` should not call this
- * (`isBlockagesUiEnabled` is false → Coming soon stub).
+ * Callers must gate on `isBlockagesUiEnabled()` first.
  */
 export function getBlockagesFetchUrl(): string {
   return process.env.NEXT_PUBLIC_LOGIE_BLOCKAGES_URL?.trim() || SPIKE_PATH;

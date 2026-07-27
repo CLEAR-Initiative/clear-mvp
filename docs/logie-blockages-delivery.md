@@ -25,6 +25,12 @@ Fetch swap point: `src/lib/map/fetch-blockages.ts`
 API waitlist: `docs/clear-api-logie-ingest.md`  
 SoT decision: `docs/adr/0003-logie-is-access-constraint-source.md`
 
+### Freshness (map + ingest)
+
+- Always show exact `status_as_of` + relative age (“15 days ago”).
+- At **≥ 15 days**: keep features on the map but **demote** (dashed / lower opacity) and warn — do not hide (absence would look like open).
+- Ingest (#317) must persist `status_as_of`, `source_name`, reliability when present, and `pulled_at`.
+
 ## After clear-api (#317)
 
 1. clear-api exposes slim Blockages GeoJSON (same shape as spike route response).
@@ -39,3 +45,11 @@ SoT decision: `docs/adr/0003-logie-is-access-constraint-source.md`
    `/api/dev/logie-blockages` for QA; keep Coming soon only when URL is unset in prod.
 
 No map paint rewrite required unless the API cannot match the slim contract.
+
+## Ship sequencing (security)
+
+1. Land **#317** clear-api LogIE persist + auth’d slim Blockages endpoint first.
+2. Only then point preview/prod at that URL (`NEXT_PUBLIC_LOGIE_BLOCKAGES_URL`) and
+   open/complete **#277**. Do not expose ArcGIS LogIE credentials or full dumps to
+   the browser; the client should only fetch CLEAR’s persisted contract.
+3. Local `#280` spike (`/api/dev/logie-blockages`) remains **development-only**.

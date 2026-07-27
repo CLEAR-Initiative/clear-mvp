@@ -465,6 +465,67 @@ export function MapPanelBar({
                     </>
                   )}
 
+                  {showBlockages !== undefined && showBlockages && (
+                    <>
+                      <Divider color="var(--color-bg-muted)" my={4} />
+                      <Group justify="space-between" align="flex-start" gap={8} wrap="nowrap">
+                        <Box style={{ flex: 1, minWidth: 0 }}>
+                          <SectionLabel>{t("panels.blockages")}</SectionLabel>
+                          <Stack gap={4}>
+                            <Group gap={8} wrap="nowrap">
+                              <Box
+                                w={18}
+                                h={3}
+                                style={{ backgroundColor: "#B91C1C", borderRadius: 1, flexShrink: 0 }}
+                              />
+                              <Text size="xs" style={{ fontSize: 11 }}>{t("panels.blockagesCurrent")}</Text>
+                            </Group>
+                            <Group gap={8} wrap="nowrap">
+                              <Box
+                                w={18}
+                                h={0}
+                                style={{
+                                  borderTop: "2px dashed #B91C1C",
+                                  opacity: 0.55,
+                                  flexShrink: 0,
+                                  alignSelf: "center",
+                                }}
+                              />
+                              <Text size="xs" style={{ fontSize: 11 }}>{t("panels.blockagesStale")}</Text>
+                            </Group>
+                          </Stack>
+                        </Box>
+                        <Stack gap={4} style={{ flexShrink: 0, paddingTop: 14 }} title={t("panels.blockagesStatus")}>
+                          <Group gap={4} wrap="nowrap" justify="flex-end">
+                            <Box
+                              w={14}
+                              h={2}
+                              style={{ backgroundColor: "#B91C1C", borderRadius: 1 }}
+                              title={t("panels.blockagesNotPassable")}
+                            />
+                            <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 9 }}>
+                              {t("panels.blockagesNotPassable")}
+                            </Text>
+                          </Group>
+                          <Group gap={4} wrap="nowrap" justify="flex-end">
+                            <Box
+                              w={14}
+                              h={2}
+                              style={{ backgroundColor: "#D97706", borderRadius: 1 }}
+                              title={t("panels.blockagesRestricted")}
+                            />
+                            <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 9 }}>
+                              {t("panels.blockagesRestricted")}
+                            </Text>
+                          </Group>
+                        </Stack>
+                      </Group>
+                      <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 10, lineHeight: 1.35 }} mt={4}>
+                        {t("panels.blockagesStaleNote")}
+                      </Text>
+                    </>
+                  )}
+
                 </Stack>
                 </Box>
               </>

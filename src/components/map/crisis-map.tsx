@@ -30,6 +30,7 @@ import {
   buildNrcOfficePopupHtml,
   paintNrcOfficeMarkerTheme,
 } from "~/lib/map/nrc-office-markers";
+import { BLOCKAGES_STALE_AFTER_DAYS } from "~/lib/map/logie-blockages";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
 const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
@@ -1468,9 +1469,10 @@ export function CrisisMap({
     const m = map.current;
     const SOURCE = "logie-blockages";
     const LINE_LAYER = "logie-blockages-line";
+    const LINE_LAYER_STALE = "logie-blockages-line-stale";
     const LINE_HIT = "logie-blockages-line-hit";
     const POINT_LAYER = "logie-blockages-point";
-    const HOVER_LAYERS = [LINE_HIT, LINE_LAYER, POINT_LAYER];
+    const HOVER_LAYERS = [LINE_HIT, LINE_LAYER, LINE_LAYER_STALE, POINT_LAYER];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mb = (window as unknown as { mapboxgl?: any }).mapboxgl;
 
@@ -1496,34 +1498,69 @@ export function CrisisMap({
             ? "Road"
             : "Segment";
       const status = escapeHtml(String(p.status ?? "—"));
-      const asOf = p.status_as_of
-        ? escapeHtml(String(p.status_as_of).slice(0, 10))
-        : null;
+      const ageRaw = p.age_days;
+      const ageDays =
+        typeof ageRaw === "number"
+          ? ageRaw
+          : typeof ageRaw === "string" && ageRaw !== ""
+            ? Number(ageRaw)
+            : null;
+      const stale =
+        p.stale === 1 ||
+        p.stale === "1" ||
+        (typeof ageDays === "number" &&
+          !Number.isNaN(ageDays) &&
+          ageDays >= BLOCKAGES_STALE_AFTER_DAYS);
+      const freshness = (() => {
+        if (p.status_as_of) {
+          const day = String(p.status_as_of).slice(0, 10);
+          if (ageDays == null || Number.isNaN(ageDays)) return `Status as of ${day}`;
+          const ago =
+            ageDays === 0
+              ? "today"
+              : ageDays === 1
+                ? "1 day ago"
+                : `${ageDays} days ago`;
+          return `Status as of ${day} (${ago})`;
+        }
+        return "Status date unknown";
+      })();
       const remark =
         typeof p.status_remark === "string" && p.status_remark.trim()
           ? escapeHtml(p.status_remark.trim().slice(0, 160))
           : null;
-      // Explicit hex — Mapbox popup chrome doesn't inherit app CSS variables reliably.
-      const bg = isDark ? "#0f172a" : "#ffffff";
+      // Colors only — chrome lives on `.mapboxgl-popup-content` (avoids white Mapbox default + nested card).
       const titleColor = isDark ? "#f8fafc" : "#0f172a";
       const secondary = isDark ? "#cbd5e1" : "#334155";
       const muted = isDark ? "#94a3b8" : "#64748b";
+      const warn = isDark ? "#fbbf24" : "#b45309";
       const partner =
-        typeof p.source_name === "string" && p.source_name.trim()
-          ? escapeHtml(p.source_name.trim())
+        (typeof p.source_label === "string" && p.source_label.trim()
+          ? p.source_label.trim()
+          : typeof p.source_name === "string" && p.source_name.trim()
+            ? p.source_name.trim()
+            : null);
+      const partnerEsc = partner ? escapeHtml(partner) : null;
+      const reliability =
+        typeof p.source_reliability === "string" && p.source_reliability.trim()
+          ? escapeHtml(p.source_reliability.trim())
           : null;
       const html = `
-        <div style="padding:10px 12px;font-family:system-ui,-apple-system,sans-serif;min-width:180px;max-width:260px;background:${bg};color:${titleColor};border-radius:6px;">
+        <div style="padding:10px 12px;font-family:system-ui,-apple-system,sans-serif;min-width:180px;max-width:280px;color:${titleColor};">
           <div style="font-weight:700;font-size:13px;color:${titleColor};line-height:1.3;margin-bottom:6px;">${title}</div>
           <div style="font-size:11px;color:${secondary};margin-bottom:4px;">
             <span style="font-weight:600;">${kind}</span>
             <span style="opacity:0.55;"> · </span>
             <span>${status}</span>
           </div>
-          ${asOf ? `<div style="font-size:10px;color:${muted};">As of ${asOf}</div>` : ""}
+          <div style="font-size:10px;color:${stale ? warn : muted};font-weight:${stale ? 600 : 400};">
+            ${escapeHtml(freshness)}
+          </div>
+          ${stale ? `<div style="font-size:10px;color:${warn};margin-top:4px;line-height:1.35;">Still probable this segment is constrained, but the LogIE status is ${ageDays != null && !Number.isNaN(ageDays) ? ageDays : `${BLOCKAGES_STALE_AFTER_DAYS}+`} days old and may no longer be accurate.</div>` : ""}
           ${remark && remark !== title ? `<div style="font-size:10px;color:${muted};margin-top:6px;line-height:1.4;">${remark}</div>` : ""}
           <div style="font-size:10px;color:${muted};margin-top:8px;padding-top:6px;border-top:1px solid ${isDark ? "rgba(148,163,184,0.25)" : "rgba(15,23,42,0.08)"};">
-            Source: LogIE (WFP Logistics Cluster)${partner ? ` · ${partner}` : ""}
+            Source: LogIE (WFP Logistics Cluster)${partnerEsc ? ` · ${partnerEsc}` : ""}
+            ${reliability ? `<div style="margin-top:2px;">Reporter confidence: ${reliability}</div>` : ""}
           </div>
         </div>
       `;
@@ -1553,6 +1590,7 @@ export function CrisisMap({
       popup?.remove();
       popup = null;
       try { if (m.getLayer(LINE_LAYER)) m.removeLayer(LINE_LAYER); } catch { /* ignore */ }
+      try { if (m.getLayer(LINE_LAYER_STALE)) m.removeLayer(LINE_LAYER_STALE); } catch { /* ignore */ }
       try { if (m.getLayer(LINE_HIT)) m.removeLayer(LINE_HIT); } catch { /* ignore */ }
       try { if (m.getLayer(POINT_LAYER)) m.removeLayer(POINT_LAYER); } catch { /* ignore */ }
       try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
@@ -1572,20 +1610,27 @@ export function CrisisMap({
         data: blockagesGeoJson as never,
       });
 
-      // Not Passable = stronger; restricted = amber.
+      // Status severity (road/bridge currstatus_physical). Coerce string props from Mapbox.
       const lineColor = [
         "match",
-        ["get", "status_code"],
-        4, "#B91C1C",
-        3, "#D97706",
-        "#DC2626",
+        ["to-number", ["get", "status_code"]],
+        4, "#B91C1C", // Not Passable
+        3, "#D97706", // Passable with restrictions / Damaged
+        "#DC2626", // fallback
       ] as never;
 
-      const lineFilter = [
+      const isLine = [
         "in",
         ["geometry-type"],
         ["literal", ["LineString", "MultiLineString"]],
       ] as never;
+      // GeoJSON props may arrive as number or string through Mapbox.
+      const isStale = [
+        "any",
+        ["==", ["get", "stale"], 1],
+        ["==", ["get", "stale"], "1"],
+      ] as never;
+      const isFresh = ["!", isStale] as never;
 
       // Wider invisible hit target so thin roads are easy to hover.
       m.addLayer(
@@ -1593,7 +1638,7 @@ export function CrisisMap({
           id: LINE_HIT,
           type: "line",
           source: SOURCE,
-          filter: lineFilter,
+          filter: isLine,
           paint: {
             "line-color": "#000000",
             "line-opacity": 0,
@@ -1609,7 +1654,7 @@ export function CrisisMap({
           id: LINE_LAYER,
           type: "line",
           source: SOURCE,
-          filter: lineFilter,
+          filter: ["all", isLine, isFresh] as never,
           paint: {
             "line-color": lineColor,
             "line-width": [
@@ -1619,6 +1664,32 @@ export function CrisisMap({
               12, 5,
             ],
             "line-opacity": 0.9,
+          },
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+          },
+        },
+        beforeId,
+      );
+
+      // Stale (≥15d): still painted, dashed + lower opacity — do not hide.
+      m.addLayer(
+        {
+          id: LINE_LAYER_STALE,
+          type: "line",
+          source: SOURCE,
+          filter: ["all", isLine, isStale] as never,
+          paint: {
+            "line-color": lineColor,
+            "line-width": [
+              "interpolate", ["linear"], ["zoom"],
+              4, 1.25,
+              8, 2.5,
+              12, 4,
+            ],
+            "line-opacity": 0.45,
+            "line-dasharray": [1.5, 1.5],
           },
           layout: {
             "line-cap": "round",
@@ -1642,6 +1713,12 @@ export function CrisisMap({
               10, 6,
             ],
             "circle-color": lineColor,
+            "circle-opacity": [
+              "case",
+              isStale,
+              0.5,
+              0.95,
+            ],
             "circle-stroke-width": 1.5,
             "circle-stroke-color": isDark ? "#0f172a" : "#ffffff",
           },

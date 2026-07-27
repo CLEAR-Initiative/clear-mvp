@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  ageDaysSince,
   blockagesDisplayLabel,
+  BLOCKAGES_STALE_AFTER_DAYS,
+  formatBlockagesFreshness,
+  isBlockagesStatusStale,
+  normalizeBlockagesSourceName,
   simplifyLine,
   toBlockagesMapCollection,
   type LogieAccessCollection,
@@ -94,7 +99,12 @@ describe("toBlockagesMapCollection", () => {
     expect(out.features[0]!.properties).not.toHaveProperty("fclass");
     expect(out.features[0]!.properties).not.toHaveProperty("admin1");
     expect(out.features[0]!.properties.label).toBe("Test");
+    expect(out.features[0]!.properties.stale).toBe(1);
+    expect(out.features[0]!.properties.age_days).toBeGreaterThanOrEqual(
+      BLOCKAGES_STALE_AFTER_DAYS,
+    );
     expect(out.features[1]!.properties.label).toBe("Bridge");
+    expect(out.features[1]!.properties.stale).toBe(0);
     expect(out.meta.feature_count).toBe(2);
     expect(out.meta.bytes_in).toBeGreaterThan(0);
     expect(out.meta.bytes_out).toBeGreaterThan(0);
@@ -117,6 +127,23 @@ describe("toBlockagesMapCollection", () => {
         status_remark: "Zalingei - Garsila route. Extra detail.",
       }),
     ).toBe("Zalingei - Garsila route");
+  });
+
+  it("marks status stale at 15 days and formats freshness", () => {
+    expect(BLOCKAGES_STALE_AFTER_DAYS).toBe(15);
+    expect(isBlockagesStatusStale(14)).toBe(false);
+    expect(isBlockagesStatusStale(15)).toBe(true);
+    expect(normalizeBlockagesSourceName("WFP-LC")).toBe(
+      "WFP Logistics Cluster",
+    );
+    expect(normalizeBlockagesSourceName("WFP-;C")).toBe(
+      "WFP Logistics Cluster",
+    );
+    const now = new Date("2026-07-27T12:00:00Z");
+    expect(ageDaysSince("2026-07-12T00:00:00Z", now)).toBe(15);
+    expect(formatBlockagesFreshness("2026-07-12T00:00:00Z", 15)).toBe(
+      "2026-07-12 (15 days ago)",
+    );
   });
 
   it("simplifies road line vertices", () => {

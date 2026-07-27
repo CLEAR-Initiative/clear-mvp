@@ -25,6 +25,17 @@ export type LogieAccessCollection = {
   metadata?: Record<string, unknown>;
 };
 
+/** Status older than this (days) is still shown but demoted + warned. */
+export const BLOCKAGES_STALE_AFTER_DAYS = 15;
+
+export const LOGIE_RELIABILITY_LABELS: Record<number, string> = {
+  0: "Unknown",
+  1: "Low (rumours, 3rd-hand)",
+  2: "Medium (heard, media)",
+  3: "High (first-hand, crowdsource)",
+  4: "Reliable (first-hand, credible)",
+};
+
 export type BlockagesMapProperties = {
   feature_type: BlockagesFeatureType;
   route_id: string | number | null;
@@ -38,6 +49,14 @@ export type BlockagesMapProperties = {
   status_remark: string | null;
   /** Optional partner reporter from LogIE; platform attribution is always LogIE. */
   source_name: string | null;
+  /** Normalized partner / LC label for UI. */
+  source_label: string | null;
+  source_reliability_code: number | null;
+  source_reliability: string | null;
+  /** Whole days since status_as_of; null if unknown. */
+  age_days: number | null;
+  /** 1 when age_days >= BLOCKAGES_STALE_AFTER_DAYS (Mapbox-friendly). */
+  stale: 0 | 1;
 };
 
 export type BlockagesMapFeature = {
@@ -164,6 +183,64 @@ export function blockagesDisplayLabel(p: Record<string, unknown>): string {
   return `${kind} · ${status}`;
 }
 
+/** Collapse messy LogIE reporter strings into a short UI label. */
+export function normalizeBlockagesSourceName(
+  raw: string | null | undefined,
+): string | null {
+  if (!raw?.trim()) return null;
+  const s = raw.trim();
+  const key = s.toUpperCase().replace(/[^A-Z0-9]+/g, "");
+  if (
+    key === "WFPLC" ||
+    key === "LC" ||
+    key === "LCWFP" ||
+    key === "WFPC" ||
+    key.startsWith("WFPLC") ||
+    key.startsWith("LCWFP")
+  ) {
+    return "WFP Logistics Cluster";
+  }
+  if (key.includes("PARTNER")) return "Partner report";
+  return s;
+}
+
+export function ageDaysSince(
+  statusAsOf: string | null | undefined,
+  now: Date = new Date(),
+): number | null {
+  if (!statusAsOf) return null;
+  const dt = new Date(statusAsOf);
+  if (Number.isNaN(dt.getTime())) return null;
+  const ms = now.getTime() - dt.getTime();
+  if (ms < 0) return 0;
+  return Math.floor(ms / (1000 * 60 * 60 * 24));
+}
+
+export function isBlockagesStatusStale(ageDays: number | null): boolean {
+  return ageDays != null && ageDays >= BLOCKAGES_STALE_AFTER_DAYS;
+}
+
+/** e.g. "2026-06-15 (42 days ago)" or "unknown date". */
+export function formatBlockagesFreshness(
+  statusAsOf: string | null | undefined,
+  ageDays: number | null = ageDaysSince(statusAsOf),
+): string {
+  if (!statusAsOf || ageDays == null) return "Status date unknown";
+  const day = statusAsOf.slice(0, 10);
+  const ago =
+    ageDays === 0 ? "today" : ageDays === 1 ? "1 day ago" : `${ageDays} days ago`;
+  return `${day} (${ago})`;
+}
+
+function parseReliabilityCode(raw: unknown): number | null {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "string" && raw.trim() !== "") {
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
 function slimProperties(p: Record<string, unknown>): BlockagesMapProperties | null {
   if (!isBlockagesType(p.feature_type)) return null;
   const name =
@@ -180,6 +257,10 @@ function slimProperties(p: Record<string, unknown>): BlockagesMapProperties | nu
     typeof p.source_name === "string" && p.source_name.trim()
       ? p.source_name.trim()
       : null;
+  const statusAsOf =
+    (p.status_as_of as string | null | undefined) ?? null;
+  const ageDays = ageDaysSince(statusAsOf);
+  const relCode = parseReliabilityCode(p.source_reliability_code);
   return {
     feature_type: p.feature_type,
     route_id: (p.route_id as string | number | null | undefined) ?? null,
@@ -187,9 +268,15 @@ function slimProperties(p: Record<string, unknown>): BlockagesMapProperties | nu
     label: blockagesDisplayLabel({ ...p, name, status_remark: remark, status }),
     status_code: (p.status_code as number | string | null | undefined) ?? null,
     status,
-    status_as_of: (p.status_as_of as string | null | undefined) ?? null,
+    status_as_of: statusAsOf,
     status_remark: remark,
     source_name: sourceName,
+    source_label: normalizeBlockagesSourceName(sourceName),
+    source_reliability_code: relCode,
+    source_reliability:
+      relCode != null ? (LOGIE_RELIABILITY_LABELS[relCode] ?? String(relCode)) : null,
+    age_days: ageDays,
+    stale: isBlockagesStatusStale(ageDays) ? 1 : 0,
   };
 }
 
