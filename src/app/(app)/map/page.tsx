@@ -131,8 +131,12 @@ export default function MapPage() {
   // "all" additionally pulls archived history so the timeline can scrub
   // back through past months. Default is a 30-day window - the archived
   // backlog is ~5x the published set and dominated page load time.
-  const [timeframe, setTimeframe] = useState<"7d" | "30d" | "90d" | "all">("30d");
+  // Deep-links start on "all" so the focused entity isn't dropped by the window.
+  const [timeframe, setTimeframe] = useState<"7d" | "30d" | "90d" | "all">(
+    () => (focusEntityId ? "all" : "30d"),
+  );
   
+
   // Compute from/to dates for server-side filtering
   const timeframeRange = useMemo(() => {
     if (timeframe === "all") return { from: undefined, to: undefined };
@@ -373,7 +377,8 @@ export default function MapPage() {
   const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
 
   // Deep-link from detail Back / Full Map: align data view + clear filters that
-  // would hide the target marker (#108).
+  // would hide the target marker (#108). Timeframe must widen — Detection can
+  // surface entities outside the map's default 30d window.
   useEffect(() => {
     if (!focusEntityId) return;
     if (focusSignalId) setDataView("signal");
@@ -381,6 +386,8 @@ export default function MapPage() {
     else if (focusEventId) setDataView("event");
     setSelectedMonth(null);
     setSelectedRegion("All Regions");
+    setSelectedTypes([]);
+    setTimeframe("all");
   }, [focusEntityId, focusSignalId, focusCrisisId, focusEventId]);
 
   // Pulse the deep-linked pin once markers are available.
@@ -678,17 +685,24 @@ export default function MapPage() {
 
   /* ---- Apply timeline filter on top ---- */
   const currentMarkers: CrisisMarker[] = useMemo(() => {
-    if (!selectedMonth) return markersBeforeTime;
-    return markersBeforeTime.filter((m) => {
-      // Markers without a known timestamp pass through - see availableMonths
-      // comment. Time-aware markers must match the picked YYYY-MM.
-      if (!m.occurredAt) return true;
-      const d = new Date(m.occurredAt);
-      if (Number.isNaN(d.getTime())) return true;
-      const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-      return ym === selectedMonth;
-    });
-  }, [markersBeforeTime, selectedMonth]);
+    const timed = !selectedMonth
+      ? markersBeforeTime
+      : markersBeforeTime.filter((m) => {
+          // Markers without a known timestamp pass through - see availableMonths
+          // comment. Time-aware markers must match the picked YYYY-MM.
+          if (!m.occurredAt) return true;
+          const d = new Date(m.occurredAt);
+          if (Number.isNaN(d.getTime())) return true;
+          const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+          return ym === selectedMonth;
+        });
+    // Camera focuses from allMarkers; the canvas paints currentMarkers. Keep the
+    // deep-link pin visible even if residual location/type filters would drop it.
+    if (focusMarker && !timed.some((m) => m.id === focusMarker.id)) {
+      return [...timed, focusMarker];
+    }
+    return timed;
+  }, [markersBeforeTime, selectedMonth, focusMarker]);
 
   /** Resolve a panel's frozen proximity order against the live filtered set. */
   const markersForPanelNav = useCallback(
