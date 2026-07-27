@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef } from "react";
 import Link from "next/link";
 import { useSelectedLayoutSegments } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -12,6 +12,9 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
+import { useOptimisticNavSegment } from "~/hooks/use-optimistic-nav-segment";
+import { useSlidingNavIndicator } from "~/hooks/use-sliding-nav-indicator";
+import { SlidingNavIndicator } from "~/components/ui/sliding-nav-indicator";
 
 const bottomNavItems = [
   { labelKey: "items.overview",  href: "/dashboard", icon: IconLayoutDashboard, segment: "dashboard" },
@@ -24,16 +27,13 @@ export function MobileBottomNav() {
   const t = useTranslations("nav");
   const segments = useSelectedLayoutSegments();
   const activeSegment = segments[0] ?? "";
-  const [optimisticSegment, setOptimisticSegment] = useState<string | null>(null);
-
-  // Drop tap optimism once the route (or burger nav) updates the real segment,
-  // otherwise bottom-nav stays stuck on the last tapped tab.
-  useEffect(() => {
-    setOptimisticSegment(null);
-  }, [activeSegment]);
+  const { displaySegment, setOptimisticSegment } = useOptimisticNavSegment(activeSegment);
+  const navRef = useRef<HTMLElement>(null);
+  const indicator = useSlidingNavIndicator(navRef, displaySegment || null);
 
   return (
     <Box
+      ref={navRef}
       component="nav"
       style={{
         position: "fixed",
@@ -48,19 +48,26 @@ export function MobileBottomNav() {
         justifyContent: "space-around",
         zIndex: 100,
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        paddingInline: 4,
       }}
       hiddenFrom="sm"
     >
+      <SlidingNavIndicator box={indicator} variant="bottom" />
       {bottomNavItems.map((item) => {
-        const isActive = (optimisticSegment ?? activeSegment) === item.segment;
+        const isActive = displaySegment === item.segment;
         const Icon = item.icon;
 
         return (
           <Link
             key={item.href}
             href={item.href}
-            onClick={() => setOptimisticSegment(item.segment)}
+            data-nav-segment={item.segment}
+            onClick={() => {
+              setOptimisticSegment(item.segment);
+            }}
             style={{
+              position: "relative",
+              zIndex: 1,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -68,6 +75,7 @@ export function MobileBottomNav() {
               textDecoration: "none",
               flex: 1,
               padding: `${spacingPx[2]}px 0`,
+              borderRadius: 10,
             }}
           >
             <Icon
@@ -75,7 +83,7 @@ export function MobileBottomNav() {
               style={{
                 color: isActive ? colors.accent : colors.textMuted,
                 strokeWidth: isActive ? 2.2 : 1.8,
-                transition: "color 150ms ease-out, stroke-width 150ms ease-out",
+                transition: "color 180ms ease-out, stroke-width 180ms ease-out",
               }}
             />
             <Text
@@ -83,7 +91,7 @@ export function MobileBottomNav() {
                 fontSize: fontSizesPx["2xs"],
                 fontWeight: isActive ? 600 : 500,
                 color: isActive ? colors.accent : colors.textMuted,
-                transition: "color 150ms ease-out, font-weight 150ms ease-out",
+                transition: "color 180ms ease-out",
               }}
             >
               {t(item.labelKey)}

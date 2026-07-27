@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useMemo, useRef } from "react";
+import { Suspense, use, useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { keepPreviousData } from "@tanstack/react-query";
 import { api } from "~/trpc/react";
@@ -10,7 +10,7 @@ import { useEventNavigation, getEventMapCenter } from "~/hooks/use-event-navigat
 import { deriveEntityPending, useEntityNavigation } from "~/hooks/use-entity-navigation";
 import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
 
-export default function EventDetailPage({
+function EventDetailPageContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -98,5 +98,17 @@ export default function EventDetailPage({
       navigationMapCenter={navigationMapCenter}
       referrer={referrer}
     />
+  );
+}
+
+export default function EventDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <EventDetailPageContent params={params} />
+    </Suspense>
   );
 }

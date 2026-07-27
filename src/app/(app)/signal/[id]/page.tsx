@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useMemo, useRef } from "react";
+import { Suspense, use, useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { keepPreviousData } from "@tanstack/react-query";
 import { api } from "~/trpc/react";
@@ -8,7 +8,7 @@ import { SignalDetailContent } from "~/components/signal-detail/signal-detail-co
 import { useSignalNavigation, getSignalMapCenter } from "~/hooks/use-event-navigation";
 import { deriveEntityPending, useEntityNavigation } from "~/hooks/use-entity-navigation";
 
-export default function SignalDetailPage({
+function SignalDetailPageContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -83,5 +83,17 @@ export default function SignalDetailPage({
       navigationMapCenter={navigationMapCenter}
       referrer={referrer}
     />
+  );
+}
+
+export default function SignalDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <SignalDetailPageContent params={params} />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -103,7 +103,7 @@ function FilterLabel({ children }: { children: string }) {
   );
 }
 
-export default function MapPage() {
+function MapPageContent() {
   const t = useTranslations("map");
   const format = useFormatter();
   const isMobile = useMediaQuery("(max-width: 48em)");
@@ -1343,5 +1343,14 @@ export default function MapPage() {
       `}</style>
 
     </Box>
+  );
+}
+
+
+export default function MapPage() {
+  return (
+    <Suspense fallback={null}>
+      <MapPageContent />
+    </Suspense>
   );
 }

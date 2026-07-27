@@ -777,6 +777,9 @@
       "empty": "No data available",
       "comingSoon": "Coming Soon"
     },
+    "errorBoundary": {
+      "description": "An unexpected error occurred. You can try again."
+    },
     "badges": {
       "soon": "Soon",
       "demo": "Demo",

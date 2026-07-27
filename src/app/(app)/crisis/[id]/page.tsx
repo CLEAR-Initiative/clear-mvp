@@ -1,11 +1,11 @@
 "use client";
 
-import { use } from "react";
+import { Suspense, use } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "~/trpc/react";
 import { CrisisDetailContent } from "~/components/crisis-detail/crisis-detail-content";
 
-export default function CrisisDetailPage({
+function CrisisDetailPageContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -41,5 +41,17 @@ export default function CrisisDetailPage({
       relatedCrises={related}
       referrer={referrer}
     />
+  );
+}
+
+export default function CrisisDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <CrisisDetailPageContent params={params} />
+    </Suspense>
   );
 }

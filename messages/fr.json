@@ -779,6 +779,9 @@
       "empty": "Aucune donnée disponible",
       "comingSoon": "Bientôt disponible"
     },
+    "errorBoundary": {
+      "description": "Une erreur inattendue s'est produite. Vous pouvez réessayer."
+    },
     "badges": {
       "soon": "Bientôt",
       "demo": "Démo",

@@ -82,16 +82,13 @@ function DetectionPageContent() {
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [storedFilters] = useState<StoredFilters>(() => readStoredFilters());
+  const [storageReady, setStorageReady] = useState(false);
 
-  // Priority: URL param (shareable link) > sessionStorage (browser back) > default
+  // URL/defaults only on first render — sessionStorage restore happens after mount
+  // to avoid SSR/client hydration mismatch.
   const [activeTab, setActiveTab] = useState<string | null>(() => {
     const fromUrl = searchParams.get("tab");
     if (fromUrl && VALID_TABS.has(fromUrl)) return fromUrl;
-    try {
-      const stored = sessionStorage.getItem(TAB_STORAGE_KEY);
-      if (stored && VALID_TABS.has(stored)) return stored;
-    } catch { /* sessionStorage unavailable (SSR or private mode) */ }
     return "events";
   });
 
@@ -111,9 +108,9 @@ function DetectionPageContent() {
     params.set("tab", tab);
     router.replace(`/detection?${params.toString()}`, { scroll: false });
   }, [router, searchParams]);
-  const [selectedCountry, setSelectedCountry] = useState(storedFilters.country ?? "Sudan");
-  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(storedFilters.regionId ?? null);
-  const [selectedDate, setSelectedDate] = useState(storedFilters.date ?? "Last 30 days");
+  const [selectedCountry, setSelectedCountry] = useState("Sudan");
+  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState("Last 30 days");
   const localizedDateOptions = useMemo(() => {
     const now = new Date();
     const englishMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -132,26 +129,50 @@ function DetectionPageContent() {
   }, [locale, t]);
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [activeSeverities, setActiveSeverities] = useState<Set<string>>(new Set(storedFilters.severities ?? ["critical", "high", "medium", "low"]));
-  const [selectedTypeFilters, setSelectedTypeFilters] = useState<string[]>(storedFilters.typeFilters ?? []);
+  const [activeSeverities, setActiveSeverities] = useState<Set<string>>(
+    () => new Set(["critical", "high", "medium", "low"]),
+  );
+  const [selectedTypeFilters, setSelectedTypeFilters] = useState<string[]>([]);
   const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, { staleTime: Infinity, refetchOnWindowFocus: false });
   const hierarchy = hierarchyQuery.data ?? [];
   const expandedTypeCodes = selectedTypeFilters.length > 0 ? expandSelectionsToCodes(selectedTypeFilters, hierarchy) : null;
-  const [activeSources, setActiveSources] = useState<Set<string> | null>(
-    storedFilters.sources ? new Set(storedFilters.sources) : null,
-  );
+  const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
   const isFiltered = activeSeverities.size < 4 || selectedTypeFilters.length > 0 || activeSources !== null;
   const filterCount = (activeSeverities.size < 4 ? 1 : 0) + (selectedTypeFilters.length > 0 ? 1 : 0) + (activeSources !== null ? 1 : 0);
 
   const { activeTeamId } = useTeam();
   const { countries, getCenter, getZoom, getLocationId, tree, isLoading: isLocationsLoading } = useLocations();
 
-  const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">(storedFilters.boundaryLevel ?? "A1");
+  const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
+
+  // Restore tab/filters from sessionStorage after mount (URL tab still wins).
+  useEffect(() => {
+    const fromUrl = searchParams.get("tab");
+    if (!fromUrl) {
+      try {
+        const stored = sessionStorage.getItem(TAB_STORAGE_KEY);
+        if (stored && VALID_TABS.has(stored)) setActiveTab(stored);
+      } catch { /* sessionStorage unavailable */ }
+    }
+
+    const storedFilters = readStoredFilters();
+    if (storedFilters.country) setSelectedCountry(storedFilters.country);
+    if (storedFilters.regionId !== undefined) setSelectedRegionId(storedFilters.regionId ?? null);
+    if (storedFilters.date) setSelectedDate(storedFilters.date);
+    if (storedFilters.severities) setActiveSeverities(new Set(storedFilters.severities));
+    if (storedFilters.typeFilters) setSelectedTypeFilters(storedFilters.typeFilters);
+    if (storedFilters.sources !== undefined) {
+      setActiveSources(storedFilters.sources ? new Set(storedFilters.sources) : null);
+    }
+    if (storedFilters.boundaryLevel) setBoundaryLevel(storedFilters.boundaryLevel);
+    setStorageReady(true);
+  }, [searchParams]);
 
   // Mirror filter selections into sessionStorage so they survive navigating
   // to a signal/event detail page and back (that route change unmounts this
   // component, resetting the useState defaults above without this).
   useEffect(() => {
+    if (!storageReady) return;
     try {
       const toStore: StoredFilters = {
         country: selectedCountry,
@@ -166,7 +187,7 @@ function DetectionPageContent() {
     } catch {
       /* sessionStorage unavailable (SSR or private mode) */
     }
-  }, [selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
+  }, [storageReady, selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
 
   const selectedCountryId = useMemo(() => getLocationId(selectedCountry), [selectedCountry, getLocationId]);
 
