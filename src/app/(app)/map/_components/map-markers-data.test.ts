@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { alertsToMarkers, eventsToMarkers, focusEventToMarkers } from "./map-markers-data";
-import type { GqlAlert, GqlEvent, GqlLocation } from "~/lib/types/graphql";
+import {
+  alertsToMarkers,
+  applyLocationChallengesToMarkers,
+  eventsToMarkers,
+  focusEventToMarkers,
+  signalsToMarkers,
+} from "./map-markers-data";
+import type {
+  GqlAlert,
+  GqlEvent,
+  GqlLocation,
+  GqlSignal,
+  GqlSignalLocationChallenge,
+} from "~/lib/types/graphql";
 
 function pointLoc(id: string, lng: number, lat: number): GqlLocation {
   return {
@@ -182,5 +194,72 @@ describe("focusEventToMarkers", () => {
     expect(markers.some((m) => m.eventId === "evt-focus" && m.markerKind === "event")).toBe(true);
     expect(markers.some((m) => m.eventId === "sig-a")).toBe(true);
     expect(markers.some((m) => m.eventId === "sig-b")).toBe(true);
+  });
+});
+
+describe("applyLocationChallengesToMarkers", () => {
+  function baseSignal(id: string, lng: number, lat: number): GqlSignal {
+    return {
+      id,
+      source: { id: "s", name: "Dataminr", type: "dataminr" },
+      title: "Signal",
+      description: null,
+      severity: 3,
+      url: null,
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      collectedAt: "2026-01-01T00:00:00.000Z",
+      originLocation: null,
+      destinationLocation: null,
+      generalLocation: pointLoc(`${id}-loc`, lng, lat),
+      events: [],
+    };
+  }
+
+  function challenge(
+    overrides: Partial<GqlSignalLocationChallenge> & { signalId: string },
+  ): GqlSignalLocationChallenge {
+    return {
+      id: "ch-1",
+      status: "consideration",
+      note: null,
+      proposedLng: null,
+      proposedLat: null,
+      proposedName: null,
+      createdBy: "user-1",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      hasProposedPoint: false,
+      ...overrides,
+    };
+  }
+
+  it("marks bare challenge without adding a second pin", () => {
+    const markers = signalsToMarkers([baseSignal("sig-1", 32, 15)]);
+    const next = applyLocationChallengesToMarkers(markers, [
+      challenge({ signalId: "sig-1" }),
+    ]);
+    expect(next).toHaveLength(1);
+    expect(next[0]?.locationTrust).toBe("challenged");
+    expect(next[0]?.locationPinRole).toBe("source");
+  });
+
+  it("adds a proposed ghost pin when correction point exists", () => {
+    const markers = signalsToMarkers([baseSignal("sig-2", 32, 15)]);
+    const next = applyLocationChallengesToMarkers(markers, [
+      challenge({
+        signalId: "sig-2",
+        proposedLng: 33.1,
+        proposedLat: 14.2,
+        proposedName: "Nyala",
+        hasProposedPoint: true,
+      }),
+    ]);
+    expect(next).toHaveLength(2);
+    expect(next[0]?.locationTrust).toBe("correction_queued");
+    expect(next[0]?.locationPinRole).toBe("source");
+    expect(next[1]?.locationPinRole).toBe("proposed");
+    expect(next[1]?.lng).toBe(33.1);
+    expect(next[1]?.lat).toBe(14.2);
+    expect(next[1]?.eventId).toBe("sig-2");
   });
 });

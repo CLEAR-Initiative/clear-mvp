@@ -56,15 +56,23 @@ forcing alternate candidates. A challenge **does not require** a proposed fix. F
 wedge: **Signals only** — parent **Event** / **Alert** may show that a child Signal has
 an open challenge, but corrections do not attach to Event/Alert pins yet. **v1 entry:**
 Signal detail page **and** Signal **Marker detail panel** (same action, two doors).
+Optional **Location correction**: place-on-map primary, manual lat/lng secondary.
+**Persistence** is a **clear-api** concern
+([docs/clear-api-location-challenge.md](docs/clear-api-location-challenge.md)) — without
+it the UI is visual/session-only. **No Location admin** accept/decline in v1 and **not
+near-roadmap**; queue-only.
 _Avoid_: “top‑3 locations” as a required step; requiring a correction to file a
-challenge; challenging Event/Alert pins as the v1 model; map-only or detail-only entry.
+challenge; challenging Event/Alert pins as the v1 model; map-only or detail-only entry;
+treating the FE ship as durable memory of challenges; shipping accept/reject “next”.
 
 **Location correction**:
 An optional proposed new **point** (lat/lng) for a challenged **Signal**, submitted for
 **consideration**. Place name / note may accompany it but are not required. Not applied
-as sole truth until accepted (accept/reject is post‑v1).
+as sole truth — there is **no** accept/reject path in v1 or the near roadmap; the point
+stays queued once clear-api persists it.
 _Avoid_: treating submit as immediate overwrite; requiring a gazetteer name pick;
-treating correction as mandatory whenever a challenge exists.
+treating correction as mandatory whenever a challenge exists; assuming an admin review
+console is coming next.
 
 **Dual location display**:
 Only when a **Location correction** (proposed point) exists: the map shows **both** the
@@ -293,9 +301,11 @@ full SDN GeoJSON dumps into the app tree by default.
 - An **Event** may be raised into one or more **Alerts** (non-empty `event.alerts` =
   flagged as an alert)
 - A **Location challenge** may stand alone or be followed by an optional **Location
-  correction** (proposed point) queued for **consideration** (accept/reject by
-  **Location admin** later; v1 queues only)
+  correction** (proposed point) queued for **consideration** — **v1 and near roadmap =
+  queue only**; **Location admin** accept/reject is explicitly deferred (not next)
 - **Dual location display** applies only when a **Location correction** point exists
+- Remembering challenges across sessions requires **clear-api** persistence (FE alone
+  does not); improving precision from those queues is later
 - **Welcome** precedes the **Product Tour**; both must complete before onboarding is done
 - The **Product Tour** (this cycle) is four stops: Alerts → Events → Map Layers → Map
   canvas (Finish); it does not visit Insights, Map filters, or Signals-as-a-stop
@@ -381,8 +391,13 @@ full SDN GeoJSON dumps into the app tree by default.
 > visible while the correction is queued."
 
 > **Dev:** "Ship accept/reject for corrections next week with team admin?"
-> **Domain expert:** "No. v1 queues the **Location correction** only. **Location admin**
-> consideration comes later."
+> **Domain expert:** "No. Queue only. **Location admin** accept/decline is **not near
+> roadmap** — do not schedule it with this wedge."
+
+> **Dev:** "Does the FE Location challenge PR mean challenges persist?"
+> **Domain expert:** "No. clear-mvp can paint challenged / dual pins locally. **Durable
+> memory needs clear-api** per
+> [docs/clear-api-location-challenge.md](docs/clear-api-location-challenge.md)."
 
 > **Dev:** "Must every challenge include a moved pin and a corrected name?"
 > **Domain expert:** "No. Challenge alone is enough. If they submit a correction, the
@@ -525,15 +540,19 @@ full SDN GeoJSON dumps into the app tree by default.
 - Location trust first wedge — resolved (see [ADR-0003](docs/adr/0003-location-trust-challenge-without-candidates.md)): **Location challenge** + submit **Location
   correction** for **consideration**. Explicitly **not** system-enforced candidate
   locations / top‑3 picker. Alias engine, gazetteer admin, Dataminr ingest fix are
-  later or parallel — not this wedge’s UX.
+  later or parallel — not this wedge’s UX. clear-api persistence contract:
+  [docs/clear-api-location-challenge.md](docs/clear-api-location-challenge.md).
+- Location trust delivery split — resolved: **clear-mvp UI can ship** with soft-fail /
+  local visual fallback; **persistence is missing until clear-api** implements the
+  contract. Do not claim the system “remembers” challenges from FE alone.
 - Location challenge target — resolved: **Signals only** for v1; parents may surface
   “child location challenged” but do not own the correction.
 - Pending correction on the map — resolved: **Dual location display** (source +
   proposed) only when a correction point is queued; bare challenge = source pin +
   challenged state. Accept/reject UI is not in v1.
-- Consideration reviewer — resolved for sequencing: **v1 = queue only**;
-  end-state reviewer = **Location admin**. Not peer-accept or platform-admin-only
-  as the target model.
+- Consideration reviewer — resolved for sequencing: **v1 and near roadmap = queue
+  only**; eventual reviewer = **Location admin**. **Not** scheduled next; not
+  peer-accept or platform-admin-only as the interim model.
 - Challenge vs correction payload — resolved: challenge **without** correction allowed;
   when a correction is submitted, **point required**, name/note optional. No mandatory
   evidence; no forced gazetteer candidates.

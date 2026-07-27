@@ -81,6 +81,26 @@ export interface GqlSignalDetail extends Omit<GqlSignal, "events"> {
       source: { id: string; name: string; type: string };
     }>;
   }>;
+  /** Open Location challenge when clear-api exposes Signal.locationChallenge. */
+  locationChallenge?: GqlSignalLocationChallenge | null;
+}
+
+/**
+ * Location challenge (+ optional correction) queued for consideration.
+ * See docs/clear-api-location-challenge.md.
+ */
+export interface GqlSignalLocationChallenge {
+  id: string;
+  signalId: string;
+  status: string;
+  note: string | null;
+  proposedLng: number | null;
+  proposedLat: number | null;
+  proposedName: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  hasProposedPoint: boolean;
 }
 
 /* ─── Event ─── */

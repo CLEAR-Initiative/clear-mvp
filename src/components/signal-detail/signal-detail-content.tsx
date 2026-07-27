@@ -22,6 +22,7 @@ import {
   IconLayoutGridAdd,
   IconAlertTriangle,
   IconMapPin,
+  IconMapPinOff,
   IconClock,
   IconCalendar,
   IconDatabase,
@@ -38,6 +39,10 @@ import type { GqlSignalDetail, GqlLocation } from "~/lib/types/graphql";
 import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
+import {
+  LocationChallengeModal,
+  LocationChallengeStatus,
+} from "~/components/location-challenge";
 import { severityColors } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { mapFocusHref } from "~/lib/map-focus-href";
@@ -160,8 +165,15 @@ export function SignalDetailContent({
 }: SignalDetailContentProps) {
   const t = useTranslations("signalDetail");
   const tCommon = useTranslations("common");
+  const tChallenge = useTranslations("locationChallenge");
   const format = useFormatter();
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
+  const [challengeOpen, setChallengeOpen] = useState(false);
+
+  const challengeQuery = api.locationChallenge.getBySignal.useQuery(
+    { signalId: signal?.id ?? "" },
+    { enabled: !!signal?.id, staleTime: 30_000 },
+  );
 
   const mapMarkers = useMemo<MapMarker[]>(() => {
     if (!signal) return [];
@@ -434,7 +446,7 @@ export function SignalDetailContent({
         }}
       >
         <SkeletonSlot pending={showPending} skeleton={<SignalHeaderSkeleton isCompact={isCompact} />}>
-          <Group gap={6} mb={10}>
+          <Group gap={6} mb={10} wrap="wrap">
             <span style={{
               display: "inline-block",
               padding: "2px 10px",
@@ -448,6 +460,7 @@ export function SignalDetailContent({
             }}>
               {tCommon(`severities.${sev}`)}
             </span>
+            <LocationChallengeStatus challenge={challengeQuery.data} compact />
           </Group>
 
           <Group
@@ -535,6 +548,22 @@ export function SignalDetailContent({
               </Text>
             </Group>
           </Group>
+
+          {isCompact && (
+            <Button
+              mt={12}
+              variant="light"
+              color="gray"
+              size="xs"
+              leftSection={<IconMapPinOff size={13} />}
+              onClick={() => setChallengeOpen(true)}
+              style={{ fontSize: 12 }}
+            >
+              {challengeQuery.data
+                ? tChallenge("actions.updateChallenge")
+                : tChallenge("actions.challengeLocation")}
+            </Button>
+          )}
         </SkeletonSlot>
       </Box>
 
@@ -845,6 +874,19 @@ export function SignalDetailContent({
                       variant="light"
                       color="gray"
                       size="xs"
+                      leftSection={<IconMapPinOff size={13} />}
+                      fullWidth
+                      onClick={() => setChallengeOpen(true)}
+                      style={{ fontSize: 12 }}
+                    >
+                      {challengeQuery.data
+                        ? tChallenge("actions.updateChallenge")
+                        : tChallenge("actions.challengeLocation")}
+                    </Button>
+                    <Button
+                      variant="light"
+                      color="gray"
+                      size="xs"
                       leftSection={<IconLayoutGridAdd size={12} />}
                       fullWidth
                       disabled
@@ -930,6 +972,13 @@ export function SignalDetailContent({
         )}
       </Box>
 
+      <LocationChallengeModal
+        opened={challengeOpen}
+        onClose={() => setChallengeOpen(false)}
+        signalId={signal.id}
+        sourceLat={mapMarkers[0]?.lat}
+        sourceLng={mapMarkers[0]?.lng}
+      />
     </Box>
   );
 }
