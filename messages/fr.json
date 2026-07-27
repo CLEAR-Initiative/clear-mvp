@@ -1771,6 +1771,22 @@
       "nrcLocations": "Sites NRC",
       "filters": "Filtres"
     },
+    "nrcOffices": {
+      "centroidDisclaimer": "Les points sont des centroïdes de ville/localité issus du rapport annuel NRC Soudan 2025 — pas des adresses vérifiées.",
+      "types": {
+        "country_office": "Bureau pays",
+        "area_office": "Bureau de zone",
+        "field_office": "Bureau de terrain",
+        "planned_or_expansion": "Expansion / prévu",
+        "former_country_office": "Ancien bureau pays"
+      },
+      "statuses": {
+        "active": "Actif",
+        "hibernating_remote": "En hibernation / à distance",
+        "expansion": "Expansion",
+        "relocated": "Relocalisé"
+      }
+    },
     "baseMaps": {
       "simple": "Simple",
       "topography": "Topographie",

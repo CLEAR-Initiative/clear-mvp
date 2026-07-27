@@ -9,6 +9,10 @@ import { IconFilter, IconLayersLinked, IconList } from "@tabler/icons-react";
 import type { DataView } from "./map-layers-panel";
 import type { BoundaryLevel } from "./map-settings-popover";
 import type { BaseMapType } from "~/components/map/crisis-map";
+import {
+  SUDAN_NRC_OFFICE_COLORS,
+  SUDAN_NRC_OFFICE_TYPE_ORDER,
+} from "~/lib/data/sudan-nrc-offices";
 export type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 
 type PanelId = "layers" | "legend" | "filters";
@@ -55,6 +59,8 @@ interface MapPanelBarProps {
   onBoundaryLevelChange: (v: BoundaryLevel) => void;
   showRoads?: boolean;
   onShowRoadsChange?: (v: boolean) => void;
+  showNrcLocations?: boolean;
+  onShowNrcLocationsChange?: (v: boolean) => void;
   baseMapType?: BaseMapType;
   onBaseMapTypeChange?: (v: BaseMapType) => void;
   /** Desktop: accumulate marker detail panels instead of replacing. */
@@ -184,6 +190,7 @@ export function MapPanelBar({
   populationLoading = false,
   boundaryLevel, onBoundaryLevelChange,
   showRoads = true, onShowRoadsChange = noop,
+  showNrcLocations = false, onShowNrcLocationsChange = noop,
   baseMapType = "simple", onBaseMapTypeChange = noop,
   keepPanelsOpen = false, onKeepPanelsOpenChange = noop,
   filters,
@@ -299,10 +306,23 @@ export function MapPanelBar({
 
                   <Divider color="var(--color-bg-muted)" my={10} />
 
-                  {/* Future operational aggregations — stubs only */}
+                  {/* Future operational aggregations — Blockages still stubbed */}
                   <SectionLabel>{t("panels.operational")}</SectionLabel>
                   <LayerStubRow label={t("panels.blockages")} hint={t("panels.comingSoon")} />
-                  <LayerStubRow label={t("panels.nrcLocations")} hint={t("panels.comingSoon")} />
+                  <LayerCheckRow
+                    label={t("panels.nrcLocations")}
+                    checked={showNrcLocations}
+                    onChange={onShowNrcLocationsChange}
+                  />
+                  {showNrcLocations && (
+                    <Text
+                      size="xs"
+                      c="var(--color-text-muted)"
+                      style={{ fontSize: 10, lineHeight: 1.35, marginTop: 2, marginBottom: 2 }}
+                    >
+                      {t("nrcOffices.centroidDisclaimer")}
+                    </Text>
+                  )}
 
                   {/* Interaction preference — not cartography (desktop only) */}
                   <Box visibleFrom="sm">
@@ -369,6 +389,49 @@ export function MapPanelBar({
                           </Text>
                         ))}
                       </Box>
+                    </>
+                  )}
+
+                  {showNrcLocations && (
+                    <>
+                      <Divider color="var(--color-bg-muted)" my={4} />
+                      <SectionLabel>{t("panels.nrcLocations")}</SectionLabel>
+                      {SUDAN_NRC_OFFICE_TYPE_ORDER.map((key) => (
+                        <Group key={key} gap={8} wrap="nowrap">
+                          <Box
+                            w={14}
+                            h={14}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Box
+                              w={10}
+                              h={10}
+                              style={{
+                                backgroundColor: SUDAN_NRC_OFFICE_COLORS[key],
+                                transform: "rotate(45deg)",
+                                borderRadius: 1,
+                                border: "1px solid var(--color-bg-muted)",
+                              }}
+                            />
+                          </Box>
+                          <Text size="xs" style={{ fontSize: 11 }}>
+                            {t(`nrcOffices.types.${key}`)}
+                          </Text>
+                        </Group>
+                      ))}
+                      <Text
+                        size="xs"
+                        c="var(--color-text-muted)"
+                        mt={6}
+                        style={{ fontSize: 10, lineHeight: 1.35 }}
+                      >
+                        {t("nrcOffices.centroidDisclaimer")}
+                      </Text>
                     </>
                   )}
 

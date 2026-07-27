@@ -1771,6 +1771,22 @@
       "nrcLocations": "مواقع NRC",
       "filters": "عوامل التصفية"
     },
+    "nrcOffices": {
+      "centroidDisclaimer": "هذه النقاط هي مراكز المدن/المحليات من التقرير السنوي لـ NRC السودان 2025 — وليست عناوين شوارع موثقة.",
+      "types": {
+        "country_office": "المكتب القطري",
+        "area_office": "مكتب المنطقة",
+        "field_office": "مكتب ميداني",
+        "planned_or_expansion": "توسع / مخطط",
+        "former_country_office": "المكتب القطري السابق"
+      },
+      "statuses": {
+        "active": "نشط",
+        "hibernating_remote": "معلّق / عن بُعد",
+        "expansion": "توسع",
+        "relocated": "نُقل"
+      }
+    },
     "baseMaps": {
       "simple": "بسيطة",
       "topography": "طبوغرافية",

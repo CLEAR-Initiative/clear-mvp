@@ -451,6 +451,7 @@ function MapPageContent() {
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
   const [showRoads, setShowRoads] = useState(true);
+  const [showNrcLocations, setShowNrcLocations] = useState(false);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
 
   // Deep-link from detail Back / Full Map: align Layers data-view chrome only.
@@ -1224,6 +1225,7 @@ function MapPageContent() {
           populationBoundaries={populationBoundaries}
           showBoundaries={boundaryLevel !== "none"}
           showRoads={showRoads}
+          showNrcLocations={showNrcLocations}
           baseMapType={baseMapType}
           hoveredMarkerId={chromeActiveMarkerId}
         />
@@ -1245,6 +1247,8 @@ function MapPageContent() {
         onBoundaryLevelChange={setBoundaryLevel}
         showRoads={showRoads}
         onShowRoadsChange={setShowRoads}
+        showNrcLocations={showNrcLocations}
+        onShowNrcLocationsChange={setShowNrcLocations}
         baseMapType={baseMapType}
         onBaseMapTypeChange={setBaseMapType}
         keepPanelsOpen={keepPanelsOpen}

@@ -61,6 +61,7 @@ export default function DashboardPage() {
   const [showPopulation, setShowPopulation] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showRoads, setShowRoads] = useState(true);
+  const [showNrcLocations, setShowNrcLocations] = useState(false);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
 
   const alertsQuery = api.alerts.alertsForMap.useQuery(
@@ -150,6 +151,7 @@ export default function DashboardPage() {
           className="w-full h-full"
           onMarkerClick={handleMarkerClick}
           showRoads={showRoads}
+          showNrcLocations={showNrcLocations}
           baseMapType={baseMapType}
           hoveredMarkerId={
             detailChromeActive && selectedMarker ? selectedMarker.id : null
@@ -176,6 +178,8 @@ export default function DashboardPage() {
           onBoundaryLevelChange={setBoundaryLevel}
           showRoads={showRoads}
           onShowRoadsChange={setShowRoads}
+          showNrcLocations={showNrcLocations}
+          onShowNrcLocationsChange={setShowNrcLocations}
           baseMapType={baseMapType}
           onBaseMapTypeChange={setBaseMapType}
         />

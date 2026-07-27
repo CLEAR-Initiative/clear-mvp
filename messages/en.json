@@ -1769,6 +1769,22 @@
       "nrcLocations": "NRC locations",
       "filters": "Filters"
     },
+    "nrcOffices": {
+      "centroidDisclaimer": "Pins are city/locality centroids from the NRC Sudan Annual Report 2025 — not verified street addresses.",
+      "types": {
+        "country_office": "Country office",
+        "area_office": "Area office",
+        "field_office": "Field office",
+        "planned_or_expansion": "Expansion / planned",
+        "former_country_office": "Former country office"
+      },
+      "statuses": {
+        "active": "Active",
+        "hibernating_remote": "Hibernating / remote",
+        "expansion": "Expansion",
+        "relocated": "Relocated"
+      }
+    },
     "baseMaps": {
       "simple": "Simple",
       "topography": "Topography",
