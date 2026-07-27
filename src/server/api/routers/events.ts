@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
+import { sanitizeLocationGeometry } from "~/lib/geo/to-map-point";
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry population
@@ -175,6 +176,35 @@ const EVENT_GET_QUERY = `
   }
 `;
 
+// Full Map deep-link (`/map?event=`): one event pin + that event's signal pins.
+// Point geometries only — no admin polygons (see GH #107).
+const MAP_FOCUS_POINT_FIELDS = `id name level geometry ancestorIds`;
+const EVENT_FOR_MAP_FOCUS_QUERY = `
+  query EventForMapFocus($id: String!) {
+    event(id: $id) {
+      id
+      title
+      description
+      types
+      severity
+      firstSignalCreatedAt
+      representativePoint { ${MAP_FOCUS_POINT_FIELDS} }
+      alerts { id status }
+      signals {
+        id
+        title
+        description
+        severity
+        publishedAt
+        source { id name type }
+        generalLocation { ${MAP_FOCUS_POINT_FIELDS} }
+        originLocation { ${MAP_FOCUS_POINT_FIELDS} }
+        destinationLocation { ${MAP_FOCUS_POINT_FIELDS} }
+      }
+    }
+  }
+`;
+
 const DISASTER_TYPES_QUERY = `
   query { disasterTypes { glideNumber level1 } }
 `;
@@ -211,6 +241,26 @@ export const eventsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.event;
+    }),
+
+  /** Solo Full Map deep-link payload — event + nested signal Points only. */
+  forMapFocus: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ event: GqlEvent | null }>(
+        EVENT_FOR_MAP_FOCUS_QUERY,
+        { id: input.id },
+        cookieHeaders(ctx),
+      );
+      const event = data.event;
+      if (!event) return null;
+      sanitizeLocationGeometry(event.representativePoint ?? null);
+      for (const signal of event.signals ?? []) {
+        sanitizeLocationGeometry(signal.generalLocation);
+        sanitizeLocationGeometry(signal.originLocation);
+        sanitizeLocationGeometry(signal.destinationLocation);
+      }
+      return event;
     }),
 
   related: protectedProcedure

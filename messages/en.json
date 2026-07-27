@@ -1817,7 +1817,11 @@
     },
     "timeline": {
       "title": "Timeline",
-      "allTime": "All time"
+      "allTime": "All time",
+      "clearFocus": "Clear focus and show all map markers",
+      "focusFallbackEvent": "Focused event",
+      "focusFallbackSignal": "Focused signal",
+      "focusFallbackCrisis": "Focused crisis"
     },
     "tokenMissing": "Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env"
   },

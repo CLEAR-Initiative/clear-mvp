@@ -142,6 +142,16 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
   return dedupeMarkersByEntity(markers);
 }
 
+/**
+ * Full Map deep-link for an event: the event pin plus each nested signal that
+ * has a Point. Browse map feeds must not use this — they omit signal nests.
+ */
+export function focusEventToMarkers(event: GqlEvent): CrisisMarker[] {
+  const eventMarkers = eventsToMarkers([event]);
+  const signalMarkers = signalsToMarkers(event.signals ?? []);
+  return [...eventMarkers, ...signalMarkers];
+}
+
 export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
   // Multiple alerts can wrap the same event — keep the entry with the best
   // representative point before dedupe (first-wins) in eventsToMarkers.
