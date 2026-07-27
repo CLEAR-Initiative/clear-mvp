@@ -32,7 +32,6 @@ import {
   IconUsers,
   IconUsersGroup,
   IconHome2,
-  IconAlertTriangle,
   IconLayersIntersect,
   IconTrendingUp,
   IconTrendingDown,
@@ -65,6 +64,7 @@ import { mapFocusHref } from "~/lib/map-focus-href";
 import { MinimapCard } from "~/components/map/minimap-card";
 import { CommentsSection } from "~/components/comments-section";
 import { NeedsAssessmentPanel } from "~/components/crisis-detail/needs-assessment-panel";
+import { EntityNotFound } from "~/components/ui/entity-not-found";
 import { KpiStack } from "~/components/ui/kpi-stack";
 
 /** Humanitarian need row - parsed from a crisis's free-form `needs` JSON. */
@@ -355,27 +355,26 @@ export function CrisisDetailContent({
 
   if (!crisis) {
     return (
-      <Box p={48} style={{ textAlign: "center" }}>
-        <IconAlertTriangle size={40} color="var(--color-warning)" style={{ margin: "0 auto 16px" }} />
-        <Text fw={600} size="lg">{t("notFound.title")}</Text>
-        <Text size="sm" c="var(--color-text-muted)" mt={8}>
-          {t("notFound.description")}
-        </Text>
-        {mode === "page" && (
-          <Link
-            href={referrer === "map" ? "/map" : "/insights"}
-            style={{
-              display: "inline-block",
-              marginTop: 16,
-              color: "var(--color-accent)",
-              fontSize: 14,
-              fontWeight: 500,
-            }}
-          >
-            &larr; {t("backToAnalysis")}
-          </Link>
-        )}
-      </Box>
+      <EntityNotFound
+        title={t("notFound.title")}
+        description={t("notFound.description")}
+        action={
+          mode === "page" ? (
+            <Link
+              href={referrer === "map" ? "/map" : "/insights"}
+              style={{
+                display: "inline-block",
+                marginTop: 16,
+                color: "var(--color-accent)",
+                fontSize: 14,
+                fontWeight: 500,
+              }}
+            >
+              &larr; {t("backToAnalysis")}
+            </Link>
+          ) : undefined
+        }
+      />
     );
   }
 

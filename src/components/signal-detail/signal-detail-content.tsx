@@ -20,7 +20,6 @@ import {
   IconArrowLeft,
   IconBookmark,
   IconLayoutGridAdd,
-  IconAlertTriangle,
   IconMapPin,
   IconClock,
   IconCalendar,
@@ -33,6 +32,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
 } from "@tabler/icons-react";
+import { EntityNotFound } from "~/components/ui/entity-not-found";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlSignalDetail, GqlLocation } from "~/lib/types/graphql";
 import { resolveLocationName } from "~/lib/location";
@@ -311,33 +311,26 @@ export function SignalDetailContent({
 
   if (!signal) {
     return (
-      <Box p={48} style={{ textAlign: "center" }}>
-        <IconAlertTriangle
-          size={40}
-          color="#D97706"
-          style={{ margin: "0 auto 16px" }}
-        />
-        <Text fw={600} size="lg">
-          {t("notFound.title")}
-        </Text>
-        <Text size="sm" c="var(--color-text-muted)" mt={8}>
-          {t("notFound.description")}
-        </Text>
-        {mode === "page" && (
-          <Link
-            href={referrer === "map" ? "/map" : "/detection"}
-            style={{
-              display: "inline-block",
-              marginTop: 16,
-              color: "#E85D3D",
-              fontSize: 14,
-              fontWeight: 500,
-            }}
-          >
-            &larr; {t("backToEvents")}
-          </Link>
-        )}
-      </Box>
+      <EntityNotFound
+        title={t("notFound.title")}
+        description={t("notFound.description")}
+        action={
+          mode === "page" ? (
+            <Link
+              href={referrer === "map" ? "/map" : "/detection"}
+              style={{
+                display: "inline-block",
+                marginTop: 16,
+                color: "var(--color-accent)",
+                fontSize: 14,
+                fontWeight: 500,
+              }}
+            >
+              &larr; {t("backToEvents")}
+            </Link>
+          ) : undefined
+        }
+      />
     );
   }
 
