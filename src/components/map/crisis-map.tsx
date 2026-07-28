@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
 import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
@@ -22,6 +22,14 @@ import {
   DENSITY_HEATMAP_PEAK_OPACITY,
 } from "~/lib/map/marker-density";
 import { spiderfyCoincidentLngLats } from "~/lib/map/spiderfy-coincident";
+import {
+  SUDAN_NRC_OFFICES,
+} from "~/lib/data/sudan-nrc-offices";
+import {
+  buildNrcOfficeMarkerElement,
+  buildNrcOfficePopupHtml,
+  paintNrcOfficeMarkerTheme,
+} from "~/lib/map/nrc-office-markers";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
 const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
@@ -144,6 +152,11 @@ interface CrisisMapProps {
   showMarkers?: boolean;
   /** Show/hide roads overlay (applies to all basemap types) */
   showRoads?: boolean;
+  /**
+   * Show NRC Sudan office/presence pins (city centroids from NRC Sudan Annual
+   * Report 2025 — not street-level premises).
+   */
+  showNrcLocations?: boolean;
   /** Basemap: simple (theme style), topography (theme style + hillshade relief), or satellite imagery */
   baseMapType?: BaseMapType;
   /**
@@ -332,12 +345,18 @@ export function CrisisMap({
   showBoundaries = true,
   showMarkers = true,
   showRoads = true,
+  showNrcLocations = false,
   baseMapType = "simple",
   mapApiRef,
   onMapMove,
 }: CrisisMapProps) {
   const t = useTranslations("map");
+  const locale = useLocale();
   const isDark = useIsDark();
+  const tRef = useRef(t);
+  const isDarkRef = useRef(isDark);
+  tRef.current = t;
+  isDarkRef.current = isDark;
 
   // Skip seed bbox rectangles / point "boundaries"; fall back to Mapbox tiles.
   const paintableFocusGeometry = useMemo(
@@ -1317,6 +1336,61 @@ export function CrisisMap({
       dot?.classList.toggle("active", on);
     }
   }, [hoveredMarkerId]);
+
+  // ── NRC Sudan office centroids (HTML markers; separate from crisis pins) ─
+  // Coordinates are city/locality centroids from NRC Sudan Annual Report 2025
+  // — never treat as street-level premises.
+  // Rebuild only when layer toggles / locale changes / map loads. Theme flips
+  // paint borders in place (14 pins — avoid Mapbox tear-down on dark mode).
+  const nrcOfficeMarkersRef = useRef<MapboxGLAny[]>([]);
+  useEffect(() => {
+    if (!map.current || !loaded || !mbRef.current) return;
+    const mb = mbRef.current;
+    const m = map.current;
+
+    const clear = () => {
+      for (const mk of nrcOfficeMarkersRef.current) {
+        try {
+          mk.remove();
+        } catch {
+          /* ignore */
+        }
+      }
+      nrcOfficeMarkersRef.current = [];
+    };
+
+    clear();
+    if (!showNrcLocations) return clear;
+
+    const translate = tRef.current;
+    const dark = isDarkRef.current;
+    const centroidDisclaimer = translate("nrcOffices.centroidDisclaimer");
+
+    for (const office of SUDAN_NRC_OFFICES) {
+      const el = buildNrcOfficeMarkerElement(office, dark);
+      const popupHtml = buildNrcOfficePopupHtml(office, {
+        typeLabel: translate(`nrcOffices.types.${office.officeType}`),
+        statusLabel: translate(`nrcOffices.statuses.${office.status}`),
+        centroidDisclaimer,
+      });
+      const popup = new mb.Popup({ offset: 16, maxWidth: "280px" }).setHTML(popupHtml);
+      const marker = new mb.Marker({ element: el })
+        .setLngLat([office.longitude, office.latitude])
+        .setPopup(popup)
+        .addTo(m);
+      nrcOfficeMarkersRef.current.push(marker);
+    }
+
+    return clear;
+  }, [loaded, showNrcLocations, locale]);
+
+  useEffect(() => {
+    if (!showNrcLocations) return;
+    for (const mk of nrcOfficeMarkersRef.current) {
+      const root = mk.getElement?.() as HTMLElement | undefined;
+      if (root) paintNrcOfficeMarkerTheme(root, isDark);
+    }
+  }, [isDark, showNrcLocations]);
 
   // ── Roads toggle (Mapbox style layers) ──────────────────────────────────
   // light-v11/dark-v11 draw roads camouflaged by design: 1-8% lightness off
