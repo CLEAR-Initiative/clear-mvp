@@ -20,7 +20,7 @@ describe("PRODUCT_TOUR_STEPS", () => {
     ).toBe(true);
     expect(PRODUCT_TOUR_STEPS.filter((s) => s.page === "detection")).toHaveLength(2);
     expect(PRODUCT_TOUR_STEPS.filter((s) => s.page === "map")).toHaveLength(2);
-    expect(PRODUCT_TOUR_STEPS[0]?.tab).toBe("live");
+    expect(PRODUCT_TOUR_STEPS[0]?.tab).toBe("alerts");
     expect(PRODUCT_TOUR_STEPS[1]?.tab).toBe("events");
   });
 

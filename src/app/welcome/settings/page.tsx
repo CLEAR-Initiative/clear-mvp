@@ -75,7 +75,7 @@ export default function WelcomeSettingsPage() {
       }
       markSettingsComplete(data.user.id);
       notifyOnboardingChange();
-      router.push("/detection?tour=1&tab=live");
+      router.push("/detection?tour=1&tab=alerts");
     } finally {
       setSubmitting(false);
     }

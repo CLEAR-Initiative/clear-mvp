@@ -35,6 +35,12 @@ export function EventDetailDrawer({
     { enabled: !!eventQuery.data && opened },
   );
 
+  const utils = api.useUtils();
+  useEffect(() => {
+    if (!opened || !eventId) return;
+    void utils.comments.list.prefetch({ entityId: eventId, entityType: "event" });
+  }, [opened, eventId, utils]);
+
   // Capture original path when drawer opens; restore it when it closes or unmounts.
   // Using a ref ensures the path is only captured once per open, not on each eventId change.
   useEffect(() => {
@@ -109,6 +115,7 @@ export function EventDetailDrawer({
       <Box style={{ flex: 1, overflowY: "auto" }}>
         <EventDetailContent
           event={eventQuery.data}
+          entityId={eventId ?? undefined}
           loading={eventQuery.isLoading}
           mode="drawer"
           relatedEvents={relatedQuery.data ?? []}

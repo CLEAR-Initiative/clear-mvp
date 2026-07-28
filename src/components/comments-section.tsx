@@ -12,20 +12,11 @@ function getInitials(name: string | null): string {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
-function CommentSkeleton() {
+function CommentListLoading() {
+  // Match empty-state height — avoid a "busy thread" 2-row skeleton for cold/empty lists.
   return (
-    <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
-      <Group align="flex-start" gap={10}>
-        <Skeleton circle height={30} />
-        <Box style={{ flex: 1 }}>
-          <Group gap={8} mb={6}>
-            <Skeleton height={10} width={80} />
-            <Skeleton height={10} width={40} style={{ marginInlineStart: "auto" }} />
-          </Group>
-          <Skeleton height={10} width="90%" mb={4} />
-          <Skeleton height={10} width="60%" />
-        </Box>
-      </Group>
+    <Box px={16} py={20} style={{ display: "flex", justifyContent: "center" }}>
+      <Skeleton height={12} width={160} radius={4} />
     </Box>
   );
 }
@@ -149,7 +140,11 @@ export function CommentsSection({ entityId, entityType }: CommentsSectionProps) 
   const utils = api.useUtils();
   const queryKey = { entityId, entityType };
 
-  const query = api.comments.list.useQuery(queryKey, { staleTime: 1000 * 60 * 2 });
+  const query = api.comments.list.useQuery(queryKey, {
+    staleTime: 1000 * 60 * 2,
+    // Only block the list on a true cold miss — cached [] paints immediately.
+    refetchOnWindowFocus: false,
+  });
 
   const addComment = api.comments.add.useMutation({
     onSuccess: () => {
@@ -213,12 +208,9 @@ export function CommentsSection({ entityId, entityType }: CommentsSectionProps) 
         </Group>
       </Box>
 
-      {/* Comment list */}
+      {/* Comment list — chrome (title + compose) stays up; only the list waits. */}
       {query.isLoading ? (
-        <>
-          <CommentSkeleton />
-          <CommentSkeleton />
-        </>
+        <CommentListLoading />
       ) : comments.length === 0 ? (
         <Box px={16} py={20} style={{ textAlign: "center" }}>
           <Text size="sm" c="var(--color-text-muted)">

@@ -16,6 +16,7 @@ import {
   IconMapPin,
 } from "@tabler/icons-react";
 import { FeedToolbar } from "~/components/ui";
+import { DetectionFeedListSkeleton } from "~/components/ui/detection-page-skeleton";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlAlert } from "~/lib/types/graphql";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
@@ -169,6 +170,8 @@ export function LiveAlertsTab({
                 </Text>
               </Box>
             )}
+
+            {alertsLoading && filtered.length === 0 && <DetectionFeedListSkeleton />}
 
             {filtered.map((alert) => {
               const sev = mapSeverity(alert.event.severity);

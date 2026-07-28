@@ -128,6 +128,8 @@ function MediaThumbnail({ url, filename }: { url: string; filename: string }) {
 
 interface SignalDetailContentProps {
   signal: GqlSignalDetail | null | undefined;
+  /** Resolved route id — used so discussion can fetch in parallel with entity pending. */
+  entityId?: string;
   loading: boolean;
   isPending?: boolean;
   mode: "page" | "drawer";
@@ -146,6 +148,7 @@ interface SignalDetailContentProps {
 
 export function SignalDetailContent({
   signal,
+  entityId,
   loading,
   isPending = false,
   mode,
@@ -670,12 +673,10 @@ export function SignalDetailContent({
             </Card>
           )}
 
-          <SkeletonSlot pending={showPending} skeleton={<DiscussionCardSkeleton />}>
-          {/* Discussion */}
+          {/* Discussion — fetch by active entityId in parallel; don't gate on entity pending. */}
           <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
-            <CommentsSection entityId={signal.id} entityType="signal" />
+            <CommentsSection entityId={entityId ?? signal.id} entityType="signal" />
           </Card>
-          </SkeletonSlot>
 
           <SkeletonSlot pending={showPending} skeleton={<EventGridCardsSkeleton />}>
           {/* Part of Events + Similar Signals - two columns */}

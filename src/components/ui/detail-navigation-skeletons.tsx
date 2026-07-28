@@ -1,6 +1,7 @@
 "use client";
 
 import { Box, Group, Skeleton, Stack } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 
 /** Card shell matching DetailCard layout (header bar + body). */
 export function DetailCardSkeleton({
@@ -82,10 +83,16 @@ export function SignalHeaderSkeleton({ isCompact = false }: { isCompact?: boolea
 }
 
 export function KpiStripSkeleton() {
+  // Match KpiStack / event-detail: only treat as mobile once the query resolves true
+  // (undefined on first paint must stay desktop width to avoid a shrink flash).
+  const isMobile = useMediaQuery("(max-width: 48em)") === true;
+
   return (
     <Box
       style={{
         display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        width: "100%",
         background: "var(--color-bg-white)",
         border: "1px solid var(--color-border)",
         borderRadius: 8,
@@ -98,7 +105,10 @@ export function KpiStripSkeleton() {
           style={{
             flex: 1,
             minWidth: 0,
-            borderInlineEnd: section === 0 ? "1px solid var(--color-border)" : undefined,
+            borderInlineEnd:
+              !isMobile && section === 0 ? "1px solid var(--color-border)" : undefined,
+            borderBottom:
+              isMobile && section === 0 ? "1px solid var(--color-border)" : undefined,
           }}
         >
           <Box
@@ -108,25 +118,29 @@ export function KpiStripSkeleton() {
           >
             <Skeleton height={10} width={70} />
           </Box>
-          {[0, 1].map((row) => (
-            <Box
-              key={row}
-              px={12}
-              py={10}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                borderBottom: row === 0 ? "1px solid var(--color-border)" : undefined,
-              }}
-            >
-              <Skeleton height={28} width={28} radius="sm" />
-              <Box style={{ flex: 1 }}>
-                <Skeleton height={17} width={48} mb={6} />
-                <Skeleton height={10} width={100} />
+          <Box style={{ display: "flex" }}>
+            {[0, 1].map((item) => (
+              <Box
+                key={item}
+                px={12}
+                py={10}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  borderInlineEnd: item === 0 ? "1px solid var(--color-border)" : undefined,
+                }}
+              >
+                <Skeleton height={28} width={28} radius="sm" style={{ flexShrink: 0 }} />
+                <Box style={{ flex: 1, minWidth: 0 }}>
+                  <Skeleton height={17} width={48} mb={6} />
+                  <Skeleton height={10} width="80%" />
+                </Box>
               </Box>
-            </Box>
-          ))}
+            ))}
+          </Box>
         </Box>
       ))}
     </Box>
@@ -147,19 +161,11 @@ export function DiscussionCardSkeleton() {
       <Box px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
         <Skeleton height={14} width={100} />
       </Box>
-      {[0, 1].map((i) => (
-        <Box key={i} px={16} py={12} style={{ borderBottom: "1px solid var(--color-border)" }}>
-          <Group align="flex-start" gap={10}>
-            <Skeleton circle height={30} />
-            <Box style={{ flex: 1 }}>
-              <Skeleton height={10} width="35%" mb={8} />
-              <Skeleton height={10} width="92%" mb={4} />
-              <Skeleton height={10} width="68%" />
-            </Box>
-          </Group>
-        </Box>
-      ))}
-      <Box px={16} py={12}>
+      {/* Compact body — matches empty/loading discussion, not a fake 2-post thread */}
+      <Box px={16} py={20} style={{ display: "flex", justifyContent: "center" }}>
+        <Skeleton height={12} width={160} radius={4} />
+      </Box>
+      <Box px={16} py={12} style={{ borderTop: "1px solid var(--color-border)" }}>
         <Skeleton height={72} radius="sm" />
       </Box>
     </Box>

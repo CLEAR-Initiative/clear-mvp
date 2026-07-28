@@ -87,6 +87,8 @@ function eventLocations(event: GqlEvent): GqlLocation[] {
 
 interface EventDetailContentProps {
   event: GqlEvent | null | undefined;
+  /** Resolved route id — used so discussion can fetch in parallel with entity pending. */
+  entityId?: string;
   loading: boolean;
   isPending?: boolean;
   mode: "page" | "drawer";
@@ -107,6 +109,7 @@ interface EventDetailContentProps {
 
 export function EventDetailContent({
   event,
+  entityId,
   loading,
   isPending = false,
   mode,
@@ -242,6 +245,13 @@ export function EventDetailContent({
           </Group>
         </Box>
 
+        {/* KPI full-bleed strip — matches loaded layout (above the 2-col body). */}
+        {mode !== "drawer" && (
+          <Box px={{ base: 12, sm: 24 }} pt={{ base: 16, sm: 24 }}>
+            <KpiStripSkeleton />
+          </Box>
+        )}
+
         {/* Body with sidebar layout */}
         <Box
           p={{ base: 16, sm: 24 }}
@@ -252,7 +262,7 @@ export function EventDetailContent({
           }}
         >
           <Box style={{ flex: 1, minWidth: 0 }}>
-            <KpiStripSkeleton />
+            {mode === "drawer" && <KpiStripSkeleton />}
             <SummaryCardSkeleton />
             <DiscussionCardSkeleton />
             <SignalsListCardSkeleton />
@@ -581,7 +591,7 @@ export function EventDetailContent({
       {/* KPI strip */}
       {!isCompact && (
         <Box px={{ base: 12, sm: 24 }} pt={{ base: 16, sm: 24 }}>
-          <SkeletonSlot pending={showPending} skeleton={<KpiStripSkeleton />}>
+          <SkeletonSlot pending={showPending} skeleton={<KpiStripSkeleton />} className="w-full">
           <KpiStack
             sections={[
               {
@@ -671,12 +681,10 @@ export function EventDetailContent({
           </Card>
           </SkeletonSlot>
 
-          <SkeletonSlot pending={showPending} skeleton={<DiscussionCardSkeleton />}>
-          {/* Discussion */}
+          {/* Discussion — fetch by active entityId in parallel; don't gate on entity pending. */}
           <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
-            <CommentsSection entityId={event.id} entityType="event" />
+            <CommentsSection entityId={entityId ?? event.id} entityType="event" />
           </Card>
-          </SkeletonSlot>
 
           <SkeletonSlot pending={showPending} skeleton={<SignalsListCardSkeleton />}>
           {/* Source Signals */}

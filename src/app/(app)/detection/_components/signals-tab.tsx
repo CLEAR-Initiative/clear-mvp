@@ -17,6 +17,7 @@ import {
   IconMapPin,
 } from "@tabler/icons-react";
 import { FeedToolbar } from "~/components/ui";
+import { DetectionFeedListSkeleton } from "~/components/ui/detection-page-skeleton";
 import type { GqlSignal } from "~/lib/types/graphql";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
@@ -165,6 +166,8 @@ export function SignalsTab({
                 </Text>
               </Box>
             )}
+
+            {loading && filtered.length === 0 && <DetectionFeedListSkeleton />}
 
             {filtered.map((signal) => {
               const sev = mapSeverity(signal.severity ?? 0);
