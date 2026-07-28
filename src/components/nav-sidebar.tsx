@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSelectedLayoutSegments, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -98,6 +98,8 @@ export function NavSidebar() {
   const segments = useSelectedLayoutSegments();
   const searchParams = useSearchParams();
   const activeSegment = segments[0] ?? "";
+  // On /map the sidebar overlays the canvas (frost + no flex resize flash).
+  const isMapRoute = activeSegment === "map";
 
   // Check if we're on a detail page (event/signal/crisis) and get the referrer
   const isDetailPage = ["event", "signal", "crisis"].includes(activeSegment);
@@ -110,6 +112,17 @@ export function NavSidebar() {
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const isAdmin = isPlatformAdmin(authData?.user?.role);
   const { flags } = useFeatureFlags();
+
+  // Publish nav width so map chrome can clear the overlay; toggle overlay mode on /map.
+  useEffect(() => {
+    const w = `${collapsed ? COLLAPSED_W : EXPANDED_W}px`;
+    document.documentElement.style.setProperty("--clear-nav-w", w);
+    document.body.dataset.navOverlay = isMapRoute ? "true" : "false";
+    return () => {
+      document.documentElement.style.removeProperty("--clear-nav-w");
+      delete document.body.dataset.navOverlay;
+    };
+  }, [collapsed, isMapRoute]);
 
   const handleLogout = async () => {
     try { await authClient.signOut(); } catch { /* ignore */ }
@@ -383,21 +396,29 @@ export function NavSidebar() {
         </Box>
       </Drawer>
 
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar — on /map: fixed frost overlay so map shows through and
+          collapse does not resize the Mapbox canvas (white flash). */}
       <Box
         component="aside"
         data-tour="nav-sidebar"
         visibleFrom="sm"
         style={{
           width: collapsed ? COLLAPSED_W : EXPANDED_W,
-          minWidth: collapsed ? COLLAPSED_W : EXPANDED_W,
+          // Keep layout slot on non-map routes; overlay mode is out-of-flow.
+          minWidth: isMapRoute ? undefined : (collapsed ? COLLAPSED_W : EXPANDED_W),
           height: "100vh",
-          position: "sticky",
+          position: isMapRoute ? "fixed" : "sticky",
           top: 0,
+          left: isMapRoute ? 0 : undefined,
+          zIndex: isMapRoute ? 40 : undefined,
           display: "flex",
           flexDirection: "column",
-          background: colors.bgWhite,
-          borderInlineEnd: `1px solid ${colors.border}`,
+          background: isMapRoute
+            ? "color-mix(in srgb, var(--color-bg-white) 42%, transparent)"
+            : colors.bgWhite,
+          backdropFilter: isMapRoute ? "blur(16px) saturate(1.2)" : undefined,
+          WebkitBackdropFilter: isMapRoute ? "blur(16px) saturate(1.2)" : undefined,
+          borderInlineEnd: `1px solid ${isMapRoute ? "color-mix(in srgb, var(--color-border) 55%, transparent)" : colors.border}`,
           transition: `width ${TRANSITION}, min-width ${TRANSITION}`,
           overflow: "hidden",
           flexShrink: 0,
@@ -407,13 +428,13 @@ export function NavSidebar() {
         <Box
           style={{
             height: 64,
-            borderBottom: `1px solid ${colors.border}`,
+            borderBottom: `1px solid ${isMapRoute ? "color-mix(in srgb, var(--color-border) 70%, transparent)" : colors.border}`,
             display: "flex",
             alignItems: "flex-start",
             justifyContent: "space-between",
             padding: spacingPx[5],
             flexShrink: 0,
-            background: colors.bgWhite,
+            background: isMapRoute ? "transparent" : colors.bgWhite,
           }}
         >
           <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[5], overflow: "hidden", width: collapsed ? 32 : 150, flexShrink: 0, transition: `width ${TRANSITION}` }}>

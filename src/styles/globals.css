@@ -142,6 +142,22 @@ body {
   overflow-x: hidden;
 }
 
+/* /map: nav overlays the canvas — keep floating chrome glued to the sidebar's
+   right edge (same gap expanded or collapsed). Match nav width transition.
+   Desktop only: below `sm` the aside is hidden (Drawer), so offsets must not apply.
+   Use `left` (not padding-left) so Mantine px={} can't win on specificity. */
+@media (min-width: 48em) {
+  body[data-nav-overlay="true"] [data-map-chrome-left] {
+    left: calc(var(--clear-nav-w, 240px) + 1rem) !important;
+    transition: left 200ms ease;
+  }
+  body[data-nav-overlay="true"] [data-map-chrome-top],
+  body[data-nav-overlay="true"] [data-map-chrome-bottom] {
+    left: var(--clear-nav-w, 240px);
+    transition: left 200ms ease;
+  }
+}
+
 /* Mapbox zoom control dark mode overrides */
 [data-mantine-color-scheme="dark"] .mapboxgl-ctrl-group {
   background: var(--color-bg-muted);

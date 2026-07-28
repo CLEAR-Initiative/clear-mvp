@@ -217,7 +217,11 @@ export function MapPanelBar({
 
   return (
     // Mobile: clear the status/safe area + floating burger. Desktop: below the filter bar.
-    <Box ref={panelRef} className="absolute z-20 top-14 left-4 sm:top-20">
+    <Box
+      ref={panelRef}
+      data-map-chrome-left
+      className="absolute z-20 top-14 left-4 sm:top-20"
+    >
       <Group gap={4} align="flex-start" wrap="nowrap">
 
         {/* Icon column — Filters is mobile-only (third button under Legend) */}
@@ -245,8 +249,12 @@ export function MapPanelBar({
             style={{
               width: 260,
               maxWidth: "calc(100vw - 72px)",
-              background: "var(--color-bg-muted)",
-              border: "1px solid var(--color-border-dark)",
+              // Frost: translucent fill + blur. Keep map container free of
+              // `isolation: isolate` so Chromium can sample the WebGL canvas.
+              background: "color-mix(in srgb, var(--color-bg-muted) 42%, transparent)",
+              backdropFilter: "blur(16px) saturate(1.2)",
+              WebkitBackdropFilter: "blur(16px) saturate(1.2)",
+              border: "1px solid color-mix(in srgb, var(--color-border-dark) 55%, transparent)",
               boxShadow: "var(--shadow-md)",
             }}
           >
