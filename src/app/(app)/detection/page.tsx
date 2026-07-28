@@ -354,11 +354,15 @@ function DetectionPageContent() {
   const [signalsSort, setSignalsSort] = useState<SignalSortOrder>("newest");
   const [historySortOrder, setHistorySortOrder] = useState<HistorySortOrder>("newest");
 
-  // Write detection nav context for event/signal page prev/next navigation
+  // Write detection nav context for event/signal page prev/next navigation.
+  // Wait until locationId is resolved — writing null would make detail arrow
+  // nav query an unfiltered (all-countries) list.
   useEffect(() => {
+    if (!selectedLocationId) return;
     writeDetectionNavContext({
       teamId: activeTeamId,
       locationId: selectedLocationId,
+      country: selectedCountry,
       from: fromIso,
       to: effectiveTo,
       severityMin,
@@ -368,7 +372,7 @@ function DetectionPageContent() {
       signalOrderBy: SIGNAL_ORDER_MAP[signalsSort],
       sourceNames: activeSources ? [...activeSources] : undefined,
     });
-  }, [activeTeamId, selectedLocationId, fromIso, effectiveTo, severityMin, severityMax, expandedTypeCodes?.join(","), eventsSort, signalsSort, activeSources]);
+  }, [activeTeamId, selectedLocationId, selectedCountry, fromIso, effectiveTo, severityMin, severityMax, expandedTypeCodes?.join(","), eventsSort, signalsSort, activeSources]);
 
   // ── Per-feed accumulated items + offset ───────────────────────────────────
   const [eventsItems, setEventsItems] = useState<GqlEvent[]>([]);
