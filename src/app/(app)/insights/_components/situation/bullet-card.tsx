@@ -12,10 +12,15 @@ const TONE_COLORS: Record<BulletTone, string> = {
 };
 
 /**
- * A titled list of narrative bullets, each with its own inline citation. Used
- * for the paired panels on the Overview sub-view (hazards / vulnerabilities,
- * push factors / return intentions). These carry genuine per-bullet source
- * ids, so the `[n]` sits right after each claim, in the text.
+ * A titled list of narrative bullets with a single source attribution at the
+ * foot. Used for the paired panels on the Overview sub-view (hazards /
+ * vulnerabilities, push factors / return intentions).
+ *
+ * Attribution is shown ONCE, not per bullet: the pipeline stamps the same
+ * component-level report set on every bullet (it does not record which claim
+ * came from which report), so a per-bullet citation would repeat identical
+ * numbers on every line and imply a precision the data does not have.
+ * Per-fact citation is pipeline work (inline `[R1]` markers at generation).
  */
 export function BulletCard({
   label,
@@ -31,6 +36,7 @@ export function BulletCard({
   onOpenSources?: () => void;
 }) {
   const color = TONE_COLORS[tone];
+  const refs = [...new Set(items.flatMap((i) => i.refs))].sort((a, b) => a - b);
 
   return (
     <Card p={16} style={{ border: "1px solid var(--color-border)", height: "100%" }}>
@@ -53,10 +59,11 @@ export function BulletCard({
           </Text>
           <Text c="var(--color-text-primary)" style={{ fontSize: 13, lineHeight: 1.5 }}>
             {item.text}
-            <Citations refs={item.refs} sources={sources} onOpen={onOpenSources} variant="inline" />
           </Text>
         </Group>
       ))}
+
+      <Citations refs={refs} sources={sources} onOpen={onOpenSources} />
     </Card>
   );
 }
