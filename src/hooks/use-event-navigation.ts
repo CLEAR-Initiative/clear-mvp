@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { useLocations } from "~/hooks/use-locations";
-import { readDetectionNavContext, getDefaultDetectionNavContext } from "~/lib/detection-nav-context";
+import { resolveDetectionNavContext } from "~/lib/detection-nav-context";
 import { getListNavigation } from "~/lib/detail-list-nav";
 import type { GqlEvent, GqlLocation, GqlSignal } from "~/lib/types/graphql";
 
@@ -77,12 +77,15 @@ export function useEventNavigation(
   const { activeTeamId } = useTeam();
   const { getLocationId } = useLocations();
 
-  const navContext = useMemo(() => {
-    const stored = readDetectionNavContext();
-    return stored ?? getDefaultDetectionNavContext(getLocationId, activeTeamId);
-  }, [getLocationId, activeTeamId]);
+  const navContext = useMemo(
+    () => resolveDetectionNavContext(getLocationId, activeTeamId),
+    [getLocationId, activeTeamId],
+  );
+  const hasLocationFilter = !!navContext.locationId;
 
   // Same filtered/ordered page as Detection Events tab (capped at API max).
+  // Do not query without locationId — that returns all countries and lets
+  // arrow keys escape the active Detection country filter.
   const detectionQuery = api.alerts.eventsPage.useQuery(
     {
       teamId: navContext.teamId ?? undefined,
@@ -96,7 +99,7 @@ export function useEventNavigation(
       limit: 500,
       offset: 0,
     },
-    { enabled: !fromMap },
+    { enabled: !fromMap && hasLocationFilter },
   );
 
   // Map feed — no Detection location/severity filters so the opened pin is present.
@@ -117,7 +120,9 @@ export function useEventNavigation(
 
   return {
     ...nav,
-    isLoading: fromMap ? mapQuery.isLoading : detectionQuery.isLoading,
+    isLoading: fromMap
+      ? mapQuery.isLoading
+      : !hasLocationFilter || detectionQuery.isLoading,
     listItems: items,
   };
 }
@@ -157,10 +162,11 @@ export function useSignalNavigation(
   const { activeTeamId } = useTeam();
   const { getLocationId } = useLocations();
 
-  const navContext = useMemo(() => {
-    const stored = readDetectionNavContext();
-    return stored ?? getDefaultDetectionNavContext(getLocationId, activeTeamId);
-  }, [getLocationId, activeTeamId]);
+  const navContext = useMemo(
+    () => resolveDetectionNavContext(getLocationId, activeTeamId),
+    [getLocationId, activeTeamId],
+  );
+  const hasLocationFilter = !!navContext.locationId;
 
   const detectionQuery = api.signals.signalsPage.useQuery(
     {
@@ -175,7 +181,7 @@ export function useSignalNavigation(
       limit: 500,
       offset: 0,
     },
-    { enabled: !fromMap },
+    { enabled: !fromMap && hasLocationFilter },
   );
 
   const mapQuery = api.signals.forMap.useQuery(
@@ -195,7 +201,9 @@ export function useSignalNavigation(
 
   return {
     ...nav,
-    isLoading: fromMap ? mapQuery.isLoading : detectionQuery.isLoading,
+    isLoading: fromMap
+      ? mapQuery.isLoading
+      : !hasLocationFilter || detectionQuery.isLoading,
     listItems: items,
   };
 }
