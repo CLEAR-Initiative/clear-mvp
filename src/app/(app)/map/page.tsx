@@ -12,6 +12,7 @@ import {
   Loader,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
+import { IconX } from "@tabler/icons-react";
 import { DisasterTypePicker } from "~/components/disaster-type-picker";
 import type {
   CrisisMapApi,
@@ -25,6 +26,7 @@ import {
   type CrisisMarker,
   alertsToMarkers,
   eventsToMarkers,
+  focusEventToMarkers,
   signalsToMarkers,
   crisesToMarkers,
 } from "./_components/map-markers-data";
@@ -41,7 +43,7 @@ import {
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
 import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getAdjacentItem, orderByProximityTo } from "~/lib/detail-list-nav";
 import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
 import {
@@ -108,16 +110,26 @@ function MapPageContent() {
   const t = useTranslations("map");
   const format = useFormatter();
   const isMobile = useMediaQuery("(max-width: 48em)");
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const focusEventId = searchParams.get("event");
-  const focusSignalId = searchParams.get("signal");
-  const focusCrisisId = searchParams.get("crisis");
+  const urlFocusEventId = searchParams.get("event");
+  const urlFocusSignalId = searchParams.get("signal");
+  const urlFocusCrisisId = searchParams.get("crisis");
+  // Local dismiss so clearing solo focus swaps to browse markers immediately
+  // without waiting on the soft URL replace (and without remounting the page).
+  const [focusDismissed, setFocusDismissed] = useState(false);
+  useEffect(() => {
+    setFocusDismissed(false);
+  }, [urlFocusEventId, urlFocusSignalId, urlFocusCrisisId]);
+  const focusEventId = focusDismissed ? null : urlFocusEventId;
+  const focusSignalId = focusDismissed ? null : urlFocusSignalId;
+  const focusCrisisId = focusDismissed ? null : urlFocusCrisisId;
   const focusEntityId = focusEventId ?? focusSignalId ?? focusCrisisId;
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>(() => {
-    if (focusSignalId) return "signal";
-    if (focusCrisisId) return "crisis";
-    if (focusEventId) return "event";
+    if (urlFocusSignalId) return "signal";
+    if (urlFocusCrisisId) return "crisis";
+    if (urlFocusEventId) return "event";
     return "alert";
   });
 
@@ -133,7 +145,7 @@ function MapPageContent() {
   // back through past months. Default is a 30-day window - the archived
   // backlog is ~5x the published set and dominated page load time.
   const [timeframe, setTimeframe] = useState<"7d" | "30d" | "90d" | "all">("30d");
-  
+
   // Compute from/to dates for server-side filtering
   const timeframeRange = useMemo(() => {
     if (timeframe === "all") return { from: undefined, to: undefined };
@@ -146,7 +158,50 @@ function MapPageContent() {
     };
   }, [timeframe]);
 
-  // Fetch data for active view ONLY (no parallel loading)
+  // Full Map / focused Back: solo mode paints only the deep-linked entity
+  // (event + its signals, or one signal/crisis). Skip the browse feeds.
+  const isFocusMode = !!focusEntityId;
+
+  const clearSoloFocus = useCallback(() => {
+    setFocusDismissed(true);
+    router.replace("/map", { scroll: false });
+  }, [router]);
+
+  const focusEventQuery = api.events.forMapFocus.useQuery(
+    { id: focusEventId! },
+    { enabled: !!focusEventId, staleTime: 60_000 },
+  );
+  const focusSignalQuery = api.signals.get.useQuery(
+    { id: focusSignalId! },
+    { enabled: !!focusSignalId, staleTime: 60_000 },
+  );
+  const focusCrisisQuery = api.crises.get.useQuery(
+    { id: focusCrisisId! },
+    { enabled: !!focusCrisisId, staleTime: 60_000 },
+  );
+
+  const focusFilterLabel = useMemo(() => {
+    if (focusEventId) {
+      return focusEventQuery.data?.title?.trim() || t("timeline.focusFallbackEvent");
+    }
+    if (focusSignalId) {
+      return focusSignalQuery.data?.title?.trim() || t("timeline.focusFallbackSignal");
+    }
+    if (focusCrisisId) {
+      return focusCrisisQuery.data?.title?.trim() || t("timeline.focusFallbackCrisis");
+    }
+    return null;
+  }, [
+    focusEventId,
+    focusSignalId,
+    focusCrisisId,
+    focusEventQuery.data,
+    focusSignalQuery.data,
+    focusCrisisQuery.data,
+    t,
+  ]);
+
+  // Fetch data for active view ONLY (no parallel loading). Disabled in focus mode.
   const alertsQuery = api.alerts.alertsForMap.useQuery(
     { 
       includeDummy: true, 
@@ -154,7 +209,7 @@ function MapPageContent() {
       from: timeframeRange.from,
       to: timeframeRange.to,
     },
-    { enabled: dataView === "alert", placeholderData: (prev) => prev },
+    { enabled: !isFocusMode && dataView === "alert", placeholderData: (prev) => prev },
   );
   const eventsQuery = api.alerts.eventsForMap.useQuery(
     { 
@@ -162,11 +217,11 @@ function MapPageContent() {
       from: timeframeRange.from,
       to: timeframeRange.to,
     },
-    { enabled: dataView === "event", placeholderData: (prev) => prev },
+    { enabled: !isFocusMode && dataView === "event", placeholderData: (prev) => prev },
   );
   const crisesQuery = api.alerts.getCrises.useQuery(
     undefined,
-    { enabled: dataView === "crisis", placeholderData: (prev) => prev },
+    { enabled: !isFocusMode && dataView === "crisis", placeholderData: (prev) => prev },
   );
   const signalsListQuery = api.signals.forMap.useQuery(
     { 
@@ -174,27 +229,52 @@ function MapPageContent() {
       from: timeframeRange.from,
       to: timeframeRange.to,
     },
-    { enabled: dataView === "signal", staleTime: 60_000, placeholderData: (prev) => prev },
+    { enabled: !isFocusMode && dataView === "signal", staleTime: 60_000, placeholderData: (prev) => prev },
   );
   const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
     staleTime: Infinity, refetchOnWindowFocus: false,
   });
   const hierarchy: HierarchyLevel1[] = hierarchyQuery.data ?? [];
 
-  /* ---- Derive markers based on active data view (markers-only; no region heatmaps) ---- */
+  /* ---- Derive markers: solo deep-link set OR browse feed ---- */
   const allMarkers: CrisisMarker[] = useMemo(() => {
+    if (focusEventId) {
+      return focusEventQuery.data ? focusEventToMarkers(focusEventQuery.data) : [];
+    }
+    if (focusSignalId) {
+      return focusSignalQuery.data ? signalsToMarkers([focusSignalQuery.data]) : [];
+    }
+    if (focusCrisisId) {
+      return focusCrisisQuery.data ? crisesToMarkers([focusCrisisQuery.data]) : [];
+    }
     let markers: CrisisMarker[] = [];
     if (dataView === "alert")  markers = alertsToMarkers(alertsQuery.data?.alerts ?? []);
     if (dataView === "event")  markers = eventsToMarkers(eventsQuery.data?.events ?? []);
     if (dataView === "signal") markers = signalsToMarkers(signalsListQuery.data ?? []);
     if (dataView === "crisis") markers = crisesToMarkers(crisesQuery.data?.crises ?? []);
-    
     return markers;
-  }, [dataView, alertsQuery.data, eventsQuery.data, signalsListQuery.data, crisesQuery.data]);
+  }, [
+    focusEventId,
+    focusSignalId,
+    focusCrisisId,
+    focusEventQuery.data,
+    focusSignalQuery.data,
+    focusCrisisQuery.data,
+    dataView,
+    alertsQuery.data,
+    eventsQuery.data,
+    signalsListQuery.data,
+    crisesQuery.data,
+  ]);
 
   const focusMarker = useMemo(() => {
     if (!focusEntityId) return null;
-    return allMarkers.find((m) => m.eventId === focusEntityId) ?? null;
+    // Prefer the primary entity pin (event/crisis/signal id), not a child signal.
+    return (
+      allMarkers.find((m) => m.eventId === focusEntityId) ??
+      allMarkers[0] ??
+      null
+    );
   }, [allMarkers, focusEntityId]);
 
   const allRegions = useMemo(() => {
@@ -373,15 +453,14 @@ function MapPageContent() {
   const [showRoads, setShowRoads] = useState(true);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
 
-  // Deep-link from detail Back / Full Map: align data view + clear filters that
-  // would hide the target marker (#108).
+  // Deep-link from detail Back / Full Map: align Layers data-view chrome only.
+  // Markers come from the solo focus queries — do not widen timeframe or wipe
+  // browse filters (#108 / show-this-pin).
   useEffect(() => {
     if (!focusEntityId) return;
     if (focusSignalId) setDataView("signal");
     else if (focusCrisisId) setDataView("crisis");
     else if (focusEventId) setDataView("event");
-    setSelectedMonth(null);
-    setSelectedRegion("All Regions");
   }, [focusEntityId, focusSignalId, focusCrisisId, focusEventId]);
 
   // Pulse the deep-linked pin once markers are available.
@@ -677,8 +756,9 @@ function MapPageContent() {
     }
   }, [availableMonths, selectedMonth]);
 
-  /* ---- Apply timeline filter on top ---- */
+  /* ---- Apply timeline filter on top (skipped in solo focus mode) ---- */
   const currentMarkers: CrisisMarker[] = useMemo(() => {
+    if (isFocusMode) return allMarkers;
     if (!selectedMonth) return markersBeforeTime;
     return markersBeforeTime.filter((m) => {
       // Markers without a known timestamp pass through - see availableMonths
@@ -689,7 +769,7 @@ function MapPageContent() {
       const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
       return ym === selectedMonth;
     });
-  }, [markersBeforeTime, selectedMonth]);
+  }, [isFocusMode, allMarkers, markersBeforeTime, selectedMonth]);
 
   /** Resolve a panel's frozen proximity order against the live filtered set. */
   const markersForPanelNav = useCallback(
@@ -999,11 +1079,14 @@ function MapPageContent() {
     };
   }, []);
 
-  const isLoading =
-    (dataView === "alert" && alertsQuery.isLoading) ||
-    (dataView === "event" && eventsQuery.isLoading) ||
-    (dataView === "signal" && signalsListQuery.isLoading) ||
-    (dataView === "crisis" && crisesQuery.isLoading);
+  const isLoading = isFocusMode
+    ? (!!focusEventId && focusEventQuery.isLoading) ||
+      (!!focusSignalId && focusSignalQuery.isLoading) ||
+      (!!focusCrisisId && focusCrisisQuery.isLoading)
+    : (dataView === "alert" && alertsQuery.isLoading) ||
+      (dataView === "event" && eventsQuery.isLoading) ||
+      (dataView === "signal" && signalsListQuery.isLoading) ||
+      (dataView === "crisis" && crisesQuery.isLoading);
 
   // Show loading overlay only on the initial fetch; timeframe/status
   // refetches keep the previous markers visible via placeholderData.
@@ -1146,7 +1229,9 @@ function MapPageContent() {
         />
 
         {/* Loading overlay - only shows when map is mounted and data is loading */}
-        {showLoadingOverlay && <MapLoadingOverlay dataView={dataView} />}
+        {showLoadingOverlay && dataView !== "none" && (
+          <MapLoadingOverlay dataView={dataView} />
+        )}
       </Box>
 
       {/* ===== Left Panel Bar (Layers / Legend / mobile Filters) ===== */}
@@ -1248,7 +1333,7 @@ function MapPageContent() {
       })}
 
       {/* ===== Timeline (bottom overlay) — desktop only; hide on mobile for map real estate ===== */}
-      {availableMonths.length > 0 && !isMobile && (
+      {(isFocusMode || availableMonths.length > 0) && !isMobile && (
         <Box
           className="absolute left-0 right-0 z-20"
           data-map-chrome-bottom
@@ -1280,59 +1365,99 @@ function MapPageContent() {
               {t("timeline.title")}
             </Text>
 
-            {/* "All time" sentinel - clears the month filter */}
-            <button
-              type="button"
-              onClick={() => setSelectedMonth(null)}
-              style={{
-                flexShrink: 0,
-                padding: "4px 12px",
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                border: "1px solid",
-                borderColor: selectedMonth === null ? "var(--color-accent)" : "var(--color-border-dark)",
-                background: selectedMonth === null ? "var(--color-accent)" : "var(--color-bg-white)",
-                color: selectedMonth === null ? "white" : "var(--color-text-secondary)",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {t("timeline.allTime")}
-            </button>
-
-            {/* Months - newest first (already sorted in availableMonths) */}
-            {availableMonths.map((ym) => {
-              // ym is "YYYY-MM"; build a Date on the 1st UTC so format.dateTime
-              // gets a stable instant regardless of viewer timezone.
-              const [yStr, mStr] = ym.split("-");
-              const y = Number(yStr);
-              const mo = Number(mStr);
-              const date = new Date(Date.UTC(y, mo - 1, 1));
-              const active = selectedMonth === ym;
-              return (
-                <button
-                  key={ym}
-                  type="button"
-                  onClick={() => setSelectedMonth(ym)}
+            {/* Solo-focus chip: dismiss to restore the full browse marker set. */}
+            {isFocusMode && focusFilterLabel && (
+              <button
+                type="button"
+                onClick={clearSoloFocus}
+                aria-label={t("timeline.clearFocus")}
+                title={focusFilterLabel}
+                style={{
+                  flexShrink: 0,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  maxWidth: 220,
+                  padding: "4px 10px 4px 12px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border: "1px solid var(--color-accent)",
+                  background: "var(--color-accent)",
+                  color: "white",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <span
                   style={{
-                    flexShrink: 0,
-                    padding: "4px 12px",
-                    borderRadius: 999,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    border: "1px solid",
-                    borderColor: active ? "var(--color-accent)" : "var(--color-border-dark)",
-                    background: active ? "var(--color-accent)" : "var(--color-bg-white)",
-                    color: active ? "white" : "var(--color-text-secondary)",
-                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    minWidth: 0,
                   }}
                 >
-                  {format.dateTime(date, { month: "short", year: "numeric" })}
-                </button>
-              );
-            })}
+                  {focusFilterLabel}
+                </span>
+                <IconX size={14} stroke={2.25} style={{ flexShrink: 0 }} aria-hidden />
+              </button>
+            )}
+
+            {/* "All time" sentinel - clears the month filter */}
+            {!isFocusMode && (
+              <button
+                type="button"
+                onClick={() => setSelectedMonth(null)}
+                style={{
+                  flexShrink: 0,
+                  padding: "4px 12px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border: "1px solid",
+                  borderColor: selectedMonth === null ? "var(--color-accent)" : "var(--color-border-dark)",
+                  background: selectedMonth === null ? "var(--color-accent)" : "var(--color-bg-white)",
+                  color: selectedMonth === null ? "white" : "var(--color-text-secondary)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {t("timeline.allTime")}
+              </button>
+            )}
+
+            {/* Months - newest first (already sorted in availableMonths) */}
+            {!isFocusMode &&
+              availableMonths.map((ym) => {
+                // ym is "YYYY-MM"; build a Date on the 1st UTC so format.dateTime
+                // gets a stable instant regardless of viewer timezone.
+                const [yStr, mStr] = ym.split("-");
+                const y = Number(yStr);
+                const mo = Number(mStr);
+                const date = new Date(Date.UTC(y, mo - 1, 1));
+                const active = selectedMonth === ym;
+                return (
+                  <button
+                    key={ym}
+                    type="button"
+                    onClick={() => setSelectedMonth(ym)}
+                    style={{
+                      flexShrink: 0,
+                      padding: "4px 12px",
+                      borderRadius: 999,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: active ? "var(--color-accent)" : "var(--color-border-dark)",
+                      background: active ? "var(--color-accent)" : "var(--color-bg-white)",
+                      color: active ? "white" : "var(--color-text-secondary)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {format.dateTime(date, { month: "short", year: "numeric" })}
+                  </button>
+                );
+              })}
           </Group>
         </Box>
       )}

@@ -1819,7 +1819,11 @@
     },
     "timeline": {
       "title": "الجدول الزمني",
-      "allTime": "كل الفترات"
+      "allTime": "كل الفترات",
+      "clearFocus": "إزالة التركيز وعرض جميع علامات الخريطة",
+      "focusFallbackEvent": "حدث مركّز",
+      "focusFallbackSignal": "إشارة مركّزة",
+      "focusFallbackCrisis": "أزمة مركّزة"
     },
     "tokenMissing": "لم يُهيَّأ رمز Mapbox. عيّن NEXT_PUBLIC_MAPBOX_TOKEN في ملف .env"
   },

@@ -1819,7 +1819,11 @@
     },
     "timeline": {
       "title": "Chronologie",
-      "allTime": "Toute la période"
+      "allTime": "Toute la période",
+      "clearFocus": "Effacer le focus et afficher tous les marqueurs",
+      "focusFallbackEvent": "Événement ciblé",
+      "focusFallbackSignal": "Signal ciblé",
+      "focusFallbackCrisis": "Crise ciblée"
     },
     "tokenMissing": "Jeton Mapbox non configuré. Définissez NEXT_PUBLIC_MAPBOX_TOKEN dans .env"
   },
