@@ -274,7 +274,8 @@
       "sources": {
         "visit": "زيارة المصدر",
         "published": "نُشر في {date}",
-        "empty": "لا توجد مصادر مسجلة لهذه اللقطة."
+        "empty": "لا توجد مصادر مسجلة لهذه اللقطة.",
+        "count": "{count} مرجع"
       },
       "kpi": {
         "informSeverity": "شدة INFORM",

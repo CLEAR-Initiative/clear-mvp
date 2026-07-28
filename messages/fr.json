@@ -274,7 +274,8 @@
       "sources": {
         "visit": "Consulter la source",
         "published": "Publié le {date}",
-        "empty": "Aucune source enregistrée pour cet instantané."
+        "empty": "Aucune source enregistrée pour cet instantané.",
+        "count": "{count} références"
       },
       "kpi": {
         "informSeverity": "Sévérité INFORM",

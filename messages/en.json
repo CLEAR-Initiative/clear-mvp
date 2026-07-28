@@ -274,7 +274,8 @@
       "sources": {
         "visit": "Visit source",
         "published": "Published {date}",
-        "empty": "No sources recorded for this snapshot."
+        "empty": "No sources recorded for this snapshot.",
+        "count": "{count} references"
       },
       "kpi": {
         "informSeverity": "INFORM Severity",
