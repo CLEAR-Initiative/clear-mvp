@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useMemo, useRef } from "react";
+import { Suspense, use, useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { keepPreviousData } from "@tanstack/react-query";
 import { api } from "~/trpc/react";
@@ -8,7 +8,7 @@ import { SignalDetailContent } from "~/components/signal-detail/signal-detail-co
 import { useSignalNavigation, getSignalMapCenter } from "~/hooks/use-event-navigation";
 import { deriveEntityPending, useEntityNavigation } from "~/hooks/use-entity-navigation";
 
-export default function SignalDetailPage({
+function SignalDetailPageContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -24,6 +24,7 @@ export default function SignalDetailPage({
   const prefetchDetail = useCallback(
     (id: string) => {
       void utils.signals.get.prefetch({ id });
+      void utils.comments.list.prefetch({ entityId: id, entityType: "signal" });
     },
     [utils],
   );
@@ -37,6 +38,12 @@ export default function SignalDetailPage({
   const navigation = useSignalNavigation(activeId, {
     listSource: referrer === "map" ? "map" : "detection",
   });
+
+  // Race comments.list with signals.get so empty threads resolve without a second waterfall.
+  useEffect(() => {
+    if (!activeId) return;
+    void utils.comments.list.prefetch({ entityId: activeId, entityType: "signal" });
+  }, [activeId, utils]);
 
   useEffect(() => {
     for (const id of [navigation.prevId, navigation.nextId]) {
@@ -74,6 +81,7 @@ export default function SignalDetailPage({
   return (
     <SignalDetailContent
       signal={signalQuery.data}
+      entityId={activeId}
       loading={signalQuery.isLoading}
       isPending={isPending}
       mode="page"
@@ -83,5 +91,17 @@ export default function SignalDetailPage({
       navigationMapCenter={navigationMapCenter}
       referrer={referrer}
     />
+  );
+}
+
+export default function SignalDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <SignalDetailPageContent params={params} />
+    </Suspense>
   );
 }

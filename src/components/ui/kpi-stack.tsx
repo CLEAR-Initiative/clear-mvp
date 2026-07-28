@@ -46,13 +46,14 @@ function ImpactRow({ icon, iconBg, value, label }: KpiItem) {
 }
 
 export function KpiStack({ sections }: { sections: KpiSection[] }) {
-  const isMobile = useMediaQuery("(max-width: 48em)");
+  const isMobile = useMediaQuery("(max-width: 48em)") === true;
 
   return (
     <Box
       style={{
         display: "flex",
         flexDirection: isMobile ? "column" : "row",
+        width: "100%",
         background: "var(--color-bg-white)",
         border: "1px solid var(--color-border)",
         borderRadius: 8,

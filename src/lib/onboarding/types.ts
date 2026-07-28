@@ -32,10 +32,11 @@ export interface ProductTourStep {
   /** App route for this stop (tour navigates here before spotlighting). */
   route: "/detection" | "/map";
   /**
-   * Optional Detection `tab` query (`live` = Alerts, `events`, …).
+   * Optional Detection `tab` query (`alerts`, `events`, …).
+   * Legacy `live` is still accepted by Detection as an alias for `alerts`.
    * Merged into navigation as `?tour=1&tab=…`.
    */
-  tab?: "live" | "events" | "signals" | "history";
+  tab?: "alerts" | "live" | "events" | "signals" | "history";
   /** CSS selector for driver.js spotlight */
   target: string;
   side?: "top" | "bottom" | "left" | "right" | "over" | "bottom-left" | "top-right";

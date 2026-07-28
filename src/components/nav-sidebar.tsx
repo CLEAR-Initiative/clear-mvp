@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSelectedLayoutSegments, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -32,6 +32,11 @@ import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
 import { isPlatformAdmin } from "~/lib/roles";
+import { useOptimisticNavSegment } from "~/hooks/use-optimistic-nav-segment";
+import { useSlidingNavIndicator } from "~/hooks/use-sliding-nav-indicator";
+import { SlidingNavIndicator } from "~/components/ui/sliding-nav-indicator";
+import { usePageTransition } from "~/components/page-transition";
+import { isModifiedNavClick } from "~/components/page-transition-intent";
 
 type NavItemKey =
   | "overview"
@@ -100,14 +105,23 @@ export function NavSidebar() {
   const activeSegment = segments[0] ?? "";
   // On /map the sidebar overlays the canvas (frost + no flex resize flash).
   const isMapRoute = activeSegment === "map";
-
-  // Check if we're on a detail page (event/signal/crisis) and get the referrer
-  const isDetailPage = ["event", "signal", "crisis"].includes(activeSegment);
   const referrer = searchParams.get("from");
-  
-  // If on detail page with referrer, use that for highlighting; otherwise use segment
-  const effectiveSegment = isDetailPage && referrer ? referrer : activeSegment;
-  
+  const { displaySegment: effectiveSegment, setOptimisticSegment } =
+    useOptimisticNavSegment(activeSegment, referrer);
+  const { beginPageTransition } = usePageTransition();
+  const desktopNavRef = useRef<HTMLElement>(null);
+  const mobileNavRef = useRef<HTMLElement>(null);
+  const desktopIndicator = useSlidingNavIndicator(
+    desktopNavRef,
+    effectiveSegment || null,
+    collapsed,
+  );
+  const mobileIndicator = useSlidingNavIndicator(
+    mobileNavRef,
+    effectiveSegment || null,
+    mobileOpen,
+  );
+
   const router = useRouter();
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const isAdmin = isPlatformAdmin(authData?.user?.role);
@@ -220,7 +234,12 @@ export function NavSidebar() {
         {/* Mobile team switcher */}
 
         {/* Mobile drawer nav */}
-        <Box component="nav" style={{ flex: 1, overflowY: "auto", padding: spacingPx[3] }}>
+        <Box
+          ref={mobileNavRef}
+          component="nav"
+          style={{ flex: 1, overflowY: "auto", padding: spacingPx[3], position: "relative" }}
+        >
+          <SlidingNavIndicator box={mobileIndicator} variant="sidebar" />
           {navSections.map((section) => {
             if (section.adminOnly && !isAdmin) return null;
             const visibleItems = section.items.filter((item) => {
@@ -242,27 +261,40 @@ export function NavSidebar() {
                   const Icon = item.icon;
                   const content = (
                     <Box
-                      key={item.href}
                       style={{
                         display: "flex", alignItems: "center", gap: spacingPx[4],
                         padding: `${spacingPx[4]}px ${spacingPx[3]}px`, borderRadius: 6,
                         cursor: isDisabled ? "not-allowed" : "pointer",
                         opacity: isDisabled ? 0.45 : 1,
-                        background: isActive ? colors.accentLight : "transparent",
-                        borderInlineStart: isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
+                        background: "transparent",
+                        borderInlineStart: "2px solid transparent",
                         color: isActive ? colors.accent : colors.textSecondary,
                         minHeight: 44,
+                        transition: "color 180ms ease-out",
                       }}
                       component="div"
                     >
-                      <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
+                      <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6, transition: "opacity 180ms ease-out" }} />
                       <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{t(`items.${item.labelKey}`)}</Text>
                       {isDisabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("soon")}</Badge>}
                       {!isDisabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("demo")}</Badge>}
                     </Box>
                   );
-                  return isDisabled ? content : (
-                    <Link key={item.href} href={item.href} onClick={closeMobile} style={{ textDecoration: "none", display: "block", color: "inherit" }}>
+                  return isDisabled ? (
+                    <Box key={item.href}>{content}</Box>
+                  ) : (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      data-nav-segment={itemSegment}
+                      onClick={(e) => {
+                        if (isModifiedNavClick(e)) return;
+                        setOptimisticSegment(itemSegment);
+                        beginPageTransition(item.href);
+                        closeMobile();
+                      }}
+                      style={{ textDecoration: "none", display: "block", color: "inherit", position: "relative", zIndex: 1 }}
+                    >
                       {content}
                     </Link>
                   );
@@ -481,9 +513,11 @@ export function NavSidebar() {
 
         {/* ── Navigation ────────────────────────────────────────── */}
         <Box
+          ref={desktopNavRef}
           component="nav"
-          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: `${spacingPx[3]}px ${spacingPx[3]}px` }}
+          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: `${spacingPx[3]}px ${spacingPx[3]}px`, position: "relative" }}
         >
+          <SlidingNavIndicator box={desktopIndicator} variant="sidebar" />
           {navSections.map((section) => {
             if (section.adminOnly && !isAdmin) return null;
             const visibleItems = section.items.filter((item) => {
@@ -518,7 +552,6 @@ export function NavSidebar() {
 
                   const row = (
                     <Box
-                      key={item.href}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -528,16 +561,16 @@ export function NavSidebar() {
                         position: "relative",
                         cursor: isDisabled ? "not-allowed" : "pointer",
                         opacity: isDisabled ? 0.45 : 1,
-                        background: isActive ? colors.accentLight : "transparent",
-                        borderInlineStart: isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
-                        transition: "none",
+                        background: "transparent",
+                        borderInlineStart: "2px solid transparent",
                         textDecoration: "none",
                         color: isActive ? colors.accent : colors.textSecondary,
+                        transition: "color 180ms ease-out",
                       }}
                       className={cn(!isDisabled && !isActive && "hover:bg-[var(--color-bg-muted)] hover:!text-[var(--color-text-primary)]")}
                       component="div"
                     >
-                      <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
+                      <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6, transition: "opacity 180ms ease-out" }} />
 
                       <Text
                         fw={isActive ? 600 : 500}
@@ -571,8 +604,20 @@ export function NavSidebar() {
                     </Box>
                   );
 
-                  const linked = isDisabled ? row : (
-                    <Link key={item.href} href={item.href} style={{ textDecoration: "none", display: "block", color: "inherit" }}>
+                  const linked = isDisabled ? (
+                    <Box key={item.href}>{row}</Box>
+                  ) : (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      data-nav-segment={itemSegment}
+                      onClick={(e) => {
+                        if (isModifiedNavClick(e)) return;
+                        setOptimisticSegment(itemSegment);
+                        beginPageTransition(item.href);
+                      }}
+                      style={{ textDecoration: "none", display: "block", color: "inherit", position: "relative", zIndex: 1 }}
+                    >
                       {row}
                     </Link>
                   );

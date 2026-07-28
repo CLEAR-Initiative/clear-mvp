@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { Box, Text, Group, Badge, Loader } from "@mantine/core";
+import { Box, Text, Group, Badge } from "@mantine/core";
 import { IconLayersIntersect } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
@@ -10,6 +10,7 @@ import { severityColors } from "~/lib/constants/severity";
 import { resolveLocationName } from "~/lib/location";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { CardSection } from "~/components/ui";
+import { InsightsCrisisListSkeleton } from "~/components/ui/insights-page-skeleton";
 
 interface ReportsTabProps {
   selectedCountry: string;
@@ -74,11 +75,7 @@ export function ReportsTab({
         }
         noPadding
       >
-        {crisesQuery.isLoading && (
-          <Box p={32} style={{ display: "flex", justifyContent: "center" }}>
-            <Loader size="sm" />
-          </Box>
-        )}
+        {crisesQuery.isLoading && <InsightsCrisisListSkeleton />}
 
         {!crisesQuery.isLoading && crises.length > 0 &&
           crisesSorted.map((crisis) => {

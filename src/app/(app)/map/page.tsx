@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -32,7 +32,7 @@ import { useLocations } from "~/hooks/use-locations";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { MapPanelBar } from "./_components/map-panel-bar";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
-import { MapLoadingOverlay } from "./_components/map-loading-overlay";
+import { MapLoadingOverlay, MapPreloader } from "./_components/map-loading-overlay";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
 import {
   MapPanelConnectors,
@@ -40,7 +40,6 @@ import {
 } from "./_components/map-panel-connectors";
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
-import { useIsDark } from "~/hooks/use-is-dark";
 import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
 import { useSearchParams } from "next/navigation";
 import { getAdjacentItem, orderByProximityTo } from "~/lib/detail-list-nav";
@@ -68,15 +67,17 @@ interface OpenMarkerPanel {
 }
 
 function MapLoadingPlaceholder() {
-  const isDark = useIsDark();
   return (
-    <Box 
-      w="100%" 
-      h="100%" 
-      style={{ 
-        background: isDark ? "#111111" : "#FAFAFA",
-      }} 
-    />
+    <Box
+      w="100%"
+      h="100%"
+      style={{
+        position: "relative",
+        background: "var(--color-bg-primary)",
+      }}
+    >
+      <MapPreloader dataView="alert" showMessages />
+    </Box>
   );
 }
 
@@ -103,7 +104,7 @@ function FilterLabel({ children }: { children: string }) {
   );
 }
 
-export default function MapPage() {
+function MapPageContent() {
   const t = useTranslations("map");
   const format = useFormatter();
   const isMobile = useMediaQuery("(max-width: 48em)");
@@ -1345,5 +1346,13 @@ export default function MapPage() {
       `}</style>
 
     </Box>
+  );
+}
+
+export default function MapPage() {
+  return (
+    <Suspense fallback={null}>
+      <MapPageContent />
+    </Suspense>
   );
 }

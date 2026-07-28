@@ -9,7 +9,7 @@ export const PRODUCT_TOUR_STEPS: ProductTourStep[] = [
     id: "detectionAlerts",
     page: "detection",
     route: "/detection",
-    tab: "live",
+    tab: "alerts",
     target: '[data-tour="detection-tab-alerts"]',
     side: "bottom",
     primaryAction: "next",

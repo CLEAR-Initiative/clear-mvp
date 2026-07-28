@@ -1,0 +1,10 @@
+.optimistic {
+  position: absolute;
+  inset: 0;
+  /* Above map overlay nav (z-index 40) so veil isn't trapped under frost. */
+  z-index: 45;
+  /* Block clicks on the outgoing page while destination chrome is painted. */
+  overflow: hidden;
+  pointer-events: auto;
+  background: var(--color-bg-primary);
+}

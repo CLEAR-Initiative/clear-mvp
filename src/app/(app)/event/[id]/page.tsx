@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useMemo, useRef } from "react";
+import { Suspense, use, useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { keepPreviousData } from "@tanstack/react-query";
 import { api } from "~/trpc/react";
@@ -10,7 +10,7 @@ import { useEventNavigation, getEventMapCenter } from "~/hooks/use-event-navigat
 import { deriveEntityPending, useEntityNavigation } from "~/hooks/use-entity-navigation";
 import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
 
-export default function EventDetailPage({
+function EventDetailPageContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -27,6 +27,7 @@ export default function EventDetailPage({
   const prefetchDetail = useCallback(
     (id: string) => {
       void utils.events.get.prefetch({ id });
+      void utils.comments.list.prefetch({ entityId: id, entityType: "event" });
     },
     [utils],
   );
@@ -40,6 +41,12 @@ export default function EventDetailPage({
   const navigation = useEventNavigation(activeId, {
     listSource: referrer === "map" ? "map" : "detection",
   });
+
+  // Race comments.list with events.get so empty threads resolve without a second waterfall.
+  useEffect(() => {
+    if (!activeId) return;
+    void utils.comments.list.prefetch({ entityId: activeId, entityType: "event" });
+  }, [activeId, utils]);
 
   useEffect(() => {
     for (const id of [navigation.prevId, navigation.nextId]) {
@@ -87,6 +94,7 @@ export default function EventDetailPage({
   return (
     <EventDetailContent
       event={eventQuery.data}
+      entityId={activeId}
       loading={eventQuery.isLoading}
       isPending={isPending}
       mode="page"
@@ -98,5 +106,17 @@ export default function EventDetailPage({
       navigationMapCenter={navigationMapCenter}
       referrer={referrer}
     />
+  );
+}
+
+export default function EventDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <EventDetailPageContent params={params} />
+    </Suspense>
   );
 }
