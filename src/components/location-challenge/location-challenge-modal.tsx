@@ -15,7 +15,7 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useTranslations } from "next-intl";
-import { IconCircleCheck, IconMapPin, IconMapPinOff } from "@tabler/icons-react";
+import { IconAlertTriangle, IconCircleCheck, IconMapPin, IconMapPinOff } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 
 export type LocationChallengeQueuePayload = {
@@ -67,6 +67,8 @@ export function LocationChallengeModal({
   const [note, setNote] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submittedWithCorrection, setSubmittedWithCorrection] = useState(false);
+  /** True when clear-api is missing and we only queued a session-local visual. */
+  const [submittedSessionOnly, setSubmittedSessionOnly] = useState(false);
 
   useEffect(() => {
     if (!opened) return;
@@ -77,6 +79,7 @@ export function LocationChallengeModal({
     setNote("");
     setSubmitted(false);
     setSubmittedWithCorrection(false);
+    setSubmittedSessionOnly(false);
   }, [opened, sourceLat, sourceLng]);
 
   const submit = api.locationChallenge.submit.useMutation({
@@ -84,6 +87,7 @@ export function LocationChallengeModal({
       setSubmittedWithCorrection(
         variables.proposedLat != null && variables.proposedLng != null,
       );
+      setSubmittedSessionOnly(false);
       setSubmitted(true);
       await Promise.all([
         utils.locationChallenge.getBySignal.invalidate({ signalId }),
@@ -103,12 +107,8 @@ export function LocationChallengeModal({
         setSubmittedWithCorrection(
           variables.proposedLat != null && variables.proposedLng != null,
         );
+        setSubmittedSessionOnly(true);
         setSubmitted(true);
-        notifications.show({
-          title: tToasts("error"),
-          message: t("errors.backendUnavailable"),
-          color: "yellow",
-        });
         return;
       }
       notifications.show({
@@ -162,14 +162,22 @@ export function LocationChallengeModal({
     >
       {submitted ? (
         <Stack align="center" gap={12} py={28}>
-          <IconCircleCheck size={52} color="var(--color-success)" style={{ strokeWidth: 1.5 }} />
+          {submittedSessionOnly ? (
+            <IconAlertTriangle size={52} color="#D97706" style={{ strokeWidth: 1.5 }} />
+          ) : (
+            <IconCircleCheck size={52} color="var(--color-success)" style={{ strokeWidth: 1.5 }} />
+          )}
           <Text fw={700} size="lg" c="var(--color-text-primary)">
-            {t("modal.successTitle")}
+            {submittedSessionOnly ? t("modal.sessionOnlyTitle") : t("modal.successTitle")}
           </Text>
           <Text size="sm" c="var(--color-text-muted)" ta="center" maw={280}>
-            {submittedWithCorrection
-              ? t("modal.successCorrection")
-              : t("modal.successChallenge")}
+            {submittedSessionOnly
+              ? submittedWithCorrection
+                ? t("modal.sessionOnlyCorrection")
+                : t("modal.sessionOnlyChallenge")
+              : submittedWithCorrection
+                ? t("modal.successCorrection")
+                : t("modal.successChallenge")}
           </Text>
           <Button variant="subtle" color="gray" size="sm" mt={4} onClick={handleClose}>
             {tActions("close")}

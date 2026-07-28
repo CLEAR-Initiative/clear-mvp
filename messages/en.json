@@ -2492,11 +2492,14 @@
       "submitCorrection": "Submit challenge + correction",
       "successTitle": "Queued for consideration",
       "successChallenge": "This Signal location is marked challenged. No second pin until a correction point is proposed.",
-      "successCorrection": "Source and proposed pins will both show on the map while the correction is queued."
+      "successCorrection": "Source and proposed pins will both show on the map while the correction is queued.",
+      "sessionOnlyTitle": "Shown this session only",
+      "sessionOnlyChallenge": "Map shows this pin as challenged for now. It is not saved yet — clear-api persistence is still pending.",
+      "sessionOnlyCorrection": "Source and proposed pins show on the map for this session. Saving for consideration needs clear-api support (still pending)."
     },
     "errors": {
       "submitFailed": "Could not submit the location challenge. Try again.",
-      "backendUnavailable": "Correction pin is shown on the map. Saving for consideration needs clear-api support (still pending)."
+      "backendUnavailable": "Location challenge is not available yet — clear-api support is still pending."
     }
   },
   "verifyEmail": {

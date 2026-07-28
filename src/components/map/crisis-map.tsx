@@ -342,8 +342,10 @@ function buildPointEl(
     opts?.locationTrust === "challenged" || opts?.locationTrust === "correction_queued";
   const size = severity === "critical" ? 18 : severity === "high" ? 16 : 14;
   // Outer: Mapbox sets its positioning transform here - do not animate this element.
+  // Do NOT set position:relative — Mapbox relies on .mapboxgl-marker { position:absolute }.
+  // Inline relative overrides that and stacks pins in document flow.
   const outer = document.createElement("div");
-  outer.style.cssText = `width:${size}px;height:${size}px;cursor:pointer;position:relative;`;
+  outer.style.cssText = `width:${size}px;height:${size}px;cursor:pointer;`;
   // Radar ping ring: expands outward in marker color, hidden until active.
   const ring = document.createElement("div");
   ring.className = "marker-ping-ring";
@@ -1298,6 +1300,10 @@ export function CrisisMap({
             pinRole === "source" || pinRole === "proposed" ? pinRole : undefined,
         });
         el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
+        // Pick mode: block pin clicks even after pan/zoom rebuilds markers.
+        if (locationPickActiveRef.current) {
+          el.style.pointerEvents = "none";
+        }
         if (hoveredMarkerIdRef.current != null && markerId === hoveredMarkerIdRef.current) {
           el.querySelector(".marker-ping-ring")?.classList.add("active");
           el.querySelector(".marker-dot")?.classList.add("active");

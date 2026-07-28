@@ -2498,7 +2498,10 @@
       "submitCorrection": "Soumettre contestation + correction",
       "successTitle": "Mis en file d’attente",
       "successChallenge": "L’emplacement de ce Signal est marqué contesté. Pas de seconde épingle tant qu’aucun point corrigé n’est proposé.",
-      "successCorrection": "Les épingles source et proposée s’afficheront toutes deux sur la carte pendant l’examen."
+      "successCorrection": "Les épingles source et proposée s’afficheront toutes deux sur la carte pendant l’examen.",
+      "sessionOnlyTitle": "Visible pour cette session seulement",
+      "sessionOnlyChallenge": "La carte affiche cette épingle comme contestée pour l’instant. Ce n’est pas encore enregistré — la persistance clear-api est encore en attente.",
+      "sessionOnlyCorrection": "Les épingles source et proposée s’affichent sur la carte pour cette session. L’enregistrement pour examen nécessite le support clear-api (encore en attente)."
     },
     "errors": {
       "submitFailed": "Impossible de soumettre la contestation. Réessayez.",

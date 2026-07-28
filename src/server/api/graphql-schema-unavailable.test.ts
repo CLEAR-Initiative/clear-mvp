@@ -13,4 +13,12 @@ describe("isGraphqlSchemaUnavailable", () => {
   it("ignores unrelated errors", () => {
     expect(isGraphqlSchemaUnavailable(new Error("must be logged in"))).toBe(false);
   });
+
+  it("does not treat generic 'is not defined' prose as schema-unavailable", () => {
+    expect(
+      isGraphqlSchemaUnavailable(
+        new Error("Variable \"$input\" got invalid value; field foo is not defined"),
+      ),
+    ).toBe(false);
+  });
 });
