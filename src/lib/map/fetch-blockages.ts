@@ -5,14 +5,14 @@
  *
  * The map paints against a **stable contract** (`BlockagesMapCollection`).
  * Do **not** call LogIE ArcGIS from the browser. After Expo **#317**, the client
- * only talks to **clear-api** (auth’d / server-persisted slim GeoJSON) via
- * `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` (or a future BFF proxy). Hold shipping this
- * layer to shared environments until that ingest path exists.
+ * fetches same-origin `/api/logie/blockages` (BFF → clear-api with session cookie)
+ * when `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` is set. Hold shipping this layer to
+ * shared environments until that env is wired.
  *
  * | Phase | Source | UI |
  * |-------|--------|-----|
  * | Local spike (#280) | `GET /api/dev/logie-blockages` (disk dump) | Layers toggle in **development only** |
- * | After Expo #317 | clear-api slim Blockages URL | Same toggle when env URL is set |
+ * | After Expo #317 | `GET /api/logie/blockages` BFF → clear-api | Same toggle when env URL is set |
  * | Expo #277 | Env + checklist | Enable outside local spike — **not** a FE rewrite |
  *
  * Spec: `docs/clear-api-logie-ingest.md` · ADR-0003
@@ -21,11 +21,13 @@
 import type { BlockagesMapCollection } from "~/lib/map/logie-blockages";
 
 const SPIKE_PATH = "/api/dev/logie-blockages";
+/** Same-origin BFF that forwards cookies to clear-api `/api/logie/blockages`. */
+export const BLOCKAGES_BFF_PATH = "/api/logie/blockages";
 
 /**
  * True when Layers → Blockages should be an interactive toggle (not Coming soon).
- * Production / preview stay Coming soon unless clear-api URL is configured —
- * never expose the local spike route as the prod data path.
+ * Production / preview stay Coming soon unless the BFF URL is configured —
+ * never expose the local spike route as the production data path.
  */
 export function isBlockagesUiEnabled(): boolean {
   if (process.env.NEXT_PUBLIC_LOGIE_BLOCKAGES_URL?.trim()) return true;
@@ -33,7 +35,7 @@ export function isBlockagesUiEnabled(): boolean {
 }
 
 /**
- * Resolve the GeoJSON URL. Prefer clear-api when configured; otherwise spike route.
+ * Resolve the GeoJSON URL. Prefer env (usually `/api/logie/blockages`); else spike.
  * Callers must gate on `isBlockagesUiEnabled()` first.
  */
 export function getBlockagesFetchUrl(): string {
@@ -42,7 +44,7 @@ export function getBlockagesFetchUrl(): string {
 
 export type FetchBlockagesResult = {
   collection: BlockagesMapCollection;
-  /** `spike` = local dev route; `api` = clear-api (or any URL via env). */
+  /** `spike` = local dev route; `api` = BFF / clear-api (any URL via env). */
   source: "spike" | "api";
 };
 
@@ -55,6 +57,9 @@ export async function fetchBlockagesMapCollection(
 
   const res = await fetch(url, {
     ...init,
+    // Same-origin BFF needs cookies; harmless for spike. Absolute clear-api
+    // URLs also need this + CORS credentials (prefer the BFF instead).
+    credentials: "include",
     headers: {
       Accept: "application/json",
       ...init?.headers,

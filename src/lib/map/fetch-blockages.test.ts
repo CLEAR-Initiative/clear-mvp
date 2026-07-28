@@ -34,16 +34,11 @@ describe("isBlockagesUiEnabled", () => {
     expect(isBlockagesUiEnabled()).toBe(false);
   });
 
-  it("enables when clear-api slim URL is set (any NODE_ENV)", () => {
+  it("enables when BFF / clear-api slim URL is set (any NODE_ENV)", () => {
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv(
-      "NEXT_PUBLIC_LOGIE_BLOCKAGES_URL",
-      "https://api.example/blockages.geojson",
-    );
+    vi.stubEnv("NEXT_PUBLIC_LOGIE_BLOCKAGES_URL", "/api/logie/blockages");
     expect(isBlockagesUiEnabled()).toBe(true);
-    expect(getBlockagesFetchUrl()).toBe(
-      "https://api.example/blockages.geojson",
-    );
+    expect(getBlockagesFetchUrl()).toBe("/api/logie/blockages");
   });
 });
 
