@@ -53,15 +53,24 @@ export function SituationOverview({
               {t("summary.title")}
             </Text>
           </Group>
-          <Text c="var(--color-text-primary)" style={{ fontSize: 13, lineHeight: 1.6 }}>
-            {summary}
-            <Citations
-              refs={data.summaryRefs}
-              sources={sources}
-              onOpen={onOpenSources}
-              variant="inline"
-            />
-          </Text>
+          {summary.split(/\n{2,}/).map((para, i, arr) => (
+            <Text
+              key={i}
+              c="var(--color-text-primary)"
+              mb={i === arr.length - 1 ? 0 : 12}
+              style={{ fontSize: 13, lineHeight: 1.65 }}
+            >
+              {para.trim()}
+              {i === arr.length - 1 && (
+                <Citations
+                  refs={data.summaryRefs}
+                  sources={sources}
+                  onOpen={onOpenSources}
+                  variant="inline"
+                />
+              )}
+            </Text>
+          ))}
         </Card>
       )}
 
