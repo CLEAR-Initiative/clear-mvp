@@ -51,6 +51,11 @@ import {
   TOUR_MAP_DEMO_EVENT,
   type TourMapDemoDetail,
 } from "~/lib/onboarding/tour-map-demo";
+import {
+  blockagesHintFromMeta,
+  fetchBlockagesMapCollection,
+  isBlockagesUiEnabled,
+} from "~/lib/map/fetch-blockages";
 const MAX_OPEN_PANELS = 4;
 
 interface OpenMarkerPanel {
@@ -453,6 +458,54 @@ function MapPageContent() {
   const [showRoads, setShowRoads] = useState(true);
   const [showNrcLocations, setShowNrcLocations] = useState(false);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
+  /**
+   * Blockages UI: enabled in development (spike) or when
+   * `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` is set (clear-api after #317).
+   * See `src/lib/map/fetch-blockages.ts` — single swap point, not a second FE PR.
+   */
+  const blockagesUiEnabled = isBlockagesUiEnabled();
+  const [showBlockages, setShowBlockages] = useState(false);
+  const [blockagesLoading, setBlockagesLoading] = useState(false);
+  const [blockagesHint, setBlockagesHint] = useState<string | undefined>();
+  const [blockagesGeoJson, setBlockagesGeoJson] = useState<{
+    type: "FeatureCollection";
+    features: Array<{
+      type: "Feature";
+      geometry: unknown;
+      properties: Record<string, unknown>;
+    }>;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!blockagesUiEnabled || !showBlockages) {
+      setBlockagesGeoJson(null);
+      setBlockagesHint(undefined);
+      setBlockagesLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setBlockagesLoading(true);
+    setBlockagesHint(undefined);
+    fetchBlockagesMapCollection()
+      .then(({ collection, source }) => {
+        if (cancelled) return;
+        setBlockagesGeoJson(collection);
+        setBlockagesHint(blockagesHintFromMeta(collection, source));
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setBlockagesGeoJson(null);
+        setBlockagesHint(
+          err instanceof Error ? err.message : "Failed to load",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setBlockagesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [blockagesUiEnabled, showBlockages]);
 
   // Deep-link from detail Back / Full Map: align Layers data-view chrome only.
   // Markers come from the solo focus queries — do not widen timeframe or wipe
@@ -1226,6 +1279,8 @@ function MapPageContent() {
           showBoundaries={boundaryLevel !== "none"}
           showRoads={showRoads}
           showNrcLocations={showNrcLocations}
+          showBlockages={blockagesUiEnabled && showBlockages}
+          blockagesGeoJson={blockagesGeoJson}
           baseMapType={baseMapType}
           hoveredMarkerId={chromeActiveMarkerId}
         />
@@ -1249,6 +1304,10 @@ function MapPageContent() {
         onShowRoadsChange={setShowRoads}
         showNrcLocations={showNrcLocations}
         onShowNrcLocationsChange={setShowNrcLocations}
+        showBlockages={blockagesUiEnabled ? showBlockages : undefined}
+        onShowBlockagesChange={setShowBlockages}
+        blockagesHint={blockagesUiEnabled ? blockagesHint : undefined}
+        blockagesLoading={blockagesUiEnabled && blockagesLoading}
         baseMapType={baseMapType}
         onBaseMapTypeChange={setBaseMapType}
         keepPanelsOpen={keepPanelsOpen}

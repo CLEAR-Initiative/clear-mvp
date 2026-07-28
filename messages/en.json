@@ -1765,6 +1765,13 @@
       "operational": "Operational",
       "comingSoon": "Coming soon",
       "blockages": "Blockages",
+      "blockagesCurrent": "Solid · < 15 days",
+      "blockagesStale": "Dashed · ≥ 15 days",
+      "blockagesStaleNote": "Hover for exact status date. Dashed may still be constrained.",
+      "blockagesStatus": "Status color",
+      "blockagesNotPassable": "Not passable",
+      "blockagesRestricted": "Restricted",
+      "blockagesFreshness": "Freshness",
       "idpDensity": "IDP Density",
       "nrcLocations": "NRC locations",
       "filters": "Filters"

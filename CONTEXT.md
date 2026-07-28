@@ -140,11 +140,11 @@ _Avoid_: peer-checkbox Satellite; treating Topography as an overlay instead of a
 choice; shipping operational layers before the triad is correct.
 
 **NRC locations** (layer):
-Operational map layer of NRC sites/offices — next operational layer to wire after the
-**Basemap triad** is fixed. Lives under **Operational** with Blockages (Blockages still
-later).
-_Avoid_: bundling IDP Density + Blockages + NRC as one must-ship; custom layers (#76)
-before NRC for this stack.
+Operational map layer of NRC sites/offices — sibling of **Access** under **Operational**
+(presence, not a movement hazard). Sequenced separately from the **LogIE spike** /
+**Blockages** wire-up; board order still places it after the **Basemap triad**.
+_Avoid_: nesting under **Access**; treating as a Detection data view; bundling IDP
+Density + Blockages + NRC as one must-ship; custom layers (#76) before NRC for this stack.
 
 **Spaghetti connector**:
 A visual link (e.g. dashed line) between a map marker and its open **Marker detail
@@ -203,6 +203,87 @@ The floating card that shows a map marker's summary and View details CTA. Dragga
 desktop; bottom sheet on mobile.
 _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interactive).
 
+### Map operational layers
+
+**Operational**:
+The Layers panel section for field-presence and movement-constraint overlays (not basemap
+cartography, not Detection data views). Contains **Access** (movement constraints) and
+**NRC locations** (presence) as siblings.
+_Avoid_: treating **Operational** as synonymous with **Access**; putting **Roads** or
+**Satellite** here.
+
+**Access**:
+The subgroup under **Operational** for hazards and constraints that affect movement.
+Not a single catch-all “inaccessible road” toggle. Product subtypes include **Blockages**,
+**Minefields**, **Checkpoints**, and **Terrain hazards** (IA / naming may refine nesting).
+_Avoid_: “inaccessible road” as the group name; nesting **Access** under Base map;
+confusing **Access** with the **Roads** overlay (supply-corridor emphasis).
+
+**Blockages**:
+The first **Access** subtype to wire with live data — physical / conflict-related
+interruptions to movement (e.g. damaged or not-passable road/bridge segments). Sourced
+from **LogIE** partner-validated status on OSM-derived geometry (Expo **#277** after the
+**LogIE spike** and the **LogIE ingest** ticket). Spike proposal for **Blockages** v1: **roads + bridges** (SDN inventory); crossings /
+aerodromes as follow-on; port/PAC defer for SDN.
+_Avoid_: painting Dataminr/ACLED candidates as **Blockages** until confirmed and
+geometried; using **Blockages** as the name for the whole **Access** group.
+
+**LogIE ingest**:
+Dedicated Expo ticket for clear-api to pull/persist LogIE GeoJSON so CLEAR can serve
+**Blockages** (and later Access subtypes) without the BFF owning domain data. Sequenced
+**after** the **LogIE spike**, **before** Expo **#277**. Opened **after the spike lands**,
+from a ticket draft embedded in spike docs (counts, status domains, proposed persist shape)
+— not as an empty placeholder beforehand.
+_Avoid_: folding this into #277; treating the spike script as production persistence;
+opening a hollow ingest ticket before spike findings exist.
+
+**LogIE**:
+WFP Logistics Cluster logistics-information system (public ArcGIS Feature Services).
+Canonical **source of truth** for Access-constraint status in CLEAR’s next wedge:
+geometry joins OSM via `osmid`; status is partner-reported and IMO-validated. Ewan’s
+`logie.py` library pulls roads/bridges/ports/aerodromes/crossings plus PAC reports as
+GeoJSON (see gist linked from Expo **#280** / feature **Operational Layers IA**).
+Spike script is a **TypeScript port** of Ewan’s `logie.py` (same ArcGIS endpoints, domains,
+blocked codes, shaping) so the CLEAR stack stays TS/bun-based. Shaped GeoJSON **passes
+through `fclass`** (and related class fields when present) so findings can inventory class
+coverage without Overpass.
+_Avoid_: inventing mock Sudan geometries as production Access; treating OSM Overpass
+surface tags as required for v1 or for the **LogIE spike** (LogIE `fclass` is the preferred
+class proxy when surface is sparse; Overpass is optional follow-up if findings show `fclass`
+thin); shaping features without `fclass` when the source layer has it; adding a Python
+runtime to clear-mvp for the spike; treating icon download as #280 acceptance.
+
+**LogIE spike**:
+Timeboxed validation of Ewan’s LogIE pull for Sudan **before** shipping live
+**Blockages** on `/map` (Expo **#277**). Spike pull = full `access_issues(iso3="SDN")`
+— all five LogIE layers (road, bridge, port, aerodrome, crossing) plus PAC reports —
+to inventory coverage and status domains for every **Access** subtype candidate.
+**Deliverable** (in **clear-mvp**): **TypeScript** port of Ewan’s `logie.py` **core**
+(`pull_layer`, `pull_pac`, `access_issues`, `status_domains`, `save` + CLI; bun/tsx;
+**`fclass` pass-through**), regenerate path, Sudan snapshot/report artifacts, plus
+**`docs/logie-spike-sudan.md`** (findings, `fclass`, LogIE→Access mapping) and
+**`docs/clear-api-logie-ingest.md`** (ingest contract + Expo ticket draft; script README =
+run commands only) — **not** production map paint and **not** clear-api persistence. Pull
+is **LogIE-only** (no OSM Overpass for #280 done). **Out of spike done, on the follow-up
+list**: LogIE sprite/`download_icons` (symbology for later paint). **Artifacts** write to
+**`scripts/logie/out/`** (gitignored by default): blocked-only GeoJSON (default
+`access_issues`) **and** a domain/counts report (`status_domains` + open-vs-blocked
+ratios); full `only_blocked=False` pull optional if size is sane; tiny samples may be
+committed only if the full pull is too large. Runtime CLEAR still owns no domain data;
+snapshots are spike evidence only.
+**LogIE ingest** opens after the spike, then **#277**; #277 does not absorb API work.
+Expo **#280** is **retargeted to this spike** in CONTEXT / plan (acceptance = script +
+artifacts + findings + ingest ticket draft); nested Access IA stubs/comps move to a later
+ticket if still needed. Expo #280 title/acceptance text is rewritten **after the spike
+lands**; CONTEXT is interim SoT during impl.
+_Avoid_: shipping Coming-soon IA comps as if they unblock data; treating the spike as map
+paint or clear-api persistence; requiring Overpass, Python, or icon download for spike
+done; putting the spike script in clear-api before **LogIE ingest**; folding ingest into
+#277; limiting the spike pull to roads-only; rewriting Expo #280 before findings exist;
+shipping only blocked GeoJSON with no domain/counts report; burying the ingest gap only
+inside `docs/logie-spike-sudan.md` without `docs/clear-api-logie-ingest.md`; committing
+full SDN GeoJSON dumps into the app tree by default.
+
 ## Relationships
 
 - A **Thread** contains many question/**Answer** turns
@@ -224,6 +305,11 @@ _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interacti
   **Product Tour** merges, a **Spaghetti connector** visually joins each open panel to
   its marker.
 - **Copyable coordinates** live on the **Marker detail panel** (click/tap to copy)
+- **Access** / **Blockages** constraint status comes from **LogIE**; road geometry joins
+  OSM via `osmid`. **NRC locations** are not a **LogIE** layer.
+- Sequence for this Access wedge: Expo **#280** (**LogIE spike**, retargeted) → **LogIE
+  ingest** (clear-api GeoJSON persist) → Expo **#277** (**Blockages** wire-up). Access IA
+  comps are a later ticket if still needed after spike findings.
 
 ## Example dialogue
 
@@ -341,6 +427,76 @@ _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interacti
 > **IDP Density** sits under **Population**; **Blockages** / **NRC locations** under
 > **Operational**. Wire performant aggregations in a later slice."
 
+> **Dev:** "Ewan can pull LogIE closed roads as GeoJSON — ship nested Access IA stubs (#280)
+> first, or validate LogIE?"
+> **Domain expert:** "**LogIE spike** first (source of truth), then ingest, then **#277**
+> live **Blockages**. Retarget **#280** to the spike; defer IA comps to a later ticket.
+> No mock Sudan geometries as production Access."
+
+> **Dev:** "Spike = offline report only, or script in repo, or clear-api ingest?"
+> **Domain expert:** "Script + regenerate + findings docs in clear-mvp. Don’t pretend
+> clear-api already persists GeoJSON — ticket that ingest gap clearly so #277 isn’t blocked
+> by a silent missing backend path."
+
+> **Dev:** "Fold ingest into #277, or a separate ticket?"
+> **Domain expert:** "Separate ingest ticket **before** #277. #277 paints Blockages from
+> persisted data; it does not own the clear-api persist path."
+
+> **Dev:** "Open the ingest ticket now as a stub?"
+> **Domain expert:** "No. Spike docs include a ready ticket draft; open Expo **LogIE ingest**
+> only after findings (domains, shape) exist."
+
+> **Dev:** "Are ports and PAC Blockages for #277?"
+> **Domain expert:** "Don’t lock it now. Spike proposes the mapping from real SDN data;
+> working hypothesis is roads + bridges first."
+
+> **Dev:** "Spike script in clear-api or clear-mvp?"
+> **Domain expert:** "clear-mvp (`scripts/logie/` + docs + snapshot), as a **TypeScript**
+> port of Ewan’s gist — keep the stack TS-based. clear-api waits for **LogIE ingest**.
+> Snapshot is not runtime domain ownership."
+
+> **Dev:** "Python venv next to Next, or rewrite in TS?"
+> **Domain expert:** "TS port. Don’t add a Python runtime to clear-mvp for the spike."
+
+> **Dev:** "Port icons and Overpass too?"
+> **Domain expert:** "Core pull/domains/save only for #280 done. Keep `download_icons` on
+> the todo list for later symbology; Overpass stays out."
+
+> **Dev:** "One findings doc, or split ingest contract?"
+> **Domain expert:** "Split: `docs/logie-spike-sudan.md` for inventory/mapping;
+> `docs/clear-api-logie-ingest.md` for the persist gap + ticket draft."
+
+> **Dev:** "Where do the GeoJSON dumps go?"
+> **Domain expert:** "`scripts/logie/out/`, gitignored. Findings hold the narrative counts;
+> commit a tiny sample only if the full pull is huge."
+
+> **Dev:** "ADR for LogIE as Access SoT now?"
+> **Domain expert:** "After spike findings. CONTEXT + spike/ingest docs carry us until
+> domains and Blockages mapping are concrete."
+
+> **Dev:** "#280 still means Access IA comps while we spike?"
+> **Domain expert:** "In plan/CONTEXT, **#280** is the spike. Rewrite Expo title/acceptance
+> after the spike lands. IA comps become a later ticket if findings still need them."
+
+> **Dev:** "Must the spike join Overpass surface tags?"
+> **Domain expert:** "No. LogIE-only for #280. Report `fclass` coverage; Overpass only if
+> findings show we need it later."
+
+> **Dev:** "Branch is stale vs origin/dev — spike on tip anyway?"
+> **Domain expert:** "No. Rebase onto `origin/dev` first, then implement the spike."
+
+> **Dev:** "Update Expo #280 text before we build?"
+> **Domain expert:** "No. CONTEXT is SoT during impl; rewrite Expo after the spike lands
+> (same cadence as opening **LogIE ingest**)."
+
+> **Dev:** "Snapshot only blocked features, or the whole network?"
+> **Domain expert:** "Both kinds of artifact: blocked GeoJSON plus a domain/counts report
+> (open-vs-blocked). Full GeoJSON only if size is sane."
+
+> **Dev:** "Ewan’s shape drops `fclass` — inventory it how?"
+> **Domain expert:** "Pass `fclass` through in the TS port. Don’t need Overpass for the
+> class proxy."
+
 > **Dev:** "Four ways back to the map from a detail page — keep View on Crisis Map?"
 > **Domain expert:** "No. Drop the header **View on Crisis Map**. **Back** (when
 > `from=map`) and **Full Map** deep-link to the marker. Sidebar **Map** tab stays the
@@ -421,6 +577,48 @@ _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interacti
 - Operational / population stubs — resolved for this slice: **IDP Density** under
   **Population**; **Blockages** / **NRC locations** under **Operational**; live
   aggregations later.
+- Access next wedge after Ewan’s LogIE note — resolved: rebase onto `origin/dev`, then
+  Expo **#280** (**LogIE spike**, TS port), then **LogIE ingest**, then **#277**
+  **Blockages**. Original #280 IA comps deferred to a later ticket. Mock Access GeoJSON is
+  not production.
+- **LogIE spike** pull scope — resolved: full `access_issues(iso3="SDN")` (five layers +
+  PAC), not roads-only; #277 still ships **Blockages** first from that inventory.
+- **LogIE spike** deliverable — resolved: **TypeScript** port of `logie.py` + snapshot/
+  regenerate + `docs/` findings **in clear-mvp** (e.g. `scripts/logie/`); **do not** build
+  clear-api persistence in the spike; snapshot is evidence only (BFF still owns no runtime
+  domain data); no Python runtime for the spike.
+- clear-api GeoJSON ingest gap — resolved: **new Expo ticket before #277** (dedicated
+  LogIE → clear-api persist); #277 stays Blockages wire-up and depends on ingest.
+- When to open **LogIE ingest** — resolved: **after spike lands**, from a draft in spike
+  docs; not a hollow placeholder now.
+- LogIE feature types → **Blockages** (v1) — spike proposal: **roads + bridges** first
+  (SDN: 28+3 blocked); crossings/aerodromes follow-on; port/PAC empty or defer for SDN.
+- Spike script home — resolved: **clear-mvp** (`scripts/logie/` + docs + snapshot),
+  **TypeScript** (port of Ewan’s gist; keep stack TS-based).
+- Expo **#280** — resolved: **retargeted to LogIE spike** (Expo title/body rewritten after
+  findings). IA stubs/comps become a later ticket if still needed.
+- **ADR-0003** — accepted: LogIE is Access-constraint SoT; ingest before #277.
+- Spike enrichment — resolved: **LogIE-only**; document `fclass`; Overpass optional later
+  if `fclass` is thin.
+- Branch before spike impl — resolved: **rebase** `clear-280-…` onto `origin/dev` first.
+- Expo #280 board text — resolved: rewrite **after spike lands** (CONTEXT interim SoT).
+- Spike pull shape — resolved: **blocked GeoJSON + domain/counts report**; full
+  `only_blocked=False` pull optional if size OK; commit vs gitignore when size known.
+- Spike `fclass` — resolved: **pass through in TS-shaped GeoJSON** (don’t rely on Overpass).
+- Spike runtime — resolved: **TypeScript port** of Ewan’s gist (no Python in clear-mvp).
+- Spike port surface — resolved: **core pull/domains/save + CLI**; `download_icons` on
+  follow-up todo (not #280 done); Overpass still out.
+- Spike docs — resolved: **`docs/logie-spike-sudan.md`** + **`docs/clear-api-logie-ingest.md`**.
+- Spike artifact path — resolved: **`scripts/logie/out/`** (gitignored; optional tiny
+  samples in git if full pull is huge).
+- Blockages freshness UX — resolved: show exact `status_as_of` + relative age; at
+  **≥ 15 days** demote + warn (**do not hide**). Ingest must persist freshness + source
+  fields and `pulled_at`.
+- Displacement camp locations / real-time satellite — **open research** on branch
+  `research/displacement-camps-satellite` (not part of #280 done). May later double-check
+  LogIE road constraints against imagery; feasibility unknown.
+- Follow-ups (not #280 done): LogIE sprite/`download_icons`; Overpass if `fclass` thin;
+  Access IA comps ticket if still needed after findings.
 - Detail→map returns — resolved: remove header **View on Crisis Map**; focused
   **Back** / **Full Map** vs default **Map** tab (#108).
 
