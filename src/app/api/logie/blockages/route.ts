@@ -6,8 +6,9 @@ import { API_URL } from "~/server/env";
  *
  * Browser stays same-origin (`/api/logie/blockages`); this route forwards the
  * session cookie to clear-api `GET /api/logie/blockages` (auth required).
- * Set `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL=/api/logie/blockages` on Preview/Production
- * to enable Layers → Blockages outside local spike.
+ * Map client defaults to this path outside development. Optional override:
+ * `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` (plain env only — Sensitive vars do not
+ * inline into the client bundle at build time).
  */
 export async function GET(request: NextRequest) {
   const incoming = request.nextUrl.searchParams;

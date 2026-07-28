@@ -4,16 +4,18 @@
  * ## Delivery model (one clear-mvp paint path)
  *
  * The map paints against a **stable contract** (`BlockagesMapCollection`).
- * Do **not** call LogIE ArcGIS from the browser. After Expo **#317**, the client
- * fetches same-origin `/api/logie/blockages` (BFF → clear-api with session cookie)
- * when `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` is set. Hold shipping this layer to
- * shared environments until that env is wired.
+ * Do **not** call LogIE ArcGIS from the browser. The client fetches same-origin
+ * `/api/logie/blockages` (BFF → clear-api with session cookie). Local development
+ * without clear-api still falls back to the disk spike route.
  *
  * | Phase | Source | UI |
  * |-------|--------|-----|
- * | Local spike (#280) | `GET /api/dev/logie-blockages` (disk dump) | Layers toggle in **development only** |
- * | After Expo #317 | `GET /api/logie/blockages` BFF → clear-api | Same toggle when env URL is set |
- * | Expo #277 | Env + checklist | Enable outside local spike — **not** a FE rewrite |
+ * | Local spike (#280) | `GET /api/dev/logie-blockages` (disk dump) | Layers toggle |
+ * | clear-api ready | `GET /api/logie/blockages` BFF | Same toggle (default outside development) |
+ *
+ * Optional override: `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` (must be a **plain**
+ * Vercel env — Sensitive/`encrypted` vars are not available at Next build time,
+ * so they never inline into the client bundle).
  *
  * Spec: `docs/clear-api-logie-ingest.md` · ADR-0003
  */
@@ -26,20 +28,24 @@ export const BLOCKAGES_BFF_PATH = "/api/logie/blockages";
 
 /**
  * True when Layers → Blockages should be an interactive toggle (not Coming soon).
- * Production / preview stay Coming soon unless the BFF URL is configured —
- * never expose the local spike route as the production data path.
+ * Always on — the BFF is the product default. Do not gate on NEXT_PUBLIC_*:
+ * Sensitive Vercel envs are runtime-only and leave the client stub stuck on
+ * Coming soon even when the value looks correct in the dashboard.
  */
 export function isBlockagesUiEnabled(): boolean {
-  if (process.env.NEXT_PUBLIC_LOGIE_BLOCKAGES_URL?.trim()) return true;
-  return process.env.NODE_ENV === "development";
+  return true;
 }
 
 /**
- * Resolve the GeoJSON URL. Prefer env (usually `/api/logie/blockages`); else spike.
+ * Resolve the GeoJSON URL.
+ * Prefer env override; else BFF in preview/prod; else local spike in development.
  * Callers must gate on `isBlockagesUiEnabled()` first.
  */
 export function getBlockagesFetchUrl(): string {
-  return process.env.NEXT_PUBLIC_LOGIE_BLOCKAGES_URL?.trim() || SPIKE_PATH;
+  const fromEnv = process.env.NEXT_PUBLIC_LOGIE_BLOCKAGES_URL?.trim();
+  if (fromEnv) return fromEnv;
+  if (process.env.NODE_ENV === "development") return SPIKE_PATH;
+  return BLOCKAGES_BFF_PATH;
 }
 
 export type FetchBlockagesResult = {
