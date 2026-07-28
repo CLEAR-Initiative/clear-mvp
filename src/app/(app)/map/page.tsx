@@ -459,9 +459,7 @@ function MapPageContent() {
   const [showNrcLocations, setShowNrcLocations] = useState(false);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
   /**
-   * Blockages UI: enabled in development (spike) or when
-   * `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` is set (clear-api after #317).
-   * See `src/lib/map/fetch-blockages.ts` — single swap point, not a second FE PR.
+   * Blockages UI: always on (BFF default). See `fetch-blockages.ts`.
    */
   const blockagesUiEnabled = isBlockagesUiEnabled();
   const [showBlockages, setShowBlockages] = useState(false);
