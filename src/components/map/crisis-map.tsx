@@ -1623,19 +1623,29 @@ export function CrisisMap({
 
   // Sidebar collapse / flex layout changes grow the container without a window
   // resize — Mapbox keeps the old canvas width unless we call resize().
+  // Debounce past the nav width transition (200ms) so we don't resize every
+  // animation frame (that blanks satellite tiles mid-reflow).
   useEffect(() => {
     if (!loaded || !mapContainer.current || !map.current) return;
     const el = mapContainer.current;
+    let timer = 0;
     const ro = new ResizeObserver(() => {
-      try {
-        map.current?.resize();
-        onMapMoveRef.current?.();
-      } catch {
-        /* ignore */
-      }
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = 0;
+        try {
+          map.current?.resize();
+          onMapMoveRef.current?.();
+        } catch {
+          /* ignore */
+        }
+      }, 220);
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (timer) window.clearTimeout(timer);
+    };
   }, [loaded]);
 
   // Expose project helpers for overlays (spaghetti connectors on /map).
@@ -1696,6 +1706,8 @@ export function CrisisMap({
           animation: marker-dot-pulse 1.1s ease-in-out infinite;
           z-index: 10 !important;
         }
+        /* Keep GL clear transparent so container basemap color shows if frames drop */
+        .mapboxgl-canvas { background: transparent !important; }
       `}</style>
       <div 
         ref={mapContainer} 
@@ -1703,7 +1715,17 @@ export function CrisisMap({
         style={{ 
           width: '100%',
           height: '100%',
-          background: isDark ? '#111111' : '#FAFAFA',
+          // Match basemap lightness so a brief WebGL clear never flashes
+          // light chrome under dark satellite imagery.
+          background:
+            baseMapType === "satellite"
+              ? "#0a0a0a"
+              : isDark
+                ? "#111111"
+                : "#FAFAFA",
+          // Promote canvas without `isolation: isolate` — isolation blocks
+          // sidebar/panel backdrop-filter from sampling Mapbox WebGL.
+          transform: "translateZ(0)",
         }}
       />
     </>

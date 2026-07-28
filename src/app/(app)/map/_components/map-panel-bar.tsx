@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useState, type ElementType, type ReactNode } from "react";
+import { useState, type ElementType, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
   Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl, Loader,
 } from "@mantine/core";
-import { useClickOutside } from "@mantine/hooks";
 import { IconFilter, IconLayersLinked, IconList } from "@tabler/icons-react";
 import type { DataView } from "./map-layers-panel";
 import type { BoundaryLevel } from "./map-settings-popover";
@@ -191,33 +190,16 @@ export function MapPanelBar({
 }: MapPanelBarProps) {
   const t = useTranslations("map");
   const [active, setActive] = useState<PanelId | null>(null);
+  // Toggle-only: map pan/zoom/click must not dismiss — analysts keep the card
+  // open while navigating. Close by clicking the active icon again (or another).
   const toggle = (id: PanelId) => setActive((prev) => (prev === id ? null : id));
-  // Dismiss layers / legend / filters when tapping the map — but ignore
-  // Mantine Select/Popover portals (they render outside this panel; closing
-  // on those taps prevented country/region picks on mobile).
-  const dismissIfOutside = useCallback((event: Event) => {
-    const target = event.target;
-    if (
-      target instanceof Element &&
-      target.closest(
-        [
-          ".mantine-Select-dropdown",
-          ".mantine-Combobox-dropdown",
-          ".mantine-Popover-dropdown",
-          ".mantine-Menu-dropdown",
-          "[data-combobox-dropdown]",
-        ].join(", "),
-      )
-    ) {
-      return;
-    }
-    setActive(null);
-  }, []);
-  const panelRef = useClickOutside<HTMLDivElement>(dismissIfOutside);
 
   return (
     // Mobile: clear the status/safe area + floating burger. Desktop: below the filter bar.
-    <Box ref={panelRef} className="absolute z-20 top-14 left-4 sm:top-20">
+    <Box
+      data-map-chrome-left
+      className="absolute z-20 top-14 left-4 sm:top-20"
+    >
       <Group gap={4} align="flex-start" wrap="nowrap">
 
         {/* Icon column — Filters is mobile-only (third button under Legend) */}
@@ -245,8 +227,12 @@ export function MapPanelBar({
             style={{
               width: 260,
               maxWidth: "calc(100vw - 72px)",
-              background: "var(--color-bg-muted)",
-              border: "1px solid var(--color-border-dark)",
+              // Frost: translucent fill + blur. Keep map container free of
+              // `isolation: isolate` so Chromium can sample the WebGL canvas.
+              background: "color-mix(in srgb, var(--color-bg-muted) 42%, transparent)",
+              backdropFilter: "blur(16px) saturate(1.2)",
+              WebkitBackdropFilter: "blur(16px) saturate(1.2)",
+              border: "1px solid color-mix(in srgb, var(--color-border-dark) 55%, transparent)",
               boxShadow: "var(--shadow-md)",
             }}
           >

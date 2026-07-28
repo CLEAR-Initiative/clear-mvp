@@ -1032,6 +1032,7 @@ export default function MapPage() {
         visibleFrom="sm"
         className="absolute top-0 left-0 right-0 z-20"
         data-tour="map-filters"
+        data-map-chrome-top
         px={16}
         py={12}
         style={{
@@ -1249,6 +1250,7 @@ export default function MapPage() {
       {availableMonths.length > 0 && !isMobile && (
         <Box
           className="absolute left-0 right-0 z-20"
+          data-map-chrome-bottom
           px={16}
           py={10}
           style={{
