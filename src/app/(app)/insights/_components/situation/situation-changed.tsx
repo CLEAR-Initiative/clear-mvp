@@ -33,13 +33,14 @@ const FIGURE_KEYS: SaStatKey[] = [
   "fundingReceived",
 ];
 
-type PeriodKey = "1m" | "3m" | "yearStart";
+type PeriodKey = "1w" | "1m" | "3m" | "yearStart";
 
 /** ISO timestamp for the chosen comparison point. Date math is done off the
  *  current snapshot's generation time so the reference is deterministic. */
 function asOfFor(period: PeriodKey, ref: Date): string {
   const d = new Date(ref);
-  if (period === "1m") d.setUTCMonth(d.getUTCMonth() - 1);
+  if (period === "1w") d.setUTCDate(d.getUTCDate() - 7);
+  else if (period === "1m") d.setUTCMonth(d.getUTCMonth() - 1);
   else if (period === "3m") d.setUTCMonth(d.getUTCMonth() - 3);
   else return new Date(Date.UTC(ref.getUTCFullYear(), 0, 1)).toISOString();
   return d.toISOString();
@@ -60,7 +61,7 @@ export function SituationChanged({
 }) {
   const t = useTranslations("insights.situation");
   const [open, setOpen] = useState(false);
-  const [period, setPeriod] = useState<PeriodKey>("1m");
+  const [period, setPeriod] = useState<PeriodKey>("1w");
 
   const asOf = useMemo(
     () => asOfFor(period, new Date(data.crisis.generatedAt)),
@@ -144,8 +145,9 @@ export function SituationChanged({
               size="xs"
               w={150}
               value={period}
-              onChange={(v) => setPeriod((v as PeriodKey) ?? "1m")}
+              onChange={(v) => setPeriod((v as PeriodKey) ?? "1w")}
               data={[
+                { value: "1w", label: t("changed.periods.1w") },
                 { value: "1m", label: t("changed.periods.1m") },
                 { value: "3m", label: t("changed.periods.3m") },
                 { value: "yearStart", label: t("changed.periods.yearStart") },

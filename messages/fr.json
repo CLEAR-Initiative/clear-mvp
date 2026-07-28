@@ -304,7 +304,8 @@
         "periods": {
           "1m": "il y a 1 mois",
           "3m": "il y a 3 mois",
-          "yearStart": "début de l'année"
+          "yearStart": "début de l'année",
+          "1w": "il y a 1 semaine"
         }
       }
     }
