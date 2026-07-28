@@ -18,45 +18,62 @@ export function Citations({
   refs,
   sources,
   onOpen,
+  variant = "block",
 }: {
   refs: number[];
   sources: SaSource[];
   onOpen?: () => void;
+  /** "block" = a labelled "Sources [1][2]" row. "inline" = bare superscript
+   *  chips that flow right after the text they cite. */
+  variant?: "block" | "inline";
 }) {
   const t = useTranslations("insights.situation");
   if (refs.length === 0) return null;
 
+  const chips = refs.map((n) => {
+    const src = sources[n - 1];
+    const label = src?.title ?? t("citations.report", { n });
+    return (
+      <Tooltip key={n} label={label} withArrow multiline w={260} openDelay={200}>
+        <Text
+          component={onOpen ? "button" : "span"}
+          onClick={onOpen}
+          aria-label={label}
+          style={{
+            fontFamily: "var(--mantine-font-family-monospace, monospace)",
+            fontSize: variant === "inline" ? 9.5 : 10.5,
+            fontWeight: 700,
+            verticalAlign: variant === "inline" ? "super" : "baseline",
+            lineHeight: variant === "inline" ? 0 : undefined,
+            color: "var(--color-info)",
+            background: "var(--color-info-light)",
+            border: 0,
+            borderRadius: 4,
+            padding: "1px 4px",
+            marginLeft: 2,
+            cursor: onOpen ? "pointer" : "help",
+          }}
+        >
+          {n}
+        </Text>
+      </Tooltip>
+    );
+  });
+
+  if (variant === "inline") {
+    // Rendered inside flowing text: a whitespace-joined run of superscripts.
+    return <Text component="span">{chips}</Text>;
+  }
+
   return (
     <Group gap={6} align="center" mt={8} wrap="wrap">
-      <Text c="var(--color-text-muted)" style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
+      <Text
+        c="var(--color-text-muted)"
+        style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}
+      >
         {t("citations.label")}
       </Text>
-      {refs.map((n) => {
-        const src = sources[n - 1];
-        const label = src?.title ?? t("citations.report", { n });
-        return (
-          <Tooltip key={n} label={label} withArrow multiline w={260} openDelay={200}>
-            <Text
-              component={onOpen ? "button" : "span"}
-              onClick={onOpen}
-              aria-label={label}
-              style={{
-                fontFamily: "var(--mantine-font-family-monospace, monospace)",
-                fontSize: 10.5,
-                fontWeight: 700,
-                color: "var(--color-info)",
-                background: "var(--color-info-light)",
-                border: 0,
-                borderRadius: 4,
-                padding: "1px 6px",
-                cursor: onOpen ? "pointer" : "help",
-              }}
-            >
-              {n}
-            </Text>
-          </Tooltip>
-        );
-      })}
+      {chips}
     </Group>
   );
 }

@@ -55,8 +55,13 @@ export function SituationOverview({
           </Group>
           <Text c="var(--color-text-primary)" style={{ fontSize: 13, lineHeight: 1.6 }}>
             {summary}
+            <Citations
+              refs={data.summaryRefs}
+              sources={sources}
+              onOpen={onOpenSources}
+              variant="inline"
+            />
           </Text>
-          <Citations refs={data.summaryRefs} sources={sources} onOpen={onOpenSources} />
         </Card>
       )}
 
@@ -96,9 +101,16 @@ export function SituationOverview({
                       style={{ fontSize: 13, lineHeight: 1.5 }}
                     >
                       {item}
+                      {j === risk.items.length - 1 && (
+                        <Citations
+                          refs={risk.refs}
+                          sources={sources}
+                          onOpen={onOpenSources}
+                          variant="inline"
+                        />
+                      )}
                     </Text>
                   ))}
-                  <Citations refs={risk.refs} sources={sources} onOpen={onOpenSources} />
                 </Box>
               </Group>
             ))}
@@ -113,17 +125,24 @@ export function SituationOverview({
           </Text>
           <SimpleGrid cols={{ base: 1, md: 2 }} spacing={16}>
             {hazards.hazards.length > 0 && (
-              <BulletCard tone="critical" label={t("hazards.current")} items={hazards.hazards} />
+              <BulletCard
+                tone="critical"
+                label={t("hazards.current")}
+                items={hazards.hazards}
+                sources={sources}
+                onOpenSources={onOpenSources}
+              />
             )}
             {hazards.vulnerabilities.length > 0 && (
               <BulletCard
                 tone="warning"
                 label={t("hazards.precrisis")}
                 items={hazards.vulnerabilities}
+                sources={sources}
+                onOpenSources={onOpenSources}
               />
             )}
           </SimpleGrid>
-          <Citations refs={hazards.refs} sources={sources} onOpen={onOpenSources} />
         </Box>
       )}
 
@@ -134,17 +153,24 @@ export function SituationOverview({
           </Text>
           <SimpleGrid cols={{ base: 1, md: 2 }} spacing={16}>
             {displacement.push.length > 0 && (
-              <BulletCard tone="info" label={t("displacement.push")} items={displacement.push} />
+              <BulletCard
+                tone="info"
+                label={t("displacement.push")}
+                items={displacement.push}
+                sources={sources}
+                onOpenSources={onOpenSources}
+              />
             )}
             {displacement.return.length > 0 && (
               <BulletCard
                 tone="success"
                 label={t("displacement.return")}
                 items={displacement.return}
+                sources={sources}
+                onOpenSources={onOpenSources}
               />
             )}
           </SimpleGrid>
-          <Citations refs={displacement.refs} sources={sources} onOpen={onOpenSources} />
         </Box>
       )}
     </Box>

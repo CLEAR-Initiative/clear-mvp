@@ -280,7 +280,16 @@
       "kpi": {
         "informSeverity": "Sévérité INFORM",
         "evidenceBase": "D'après la dernière analyse · {reports} rapports",
-        "freshest": "plus récent {date}"
+        "freshest": "plus récent {date}",
+        "info": {
+          "informSeverity": "Indice de sévérité INFORM (0-10) d'ACAPS, mis à jour chaque mois. Mesure composite de la sévérité, indépendante du pipeline d'analyse.",
+          "displaced": "Personnes déplacées internes (PDI). Agrégé à partir des rapports sources (champ : population_displaced).",
+          "inNeed": "Personnes dans le besoin. Agrégé à partir des rapports sources (champ : population_in_need).",
+          "affected": "Personnes affectées par la crise - un cercle plus large que les personnes dans le besoin (champ : population_affected).",
+          "fundingRequired": "Financement requis pour les appels, en USD (champ : funding_required_usd).",
+          "returnees": "Personnes retournées. Agrégé à partir des rapports sources (champ : returnees).",
+          "fundingReceived": "Financement reçu pour les appels, en USD (champ : funding_received_usd)."
+        }
       },
       "citations": {
         "label": "Sources",

@@ -171,6 +171,14 @@ export interface SaSource {
   publishedAt: string | null;
 }
 
+/** A single sourced claim: the text plus the citation numbers backing it.
+ *  Hazards and displacement carry genuine per-bullet source ids, so these
+ *  render true inline citations - one `[n]` right after each claim. */
+export interface SaBullet {
+  text: string;
+  refs: number[];
+}
+
 export interface SituationAnalysis {
   crisis: SaCrisis;
   summary: string | null;
@@ -181,8 +189,8 @@ export interface SituationAnalysis {
    *  where the pipeline did not resolve a value. */
   figures: Record<SaStatKey, number | null>;
   contextRisks: SaContextRisk[];
-  hazards: { hazards: string[]; vulnerabilities: string[]; refs: number[] };
-  displacement: { push: string[]; return: string[]; refs: number[] };
+  hazards: { hazards: SaBullet[]; vulnerabilities: SaBullet[] };
+  displacement: { push: SaBullet[]; return: SaBullet[] };
   sectors: SaSector[];
   sources: SaSource[];
 }
@@ -239,20 +247,18 @@ export function compactNumber(n: number): string {
   return String(n);
 }
 
-/** Pull `description` off the SAF list items, dropping blanks. */
-function descriptions(items: RawDescribed[] | undefined): string[] {
+/** Pull each SAF bullet's text + its own citation numbers, dropping blanks. */
+function sourcedBullets(
+  items: RawDescribed[] | undefined,
+  refsFrom: (ids: string[] | undefined) => number[],
+): SaBullet[] {
   return (items ?? [])
-    .map((i) => i.description?.trim())
-    .filter((d): d is string => Boolean(d));
+    .map((i) => ({ text: i.description?.trim() ?? "", refs: refsFrom(i.source_report_ids) }))
+    .filter((b) => b.text.length > 0);
 }
 
 function cleanStrings(items: string[] | undefined): string[] {
   return (items ?? []).map((s) => s?.trim()).filter((s): s is string => Boolean(s));
-}
-
-/** Union the `source_report_ids` off a list of sourced bullets. */
-function bulletRefIds(items: RawDescribed[] | undefined): string[] {
-  return (items ?? []).flatMap((i) => i.source_report_ids ?? []);
 }
 
 /** Build a `report_id -> citation number` index from the ordered source list,
@@ -407,22 +413,15 @@ export function mapSituationAnalysis(
     },
     contextRisks: mapContextRisks(data.context_risks, refsFrom),
     hazards: {
-      hazards: descriptions(data.hazards_and_vulnerabilities?.hazards),
-      vulnerabilities: descriptions(
+      hazards: sourcedBullets(data.hazards_and_vulnerabilities?.hazards, refsFrom),
+      vulnerabilities: sourcedBullets(
         data.hazards_and_vulnerabilities?.vulnerabilities,
+        refsFrom,
       ),
-      refs: refsFrom([
-        ...bulletRefIds(data.hazards_and_vulnerabilities?.hazards),
-        ...bulletRefIds(data.hazards_and_vulnerabilities?.vulnerabilities),
-      ]),
     },
     displacement: {
-      push: descriptions(data.displacement?.push_factors),
-      return: descriptions(data.displacement?.return_intention),
-      refs: refsFrom([
-        ...bulletRefIds(data.displacement?.push_factors),
-        ...bulletRefIds(data.displacement?.return_intention),
-      ]),
+      push: sourcedBullets(data.displacement?.push_factors, refsFrom),
+      return: sourcedBullets(data.displacement?.return_intention, refsFrom),
     },
     sectors: mapSectors(data.sectors, refsFrom),
     sources,

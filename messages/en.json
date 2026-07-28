@@ -280,7 +280,16 @@
       "kpi": {
         "informSeverity": "INFORM Severity",
         "evidenceBase": "From the latest analysis · {reports} reports",
-        "freshest": "freshest {date}"
+        "freshest": "freshest {date}",
+        "info": {
+          "informSeverity": "INFORM Severity Index (0-10) from ACAPS, updated monthly. A composite measure of crisis severity, independent of the situation-analysis pipeline.",
+          "displaced": "Internally displaced persons (IDPs). Aggregated from the source reports below (field: population_displaced).",
+          "inNeed": "People in need of humanitarian assistance. Aggregated from the source reports (field: population_in_need / overall PiN).",
+          "affected": "People affected by the crisis - a wider circle than people in need. Aggregated from the source reports (field: population_affected).",
+          "fundingRequired": "Funding required across appeals, in USD. Aggregated from the source reports (field: funding_required_usd).",
+          "returnees": "Returnees. Aggregated from the source reports (field: returnees).",
+          "fundingReceived": "Funding received against appeals, in USD (field: funding_received_usd)."
+        }
       },
       "citations": {
         "label": "Sources",

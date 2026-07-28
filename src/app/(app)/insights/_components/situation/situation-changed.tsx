@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box, Collapse, Group, Loader, Select, Text, UnstyledButton } from "@mantine/core";
-import { IconChevronRight } from "@tabler/icons-react";
+import { IconChevronRight, IconHistory } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import {
   compactNumber,
@@ -99,25 +99,31 @@ export function SituationChanged({
       <UnstyledButton
         onClick={() => setOpen((v) => !v)}
         w="100%"
-        px={12}
-        py={8}
+        px={14}
+        py={11}
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 9,
-          border: "1px dashed var(--color-border-dark)",
-          borderRadius: 8,
+          gap: 10,
+          border: "1px solid var(--color-border)",
+          background: "var(--color-bg-muted)",
+          borderRadius: open ? "10px 10px 0 0" : 10,
         }}
         aria-expanded={open}
       >
-        <IconChevronRight
-          size={15}
-          color="var(--color-text-muted)"
-          style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform .15s" }}
-        />
-        <Text c="var(--color-text-secondary)" style={{ fontSize: 12.5 }}>
+        <IconHistory size={17} color="var(--color-accent)" style={{ flexShrink: 0 }} />
+        <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
           {t("changed.label", { period: periodLabel })}
         </Text>
+        <IconChevronRight
+          size={16}
+          color="var(--color-text-muted)"
+          style={{
+            marginLeft: "auto",
+            transform: open ? "rotate(90deg)" : "none",
+            transition: "transform .15s",
+          }}
+        />
       </UnstyledButton>
 
       <Collapse in={open}>
@@ -127,7 +133,7 @@ export function SituationChanged({
           style={{
             border: "1px solid var(--color-border)",
             borderTop: 0,
-            borderRadius: "0 0 8px 8px",
+            borderRadius: "0 0 10px 10px",
           }}
         >
           <Group gap={8} mb={10} align="center">

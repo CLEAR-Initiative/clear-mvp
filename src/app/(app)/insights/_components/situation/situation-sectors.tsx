@@ -152,6 +152,12 @@ function SectorDetail({
                 needs: sector.needs.length,
                 interventions: sector.interventions.length,
               })}
+              <Citations
+                refs={sector.refs}
+                sources={sources}
+                onOpen={onOpenSources}
+                variant="inline"
+              />
             </Text>
           </Box>
           {sector.severity ? (
@@ -240,8 +246,6 @@ function SectorDetail({
             ))}
           </Box>
         )}
-
-        <Citations refs={sector.refs} sources={sources} onOpen={onOpenSources} />
       </Box>
     </Card>
   );

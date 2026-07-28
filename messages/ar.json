@@ -280,7 +280,16 @@
       "kpi": {
         "informSeverity": "شدة INFORM",
         "evidenceBase": "من أحدث تحليل · {reports} تقارير",
-        "freshest": "الأحدث {date}"
+        "freshest": "الأحدث {date}",
+        "info": {
+          "informSeverity": "مؤشر شدة INFORM (0-10) من ACAPS، يُحدَّث شهرياً. مقياس مركّب لشدة الأزمة، مستقل عن خط معالجة التحليل.",
+          "displaced": "النازحون داخلياً. مجمّع من التقارير المصدرية (الحقل: population_displaced).",
+          "inNeed": "المحتاجون للمساعدة الإنسانية. مجمّع من التقارير المصدرية (الحقل: population_in_need).",
+          "affected": "المتأثرون بالأزمة - دائرة أوسع من المحتاجين (الحقل: population_affected).",
+          "fundingRequired": "التمويل المطلوب للنداءات بالدولار (الحقل: funding_required_usd).",
+          "returnees": "العائدون. مجمّع من التقارير المصدرية (الحقل: returnees).",
+          "fundingReceived": "التمويل المستلم للنداءات بالدولار (الحقل: funding_received_usd)."
+        }
       },
       "citations": {
         "label": "المصادر",
