@@ -9,6 +9,7 @@ import { BulletCard } from "./bullet-card";
 import { SituationKpis } from "./situation-kpis";
 import { Citations } from "./citations";
 import { SituationChanged } from "./situation-changed";
+import { SectionChange } from "./section-change";
 
 /**
  * Situation Analysis -> Overview. Every block is conditional: the pipeline
@@ -120,6 +121,7 @@ export function SituationOverview({
                       )}
                     </Text>
                   ))}
+                  <SectionChange note={data.changes.notes[`context_risks.${risk.key}`]} />
                 </Box>
               </Group>
             ))}
@@ -152,6 +154,7 @@ export function SituationOverview({
               />
             )}
           </SimpleGrid>
+          <SectionChange note={data.changes.notes.hazards} />
         </Box>
       )}
 
@@ -180,6 +183,7 @@ export function SituationOverview({
               />
             )}
           </SimpleGrid>
+          <SectionChange note={data.changes.notes.displacement} />
         </Box>
       )}
     </Box>

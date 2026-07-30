@@ -269,7 +269,9 @@
         "topNeed": "Top need",
         "mostVulnerable": "Most vulnerable",
         "evidence": "Evidence",
-        "evidenceCount": "{reports, plural, one {# report} other {# reports}}"
+        "evidenceCount": "{reports, plural, one {# report} other {# reports}}",
+        "inferred": "Inferred",
+        "inferredWarning": "This grade was produced from off-sector evidence (a fallback search), so the analysis below is inference, not sector-specific reporting."
       },
       "sources": {
         "visit": "Visit source",

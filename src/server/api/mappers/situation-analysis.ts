@@ -38,6 +38,7 @@ interface RawSector {
     rating_out_of_10?: number;
   }>;
   source_report_ids?: string[];
+  evidence_scope?: "sector" | "fallback" | null;
 }
 
 interface RawContextRisk {
@@ -84,6 +85,10 @@ export interface SaPayload {
       published_at?: string | null;
       report_title?: string | null;
     }>;
+  };
+  changes?: {
+    compared_to?: string | null;
+    notes?: Record<string, string>;
   };
 }
 
@@ -162,6 +167,9 @@ export interface SaSector {
   refs: number[];
   /** Distinct contributing reports - a plain evidence-count signal. */
   reportCount: number;
+  /** "fallback" when the grade came from an off-sector search (an inference,
+   *  not sector reporting); "sector" when evidenced; null when not produced. */
+  evidenceScope: "sector" | "fallback" | null;
 }
 
 export interface SaSource {
@@ -193,6 +201,10 @@ export interface SituationAnalysis {
   displacement: { push: SaBullet[]; return: SaBullet[] };
   sectors: SaSector[];
   sources: SaSource[];
+  /** Pipeline-generated "what changed vs the prior snapshot" notes, keyed by
+   *  section path (summary, context_risks.<domain>, hazards, displacement,
+   *  sectors.<id>). Empty until the pipeline produces them. */
+  changes: { comparedTo: string | null; notes: Record<string, string> };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -335,6 +347,7 @@ function mapSectors(
         })),
       refs: refsFrom(s?.source_report_ids),
       reportCount: new Set(s?.source_report_ids ?? []).size,
+      evidenceScope: s?.evidence_scope ?? null,
     }))
     .sort((a, b) => {
       const ai = SECTOR_ORDER.indexOf(a.id);
@@ -425,5 +438,9 @@ export function mapSituationAnalysis(
     },
     sectors: mapSectors(data.sectors, refsFrom),
     sources,
+    changes: {
+      comparedTo: data.changes?.compared_to ?? null,
+      notes: data.changes?.notes ?? {},
+    },
   };
 }

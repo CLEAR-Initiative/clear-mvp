@@ -7,6 +7,7 @@ import { CardSection, SeverityBadge } from "~/components/ui";
 import type { SaSector, SaSource } from "~/server/api/mappers/situation-analysis";
 import { toAppSeverity } from "./severity";
 import { Citations } from "./citations";
+import { SectionChange } from "./section-change";
 
 /**
  * Situation Analysis -> Sectors: a selectable list beside the full analysis of
@@ -22,10 +23,12 @@ export function SituationSectors({
   sectors,
   sources,
   onOpenSources,
+  changeNotes = {},
 }: {
   sectors: SaSector[];
   sources: SaSource[];
   onOpenSources?: () => void;
+  changeNotes?: Record<string, string>;
 }) {
   const t = useTranslations("insights.situation");
   const [selected, setSelected] = useState<string | undefined>(() => sectors[0]?.id);
@@ -85,7 +88,12 @@ export function SituationSectors({
         ))}
       </CardSection>
 
-      <SectorDetail sector={sector} sources={sources} onOpenSources={onOpenSources} />
+      <SectorDetail
+        sector={sector}
+        sources={sources}
+        onOpenSources={onOpenSources}
+        changeNote={changeNotes[`sectors.${sector.id}`]}
+      />
     </SimpleGrid>
   );
 }
@@ -121,10 +129,12 @@ function SectorDetail({
   sector,
   sources,
   onOpenSources,
+  changeNote,
 }: {
   sector: SaSector;
   sources: SaSource[];
   onOpenSources?: () => void;
+  changeNote?: string;
 }) {
   const t = useTranslations("insights.situation");
 
@@ -160,13 +170,32 @@ function SectorDetail({
               />
             </Text>
           </Box>
-          {sector.severity ? (
-            <SeverityBadge severity={toAppSeverity(sector.severity)} size="sm" />
-          ) : (
-            <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
-              {t("sectors.notAssessed")}
-            </Text>
-          )}
+          <Group gap={8} align="center" wrap="nowrap">
+            {sector.severity ? (
+              <SeverityBadge severity={toAppSeverity(sector.severity)} size="sm" />
+            ) : (
+              <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
+                {t("sectors.notAssessed")}
+              </Text>
+            )}
+            {sector.evidenceScope === "fallback" && (
+              <Text
+                fw={700}
+                tt="uppercase"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.03em",
+                  color: "var(--color-warning)",
+                  background: "var(--color-warning-light)",
+                  border: "1px dashed var(--color-warning)",
+                  borderRadius: 6,
+                  padding: "2px 7px",
+                }}
+              >
+                {t("sectors.inferred")}
+              </Text>
+            )}
+          </Group>
         </Group>
       </Box>
 
@@ -174,6 +203,22 @@ function SectorDetail({
         {isEmpty && (
           <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
             {t("sectors.noAnalysis")}
+          </Text>
+        )}
+
+        {sector.evidenceScope === "fallback" && !isEmpty && (
+          <Text
+            mb={14}
+            style={{
+              fontSize: 12,
+              lineHeight: 1.5,
+              color: "var(--color-warning)",
+              background: "var(--color-warning-light)",
+              borderRadius: 8,
+              padding: "9px 11px",
+            }}
+          >
+            &#9888; {t("sectors.inferredWarning")}
           </Text>
         )}
 
@@ -246,6 +291,8 @@ function SectorDetail({
             ))}
           </Box>
         )}
+
+        <SectionChange note={changeNote} />
       </Box>
     </Card>
   );

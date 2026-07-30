@@ -269,7 +269,9 @@
         "topNeed": "Besoin prioritaire",
         "mostVulnerable": "Plus vulnérables",
         "evidence": "Preuves",
-        "evidenceCount": "{reports, plural, one {# rapport} other {# rapports}}"
+        "evidenceCount": "{reports, plural, one {# rapport} other {# rapports}}",
+        "inferred": "Inféré",
+        "inferredWarning": "Cette évaluation provient de sources hors secteur (recherche de repli) ; l'analyse ci-dessous est une inférence, pas un rapport sectoriel."
       },
       "sources": {
         "visit": "Consulter la source",

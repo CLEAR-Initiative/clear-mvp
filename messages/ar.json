@@ -269,7 +269,9 @@
         "topNeed": "الحاجة الأولى",
         "mostVulnerable": "الأكثر ضعفاً",
         "evidence": "الأدلة",
-        "evidenceCount": "{reports, plural, zero {# تقرير} one {# تقرير} two {تقريران} few {# تقارير} many {# تقريراً} other {# تقرير}}"
+        "evidenceCount": "{reports, plural, zero {# تقرير} one {# تقرير} two {تقريران} few {# تقارير} many {# تقريراً} other {# تقرير}}",
+        "inferred": "مُستنتَج",
+        "inferredWarning": "نتجت هذه الدرجة عن أدلة من خارج القطاع (بحث احتياطي)، لذا فإن التحليل أدناه استنتاج وليس تقريراً خاصاً بالقطاع."
       },
       "sources": {
         "visit": "زيارة المصدر",

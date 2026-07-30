@@ -166,6 +166,7 @@ export function SituationTab() {
               sectors={data.sectors}
               sources={data.sources}
               onOpenSources={() => setSubTab("sources")}
+              changeNotes={data.changes.notes}
             />
           )}
           {subTab === "sources" && <SituationSources sources={data.sources} />}
