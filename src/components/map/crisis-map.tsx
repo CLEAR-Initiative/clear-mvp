@@ -31,6 +31,7 @@ import {
   paintNrcOfficeMarkerTheme,
 } from "~/lib/map/nrc-office-markers";
 import { BLOCKAGES_STALE_AFTER_DAYS } from "~/lib/map/logie-blockages";
+import { syncTopographyTerrain } from "~/lib/map/topography-terrain";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
 const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
@@ -171,7 +172,7 @@ interface CrisisMapProps {
       properties: Record<string, unknown>;
     }>;
   } | null;
-  /** Basemap: simple (theme style), topography (theme style + hillshade relief), or satellite imagery */
+  /** Basemap: simple (theme style), topography (hillshade + DEM terrain mesh), or satellite imagery */
   baseMapType?: BaseMapType;
   /**
    * Mutable ref filled with project helpers while the map is mounted.
@@ -404,8 +405,8 @@ export function CrisisMap({
         ? "mapbox://styles/mapbox/satellite-streets-v12"
         : "mapbox://styles/mapbox/satellite-v9";
     }
-    // Topography shares the theme style - relief comes from a hillshade
-    // layer (see the terrain-dem effect below) instead of a separate
+    // Topography shares the theme style - relief comes from hillshade +
+    // DEM terrain mesh (see topography-terrain sync below) instead of a
     // Mapbox style. outdoors-v12 was tried and rejected: pale landcover,
     // no dark-mode variant, and boundary overlays drowned in it.
     return isDark
@@ -534,50 +535,25 @@ export function CrisisMap({
     };
   }, [mapStyle]);
 
-  // Terrain relief: hillshade overlay on the theme basemap ("topography"
-  // mode). Runs before the focus effect below so the dim mask - inserted
-  // at the same road-layer anchor - lands above the relief and dims it
-  // outside the focus country too.
+  // Hybrid Topography: hillshade + DEM terrain mesh (`setTerrain`) while
+  // Topography is active. Country-band-boosted exaggeration; Simple /
+  // Satellite stay flat. Runs before the focus effect so the dim mask
+  // lands above the relief outside the focus country too.
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
-    const cleanup = () => {
-      try { if (m.getLayer("terrain-hillshade")) m.removeLayer("terrain-hillshade"); } catch { /* ignore */ }
-      try { if (m.getSource("terrain-dem")) m.removeSource("terrain-dem"); } catch { /* ignore */ }
-    };
-    cleanup();
-    if (baseMapType !== "topography") return;
-
-    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
-    const beforeId =
-      styleLayers.find((l) => isRoadLayerId(l.id))?.id ??
-      styleLayers.find((l) => l.type === "symbol")?.id;
     try {
-      m.addSource("terrain-dem", {
-        type: "raster-dem",
-        url: "mapbox://mapbox.mapbox-terrain-dem-v1",
-        tileSize: 512,
-        maxzoom: 14,
-      });
-      m.addLayer(
-        { id: "terrain-hillshade", type: "hillshade", source: "terrain-dem",
-          paint: {
-            // Strongest at the Country band (z5-8) where relief must read
-            // at country scale; relaxes toward the Site band where the
-            // street grid takes over (docs/map-design.md).
-            "hillshade-exaggeration": [
-              "interpolate", ["linear"], ["zoom"],
-              4, isDark ? 1 : 0.9,
-              10, isDark ? 0.65 : 0.55,
-              14, 0.35,
-            ] as never,
-            "hillshade-shadow-color": isDark ? "#000000" : "#57534E",
-            "hillshade-highlight-color": isDark ? "#6B6B78" : "#FFFFFF",
-          } },
-        beforeId,
-      );
-    } catch { /* ignore */ }
-    return cleanup;
+      syncTopographyTerrain(m, baseMapType, { isDark });
+    } catch {
+      /* ignore style race */
+    }
+    return () => {
+      try {
+        syncTopographyTerrain(m, "simple", { isDark });
+      } catch {
+        /* ignore */
+      }
+    };
   }, [loaded, baseMapType, isDark]);
 
   // ── Country focus: dim mask + border glow + bounds ──────────────────────
