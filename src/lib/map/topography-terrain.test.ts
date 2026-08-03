@@ -8,7 +8,7 @@ import {
   findHillshadeBeforeId,
   hillshadeExaggerationExpression,
   syncTopographyTerrain,
-  terrainMeshExaggerationExpression,
+  terrainMeshExaggerationForZoom,
   type TopographyTerrainMap,
 } from "./topography-terrain";
 
@@ -34,6 +34,8 @@ function createMockMap(
       return terrain;
     },
     getStyle: () => ({ layers }),
+    getZoom: () => 6,
+    getTerrain: () => terrain,
     getLayer: (id) => (layerIds.has(id) ? { id } : undefined),
     getSource: (id) => (sources.has(id) ? { id } : undefined),
     addSource: (id) => {
@@ -69,18 +71,14 @@ describe("exaggeration curves", () => {
     expect(stops[14]).toBeLessThan(0.5);
   });
 
-  it("boosts terrain mesh at Country band and relaxes toward Site", () => {
-    const expr = terrainMeshExaggerationExpression();
-    const stops = Object.fromEntries(
-      Array.from({ length: (expr.length - 3) / 2 }, (_, i) => [
-        expr[3 + i * 2] as number,
-        expr[4 + i * 2] as number,
-      ]),
-    );
-    expect(stops[4]).toBeGreaterThan(stops[10]!);
-    expect(stops[8]).toBeGreaterThan(stops[14]!);
-    expect(stops[8]).toBeGreaterThan(2);
-    expect(stops[14]).toBe(1);
+  it("boosts terrain mesh at Country band and relaxes toward Site (numeric)", () => {
+    const country = terrainMeshExaggerationForZoom(6);
+    const area = terrainMeshExaggerationForZoom(10);
+    const site = terrainMeshExaggerationForZoom(14);
+    expect(country).toBeGreaterThan(area);
+    expect(area).toBeGreaterThan(site);
+    expect(country).toBeGreaterThan(2.5);
+    expect(typeof country).toBe("number");
   });
 });
 
@@ -116,7 +114,7 @@ describe("enableTopographyTerrain", () => {
     const addLayer = vi.spyOn(map, "addLayer");
     const setTerrain = vi.spyOn(map, "setTerrain");
 
-    enableTopographyTerrain(map, { isDark: false });
+    enableTopographyTerrain(map, { isDark: false, zoom: 6 });
 
     expect(addSource).toHaveBeenCalledWith(
       TERRAIN_DEM_SOURCE_ID,
@@ -133,10 +131,15 @@ describe("enableTopographyTerrain", () => {
       }),
       "road-primary",
     );
-    expect(setTerrain).toHaveBeenCalledWith({
+    const lastTerrainArg = setTerrain.mock.calls.at(-1)?.[0] as {
+      source: string;
+      exaggeration: unknown;
+    };
+    expect(lastTerrainArg).toEqual({
       source: TERRAIN_DEM_SOURCE_ID,
-      exaggeration: terrainMeshExaggerationExpression(),
+      exaggeration: terrainMeshExaggerationForZoom(6),
     });
+    expect(typeof lastTerrainArg.exaggeration).toBe("number");
     expect(map.sources.has(TERRAIN_DEM_SOURCE_ID)).toBe(true);
     expect(map.layers.has(TERRAIN_HILLSHADE_LAYER_ID)).toBe(true);
     expect(map.terrain?.source).toBe(TERRAIN_DEM_SOURCE_ID);

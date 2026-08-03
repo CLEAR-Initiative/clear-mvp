@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   formatAltitudeMetres,
+  formatAltitudeProbeLabel,
+  isPointerOverTerrain,
   samplePointAltitude,
   shouldShowPointAltitude,
   toPointAltitudeResult,
@@ -32,6 +34,19 @@ describe("formatAltitudeMetres / toPointAltitudeResult", () => {
   });
 });
 
+describe("formatAltitudeProbeLabel", () => {
+  it("uses compact metres for the hover probe", () => {
+    expect(
+      formatAltitudeProbeLabel({
+        kind: "ok",
+        metres: 412,
+        displayMetres: "412 m",
+      }),
+    ).toBe("412 m");
+    expect(formatAltitudeProbeLabel({ kind: "unavailable" })).toBe("—");
+  });
+});
+
 describe("samplePointAltitude", () => {
   it("queries unexaggerated DEM metres", () => {
     const query = vi.fn(() => 385.2);
@@ -40,15 +55,17 @@ describe("samplePointAltitude", () => {
       32.5,
       15.5,
     );
-    expect(query).toHaveBeenCalledWith(
-      { lng: 32.5, lat: 15.5 },
-      { exaggerated: false },
-    );
-    expect(result).toEqual({
-      kind: "ok",
-      metres: 385.2,
-      displayMetres: "385 m",
-    });
+    expect(query.mock.calls.length).toBe(1);
+    const lngLat = query.mock.calls[0]?.[0] as { lng: number; lat: number };
+    const opts = query.mock.calls[0]?.[1] as { exaggerated?: boolean };
+    expect(lngLat.lng).toBe(32.5);
+    expect(lngLat.lat).toBe(15.5);
+    expect(opts.exaggerated).toBe(false);
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.metres).toBe(385.2);
+      expect(result.displayMetres).toBe("385 m");
+    }
   });
 
   it("returns unavailable when map/query missing or null elevation", () => {
@@ -56,5 +73,35 @@ describe("samplePointAltitude", () => {
     expect(
       samplePointAltitude({ queryTerrainElevation: () => null }, 1, 2),
     ).toEqual({ kind: "unavailable" });
+  });
+});
+
+describe("isPointerOverTerrain", () => {
+  it("is true when project(lngLat) matches the pointer", () => {
+    const map = {
+      project: vi.fn(() => ({ x: 120, y: 80 })),
+    };
+    expect(
+      isPointerOverTerrain(map, { x: 120, y: 80 }, { lng: 32, lat: 15 }),
+    ).toBe(true);
+    expect(
+      isPointerOverTerrain(map, { x: 122, y: 81 }, { lng: 32, lat: 15 }),
+    ).toBe(true);
+  });
+
+  it("is false when pitched sky clamps lngLat to the horizon", () => {
+    // Pointer in the sky; Mapbox lngLat stuck on the silhouette → large dy.
+    const map = {
+      project: vi.fn(() => ({ x: 200, y: 340 })),
+    };
+    expect(
+      isPointerOverTerrain(map, { x: 200, y: 40 }, { lng: 32, lat: 15 }),
+    ).toBe(false);
+  });
+
+  it("defaults to over-terrain when project is unavailable", () => {
+    expect(
+      isPointerOverTerrain({}, { x: 1, y: 2 }, { lng: 0, lat: 0 }),
+    ).toBe(true);
   });
 });

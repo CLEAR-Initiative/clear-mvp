@@ -46,6 +46,7 @@ import {
 import { severityColors } from "~/lib/constants/severity";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { mapFocusHref } from "~/lib/map-focus-href";
+import { mapReturnHref } from "~/lib/map-view-state";
 import { api } from "~/trpc/react";
 import { useLocations } from "~/hooks/use-locations";
 import { MinimapCard } from "~/components/map/minimap-card";
@@ -340,7 +341,7 @@ export function SignalDetailContent({
         </Text>
         {mode === "page" && (
           <Link
-            href={referrer === "map" ? "/map" : "/detection"}
+            href={referrer === "map" ? mapReturnHref() : "/detection"}
             style={{
               display: "inline-block",
               marginTop: 16,
@@ -383,7 +384,7 @@ export function SignalDetailContent({
           <Group justify="space-between" wrap="wrap" gap={8}>
             <Group gap={12} wrap="wrap">
               <Link
-                href={referrer === "map" ? mapFocusHref("signal", signal.id) : "/detection"}
+                href={referrer === "map" ? mapReturnHref() : "/detection"}
                 style={{ textDecoration: "none" }}
               >
                 <Group

@@ -31,14 +31,22 @@ import {
   paintNrcOfficeMarkerTheme,
 } from "~/lib/map/nrc-office-markers";
 import { BLOCKAGES_STALE_AFTER_DAYS } from "~/lib/map/logie-blockages";
-import { syncTopographyPitch } from "~/lib/map/topography-pitch";
-import { syncTopographyTerrain } from "~/lib/map/topography-terrain";
+import {
+  applyTopographyOptInTilt,
+  syncTopographyPitch,
+} from "~/lib/map/topography-pitch";
+import {
+  syncTopographyTerrain,
+  updateTopographyTerrainExaggeration,
+} from "~/lib/map/topography-terrain";
 import {
   dismissTopographyTiltHint,
   isTopographyTiltHintDismissed,
   shouldShowTopographyTiltHint,
 } from "~/lib/map/topography-tilt-hint";
 import {
+  formatAltitudeProbeLabel,
+  isPointerOverTerrain,
   samplePointAltitude,
   shouldShowPointAltitude,
   type PointAltitudeResult,
@@ -69,6 +77,14 @@ export interface MarkerScreenPoint {
   y: number;
 }
 
+/** Live Mapbox camera including pitch/bearing (for round-trip restore). */
+export type MapViewCameraSnapshot = {
+  center: [number, number];
+  zoom: number;
+  pitch: number;
+  bearing: number;
+};
+
 /** Imperative helpers for overlays that track pins (e.g. spaghetti connectors). */
 export interface CrisisMapApi {
   /**
@@ -82,6 +98,10 @@ export interface CrisisMapApi {
   ) => MarkerScreenPoint | null;
   /** Unexaggerated DEM sample — meaningful while Topography terrain mesh is on. */
   samplePointAltitude: (lng: number, lat: number) => PointAltitudeResult;
+  /** Current camera including pitch/bearing. */
+  getViewCamera: () => MapViewCameraSnapshot | null;
+  /** Instant restore (no fly) for map ↔ detail round-trips. */
+  restoreViewCamera: (camera: MapViewCameraSnapshot) => void;
 }
 
 export interface MapRegion {
@@ -107,6 +127,10 @@ interface CrisisMapProps {
   regions?: MapRegion[];
   center?: [number, number];
   zoom?: number;
+  /** Initial pitch (degrees). Used for session restore; defaults to 0. */
+  initialPitch?: number;
+  /** Initial bearing (degrees). Used for session restore; defaults to 0. */
+  initialBearing?: number;
   className?: string;
   onMarkerClick?: (
     marker: MapMarker,
@@ -156,7 +180,7 @@ interface CrisisMapProps {
    */
   forceFlyToken?: number;
   /** Fired when the camera settles (pan/zoom/cluster fitBounds). */
-  onCameraChange?: (camera: { center: [number, number]; zoom: number }) => void;
+  onCameraChange?: (camera: MapViewCameraSnapshot) => void;
   /**
    * Fired when a donut cluster is tapped, with the camera *before* expand
    * and the number of markers in that cluster.
@@ -395,6 +419,8 @@ export function CrisisMap({
   regions = [],
   center = [30, 14],
   zoom = 5.5,
+  initialPitch = 0,
+  initialBearing = 0,
   className,
   onMarkerClick,
   onMarkerHover,
@@ -499,10 +525,19 @@ export function CrisisMap({
     dismissTopographyTiltHint();
     setTiltHintDismissed(true);
   };
-  const showAltitudeHud = shouldShowPointAltitude(baseMapType);
-  const [cursorAltitude, setCursorAltitude] = useState<PointAltitudeResult | null>(
-    null,
-  );
+  const onTiltFromHint = () => {
+    if (map.current) applyTopographyOptInTilt(map.current);
+    dismissTopographyTiltHint();
+    setTiltHintDismissed(true);
+  };
+  const showAltitudeProbe = shouldShowPointAltitude(baseMapType);
+  /** Imperative probe DOM — no React state on mousemove/camera (keeps tilt/drag smooth). */
+  const mapShellRef = useRef<HTMLDivElement | null>(null);
+  const altitudeProbeElRef = useRef<HTMLDivElement | null>(null);
+  const altitudeProbeLabelRef = useRef<HTMLSpanElement | null>(null);
+  const altitudeProbeRafRef = useRef(0);
+  const altitudeProbeLngLatRef = useRef<{ lng: number; lat: number } | null>(null);
+  const altitudeUnavailableLabel = t("pointAltitude.unavailable");
   const mapReadyRef = useRef(false);
   const appliedStyleRef = useRef<string | null>(null);
   const mapStyleRef = useRef(mapStyle);
@@ -540,9 +575,22 @@ export function CrisisMap({
         style: mapStyle,
         center,
         zoom,
+        pitch: initialPitch,
+        bearing: initialBearing,
         interactive,
         preserveDrawingBuffer,
         attributionControl: false,
+      });
+
+      // Right-click / Ctrl+click must drive Mapbox pitch-rotate, not the
+      // browser context menu (all basemap modes).
+      const suppressBrowserMenu = (e: Event) => {
+        e.preventDefault();
+      };
+      map.current.getCanvas().addEventListener("contextmenu", suppressBrowserMenu);
+      map.current.on("contextmenu", (e: { preventDefault?: () => void; originalEvent?: Event }) => {
+        e.preventDefault?.();
+        e.originalEvent?.preventDefault?.();
       });
 
       map.current.on("load", () => {
@@ -563,6 +611,8 @@ export function CrisisMap({
         onCameraChangeRef.current?.({
           center: [c.lng, c.lat],
           zoom: map.current.getZoom(),
+          pitch: map.current.getPitch?.() ?? 0,
+          bearing: map.current.getBearing?.() ?? 0,
         });
       });
 
@@ -607,20 +657,45 @@ export function CrisisMap({
   }, [mapStyle]);
 
   // Hybrid Topography: hillshade + DEM terrain mesh (`setTerrain`) while
-  // Topography is active. Country-band-boosted exaggeration; Simple /
-  // Satellite stay flat. Pitch is opt-in (gestures on Topography only;
-  // leave resets pitch). Runs before the focus effect so the dim mask
-  // lands above the relief outside the focus country too.
+  // Topography is active. Country-band-boosted exaggeration (numeric —
+  // zoom expressions can leave the mesh off). Pitch is opt-in. Runs before
+  // the focus effect so the dim mask lands above the relief outside the
+  // focus country too.
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
     try {
-      syncTopographyTerrain(m, baseMapType, { isDark });
+      syncTopographyTerrain(m, baseMapType, {
+        isDark,
+        zoom: typeof m.getZoom === "function" ? m.getZoom() : 6,
+      });
       syncTopographyPitch(m, baseMapType);
-    } catch {
-      /* ignore style race */
+    } catch (err) {
+      // Surface failures — silent catch previously hid a dead setTerrain.
+      console.warn("[topography] failed to sync terrain/pitch", err);
     }
+
+    if (baseMapType !== "topography") {
+      return () => {
+        try {
+          syncTopographyTerrain(m, "simple", { isDark });
+          syncTopographyPitch(m, "simple");
+        } catch {
+          /* ignore */
+        }
+      };
+    }
+
+    const onZoomEnd = () => {
+      try {
+        updateTopographyTerrainExaggeration(m);
+      } catch {
+        /* ignore */
+      }
+    };
+    m.on?.("zoomend", onZoomEnd);
     return () => {
+      m.off?.("zoomend", onZoomEnd);
       try {
         syncTopographyTerrain(m, "simple", { isDark });
         syncTopographyPitch(m, "simple");
@@ -630,26 +705,103 @@ export function CrisisMap({
     };
   }, [loaded, baseMapType, isDark]);
 
-  // Cursor altitude HUD — sample DEM under the pointer while Topography is on.
+  // Topography hover probe — orange ground dot + altitude under the cursor.
+  // All updates are imperative DOM writes so pan/tilt never re-render React.
+  // Over pitched sky Mapbox clamps lngLat to the silhouette — detect that,
+  // fade the probe, and restore the system cursor so filters stay reachable.
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
-    if (!showAltitudeHud) {
-      setCursorAltitude(null);
+    const PROBE_ACTIVE_CLASS = "topography-altitude-probe-active";
+
+    const setProbeCursorActive = (active: boolean) => {
+      const shell = mapShellRef.current;
+      if (!shell) return;
+      shell.classList.toggle(PROBE_ACTIVE_CLASS, active);
+    };
+
+    const hideProbe = () => {
+      altitudeProbeLngLatRef.current = null;
+      setProbeCursorActive(false);
+      const el = altitudeProbeElRef.current;
+      if (el) {
+        el.style.opacity = "0";
+        el.setAttribute("aria-hidden", "true");
+      }
+    };
+    if (!showAltitudeProbe) {
+      hideProbe();
       return;
     }
-    const onMove = (e: { lngLat: { lng: number; lat: number } }) => {
-      setCursorAltitude(samplePointAltitude(m, e.lngLat.lng, e.lngLat.lat));
+
+    const paintProbe = (lng: number, lat: number, sampleLabel: boolean) => {
+      const el = altitudeProbeElRef.current;
+      if (!el) return;
+      const point = m.project([lng, lat]) as { x: number; y: number };
+      el.style.left = `${point.x}px`;
+      el.style.top = `${point.y}px`;
+      el.style.opacity = "1";
+      el.removeAttribute("aria-hidden");
+      setProbeCursorActive(true);
+      // DEM sample only on pointer moves — camera frames just reproject (smooth tilt).
+      if (!sampleLabel) return;
+      const labelEl = altitudeProbeLabelRef.current;
+      if (!labelEl) return;
+      const altitude = samplePointAltitude(m, lng, lat);
+      const text = formatAltitudeProbeLabel(altitude, altitudeUnavailableLabel);
+      labelEl.textContent = text;
+      el.setAttribute("aria-label", text);
     };
-    const onLeave = () => setCursorAltitude(null);
+
+    let pendingSampleLabel = false;
+    const schedulePaint = (sampleLabel: boolean) => {
+      pendingSampleLabel = pendingSampleLabel || sampleLabel;
+      if (altitudeProbeRafRef.current) return;
+      altitudeProbeRafRef.current = requestAnimationFrame(() => {
+        altitudeProbeRafRef.current = 0;
+        const ll = altitudeProbeLngLatRef.current;
+        const wantLabel = pendingSampleLabel;
+        pendingSampleLabel = false;
+        if (!ll) return;
+        paintProbe(ll.lng, ll.lat, wantLabel);
+      });
+    };
+
+    const onMove = (e: {
+      lngLat: { lng: number; lat: number };
+      point: { x: number; y: number };
+    }) => {
+      // Sky: lngLat sticks on the horizon while the pointer keeps moving.
+      if (!isPointerOverTerrain(m, e.point, e.lngLat)) {
+        hideProbe();
+        return;
+      }
+      altitudeProbeLngLatRef.current = {
+        lng: e.lngLat.lng,
+        lat: e.lngLat.lat,
+      };
+      schedulePaint(true);
+    };
+
+    const onCamera = () => {
+      if (!altitudeProbeLngLatRef.current) return;
+      schedulePaint(false);
+    };
+
     m.on("mousemove", onMove);
-    m.on("mouseout", onLeave);
+    m.on("mouseout", hideProbe);
+    m.on("move", onCamera);
     return () => {
       m.off("mousemove", onMove);
-      m.off("mouseout", onLeave);
-      setCursorAltitude(null);
+      m.off("mouseout", hideProbe);
+      m.off("move", onCamera);
+      if (altitudeProbeRafRef.current) {
+        cancelAnimationFrame(altitudeProbeRafRef.current);
+        altitudeProbeRafRef.current = 0;
+      }
+      hideProbe();
     };
-  }, [loaded, showAltitudeHud]);
+  }, [loaded, showAltitudeProbe, altitudeUnavailableLabel]);
 
   // ── Country focus: dim mask + border glow + bounds ──────────────────────
   //
@@ -1024,16 +1176,42 @@ export function CrisisMap({
       prevZoom.current === zoom &&
       !paddingChanged
     ) return;
+    // Skip if Mapbox is already there (avoids stop()+flyTo fighting a live gesture
+    // when parent props echo the settled camera).
+    if (!forced && !paddingChanged) {
+      try {
+        const cur = map.current.getCenter?.();
+        const z = map.current.getZoom?.();
+        if (
+          cur &&
+          typeof z === "number" &&
+          Math.abs(cur.lng - center[0]) < 1e-5 &&
+          Math.abs(cur.lat - center[1]) < 1e-5 &&
+          Math.abs(z - zoom) < 1e-3
+        ) {
+          prevCenter.current = center;
+          prevZoom.current = zoom;
+          prevPadding.current = flyPaddingBottom;
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
     prevCenter.current = center;
     prevZoom.current = zoom;
     prevPadding.current = flyPaddingBottom;
     // Cancel any in-flight country fitBounds so a deep-link marker zoom wins.
     try { map.current.stop(); } catch { /* ignore */ }
+    // Preserve pitch/bearing for Topography session restore + browse.
+    // Mobile marker focus (bottom padding) and forced resets still flatten.
+    const flattenPitch = flyPaddingBottom > 0;
     map.current.flyTo({
       center,
       zoom,
       duration: flyDuration,
-      pitch: 0,
+      pitch: flattenPitch ? 0 : (map.current.getPitch?.() ?? 0),
+      bearing: flattenPitch ? 0 : (map.current.getBearing?.() ?? 0),
       padding: flyPaddingBottom > 0
         ? { top: 48, bottom: flyPaddingBottom, left: 24, right: 24 }
         : { top: 0, bottom: 0, left: 0, right: 0 },
@@ -2130,6 +2308,31 @@ export function CrisisMap({
         return { x: p.x, y: p.y };
       },
       samplePointAltitude: (lng, lat) => samplePointAltitude(map.current, lng, lat),
+      getViewCamera: () => {
+        const m = map.current;
+        if (!m) return null;
+        const c = m.getCenter();
+        return {
+          center: [c.lng, c.lat],
+          zoom: m.getZoom(),
+          pitch: m.getPitch?.() ?? 0,
+          bearing: m.getBearing?.() ?? 0,
+        };
+      },
+      restoreViewCamera: (camera) => {
+        const m = map.current;
+        if (!m) return;
+        try {
+          m.jumpTo({
+            center: camera.center,
+            zoom: camera.zoom,
+            pitch: camera.pitch,
+            bearing: camera.bearing,
+          });
+        } catch {
+          /* ignore */
+        }
+      },
     };
     return () => {
       mapApiRef.current = null;
@@ -2195,8 +2398,20 @@ export function CrisisMap({
         }
         /* Keep GL clear transparent so container basemap color shows if frames drop */
         .mapboxgl-canvas { background: transparent !important; }
+        /* Topography: hide grab hand only while the probe is over terrain.
+           Over pitched sky we restore the system cursor so filters/menus
+           stay easy to reach. Inline cursor:pointer from markers/blockages
+           still overrides when set. */
+        .topography-altitude-probe-active .mapboxgl-canvas-container.mapboxgl-interactive,
+        .topography-altitude-probe-active .mapboxgl-canvas {
+          cursor: none;
+        }
+        [data-testid="point-altitude-probe"] {
+          transition: opacity 140ms ease;
+        }
       `}</style>
       <div
+        ref={mapShellRef}
         className={className}
         style={{
           position: "relative",
@@ -2221,87 +2436,124 @@ export function CrisisMap({
             role="status"
             data-testid="topography-tilt-hint"
             style={{
+              // Above map chrome siblings (filters/panel bar are z-20 on /map).
               position: "absolute",
-              top: 12,
+              top: "max(72px, 12%)",
               left: "50%",
               transform: "translateX(-50%)",
-              zIndex: 5,
+              zIndex: 40,
               display: "flex",
-              alignItems: "center",
-              gap: 10,
-              maxWidth: "min(360px, calc(100% - 24px))",
-              padding: "8px 10px 8px 14px",
-              borderRadius: 10,
+              flexDirection: "column",
+              alignItems: "stretch",
+              gap: 8,
+              maxWidth: "min(400px, calc(100% - 24px))",
+              padding: "12px 14px",
+              borderRadius: 12,
               border: "1px solid var(--color-border-dark)",
               background: isDark
-                ? "rgba(17, 17, 17, 0.72)"
-                : "rgba(250, 250, 250, 0.78)",
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
+                ? "rgba(17, 17, 17, 0.88)"
+                : "rgba(250, 250, 250, 0.92)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
               color: "var(--color-text-primary)",
               fontSize: 13,
               fontWeight: 500,
-              lineHeight: 1.35,
-              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+              lineHeight: 1.4,
+              boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
               pointerEvents: "auto",
             }}
           >
             <span style={{ minWidth: 0 }}>{t("tiltHint.message")}</span>
-            <button
-              type="button"
-              onClick={onDismissTiltHint}
-              aria-label={t("tiltHint.dismiss")}
-              style={{
-                flexShrink: 0,
-                border: "none",
-                background: "transparent",
-                color: "var(--color-text-muted)",
-                cursor: "pointer",
-                fontSize: 12,
-                fontWeight: 600,
-                padding: "4px 6px",
-              }}
-            >
-              {t("tiltHint.dismiss")}
-            </button>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={onDismissTiltHint}
+                aria-label={t("tiltHint.dismiss")}
+                style={{
+                  border: "1px solid var(--color-border-dark)",
+                  background: "transparent",
+                  color: "var(--color-text-muted)",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                }}
+              >
+                {t("tiltHint.dismiss")}
+              </button>
+              <button
+                type="button"
+                onClick={onTiltFromHint}
+                data-testid="topography-tilt-hint-action"
+                style={{
+                  border: "none",
+                  background: "var(--color-accent)",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                }}
+              >
+                {t("tiltHint.tilt")}
+              </button>
+            </div>
           </div>
         )}
-        {showAltitudeHud && cursorAltitude && (
+        {showAltitudeProbe && (
           <div
+            ref={altitudeProbeElRef}
             role="status"
-            data-testid="point-altitude-hud"
+            data-testid="point-altitude-probe"
+            aria-hidden
             style={{
               position: "absolute",
-              top: showTiltHint ? 56 : 12,
-              right: 12,
-              zIndex: 5,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-end",
-              gap: 2,
-              padding: "8px 12px",
-              borderRadius: 10,
-              border: "1px solid var(--color-border-dark)",
-              background: isDark
-                ? "rgba(17, 17, 17, 0.72)"
-                : "rgba(250, 250, 250, 0.78)",
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-              color: "var(--color-text-primary)",
-              fontSize: 12,
-              lineHeight: 1.3,
-              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+              left: 0,
+              top: 0,
+              zIndex: 25,
+              // Anchor the orange dot on the ground point; label hangs below.
+              transform: "translate(-50%, -50%)",
+              width: 8,
+              height: 8,
+              opacity: 0,
               pointerEvents: "none",
+              userSelect: "none",
+              transition: "opacity 140ms ease",
             }}
           >
-            <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
-              {cursorAltitude.kind === "ok"
-                ? cursorAltitude.displayMetres
-                : t("pointAltitude.unavailable")}
-            </span>
-            <span style={{ color: "var(--color-text-muted)", fontSize: 11 }}>
-              {t("pointAltitude.qualifier")}
-            </span>
+            <span
+              aria-hidden
+              style={{
+                display: "block",
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#EA580C",
+                boxShadow:
+                  "0 0 0 2px rgba(255,255,255,0.9), 0 1px 4px rgba(0,0,0,0.35)",
+              }}
+            />
+            <span
+              ref={altitudeProbeLabelRef}
+              style={{
+                position: "absolute",
+                top: 12,
+                left: "50%",
+                transform: "translateX(-50%)",
+                padding: "1px 5px",
+                borderRadius: 4,
+                fontSize: 11,
+                fontWeight: 700,
+                fontVariantNumeric: "tabular-nums",
+                letterSpacing: "0.01em",
+                color: "#fff",
+                background: "rgba(0,0,0,0.55)",
+                textShadow: "0 1px 2px rgba(0,0,0,0.45)",
+                whiteSpace: "nowrap",
+              }}
+            />
           </div>
         )}
       </div>

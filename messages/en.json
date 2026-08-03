@@ -1848,8 +1848,9 @@
     },
     "tokenMissing": "Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env",
     "tiltHint": {
-      "message": "Drag to tilt and read the terrain in 3D",
-      "dismiss": "Got it"
+      "message": "Terrain is 3D — click Tilt, or Ctrl+drag (right-click drag) / two-finger drag on touch",
+      "tilt": "Tilt",
+      "dismiss": "Not now"
     },
     "pointAltitude": {
       "label": "Altitude",

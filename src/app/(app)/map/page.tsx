@@ -50,6 +50,12 @@ import {
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
 import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
+import {
+  readMapViewState,
+  writeMapViewState,
+  type MapViewCamera,
+  type MapViewStateV1,
+} from "~/lib/map-view-state";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getAdjacentItem, orderByProximityTo } from "~/lib/detail-list-nav";
 import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
@@ -127,6 +133,31 @@ function MapPageContent() {
   const urlFocusEventId = searchParams.get("event");
   const urlFocusSignalId = searchParams.get("signal");
   const urlFocusCrisisId = searchParams.get("crisis");
+  /**
+   * Session restore from map → detail → back. Skipped when the URL asks for
+   * a solo-focus deep link (`?event=` / signal / crisis).
+   */
+  const [restoredView] = useState<MapViewStateV1 | null>(() => {
+    if (typeof window === "undefined") return null;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("event") || sp.get("signal") || sp.get("crisis")) return null;
+    return readMapViewState();
+  });
+  /**
+   * Session-restore seed for center/zoom props. Cleared on country/region
+   * change. Never updated from live pans — that re-triggered flyTo and made
+   * drag/tilt feel staggered.
+   */
+  const [cameraSeed, setCameraSeed] = useState<MapViewCamera | null>(
+    () => restoredView?.camera ?? null,
+  );
+  const [pendingRestoreMarkerIds, setPendingRestoreMarkerIds] = useState<number[]>(
+    () => restoredView?.openMarkerIds ?? [],
+  );
+  /** Block session writes until marker reopen finishes (avoids wiping openMarkerIds). */
+  const [restoreReady, setRestoreReady] = useState(
+    () => !restoredView || (restoredView.openMarkerIds.length === 0),
+  );
   // Local dismiss so clearing solo focus swaps to browse markers immediately
   // without waiting on the soft URL replace (and without remounting the page).
   const [focusDismissed, setFocusDismissed] = useState(false);
@@ -589,11 +620,34 @@ function MapPageContent() {
     [],
   );
 
-  const handleCameraChange = useCallback((camera: { center: [number, number]; zoom: number }) => {
+  const persistMapView = useCallback((camera?: MapViewCamera) => {
+    const live =
+      camera ??
+      mapApiRef.current?.getViewCamera() ??
+      (browseCameraRef.current
+        ? {
+            center: browseCameraRef.current.center,
+            zoom: browseCameraRef.current.zoom,
+            pitch: 0,
+            bearing: 0,
+          }
+        : null);
+    if (!live) return;
+    writeMapViewState({
+      camera: live,
+      baseMapType: baseMapTypeRef.current,
+      openMarkerIds: openPanelsRef.current.map((p) => p.marker.id),
+    });
+  }, []);
+
+  const handleCameraChange = useCallback((camera: MapViewCamera) => {
     // Track browse camera only while not in a marker-detail focus fly.
+    // Persist via refs/storage only — do not push camera into React state
+    // (mapCenter/mapZoom props → flyTo loop → staggered drag/tilt).
     if (markerFocusRef.current) return;
     browseCameraRef.current = camera;
     layerCameraRef.current = camera;
+    if (restoreReady) persistMapView(camera);
     // If the user zooms back out to donut/regional depth, drop group context
     // so the next pin is treated as lonely (close → global).
     const donut = donutCameraRef.current;
@@ -606,7 +660,7 @@ function MapPageContent() {
       clusterLeafCountRef.current = 0;
       donutCameraRef.current = null;
     }
-  }, []);
+  }, [persistMapView, restoreReady]);
 
   const handleClusterExpand = useCallback((
     camera: { center: [number, number]; zoom: number },
@@ -620,7 +674,34 @@ function MapPageContent() {
   const [showPopulation, setShowPopulation] = useState(false);
   const [showRoads, setShowRoads] = useState(true);
   const [showNrcLocations, setShowNrcLocations] = useState(false);
-  const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
+  const [baseMapType, setBaseMapType] = useState<BaseMapType>(
+    () => restoredView?.baseMapType ?? "simple",
+  );
+  const baseMapTypeRef = useRef(baseMapType);
+  baseMapTypeRef.current = baseMapType;
+
+  // Persist basemap / open panels even when the camera is still.
+  useEffect(() => {
+    if (!restoreReady) return;
+    persistMapView();
+  }, [baseMapType, openPanels, persistMapView, restoreReady]);
+
+  // Flush snapshot on leave so View details → Back always has a fresh copy.
+  useEffect(() => {
+    const flush = () => {
+      if (!restoreReady) return;
+      persistMapView();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [persistMapView, restoreReady]);
   /** Marker-detail Point altitude samples (Topography only). */
   const [panelAltitudes, setPanelAltitudes] = useState<
     Record<number, PointAltitudeResult>
@@ -794,6 +875,8 @@ function MapPageContent() {
   const mapCenter: [number, number] = useMemo(() => {
     if (markerFocus) return [markerFocus.lng, markerFocus.lat];
     if (returnCamera) return returnCamera.center;
+    // Initial restore seed only — live pans stay in Mapbox + sessionStorage.
+    if (cameraSeed) return cameraSeed.center;
     if (focusMarker) return [focusMarker.lng, focusMarker.lat];
     if (selectedCountry !== "All Countries") {
       return getCenter(selectedCountry);
@@ -804,11 +887,12 @@ function MapPageContent() {
     const avgLat =
       allMarkers.reduce((sum, m) => sum + m.lat, 0) / allMarkers.length;
     return [avgLng, avgLat];
-  }, [allMarkers, selectedCountry, focusMarker, markerFocus, returnCamera, getCenter]);
+  }, [allMarkers, selectedCountry, focusMarker, markerFocus, returnCamera, cameraSeed, getCenter]);
 
   const mapZoom = useMemo(() => {
     if (markerFocus) return markerFocus.zoom;
     if (returnCamera) return returnCamera.zoom;
+    if (cameraSeed) return cameraSeed.zoom;
     if (focusMarker) return MAP_FOCUS_ZOOM;
     if (selectedCountry !== "All Countries") {
       // Same country zoom on mobile and desktop — fitBounds owns framing when
@@ -816,7 +900,7 @@ function MapPageContent() {
       return getZoom(selectedCountry);
     }
     return isMobile ? 4 : 5;
-  }, [selectedCountry, focusMarker, markerFocus, returnCamera, getZoom, isMobile]);
+  }, [selectedCountry, focusMarker, markerFocus, returnCamera, cameraSeed, getZoom, isMobile]);
 
   /* ---- Resolve selected location for filtering ---- */
   const selectedLocationId = useMemo(() => {
@@ -1139,6 +1223,40 @@ function MapPageContent() {
     });
   }, [isFocusMode, allMarkers, markersBeforeTime, selectedMonth]);
 
+  // Reopen marker panels from the session snapshot once markers are loaded.
+  useEffect(() => {
+    if (pendingRestoreMarkerIds.length === 0) {
+      if (!restoreReady) setRestoreReady(true);
+      return;
+    }
+    if (currentMarkers.length === 0) return;
+
+    const byId = new Map(currentMarkers.map((m) => [m.id, m]));
+    const panels: OpenMarkerPanel[] = [];
+    for (const id of pendingRestoreMarkerIds) {
+      const marker = byId.get(id);
+      if (!marker) continue;
+      const proximityOrderIds = orderByProximityTo(
+        currentMarkers,
+        marker.id,
+        (m) => m.id,
+      ).map((m) => m.id);
+      panels.push({
+        marker,
+        anchor: null,
+        openedAt: Date.now(),
+        z: bumpPanelZ(),
+        proximityOrderIds,
+      });
+    }
+    if (panels.length > 0) {
+      openPanelsRef.current = panels;
+      setOpenPanels(panels);
+    }
+    setPendingRestoreMarkerIds([]);
+    setRestoreReady(true);
+  }, [currentMarkers, pendingRestoreMarkerIds, restoreReady, bumpPanelZ]);
+
   /** Resolve a panel's frozen proximity order against the live filtered set. */
   const markersForPanelNav = useCallback(
     (panel: OpenMarkerPanel): CrisisMarker[] => {
@@ -1199,14 +1317,17 @@ function MapPageContent() {
         );
       });
 
-      // Keep current detail zoom while the camera follows the stepped pin.
-      const focusZoom = markerFocusRef.current?.zoom ?? MAP_FOCUS_ZOOM;
-      const focus = { lng: target.lng, lat: target.lat, zoom: focusZoom };
-      setMarkerFocus(focus);
-      markerFocusRef.current = focus;
+      // Mobile: keep detail zoom while the camera follows the stepped pin.
+      // Desktop: panel swaps in place — leave the camera alone.
+      if (isMobile) {
+        const focusZoom = markerFocusRef.current?.zoom ?? MAP_FOCUS_ZOOM;
+        const focus = { lng: target.lng, lat: target.lat, zoom: focusZoom };
+        setMarkerFocus(focus);
+        markerFocusRef.current = focus;
+      }
       setChromeActiveMarkerId(target.id);
     },
-    [openPanels, markersForPanelNav, bumpPanelZ],
+    [openPanels, markersForPanelNav, bumpPanelZ, isMobile],
   );
 
   const topOpenPanel = useMemo(() => {
@@ -1266,11 +1387,13 @@ function MapPageContent() {
   const handleCountryChange = (value: string | null) => {
     setSelectedCountry(value ?? "All Countries");
     setSelectedRegion("All Regions");
+    setCameraSeed(null);
     clearOpenPanels();
   };
 
   const handleRegionChange = (value: string | null) => {
     setSelectedRegion(value ?? "All Regions");
+    setCameraSeed(null);
     clearOpenPanels();
   };
 
@@ -1286,40 +1409,51 @@ function MapPageContent() {
         allMarkers.find((m) => m.id === marker.id);
       if (!full) return;
 
-      // Click-time camera = group framing after donut expand, or country overview.
-      const prior = camera ?? browseCameraRef.current ?? layerCameraRef.current;
+      // Desktop: open the panel in place — do not fly/reposition the camera.
+      // Mobile keeps focus-fly so the pin sits above the bottom sheet.
+      if (isMobile) {
+        // Click-time camera = group framing after donut expand, or country overview.
+        const prior = camera ?? browseCameraRef.current ?? layerCameraRef.current;
 
-      const countryZoom =
-        selectedCountry !== "All Countries"
-          ? getZoom(selectedCountry)
-          : (isMobile ? 4 : 5);
+        const countryZoom =
+          selectedCountry !== "All Countries"
+            ? getZoom(selectedCountry)
+            : 4;
 
-      // Group (≥2 markers from a donut): close returns to this group zoom.
-      // Lonely pin: close keeps the detail zoom (no country fitBounds).
-      const fromGroup =
-        openedFromClusterRef.current &&
-        clusterLeafCountRef.current >= 2 &&
-        prior != null;
+        // Group (≥2 markers from a donut): close returns to this group zoom.
+        // Lonely pin: close keeps the detail zoom (no country fitBounds).
+        const fromGroup =
+          openedFromClusterRef.current &&
+          clusterLeafCountRef.current >= 2 &&
+          prior != null;
 
-      detailCloseIsGroupRef.current = fromGroup;
-      if (fromGroup) {
-        const restore = {
-          center: [prior.center[0], prior.center[1]] as [number, number],
-          zoom: prior.zoom,
-        };
-        detailRestoreCameraRef.current = restore;
-        setReturnCamera(restore);
-        returnCameraRef.current = restore;
+        detailCloseIsGroupRef.current = fromGroup;
+        if (fromGroup) {
+          const restore = {
+            center: [prior.center[0], prior.center[1]] as [number, number],
+            zoom: prior.zoom,
+          };
+          detailRestoreCameraRef.current = restore;
+          setReturnCamera(restore);
+          returnCameraRef.current = restore;
+        } else {
+          detailRestoreCameraRef.current = null;
+          setReturnCamera(null);
+          returnCameraRef.current = null;
+        }
+
+        // Zoom in past the current layer so close clearly returns outward.
+        const focusZoom = Math.min(14.5, (prior?.zoom ?? countryZoom) + 2.5);
+        setMarkerFocus({ lng: full.lng, lat: full.lat, zoom: focusZoom });
+        markerFocusRef.current = { lng: full.lng, lat: full.lat, zoom: focusZoom };
       } else {
+        detailCloseIsGroupRef.current = false;
         detailRestoreCameraRef.current = null;
         setReturnCamera(null);
         returnCameraRef.current = null;
+        setMarkerFocus(null);
+        markerFocusRef.current = null;
       }
-
-      // Zoom in past the current layer so close clearly returns outward.
-      const focusZoom = Math.min(14.5, (prior?.zoom ?? countryZoom) + 2.5);
-      setMarkerFocus({ lng: full.lng, lat: full.lat, zoom: focusZoom });
-      markerFocusRef.current = { lng: full.lng, lat: full.lat, zoom: focusZoom };
 
       // Re-anchor proximity walk from the clicked pin (nearest cluster first).
       const proximityOrderIds = orderByProximityTo(
@@ -1412,6 +1546,12 @@ function MapPageContent() {
         center: [pick.lng, pick.lat],
         zoom: clusterZoom,
       });
+      // Desktop marker clicks no longer fly the camera; the tour still needs to.
+      if (!isMobile) {
+        const focus = { lng: pick.lng, lat: pick.lat, zoom: clusterZoom };
+        setMarkerFocus(focus);
+        markerFocusRef.current = focus;
+      }
       setForceFlyToken((n) => n + 1);
     };
 
@@ -1445,7 +1585,7 @@ function MapPageContent() {
       if (startTimer != null) window.clearTimeout(startTimer);
       window.removeEventListener(TOUR_MAP_DEMO_EVENT, onTourDemo);
     };
-  }, []);
+  }, [isMobile]);
 
   const isLoading = isFocusMode
     ? (!!focusEventId && focusEventQuery.isLoading) ||
@@ -1576,7 +1716,11 @@ function MapPageContent() {
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
           fitBoundsGeometry={focusEntityId || markerFocus ? null : fitBoundsGeometry}
-          fitBoundsOnFocus={!focusEntityId && !markerFocus && !returnCamera}
+          fitBoundsOnFocus={
+            !focusEntityId && !markerFocus && !returnCamera && !cameraSeed
+          }
+          initialPitch={cameraSeed?.pitch ?? restoredView?.camera.pitch ?? 0}
+          initialBearing={cameraSeed?.bearing ?? restoredView?.camera.bearing ?? 0}
           forceFlyToken={forceFlyToken}
           flyDuration={markerFocus ? 500 : 650}
           // Keep pin above the ~45vh sheet + breathing room.

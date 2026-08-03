@@ -6,6 +6,10 @@
  * Visual exaggeration is Country-band boosted (stronger at z5–8, relaxes
  * toward Site). That is paint/mesh only — Point altitude samples unexaggerated
  * DEM metres elsewhere.
+ *
+ * `setTerrain` exaggeration uses a **number** (not a zoom expression). Zoom
+ * expressions on terrain are flaky in Mapbox GL and can leave the mesh off
+ * while hillshade still paints — matching “shades but no 3D”.
  */
 
 export const TERRAIN_DEM_SOURCE_ID = "terrain-dem";
@@ -17,6 +21,8 @@ export type TopographyTerrainMap = {
   getStyle: () => { layers?: Array<{ id: string; type: string }> };
   getLayer: (id: string) => unknown;
   getSource: (id: string) => unknown;
+  getZoom?: () => number;
+  getTerrain?: () => { source?: string; exaggeration?: unknown } | null;
   addSource: (id: string, source: Record<string, unknown>) => void;
   addLayer: (layer: Record<string, unknown>, beforeId?: string) => void;
   removeLayer: (id: string) => void;
@@ -24,12 +30,15 @@ export type TopographyTerrainMap = {
   setTerrain: (
     terrain: { source: string; exaggeration?: unknown } | null,
   ) => void;
+  setPaintProperty?: (layerId: string, name: string, value: unknown) => void;
 };
 
 export type TopographyTerrainOptions = {
   isDark: boolean;
   /** Layer id to insert hillshade before (roads / symbols). */
   beforeId?: string;
+  /** Current map zoom — drives Country-band mesh exaggeration. */
+  zoom?: number;
 };
 
 /** Zoom-interpolated hillshade exaggeration — strongest at Country band. */
@@ -52,22 +61,45 @@ export function hillshadeExaggerationExpression(
 }
 
 /**
- * Zoom-interpolated terrain-mesh exaggeration for `setTerrain`.
- * Country-band boosted; relaxes toward Site. Visual only.
+ * Country-band-boosted mesh exaggeration as a plain number for `setTerrain`.
+ * Stronger at z5–8 so tilt reads clearly over Sudan plains; relaxes to Site.
  */
+export function terrainMeshExaggerationForZoom(zoom: number): number {
+  const z = Number.isFinite(zoom) ? zoom : 6;
+  // Piecewise-linear through the band anchors (same shape as the old expression).
+  const stops: Array<[number, number]> = [
+    [4, 3.2],
+    [8, 2.8],
+    [10, 1.8],
+    [14, 1.15],
+  ];
+  if (z <= stops[0]![0]) return stops[0]![1];
+  if (z >= stops[stops.length - 1]![0]) return stops[stops.length - 1]![1];
+  for (let i = 0; i < stops.length - 1; i++) {
+    const [z0, v0] = stops[i]!;
+    const [z1, v1] = stops[i + 1]!;
+    if (z >= z0 && z <= z1) {
+      const t = (z - z0) / (z1 - z0);
+      return v0 + (v1 - v0) * t;
+    }
+  }
+  return 2.8;
+}
+
+/** @deprecated Prefer terrainMeshExaggerationForZoom — kept for tests/docs. */
 export function terrainMeshExaggerationExpression(): unknown[] {
   return [
     "interpolate",
     ["linear"],
     ["zoom"],
     4,
-    2.4,
+    3.2,
     8,
-    2.1,
+    2.8,
     10,
-    1.4,
+    1.8,
     14,
-    1.0,
+    1.15,
   ];
 }
 
@@ -113,6 +145,22 @@ export function disableTopographyTerrain(map: TopographyTerrainMap): void {
   }
 }
 
+/** Update mesh exaggeration for the current zoom without rebuilding the stack. */
+export function updateTopographyTerrainExaggeration(
+  map: TopographyTerrainMap,
+  zoom?: number,
+): void {
+  const z = zoom ?? map.getZoom?.() ?? 6;
+  const exaggeration = terrainMeshExaggerationForZoom(z);
+  try {
+    const current = map.getTerrain?.();
+    if (!current?.source) return;
+    map.setTerrain({ source: current.source, exaggeration });
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * Enable DEM source + hillshade + `setTerrain` together (Hybrid Topography).
  * Idempotent: clears any prior Topography stack first.
@@ -152,9 +200,10 @@ export function enableTopographyTerrain(
     beforeId,
   );
 
+  const zoom = options.zoom ?? map.getZoom?.() ?? 6;
   map.setTerrain({
     source: TERRAIN_DEM_SOURCE_ID,
-    exaggeration: terrainMeshExaggerationExpression(),
+    exaggeration: terrainMeshExaggerationForZoom(zoom),
   });
 }
 
@@ -171,5 +220,15 @@ export function syncTopographyTerrain(
     enableTopographyTerrain(map, options);
   } else {
     disableTopographyTerrain(map);
+  }
+}
+
+/** True when Mapbox reports an active terrain mesh on our DEM source. */
+export function isTopographyTerrainMeshActive(map: TopographyTerrainMap): boolean {
+  try {
+    const terrain = map.getTerrain?.();
+    return terrain?.source === TERRAIN_DEM_SOURCE_ID;
+  } catch {
+    return false;
   }
 }

@@ -1850,8 +1850,9 @@
     },
     "tokenMissing": "Jeton Mapbox non configuré. Définissez NEXT_PUBLIC_MAPBOX_TOKEN dans .env",
     "tiltHint": {
-      "message": "Faites glisser pour incliner et lire le relief en 3D",
-      "dismiss": "Compris"
+      "message": "Le relief est en 3D — cliquez Incliner, ou Ctrl+glisser (clic droit) / deux doigts sur tactile",
+      "tilt": "Incliner",
+      "dismiss": "Plus tard"
     },
     "pointAltitude": {
       "label": "Altitude",
