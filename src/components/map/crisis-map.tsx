@@ -31,6 +31,18 @@ import {
   paintNrcOfficeMarkerTheme,
 } from "~/lib/map/nrc-office-markers";
 import { BLOCKAGES_STALE_AFTER_DAYS } from "~/lib/map/logie-blockages";
+import { syncTopographyPitch } from "~/lib/map/topography-pitch";
+import { syncTopographyTerrain } from "~/lib/map/topography-terrain";
+import {
+  dismissTopographyTiltHint,
+  isTopographyTiltHintDismissed,
+  shouldShowTopographyTiltHint,
+} from "~/lib/map/topography-tilt-hint";
+import {
+  samplePointAltitude,
+  shouldShowPointAltitude,
+  type PointAltitudeResult,
+} from "~/lib/map/point-altitude";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
 const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
@@ -68,6 +80,8 @@ export interface CrisisMapApi {
     lng: number,
     lat: number,
   ) => MarkerScreenPoint | null;
+  /** Unexaggerated DEM sample — meaningful while Topography terrain mesh is on. */
+  samplePointAltitude: (lng: number, lat: number) => PointAltitudeResult;
 }
 
 export interface MapRegion {
@@ -175,7 +189,7 @@ interface CrisisMapProps {
       properties: Record<string, unknown>;
     }>;
   } | null;
-  /** Basemap: simple (theme style), topography (theme style + hillshade relief), or satellite imagery */
+  /** Basemap: simple (theme style), topography (hillshade + DEM terrain mesh), or satellite imagery */
   baseMapType?: BaseMapType;
   /**
    * Mutable ref filled with project helpers while the map is mounted.
@@ -443,8 +457,8 @@ export function CrisisMap({
         ? "mapbox://styles/mapbox/satellite-streets-v12"
         : "mapbox://styles/mapbox/satellite-v9";
     }
-    // Topography shares the theme style - relief comes from a hillshade
-    // layer (see the terrain-dem effect below) instead of a separate
+    // Topography shares the theme style - relief comes from hillshade +
+    // DEM terrain mesh (see topography-terrain sync below) instead of a
     // Mapbox style. outdoors-v12 was tried and rejected: pale landcover,
     // no dark-mode variant, and boundary overlays drowned in it.
     return isDark
@@ -474,6 +488,21 @@ export function CrisisMap({
   const markersDataRef = useRef<MapMarker[]>(markers);
   const hoveredMarkerIdRef = useRef<number | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [tiltHintDismissed, setTiltHintDismissed] = useState(() =>
+    isTopographyTiltHintDismissed(),
+  );
+  const showTiltHint = shouldShowTopographyTiltHint({
+    baseMapType,
+    dismissed: tiltHintDismissed,
+  });
+  const onDismissTiltHint = () => {
+    dismissTopographyTiltHint();
+    setTiltHintDismissed(true);
+  };
+  const showAltitudeHud = shouldShowPointAltitude(baseMapType);
+  const [cursorAltitude, setCursorAltitude] = useState<PointAltitudeResult | null>(
+    null,
+  );
   const mapReadyRef = useRef(false);
   const appliedStyleRef = useRef<string | null>(null);
   const mapStyleRef = useRef(mapStyle);
@@ -577,51 +606,50 @@ export function CrisisMap({
     };
   }, [mapStyle]);
 
-  // Terrain relief: hillshade overlay on the theme basemap ("topography"
-  // mode). Runs before the focus effect below so the dim mask - inserted
-  // at the same road-layer anchor - lands above the relief and dims it
-  // outside the focus country too.
+  // Hybrid Topography: hillshade + DEM terrain mesh (`setTerrain`) while
+  // Topography is active. Country-band-boosted exaggeration; Simple /
+  // Satellite stay flat. Pitch is opt-in (gestures on Topography only;
+  // leave resets pitch). Runs before the focus effect so the dim mask
+  // lands above the relief outside the focus country too.
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
-    const cleanup = () => {
-      try { if (m.getLayer("terrain-hillshade")) m.removeLayer("terrain-hillshade"); } catch { /* ignore */ }
-      try { if (m.getSource("terrain-dem")) m.removeSource("terrain-dem"); } catch { /* ignore */ }
-    };
-    cleanup();
-    if (baseMapType !== "topography") return;
-
-    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
-    const beforeId =
-      styleLayers.find((l) => isRoadLayerId(l.id))?.id ??
-      styleLayers.find((l) => l.type === "symbol")?.id;
     try {
-      m.addSource("terrain-dem", {
-        type: "raster-dem",
-        url: "mapbox://mapbox.mapbox-terrain-dem-v1",
-        tileSize: 512,
-        maxzoom: 14,
-      });
-      m.addLayer(
-        { id: "terrain-hillshade", type: "hillshade", source: "terrain-dem",
-          paint: {
-            // Strongest at the Country band (z5-8) where relief must read
-            // at country scale; relaxes toward the Site band where the
-            // street grid takes over (docs/map-design.md).
-            "hillshade-exaggeration": [
-              "interpolate", ["linear"], ["zoom"],
-              4, isDark ? 1 : 0.9,
-              10, isDark ? 0.65 : 0.55,
-              14, 0.35,
-            ] as never,
-            "hillshade-shadow-color": isDark ? "#000000" : "#57534E",
-            "hillshade-highlight-color": isDark ? "#6B6B78" : "#FFFFFF",
-          } },
-        beforeId,
-      );
-    } catch { /* ignore */ }
-    return cleanup;
+      syncTopographyTerrain(m, baseMapType, { isDark });
+      syncTopographyPitch(m, baseMapType);
+    } catch {
+      /* ignore style race */
+    }
+    return () => {
+      try {
+        syncTopographyTerrain(m, "simple", { isDark });
+        syncTopographyPitch(m, "simple");
+      } catch {
+        /* ignore */
+      }
+    };
   }, [loaded, baseMapType, isDark]);
+
+  // Cursor altitude HUD — sample DEM under the pointer while Topography is on.
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    if (!showAltitudeHud) {
+      setCursorAltitude(null);
+      return;
+    }
+    const onMove = (e: { lngLat: { lng: number; lat: number } }) => {
+      setCursorAltitude(samplePointAltitude(m, e.lngLat.lng, e.lngLat.lat));
+    };
+    const onLeave = () => setCursorAltitude(null);
+    m.on("mousemove", onMove);
+    m.on("mouseout", onLeave);
+    return () => {
+      m.off("mousemove", onMove);
+      m.off("mouseout", onLeave);
+      setCursorAltitude(null);
+    };
+  }, [loaded, showAltitudeHud]);
 
   // ── Country focus: dim mask + border glow + bounds ──────────────────────
   //
@@ -2101,6 +2129,7 @@ export function CrisisMap({
         const p = m.project(coords) as { x: number; y: number };
         return { x: p.x, y: p.y };
       },
+      samplePointAltitude: (lng, lat) => samplePointAltitude(map.current, lng, lat),
     };
     return () => {
       mapApiRef.current = null;
@@ -2167,12 +2196,12 @@ export function CrisisMap({
         /* Keep GL clear transparent so container basemap color shows if frames drop */
         .mapboxgl-canvas { background: transparent !important; }
       `}</style>
-      <div 
-        ref={mapContainer} 
+      <div
         className={className}
-        style={{ 
-          width: '100%',
-          height: '100%',
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
           // Match basemap lightness so a brief WebGL clear never flashes
           // light chrome under dark satellite imagery.
           background:
@@ -2185,7 +2214,97 @@ export function CrisisMap({
           // sidebar/panel backdrop-filter from sampling Mapbox WebGL.
           transform: "translateZ(0)",
         }}
-      />
+      >
+        <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
+        {showTiltHint && (
+          <div
+            role="status"
+            data-testid="topography-tilt-hint"
+            style={{
+              position: "absolute",
+              top: 12,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 5,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              maxWidth: "min(360px, calc(100% - 24px))",
+              padding: "8px 10px 8px 14px",
+              borderRadius: 10,
+              border: "1px solid var(--color-border-dark)",
+              background: isDark
+                ? "rgba(17, 17, 17, 0.72)"
+                : "rgba(250, 250, 250, 0.78)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              color: "var(--color-text-primary)",
+              fontSize: 13,
+              fontWeight: 500,
+              lineHeight: 1.35,
+              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+              pointerEvents: "auto",
+            }}
+          >
+            <span style={{ minWidth: 0 }}>{t("tiltHint.message")}</span>
+            <button
+              type="button"
+              onClick={onDismissTiltHint}
+              aria-label={t("tiltHint.dismiss")}
+              style={{
+                flexShrink: 0,
+                border: "none",
+                background: "transparent",
+                color: "var(--color-text-muted)",
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 600,
+                padding: "4px 6px",
+              }}
+            >
+              {t("tiltHint.dismiss")}
+            </button>
+          </div>
+        )}
+        {showAltitudeHud && cursorAltitude && (
+          <div
+            role="status"
+            data-testid="point-altitude-hud"
+            style={{
+              position: "absolute",
+              top: showTiltHint ? 56 : 12,
+              right: 12,
+              zIndex: 5,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              gap: 2,
+              padding: "8px 12px",
+              borderRadius: 10,
+              border: "1px solid var(--color-border-dark)",
+              background: isDark
+                ? "rgba(17, 17, 17, 0.72)"
+                : "rgba(250, 250, 250, 0.78)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              color: "var(--color-text-primary)",
+              fontSize: 12,
+              lineHeight: 1.3,
+              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+              pointerEvents: "none",
+            }}
+          >
+            <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+              {cursorAltitude.kind === "ok"
+                ? cursorAltitude.displayMetres
+                : t("pointAltitude.unavailable")}
+            </span>
+            <span style={{ color: "var(--color-text-muted)", fontSize: 11 }}>
+              {t("pointAltitude.qualifier")}
+            </span>
+          </div>
+        )}
+      </div>
     </>
   );
 }

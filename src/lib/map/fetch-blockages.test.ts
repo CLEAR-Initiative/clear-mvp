@@ -28,13 +28,14 @@ describe("isBlockagesUiEnabled", () => {
     expect(getBlockagesFetchUrl()).toBe("/api/dev/logie-blockages");
   });
 
-  it("stays Coming soon in production without an API URL", () => {
+  it("is always enabled (no NEXT_PUBLIC gate); prod without env uses BFF path", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_LOGIE_BLOCKAGES_URL", "");
-    expect(isBlockagesUiEnabled()).toBe(false);
+    expect(isBlockagesUiEnabled()).toBe(true);
+    expect(getBlockagesFetchUrl()).toBe("/api/logie/blockages");
   });
 
-  it("enables when BFF / clear-api slim URL is set (any NODE_ENV)", () => {
+  it("prefers BFF / clear-api slim URL when set (any NODE_ENV)", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_LOGIE_BLOCKAGES_URL", "/api/logie/blockages");
     expect(isBlockagesUiEnabled()).toBe(true);

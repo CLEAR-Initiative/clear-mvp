@@ -142,10 +142,45 @@ _Avoid_: white overlays; page-level content fade-in; opacity-0 entry animations 
 ### Map foundation
 
 **Basemap triad**:
-Exactly one basemap is active: **Simple**, **Topography** (relief/hillshade), or
-**Satellite**. Not a Satellite checkbox stacked on Simple.
+Exactly one basemap is active: **Simple**, **Topography**, or **Satellite**. Not a
+Satellite checkbox stacked on Simple.
 _Avoid_: peer-checkbox Satellite; treating Topography as an overlay instead of a basemap
 choice; shipping operational layers before the triad is correct.
+
+**Topography** (basemap):
+The relief basemap in the triad. **Hybrid**: readable top-down relief by default
+(**hillshade** + **terrain mesh** together), with a real DEM-backed mesh (Mapbox
+`setTerrain` on the existing terrain DEM — not Cesium) so optional tilt reveals true
+3D height. Visual **exaggeration is Country-band boosted** (stronger at z5–8, relaxes
+toward Site) so Topography is obviously distinct from Simple where program managers
+work — exaggeration is visual only; **Point altitude** remains real DEM metres. UI may
+label it “Terrain”; glossary and code stay **Topography** / `topography`.
+_Avoid_: hillshade-only as the finished product; mesh-without-hillshade as the only
+top-down treatment; requiring pitch to understand relief; Cesium / a second map runtime;
+treating Topography as an Access layer; an exaggeration slider in this wedge; shipping
+Topography that only reads as “slightly shaded Simple” at Country band.
+
+**Terrain mesh** (Topography):
+The DEM surface enabled with Mapbox `setTerrain` **only** while **Topography** is
+active. Simple and Satellite stay flat (no mesh). **Pitch is opt-in**: camera stays
+top-down (`pitch: 0`) until the analyst tilts (gestures / touch pitch); leaving
+Topography clears the mesh and resets pitch. First Topography selection shows a
+dismissible **tilt hint** (session or until dismissed) — not permanent 3D chrome.
+_Avoid_: auto-pitch on selecting Topography; a separate “3D” Layers toggle for v1;
+silent tilt with no teaching; persistent tilt chrome; leaving pitch/mesh stuck after
+switching to Simple or Satellite; draping DEM on Satellite or Simple in this wedge.
+
+**Point altitude**:
+The DEM elevation (metres) sampled at a map point while **Topography** is active
+(Mapbox `queryTerrainElevation` on the same terrain DEM). Shown in two places: a live
+**cursor altitude HUD** while browsing, and on the open **Marker detail panel** next to
+**Copyable coordinates**. Display is **approximate** (soft “approx.” / DEM qualifier) —
+numeric and point-sampled, not survey grade. Readout only — not an **Access**
+constraint and not a substitute for **LogIE** / **Blockages**.
+_Avoid_: calling point altitude **Terrain hazards**; deriving passability from DEM in
+this wedge; presenting altitude as survey-grade truth; silent metres with no qualifier;
+altitude-only-in-HUD or altitude-only-on-marker as the finished v1; inventing a
+confidence/uncertainty band in this wedge.
 
 **NRC locations** (layer):
 Operational map layer of NRC sites/offices — sibling of **Access** under **Operational**
@@ -315,6 +350,9 @@ full SDN GeoJSON dumps into the app tree by default.
   **Product Tour** merges, a **Spaghetti connector** visually joins each open panel to
   its marker.
 - **Copyable coordinates** live on the **Marker detail panel** (click/tap to copy)
+- **Topography** enables **terrain mesh** + hillshade; **Point altitude** samples that
+  same DEM (cursor HUD + Marker detail) and is not an **Access** / **Terrain hazards**
+  signal
 - **Access** / **Blockages** constraint status comes from **LogIE**; road geometry joins
   OSM via `osmid`. **NRC locations** are not a **LogIE** layer.
 - Sequence for this Access wedge: Expo **#280** (**LogIE spike**, retargeted) → **LogIE
@@ -413,6 +451,11 @@ full SDN GeoJSON dumps into the app tree by default.
 > **Dev:** "Ship NRC, IDP, and Blockages right after Location trust?"
 > **Domain expert:** "No. Fix the **Basemap triad** (Simple / Topography / Satellite),
 > then wire **NRC locations**. IDP and Blockages wait."
+
+> **Dev:** "Topography = stronger hillshade, or real 3D heightmap? Cesium?"
+> **Domain expert:** "**Hybrid Topography**: hillshade + **terrain mesh** (`setTerrain`,
+> not Cesium). Pitch opt-in; **Point altitude** on HUD + marker panel. No DEM
+> **Terrain hazards** yet. Satellite quality is a separate follow-on."
 
 > **Dev:** "Open Expo tickets for weather, conflict probability, and notifications now?"
 > **Domain expert:** "No. One **Foresight** spike after NRC. Bias the spike to weather /
@@ -593,6 +636,30 @@ full SDN GeoJSON dumps into the app tree by default.
   Satellite**; **Roads** under Overlays (works on the non-imagery path; satellite-streets
   when roads + satellite). Legacy “Streets ↔ Satellite” wording means Simple vs Satellite
   within the triad.
+- **Topography** meaning — resolved: **Hybrid** (readable top-down + optional 3D mesh via
+  Mapbox `setTerrain` on existing DEM). Not hillshade-only forever; not Cesium; not
+  pitch-required-only. Location trust may stay parallel — triad/heightmap work need not
+  wait on #314. See [ADR-0004](docs/adr/0004-topography-uses-mapbox-setterrain-not-cesium.md).
+- **Terrain mesh** camera — resolved: mesh on while Topography is selected; **pitch
+  opt-in** (no auto-pitch, no dedicated 3D toggle in v1). Leave Topography → clear mesh +
+  reset pitch.
+- **Terrain mesh** scope — resolved: **Topography only**; Simple and Satellite remain
+  flat in this wedge.
+- Topography paint stack — resolved: **mesh + hillshade** together (hillshade carries
+  Country-band top-down readability; mesh enables opt-in tilt). Not mesh-only at pitch 0.
+- Altitude → access scope for this wedge — resolved: **Visual Topography + Point
+  altitude** (elevation readout). No DEM-derived **Terrain hazards** / passability in
+  this wedge; that stays a later Access subtype.
+- **Point altitude** surfaces — resolved: **cursor HUD + Marker detail panel** (both)
+  while Topography is active.
+- Tilt discoverability — resolved: **one-time dismissible hint** on first Topography
+  select (not silent gestures-only, not persistent 3D chrome).
+- This wedge vs Satellite — resolved: ship **Topography + Point altitude** only;
+  Satellite source/color (#137 Part B / #283→#284) stays a separate follow-on.
+- Point altitude precision framing — resolved: **soft qualifier** (“approx.” / DEM);
+  not silent raw metres; not a full uncertainty-band UI.
+- Terrain visual exaggeration — resolved: **Country-band boost** (stronger z5–8, relax
+  toward Site); no user slider in this wedge. Point altitude stays unexaggerated metres.
 - Operational / population stubs — resolved for this slice: **IDP Density** under
   **Population**; **Blockages** / **NRC locations** under **Operational**; live
   aggregations later.

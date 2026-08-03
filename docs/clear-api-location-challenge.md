@@ -1,20 +1,19 @@
 # Clear-API Contract: Location challenge + optional correction (v1)
 
-> **Status (clear-mvp #314):** **UI ready to ship.** Analysts can challenge a Signal
-> pin and optionally propose a corrected point (place-on-map primary, manual lat/lng
-> secondary). **Persistence is not implemented** — without clear-api, challenges are
-> session/local visual only and do not survive reload.  
-> **Do not treat the FE alone as a complete Location trust system.**  
+> **Status (clear-mvp #314 / PR #136):** **UI + API persistence ready.** Analysts can
+> challenge a Signal pin and optionally propose a corrected point (place-on-map
+> primary, manual lat/lng secondary). clear-api persists the queue via GraphQL;
+> clear-mvp tRPC still soft-fails if the schema is unavailable (older environments).  
 > Product rules: [CONTEXT.md](../CONTEXT.md) (Location trust) +
 > [ADR-0003](adr/0003-location-trust-challenge-without-candidates.md).
 
-## What ships in clear-mvp vs what is still missing
+## What ships vs what is still missing
 
 | Layer | State |
 |---|---|
 | clear-mvp UI (Signal detail + map Marker detail) | **Done** — challenge modal, map place-pin, dual-pin / challenged affordance |
 | clear-mvp tRPC (`locationChallenge.*`) | **Done** — calls GraphQL below; degrades when schema missing |
-| clear-api persist + GraphQL | **Missing** — required for the system to remember challenges |
+| clear-api persist + GraphQL | **Done** — `signalLocationChallenges` + `submitSignalLocationChallenge` |
 | Location admin accept / decline | **Not built and not near-roadmap** — v1 is queue-only forever until a later product decision |
 
 ### Explicit non-goals (near term)
