@@ -7,6 +7,8 @@ import { api } from "~/trpc/react";
 import { SignalDetailContent } from "~/components/signal-detail/signal-detail-content";
 import { useSignalNavigation, getSignalMapCenter } from "~/hooks/use-event-navigation";
 import { deriveEntityPending, useEntityNavigation } from "~/hooks/use-entity-navigation";
+import { useDetailKeyboardScrub } from "~/hooks/use-detail-keyboard-scrub";
+import { getListNavigation } from "~/lib/detail-list-nav";
 
 function SignalDetailPageContent({
   params,
@@ -35,9 +37,26 @@ function SignalDetailPageContent({
     searchParams,
   });
 
-  const navigation = useSignalNavigation(activeId, {
-    listSource: referrer === "map" ? "map" : "detection",
+  // List from committed id; chrome follows scrubId (GH #148 settle-to-commit).
+  const listSource = referrer === "map" ? "map" : "detection";
+  const listNav = useSignalNavigation(activeId, { listSource });
+  const orderedIds = useMemo(
+    () => listNav.listItems.map((s) => s.id),
+    [listNav.listItems],
+  );
+  const { scrubId } = useDetailKeyboardScrub({
+    ids: orderedIds,
+    committedId: activeId,
+    onCommit: navigateTo,
   });
+  const navigation = useMemo(() => {
+    const step = getListNavigation(orderedIds, scrubId);
+    return {
+      ...step,
+      isLoading: listNav.isLoading,
+      listItems: listNav.listItems,
+    };
+  }, [orderedIds, scrubId, listNav.isLoading, listNav.listItems]);
 
   // Race comments.list with signals.get so empty threads resolve without a second waterfall.
   useEffect(() => {
@@ -45,13 +64,18 @@ function SignalDetailPageContent({
     void utils.comments.list.prefetch({ entityId: activeId, entityType: "signal" });
   }, [activeId, utils]);
 
+  // Prefetch ±1 around the *committed* id only — never the scrub cursor (GH #148).
+  const committedNeighbors = useMemo(
+    () => getListNavigation(orderedIds, activeId),
+    [orderedIds, activeId],
+  );
   useEffect(() => {
-    for (const id of [navigation.prevId, navigation.nextId]) {
+    for (const id of [committedNeighbors.prevId, committedNeighbors.nextId]) {
       if (!id || prefetchedRef.current.has(id)) continue;
       prefetchedRef.current.add(id);
       prefetchDetail(id);
     }
-  }, [navigation.prevId, navigation.nextId, prefetchDetail]);
+  }, [committedNeighbors.prevId, committedNeighbors.nextId, prefetchDetail]);
 
   const signalQuery = api.signals.get.useQuery(
     { id: activeId },
@@ -70,13 +94,13 @@ function SignalDetailPageContent({
     return item ? getSignalMapCenter(item) ?? undefined : undefined;
   }, [activeId, navigation.listItems]);
 
-  const navigatePrev = () => {
+  const navigatePrev = useCallback(() => {
     if (navigation.prevId) navigateTo(navigation.prevId);
-  };
+  }, [navigation.prevId, navigateTo]);
 
-  const navigateNext = () => {
+  const navigateNext = useCallback(() => {
     if (navigation.nextId) navigateTo(navigation.nextId);
-  };
+  }, [navigation.nextId, navigateTo]);
 
   return (
     <SignalDetailContent
