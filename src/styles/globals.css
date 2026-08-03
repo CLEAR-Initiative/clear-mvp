@@ -159,14 +159,24 @@ body {
 }
 
 /*
- * Satellite frost chrome (GH #145): resting labels must be high-contrast over
- * dark imagery; hover softens to grey (not grey→white). Scoped to map overlay
- * frost surfaces only so Simple/Topography keep theme tokens.
+ * Map frost chrome (GH #145): high-contrast idle text on frosted glass over
+ * any basemap; hover softens to grey (not the reverse). Theme-aware so light
+ * mode stays black-on-frost (not white-on-light).
  */
-body[data-nav-overlay="true"][data-map-basemap="satellite"] [data-tour="nav-sidebar"],
-body[data-nav-overlay="true"][data-map-basemap="satellite"] [data-map-chrome-left],
-body[data-nav-overlay="true"][data-map-basemap="satellite"] [data-map-chrome-top],
-body[data-nav-overlay="true"][data-map-basemap="satellite"] [data-map-chrome-bottom] {
+body[data-nav-overlay="true"][data-map-basemap] [data-tour="nav-sidebar"],
+body[data-nav-overlay="true"][data-map-basemap] [data-map-chrome-left],
+body[data-nav-overlay="true"][data-map-basemap] [data-map-chrome-top],
+body[data-nav-overlay="true"][data-map-basemap] [data-map-chrome-bottom] {
+  --color-text-primary: #171717;
+  --color-text-secondary: #171717;
+  --color-text-muted: #404040;
+  --map-frost-hover-text: #737373;
+}
+
+[data-mantine-color-scheme="dark"] body[data-nav-overlay="true"][data-map-basemap] [data-tour="nav-sidebar"],
+[data-mantine-color-scheme="dark"] body[data-nav-overlay="true"][data-map-basemap] [data-map-chrome-left],
+[data-mantine-color-scheme="dark"] body[data-nav-overlay="true"][data-map-basemap] [data-map-chrome-top],
+[data-mantine-color-scheme="dark"] body[data-nav-overlay="true"][data-map-basemap] [data-map-chrome-bottom] {
   --color-text-primary: #fafafa;
   --color-text-secondary: #f5f5f5;
   --color-text-muted: #f5f5f5;

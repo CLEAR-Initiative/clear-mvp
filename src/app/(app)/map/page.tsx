@@ -707,8 +707,8 @@ function MapPageContent() {
     Record<number, PointAltitudeResult>
   >({});
 
-  // Publish basemap so frost chrome (nav + Layers) can invert text contrast
-  // on Satellite (GH #145). Cleared when leaving /map.
+  // Publish basemap so frost chrome (nav + Layers) can remap text contrast
+  // on Simple / Topography / Satellite (GH #145). Cleared when leaving /map.
   useEffect(() => {
     document.body.dataset.mapBasemap = baseMapType;
     return () => {

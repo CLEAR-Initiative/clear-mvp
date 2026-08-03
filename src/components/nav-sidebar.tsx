@@ -570,8 +570,8 @@ export function NavSidebar() {
                       className={cn(
                         !isDisabled &&
                           !isActive &&
-                          // Prefer --map-frost-hover-text on Satellite frost (softens);
-                          // falls back to primary elsewhere (brightens).
+                          // Prefer --map-frost-hover-text on map frost (softens);
+                          // falls back to primary off-map (brightens).
                           "hover:bg-[var(--color-bg-muted)] hover:!text-[var(--map-frost-hover-text,var(--color-text-primary))]",
                       )}
                       component="div"

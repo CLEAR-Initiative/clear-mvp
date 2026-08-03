@@ -127,7 +127,7 @@ function PanelHeader({ children }: { children: string }) {
 function SectionLabel({ children }: { children: string }) {
   return (
     // Opacity lives in the muted token; avoid a second dim pass that fights
-    // Satellite frost high-contrast remap (GH #145).
+    // map frost high-contrast remap (GH #145).
     <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em" }} mb={6}>
       {children}
     </Text>
