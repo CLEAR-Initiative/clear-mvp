@@ -20,6 +20,10 @@ import type {
   MarkerScreenPoint,
   BaseMapType,
 } from "~/components/map/crisis-map";
+import {
+  shouldShowPointAltitude,
+  type PointAltitudeResult,
+} from "~/lib/map/point-altitude";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import {
@@ -458,6 +462,38 @@ function MapPageContent() {
   const [showRoads, setShowRoads] = useState(true);
   const [showNrcLocations, setShowNrcLocations] = useState(false);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
+  /** Marker-detail Point altitude samples (Topography only). */
+  const [panelAltitudes, setPanelAltitudes] = useState<
+    Record<number, PointAltitudeResult>
+  >({});
+
+  useEffect(() => {
+    if (!shouldShowPointAltitude(baseMapType) || openPanels.length === 0) {
+      setPanelAltitudes({});
+      return;
+    }
+    const sample = () => {
+      const api = mapApiRef.current;
+      if (!api) return;
+      const next: Record<number, PointAltitudeResult> = {};
+      for (const panel of openPanelsRef.current) {
+        next[panel.marker.id] = api.samplePointAltitude(
+          panel.marker.lng,
+          panel.marker.lat,
+        );
+      }
+      setPanelAltitudes(next);
+    };
+    sample();
+    // DEM tiles may land after setTerrain — retry briefly for open panels.
+    const t1 = window.setTimeout(sample, 400);
+    const t2 = window.setTimeout(sample, 1200);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [baseMapType, openPanels]);
+
   /**
    * Blockages UI: always on (BFF default). See `fetch-blockages.ts`.
    */
@@ -1372,6 +1408,11 @@ function MapPageContent() {
           <MapMarkerDetail
             key={panel.marker.id}
             marker={panel.marker}
+            pointAltitude={
+              shouldShowPointAltitude(baseMapType)
+                ? (panelAltitudes[panel.marker.id] ?? null)
+                : null
+            }
             anchor={panel.anchor}
             livePin={connectorPins[panel.marker.id] ?? null}
             stackZIndex={panel.z}

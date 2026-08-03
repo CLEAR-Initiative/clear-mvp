@@ -13,10 +13,16 @@ import {
   placeNearMarker,
 } from "./map-panel-placement";
 import styles from "./map-marker-detail.module.css";
+import type { PointAltitudeResult } from "~/lib/map/point-altitude";
 
 interface MapMarkerDetailProps {
   marker: CrisisMarker;
   onClose: () => void;
+  /**
+   * Point altitude while Topography is active (null/undefined = hide row).
+   * Soft approx./DEM framing — not survey grade.
+   */
+  pointAltitude?: PointAltitudeResult | null;
   /** Marker pixel position inside the map overlay parent. Desktop only. */
   anchor?: MarkerScreenPoint | null;
   /**
@@ -65,6 +71,7 @@ const OPEN_NUDGE_MS = 2200;
 export function MapMarkerDetail({
   marker,
   onClose,
+  pointAltitude = null,
   anchor,
   livePin,
   onChromeActiveChange,
@@ -485,6 +492,17 @@ export function MapMarkerDetail({
             value={`${marker.lat.toFixed(2)}, ${marker.lng.toFixed(2)}`}
             copiedLabel={t("detail.copied")}
           />
+          {pointAltitude && (
+            <DetailRow
+              label={t("pointAltitude.label")}
+              value={
+                pointAltitude.kind === "ok"
+                  ? `${pointAltitude.displayMetres} · ${t("pointAltitude.qualifier")}`
+                  : t("pointAltitude.unavailable")
+              }
+              mono
+            />
+          )}
         </Stack>
 
         {marker.eventId && (

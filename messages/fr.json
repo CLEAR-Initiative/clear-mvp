@@ -1852,6 +1852,11 @@
     "tiltHint": {
       "message": "Faites glisser pour incliner et lire le relief en 3D",
       "dismiss": "Compris"
+    },
+    "pointAltitude": {
+      "label": "Altitude",
+      "qualifier": "approx. · MNT",
+      "unavailable": "—"
     }
   },
   "nav": {

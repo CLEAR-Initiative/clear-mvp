@@ -1850,6 +1850,11 @@
     "tiltHint": {
       "message": "Drag to tilt and read the terrain in 3D",
       "dismiss": "Got it"
+    },
+    "pointAltitude": {
+      "label": "Altitude",
+      "qualifier": "approx. · DEM",
+      "unavailable": "—"
     }
   },
   "nav": {
