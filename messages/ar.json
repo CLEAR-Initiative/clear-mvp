@@ -1848,7 +1848,11 @@
       "focusFallbackSignal": "إشارة مركّزة",
       "focusFallbackCrisis": "أزمة مركّزة"
     },
-    "tokenMissing": "لم يُهيَّأ رمز Mapbox. عيّن NEXT_PUBLIC_MAPBOX_TOKEN في ملف .env"
+    "tokenMissing": "لم يُهيَّأ رمز Mapbox. عيّن NEXT_PUBLIC_MAPBOX_TOKEN في ملف .env",
+    "tiltHint": {
+      "message": "اسحب لإمالة الخريطة وقراءة التضاريس ثلاثية الأبعاد",
+      "dismiss": "حسناً"
+    }
   },
   "nav": {
     "sections": {

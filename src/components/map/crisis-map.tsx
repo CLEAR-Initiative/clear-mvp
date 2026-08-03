@@ -31,7 +31,13 @@ import {
   paintNrcOfficeMarkerTheme,
 } from "~/lib/map/nrc-office-markers";
 import { BLOCKAGES_STALE_AFTER_DAYS } from "~/lib/map/logie-blockages";
+import { syncTopographyPitch } from "~/lib/map/topography-pitch";
 import { syncTopographyTerrain } from "~/lib/map/topography-terrain";
+import {
+  dismissTopographyTiltHint,
+  isTopographyTiltHintDismissed,
+  shouldShowTopographyTiltHint,
+} from "~/lib/map/topography-tilt-hint";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
 const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
@@ -432,6 +438,17 @@ export function CrisisMap({
   const markersDataRef = useRef<MapMarker[]>(markers);
   const hoveredMarkerIdRef = useRef<number | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [tiltHintDismissed, setTiltHintDismissed] = useState(() =>
+    isTopographyTiltHintDismissed(),
+  );
+  const showTiltHint = shouldShowTopographyTiltHint({
+    baseMapType,
+    dismissed: tiltHintDismissed,
+  });
+  const onDismissTiltHint = () => {
+    dismissTopographyTiltHint();
+    setTiltHintDismissed(true);
+  };
   const mapReadyRef = useRef(false);
   const appliedStyleRef = useRef<string | null>(null);
   const mapStyleRef = useRef(mapStyle);
@@ -537,19 +554,22 @@ export function CrisisMap({
 
   // Hybrid Topography: hillshade + DEM terrain mesh (`setTerrain`) while
   // Topography is active. Country-band-boosted exaggeration; Simple /
-  // Satellite stay flat. Runs before the focus effect so the dim mask
+  // Satellite stay flat. Pitch is opt-in (gestures on Topography only;
+  // leave resets pitch). Runs before the focus effect so the dim mask
   // lands above the relief outside the focus country too.
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
     try {
       syncTopographyTerrain(m, baseMapType, { isDark });
+      syncTopographyPitch(m, baseMapType);
     } catch {
       /* ignore style race */
     }
     return () => {
       try {
         syncTopographyTerrain(m, "simple", { isDark });
+        syncTopographyPitch(m, "simple");
       } catch {
         /* ignore */
       }
@@ -2057,12 +2077,12 @@ export function CrisisMap({
         /* Keep GL clear transparent so container basemap color shows if frames drop */
         .mapboxgl-canvas { background: transparent !important; }
       `}</style>
-      <div 
-        ref={mapContainer} 
+      <div
         className={className}
-        style={{ 
-          width: '100%',
-          height: '100%',
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
           // Match basemap lightness so a brief WebGL clear never flashes
           // light chrome under dark satellite imagery.
           background:
@@ -2075,7 +2095,59 @@ export function CrisisMap({
           // sidebar/panel backdrop-filter from sampling Mapbox WebGL.
           transform: "translateZ(0)",
         }}
-      />
+      >
+        <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
+        {showTiltHint && (
+          <div
+            role="status"
+            data-testid="topography-tilt-hint"
+            style={{
+              position: "absolute",
+              top: 12,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 5,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              maxWidth: "min(360px, calc(100% - 24px))",
+              padding: "8px 10px 8px 14px",
+              borderRadius: 10,
+              border: "1px solid var(--color-border-dark)",
+              background: isDark
+                ? "rgba(17, 17, 17, 0.72)"
+                : "rgba(250, 250, 250, 0.78)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              color: "var(--color-text-primary)",
+              fontSize: 13,
+              fontWeight: 500,
+              lineHeight: 1.35,
+              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+              pointerEvents: "auto",
+            }}
+          >
+            <span style={{ minWidth: 0 }}>{t("tiltHint.message")}</span>
+            <button
+              type="button"
+              onClick={onDismissTiltHint}
+              aria-label={t("tiltHint.dismiss")}
+              style={{
+                flexShrink: 0,
+                border: "none",
+                background: "transparent",
+                color: "var(--color-text-muted)",
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 600,
+                padding: "4px 6px",
+              }}
+            >
+              {t("tiltHint.dismiss")}
+            </button>
+          </div>
+        )}
+      </div>
     </>
   );
 }
