@@ -66,14 +66,20 @@ function EventDetailPageContent({
     void utils.comments.list.prefetch({ entityId: activeId, entityType: "event" });
   }, [activeId, utils]);
 
-  // Prefetch ±1 around the scrub cursor (cheap); no trail of intermediate gets.
+  // Prefetch ±1 around the *committed* id only — never the scrub cursor.
+  // Scrubbing 4→60 would otherwise fire a trail of get/comments prefetches
+  // and starve the settled destination (GH #148).
+  const committedNeighbors = useMemo(
+    () => getListNavigation(orderedIds, activeId),
+    [orderedIds, activeId],
+  );
   useEffect(() => {
-    for (const id of [navigation.prevId, navigation.nextId]) {
+    for (const id of [committedNeighbors.prevId, committedNeighbors.nextId]) {
       if (!id || prefetchedRef.current.has(id)) continue;
       prefetchedRef.current.add(id);
       prefetchDetail(id);
     }
-  }, [navigation.prevId, navigation.nextId, prefetchDetail]);
+  }, [committedNeighbors.prevId, committedNeighbors.nextId, prefetchDetail]);
 
   const eventQuery = api.events.get.useQuery(
     { id: activeId },

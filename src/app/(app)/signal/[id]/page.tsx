@@ -64,13 +64,18 @@ function SignalDetailPageContent({
     void utils.comments.list.prefetch({ entityId: activeId, entityType: "signal" });
   }, [activeId, utils]);
 
+  // Prefetch ±1 around the *committed* id only — never the scrub cursor (GH #148).
+  const committedNeighbors = useMemo(
+    () => getListNavigation(orderedIds, activeId),
+    [orderedIds, activeId],
+  );
   useEffect(() => {
-    for (const id of [navigation.prevId, navigation.nextId]) {
+    for (const id of [committedNeighbors.prevId, committedNeighbors.nextId]) {
       if (!id || prefetchedRef.current.has(id)) continue;
       prefetchedRef.current.add(id);
       prefetchDetail(id);
     }
-  }, [navigation.prevId, navigation.nextId, prefetchDetail]);
+  }, [committedNeighbors.prevId, committedNeighbors.nextId, prefetchDetail]);
 
   const signalQuery = api.signals.get.useQuery(
     { id: activeId },
