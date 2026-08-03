@@ -24,16 +24,31 @@ performs in the Site band is a decoration, not a feature.
 
 ## Base maps
 
-Three modes, one design language:
+Three exclusive modes (Layers UI still labels Topography as **Terrain**), one
+design language. Product language: **Simple** | **Topography** | **Satellite**
+— see `CONTEXT.md` and [ADR-0004](adr/0004-topography-uses-mapbox-setterrain-not-cesium.md).
 
 - **Simple** - Mapbox light-v11 / dark-v11 following the app theme. The
-  clean canvas for data overlays.
-- **Terrain** - Simple + a hillshade layer (`mapbox-terrain-dem-v1`).
-  Same cartography, adds relief for access/flood reasoning. NOT a separate
-  Mapbox style: outdoors-v12 was tried and rejected (pale landcover, no
-  dark variant, drowned our overlays).
+  clean canvas for data overlays. Flat camera; no DEM mesh.
+- **Topography** (UI: Terrain) - **Hybrid Topography**: same light/dark
+  cartography as Simple, plus hillshade **and** a Mapbox `setTerrain` mesh on
+  `mapbox-terrain-dem-v1`. NOT a separate Mapbox style: outdoors-v12 was tried
+  and rejected (pale landcover, no dark variant, drowned our overlays).
+  - **Pitch opt-in** — camera stays top-down (`pitch: 0`) until the analyst
+    tilts; no auto-pitch on select; no dedicated Layers “3D” toggle. Leaving
+    Topography clears the mesh and resets pitch. A one-time dismissible tilt
+    hint teaches the gesture.
+  - **Country-band exaggeration** — visual mesh boost stronger at z5–8,
+    relaxing toward Site. Paint/mesh only; **Point altitude** stays
+    unexaggerated DEM metres.
+  - **Point altitude** — approximate DEM elevation via
+    `queryTerrainElevation` while Topography is active: orange ground probe
+    under the cursor (fades over pitched sky) and a row on the open Marker
+    detail panel beside Copyable coordinates. Soft “approx.” / DEM qualifier;
+    not survey grade; not Access / Terrain hazards.
 - **Satellite** - imagery (satellite-v9, or satellite-streets-v12 when
-  Roads is on). Ground-truth mode for site assessment.
+  Roads is on). Ground-truth mode for site assessment. Flat in this wedge
+  (no DEM mesh / Point altitude).
 
 Rules that hold across all three:
 
@@ -41,8 +56,10 @@ Rules that hold across all three:
    Satellite is always a dark basemap, even in light mode.
 2. Country-focus fills (mask/tint) insert **below the road layers**.
    Fills above roads bury the network (only symbols render above fills).
-3. The blue focus tint exists only on Simple. On Terrain/Satellite the
+3. The blue focus tint exists only on Simple. On Topography/Satellite the
    focus is carried by border + outside mask, never a wash over imagery.
+4. **Terrain mesh is Topography-only.** Simple and Satellite stay flat;
+   do not drape DEM on those modes in this wedge.
 
 ## Roads = supply corridors
 
@@ -66,14 +83,14 @@ override paint on the style's road layers.
 ## Layer stack (bottom to top)
 
 1. Basemap land / water / landuse
-2. Hillshade (Terrain mode)
+2. DEM terrain mesh (`setTerrain`) + hillshade (Topography only)
 3. Focus mask (dims non-focus countries) + focus tint (Simple only)
 4. Roads
 5. Mapbox admin lines / A1 fallback borders
 6. Backend admin boundaries (A1/A2 lines), focus country border
 7. Population choropleth (opt-in)
 8. Labels (style symbols; settlement labels relaxed inside focus country)
-9. Markers, cluster donuts, marker detail (DOM)
+9. Markers, cluster donuts, marker detail (DOM); Point altitude probe (Topography)
 
 ## Color roles
 
@@ -93,10 +110,15 @@ distinguishable information channels at every zoom and theme.
 
 ## Known limits / roadmap
 
-- Hillshade is real relief: central Sudan is flat and will stay visually
-  quiet on Terrain. The relief shows in Jebel Marra, the Nuba Mountains,
-  and the Red Sea Hills. If flat regions need texture, add a landcover
-  tint - do not swap the base style.
+- DEM + hillshade are real relief: central Sudan is flat and will stay
+  visually quiet on Topography even with Country-band exaggeration. The
+  relief shows in Jebel Marra, the Nuba Mountains, and the Red Sea Hills.
+  If flat regions need texture, add a landcover tint - do not swap the
+  base style.
+- Point altitude is a readout only (approx. DEM metres). Do not derive
+  passability or **Terrain hazards** from it in this wedge; Access /
+  Blockages stay LogIE-sourced
+  ([ADR-0003](adr/0003-logie-is-access-constraint-source.md)).
 - The durable version of all of this is a custom Mapbox Studio style pair
   ("CLEAR Light"/"CLEAR Dark") with these rules baked in, replacing the
   runtime overrides. Runtime overrides are the tactical layer.
