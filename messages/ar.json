@@ -1852,6 +1852,11 @@
     "tiltHint": {
       "message": "اسحب لإمالة الخريطة وقراءة التضاريس ثلاثية الأبعاد",
       "dismiss": "حسناً"
+    },
+    "pointAltitude": {
+      "label": "الارتفاع",
+      "qualifier": "تقريبي · DEM",
+      "unavailable": "—"
     }
   },
   "nav": {

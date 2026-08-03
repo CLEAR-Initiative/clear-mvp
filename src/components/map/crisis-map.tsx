@@ -38,6 +38,11 @@ import {
   isTopographyTiltHintDismissed,
   shouldShowTopographyTiltHint,
 } from "~/lib/map/topography-tilt-hint";
+import {
+  samplePointAltitude,
+  shouldShowPointAltitude,
+  type PointAltitudeResult,
+} from "~/lib/map/point-altitude";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
 const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
@@ -71,6 +76,8 @@ export interface CrisisMapApi {
     lng: number,
     lat: number,
   ) => MarkerScreenPoint | null;
+  /** Unexaggerated DEM sample — meaningful while Topography terrain mesh is on. */
+  samplePointAltitude: (lng: number, lat: number) => PointAltitudeResult;
 }
 
 export interface MapRegion {
@@ -449,6 +456,10 @@ export function CrisisMap({
     dismissTopographyTiltHint();
     setTiltHintDismissed(true);
   };
+  const showAltitudeHud = shouldShowPointAltitude(baseMapType);
+  const [cursorAltitude, setCursorAltitude] = useState<PointAltitudeResult | null>(
+    null,
+  );
   const mapReadyRef = useRef(false);
   const appliedStyleRef = useRef<string | null>(null);
   const mapStyleRef = useRef(mapStyle);
@@ -575,6 +586,27 @@ export function CrisisMap({
       }
     };
   }, [loaded, baseMapType, isDark]);
+
+  // Cursor altitude HUD — sample DEM under the pointer while Topography is on.
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    if (!showAltitudeHud) {
+      setCursorAltitude(null);
+      return;
+    }
+    const onMove = (e: { lngLat: { lng: number; lat: number } }) => {
+      setCursorAltitude(samplePointAltitude(m, e.lngLat.lng, e.lngLat.lat));
+    };
+    const onLeave = () => setCursorAltitude(null);
+    m.on("mousemove", onMove);
+    m.on("mouseout", onLeave);
+    return () => {
+      m.off("mousemove", onMove);
+      m.off("mouseout", onLeave);
+      setCursorAltitude(null);
+    };
+  }, [loaded, showAltitudeHud]);
 
   // ── Country focus: dim mask + border glow + bounds ──────────────────────
   //
@@ -2039,6 +2071,7 @@ export function CrisisMap({
         const p = m.project(coords) as { x: number; y: number };
         return { x: p.x, y: p.y };
       },
+      samplePointAltitude: (lng, lat) => samplePointAltitude(map.current, lng, lat),
     };
     return () => {
       mapApiRef.current = null;
@@ -2145,6 +2178,44 @@ export function CrisisMap({
             >
               {t("tiltHint.dismiss")}
             </button>
+          </div>
+        )}
+        {showAltitudeHud && cursorAltitude && (
+          <div
+            role="status"
+            data-testid="point-altitude-hud"
+            style={{
+              position: "absolute",
+              top: showTiltHint ? 56 : 12,
+              right: 12,
+              zIndex: 5,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              gap: 2,
+              padding: "8px 12px",
+              borderRadius: 10,
+              border: "1px solid var(--color-border-dark)",
+              background: isDark
+                ? "rgba(17, 17, 17, 0.72)"
+                : "rgba(250, 250, 250, 0.78)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              color: "var(--color-text-primary)",
+              fontSize: 12,
+              lineHeight: 1.3,
+              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+              pointerEvents: "none",
+            }}
+          >
+            <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+              {cursorAltitude.kind === "ok"
+                ? cursorAltitude.displayMetres
+                : t("pointAltitude.unavailable")}
+            </span>
+            <span style={{ color: "var(--color-text-muted)", fontSize: 11 }}>
+              {t("pointAltitude.qualifier")}
+            </span>
           </div>
         )}
       </div>
