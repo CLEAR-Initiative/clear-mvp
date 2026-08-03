@@ -8,7 +8,8 @@ import { useTeam } from "~/providers/team-provider";
 import { EventDetailContent } from "~/components/event-detail/event-detail-content";
 import { useEventNavigation, getEventMapCenter } from "~/hooks/use-event-navigation";
 import { deriveEntityPending, useEntityNavigation } from "~/hooks/use-entity-navigation";
-import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
+import { useDetailKeyboardScrub } from "~/hooks/use-detail-keyboard-scrub";
+import { getListNavigation } from "~/lib/detail-list-nav";
 
 function EventDetailPageContent({
   params,
@@ -38,9 +39,26 @@ function EventDetailPageContent({
     searchParams,
   });
 
-  const navigation = useEventNavigation(activeId, {
-    listSource: referrer === "map" ? "map" : "detection",
+  // List from committed id; chrome follows scrubId (GH #148 settle-to-commit).
+  const listSource = referrer === "map" ? "map" : "detection";
+  const listNav = useEventNavigation(activeId, { listSource });
+  const orderedIds = useMemo(
+    () => listNav.listItems.map((e) => e.id),
+    [listNav.listItems],
+  );
+  const { scrubId } = useDetailKeyboardScrub({
+    ids: orderedIds,
+    committedId: activeId,
+    onCommit: navigateTo,
   });
+  const navigation = useMemo(() => {
+    const step = getListNavigation(orderedIds, scrubId);
+    return {
+      ...step,
+      isLoading: listNav.isLoading,
+      listItems: listNav.listItems,
+    };
+  }, [orderedIds, scrubId, listNav.isLoading, listNav.listItems]);
 
   // Race comments.list with events.get so empty threads resolve without a second waterfall.
   useEffect(() => {
@@ -48,6 +66,7 @@ function EventDetailPageContent({
     void utils.comments.list.prefetch({ entityId: activeId, entityType: "event" });
   }, [activeId, utils]);
 
+  // Prefetch ±1 around the scrub cursor (cheap); no trail of intermediate gets.
   useEffect(() => {
     for (const id of [navigation.prevId, navigation.nextId]) {
       if (!id || prefetchedRef.current.has(id)) continue;
@@ -83,13 +102,6 @@ function EventDetailPageContent({
   const navigateNext = useCallback(() => {
     if (navigation.nextId) navigateTo(navigation.nextId);
   }, [navigation.nextId, navigateTo]);
-
-  useDetailKeyboardNav({
-    hasPrev: navigation.hasPrev,
-    hasNext: navigation.hasNext,
-    onPrev: navigatePrev,
-    onNext: navigateNext,
-  });
 
   return (
     <EventDetailContent

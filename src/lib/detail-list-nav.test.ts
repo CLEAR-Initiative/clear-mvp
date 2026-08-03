@@ -4,7 +4,21 @@ import {
   getListNavigation,
   isTypingTarget,
   orderByProximityTo,
+  stepListId,
 } from "~/lib/detail-list-nav";
+
+describe("stepListId", () => {
+  it("steps forward and backward within bounds", () => {
+    expect(stepListId(["a", "b", "c"], "b", 1)).toBe("c");
+    expect(stepListId(["a", "b", "c"], "b", -1)).toBe("a");
+  });
+
+  it("returns null at boundaries or unknown id", () => {
+    expect(stepListId(["a", "b"], "a", -1)).toBeNull();
+    expect(stepListId(["a", "b"], "b", 1)).toBeNull();
+    expect(stepListId(["a", "b"], "z", 1)).toBeNull();
+  });
+});
 
 describe("getListNavigation", () => {
   it("returns empty neighbors for an empty list", () => {
