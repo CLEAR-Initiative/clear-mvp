@@ -149,11 +149,15 @@ body {
 @media (min-width: 48em) {
   body[data-nav-overlay="true"] [data-map-chrome-left] {
     left: calc(var(--clear-nav-w, 240px) + 1rem) !important;
-    transition: left 200ms ease;
   }
   body[data-nav-overlay="true"] [data-map-chrome-top],
   body[data-nav-overlay="true"] [data-map-chrome-bottom] {
     left: var(--clear-nav-w, 240px);
+  }
+  /* Motion gated so first /map paint doesn't slide Layers/Filters in. */
+  body[data-nav-overlay="true"][data-nav-offset-motion="true"] [data-map-chrome-left],
+  body[data-nav-overlay="true"][data-nav-offset-motion="true"] [data-map-chrome-top],
+  body[data-nav-overlay="true"][data-nav-offset-motion="true"] [data-map-chrome-bottom] {
     transition: left 200ms ease;
   }
 }

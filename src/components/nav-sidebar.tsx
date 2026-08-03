@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSelectedLayoutSegments, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -103,11 +103,14 @@ export function NavSidebar() {
   const segments = useSelectedLayoutSegments();
   const searchParams = useSearchParams();
   const activeSegment = segments[0] ?? "";
-  // On /map the sidebar overlays the canvas (frost + no flex resize flash).
-  const isMapRoute = activeSegment === "map";
   const referrer = searchParams.get("from");
   const { displaySegment: effectiveSegment, setOptimisticSegment } =
     useOptimisticNavSegment(activeSegment, referrer);
+  // Frost overlay while settled on /map OR optimistically heading there.
+  // Do not drop overlay on optimistic leave — that flex-resizes the Mapbox
+  // canvas (white flash). Veil stays clear of the nav via z-index + inset.
+  const isMapRoute =
+    activeSegment === "map" || effectiveSegment === "map";
   const { beginPageTransition } = usePageTransition();
   const desktopNavRef = useRef<HTMLElement>(null);
   const mobileNavRef = useRef<HTMLElement>(null);
@@ -127,16 +130,31 @@ export function NavSidebar() {
   const isAdmin = isPlatformAdmin(authData?.user?.role);
   const { flags } = useFeatureFlags();
 
-  // Publish nav width so map chrome can clear the overlay; toggle overlay mode on /map.
-  useEffect(() => {
+  // Publish overlay vars before paint so Layers/Filters mount at the final
+  // left offset (useEffect painted left-4 first → 200ms horizontal slide).
+  useLayoutEffect(() => {
     const w = `${collapsed ? COLLAPSED_W : EXPANDED_W}px`;
     document.documentElement.style.setProperty("--clear-nav-w", w);
     document.body.dataset.navOverlay = isMapRoute ? "true" : "false";
     return () => {
       document.documentElement.style.removeProperty("--clear-nav-w");
       delete document.body.dataset.navOverlay;
+      delete document.body.dataset.navOffsetMotion;
     };
   }, [collapsed, isMapRoute]);
+
+  // Enable left transitions only after the first overlay frame — collapse/expand
+  // still animates; first map paint does not.
+  useEffect(() => {
+    if (!isMapRoute) {
+      delete document.body.dataset.navOffsetMotion;
+      return;
+    }
+    const id = requestAnimationFrame(() => {
+      document.body.dataset.navOffsetMotion = "true";
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isMapRoute]);
 
   const handleLogout = async () => {
     try { await authClient.signOut(); } catch { /* ignore */ }

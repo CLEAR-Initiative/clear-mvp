@@ -1,10 +1,21 @@
 .optimistic {
   position: absolute;
   inset: 0;
-  /* Above map overlay nav (z-index 40) so veil isn't trapped under frost. */
-  z-index: 45;
+  /*
+   * Above map chrome (z-20) so destination skeleton covers the canvas, but
+   * below overlay nav (z-40). z-45 used to paint over the fixed /map frost
+   * sidebar and looked like the nav unmounted during quick tab jumps.
+   */
+  z-index: 30;
   /* Block clicks on the outgoing page while destination chrome is painted. */
   overflow: hidden;
   pointer-events: auto;
   background: var(--color-bg-primary);
+}
+
+/* On /map the nav is fixed over full-bleed main — keep veil in the content column. */
+@media (min-width: 48em) {
+  :global(body[data-nav-overlay="true"]) .optimistic {
+    left: var(--clear-nav-w, 240px);
+  }
 }
