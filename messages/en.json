@@ -2463,6 +2463,54 @@
       "affectedAreas": "Affected Areas"
     }
   },
+  "locationChallenge": {
+    "actions": {
+      "challengeLocation": "Challenge location",
+      "updateChallenge": "Update location challenge",
+      "challengeOnMap": "Challenge location",
+      "updateOnMap": "Move corrected pin",
+      "showSignalsLayer": "Show Signals layer"
+    },
+    "mapPick": {
+      "hint": "Tap the map to place the corrected pin.",
+      "placed": "Corrected pin: {coords}",
+      "reposition": "Move",
+      "confirm": "Confirm",
+      "signalLayerHint": "To challenge a pin, open Layers and switch Data to Signals, then open a Signal pin."
+    },
+    "status": {
+      "challenged": "Location challenged",
+      "correctionQueued": "Correction queued"
+    },
+    "modal": {
+      "title": "Challenge location",
+      "intro": "Mark this Signal pin as untrusted. You can optionally propose a corrected point for consideration — the source pin is not overwritten.",
+      "noteLabel": "Why does this look wrong? (optional)",
+      "notePlaceholder": "e.g. Dataminr placed this in the wrong town…",
+      "proposeCorrection": "Propose a corrected point (optional)",
+      "proposeCorrectionHint": "Optional. Enter latitude and longitude if you know them. Queued for consideration only.",
+      "placeOnMap": "Place corrected pin on map",
+      "placeOnMapHint": "Return to the map and click where the pin should be. You can still enter coordinates manually below.",
+      "enterCoordinatesManually": "Enter coordinates manually",
+      "hideManualCoordinates": "Hide coordinate fields",
+      "lat": "Latitude",
+      "lng": "Longitude",
+      "placeName": "Place name (optional)",
+      "placeNamePlaceholder": "Local spelling or landmark",
+      "submitChallenge": "Submit challenge",
+      "submitCorrection": "Submit challenge + correction",
+      "successTitle": "Queued for consideration",
+      "successChallenge": "This Signal location is marked challenged. No second pin until a correction point is proposed.",
+      "successCorrection": "Source and proposed pins will both show on the map while the correction is queued.",
+      "sessionOnlyTitle": "Shown this session only",
+      "sessionOnlyChallenge": "Map shows this pin as challenged for now. It is not saved yet — clear-api persistence is still pending.",
+      "sessionOnlyCorrection": "Source and proposed pins show on the map for this session. Saving for consideration needs clear-api support (still pending)."
+    },
+    "errors": {
+      "submitFailed": "Could not submit the location challenge. Try again.",
+      "backendUnavailable": "Location challenge is not available yet — clear-api support is still pending."
+    }
+  },
   "verifyEmail": {
     "verifying": "Verifying your email...",
     "success": {

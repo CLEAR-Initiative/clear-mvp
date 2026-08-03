@@ -2469,6 +2469,54 @@
       "position": "Signal {current} sur {total}"
     }
   },
+  "locationChallenge": {
+    "actions": {
+      "challengeLocation": "Contester l’emplacement",
+      "updateChallenge": "Mettre à jour la contestation",
+      "challengeOnMap": "Contester l’emplacement",
+      "updateOnMap": "Déplacer l’épingle corrigée",
+      "showSignalsLayer": "Afficher la couche Signaux"
+    },
+    "mapPick": {
+      "hint": "Touchez la carte pour placer l’épingle corrigée.",
+      "placed": "Épingle corrigée : {coords}",
+      "reposition": "Déplacer",
+      "confirm": "Confirmer",
+      "signalLayerHint": "Pour contester une épingle, ouvrez Couches, passez les données sur Signaux, puis ouvrez une épingle Signal."
+    },
+    "status": {
+      "challenged": "Emplacement contesté",
+      "correctionQueued": "Correction en file d’attente"
+    },
+    "modal": {
+      "title": "Contester l’emplacement",
+      "intro": "Marquez l’épingle de ce Signal comme non fiable. Vous pouvez proposer un point corrigé pour examen — l’épingle source n’est pas écrasée.",
+      "noteLabel": "Pourquoi cela semble incorrect ? (facultatif)",
+      "notePlaceholder": "ex. Dataminr a placé ceci dans la mauvaise ville…",
+      "proposeCorrection": "Proposer un point corrigé (facultatif)",
+      "proposeCorrectionHint": "Facultatif. Saisissez latitude et longitude si vous les connaissez. Mis en file d’attente uniquement.",
+      "placeOnMap": "Placer l’épingle corrigée sur la carte",
+      "placeOnMapHint": "Revenez à la carte et cliquez où l’épingle doit être. Vous pouvez aussi saisir les coordonnées manuellement ci-dessous.",
+      "enterCoordinatesManually": "Saisir les coordonnées manuellement",
+      "hideManualCoordinates": "Masquer les champs de coordonnées",
+      "lat": "Latitude",
+      "lng": "Longitude",
+      "placeName": "Nom du lieu (facultatif)",
+      "placeNamePlaceholder": "Orthographe locale ou point de repère",
+      "submitChallenge": "Soumettre la contestation",
+      "submitCorrection": "Soumettre contestation + correction",
+      "successTitle": "Mis en file d’attente",
+      "successChallenge": "L’emplacement de ce Signal est marqué contesté. Pas de seconde épingle tant qu’aucun point corrigé n’est proposé.",
+      "successCorrection": "Les épingles source et proposée s’afficheront toutes deux sur la carte pendant l’examen.",
+      "sessionOnlyTitle": "Visible pour cette session seulement",
+      "sessionOnlyChallenge": "La carte affiche cette épingle comme contestée pour l’instant. Ce n’est pas encore enregistré — la persistance clear-api est encore en attente.",
+      "sessionOnlyCorrection": "Les épingles source et proposée s’affichent sur la carte pour cette session. L’enregistrement pour examen nécessite le support clear-api (encore en attente)."
+    },
+    "errors": {
+      "submitFailed": "Impossible de soumettre la contestation. Réessayez.",
+      "backendUnavailable": "La contestation d’emplacement n’est pas encore disponible — le support clear-api est en attente."
+    }
+  },
   "verifyEmail": {
     "verifying": "Vérification de votre e-mail...",
     "success": {

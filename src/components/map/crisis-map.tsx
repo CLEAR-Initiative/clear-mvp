@@ -57,6 +57,10 @@ export interface MapMarker {
   description?: string;
   popup?: string;
   markerKind?: "event" | "signal" | "crisis";
+  /** Source pin challenged / correction queued (Location trust v1). */
+  locationTrust?: "challenged" | "correction_queued";
+  /** Proposed correction pin vs source pin for dual location display. */
+  locationPinRole?: "source" | "proposed";
 }
 
 /** Pixel position of a marker inside the map container (from Mapbox `project`). */
@@ -194,6 +198,13 @@ interface CrisisMapProps {
   mapApiRef?: MutableRefObject<CrisisMapApi | null>;
   /** Fired on every camera frame during pan/zoom/fly (not only moveend). */
   onMapMove?: () => void;
+  /**
+   * When true, marker DOM pins ignore pointer events so map clicks can place
+   * a Location correction pin (crosshair cursor).
+   */
+  locationPickActive?: boolean;
+  /** Map background click (lng/lat). Used while placing a Location correction. */
+  onMapClick?: (lngLat: { lng: number; lat: number }) => void;
 }
 
 export type BaseMapType = "simple" | "topography" | "satellite";
@@ -332,20 +343,46 @@ function buildDonutEl(props: Record<string, number>): HTMLDivElement {
   return el;
 }
 
-function buildPointEl(severity: string): HTMLDivElement {
+function buildPointEl(
+  severity: string,
+  opts?: {
+    locationTrust?: "challenged" | "correction_queued";
+    locationPinRole?: "source" | "proposed";
+  },
+): HTMLDivElement {
   const color = severityColors[severity] ?? "#737373";
-  const size  = severity === "critical" ? 18 : severity === "high" ? 16 : 14;
+  const proposed = opts?.locationPinRole === "proposed";
+  const challenged =
+    opts?.locationTrust === "challenged" || opts?.locationTrust === "correction_queued";
+  const size = severity === "critical" ? 18 : severity === "high" ? 16 : 14;
   // Outer: Mapbox sets its positioning transform here - do not animate this element.
+  // Do NOT set position:relative — Mapbox relies on .mapboxgl-marker { position:absolute }.
+  // Inline relative overrides that and stacks pins in document flow.
   const outer = document.createElement("div");
   outer.style.cssText = `width:${size}px;height:${size}px;cursor:pointer;`;
   // Radar ping ring: expands outward in marker color, hidden until active.
   const ring = document.createElement("div");
   ring.className = "marker-ping-ring";
   ring.style.cssText = `position:absolute;inset:0;border-radius:50%;border:2.5px solid ${color};opacity:0;pointer-events:none;`;
+  // Challenged affordance: dashed amber halo on the source pin (no second pin).
+  if (challenged && !proposed) {
+    const trustRing = document.createElement("div");
+    trustRing.className = "marker-trust-ring";
+    trustRing.style.cssText =
+      "position:absolute;inset:-5px;border-radius:50%;border:2px dashed #D97706;pointer-events:none;opacity:0.95;";
+    outer.appendChild(trustRing);
+  }
   // Inner dot: the colored circle, safe to scale independently.
   const inner = document.createElement("div");
   inner.className = "marker-dot";
-  inner.style.cssText = `width:100%;height:100%;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);`;
+  if (proposed) {
+    // Ghost proposed pin for dual location display.
+    inner.style.cssText =
+      `width:100%;height:100%;border-radius:50%;background:transparent;border:2.5px dashed ${color};box-shadow:none;opacity:0.85;`;
+  } else {
+    inner.style.cssText =
+      `width:100%;height:100%;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);`;
+  }
   outer.appendChild(ring);
   outer.appendChild(inner);
   return outer;
@@ -387,6 +424,8 @@ export function CrisisMap({
   baseMapType = "simple",
   mapApiRef,
   onMapMove,
+  locationPickActive = false,
+  onMapClick,
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const locale = useLocale();
@@ -434,11 +473,15 @@ export function CrisisMap({
   const onCameraChangeRef = useRef(onCameraChange);
   const onClusterExpandRef = useRef(onClusterExpand);
   const onMapMoveRef = useRef(onMapMove);
+  const onMapClickRef = useRef(onMapClick);
+  const locationPickActiveRef = useRef(locationPickActive);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMarkerHoverRef.current = onMarkerHover; }, [onMarkerHover]);
   useEffect(() => { onCameraChangeRef.current = onCameraChange; }, [onCameraChange]);
   useEffect(() => { onClusterExpandRef.current = onClusterExpand; }, [onClusterExpand]);
   useEffect(() => { onMapMoveRef.current = onMapMove; }, [onMapMove]);
+  useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
+  useEffect(() => { locationPickActiveRef.current = locationPickActive; }, [locationPickActive]);
   const clusterDomMarkers = useRef<Map<string, MapboxGLAny>>(new Map());
   /** Spiderfy display lng/lat by marker id — kept in sync with mounted pins. */
   const displayLngLatRef = useRef<Map<number, [number, number]>>(new Map());
@@ -1051,6 +1094,8 @@ export function CrisisMap({
         id: mk.id, title: mk.title, severity: mk.severity,
         type: mk.type ?? "", description: mk.description ?? "",
         marker_kind: mk.markerKind ?? "",
+        location_trust: mk.locationTrust ?? "",
+        location_pin_role: mk.locationPinRole ?? "",
         is_critical: mk.severity === "critical" ? 1 : 0,
         is_high:     mk.severity === "high"     ? 1 : 0,
         is_medium:   mk.severity === "medium"   ? 1 : 0,
@@ -1272,8 +1317,21 @@ export function CrisisMap({
         const markerId = Number(props.id);
         if (!Number.isFinite(markerId)) continue;
         const coords = displayLngLat.get(markerId) ?? rawCoords;
-        const el = buildPointEl(props.severity as string);
+        const trust = props.location_trust as string;
+        const pinRole = props.location_pin_role as string;
+        const el = buildPointEl(props.severity as string, {
+          locationTrust:
+            trust === "challenged" || trust === "correction_queued"
+              ? trust
+              : undefined,
+          locationPinRole:
+            pinRole === "source" || pinRole === "proposed" ? pinRole : undefined,
+        });
         el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
+        // Pick mode: block pin clicks even after pan/zoom rebuilds markers.
+        if (locationPickActiveRef.current) {
+          el.style.pointerEvents = "none";
+        }
         if (hoveredMarkerIdRef.current != null && markerId === hoveredMarkerIdRef.current) {
           el.querySelector(".marker-ping-ring")?.classList.add("active");
           el.querySelector(".marker-dot")?.classList.add("active");
@@ -2077,6 +2135,34 @@ export function CrisisMap({
       mapApiRef.current = null;
     };
   }, [loaded, mapApiRef]);
+
+  // Location-correction pick: map click + crosshair; pins don't steal the click.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !loaded) return;
+    const onClick = (e: { lngLat: { lng: number; lat: number } }) => {
+      if (!locationPickActiveRef.current) return;
+      onMapClickRef.current?.({ lng: e.lngLat.lng, lat: e.lngLat.lat });
+    };
+    m.on("click", onClick);
+    return () => {
+      try { m.off("click", onClick); } catch { /* ignore */ }
+    };
+  }, [loaded]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !loaded) return;
+    try {
+      m.getCanvas().style.cursor = locationPickActive ? "crosshair" : "";
+    } catch { /* ignore */ }
+    for (const mk of clusterDomMarkers.current.values()) {
+      try {
+        const el = (mk as MapboxGLAny).getElement?.() as HTMLElement | undefined;
+        if (el) el.style.pointerEvents = locationPickActive ? "none" : "auto";
+      } catch { /* ignore */ }
+    }
+  }, [locationPickActive, loaded, markers]);
 
   if (!MAPBOX_TOKEN) {
     return (

@@ -12,8 +12,23 @@ import {
   panelCoversPin,
   placeNearMarker,
 } from "./map-panel-placement";
+import {
+  LocationChallengeModal,
+  LocationChallengeStatus,
+  type LocationChallengeQueuePayload,
+} from "~/components/location-challenge";
+import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
+import { api } from "~/trpc/react";
 import styles from "./map-marker-detail.module.css";
 import type { PointAltitudeResult } from "~/lib/map/point-altitude";
+
+/** In-panel Location correction place-on-map flow (Signal pins only). */
+export type LocationCorrectionUi = {
+  phase: "picking" | "placed";
+  draftLat?: number;
+  draftLng?: number;
+  submitting?: boolean;
+};
 
 interface MapMarkerDetailProps {
   marker: CrisisMarker;
@@ -45,6 +60,18 @@ interface MapMarkerDetailProps {
    * Cleared on unmount / mobile.
    */
   onGeometryChange?: (geometry: PanelGeometry | null) => void;
+  /** Active place-on-map Location correction for this panel's Signal. */
+  locationCorrection?: LocationCorrectionUi | null;
+  /** Start map pick mode from the challenge modal (carries optional note). */
+  onStartLocationCorrection?: (draft?: { note?: string }) => void;
+  onCancelLocationCorrection?: () => void;
+  onConfirmLocationCorrection?: () => void;
+  /** Keep pick mode; clear draft so user can tap again. */
+  onRepickLocationCorrection?: () => void;
+  /** Alert/Event panels: jump to Signals data view so the challenge action is available. */
+  onSwitchToSignalLayer?: () => void;
+  /** Local visual queue when clear-api Location challenge schema is not shipped yet. */
+  onUnavailableChallengeQueue?: (payload: LocationChallengeQueuePayload) => void;
 }
 
 const PANEL_WIDTH = 320;
@@ -80,11 +107,62 @@ export function MapMarkerDetail({
   onSwipePrev,
   onSwipeNext,
   onGeometryChange,
+  locationCorrection = null,
+  onStartLocationCorrection,
+  onCancelLocationCorrection,
+  onConfirmLocationCorrection,
+  onRepickLocationCorrection,
+  onSwitchToSignalLayer,
+  onUnavailableChallengeQueue,
 }: MapMarkerDetailProps) {
   const t = useTranslations("map");
+  const tChallenge = useTranslations("locationChallenge");
+  const tActions = useTranslations("common.actions");
   const format = useFormatter();
   const isMobile = useMediaQuery("(max-width: 48em)");
   const sev = severityColors[marker.severity] ?? severityColors.medium;
+  /** Location challenge v1 attaches to Signal pins only (not Alert/Event/Crisis). */
+  const isSignal =
+    marker.markerKind === "signal" &&
+    !!marker.eventId &&
+    marker.locationPinRole !== "proposed";
+  const showLocationChallengeSlot =
+    marker.locationPinRole !== "proposed" && marker.markerKind !== "crisis";
+  const [challengeOpen, setChallengeOpen] = useState(false);
+  const [challengeLinkHovered, setChallengeLinkHovered] = useState(false);
+  const [localChallenge, setLocalChallenge] =
+    useState<GqlSignalLocationChallenge | null>(null);
+  const challengeQuery = api.locationChallenge.getBySignal.useQuery(
+    { signalId: marker.eventId ?? "" },
+    { enabled: isSignal, staleTime: 30_000 },
+  );
+  const displayChallenge = challengeQuery.data ?? localChallenge;
+
+  useEffect(() => {
+    setLocalChallenge(null);
+  }, [marker.eventId]);
+
+  const handleUnavailableChallengeQueue = useCallback(
+    (payload: LocationChallengeQueuePayload) => {
+      const hasPoint =
+        payload.proposedLat != null && payload.proposedLng != null;
+      setLocalChallenge({
+        id: `local-${payload.signalId}`,
+        signalId: payload.signalId,
+        status: "consideration",
+        note: payload.note ?? null,
+        proposedLng: payload.proposedLng ?? null,
+        proposedLat: payload.proposedLat ?? null,
+        proposedName: payload.proposedName ?? null,
+        createdBy: "local",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        hasProposedPoint: hasPoint,
+      });
+      onUnavailableChallengeQueue?.(payload);
+    },
+    [onUnavailableChallengeQueue],
+  );
 
   const boxRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -332,6 +410,7 @@ export function MapMarkerDetail({
   }, [onClose, onSwipeNext, onSwipePrev]);
 
   return (
+    <>
     <Box
       ref={boxRef}
       data-tour="map-marker-detail"
@@ -503,6 +582,130 @@ export function MapMarkerDetail({
               mono
             />
           )}
+          {showLocationChallengeSlot && isSignal && !locationCorrection && (
+            <Box pt={6} pb={2} style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+              <UnstyledButton
+                type="button"
+                onClick={() => setChallengeOpen(true)}
+                onMouseEnter={() => setChallengeLinkHovered(true)}
+                onMouseLeave={() => setChallengeLinkHovered(false)}
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  lineHeight: 1.35,
+                  color: challengeLinkHovered
+                    ? "var(--color-accent)"
+                    : "var(--color-text-muted)",
+                  cursor: "pointer",
+                  transition: "color 120ms ease",
+                  textAlign: "end",
+                  padding: 0,
+                }}
+              >
+                {displayChallenge
+                  ? tChallenge("actions.updateChallenge")
+                  : tChallenge("actions.challengeLocation")}
+              </UnstyledButton>
+              {displayChallenge && (
+                <Box mt={4} style={{ width: "100%", display: "flex", justifyContent: "flex-end" }}>
+                  <LocationChallengeStatus challenge={displayChallenge} compact />
+                </Box>
+              )}
+            </Box>
+          )}
+          {showLocationChallengeSlot && isSignal && locationCorrection?.phase === "picking" && (
+            <Box pt={6} pb={2} style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+              <Text size="xs" c="#B45309" ta="end" style={{ lineHeight: 1.4 }}>
+                {tChallenge("mapPick.hint")}
+              </Text>
+              <UnstyledButton
+                type="button"
+                onClick={() => onCancelLocationCorrection?.()}
+                style={{
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: "var(--color-text-muted)",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                {tActions("cancel")}
+              </UnstyledButton>
+            </Box>
+          )}
+          {showLocationChallengeSlot &&
+            isSignal &&
+            locationCorrection?.phase === "placed" &&
+            locationCorrection.draftLat != null &&
+            locationCorrection.draftLng != null && (
+            <Stack gap={6} pt={6} pb={2} align="flex-end">
+              <Text size="xs" c="var(--color-text-secondary)" ta="end" style={{ lineHeight: 1.4 }}>
+                {tChallenge("mapPick.placed", {
+                  coords: `${locationCorrection.draftLat.toFixed(2)}, ${locationCorrection.draftLng.toFixed(2)}`,
+                })}
+              </Text>
+              <Group gap={6} justify="flex-end">
+                <Button
+                  size="xs"
+                  variant="default"
+                  onClick={() => onRepickLocationCorrection?.()}
+                  disabled={locationCorrection.submitting}
+                  style={{ fontSize: 11, height: 26 }}
+                >
+                  {tChallenge("mapPick.reposition")}
+                </Button>
+                <Button
+                  size="xs"
+                  variant="default"
+                  onClick={() => onCancelLocationCorrection?.()}
+                  disabled={locationCorrection.submitting}
+                  style={{ fontSize: 11, height: 26 }}
+                >
+                  {tActions("cancel")}
+                </Button>
+                <Button
+                  size="xs"
+                  loading={locationCorrection.submitting}
+                  onClick={() => onConfirmLocationCorrection?.()}
+                  style={{
+                    fontSize: 11,
+                    height: 26,
+                    background: "var(--color-accent)",
+                    borderColor: "var(--color-accent)",
+                    color: "#fff",
+                  }}
+                >
+                  {tChallenge("mapPick.confirm")}
+                </Button>
+              </Group>
+            </Stack>
+          )}
+          {showLocationChallengeSlot && !isSignal && onSwitchToSignalLayer && (
+            <Box pt={6} pb={2} style={{ display: "flex", justifyContent: "flex-end" }}>
+              <UnstyledButton
+                type="button"
+                onClick={onSwitchToSignalLayer}
+                onMouseEnter={() => setChallengeLinkHovered(true)}
+                onMouseLeave={() => setChallengeLinkHovered(false)}
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  lineHeight: 1.35,
+                  color: challengeLinkHovered
+                    ? "var(--color-accent)"
+                    : "var(--color-text-muted)",
+                  cursor: "pointer",
+                  transition: "color 120ms ease",
+                  textAlign: "end",
+                  padding: 0,
+                }}
+              >
+                {tChallenge("actions.showSignalsLayer")}
+              </UnstyledButton>
+            </Box>
+          )}
         </Stack>
 
         {marker.eventId && (
@@ -534,6 +737,23 @@ export function MapMarkerDetail({
       </Box>
       </ScrollArea.Autosize>
     </Box>
+
+      {isSignal && marker.eventId && (
+        <LocationChallengeModal
+          opened={challengeOpen}
+          onClose={() => setChallengeOpen(false)}
+          signalId={marker.eventId}
+          sourceLat={marker.lat}
+          sourceLng={marker.lng}
+          onPlaceOnMap={
+            onStartLocationCorrection
+              ? (draft) => onStartLocationCorrection(draft)
+              : undefined
+          }
+          onUnavailableQueue={handleUnavailableChallengeQueue}
+        />
+      )}
+    </>
   );
 }
 

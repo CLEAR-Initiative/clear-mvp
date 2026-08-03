@@ -11,6 +11,7 @@ import {
   Select,
   Loader,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { useMediaQuery } from "@mantine/hooks";
 import { IconX } from "@tabler/icons-react";
 import { DisasterTypePicker } from "~/components/disaster-type-picker";
@@ -33,7 +34,9 @@ import {
   focusEventToMarkers,
   signalsToMarkers,
   crisesToMarkers,
+  applyLocationChallengesToMarkers,
 } from "./_components/map-markers-data";
+import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
 import { useLocations } from "~/hooks/use-locations";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { MapPanelBar } from "./_components/map-panel-bar";
@@ -240,10 +243,155 @@ function MapPageContent() {
     },
     { enabled: !isFocusMode && dataView === "signal", staleTime: 60_000, placeholderData: (prev) => prev },
   );
+  const locationChallengesQuery = api.locationChallenge.listForMap.useQuery(
+    { teamId: activeTeamId ?? undefined, status: "consideration" },
+    { enabled: dataView === "signal", staleTime: 60_000 },
+  );
   const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
     staleTime: Infinity, refetchOnWindowFocus: false,
   });
   const hierarchy: HierarchyLevel1[] = hierarchyQuery.data ?? [];
+  const utils = api.useUtils();
+  const tChallenge = useTranslations("locationChallenge");
+  const tToasts = useTranslations("common.toasts");
+
+  /**
+   * Place-on-map Location correction draft (started from challenge modal).
+   * Visual ghost pin is merged into markers before clear-api persists.
+   */
+  const [locationCorrectionDraft, setLocationCorrectionDraft] = useState<{
+    signalId: string;
+    sourceMarkerId: number;
+    phase: "picking" | "placed";
+    note?: string;
+    draftLat?: number;
+    draftLng?: number;
+    submitting?: boolean;
+  } | null>(null);
+  /** Local dual-pin overlay when submit succeeds visually but API is not shipped yet. */
+  const [localCorrections, setLocalCorrections] = useState<
+    Record<string, { lng: number; lat: number; name?: string; note?: string }>
+  >({});
+  /** Local bare Location challenge (no proposed point) before clear-api ships. */
+  const [localBareChallenges, setLocalBareChallenges] = useState<
+    Record<string, { note?: string }>
+  >({});
+
+  const submitLocationCorrection = api.locationChallenge.submit.useMutation();
+
+  const handleUnavailableChallengeQueue = useCallback(
+    (payload: {
+      signalId: string;
+      note?: string;
+      proposedLat?: number;
+      proposedLng?: number;
+      proposedName?: string;
+    }) => {
+      const hasPoint =
+        payload.proposedLat != null && payload.proposedLng != null;
+      if (hasPoint) {
+        setLocalCorrections((prev) => ({
+          ...prev,
+          [payload.signalId]: {
+            lng: payload.proposedLng!,
+            lat: payload.proposedLat!,
+            name: payload.proposedName,
+            note: payload.note,
+          },
+        }));
+        setLocalBareChallenges((prev) => {
+          if (!(payload.signalId in prev)) return prev;
+          const next = { ...prev };
+          delete next[payload.signalId];
+          return next;
+        });
+        return;
+      }
+      setLocalBareChallenges((prev) => ({
+        ...prev,
+        [payload.signalId]: { note: payload.note },
+      }));
+    },
+    [],
+  );
+
+  const signalChallengesForMap = useMemo((): GqlSignalLocationChallenge[] => {
+    const bySignal = new Map<string, GqlSignalLocationChallenge>();
+    for (const c of locationChallengesQuery.data ?? []) {
+      bySignal.set(c.signalId, c);
+    }
+    for (const [signalId, bare] of Object.entries(localBareChallenges)) {
+      if (bySignal.has(signalId)) continue;
+      bySignal.set(signalId, {
+        id: `local-bare-${signalId}`,
+        signalId,
+        status: "consideration",
+        note: bare.note ?? null,
+        proposedLng: null,
+        proposedLat: null,
+        proposedName: null,
+        createdBy: "local",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        hasProposedPoint: false,
+      });
+    }
+    for (const [signalId, pt] of Object.entries(localCorrections)) {
+      const existing = bySignal.get(signalId);
+      if (existing?.hasProposedPoint) continue;
+      bySignal.set(signalId, {
+        id: `local-${signalId}`,
+        signalId,
+        status: "consideration",
+        note: pt.note ?? null,
+        proposedLng: pt.lng,
+        proposedLat: pt.lat,
+        proposedName: pt.name ?? null,
+        createdBy: "local",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        hasProposedPoint: true,
+      });
+    }
+    if (locationCorrectionDraft) {
+      const { signalId, draftLat, draftLng, phase, note } = locationCorrectionDraft;
+      if (phase === "placed" && draftLat != null && draftLng != null) {
+        bySignal.set(signalId, {
+          id: `draft-${signalId}`,
+          signalId,
+          status: "consideration",
+          note: note ?? null,
+          proposedLng: draftLng,
+          proposedLat: draftLat,
+          proposedName: null,
+          createdBy: "draft",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          hasProposedPoint: true,
+        });
+      } else if (phase === "picking" && !bySignal.has(signalId)) {
+        bySignal.set(signalId, {
+          id: `draft-${signalId}`,
+          signalId,
+          status: "consideration",
+          note: note ?? null,
+          proposedLng: null,
+          proposedLat: null,
+          proposedName: null,
+          createdBy: "draft",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          hasProposedPoint: false,
+        });
+      }
+    }
+    return [...bySignal.values()];
+  }, [
+    locationChallengesQuery.data,
+    localBareChallenges,
+    localCorrections,
+    locationCorrectionDraft,
+  ]);
 
   /* ---- Derive markers: solo deep-link set OR browse feed ---- */
   const allMarkers: CrisisMarker[] = useMemo(() => {
@@ -251,7 +399,12 @@ function MapPageContent() {
       return focusEventQuery.data ? focusEventToMarkers(focusEventQuery.data) : [];
     }
     if (focusSignalId) {
-      return focusSignalQuery.data ? signalsToMarkers([focusSignalQuery.data]) : [];
+      return focusSignalQuery.data
+        ? applyLocationChallengesToMarkers(
+            signalsToMarkers([focusSignalQuery.data]),
+            signalChallengesForMap,
+          )
+        : [];
     }
     if (focusCrisisId) {
       return focusCrisisQuery.data ? crisesToMarkers([focusCrisisQuery.data]) : [];
@@ -259,7 +412,12 @@ function MapPageContent() {
     let markers: CrisisMarker[] = [];
     if (dataView === "alert")  markers = alertsToMarkers(alertsQuery.data?.alerts ?? []);
     if (dataView === "event")  markers = eventsToMarkers(eventsQuery.data?.events ?? []);
-    if (dataView === "signal") markers = signalsToMarkers(signalsListQuery.data ?? []);
+    if (dataView === "signal") {
+      markers = applyLocationChallengesToMarkers(
+        signalsToMarkers(signalsListQuery.data ?? []),
+        signalChallengesForMap,
+      );
+    }
     if (dataView === "crisis") markers = crisesToMarkers(crisesQuery.data?.crises ?? []);
     return markers;
   }, [
@@ -273,6 +431,7 @@ function MapPageContent() {
     alertsQuery.data,
     eventsQuery.data,
     signalsListQuery.data,
+    signalChallengesForMap,
     crisesQuery.data,
   ]);
 
@@ -723,6 +882,124 @@ function MapPageContent() {
     });
   }, []);
 
+  const handleStartLocationCorrection = useCallback(
+    (marker: CrisisMarker, draft?: { note?: string }) => {
+      if (marker.markerKind !== "signal" || !marker.eventId) return;
+      setLocationCorrectionDraft({
+        signalId: marker.eventId,
+        sourceMarkerId: marker.id,
+        phase: "picking",
+        note: draft?.note,
+      });
+    },
+    [],
+  );
+
+  const handleCancelLocationCorrection = useCallback(() => {
+    setLocationCorrectionDraft(null);
+  }, []);
+
+  const handleRepickLocationCorrection = useCallback(() => {
+    setLocationCorrectionDraft((prev) =>
+      prev
+        ? {
+            signalId: prev.signalId,
+            sourceMarkerId: prev.sourceMarkerId,
+            phase: "picking",
+            note: prev.note,
+          }
+        : null,
+    );
+  }, []);
+
+  const handleLocationCorrectionMapClick = useCallback(
+    (lngLat: { lng: number; lat: number }) => {
+      setLocationCorrectionDraft((prev) => {
+        if (!prev || prev.phase !== "picking") return prev;
+        return {
+          ...prev,
+          phase: "placed",
+          draftLat: lngLat.lat,
+          draftLng: lngLat.lng,
+        };
+      });
+    },
+    [],
+  );
+
+  const handleConfirmLocationCorrection = useCallback(async () => {
+    const draft = locationCorrectionDraft;
+    if (
+      !draft ||
+      draft.phase !== "placed" ||
+      draft.draftLat == null ||
+      draft.draftLng == null
+    ) {
+      return;
+    }
+    setLocationCorrectionDraft({ ...draft, submitting: true });
+    try {
+      await submitLocationCorrection.mutateAsync({
+        signalId: draft.signalId,
+        note: draft.note,
+        proposedLat: draft.draftLat,
+        proposedLng: draft.draftLng,
+      });
+      await Promise.all([
+        utils.locationChallenge.listForMap.invalidate(),
+        utils.locationChallenge.getBySignal.invalidate({ signalId: draft.signalId }),
+      ]);
+      setLocalCorrections((prev) => {
+        const next = { ...prev };
+        delete next[draft.signalId];
+        return next;
+      });
+      setLocationCorrectionDraft(null);
+      notifications.show({
+        title: tChallenge("modal.successTitle"),
+        message: tChallenge("modal.successCorrection"),
+        color: "green",
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      const backendMissing = message.includes("LOCATION_CHALLENGE_BACKEND_UNAVAILABLE");
+      if (backendMissing) {
+        setLocalCorrections((prev) => ({
+          ...prev,
+          [draft.signalId]: {
+            lng: draft.draftLng!,
+            lat: draft.draftLat!,
+            note: draft.note,
+          },
+        }));
+        setLocationCorrectionDraft(null);
+        notifications.show({
+          title: tToasts("error"),
+          message: tChallenge("errors.backendUnavailable"),
+          color: "yellow",
+        });
+        return;
+      }
+      setLocationCorrectionDraft({ ...draft, submitting: false });
+      notifications.show({
+        title: tToasts("error"),
+        message: tChallenge("errors.submitFailed"),
+        color: "red",
+      });
+    }
+  }, [
+    locationCorrectionDraft,
+    submitLocationCorrection,
+    utils.locationChallenge.listForMap,
+    utils.locationChallenge.getBySignal,
+    tChallenge,
+    tToasts,
+  ]);
+
+  useEffect(() => {
+    setLocationCorrectionDraft(null);
+  }, [dataView]);
+
   const closeOpenPanel = useCallback((markerId: number) => {
     const nextPanels = openPanelsRef.current.filter((p) => p.marker.id !== markerId);
     const closingLast =
@@ -731,6 +1008,9 @@ function MapPageContent() {
     openPanelsRef.current = nextPanels;
     setOpenPanels(nextPanels);
     setChromeActiveMarkerId((prev) => (prev === markerId ? null : prev));
+    setLocationCorrectionDraft((prev) =>
+      prev?.sourceMarkerId === markerId ? null : prev,
+    );
 
     if (!closingLast) return;
 
@@ -1317,6 +1597,8 @@ function MapPageContent() {
           blockagesGeoJson={blockagesGeoJson}
           baseMapType={baseMapType}
           hoveredMarkerId={chromeActiveMarkerId}
+          locationPickActive={locationCorrectionDraft?.phase === "picking"}
+          onMapClick={handleLocationCorrectionMapClick}
         />
 
         {/* Loading overlay - only shows when map is mounted and data is loading */}
@@ -1430,6 +1712,30 @@ function MapPageContent() {
             onSwipeNext={
               next ? () => stepOpenPanelMarker(panel.marker.id, "next") : undefined
             }
+            locationCorrection={(() => {
+              const draft = locationCorrectionDraft;
+              if (!draft) return null;
+              const matchesPanel =
+                draft.sourceMarkerId === panel.marker.id ||
+                draft.signalId === panel.marker.eventId;
+              if (!matchesPanel) return null;
+              return {
+                phase: draft.phase,
+                draftLat: draft.draftLat,
+                draftLng: draft.draftLng,
+                submitting: draft.submitting,
+              };
+            })()}
+            onStartLocationCorrection={(draft) =>
+              handleStartLocationCorrection(panel.marker, draft)
+            }
+            onCancelLocationCorrection={handleCancelLocationCorrection}
+            onConfirmLocationCorrection={() => {
+              void handleConfirmLocationCorrection();
+            }}
+            onRepickLocationCorrection={handleRepickLocationCorrection}
+            onSwitchToSignalLayer={() => setDataView("signal")}
+            onUnavailableChallengeQueue={handleUnavailableChallengeQueue}
           />
         );
       })}
