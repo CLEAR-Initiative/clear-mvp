@@ -1846,7 +1846,11 @@
       "focusFallbackSignal": "Focused signal",
       "focusFallbackCrisis": "Focused crisis"
     },
-    "tokenMissing": "Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env"
+    "tokenMissing": "Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env",
+    "tiltHint": {
+      "message": "Drag to tilt and read the terrain in 3D",
+      "dismiss": "Got it"
+    }
   },
   "nav": {
     "sections": {
