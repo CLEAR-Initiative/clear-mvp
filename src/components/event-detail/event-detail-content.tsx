@@ -45,6 +45,7 @@ import { useLocations } from "~/hooks/use-locations";
 import { MinimapCard } from "~/components/map/minimap-card";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { mapFocusHref } from "~/lib/map-focus-href";
+import { mapReturnHref } from "~/lib/map-view-state";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { getDisasterLabel, getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
@@ -299,7 +300,7 @@ export function EventDetailContent({
         </Text>
         {mode === "page" && (
           <Link
-            href={referrer === "map" ? "/map" : "/detection"}
+            href={referrer === "map" ? mapReturnHref() : "/detection"}
             style={{
               display: "inline-block",
               marginTop: 16,
@@ -391,7 +392,7 @@ export function EventDetailContent({
           <Group justify="space-between" wrap="wrap" gap={8}>
             <Group gap={12} wrap="wrap">
               <Link
-                href={referrer === "map" ? mapFocusHref("event", event.id) : "/detection"}
+                href={referrer === "map" ? mapReturnHref() : "/detection"}
                 style={{ textDecoration: "none" }}
               >
                 <Group

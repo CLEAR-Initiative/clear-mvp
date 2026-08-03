@@ -1,6 +1,7 @@
 /**
- * Deep-links that land `/map` on a specific marker.
- * Bare `/map` (sidebar Map tab) stays the default country overview.
+ * Deep-links that land `/map` on a specific marker (solo-focus fly).
+ * Bare `/map` (sidebar Map tab, or Back from detail with `from=map`) stays
+ * the country overview / session restore — see `mapReturnHref()`.
  */
 export type MapFocusKind = "event" | "signal" | "crisis";
 

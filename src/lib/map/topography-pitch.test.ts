@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  TOPOGRAPHY_OPT_IN_PITCH,
+  applyTopographyOptInTilt,
   resetTopographyPitch,
   setTopographyPitchGestures,
   syncTopographyPitch,
@@ -70,6 +72,15 @@ describe("resetTopographyPitch", () => {
     const map = createMockPitchMap(40);
     resetTopographyPitch(map);
     expect(map.pitch).toBe(0);
+  });
+});
+
+describe("applyTopographyOptInTilt", () => {
+  it("eases to the opt-in pitch without requiring prior auto-tilt", () => {
+    const map = createMockPitchMap(0);
+    applyTopographyOptInTilt(map);
+    expect(map.pitch).toBe(TOPOGRAPHY_OPT_IN_PITCH);
+    expect(map.dragEnabled).toBe(true);
   });
 });
 

@@ -4,8 +4,9 @@
  * Topography within the same tab session only if not dismissed).
  */
 
+/** Bump suffix when hint copy/CTA changes so prior dismissals don't hide teaching. */
 export const TOPOGRAPHY_TILT_HINT_STORAGE_KEY =
-  "clear.map.topographyTiltHintDismissed";
+  "clear.map.topographyTiltHintDismissed.v2";
 
 export type TiltHintStorage = {
   getItem: (key: string) => string | null;

@@ -62,6 +62,7 @@ import { IASC_CLUSTERS, type IASCClusterCode } from "~/lib/constants/iasc-cluste
 import type { GqlCrisis } from "~/server/api/routers/crises";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { mapFocusHref } from "~/lib/map-focus-href";
+import { mapReturnHref } from "~/lib/map-view-state";
 import { MinimapCard } from "~/components/map/minimap-card";
 import { CommentsSection } from "~/components/comments-section";
 import { NeedsAssessmentPanel } from "~/components/crisis-detail/needs-assessment-panel";
@@ -363,7 +364,7 @@ export function CrisisDetailContent({
         </Text>
         {mode === "page" && (
           <Link
-            href={referrer === "map" ? "/map" : "/insights"}
+            href={referrer === "map" ? mapReturnHref() : "/insights"}
             style={{
               display: "inline-block",
               marginTop: 16,
@@ -444,7 +445,7 @@ export function CrisisDetailContent({
         >
           <Group justify="space-between">
             <Link
-              href={referrer === "map" ? mapFocusHref("crisis", crisis.id) : "/insights"}
+              href={referrer === "map" ? mapReturnHref() : "/insights"}
               style={{ textDecoration: "none" }}
             >
               <Group gap={6} className="hover:opacity-70" style={{ cursor: "pointer" }}>
