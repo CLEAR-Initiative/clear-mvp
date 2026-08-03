@@ -567,7 +567,13 @@ export function NavSidebar() {
                         color: isActive ? colors.accent : colors.textSecondary,
                         transition: "color 180ms ease-out",
                       }}
-                      className={cn(!isDisabled && !isActive && "hover:bg-[var(--color-bg-muted)] hover:!text-[var(--color-text-primary)]")}
+                      className={cn(
+                        !isDisabled &&
+                          !isActive &&
+                          // Prefer --map-frost-hover-text on Satellite frost (softens);
+                          // falls back to primary elsewhere (brightens).
+                          "hover:bg-[var(--color-bg-muted)] hover:!text-[var(--map-frost-hover-text,var(--color-text-primary))]",
+                      )}
                       component="div"
                     >
                       <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6, transition: "opacity 180ms ease-out" }} />
