@@ -6,7 +6,8 @@ import { Badge, Box, Card, Group, Text } from "@mantine/core";
 import { IconLock, IconPaperclip } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { DataTable, Table } from "~/components/ui";
-import { GROUND_CLASSIFICATIONS, type GqlGroundMessage } from "~/lib/types/graphql";
+import { GROUND_CLASSIFICATIONS, type GqlGroundMessage, type GqlGroundThread } from "~/lib/types/graphql";
+import { GroundThreadDrawer, LifecycleBadge } from "./ground-thread-drawer";
 
 /**
  * Ground intel review tab — the staging tier in front of the signals graph.
@@ -40,7 +41,7 @@ const CLASSIFICATION_STYLES: Record<ClassificationFilter, { bg: string; color: s
 };
 
 // i18n keys under detection.groundIntel.columns.* — resolved via t() at render time.
-const COLUMN_KEYS = ["sent", "sender", "source", "classification", "message", "media"] as const;
+const COLUMN_KEYS = ["sent", "sender", "source", "classification", "message", "media", "thread"] as const;
 
 export function ClassificationPill({ value }: { value: ClassificationFilter }) {
   const t = useTranslations("detection");
@@ -71,6 +72,7 @@ export function GroundIntelTab() {
 
   const messagesQuery = api.ground.messages.useQuery({}, { staleTime: 60_000 });
   const sourcesQuery = api.ground.sources.useQuery(undefined, { staleTime: 60_000 });
+  const threadsQuery = api.ground.threads.useQuery({}, { staleTime: 60_000 });
 
   const messages = useMemo(() => messagesQuery.data ?? [], [messagesQuery.data]);
   const sourceNameById = useMemo(() => {
@@ -78,6 +80,15 @@ export function GroundIntelTab() {
     for (const s of sourcesQuery.data ?? []) map.set(s.id, s.name);
     return map;
   }, [sourcesQuery.data]);
+  const threadById = useMemo(() => {
+    const map = new Map<string, GqlGroundThread>();
+    for (const th of threadsQuery.data ?? []) map.set(th.id, th);
+    return map;
+  }, [threadsQuery.data]);
+
+  // Thread drill-in: clicking a row (or its thread badge) opens the
+  // incident-thread drawer with the full correction chain.
+  const [openThreadId, setOpenThreadId] = useState<string | null>(null);
 
   // Classification filter — null means "all"; an explicit Set narrows.
   // Toggling back to the full set collapses to null so every chip reads
@@ -165,7 +176,12 @@ export function GroundIntelTab() {
                 messages.length === 0 ? t("groundIntel.empty") : t("groundIntel.noMatch")
               }
               renderRow={(m) => (
-                <Table.Tr key={m.id} data-testid="ground-message-row">
+                <Table.Tr
+                  key={m.id}
+                  data-testid="ground-message-row"
+                  onClick={m.threadId ? () => setOpenThreadId(m.threadId) : undefined}
+                  style={m.threadId ? { cursor: "pointer" } : undefined}
+                >
                   <Table.Td style={{ whiteSpace: "nowrap" }}>
                     <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
                       {format.dateTime(new Date(m.sentAt), "short")}
@@ -219,12 +235,42 @@ export function GroundIntelTab() {
                       </Text>
                     )}
                   </Table.Td>
+                  <Table.Td style={{ whiteSpace: "nowrap" }}>
+                    {(() => {
+                      const thread = m.threadId ? threadById.get(m.threadId) : undefined;
+                      if (!thread) {
+                        return (
+                          <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>
+                            -
+                          </Text>
+                        );
+                      }
+                      return (
+                        <Group gap={6} wrap="nowrap">
+                          <LifecycleBadge state={thread.lifecycleState} />
+                          <Text
+                            c="var(--color-text-secondary)"
+                            lineClamp={1}
+                            style={{ fontSize: 12, maxWidth: 140 }}
+                          >
+                            {thread.title ?? t("groundIntel.thread.untitled")}
+                          </Text>
+                        </Group>
+                      );
+                    })()}
+                  </Table.Td>
                 </Table.Tr>
               )}
             />
           </Box>
         </Box>
       </Card>
+
+      <GroundThreadDrawer
+        threadId={openThreadId}
+        opened={openThreadId !== null}
+        onClose={() => setOpenThreadId(null)}
+      />
     </Box>
   );
 }

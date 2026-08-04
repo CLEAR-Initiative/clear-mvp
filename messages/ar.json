@@ -1592,7 +1592,26 @@
         "source": "المصدر",
         "classification": "التصنيف",
         "message": "الرسالة",
-        "media": "الوسائط"
+        "media": "الوسائط",
+        "thread": "السلسلة"
+      },
+      "lifecycle": {
+        "reported": "مُبلّغ",
+        "updated": "مُحدّث",
+        "confirmed": "مؤكد",
+        "corrected": "مُصحّح",
+        "retracted": "مسحوب"
+      },
+      "reviewStates": {
+        "unverified": "غير متحقق منه",
+        "approved_private": "معتمد (خاص)",
+        "approved_public": "معتمد (عام)",
+        "rejected": "مرفوض"
+      },
+      "thread": {
+        "untitled": "سلسلة بدون عنوان",
+        "notFound": "السلسلة غير موجودة",
+        "reviewNote": "ملاحظة المراجعة"
       },
       "empty": "لا توجد رسائل ميدانية قيد المراجعة بعد",
       "noMatch": "لا توجد رسائل مطابقة للمرشح الحالي",

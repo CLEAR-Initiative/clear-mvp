@@ -1592,7 +1592,26 @@
         "source": "Source",
         "classification": "Classification",
         "message": "Message",
-        "media": "Médias"
+        "media": "Médias",
+        "thread": "Fil"
+      },
+      "lifecycle": {
+        "reported": "Signalé",
+        "updated": "Mis à jour",
+        "confirmed": "Confirmé",
+        "corrected": "Corrigé",
+        "retracted": "Rétracté"
+      },
+      "reviewStates": {
+        "unverified": "Non vérifié",
+        "approved_private": "Approuvé (privé)",
+        "approved_public": "Approuvé (public)",
+        "rejected": "Rejeté"
+      },
+      "thread": {
+        "untitled": "Fil sans titre",
+        "notFound": "Fil introuvable",
+        "reviewNote": "Note de revue"
       },
       "empty": "Aucun message terrain en attente",
       "noMatch": "Aucun message ne correspond au filtre actuel",

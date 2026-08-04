@@ -1590,7 +1590,26 @@
         "source": "Source",
         "classification": "Classification",
         "message": "Message",
-        "media": "Media"
+        "media": "Media",
+        "thread": "Thread"
+      },
+      "lifecycle": {
+        "reported": "Reported",
+        "updated": "Updated",
+        "confirmed": "Confirmed",
+        "corrected": "Corrected",
+        "retracted": "Retracted"
+      },
+      "reviewStates": {
+        "unverified": "Unverified",
+        "approved_private": "Approved (private)",
+        "approved_public": "Approved (public)",
+        "rejected": "Rejected"
+      },
+      "thread": {
+        "untitled": "Untitled thread",
+        "notFound": "Thread not found",
+        "reviewNote": "Review note"
       },
       "empty": "No staged ground messages yet",
       "noMatch": "No messages match the current filter",

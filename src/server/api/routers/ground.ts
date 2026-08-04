@@ -4,6 +4,8 @@ import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type {
   GqlGroundMessage,
   GqlGroundSource,
+  GqlGroundThread,
+  GqlGroundThreadDetail,
 } from "~/lib/types/graphql";
 
 /**
@@ -40,9 +42,40 @@ const GROUND_MESSAGE_FIELDS = `
   threadId
 `;
 
+const GROUND_THREAD_FIELDS = `
+  id
+  groundSourceId
+  title
+  lifecycleState
+  reviewState
+  reviewedBy
+  reviewedAt
+  reviewNote
+  promotedSignalId
+  createdAt
+`;
+
 const GROUND_SOURCES_QUERY = `
   query GroundSources {
     groundSources { ${GROUND_SOURCE_FIELDS} }
+  }
+`;
+
+const GROUND_THREADS_QUERY = `
+  query GroundThreads($groundSourceId: String, $reviewState: String, $limit: Int, $offset: Int) {
+    groundThreads(groundSourceId: $groundSourceId, reviewState: $reviewState, limit: $limit, offset: $offset) {
+      ${GROUND_THREAD_FIELDS}
+    }
+  }
+`;
+
+const GROUND_THREAD_QUERY = `
+  query GroundThread($id: String!) {
+    groundThread(id: $id) {
+      ${GROUND_THREAD_FIELDS}
+      source { ${GROUND_SOURCE_FIELDS} }
+      messages { ${GROUND_MESSAGE_FIELDS} }
+    }
   }
 `;
 
@@ -64,6 +97,44 @@ export const groundRouter = createTRPCRouter({
     );
     return data.groundSources;
   }),
+
+  /** Review queue: incident threads, newest first (clear-api ordering). */
+  threads: protectedProcedure
+    .input(
+      z
+        .object({
+          groundSourceId: z.string().optional(),
+          reviewState: z.string().optional(),
+          limit: z.number().int().min(1).max(500).optional(),
+          offset: z.number().int().min(0).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ groundThreads: GqlGroundThread[] }>(
+        GROUND_THREADS_QUERY,
+        {
+          groundSourceId: input?.groundSourceId,
+          reviewState: input?.reviewState,
+          limit: input?.limit ?? 200,
+          offset: input?.offset ?? 0,
+        },
+        cookieHeaders(ctx),
+      );
+      return data.groundThreads;
+    }),
+
+  /** One thread with its source policy record and messages (oldest first). */
+  thread: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ groundThread: GqlGroundThreadDetail | null }>(
+        GROUND_THREAD_QUERY,
+        { id: input.id },
+        cookieHeaders(ctx),
+      );
+      return data.groundThread;
+    }),
 
   /** Staged messages, oldest first (clear-api ordering). */
   messages: protectedProcedure
