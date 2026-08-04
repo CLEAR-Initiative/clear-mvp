@@ -233,7 +233,6 @@ export interface GqlGroundMessage {
   senderName: string | null;
   text: string;
   mediaKeys: string[];
-  mediaUrls: string[];
   mediaRefs: string[];
   omittedMediaCount: number;
   classification: string | null;

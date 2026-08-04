@@ -237,6 +237,22 @@ function DetectionPageContent() {
     [canSeeGround],
   );
 
+  // An unauthorised deep link (?tab=ground) or a stale stored tab would
+  // otherwise strand the user on an empty panel: the tab button is hidden
+  // but activeTab still says "ground". Wait until the role is actually
+  // known (authData resolved) so admins aren't bounced mid-fetch, then
+  // fall back to the default tab.
+  useEffect(() => {
+    if (!authData || canSeeGround) return;
+    if (activeTab !== "ground" && indicatorTab !== "ground") return;
+    clearTabTimers();
+    pendingRouteTab.current = null;
+    setIndicatorTab("events");
+    setActiveTab("events");
+    setPendingTab(null);
+    commitTabRoute("events");
+  }, [authData, canSeeGround, activeTab, indicatorTab, clearTabTimers, commitTabRoute]);
+
   const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
 
   // Restore tab/filters from sessionStorage after mount (URL tab still wins).

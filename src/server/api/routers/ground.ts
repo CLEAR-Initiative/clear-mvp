@@ -33,7 +33,6 @@ const GROUND_MESSAGE_FIELDS = `
   senderName
   text
   mediaKeys
-  mediaUrls
   mediaRefs
   omittedMediaCount
   classification
