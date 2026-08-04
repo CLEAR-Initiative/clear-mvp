@@ -38,17 +38,13 @@ type SessionResult =
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public routes that don't require auth. `/public/` covers the
-  // shareable event link pages — those carry their own
-  // (eventId, token) gate at the GraphQL layer and must work for
-  // visitors with no CLEAR session at all.
+  // Public routes that don't require auth.
   const publicPaths = [
     "/auth/login",
     "/auth/logout",
     "/auth/forgot-password",
     "/auth/reset-password",
     "/accept-invite",
-    "/public/",
     "/api/",
   ];
   if (publicPaths.some((p) => pathname.startsWith(p))) {

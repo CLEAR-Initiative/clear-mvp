@@ -53,7 +53,6 @@ import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { AddToCrisisButton } from "~/components/event-detail/add-to-crisis-button";
-import { ShareEventButton } from "~/components/event-detail/share-event-button";
 import { severityColors } from "~/lib/constants/severity";
 import { KpiStack } from "~/components/ui/kpi-stack";
 import { SkeletonSlot } from "~/components/ui/skeleton-slot";
@@ -975,7 +974,6 @@ export function EventDetailContent({
                         event.severity ?? Math.round((event.rank ?? 0) * 5)
                       }
                     />
-                    <ShareEventButton eventId={event.id} />
                   </Stack>
                 </Box>
               </Card>
