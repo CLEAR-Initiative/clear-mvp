@@ -79,6 +79,14 @@ const GROUND_THREAD_QUERY = `
   }
 `;
 
+const REVIEW_GROUND_THREAD_MUTATION = `
+  mutation ReviewGroundThread($id: String!, $decision: String!, $note: String) {
+    reviewGroundThread(id: $id, decision: $decision, note: $note) {
+      ${GROUND_THREAD_FIELDS}
+    }
+  }
+`;
+
 const GROUND_MESSAGES_QUERY = `
   query GroundMessages($groundSourceId: String, $threadId: String, $limit: Int, $offset: Int) {
     groundMessages(groundSourceId: $groundSourceId, threadId: $threadId, limit: $limit, offset: $offset) {
@@ -134,6 +142,29 @@ export const groundRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.groundThread;
+    }),
+
+  /**
+   * Review a thread: approve_private | approve_public | reject.
+   * clear-api enforces the per-source reviewerRoles policy and the V1
+   * state machine (approved_public is terminal and triggers promotion
+   * into the signals graph with all sender identity scrubbed).
+   */
+  review: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        decision: z.enum(["approve_private", "approve_public", "reject"]),
+        note: z.string().max(2000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ reviewGroundThread: GqlGroundThread }>(
+        REVIEW_GROUND_THREAD_MUTATION,
+        { id: input.id, decision: input.decision, note: input.note ?? null },
+        cookieHeaders(ctx),
+      );
+      return data.reviewGroundThread;
     }),
 
   /** Staged messages, oldest first (clear-api ordering). */

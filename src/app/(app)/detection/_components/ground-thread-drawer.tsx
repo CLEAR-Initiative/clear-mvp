@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
-import { Badge, Box, Drawer, Group, Loader, Stack, Text } from "@mantine/core";
+import { Badge, Box, Button, Drawer, Group, Loader, Stack, Text } from "@mantine/core";
 import { IconPaperclip } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { GqlGroundMessage, GqlGroundThreadDetail } from "~/lib/types/graphql";
+import { allowedReviewDecisions, canReviewSource, type GroundReviewDecision } from "~/lib/ground-review";
 import { ClassificationPill, messageClassification } from "./ground-intel-tab";
 
 /**
@@ -110,8 +113,126 @@ interface GroundThreadDrawerProps {
   threadId: string | null;
   opened: boolean;
   onClose: () => void;
-  /** Review controls (action buttons) — injected by the tab so gating logic stays in one place. */
-  renderActions?: (thread: GqlGroundThreadDetail) => React.ReactNode;
+}
+
+/**
+ * Role-gated review controls. Buttons render only when the current
+ * user's global role passes the source's `reviewerRoles` policy record
+ * (platform admins always pass) — mirroring clear-api's authorization so
+ * unauthorized roles never see actions that are guaranteed to 403.
+ * Decisions are limited to what the V1 state machine allows from the
+ * thread's current review state; approved_public is terminal.
+ */
+function GroundReviewActions({ thread }: { thread: GqlGroundThreadDetail }) {
+  const t = useTranslations("detection");
+  const utils = api.useUtils();
+  const [confirmingPublish, setConfirmingPublish] = useState(false);
+
+  const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
+  const canReview = canReviewSource(authData?.user?.role, thread.source.reviewerRoles);
+  const allowed = allowedReviewDecisions(thread.reviewState);
+
+  const review = api.ground.review.useMutation({
+    onSuccess: () => {
+      setConfirmingPublish(false);
+      void utils.ground.thread.invalidate({ id: thread.id });
+      void utils.ground.threads.invalidate();
+      void utils.ground.messages.invalidate();
+    },
+  });
+
+  const decide = (decision: GroundReviewDecision) =>
+    review.mutate({ id: thread.id, decision });
+
+  if (thread.reviewState === "approved_public") {
+    return (
+      <Box data-testid="ground-review-final">
+        <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>
+          {t("groundIntel.review.finalNotice")}
+        </Text>
+        {thread.promotedSignalId && (
+          <Link href={`/signal/${thread.promotedSignalId}`} style={{ fontSize: 12 }}>
+            {t("groundIntel.review.viewSignal")}
+          </Link>
+        )}
+      </Box>
+    );
+  }
+
+  if (!canReview || allowed.length === 0) return null;
+
+  return (
+    <Box data-testid="ground-review-actions">
+      {confirmingPublish ? (
+        <Group gap={8} wrap="wrap">
+          <Text style={{ fontSize: 12, color: "var(--color-warning)" }}>
+            {t("groundIntel.review.confirmPublish")}
+          </Text>
+          <Button
+            size="compact-xs"
+            color="green"
+            loading={review.isPending}
+            onClick={() => decide("approve_public")}
+            data-testid="ground-confirm-publish"
+          >
+            {t("groundIntel.review.confirm")}
+          </Button>
+          <Button
+            size="compact-xs"
+            variant="subtle"
+            color="gray"
+            disabled={review.isPending}
+            onClick={() => setConfirmingPublish(false)}
+          >
+            {t("groundIntel.review.cancel")}
+          </Button>
+        </Group>
+      ) : (
+        <Group gap={8} wrap="wrap">
+          {allowed.includes("approve_private") && (
+            <Button
+              size="compact-sm"
+              variant="outline"
+              color="blue"
+              loading={review.isPending}
+              onClick={() => decide("approve_private")}
+              data-testid="ground-approve-private"
+            >
+              {t("groundIntel.review.approvePrivate")}
+            </Button>
+          )}
+          {allowed.includes("approve_public") && (
+            <Button
+              size="compact-sm"
+              color="green"
+              disabled={review.isPending}
+              onClick={() => setConfirmingPublish(true)}
+              data-testid="ground-approve-public"
+            >
+              {t("groundIntel.review.approvePublic")}
+            </Button>
+          )}
+          {allowed.includes("reject") && (
+            <Button
+              size="compact-sm"
+              variant="outline"
+              color="red"
+              loading={review.isPending}
+              onClick={() => decide("reject")}
+              data-testid="ground-reject"
+            >
+              {t("groundIntel.review.reject")}
+            </Button>
+          )}
+        </Group>
+      )}
+      {review.error && (
+        <Text mt={6} style={{ fontSize: 12, color: "var(--color-critical)" }}>
+          {review.error.message}
+        </Text>
+      )}
+    </Box>
+  );
 }
 
 function ChainMessage({
@@ -178,7 +299,7 @@ function ChainMessage({
   );
 }
 
-export function GroundThreadDrawer({ threadId, opened, onClose, renderActions }: GroundThreadDrawerProps) {
+export function GroundThreadDrawer({ threadId, opened, onClose }: GroundThreadDrawerProps) {
   const t = useTranslations("detection");
   const threadQuery = api.ground.thread.useQuery(
     { id: threadId ?? "" },
@@ -234,7 +355,7 @@ export function GroundThreadDrawer({ threadId, opened, onClose, renderActions }:
             </Box>
           )}
 
-          {renderActions?.(thread)}
+          <GroundReviewActions thread={thread} />
 
           {/* Correction chain: messages in sent order along a timeline rail. */}
           <Box style={{ position: "relative" }}>

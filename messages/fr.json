@@ -1613,6 +1613,16 @@
         "notFound": "Fil introuvable",
         "reviewNote": "Note de revue"
       },
+      "review": {
+        "approvePrivate": "Approuver (privé)",
+        "approvePublic": "Approuver (public)",
+        "reject": "Rejeter",
+        "confirmPublish": "La publication est définitive et promeut ce fil dans le graphe des signaux.",
+        "confirm": "Confirmer la publication",
+        "cancel": "Annuler",
+        "finalNotice": "Approuvé public — promu dans le graphe des signaux.",
+        "viewSignal": "Voir le signal promu"
+      },
       "empty": "Aucun message terrain en attente",
       "noMatch": "Aucun message ne correspond au filtre actuel",
       "noText": "Média sans légende",

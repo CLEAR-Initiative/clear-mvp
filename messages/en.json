@@ -1611,6 +1611,16 @@
         "notFound": "Thread not found",
         "reviewNote": "Review note"
       },
+      "review": {
+        "approvePrivate": "Approve (private)",
+        "approvePublic": "Approve (public)",
+        "reject": "Reject",
+        "confirmPublish": "Publishing is final and promotes this thread into the signals graph.",
+        "confirm": "Confirm publish",
+        "cancel": "Cancel",
+        "finalNotice": "Approved public — promoted into the signals graph.",
+        "viewSignal": "View promoted signal"
+      },
       "empty": "No staged ground messages yet",
       "noMatch": "No messages match the current filter",
       "noText": "Media without caption",
