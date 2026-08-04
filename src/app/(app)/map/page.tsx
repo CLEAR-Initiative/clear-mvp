@@ -707,6 +707,15 @@ function MapPageContent() {
     Record<number, PointAltitudeResult>
   >({});
 
+  // Publish basemap so frost chrome (nav + Layers) can remap text contrast
+  // on Simple / Topography / Satellite (GH #145). Cleared when leaving /map.
+  useEffect(() => {
+    document.body.dataset.mapBasemap = baseMapType;
+    return () => {
+      delete document.body.dataset.mapBasemap;
+    };
+  }, [baseMapType]);
+
   useEffect(() => {
     if (!shouldShowPointAltitude(baseMapType) || openPanels.length === 0) {
       setPanelAltitudes({});
