@@ -1337,7 +1337,8 @@
       "alerts": "التنبيهات",
       "events": "الأحداث",
       "signals": "الإشارات",
-      "history": "السجل"
+      "history": "السجل",
+      "ground": "معلومات ميدانية"
     },
     "actions": {
       "createSignal": "إنشاء إشارة"
@@ -1573,6 +1574,30 @@
         "critical": "5 - حرج"
       },
       "submit": "إنشاء التنبيه"
+    },
+    "groundIntel": {
+      "title": "مراجعة المعلومات الميدانية",
+      "count": "{count, plural, zero {لا رسائل} one {رسالة واحدة} two {رسالتان} few {# رسائل} many {# رسالة} other {# رسالة}} قيد المراجعة",
+      "privateTier": "مستوى خاص — للمراجعة الداخلية فقط",
+      "classifications": {
+        "field_report": "تقرير ميداني",
+        "news_digest": "موجز إخباري",
+        "operational": "تشغيلي",
+        "chatter": "دردشة",
+        "unclassified": "غير مصنف"
+      },
+      "columns": {
+        "sent": "أُرسلت",
+        "sender": "المرسل",
+        "source": "المصدر",
+        "classification": "التصنيف",
+        "message": "الرسالة",
+        "media": "الوسائط"
+      },
+      "empty": "لا توجد رسائل ميدانية قيد المراجعة بعد",
+      "noMatch": "لا توجد رسائل مطابقة للمرشح الحالي",
+      "noText": "وسائط بدون تعليق",
+      "edited": "معدلة"
     },
     "dataSources": {
       "title": "مصادر البيانات المتصلة",

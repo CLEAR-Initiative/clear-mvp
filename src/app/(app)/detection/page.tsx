@@ -21,6 +21,7 @@ import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
 import { writeDetectionNavContext } from "~/lib/detection-nav-context";
 
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
+import { GroundIntelTab } from "./_components/ground-intel-tab";
 import { HistoryTab, type HistorySortOrder } from "./_components/history-tab";
 import { EventsTab, type EventSortOrder } from "./_components/events-tab";
 import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
@@ -55,7 +56,7 @@ const SIGNAL_ORDER_MAP: Record<SignalSortOrder, SignalOrderBy> = {
   "sev-asc":  "SEVERITY_ASC",
 };
 
-const CANONICAL_TABS = new Set(["alerts", "events", "signals", "history"]);
+const CANONICAL_TABS = new Set(["alerts", "events", "signals", "history", "ground"]);
 /** Legacy `live` slug → `alerts` (matches the Alerts label). */
 function normalizeDetectionTab(raw: string | null): string | null {
   if (!raw) return null;
@@ -220,6 +221,21 @@ function DetectionPageContent() {
 
   const { activeTeamId } = useTeam();
   const { countries, getCenter, getZoom, getLocationId, tree, isLoading: isLocationsLoading } = useLocations();
+
+  // Ground intel is a PRIVATE staging tier (sender names, unvetted claims):
+  // clear-api rejects every ground query for roles other than admin/analyst,
+  // so the tab is hidden for everyone else rather than rendering a surface
+  // that can only error. Mirrors event-detail's promote gating pattern.
+  const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
+  const canSeeGround =
+    authData?.user?.role === "admin" || authData?.user?.role === "analyst";
+
+  // Tab order drives the sliding indicator geometry — 4 or 5 equal slots
+  // depending on whether the ground tab is visible for this role.
+  const visibleTabs = useMemo(
+    () => ["alerts", "events", "signals", "history", ...(canSeeGround ? ["ground"] : [])],
+    [canSeeGround],
+  );
 
   const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
 
@@ -779,6 +795,9 @@ function DetectionPageContent() {
           historyEventsQuery.isLoading ||
           historySignalsQuery.isLoading
         );
+      case "ground":
+        // Self-fetching tab — it renders its own table loading state.
+        return false;
       default:
         return true;
     }
@@ -959,13 +978,14 @@ function DetectionPageContent() {
             <Tabs.Tab value="events" data-tour="detection-tab-events">{t("tabs.events")}</Tabs.Tab>
             <Tabs.Tab value="signals">{t("tabs.signals")}</Tabs.Tab>
             <Tabs.Tab value="history">{t("tabs.history")}</Tabs.Tab>
+            {canSeeGround && <Tabs.Tab value="ground">{t("tabs.ground")}</Tabs.Tab>}
             <Box
               className={detectionTabsStyles.indicator}
               style={{
-                left:
-                  indicatorTab === "alerts" ? "0%" :
-                  indicatorTab === "events" ? "25%" :
-                  indicatorTab === "signals" ? "50%" : "75%",
+                // Equal slots; geometry follows the visible tab count so the
+                // underline stays aligned whether or not ground is shown.
+                width: `${100 / visibleTabs.length}%`,
+                left: `${(Math.max(visibleTabs.indexOf(indicatorTab ?? "alerts"), 0) * 100) / visibleTabs.length}%`,
               }}
             />
           </Tabs.List>
@@ -1060,6 +1080,8 @@ function DetectionPageContent() {
                 activeSources={activeSources}
               />
             )}
+
+            {activeTab === "ground" && canSeeGround && <GroundIntelTab />}
 
             {activeTab === "history" && (
               <HistoryTab

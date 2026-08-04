@@ -1335,7 +1335,8 @@
       "alerts": "Alerts",
       "events": "Events",
       "signals": "Signals",
-      "history": "History"
+      "history": "History",
+      "ground": "Ground Intel"
     },
     "actions": {
       "createSignal": "Create Signal"
@@ -1571,6 +1572,30 @@
         "critical": "5 - Critical"
       },
       "submit": "Create Alert"
+    },
+    "groundIntel": {
+      "title": "Ground Intel Review",
+      "count": "{count, plural, one {# staged message} other {# staged messages}}",
+      "privateTier": "Private tier — internal review only",
+      "classifications": {
+        "field_report": "Field report",
+        "news_digest": "News digest",
+        "operational": "Operational",
+        "chatter": "Chatter",
+        "unclassified": "Unclassified"
+      },
+      "columns": {
+        "sent": "Sent",
+        "sender": "Sender",
+        "source": "Source",
+        "classification": "Classification",
+        "message": "Message",
+        "media": "Media"
+      },
+      "empty": "No staged ground messages yet",
+      "noMatch": "No messages match the current filter",
+      "noText": "Media without caption",
+      "edited": "edited"
     },
     "dataSources": {
       "title": "Connected Data Sources",
