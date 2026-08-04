@@ -1337,7 +1337,8 @@
       "alerts": "Alertes",
       "events": "Événements",
       "signals": "Signaux",
-      "history": "Historique"
+      "history": "Historique",
+      "ground": "Renseignement terrain"
     },
     "actions": {
       "createSignal": "Créer un signal"
@@ -1573,6 +1574,59 @@
         "critical": "5 - Critique"
       },
       "submit": "Créer l'alerte"
+    },
+    "groundIntel": {
+      "title": "Revue du renseignement terrain",
+      "count": "{count, plural, one {# message en attente} other {# messages en attente}}",
+      "privateTier": "Niveau privé — revue interne uniquement",
+      "classifications": {
+        "field_report": "Rapport de terrain",
+        "news_digest": "Revue de presse",
+        "operational": "Opérationnel",
+        "chatter": "Discussion",
+        "unclassified": "Non classé"
+      },
+      "columns": {
+        "sent": "Envoyé",
+        "sender": "Expéditeur",
+        "source": "Source",
+        "classification": "Classification",
+        "message": "Message",
+        "media": "Médias",
+        "thread": "Fil"
+      },
+      "lifecycle": {
+        "reported": "Signalé",
+        "updated": "Mis à jour",
+        "confirmed": "Confirmé",
+        "corrected": "Corrigé",
+        "retracted": "Rétracté"
+      },
+      "reviewStates": {
+        "unverified": "Non vérifié",
+        "approved_private": "Approuvé (privé)",
+        "approved_public": "Approuvé (public)",
+        "rejected": "Rejeté"
+      },
+      "thread": {
+        "untitled": "Fil sans titre",
+        "notFound": "Fil introuvable",
+        "reviewNote": "Note de revue"
+      },
+      "review": {
+        "approvePrivate": "Approuver (privé)",
+        "approvePublic": "Approuver (public)",
+        "reject": "Rejeter",
+        "confirmPublish": "La publication est définitive et promeut ce fil dans le graphe des signaux.",
+        "confirm": "Confirmer la publication",
+        "cancel": "Annuler",
+        "finalNotice": "Approuvé public — promu dans le graphe des signaux.",
+        "viewSignal": "Voir le signal promu"
+      },
+      "empty": "Aucun message terrain en attente",
+      "noMatch": "Aucun message ne correspond au filtre actuel",
+      "noText": "Média sans légende",
+      "edited": "modifié"
     },
     "dataSources": {
       "title": "Sources de données connectées",
