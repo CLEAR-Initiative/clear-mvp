@@ -347,7 +347,13 @@ function ChainMessage({
         <Group gap={6} mt={4}>
           <ClassificationPill value={messageClassification(message)} />
           {message.uncertainty && (
-            <Badge size="xs" variant="light" color="yellow" style={{ textTransform: "none" }}>
+            <Badge
+              size="xs"
+              variant="light"
+              color="yellow"
+              style={{ textTransform: "none" }}
+              data-testid="ground-uncertainty-badge"
+            >
               {message.uncertainty}
             </Badge>
           )}

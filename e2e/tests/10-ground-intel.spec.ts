@@ -65,7 +65,8 @@ test.describe("Ground Intel tab (case 10)", () => {
     await expect(steps.last()).toHaveText("Corrected");
 
     // The contributor's own uncertainty marker survived ingestion.
-    await expect(drawer.getByText("unconfirmed")).toBeVisible();
+    // Exact/testid locator: message body also contains the word "Unconfirmed".
+    await expect(drawer.getByTestId("ground-uncertainty-badge")).toHaveText("unconfirmed");
   });
 
   test("analyst can reject a thread via the role-gated review actions", async ({ page }) => {
