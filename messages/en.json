@@ -1584,6 +1584,14 @@
         "chatter": "Chatter",
         "unclassified": "Unclassified"
       },
+      "sources": {
+        "all": "All sources"
+      },
+      "sourceKinds": {
+        "staff_group": "Staff group",
+        "partner_group": "Partner group",
+        "hotline": "Hotline"
+      },
       "columns": {
         "sent": "Sent",
         "sender": "Sender",

@@ -8,6 +8,7 @@ import { IconPaperclip } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { GqlGroundMessage, GqlGroundThreadDetail } from "~/lib/types/graphql";
 import { allowedReviewDecisions, canReviewSource, type GroundReviewDecision } from "~/lib/ground-review";
+import { isGroundSourceKind, senderDisplay } from "~/lib/ground-source";
 import { ClassificationPill, messageClassification } from "./ground-intel-tab";
 
 /**
@@ -35,6 +36,12 @@ const LIFECYCLE_STYLES: Record<string, { bg: string; color: string }> = {
   confirmed: { bg: "var(--color-success-light)",  color: "var(--color-success)" },
   corrected: { bg: "var(--color-warning-light)",  color: "var(--color-warning)" },
   retracted: { bg: "var(--color-critical-light)", color: "var(--color-critical)" },
+};
+
+const SOURCE_KIND_STYLES: Record<string, { bg: string; color: string }> = {
+  staff_group:   { bg: "var(--color-info-light)",    color: "var(--color-info)" },
+  partner_group: { bg: "var(--color-ai-light)",      color: "var(--color-ai)" },
+  hotline:       { bg: "var(--color-warning-light)", color: "var(--color-warning)" },
 };
 
 const REVIEW_STATE_STYLES: Record<string, { bg: string; color: string }> = {
@@ -76,6 +83,16 @@ export function LifecycleBadge({ state }: { state: string }) {
     isLifecycleState(state) ? t(`groundIntel.lifecycle.${state}`) : state,
     LIFECYCLE_STYLES[state],
     "ground-lifecycle-badge",
+  );
+}
+
+/** Source kind pill (staff group / partner group / hotline). Unknown kinds render verbatim. */
+export function SourceKindBadge({ kind }: { kind: string }) {
+  const t = useTranslations("detection");
+  return statePill(
+    isGroundSourceKind(kind) ? t(`groundIntel.sourceKinds.${kind}`) : kind,
+    SOURCE_KIND_STYLES[kind],
+    "ground-source-kind-badge",
   );
 }
 
@@ -238,14 +255,19 @@ function GroundReviewActions({ thread }: { thread: GqlGroundThreadDetail }) {
 function ChainMessage({
   message,
   step,
+  sourceKind,
 }: {
   message: GqlGroundMessage;
   step: ReturnType<typeof chainStep>;
+  sourceKind: string;
 }) {
   const t = useTranslations("detection");
   const format = useFormatter();
   const style = LIFECYCLE_STYLES[step];
   const mediaCount = message.mediaRefs.length + message.omittedMediaCount;
+  // Hotline sources have no sender identity — per-conversation pseudonym
+  // or an em dash, never a blank (see ~/lib/ground-source.ts).
+  const sender = senderDisplay(message, sourceKind);
   return (
     <Group gap={12} align="flex-start" style={{ position: "relative" }} data-testid="ground-chain-message">
       <Box
@@ -264,7 +286,7 @@ function ChainMessage({
           {statePill(t(`groundIntel.lifecycle.${step}`), style, "ground-chain-step")}
           {/* Private tier: raw sender display name renders in ground surfaces only. */}
           <Text fw={600} style={{ fontSize: 12 }}>
-            {message.senderName ?? message.senderRef}
+            {sender.primary}
           </Text>
           <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
             {format.dateTime(new Date(message.sentAt), "short")}
@@ -333,6 +355,7 @@ export function GroundThreadDrawer({ threadId, opened, onClose }: GroundThreadDr
           <Group gap={8} wrap="wrap">
             <LifecycleBadge state={thread.lifecycleState} />
             <ReviewStateBadge state={thread.reviewState} />
+            <SourceKindBadge kind={thread.source.kind} />
             <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>
               {thread.source.name}
             </Text>
@@ -375,6 +398,7 @@ export function GroundThreadDrawer({ threadId, opened, onClose }: GroundThreadDr
                   key={m.id}
                   message={m}
                   step={chainStep(i, thread.messages.length, thread.lifecycleState)}
+                  sourceKind={thread.source.kind}
                 />
               ))}
             </Stack>

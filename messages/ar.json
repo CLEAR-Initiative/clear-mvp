@@ -1586,6 +1586,14 @@
         "chatter": "دردشة",
         "unclassified": "غير مصنف"
       },
+      "sources": {
+        "all": "جميع المصادر"
+      },
+      "sourceKinds": {
+        "staff_group": "مجموعة الموظفين",
+        "partner_group": "مجموعة الشركاء",
+        "hotline": "الخط الساخن"
+      },
       "columns": {
         "sent": "أُرسلت",
         "sender": "المرسل",

@@ -1586,6 +1586,14 @@
         "chatter": "Discussion",
         "unclassified": "Non classé"
       },
+      "sources": {
+        "all": "Toutes les sources"
+      },
+      "sourceKinds": {
+        "staff_group": "Groupe du personnel",
+        "partner_group": "Groupe partenaire",
+        "hotline": "Ligne d'assistance"
+      },
       "columns": {
         "sent": "Envoyé",
         "sender": "Expéditeur",
