@@ -54,5 +54,8 @@ echo "── building + starting db, redis, api, web (first run builds images) �
 echo "── seeding database (prisma/seed.ts) ──"
 "${COMPOSE[@]}" run --rm seed
 
+echo "── seeding ground-intel fixture (e2e/support/ground-seed.ts) ──"
+"${COMPOSE[@]}" run --rm seed-ground
+
 echo "── running Playwright smoke suite ──"
 bunx playwright test "$@"

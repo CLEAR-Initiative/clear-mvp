@@ -1335,7 +1335,8 @@
       "alerts": "Alerts",
       "events": "Events",
       "signals": "Signals",
-      "history": "History"
+      "history": "History",
+      "ground": "Ground Intel"
     },
     "actions": {
       "createSignal": "Create Signal"
@@ -1571,6 +1572,81 @@
         "critical": "5 - Critical"
       },
       "submit": "Create Alert"
+    },
+    "groundIntel": {
+      "title": "Ground Intel Review",
+      "count": "{count, plural, one {# staged message} other {# staged messages}}",
+      "privateTier": "Private tier — internal review only",
+      "classifications": {
+        "field_report": "Field report",
+        "news_digest": "News digest",
+        "operational": "Operational",
+        "chatter": "Chatter",
+        "unclassified": "Unclassified"
+      },
+      "sources": {
+        "all": "All sources"
+      },
+      "sourceKinds": {
+        "staff_group": "Staff group",
+        "partner_group": "Partner group",
+        "hotline": "Hotline"
+      },
+      "columns": {
+        "sent": "Sent",
+        "sender": "Sender",
+        "source": "Source",
+        "classification": "Classification",
+        "message": "Message",
+        "media": "Media",
+        "thread": "Thread"
+      },
+      "lifecycle": {
+        "reported": "Reported",
+        "updated": "Updated",
+        "confirmed": "Confirmed",
+        "corrected": "Corrected",
+        "retracted": "Retracted"
+      },
+      "reviewStates": {
+        "unverified": "Unverified",
+        "approved_private": "Approved (private)",
+        "approved_public": "Approved (public)",
+        "rejected": "Rejected"
+      },
+      "thread": {
+        "untitled": "Untitled thread",
+        "notFound": "Thread not found",
+        "reviewNote": "Review note"
+      },
+      "review": {
+        "approvePrivate": "Approve (private)",
+        "approvePublic": "Approve (public)",
+        "reject": "Reject",
+        "confirmPublish": "Publishing is final — this thread is promoted and becomes a signal in the signals graph.",
+        "confirm": "Confirm publish",
+        "cancel": "Cancel",
+        "finalNotice": "Approved public — this thread became a signal in the signals graph.",
+        "viewSignal": "View promoted signal",
+        "help": {
+          "approvePrivate": {
+            "title": "Verified, but stays inside the room.",
+            "body": "The thread is marked as reviewed and believed, but it stays in the ground staging tier: visible only in this Ground Intel tab, only to admins and analysts. No signal is created — nothing appears on the map or in events and alerts, and nothing is exposed through the API. This is the state for content that is true but operationally sensitive — staff movements, or attribution that could endanger the reporter. It can still be promoted to public later if circumstances change."
+          },
+          "approvePublic": {
+            "title": "Verified — release it into CLEAR.",
+            "body": "This is promotion: the thread becomes a real signal in CLEAR's five-tier graph — source \"whatsapp\", visible in the Signals and History views and on the map, eligible for event clustering and everything downstream — with all sender identity structurally stripped: the promotion payload has no sender fields, so the sender's name physically cannot travel with it. This action is terminal — once promoted, the signal exists in the graph and the thread cannot be un-promoted; the server refuses any further changes."
+          },
+          "reject": {
+            "title": "Not actionable.",
+            "body": "Parks the thread. Unlike public approval, rejection is reversible if someone changes their mind."
+          }
+        }
+      },
+      "empty": "No staged ground messages yet",
+      "noMatch": "No messages match the current filter",
+      "noText": "Media without caption",
+      "edited": "edited"
     },
     "dataSources": {
       "title": "Connected Data Sources",

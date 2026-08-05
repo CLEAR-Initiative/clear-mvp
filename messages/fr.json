@@ -1337,7 +1337,8 @@
       "alerts": "Alertes",
       "events": "Événements",
       "signals": "Signaux",
-      "history": "Historique"
+      "history": "Historique",
+      "ground": "Renseignement terrain"
     },
     "actions": {
       "createSignal": "Créer un signal"
@@ -1573,6 +1574,81 @@
         "critical": "5 - Critique"
       },
       "submit": "Créer l'alerte"
+    },
+    "groundIntel": {
+      "title": "Revue du renseignement terrain",
+      "count": "{count, plural, one {# message en attente} other {# messages en attente}}",
+      "privateTier": "Niveau privé — revue interne uniquement",
+      "classifications": {
+        "field_report": "Rapport de terrain",
+        "news_digest": "Revue de presse",
+        "operational": "Opérationnel",
+        "chatter": "Discussion",
+        "unclassified": "Non classé"
+      },
+      "sources": {
+        "all": "Toutes les sources"
+      },
+      "sourceKinds": {
+        "staff_group": "Groupe du personnel",
+        "partner_group": "Groupe partenaire",
+        "hotline": "Ligne d'assistance"
+      },
+      "columns": {
+        "sent": "Envoyé",
+        "sender": "Expéditeur",
+        "source": "Source",
+        "classification": "Classification",
+        "message": "Message",
+        "media": "Médias",
+        "thread": "Fil"
+      },
+      "lifecycle": {
+        "reported": "Signalé",
+        "updated": "Mis à jour",
+        "confirmed": "Confirmé",
+        "corrected": "Corrigé",
+        "retracted": "Rétracté"
+      },
+      "reviewStates": {
+        "unverified": "Non vérifié",
+        "approved_private": "Approuvé (privé)",
+        "approved_public": "Approuvé (public)",
+        "rejected": "Rejeté"
+      },
+      "thread": {
+        "untitled": "Fil sans titre",
+        "notFound": "Fil introuvable",
+        "reviewNote": "Note de revue"
+      },
+      "review": {
+        "approvePrivate": "Approuver (privé)",
+        "approvePublic": "Approuver (public)",
+        "reject": "Rejeter",
+        "confirmPublish": "La publication est définitive — ce fil est promu et devient un signal dans le graphe des signaux.",
+        "confirm": "Confirmer la publication",
+        "cancel": "Annuler",
+        "finalNotice": "Approuvé public — ce fil est devenu un signal dans le graphe des signaux.",
+        "viewSignal": "Voir le signal promu",
+        "help": {
+          "approvePrivate": {
+            "title": "Vérifié, mais reste en interne.",
+            "body": "Le fil est marqué comme examiné et jugé crédible, mais il reste dans le niveau de préparation terrain : visible uniquement dans cet onglet Renseignement terrain, et uniquement pour les admins et les analystes. Aucun signal n'est créé — rien n'apparaît sur la carte ni dans les événements et alertes, et rien n'est exposé via l'API. C'est l'état prévu pour un contenu vrai mais sensible sur le plan opérationnel — déplacements du personnel, ou attribution qui pourrait mettre en danger la personne à l'origine du signalement. Il pourra encore être promu en public plus tard si les circonstances changent."
+          },
+          "approvePublic": {
+            "title": "Vérifié — diffusé dans CLEAR.",
+            "body": "C'est une promotion : le fil devient un vrai signal dans le graphe à cinq niveaux de CLEAR — source « whatsapp », visible dans les vues Signaux et Historique ainsi que sur la carte, éligible au regroupement en événements et à tout ce qui en découle — avec toute identité d'expéditeur structurellement supprimée : la charge utile de promotion ne contient aucun champ d'expéditeur, le nom de l'expéditeur ne peut donc physiquement pas l'accompagner. Cette action est définitive — une fois la promotion effectuée, le signal existe dans le graphe et le fil ne peut pas être dé-promu ; le serveur refuse toute modification ultérieure."
+          },
+          "reject": {
+            "title": "Non exploitable.",
+            "body": "Met le fil de côté. Contrairement à l'approbation publique, le rejet est réversible si quelqu'un change d'avis."
+          }
+        }
+      },
+      "empty": "Aucun message terrain en attente",
+      "noMatch": "Aucun message ne correspond au filtre actuel",
+      "noText": "Média sans légende",
+      "edited": "modifié"
     },
     "dataSources": {
       "title": "Sources de données connectées",

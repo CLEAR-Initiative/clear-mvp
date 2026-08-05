@@ -174,6 +174,73 @@ export interface GqlCrisis {
   events: Array<{ id: string; types: string[] }>;
 }
 
+/* ─── Ground intel staging tier ─── */
+
+/** Message classification labels ("unclassified" = pipeline hasn't labeled yet). */
+export const GROUND_CLASSIFICATIONS = [
+  "field_report",
+  "news_digest",
+  "operational",
+  "chatter",
+] as const;
+export type GroundClassification = (typeof GROUND_CLASSIFICATIONS)[number];
+
+export interface GqlGroundSource {
+  id: string;
+  name: string;
+  /** "staff_group" | "partner_group" | "hotline". */
+  kind: string;
+  /** Global roles allowed to review threads from this source. */
+  reviewerRoles: string[];
+  privacyDefault: string;
+  isActive: boolean;
+}
+
+export interface GqlGroundThread {
+  id: string;
+  groundSourceId: string;
+  title: string | null;
+  /** "reported" | "updated" | "confirmed" | "corrected" | "retracted". */
+  lifecycleState: string;
+  /** "unverified" | "approved_private" | "approved_public" | "rejected". */
+  reviewState: string;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  promotedSignalId: string | null;
+  createdAt: string;
+}
+
+export interface GqlGroundThreadDetail extends GqlGroundThread {
+  source: GqlGroundSource;
+  messages: GqlGroundMessage[];
+}
+
+/**
+ * A staged ground message. PRIVATE TIER: `senderName` may be rendered in
+ * the detection Ground-intel tab ONLY — never anywhere else, and never in
+ * anything promoted to the signals graph. Text is phone-number-redacted
+ * at persistence by clear-api.
+ */
+export interface GqlGroundMessage {
+  id: string;
+  groundSourceId: string;
+  externalId: string;
+  sentAt: string;
+  /** Pseudonymous per-(source, sender) ref, e.g. "s_ab12cd34". */
+  senderRef: string;
+  /** Raw sender display name. Private tier only. */
+  senderName: string | null;
+  text: string;
+  mediaKeys: string[];
+  mediaRefs: string[];
+  omittedMediaCount: number;
+  classification: string | null;
+  uncertainty: string | null;
+  isEdited: boolean;
+  threadId: string | null;
+}
+
 /* ─── Severity helpers ─── */
 
 /** Map severity (1-5) to a UI severity bucket. Null/undefined = pipeline hasn't set it yet. */

@@ -107,6 +107,33 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # One-shot: seeds the SYNTHETIC ground-intel fixture (source + correction
+  # chain + retraction threads + classification variety) used by the
+  # ground-intel spec. Same image as `seed` (clear-api build stage, which
+  # carries the Prisma client + source); the script itself lives in THIS
+  # repo and is bind-mounted in, so the fixture evolves with the UI tests
+  # that consume it. Runs after `seed`.
+  seed-ground:
+    build:
+      context: ../clear-api
+      target: build
+    image: clear-e2e-seed:latest
+    command: ["bun", "/app/e2e-ground-seed.ts"]
+    volumes:
+      - ./e2e/support/ground-seed.ts:/app/e2e-ground-seed.ts:ro
+    environment:
+      DATABASE_URL: postgres://clear:clear@db:5432/clear
+      BETTER_AUTH_SECRET: E2E_SMOKE_BETTER_AUTH_SECRET_0123456789abcdef
+      BETTER_AUTH_URL: http://localhost:4000
+      CELERY_BROKER_URL: redis://redis:6379/0
+      ADMIN_EMAIL: admin@clear.dev
+      ADMIN_PASSWORD: password123
+      NODE_ENV: production
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: "no"
+
   web:
     build:
       context: .
