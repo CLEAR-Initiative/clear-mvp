@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
 import { Badge, Box, Button, Drawer, Group, Loader, Stack, Text } from "@mantine/core";
@@ -8,6 +8,7 @@ import { IconPaperclip } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { GqlGroundMessage, GqlGroundThreadDetail } from "~/lib/types/graphql";
 import { allowedReviewDecisions, canReviewSource, type GroundReviewDecision } from "~/lib/ground-review";
+import { activeReviewHelp, clearedReviewHelp, reviewHelpMessageKey } from "~/lib/ground-review-help";
 import { isGroundSourceKind, senderDisplay } from "~/lib/ground-source";
 import { ClassificationPill, messageClassification } from "./ground-intel-tab";
 
@@ -134,6 +135,27 @@ interface GroundThreadDrawerProps {
 }
 
 /**
+ * Hover/focus callbacks the drawer passes down so the review buttons can
+ * drive the help panel that renders in the drawer's footer area. Keyboard
+ * focus is treated as hover (accessibility); `clear` handles the unmount
+ * paths (click → confirm step / refetch) where leave/blur never fire.
+ */
+interface ReviewHelpHandlers {
+  enter: (decision: GroundReviewDecision) => void;
+  leave: (decision: GroundReviewDecision) => void;
+  focus: (decision: GroundReviewDecision) => void;
+  blur: (decision: GroundReviewDecision) => void;
+  clear: (decision: GroundReviewDecision) => void;
+}
+
+/** Title accent per action — mirrors REVIEW_STATE_STYLES accents. */
+const REVIEW_HELP_TITLE_COLORS: Record<GroundReviewDecision, string> = {
+  approve_private: "var(--color-info)",
+  approve_public: "var(--color-success)",
+  reject: "var(--color-critical)",
+};
+
+/**
  * Role-gated review controls. Buttons render only when the current
  * user's global role passes the source's `reviewerRoles` policy record
  * (platform admins always pass) — mirroring clear-api's authorization so
@@ -141,10 +163,24 @@ interface GroundThreadDrawerProps {
  * Decisions are limited to what the V1 state machine allows from the
  * thread's current review state; approved_public is terminal.
  */
-function GroundReviewActions({ thread }: { thread: GqlGroundThreadDetail }) {
+function GroundReviewActions({
+  thread,
+  help,
+}: {
+  thread: GqlGroundThreadDetail;
+  help: ReviewHelpHandlers;
+}) {
   const t = useTranslations("detection");
   const utils = api.useUtils();
   const [confirmingPublish, setConfirmingPublish] = useState(false);
+
+  /** Hover + focus wiring for one review action button. */
+  const helpProps = (decision: GroundReviewDecision) => ({
+    onMouseEnter: () => help.enter(decision),
+    onMouseLeave: () => help.leave(decision),
+    onFocus: () => help.focus(decision),
+    onBlur: () => help.blur(decision),
+  });
 
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const canReview = canReviewSource(authData?.user?.role, thread.source.reviewerRoles);
@@ -159,8 +195,12 @@ function GroundReviewActions({ thread }: { thread: GqlGroundThreadDetail }) {
     },
   });
 
-  const decide = (decision: GroundReviewDecision) =>
+  const decide = (decision: GroundReviewDecision) => {
+    // Buttons can unmount on success without firing leave/blur — drop
+    // the help explicitly so the panel never sticks around.
+    help.clear(decision);
     review.mutate({ id: thread.id, decision });
+  };
 
   if (thread.reviewState === "approved_public") {
     return (
@@ -215,6 +255,7 @@ function GroundReviewActions({ thread }: { thread: GqlGroundThreadDetail }) {
               loading={review.isPending}
               onClick={() => decide("approve_private")}
               data-testid="ground-approve-private"
+              {...helpProps("approve_private")}
             >
               {t("groundIntel.review.approvePrivate")}
             </Button>
@@ -224,8 +265,14 @@ function GroundReviewActions({ thread }: { thread: GqlGroundThreadDetail }) {
               size="compact-sm"
               color="green"
               disabled={review.isPending}
-              onClick={() => setConfirmingPublish(true)}
+              onClick={() => {
+                // Switching to the confirm step unmounts this button
+                // without leave/blur firing — clear the help by hand.
+                help.clear("approve_public");
+                setConfirmingPublish(true);
+              }}
               data-testid="ground-approve-public"
+              {...helpProps("approve_public")}
             >
               {t("groundIntel.review.approvePublic")}
             </Button>
@@ -238,6 +285,7 @@ function GroundReviewActions({ thread }: { thread: GqlGroundThreadDetail }) {
               loading={review.isPending}
               onClick={() => decide("reject")}
               data-testid="ground-reject"
+              {...helpProps("reject")}
             >
               {t("groundIntel.review.reject")}
             </Button>
@@ -330,6 +378,30 @@ export function GroundThreadDrawer({ threadId, opened, onClose }: GroundThreadDr
   );
   const thread = threadQuery.data;
 
+  // Which review action's explanation to show in the footer panel.
+  // Hover and keyboard focus are tracked separately so one can end
+  // without clobbering the other; see ~/lib/ground-review-help.ts.
+  const [hoveredAction, setHoveredAction] = useState<GroundReviewDecision | null>(null);
+  const [focusedAction, setFocusedAction] = useState<GroundReviewDecision | null>(null);
+  const helpDecision = activeReviewHelp(hoveredAction, focusedAction);
+
+  useEffect(() => {
+    // New thread / reopen: never carry a stale help panel over.
+    setHoveredAction(null);
+    setFocusedAction(null);
+  }, [threadId, opened]);
+
+  const reviewHelp: ReviewHelpHandlers = {
+    enter: (d) => setHoveredAction(d),
+    leave: (d) => setHoveredAction((cur) => clearedReviewHelp(cur, d)),
+    focus: (d) => setFocusedAction(d),
+    blur: (d) => setFocusedAction((cur) => clearedReviewHelp(cur, d)),
+    clear: (d) => {
+      setHoveredAction((cur) => clearedReviewHelp(cur, d));
+      setFocusedAction((cur) => clearedReviewHelp(cur, d));
+    },
+  };
+
   return (
     <Drawer
       opened={opened}
@@ -379,7 +451,7 @@ export function GroundThreadDrawer({ threadId, opened, onClose }: GroundThreadDr
             </Box>
           )}
 
-          <GroundReviewActions thread={thread} />
+          <GroundReviewActions thread={thread} help={reviewHelp} />
 
           {/* Correction chain: messages in sent order along a timeline rail. */}
           <Box style={{ position: "relative" }}>
@@ -404,6 +476,35 @@ export function GroundThreadDrawer({ threadId, opened, onClose }: GroundThreadDr
               ))}
             </Stack>
           </Box>
+
+          {/*
+           * Review-action help: explains the hovered/focused action in
+           * the drawer's footer area. Sticky so it pins to the bottom
+           * of the drawer viewport while the chain scrolls; hidden
+           * entirely when no action is hovered or focused.
+           */}
+          {helpDecision && (
+            <Box
+              px={12}
+              py={10}
+              data-testid="ground-review-help"
+              style={{
+                position: "sticky",
+                bottom: 0,
+                background: "var(--color-bg-white)",
+                border: "1px solid var(--color-border)",
+                borderRadius: 6,
+                boxShadow: "var(--shadow-sm)",
+              }}
+            >
+              <Text fw={700} mb={2} style={{ fontSize: 12, color: REVIEW_HELP_TITLE_COLORS[helpDecision] }}>
+                {t(`groundIntel.review.help.${reviewHelpMessageKey(helpDecision)}.title`)}
+              </Text>
+              <Text c="var(--color-text-muted)" style={{ fontSize: 12, lineHeight: 1.55 }}>
+                {t(`groundIntel.review.help.${reviewHelpMessageKey(helpDecision)}.body`)}
+              </Text>
+            </Box>
+          )}
         </Stack>
       )}
     </Drawer>

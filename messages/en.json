@@ -1627,7 +1627,21 @@
         "confirm": "Confirm publish",
         "cancel": "Cancel",
         "finalNotice": "Approved public — this thread became a signal in the signals graph.",
-        "viewSignal": "View promoted signal"
+        "viewSignal": "View promoted signal",
+        "help": {
+          "approvePrivate": {
+            "title": "Verified, but stays inside the room.",
+            "body": "The thread is marked as reviewed and believed, but it stays in the ground staging tier: visible only in this Ground Intel tab, only to admins and analysts. No signal is created — nothing appears on the map or in events and alerts, and nothing is exposed through the API. This is the state for content that is true but operationally sensitive — staff movements, or attribution that could endanger the reporter. It can still be promoted to public later if circumstances change."
+          },
+          "approvePublic": {
+            "title": "Verified — release it into CLEAR.",
+            "body": "This is promotion: the thread becomes a real signal in CLEAR's five-tier graph — source \"whatsapp\", visible in the Signals and History views and on the map, eligible for event clustering and everything downstream — with all sender identity structurally stripped: the promotion payload has no sender fields, so the sender's name physically cannot travel with it. This action is terminal — once promoted, the signal exists in the graph and the thread cannot be un-promoted; the server refuses any further changes."
+          },
+          "reject": {
+            "title": "Not actionable.",
+            "body": "Parks the thread. Unlike public approval, rejection is reversible if someone changes their mind."
+          }
+        }
       },
       "empty": "No staged ground messages yet",
       "noMatch": "No messages match the current filter",
