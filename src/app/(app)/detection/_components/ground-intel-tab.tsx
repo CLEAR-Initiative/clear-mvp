@@ -6,8 +6,14 @@ import { Badge, Box, Card, Group, Text } from "@mantine/core";
 import { IconLock, IconPaperclip } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { DataTable, Table } from "~/components/ui";
-import { GROUND_CLASSIFICATIONS, type GqlGroundMessage, type GqlGroundThread } from "~/lib/types/graphql";
-import { GroundThreadDrawer, LifecycleBadge } from "./ground-thread-drawer";
+import {
+  GROUND_CLASSIFICATIONS,
+  type GqlGroundMessage,
+  type GqlGroundSource,
+  type GqlGroundThread,
+} from "~/lib/types/graphql";
+import { senderDisplay } from "~/lib/ground-source";
+import { GroundThreadDrawer, LifecycleBadge, SourceKindBadge } from "./ground-thread-drawer";
 
 /**
  * Ground intel review tab — the staging tier in front of the signals graph.
@@ -70,16 +76,27 @@ export function GroundIntelTab() {
   const t = useTranslations("detection");
   const format = useFormatter();
 
-  const messagesQuery = api.ground.messages.useQuery({}, { staleTime: 60_000 });
+  // Source filter — null means "all sources". Server-side narrowing: the
+  // id feeds the groundSourceId arg on BOTH the message and thread queries.
+  const [activeSourceId, setActiveSourceId] = useState<string | null>(null);
+
+  const messagesQuery = api.ground.messages.useQuery(
+    { groundSourceId: activeSourceId ?? undefined },
+    { staleTime: 60_000 },
+  );
   const sourcesQuery = api.ground.sources.useQuery(undefined, { staleTime: 60_000 });
-  const threadsQuery = api.ground.threads.useQuery({}, { staleTime: 60_000 });
+  const threadsQuery = api.ground.threads.useQuery(
+    { groundSourceId: activeSourceId ?? undefined },
+    { staleTime: 60_000 },
+  );
 
   const messages = useMemo(() => messagesQuery.data ?? [], [messagesQuery.data]);
-  const sourceNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const s of sourcesQuery.data ?? []) map.set(s.id, s.name);
+  const sources = useMemo(() => sourcesQuery.data ?? [], [sourcesQuery.data]);
+  const sourceById = useMemo(() => {
+    const map = new Map<string, GqlGroundSource>();
+    for (const s of sources) map.set(s.id, s);
     return map;
-  }, [sourcesQuery.data]);
+  }, [sources]);
   const threadById = useMemo(() => {
     const map = new Map<string, GqlGroundThread>();
     for (const th of threadsQuery.data ?? []) map.set(th.id, th);
@@ -146,6 +163,38 @@ export function GroundIntelTab() {
         </Group>
       </Group>
 
+      {/* Source filter: single-select chips (the backend narrows on one
+          groundSourceId). "All sources" restores the unfiltered view, which
+          stays legible via the per-row source name + kind badges. */}
+      {sources.length > 0 && (
+        <Group gap={6} mb={8} wrap="wrap" data-testid="ground-source-chips">
+          <Badge
+            size="sm"
+            variant={activeSourceId === null ? "filled" : "light"}
+            color={activeSourceId === null ? "dark" : "gray"}
+            style={{ cursor: "pointer", textTransform: "none" }}
+            onClick={() => setActiveSourceId(null)}
+          >
+            {t("groundIntel.sources.all")}
+          </Badge>
+          {sources.map((s) => {
+            const active = activeSourceId === s.id;
+            return (
+              <Badge
+                key={s.id}
+                size="sm"
+                variant={active ? "filled" : "light"}
+                color={active ? "dark" : "gray"}
+                style={{ cursor: "pointer", textTransform: "none" }}
+                onClick={() => setActiveSourceId(active ? null : s.id)}
+              >
+                {s.name}
+              </Badge>
+            );
+          })}
+        </Group>
+      )}
+
       <Group gap={6} mb={12} wrap="wrap" data-testid="ground-classification-chips">
         {CLASSIFICATION_FILTERS.map((c) => {
           const active = activeClassifications === null || activeClassifications.has(c);
@@ -188,18 +237,47 @@ export function GroundIntelTab() {
                     </Text>
                   </Table.Td>
                   <Table.Td style={{ minWidth: 120 }}>
-                    {/* Private tier: raw sender display name renders here ONLY. */}
-                    <Text fw={600} style={{ fontSize: 13 }}>
-                      {m.senderName ?? m.senderRef}
-                    </Text>
-                    <Text c="var(--color-text-muted)" style={{ fontSize: 11, fontFamily: "monospace" }}>
-                      {m.senderRef}
-                    </Text>
+                    {/* Private tier: raw sender display name renders here ONLY.
+                        Hotline sources carry no sender identity — the cell shows
+                        the per-conversation pseudonym or an em dash, never blank
+                        (see ~/lib/ground-source.ts). */}
+                    {(() => {
+                      const sender = senderDisplay(m, sourceById.get(m.groundSourceId)?.kind);
+                      return (
+                        <>
+                          <Text fw={600} style={{ fontSize: 13 }}>
+                            {sender.primary}
+                          </Text>
+                          {sender.secondary && (
+                            <Text c="var(--color-text-muted)" style={{ fontSize: 11, fontFamily: "monospace" }}>
+                              {sender.secondary}
+                            </Text>
+                          )}
+                        </>
+                      );
+                    })()}
                   </Table.Td>
-                  <Table.Td style={{ minWidth: 100 }}>
-                    <Text c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
-                      {sourceNameById.get(m.groundSourceId) ?? "-"}
-                    </Text>
+                  <Table.Td style={{ minWidth: 130 }}>
+                    {(() => {
+                      const source = sourceById.get(m.groundSourceId);
+                      if (!source) {
+                        return (
+                          <Text c="var(--color-text-muted)" style={{ fontSize: 12 }}>
+                            -
+                          </Text>
+                        );
+                      }
+                      return (
+                        <>
+                          <Text c="var(--color-text-secondary)" style={{ fontSize: 12 }}>
+                            {source.name}
+                          </Text>
+                          <Box mt={2}>
+                            <SourceKindBadge kind={source.kind} />
+                          </Box>
+                        </>
+                      );
+                    })()}
                   </Table.Td>
                   <Table.Td style={{ whiteSpace: "nowrap" }}>
                     <ClassificationPill value={messageClassification(m)} />
