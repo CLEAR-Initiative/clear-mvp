@@ -12,7 +12,8 @@ import { isGroundSourceKind, senderDisplay } from "~/lib/ground-source";
 import { ClassificationPill, messageClassification } from "./ground-intel-tab";
 
 /**
- * Ground thread drawer — one incident thread with its correction chain.
+ * Ground thread drawer — one thread (a cluster of staged Signals) with
+ * its correction chain.
  *
  * PRIVATE TIER: renders `senderName`, which is allowed in the detection
  * Ground-intel surfaces ONLY (see ground-intel-tab.tsx for the rules).

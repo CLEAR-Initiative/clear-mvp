@@ -105,7 +105,8 @@ export const groundRouter = createTRPCRouter({
     return data.groundSources;
   }),
 
-  /** Review queue: incident threads, newest first (clear-api ordering). */
+  /** Review queue: threads (clusters of staged Signals), newest first
+   *  (clear-api ordering). */
   threads: protectedProcedure
     .input(
       z
