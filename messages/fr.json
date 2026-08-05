@@ -1625,10 +1625,10 @@
         "approvePrivate": "Approuver (privé)",
         "approvePublic": "Approuver (public)",
         "reject": "Rejeter",
-        "confirmPublish": "La publication est définitive et promeut ce fil dans le graphe des signaux.",
+        "confirmPublish": "La publication est définitive — ce fil est promu et devient un signal dans le graphe des signaux.",
         "confirm": "Confirmer la publication",
         "cancel": "Annuler",
-        "finalNotice": "Approuvé public — promu dans le graphe des signaux.",
+        "finalNotice": "Approuvé public — ce fil est devenu un signal dans le graphe des signaux.",
         "viewSignal": "Voir le signal promu"
       },
       "empty": "Aucun message terrain en attente",

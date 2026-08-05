@@ -104,7 +104,7 @@ export function GroundIntelTab() {
   }, [threadsQuery.data]);
 
   // Thread drill-in: clicking a row (or its thread badge) opens the
-  // incident-thread drawer with the full correction chain.
+  // thread drawer with the full correction chain.
   const [openThreadId, setOpenThreadId] = useState<string | null>(null);
 
   // Classification filter — null means "all"; an explicit Set narrows.

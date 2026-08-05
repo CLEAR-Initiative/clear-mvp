@@ -1623,10 +1623,10 @@
         "approvePrivate": "Approve (private)",
         "approvePublic": "Approve (public)",
         "reject": "Reject",
-        "confirmPublish": "Publishing is final and promotes this thread into the signals graph.",
+        "confirmPublish": "Publishing is final — this thread is promoted and becomes a signal in the signals graph.",
         "confirm": "Confirm publish",
         "cancel": "Cancel",
-        "finalNotice": "Approved public — promoted into the signals graph.",
+        "finalNotice": "Approved public — this thread became a signal in the signals graph.",
         "viewSignal": "View promoted signal"
       },
       "empty": "No staged ground messages yet",
