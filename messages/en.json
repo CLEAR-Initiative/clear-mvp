@@ -6,10 +6,6 @@
       "tabs": {
         "crisis": "Crisis Overview",
         "situation": "Situation Analysis"
-      },
-      "situationPlaceholder": {
-        "title": "Situation Analysis",
-        "description": "AI-generated situation reports coming soon."
       }
     },
     "reports": {
@@ -214,6 +210,105 @@
         "transport": "Transport route disruptions delaying humanitarian supply chains by 48-72 hours",
         "mentalHealth": "Mental health impacts reported in 60% of displaced households",
         "agriculture": "Agricultural season disruption threatening next harvest in 4 woredas"
+      }
+    },
+    "situation": {
+      "country": "Country",
+      "error": "Unable to load the situation analysis. Please try again.",
+      "tabs": {
+        "overview": "Overview",
+        "sectors": "Sectors",
+        "sources": "Sources"
+      },
+      "empty": {
+        "title": "No situation analysis yet",
+        "description": "No snapshot has been generated for {country} yet. Analyses are regenerated weekly."
+      },
+      "meta": {
+        "generated": "Generated {date} by {model} · {reports} reports"
+      },
+      "summary": {
+        "title": "AI Situation Summary"
+      },
+      "stats": {
+        "displaced": "Displaced",
+        "affected": "Affected",
+        "inNeed": "In Need",
+        "returnees": "Returnees",
+        "fundingRequired": "Funding Required",
+        "fundingReceived": "Funding Received"
+      },
+      "sections": {
+        "contextRisks": "Context Risks",
+        "hazards": "Hazards & Pre-Crisis Vulnerabilities",
+        "displacement": "Displacement"
+      },
+      "hazards": {
+        "current": "Current Hazards",
+        "precrisis": "Pre-Crisis Vulnerabilities"
+      },
+      "displacement": {
+        "push": "Push Factors",
+        "return": "Return Intentions"
+      },
+      "sectors": {
+        "listTitle": "Sectors",
+        "listSubtitle": "{count} sectors · select to view full analysis",
+        "notAssessed": "Not assessed",
+        "detailMeta": "{needs} needs · {interventions} interventions",
+        "noAnalysis": "No analysis available for this sector.",
+        "impact": "Impact",
+        "humanitarian": "Humanitarian Conditions",
+        "atRisk": "At Risk",
+        "needs": "Top Needs",
+        "interventions": "Priority Interventions",
+        "coverage": "Information Coverage",
+        "coverageScore": "{score}/10 · {reports} reports",
+        "empty": "No sectors analysed.",
+        "snapshot": "At a glance",
+        "topNeed": "Top need",
+        "mostVulnerable": "Most vulnerable",
+        "evidence": "Evidence",
+        "evidenceCount": "{reports, plural, one {# report} other {# reports}}",
+        "inferred": "Inferred",
+        "inferredWarning": "This grade was produced from off-sector evidence (a fallback search), so the analysis below is inference, not sector-specific reporting."
+      },
+      "sources": {
+        "visit": "Visit source",
+        "published": "Published {date}",
+        "empty": "No sources recorded for this snapshot.",
+        "count": "{count} references"
+      },
+      "kpi": {
+        "informSeverity": "INFORM Severity",
+        "evidenceBase": "From the latest analysis · {reports} reports",
+        "freshest": "freshest {date}",
+        "info": {
+          "informSeverity": "INFORM Severity Index (0-10) from ACAPS, updated monthly. A composite measure of crisis severity, independent of the situation-analysis pipeline.",
+          "displaced": "Internally displaced persons (IDPs). Aggregated from the source reports below (field: population_displaced).",
+          "inNeed": "People in need of humanitarian assistance. Aggregated from the source reports (field: population_in_need / overall PiN).",
+          "affected": "People affected by the crisis - a wider circle than people in need. Aggregated from the source reports (field: population_affected).",
+          "fundingRequired": "Funding required across appeals, in USD. Aggregated from the source reports (field: funding_required_usd).",
+          "returnees": "Returnees. Aggregated from the source reports (field: returnees).",
+          "fundingReceived": "Funding received against appeals, in USD (field: funding_received_usd)."
+        }
+      },
+      "citations": {
+        "label": "Sources",
+        "report": "Report {n}"
+      },
+      "changed": {
+        "label": "What changed since {period}",
+        "compareTo": "Compare to",
+        "noPrior": "No snapshot existed {period}. This view fills in as weekly analyses accumulate.",
+        "noChange": "No tracked figures changed over this period.",
+        "numbersOnly": "Numbers only. A narrative of what changed is coming with the pipeline.",
+        "periods": {
+          "1m": "1 month ago",
+          "3m": "3 months ago",
+          "yearStart": "start of the year",
+          "1w": "1 week ago"
+        }
       }
     }
   },

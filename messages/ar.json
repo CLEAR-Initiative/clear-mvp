@@ -6,10 +6,6 @@
       "tabs": {
         "crisis": "نظرة عامة على الأزمة",
         "situation": "تحليل الوضع"
-      },
-      "situationPlaceholder": {
-        "title": "تحليل الوضع",
-        "description": "تقارير الوضع المُنشأة بالذكاء الاصطناعي قريباً."
       }
     },
     "reports": {
@@ -214,6 +210,105 @@
         "transport": "اضطراب طرق النقل يؤخر سلاسل الإمداد الإنساني 48-72 ساعة",
         "mentalHealth": "تأثيرات الصحة النفسية موثقة لدى 60% من الأسر النازحة",
         "agriculture": "اضطراب الموسم الزراعي يهدد الحصاد القادم في 4 ورادات"
+      }
+    },
+    "situation": {
+      "country": "الدولة",
+      "error": "تعذر تحميل تحليل الوضع. يرجى المحاولة مرة أخرى.",
+      "tabs": {
+        "overview": "نظرة عامة",
+        "sectors": "القطاعات",
+        "sources": "المصادر"
+      },
+      "empty": {
+        "title": "لا يوجد تحليل للوضع بعد",
+        "description": "لم يتم إنشاء لقطة لـ {country} بعد. يتم تحديث التحليلات أسبوعياً."
+      },
+      "meta": {
+        "generated": "أُنشئ في {date} بواسطة {model} · {reports} تقارير"
+      },
+      "summary": {
+        "title": "ملخص الوضع بالذكاء الاصطناعي"
+      },
+      "stats": {
+        "displaced": "النازحون",
+        "affected": "المتأثرون",
+        "inNeed": "المحتاجون",
+        "returnees": "العائدون",
+        "fundingRequired": "التمويل المطلوب",
+        "fundingReceived": "التمويل المستلم"
+      },
+      "sections": {
+        "contextRisks": "المخاطر السياقية",
+        "hazards": "الأخطار ونقاط الضعف قبل الأزمة",
+        "displacement": "النزوح"
+      },
+      "hazards": {
+        "current": "الأخطار الحالية",
+        "precrisis": "نقاط الضعف قبل الأزمة"
+      },
+      "displacement": {
+        "push": "عوامل الدفع",
+        "return": "نوايا العودة"
+      },
+      "sectors": {
+        "listTitle": "القطاعات",
+        "listSubtitle": "{count} قطاعات · اختر لعرض التحليل الكامل",
+        "notAssessed": "غير مُقيَّم",
+        "detailMeta": "{needs} احتياجات · {interventions} تدخلات",
+        "noAnalysis": "لا يوجد تحليل متاح لهذا القطاع.",
+        "impact": "الأثر",
+        "humanitarian": "الظروف الإنسانية",
+        "atRisk": "الفئات المعرضة للخطر",
+        "needs": "الاحتياجات ذات الأولوية",
+        "interventions": "التدخلات ذات الأولوية",
+        "coverage": "تغطية المعلومات",
+        "coverageScore": "{score}/10 · {reports} تقارير",
+        "empty": "لا توجد قطاعات محللة.",
+        "snapshot": "نظرة سريعة",
+        "topNeed": "الحاجة الأولى",
+        "mostVulnerable": "الأكثر ضعفاً",
+        "evidence": "الأدلة",
+        "evidenceCount": "{reports, plural, zero {# تقرير} one {# تقرير} two {تقريران} few {# تقارير} many {# تقريراً} other {# تقرير}}",
+        "inferred": "مُستنتَج",
+        "inferredWarning": "نتجت هذه الدرجة عن أدلة من خارج القطاع (بحث احتياطي)، لذا فإن التحليل أدناه استنتاج وليس تقريراً خاصاً بالقطاع."
+      },
+      "sources": {
+        "visit": "زيارة المصدر",
+        "published": "نُشر في {date}",
+        "empty": "لا توجد مصادر مسجلة لهذه اللقطة.",
+        "count": "{count} مرجع"
+      },
+      "kpi": {
+        "informSeverity": "شدة INFORM",
+        "evidenceBase": "من أحدث تحليل · {reports} تقارير",
+        "freshest": "الأحدث {date}",
+        "info": {
+          "informSeverity": "مؤشر شدة INFORM (0-10) من ACAPS، يُحدَّث شهرياً. مقياس مركّب لشدة الأزمة، مستقل عن خط معالجة التحليل.",
+          "displaced": "النازحون داخلياً. مجمّع من التقارير المصدرية (الحقل: population_displaced).",
+          "inNeed": "المحتاجون للمساعدة الإنسانية. مجمّع من التقارير المصدرية (الحقل: population_in_need).",
+          "affected": "المتأثرون بالأزمة - دائرة أوسع من المحتاجين (الحقل: population_affected).",
+          "fundingRequired": "التمويل المطلوب للنداءات بالدولار (الحقل: funding_required_usd).",
+          "returnees": "العائدون. مجمّع من التقارير المصدرية (الحقل: returnees).",
+          "fundingReceived": "التمويل المستلم للنداءات بالدولار (الحقل: funding_received_usd)."
+        }
+      },
+      "citations": {
+        "label": "المصادر",
+        "report": "تقرير {n}"
+      },
+      "changed": {
+        "label": "ما الذي تغيّر منذ {period}",
+        "compareTo": "مقارنة بـ",
+        "noPrior": "لم توجد لقطة {period}. تمتلئ هذه الطريقة العرض مع تراكم التحليلات الأسبوعية.",
+        "noChange": "لم تتغيّر أي أرقام متتبَّعة خلال هذه الفترة.",
+        "numbersOnly": "الأرقام فقط. سيأتي سرد لما تغيّر مع خط المعالجة.",
+        "periods": {
+          "1m": "قبل شهر",
+          "3m": "قبل 3 أشهر",
+          "yearStart": "بداية العام",
+          "1w": "قبل أسبوع"
+        }
       }
     }
   },
