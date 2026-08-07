@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Box, Group, Tabs, Text } from "@mantine/core";
+import { Box, Tabs } from "@mantine/core";
 import { PageHeader } from "~/components/ui";
 import { ReportsTab } from "./_components/reports-tab";
+import { SituationTab } from "./_components/situation/situation-tab";
+import { useTeamCountry } from "~/hooks/use-team-country";
 
 export default function InsightsPage() {
   const t = useTranslations("insights");
-  const tBadges = useTranslations("common.badges");
   const [activeTab, setActiveTab] = useState<string | null>("crisis");
+  const { countryName: teamCountryName } = useTeamCountry();
 
   return (
     <Box>
@@ -26,43 +28,24 @@ export default function InsightsPage() {
           mb={24}
           styles={{ tab: { fontSize: 13, fontWeight: 500 } }}
         >
-          <Tabs.List>
+          <Tabs.List data-tour="insights-tabs">
             <Tabs.Tab value="crisis">{t("page.tabs.crisis")}</Tabs.Tab>
-            <Tabs.Tab value="situation">
-              <Group gap={6} align="center">
-                {t("page.tabs.situation")}
-                <Badge size="xs" variant="light" color="gray" style={{ fontSize: 10 }}>{tBadges("soon")}</Badge>
-              </Group>
-            </Tabs.Tab>
+            <Tabs.Tab value="situation">{t("page.tabs.situation")}</Tabs.Tab>
           </Tabs.List>
         </Tabs>
 
         {activeTab === "crisis" && (
-          <ReportsTab
-            selectedCountry="Sudan"
-            selectedRegion="All Regions"
-            summaryStats={{ critical: 0, total: 0, types: [] }}
-            realSituationItems={null}
-          />
-        )}
-
-        {activeTab === "situation" && (
-          <Box
-            p={32}
-            style={{
-              border: "1px solid var(--color-border)",
-              background: "var(--color-bg-white)",
-              textAlign: "center",
-            }}
-          >
-            <Text fw={600} c="var(--color-text-primary)" mb={8}>
-              {t("page.situationPlaceholder.title")}
-            </Text>
-            <Text size="sm" c="var(--color-text-muted)">
-              {t("page.situationPlaceholder.description")}
-            </Text>
+          <Box data-tour="insights-crises">
+            <ReportsTab
+              selectedCountry={teamCountryName ?? ""}
+              selectedRegion="All Regions"
+              summaryStats={{ critical: 0, total: 0, types: [] }}
+              realSituationItems={null}
+            />
           </Box>
         )}
+
+        {activeTab === "situation" && <SituationTab />}
       </Box>
     </Box>
   );

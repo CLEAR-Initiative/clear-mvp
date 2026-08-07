@@ -41,10 +41,12 @@ import {
   IconChevronRight,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { useLocations } from "~/hooks/use-locations";
+import { useTeamCountry } from "~/hooks/use-team-country";
+import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { MinimapCard } from "~/components/map/minimap-card";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { mapFocusHref } from "~/lib/map-focus-href";
+import { mapReturnHref } from "~/lib/map-view-state";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { getDisasterLabel, getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
@@ -52,7 +54,6 @@ import { resolveLocationName } from "~/lib/location";
 import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { AddToCrisisButton } from "~/components/event-detail/add-to-crisis-button";
-import { ShareEventButton } from "~/components/event-detail/share-event-button";
 import { severityColors } from "~/lib/constants/severity";
 import { KpiStack } from "~/components/ui/kpi-stack";
 import { SkeletonSlot } from "~/components/ui/skeleton-slot";
@@ -87,6 +88,8 @@ function eventLocations(event: GqlEvent): GqlLocation[] {
 
 interface EventDetailContentProps {
   event: GqlEvent | null | undefined;
+  /** Resolved route id - used so discussion can fetch in parallel with entity pending. */
+  entityId?: string;
   loading: boolean;
   isPending?: boolean;
   mode: "page" | "drawer";
@@ -107,6 +110,7 @@ interface EventDetailContentProps {
 
 export function EventDetailContent({
   event,
+  entityId,
   loading,
   isPending = false,
   mode,
@@ -145,28 +149,30 @@ export function EventDetailContent({
     if (!event) return [];
     const markers: MapMarker[] = [];
     let idx = 0;
-    // Prefer event-level Point locations; if none exist (e.g. all Polygons), use signal locations.
-    const eventLocs = eventLocations(event);
-    const hasEventPoints = eventLocs.some((l) => l.geometry?.type === "Point");
-    const sourceLocs: GqlLocation[] = hasEventPoints
-      ? eventLocs
-      : (event.signals ?? []).flatMap((s) =>
-          [s.generalLocation, s.originLocation, s.destinationLocation].filter((l): l is GqlLocation => !!l),
-        );
-    for (const loc of sourceLocs) {
-      const geom = loc.geometry;
-      if (!geom || geom.type !== "Point") continue;
+    const pushPoint = (loc: GqlLocation | null | undefined, title?: string | null) => {
+      const geom = loc?.geometry;
+      if (!geom || geom.type !== "Point") return;
       const coords = geom.coordinates as [number, number] | undefined;
-      if (!coords) continue;
+      if (!coords) return;
       const [lng, lat] = coords;
+      const label = title ?? loc?.name ?? event.title ?? "Event";
       markers.push({
         id: idx++,
         lng,
         lat,
-        title: loc.name,
+        title: label,
         severity: mapSeverity(event.severity),
-        description: loc.name,
+        description: label,
       });
+    };
+
+    // Prefer API representativePoint (avoids nesting every signal geometry).
+    pushPoint(event.representativePoint ?? null, event.title);
+    if (markers.length > 0) return markers;
+
+    // Fallback: any Point still present on the event's own locations.
+    for (const loc of eventLocations(event)) {
+      pushPoint(loc);
     }
     return markers;
   }, [event]);
@@ -176,13 +182,15 @@ export function EventDetailContent({
     return [mapMarkers[0]!.lng, mapMarkers[0]!.lat];
   }, [mapMarkers]);
 
-  const { getLocationId } = useLocations();
-  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
-  const sudanL0Query = api.locations.getById.useQuery(
-    { id: sudanId! },
-    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  // Country context for the minimap comes from the active team, not a
+  // fixed country. Null when the team monitors globally.
+  const { countryId: focusCountryId, countryName: focusCountryName } = useTeamCountry();
+  const focusCountryL0Query = api.locations.getById.useQuery(
+    { id: focusCountryId! },
+    { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
-  const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
+  const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
+  const focusCountryPCode = resolveCountryConfig(focusCountryName ?? undefined)?.pCode;
 
   const showPending = isPending && !!event;
   const hookPrimaryMapLocation =
@@ -240,6 +248,13 @@ export function EventDetailContent({
           </Group>
         </Box>
 
+        {/* KPI full-bleed strip - matches loaded layout (above the 2-col body). */}
+        {mode !== "drawer" && (
+          <Box px={{ base: 12, sm: 24 }} pt={{ base: 16, sm: 24 }}>
+            <KpiStripSkeleton />
+          </Box>
+        )}
+
         {/* Body with sidebar layout */}
         <Box
           p={{ base: 16, sm: 24 }}
@@ -250,7 +265,7 @@ export function EventDetailContent({
           }}
         >
           <Box style={{ flex: 1, minWidth: 0 }}>
-            <KpiStripSkeleton />
+            {mode === "drawer" && <KpiStripSkeleton />}
             <SummaryCardSkeleton />
             <DiscussionCardSkeleton />
             <SignalsListCardSkeleton />
@@ -287,7 +302,7 @@ export function EventDetailContent({
         </Text>
         {mode === "page" && (
           <Link
-            href={referrer === "map" ? "/map" : "/detection"}
+            href={referrer === "map" ? mapReturnHref() : "/detection"}
             style={{
               display: "inline-block",
               marginTop: 16,
@@ -379,7 +394,7 @@ export function EventDetailContent({
           <Group justify="space-between" wrap="wrap" gap={8}>
             <Group gap={12} wrap="wrap">
               <Link
-                href={referrer === "map" ? mapFocusHref("event", event.id) : "/detection"}
+                href={referrer === "map" ? mapReturnHref() : "/detection"}
                 style={{ textDecoration: "none" }}
               >
                 <Group
@@ -579,7 +594,7 @@ export function EventDetailContent({
       {/* KPI strip */}
       {!isCompact && (
         <Box px={{ base: 12, sm: 24 }} pt={{ base: 16, sm: 24 }}>
-          <SkeletonSlot pending={showPending} skeleton={<KpiStripSkeleton />}>
+          <SkeletonSlot pending={showPending} skeleton={<KpiStripSkeleton />} className="w-full">
           <KpiStack
             sections={[
               {
@@ -669,12 +684,10 @@ export function EventDetailContent({
           </Card>
           </SkeletonSlot>
 
-          <SkeletonSlot pending={showPending} skeleton={<DiscussionCardSkeleton />}>
-          {/* Discussion */}
+          {/* Discussion - fetch by active entityId in parallel; don't gate on entity pending. */}
           <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
-            <CommentsSection entityId={event.id} entityType="event" />
+            <CommentsSection entityId={entityId ?? event.id} entityType="event" />
           </Card>
-          </SkeletonSlot>
 
           <SkeletonSlot pending={showPending} skeleton={<SignalsListCardSkeleton />}>
           {/* Source Signals */}
@@ -840,15 +853,17 @@ export function EventDetailContent({
           </SkeletonSlot>
         </Box>
 
-        {/* Right sidebar — full-width under main column on phone */}
+        {/* Right sidebar - full-width under main column on phone */}
         {!isCompact && (
           <Box style={{ width: isMobile ? "100%" : 300, flexShrink: 0 }}>
             <Stack gap={20}>
               <MinimapCard
                 markers={mapDisplayMarkers}
                 center={mapDisplayCenter}
-                sudanGeometry={sudanGeometry}
-                sudanId={sudanId}
+                countryGeometry={focusCountryGeometry}
+                countryId={focusCountryId ?? null}
+                countryName={focusCountryName ?? undefined}
+                countryPCode={focusCountryPCode}
                 location={mapDisplayLocation}
                 holdRegionFit={holdRegionFit}
                 flyDuration={mapFlyDuration}
@@ -964,7 +979,6 @@ export function EventDetailContent({
                         event.severity ?? Math.round((event.rank ?? 0) * 5)
                       }
                     />
-                    <ShareEventButton eventId={event.id} />
                   </Stack>
                 </Box>
               </Card>

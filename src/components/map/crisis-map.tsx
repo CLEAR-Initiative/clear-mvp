@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
 import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
 import { useIsDark } from "~/hooks/use-is-dark";
-import { countryConfig } from "~/lib/constants/country-config";
+import { countryConfig, staticCountryBounds } from "~/lib/constants/country-config";
 import {
   aggregationModeForZoom,
   donutCenterCount,
@@ -22,6 +22,35 @@ import {
   DENSITY_HEATMAP_PEAK_OPACITY,
 } from "~/lib/map/marker-density";
 import { spiderfyCoincidentLngLats } from "~/lib/map/spiderfy-coincident";
+import {
+  SUDAN_NRC_OFFICES,
+} from "~/lib/data/sudan-nrc-offices";
+import {
+  buildNrcOfficeMarkerElement,
+  buildNrcOfficePopupHtml,
+  paintNrcOfficeMarkerTheme,
+} from "~/lib/map/nrc-office-markers";
+import { BLOCKAGES_STALE_AFTER_DAYS } from "~/lib/map/logie-blockages";
+import {
+  applyTopographyOptInTilt,
+  syncTopographyPitch,
+} from "~/lib/map/topography-pitch";
+import {
+  syncTopographyTerrain,
+  updateTopographyTerrainExaggeration,
+} from "~/lib/map/topography-terrain";
+import {
+  dismissTopographyTiltHint,
+  isTopographyTiltHintDismissed,
+  shouldShowTopographyTiltHint,
+} from "~/lib/map/topography-tilt-hint";
+import {
+  formatAltitudeProbeLabel,
+  isPointerOverTerrain,
+  samplePointAltitude,
+  shouldShowPointAltitude,
+  type PointAltitudeResult,
+} from "~/lib/map/point-altitude";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
 const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
@@ -36,12 +65,43 @@ export interface MapMarker {
   description?: string;
   popup?: string;
   markerKind?: "event" | "signal" | "crisis";
+  /** Source pin challenged / correction queued (Location trust v1). */
+  locationTrust?: "challenged" | "correction_queued";
+  /** Proposed correction pin vs source pin for dual location display. */
+  locationPinRole?: "source" | "proposed";
 }
 
 /** Pixel position of a marker inside the map container (from Mapbox `project`). */
 export interface MarkerScreenPoint {
   x: number;
   y: number;
+}
+
+/** Live Mapbox camera including pitch/bearing (for round-trip restore). */
+export type MapViewCameraSnapshot = {
+  center: [number, number];
+  zoom: number;
+  pitch: number;
+  bearing: number;
+};
+
+/** Imperative helpers for overlays that track pins (e.g. spaghetti connectors). */
+export interface CrisisMapApi {
+  /**
+   * Project a marker to container pixels. Prefers the live Mapbox Marker
+   * (spiderfy display position) when mounted; otherwise falls back to lng/lat.
+   */
+  projectMarker: (
+    id: number,
+    lng: number,
+    lat: number,
+  ) => MarkerScreenPoint | null;
+  /** Unexaggerated DEM sample — meaningful while Topography terrain mesh is on. */
+  samplePointAltitude: (lng: number, lat: number) => PointAltitudeResult;
+  /** Current camera including pitch/bearing. */
+  getViewCamera: () => MapViewCameraSnapshot | null;
+  /** Instant restore (no fly) for map ↔ detail round-trips. */
+  restoreViewCamera: (camera: MapViewCameraSnapshot) => void;
 }
 
 export interface MapRegion {
@@ -67,6 +127,10 @@ interface CrisisMapProps {
   regions?: MapRegion[];
   center?: [number, number];
   zoom?: number;
+  /** Initial pitch (degrees). Used for session restore; defaults to 0. */
+  initialPitch?: number;
+  /** Initial bearing (degrees). Used for session restore; defaults to 0. */
+  initialBearing?: number;
   className?: string;
   onMarkerClick?: (
     marker: MapMarker,
@@ -116,7 +180,7 @@ interface CrisisMapProps {
    */
   forceFlyToken?: number;
   /** Fired when the camera settles (pan/zoom/cluster fitBounds). */
-  onCameraChange?: (camera: { center: [number, number]; zoom: number }) => void;
+  onCameraChange?: (camera: MapViewCameraSnapshot) => void;
   /**
    * Fired when a donut cluster is tapped, with the camera *before* expand
    * and the number of markers in that cluster.
@@ -131,8 +195,40 @@ interface CrisisMapProps {
   showMarkers?: boolean;
   /** Show/hide roads overlay (applies to all basemap types) */
   showRoads?: boolean;
-  /** Basemap: simple (theme style), topography (theme style + hillshade relief), or satellite imagery */
+  /**
+   * Show NRC Sudan office/presence pins (city centroids from NRC Sudan Annual
+   * Report 2025 — not street-level premises).
+   */
+  showNrcLocations?: boolean;
+  /**
+   * DEV / future #277: LogIE Blockages (roads + bridges). Inline FeatureCollection
+   * from `/api/dev/logie-blockages` (smoke) or clear-api ingest (prod).
+   */
+  showBlockages?: boolean;
+  blockagesGeoJson?: {
+    type: "FeatureCollection";
+    features: Array<{
+      type: "Feature";
+      geometry: unknown;
+      properties: Record<string, unknown>;
+    }>;
+  } | null;
+  /** Basemap: simple (theme style), topography (hillshade + DEM terrain mesh), or satellite imagery */
   baseMapType?: BaseMapType;
+  /**
+   * Mutable ref filled with project helpers while the map is mounted.
+   * Cleared on unmount. Used by `/map` spaghetti connectors.
+   */
+  mapApiRef?: MutableRefObject<CrisisMapApi | null>;
+  /** Fired on every camera frame during pan/zoom/fly (not only moveend). */
+  onMapMove?: () => void;
+  /**
+   * When true, marker DOM pins ignore pointer events so map clicks can place
+   * a Location correction pin (crosshair cursor).
+   */
+  locationPickActive?: boolean;
+  /** Map background click (lng/lat). Used while placing a Location correction. */
+  onMapClick?: (lngLat: { lng: number; lat: number }) => void;
 }
 
 export type BaseMapType = "simple" | "topography" | "satellite";
@@ -186,6 +282,14 @@ function parsePopulation(value: string | number | null | undefined): number {
   if (!value) return 0;
   const parsed = Number(value.replace(/[^\d.-]/g, ""));
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function isRoadLayerId(id: string): boolean {
@@ -263,20 +367,46 @@ function buildDonutEl(props: Record<string, number>): HTMLDivElement {
   return el;
 }
 
-function buildPointEl(severity: string): HTMLDivElement {
+function buildPointEl(
+  severity: string,
+  opts?: {
+    locationTrust?: "challenged" | "correction_queued";
+    locationPinRole?: "source" | "proposed";
+  },
+): HTMLDivElement {
   const color = severityColors[severity] ?? "#737373";
-  const size  = severity === "critical" ? 18 : severity === "high" ? 16 : 14;
+  const proposed = opts?.locationPinRole === "proposed";
+  const challenged =
+    opts?.locationTrust === "challenged" || opts?.locationTrust === "correction_queued";
+  const size = severity === "critical" ? 18 : severity === "high" ? 16 : 14;
   // Outer: Mapbox sets its positioning transform here - do not animate this element.
+  // Do NOT set position:relative — Mapbox relies on .mapboxgl-marker { position:absolute }.
+  // Inline relative overrides that and stacks pins in document flow.
   const outer = document.createElement("div");
   outer.style.cssText = `width:${size}px;height:${size}px;cursor:pointer;`;
   // Radar ping ring: expands outward in marker color, hidden until active.
   const ring = document.createElement("div");
   ring.className = "marker-ping-ring";
   ring.style.cssText = `position:absolute;inset:0;border-radius:50%;border:2.5px solid ${color};opacity:0;pointer-events:none;`;
+  // Challenged affordance: dashed amber halo on the source pin (no second pin).
+  if (challenged && !proposed) {
+    const trustRing = document.createElement("div");
+    trustRing.className = "marker-trust-ring";
+    trustRing.style.cssText =
+      "position:absolute;inset:-5px;border-radius:50%;border:2px dashed #D97706;pointer-events:none;opacity:0.95;";
+    outer.appendChild(trustRing);
+  }
   // Inner dot: the colored circle, safe to scale independently.
   const inner = document.createElement("div");
   inner.className = "marker-dot";
-  inner.style.cssText = `width:100%;height:100%;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);`;
+  if (proposed) {
+    // Ghost proposed pin for dual location display.
+    inner.style.cssText =
+      `width:100%;height:100%;border-radius:50%;background:transparent;border:2.5px dashed ${color};box-shadow:none;opacity:0.85;`;
+  } else {
+    inner.style.cssText =
+      `width:100%;height:100%;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);`;
+  }
   outer.appendChild(ring);
   outer.appendChild(inner);
   return outer;
@@ -289,6 +419,8 @@ export function CrisisMap({
   regions = [],
   center = [30, 14],
   zoom = 5.5,
+  initialPitch = 0,
+  initialBearing = 0,
   className,
   onMarkerClick,
   onMarkerHover,
@@ -312,10 +444,22 @@ export function CrisisMap({
   showBoundaries = true,
   showMarkers = true,
   showRoads = true,
+  showNrcLocations = false,
+  showBlockages = false,
+  blockagesGeoJson = null,
   baseMapType = "simple",
+  mapApiRef,
+  onMapMove,
+  locationPickActive = false,
+  onMapClick,
 }: CrisisMapProps) {
   const t = useTranslations("map");
+  const locale = useLocale();
   const isDark = useIsDark();
+  const tRef = useRef(t);
+  const isDarkRef = useRef(isDark);
+  tRef.current = t;
+  isDarkRef.current = isDark;
 
   // Skip seed bbox rectangles / point "boundaries"; fall back to Mapbox tiles.
   const paintableFocusGeometry = useMemo(
@@ -339,8 +483,8 @@ export function CrisisMap({
         ? "mapbox://styles/mapbox/satellite-streets-v12"
         : "mapbox://styles/mapbox/satellite-v9";
     }
-    // Topography shares the theme style - relief comes from a hillshade
-    // layer (see the terrain-dem effect below) instead of a separate
+    // Topography shares the theme style - relief comes from hillshade +
+    // DEM terrain mesh (see topography-terrain sync below) instead of a
     // Mapbox style. outdoors-v12 was tried and rejected: pale landcover,
     // no dark-mode variant, and boundary overlays drowned in it.
     return isDark
@@ -354,14 +498,46 @@ export function CrisisMap({
   const onMarkerHoverRef = useRef(onMarkerHover);
   const onCameraChangeRef = useRef(onCameraChange);
   const onClusterExpandRef = useRef(onClusterExpand);
+  const onMapMoveRef = useRef(onMapMove);
+  const onMapClickRef = useRef(onMapClick);
+  const locationPickActiveRef = useRef(locationPickActive);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMarkerHoverRef.current = onMarkerHover; }, [onMarkerHover]);
   useEffect(() => { onCameraChangeRef.current = onCameraChange; }, [onCameraChange]);
   useEffect(() => { onClusterExpandRef.current = onClusterExpand; }, [onClusterExpand]);
+  useEffect(() => { onMapMoveRef.current = onMapMove; }, [onMapMove]);
+  useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
+  useEffect(() => { locationPickActiveRef.current = locationPickActive; }, [locationPickActive]);
   const clusterDomMarkers = useRef<Map<string, MapboxGLAny>>(new Map());
+  /** Spiderfy display lng/lat by marker id — kept in sync with mounted pins. */
+  const displayLngLatRef = useRef<Map<number, [number, number]>>(new Map());
   const markersDataRef = useRef<MapMarker[]>(markers);
   const hoveredMarkerIdRef = useRef<number | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [tiltHintDismissed, setTiltHintDismissed] = useState(() =>
+    isTopographyTiltHintDismissed(),
+  );
+  const showTiltHint = shouldShowTopographyTiltHint({
+    baseMapType,
+    dismissed: tiltHintDismissed,
+  });
+  const onDismissTiltHint = () => {
+    dismissTopographyTiltHint();
+    setTiltHintDismissed(true);
+  };
+  const onTiltFromHint = () => {
+    if (map.current) applyTopographyOptInTilt(map.current);
+    dismissTopographyTiltHint();
+    setTiltHintDismissed(true);
+  };
+  const showAltitudeProbe = shouldShowPointAltitude(baseMapType);
+  /** Imperative probe DOM — no React state on mousemove/camera (keeps tilt/drag smooth). */
+  const mapShellRef = useRef<HTMLDivElement | null>(null);
+  const altitudeProbeElRef = useRef<HTMLDivElement | null>(null);
+  const altitudeProbeLabelRef = useRef<HTMLSpanElement | null>(null);
+  const altitudeProbeRafRef = useRef(0);
+  const altitudeProbeLngLatRef = useRef<{ lng: number; lat: number } | null>(null);
+  const altitudeUnavailableLabel = t("pointAltitude.unavailable");
   const mapReadyRef = useRef(false);
   const appliedStyleRef = useRef<string | null>(null);
   const mapStyleRef = useRef(mapStyle);
@@ -371,10 +547,17 @@ export function CrisisMap({
 
   // Convert focusCountryGeometry prop to a usable format (same structure as the query result).
   // This avoids the duplicate getCountryByPCode fetch when the page already passes geometry.
+  // Paint layers still require isPaintableBoundaryGeometry; framing uses any polygon
+  // (including seed bboxes) so countries without rich COD boundaries still fitBounds.
   const focusCountry = useMemo(() => {
     if (!focusCountryGeometry) return null;
     if (!isPaintableBoundaryGeometry(focusCountryGeometry as never)) return null;
     return { geometry: focusCountryGeometry };
+  }, [focusCountryGeometry]);
+
+  const focusCountryFitBounds = useMemo(() => {
+    if (!focusCountryGeometry) return null;
+    return geometryBounds(focusCountryGeometry as never);
   }, [focusCountryGeometry]);
 
   // ── Map init (once) ─────────────────────────────────────────────────────
@@ -392,9 +575,22 @@ export function CrisisMap({
         style: mapStyle,
         center,
         zoom,
+        pitch: initialPitch,
+        bearing: initialBearing,
         interactive,
         preserveDrawingBuffer,
         attributionControl: false,
+      });
+
+      // Right-click / Ctrl+click must drive Mapbox pitch-rotate, not the
+      // browser context menu (all basemap modes).
+      const suppressBrowserMenu = (e: Event) => {
+        e.preventDefault();
+      };
+      map.current.getCanvas().addEventListener("contextmenu", suppressBrowserMenu);
+      map.current.on("contextmenu", (e: { preventDefault?: () => void; originalEvent?: Event }) => {
+        e.preventDefault?.();
+        e.originalEvent?.preventDefault?.();
       });
 
       map.current.on("load", () => {
@@ -415,7 +611,15 @@ export function CrisisMap({
         onCameraChangeRef.current?.({
           center: [c.lng, c.lat],
           zoom: map.current.getZoom(),
+          pitch: map.current.getPitch?.() ?? 0,
+          bearing: map.current.getBearing?.() ?? 0,
         });
+      });
+
+      // Continuous frames for overlays (spaghetti connectors) during pan/fly.
+      map.current.on("move", () => {
+        if (cancelled) return;
+        onMapMoveRef.current?.();
       });
 
       map.current.addControl(
@@ -429,6 +633,7 @@ export function CrisisMap({
       mapReadyRef.current = false;
       appliedStyleRef.current = null;
       setLoaded(false);
+      if (mapApiRef) mapApiRef.current = null;
       map.current?.remove();
       map.current = null;
     };
@@ -451,51 +656,152 @@ export function CrisisMap({
     };
   }, [mapStyle]);
 
-  // Terrain relief: hillshade overlay on the theme basemap ("topography"
-  // mode). Runs before the focus effect below so the dim mask - inserted
-  // at the same road-layer anchor - lands above the relief and dims it
-  // outside the focus country too.
+  // Hybrid Topography: hillshade + DEM terrain mesh (`setTerrain`) while
+  // Topography is active. Country-band-boosted exaggeration (numeric —
+  // zoom expressions can leave the mesh off). Pitch is opt-in. Runs before
+  // the focus effect so the dim mask lands above the relief outside the
+  // focus country too.
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
-    const cleanup = () => {
-      try { if (m.getLayer("terrain-hillshade")) m.removeLayer("terrain-hillshade"); } catch { /* ignore */ }
-      try { if (m.getSource("terrain-dem")) m.removeSource("terrain-dem"); } catch { /* ignore */ }
-    };
-    cleanup();
-    if (baseMapType !== "topography") return;
-
-    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
-    const beforeId =
-      styleLayers.find((l) => isRoadLayerId(l.id))?.id ??
-      styleLayers.find((l) => l.type === "symbol")?.id;
     try {
-      m.addSource("terrain-dem", {
-        type: "raster-dem",
-        url: "mapbox://mapbox.mapbox-terrain-dem-v1",
-        tileSize: 512,
-        maxzoom: 14,
+      syncTopographyTerrain(m, baseMapType, {
+        isDark,
+        zoom: typeof m.getZoom === "function" ? m.getZoom() : 6,
       });
-      m.addLayer(
-        { id: "terrain-hillshade", type: "hillshade", source: "terrain-dem",
-          paint: {
-            // Strongest at the Country band (z5-8) where relief must read
-            // at country scale; relaxes toward the Site band where the
-            // street grid takes over (docs/map-design.md).
-            "hillshade-exaggeration": [
-              "interpolate", ["linear"], ["zoom"],
-              4, isDark ? 1 : 0.9,
-              10, isDark ? 0.65 : 0.55,
-              14, 0.35,
-            ] as never,
-            "hillshade-shadow-color": isDark ? "#000000" : "#57534E",
-            "hillshade-highlight-color": isDark ? "#6B6B78" : "#FFFFFF",
-          } },
-        beforeId,
-      );
-    } catch { /* ignore */ }
-    return cleanup;
+      syncTopographyPitch(m, baseMapType);
+    } catch (err) {
+      // Surface failures — silent catch previously hid a dead setTerrain.
+      console.warn("[topography] failed to sync terrain/pitch", err);
+    }
+
+    if (baseMapType !== "topography") {
+      return () => {
+        try {
+          syncTopographyTerrain(m, "simple", { isDark });
+          syncTopographyPitch(m, "simple");
+        } catch {
+          /* ignore */
+        }
+      };
+    }
+
+    const onZoomEnd = () => {
+      try {
+        updateTopographyTerrainExaggeration(m);
+      } catch {
+        /* ignore */
+      }
+    };
+    m.on?.("zoomend", onZoomEnd);
+    return () => {
+      m.off?.("zoomend", onZoomEnd);
+      try {
+        syncTopographyTerrain(m, "simple", { isDark });
+        syncTopographyPitch(m, "simple");
+      } catch {
+        /* ignore */
+      }
+    };
   }, [loaded, baseMapType, isDark]);
+
+  // Topography hover probe — orange ground dot + altitude under the cursor.
+  // All updates are imperative DOM writes so pan/tilt never re-render React.
+  // Over pitched sky Mapbox clamps lngLat to the silhouette — detect that,
+  // fade the probe, and restore the system cursor so filters stay reachable.
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const PROBE_ACTIVE_CLASS = "topography-altitude-probe-active";
+
+    const setProbeCursorActive = (active: boolean) => {
+      const shell = mapShellRef.current;
+      if (!shell) return;
+      shell.classList.toggle(PROBE_ACTIVE_CLASS, active);
+    };
+
+    const hideProbe = () => {
+      altitudeProbeLngLatRef.current = null;
+      setProbeCursorActive(false);
+      const el = altitudeProbeElRef.current;
+      if (el) {
+        el.style.opacity = "0";
+        el.setAttribute("aria-hidden", "true");
+      }
+    };
+    if (!showAltitudeProbe) {
+      hideProbe();
+      return;
+    }
+
+    const paintProbe = (lng: number, lat: number, sampleLabel: boolean) => {
+      const el = altitudeProbeElRef.current;
+      if (!el) return;
+      const point = m.project([lng, lat]) as { x: number; y: number };
+      el.style.left = `${point.x}px`;
+      el.style.top = `${point.y}px`;
+      el.style.opacity = "1";
+      el.removeAttribute("aria-hidden");
+      setProbeCursorActive(true);
+      // DEM sample only on pointer moves — camera frames just reproject (smooth tilt).
+      if (!sampleLabel) return;
+      const labelEl = altitudeProbeLabelRef.current;
+      if (!labelEl) return;
+      const altitude = samplePointAltitude(m, lng, lat);
+      const text = formatAltitudeProbeLabel(altitude, altitudeUnavailableLabel);
+      labelEl.textContent = text;
+      el.setAttribute("aria-label", text);
+    };
+
+    let pendingSampleLabel = false;
+    const schedulePaint = (sampleLabel: boolean) => {
+      pendingSampleLabel = pendingSampleLabel || sampleLabel;
+      if (altitudeProbeRafRef.current) return;
+      altitudeProbeRafRef.current = requestAnimationFrame(() => {
+        altitudeProbeRafRef.current = 0;
+        const ll = altitudeProbeLngLatRef.current;
+        const wantLabel = pendingSampleLabel;
+        pendingSampleLabel = false;
+        if (!ll) return;
+        paintProbe(ll.lng, ll.lat, wantLabel);
+      });
+    };
+
+    const onMove = (e: {
+      lngLat: { lng: number; lat: number };
+      point: { x: number; y: number };
+    }) => {
+      // Sky: lngLat sticks on the horizon while the pointer keeps moving.
+      if (!isPointerOverTerrain(m, e.point, e.lngLat)) {
+        hideProbe();
+        return;
+      }
+      altitudeProbeLngLatRef.current = {
+        lng: e.lngLat.lng,
+        lat: e.lngLat.lat,
+      };
+      schedulePaint(true);
+    };
+
+    const onCamera = () => {
+      if (!altitudeProbeLngLatRef.current) return;
+      schedulePaint(false);
+    };
+
+    m.on("mousemove", onMove);
+    m.on("mouseout", hideProbe);
+    m.on("move", onCamera);
+    return () => {
+      m.off("mousemove", onMove);
+      m.off("mouseout", hideProbe);
+      m.off("move", onCamera);
+      if (altitudeProbeRafRef.current) {
+        cancelAnimationFrame(altitudeProbeRafRef.current);
+        altitudeProbeRafRef.current = 0;
+      }
+      hideProbe();
+    };
+  }, [loaded, showAltitudeProbe, altitudeUnavailableLabel]);
 
   // ── Country focus: dim mask + border glow + bounds ──────────────────────
   //
@@ -748,30 +1054,29 @@ export function CrisisMap({
     return cleanup;
   }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries, baseMapType]);
 
-  // Fit bounds to the focus country once its backend bbox is available.
+  // Frame the focus country instantly from static countryConfig.
+  // L0 GeoJSON (focusCountryFitBounds) is for highlight paint only — waiting
+  // on it made Venezuela feel like a 2–5s "flight" (GH #112).
   // Skips when fitBoundsGeometry is set (a more specific region is focused).
   // A countryFitNonce bump always wins (lone-pin detail close → country overview),
   // even if fitBoundsOnFocus is briefly false in the same render batch.
   const prevCountryFitNonce = useRef(countryFitNonce);
+  const prevFramedCountry = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!map.current || !loaded || fitBoundsGeometry) return;
     const nonceBumped = countryFitNonce !== prevCountryFitNonce.current;
     prevCountryFitNonce.current = countryFitNonce;
     if (!fitBoundsOnFocus && !nonceBumped) return;
 
-    // Prefer live geometry; fall back to static country bbox so framing still
-    // lands at country level if the API geometry isn't ready yet.
-    const geoBounds = focusCountry
-      ? geometryBounds(focusCountry.geometry as never)
-      : null;
-    const cfgBbox =
-      focusCountryName && countryConfig[focusCountryName]
-        ? countryConfig[focusCountryName].bbox
-        : null;
-    const bounds = geoBounds ?? (cfgBbox
-      ? [cfgBbox[0], cfgBbox[1], cfgBbox[2], cfgBbox[3]] as const
-      : null);
+    const cfgBounds = staticCountryBounds(focusCountryName);
+    // Static config first (instant). Live bounds only if the country is missing
+    // from countryConfig — never let late geometry restart a finished flight.
+    const bounds = cfgBounds ?? focusCountryFitBounds;
     if (!bounds) return;
+
+    const framedKey = focusCountryName ?? `bounds:${bounds.join(",")}`;
+    if (!nonceBumped && prevFramedCountry.current === framedKey) return;
+    prevFramedCountry.current = framedKey;
 
     // Narrow viewports: less padding so country fit stays country-level
     // (80px on a phone shrinks the usable canvas and looks global).
@@ -785,7 +1090,7 @@ export function CrisisMap({
       { padding, duration: 800 },
     );
   }, [
-    focusCountry,
+    focusCountryFitBounds,
     focusCountryName,
     loaded,
     fitBoundsGeometry,
@@ -858,10 +1163,11 @@ export function CrisisMap({
     if (!map.current || !loaded) return;
     const forced = forceFlyToken !== prevForceFly.current;
     prevForceFly.current = forceFlyToken;
-    // Country fitBounds owns framing unless the caller opts out (e.g. marker
-    // deep-link focus) or a tighter region geometry is already driving the view.
-    // A forced restore (closing marker detail) always wins.
-    if (!forced && focusCountry && fitBoundsOnFocus && !fitBoundsGeometry) return;
+    // Country fitBounds owns framing whenever a focus country is selected —
+    // including while L0 geometry is still loading. Otherwise flyTo races to
+    // a wrong fallback center (e.g. Sudan for Venezuela) and fitBounds has to
+    // restart mid-flight (GH #112). Forced restore always wins.
+    if (!forced && focusCountryName && fitBoundsOnFocus && !fitBoundsGeometry) return;
     const paddingChanged = prevPadding.current !== flyPaddingBottom;
     if (
       !forced &&
@@ -870,21 +1176,47 @@ export function CrisisMap({
       prevZoom.current === zoom &&
       !paddingChanged
     ) return;
+    // Skip if Mapbox is already there (avoids stop()+flyTo fighting a live gesture
+    // when parent props echo the settled camera).
+    if (!forced && !paddingChanged) {
+      try {
+        const cur = map.current.getCenter?.();
+        const z = map.current.getZoom?.();
+        if (
+          cur &&
+          typeof z === "number" &&
+          Math.abs(cur.lng - center[0]) < 1e-5 &&
+          Math.abs(cur.lat - center[1]) < 1e-5 &&
+          Math.abs(z - zoom) < 1e-3
+        ) {
+          prevCenter.current = center;
+          prevZoom.current = zoom;
+          prevPadding.current = flyPaddingBottom;
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
     prevCenter.current = center;
     prevZoom.current = zoom;
     prevPadding.current = flyPaddingBottom;
     // Cancel any in-flight country fitBounds so a deep-link marker zoom wins.
     try { map.current.stop(); } catch { /* ignore */ }
+    // Preserve pitch/bearing for Topography session restore + browse.
+    // Mobile marker focus (bottom padding) and forced resets still flatten.
+    const flattenPitch = flyPaddingBottom > 0;
     map.current.flyTo({
       center,
       zoom,
       duration: flyDuration,
-      pitch: 0,
+      pitch: flattenPitch ? 0 : (map.current.getPitch?.() ?? 0),
+      bearing: flattenPitch ? 0 : (map.current.getBearing?.() ?? 0),
       padding: flyPaddingBottom > 0
         ? { top: 48, bottom: flyPaddingBottom, left: 24, right: 24 }
         : { top: 0, bottom: 0, left: 0, right: 0 },
     });
-  }, [center, zoom, loaded, focusCountry, flyDuration, fitBoundsOnFocus, fitBoundsGeometry, flyPaddingBottom, forceFlyToken]);
+  }, [center, zoom, loaded, focusCountryName, flyDuration, fitBoundsOnFocus, fitBoundsGeometry, flyPaddingBottom, forceFlyToken]);
 
   // ── Markers (density ladder: heatmap → donuts → points) ─────────────────
   useEffect(() => {
@@ -903,6 +1235,7 @@ export function CrisisMap({
         try { mk.remove(); } catch { /* ignore */ }
       }
       clusterDomMarkers.current.clear();
+      displayLngLatRef.current = new Map();
       if (!sweepOrphans) return;
       try {
         m.getContainer()
@@ -939,6 +1272,8 @@ export function CrisisMap({
         id: mk.id, title: mk.title, severity: mk.severity,
         type: mk.type ?? "", description: mk.description ?? "",
         marker_kind: mk.markerKind ?? "",
+        location_trust: mk.locationTrust ?? "",
+        location_pin_role: mk.locationPinRole ?? "",
         is_critical: mk.severity === "critical" ? 1 : 0,
         is_high:     mk.severity === "high"     ? 1 : 0,
         is_medium:   mk.severity === "medium"   ? 1 : 0,
@@ -1137,6 +1472,21 @@ export function CrisisMap({
         spiderfyPoints.push({ id: markerId, lng: coords[0], lat: coords[1] });
       }
       const displayLngLat = spiderfyCoincidentLngLats(spiderfyPoints);
+      const nextDisplay = new Map<number, [number, number]>();
+      for (const [id, ll] of displayLngLat) {
+        const numericId = Number(id);
+        if (!Number.isFinite(numericId)) continue;
+        nextDisplay.set(numericId, [ll[0], ll[1]]);
+      }
+      // Also record non-spiderfied singles so projectMarker can prefer them.
+      for (const feat of pointFeats) {
+        const rawCoords = feat.geometry?.coordinates;
+        if (!isValidLngLat(rawCoords)) continue;
+        const markerId = Number((feat.properties as Record<string, unknown> | null)?.id);
+        if (!Number.isFinite(markerId) || nextDisplay.has(markerId)) continue;
+        nextDisplay.set(markerId, [rawCoords[0], rawCoords[1]]);
+      }
+      displayLngLatRef.current = nextDisplay;
 
       for (const feat of pointFeats) {
         const rawCoords = feat.geometry?.coordinates;
@@ -1145,8 +1495,21 @@ export function CrisisMap({
         const markerId = Number(props.id);
         if (!Number.isFinite(markerId)) continue;
         const coords = displayLngLat.get(markerId) ?? rawCoords;
-        const el = buildPointEl(props.severity as string);
+        const trust = props.location_trust as string;
+        const pinRole = props.location_pin_role as string;
+        const el = buildPointEl(props.severity as string, {
+          locationTrust:
+            trust === "challenged" || trust === "correction_queued"
+              ? trust
+              : undefined,
+          locationPinRole:
+            pinRole === "source" || pinRole === "proposed" ? pinRole : undefined,
+        });
         el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
+        // Pick mode: block pin clicks even after pan/zoom rebuilds markers.
+        if (locationPickActiveRef.current) {
+          el.style.pointerEvents = "none";
+        }
         if (hoveredMarkerIdRef.current != null && markerId === hoveredMarkerIdRef.current) {
           el.querySelector(".marker-ping-ring")?.classList.add("active");
           el.querySelector(".marker-dot")?.classList.add("active");
@@ -1262,6 +1625,61 @@ export function CrisisMap({
     }
   }, [hoveredMarkerId]);
 
+  // ── NRC Sudan office centroids (HTML markers; separate from crisis pins) ─
+  // Coordinates are city/locality centroids from NRC Sudan Annual Report 2025
+  // — never treat as street-level premises.
+  // Rebuild only when layer toggles / locale changes / map loads. Theme flips
+  // paint borders in place (14 pins — avoid Mapbox tear-down on dark mode).
+  const nrcOfficeMarkersRef = useRef<MapboxGLAny[]>([]);
+  useEffect(() => {
+    if (!map.current || !loaded || !mbRef.current) return;
+    const mb = mbRef.current;
+    const m = map.current;
+
+    const clear = () => {
+      for (const mk of nrcOfficeMarkersRef.current) {
+        try {
+          mk.remove();
+        } catch {
+          /* ignore */
+        }
+      }
+      nrcOfficeMarkersRef.current = [];
+    };
+
+    clear();
+    if (!showNrcLocations) return clear;
+
+    const translate = tRef.current;
+    const dark = isDarkRef.current;
+    const centroidDisclaimer = translate("nrcOffices.centroidDisclaimer");
+
+    for (const office of SUDAN_NRC_OFFICES) {
+      const el = buildNrcOfficeMarkerElement(office, dark);
+      const popupHtml = buildNrcOfficePopupHtml(office, {
+        typeLabel: translate(`nrcOffices.types.${office.officeType}`),
+        statusLabel: translate(`nrcOffices.statuses.${office.status}`),
+        centroidDisclaimer,
+      });
+      const popup = new mb.Popup({ offset: 16, maxWidth: "280px" }).setHTML(popupHtml);
+      const marker = new mb.Marker({ element: el })
+        .setLngLat([office.longitude, office.latitude])
+        .setPopup(popup)
+        .addTo(m);
+      nrcOfficeMarkersRef.current.push(marker);
+    }
+
+    return clear;
+  }, [loaded, showNrcLocations, locale]);
+
+  useEffect(() => {
+    if (!showNrcLocations) return;
+    for (const mk of nrcOfficeMarkersRef.current) {
+      const root = mk.getElement?.() as HTMLElement | undefined;
+      if (root) paintNrcOfficeMarkerTheme(root, isDark);
+    }
+  }, [isDark, showNrcLocations]);
+
   // ── Roads toggle (Mapbox style layers) ──────────────────────────────────
   // light-v11/dark-v11 draw roads camouflaged by design: 1-8% lightness off
   // the land color, 0.45px wide at z5 (0px for minor classes). Toggling
@@ -1308,6 +1726,280 @@ export function CrisisMap({
       } catch { /* ignore */ }
     }
   }, [loaded, showRoads, isDark, baseMapType]);
+
+  // ── LogIE Blockages (roads + bridges) — smoke / future #277 ─────────────
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const SOURCE = "logie-blockages";
+    const LINE_LAYER = "logie-blockages-line";
+    const LINE_LAYER_STALE = "logie-blockages-line-stale";
+    const LINE_HIT = "logie-blockages-line-hit";
+    const POINT_LAYER = "logie-blockages-point";
+    const HOVER_LAYERS = [LINE_HIT, LINE_LAYER, LINE_LAYER_STALE, POINT_LAYER];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mb = (window as unknown as { mapboxgl?: any }).mapboxgl;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let popup: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const onMove = (e: any) => {
+      const feats = m.queryRenderedFeatures(e.point, { layers: HOVER_LAYERS }) as Array<{
+        properties?: Record<string, unknown>;
+      }>;
+      if (!feats.length) {
+        popup?.remove();
+        m.getCanvas().style.cursor = "";
+        return;
+      }
+      m.getCanvas().style.cursor = "pointer";
+      const p = feats[0]?.properties ?? {};
+      const title = escapeHtml(String(p.label || p.name || "Access constraint"));
+      const kind =
+        p.feature_type === "bridge"
+          ? "Bridge"
+          : p.feature_type === "road"
+            ? "Road"
+            : "Segment";
+      const status = escapeHtml(String(p.status ?? "—"));
+      const ageRaw = p.age_days;
+      const ageDays =
+        typeof ageRaw === "number"
+          ? ageRaw
+          : typeof ageRaw === "string" && ageRaw !== ""
+            ? Number(ageRaw)
+            : null;
+      const stale =
+        p.stale === 1 ||
+        p.stale === "1" ||
+        (typeof ageDays === "number" &&
+          !Number.isNaN(ageDays) &&
+          ageDays >= BLOCKAGES_STALE_AFTER_DAYS);
+      const freshness = (() => {
+        if (p.status_as_of) {
+          const day = String(p.status_as_of).slice(0, 10);
+          if (ageDays == null || Number.isNaN(ageDays)) return `Status as of ${day}`;
+          const ago =
+            ageDays === 0
+              ? "today"
+              : ageDays === 1
+                ? "1 day ago"
+                : `${ageDays} days ago`;
+          return `Status as of ${day} (${ago})`;
+        }
+        return "Status date unknown";
+      })();
+      const remark =
+        typeof p.status_remark === "string" && p.status_remark.trim()
+          ? escapeHtml(p.status_remark.trim().slice(0, 160))
+          : null;
+      // Colors only — chrome lives on `.mapboxgl-popup-content` (avoids white Mapbox default + nested card).
+      const titleColor = isDark ? "#f8fafc" : "#0f172a";
+      const secondary = isDark ? "#cbd5e1" : "#334155";
+      const muted = isDark ? "#94a3b8" : "#64748b";
+      const warn = isDark ? "#fbbf24" : "#b45309";
+      const partner =
+        (typeof p.source_label === "string" && p.source_label.trim()
+          ? p.source_label.trim()
+          : typeof p.source_name === "string" && p.source_name.trim()
+            ? p.source_name.trim()
+            : null);
+      const partnerEsc = partner ? escapeHtml(partner) : null;
+      const reliability =
+        typeof p.source_reliability === "string" && p.source_reliability.trim()
+          ? escapeHtml(p.source_reliability.trim())
+          : null;
+      const html = `
+        <div style="padding:10px 12px;font-family:system-ui,-apple-system,sans-serif;min-width:180px;max-width:280px;color:${titleColor};">
+          <div style="font-weight:700;font-size:13px;color:${titleColor};line-height:1.3;margin-bottom:6px;">${title}</div>
+          <div style="font-size:11px;color:${secondary};margin-bottom:4px;">
+            <span style="font-weight:600;">${kind}</span>
+            <span style="opacity:0.55;"> · </span>
+            <span>${status}</span>
+          </div>
+          <div style="font-size:10px;color:${stale ? warn : muted};font-weight:${stale ? 600 : 400};">
+            ${escapeHtml(freshness)}
+          </div>
+          ${stale ? `<div style="font-size:10px;color:${warn};margin-top:4px;line-height:1.35;">Still probable this segment is constrained, but the LogIE status is ${ageDays != null && !Number.isNaN(ageDays) ? ageDays : `${BLOCKAGES_STALE_AFTER_DAYS}+`} days old and may no longer be accurate.</div>` : ""}
+          ${remark && remark !== title ? `<div style="font-size:10px;color:${muted};margin-top:6px;line-height:1.4;">${remark}</div>` : ""}
+          <div style="font-size:10px;color:${muted};margin-top:8px;padding-top:6px;border-top:1px solid ${isDark ? "rgba(148,163,184,0.25)" : "rgba(15,23,42,0.08)"};">
+            Source: LogIE (WFP Logistics Cluster)${partnerEsc ? ` · ${partnerEsc}` : ""}
+            ${reliability ? `<div style="margin-top:2px;">Reporter confidence: ${reliability}</div>` : ""}
+          </div>
+        </div>
+      `;
+      if (!popup && mb?.Popup) {
+        popup = new mb.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          offset: 10,
+          maxWidth: "280px",
+          className: isDark
+            ? "logie-blockages-popup logie-blockages-popup--dark"
+            : "logie-blockages-popup logie-blockages-popup--light",
+        });
+      }
+      popup?.setLngLat(e.lngLat).setHTML(html).addTo(m);
+    };
+    const onLeave = () => {
+      popup?.remove();
+      m.getCanvas().style.cursor = "";
+    };
+
+    const cleanup = () => {
+      for (const id of HOVER_LAYERS) {
+        m.off("mousemove", id, onMove);
+        m.off("mouseleave", id, onLeave);
+      }
+      popup?.remove();
+      popup = null;
+      try { if (m.getLayer(LINE_LAYER)) m.removeLayer(LINE_LAYER); } catch { /* ignore */ }
+      try { if (m.getLayer(LINE_LAYER_STALE)) m.removeLayer(LINE_LAYER_STALE); } catch { /* ignore */ }
+      try { if (m.getLayer(LINE_HIT)) m.removeLayer(LINE_HIT); } catch { /* ignore */ }
+      try { if (m.getLayer(POINT_LAYER)) m.removeLayer(POINT_LAYER); } catch { /* ignore */ }
+      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
+      m.getCanvas().style.cursor = "";
+    };
+
+    cleanup();
+
+    if (!showBlockages || !blockagesGeoJson?.features?.length) return;
+
+    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+    const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
+
+    try {
+      m.addSource(SOURCE, {
+        type: "geojson",
+        data: blockagesGeoJson as never,
+      });
+
+      // Status severity (road/bridge currstatus_physical). Coerce string props from Mapbox.
+      const lineColor = [
+        "match",
+        ["to-number", ["get", "status_code"]],
+        4, "#B91C1C", // Not Passable
+        3, "#D97706", // Passable with restrictions / Damaged
+        "#DC2626", // fallback
+      ] as never;
+
+      const isLine = [
+        "in",
+        ["geometry-type"],
+        ["literal", ["LineString", "MultiLineString"]],
+      ] as never;
+      // GeoJSON props may arrive as number or string through Mapbox.
+      const isStale = [
+        "any",
+        ["==", ["get", "stale"], 1],
+        ["==", ["get", "stale"], "1"],
+      ] as never;
+      const isFresh = ["!", isStale] as never;
+
+      // Wider invisible hit target so thin roads are easy to hover.
+      m.addLayer(
+        {
+          id: LINE_HIT,
+          type: "line",
+          source: SOURCE,
+          filter: isLine,
+          paint: {
+            "line-color": "#000000",
+            "line-opacity": 0,
+            "line-width": 14,
+          },
+          layout: { "line-cap": "round", "line-join": "round" },
+        },
+        beforeId,
+      );
+
+      m.addLayer(
+        {
+          id: LINE_LAYER,
+          type: "line",
+          source: SOURCE,
+          filter: ["all", isLine, isFresh] as never,
+          paint: {
+            "line-color": lineColor,
+            "line-width": [
+              "interpolate", ["linear"], ["zoom"],
+              4, 1.5,
+              8, 3,
+              12, 5,
+            ],
+            "line-opacity": 0.9,
+          },
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+          },
+        },
+        beforeId,
+      );
+
+      // Stale (≥15d): still painted, dashed + lower opacity — do not hide.
+      m.addLayer(
+        {
+          id: LINE_LAYER_STALE,
+          type: "line",
+          source: SOURCE,
+          filter: ["all", isLine, isStale] as never,
+          paint: {
+            "line-color": lineColor,
+            "line-width": [
+              "interpolate", ["linear"], ["zoom"],
+              4, 1.25,
+              8, 2.5,
+              12, 4,
+            ],
+            "line-opacity": 0.45,
+            "line-dasharray": [1.5, 1.5],
+          },
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+          },
+        },
+        beforeId,
+      );
+
+      // Bridges (and any Point leftovers) as circles.
+      m.addLayer(
+        {
+          id: POINT_LAYER,
+          type: "circle",
+          source: SOURCE,
+          filter: ["==", ["geometry-type"], "Point"],
+          paint: {
+            "circle-radius": [
+              "interpolate", ["linear"], ["zoom"],
+              4, 3,
+              10, 6,
+            ],
+            "circle-color": lineColor,
+            "circle-opacity": [
+              "case",
+              isStale,
+              0.5,
+              0.95,
+            ],
+            "circle-stroke-width": 1.5,
+            "circle-stroke-color": isDark ? "#0f172a" : "#ffffff",
+          },
+        },
+        beforeId,
+      );
+
+      for (const id of HOVER_LAYERS) {
+        m.on("mousemove", id, onMove);
+        m.on("mouseleave", id, onLeave);
+      }
+    } catch {
+      /* style may be mid-swap */
+    }
+
+    return cleanup;
+  }, [loaded, showBlockages, blockagesGeoJson, isDark]);
 
   // ── Population choropleth (A2 districts, independent layer) ─────────────
   useEffect(() => {
@@ -1565,6 +2257,116 @@ export function CrisisMap({
     };
   }, [regions, loaded]);
 
+  // Sidebar collapse / flex layout changes grow the container without a window
+  // resize — Mapbox keeps the old canvas width unless we call resize().
+  // Debounce past the nav width transition (200ms) so we don't resize every
+  // animation frame (that blanks satellite tiles mid-reflow).
+  useEffect(() => {
+    if (!loaded || !mapContainer.current || !map.current) return;
+    const el = mapContainer.current;
+    let timer = 0;
+    const ro = new ResizeObserver(() => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = 0;
+        try {
+          map.current?.resize();
+          onMapMoveRef.current?.();
+        } catch {
+          /* ignore */
+        }
+      }, 220);
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [loaded]);
+
+  // Expose project helpers for overlays (spaghetti connectors on /map).
+  useEffect(() => {
+    if (!mapApiRef) return;
+    if (!loaded) {
+      mapApiRef.current = null;
+      return;
+    }
+    mapApiRef.current = {
+      projectMarker: (id, lng, lat) => {
+        const m = map.current;
+        if (!m) return null;
+        const mounted = clusterDomMarkers.current.get(`p-${id}`);
+        if (mounted?.getLngLat) {
+          const ll = mounted.getLngLat() as { lng: number; lat: number };
+          const p = m.project([ll.lng, ll.lat]) as { x: number; y: number };
+          return { x: p.x, y: p.y };
+        }
+        const display = displayLngLatRef.current.get(id);
+        const coords = display ?? ([lng, lat] as [number, number]);
+        if (!Number.isFinite(coords[0]) || !Number.isFinite(coords[1])) return null;
+        const p = m.project(coords) as { x: number; y: number };
+        return { x: p.x, y: p.y };
+      },
+      samplePointAltitude: (lng, lat) => samplePointAltitude(map.current, lng, lat),
+      getViewCamera: () => {
+        const m = map.current;
+        if (!m) return null;
+        const c = m.getCenter();
+        return {
+          center: [c.lng, c.lat],
+          zoom: m.getZoom(),
+          pitch: m.getPitch?.() ?? 0,
+          bearing: m.getBearing?.() ?? 0,
+        };
+      },
+      restoreViewCamera: (camera) => {
+        const m = map.current;
+        if (!m) return;
+        try {
+          m.jumpTo({
+            center: camera.center,
+            zoom: camera.zoom,
+            pitch: camera.pitch,
+            bearing: camera.bearing,
+          });
+        } catch {
+          /* ignore */
+        }
+      },
+    };
+    return () => {
+      mapApiRef.current = null;
+    };
+  }, [loaded, mapApiRef]);
+
+  // Location-correction pick: map click + crosshair; pins don't steal the click.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !loaded) return;
+    const onClick = (e: { lngLat: { lng: number; lat: number } }) => {
+      if (!locationPickActiveRef.current) return;
+      onMapClickRef.current?.({ lng: e.lngLat.lng, lat: e.lngLat.lat });
+    };
+    m.on("click", onClick);
+    return () => {
+      try { m.off("click", onClick); } catch { /* ignore */ }
+    };
+  }, [loaded]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !loaded) return;
+    try {
+      m.getCanvas().style.cursor = locationPickActive ? "crosshair" : "";
+    } catch { /* ignore */ }
+    for (const mk of clusterDomMarkers.current.values()) {
+      try {
+        const el = (mk as MapboxGLAny).getElement?.() as HTMLElement | undefined;
+        if (el) el.style.pointerEvents = locationPickActive ? "none" : "auto";
+      } catch { /* ignore */ }
+    }
+  }, [locationPickActive, loaded, markers]);
+
   if (!MAPBOX_TOKEN) {
     return (
       <div
@@ -1594,16 +2396,167 @@ export function CrisisMap({
           animation: marker-dot-pulse 1.1s ease-in-out infinite;
           z-index: 10 !important;
         }
+        /* Keep GL clear transparent so container basemap color shows if frames drop */
+        .mapboxgl-canvas { background: transparent !important; }
+        /* Topography: hide grab hand only while the probe is over terrain.
+           Over pitched sky we restore the system cursor so filters/menus
+           stay easy to reach. Inline cursor:pointer from markers/blockages
+           still overrides when set. */
+        .topography-altitude-probe-active .mapboxgl-canvas-container.mapboxgl-interactive,
+        .topography-altitude-probe-active .mapboxgl-canvas {
+          cursor: none;
+        }
+        [data-testid="point-altitude-probe"] {
+          transition: opacity 140ms ease;
+        }
       `}</style>
-      <div 
-        ref={mapContainer} 
+      <div
+        ref={mapShellRef}
         className={className}
-        style={{ 
-          width: '100%',
-          height: '100%',
-          background: isDark ? '#111111' : '#FAFAFA',
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          // Match basemap lightness so a brief WebGL clear never flashes
+          // light chrome under dark satellite imagery.
+          background:
+            baseMapType === "satellite"
+              ? "#0a0a0a"
+              : isDark
+                ? "#111111"
+                : "#FAFAFA",
+          // Promote canvas without `isolation: isolate` — isolation blocks
+          // sidebar/panel backdrop-filter from sampling Mapbox WebGL.
+          transform: "translateZ(0)",
         }}
-      />
+      >
+        <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
+        {showTiltHint && (
+          <div
+            role="status"
+            data-testid="topography-tilt-hint"
+            style={{
+              // Above map chrome siblings (filters/panel bar are z-20 on /map).
+              position: "absolute",
+              top: "max(72px, 12%)",
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 40,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "stretch",
+              gap: 8,
+              maxWidth: "min(400px, calc(100% - 24px))",
+              padding: "12px 14px",
+              borderRadius: 12,
+              border: "1px solid var(--color-border-dark)",
+              background: isDark
+                ? "rgba(17, 17, 17, 0.88)"
+                : "rgba(250, 250, 250, 0.92)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              color: "var(--color-text-primary)",
+              fontSize: 13,
+              fontWeight: 500,
+              lineHeight: 1.4,
+              boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
+              pointerEvents: "auto",
+            }}
+          >
+            <span style={{ minWidth: 0 }}>{t("tiltHint.message")}</span>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={onDismissTiltHint}
+                aria-label={t("tiltHint.dismiss")}
+                style={{
+                  border: "1px solid var(--color-border-dark)",
+                  background: "transparent",
+                  color: "var(--color-text-muted)",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                }}
+              >
+                {t("tiltHint.dismiss")}
+              </button>
+              <button
+                type="button"
+                onClick={onTiltFromHint}
+                data-testid="topography-tilt-hint-action"
+                style={{
+                  border: "none",
+                  background: "var(--color-accent)",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                }}
+              >
+                {t("tiltHint.tilt")}
+              </button>
+            </div>
+          </div>
+        )}
+        {showAltitudeProbe && (
+          <div
+            ref={altitudeProbeElRef}
+            role="status"
+            data-testid="point-altitude-probe"
+            aria-hidden
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              zIndex: 25,
+              // Anchor the orange dot on the ground point; label hangs below.
+              transform: "translate(-50%, -50%)",
+              width: 8,
+              height: 8,
+              opacity: 0,
+              pointerEvents: "none",
+              userSelect: "none",
+              transition: "opacity 140ms ease",
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                display: "block",
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#EA580C",
+                boxShadow:
+                  "0 0 0 2px rgba(255,255,255,0.9), 0 1px 4px rgba(0,0,0,0.35)",
+              }}
+            />
+            <span
+              ref={altitudeProbeLabelRef}
+              style={{
+                position: "absolute",
+                top: 12,
+                left: "50%",
+                transform: "translateX(-50%)",
+                padding: "1px 5px",
+                borderRadius: 4,
+                fontSize: 11,
+                fontWeight: 700,
+                fontVariantNumeric: "tabular-nums",
+                letterSpacing: "0.01em",
+                color: "#fff",
+                background: "rgba(0,0,0,0.55)",
+                textShadow: "0 1px 2px rgba(0,0,0,0.45)",
+                whiteSpace: "nowrap",
+              }}
+            />
+          </div>
+        )}
+      </div>
     </>
   );
 }

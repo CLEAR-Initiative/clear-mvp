@@ -1,15 +1,18 @@
 "use client";
 
-import { useCallback, useState, type ElementType, type ReactNode } from "react";
+import { useState, type ElementType, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
   Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl, Loader,
 } from "@mantine/core";
-import { useClickOutside } from "@mantine/hooks";
 import { IconFilter, IconLayersLinked, IconList } from "@tabler/icons-react";
 import type { DataView } from "./map-layers-panel";
 import type { BoundaryLevel } from "./map-settings-popover";
 import type { BaseMapType } from "~/components/map/crisis-map";
+import {
+  SUDAN_NRC_OFFICE_COLORS,
+  SUDAN_NRC_OFFICE_TYPE_ORDER,
+} from "~/lib/data/sudan-nrc-offices";
 export type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 
 type PanelId = "layers" | "legend" | "filters";
@@ -56,6 +59,16 @@ interface MapPanelBarProps {
   onBoundaryLevelChange: (v: BoundaryLevel) => void;
   showRoads?: boolean;
   onShowRoadsChange?: (v: boolean) => void;
+  showNrcLocations?: boolean;
+  onShowNrcLocationsChange?: (v: boolean) => void;
+  /**
+   * When set, Blockages is a live toggle (dev smoke / future #277).
+   * When omitted, Blockages stays a Coming-soon stub.
+   */
+  showBlockages?: boolean;
+  onShowBlockagesChange?: (v: boolean) => void;
+  blockagesHint?: string;
+  blockagesLoading?: boolean;
   baseMapType?: BaseMapType;
   onBaseMapTypeChange?: (v: BaseMapType) => void;
   /** Desktop: accumulate marker detail panels instead of replacing. */
@@ -73,14 +86,15 @@ const noop = () => {
 };
 
 function IconBtn({
-  icon: Icon, active, title, onClick, testId,
+  icon: Icon, active, title, onClick, testId, tourId,
 }: {
-  icon: ElementType; active: boolean; title: string; onClick: () => void; testId?: string;
+  icon: ElementType; active: boolean; title: string; onClick: () => void; testId?: string; tourId?: string;
 }) {
   return (
     <button
       title={title}
       data-testid={testId}
+      data-tour={tourId}
       onClick={onClick}
       style={{
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -112,7 +126,9 @@ function PanelHeader({ children }: { children: string }) {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em", opacity: 0.7 }} mb={6}>
+    // Opacity lives in the muted token; avoid a second dim pass that fights
+    // map frost high-contrast remap (GH #145).
+    <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em" }} mb={6}>
       {children}
     </Text>
   );
@@ -184,44 +200,33 @@ export function MapPanelBar({
   populationLoading = false,
   boundaryLevel, onBoundaryLevelChange,
   showRoads = true, onShowRoadsChange = noop,
+  showNrcLocations = false, onShowNrcLocationsChange = noop,
+  showBlockages,
+  onShowBlockagesChange = noop,
+  blockagesHint,
+  blockagesLoading = false,
   baseMapType = "simple", onBaseMapTypeChange = noop,
   keepPanelsOpen = false, onKeepPanelsOpenChange = noop,
   filters,
 }: MapPanelBarProps) {
+  const blockagesEnabled = showBlockages !== undefined;
   const t = useTranslations("map");
   const [active, setActive] = useState<PanelId | null>(null);
+  // Toggle-only: map pan/zoom/click must not dismiss — analysts keep the card
+  // open while navigating. Close by clicking the active icon again (or another).
   const toggle = (id: PanelId) => setActive((prev) => (prev === id ? null : id));
-  // Dismiss layers / legend / filters when tapping the map — but ignore
-  // Mantine Select/Popover portals (they render outside this panel; closing
-  // on those taps prevented country/region picks on mobile).
-  const dismissIfOutside = useCallback((event: Event) => {
-    const target = event.target;
-    if (
-      target instanceof Element &&
-      target.closest(
-        [
-          ".mantine-Select-dropdown",
-          ".mantine-Combobox-dropdown",
-          ".mantine-Popover-dropdown",
-          ".mantine-Menu-dropdown",
-          "[data-combobox-dropdown]",
-        ].join(", "),
-      )
-    ) {
-      return;
-    }
-    setActive(null);
-  }, []);
-  const panelRef = useClickOutside<HTMLDivElement>(dismissIfOutside);
 
   return (
     // Mobile: clear the status/safe area + floating burger. Desktop: below the filter bar.
-    <Box ref={panelRef} className="absolute z-20 top-14 left-4 sm:top-20">
+    <Box
+      data-map-chrome-left
+      className="absolute z-20 top-14 left-4 sm:top-20"
+    >
       <Group gap={4} align="flex-start" wrap="nowrap">
 
         {/* Icon column — Filters is mobile-only (third button under Legend) */}
         <Stack gap={4}>
-          <IconBtn icon={IconLayersLinked} active={active === "layers"} title={t("panels.layers")} onClick={() => toggle("layers")} testId="map-layers-toggle" />
+          <IconBtn icon={IconLayersLinked} active={active === "layers"} title={t("panels.layers")} onClick={() => toggle("layers")} testId="map-layers-toggle" tourId="map-layers" />
           <IconBtn icon={IconList}         active={active === "legend"} title={t("panels.legend")} onClick={() => toggle("legend")} />
           {filters != null && (
             <Box hiddenFrom="sm">
@@ -230,6 +235,7 @@ export function MapPanelBar({
                 active={active === "filters"}
                 title={t("panels.filters")}
                 onClick={() => toggle("filters")}
+                tourId="map-filters"
               />
             </Box>
           )}
@@ -239,11 +245,16 @@ export function MapPanelBar({
         {active && (
           <Box
             className="flex flex-col max-h-[min(52vh,calc(100dvh-160px))] sm:max-h-[min(72vh,calc(100vh-120px))]"
+            data-tour={active === "layers" ? "map-layers-panel" : undefined}
             style={{
               width: 260,
               maxWidth: "calc(100vw - 72px)",
-              background: "var(--color-bg-muted)",
-              border: "1px solid var(--color-border-dark)",
+              // Frost: translucent fill + blur. Keep map container free of
+              // `isolation: isolate` so Chromium can sample the WebGL canvas.
+              background: "color-mix(in srgb, var(--color-bg-muted) 42%, transparent)",
+              backdropFilter: "blur(16px) saturate(1.2)",
+              WebkitBackdropFilter: "blur(16px) saturate(1.2)",
+              border: "1px solid color-mix(in srgb, var(--color-border-dark) 55%, transparent)",
               boxShadow: "var(--shadow-md)",
             }}
           >
@@ -310,10 +321,40 @@ export function MapPanelBar({
 
                   <Divider color="var(--color-bg-muted)" my={10} />
 
-                  {/* Future operational aggregations — stubs only */}
+                  {/* Operational: Blockages live when enabled; NRC locations always toggleable */}
                   <SectionLabel>{t("panels.operational")}</SectionLabel>
-                  <LayerStubRow label={t("panels.blockages")} hint={t("panels.comingSoon")} />
-                  <LayerStubRow label={t("panels.nrcLocations")} hint={t("panels.comingSoon")} />
+                  {blockagesEnabled ? (
+                    <LayerCheckRow
+                      label={t("panels.blockages")}
+                      checked={showBlockages}
+                      onChange={onShowBlockagesChange}
+                      trailing={
+                        blockagesLoading ? (
+                          <Loader size={12} />
+                        ) : blockagesHint ? (
+                          <Text size="10px" c="var(--color-text-muted)" style={{ maxWidth: 120 }} truncate>
+                            {blockagesHint}
+                          </Text>
+                        ) : undefined
+                      }
+                    />
+                  ) : (
+                    <LayerStubRow label={t("panels.blockages")} hint={t("panels.comingSoon")} />
+                  )}
+                  <LayerCheckRow
+                    label={t("panels.nrcLocations")}
+                    checked={showNrcLocations}
+                    onChange={onShowNrcLocationsChange}
+                  />
+                  {showNrcLocations && (
+                    <Text
+                      size="xs"
+                      c="var(--color-text-muted)"
+                      style={{ fontSize: 10, lineHeight: 1.35, marginTop: 2, marginBottom: 2 }}
+                    >
+                      {t("nrcOffices.centroidDisclaimer")}
+                    </Text>
+                  )}
 
                   {/* Interaction preference — not cartography (desktop only) */}
                   <Box visibleFrom="sm">
@@ -380,6 +421,110 @@ export function MapPanelBar({
                           </Text>
                         ))}
                       </Box>
+                    </>
+                  )}
+
+                  {showNrcLocations && (
+                    <>
+                      <Divider color="var(--color-bg-muted)" my={4} />
+                      <SectionLabel>{t("panels.nrcLocations")}</SectionLabel>
+                      {SUDAN_NRC_OFFICE_TYPE_ORDER.map((key) => (
+                        <Group key={key} gap={8} wrap="nowrap">
+                          <Box
+                            w={14}
+                            h={14}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Box
+                              w={10}
+                              h={10}
+                              style={{
+                                backgroundColor: SUDAN_NRC_OFFICE_COLORS[key],
+                                transform: "rotate(45deg)",
+                                borderRadius: 1,
+                                border: "1px solid var(--color-bg-muted)",
+                              }}
+                            />
+                          </Box>
+                          <Text size="xs" style={{ fontSize: 11 }}>
+                            {t(`nrcOffices.types.${key}`)}
+                          </Text>
+                        </Group>
+                      ))}
+                      <Text
+                        size="xs"
+                        c="var(--color-text-muted)"
+                        mt={6}
+                        style={{ fontSize: 10, lineHeight: 1.35 }}
+                      >
+                        {t("nrcOffices.centroidDisclaimer")}
+                      </Text>
+                    </>
+                  )}
+
+                  {showBlockages !== undefined && showBlockages && (
+                    <>
+                      <Divider color="var(--color-bg-muted)" my={4} />
+                      <Group justify="space-between" align="flex-start" gap={8} wrap="nowrap">
+                        <Box style={{ flex: 1, minWidth: 0 }}>
+                          <SectionLabel>{t("panels.blockages")}</SectionLabel>
+                          <Stack gap={4}>
+                            <Group gap={8} wrap="nowrap">
+                              <Box
+                                w={18}
+                                h={3}
+                                style={{ backgroundColor: "#B91C1C", borderRadius: 1, flexShrink: 0 }}
+                              />
+                              <Text size="xs" style={{ fontSize: 11 }}>{t("panels.blockagesCurrent")}</Text>
+                            </Group>
+                            <Group gap={8} wrap="nowrap">
+                              <Box
+                                w={18}
+                                h={0}
+                                style={{
+                                  borderTop: "2px dashed #B91C1C",
+                                  opacity: 0.55,
+                                  flexShrink: 0,
+                                  alignSelf: "center",
+                                }}
+                              />
+                              <Text size="xs" style={{ fontSize: 11 }}>{t("panels.blockagesStale")}</Text>
+                            </Group>
+                          </Stack>
+                        </Box>
+                        <Stack gap={4} style={{ flexShrink: 0, paddingTop: 14 }} title={t("panels.blockagesStatus")}>
+                          <Group gap={4} wrap="nowrap" justify="flex-end">
+                            <Box
+                              w={14}
+                              h={2}
+                              style={{ backgroundColor: "#B91C1C", borderRadius: 1 }}
+                              title={t("panels.blockagesNotPassable")}
+                            />
+                            <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 9 }}>
+                              {t("panels.blockagesNotPassable")}
+                            </Text>
+                          </Group>
+                          <Group gap={4} wrap="nowrap" justify="flex-end">
+                            <Box
+                              w={14}
+                              h={2}
+                              style={{ backgroundColor: "#D97706", borderRadius: 1 }}
+                              title={t("panels.blockagesRestricted")}
+                            />
+                            <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 9 }}>
+                              {t("panels.blockagesRestricted")}
+                            </Text>
+                          </Group>
+                        </Stack>
+                      </Group>
+                      <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 10, lineHeight: 1.35 }} mt={4}>
+                        {t("panels.blockagesStaleNote")}
+                      </Text>
                     </>
                   )}
 

@@ -25,6 +25,9 @@ public/workbox-*.js
 /docs/agents/
 .exponential/
 
+# LogIE spike pull artifacts (regenerate with `bun run logie:spike`)
+scripts/logie/out/
+
 # Playwright E2E artifacts
 /e2e/.auth/
 /test-results/

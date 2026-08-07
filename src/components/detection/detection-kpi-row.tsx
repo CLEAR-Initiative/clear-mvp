@@ -1,14 +1,31 @@
 "use client";
 
-import { useState } from "react";
-import { Box, Text, Group, Collapse, ActionIcon } from "@mantine/core";
+import { useState, type CSSProperties } from "react";
+import dynamic from "next/dynamic";
+import { Box, Text, Group, Collapse, ActionIcon, Loader } from "@mantine/core";
 import { IconChevronUp, IconChevronDown } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import type { GqlAlert, GqlEvent } from "~/lib/types/graphql";
-import { SignalTrendCard }      from "./signal-trend-card";
-import { CoverageRingsCard }    from "./coverage-rings-card";
-import { IdpCard }              from "./idp-card";
-import { InformSeverityCard }   from "./inform-severity-card";
+import { CoverageRingsCard } from "./coverage-rings-card";
+import { InformSeverityCard } from "./inform-severity-card";
+
+const SignalTrendCard = dynamic(
+  () => import("./signal-trend-card").then((m) => m.SignalTrendCard),
+  { ssr: false, loading: () => <ChartCardFallback /> },
+);
+
+const IdpCard = dynamic(
+  () => import("./idp-card").then((m) => m.IdpCard),
+  { ssr: false, loading: () => <ChartCardFallback /> },
+);
+
+function ChartCardFallback() {
+  return (
+    <Box style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 120 }}>
+      <Loader size="sm" />
+    </Box>
+  );
+}
 
 // ISO3 lookup -- extend as more countries are added
 const ISO3: Record<string, string> = {
@@ -22,7 +39,7 @@ const ISO3: Record<string, string> = {
   Myanmar:       "MMR",
 };
 
-const CARD: React.CSSProperties = {
+const CARD: CSSProperties = {
   background: "#ffffff",
   border: "1px solid #E5E5E5",
   borderRadius: 12,

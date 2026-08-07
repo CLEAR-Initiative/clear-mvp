@@ -6,10 +6,6 @@
       "tabs": {
         "crisis": "Vue d'ensemble de la crise",
         "situation": "Analyse de situation"
-      },
-      "situationPlaceholder": {
-        "title": "Analyse de situation",
-        "description": "Rapports de situation générés par IA bientôt disponibles."
       }
     },
     "reports": {
@@ -214,6 +210,105 @@
         "transport": "Les perturbations des axes de transport retardent les chaînes d'approvisionnement humanitaire de 48 à 72 heures",
         "mentalHealth": "Impacts sur la santé mentale signalés dans 60 % des ménages déplacés",
         "agriculture": "La perturbation de la saison agricole menace la prochaine récolte dans 4 woredas"
+      }
+    },
+    "situation": {
+      "country": "Pays",
+      "error": "Impossible de charger l'analyse de situation. Veuillez réessayer.",
+      "tabs": {
+        "overview": "Vue d'ensemble",
+        "sectors": "Secteurs",
+        "sources": "Sources"
+      },
+      "empty": {
+        "title": "Aucune analyse de situation",
+        "description": "Aucun instantané n'a encore été généré pour {country}. Les analyses sont régénérées chaque semaine."
+      },
+      "meta": {
+        "generated": "Généré le {date} par {model} · {reports} rapports"
+      },
+      "summary": {
+        "title": "Résumé de situation par IA"
+      },
+      "stats": {
+        "displaced": "Personnes déplacées",
+        "affected": "Personnes affectées",
+        "inNeed": "Personnes dans le besoin",
+        "returnees": "Retournés",
+        "fundingRequired": "Financement requis",
+        "fundingReceived": "Financement reçu"
+      },
+      "sections": {
+        "contextRisks": "Risques contextuels",
+        "hazards": "Aléas et vulnérabilités pré-crise",
+        "displacement": "Déplacement"
+      },
+      "hazards": {
+        "current": "Aléas actuels",
+        "precrisis": "Vulnérabilités pré-crise"
+      },
+      "displacement": {
+        "push": "Facteurs de départ",
+        "return": "Intentions de retour"
+      },
+      "sectors": {
+        "listTitle": "Secteurs",
+        "listSubtitle": "{count} secteurs · sélectionner pour voir l'analyse complète",
+        "notAssessed": "Non évalué",
+        "detailMeta": "{needs} besoins · {interventions} interventions",
+        "noAnalysis": "Aucune analyse disponible pour ce secteur.",
+        "impact": "Impact",
+        "humanitarian": "Conditions humanitaires",
+        "atRisk": "Populations à risque",
+        "needs": "Besoins prioritaires",
+        "interventions": "Interventions prioritaires",
+        "coverage": "Couverture de l'information",
+        "coverageScore": "{score}/10 · {reports} rapports",
+        "empty": "Aucun secteur analysé.",
+        "snapshot": "En bref",
+        "topNeed": "Besoin prioritaire",
+        "mostVulnerable": "Plus vulnérables",
+        "evidence": "Preuves",
+        "evidenceCount": "{reports, plural, one {# rapport} other {# rapports}}",
+        "inferred": "Inféré",
+        "inferredWarning": "Cette évaluation provient de sources hors secteur (recherche de repli) ; l'analyse ci-dessous est une inférence, pas un rapport sectoriel."
+      },
+      "sources": {
+        "visit": "Consulter la source",
+        "published": "Publié le {date}",
+        "empty": "Aucune source enregistrée pour cet instantané.",
+        "count": "{count} références"
+      },
+      "kpi": {
+        "informSeverity": "Sévérité INFORM",
+        "evidenceBase": "D'après la dernière analyse · {reports} rapports",
+        "freshest": "plus récent {date}",
+        "info": {
+          "informSeverity": "Indice de sévérité INFORM (0-10) d'ACAPS, mis à jour chaque mois. Mesure composite de la sévérité, indépendante du pipeline d'analyse.",
+          "displaced": "Personnes déplacées internes (PDI). Agrégé à partir des rapports sources (champ : population_displaced).",
+          "inNeed": "Personnes dans le besoin. Agrégé à partir des rapports sources (champ : population_in_need).",
+          "affected": "Personnes affectées par la crise - un cercle plus large que les personnes dans le besoin (champ : population_affected).",
+          "fundingRequired": "Financement requis pour les appels, en USD (champ : funding_required_usd).",
+          "returnees": "Personnes retournées. Agrégé à partir des rapports sources (champ : returnees).",
+          "fundingReceived": "Financement reçu pour les appels, en USD (champ : funding_received_usd)."
+        }
+      },
+      "citations": {
+        "label": "Sources",
+        "report": "Rapport {n}"
+      },
+      "changed": {
+        "label": "Ce qui a changé depuis {period}",
+        "compareTo": "Comparer à",
+        "noPrior": "Aucun instantané n'existait {period}. Cette vue se remplit à mesure que les analyses hebdomadaires s'accumulent.",
+        "noChange": "Aucun chiffre suivi n'a changé sur cette période.",
+        "numbersOnly": "Chiffres uniquement. Un récit des changements arrivera avec le pipeline.",
+        "periods": {
+          "1m": "il y a 1 mois",
+          "3m": "il y a 3 mois",
+          "yearStart": "début de l'année",
+          "1w": "il y a 1 semaine"
+        }
       }
     }
   },
@@ -1337,7 +1432,8 @@
       "alerts": "Alertes",
       "events": "Événements",
       "signals": "Signaux",
-      "history": "Historique"
+      "history": "Historique",
+      "ground": "Renseignement terrain"
     },
     "actions": {
       "createSignal": "Créer un signal"
@@ -1574,6 +1670,81 @@
       },
       "submit": "Créer l'alerte"
     },
+    "groundIntel": {
+      "title": "Revue du renseignement terrain",
+      "count": "{count, plural, one {# message en attente} other {# messages en attente}}",
+      "privateTier": "Niveau privé — revue interne uniquement",
+      "classifications": {
+        "field_report": "Rapport de terrain",
+        "news_digest": "Revue de presse",
+        "operational": "Opérationnel",
+        "chatter": "Discussion",
+        "unclassified": "Non classé"
+      },
+      "sources": {
+        "all": "Toutes les sources"
+      },
+      "sourceKinds": {
+        "staff_group": "Groupe du personnel",
+        "partner_group": "Groupe partenaire",
+        "hotline": "Ligne d'assistance"
+      },
+      "columns": {
+        "sent": "Envoyé",
+        "sender": "Expéditeur",
+        "source": "Source",
+        "classification": "Classification",
+        "message": "Message",
+        "media": "Médias",
+        "thread": "Fil"
+      },
+      "lifecycle": {
+        "reported": "Signalé",
+        "updated": "Mis à jour",
+        "confirmed": "Confirmé",
+        "corrected": "Corrigé",
+        "retracted": "Rétracté"
+      },
+      "reviewStates": {
+        "unverified": "Non vérifié",
+        "approved_private": "Approuvé (privé)",
+        "approved_public": "Approuvé (public)",
+        "rejected": "Rejeté"
+      },
+      "thread": {
+        "untitled": "Fil sans titre",
+        "notFound": "Fil introuvable",
+        "reviewNote": "Note de revue"
+      },
+      "review": {
+        "approvePrivate": "Approuver (privé)",
+        "approvePublic": "Approuver (public)",
+        "reject": "Rejeter",
+        "confirmPublish": "La publication est définitive — ce fil est promu et devient un signal dans le graphe des signaux.",
+        "confirm": "Confirmer la publication",
+        "cancel": "Annuler",
+        "finalNotice": "Approuvé public — ce fil est devenu un signal dans le graphe des signaux.",
+        "viewSignal": "Voir le signal promu",
+        "help": {
+          "approvePrivate": {
+            "title": "Vérifié, mais reste en interne.",
+            "body": "Le fil est marqué comme examiné et jugé crédible, mais il reste dans le niveau de préparation terrain : visible uniquement dans cet onglet Renseignement terrain, et uniquement pour les admins et les analystes. Aucun signal n'est créé — rien n'apparaît sur la carte ni dans les événements et alertes, et rien n'est exposé via l'API. C'est l'état prévu pour un contenu vrai mais sensible sur le plan opérationnel — déplacements du personnel, ou attribution qui pourrait mettre en danger la personne à l'origine du signalement. Il pourra encore être promu en public plus tard si les circonstances changent."
+          },
+          "approvePublic": {
+            "title": "Vérifié — diffusé dans CLEAR.",
+            "body": "C'est une promotion : le fil devient un vrai signal dans le graphe à cinq niveaux de CLEAR — source « whatsapp », visible dans les vues Signaux et Historique ainsi que sur la carte, éligible au regroupement en événements et à tout ce qui en découle — avec toute identité d'expéditeur structurellement supprimée : la charge utile de promotion ne contient aucun champ d'expéditeur, le nom de l'expéditeur ne peut donc physiquement pas l'accompagner. Cette action est définitive — une fois la promotion effectuée, le signal existe dans le graphe et le fil ne peut pas être dé-promu ; le serveur refuse toute modification ultérieure."
+          },
+          "reject": {
+            "title": "Non exploitable.",
+            "body": "Met le fil de côté. Contrairement à l'approbation publique, le rejet est réversible si quelqu'un change d'avis."
+          }
+        }
+      },
+      "empty": "Aucun message terrain en attente",
+      "noMatch": "Aucun message ne correspond au filtre actuel",
+      "noText": "Média sans légende",
+      "edited": "modifié"
+    },
     "dataSources": {
       "title": "Sources de données connectées",
       "subtitle": "{count, plural, one {# source alimente} other {# sources alimentent}} le moteur de détection",
@@ -1767,9 +1938,32 @@
       "operational": "Opérationnel",
       "comingSoon": "Bientôt disponible",
       "blockages": "Blocages",
+      "blockagesCurrent": "Plein · < 15 j",
+      "blockagesStale": "Pointillé · ≥ 15 j",
+      "blockagesStaleNote": "Survolez pour la date exacte. Le pointillé peut encore être contraint.",
+      "blockagesStatus": "Couleur du statut",
+      "blockagesNotPassable": "Non praticable",
+      "blockagesRestricted": "Restreint",
+      "blockagesFreshness": "Fraîcheur",
       "idpDensity": "Densité IDP",
       "nrcLocations": "Sites NRC",
       "filters": "Filtres"
+    },
+    "nrcOffices": {
+      "centroidDisclaimer": "Les points sont des centroïdes de ville/localité issus du rapport annuel NRC Soudan 2025 — pas des adresses vérifiées.",
+      "types": {
+        "country_office": "Bureau pays",
+        "area_office": "Bureau de zone",
+        "field_office": "Bureau de terrain",
+        "planned_or_expansion": "Expansion / prévu",
+        "former_country_office": "Ancien bureau pays"
+      },
+      "statuses": {
+        "active": "Actif",
+        "hibernating_remote": "En hibernation / à distance",
+        "expansion": "Expansion",
+        "relocated": "Relocalisé"
+      }
     },
     "baseMaps": {
       "simple": "Simple",
@@ -1810,6 +2004,7 @@
       "dataSource": "Source de données",
       "shockDate": "Date du choc",
       "coordinates": "Coordonnées",
+      "copied": "Copié",
       "viewDetails": "Voir les détails"
     },
     "minimap": {
@@ -1818,9 +2013,23 @@
     },
     "timeline": {
       "title": "Chronologie",
-      "allTime": "Toute la période"
+      "allTime": "Toute la période",
+      "clearFocus": "Effacer le focus et afficher tous les marqueurs",
+      "focusFallbackEvent": "Événement ciblé",
+      "focusFallbackSignal": "Signal ciblé",
+      "focusFallbackCrisis": "Crise ciblée"
     },
-    "tokenMissing": "Jeton Mapbox non configuré. Définissez NEXT_PUBLIC_MAPBOX_TOKEN dans .env"
+    "tokenMissing": "Jeton Mapbox non configuré. Définissez NEXT_PUBLIC_MAPBOX_TOKEN dans .env",
+    "tiltHint": {
+      "message": "Le relief est en 3D — cliquez Incliner, ou Ctrl+glisser (clic droit) / deux doigts sur tactile",
+      "tilt": "Incliner",
+      "dismiss": "Plus tard"
+    },
+    "pointAltitude": {
+      "label": "Altitude",
+      "qualifier": "approx. · MNT",
+      "unavailable": "—"
+    }
   },
   "nav": {
     "sections": {
@@ -1921,6 +2130,61 @@
   "onboarding": {
     "title": "Bienvenue sur CLEAR",
     "subtitle": "Configurons votre organisation, votre équipe et vos zones de surveillance.",
+    "welcome": {
+      "profile": {
+        "title": "Configurez votre profil",
+        "subtitle": "Présentez-vous à votre équipe avant d'explorer CLEAR.",
+        "name": "Nom complet",
+        "phone": "Numéro de mobile",
+        "phonePlaceholder": "912 345 678",
+        "phoneOptional": "Facultatif — vous pourrez l'ajouter plus tard dans les paramètres.",
+        "appearance": "Apparence",
+        "continue": "Continuer"
+      },
+      "settings": {
+        "title": "Paramètres rapides",
+        "subtitle": "Confirmez votre langue et fuseau horaire. Modifiables à tout moment.",
+        "team": "Équipe active",
+        "continue": "Continuer vers la visite"
+      }
+    },
+    "tour": {
+      "back": "Retour",
+      "next": "Suivant",
+      "finish": "Terminer",
+      "finishTour": "Terminer la visite",
+      "skipTour": "Passer la visite",
+      "exitTour": "Quitter la visite",
+      "replay": "Revoir la visite",
+      "steps": {
+        "detectionAlerts": {
+          "title": "Les alertes d’abord",
+          "body": "Cet onglet liste les alertes publiées — ce sur quoi votre équipe agit. Commencez ici dans Détection."
+        },
+        "detectionEvents": {
+          "title": "Les événements sont les incidents",
+          "body": "Un événement regroupe un ou plusieurs signaux en un incident. Quand il compte, élevez-le en alerte."
+        },
+        "mapLayers": {
+          "title": "Façonnez la carte",
+          "body": "Utilisez Couches pour les contrôles actifs : vue de données, fond (Simple, Topographie ou Satellite), routes et limites."
+        },
+        "mapCanvas": {
+          "title": "Déplacez-vous et ouvrez un marqueur",
+          "body": "Faites glisser pour parcourir la carte. Cliquez une épingle ou un cluster pour ouvrir sa fiche — essayez celle ouverte pour vous."
+        }
+      },
+      "widgets": {
+        "activeSignals": "Signaux actifs",
+        "signalLegend": "Légende des signaux",
+        "highConfidence": "Haute confiance (90 %+)",
+        "highConfidenceHint": "Variance minimale détectée",
+        "mediumConfidence": "Confiance moyenne (60–89 %)",
+        "mediumConfidenceHint": "Incertitude modérée du signal",
+        "impactZone": "Zone d'impact",
+        "impactZoneHint": "Périmètre affecté"
+      }
+    },
     "steps": {
       "org": {
         "label": "Organisation",
@@ -2375,6 +2639,54 @@
       "previous": "Signal précédent",
       "next": "Signal suivant",
       "position": "Signal {current} sur {total}"
+    }
+  },
+  "locationChallenge": {
+    "actions": {
+      "challengeLocation": "Contester l’emplacement",
+      "updateChallenge": "Mettre à jour la contestation",
+      "challengeOnMap": "Contester l’emplacement",
+      "updateOnMap": "Déplacer l’épingle corrigée",
+      "showSignalsLayer": "Afficher la couche Signaux"
+    },
+    "mapPick": {
+      "hint": "Touchez la carte pour placer l’épingle corrigée.",
+      "placed": "Épingle corrigée : {coords}",
+      "reposition": "Déplacer",
+      "confirm": "Confirmer",
+      "signalLayerHint": "Pour contester une épingle, ouvrez Couches, passez les données sur Signaux, puis ouvrez une épingle Signal."
+    },
+    "status": {
+      "challenged": "Emplacement contesté",
+      "correctionQueued": "Correction en file d’attente"
+    },
+    "modal": {
+      "title": "Contester l’emplacement",
+      "intro": "Marquez l’épingle de ce Signal comme non fiable. Vous pouvez proposer un point corrigé pour examen — l’épingle source n’est pas écrasée.",
+      "noteLabel": "Pourquoi cela semble incorrect ? (facultatif)",
+      "notePlaceholder": "ex. Dataminr a placé ceci dans la mauvaise ville…",
+      "proposeCorrection": "Proposer un point corrigé (facultatif)",
+      "proposeCorrectionHint": "Facultatif. Saisissez latitude et longitude si vous les connaissez. Mis en file d’attente uniquement.",
+      "placeOnMap": "Placer l’épingle corrigée sur la carte",
+      "placeOnMapHint": "Revenez à la carte et cliquez où l’épingle doit être. Vous pouvez aussi saisir les coordonnées manuellement ci-dessous.",
+      "enterCoordinatesManually": "Saisir les coordonnées manuellement",
+      "hideManualCoordinates": "Masquer les champs de coordonnées",
+      "lat": "Latitude",
+      "lng": "Longitude",
+      "placeName": "Nom du lieu (facultatif)",
+      "placeNamePlaceholder": "Orthographe locale ou point de repère",
+      "submitChallenge": "Soumettre la contestation",
+      "submitCorrection": "Soumettre contestation + correction",
+      "successTitle": "Mis en file d’attente",
+      "successChallenge": "L’emplacement de ce Signal est marqué contesté. Pas de seconde épingle tant qu’aucun point corrigé n’est proposé.",
+      "successCorrection": "Les épingles source et proposée s’afficheront toutes deux sur la carte pendant l’examen.",
+      "sessionOnlyTitle": "Visible pour cette session seulement",
+      "sessionOnlyChallenge": "La carte affiche cette épingle comme contestée pour l’instant. Ce n’est pas encore enregistré — la persistance clear-api est encore en attente.",
+      "sessionOnlyCorrection": "Les épingles source et proposée s’affichent sur la carte pour cette session. L’enregistrement pour examen nécessite le support clear-api (encore en attente)."
+    },
+    "errors": {
+      "submitFailed": "Impossible de soumettre la contestation. Réessayez.",
+      "backendUnavailable": "La contestation d’emplacement n’est pas encore disponible — le support clear-api est en attente."
     }
   },
   "verifyEmail": {

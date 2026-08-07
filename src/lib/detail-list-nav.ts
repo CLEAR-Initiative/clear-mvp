@@ -14,6 +14,22 @@ export interface ListNavState {
   position: string;
 }
 
+/**
+ * Step one slot in an ordered id list. Used by keyboard scrub so key-repeat
+ * can advance without waiting on React-rendered neighbor ids.
+ */
+export function stepListId(
+  ids: readonly string[],
+  currentId: string,
+  delta: -1 | 1,
+): string | null {
+  const i = ids.indexOf(currentId);
+  if (i < 0) return null;
+  const next = i + delta;
+  if (next < 0 || next >= ids.length) return null;
+  return ids[next] ?? null;
+}
+
 /** Resolve adjacent ids and chrome for a string-keyed ordered list. */
 export function getListNavigation(
   ids: readonly string[],

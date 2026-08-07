@@ -2,7 +2,10 @@
 
 import { useMemo } from "react";
 import { api } from "~/trpc/react";
-import { countryConfig } from "~/lib/constants/country-config";
+import { countryConfig, resolveCountryConfig } from "~/lib/constants/country-config";
+
+/** Neutral camera used when no country is selected or configured. */
+const WORLD_VIEW = { center: [10, 20] as [number, number], zoom: 1.6 };
 
 interface LocationNode {
   id: string;
@@ -49,7 +52,7 @@ export function useLocations() {
         return ["All Regions", ...country.states.map((s) => s.name).sort()];
       }
       // Fallback
-      return countryConfig[countryName]?.regions ?? ["All Regions"];
+      return resolveCountryConfig(countryName)?.regions ?? ["All Regions"];
     };
   }, [tree]);
 
@@ -80,12 +83,17 @@ export function useLocations() {
     };
   }, [tree]);
 
-  /** Map center for a country (from hardcoded config for now) */
+  /**
+   * Map center for a country (from hardcoded config for now).
+   * Unknown or unset country falls back to a world view rather than a specific
+   * country, so a team whose country has no config entry is not silently shown
+   * someone else's operation.
+   */
   const getCenter = (countryName: string): [number, number] =>
-    countryConfig[countryName]?.center ?? [30.0, 15.5];
+    resolveCountryConfig(countryName)?.center ?? WORLD_VIEW.center;
 
   const getZoom = (countryName: string): number =>
-    countryConfig[countryName]?.zoom ?? 5;
+    resolveCountryConfig(countryName)?.zoom ?? WORLD_VIEW.zoom;
 
   return {
     countries,

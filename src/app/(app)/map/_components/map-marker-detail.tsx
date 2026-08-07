@@ -1,18 +1,50 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { Box, Text, Group, Stack, Badge, Button, CloseButton, ScrollArea } from "@mantine/core";
+import { Box, Text, Group, Stack, Badge, Button, CloseButton, ScrollArea, UnstyledButton } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { IconGripHorizontal } from "@tabler/icons-react";
+import { IconClipboard, IconGripHorizontal } from "@tabler/icons-react";
 import Link from "next/link";
 import { type CrisisMarker } from "./map-markers-data";
 import type { MarkerScreenPoint } from "~/components/map/crisis-map";
+import type { PanelGeometry } from "./map-panel-connectors";
+import {
+  PANEL_MARGIN,
+  panelCoversPin,
+  placeNearMarker,
+} from "./map-panel-placement";
+import {
+  LocationChallengeModal,
+  LocationChallengeStatus,
+  type LocationChallengeQueuePayload,
+} from "~/components/location-challenge";
+import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
+import { api } from "~/trpc/react";
 import styles from "./map-marker-detail.module.css";
+import type { PointAltitudeResult } from "~/lib/map/point-altitude";
+
+/** In-panel Location correction place-on-map flow (Signal pins only). */
+export type LocationCorrectionUi = {
+  phase: "picking" | "placed";
+  draftLat?: number;
+  draftLng?: number;
+  submitting?: boolean;
+};
 
 interface MapMarkerDetailProps {
   marker: CrisisMarker;
   onClose: () => void;
+  /**
+   * Point altitude while Topography is active (null/undefined = hide row).
+   * Soft approx./DEM framing — not survey grade.
+   */
+  pointAltitude?: PointAltitudeResult | null;
   /** Marker pixel position inside the map overlay parent. Desktop only. */
   anchor?: MarkerScreenPoint | null;
+  /**
+   * Live projected pin position (updates on pan/zoom/focus fly). Used to nudge
+   * first-open placement if the camera move would hide the pin under the panel.
+   */
+  livePin?: MarkerScreenPoint | null;
   /** Fired when the drag chrome is hovered or actively dragged — use to pulse the map pin. */
   onChromeActiveChange?: (active: boolean) => void;
   /** Bring this panel above siblings when the user interacts with it. */
@@ -23,15 +55,26 @@ interface MapMarkerDetailProps {
   onSwipePrev?: () => void;
   /** Mobile: swipe left → next event in the filtered map list. */
   onSwipeNext?: () => void;
+  /**
+   * Desktop: report panel box (in overlay-parent coords) for spaghetti connectors.
+   * Cleared on unmount / mobile.
+   */
+  onGeometryChange?: (geometry: PanelGeometry | null) => void;
+  /** Active place-on-map Location correction for this panel's Signal. */
+  locationCorrection?: LocationCorrectionUi | null;
+  /** Start map pick mode from the challenge modal (carries optional note). */
+  onStartLocationCorrection?: (draft?: { note?: string }) => void;
+  onCancelLocationCorrection?: () => void;
+  onConfirmLocationCorrection?: () => void;
+  /** Keep pick mode; clear draft so user can tap again. */
+  onRepickLocationCorrection?: () => void;
+  /** Alert/Event panels: jump to Signals data view so the challenge action is available. */
+  onSwitchToSignalLayer?: () => void;
+  /** Local visual queue when clear-api Location challenge schema is not shipped yet. */
+  onUnavailableChallengeQueue?: (payload: LocationChallengeQueuePayload) => void;
 }
 
 const PANEL_WIDTH = 320;
-/** Half of typical map pin (~14–18px); gap is measured from pin edge, not center. */
-const MARKER_RADIUS = 10;
-/** Clear air between pin edge and panel — same for every marker. */
-const CLEARANCE = 24;
-const PANEL_GAP = MARKER_RADIUS + CLEARANCE;
-const PANEL_MARGIN = 8;
 const FALLBACK_HEIGHT = 320;
 
 const severityColors: Record<string, { bg: string; color: string }> = {
@@ -49,44 +92,85 @@ interface DragState {
   startOffsetY: number;
 }
 
-/** Place the panel beside the marker: left markers → right side, and vice versa. */
-function placeNearMarker(
-  anchor: MarkerScreenPoint,
-  parent: { width: number; height: number },
-  panel: { width: number; height: number },
-): { left: number; top: number } {
-  const placeOnRight = anchor.x < parent.width / 2;
-  let left = placeOnRight
-    ? anchor.x + PANEL_GAP
-    : anchor.x - panel.width - PANEL_GAP;
-  // Keep the header near the pin vertically without covering it.
-  let top = anchor.y - Math.min(56, panel.height * 0.28);
-
-  left = Math.min(Math.max(left, PANEL_MARGIN), Math.max(PANEL_MARGIN, parent.width - panel.width - PANEL_MARGIN));
-  top = Math.min(Math.max(top, PANEL_MARGIN), Math.max(PANEL_MARGIN, parent.height - panel.height - PANEL_MARGIN));
-
-  return { left, top };
-}
+/** Auto-nudge window after focus-fly only — ignore later pan/zoom once settled. */
+const OPEN_NUDGE_MS = 2200;
 
 export function MapMarkerDetail({
   marker,
   onClose,
+  pointAltitude = null,
   anchor,
+  livePin,
   onChromeActiveChange,
   onActivate,
   stackZIndex = 10,
   onSwipePrev,
   onSwipeNext,
+  onGeometryChange,
+  locationCorrection = null,
+  onStartLocationCorrection,
+  onCancelLocationCorrection,
+  onConfirmLocationCorrection,
+  onRepickLocationCorrection,
+  onSwitchToSignalLayer,
+  onUnavailableChallengeQueue,
 }: MapMarkerDetailProps) {
   const t = useTranslations("map");
+  const tChallenge = useTranslations("locationChallenge");
+  const tActions = useTranslations("common.actions");
   const format = useFormatter();
   const isMobile = useMediaQuery("(max-width: 48em)");
   const sev = severityColors[marker.severity] ?? severityColors.medium;
+  /** Location challenge v1 attaches to Signal pins only (not Alert/Event/Crisis). */
+  const isSignal =
+    marker.markerKind === "signal" &&
+    !!marker.eventId &&
+    marker.locationPinRole !== "proposed";
+  const showLocationChallengeSlot =
+    marker.locationPinRole !== "proposed" && marker.markerKind !== "crisis";
+  const [challengeOpen, setChallengeOpen] = useState(false);
+  const [challengeLinkHovered, setChallengeLinkHovered] = useState(false);
+  const [localChallenge, setLocalChallenge] =
+    useState<GqlSignalLocationChallenge | null>(null);
+  const challengeQuery = api.locationChallenge.getBySignal.useQuery(
+    { signalId: marker.eventId ?? "" },
+    { enabled: isSignal, staleTime: 30_000 },
+  );
+  const displayChallenge = challengeQuery.data ?? localChallenge;
+
+  useEffect(() => {
+    setLocalChallenge(null);
+  }, [marker.eventId]);
+
+  const handleUnavailableChallengeQueue = useCallback(
+    (payload: LocationChallengeQueuePayload) => {
+      const hasPoint =
+        payload.proposedLat != null && payload.proposedLng != null;
+      setLocalChallenge({
+        id: `local-${payload.signalId}`,
+        signalId: payload.signalId,
+        status: "consideration",
+        note: payload.note ?? null,
+        proposedLng: payload.proposedLng ?? null,
+        proposedLat: payload.proposedLat ?? null,
+        proposedName: payload.proposedName ?? null,
+        createdBy: "local",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        hasProposedPoint: hasPoint,
+      });
+      onUnavailableChallengeQueue?.(payload);
+    },
+    [onUnavailableChallengeQueue],
+  );
 
   const boxRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const swipeRef = useRef<{ pointerId: number; startX: number; startY: number } | null>(null);
   const swipeDeltaRef = useRef({ x: 0, y: 0 });
+  const onGeometryChangeRef = useRef(onGeometryChange);
+  onGeometryChangeRef.current = onGeometryChange;
+  const openedAtRef = useRef(Date.now());
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [headerHovered, setHeaderHovered] = useState(false);
@@ -102,6 +186,7 @@ export function MapMarkerDetail({
 
   // Reset desktop drag offset / mobile swipe when the marker changes.
   useEffect(() => {
+    openedAtRef.current = Date.now();
     setOffset({ x: 0, y: 0 });
     swipeDeltaRef.current = { x: 0, y: 0 };
     const el = boxRef.current;
@@ -121,6 +206,7 @@ export function MapMarkerDetail({
     const parentSize = { width: parent.clientWidth, height: parent.clientHeight };
 
     if (anchor) {
+      openedAtRef.current = Date.now();
       setBasePos(placeNearMarker(anchor, parentSize, { width: PANEL_WIDTH, height: panelHeight }));
       return;
     }
@@ -131,6 +217,60 @@ export function MapMarkerDetail({
       top: 80,
     });
   }, [marker.id, anchor, isMobile]);
+
+  // After focus-fly, the pin can slide under the panel — nudge once while undragged.
+  useLayoutEffect(() => {
+    if (isMobile || !livePin) return;
+    if (offset.x !== 0 || offset.y !== 0) return;
+    if (Date.now() - openedAtRef.current > OPEN_NUDGE_MS) return;
+
+    const el = boxRef.current;
+    const parent = el?.offsetParent as HTMLElement | null;
+    if (!el || !parent) return;
+
+    const panelHeight = el.offsetHeight || FALLBACK_HEIGHT;
+    const panelSize = { width: PANEL_WIDTH, height: panelHeight };
+    const covers = panelCoversPin(
+      {
+        left: basePos.left,
+        top: basePos.top,
+        width: panelSize.width,
+        height: panelSize.height,
+      },
+      livePin,
+    );
+    if (!covers) return;
+
+    setBasePos(placeNearMarker(livePin, {
+      width: parent.clientWidth,
+      height: parent.clientHeight,
+    }, panelSize));
+  }, [isMobile, livePin, basePos.left, basePos.top, offset.x, offset.y]);
+
+  // Report desktop panel box for spaghetti connectors (clears on mobile / unmount).
+  useLayoutEffect(() => {
+    if (isMobile) {
+      onGeometryChangeRef.current?.(null);
+      return;
+    }
+    const el = boxRef.current;
+    if (!el) return;
+    const report = () => {
+      onGeometryChangeRef.current?.({
+        left: basePos.left + offset.x,
+        top: basePos.top + offset.y,
+        width: el.offsetWidth || PANEL_WIDTH,
+        height: el.offsetHeight || FALLBACK_HEIGHT,
+      });
+    };
+    report();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(report) : null;
+    ro?.observe(el);
+    return () => {
+      ro?.disconnect();
+      onGeometryChangeRef.current?.(null);
+    };
+  }, [isMobile, basePos.left, basePos.top, offset.x, offset.y, marker.id]);
 
   // Keep the window inside its positioned container as the offset changes.
   const clampOffset = useCallback((nextX: number, nextY: number) => {
@@ -270,14 +410,16 @@ export function MapMarkerDetail({
   }, [onClose, onSwipeNext, onSwipePrev]);
 
   return (
+    <>
     <Box
       ref={boxRef}
+      data-tour="map-marker-detail"
       className={isMobile ? styles.sheetMobile : "absolute z-10 bg-[var(--color-bg-white)]"}
       onPointerDown={isMobile ? handleSwipeStart : undefined}
       onPointerMove={isMobile ? handleSwipeMove : undefined}
       onPointerUp={isMobile ? handleSwipeEnd : undefined}
       onPointerCancel={isMobile ? handleSwipeEnd : undefined}
-      style={isMobile ? { touchAction: "none", cursor: "grab" } : {
+      style={isMobile ? { touchAction: "none", cursor: "grab", zIndex: 20 } : {
         // Desktop: beside the marker, draggable via grip / header
         top: basePos.top,
         left: basePos.left,
@@ -296,7 +438,7 @@ export function MapMarkerDetail({
         transform: `translate(${offset.x}px, ${offset.y}px)`,
         transition: dragging ? "none" : "box-shadow 140ms ease, border-color 140ms ease, outline 140ms ease",
         touchAction: "none",
-        zIndex: dragging ? Math.max(stackZIndex, 30) : stackZIndex,
+        zIndex: dragging ? Math.max(stackZIndex, 30) : Math.max(stackZIndex, 20),
       }}
     >
       {/* Desktop: drag chrome — grip + title row */}
@@ -424,11 +566,146 @@ export function MapMarkerDetail({
               value={format.dateTime(new Date(marker.shockDate), "short")}
             />
           )}
-          <DetailRow
+          <CopyableCoordinatesRow
             label={t("detail.coordinates")}
             value={`${marker.lat.toFixed(2)}, ${marker.lng.toFixed(2)}`}
-            mono
+            copiedLabel={t("detail.copied")}
           />
+          {pointAltitude && (
+            <DetailRow
+              label={t("pointAltitude.label")}
+              value={
+                pointAltitude.kind === "ok"
+                  ? `${pointAltitude.displayMetres} · ${t("pointAltitude.qualifier")}`
+                  : t("pointAltitude.unavailable")
+              }
+              mono
+            />
+          )}
+          {showLocationChallengeSlot && isSignal && !locationCorrection && (
+            <Box pt={6} pb={2} style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+              <UnstyledButton
+                type="button"
+                onClick={() => setChallengeOpen(true)}
+                onMouseEnter={() => setChallengeLinkHovered(true)}
+                onMouseLeave={() => setChallengeLinkHovered(false)}
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  lineHeight: 1.35,
+                  color: challengeLinkHovered
+                    ? "var(--color-accent)"
+                    : "var(--color-text-muted)",
+                  cursor: "pointer",
+                  transition: "color 120ms ease",
+                  textAlign: "end",
+                  padding: 0,
+                }}
+              >
+                {displayChallenge
+                  ? tChallenge("actions.updateChallenge")
+                  : tChallenge("actions.challengeLocation")}
+              </UnstyledButton>
+              {displayChallenge && (
+                <Box mt={4} style={{ width: "100%", display: "flex", justifyContent: "flex-end" }}>
+                  <LocationChallengeStatus challenge={displayChallenge} compact />
+                </Box>
+              )}
+            </Box>
+          )}
+          {showLocationChallengeSlot && isSignal && locationCorrection?.phase === "picking" && (
+            <Box pt={6} pb={2} style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+              <Text size="xs" c="#B45309" ta="end" style={{ lineHeight: 1.4 }}>
+                {tChallenge("mapPick.hint")}
+              </Text>
+              <UnstyledButton
+                type="button"
+                onClick={() => onCancelLocationCorrection?.()}
+                style={{
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: "var(--color-text-muted)",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                {tActions("cancel")}
+              </UnstyledButton>
+            </Box>
+          )}
+          {showLocationChallengeSlot &&
+            isSignal &&
+            locationCorrection?.phase === "placed" &&
+            locationCorrection.draftLat != null &&
+            locationCorrection.draftLng != null && (
+            <Stack gap={6} pt={6} pb={2} align="flex-end">
+              <Text size="xs" c="var(--color-text-secondary)" ta="end" style={{ lineHeight: 1.4 }}>
+                {tChallenge("mapPick.placed", {
+                  coords: `${locationCorrection.draftLat.toFixed(2)}, ${locationCorrection.draftLng.toFixed(2)}`,
+                })}
+              </Text>
+              <Group gap={6} justify="flex-end">
+                <Button
+                  size="xs"
+                  variant="default"
+                  onClick={() => onRepickLocationCorrection?.()}
+                  disabled={locationCorrection.submitting}
+                  style={{ fontSize: 11, height: 26 }}
+                >
+                  {tChallenge("mapPick.reposition")}
+                </Button>
+                <Button
+                  size="xs"
+                  variant="default"
+                  onClick={() => onCancelLocationCorrection?.()}
+                  disabled={locationCorrection.submitting}
+                  style={{ fontSize: 11, height: 26 }}
+                >
+                  {tActions("cancel")}
+                </Button>
+                <Button
+                  size="xs"
+                  loading={locationCorrection.submitting}
+                  onClick={() => onConfirmLocationCorrection?.()}
+                  style={{
+                    fontSize: 11,
+                    height: 26,
+                    background: "var(--color-accent)",
+                    borderColor: "var(--color-accent)",
+                    color: "#fff",
+                  }}
+                >
+                  {tChallenge("mapPick.confirm")}
+                </Button>
+              </Group>
+            </Stack>
+          )}
+          {showLocationChallengeSlot && !isSignal && onSwitchToSignalLayer && (
+            <Box pt={6} pb={2} style={{ display: "flex", justifyContent: "flex-end" }}>
+              <UnstyledButton
+                type="button"
+                onClick={onSwitchToSignalLayer}
+                onMouseEnter={() => setChallengeLinkHovered(true)}
+                onMouseLeave={() => setChallengeLinkHovered(false)}
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  lineHeight: 1.35,
+                  color: challengeLinkHovered
+                    ? "var(--color-accent)"
+                    : "var(--color-text-muted)",
+                  cursor: "pointer",
+                  transition: "color 120ms ease",
+                  textAlign: "end",
+                  padding: 0,
+                }}
+              >
+                {tChallenge("actions.showSignalsLayer")}
+              </UnstyledButton>
+            </Box>
+          )}
         </Stack>
 
         {marker.eventId && (
@@ -460,6 +737,23 @@ export function MapMarkerDetail({
       </Box>
       </ScrollArea.Autosize>
     </Box>
+
+      {isSignal && marker.eventId && (
+        <LocationChallengeModal
+          opened={challengeOpen}
+          onClose={() => setChallengeOpen(false)}
+          signalId={marker.eventId}
+          sourceLat={marker.lat}
+          sourceLng={marker.lng}
+          onPlaceOnMap={
+            onStartLocationCorrection
+              ? (draft) => onStartLocationCorrection(draft)
+              : undefined
+          }
+          onUnavailableQueue={handleUnavailableChallengeQueue}
+        />
+      )}
+    </>
   );
 }
 
@@ -477,6 +771,108 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
       >
         {value}
       </Text>
+    </Group>
+  );
+}
+
+const COPY_HOLD_MS = 1200;
+const COPY_FADE_MS = 450;
+
+/** Click/tap lat,lng → clipboard; numbers stay, icon + color confirm copy. */
+function CopyableCoordinatesRow({
+  label,
+  value,
+  copiedLabel,
+}: {
+  label: string;
+  value: string;
+  copiedLabel: string;
+}) {
+  const [highlight, setHighlight] = useState(false);
+  const [showIcon, setShowIcon] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const holdTimerRef = useRef<number | null>(null);
+  const fadeTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (holdTimerRef.current != null) window.clearTimeout(holdTimerRef.current);
+      if (fadeTimerRef.current != null) window.clearTimeout(fadeTimerRef.current);
+    };
+  }, []);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setHighlight(true);
+      setShowIcon(true);
+      if (holdTimerRef.current != null) window.clearTimeout(holdTimerRef.current);
+      if (fadeTimerRef.current != null) window.clearTimeout(fadeTimerRef.current);
+      // Drop highlight → CSS fades bg/icon; then unmount icon after transition.
+      holdTimerRef.current = window.setTimeout(() => {
+        setHighlight(false);
+        fadeTimerRef.current = window.setTimeout(() => setShowIcon(false), COPY_FADE_MS);
+      }, COPY_HOLD_MS);
+    } catch {
+      // Secure-context / permission failures — leave value visible for manual select.
+    }
+  };
+
+  // Hover → grey type; copied → white type on fixed charcoal (readable in both themes).
+  const background = highlight
+    ? "#262626"
+    : hovered
+      ? "var(--color-bg-muted)"
+      : "transparent";
+  const color = highlight
+    ? "#FFFFFF"
+    : hovered
+      ? "var(--color-text-secondary)"
+      : "var(--color-text-primary)";
+
+  return (
+    <Group justify="space-between" py={6} className="border-b border-[var(--color-border)] last:border-b-0" wrap="nowrap" gap={8}>
+      <Text size="xs" c="var(--color-text-muted)" style={{ flexShrink: 0 }}>
+        {label}
+      </Text>
+      <UnstyledButton
+        type="button"
+        onClick={handleCopy}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        aria-label={highlight ? copiedLabel : `${label}: ${value}`}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 5,
+          fontFamily: "monospace",
+          fontSize: 11,
+          fontWeight: 500,
+          color,
+          textAlign: "end",
+          lineHeight: 1.3,
+          borderRadius: 4,
+          padding: "2px 6px",
+          marginInlineEnd: -4,
+          cursor: "pointer",
+          background,
+          transition: `background ${COPY_FADE_MS}ms ease, color ${COPY_FADE_MS}ms ease`,
+        }}
+      >
+        {showIcon && (
+          <IconClipboard
+            size={12}
+            stroke={1.75}
+            aria-hidden
+            style={{
+              flexShrink: 0,
+              opacity: highlight ? 1 : 0,
+              transition: `opacity ${COPY_FADE_MS}ms ease`,
+            }}
+          />
+        )}
+        <span>{value}</span>
+      </UnstyledButton>
     </Group>
   );
 }

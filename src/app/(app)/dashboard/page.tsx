@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Box } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import dynamic from "next/dynamic";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { useLocations } from "~/hooks/use-locations";
+import { useTeamCountry } from "~/hooks/use-team-country";
+import { resolveCountryConfig } from "~/lib/constants/country-config";
 import {
   alertsToMarkers,
   eventsToMarkers,
@@ -21,7 +23,7 @@ import type { BaseMapType, MapMarker, MarkerScreenPoint } from "~/components/map
 import { RightPanel } from "./_components/right-panel";
 import { useIsDark } from "~/hooks/use-is-dark";
 
-/** App shell reserves these gutters for mobile chrome — bleed the map through them. */
+/** App shell reserves these gutters for mobile chrome - bleed the map through them. */
 const MOBILE_TOP_GUTTER = 56;
 const MOBILE_BOTTOM_GUTTER = 72;
 
@@ -45,15 +47,24 @@ const CrisisMap = dynamic(
 
 export default function DashboardPage() {
   const { activeTeamId } = useTeam();
-  const { getLocationId } = useLocations();
+  const { getLocationId, getCenter, getZoom } = useLocations();
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
-  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
-  const sudanL0Query = api.locations.getById.useQuery(
-    { id: sudanId! },
-    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+
+  // Frame the map on the active team's country rather than a fixed one. A team
+  // with no level-0 binding monitors globally, so every country-scoped overlay
+  // query below stays disabled and the camera keeps its world view.
+  const { countryId: teamCountryId, countryName: teamCountryName } = useTeamCountry();
+  const focusCountryId = useMemo(
+    () => teamCountryId ?? (teamCountryName ? getLocationId(teamCountryName) : null),
+    [teamCountryId, teamCountryName, getLocationId],
   );
-  const focusCountryGeometry = sudanL0Query.data?.geometry ?? undefined;
-  const [selectedCountry, setSelectedCountry] = useState("Sudan");
+  const focusCountryL0Query = api.locations.getById.useQuery(
+    { id: focusCountryId! },
+    { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
+  );
+  const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
+  const focusCountryPCode = resolveCountryConfig(teamCountryName ?? undefined)?.pCode;
+  const [selectedCountry, setSelectedCountry] = useState(teamCountryName ?? "");
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(null);
   const [detailAnchor, setDetailAnchor] = useState<MarkerScreenPoint | null>(null);
   const [detailChromeActive, setDetailChromeActive] = useState(false);
@@ -61,7 +72,14 @@ export default function DashboardPage() {
   const [showPopulation, setShowPopulation] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showRoads, setShowRoads] = useState(true);
+  const [showNrcLocations, setShowNrcLocations] = useState(false);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
+
+  // Teams resolve after first paint, so the initial state above can be empty.
+  // Adopt the team's country once it arrives.
+  useEffect(() => {
+    if (teamCountryName) setSelectedCountry(teamCountryName);
+  }, [teamCountryName]);
 
   const alertsQuery = api.alerts.alertsForMap.useQuery(
     { activeOnly: true, teamId: activeTeamId },
@@ -81,12 +99,12 @@ export default function DashboardPage() {
   // Each query is gated on the corresponding panel state to avoid burning
   // bandwidth when the layer is off.
   const a1Query = api.locations.getAdminBoundaries.useQuery(
-    { level: 1, countryId: sudanId ?? undefined },
-    { enabled: boundaryLevel === "A1" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    { level: 1, countryId: focusCountryId ?? undefined },
+    { enabled: boundaryLevel === "A1" && !!focusCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const a2Query = api.locations.getAdminBoundaries.useQuery(
-    { level: 2, countryId: sudanId ?? undefined },
-    { enabled: boundaryLevel === "A2" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    { level: 2, countryId: focusCountryId ?? undefined },
+    { enabled: boundaryLevel === "A2" && !!focusCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const adminBoundaries = useMemo(() => {
     if (boundaryLevel === "A1") return a1Query.data ?? [];
@@ -97,8 +115,8 @@ export default function DashboardPage() {
     boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
   const populationQuery = api.locations.getPopulationBoundaries.useQuery(
-    { countryId: sudanId ?? undefined },
-    { enabled: showPopulation && !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+    { countryId: focusCountryId ?? undefined },
+    { enabled: showPopulation && !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
   const populationBoundaries = useMemo(
     () => (showPopulation ? (populationQuery.data ?? []) : []),
@@ -139,10 +157,10 @@ export default function DashboardPage() {
       >
         <CrisisMap
           markers={markers}
-          center={[30.0, 15.5]}
-          zoom={isMobile ? 4 : 5}
-          focusCountryPCode="SD"
-          focusCountryName="Sudan"
+          center={getCenter(selectedCountry)}
+          zoom={isMobile ? getZoom(selectedCountry) - 1 : getZoom(selectedCountry)}
+          focusCountryPCode={focusCountryPCode}
+          focusCountryName={selectedCountry || undefined}
           focusCountryGeometry={focusCountryGeometry}
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
@@ -150,6 +168,7 @@ export default function DashboardPage() {
           className="w-full h-full"
           onMarkerClick={handleMarkerClick}
           showRoads={showRoads}
+          showNrcLocations={showNrcLocations}
           baseMapType={baseMapType}
           hoveredMarkerId={
             detailChromeActive && selectedMarker ? selectedMarker.id : null
@@ -176,6 +195,8 @@ export default function DashboardPage() {
           onBoundaryLevelChange={setBoundaryLevel}
           showRoads={showRoads}
           onShowRoadsChange={setShowRoads}
+          showNrcLocations={showNrcLocations}
+          onShowNrcLocationsChange={setShowNrcLocations}
           baseMapType={baseMapType}
           onBaseMapTypeChange={setBaseMapType}
         />

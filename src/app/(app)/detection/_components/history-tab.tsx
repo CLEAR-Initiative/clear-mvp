@@ -19,6 +19,7 @@ import { IconFilter } from "@tabler/icons-react";
 import { mapSeverity } from "~/lib/types/graphql";
 import type { GqlAlert, GqlEvent, GqlSignal } from "~/lib/types/graphql";
 import { DataTable, Table, SeverityBadge, FeedToolbar } from "~/components/ui";
+import { DetectionHistoryTableSkeleton } from "~/components/ui/detection-page-skeleton";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
 
@@ -394,14 +395,18 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
       />
 
       <Card p={0} style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
-        <Box style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-          <Box style={{ minWidth: 760 }}>
-        <DataTable
-          columns={COLUMN_KEYS.map((k) => ({ label: t(`history.columns.${k}`) }))}
-          data={filtered}
-          loading={loading}
-          emptyMessage={loadedCount === 0 ? t("history.empty") : t("history.noMatch")}
-          renderRow={(row) => {
+        {loading ? (
+          <DetectionHistoryTableSkeleton />
+        ) : (
+          <>
+            <Box style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+              <Box style={{ minWidth: 760 }}>
+                <DataTable
+                  columns={COLUMN_KEYS.map((k) => ({ label: t(`history.columns.${k}`) }))}
+                  data={filtered}
+                  loading={false}
+                  emptyMessage={loadedCount === 0 ? t("history.empty") : t("history.noMatch")}
+                  renderRow={(row) => {
             const sev = rowSeverity(row);
             const cls = CLASS_STYLES[row.kind]!;
 
@@ -504,33 +509,35 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
                 </Table.Td>
               </Table.Tr>
             );
-          }}
-        />
-          </Box>
-        </Box>
+                  }}
+                />
+              </Box>
+            </Box>
 
-        {(hasMore || isFetchingMore) && (
-          <Box px={16} py={12} style={{ borderTop: "1px solid var(--color-border)", display: "flex", justifyContent: "center" }}>
-            {isFetchingMore ? (
-              <Loader size="xs" color="gray" />
-            ) : (
-              <button
-                onClick={onLoadMore}
-                style={{
-                  padding: "6px 16px",
-                  borderRadius: 6,
-                  border: "1px solid var(--color-border)",
-                  background: "var(--color-bg-white)",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                {t("history.loadMore")}
-              </button>
+            {(hasMore || isFetchingMore) && (
+              <Box px={16} py={12} style={{ borderTop: "1px solid var(--color-border)", display: "flex", justifyContent: "center" }}>
+                {isFetchingMore ? (
+                  <Loader size="xs" color="gray" />
+                ) : (
+                  <button
+                    onClick={onLoadMore}
+                    style={{
+                      padding: "6px 16px",
+                      borderRadius: 6,
+                      border: "1px solid var(--color-border)",
+                      background: "var(--color-bg-white)",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 500,
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    {t("history.loadMore")}
+                  </button>
+                )}
+              </Box>
             )}
-          </Box>
+          </>
         )}
       </Card>
     </Box>

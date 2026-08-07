@@ -1,5 +1,11 @@
 import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
-import type { GqlAlert, GqlEvent, GqlSignal, GqlCrisis } from "~/lib/types/graphql";
+import type {
+  GqlAlert,
+  GqlEvent,
+  GqlSignal,
+  GqlCrisis,
+  GqlSignalLocationChallenge,
+} from "~/lib/types/graphql";
 import { mapSeverity } from "~/lib/types/graphql";
 import { resolveLocationName } from "~/lib/location";
 
@@ -30,6 +36,10 @@ export interface CrisisMarker extends MapMarker {
   shockTypeName?: string;
   dataSource?: string;
   shockDate?: string;
+  /** Location trust affordance for Signal pins (source side). */
+  locationTrust?: "challenged" | "correction_queued";
+  /** Distinguishes source vs proposed dual-display pins. */
+  locationPinRole?: "source" | "proposed";
 }
 
 /* ========== Layer definitions ========== */
@@ -142,6 +152,16 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
   return dedupeMarkersByEntity(markers);
 }
 
+/**
+ * Full Map deep-link for an event: the event pin plus each nested signal that
+ * has a Point. Browse map feeds must not use this — they omit signal nests.
+ */
+export function focusEventToMarkers(event: GqlEvent): CrisisMarker[] {
+  const eventMarkers = eventsToMarkers([event]);
+  const signalMarkers = signalsToMarkers(event.signals ?? []);
+  return [...eventMarkers, ...signalMarkers];
+}
+
 export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
   // Multiple alerts can wrap the same event — keep the entry with the best
   // representative point before dedupe (first-wins) in eventsToMarkers.
@@ -188,6 +208,7 @@ export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
             eventId: signal.id,
             markerKind: "signal",
             occurredAt: signal.publishedAt,
+            locationPinRole: "source",
           });
           break;
         }
@@ -195,6 +216,68 @@ export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
     }
   }
   return dedupeMarkersByEntity(markers);
+}
+
+/**
+ * Merge open Location challenges onto Signal markers:
+ * - bare challenge → source pin gets `locationTrust: "challenged"`
+ * - correction with point → source `correction_queued` + ghost proposed pin
+ */
+export function applyLocationChallengesToMarkers(
+  markers: CrisisMarker[],
+  challenges: GqlSignalLocationChallenge[],
+): CrisisMarker[] {
+  if (challenges.length === 0) return markers;
+
+  const bySignal = new Map<string, GqlSignalLocationChallenge>();
+  for (const c of challenges) {
+    if (c.status && c.status !== "consideration") continue;
+    bySignal.set(c.signalId, c);
+  }
+  if (bySignal.size === 0) return markers;
+
+  const out: CrisisMarker[] = [];
+  for (const marker of markers) {
+    if (marker.markerKind !== "signal" || !marker.eventId) {
+      out.push(marker);
+      continue;
+    }
+    const challenge = bySignal.get(marker.eventId);
+    if (!challenge) {
+      out.push(marker);
+      continue;
+    }
+
+    const hasPoint =
+      challenge.hasProposedPoint ||
+      (challenge.proposedLng != null && challenge.proposedLat != null);
+
+    out.push({
+      ...marker,
+      locationTrust: hasPoint ? "correction_queued" : "challenged",
+      locationPinRole: "source",
+    });
+
+    if (
+      hasPoint &&
+      typeof challenge.proposedLng === "number" &&
+      typeof challenge.proposedLat === "number"
+    ) {
+      out.push({
+        ...marker,
+        id: hashId(marker.eventId, "proposed-correction"),
+        lng: challenge.proposedLng,
+        lat: challenge.proposedLat,
+        title: challenge.proposedName
+          ? `${marker.title} → ${challenge.proposedName}`
+          : marker.title,
+        region: challenge.proposedName ?? marker.region,
+        locationTrust: "correction_queued",
+        locationPinRole: "proposed",
+      });
+    }
+  }
+  return out;
 }
 
 /* ========== Extract polygon regions from events ========== */

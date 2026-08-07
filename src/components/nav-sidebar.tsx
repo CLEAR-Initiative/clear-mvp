@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSelectedLayoutSegments, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -32,6 +32,11 @@ import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
 import { isPlatformAdmin } from "~/lib/roles";
+import { useOptimisticNavSegment } from "~/hooks/use-optimistic-nav-segment";
+import { useSlidingNavIndicator } from "~/hooks/use-sliding-nav-indicator";
+import { SlidingNavIndicator } from "~/components/ui/sliding-nav-indicator";
+import { usePageTransition } from "~/components/page-transition";
+import { isModifiedNavClick } from "~/components/page-transition-intent";
 
 type NavItemKey =
   | "overview"
@@ -98,18 +103,58 @@ export function NavSidebar() {
   const segments = useSelectedLayoutSegments();
   const searchParams = useSearchParams();
   const activeSegment = segments[0] ?? "";
-  
-  // Check if we're on a detail page (event/signal/crisis) and get the referrer
-  const isDetailPage = ["event", "signal", "crisis"].includes(activeSegment);
   const referrer = searchParams.get("from");
-  
-  // If on detail page with referrer, use that for highlighting; otherwise use segment
-  const effectiveSegment = isDetailPage && referrer ? referrer : activeSegment;
-  
+  const { displaySegment: effectiveSegment, setOptimisticSegment } =
+    useOptimisticNavSegment(activeSegment, referrer);
+  // Frost overlay while settled on /map OR optimistically heading there.
+  // Do not drop overlay on optimistic leave — that flex-resizes the Mapbox
+  // canvas (white flash). Veil stays clear of the nav via z-index + inset.
+  const isMapRoute =
+    activeSegment === "map" || effectiveSegment === "map";
+  const { beginPageTransition } = usePageTransition();
+  const desktopNavRef = useRef<HTMLElement>(null);
+  const mobileNavRef = useRef<HTMLElement>(null);
+  const desktopIndicator = useSlidingNavIndicator(
+    desktopNavRef,
+    effectiveSegment || null,
+    collapsed,
+  );
+  const mobileIndicator = useSlidingNavIndicator(
+    mobileNavRef,
+    effectiveSegment || null,
+    mobileOpen,
+  );
+
   const router = useRouter();
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const isAdmin = isPlatformAdmin(authData?.user?.role);
   const { flags } = useFeatureFlags();
+
+  // Publish overlay vars before paint so Layers/Filters mount at the final
+  // left offset (useEffect painted left-4 first → 200ms horizontal slide).
+  useLayoutEffect(() => {
+    const w = `${collapsed ? COLLAPSED_W : EXPANDED_W}px`;
+    document.documentElement.style.setProperty("--clear-nav-w", w);
+    document.body.dataset.navOverlay = isMapRoute ? "true" : "false";
+    return () => {
+      document.documentElement.style.removeProperty("--clear-nav-w");
+      delete document.body.dataset.navOverlay;
+      delete document.body.dataset.navOffsetMotion;
+    };
+  }, [collapsed, isMapRoute]);
+
+  // Enable left transitions only after the first overlay frame — collapse/expand
+  // still animates; first map paint does not.
+  useEffect(() => {
+    if (!isMapRoute) {
+      delete document.body.dataset.navOffsetMotion;
+      return;
+    }
+    const id = requestAnimationFrame(() => {
+      document.body.dataset.navOffsetMotion = "true";
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isMapRoute]);
 
   const handleLogout = async () => {
     try { await authClient.signOut(); } catch { /* ignore */ }
@@ -132,7 +177,7 @@ export function NavSidebar() {
 
   return (
     <>
-      {/* Mobile hamburger — right side; sits above the drawer so it can toggle closed */}
+      {/* Mobile hamburger — right side; sits above the sheet so it can toggle closed */}
       <Box
         hiddenFrom="sm"
         style={{
@@ -166,22 +211,40 @@ export function NavSidebar() {
         </UnstyledButton>
       </Box>
 
-      {/* Mobile drawer — slides in from the left; burger stays on the right */}
+      {/* Mobile menu — fullscreen sheet, bottom → top (not a side drawer). */}
       <Drawer
         opened={mobileOpen}
         onClose={closeMobile}
-        position="left"
-        size="280px"
+        position="bottom"
+        size="100%"
         withCloseButton={false}
         hiddenFrom="sm"
         zIndex={400}
+        transitionProps={{ transition: "slide-up", duration: 280, timingFunction: "cubic-bezier(0.32, 0.72, 0, 1)" }}
         styles={{
           body: { padding: 0, height: "100%", display: "flex", flexDirection: "column" },
-          content: { background: colors.bgWhite },
+          content: {
+            background: colors.bgWhite,
+            borderRadius: 0,
+            maxHeight: "100dvh",
+          },
+          inner: { padding: 0 },
         }}
       >
-        {/* Mobile drawer header */}
-        <Box style={{ height: 64, borderBottom: `1px solid ${colors.border}`, display: "flex", alignItems: "center", padding: spacingPx[5], gap: spacingPx[5] }}>
+        {/* Mobile sheet header — leave room for the floating close (burger) button */}
+        <Box
+          style={{
+            height: 64,
+            borderBottom: `1px solid ${colors.border}`,
+            display: "flex",
+            alignItems: "center",
+            padding: spacingPx[5],
+            paddingInlineEnd: 56,
+            paddingTop: "max(12px, env(safe-area-inset-top, 0px))",
+            gap: spacingPx[5],
+            flexShrink: 0,
+          }}
+        >
           <NrcLogoMark size={32} />
           <Text fw={700} style={{ fontSize: fontSizesPx.xl, color: colors.textPrimary, fontFamily: "Calibri, 'Trebuchet MS', sans-serif" }}>CLEAR</Text>
         </Box>
@@ -189,7 +252,12 @@ export function NavSidebar() {
         {/* Mobile team switcher */}
 
         {/* Mobile drawer nav */}
-        <Box component="nav" style={{ flex: 1, overflowY: "auto", padding: spacingPx[3] }}>
+        <Box
+          ref={mobileNavRef}
+          component="nav"
+          style={{ flex: 1, overflowY: "auto", padding: spacingPx[3], position: "relative" }}
+        >
+          <SlidingNavIndicator box={mobileIndicator} variant="sidebar" />
           {navSections.map((section) => {
             if (section.adminOnly && !isAdmin) return null;
             const visibleItems = section.items.filter((item) => {
@@ -211,27 +279,40 @@ export function NavSidebar() {
                   const Icon = item.icon;
                   const content = (
                     <Box
-                      key={item.href}
                       style={{
                         display: "flex", alignItems: "center", gap: spacingPx[4],
                         padding: `${spacingPx[4]}px ${spacingPx[3]}px`, borderRadius: 6,
                         cursor: isDisabled ? "not-allowed" : "pointer",
                         opacity: isDisabled ? 0.45 : 1,
-                        background: isActive ? colors.accentLight : "transparent",
-                        borderInlineStart: isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
+                        background: "transparent",
+                        borderInlineStart: "2px solid transparent",
                         color: isActive ? colors.accent : colors.textSecondary,
                         minHeight: 44,
+                        transition: "color 180ms ease-out",
                       }}
                       component="div"
                     >
-                      <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
+                      <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6, transition: "opacity 180ms ease-out" }} />
                       <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{t(`items.${item.labelKey}`)}</Text>
                       {isDisabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("soon")}</Badge>}
                       {!isDisabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("demo")}</Badge>}
                     </Box>
                   );
-                  return isDisabled ? content : (
-                    <Link key={item.href} href={item.href} onClick={closeMobile} style={{ textDecoration: "none", display: "block", color: "inherit" }}>
+                  return isDisabled ? (
+                    <Box key={item.href}>{content}</Box>
+                  ) : (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      data-nav-segment={itemSegment}
+                      onClick={(e) => {
+                        if (isModifiedNavClick(e)) return;
+                        setOptimisticSegment(itemSegment);
+                        beginPageTransition(item.href);
+                        closeMobile();
+                      }}
+                      style={{ textDecoration: "none", display: "block", color: "inherit", position: "relative", zIndex: 1 }}
+                    >
                       {content}
                     </Link>
                   );
@@ -365,20 +446,29 @@ export function NavSidebar() {
         </Box>
       </Drawer>
 
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar — on /map: fixed frost overlay so map shows through and
+          collapse does not resize the Mapbox canvas (white flash). */}
       <Box
         component="aside"
+        data-tour="nav-sidebar"
         visibleFrom="sm"
         style={{
           width: collapsed ? COLLAPSED_W : EXPANDED_W,
-          minWidth: collapsed ? COLLAPSED_W : EXPANDED_W,
+          // Keep layout slot on non-map routes; overlay mode is out-of-flow.
+          minWidth: isMapRoute ? undefined : (collapsed ? COLLAPSED_W : EXPANDED_W),
           height: "100vh",
-          position: "sticky",
+          position: isMapRoute ? "fixed" : "sticky",
           top: 0,
+          left: isMapRoute ? 0 : undefined,
+          zIndex: isMapRoute ? 40 : undefined,
           display: "flex",
           flexDirection: "column",
-          background: colors.bgWhite,
-          borderInlineEnd: `1px solid ${colors.border}`,
+          background: isMapRoute
+            ? "color-mix(in srgb, var(--color-bg-white) 42%, transparent)"
+            : colors.bgWhite,
+          backdropFilter: isMapRoute ? "blur(16px) saturate(1.2)" : undefined,
+          WebkitBackdropFilter: isMapRoute ? "blur(16px) saturate(1.2)" : undefined,
+          borderInlineEnd: `1px solid ${isMapRoute ? "color-mix(in srgb, var(--color-border) 55%, transparent)" : colors.border}`,
           transition: `width ${TRANSITION}, min-width ${TRANSITION}`,
           overflow: "hidden",
           flexShrink: 0,
@@ -388,13 +478,13 @@ export function NavSidebar() {
         <Box
           style={{
             height: 64,
-            borderBottom: `1px solid ${colors.border}`,
+            borderBottom: `1px solid ${isMapRoute ? "color-mix(in srgb, var(--color-border) 70%, transparent)" : colors.border}`,
             display: "flex",
             alignItems: "flex-start",
             justifyContent: "space-between",
             padding: spacingPx[5],
             flexShrink: 0,
-            background: colors.bgWhite,
+            background: isMapRoute ? "transparent" : colors.bgWhite,
           }}
         >
           <Box style={{ display: "flex", alignItems: "center", gap: spacingPx[5], overflow: "hidden", width: collapsed ? 32 : 150, flexShrink: 0, transition: `width ${TRANSITION}` }}>
@@ -441,9 +531,11 @@ export function NavSidebar() {
 
         {/* ── Navigation ────────────────────────────────────────── */}
         <Box
+          ref={desktopNavRef}
           component="nav"
-          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: `${spacingPx[3]}px ${spacingPx[3]}px` }}
+          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: `${spacingPx[3]}px ${spacingPx[3]}px`, position: "relative" }}
         >
+          <SlidingNavIndicator box={desktopIndicator} variant="sidebar" />
           {navSections.map((section) => {
             if (section.adminOnly && !isAdmin) return null;
             const visibleItems = section.items.filter((item) => {
@@ -478,7 +570,6 @@ export function NavSidebar() {
 
                   const row = (
                     <Box
-                      key={item.href}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -488,16 +579,22 @@ export function NavSidebar() {
                         position: "relative",
                         cursor: isDisabled ? "not-allowed" : "pointer",
                         opacity: isDisabled ? 0.45 : 1,
-                        background: isActive ? colors.accentLight : "transparent",
-                        borderInlineStart: isActive ? `2px solid ${colors.accent}` : "2px solid transparent",
-                        transition: "none",
+                        background: "transparent",
+                        borderInlineStart: "2px solid transparent",
                         textDecoration: "none",
                         color: isActive ? colors.accent : colors.textSecondary,
+                        transition: "color 180ms ease-out",
                       }}
-                      className={cn(!isDisabled && !isActive && "hover:bg-[var(--color-bg-muted)] hover:!text-[var(--color-text-primary)]")}
+                      className={cn(
+                        !isDisabled &&
+                          !isActive &&
+                          // Prefer --map-frost-hover-text on map frost (softens);
+                          // falls back to primary off-map (brightens).
+                          "hover:bg-[var(--color-bg-muted)] hover:!text-[var(--map-frost-hover-text,var(--color-text-primary))]",
+                      )}
                       component="div"
                     >
-                      <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6 }} />
+                      <Icon size={20} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.6, transition: "opacity 180ms ease-out" }} />
 
                       <Text
                         fw={isActive ? 600 : 500}
@@ -531,8 +628,20 @@ export function NavSidebar() {
                     </Box>
                   );
 
-                  const linked = isDisabled ? row : (
-                    <Link key={item.href} href={item.href} style={{ textDecoration: "none", display: "block", color: "inherit" }}>
+                  const linked = isDisabled ? (
+                    <Box key={item.href}>{row}</Box>
+                  ) : (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      data-nav-segment={itemSegment}
+                      onClick={(e) => {
+                        if (isModifiedNavClick(e)) return;
+                        setOptimisticSegment(itemSegment);
+                        beginPageTransition(item.href);
+                      }}
+                      style={{ textDecoration: "none", display: "block", color: "inherit", position: "relative", zIndex: 1 }}
+                    >
                       {row}
                     </Link>
                   );

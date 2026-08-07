@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -11,42 +11,74 @@ import {
   Select,
   Loader,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { useMediaQuery } from "@mantine/hooks";
+import { IconX } from "@tabler/icons-react";
 import { DisasterTypePicker } from "~/components/disaster-type-picker";
-import type { MapMarker, MarkerScreenPoint } from "~/components/map/crisis-map";
+import type {
+  CrisisMapApi,
+  MapMarker,
+  MarkerScreenPoint,
+  BaseMapType,
+} from "~/components/map/crisis-map";
+import {
+  shouldShowPointAltitude,
+  type PointAltitudeResult,
+} from "~/lib/map/point-altitude";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
+import { useTeamCountry, useScopedCountryOptions } from "~/hooks/use-team-country";
 import {
   type CrisisMarker,
   alertsToMarkers,
   eventsToMarkers,
+  focusEventToMarkers,
   signalsToMarkers,
   crisesToMarkers,
+  applyLocationChallengesToMarkers,
 } from "./_components/map-markers-data";
+import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
 import { useLocations } from "~/hooks/use-locations";
-import { countryConfig } from "~/lib/constants/country-config";
+import { resolveCountryConfig, shortCountryName } from "~/lib/constants/country-config";
 import { MapPanelBar } from "./_components/map-panel-bar";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
-import { MapLoadingOverlay } from "./_components/map-loading-overlay";
+import { MapLoadingOverlay, MapPreloader } from "./_components/map-loading-overlay";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
+import {
+  MapPanelConnectors,
+  type PanelGeometry,
+} from "./_components/map-panel-connectors";
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
-import type { BaseMapType } from "~/components/map/crisis-map";
-import { useIsDark } from "~/hooks/use-is-dark";
 import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
-import { useSearchParams } from "next/navigation";
+import {
+  readMapViewState,
+  writeMapViewState,
+  type MapViewCamera,
+  type MapViewStateV1,
+} from "~/lib/map-view-state";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getAdjacentItem, orderByProximityTo } from "~/lib/detail-list-nav";
 import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
-
+import {
+  pickTourDemoMarker,
+  TOUR_MAP_DEMO_EVENT,
+  type TourMapDemoDetail,
+} from "~/lib/onboarding/tour-map-demo";
+import {
+  blockagesHintFromMeta,
+  fetchBlockagesMapCollection,
+  isBlockagesUiEnabled,
+} from "~/lib/map/fetch-blockages";
 const MAX_OPEN_PANELS = 4;
 
 interface OpenMarkerPanel {
   marker: CrisisMarker;
   /** Null after arrow-nav until the user re-clicks a pin (fallback panel placement). */
   anchor: MarkerScreenPoint | null;
-  /** FIFO age — set once when the panel is created. */
+  /** FIFO age - set once when the panel is created. */
   openedAt: number;
-  /** Bring-to-front order — bumped on open/focus/drag. */
+  /** Bring-to-front order - bumped on open/focus/drag. */
   z: number;
   /**
    * Frozen proximity walk from the pin that opened/focused this panel:
@@ -56,15 +88,17 @@ interface OpenMarkerPanel {
 }
 
 function MapLoadingPlaceholder() {
-  const isDark = useIsDark();
   return (
-    <Box 
-      w="100%" 
-      h="100%" 
-      style={{ 
-        background: isDark ? "#111111" : "#FAFAFA",
-      }} 
-    />
+    <Box
+      w="100%"
+      h="100%"
+      style={{
+        position: "relative",
+        background: "var(--color-bg-primary)",
+      }}
+    >
+      <MapPreloader dataView="alert" showMessages />
+    </Box>
   );
 }
 
@@ -91,27 +125,62 @@ function FilterLabel({ children }: { children: string }) {
   );
 }
 
-export default function MapPage() {
+function MapPageContent() {
   const t = useTranslations("map");
   const format = useFormatter();
   const isMobile = useMediaQuery("(max-width: 48em)");
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const focusEventId = searchParams.get("event");
-  const focusSignalId = searchParams.get("signal");
-  const focusCrisisId = searchParams.get("crisis");
+  const urlFocusEventId = searchParams.get("event");
+  const urlFocusSignalId = searchParams.get("signal");
+  const urlFocusCrisisId = searchParams.get("crisis");
+  /**
+   * Session restore from map → detail → back. Skipped when the URL asks for
+   * a solo-focus deep link (`?event=` / signal / crisis).
+   */
+  const [restoredView] = useState<MapViewStateV1 | null>(() => {
+    if (typeof window === "undefined") return null;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("event") || sp.get("signal") || sp.get("crisis")) return null;
+    return readMapViewState();
+  });
+  /**
+   * Session-restore seed for center/zoom props. Cleared on country/region
+   * change. Never updated from live pans - that re-triggered flyTo and made
+   * drag/tilt feel staggered.
+   */
+  const [cameraSeed, setCameraSeed] = useState<MapViewCamera | null>(
+    () => restoredView?.camera ?? null,
+  );
+  const [pendingRestoreMarkerIds, setPendingRestoreMarkerIds] = useState<number[]>(
+    () => restoredView?.openMarkerIds ?? [],
+  );
+  /** Block session writes until marker reopen finishes (avoids wiping openMarkerIds). */
+  const [restoreReady, setRestoreReady] = useState(
+    () => !restoredView || (restoredView.openMarkerIds.length === 0),
+  );
+  // Local dismiss so clearing solo focus swaps to browse markers immediately
+  // without waiting on the soft URL replace (and without remounting the page).
+  const [focusDismissed, setFocusDismissed] = useState(false);
+  useEffect(() => {
+    setFocusDismissed(false);
+  }, [urlFocusEventId, urlFocusSignalId, urlFocusCrisisId]);
+  const focusEventId = focusDismissed ? null : urlFocusEventId;
+  const focusSignalId = focusDismissed ? null : urlFocusSignalId;
+  const focusCrisisId = focusDismissed ? null : urlFocusCrisisId;
   const focusEntityId = focusEventId ?? focusSignalId ?? focusCrisisId;
-
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>(() => {
-    if (focusSignalId) return "signal";
-    if (focusCrisisId) return "crisis";
-    if (focusEventId) return "event";
+    if (urlFocusSignalId) return "signal";
+    if (urlFocusCrisisId) return "crisis";
+    if (urlFocusEventId) return "event";
     return "alert";
   });
 
   /* ---- Fetch data ---- */
   const { activeTeamId, activeTeam } = useTeam();
   const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
+  const { countryName: teamCountryName } = useTeamCountry();
 
   // Timeline state. Stored as "YYYY-MM"; null means "all time".
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -121,7 +190,7 @@ export default function MapPage() {
   // back through past months. Default is a 30-day window - the archived
   // backlog is ~5x the published set and dominated page load time.
   const [timeframe, setTimeframe] = useState<"7d" | "30d" | "90d" | "all">("30d");
-  
+
   // Compute from/to dates for server-side filtering
   const timeframeRange = useMemo(() => {
     if (timeframe === "all") return { from: undefined, to: undefined };
@@ -134,55 +203,286 @@ export default function MapPage() {
     };
   }, [timeframe]);
 
-  // Fetch data for active view ONLY (no parallel loading)
+  // Full Map / focused Back: solo mode paints only the deep-linked entity
+  // (event + its signals, or one signal/crisis). Skip the browse feeds.
+  const isFocusMode = !!focusEntityId;
+
+  const clearSoloFocus = useCallback(() => {
+    setFocusDismissed(true);
+    router.replace("/map", { scroll: false });
+  }, [router]);
+
+  const focusEventQuery = api.events.forMapFocus.useQuery(
+    { id: focusEventId! },
+    { enabled: !!focusEventId, staleTime: 60_000 },
+  );
+  const focusSignalQuery = api.signals.get.useQuery(
+    { id: focusSignalId! },
+    { enabled: !!focusSignalId, staleTime: 60_000 },
+  );
+  const focusCrisisQuery = api.crises.get.useQuery(
+    { id: focusCrisisId! },
+    { enabled: !!focusCrisisId, staleTime: 60_000 },
+  );
+
+  const focusFilterLabel = useMemo(() => {
+    if (focusEventId) {
+      return focusEventQuery.data?.title?.trim() || t("timeline.focusFallbackEvent");
+    }
+    if (focusSignalId) {
+      return focusSignalQuery.data?.title?.trim() || t("timeline.focusFallbackSignal");
+    }
+    if (focusCrisisId) {
+      return focusCrisisQuery.data?.title?.trim() || t("timeline.focusFallbackCrisis");
+    }
+    return null;
+  }, [
+    focusEventId,
+    focusSignalId,
+    focusCrisisId,
+    focusEventQuery.data,
+    focusSignalQuery.data,
+    focusCrisisQuery.data,
+    t,
+  ]);
+
+  // Fetch data for active view ONLY (no parallel loading). Disabled in focus mode.
+  // teamId is what actually enforces the team's location scope: the backend
+  // ANDs in that team's locations (expanded to descendants). Without it the
+  // full global dataset reaches the browser and the country picker below is
+  // only cosmetic.
   const alertsQuery = api.alerts.alertsForMap.useQuery(
-    { 
-      includeDummy: true, 
+    {
+      includeDummy: true,
       activeOnly: timeframe !== "all",
       from: timeframeRange.from,
       to: timeframeRange.to,
+      teamId: activeTeamId,
     },
-    { enabled: dataView === "alert", placeholderData: (prev) => prev },
+    { enabled: !isFocusMode && dataView === "alert", placeholderData: (prev) => prev },
   );
   const eventsQuery = api.alerts.eventsForMap.useQuery(
-    { 
+    {
       includeDummy: true,
       from: timeframeRange.from,
       to: timeframeRange.to,
+      teamId: activeTeamId ?? undefined,
     },
-    { enabled: dataView === "event", placeholderData: (prev) => prev },
+    { enabled: !isFocusMode && dataView === "event", placeholderData: (prev) => prev },
   );
   const crisesQuery = api.alerts.getCrises.useQuery(
     undefined,
-    { enabled: dataView === "crisis", placeholderData: (prev) => prev },
+    { enabled: !isFocusMode && dataView === "crisis", placeholderData: (prev) => prev },
   );
   const signalsListQuery = api.signals.forMap.useQuery(
-    { 
+    {
       includeDummy: true,
       from: timeframeRange.from,
       to: timeframeRange.to,
+      teamId: activeTeamId,
     },
-    { enabled: dataView === "signal", staleTime: 60_000, placeholderData: (prev) => prev },
+    { enabled: !isFocusMode && dataView === "signal", staleTime: 60_000, placeholderData: (prev) => prev },
+  );
+  const locationChallengesQuery = api.locationChallenge.listForMap.useQuery(
+    { teamId: activeTeamId ?? undefined, status: "consideration" },
+    { enabled: dataView === "signal", staleTime: 60_000 },
   );
   const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, {
     staleTime: Infinity, refetchOnWindowFocus: false,
   });
   const hierarchy: HierarchyLevel1[] = hierarchyQuery.data ?? [];
+  const utils = api.useUtils();
+  const tChallenge = useTranslations("locationChallenge");
+  const tToasts = useTranslations("common.toasts");
 
-  /* ---- Derive markers based on active data view (markers-only; no region heatmaps) ---- */
+  /**
+   * Place-on-map Location correction draft (started from challenge modal).
+   * Visual ghost pin is merged into markers before clear-api persists.
+   */
+  const [locationCorrectionDraft, setLocationCorrectionDraft] = useState<{
+    signalId: string;
+    sourceMarkerId: number;
+    phase: "picking" | "placed";
+    note?: string;
+    draftLat?: number;
+    draftLng?: number;
+    submitting?: boolean;
+  } | null>(null);
+  /** Local dual-pin overlay when submit succeeds visually but API is not shipped yet. */
+  const [localCorrections, setLocalCorrections] = useState<
+    Record<string, { lng: number; lat: number; name?: string; note?: string }>
+  >({});
+  /** Local bare Location challenge (no proposed point) before clear-api ships. */
+  const [localBareChallenges, setLocalBareChallenges] = useState<
+    Record<string, { note?: string }>
+  >({});
+
+  const submitLocationCorrection = api.locationChallenge.submit.useMutation();
+
+  const handleUnavailableChallengeQueue = useCallback(
+    (payload: {
+      signalId: string;
+      note?: string;
+      proposedLat?: number;
+      proposedLng?: number;
+      proposedName?: string;
+    }) => {
+      const hasPoint =
+        payload.proposedLat != null && payload.proposedLng != null;
+      if (hasPoint) {
+        setLocalCorrections((prev) => ({
+          ...prev,
+          [payload.signalId]: {
+            lng: payload.proposedLng!,
+            lat: payload.proposedLat!,
+            name: payload.proposedName,
+            note: payload.note,
+          },
+        }));
+        setLocalBareChallenges((prev) => {
+          if (!(payload.signalId in prev)) return prev;
+          const next = { ...prev };
+          delete next[payload.signalId];
+          return next;
+        });
+        return;
+      }
+      setLocalBareChallenges((prev) => ({
+        ...prev,
+        [payload.signalId]: { note: payload.note },
+      }));
+    },
+    [],
+  );
+
+  const signalChallengesForMap = useMemo((): GqlSignalLocationChallenge[] => {
+    const bySignal = new Map<string, GqlSignalLocationChallenge>();
+    for (const c of locationChallengesQuery.data ?? []) {
+      bySignal.set(c.signalId, c);
+    }
+    for (const [signalId, bare] of Object.entries(localBareChallenges)) {
+      if (bySignal.has(signalId)) continue;
+      bySignal.set(signalId, {
+        id: `local-bare-${signalId}`,
+        signalId,
+        status: "consideration",
+        note: bare.note ?? null,
+        proposedLng: null,
+        proposedLat: null,
+        proposedName: null,
+        createdBy: "local",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        hasProposedPoint: false,
+      });
+    }
+    for (const [signalId, pt] of Object.entries(localCorrections)) {
+      const existing = bySignal.get(signalId);
+      if (existing?.hasProposedPoint) continue;
+      bySignal.set(signalId, {
+        id: `local-${signalId}`,
+        signalId,
+        status: "consideration",
+        note: pt.note ?? null,
+        proposedLng: pt.lng,
+        proposedLat: pt.lat,
+        proposedName: pt.name ?? null,
+        createdBy: "local",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        hasProposedPoint: true,
+      });
+    }
+    if (locationCorrectionDraft) {
+      const { signalId, draftLat, draftLng, phase, note } = locationCorrectionDraft;
+      if (phase === "placed" && draftLat != null && draftLng != null) {
+        bySignal.set(signalId, {
+          id: `draft-${signalId}`,
+          signalId,
+          status: "consideration",
+          note: note ?? null,
+          proposedLng: draftLng,
+          proposedLat: draftLat,
+          proposedName: null,
+          createdBy: "draft",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          hasProposedPoint: true,
+        });
+      } else if (phase === "picking" && !bySignal.has(signalId)) {
+        bySignal.set(signalId, {
+          id: `draft-${signalId}`,
+          signalId,
+          status: "consideration",
+          note: note ?? null,
+          proposedLng: null,
+          proposedLat: null,
+          proposedName: null,
+          createdBy: "draft",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          hasProposedPoint: false,
+        });
+      }
+    }
+    return [...bySignal.values()];
+  }, [
+    locationChallengesQuery.data,
+    localBareChallenges,
+    localCorrections,
+    locationCorrectionDraft,
+  ]);
+
+  /* ---- Derive markers: solo deep-link set OR browse feed ---- */
   const allMarkers: CrisisMarker[] = useMemo(() => {
+    if (focusEventId) {
+      return focusEventQuery.data ? focusEventToMarkers(focusEventQuery.data) : [];
+    }
+    if (focusSignalId) {
+      return focusSignalQuery.data
+        ? applyLocationChallengesToMarkers(
+            signalsToMarkers([focusSignalQuery.data]),
+            signalChallengesForMap,
+          )
+        : [];
+    }
+    if (focusCrisisId) {
+      return focusCrisisQuery.data ? crisesToMarkers([focusCrisisQuery.data]) : [];
+    }
     let markers: CrisisMarker[] = [];
     if (dataView === "alert")  markers = alertsToMarkers(alertsQuery.data?.alerts ?? []);
     if (dataView === "event")  markers = eventsToMarkers(eventsQuery.data?.events ?? []);
-    if (dataView === "signal") markers = signalsToMarkers(signalsListQuery.data ?? []);
+    if (dataView === "signal") {
+      markers = applyLocationChallengesToMarkers(
+        signalsToMarkers(signalsListQuery.data ?? []),
+        signalChallengesForMap,
+      );
+    }
     if (dataView === "crisis") markers = crisesToMarkers(crisesQuery.data?.crises ?? []);
-    
     return markers;
-  }, [dataView, alertsQuery.data, eventsQuery.data, signalsListQuery.data, crisesQuery.data]);
+  }, [
+    focusEventId,
+    focusSignalId,
+    focusCrisisId,
+    focusEventQuery.data,
+    focusSignalQuery.data,
+    focusCrisisQuery.data,
+    dataView,
+    alertsQuery.data,
+    eventsQuery.data,
+    signalsListQuery.data,
+    signalChallengesForMap,
+    crisesQuery.data,
+  ]);
 
   const focusMarker = useMemo(() => {
     if (!focusEntityId) return null;
-    return allMarkers.find((m) => m.eventId === focusEntityId) ?? null;
+    // Prefer the primary entity pin (event/crisis/signal id), not a child signal.
+    return (
+      allMarkers.find((m) => m.eventId === focusEntityId) ??
+      allMarkers[0] ??
+      null
+    );
   }, [allMarkers, focusEntityId]);
 
   const allRegions = useMemo(() => {
@@ -206,25 +506,27 @@ export default function MapPage() {
     return codes;
   }, [selectedTypes, hierarchy]);
 
-  // TODO: hardcoded to Sudan for the current single-team deployment.
-  // When more teams join, remove this default and rely solely on the
-  // useEffect below which sets the country from activeTeam.locations.
-  // Requires teams to have a level-0 location configured in the DB.
-  const [selectedCountry, setSelectedCountry] = useState("Sudan");
+  // Country the user picked. Only consulted when the active team monitors
+  // globally; a team bound to a country is pinned to it via selectedCountry
+  // below, so "All Countries" is not reachable for them.
+  const [pickedCountry, setPickedCountry] = useState("All Countries");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
+  const selectedCountry = teamCountryName ?? pickedCountry;
+  const setSelectedCountry = setPickedCountry;
 
-  // Pre-select the team's country when the active team loads.
+  // Reset the region whenever the team (and therefore the country) changes.
   useEffect(() => {
-    const countryLoc = activeTeam?.locations.find((l) => l.level === 0);
-    if (countryLoc) {
-      setSelectedCountry(countryLoc.name);
-      setSelectedRegion("All Regions");
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setSelectedRegion("All Regions");
   }, [activeTeam?.id]);
   const [openPanels, setOpenPanels] = useState<OpenMarkerPanel[]>([]);
   const [keepPanelsOpen, setKeepPanelsOpen] = useState(false);
   const [chromeActiveMarkerId, setChromeActiveMarkerId] = useState<number | null>(null);
+  /** Desktop panel boxes for spaghetti connectors (marker id → geometry). */
+  const [panelGeometries, setPanelGeometries] = useState<Record<number, PanelGeometry>>({});
+  /** Live pin screen positions for open panels (reprojected on map move). */
+  const [connectorPins, setConnectorPins] = useState<Record<number, MarkerScreenPoint>>({});
+  const mapApiRef = useRef<CrisisMapApi | null>(null);
+  const connectorRafRef = useRef<number | null>(null);
   /** When set, camera flies to this marker; closing restores `returnCamera`. */
   const [markerFocus, setMarkerFocus] = useState<{ lng: number; lat: number; zoom: number } | null>(null);
   /** Camera to restore when closing a marker sheet (usually the prior cluster/donut layer). */
@@ -245,7 +547,7 @@ export default function MapPage() {
   /**
    * Camera to restore when the last detail panel closes (group pins → expanded
    * cluster framing). Lonely pins keep the detail zoom on close.
-   * Decided at open — never mutated inside a setState updater (Strict Mode safe).
+   * Decided at open - never mutated inside a setState updater (Strict Mode safe).
    */
   const detailRestoreCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
   /** True when the open detail should close back to group zoom. */
@@ -257,11 +559,100 @@ export default function MapPage() {
   const markerFocusRef = useRef(markerFocus);
   markerFocusRef.current = markerFocus;
 
-  const handleCameraChange = useCallback((camera: { center: [number, number]; zoom: number }) => {
+  const refreshConnectorPins = useCallback(() => {
+    const api = mapApiRef.current;
+    const panels = openPanelsRef.current;
+    if (!api || panels.length === 0) {
+      setConnectorPins((prev) => (Object.keys(prev).length === 0 ? prev : {}));
+      return;
+    }
+    const next: Record<number, MarkerScreenPoint> = {};
+    for (const panel of panels) {
+      const pt = api.projectMarker(panel.marker.id, panel.marker.lng, panel.marker.lat);
+      if (pt) next[panel.marker.id] = pt;
+    }
+    setConnectorPins(next);
+  }, []);
+
+  const handleMapMove = useCallback(() => {
+    if (openPanelsRef.current.length === 0) return;
+    if (connectorRafRef.current != null) return;
+    connectorRafRef.current = window.requestAnimationFrame(() => {
+      connectorRafRef.current = null;
+      refreshConnectorPins();
+    });
+  }, [refreshConnectorPins]);
+
+  useEffect(() => {
+    refreshConnectorPins();
+  }, [openPanels, refreshConnectorPins]);
+
+  useEffect(() => {
+    return () => {
+      if (connectorRafRef.current != null) {
+        window.cancelAnimationFrame(connectorRafRef.current);
+      }
+    };
+  }, []);
+
+  // Drop geometry for panels that closed (unmount also clears via callback).
+  useEffect(() => {
+    const openIds = new Set(openPanels.map((p) => p.marker.id));
+    setPanelGeometries((prev) => {
+      let changed = false;
+      const next: Record<number, PanelGeometry> = {};
+      for (const [idStr, geom] of Object.entries(prev)) {
+        const id = Number(idStr);
+        if (openIds.has(id)) next[id] = geom;
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [openPanels]);
+
+  const handlePanelGeometryChange = useCallback(
+    (markerId: number, geometry: PanelGeometry | null) => {
+      setPanelGeometries((prev) => {
+        if (geometry == null) {
+          if (!(markerId in prev)) return prev;
+          const next = { ...prev };
+          delete next[markerId];
+          return next;
+        }
+        return { ...prev, [markerId]: geometry };
+      });
+    },
+    [],
+  );
+
+  const persistMapView = useCallback((camera?: MapViewCamera) => {
+    const live =
+      camera ??
+      mapApiRef.current?.getViewCamera() ??
+      (browseCameraRef.current
+        ? {
+            center: browseCameraRef.current.center,
+            zoom: browseCameraRef.current.zoom,
+            pitch: 0,
+            bearing: 0,
+          }
+        : null);
+    if (!live) return;
+    writeMapViewState({
+      camera: live,
+      baseMapType: baseMapTypeRef.current,
+      openMarkerIds: openPanelsRef.current.map((p) => p.marker.id),
+    });
+  }, []);
+
+  const handleCameraChange = useCallback((camera: MapViewCamera) => {
     // Track browse camera only while not in a marker-detail focus fly.
+    // Persist via refs/storage only - do not push camera into React state
+    // (mapCenter/mapZoom props → flyTo loop → staggered drag/tilt).
     if (markerFocusRef.current) return;
     browseCameraRef.current = camera;
     layerCameraRef.current = camera;
+    if (restoreReady) persistMapView(camera);
     // If the user zooms back out to donut/regional depth, drop group context
     // so the next pin is treated as lonely (close → global).
     const donut = donutCameraRef.current;
@@ -274,7 +665,7 @@ export default function MapPage() {
       clusterLeafCountRef.current = 0;
       donutCameraRef.current = null;
     }
-  }, []);
+  }, [persistMapView, restoreReady]);
 
   const handleClusterExpand = useCallback((
     camera: { center: [number, number]; zoom: number },
@@ -287,17 +678,131 @@ export default function MapPage() {
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
   const [showRoads, setShowRoads] = useState(true);
-  const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
+  const [showNrcLocations, setShowNrcLocations] = useState(false);
+  const [baseMapType, setBaseMapType] = useState<BaseMapType>(
+    () => restoredView?.baseMapType ?? "simple",
+  );
+  const baseMapTypeRef = useRef(baseMapType);
+  baseMapTypeRef.current = baseMapType;
 
-  // Deep-link from detail Back / Full Map: align data view + clear filters that
-  // would hide the target marker (#108).
+  // Persist basemap / open panels even when the camera is still.
+  useEffect(() => {
+    if (!restoreReady) return;
+    persistMapView();
+  }, [baseMapType, openPanels, persistMapView, restoreReady]);
+
+  // Flush snapshot on leave so View details → Back always has a fresh copy.
+  useEffect(() => {
+    const flush = () => {
+      if (!restoreReady) return;
+      persistMapView();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [persistMapView, restoreReady]);
+  /** Marker-detail Point altitude samples (Topography only). */
+  const [panelAltitudes, setPanelAltitudes] = useState<
+    Record<number, PointAltitudeResult>
+  >({});
+
+  // Publish basemap so frost chrome (nav + Layers) can remap text contrast
+  // on Simple / Topography / Satellite (GH #145). Cleared when leaving /map.
+  useEffect(() => {
+    document.body.dataset.mapBasemap = baseMapType;
+    return () => {
+      delete document.body.dataset.mapBasemap;
+    };
+  }, [baseMapType]);
+
+  useEffect(() => {
+    if (!shouldShowPointAltitude(baseMapType) || openPanels.length === 0) {
+      setPanelAltitudes({});
+      return;
+    }
+    const sample = () => {
+      const api = mapApiRef.current;
+      if (!api) return;
+      const next: Record<number, PointAltitudeResult> = {};
+      for (const panel of openPanelsRef.current) {
+        next[panel.marker.id] = api.samplePointAltitude(
+          panel.marker.lng,
+          panel.marker.lat,
+        );
+      }
+      setPanelAltitudes(next);
+    };
+    sample();
+    // DEM tiles may land after setTerrain - retry briefly for open panels.
+    const t1 = window.setTimeout(sample, 400);
+    const t2 = window.setTimeout(sample, 1200);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [baseMapType, openPanels]);
+
+  /**
+   * Blockages UI: always on (BFF default). See `fetch-blockages.ts`.
+   */
+  const blockagesUiEnabled = isBlockagesUiEnabled();
+  const [showBlockages, setShowBlockages] = useState(false);
+  const [blockagesLoading, setBlockagesLoading] = useState(false);
+  const [blockagesHint, setBlockagesHint] = useState<string | undefined>();
+  const [blockagesGeoJson, setBlockagesGeoJson] = useState<{
+    type: "FeatureCollection";
+    features: Array<{
+      type: "Feature";
+      geometry: unknown;
+      properties: Record<string, unknown>;
+    }>;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!blockagesUiEnabled || !showBlockages) {
+      setBlockagesGeoJson(null);
+      setBlockagesHint(undefined);
+      setBlockagesLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setBlockagesLoading(true);
+    setBlockagesHint(undefined);
+    fetchBlockagesMapCollection()
+      .then(({ collection, source }) => {
+        if (cancelled) return;
+        setBlockagesGeoJson(collection);
+        setBlockagesHint(blockagesHintFromMeta(collection, source));
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setBlockagesGeoJson(null);
+        setBlockagesHint(
+          err instanceof Error ? err.message : "Failed to load",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setBlockagesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [blockagesUiEnabled, showBlockages]);
+
+  // Deep-link from detail Back / Full Map: align Layers data-view chrome only.
+  // Markers come from the solo focus queries - do not widen timeframe or wipe
+  // browse filters (#108 / show-this-pin).
   useEffect(() => {
     if (!focusEntityId) return;
     if (focusSignalId) setDataView("signal");
     else if (focusCrisisId) setDataView("crisis");
     else if (focusEventId) setDataView("event");
-    setSelectedMonth(null);
-    setSelectedRegion("All Regions");
   }, [focusEntityId, focusSignalId, focusCrisisId, focusEventId]);
 
   // Pulse the deep-linked pin once markers are available.
@@ -344,13 +849,17 @@ export default function MapPage() {
   );
   const populationLoading = showPopulation && populationQuery.isFetching && populationBoundaries.length === 0;
 
-  // Country L0 geometry - used for the country highlight instead of Mapbox's
-  // inaccurate tileset. Re-runs whenever the user switches country.
+  // Country L0 geometry - country highlight paint only. Camera framing uses
+  // static countryConfig so switches don't wait on this (often 2–5s) fetch.
   const focusCountryL0Query = api.locations.getById.useQuery(
     { id: focusCountryId! },
     { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
-  const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
+  // Ignore stale prior-country payloads while the new id is in flight.
+  const focusCountryGeometry =
+    focusCountryL0Query.data?.id === focusCountryId
+      ? (focusCountryL0Query.data.geometry ?? undefined)
+      : undefined;
 
   // Region zoom: fetch selected region geometry and fit map to it.
   const selectedRegionId = useMemo(
@@ -367,9 +876,12 @@ export default function MapPage() {
   );
 
   /* ---- Derive country/region options from API locations ---- */
+  // A team bound to a country gets only that country: no "All Countries"
+  // escape hatch, since the data behind it is now scoped out anyway.
+  const scopedCountries = useScopedCountryOptions(apiCountries);
   const countryOptions = useMemo(
-    () => ["All Countries", ...apiCountries],
-    [apiCountries],
+    () => (teamCountryName ? scopedCountries : ["All Countries", ...apiCountries]),
+    [teamCountryName, scopedCountries, apiCountries],
   );
   const regionOptions = useMemo(
     () => selectedCountry !== "All Countries" ? getRegions(selectedCountry) : ["All Regions"],
@@ -380,6 +892,8 @@ export default function MapPage() {
   const mapCenter: [number, number] = useMemo(() => {
     if (markerFocus) return [markerFocus.lng, markerFocus.lat];
     if (returnCamera) return returnCamera.center;
+    // Initial restore seed only - live pans stay in Mapbox + sessionStorage.
+    if (cameraSeed) return cameraSeed.center;
     if (focusMarker) return [focusMarker.lng, focusMarker.lat];
     if (selectedCountry !== "All Countries") {
       return getCenter(selectedCountry);
@@ -390,19 +904,20 @@ export default function MapPage() {
     const avgLat =
       allMarkers.reduce((sum, m) => sum + m.lat, 0) / allMarkers.length;
     return [avgLng, avgLat];
-  }, [allMarkers, selectedCountry, focusMarker, markerFocus, returnCamera, getCenter]);
+  }, [allMarkers, selectedCountry, focusMarker, markerFocus, returnCamera, cameraSeed, getCenter]);
 
   const mapZoom = useMemo(() => {
     if (markerFocus) return markerFocus.zoom;
     if (returnCamera) return returnCamera.zoom;
+    if (cameraSeed) return cameraSeed.zoom;
     if (focusMarker) return MAP_FOCUS_ZOOM;
     if (selectedCountry !== "All Countries") {
-      // Same country zoom on mobile and desktop — fitBounds owns framing when
+      // Same country zoom on mobile and desktop - fitBounds owns framing when
       // geometry/bbox is available; this is the fallback before that lands.
       return getZoom(selectedCountry);
     }
     return isMobile ? 4 : 5;
-  }, [selectedCountry, focusMarker, markerFocus, returnCamera, getZoom, isMobile]);
+  }, [selectedCountry, focusMarker, markerFocus, returnCamera, cameraSeed, getZoom, isMobile]);
 
   /* ---- Resolve selected location for filtering ---- */
   const selectedLocationId = useMemo(() => {
@@ -468,6 +983,124 @@ export default function MapPage() {
     });
   }, []);
 
+  const handleStartLocationCorrection = useCallback(
+    (marker: CrisisMarker, draft?: { note?: string }) => {
+      if (marker.markerKind !== "signal" || !marker.eventId) return;
+      setLocationCorrectionDraft({
+        signalId: marker.eventId,
+        sourceMarkerId: marker.id,
+        phase: "picking",
+        note: draft?.note,
+      });
+    },
+    [],
+  );
+
+  const handleCancelLocationCorrection = useCallback(() => {
+    setLocationCorrectionDraft(null);
+  }, []);
+
+  const handleRepickLocationCorrection = useCallback(() => {
+    setLocationCorrectionDraft((prev) =>
+      prev
+        ? {
+            signalId: prev.signalId,
+            sourceMarkerId: prev.sourceMarkerId,
+            phase: "picking",
+            note: prev.note,
+          }
+        : null,
+    );
+  }, []);
+
+  const handleLocationCorrectionMapClick = useCallback(
+    (lngLat: { lng: number; lat: number }) => {
+      setLocationCorrectionDraft((prev) => {
+        if (!prev || prev.phase !== "picking") return prev;
+        return {
+          ...prev,
+          phase: "placed",
+          draftLat: lngLat.lat,
+          draftLng: lngLat.lng,
+        };
+      });
+    },
+    [],
+  );
+
+  const handleConfirmLocationCorrection = useCallback(async () => {
+    const draft = locationCorrectionDraft;
+    if (
+      !draft ||
+      draft.phase !== "placed" ||
+      draft.draftLat == null ||
+      draft.draftLng == null
+    ) {
+      return;
+    }
+    setLocationCorrectionDraft({ ...draft, submitting: true });
+    try {
+      await submitLocationCorrection.mutateAsync({
+        signalId: draft.signalId,
+        note: draft.note,
+        proposedLat: draft.draftLat,
+        proposedLng: draft.draftLng,
+      });
+      await Promise.all([
+        utils.locationChallenge.listForMap.invalidate(),
+        utils.locationChallenge.getBySignal.invalidate({ signalId: draft.signalId }),
+      ]);
+      setLocalCorrections((prev) => {
+        const next = { ...prev };
+        delete next[draft.signalId];
+        return next;
+      });
+      setLocationCorrectionDraft(null);
+      notifications.show({
+        title: tChallenge("modal.successTitle"),
+        message: tChallenge("modal.successCorrection"),
+        color: "green",
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      const backendMissing = message.includes("LOCATION_CHALLENGE_BACKEND_UNAVAILABLE");
+      if (backendMissing) {
+        setLocalCorrections((prev) => ({
+          ...prev,
+          [draft.signalId]: {
+            lng: draft.draftLng!,
+            lat: draft.draftLat!,
+            note: draft.note,
+          },
+        }));
+        setLocationCorrectionDraft(null);
+        notifications.show({
+          title: tToasts("error"),
+          message: tChallenge("errors.backendUnavailable"),
+          color: "yellow",
+        });
+        return;
+      }
+      setLocationCorrectionDraft({ ...draft, submitting: false });
+      notifications.show({
+        title: tToasts("error"),
+        message: tChallenge("errors.submitFailed"),
+        color: "red",
+      });
+    }
+  }, [
+    locationCorrectionDraft,
+    submitLocationCorrection,
+    utils.locationChallenge.listForMap,
+    utils.locationChallenge.getBySignal,
+    tChallenge,
+    tToasts,
+  ]);
+
+  useEffect(() => {
+    setLocationCorrectionDraft(null);
+  }, [dataView]);
+
   const closeOpenPanel = useCallback((markerId: number) => {
     const nextPanels = openPanelsRef.current.filter((p) => p.marker.id !== markerId);
     const closingLast =
@@ -476,6 +1109,9 @@ export default function MapPage() {
     openPanelsRef.current = nextPanels;
     setOpenPanels(nextPanels);
     setChromeActiveMarkerId((prev) => (prev === markerId ? null : prev));
+    setLocationCorrectionDraft((prev) =>
+      prev?.sourceMarkerId === markerId ? null : prev,
+    );
 
     if (!closingLast) return;
 
@@ -589,8 +1225,9 @@ export default function MapPage() {
     }
   }, [availableMonths, selectedMonth]);
 
-  /* ---- Apply timeline filter on top ---- */
+  /* ---- Apply timeline filter on top (skipped in solo focus mode) ---- */
   const currentMarkers: CrisisMarker[] = useMemo(() => {
+    if (isFocusMode) return allMarkers;
     if (!selectedMonth) return markersBeforeTime;
     return markersBeforeTime.filter((m) => {
       // Markers without a known timestamp pass through - see availableMonths
@@ -601,7 +1238,41 @@ export default function MapPage() {
       const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
       return ym === selectedMonth;
     });
-  }, [markersBeforeTime, selectedMonth]);
+  }, [isFocusMode, allMarkers, markersBeforeTime, selectedMonth]);
+
+  // Reopen marker panels from the session snapshot once markers are loaded.
+  useEffect(() => {
+    if (pendingRestoreMarkerIds.length === 0) {
+      if (!restoreReady) setRestoreReady(true);
+      return;
+    }
+    if (currentMarkers.length === 0) return;
+
+    const byId = new Map(currentMarkers.map((m) => [m.id, m]));
+    const panels: OpenMarkerPanel[] = [];
+    for (const id of pendingRestoreMarkerIds) {
+      const marker = byId.get(id);
+      if (!marker) continue;
+      const proximityOrderIds = orderByProximityTo(
+        currentMarkers,
+        marker.id,
+        (m) => m.id,
+      ).map((m) => m.id);
+      panels.push({
+        marker,
+        anchor: null,
+        openedAt: Date.now(),
+        z: bumpPanelZ(),
+        proximityOrderIds,
+      });
+    }
+    if (panels.length > 0) {
+      openPanelsRef.current = panels;
+      setOpenPanels(panels);
+    }
+    setPendingRestoreMarkerIds([]);
+    setRestoreReady(true);
+  }, [currentMarkers, pendingRestoreMarkerIds, restoreReady, bumpPanelZ]);
 
   /** Resolve a panel's frozen proximity order against the live filtered set. */
   const markersForPanelNav = useCallback(
@@ -656,27 +1327,46 @@ export default function MapPage() {
                 marker: target,
                 anchor: null,
                 z,
-                // Keep the frozen proximity walk — do not re-anchor mid-tour.
+                // Keep the frozen proximity walk - do not re-anchor mid-tour.
                 proximityOrderIds: p.proximityOrderIds,
               }
             : p,
         );
       });
 
-      // Keep current detail zoom while the camera follows the stepped pin.
-      const focusZoom = markerFocusRef.current?.zoom ?? MAP_FOCUS_ZOOM;
-      const focus = { lng: target.lng, lat: target.lat, zoom: focusZoom };
-      setMarkerFocus(focus);
-      markerFocusRef.current = focus;
+      // Mobile: keep detail zoom while the camera follows the stepped pin.
+      // Desktop: panel swaps in place - leave the camera alone.
+      if (isMobile) {
+        const focusZoom = markerFocusRef.current?.zoom ?? MAP_FOCUS_ZOOM;
+        const focus = { lng: target.lng, lat: target.lat, zoom: focusZoom };
+        setMarkerFocus(focus);
+        markerFocusRef.current = focus;
+      }
       setChromeActiveMarkerId(target.id);
     },
-    [openPanels, markersForPanelNav, bumpPanelZ],
+    [openPanels, markersForPanelNav, bumpPanelZ, isMobile],
   );
 
   const topOpenPanel = useMemo(() => {
     if (openPanels.length === 0) return null;
     return openPanels.reduce((best, p) => (p.z >= best.z ? p : best));
   }, [openPanels]);
+
+  const connectorLinks = useMemo(() => {
+    if (isMobile || openPanels.length === 0) return [];
+    const topZ = topOpenPanel?.z ?? 0;
+    return openPanels.flatMap((panel) => {
+      const pin = connectorPins[panel.marker.id];
+      const geom = panelGeometries[panel.marker.id];
+      if (!pin || !geom) return [];
+      return [{
+        id: panel.marker.id,
+        pin,
+        panel: geom,
+        emphasized: panel.z === topZ,
+      }];
+    });
+  }, [isMobile, openPanels, topOpenPanel, connectorPins, panelGeometries]);
 
   const topPanelAdjacent = useMemo(() => {
     if (!topOpenPanel) {
@@ -714,11 +1404,13 @@ export default function MapPage() {
   const handleCountryChange = (value: string | null) => {
     setSelectedCountry(value ?? "All Countries");
     setSelectedRegion("All Regions");
+    setCameraSeed(null);
     clearOpenPanels();
   };
 
   const handleRegionChange = (value: string | null) => {
     setSelectedRegion(value ?? "All Regions");
+    setCameraSeed(null);
     clearOpenPanels();
   };
 
@@ -734,40 +1426,51 @@ export default function MapPage() {
         allMarkers.find((m) => m.id === marker.id);
       if (!full) return;
 
-      // Click-time camera = group framing after donut expand, or country overview.
-      const prior = camera ?? browseCameraRef.current ?? layerCameraRef.current;
+      // Desktop: open the panel in place - do not fly/reposition the camera.
+      // Mobile keeps focus-fly so the pin sits above the bottom sheet.
+      if (isMobile) {
+        // Click-time camera = group framing after donut expand, or country overview.
+        const prior = camera ?? browseCameraRef.current ?? layerCameraRef.current;
 
-      const countryZoom =
-        selectedCountry !== "All Countries"
-          ? getZoom(selectedCountry)
-          : (isMobile ? 4 : 5);
+        const countryZoom =
+          selectedCountry !== "All Countries"
+            ? getZoom(selectedCountry)
+            : 4;
 
-      // Group (≥2 markers from a donut): close returns to this group zoom.
-      // Lonely pin: close keeps the detail zoom (no country fitBounds).
-      const fromGroup =
-        openedFromClusterRef.current &&
-        clusterLeafCountRef.current >= 2 &&
-        prior != null;
+        // Group (≥2 markers from a donut): close returns to this group zoom.
+        // Lonely pin: close keeps the detail zoom (no country fitBounds).
+        const fromGroup =
+          openedFromClusterRef.current &&
+          clusterLeafCountRef.current >= 2 &&
+          prior != null;
 
-      detailCloseIsGroupRef.current = fromGroup;
-      if (fromGroup) {
-        const restore = {
-          center: [prior.center[0], prior.center[1]] as [number, number],
-          zoom: prior.zoom,
-        };
-        detailRestoreCameraRef.current = restore;
-        setReturnCamera(restore);
-        returnCameraRef.current = restore;
+        detailCloseIsGroupRef.current = fromGroup;
+        if (fromGroup) {
+          const restore = {
+            center: [prior.center[0], prior.center[1]] as [number, number],
+            zoom: prior.zoom,
+          };
+          detailRestoreCameraRef.current = restore;
+          setReturnCamera(restore);
+          returnCameraRef.current = restore;
+        } else {
+          detailRestoreCameraRef.current = null;
+          setReturnCamera(null);
+          returnCameraRef.current = null;
+        }
+
+        // Zoom in past the current layer so close clearly returns outward.
+        const focusZoom = Math.min(14.5, (prior?.zoom ?? countryZoom) + 2.5);
+        setMarkerFocus({ lng: full.lng, lat: full.lat, zoom: focusZoom });
+        markerFocusRef.current = { lng: full.lng, lat: full.lat, zoom: focusZoom };
       } else {
+        detailCloseIsGroupRef.current = false;
         detailRestoreCameraRef.current = null;
         setReturnCamera(null);
         returnCameraRef.current = null;
+        setMarkerFocus(null);
+        markerFocusRef.current = null;
       }
-
-      // Zoom in past the current layer so close clearly returns outward.
-      const focusZoom = Math.min(14.5, (prior?.zoom ?? countryZoom) + 2.5);
-      setMarkerFocus({ lng: full.lng, lat: full.lat, zoom: focusZoom });
-      markerFocusRef.current = { lng: full.lng, lat: full.lat, zoom: focusZoom };
 
       // Re-anchor proximity walk from the clicked pin (nearest cluster first).
       const proximityOrderIds = orderByProximityTo(
@@ -780,6 +1483,18 @@ export default function MapPage() {
       const accumulate = keepPanelsOpen && !isMobile;
 
       setOpenPanels((prev) => {
+        const existing = prev.find((p) => p.marker.id === full.id);
+        if (existing) {
+          // Same pin again: focus only - keep placement so the panel does not jump.
+          const z = bumpPanelZ();
+          if (!accumulate) {
+            return [{ ...existing, z, proximityOrderIds }];
+          }
+          return prev.map((p) =>
+            p.marker.id === full.id ? { ...p, z, proximityOrderIds } : p,
+          );
+        }
+
         if (!accumulate) {
           return [{
             marker: full,
@@ -788,16 +1503,6 @@ export default function MapPage() {
             z: bumpPanelZ(),
             proximityOrderIds,
           }];
-        }
-
-        const existing = prev.find((p) => p.marker.id === full.id);
-        if (existing) {
-          // Focus existing — no duplicate; refresh proximity from this pin.
-          return prev.map((p) =>
-            p.marker.id === full.id
-              ? { ...p, anchor: screenPoint, z: bumpPanelZ(), proximityOrderIds }
-              : p,
-          );
         }
 
         const next: OpenMarkerPanel[] = [
@@ -810,7 +1515,7 @@ export default function MapPage() {
             proximityOrderIds,
           },
         ];
-        // Soft max 4 — drop oldest by openedAt (FIFO).
+        // Soft max 4 - drop oldest by openedAt (FIFO).
         while (next.length > MAX_OPEN_PANELS) {
           let oldestIdx = 0;
           for (let i = 1; i < next.length; i++) {
@@ -824,11 +1529,89 @@ export default function MapPage() {
     [allMarkers, currentMarkers, keepPanelsOpen, isMobile, bumpPanelZ, selectedCountry, getZoom],
   );
 
-  const isLoading =
-    (dataView === "alert" && alertsQuery.isLoading) ||
-    (dataView === "event" && eventsQuery.isLoading) ||
-    (dataView === "signal" && signalsListQuery.isLoading) ||
-    (dataView === "crisis" && crisesQuery.isLoading);
+  const currentMarkersRef = useRef(currentMarkers);
+  currentMarkersRef.current = currentMarkers;
+  const handleMarkerClickRef = useRef(handleMarkerClick);
+  handleMarkerClickRef.current = handleMarkerClick;
+  const clearOpenPanelsRef = useRef(clearOpenPanels);
+  clearOpenPanelsRef.current = clearOpenPanels;
+
+  // Product Tour step 4: zoom into a dense area and open a marker detail panel.
+  // Re-entry (4→3→4) must clear then force-fly: CrisisMap skips flyTo when
+  // center/zoom match prev props, and closing with fitBoundsOnFocus can leave
+  // those prev props stuck on the first demo focus.
+  useEffect(() => {
+    let startTimer: number | null = null;
+
+    const runDemoStart = () => {
+      const markers = currentMarkersRef.current;
+      const pick = pickTourDemoMarker(markers);
+      if (!pick) return;
+
+      const nearby = markers.filter(
+        (o) => o.id !== pick.id && Math.hypot(o.lng - pick.lng, o.lat - pick.lat) < 0.4,
+      ).length;
+      const clusterZoom = nearby >= 1 ? 9.2 : 10.5;
+      // Anchor on the right half so the detail panel opens to the LEFT of the pin
+      // (placeNearMarker: x >= midpoint → panel on left) and does not cover it.
+      const screenPoint: MarkerScreenPoint = {
+        x: Math.round((typeof window !== "undefined" ? window.innerWidth : 1200) * 0.72),
+        y: Math.round((typeof window !== "undefined" ? window.innerHeight : 800) * 0.38),
+      };
+
+      handleMarkerClickRef.current(pick, screenPoint, {
+        center: [pick.lng, pick.lat],
+        zoom: clusterZoom,
+      });
+      // Desktop marker clicks no longer fly the camera; the tour still needs to.
+      if (!isMobile) {
+        const focus = { lng: pick.lng, lat: pick.lat, zoom: clusterZoom };
+        setMarkerFocus(focus);
+        markerFocusRef.current = focus;
+      }
+      setForceFlyToken((n) => n + 1);
+    };
+
+    const onTourDemo = (event: Event) => {
+      const detail = (event as CustomEvent<TourMapDemoDetail>).detail;
+      if (detail?.action === "stop") {
+        if (startTimer != null) {
+          window.clearTimeout(startTimer);
+          startTimer = null;
+        }
+        clearOpenPanelsRef.current();
+        setForceFlyToken((n) => n + 1);
+        return;
+      }
+      if (detail?.action !== "start") return;
+
+      if (startTimer != null) {
+        window.clearTimeout(startTimer);
+        startTimer = null;
+      }
+      // Reset first so markerFocus null commits; then re-open (works every visit).
+      clearOpenPanelsRef.current();
+      startTimer = window.setTimeout(() => {
+        startTimer = null;
+        runDemoStart();
+      }, 50);
+    };
+
+    window.addEventListener(TOUR_MAP_DEMO_EVENT, onTourDemo);
+    return () => {
+      if (startTimer != null) window.clearTimeout(startTimer);
+      window.removeEventListener(TOUR_MAP_DEMO_EVENT, onTourDemo);
+    };
+  }, [isMobile]);
+
+  const isLoading = isFocusMode
+    ? (!!focusEventId && focusEventQuery.isLoading) ||
+      (!!focusSignalId && focusSignalQuery.isLoading) ||
+      (!!focusCrisisId && focusCrisisQuery.isLoading)
+    : (dataView === "alert" && alertsQuery.isLoading) ||
+      (dataView === "event" && eventsQuery.isLoading) ||
+      (dataView === "signal" && signalsListQuery.isLoading) ||
+      (dataView === "crisis" && crisesQuery.isLoading);
 
   // Show loading overlay only on the initial fetch; timeframe/status
   // refetches keep the previous markers visible via placeholderData.
@@ -853,11 +1636,12 @@ export default function MapPage() {
         background: "var(--color-bg-primary)",
       }}
     >
-      {/* Top filters bar — desktop only; mobile uses the Filters icon in MapPanelBar */}
+      {/* Top filters bar - desktop only; mobile uses the Filters icon in MapPanelBar */}
       <Box
         visibleFrom="sm"
         className="absolute top-0 left-0 right-0 z-20"
         data-tour="map-filters"
+        data-map-chrome-top
         px={16}
         py={12}
         style={{
@@ -873,7 +1657,7 @@ export default function MapPage() {
             value={selectedCountry}
             onChange={handleCountryChange}
             data={countryOptions.map((c) =>
-              c === "All Countries" ? { value: c, label: t("filters.allCountries") } : c,
+              c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
             )}
             style={{ minWidth: 140 }}
             styles={{ input: INPUT_STYLE }}
@@ -917,8 +1701,9 @@ export default function MapPage() {
         </Group>
       </Box>
 
-      {/* Map container with loading overlay — above timeline empty space for zoom hit-testing */}
+      {/* Map container with loading overlay - above timeline empty space for zoom hit-testing */}
       <Box
+        data-tour="map-canvas"
         style={{
           position: "absolute",
           top: 0,
@@ -938,7 +1723,7 @@ export default function MapPage() {
           onMarkerClick={handleMarkerClick}
           focusCountryPCode={
             selectedCountry !== "All Countries"
-              ? countryConfig[selectedCountry]?.pCode
+              ? resolveCountryConfig(selectedCountry)?.pCode
               : undefined
           }
           focusCountryName={
@@ -948,7 +1733,11 @@ export default function MapPage() {
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
           fitBoundsGeometry={focusEntityId || markerFocus ? null : fitBoundsGeometry}
-          fitBoundsOnFocus={!focusEntityId && !markerFocus && !returnCamera}
+          fitBoundsOnFocus={
+            !focusEntityId && !markerFocus && !returnCamera && !cameraSeed
+          }
+          initialPitch={cameraSeed?.pitch ?? restoredView?.camera.pitch ?? 0}
+          initialBearing={cameraSeed?.bearing ?? restoredView?.camera.bearing ?? 0}
           forceFlyToken={forceFlyToken}
           flyDuration={markerFocus ? 500 : 650}
           // Keep pin above the ~45vh sheet + breathing room.
@@ -958,16 +1747,25 @@ export default function MapPage() {
               : 0
           }
           onCameraChange={handleCameraChange}
+          onMapMove={handleMapMove}
+          mapApiRef={mapApiRef}
           onClusterExpand={handleClusterExpand}
           populationBoundaries={populationBoundaries}
           showBoundaries={boundaryLevel !== "none"}
           showRoads={showRoads}
+          showNrcLocations={showNrcLocations}
+          showBlockages={blockagesUiEnabled && showBlockages}
+          blockagesGeoJson={blockagesGeoJson}
           baseMapType={baseMapType}
           hoveredMarkerId={chromeActiveMarkerId}
+          locationPickActive={locationCorrectionDraft?.phase === "picking"}
+          onMapClick={handleLocationCorrectionMapClick}
         />
 
         {/* Loading overlay - only shows when map is mounted and data is loading */}
-        {showLoadingOverlay && <MapLoadingOverlay dataView={dataView} />}
+        {showLoadingOverlay && dataView !== "none" && (
+          <MapLoadingOverlay dataView={dataView} />
+        )}
       </Box>
 
       {/* ===== Left Panel Bar (Layers / Legend / mobile Filters) ===== */}
@@ -981,6 +1779,12 @@ export default function MapPage() {
         onBoundaryLevelChange={setBoundaryLevel}
         showRoads={showRoads}
         onShowRoadsChange={setShowRoads}
+        showNrcLocations={showNrcLocations}
+        onShowNrcLocationsChange={setShowNrcLocations}
+        showBlockages={blockagesUiEnabled ? showBlockages : undefined}
+        onShowBlockagesChange={setShowBlockages}
+        blockagesHint={blockagesUiEnabled ? blockagesHint : undefined}
+        blockagesLoading={blockagesUiEnabled && blockagesLoading}
         baseMapType={baseMapType}
         onBaseMapTypeChange={setBaseMapType}
         keepPanelsOpen={keepPanelsOpen}
@@ -992,7 +1796,7 @@ export default function MapPage() {
               value={selectedCountry}
               onChange={handleCountryChange}
               data={countryOptions.map((c) =>
-                c === "All Countries" ? { value: c, label: t("filters.allCountries") } : c,
+                c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
               )}
               styles={{ input: INPUT_STYLE }}
               label={<FilterLabel>{t("filters.country")}</FilterLabel>}
@@ -1032,6 +1836,9 @@ export default function MapPage() {
         }
       />
 
+      {/* ===== Spaghetti connectors (desktop; cleared with panels / data view) ===== */}
+      {!isMobile && <MapPanelConnectors links={connectorLinks} />}
+
       {/* ===== Marker detail panel(s) ===== */}
       {openPanels.map((panel) => {
         const ordered = markersForPanelNav(panel);
@@ -1044,11 +1851,20 @@ export default function MapPage() {
           <MapMarkerDetail
             key={panel.marker.id}
             marker={panel.marker}
+            pointAltitude={
+              shouldShowPointAltitude(baseMapType)
+                ? (panelAltitudes[panel.marker.id] ?? null)
+                : null
+            }
             anchor={panel.anchor}
+            livePin={connectorPins[panel.marker.id] ?? null}
             stackZIndex={panel.z}
             onActivate={() => focusOpenPanel(panel.marker.id)}
             onChromeActiveChange={(active) =>
               handlePanelChromeActive(panel.marker.id, active)
+            }
+            onGeometryChange={(geometry) =>
+              handlePanelGeometryChange(panel.marker.id, geometry)
             }
             onClose={() => closeOpenPanel(panel.marker.id)}
             onSwipePrev={
@@ -1057,14 +1873,39 @@ export default function MapPage() {
             onSwipeNext={
               next ? () => stepOpenPanelMarker(panel.marker.id, "next") : undefined
             }
+            locationCorrection={(() => {
+              const draft = locationCorrectionDraft;
+              if (!draft) return null;
+              const matchesPanel =
+                draft.sourceMarkerId === panel.marker.id ||
+                draft.signalId === panel.marker.eventId;
+              if (!matchesPanel) return null;
+              return {
+                phase: draft.phase,
+                draftLat: draft.draftLat,
+                draftLng: draft.draftLng,
+                submitting: draft.submitting,
+              };
+            })()}
+            onStartLocationCorrection={(draft) =>
+              handleStartLocationCorrection(panel.marker, draft)
+            }
+            onCancelLocationCorrection={handleCancelLocationCorrection}
+            onConfirmLocationCorrection={() => {
+              void handleConfirmLocationCorrection();
+            }}
+            onRepickLocationCorrection={handleRepickLocationCorrection}
+            onSwitchToSignalLayer={() => setDataView("signal")}
+            onUnavailableChallengeQueue={handleUnavailableChallengeQueue}
           />
         );
       })}
 
-      {/* ===== Timeline (bottom overlay) — desktop only; hide on mobile for map real estate ===== */}
-      {availableMonths.length > 0 && !isMobile && (
+      {/* ===== Timeline (bottom overlay) - desktop only; hide on mobile for map real estate ===== */}
+      {(isFocusMode || availableMonths.length > 0) && !isMobile && (
         <Box
           className="absolute left-0 right-0 z-20"
+          data-map-chrome-bottom
           px={16}
           py={10}
           style={{
@@ -1093,59 +1934,99 @@ export default function MapPage() {
               {t("timeline.title")}
             </Text>
 
-            {/* "All time" sentinel - clears the month filter */}
-            <button
-              type="button"
-              onClick={() => setSelectedMonth(null)}
-              style={{
-                flexShrink: 0,
-                padding: "4px 12px",
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                border: "1px solid",
-                borderColor: selectedMonth === null ? "var(--color-accent)" : "var(--color-border-dark)",
-                background: selectedMonth === null ? "var(--color-accent)" : "var(--color-bg-white)",
-                color: selectedMonth === null ? "white" : "var(--color-text-secondary)",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {t("timeline.allTime")}
-            </button>
-
-            {/* Months - newest first (already sorted in availableMonths) */}
-            {availableMonths.map((ym) => {
-              // ym is "YYYY-MM"; build a Date on the 1st UTC so format.dateTime
-              // gets a stable instant regardless of viewer timezone.
-              const [yStr, mStr] = ym.split("-");
-              const y = Number(yStr);
-              const mo = Number(mStr);
-              const date = new Date(Date.UTC(y, mo - 1, 1));
-              const active = selectedMonth === ym;
-              return (
-                <button
-                  key={ym}
-                  type="button"
-                  onClick={() => setSelectedMonth(ym)}
+            {/* Solo-focus chip: dismiss to restore the full browse marker set. */}
+            {isFocusMode && focusFilterLabel && (
+              <button
+                type="button"
+                onClick={clearSoloFocus}
+                aria-label={t("timeline.clearFocus")}
+                title={focusFilterLabel}
+                style={{
+                  flexShrink: 0,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  maxWidth: 220,
+                  padding: "4px 10px 4px 12px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border: "1px solid var(--color-accent)",
+                  background: "var(--color-accent)",
+                  color: "white",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <span
                   style={{
-                    flexShrink: 0,
-                    padding: "4px 12px",
-                    borderRadius: 999,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    border: "1px solid",
-                    borderColor: active ? "var(--color-accent)" : "var(--color-border-dark)",
-                    background: active ? "var(--color-accent)" : "var(--color-bg-white)",
-                    color: active ? "white" : "var(--color-text-secondary)",
-                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    minWidth: 0,
                   }}
                 >
-                  {format.dateTime(date, { month: "short", year: "numeric" })}
-                </button>
-              );
-            })}
+                  {focusFilterLabel}
+                </span>
+                <IconX size={14} stroke={2.25} style={{ flexShrink: 0 }} aria-hidden />
+              </button>
+            )}
+
+            {/* "All time" sentinel - clears the month filter */}
+            {!isFocusMode && (
+              <button
+                type="button"
+                onClick={() => setSelectedMonth(null)}
+                style={{
+                  flexShrink: 0,
+                  padding: "4px 12px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border: "1px solid",
+                  borderColor: selectedMonth === null ? "var(--color-accent)" : "var(--color-border-dark)",
+                  background: selectedMonth === null ? "var(--color-accent)" : "var(--color-bg-white)",
+                  color: selectedMonth === null ? "white" : "var(--color-text-secondary)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {t("timeline.allTime")}
+              </button>
+            )}
+
+            {/* Months - newest first (already sorted in availableMonths) */}
+            {!isFocusMode &&
+              availableMonths.map((ym) => {
+                // ym is "YYYY-MM"; build a Date on the 1st UTC so format.dateTime
+                // gets a stable instant regardless of viewer timezone.
+                const [yStr, mStr] = ym.split("-");
+                const y = Number(yStr);
+                const mo = Number(mStr);
+                const date = new Date(Date.UTC(y, mo - 1, 1));
+                const active = selectedMonth === ym;
+                return (
+                  <button
+                    key={ym}
+                    type="button"
+                    onClick={() => setSelectedMonth(ym)}
+                    style={{
+                      flexShrink: 0,
+                      padding: "4px 12px",
+                      borderRadius: 999,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: active ? "var(--color-accent)" : "var(--color-border-dark)",
+                      background: active ? "var(--color-accent)" : "var(--color-bg-white)",
+                      color: active ? "white" : "var(--color-text-secondary)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {format.dateTime(date, { month: "short", year: "numeric" })}
+                  </button>
+                );
+              })}
           </Group>
         </Box>
       )}
@@ -1157,6 +2038,15 @@ export default function MapPage() {
           50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
         }
       `}</style>
+
     </Box>
+  );
+}
+
+export default function MapPage() {
+  return (
+    <Suspense fallback={null}>
+      <MapPageContent />
+    </Suspense>
   );
 }

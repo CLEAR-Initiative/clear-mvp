@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
+import { sanitizeLocationGeometry } from "~/lib/geo/to-map-point";
 
 const LOCATION_FIELDS = `
   id name level geoId ancestorIds geometry population
@@ -16,26 +17,42 @@ const LOCATION_FIELDS = `
 // when admin polygons are large — 3 locations × ~4 ancestors × full
 // metadata at ar locale was causing 5-minute fetch failures.
 //
-// Trade-off: the IDP-displacement fallback on event detail (lines
-// 220-238 of event-detail-content.tsx) walks `loc.ancestors[*].metadata`
-// for `iom_dtm_displacement`. With this slim shape the fallback only
-// finds the metadata when it's on the event's *direct* location, not
-// when only an ancestor has it. Acceptable degradation in exchange for
-// the page actually loading.
+// Geometry is also omitted here: the minimap uses `representativePoint`
+// (and a separate locations.getById for country highlight). Dropping
+// admin polygons from the three event locations is the other half of
+// the high-signal-count stall (GH #107).
+//
+// Trade-off: the IDP-displacement fallback on event detail walks
+// `loc.ancestors[*].metadata` for `iom_dtm_displacement`. With this slim
+// shape the fallback only finds metadata on the event's *direct*
+// location. Acceptable degradation in exchange for the page loading.
 const EVENT_DETAIL_LOCATION_FIELDS = `
-  id name level geoId ancestorIds geometry population
+  id name level geoId ancestorIds population
   parent { id name }
   metadata { type data }
 `;
 
-// Signal locations on the event-detail page are only used to plot
-// map points (event-detail-content.tsx reads `loc.geometry`/`name` and
-// nothing else from signal locations). Fetching the full LOCATION_FIELDS
-// per signal (ancestors with metadata, parent, population, etc.) ×3
-// per signal ×N signals exploded the resolver fan-out at non-English
-// locales and stalled the detail page. The event's *own* location keeps
-// LOCATION_FIELDS below because the IDP-displacement fallback walks
-// `event.generalLocation.ancestors[*].metadata`.
+// Point-only location for event.representativePoint (minimap pin).
+const DETAIL_POINT_LOCATION_FIELDS = `
+  id name level geometry
+`;
+
+// Signal rows on event detail only need list fields + location *names*
+// (no geometries). Nested signal geometries ×3 ×N was the dominant cost
+// for events with ~20+ signals (GH #107).
+const DETAIL_SIGNAL_FIELDS = `
+  id
+  source { id name type }
+  title
+  description
+  url
+  publishedAt
+  generalLocation { id name }
+  originLocation { id name }
+  destinationLocation { id name }
+`;
+
+// Kept for list/create mutations that still nest signal geometries.
 const SIGNAL_LOCATION_FIELDS = `
   id name level geometry
 `;
@@ -125,10 +142,10 @@ const CURRENT_EVENT_FOR_RELATED = `
   }
 `;
 
-// Slim EVENT_FIELDS variant for the event detail page. Substitutes
-// EVENT_DETAIL_LOCATION_FIELDS (no recursive ancestors walk) for the
-// 3 event-level location fields. Everything else identical. See the
-// rationale on EVENT_DETAIL_LOCATION_FIELDS.
+// Slim EVENT_FIELDS variant for the event detail page (`events.get`).
+// - No recursive ancestors walk on event locations
+// - No admin polygons on event locations (use representativePoint for map)
+// - Signals nest names only (no per-signal geometries)
 const EVENT_DETAIL_FIELDS = `
   id
   title
@@ -143,10 +160,11 @@ const EVENT_DETAIL_FIELDS = `
   lastSignalCreatedAt
   populationAffected
   casualties
+  representativePoint { ${DETAIL_POINT_LOCATION_FIELDS} }
   generalLocation { ${EVENT_DETAIL_LOCATION_FIELDS} }
   originLocation { ${EVENT_DETAIL_LOCATION_FIELDS} }
   destinationLocation { ${EVENT_DETAIL_LOCATION_FIELDS} }
-  signals { ${SIGNAL_FIELDS} }
+  signals { ${DETAIL_SIGNAL_FIELDS} }
   alerts { id status }
 `;
 
@@ -154,6 +172,35 @@ const EVENT_GET_QUERY = `
   query Event($id: String!) {
     event(id: $id) {
       ${EVENT_DETAIL_FIELDS}
+    }
+  }
+`;
+
+// Full Map deep-link (`/map?event=`): one event pin + that event's signal pins.
+// Point geometries only — no admin polygons (see GH #107).
+const MAP_FOCUS_POINT_FIELDS = `id name level geometry ancestorIds`;
+const EVENT_FOR_MAP_FOCUS_QUERY = `
+  query EventForMapFocus($id: String!) {
+    event(id: $id) {
+      id
+      title
+      description
+      types
+      severity
+      firstSignalCreatedAt
+      representativePoint { ${MAP_FOCUS_POINT_FIELDS} }
+      alerts { id status }
+      signals {
+        id
+        title
+        description
+        severity
+        publishedAt
+        source { id name type }
+        generalLocation { ${MAP_FOCUS_POINT_FIELDS} }
+        originLocation { ${MAP_FOCUS_POINT_FIELDS} }
+        destinationLocation { ${MAP_FOCUS_POINT_FIELDS} }
+      }
     }
   }
 `;
@@ -194,6 +241,26 @@ export const eventsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.event;
+    }),
+
+  /** Solo Full Map deep-link payload — event + nested signal Points only. */
+  forMapFocus: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ event: GqlEvent | null }>(
+        EVENT_FOR_MAP_FOCUS_QUERY,
+        { id: input.id },
+        cookieHeaders(ctx),
+      );
+      const event = data.event;
+      if (!event) return null;
+      sanitizeLocationGeometry(event.representativePoint ?? null);
+      for (const signal of event.signals ?? []) {
+        sanitizeLocationGeometry(signal.generalLocation);
+        sanitizeLocationGeometry(signal.originLocation);
+        sanitizeLocationGeometry(signal.destinationLocation);
+      }
+      return event;
     }),
 
   related: protectedProcedure
@@ -309,92 +376,5 @@ export const eventsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.createEvent;
-    }),
-
-  /**
-   * Look up the most recently-minted live public share link for an
-   * event. Returns null when no live link exists. The Share modal
-   * calls this on open so it can reuse an existing token rather than
-   * minting a fresh one on every click.
-   */
-  existingPublicLink: protectedProcedure
-    .input(z.object({ eventId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      const data = await graphqlFetch<{
-        existingPublicEventLink: {
-          token: string;
-          url: string;
-          expiresAt: string;
-        } | null;
-      }>(
-        `
-        query ExistingPublicEventLink($eventId: String!) {
-          existingPublicEventLink(eventId: $eventId) {
-            token
-            url
-            expiresAt
-          }
-        }
-        `,
-        { eventId: input.eventId },
-        cookieHeaders(ctx),
-      );
-      return data.existingPublicEventLink;
-    }),
-
-  /**
-   * Mint a public share link for the given event. Returns the
-   * plaintext token + the pre-built /public/event/<id>/<token> URL
-   * exactly once — the share modal copies them and discards the
-   * response.
-   */
-  createPublicLink: protectedProcedure
-    .input(
-      z.object({
-        eventId: z.string(),
-        ttlDays: z.number().int().min(1).max(90).optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const data = await graphqlFetch<{
-        createPublicEventLink: {
-          token: string;
-          url: string;
-          expiresAt: string;
-        };
-      }>(
-        `
-        mutation CreatePublicEventLink($input: CreatePublicEventLinkInput!) {
-          createPublicEventLink(input: $input) {
-            token
-            url
-            expiresAt
-          }
-        }
-        `,
-        { input },
-        cookieHeaders(ctx),
-      );
-      return data.createPublicEventLink;
-    }),
-
-  /**
-   * Invalidate a public share token. Idempotent — revoking a missing
-   * key still returns true so the UI doesn't have to handle a "no
-   * such link" path.
-   */
-  revokePublicLink: protectedProcedure
-    .input(z.object({ eventId: z.string(), token: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const data = await graphqlFetch<{ revokePublicEventLink: boolean }>(
-        `
-        mutation RevokePublicEventLink($eventId: String!, $token: String!) {
-          revokePublicEventLink(eventId: $eventId, token: $token)
-        }
-        `,
-        { eventId: input.eventId, token: input.token },
-        cookieHeaders(ctx),
-      );
-      return data.revokePublicEventLink;
     }),
 });

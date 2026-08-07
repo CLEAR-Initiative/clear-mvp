@@ -15,10 +15,11 @@
     "check": "next lint && tsc --noEmit && node scripts/check-messages.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "logie:spike": "npx --yes tsx scripts/logie/cli.ts --iso3 SDN",
     "test:e2e": "playwright test",
     "e2e": "bash e2e/run-local.sh",
     "e2e:up": "docker compose -f docker-compose.e2e.yml up -d --build --wait db redis api web",
-    "e2e:seed": "docker compose -f docker-compose.e2e.yml run --rm seed",
+    "e2e:seed": "docker compose -f docker-compose.e2e.yml run --rm seed && docker compose -f docker-compose.e2e.yml run --rm seed-ground",
     "e2e:down": "docker compose -f docker-compose.e2e.yml down -v --remove-orphans"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
     "better-auth": "^1.5.2",
     "clear-nextjs-frontend": ".",
     "clsx": "^2.1.1",
+    "driver.js": "^1.6.0",
     "next": "^15.2.3",
     "next-intl": "^4.13.0",
     "react": "^19.0.0",

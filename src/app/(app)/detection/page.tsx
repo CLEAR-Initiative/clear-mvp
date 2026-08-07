@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "react";
+import { flushSync } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { Box, Tabs, Button, Group, Popover, Text, Badge, ActionIcon, Divider } from "@mantine/core";
+import { DetectionTabContentSkeleton } from "~/components/ui/detection-page-skeleton";
 import { IconFilter } from "@tabler/icons-react";
 import { DisasterTypePicker, expandSelectionsToCodes } from "~/components/disaster-type-picker";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
+import { useTeamCountry, useScopedCountryOptions } from "~/hooks/use-team-country";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { countryConfig, parseDateFilter } from "~/lib/constants/country-config";
+import { parseDateFilter, resolveCountryConfig } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
 import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
@@ -19,10 +22,12 @@ import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
 import { writeDetectionNavContext } from "~/lib/detection-nav-context";
 
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
+import { GroundIntelTab } from "./_components/ground-intel-tab";
 import { HistoryTab, type HistorySortOrder } from "./_components/history-tab";
 import { EventsTab, type EventSortOrder } from "./_components/events-tab";
 import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
+import detectionTabsStyles from "./detection-tabs.module.css";
 
 const PAGE_SIZE = 25;
 const HISTORY_PAGE_SIZE = 100;
@@ -52,9 +57,19 @@ const SIGNAL_ORDER_MAP: Record<SignalSortOrder, SignalOrderBy> = {
   "sev-asc":  "SEVERITY_ASC",
 };
 
-const VALID_TABS = new Set(["live", "events", "signals", "history"]);
+const CANONICAL_TABS = new Set(["alerts", "events", "signals", "history", "ground"]);
+/** Legacy `live` slug → `alerts` (matches the Alerts label). */
+function normalizeDetectionTab(raw: string | null): string | null {
+  if (!raw) return null;
+  if (raw === "live") return "alerts";
+  if (CANONICAL_TABS.has(raw)) return raw;
+  return null;
+}
+
 const TAB_STORAGE_KEY = "detection-active-tab";
 const FILTERS_STORAGE_KEY = "detection-filters";
+/** Gap after underline paints before skeleton - one frame, not a full CSS duration. */
+const TAB_SKELETON_DELAY_MS = 0;
 
 // Persisted alongside the tab so filter selections survive a round trip
 // through a signal/event detail page (which unmounts this component).
@@ -82,30 +97,103 @@ function DetectionPageContent() {
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [storedFilters] = useState<StoredFilters>(() => readStoredFilters());
+  const [storageReady, setStorageReady] = useState(false);
 
-  // Priority: URL param (shareable link) > sessionStorage (browser back) > default
-  const [activeTab, setActiveTab] = useState<string | null>(() => {
-    const fromUrl = searchParams.get("tab");
-    if (fromUrl && VALID_TABS.has(fromUrl)) return fromUrl;
-    try {
-      const stored = sessionStorage.getItem(TAB_STORAGE_KEY);
-      if (stored && VALID_TABS.has(stored)) return stored;
-    } catch { /* sessionStorage unavailable (SSR or private mode) */ }
+  // URL/defaults only on first render - sessionStorage restore happens after mount
+  // to avoid SSR/client hydration mismatch.
+  const initialTab = (): string => {
+    const fromUrl = normalizeDetectionTab(searchParams.get("tab"));
+    if (fromUrl) return fromUrl;
     return "events";
-  });
+  };
+  // indicatorTab = orange underline + active bg (phase 1);
+  // pendingTab = optimistic panel skeleton (phase 2);
+  // activeTab = queries / real panel; URL rewrite is phase 3 (when ready).
+  const [activeTab, setActiveTab] = useState<string | null>(initialTab);
+  const [indicatorTab, setIndicatorTab] = useState<string | null>(initialTab);
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
+  const tabTransitionStartedAt = useRef(0);
+  const tabHandoffTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tabSkeletonTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRouteTab = useRef<string | null>(null);
+  /** Fresh each render - true when destination tab has no cached data yet. */
+  const tabNeedsSkeletonRef = useRef<(tab: string) => boolean>(() => true);
 
-  const handleTabChange = useCallback((tab: string | null) => {
-    if (!tab) return;
-    setActiveTab(tab);
+  const clearTabTimers = useCallback(() => {
+    if (tabSkeletonTimer.current) clearTimeout(tabSkeletonTimer.current);
+    if (tabHandoffTimer.current) clearTimeout(tabHandoffTimer.current);
+    tabSkeletonTimer.current = null;
+    tabHandoffTimer.current = null;
+  }, []);
+
+  // Keep tab in sync when the Product Tour (or shareable links) change `?tab=`.
+  // IMPORTANT: depend on searchParams only - including indicatorTab here undoes
+  // optimistic clicks until the deferred router.replace lands (felt like ~2s lag).
+  useEffect(() => {
+    const fromUrl = normalizeDetectionTab(searchParams.get("tab"));
+    if (!fromUrl) return;
+
+    if (pendingRouteTab.current) {
+      if (fromUrl === pendingRouteTab.current) {
+        // Our replace landed - state already matches.
+        pendingRouteTab.current = null;
+        return;
+      }
+      // External navigation (tour / back / deep link) won - abort optimism.
+      pendingRouteTab.current = null;
+      clearTabTimers();
+    }
+
+    clearTabTimers();
+    setIndicatorTab(fromUrl);
+    setActiveTab(fromUrl);
+    setPendingTab(null);
+    try { sessionStorage.setItem(TAB_STORAGE_KEY, fromUrl); } catch { /* ignore */ }
+  }, [searchParams, clearTabTimers]);
+
+  useEffect(() => () => clearTabTimers(), [clearTabTimers]);
+
+  const commitTabRoute = useCallback((tab: string) => {
     try { sessionStorage.setItem(TAB_STORAGE_KEY, tab); } catch { /* ignore */ }
     const params = new URLSearchParams(searchParams.toString());
+    // Accept legacy ?tab=live as already matching alerts.
+    const urlTab = normalizeDetectionTab(params.get("tab"));
+    if (urlTab === tab) return;
     params.set("tab", tab);
     router.replace(`/detection?${params.toString()}`, { scroll: false });
   }, [router, searchParams]);
-  const [selectedCountry, setSelectedCountry] = useState(storedFilters.country ?? "Sudan");
-  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(storedFilters.regionId ?? null);
-  const [selectedDate, setSelectedDate] = useState(storedFilters.date ?? "Last 30 days");
+
+  const handleTabChange = useCallback((tab: string | null) => {
+    if (!tab || tab === indicatorTab) return;
+    clearTabTimers();
+    pendingRouteTab.current = tab;
+
+    // Phase 1 - tab chrome + enable queries (cache resolves synchronously in this flush).
+    flushSync(() => {
+      setIndicatorTab(tab);
+      setPendingTab(null);
+      setActiveTab(tab);
+    });
+
+    // Phase 2 - skeleton only on cold load; cached revisits skip it to avoid flash.
+    // Keep pendingRouteTab until searchParams confirms (don't clear on cache hit).
+    tabSkeletonTimer.current = setTimeout(() => {
+      tabSkeletonTimer.current = null;
+      tabTransitionStartedAt.current = Date.now();
+      if (tabNeedsSkeletonRef.current(tab)) {
+        flushSync(() => {
+          setPendingTab(tab);
+        });
+      }
+      commitTabRoute(tab);
+    }, TAB_SKELETON_DELAY_MS);
+  }, [indicatorTab, clearTabTimers, commitTabRoute]);
+  // Country the user picked. Only consulted when the active team monitors
+  // globally: a team bound to a country is pinned to it (see selectedCountry
+  // below), so the picker cannot take them out of scope.
+  const [pickedCountry, setPickedCountry] = useState("");
+  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState("Last 30 days");
   const localizedDateOptions = useMemo(() => {
     const now = new Date();
     const englishMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -124,26 +212,96 @@ function DetectionPageContent() {
   }, [locale, t]);
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] = useDisclosure(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [activeSeverities, setActiveSeverities] = useState<Set<string>>(new Set(storedFilters.severities ?? ["critical", "high", "medium", "low"]));
-  const [selectedTypeFilters, setSelectedTypeFilters] = useState<string[]>(storedFilters.typeFilters ?? []);
+  const [activeSeverities, setActiveSeverities] = useState<Set<string>>(
+    () => new Set(["critical", "high", "medium", "low"]),
+  );
+  const [selectedTypeFilters, setSelectedTypeFilters] = useState<string[]>([]);
   const hierarchyQuery = api.alerts.getDisasterTypeHierarchy.useQuery(undefined, { staleTime: Infinity, refetchOnWindowFocus: false });
   const hierarchy = hierarchyQuery.data ?? [];
   const expandedTypeCodes = selectedTypeFilters.length > 0 ? expandSelectionsToCodes(selectedTypeFilters, hierarchy) : null;
-  const [activeSources, setActiveSources] = useState<Set<string> | null>(
-    storedFilters.sources ? new Set(storedFilters.sources) : null,
-  );
+  const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
   const isFiltered = activeSeverities.size < 4 || selectedTypeFilters.length > 0 || activeSources !== null;
   const filterCount = (activeSeverities.size < 4 ? 1 : 0) + (selectedTypeFilters.length > 0 ? 1 : 0) + (activeSources !== null ? 1 : 0);
 
   const { activeTeamId } = useTeam();
   const { countries, getCenter, getZoom, getLocationId, tree, isLoading: isLocationsLoading } = useLocations();
+  const { countryName: teamCountryName } = useTeamCountry();
 
-  const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">(storedFilters.boundaryLevel ?? "A1");
+  // A team's country binding wins over any picked/restored value. Derived
+  // rather than synced through an effect so there is no window where the page
+  // queries one country while the team is scoped to another (that mismatch
+  // ANDs to zero rows server-side and renders an unexplained empty page).
+  const selectedCountry = teamCountryName ?? pickedCountry;
+  const setSelectedCountry = setPickedCountry;
+  const countryOptions = useScopedCountryOptions(countries);
+
+  // Ground intel is a PRIVATE staging tier (sender names, unvetted claims):
+  // clear-api rejects every ground query for roles other than admin/analyst,
+  // so the tab is hidden for everyone else rather than rendering a surface
+  // that can only error. Mirrors event-detail's promote gating pattern.
+  const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
+  const canSeeGround =
+    authData?.user?.role === "admin" || authData?.user?.role === "analyst";
+
+  // Tab order drives the sliding indicator geometry - 4 or 5 equal slots
+  // depending on whether the ground tab is visible for this role.
+  const visibleTabs = useMemo(
+    () => ["alerts", "events", "signals", "history", ...(canSeeGround ? ["ground"] : [])],
+    [canSeeGround],
+  );
+
+  // An unauthorised deep link (?tab=ground) or a stale stored tab would
+  // otherwise strand the user on an empty panel: the tab button is hidden
+  // but activeTab still says "ground". Wait until the role is actually
+  // known (authData resolved) so admins aren't bounced mid-fetch, then
+  // fall back to the default tab.
+  useEffect(() => {
+    if (!authData || canSeeGround) return;
+    if (activeTab !== "ground" && indicatorTab !== "ground") return;
+    clearTabTimers();
+    pendingRouteTab.current = null;
+    setIndicatorTab("events");
+    setActiveTab("events");
+    setPendingTab(null);
+    commitTabRoute("events");
+  }, [authData, canSeeGround, activeTab, indicatorTab, clearTabTimers, commitTabRoute]);
+
+  const [boundaryLevel, setBoundaryLevel] = useState<"none" | "A0" | "A1" | "A2">("A1");
+
+  // Restore tab/filters from sessionStorage after mount (URL tab still wins).
+  useEffect(() => {
+    const fromUrl = searchParams.get("tab");
+    if (!fromUrl) {
+      try {
+        const stored = sessionStorage.getItem(TAB_STORAGE_KEY);
+        const normalized = normalizeDetectionTab(stored);
+        if (normalized) {
+          setIndicatorTab(normalized);
+          setActiveTab(normalized);
+        }
+      } catch { /* sessionStorage unavailable */ }
+    }
+
+    const storedFilters = readStoredFilters();
+    if (storedFilters.country) setSelectedCountry(storedFilters.country);
+    if (storedFilters.regionId !== undefined) setSelectedRegionId(storedFilters.regionId ?? null);
+    if (storedFilters.date) setSelectedDate(storedFilters.date);
+    if (storedFilters.severities) setActiveSeverities(new Set(storedFilters.severities));
+    if (storedFilters.typeFilters) setSelectedTypeFilters(storedFilters.typeFilters);
+    if (storedFilters.sources !== undefined) {
+      setActiveSources(storedFilters.sources ? new Set(storedFilters.sources) : null);
+    }
+    if (storedFilters.boundaryLevel) setBoundaryLevel(storedFilters.boundaryLevel);
+    setStorageReady(true);
+    // Mount-only restore; searchParams read intentionally for initial URL tab check.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Mirror filter selections into sessionStorage so they survive navigating
   // to a signal/event detail page and back (that route change unmounts this
   // component, resetting the useState defaults above without this).
   useEffect(() => {
+    if (!storageReady) return;
     try {
       const toStore: StoredFilters = {
         country: selectedCountry,
@@ -158,16 +316,17 @@ function DetectionPageContent() {
     } catch {
       /* sessionStorage unavailable (SSR or private mode) */
     }
-  }, [selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
+  }, [storageReady, selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
 
   const selectedCountryId = useMemo(() => getLocationId(selectedCountry), [selectedCountry, getLocationId]);
 
-  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
-  const sudanL0Query = api.locations.getById.useQuery(
-    { id: sudanId! },
-    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  // Country outline for the map highlight, keyed off whichever country is
+  // actually selected rather than a fixed one.
+  const focusCountryL0Query = api.locations.getById.useQuery(
+    { id: selectedCountryId! },
+    { enabled: !!selectedCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
-  const focusCountryGeometry = sudanL0Query.data?.geometry ?? undefined;
+  const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
 
   const a1BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
     { level: 1, countryId: selectedCountryId ?? undefined },
@@ -241,11 +400,15 @@ function DetectionPageContent() {
   const [signalsSort, setSignalsSort] = useState<SignalSortOrder>("newest");
   const [historySortOrder, setHistorySortOrder] = useState<HistorySortOrder>("newest");
 
-  // Write detection nav context for event/signal page prev/next navigation
+  // Write detection nav context for event/signal page prev/next navigation.
+  // Wait until locationId is resolved - writing null would make detail arrow
+  // nav query an unfiltered (all-countries) list.
   useEffect(() => {
+    if (!selectedLocationId) return;
     writeDetectionNavContext({
       teamId: activeTeamId,
       locationId: selectedLocationId,
+      country: selectedCountry,
       from: fromIso,
       to: effectiveTo,
       severityMin,
@@ -255,7 +418,7 @@ function DetectionPageContent() {
       signalOrderBy: SIGNAL_ORDER_MAP[signalsSort],
       sourceNames: activeSources ? [...activeSources] : undefined,
     });
-  }, [activeTeamId, selectedLocationId, fromIso, effectiveTo, severityMin, severityMax, expandedTypeCodes?.join(","), eventsSort, signalsSort, activeSources]);
+  }, [activeTeamId, selectedLocationId, selectedCountry, fromIso, effectiveTo, severityMin, severityMax, expandedTypeCodes?.join(","), eventsSort, signalsSort, activeSources]);
 
   // ── Per-feed accumulated items + offset ───────────────────────────────────
   const [eventsItems, setEventsItems] = useState<GqlEvent[]>([]);
@@ -318,7 +481,7 @@ function DetectionPageContent() {
   );
   const alertsQuery = api.alerts.alertsPage.useQuery(
     { ...sharedFilter, status: "published", orderBy: ALERT_ORDER_MAP[alertsSort], limit: PAGE_SIZE, offset: alertsOffset, _v: alertsVersion },
-    { enabled: locationsReady && activeTab === "live", staleTime: Infinity },
+    { enabled: locationsReady && activeTab === "alerts", staleTime: Infinity },
   );
   const signalsQuery = api.signals.signalsPage.useQuery(
     {
@@ -515,7 +678,7 @@ function DetectionPageContent() {
       limit: 1,
       orderBy: "CREATED_DESC",
     },
-    { enabled: locationsReady && activeTab === "live", refetchInterval: 60_000, staleTime: 0 },
+    { enabled: locationsReady && activeTab === "alerts", refetchInterval: 60_000, staleTime: 0 },
   );
   const signalsNewQuery = api.signals.signalsPage.useQuery(
     {
@@ -627,7 +790,7 @@ function DetectionPageContent() {
     return [...s].sort();
   }, [alertsItems, eventsItems, signalsItems]);
 
-  const focusCountryPCode = countryConfig[selectedCountry]?.pCode;
+  const focusCountryPCode = resolveCountryConfig(selectedCountry)?.pCode;
   const focusCountryName = selectedCountry;
 
   const clipToRegion = useCallback((markers: CrisisMarker[]): CrisisMarker[] => {
@@ -646,6 +809,68 @@ function DetectionPageContent() {
   const mapCenter = useMemo<[number, number]>(() => getCenter(selectedCountry), [selectedCountry]);
   const mapZoom = useMemo(() => getZoom(selectedCountry), [selectedCountry]);
 
+  // Keep skeleton gate fresh after each render (incl. flushSync after setActiveTab).
+  tabNeedsSkeletonRef.current = (tab: string) => {
+    if (!locationsReady) return true;
+    switch (tab) {
+      case "alerts":
+        return alertsQuery.isLoading;
+      case "events":
+        return eventsQuery.isLoading;
+      case "signals":
+        return signalsQuery.isLoading;
+      case "history":
+        return (
+          historyAlertsQuery.isLoading ||
+          historyEventsQuery.isLoading ||
+          historySignalsQuery.isLoading
+        );
+      case "ground":
+        // Self-fetching tab - it renders its own table loading state.
+        return false;
+      default:
+        return true;
+    }
+  };
+
+  const pendingTabLoading =
+    pendingTab === "alerts"
+      ? alertsQuery.isLoading
+      : pendingTab === "events"
+        ? eventsQuery.isLoading
+        : pendingTab === "signals"
+          ? signalsQuery.isLoading
+          : pendingTab === "history"
+            ? historyAlertsQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading
+            : false;
+
+  // Phase 3 - hand off skeleton → real panel when data is ready (URL already updated in phase 2).
+  useEffect(() => {
+    if (!pendingTab || pendingTab !== activeTab) return;
+
+    if (tabHandoffTimer.current) clearTimeout(tabHandoffTimer.current);
+
+    const finish = () => {
+      tabHandoffTimer.current = null;
+      pendingRouteTab.current = null;
+      setPendingTab(null);
+    };
+
+    if (pendingTabLoading || !locationsReady) {
+      tabHandoffTimer.current = setTimeout(finish, 1600);
+      return () => {
+        if (tabHandoffTimer.current) clearTimeout(tabHandoffTimer.current);
+      };
+    }
+
+    const elapsed = Date.now() - tabTransitionStartedAt.current;
+    const wait = Math.max(16, 80 - elapsed);
+    tabHandoffTimer.current = setTimeout(finish, wait);
+    return () => {
+      if (tabHandoffTimer.current) clearTimeout(tabHandoffTimer.current);
+    };
+  }, [pendingTab, activeTab, pendingTabLoading, locationsReady]);
+
   return (
     <Box>
       <PageHeader
@@ -654,10 +879,11 @@ function DetectionPageContent() {
         breadcrumbs={["CLEAR", t("header.breadcrumb")]}
         loading={eventsQuery.isLoading || alertsQuery.isLoading}
       >
+        <Box data-tour="detection-filters">
         <FilterBar
           country={selectedCountry}
           onCountryChange={(v) => { setSelectedCountry(v); setSelectedRegionId(null); }}
-          countries={countries}
+          countries={countryOptions}
           regionsContent={
             <RegionPicker
               states={currentCountryStates}
@@ -754,7 +980,8 @@ function DetectionPageContent() {
             </Popover>
           </Box>
         </FilterBar>
-        <Group gap={8}>
+        </Box>
+        <Group gap={8} data-tour="detection-create">
           <Button
             size="xs"
             leftSection={<IconPlus size={14} />}
@@ -768,152 +995,139 @@ function DetectionPageContent() {
 
       <Box px={{ base: 12, sm: 24 }} py={{ base: 16, sm: 24 }}>
         <Tabs
-          value={activeTab}
+          value={indicatorTab}
           onChange={handleTabChange}
           mb={{ base: 16, sm: 24 }}
-          styles={{
-            tab: {
-              fontSize: 13,
-              fontWeight: 500,
-              flex: 1,
-              border: "none",
-              paddingInline: 8,
-              transition: "background-color 800ms cubic-bezier(0.4, 0, 0.2, 1)",
-              "&[data-active]": {
-                backgroundColor: "#f1f3f5",
-              },
-              "&:hover:not([data-active])": {
-                backgroundColor: "#f8f9fa",
-                transition: "background-color 200ms ease-out",
-              },
-            },
-            list: {
-              borderBottom: "none",
-            },
+          classNames={{
+            tab: detectionTabsStyles.tab,
+            list: detectionTabsStyles.list,
           }}
         >
-          <Tabs.List style={{ position: "relative", display: "flex", width: "100%" }}>
-            <Tabs.Tab value="live">{t("tabs.alerts")}</Tabs.Tab>
-            <Tabs.Tab value="events">{t("tabs.events")}</Tabs.Tab>
+          <Tabs.List data-tour="detection-tabs" style={{ position: "relative", display: "flex", width: "100%" }}>
+            <Tabs.Tab value="alerts" data-tour="detection-tab-alerts">{t("tabs.alerts")}</Tabs.Tab>
+            <Tabs.Tab value="events" data-tour="detection-tab-events">{t("tabs.events")}</Tabs.Tab>
             <Tabs.Tab value="signals">{t("tabs.signals")}</Tabs.Tab>
             <Tabs.Tab value="history">{t("tabs.history")}</Tabs.Tab>
+            {canSeeGround && <Tabs.Tab value="ground">{t("tabs.ground")}</Tabs.Tab>}
             <Box
+              className={detectionTabsStyles.indicator}
               style={{
-                position: "absolute",
-                bottom: 0,
-                left:
-                  activeTab === "live" ? "0%" :
-                  activeTab === "events" ? "25%" :
-                  activeTab === "signals" ? "50%" : "75%",
-                width: "25%",
-                height: 2,
-                background: "var(--color-accent)",
-                transition: "left 350ms cubic-bezier(0.4, 0, 0.2, 1)",
-                zIndex: 10,
+                // Equal slots; geometry follows the visible tab count so the
+                // underline stays aligned whether or not ground is shown.
+                width: `${100 / visibleTabs.length}%`,
+                left: `${(Math.max(visibleTabs.indexOf(indicatorTab ?? "alerts"), 0) * 100) / visibleTabs.length}%`,
               }}
             />
           </Tabs.List>
         </Tabs>
 
-        {activeTab === "live" && (
-          <LiveAlertsTab
-            alerts={alertsItems}
-            alertsLoading={alertsQuery.isLoading}
-            isFetchingMore={alertsQuery.isFetching && alertsAppending.current}
-            hasMore={alertsHasMore}
-            totalCount={alertsTotalCount}
-            newCount={alertsNewCount}
-            sortOrder={alertsSort}
-            onSortChange={setAlertsSort}
-            onLoadMore={loadMoreAlerts}
-            onRefresh={refreshAlerts}
-            mapMarkers={mapMarkers}
-            mapCenter={mapCenter}
-            mapZoom={mapZoom}
-            fitBoundsGeometry={fitBoundsGeometry}
-            adminBoundaries={adminBoundaries}
-            adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-            boundaryLevel={boundaryLevel}
-            onBoundaryLevelChange={setBoundaryLevel}
-            focusCountryPCode={focusCountryPCode}
-            focusCountryName={focusCountryName}
-            focusCountryGeometry={focusCountryGeometry}
-            activeSeverities={activeSeverities}
-            expandedTypeCodes={expandedTypeCodes}
-            activeSources={activeSources}
-          />
-        )}
+        {pendingTab ? (
+          <DetectionTabContentSkeleton tab={pendingTab} />
+        ) : (
+          <>
+            {activeTab === "alerts" && (
+              <LiveAlertsTab
+                alerts={alertsItems}
+                alertsLoading={alertsQuery.isLoading}
+                isFetchingMore={alertsQuery.isFetching && alertsAppending.current}
+                hasMore={alertsHasMore}
+                totalCount={alertsTotalCount}
+                newCount={alertsNewCount}
+                sortOrder={alertsSort}
+                onSortChange={setAlertsSort}
+                onLoadMore={loadMoreAlerts}
+                onRefresh={refreshAlerts}
+                mapMarkers={mapMarkers}
+                mapCenter={mapCenter}
+                mapZoom={mapZoom}
+                fitBoundsGeometry={fitBoundsGeometry}
+                adminBoundaries={adminBoundaries}
+                adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+                boundaryLevel={boundaryLevel}
+                onBoundaryLevelChange={setBoundaryLevel}
+                focusCountryPCode={focusCountryPCode}
+                focusCountryName={focusCountryName}
+                focusCountryGeometry={focusCountryGeometry}
+                activeSeverities={activeSeverities}
+                expandedTypeCodes={expandedTypeCodes}
+                activeSources={activeSources}
+              />
+            )}
 
-        {activeTab === "events" && (
-          <EventsTab
-            events={eventsItems}
-            loading={eventsQuery.isLoading}
-            isFetchingMore={eventsQuery.isFetching && eventsAppending.current}
-            hasMore={eventsHasMore}
-            totalCount={eventsTotalCount}
-            newCount={eventsNewCount}
-            sortOrder={eventsSort}
-            onSortChange={setEventsSort}
-            onLoadMore={loadMoreEvents}
-            onRefresh={refreshEvents}
-            mapMarkers={eventMapMarkers}
-            mapCenter={mapCenter}
-            mapZoom={mapZoom}
-            fitBoundsGeometry={fitBoundsGeometry}
-            adminBoundaries={adminBoundaries}
-            adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-            boundaryLevel={boundaryLevel}
-            onBoundaryLevelChange={setBoundaryLevel}
-            focusCountryPCode={focusCountryPCode}
-            focusCountryName={focusCountryName}
-            focusCountryGeometry={focusCountryGeometry}
-            activeSeverities={activeSeverities}
-            expandedTypeCodes={expandedTypeCodes}
-            activeSources={activeSources}
-          />
-        )}
+            {activeTab === "events" && (
+              <EventsTab
+                events={eventsItems}
+                loading={eventsQuery.isLoading}
+                isFetchingMore={eventsQuery.isFetching && eventsAppending.current}
+                hasMore={eventsHasMore}
+                totalCount={eventsTotalCount}
+                newCount={eventsNewCount}
+                sortOrder={eventsSort}
+                onSortChange={setEventsSort}
+                onLoadMore={loadMoreEvents}
+                onRefresh={refreshEvents}
+                mapMarkers={eventMapMarkers}
+                mapCenter={mapCenter}
+                mapZoom={mapZoom}
+                fitBoundsGeometry={fitBoundsGeometry}
+                adminBoundaries={adminBoundaries}
+                adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+                boundaryLevel={boundaryLevel}
+                onBoundaryLevelChange={setBoundaryLevel}
+                focusCountryPCode={focusCountryPCode}
+                focusCountryName={focusCountryName}
+                focusCountryGeometry={focusCountryGeometry}
+                activeSeverities={activeSeverities}
+                expandedTypeCodes={expandedTypeCodes}
+                activeSources={activeSources}
+              />
+            )}
 
-        {activeTab === "signals" && (
-          <SignalsTab
-            signals={signalsItems}
-            loading={signalsQuery.isLoading}
-            isFetchingMore={signalsQuery.isFetching && signalsAppending.current}
-            hasMore={signalsHasMore}
-            totalCount={signalsTotalCount}
-            newCount={signalsNewCount}
-            sortOrder={signalsSort}
-            onSortChange={setSignalsSort}
-            onLoadMore={loadMoreSignals}
-            onRefresh={refreshSignals}
-            mapMarkers={signalMapMarkers}
-            mapCenter={mapCenter}
-            mapZoom={mapZoom}
-            fitBoundsGeometry={fitBoundsGeometry}
-            adminBoundaries={adminBoundaries}
-            adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
-            boundaryLevel={boundaryLevel}
-            onBoundaryLevelChange={setBoundaryLevel}
-            focusCountryPCode={focusCountryPCode}
-            focusCountryName={focusCountryName}
-            focusCountryGeometry={focusCountryGeometry}
-            activeSeverities={activeSeverities}
-            activeSources={activeSources}
-          />
-        )}
+            {activeTab === "signals" && (
+              <SignalsTab
+                signals={signalsItems}
+                loading={signalsQuery.isLoading}
+                isFetchingMore={signalsQuery.isFetching && signalsAppending.current}
+                hasMore={signalsHasMore}
+                totalCount={signalsTotalCount}
+                newCount={signalsNewCount}
+                sortOrder={signalsSort}
+                onSortChange={setSignalsSort}
+                onLoadMore={loadMoreSignals}
+                onRefresh={refreshSignals}
+                mapMarkers={signalMapMarkers}
+                mapCenter={mapCenter}
+                mapZoom={mapZoom}
+                fitBoundsGeometry={fitBoundsGeometry}
+                adminBoundaries={adminBoundaries}
+                adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+                boundaryLevel={boundaryLevel}
+                onBoundaryLevelChange={setBoundaryLevel}
+                focusCountryPCode={focusCountryPCode}
+                focusCountryName={focusCountryName}
+                focusCountryGeometry={focusCountryGeometry}
+                activeSeverities={activeSeverities}
+                activeSources={activeSources}
+              />
+            )}
 
-        {activeTab === "history" && (
-          <HistoryTab
-            alerts={historyAlertsItems}
-            events={historyEventsItems}
-            signals={historySignalsItems}
-            loading={historyAlertsQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading}
-            hasMore={historyHasMore}
-            isFetchingMore={historyIsFetching && historyAppending.current}
-            totalCount={historyTotalCount}
-            onLoadMore={loadMoreHistory}
-            sortOrder={historySortOrder}
-            onSortChange={setHistorySortOrder}
-          />
+            {activeTab === "ground" && canSeeGround && <GroundIntelTab />}
+
+            {activeTab === "history" && (
+              <HistoryTab
+                alerts={historyAlertsItems}
+                events={historyEventsItems}
+                signals={historySignalsItems}
+                loading={historyAlertsQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading}
+                hasMore={historyHasMore}
+                isFetchingMore={historyIsFetching && historyAppending.current}
+                totalCount={historyTotalCount}
+                onLoadMore={loadMoreHistory}
+                sortOrder={historySortOrder}
+                onSortChange={setHistorySortOrder}
+              />
+            )}
+          </>
         )}
       </Box>
 
