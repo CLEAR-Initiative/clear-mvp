@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { shortCountryName } from "~/lib/constants/country-config";
 
 /* ========== Shared ========== */
 
@@ -14,7 +15,17 @@ const COUNTRY_ISO3: Record<string, string> = {
   Iraq: "IRQ",
   Syria: "SYR",
   Colombia: "COL",
+  Venezuela: "VEN",
 };
+
+/**
+ * Callers pass whatever `locations` stores, which is the COD name
+ * ("Venezuela (Bolivarian Republic of)"). Strip the qualifier before the
+ * lookup so a country is not silently dropped for having a long name.
+ */
+function iso3For(country: string): string | undefined {
+  return COUNTRY_ISO3[country] ?? COUNTRY_ISO3[shortCountryName(country)];
+}
 
 interface AcapsRecord {
   crisis_id: string;
@@ -60,11 +71,11 @@ const COMPOSITE_IDS = new Set(["INFORM", "HA", "VU", "CC"]);
 // Curated display names, applied in priority order over the raw API labels.
 // Needed because:
 //  (a) Several IDs in the Scores endpoint are legacy (pre-rename) and absent from
-//      /indicators/Index — their IndicatorName field is wrong (e.g. HA.VECT = "Human").
+//      /indicators/Index - their IndicatorName field is wrong (e.g. HA.VECT = "Human").
 //  (b) /indicators/Index has typos ("Phisical") for some entries.
 //  (c) Some verbose descriptions are shortened for display.
 const INDICATOR_DISPLAY_NAMES: Record<string, string> = {
-  // Legacy IDs (not in /indicators/Index) — matched to HA.EPI.* equivalents
+  // Legacy IDs (not in /indicators/Index) - matched to HA.EPI.* equivalents
   "HA.VECT":    "Vector-borne Disease",
   "HA.FWB":     "Food & Water Security",
   "HA.ZOON":    "Zoonotic Disease",
@@ -100,7 +111,7 @@ interface JrcScoreRecord {
   IndicatorId: string;
   IndicatorName: string;
   IndicatorScore: number;
-  nodelevel: number;    // NB: lowercase — as returned by the API
+  nodelevel: number;    // NB: lowercase - as returned by the API
   Unit: string;
 }
 
@@ -111,7 +122,7 @@ interface JrcIndicatorMeta {
 
 async function getLatestWorkflowId(): Promise<{ id: number; name: string }> {
   const res = await fetch(`${JRC_BASE}/workflows/GetBySystem?id=INFORM`, {
-    next: { revalidate: 604800 }, // 7 days — new editions release 1-2x/year
+    next: { revalidate: 604800 }, // 7 days - new editions release 1-2x/year
   });
   if (!res.ok) throw new Error(`JRC workflows fetch failed: ${res.status}`);
   const workflows = (await res.json()) as JrcWorkflow[];
@@ -124,7 +135,7 @@ async function getLatestWorkflowId(): Promise<{ id: number; name: string }> {
 
 async function fetchRiskScores(workflowId: number, iso3: string): Promise<JrcScoreRecord[]> {
   const res = await fetch(`${JRC_BASE}/countries/Scores?workflowid=${workflowId}&iso3=${iso3}`, {
-    next: { revalidate: 86400 }, // 24h — scores are annual
+    next: { revalidate: 86400 }, // 24h - scores are annual
   });
   if (!res.ok) throw new Error(`JRC scores fetch failed: ${res.status}`);
   return (await res.json()) as JrcScoreRecord[];
@@ -135,7 +146,7 @@ async function fetchRiskScores(workflowId: number, iso3: string): Promise<JrcSco
 async function fetchIndicatorMeta(): Promise<Map<string, string>> {
   try {
     const res = await fetch(`${JRC_BASE}/indicators/Index`, {
-      next: { revalidate: 2592000 }, // 30 days — metadata rarely changes
+      next: { revalidate: 2592000 }, // 30 days - metadata rarely changes
     });
     if (!res.ok) return new Map();
     const data = (await res.json()) as JrcIndicatorMeta[];
@@ -170,7 +181,7 @@ export const informRouter = createTRPCRouter({
   getSeverity: publicProcedure
     .input(z.object({ country: z.string() }))
     .query(async ({ input }) => {
-      const iso3 = COUNTRY_ISO3[input.country];
+      const iso3 = iso3For(input.country);
       if (!iso3) return null;
 
       const token = process.env.ACAPS_API_TOKEN;
@@ -179,7 +190,7 @@ export const informRouter = createTRPCRouter({
       const url = `https://api.acaps.org/api/v1/inform-severity-index/${currentMonthSlug()}/?iso3=${iso3}`;
       const res = await fetch(url, {
         headers: { Authorization: `Token ${token}` },
-        next: { revalidate: 43200 }, // 12h — data updates monthly
+        next: { revalidate: 43200 }, // 12h - data updates monthly
       });
 
       if (!res.ok) return null;
@@ -215,7 +226,7 @@ export const informRouter = createTRPCRouter({
   getRisk: publicProcedure
     .input(z.object({ country: z.string() }))
     .query(async ({ input }) => {
-      const iso3 = COUNTRY_ISO3[input.country];
+      const iso3 = iso3For(input.country);
       if (!iso3) return null;
 
       const { id: workflowId, name: edition } = await getLatestWorkflowId();
@@ -249,7 +260,7 @@ export const informRouter = createTRPCRouter({
         })
         .filter((s): s is typeof s & { name: string } => s.name !== null)
         .sort((a, b) => b.score - a.score)
-        // Deduplicate by resolved name — keeps highest-scoring entry
+        // Deduplicate by resolved name - keeps highest-scoring entry
         .filter((item, idx, arr) => arr.findIndex((x) => x.name === item.name) === idx);
 
       return {
@@ -259,7 +270,7 @@ export const informRouter = createTRPCRouter({
           vulnerability: find("VU"),
           coping: find("CC"),
         },
-        indicators, // full sorted list — slice top-N on the client
+        indicators, // full sorted list - slice top-N on the client
         iso3,
         workflowId,
         edition,

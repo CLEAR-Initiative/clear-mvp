@@ -41,7 +41,8 @@ import {
   IconChevronRight,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { useLocations } from "~/hooks/use-locations";
+import { useTeamCountry } from "~/hooks/use-team-country";
+import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { MinimapCard } from "~/components/map/minimap-card";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { mapFocusHref } from "~/lib/map-focus-href";
@@ -87,7 +88,7 @@ function eventLocations(event: GqlEvent): GqlLocation[] {
 
 interface EventDetailContentProps {
   event: GqlEvent | null | undefined;
-  /** Resolved route id — used so discussion can fetch in parallel with entity pending. */
+  /** Resolved route id - used so discussion can fetch in parallel with entity pending. */
   entityId?: string;
   loading: boolean;
   isPending?: boolean;
@@ -181,13 +182,15 @@ export function EventDetailContent({
     return [mapMarkers[0]!.lng, mapMarkers[0]!.lat];
   }, [mapMarkers]);
 
-  const { getLocationId } = useLocations();
-  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
-  const sudanL0Query = api.locations.getById.useQuery(
-    { id: sudanId! },
-    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  // Country context for the minimap comes from the active team, not a
+  // fixed country. Null when the team monitors globally.
+  const { countryId: focusCountryId, countryName: focusCountryName } = useTeamCountry();
+  const focusCountryL0Query = api.locations.getById.useQuery(
+    { id: focusCountryId! },
+    { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
-  const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
+  const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
+  const focusCountryPCode = resolveCountryConfig(focusCountryName ?? undefined)?.pCode;
 
   const showPending = isPending && !!event;
   const hookPrimaryMapLocation =
@@ -245,7 +248,7 @@ export function EventDetailContent({
           </Group>
         </Box>
 
-        {/* KPI full-bleed strip — matches loaded layout (above the 2-col body). */}
+        {/* KPI full-bleed strip - matches loaded layout (above the 2-col body). */}
         {mode !== "drawer" && (
           <Box px={{ base: 12, sm: 24 }} pt={{ base: 16, sm: 24 }}>
             <KpiStripSkeleton />
@@ -681,7 +684,7 @@ export function EventDetailContent({
           </Card>
           </SkeletonSlot>
 
-          {/* Discussion — fetch by active entityId in parallel; don't gate on entity pending. */}
+          {/* Discussion - fetch by active entityId in parallel; don't gate on entity pending. */}
           <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
             <CommentsSection entityId={entityId ?? event.id} entityType="event" />
           </Card>
@@ -850,15 +853,17 @@ export function EventDetailContent({
           </SkeletonSlot>
         </Box>
 
-        {/* Right sidebar — full-width under main column on phone */}
+        {/* Right sidebar - full-width under main column on phone */}
         {!isCompact && (
           <Box style={{ width: isMobile ? "100%" : 300, flexShrink: 0 }}>
             <Stack gap={20}>
               <MinimapCard
                 markers={mapDisplayMarkers}
                 center={mapDisplayCenter}
-                sudanGeometry={sudanGeometry}
-                sudanId={sudanId}
+                countryGeometry={focusCountryGeometry}
+                countryId={focusCountryId ?? null}
+                countryName={focusCountryName ?? undefined}
+                countryPCode={focusCountryPCode}
                 location={mapDisplayLocation}
                 holdRegionFit={holdRegionFit}
                 flyDuration={mapFlyDuration}

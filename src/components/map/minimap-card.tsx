@@ -27,8 +27,14 @@ const BOUNDARY_OPTIONS = [
 interface MinimapCardProps {
   markers: MapMarker[];
   center: [number, number];
-  sudanGeometry: unknown | undefined;
-  sudanId: string | null;
+  /** L0 outline of the country being shown (was Sudan-only). */
+  countryGeometry: unknown | undefined;
+  /** L0 location id of that country, used to scope admin/population layers. */
+  countryId: string | null;
+  /** Country name for the Mapbox focus layer label. */
+  countryName?: string;
+  /** ISO-3166 alpha-2 for the Mapbox country focus layer. */
+  countryPCode?: string;
   /**
    * The primary location for this entity (A2 district or A1 state).
    * MinimapCard uses location.parent.id (for level-2) or location.id (for level-1)
@@ -46,7 +52,7 @@ interface MinimapCardProps {
   flyDuration?: number;
 }
 
-export function MinimapCard({ markers, center, sudanGeometry, sudanId, location, locationName, fullMapHref = "/map", holdRegionFit = false, flyDuration }: MinimapCardProps) {
+export function MinimapCard({ markers, center, countryGeometry, countryId, countryName, countryPCode, location, locationName, fullMapHref = "/map", holdRegionFit = false, flyDuration }: MinimapCardProps) {
   const t = useTranslations("map");
   const [layersOpen, setLayersOpen] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A2");
@@ -81,14 +87,14 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, location,
     : fitBoundsGeometry;
 
   const a1BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
-    { level: 1, countryId: sudanId ?? undefined },
-    { enabled: boundaryLevel === "A1" && !!sudanId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    { level: 1, countryId: countryId ?? undefined },
+    { enabled: boundaryLevel === "A1" && !!countryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const a2BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
     a1StateId
       ? { level: 2, stateId: a1StateId }
-      : { level: 2, countryId: sudanId ?? undefined },
-    { enabled: boundaryLevel === "A2" && (!!a1StateId || !!sudanId), staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+      : { level: 2, countryId: countryId ?? undefined },
+    { enabled: boundaryLevel === "A2" && (!!a1StateId || !!countryId), staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
 
   const adminBoundaries = useMemo(() => {
@@ -99,8 +105,8 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, location,
   const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
   const populationQuery = api.locations.getPopulationBoundaries.useQuery(
-    { countryId: sudanId ?? undefined },
-    { enabled: showPopulation && !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+    { countryId: countryId ?? undefined },
+    { enabled: showPopulation && !!countryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
   const populationBoundaries = useMemo(
     () => (showPopulation ? (populationQuery.data ?? []) : []),
@@ -134,9 +140,9 @@ export function MinimapCard({ markers, center, sudanGeometry, sudanId, location,
           center={center}
           zoom={4.5}
           className="w-full h-full"
-          focusCountryPCode="SD"
-          focusCountryName="Sudan"
-          focusCountryGeometry={sudanGeometry}
+          focusCountryPCode={countryPCode}
+          focusCountryName={countryName}
+          focusCountryGeometry={countryGeometry}
           fitBoundsOnFocus={false}
           fitBoundsGeometry={displayFitBoundsGeometry}
           adminBoundaries={adminBoundaries}

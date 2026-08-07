@@ -41,6 +41,7 @@ import { api } from "~/trpc/react";
 import { authClient } from "~/lib/auth-client";
 import { defaultTimeZone, isLocale, localeLabels, locales } from "~/i18n/config";
 import { useTeam } from "~/providers/team-provider";
+import { useTeamCountry } from "~/hooks/use-team-country";
 import { COUNTRIES_BY_DIAL_LENGTH, COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
 import { NotificationPreferencesSection } from "./_components/NotificationPreferencesSection";
 import { AlertSubscriptionsSection } from "./_components/AlertSubscriptionsSection";
@@ -75,10 +76,11 @@ interface ProfileUser {
   role: string;
 }
 
-function parseE164(e164: string): { iso: string; local: string } {
+function parseE164(e164: string): { iso: string | null; local: string } {
   const match = COUNTRIES_BY_DIAL_LENGTH.find((c) => e164.startsWith(c.dialCode));
   if (match) return { iso: match.iso, local: e164.slice(match.dialCode.length) };
-  return { iso: "SD", local: "" };
+  // Unrecognised dial code: leave the country unset rather than guessing one.
+  return { iso: null, local: "" };
 }
 
 function NameField({ userName }: { userName: string }) {
@@ -172,8 +174,11 @@ function MobileNumberField() {
   const tActions = useTranslations("common.actions");
   const utils = api.useUtils();
   const phoneQuery = api.auth.myUserDetails.useQuery();
+  // Fall back to the active team's country instead of a fixed one when the
+  // user has no number saved yet.
+  const { countryIso: teamCountryIso } = useTeamCountry();
   const [editing, setEditing] = useState(false);
-  const [selectedIso, setSelectedIso] = useState("SD");
+  const [selectedIso, setSelectedIso] = useState<string | null>(null);
   const [localNumber, setLocalNumber] = useState("");
 
   const savedE164 = phoneQuery.data?.phoneNumber ?? "";
@@ -189,7 +194,13 @@ function MobileNumberField() {
     }
   }, [phoneQuery.data, editing, savedE164]);
 
-  const currentE164 = localNumber ? `${getDialCode(selectedIso)}${localNumber.replace(/\s/g, "")}` : "";
+  // No saved number: seed the picker from the team country once it resolves.
+  useEffect(() => {
+    if (savedE164 || !teamCountryIso) return;
+    setSelectedIso((prev) => prev ?? teamCountryIso);
+  }, [teamCountryIso, savedE164]);
+
+  const currentE164 = localNumber && selectedIso ? `${getDialCode(selectedIso)}${localNumber.replace(/\s/g, "")}` : "";
   const isDirty = currentE164 !== savedE164;
 
   const updateProfile = api.auth.updateProfile.useMutation({
@@ -236,7 +247,7 @@ function MobileNumberField() {
         <Select
           data={COUNTRY_SELECT_DATA}
           value={selectedIso}
-          onChange={(v: string | null) => { setSelectedIso(v ?? "SD"); }}
+          onChange={(v: string | null) => { if (v) setSelectedIso(v); }}
           searchable
           size="xs"
           readOnly={readOnly}
@@ -672,7 +683,7 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                 <NameField userName={user.name} />
                 <Box>
                   <Text size="xs" c="var(--color-text-muted)" mb={12}>{t("info.email")}</Text>
-                  <Text size="sm" fw={500} c="var(--color-text-primary)">{user.email ?? "—"}</Text>
+                  <Text size="sm" fw={500} c="var(--color-text-primary)">{user.email ?? "-"}</Text>
                 </Box>
               </Stack>
             </Box>
@@ -688,7 +699,7 @@ function SettingsContent({ user }: { user: ProfileUser }) {
                 {/* Column 2: Email (read-only) */}
                 <Box style={{ flex: 1 }}>
                   <Text size="xs" c="var(--color-text-muted)" mb={12}>{t("info.email")}</Text>
-                  <Text size="sm" fw={500} c="var(--color-text-primary)">{user.email ?? "—"}</Text>
+                  <Text size="sm" fw={500} c="var(--color-text-primary)">{user.email ?? "-"}</Text>
                 </Box>
 
                 {/* Column 3: Profile Picture */}

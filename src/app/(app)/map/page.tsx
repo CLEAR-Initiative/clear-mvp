@@ -27,6 +27,7 @@ import {
 } from "~/lib/map/point-altitude";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
+import { useTeamCountry, useScopedCountryOptions } from "~/hooks/use-team-country";
 import {
   type CrisisMarker,
   alertsToMarkers,
@@ -38,7 +39,7 @@ import {
 } from "./_components/map-markers-data";
 import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
 import { useLocations } from "~/hooks/use-locations";
-import { resolveCountryConfig } from "~/lib/constants/country-config";
+import { resolveCountryConfig, shortCountryName } from "~/lib/constants/country-config";
 import { MapPanelBar } from "./_components/map-panel-bar";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapLoadingOverlay, MapPreloader } from "./_components/map-loading-overlay";
@@ -75,9 +76,9 @@ interface OpenMarkerPanel {
   marker: CrisisMarker;
   /** Null after arrow-nav until the user re-clicks a pin (fallback panel placement). */
   anchor: MarkerScreenPoint | null;
-  /** FIFO age — set once when the panel is created. */
+  /** FIFO age - set once when the panel is created. */
   openedAt: number;
-  /** Bring-to-front order — bumped on open/focus/drag. */
+  /** Bring-to-front order - bumped on open/focus/drag. */
   z: number;
   /**
    * Frozen proximity walk from the pin that opened/focused this panel:
@@ -145,7 +146,7 @@ function MapPageContent() {
   });
   /**
    * Session-restore seed for center/zoom props. Cleared on country/region
-   * change. Never updated from live pans — that re-triggered flyTo and made
+   * change. Never updated from live pans - that re-triggered flyTo and made
    * drag/tilt feel staggered.
    */
   const [cameraSeed, setCameraSeed] = useState<MapViewCamera | null>(
@@ -179,6 +180,7 @@ function MapPageContent() {
   /* ---- Fetch data ---- */
   const { activeTeamId, activeTeam } = useTeam();
   const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
+  const { countryName: teamCountryName } = useTeamCountry();
 
   // Timeline state. Stored as "YYYY-MM"; null means "all time".
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -245,20 +247,26 @@ function MapPageContent() {
   ]);
 
   // Fetch data for active view ONLY (no parallel loading). Disabled in focus mode.
+  // teamId is what actually enforces the team's location scope: the backend
+  // ANDs in that team's locations (expanded to descendants). Without it the
+  // full global dataset reaches the browser and the country picker below is
+  // only cosmetic.
   const alertsQuery = api.alerts.alertsForMap.useQuery(
-    { 
-      includeDummy: true, 
+    {
+      includeDummy: true,
       activeOnly: timeframe !== "all",
       from: timeframeRange.from,
       to: timeframeRange.to,
+      teamId: activeTeamId,
     },
     { enabled: !isFocusMode && dataView === "alert", placeholderData: (prev) => prev },
   );
   const eventsQuery = api.alerts.eventsForMap.useQuery(
-    { 
+    {
       includeDummy: true,
       from: timeframeRange.from,
       to: timeframeRange.to,
+      teamId: activeTeamId ?? undefined,
     },
     { enabled: !isFocusMode && dataView === "event", placeholderData: (prev) => prev },
   );
@@ -267,10 +275,11 @@ function MapPageContent() {
     { enabled: !isFocusMode && dataView === "crisis", placeholderData: (prev) => prev },
   );
   const signalsListQuery = api.signals.forMap.useQuery(
-    { 
+    {
       includeDummy: true,
       from: timeframeRange.from,
       to: timeframeRange.to,
+      teamId: activeTeamId,
     },
     { enabled: !isFocusMode && dataView === "signal", staleTime: 60_000, placeholderData: (prev) => prev },
   );
@@ -497,21 +506,17 @@ function MapPageContent() {
     return codes;
   }, [selectedTypes, hierarchy]);
 
-  // TODO: hardcoded to Sudan for the current single-team deployment.
-  // When more teams join, remove this default and rely solely on the
-  // useEffect below which sets the country from activeTeam.locations.
-  // Requires teams to have a level-0 location configured in the DB.
-  const [selectedCountry, setSelectedCountry] = useState("Sudan");
+  // Country the user picked. Only consulted when the active team monitors
+  // globally; a team bound to a country is pinned to it via selectedCountry
+  // below, so "All Countries" is not reachable for them.
+  const [pickedCountry, setPickedCountry] = useState("All Countries");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
+  const selectedCountry = teamCountryName ?? pickedCountry;
+  const setSelectedCountry = setPickedCountry;
 
-  // Pre-select the team's country when the active team loads.
+  // Reset the region whenever the team (and therefore the country) changes.
   useEffect(() => {
-    const countryLoc = activeTeam?.locations.find((l) => l.level === 0);
-    if (countryLoc) {
-      setSelectedCountry(countryLoc.name);
-      setSelectedRegion("All Regions");
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setSelectedRegion("All Regions");
   }, [activeTeam?.id]);
   const [openPanels, setOpenPanels] = useState<OpenMarkerPanel[]>([]);
   const [keepPanelsOpen, setKeepPanelsOpen] = useState(false);
@@ -542,7 +547,7 @@ function MapPageContent() {
   /**
    * Camera to restore when the last detail panel closes (group pins → expanded
    * cluster framing). Lonely pins keep the detail zoom on close.
-   * Decided at open — never mutated inside a setState updater (Strict Mode safe).
+   * Decided at open - never mutated inside a setState updater (Strict Mode safe).
    */
   const detailRestoreCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
   /** True when the open detail should close back to group zoom. */
@@ -642,7 +647,7 @@ function MapPageContent() {
 
   const handleCameraChange = useCallback((camera: MapViewCamera) => {
     // Track browse camera only while not in a marker-detail focus fly.
-    // Persist via refs/storage only — do not push camera into React state
+    // Persist via refs/storage only - do not push camera into React state
     // (mapCenter/mapZoom props → flyTo loop → staggered drag/tilt).
     if (markerFocusRef.current) return;
     browseCameraRef.current = camera;
@@ -734,7 +739,7 @@ function MapPageContent() {
       setPanelAltitudes(next);
     };
     sample();
-    // DEM tiles may land after setTerrain — retry briefly for open panels.
+    // DEM tiles may land after setTerrain - retry briefly for open panels.
     const t1 = window.setTimeout(sample, 400);
     const t2 = window.setTimeout(sample, 1200);
     return () => {
@@ -791,7 +796,7 @@ function MapPageContent() {
   }, [blockagesUiEnabled, showBlockages]);
 
   // Deep-link from detail Back / Full Map: align Layers data-view chrome only.
-  // Markers come from the solo focus queries — do not widen timeframe or wipe
+  // Markers come from the solo focus queries - do not widen timeframe or wipe
   // browse filters (#108 / show-this-pin).
   useEffect(() => {
     if (!focusEntityId) return;
@@ -871,9 +876,12 @@ function MapPageContent() {
   );
 
   /* ---- Derive country/region options from API locations ---- */
+  // A team bound to a country gets only that country: no "All Countries"
+  // escape hatch, since the data behind it is now scoped out anyway.
+  const scopedCountries = useScopedCountryOptions(apiCountries);
   const countryOptions = useMemo(
-    () => ["All Countries", ...apiCountries],
-    [apiCountries],
+    () => (teamCountryName ? scopedCountries : ["All Countries", ...apiCountries]),
+    [teamCountryName, scopedCountries, apiCountries],
   );
   const regionOptions = useMemo(
     () => selectedCountry !== "All Countries" ? getRegions(selectedCountry) : ["All Regions"],
@@ -884,7 +892,7 @@ function MapPageContent() {
   const mapCenter: [number, number] = useMemo(() => {
     if (markerFocus) return [markerFocus.lng, markerFocus.lat];
     if (returnCamera) return returnCamera.center;
-    // Initial restore seed only — live pans stay in Mapbox + sessionStorage.
+    // Initial restore seed only - live pans stay in Mapbox + sessionStorage.
     if (cameraSeed) return cameraSeed.center;
     if (focusMarker) return [focusMarker.lng, focusMarker.lat];
     if (selectedCountry !== "All Countries") {
@@ -904,7 +912,7 @@ function MapPageContent() {
     if (cameraSeed) return cameraSeed.zoom;
     if (focusMarker) return MAP_FOCUS_ZOOM;
     if (selectedCountry !== "All Countries") {
-      // Same country zoom on mobile and desktop — fitBounds owns framing when
+      // Same country zoom on mobile and desktop - fitBounds owns framing when
       // geometry/bbox is available; this is the fallback before that lands.
       return getZoom(selectedCountry);
     }
@@ -1319,7 +1327,7 @@ function MapPageContent() {
                 marker: target,
                 anchor: null,
                 z,
-                // Keep the frozen proximity walk — do not re-anchor mid-tour.
+                // Keep the frozen proximity walk - do not re-anchor mid-tour.
                 proximityOrderIds: p.proximityOrderIds,
               }
             : p,
@@ -1327,7 +1335,7 @@ function MapPageContent() {
       });
 
       // Mobile: keep detail zoom while the camera follows the stepped pin.
-      // Desktop: panel swaps in place — leave the camera alone.
+      // Desktop: panel swaps in place - leave the camera alone.
       if (isMobile) {
         const focusZoom = markerFocusRef.current?.zoom ?? MAP_FOCUS_ZOOM;
         const focus = { lng: target.lng, lat: target.lat, zoom: focusZoom };
@@ -1418,7 +1426,7 @@ function MapPageContent() {
         allMarkers.find((m) => m.id === marker.id);
       if (!full) return;
 
-      // Desktop: open the panel in place — do not fly/reposition the camera.
+      // Desktop: open the panel in place - do not fly/reposition the camera.
       // Mobile keeps focus-fly so the pin sits above the bottom sheet.
       if (isMobile) {
         // Click-time camera = group framing after donut expand, or country overview.
@@ -1477,7 +1485,7 @@ function MapPageContent() {
       setOpenPanels((prev) => {
         const existing = prev.find((p) => p.marker.id === full.id);
         if (existing) {
-          // Same pin again: focus only — keep placement so the panel does not jump.
+          // Same pin again: focus only - keep placement so the panel does not jump.
           const z = bumpPanelZ();
           if (!accumulate) {
             return [{ ...existing, z, proximityOrderIds }];
@@ -1507,7 +1515,7 @@ function MapPageContent() {
             proximityOrderIds,
           },
         ];
-        // Soft max 4 — drop oldest by openedAt (FIFO).
+        // Soft max 4 - drop oldest by openedAt (FIFO).
         while (next.length > MAX_OPEN_PANELS) {
           let oldestIdx = 0;
           for (let i = 1; i < next.length; i++) {
@@ -1628,7 +1636,7 @@ function MapPageContent() {
         background: "var(--color-bg-primary)",
       }}
     >
-      {/* Top filters bar — desktop only; mobile uses the Filters icon in MapPanelBar */}
+      {/* Top filters bar - desktop only; mobile uses the Filters icon in MapPanelBar */}
       <Box
         visibleFrom="sm"
         className="absolute top-0 left-0 right-0 z-20"
@@ -1649,7 +1657,7 @@ function MapPageContent() {
             value={selectedCountry}
             onChange={handleCountryChange}
             data={countryOptions.map((c) =>
-              c === "All Countries" ? { value: c, label: t("filters.allCountries") } : c,
+              c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
             )}
             style={{ minWidth: 140 }}
             styles={{ input: INPUT_STYLE }}
@@ -1693,7 +1701,7 @@ function MapPageContent() {
         </Group>
       </Box>
 
-      {/* Map container with loading overlay — above timeline empty space for zoom hit-testing */}
+      {/* Map container with loading overlay - above timeline empty space for zoom hit-testing */}
       <Box
         data-tour="map-canvas"
         style={{
@@ -1788,7 +1796,7 @@ function MapPageContent() {
               value={selectedCountry}
               onChange={handleCountryChange}
               data={countryOptions.map((c) =>
-                c === "All Countries" ? { value: c, label: t("filters.allCountries") } : c,
+                c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
               )}
               styles={{ input: INPUT_STYLE }}
               label={<FilterLabel>{t("filters.country")}</FilterLabel>}
@@ -1893,7 +1901,7 @@ function MapPageContent() {
         );
       })}
 
-      {/* ===== Timeline (bottom overlay) — desktop only; hide on mobile for map real estate ===== */}
+      {/* ===== Timeline (bottom overlay) - desktop only; hide on mobile for map real estate ===== */}
       {(isFocusMode || availableMonths.length > 0) && !isMobile && (
         <Box
           className="absolute left-0 right-0 z-20"

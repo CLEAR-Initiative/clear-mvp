@@ -19,7 +19,8 @@ import { WelcomeShell, WelcomeStepper } from "~/components/onboarding/welcome-sh
 import { markOnboardingStarted, markProfileComplete, readOnboardingState } from "~/lib/onboarding/storage";
 import { notifyOnboardingChange } from "~/hooks/use-onboarding-state";
 import { api } from "~/trpc/react";
-import { COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
+import { COUNTRIES_BY_DIAL_LENGTH, COUNTRY_SELECT_DATA, getDialCode } from "~/lib/constants/countries";
+import { useTeamCountry } from "~/hooks/use-team-country";
 
 export default function WelcomeProfilePage() {
   const t = useTranslations("onboarding.welcome.profile");
@@ -30,8 +31,16 @@ export default function WelcomeProfilePage() {
   });
   const updateProfile = api.auth.updateProfile.useMutation();
 
+  // Dial-code default follows the team the invitee was added to, rather than a
+  // fixed country. Multi-country teams use the alphabetically first, which is
+  // what useTeamCountry treats as primary.
+  const { countryIso: teamCountryIso } = useTeamCountry();
+
   const [name, setName] = useState("");
-  const [selectedIso, setSelectedIso] = useState("SD");
+  // null until either the team country resolves or a stored number is parsed,
+  // so neither can be clobbered by a late-arriving default.
+  const [selectedIso, setSelectedIso] = useState<string | null>(null);
+  const [isoTouched, setIsoTouched] = useState(false);
   const [localNumber, setLocalNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -48,12 +57,23 @@ export default function WelcomeProfilePage() {
     if (data?.user?.name) setName(data.user.name);
   }, [data?.user?.name]);
 
+  // Adopt the team's country once teams load, unless the user already picked
+  // one or an existing number established it.
+  useEffect(() => {
+    if (isoTouched || !teamCountryIso) return;
+    setSelectedIso((prev) => prev ?? teamCountryIso);
+  }, [teamCountryIso, isoTouched]);
+
+  // Prefill from an already-stored number. Longest dial code wins so +1268
+  // is not read as +1.
   useEffect(() => {
     const phone = detailsQuery.data?.phoneNumber;
-    if (phone?.startsWith("+249")) {
-      setSelectedIso("SD");
-      setLocalNumber(phone.slice(4));
-    }
+    if (!phone) return;
+    const match = COUNTRIES_BY_DIAL_LENGTH.find((c) => phone.startsWith(c.dialCode));
+    if (!match) return;
+    setSelectedIso(match.iso);
+    setIsoTouched(true);
+    setLocalNumber(phone.slice(match.dialCode.length));
   }, [detailsQuery.data?.phoneNumber]);
 
   if (isLoading || !data?.authenticated || !data.user) {
@@ -68,7 +88,9 @@ export default function WelcomeProfilePage() {
     if (!name.trim()) return;
     setSubmitting(true);
     try {
-      const phoneE164 = localNumber.trim()
+      // Without a resolved country there is no dial code to prefix, so an
+      // entered number would be stored unqualified. Skip it instead.
+      const phoneE164 = localNumber.trim() && selectedIso
         ? `${getDialCode(selectedIso)}${localNumber.replace(/\s/g, "")}`
         : undefined;
       await updateProfile.mutateAsync({
@@ -112,7 +134,11 @@ export default function WelcomeProfilePage() {
               <Select
                 data={COUNTRY_SELECT_DATA}
                 value={selectedIso}
-                onChange={(v) => v && setSelectedIso(v)}
+                onChange={(v) => {
+                  if (!v) return;
+                  setSelectedIso(v);
+                  setIsoTouched(true);
+                }}
                 w={100}
                 searchable
               />

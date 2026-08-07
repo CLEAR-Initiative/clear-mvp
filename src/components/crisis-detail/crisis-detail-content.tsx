@@ -57,7 +57,8 @@ import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
-import { useLocations } from "~/hooks/use-locations";
+import { useTeamCountry } from "~/hooks/use-team-country";
+import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { IASC_CLUSTERS, type IASCClusterCode } from "~/lib/constants/iasc-clusters";
 import type { GqlCrisis } from "~/server/api/routers/crises";
 import type { MapMarker } from "~/components/map/crisis-map";
@@ -253,19 +254,21 @@ export function CrisisDetailContent({
     },
   });
 
-  const { getLocationId } = useLocations();
-  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
-  const sudanL0Query = api.locations.getById.useQuery(
-    { id: sudanId! },
-    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  // Country context for the minimap comes from the active team, not a
+  // fixed country. Null when the team monitors globally.
+  const { countryId: focusCountryId, countryName: focusCountryName } = useTeamCountry();
+  const focusCountryL0Query = api.locations.getById.useQuery(
+    { id: focusCountryId! },
+    { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
-  const sudanGeometry = sudanL0Query.data?.geometry ?? undefined;
+  const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
+  const focusCountryPCode = resolveCountryConfig(focusCountryName ?? undefined)?.pCode;
 
   const events = crisis?.events ?? [];
 
   // Pick a primary coordinate for the map centre. Prefer the crisis's own
   // generalLocation, fall back to the first event with a resolvable location,
-  // finally default to a Sudan-wide view.
+  // finally centre on the active team's country.
   const primaryCoords = useMemo<[number, number]>(() => {
     const fromCrisis = locationCoords(crisis?.generalLocation);
     if (fromCrisis) return fromCrisis;
@@ -273,8 +276,8 @@ export function CrisisDetailContent({
       const c = locationCoords(pickEventLocation(e));
       if (c) return c;
     }
-    return [30, 14];
-  }, [crisis, events]);
+    return resolveCountryConfig(focusCountryName ?? undefined)?.center ?? [10, 20];
+  }, [crisis, events, focusCountryName]);
 
   // For the minimap zoom, use the first event location that has a proper parent
   // chain (A2 district with A1 state parent). The crisis's own generalLocation
@@ -750,8 +753,10 @@ export function CrisisDetailContent({
               <MinimapCard
                 markers={mapMarkers}
                 center={primaryCoords}
-                sudanGeometry={sudanGeometry}
-                sudanId={sudanId ?? null}
+                countryGeometry={focusCountryGeometry}
+                countryId={focusCountryId ?? null}
+                countryName={focusCountryName ?? undefined}
+                countryPCode={focusCountryPCode}
                 location={mapZoomLocation}
                 locationName={locationName ?? undefined}
                 fullMapHref={mapFocusHref("crisis", crisis.id)}
