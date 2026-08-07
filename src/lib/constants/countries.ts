@@ -218,3 +218,29 @@ export const COUNTRY_SELECT_DATA = COUNTRIES.map((c) => ({
 export function getDialCode(iso: string): string {
   return COUNTRIES.find((c) => c.iso === iso)?.dialCode ?? "+1";
 }
+
+/**
+ * Resolve a location's country name to an ISO 3166-1 alpha-2 code.
+ *
+ * `locations` stores the long COD/UN form ("Venezuela (Bolivarian Republic
+ * of)") while this list uses short names, so fall back to a longest-prefix
+ * match. Longest wins so "South Sudan" is not swallowed by "Sudan".
+ * Returns null when nothing matches, letting callers decide their own default
+ * instead of silently landing on one country.
+ */
+export function isoForCountryName(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const lower = name.trim().toLowerCase();
+
+  const exact = COUNTRIES.find((c) => c.name.toLowerCase() === lower);
+  if (exact) return exact.iso;
+
+  let best: Country | undefined;
+  for (const c of COUNTRIES) {
+    const k = c.name.toLowerCase();
+    if (lower.startsWith(`${k} (`) || lower.startsWith(`${k} `)) {
+      if (!best || c.name.length > best.name.length) best = c;
+    }
+  }
+  return best?.iso ?? null;
+}

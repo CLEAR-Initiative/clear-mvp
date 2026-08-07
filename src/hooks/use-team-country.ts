@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useTeam } from "~/providers/team-provider";
+import { isoForCountryName } from "~/lib/constants/countries";
 
 /**
  * The active team's country scope (level-0 location binding).
@@ -15,12 +16,28 @@ import { useTeam } from "~/providers/team-provider";
 export function useTeamCountry() {
   const { activeTeam, isLoading } = useTeam();
 
-  const country = useMemo(
-    () => activeTeam?.locations.find((l) => l.level === 0) ?? null,
+  /**
+   * Every country in the team's scope, sorted by name. Sorting matters: the
+   * API returns bindings in insertion order, so without it a multi-country
+   * team would get a different "primary" country between loads.
+   */
+  const countries = useMemo(
+    () =>
+      (activeTeam?.locations ?? [])
+        .filter((l) => l.level === 0)
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name)),
     [activeTeam],
   );
 
+  // Alphabetically first country is the team's primary for defaulting purposes.
+  const country = countries[0] ?? null;
+
   return {
+    /** All level-0 countries in scope, alphabetical. Empty when unscoped. */
+    countries,
+    /** ISO 3166-1 alpha-2 of the primary country, or null when unresolved. */
+    countryIso: isoForCountryName(country?.name),
     /** Location id of the team's country, or null when unscoped. */
     countryId: country?.id ?? null,
     /**
@@ -38,14 +55,16 @@ export function useTeamCountry() {
 /**
  * Country names the active team may switch between.
  *
- * Returns the team's own country only. An unscoped team gets every country the
- * API knows about, matching the backend's "no location bindings = global
- * monitoring" semantics in `buildLocationFilterForTeam`.
+ * Returns every country in the team's scope (a team can be bound to more than
+ * one). An unscoped team gets all countries the API knows about, matching the
+ * backend's "no location bindings = global monitoring" semantics in
+ * `buildLocationFilterForTeam`.
  */
 export function useScopedCountryOptions(allCountries: string[]): string[] {
-  const { countryName, hasCountryScope } = useTeamCountry();
+  const { countries, hasCountryScope } = useTeamCountry();
   return useMemo(() => {
-    if (!hasCountryScope || !countryName) return allCountries;
-    return allCountries.filter((c) => c === countryName);
-  }, [allCountries, countryName, hasCountryScope]);
+    if (!hasCountryScope) return allCountries;
+    const scoped = new Set(countries.map((c) => c.name));
+    return allCountries.filter((c) => scoped.has(c));
+  }, [allCountries, countries, hasCountryScope]);
 }
