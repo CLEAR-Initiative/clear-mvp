@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Group, Select, Text } from "@mantine/core";
+import { shortCountryName } from "~/lib/constants/country-config";
 import { useTranslations } from "next-intl";
 
 const LABEL_STYLE = {
@@ -57,7 +58,9 @@ export function FilterBar({
         size="xs"
         value={country}
         onChange={(v) => onCountryChange(v ?? country)}
-        data={countries}
+        // Value stays the canonical COD name (it keys location lookups);
+        // only the label is shortened.
+        data={countries.map((c) => ({ value: c, label: shortCountryName(c) }))}
         style={{ minWidth: 130, flex: "1 1 130px", maxWidth: 200 }}
         styles={{ input: INPUT_STYLE }}
         label={<FilterLabel>{t("country")}</FilterLabel>}

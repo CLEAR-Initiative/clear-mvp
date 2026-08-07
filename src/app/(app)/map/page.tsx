@@ -39,7 +39,7 @@ import {
 } from "./_components/map-markers-data";
 import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
 import { useLocations } from "~/hooks/use-locations";
-import { resolveCountryConfig } from "~/lib/constants/country-config";
+import { resolveCountryConfig, shortCountryName } from "~/lib/constants/country-config";
 import { MapPanelBar } from "./_components/map-panel-bar";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapLoadingOverlay, MapPreloader } from "./_components/map-loading-overlay";
@@ -1657,7 +1657,7 @@ function MapPageContent() {
             value={selectedCountry}
             onChange={handleCountryChange}
             data={countryOptions.map((c) =>
-              c === "All Countries" ? { value: c, label: t("filters.allCountries") } : c,
+              c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
             )}
             style={{ minWidth: 140 }}
             styles={{ input: INPUT_STYLE }}
@@ -1796,7 +1796,7 @@ function MapPageContent() {
               value={selectedCountry}
               onChange={handleCountryChange}
               data={countryOptions.map((c) =>
-                c === "All Countries" ? { value: c, label: t("filters.allCountries") } : c,
+                c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
               )}
               styles={{ input: INPUT_STYLE }}
               label={<FilterLabel>{t("filters.country")}</FilterLabel>}

@@ -41,6 +41,7 @@ import { cn } from "~/lib/utils";
 import { useDisclosure } from "@mantine/hooks";
 import { CollapsibleSection } from "~/components/ui/collapsible-section";
 import { CreateSignalModal } from "~/components/create-signal-modal";
+import { shortCountryName } from "~/lib/constants/country-config";
 import {
   nrcLocations,
   nrcStatistics,
@@ -174,7 +175,7 @@ export function RightPanel({
       <Box px={24} py={24} className="border-b border-[var(--color-border)] bg-[var(--color-bg-muted)]">
         <Group justify="space-between" align="flex-start" mb={4}>
           <Text fw={700} style={{ fontSize: 24, letterSpacing: "-0.02em" }}>
-            {selectedCountry}
+            {shortCountryName(selectedCountry)}
           </Text>
           {!hasCrisisData && currentNRCLocation ? (
             <Badge
