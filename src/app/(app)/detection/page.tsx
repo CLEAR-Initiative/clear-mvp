@@ -12,6 +12,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
+import { useTeamCountry, useScopedCountryOptions } from "~/hooks/use-team-country";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { parseDateFilter, resolveCountryConfig } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
@@ -67,7 +68,7 @@ function normalizeDetectionTab(raw: string | null): string | null {
 
 const TAB_STORAGE_KEY = "detection-active-tab";
 const FILTERS_STORAGE_KEY = "detection-filters";
-/** Gap after underline paints before skeleton — one frame, not a full CSS duration. */
+/** Gap after underline paints before skeleton - one frame, not a full CSS duration. */
 const TAB_SKELETON_DELAY_MS = 0;
 
 // Persisted alongside the tab so filter selections survive a round trip
@@ -98,7 +99,7 @@ function DetectionPageContent() {
   const searchParams = useSearchParams();
   const [storageReady, setStorageReady] = useState(false);
 
-  // URL/defaults only on first render — sessionStorage restore happens after mount
+  // URL/defaults only on first render - sessionStorage restore happens after mount
   // to avoid SSR/client hydration mismatch.
   const initialTab = (): string => {
     const fromUrl = normalizeDetectionTab(searchParams.get("tab"));
@@ -115,7 +116,7 @@ function DetectionPageContent() {
   const tabHandoffTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tabSkeletonTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRouteTab = useRef<string | null>(null);
-  /** Fresh each render — true when destination tab has no cached data yet. */
+  /** Fresh each render - true when destination tab has no cached data yet. */
   const tabNeedsSkeletonRef = useRef<(tab: string) => boolean>(() => true);
 
   const clearTabTimers = useCallback(() => {
@@ -126,7 +127,7 @@ function DetectionPageContent() {
   }, []);
 
   // Keep tab in sync when the Product Tour (or shareable links) change `?tab=`.
-  // IMPORTANT: depend on searchParams only — including indicatorTab here undoes
+  // IMPORTANT: depend on searchParams only - including indicatorTab here undoes
   // optimistic clicks until the deferred router.replace lands (felt like ~2s lag).
   useEffect(() => {
     const fromUrl = normalizeDetectionTab(searchParams.get("tab"));
@@ -134,11 +135,11 @@ function DetectionPageContent() {
 
     if (pendingRouteTab.current) {
       if (fromUrl === pendingRouteTab.current) {
-        // Our replace landed — state already matches.
+        // Our replace landed - state already matches.
         pendingRouteTab.current = null;
         return;
       }
-      // External navigation (tour / back / deep link) won — abort optimism.
+      // External navigation (tour / back / deep link) won - abort optimism.
       pendingRouteTab.current = null;
       clearTabTimers();
     }
@@ -167,14 +168,14 @@ function DetectionPageContent() {
     clearTabTimers();
     pendingRouteTab.current = tab;
 
-    // Phase 1 — tab chrome + enable queries (cache resolves synchronously in this flush).
+    // Phase 1 - tab chrome + enable queries (cache resolves synchronously in this flush).
     flushSync(() => {
       setIndicatorTab(tab);
       setPendingTab(null);
       setActiveTab(tab);
     });
 
-    // Phase 2 — skeleton only on cold load; cached revisits skip it to avoid flash.
+    // Phase 2 - skeleton only on cold load; cached revisits skip it to avoid flash.
     // Keep pendingRouteTab until searchParams confirms (don't clear on cache hit).
     tabSkeletonTimer.current = setTimeout(() => {
       tabSkeletonTimer.current = null;
@@ -187,7 +188,10 @@ function DetectionPageContent() {
       commitTabRoute(tab);
     }, TAB_SKELETON_DELAY_MS);
   }, [indicatorTab, clearTabTimers, commitTabRoute]);
-  const [selectedCountry, setSelectedCountry] = useState("Sudan");
+  // Country the user picked. Only consulted when the active team monitors
+  // globally: a team bound to a country is pinned to it (see selectedCountry
+  // below), so the picker cannot take them out of scope.
+  const [pickedCountry, setPickedCountry] = useState("");
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("Last 30 days");
   const localizedDateOptions = useMemo(() => {
@@ -221,6 +225,15 @@ function DetectionPageContent() {
 
   const { activeTeamId } = useTeam();
   const { countries, getCenter, getZoom, getLocationId, tree, isLoading: isLocationsLoading } = useLocations();
+  const { countryName: teamCountryName } = useTeamCountry();
+
+  // A team's country binding wins over any picked/restored value. Derived
+  // rather than synced through an effect so there is no window where the page
+  // queries one country while the team is scoped to another (that mismatch
+  // ANDs to zero rows server-side and renders an unexplained empty page).
+  const selectedCountry = teamCountryName ?? pickedCountry;
+  const setSelectedCountry = setPickedCountry;
+  const countryOptions = useScopedCountryOptions(countries);
 
   // Ground intel is a PRIVATE staging tier (sender names, unvetted claims):
   // clear-api rejects every ground query for roles other than admin/analyst,
@@ -230,7 +243,7 @@ function DetectionPageContent() {
   const canSeeGround =
     authData?.user?.role === "admin" || authData?.user?.role === "analyst";
 
-  // Tab order drives the sliding indicator geometry — 4 or 5 equal slots
+  // Tab order drives the sliding indicator geometry - 4 or 5 equal slots
   // depending on whether the ground tab is visible for this role.
   const visibleTabs = useMemo(
     () => ["alerts", "events", "signals", "history", ...(canSeeGround ? ["ground"] : [])],
@@ -307,12 +320,13 @@ function DetectionPageContent() {
 
   const selectedCountryId = useMemo(() => getLocationId(selectedCountry), [selectedCountry, getLocationId]);
 
-  const sudanId = useMemo(() => getLocationId("Sudan"), [getLocationId]);
-  const sudanL0Query = api.locations.getById.useQuery(
-    { id: sudanId! },
-    { enabled: !!sudanId, staleTime: Infinity, refetchOnWindowFocus: false },
+  // Country outline for the map highlight, keyed off whichever country is
+  // actually selected rather than a fixed one.
+  const focusCountryL0Query = api.locations.getById.useQuery(
+    { id: selectedCountryId! },
+    { enabled: !!selectedCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
-  const focusCountryGeometry = sudanL0Query.data?.geometry ?? undefined;
+  const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
 
   const a1BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
     { level: 1, countryId: selectedCountryId ?? undefined },
@@ -387,7 +401,7 @@ function DetectionPageContent() {
   const [historySortOrder, setHistorySortOrder] = useState<HistorySortOrder>("newest");
 
   // Write detection nav context for event/signal page prev/next navigation.
-  // Wait until locationId is resolved — writing null would make detail arrow
+  // Wait until locationId is resolved - writing null would make detail arrow
   // nav query an unfiltered (all-countries) list.
   useEffect(() => {
     if (!selectedLocationId) return;
@@ -812,7 +826,7 @@ function DetectionPageContent() {
           historySignalsQuery.isLoading
         );
       case "ground":
-        // Self-fetching tab — it renders its own table loading state.
+        // Self-fetching tab - it renders its own table loading state.
         return false;
       default:
         return true;
@@ -830,7 +844,7 @@ function DetectionPageContent() {
             ? historyAlertsQuery.isLoading || historyEventsQuery.isLoading || historySignalsQuery.isLoading
             : false;
 
-  // Phase 3 — hand off skeleton → real panel when data is ready (URL already updated in phase 2).
+  // Phase 3 - hand off skeleton → real panel when data is ready (URL already updated in phase 2).
   useEffect(() => {
     if (!pendingTab || pendingTab !== activeTab) return;
 
@@ -869,7 +883,7 @@ function DetectionPageContent() {
         <FilterBar
           country={selectedCountry}
           onCountryChange={(v) => { setSelectedCountry(v); setSelectedRegionId(null); }}
-          countries={countries}
+          countries={countryOptions}
           regionsContent={
             <RegionPicker
               states={currentCountryStates}

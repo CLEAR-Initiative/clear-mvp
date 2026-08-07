@@ -6,10 +6,12 @@ import { Box, Tabs } from "@mantine/core";
 import { PageHeader } from "~/components/ui";
 import { ReportsTab } from "./_components/reports-tab";
 import { SituationTab } from "./_components/situation/situation-tab";
+import { useTeamCountry } from "~/hooks/use-team-country";
 
 export default function InsightsPage() {
   const t = useTranslations("insights");
   const [activeTab, setActiveTab] = useState<string | null>("crisis");
+  const { countryName: teamCountryName } = useTeamCountry();
 
   return (
     <Box>
@@ -35,7 +37,7 @@ export default function InsightsPage() {
         {activeTab === "crisis" && (
           <Box data-tour="insights-crises">
             <ReportsTab
-              selectedCountry="Sudan"
+              selectedCountry={teamCountryName ?? ""}
               selectedRegion="All Regions"
               summaryStats={{ critical: 0, total: 0, types: [] }}
               realSituationItems={null}

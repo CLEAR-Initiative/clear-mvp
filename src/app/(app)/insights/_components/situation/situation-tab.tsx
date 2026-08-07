@@ -8,11 +8,6 @@ import { SituationOverview } from "./situation-overview";
 import { SituationSectors } from "./situation-sectors";
 import { SituationSources } from "./situation-sources";
 
-/** Fallback default when the user's teams carry no country scope (global
- *  monitoring). Sudan is the first deployment target and the only country the
- *  pipeline generates for today. */
-const DEFAULT_COUNTRY = "Sudan";
-
 type SubTab = "overview" | "sectors" | "sources";
 
 export function SituationTab() {
@@ -51,7 +46,7 @@ export function SituationTab() {
   const country = useMemo(() => {
     if (!options.length) return null;
     if (countryId) return options.find((c) => c.id === countryId) ?? options[0] ?? null;
-    return options.find((c) => c.name === DEFAULT_COUNTRY) ?? options[0] ?? null;
+    return options[0] ?? null;
   }, [options, countryId]);
 
   const { data, isLoading, isError } = api.situationAnalysis.get.useQuery(
