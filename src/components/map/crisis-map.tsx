@@ -51,6 +51,7 @@ import {
   shouldShowPointAltitude,
   type PointAltitudeResult,
 } from "~/lib/map/point-altitude";
+import { signalIconUrl } from "~/lib/signals/resolve-icon";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
 const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
@@ -65,6 +66,8 @@ export interface MapMarker {
   description?: string;
   popup?: string;
   markerKind?: "event" | "signal" | "crisis";
+  /** CLEAR Signals SVG slug for type glyph on unclustered pins. */
+  iconSlug?: string;
   /** Source pin challenged / correction queued (Location trust v1). */
   locationTrust?: "challenged" | "correction_queued";
   /** Proposed correction pin vs source pin for dual location display. */
@@ -372,13 +375,26 @@ function buildPointEl(
   opts?: {
     locationTrust?: "challenged" | "correction_queued";
     locationPinRole?: "source" | "proposed";
+    iconSlug?: string;
   },
 ): HTMLDivElement {
   const color = severityColors[severity] ?? "#737373";
   const proposed = opts?.locationPinRole === "proposed";
   const challenged =
     opts?.locationTrust === "challenged" || opts?.locationTrust === "correction_queued";
-  const size = severity === "critical" ? 18 : severity === "high" ? 16 : 14;
+  const withGlyph = Boolean(opts?.iconSlug) && !proposed;
+  // Glyph pins need a bit more surface; severity still drives size.
+  const size = withGlyph
+    ? severity === "critical"
+      ? 28
+      : severity === "high"
+        ? 26
+        : 24
+    : severity === "critical"
+      ? 18
+      : severity === "high"
+        ? 16
+        : 14;
   // Outer: Mapbox sets its positioning transform here - do not animate this element.
   // Do NOT set position:relative — Mapbox relies on .mapboxgl-marker { position:absolute }.
   // Inline relative overrides that and stacks pins in document flow.
@@ -404,8 +420,26 @@ function buildPointEl(
     inner.style.cssText =
       `width:100%;height:100%;border-radius:50%;background:transparent;border:2.5px dashed ${color};box-shadow:none;opacity:0.85;`;
   } else {
-    inner.style.cssText =
-      `width:100%;height:100%;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);`;
+    inner.style.cssText = [
+      `width:100%;height:100%;border-radius:50%;background:${color};`,
+      `border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);`,
+      withGlyph ? "display:flex;align-items:center;justify-content:center;overflow:hidden;" : "",
+    ].join("");
+    if (withGlyph && opts?.iconSlug) {
+      const img = document.createElement("img");
+      img.src = signalIconUrl(opts.iconSlug);
+      img.alt = "";
+      img.draggable = false;
+      // Medium discs are yellow (`#FBBF24`) — white glyphs wash out; use a dark glyph there.
+      const lightDisc = severity === "medium";
+      img.style.cssText = [
+        "width:58%;height:58%;object-fit:contain;pointer-events:none;",
+        lightDisc
+          ? "filter:brightness(0);"
+          : "filter:brightness(0) invert(1);",
+      ].join("");
+      inner.appendChild(img);
+    }
   }
   outer.appendChild(ring);
   outer.appendChild(inner);
@@ -1272,6 +1306,7 @@ export function CrisisMap({
         id: mk.id, title: mk.title, severity: mk.severity,
         type: mk.type ?? "", description: mk.description ?? "",
         marker_kind: mk.markerKind ?? "",
+        icon_slug: mk.iconSlug ?? "",
         location_trust: mk.locationTrust ?? "",
         location_pin_role: mk.locationPinRole ?? "",
         is_critical: mk.severity === "critical" ? 1 : 0,
@@ -1504,6 +1539,13 @@ export function CrisisMap({
               : undefined,
           locationPinRole:
             pinRole === "source" || pinRole === "proposed" ? pinRole : undefined,
+          // Glyphs only in the point density band — Country/donut keeps severity discs.
+          iconSlug:
+            mode === "point" &&
+            typeof props.icon_slug === "string" &&
+            props.icon_slug
+              ? props.icon_slug
+              : undefined,
         });
         el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
         // Pick mode: block pin clicks even after pan/zoom rebuilds markers.

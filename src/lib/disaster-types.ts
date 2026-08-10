@@ -138,3 +138,8 @@ export function getDisasterL2Pills(types: string[]): DisasterPill[] {
 export function getDisasterLabel(code: string): string {
   return DISASTER_META[code.toLowerCase()]?.label ?? code.toUpperCase();
 }
+
+/** All GLIDE codes known to the pill system (including hidden). */
+export function allDisasterTypeCodes(): string[] {
+  return Object.keys(DISASTER_META);
+}
