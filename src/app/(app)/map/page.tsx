@@ -10,6 +10,7 @@ import {
   Stack,
   Select,
   Loader,
+  SegmentedControl,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useMediaQuery } from "@mantine/hooks";
@@ -20,11 +21,13 @@ import type {
   MapMarker,
   MarkerScreenPoint,
   BaseMapType,
+  SatelliteImagerySource,
 } from "~/components/map/crisis-map";
 import {
   shouldShowPointAltitude,
   type PointAltitudeResult,
 } from "~/lib/map/point-altitude";
+import { DEFAULT_SATELLITE_IMAGERY_SOURCE } from "~/lib/map/satellite-imagery-ab";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { useTeamCountry, useScopedCountryOptions } from "~/hooks/use-team-country";
@@ -683,6 +686,9 @@ function MapPageContent() {
   const [baseMapType, setBaseMapType] = useState<BaseMapType>(
     () => restoredView?.baseMapType ?? "simple",
   );
+  /** TEMP A/B (#160) — not persisted; remove with satellite-imagery-ab. */
+  const [satelliteImagerySource, setSatelliteImagerySource] =
+    useState<SatelliteImagerySource>(DEFAULT_SATELLITE_IMAGERY_SOURCE);
   const baseMapTypeRef = useRef(baseMapType);
   baseMapTypeRef.current = baseMapType;
 
@@ -1758,6 +1764,7 @@ function MapPageContent() {
           showBlockages={blockagesUiEnabled && showBlockages}
           blockagesGeoJson={blockagesGeoJson}
           baseMapType={baseMapType}
+          satelliteImagerySource={satelliteImagerySource}
           hoveredMarkerId={chromeActiveMarkerId}
           locationPickActive={locationCorrectionDraft?.phase === "picking"}
           onMapClick={handleLocationCorrectionMapClick}
@@ -1766,6 +1773,57 @@ function MapPageContent() {
         {/* Loading overlay - only shows when map is mounted and data is loading */}
         {showLoadingOverlay && dataView !== "none" && (
           <MapLoadingOverlay dataView={dataView} />
+        )}
+
+        {/* TEMP satellite imagery A/B (#160) — floating quick swap while Satellite is on */}
+        {baseMapType === "satellite" && (
+          <Box
+            data-testid="satellite-imagery-ab-chip"
+            style={{
+              position: "absolute",
+              top: 12,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 25,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 4,
+              padding: "6px 8px",
+              borderRadius: 10,
+              background: "color-mix(in srgb, var(--color-bg-muted) 55%, transparent)",
+              backdropFilter: "blur(12px) saturate(1.2)",
+              WebkitBackdropFilter: "blur(12px) saturate(1.2)",
+              border: "1px solid color-mix(in srgb, var(--color-border-dark) 55%, transparent)",
+              boxShadow: "var(--shadow-md)",
+              pointerEvents: "auto",
+            }}
+          >
+            <Text
+              size="xs"
+              c="var(--color-text-muted)"
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+              }}
+            >
+              {t("panels.imageryAbTemp")}
+            </Text>
+            <SegmentedControl
+              value={satelliteImagerySource}
+              onChange={(v) =>
+                setSatelliteImagerySource(v as SatelliteImagerySource)
+              }
+              data={[
+                { value: "mapbox", label: t("panels.imageryMapbox") },
+                { value: "esri", label: t("panels.imageryEsri") },
+              ]}
+              size="xs"
+              styles={{ label: { fontSize: 11, padding: "2px 10px" } }}
+            />
+          </Box>
         )}
       </Box>
 
@@ -1788,6 +1846,8 @@ function MapPageContent() {
         blockagesLoading={blockagesUiEnabled && blockagesLoading}
         baseMapType={baseMapType}
         onBaseMapTypeChange={setBaseMapType}
+        satelliteImagerySource={satelliteImagerySource}
+        onSatelliteImagerySourceChange={setSatelliteImagerySource}
         keepPanelsOpen={keepPanelsOpen}
         onKeepPanelsOpenChange={setKeepPanelsOpen}
         filters={
