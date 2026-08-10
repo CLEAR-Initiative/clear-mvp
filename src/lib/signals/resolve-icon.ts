@@ -9,26 +9,31 @@
  */
 
 /** GLIDE / category code → icon slug. Conflict codes share one glyph. */
-const GLIDE_TO_SLUG: Record<string, string> = {
+export const GLIDE_TO_SLUG: Record<string, string> = {
   // Natural hazards
+  av: "cat-natural-disasters",
+  cw: "weather",
   dr: "drought",
+  ec: "cyclone",
   eq: "earthquake",
+  et: "weather",
   ff: "flood",
   fl: "flood",
   fr: "wildfire",
-  wf: "wildfire",
+  ht: "weather",
+  in: "cat-natural-disasters",
   ls: "landslide",
   ms: "landslide",
   sl: "landslide",
+  ss: "storm",
   st: "storm",
   tc: "cyclone",
-  ec: "cyclone",
   to: "storm",
-  ss: "storm",
+  ts: "cat-natural-disasters",
+  vo: "cat-natural-disasters",
   vw: "storm",
-  cw: "weather",
-  ht: "weather",
-  et: "weather",
+  wf: "wildfire",
+  ot: "cat-other-operations",
   // Conflict family
   ba: "conflict",
   bg: "conflict",
@@ -62,7 +67,10 @@ const GLIDE_TO_SLUG: Record<string, string> = {
   fa: "food-insecurity",
   fc: "econ-shock",
   ep: "disease",
-  ac: "explosive-hazard",
+  // Technological disaster — infrastructure, not explosives
+  ac: "cat-infrastructure",
+  // Complex emergency (often hidden in pills) — generic event core
+  ce: "sample-event-core",
   // Free-text / layer names sometimes appear as types
   conflict: "conflict",
   displacement: "refugees",
@@ -78,12 +86,14 @@ const GLIDE_TO_SLUG: Record<string, string> = {
 };
 
 const KEYWORD_RULES: Array<{ pattern: RegExp; slug: string }> = [
-  { pattern: /\bflood/i, slug: "flood" },
+  { pattern: /\bflood|tsunami/i, slug: "flood" },
   { pattern: /\bdrought/i, slug: "drought" },
   { pattern: /\bwildfire|bush\s*fire|\bfire\b/i, slug: "wildfire" },
   { pattern: /\bearthquake|seismic/i, slug: "earthquake" },
   { pattern: /\bcyclone|hurricane|typhoon|storm\b/i, slug: "cyclone" },
-  { pattern: /\bland\s*slide|mud\s*slide/i, slug: "landslide" },
+  { pattern: /\bland\s*slide|mud\s*slide|avalanche/i, slug: "landslide" },
+  { pattern: /\bvolcano|eruption/i, slug: "cat-natural-disasters" },
+  { pattern: /\binsect\s*infestation|locust/i, slug: "cat-natural-disasters" },
   { pattern: /\bconflict|fighting|attack|airstrike|shelling|clash/i, slug: "conflict" },
   { pattern: /\bexplosive|ied|bomb/i, slug: "explosive-hazard" },
   { pattern: /\brefugee|displacement|idp|migrat/i, slug: "refugees" },
@@ -95,6 +105,7 @@ const KEYWORD_RULES: Array<{ pattern: RegExp; slug: string }> = [
   { pattern: /\bwater|wash|sanitation/i, slug: "water-wash" },
   { pattern: /\bweather|rainfall/i, slug: "weather" },
   { pattern: /\beconomic|market|inflation/i, slug: "econ-shock" },
+  { pattern: /\btechnological|industrial\s*accident|chemical\s*spill/i, slug: "cat-infrastructure" },
   { pattern: /\bmovement|migration/i, slug: "movement" },
 ];
 
@@ -132,9 +143,4 @@ export function resolveMarkerIconSlug(opts: {
     return EVENT_MARKER_ICON;
   }
   return DEFAULT_ICON_SLUG;
-}
-
-/** @deprecated Prefer resolveMarkerIconSlug — kept for call-site migration. */
-export function resolveSignalIcon(...texts: Array<string | null | undefined>): string {
-  return resolveMarkerIconSlug({ texts });
 }

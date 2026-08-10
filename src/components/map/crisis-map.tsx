@@ -430,8 +430,14 @@ function buildPointEl(
       img.src = signalIconUrl(opts.iconSlug);
       img.alt = "";
       img.draggable = false;
-      img.style.cssText =
-        "width:58%;height:58%;object-fit:contain;filter:brightness(0) invert(1);pointer-events:none;";
+      // Medium discs are yellow (`#FBBF24`) — white glyphs wash out; use a dark glyph there.
+      const lightDisc = severity === "medium";
+      img.style.cssText = [
+        "width:58%;height:58%;object-fit:contain;pointer-events:none;",
+        lightDisc
+          ? "filter:brightness(0);"
+          : "filter:brightness(0) invert(1);",
+      ].join("");
       inner.appendChild(img);
     }
   }
@@ -1533,9 +1539,13 @@ export function CrisisMap({
               : undefined,
           locationPinRole:
             pinRole === "source" || pinRole === "proposed" ? pinRole : undefined,
-          iconSlug: typeof props.icon_slug === "string" && props.icon_slug
-            ? props.icon_slug
-            : undefined,
+          // Glyphs only in the point density band — Country/donut keeps severity discs.
+          iconSlug:
+            mode === "point" &&
+            typeof props.icon_slug === "string" &&
+            props.icon_slug
+              ? props.icon_slug
+              : undefined,
         });
         el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
         // Pick mode: block pin clicks even after pan/zoom rebuilds markers.

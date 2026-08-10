@@ -1,7 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { allDisasterTypeCodes } from "~/lib/disaster-types";
 import {
   DEFAULT_ICON_SLUG,
   EVENT_MARKER_ICON,
+  GLIDE_TO_SLUG,
   resolveMarkerIconSlug,
   signalIconUrl,
 } from "./resolve-icon";
@@ -16,8 +20,12 @@ describe("resolveMarkerIconSlug", () => {
     expect(resolveMarkerIconSlug({ types: ["fa"] })).toBe("food-insecurity");
   });
 
+  it("maps technological disaster (ac) to infrastructure, not explosives", () => {
+    expect(resolveMarkerIconSlug({ types: ["ac"] })).toBe("cat-infrastructure");
+  });
+
   it("uses the first matching type in the list", () => {
-    expect(resolveMarkerIconSlug({ types: ["ot", "eq"] })).toBe("earthquake");
+    expect(resolveMarkerIconSlug({ types: ["ot", "eq"] })).toBe("cat-other-operations");
   });
 
   it("falls back to keyword match on free text when types miss", () => {
@@ -37,6 +45,19 @@ describe("resolveMarkerIconSlug", () => {
 
   it("defaults signals without clues to movement", () => {
     expect(resolveMarkerIconSlug({ markerKind: "signal" })).toBe(DEFAULT_ICON_SLUG);
+  });
+
+  it("covers every DISASTER_META code with a shipped SVG slug", () => {
+    const iconsDir = join(process.cwd(), "public/images/ui-kit/signals/icons");
+    for (const code of allDisasterTypeCodes()) {
+      const slug = resolveMarkerIconSlug({ types: [code], markerKind: "event" });
+      expect(GLIDE_TO_SLUG[code], `missing GLIDE_TO_SLUG[${code}]`).toBeTruthy();
+      expect(slug).toBe(GLIDE_TO_SLUG[code]);
+      expect(
+        existsSync(join(iconsDir, `${slug}.svg`)),
+        `missing SVG for ${code} → ${slug}`,
+      ).toBe(true);
+    }
   });
 });
 
