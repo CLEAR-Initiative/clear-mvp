@@ -8,6 +8,7 @@ import type {
 } from "~/lib/types/graphql";
 import { mapSeverity } from "~/lib/types/graphql";
 import { resolveLocationName } from "~/lib/location";
+import { resolveMarkerIconSlug } from "~/lib/signals/resolve-icon";
 
 export interface CrisisMarker extends MapMarker {
   region?: string;
@@ -127,6 +128,11 @@ function eventToMarker(event: GqlEvent, loc: NonNullable<ReturnType<typeof point
     markerKind: "event",
     status: event.alerts[0]?.status,
     occurredAt: event.firstSignalCreatedAt,
+    iconSlug: resolveMarkerIconSlug({
+      types: event.types,
+      texts: [event.title, event.description],
+      markerKind: "event",
+    }),
   };
 }
 
@@ -209,6 +215,10 @@ export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
             markerKind: "signal",
             occurredAt: signal.publishedAt,
             locationPinRole: "source",
+            iconSlug: resolveMarkerIconSlug({
+              texts: [signal.title, signal.description],
+              markerKind: "signal",
+            }),
           });
           break;
         }
@@ -342,6 +352,7 @@ export function crisesToMarkers(crises: GqlCrisis[]): CrisisMarker[] {
     if (loc?.geometry?.type === "Point") {
       const [lng, lat] = loc.geometry.coordinates as [number, number];
       if (typeof lng === "number" && typeof lat === "number") {
+        const eventTypes = crisis.events.flatMap((e) => e.types).map((t) => t.toLowerCase());
         markers.push({
           id: Math.abs(crisis.id.split("").reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)),
           lng,
@@ -350,10 +361,15 @@ export function crisesToMarkers(crises: GqlCrisis[]): CrisisMarker[] {
           severity: mapSeverity(crisis.severity),
           locationId: loc.id,
           ancestorIds: loc.ancestorIds ?? [],
-          eventTypes: crisis.events.flatMap((e) => e.types).map((t) => t.toLowerCase()),
+          eventTypes,
           region: resolveLocationName(loc) ?? undefined,
           eventId: crisis.id,
           markerKind: "crisis",
+          iconSlug: resolveMarkerIconSlug({
+            types: eventTypes,
+            texts: [crisis.title],
+            markerKind: "crisis",
+          }),
         });
       }
     }
