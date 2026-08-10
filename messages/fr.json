@@ -1934,7 +1934,7 @@
       "roads": "Routes",
       "satellite": "Satellite",
       "simple": "Simple",
-      "topography": "Relief",
+      "topography": "Topographie",
       "imageryAbTemp": "Imagerie A/B (temp)",
       "imageryMapbox": "Mapbox",
       "imageryEsri": "Esri",
@@ -2024,7 +2024,7 @@
     },
     "tokenMissing": "Jeton Mapbox non configuré. Définissez NEXT_PUBLIC_MAPBOX_TOKEN dans .env",
     "tiltHint": {
-      "message": "Le relief est en 3D — cliquez Incliner, ou Ctrl+glisser (clic droit) / deux doigts sur tactile",
+      "message": "La topographie est en 3D — cliquez Incliner, ou Ctrl/⌘+glisser (clic droit) / deux doigts sur tactile",
       "tilt": "Incliner",
       "dismiss": "Plus tard"
     },
