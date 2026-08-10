@@ -182,7 +182,7 @@ function MapPageContent() {
 
   /* ---- Fetch data ---- */
   const { activeTeamId, activeTeam } = useTeam();
-  const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId } = useLocations();
+  const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId, locationById } = useLocations();
   const { countryName: teamCountryName } = useTeamCountry();
 
   // Timeline state. Stored as "YYYY-MM"; null means "all time".
@@ -439,29 +439,29 @@ function MapPageContent() {
   /* ---- Derive markers: solo deep-link set OR browse feed ---- */
   const allMarkers: CrisisMarker[] = useMemo(() => {
     if (focusEventId) {
-      return focusEventQuery.data ? focusEventToMarkers(focusEventQuery.data) : [];
+      return focusEventQuery.data ? focusEventToMarkers(focusEventQuery.data, locationById) : [];
     }
     if (focusSignalId) {
       return focusSignalQuery.data
         ? applyLocationChallengesToMarkers(
-            signalsToMarkers([focusSignalQuery.data]),
+            signalsToMarkers([focusSignalQuery.data], locationById),
             signalChallengesForMap,
           )
         : [];
     }
     if (focusCrisisId) {
-      return focusCrisisQuery.data ? crisesToMarkers([focusCrisisQuery.data]) : [];
+      return focusCrisisQuery.data ? crisesToMarkers([focusCrisisQuery.data], locationById) : [];
     }
     let markers: CrisisMarker[] = [];
-    if (dataView === "alert")  markers = alertsToMarkers(alertsQuery.data?.alerts ?? []);
-    if (dataView === "event")  markers = eventsToMarkers(eventsQuery.data?.events ?? []);
+    if (dataView === "alert")  markers = alertsToMarkers(alertsQuery.data?.alerts ?? [], locationById);
+    if (dataView === "event")  markers = eventsToMarkers(eventsQuery.data?.events ?? [], locationById);
     if (dataView === "signal") {
       markers = applyLocationChallengesToMarkers(
-        signalsToMarkers(signalsListQuery.data ?? []),
+        signalsToMarkers(signalsListQuery.data ?? [], locationById),
         signalChallengesForMap,
       );
     }
-    if (dataView === "crisis") markers = crisesToMarkers(crisesQuery.data?.crises ?? []);
+    if (dataView === "crisis") markers = crisesToMarkers(crisesQuery.data?.crises ?? [], locationById);
     return markers;
   }, [
     focusEventId,
@@ -476,6 +476,7 @@ function MapPageContent() {
     signalsListQuery.data,
     signalChallengesForMap,
     crisesQuery.data,
+    locationById,
   ]);
 
   const focusMarker = useMemo(() => {

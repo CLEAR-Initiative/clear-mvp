@@ -103,10 +103,14 @@ override paint on the style's road layers.
 | Focus border | #1D4ED8 | #60A5FA |
 | Focus tint (Simple only) | #1E40AF @ .35 | #1E3A5F @ .45 |
 | Outside mask | #FFF @ .9 (Simple) / #000 @ .4 | #000 @ .55 (Simple) / #000 @ .4 |
-| Markers | severity scale (critical red -> low green), orange accent rings | same |
+| Markers | severity scale (critical red -> low green), orange accent rings; type glyph on unclustered pins | same |
 
 Boundaries are blue, corridors tan, markers orange/severity - three
-distinguishable information channels at every zoom and theme.
+distinguishable information channels at every zoom and theme. On the
+point density band, severity stays the disc color and type is a white
+SVG glyph (`resolveMarkerIconSlug` → `/images/ui-kit/signals/icons/`).
+Heatmap and donut bands stay severity-only so glyphs do not fight
+aggregation.
 
 ## Known limits / roadmap
 
