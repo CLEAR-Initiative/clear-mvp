@@ -37,3 +37,6 @@ scripts/logie/out/
 
 # Local-only compose override (points builds at a worktree)
 docker-compose.e2e.override.yml
+
+# Research fixtures with precise camp coordinates (never commit)
+.local/

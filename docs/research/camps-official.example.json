@@ -1,0 +1,17 @@
+{
+  "asOf": "2020-02-20",
+  "source": "HDX Sudan IDP camps (local copy — do not commit real file)",
+  "sites": [
+    {
+      "id": "example-replace-me",
+      "name": "Example Official Camp",
+      "state": "West Darfur",
+      "locality": "Example",
+      "siteClass": "formal_camp",
+      "lng": 22.0,
+      "lat": 13.0,
+      "asOf": "2020-02-20",
+      "notes": "Copy to .local/camps-official.json and replace with real official rows. Keep that file gitignored."
+    }
+  ]
+}
