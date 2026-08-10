@@ -8,7 +8,7 @@ import {
 import { IconFilter, IconLayersLinked, IconList } from "@tabler/icons-react";
 import type { DataView } from "./map-layers-panel";
 import type { BoundaryLevel } from "./map-settings-popover";
-import type { BaseMapType } from "~/components/map/crisis-map";
+import type { BaseMapType, SatelliteImagerySource } from "~/components/map/crisis-map";
 import {
   SUDAN_NRC_OFFICE_COLORS,
   SUDAN_NRC_OFFICE_TYPE_ORDER,
@@ -38,6 +38,15 @@ const BASE_MAP_OPTIONS: { labelKey: BaseMapType; value: BaseMapType }[] = [
   { labelKey: "simple",     value: "simple" },
   { labelKey: "topography", value: "topography" },
   { labelKey: "satellite",  value: "satellite" },
+];
+
+/** TEMP A/B (#160) — remove with satellite-imagery-ab after evaluation. */
+const SATELLITE_IMAGERY_OPTIONS: {
+  labelKey: "imageryMapbox" | "imageryEsri";
+  value: SatelliteImagerySource;
+}[] = [
+  { labelKey: "imageryMapbox", value: "mapbox" },
+  { labelKey: "imageryEsri", value: "esri" },
 ];
 
 // labelKey: i18n keys under map.dataViews.* - resolved via t() at render time.
@@ -71,6 +80,9 @@ interface MapPanelBarProps {
   blockagesLoading?: boolean;
   baseMapType?: BaseMapType;
   onBaseMapTypeChange?: (v: BaseMapType) => void;
+  /** TEMP A/B (#160) — satellite imagery vendor while basemap is Satellite. */
+  satelliteImagerySource?: SatelliteImagerySource;
+  onSatelliteImagerySourceChange?: (v: SatelliteImagerySource) => void;
   /** Desktop: accumulate marker detail panels instead of replacing. */
   keepPanelsOpen?: boolean;
   onKeepPanelsOpenChange?: (v: boolean) => void;
@@ -206,6 +218,7 @@ export function MapPanelBar({
   blockagesHint,
   blockagesLoading = false,
   baseMapType = "simple", onBaseMapTypeChange = noop,
+  satelliteImagerySource = "mapbox", onSatelliteImagerySourceChange = noop,
   keepPanelsOpen = false, onKeepPanelsOpenChange = noop,
   filters,
 }: MapPanelBarProps) {
@@ -272,8 +285,33 @@ export function MapPanelBar({
                     size="xs"
                     fullWidth
                     styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
-                    mb={10}
+                    mb={baseMapType === "satellite" ? 8 : 10}
                   />
+                  {baseMapType === "satellite" && (
+                    <Box mb={10} data-testid="satellite-imagery-ab">
+                      <Text
+                        size="xs"
+                        c="var(--color-text-muted)"
+                        mb={4}
+                        style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}
+                      >
+                        {t("panels.imageryAbTemp")}
+                      </Text>
+                      <SegmentedControl
+                        value={satelliteImagerySource}
+                        onChange={(v) =>
+                          onSatelliteImagerySourceChange(v as SatelliteImagerySource)
+                        }
+                        data={SATELLITE_IMAGERY_OPTIONS.map((o) => ({
+                          value: o.value,
+                          label: t(`panels.${o.labelKey}`),
+                        }))}
+                        size="xs"
+                        fullWidth
+                        styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
+                      />
+                    </Box>
+                  )}
 
                   <SectionLabel>{t("panels.overlays")}</SectionLabel>
                   <LayerCheckRow
