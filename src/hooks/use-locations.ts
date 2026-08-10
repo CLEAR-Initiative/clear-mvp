@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { api } from "~/trpc/react";
 import { countryConfig, resolveCountryConfig } from "~/lib/constants/country-config";
+import { flattenLocationTree } from "~/lib/location";
 
 /** Neutral camera used when no country is selected or configured. */
 const WORLD_VIEW = { center: [10, 20] as [number, number], zoom: 1.6 };
@@ -95,6 +96,12 @@ export function useLocations() {
   const getZoom = (countryName: string): number =>
     resolveCountryConfig(countryName)?.zoom ?? WORLD_VIEW.zoom;
 
+  /**
+   * Flattened id→{name,level} map for resolving location names from ancestorIds.
+   * Used by map markers when full ancestor objects aren't in the GraphQL payload.
+   */
+  const locationById = useMemo(() => flattenLocationTree(tree), [tree]);
+
   return {
     countries,
     getRegions,
@@ -102,6 +109,7 @@ export function useLocations() {
     getLocationId,
     getCenter,
     getZoom,
+    locationById,
     isLoading: treeQuery.isLoading,
     tree,
   };

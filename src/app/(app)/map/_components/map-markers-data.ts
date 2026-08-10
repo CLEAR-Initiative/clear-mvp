@@ -112,7 +112,11 @@ function pointLocation(event: GqlEvent) {
   return null;
 }
 
-function eventToMarker(event: GqlEvent, loc: NonNullable<ReturnType<typeof pointFromLocation>>): CrisisMarker {
+function eventToMarker(
+  event: GqlEvent,
+  loc: NonNullable<ReturnType<typeof pointFromLocation>>,
+  locationById?: Map<string, { name: string; level: number }>,
+): CrisisMarker {
   return {
     id: hashId(event.id, loc.loc.id),
     lng: loc.lng,
@@ -120,7 +124,7 @@ function eventToMarker(event: GqlEvent, loc: NonNullable<ReturnType<typeof point
     title: event.title ?? event.types[0] ?? "Event",
     severity: mapSeverity(event.severity),
     description: event.description ?? undefined,
-    region: resolveLocationName(loc.loc) ?? undefined,
+    region: resolveLocationName(loc.loc, { locationById }) ?? undefined,
     locationId: loc.loc.id,
     ancestorIds: loc.loc.ancestorIds ?? [],
     eventTypes: event.types.map((t) => t.toLowerCase()),
@@ -149,11 +153,14 @@ function dedupeMarkersByEntity(markers: CrisisMarker[]): CrisisMarker[] {
   return out;
 }
 
-export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
+export function eventsToMarkers(
+  events: GqlEvent[],
+  locationById?: Map<string, { name: string; level: number }>,
+): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
   for (const event of events) {
     const point = pointLocation(event);
-    if (point) markers.push(eventToMarker(event, point));
+    if (point) markers.push(eventToMarker(event, point, locationById));
   }
   return dedupeMarkersByEntity(markers);
 }
@@ -162,13 +169,19 @@ export function eventsToMarkers(events: GqlEvent[]): CrisisMarker[] {
  * Full Map deep-link for an event: the event pin plus each nested signal that
  * has a Point. Browse map feeds must not use this — they omit signal nests.
  */
-export function focusEventToMarkers(event: GqlEvent): CrisisMarker[] {
-  const eventMarkers = eventsToMarkers([event]);
-  const signalMarkers = signalsToMarkers(event.signals ?? []);
+export function focusEventToMarkers(
+  event: GqlEvent,
+  locationById?: Map<string, { name: string; level: number }>,
+): CrisisMarker[] {
+  const eventMarkers = eventsToMarkers([event], locationById);
+  const signalMarkers = signalsToMarkers(event.signals ?? [], locationById);
   return [...eventMarkers, ...signalMarkers];
 }
 
-export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
+export function alertsToMarkers(
+  alerts: GqlAlert[],
+  locationById?: Map<string, { name: string; level: number }>,
+): CrisisMarker[] {
   // Multiple alerts can wrap the same event — keep the entry with the best
   // representative point before dedupe (first-wins) in eventsToMarkers.
   const bestByEvent = new Map<string, GqlAlert>();
@@ -189,10 +202,14 @@ export function alertsToMarkers(alerts: GqlAlert[]): CrisisMarker[] {
       representativePoint: a.event.representativePoint ?? a.representativePoint ?? null,
       alerts: a.event.alerts?.length ? a.event.alerts : [{ id: a.id, status: a.status }],
     })),
+    locationById,
   );
 }
 
-export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
+export function signalsToMarkers(
+  signals: GqlSignal[],
+  locationById?: Map<string, { name: string; level: number }>,
+): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
   for (const signal of signals) {
     const candidates = [signal.generalLocation, signal.originLocation, signal.destinationLocation];
@@ -207,7 +224,7 @@ export function signalsToMarkers(signals: GqlSignal[]): CrisisMarker[] {
             title: signal.title ?? signal.source.name ?? "Signal",
             severity: signal.severity ? mapSeverity(signal.severity) : "medium",
             description: signal.description ?? undefined,
-            region: resolveLocationName(loc) ?? undefined,
+            region: resolveLocationName(loc, { locationById }) ?? undefined,
             locationId: loc.id,
             ancestorIds: loc.ancestorIds ?? [],
             dataSource: signal.source.name,
@@ -345,7 +362,10 @@ export function alertsToRegions(alerts: GqlAlert[]): MapRegion[] {
   return eventsToRegions(alerts.map((a) => a.event));
 }
 
-export function crisesToMarkers(crises: GqlCrisis[]): CrisisMarker[] {
+export function crisesToMarkers(
+  crises: GqlCrisis[],
+  locationById?: Map<string, { name: string; level: number }>,
+): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
   for (const crisis of crises) {
     const loc = crisis.generalLocation;
@@ -362,7 +382,7 @@ export function crisesToMarkers(crises: GqlCrisis[]): CrisisMarker[] {
           locationId: loc.id,
           ancestorIds: loc.ancestorIds ?? [],
           eventTypes,
-          region: resolveLocationName(loc) ?? undefined,
+          region: resolveLocationName(loc, { locationById }) ?? undefined,
           eventId: crisis.id,
           markerKind: "crisis",
           iconSlug: resolveMarkerIconSlug({
