@@ -3,7 +3,7 @@
 import { useState, type ElementType, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl, Loader,
+  Box, Text, Stack, Group, Checkbox, Divider, Select, SegmentedControl, Loader, Collapse, UnstyledButton,
 } from "@mantine/core";
 import { IconFilter, IconLayersLinked, IconList } from "@tabler/icons-react";
 import type { DataView } from "./map-layers-panel";
@@ -13,6 +13,7 @@ import {
   SUDAN_NRC_OFFICE_COLORS,
   SUDAN_NRC_OFFICE_TYPE_ORDER,
 } from "~/lib/data/sudan-nrc-offices";
+import { signalIconUrl } from "~/lib/signals/resolve-icon";
 export type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 
 type PanelId = "layers" | "legend" | "filters";
@@ -48,6 +49,82 @@ const DATA_VIEW_OPTIONS: { labelKey: DataView; value: DataView }[] = [
   { labelKey: "event",  value: "event" },
   { labelKey: "signal", value: "signal" },
 ];
+
+// Grouped icon categories for the UI kit legend
+const ICON_CATEGORIES = [
+  {
+    name: "Natural Disasters",
+    icons: [
+      { slug: "flood", label: "Flood" },
+      { slug: "drought", label: "Drought" },
+      { slug: "earthquake", label: "Earthquake" },
+      { slug: "cyclone", label: "Cyclone/Storm" },
+      { slug: "wildfire", label: "Wildfire" },
+      { slug: "landslide", label: "Landslide" },
+      { slug: "weather", label: "Weather" },
+    ],
+  },
+  {
+    name: "Conflict & Security",
+    icons: [
+      { slug: "conflict", label: "Conflict" },
+      { slug: "explosive-hazard", label: "Explosive Hazard" },
+      { slug: "human-rights", label: "Human Rights" },
+      { slug: "gbv-risk", label: "GBV Risk" },
+    ],
+  },
+  {
+    name: "Health & WASH",
+    icons: [
+      { slug: "disease", label: "Disease/Outbreak" },
+      { slug: "hospital", label: "Hospital" },
+      { slug: "water-wash", label: "Water/WASH" },
+    ],
+  },
+  {
+    name: "Displacement & Migration",
+    icons: [
+      { slug: "refugees", label: "Refugees/IDPs" },
+      { slug: "movement", label: "Movement" },
+      { slug: "migration", label: "Migration" },
+      { slug: "border-crossing", label: "Border Crossing" },
+    ],
+  },
+  {
+    name: "Food & Economic",
+    icons: [
+      { slug: "food-insecurity", label: "Food Insecurity" },
+      { slug: "econ-shock", label: "Economic Shock" },
+      { slug: "market-access", label: "Market Access" },
+    ],
+  },
+  {
+    name: "Infrastructure & Services",
+    icons: [
+      { slug: "road-closure", label: "Road Closure" },
+      { slug: "power-grid", label: "Power Grid" },
+      { slug: "telecomms", label: "Telecommunications" },
+      { slug: "school-closure", label: "School Closure" },
+      { slug: "supply-chain", label: "Supply Chain" },
+    ],
+  },
+  {
+    name: "Operations",
+    icons: [
+      { slug: "aid-delivery", label: "Aid Delivery" },
+      { slug: "cash-assist", label: "Cash Assistance" },
+      { slug: "shelter", label: "Shelter" },
+      { slug: "protection", label: "Protection" },
+      { slug: "logistics", label: "Logistics" },
+    ],
+  },
+  {
+    name: "Governance",
+    icons: [
+      { slug: "gov-policy", label: "Gov Policy" },
+    ],
+  },
+] as const;
 
 interface MapPanelBarProps {
   dataView: DataView;
@@ -212,6 +289,7 @@ export function MapPanelBar({
   const blockagesEnabled = showBlockages !== undefined;
   const t = useTranslations("map");
   const [active, setActive] = useState<PanelId | null>(null);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   // Toggle-only: map pan/zoom/click must not dismiss — analysts keep the card
   // open while navigating. Close by clicking the active icon again (or another).
   const toggle = (id: PanelId) => setActive((prev) => (prev === id ? null : id));
@@ -528,6 +606,82 @@ export function MapPanelBar({
                     </>
                   )}
 
+                </Stack>
+                </Box>
+              </>
+            )}
+
+            {/* Legend — Severity colors + Icon guide */}
+            {active === "legend" && (
+              <>
+                <PanelHeader>{t("panels.legend")}</PanelHeader>
+                <Box style={{ overflowY: "auto", flex: 1, minHeight: 0, WebkitOverflowScrolling: "touch" }}>
+                <Stack gap={10} px={12} py={10}>
+                  <SectionLabel>{t("panels.severity")}</SectionLabel>
+                  {SEVERITY_ITEMS.map((item) => (
+                    <Group key={item.labelKey} gap={8} wrap="nowrap">
+                      <Box w={14} h={14} style={{ borderRadius: "50%", backgroundColor: item.color, flexShrink: 0 }} />
+                      <Text size="xs" style={{ fontSize: 11 }}>{t(`severities.${item.labelKey}`)}</Text>
+                    </Group>
+                  ))}
+
+                  <Divider color="var(--color-bg-muted)" my={10} />
+
+                  <SectionLabel>Icon Guide</SectionLabel>
+                  <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 10, lineHeight: 1.4 }} mb={8}>
+                    Event markers show type icons on severity-colored pins at zoom 9+
+                  </Text>
+
+                  <Stack gap={8}>
+                    {ICON_CATEGORIES.map((category) => (
+                      <Box key={category.name}>
+                        <UnstyledButton
+                          onClick={() => setExpandedCategory(expandedCategory === category.name ? null : category.name)}
+                          style={{ width: "100%", textAlign: "left" }}
+                          mb={4}
+                        >
+                          <Group gap={6} wrap="nowrap">
+                            <Text size="xs" fw={600} c="var(--color-text-muted)" style={{ fontSize: 9 }}>
+                              {expandedCategory === category.name ? "▼" : "▶"}
+                            </Text>
+                            <Text size="xs" fw={600} style={{ fontSize: 11 }}>
+                              {category.name}
+                            </Text>
+                          </Group>
+                        </UnstyledButton>
+
+                        <Collapse in={expandedCategory === category.name}>
+                          <Stack gap={4} pl={12}>
+                            {category.icons.map((icon) => (
+                              <Group key={icon.slug} gap={8} wrap="nowrap">
+                                <Box
+                                  style={{
+                                    width: 18,
+                                    height: 18,
+                                    flexShrink: 0,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    backgroundColor: "var(--color-bg-muted)",
+                                    borderRadius: 3,
+                                  }}
+                                >
+                                  <img
+                                    src={signalIconUrl(icon.slug)}
+                                    alt={icon.label}
+                                    style={{ width: 13, height: 13, filter: "brightness(0) invert(1)" }}
+                                  />
+                                </Box>
+                                <Text size="xs" style={{ fontSize: 11 }}>
+                                  {icon.label}
+                                </Text>
+                              </Group>
+                            ))}
+                          </Stack>
+                        </Collapse>
+                      </Box>
+                    ))}
+                  </Stack>
                 </Stack>
                 </Box>
               </>
