@@ -38,7 +38,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
   },
   {
     key: "crisis_map",
-    label: "Crisis Map",
+    label: "Map",
     description: "Interactive map with crisis markers and data layers",
     tier: 2,
     defaultEnabled: true,
