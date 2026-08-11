@@ -2,8 +2,9 @@
  * Topography pitch opt-in — enable tilt gestures only while Topography is
  * active; never auto-pitch on select; reset pitch when leaving.
  *
- * Desktop Mapbox pitch is Ctrl+drag or right-click drag (not plain pan).
- * Touch uses two-finger pitch. An explicit “Tilt” action is also opt-in.
+ * Desktop Mapbox pitch is Ctrl+drag, ⌘+drag (via meta→ctrl bridge), or
+ * right-click drag (not plain pan). Touch uses two-finger pitch. An explicit
+ * “Tilt” action is also opt-in.
  */
 
 /** Opt-in demo pitch — enough to reveal the DEM mesh without auto-select. */

@@ -1932,7 +1932,7 @@
       "roads": "Roads",
       "satellite": "Satellite",
       "simple": "Simple",
-      "topography": "Terrain",
+      "topography": "Topography",
       "imageryAbTemp": "Imagery A/B (temp)",
       "imageryMapbox": "Mapbox",
       "imageryEsri": "Esri",
@@ -2022,7 +2022,7 @@
     },
     "tokenMissing": "Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env",
     "tiltHint": {
-      "message": "Terrain is 3D — click Tilt, or Ctrl+drag (right-click drag) / two-finger drag on touch",
+      "message": "Topography is 3D — click Tilt, or Ctrl/⌘+drag (right-click drag) / two-finger drag on touch",
       "tilt": "Tilt",
       "dismiss": "Not now"
     },

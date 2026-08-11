@@ -1934,7 +1934,7 @@
       "roads": "الطرق",
       "satellite": "الأقمار الصناعية",
       "simple": "بسيطة",
-      "topography": "تضاريس",
+      "topography": "طبوغرافية",
       "imageryAbTemp": "صور A/B (مؤقت)",
       "imageryMapbox": "Mapbox",
       "imageryEsri": "Esri",
@@ -2024,7 +2024,7 @@
     },
     "tokenMissing": "لم يُهيَّأ رمز Mapbox. عيّن NEXT_PUBLIC_MAPBOX_TOKEN في ملف .env",
     "tiltHint": {
-      "message": "التضاريس ثلاثية الأبعاد — انقر إمالة، أو Ctrl+سحب (زر أيمن) / إصبعان على اللمس",
+      "message": "الطبوغرافية ثلاثية الأبعاد — انقر إمالة، أو Ctrl/⌘+سحب (زر أيمن) / إصبعان على اللمس",
       "tilt": "إمالة",
       "dismiss": "ليس الآن"
     },
