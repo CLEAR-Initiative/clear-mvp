@@ -224,6 +224,18 @@ interface CrisisMapProps {
       properties: Record<string, unknown>;
     }>;
   } | null;
+  /**
+   * Seismic Signals (USGS earthquake epicenters).
+   */
+  showSeismicSignals?: boolean;
+  seismicSignalsGeoJson?: {
+    type: "FeatureCollection";
+    features: Array<{
+      type: "Feature";
+      geometry: unknown;
+      properties: Record<string, unknown>;
+    }>;
+  } | null;
   /** Basemap: simple (theme style), topography (hillshade + DEM terrain mesh), or satellite imagery */
   baseMapType?: BaseMapType;
   /**
