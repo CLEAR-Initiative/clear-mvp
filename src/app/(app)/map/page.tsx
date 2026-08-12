@@ -1823,8 +1823,8 @@ function MapPageContent() {
           key={retryNonce}
         />
 
-        {/* Loading overlay - only shows when map is mounted and data is loading */}
-        {showLoadingOverlay && dataView !== "none" && (
+        {/* Spinner while data loads; error overlay stays up even after queries settle. */}
+        {(mapLoadError || (showLoadingOverlay && dataView !== "none")) && (
           <MapLoadingOverlay
             dataView={dataView}
             error={mapLoadError ? { message: mapLoadError.message, onRetry: handleRetryMapLoad } : null}

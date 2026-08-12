@@ -678,9 +678,10 @@ export function CrisisMap({
         attributionControl: false,
       });
 
-      // Detect offline / style load errors
+      // Only surface pre-load failures. Mapbox fires `error` for routine
+      // tile 404s after the style is up — those must not replace the map.
       map.current.on("error", (e: { error?: { message?: string; status?: number } }) => {
-        if (cancelled) return;
+        if (cancelled || mapReadyRef.current) return;
         const isOffline = !navigator.onLine || e.error?.status === 0;
         const message = isOffline
           ? "No internet connection detected. Please check your network and try again."
