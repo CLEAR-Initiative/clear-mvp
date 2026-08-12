@@ -243,6 +243,8 @@ interface CrisisMapProps {
    * on session restore / deep links. Requires fitBoundsOnFocus=true to work.
    */
   introFromGlobe?: boolean;
+  /** Fired when the map fails to load (offline, style error, etc.). */
+  onLoadError?: (error: { message: string; isOffline: boolean }) => void;
 }
 
 export type BaseMapType = "simple" | "topography" | "satellite";
@@ -543,6 +545,7 @@ export function CrisisMap({
   locationPickActive = false,
   onMapClick,
   introFromGlobe = false,
+  onLoadError,
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const locale = useLocale();
@@ -675,6 +678,16 @@ export function CrisisMap({
         attributionControl: false,
       });
 
+      // Detect offline / style load errors
+      map.current.on("error", (e: { error?: { message?: string; status?: number } }) => {
+        if (cancelled) return;
+        const isOffline = !navigator.onLine || e.error?.status === 0;
+        const message = isOffline
+          ? "No internet connection detected. Please check your network and try again."
+          : e.error?.message ?? "Failed to load map data. Please try again.";
+        onLoadError?.({ message, isOffline });
+      });
+
       // Right-click / Ctrl+click / ⌘+click must drive Mapbox pitch-rotate, not
       // the browser context menu (all basemap modes).
       const suppressBrowserMenu = (e: Event) => {
@@ -724,6 +737,13 @@ export function CrisisMap({
 
       // Stash disposer on the map instance for effect cleanup below.
       (map.current as MapboxGLAny).__clearMetaPitchBridge = removeMetaPitchBridge;
+    }).catch((err: Error) => {
+      if (cancelled) return;
+      const isOffline = !navigator.onLine;
+      const message = isOffline
+        ? "No internet connection detected. Please check your network and try again."
+        : "Failed to load map library. Please refresh the page.";
+      onLoadError?.({ message, isOffline });
     });
 
     return () => {
