@@ -1655,6 +1655,7 @@ export function CrisisMap({
               typeof m.getPitch === "function" ? m.getPitch() : 0,
             )
           : 0;
+        const isCrisisMarker = props.marker_kind === "crisis";
         const el = buildPointEl(props.severity as string, {
           locationTrust:
             trust === "challenged" || trust === "correction_queued"
@@ -1672,6 +1673,10 @@ export function CrisisMap({
           elevated,
           elevationFactor,
         });
+        // Crisis markers get enhanced visual weight
+        if (isCrisisMarker) {
+          el.classList.add("crisis-marker");
+        }
         el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
         // Pick mode: block pin clicks even after pan/zoom rebuilds markers.
         if (locationPickActiveRef.current) {
@@ -2560,12 +2565,33 @@ export function CrisisMap({
           50%  { transform: scale(1.18); }
           100% { transform: scale(1);    }
         }
+        @keyframes crisis-marker-pulse {
+          0%   { transform: scale(1); box-shadow: 0 0 0 0 currentColor; }
+          50%  { transform: scale(1.25); box-shadow: 0 0 8px 2px currentColor; }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 currentColor; }
+        }
         .marker-ping-ring.active {
           animation: marker-ping 1.1s cubic-bezier(0, 0, 0.4, 1) infinite;
         }
         .marker-dot.active {
           animation: marker-dot-pulse 1.1s ease-in-out infinite;
           z-index: 10 !important;
+        }
+        /* Crisis marker enhancements */
+        .crisis-marker .marker-dot {
+          filter: brightness(1.1) saturate(1.15);
+        }
+        .crisis-marker:hover .marker-dot {
+          transform: scale(1.15);
+          filter: brightness(1.2) saturate(1.25) drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+          transition: all 0.2s ease-out;
+        }
+        .crisis-marker .marker-dot.active {
+          animation: crisis-marker-pulse 1.4s ease-in-out infinite;
+          z-index: 15 !important;
+        }
+        .crisis-marker .marker-ping-ring.active {
+          opacity: 0.9;
         }
         /* Keep GL clear transparent so container basemap color shows if frames drop */
         .mapboxgl-canvas { background: transparent !important; }
