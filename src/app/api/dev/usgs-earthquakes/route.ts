@@ -18,8 +18,8 @@ const USGS_FDSN_BASE = "https://earthquake.usgs.gov/fdsnws/event/1/query";
 const MIN_MAGNITUDE = 5.5;
 const WINDOW_DAYS = 30;
 
-// Sudan + adjacent countries approximate bbox (expandable for other regions)
-const DEFAULT_BBOX: [number, number, number, number] = [20, 3, 50, 23]; // [minLng, minLat, maxLng, maxLat]
+// Venezuela bbox for testing (active seismic region)
+const DEFAULT_BBOX: [number, number, number, number] = [-73, 0, -59, 13]; // [minLng, minLat, maxLng, maxLat]
 
 export async function GET() {
   if (process.env.NODE_ENV === "production") {
