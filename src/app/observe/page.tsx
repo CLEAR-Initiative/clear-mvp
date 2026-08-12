@@ -295,7 +295,11 @@ export default function ObservePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
-  const createSignal = api.signals.createManual.useMutation();
+  const createSignal = api.signals.createManual.useMutation({
+    onSuccess: async () => {
+      await utils.signals.invalidate();
+    },
+  });
   const sourcesQuery = api.signals.sources.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   const locationsQuery = api.locations.list.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   // /observe lives outside the (app) group and has no team switcher, so we

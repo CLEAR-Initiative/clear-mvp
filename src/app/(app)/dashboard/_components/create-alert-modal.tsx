@@ -194,10 +194,20 @@ function CreateEventSubFlow({
   const t = useTranslations("dashboard");
   const tActions = useTranslations("common.actions");
   const { activeTeamId } = useTeam();
+  const utils = api.useUtils();
   const signalsQuery = api.signals.list.useQuery({ teamId: activeTeamId });
   const sourcesQuery = api.signals.sources.useQuery();
-  const createSignalMutation = api.signals.create.useMutation();
-  const createEventMutation = api.events.create.useMutation();
+  const createSignalMutation = api.signals.create.useMutation({
+    onSuccess: async () => {
+      await utils.signals.invalidate();
+    },
+  });
+  const createEventMutation = api.events.create.useMutation({
+    onSuccess: async () => {
+      await utils.events.invalidate();
+      await utils.alerts.invalidate();
+    },
+  });
 
   const [selectedSignalIds, setSelectedSignalIds] = useState<string[]>([]);
   const [showManualSignal, setShowManualSignal] = useState(false);
@@ -242,7 +252,6 @@ function CreateEventSubFlow({
       setSelectedSignalIds((prev) => [...prev, newSignal.id]);
       setManualTitle("");
       setShowManualSignal(false);
-      await signalsQuery.refetch();
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : t("createAlert.errors.createSignal"));
     }
