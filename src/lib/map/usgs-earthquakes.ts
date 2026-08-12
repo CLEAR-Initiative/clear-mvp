@@ -163,12 +163,13 @@ function extractDepth(geometry: GeoJsonGeometry | null): number | null {
 function slimProperties(
   p: Record<string, unknown>,
   geometry: GeoJsonGeometry | null,
+  featureId?: string,
 ): SeismicMapProperties | null {
   // Filter to earthquakes only (eventtype=earthquake on FDSN, but double-check)
   const eventType = p.type;
   if (eventType !== "earthquake") return null;
 
-  const id = typeof p.id === "string" ? p.id : String(p.id ?? "unknown");
+  const id = featureId || (typeof p.id === "string" ? p.id : String(p.id ?? "unknown"));
   const mag = typeof p.mag === "number" && Number.isFinite(p.mag) ? p.mag : null;
   const magType = typeof p.magType === "string" ? p.magType : null;
   const place = typeof p.place === "string" ? p.place.trim() || null : null;
@@ -221,7 +222,8 @@ export function toSeismicMapCollection(
 
   const features: SeismicMapFeature[] = [];
   for (const f of input.features ?? []) {
-    const props = slimProperties(f.properties ?? {}, f.geometry);
+    const featureId = typeof f.id === "string" ? f.id : undefined;
+    const props = slimProperties(f.properties ?? {}, f.geometry, featureId);
     if (!props) continue;
 
     // Only include Point geometries (epicenters)
