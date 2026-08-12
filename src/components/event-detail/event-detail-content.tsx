@@ -372,9 +372,9 @@ export function EventDetailContent({
       const loc = candidates.find((c) => c.level === level);
       if (!loc) continue;
       const meta = loc.metadata?.find((m) => m.type === "iom_dtm_displacement");
-      if (!meta) continue;
-      const displaced = meta.data.population_displaced as number | undefined;
-      if (!displaced) continue;
+      if (!meta?.data) continue;
+      const displaced = (meta.data as Record<string, unknown>).population_displaced as number | undefined;
+      if (typeof displaced !== "number" || !isFinite(displaced)) continue;
       const population = loc.population ? Number(loc.population) : null;
       const ratio = population ? displaced / population : null;
       return { displaced, population, ratio, name: loc.name };
