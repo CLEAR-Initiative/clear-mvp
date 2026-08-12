@@ -15,11 +15,11 @@ import {
  */
 
 const USGS_FDSN_BASE = "https://earthquake.usgs.gov/fdsnws/event/1/query";
-const MIN_MAGNITUDE = 5.5;
+const MIN_MAGNITUDE = 4.0; // Lowered to 4.0 for testing to ensure we see results
 const WINDOW_DAYS = 30;
 
-// Venezuela bbox for testing (active seismic region)
-const DEFAULT_BBOX: [number, number, number, number] = [-73, 0, -59, 13]; // [minLng, minLat, maxLng, maxLat]
+// South America (Venezuela, Colombia, Ecuador region) for testing
+const DEFAULT_BBOX: [number, number, number, number] = [-82, -5, -60, 13]; // [minLng, minLat, maxLng, maxLat]
 
 export async function GET() {
   if (process.env.NODE_ENV === "production") {
@@ -44,6 +44,8 @@ export async function GET() {
   url.searchParams.set("orderby", "time");
   url.searchParams.set("limit", "20000");
 
+  console.log("[usgs-spike] Fetching:", url.toString());
+
   let upstream: UsgsFdsnCollection;
   try {
     const res = await fetch(url.toString(), {
@@ -58,6 +60,7 @@ export async function GET() {
         {
           error: `USGS FDSN query failed (HTTP ${res.status})`,
           detail: text.slice(0, 200),
+          url: url.toString(),
         },
         { status: 502 },
       );
@@ -85,6 +88,8 @@ export async function GET() {
     windowDays: WINDOW_DAYS,
     bbox: DEFAULT_BBOX,
   });
+
+  console.log(`[usgs-spike] Returned ${collection.meta.feature_count} earthquakes`);
 
   return NextResponse.json(collection, {
     headers: {
