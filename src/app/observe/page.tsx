@@ -295,6 +295,7 @@ export default function ObservePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
+  const utils = api.useUtils();
   const createSignal = api.signals.createManual.useMutation({
     onSuccess: async () => {
       await utils.signals.invalidate();
@@ -309,7 +310,6 @@ export default function ObservePage() {
   // FORBIDDEN; a fix on that path is future work.
   const meQuery = api.auth.me.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
   const defaultTeamId = meQuery.data?.user?.defaultTeamId ?? undefined;
-  const utils = api.useUtils();
 
   const mutateFnRef = useRef(createSignal.mutateAsync);
   useEffect(() => { mutateFnRef.current = createSignal.mutateAsync; });
