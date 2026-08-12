@@ -542,6 +542,8 @@ export function CrisisMap({
   showNrcLocations = false,
   showBlockages = false,
   blockagesGeoJson = null,
+  showSeismicSignals = false,
+  seismicSignalsGeoJson = null,
   baseMapType = "simple",
   mapApiRef,
   onMapMove,
@@ -2209,6 +2211,187 @@ export function CrisisMap({
 
     return cleanup;
   }, [loaded, showBlockages, blockagesGeoJson, isDark]);
+
+  // ── Seismic Signals (USGS earthquake epicenters) ────────────────────────
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const SOURCE = "seismic-signals";
+    const CLUSTER_LAYER = "seismic-cluster";
+    const CLUSTER_COUNT_LAYER = "seismic-cluster-count";
+    const UNCLUSTERED_LAYER = "seismic-unclustered";
+
+    const cleanup = () => {
+      try { if (m.getLayer(CLUSTER_COUNT_LAYER)) m.removeLayer(CLUSTER_COUNT_LAYER); } catch { /* ignore */ }
+      try { if (m.getLayer(CLUSTER_LAYER)) m.removeLayer(CLUSTER_LAYER); } catch { /* ignore */ }
+      try { if (m.getLayer(UNCLUSTERED_LAYER)) m.removeLayer(UNCLUSTERED_LAYER); } catch { /* ignore */ }
+      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
+    };
+
+    if (!showSeismicSignals || !seismicSignalsGeoJson?.features?.length) return;
+
+    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+    const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
+
+    try {
+      m.addSource(SOURCE, {
+        type: "geojson",
+        data: seismicSignalsGeoJson as never,
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 50,
+      });
+
+      // Cluster circles (magnitude-based size from cluster properties)
+      m.addLayer({
+        id: CLUSTER_LAYER,
+        type: "circle",
+        source: SOURCE,
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": [
+            "step",
+            ["get", "point_count"],
+            "#FFA500", // orange for small clusters
+            10,
+            "#FF6B00", // darker orange for medium
+            25,
+            "#FF4500", // red-orange for large
+          ],
+          "circle-radius": [
+            "step",
+            ["get", "point_count"],
+            15, // small
+            10,
+            20, // medium
+            25,
+            25, // large
+          ],
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#fff",
+          "circle-opacity": 0.8,
+        },
+      }, beforeId);
+
+      // Cluster count labels
+      m.addLayer({
+        id: CLUSTER_COUNT_LAYER,
+        type: "symbol",
+        source: SOURCE,
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": "{point_count_abbreviated}",
+          "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+          "text-size": 12,
+        },
+        paint: {
+          "text-color": "#fff",
+        },
+      }, beforeId);
+
+      // Individual earthquake points (magnitude-based color and size)
+      m.addLayer({
+        id: UNCLUSTERED_LAYER,
+        type: "circle",
+        source: SOURCE,
+        filter: ["!", ["has", "point_count"]],
+        paint: {
+          "circle-color": [
+            "case",
+            ["==", ["get", "alert"], "red"], "#DC2626",
+            ["==", ["get", "alert"], "orange"], "#F97316",
+            ["==", ["get", "alert"], "yellow"], "#FBBF24",
+            ["==", ["get", "alert"], "green"], "#10B981",
+            "#9CA3AF", // gray for no alert
+          ],
+          "circle-radius": [
+            "interpolate", ["linear"], ["get", "mag"],
+            3, 6,   // M3 → 6px
+            5, 10,  // M5 → 10px
+            7, 16,  // M7 → 16px
+            9, 24,  // M9 → 24px
+          ],
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#fff",
+          "circle-opacity": [
+            "case",
+            ["==", ["get", "stale"], 1], 0.5, // stale events dimmed
+            0.85,
+          ],
+        },
+      }, beforeId);
+
+      // Hover popup for individual earthquakes
+      const popup = new (window as any).mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        maxWidth: "300px",
+      });
+
+      m.on("mouseenter", UNCLUSTERED_LAYER, (e: any) => {
+        m.getCanvas().style.cursor = "pointer";
+        const coords = e.features?.[0]?.geometry?.coordinates as [number, number];
+        const props = e.features?.[0]?.properties as Record<string, any>;
+        if (!coords || !props) return;
+
+        const mag = props.mag ? `M ${props.mag}` : "Unknown magnitude";
+        const place = props.place || "Unknown location";
+        const depth = props.depth_km != null ? `${props.depth_km} km depth` : "";
+        const alert = props.alert ? `PAGER: ${props.alert}` : "";
+        const age = props.age_days != null ? `${props.age_days} days ago` : "";
+        const url = props.url || "";
+
+        const html = `
+          <div style="font-size: 12px; line-height: 1.4;">
+            <strong style="color: #DC2626; font-size: 14px;">${mag}</strong><br/>
+            <span style="color: #6B7280;">${place}</span>
+            ${depth ? `<br/><span style="color: #9CA3AF;">${depth}</span>` : ""}
+            ${alert ? `<br/><span style="color: #F97316;">${alert}</span>` : ""}
+            ${age ? `<br/><span style="color: #9CA3AF;">${age}</span>` : ""}
+            ${url ? `<br/><a href="${url}" target="_blank" style="color: #3B82F6; text-decoration: underline;">View details</a>` : ""}
+          </div>
+        `;
+
+        popup.setLngLat(coords).setHTML(html).addTo(m);
+      });
+
+      m.on("mouseleave", UNCLUSTERED_LAYER, () => {
+        m.getCanvas().style.cursor = "";
+        popup.remove();
+      });
+
+      // Click to expand clusters
+      m.on("click", CLUSTER_LAYER, (e: any) => {
+        const features = m.queryRenderedFeatures(e.point, {
+          layers: [CLUSTER_LAYER],
+        });
+        const clusterId = features[0]?.properties?.cluster_id;
+        if (clusterId == null) return;
+
+        const source = m.getSource(SOURCE) as any;
+        source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
+          if (err) return;
+          m.easeTo({
+            center: features[0]!.geometry.coordinates as [number, number],
+            zoom: zoom + 0.5,
+          });
+        });
+      });
+
+      m.on("mouseenter", CLUSTER_LAYER, () => {
+        m.getCanvas().style.cursor = "pointer";
+      });
+
+      m.on("mouseleave", CLUSTER_LAYER, () => {
+        m.getCanvas().style.cursor = "";
+      });
+    } catch (err) {
+      console.error("[seismic-signals]", err);
+      /* style may be mid-swap */
+    }
+
+    return cleanup;
+  }, [loaded, showSeismicSignals, seismicSignalsGeoJson]);
 
   // ── Population choropleth (A2 districts, independent layer) ─────────────
   useEffect(() => {

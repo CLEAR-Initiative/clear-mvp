@@ -1,0 +1,100 @@
+/**
+ * USGS Seismic Signals data source — single swap point for spike → clear-api.
+ *
+ * ## Delivery model (one clear-mvp paint path)
+ *
+ * The map paints against a **stable contract** (`SeismicMapCollection`).
+ * Do **not** call earthquake.usgs.gov from the browser. The client fetches
+ * same-origin `/api/usgs/earthquakes` (BFF → clear-api with session cookie).
+ * Local development without clear-api falls back to the spike route.
+ *
+ * | Phase | Source | UI |
+ * |-------|--------|-----|
+ * | Local spike | `GET /api/dev/usgs-earthquakes` (live USGS FDSN) | Layers toggle |
+ * | clear-api ready | `GET /api/usgs/earthquakes` BFF | Same toggle (default outside development) |
+ *
+ * Optional override: `NEXT_PUBLIC_USGS_EARTHQUAKES_URL` (must be a **plain**
+ * Vercel env — Sensitive/`encrypted` vars are not available at Next build time).
+ *
+ * Spec: `docs/clear-api-usgs-seismic-ingest.md` · Expo #465
+ */
+
+import type { SeismicMapCollection } from "~/lib/map/usgs-earthquakes";
+
+const SPIKE_PATH = "/api/dev/usgs-earthquakes";
+/** Same-origin BFF that forwards cookies to clear-api `/api/usgs/earthquakes`. */
+export const EARTHQUAKES_BFF_PATH = "/api/usgs/earthquakes";
+
+/**
+ * True when Layers → Seismic Signals should be an interactive toggle (not Coming soon).
+ * Always on — the spike is live USGS in dev, BFF in prod. Do not gate on NEXT_PUBLIC_*:
+ * Sensitive Vercel envs are runtime-only.
+ */
+export function isSeismicSignalsUiEnabled(): boolean {
+  return true;
+}
+
+/**
+ * Resolve the GeoJSON URL.
+ * Prefer env override; else BFF in preview/prod; else local spike in development.
+ * Callers must gate on `isSeismicSignalsUiEnabled()` first.
+ */
+export function getSeismicSignalsFetchUrl(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_USGS_EARTHQUAKES_URL?.trim();
+  if (fromEnv) return fromEnv;
+  if (process.env.NODE_ENV === "development") return SPIKE_PATH;
+  return EARTHQUAKES_BFF_PATH;
+}
+
+export type FetchSeismicSignalsResult = {
+  collection: SeismicMapCollection;
+  /** `spike` = local dev route; `api` = BFF / clear-api (any URL via env). */
+  source: "spike" | "api";
+};
+
+export async function fetchSeismicSignalsMapCollection(
+  init?: RequestInit,
+): Promise<FetchSeismicSignalsResult> {
+  const url = getSeismicSignalsFetchUrl();
+  const source: "spike" | "api" =
+    url === SPIKE_PATH || url.endsWith(SPIKE_PATH) ? "spike" : "api";
+
+  const res = await fetch(url, {
+    ...init,
+    // Same-origin BFF needs cookies; harmless for spike. Absolute clear-api
+    // URLs also need this + CORS credentials (prefer the BFF instead).
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+      ...init?.headers,
+    },
+  });
+
+  const body = (await res.json()) as SeismicMapCollection & {
+    error?: string;
+  };
+
+  if (!res.ok) {
+    throw new Error(body.error ?? `Seismic Signals fetch failed (HTTP ${res.status})`);
+  }
+
+  if (body.type !== "FeatureCollection" || !Array.isArray(body.features)) {
+    throw new Error("Seismic Signals response is not a FeatureCollection");
+  }
+
+  return { collection: body, source };
+}
+
+/** Compact Layers-panel hint from meta (feature count + reduction). */
+export function seismicSignalsHintFromMeta(
+  collection: SeismicMapCollection,
+  source: "spike" | "api",
+): string {
+  const kin = collection.meta?.bytes_in ?? 0;
+  const kout = collection.meta?.bytes_out ?? 0;
+  const n = collection.meta?.feature_count ?? collection.features.length;
+  const pct = kin > 0 ? Math.round((1 - kout / kin) * 100) : null;
+  const sizeBit = pct != null ? ` · −${pct}%` : "";
+  const srcBit = source === "spike" ? " · spike" : "";
+  return `${n} event${n === 1 ? "" : "s"}${sizeBit}${srcBit}`;
+}

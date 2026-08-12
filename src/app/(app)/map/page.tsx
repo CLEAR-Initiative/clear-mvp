@@ -76,6 +76,11 @@ import {
   fetchBlockagesMapCollection,
   isBlockagesUiEnabled,
 } from "~/lib/map/fetch-blockages";
+import {
+  seismicSignalsHintFromMeta,
+  fetchSeismicSignalsMapCollection,
+  isSeismicSignalsUiEnabled,
+} from "~/lib/map/fetch-usgs-earthquakes";
 const MAX_OPEN_PANELS = 4;
 
 interface OpenMarkerPanel {
@@ -814,6 +819,53 @@ function MapPageContent() {
       cancelled = true;
     };
   }, [blockagesUiEnabled, showBlockages]);
+
+  /**
+   * Seismic Signals UI: always on (spike in dev, BFF in prod). See `fetch-usgs-earthquakes.ts`.
+   */
+  const seismicSignalsUiEnabled = isSeismicSignalsUiEnabled();
+  const [showSeismicSignals, setShowSeismicSignals] = useState(false);
+  const [seismicSignalsLoading, setSeismicSignalsLoading] = useState(false);
+  const [seismicSignalsHint, setSeismicSignalsHint] = useState<string | undefined>();
+  const [seismicSignalsGeoJson, setSeismicSignalsGeoJson] = useState<{
+    type: "FeatureCollection";
+    features: Array<{
+      type: "Feature";
+      geometry: unknown;
+      properties: Record<string, unknown>;
+    }>;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!seismicSignalsUiEnabled || !showSeismicSignals) {
+      setSeismicSignalsGeoJson(null);
+      setSeismicSignalsHint(undefined);
+      setSeismicSignalsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setSeismicSignalsLoading(true);
+    setSeismicSignalsHint(undefined);
+    fetchSeismicSignalsMapCollection()
+      .then(({ collection, source }) => {
+        if (cancelled) return;
+        setSeismicSignalsGeoJson(collection);
+        setSeismicSignalsHint(seismicSignalsHintFromMeta(collection, source));
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setSeismicSignalsGeoJson(null);
+        setSeismicSignalsHint(
+          err instanceof Error ? err.message : "Failed to load",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setSeismicSignalsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [seismicSignalsUiEnabled, showSeismicSignals]);
 
   // Deep-link from detail Back / Full Map: align Layers data-view chrome only.
   // Markers come from the solo focus queries - do not widen timeframe or wipe
@@ -1815,6 +1867,8 @@ function MapPageContent() {
           showNrcLocations={showNrcLocations}
           showBlockages={blockagesUiEnabled && showBlockages}
           blockagesGeoJson={blockagesGeoJson}
+          showSeismicSignals={seismicSignalsUiEnabled && showSeismicSignals}
+          seismicSignalsGeoJson={seismicSignalsGeoJson}
           baseMapType={baseMapType}
           hoveredMarkerId={chromeActiveMarkerId}
           locationPickActive={locationCorrectionDraft?.phase === "picking"}
@@ -1849,6 +1903,10 @@ function MapPageContent() {
         onShowBlockagesChange={setShowBlockages}
         blockagesHint={blockagesUiEnabled ? blockagesHint : undefined}
         blockagesLoading={blockagesUiEnabled && blockagesLoading}
+        showSeismicSignals={seismicSignalsUiEnabled ? showSeismicSignals : undefined}
+        onShowSeismicSignalsChange={setShowSeismicSignals}
+        seismicSignalsHint={seismicSignalsUiEnabled ? seismicSignalsHint : undefined}
+        seismicSignalsLoading={seismicSignalsUiEnabled && seismicSignalsLoading}
         baseMapType={baseMapType}
         onBaseMapTypeChange={setBaseMapType}
         keepPanelsOpen={keepPanelsOpen}
