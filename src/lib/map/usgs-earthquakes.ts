@@ -82,10 +82,34 @@ export type SeismicMapFeature = {
   properties: SeismicMapProperties;
 };
 
+/** ShakeMap MMI contour feature (isoseismal line). */
+export type ShakeMapContourFeature = {
+  type: "Feature";
+  properties: {
+    value: number; // MMI intensity value
+    units: string;
+    color?: string;
+    weight?: number;
+  };
+  geometry: {
+    type: "MultiLineString" | "LineString";
+    coordinates: unknown;
+  };
+};
+
+/** ShakeMap contours for a single earthquake. */
+export type ShakeMapContours = {
+  eventId: string;
+  type: "FeatureCollection";
+  features: ShakeMapContourFeature[];
+};
+
 /** Slim map-ready FeatureCollection. */
 export type SeismicMapCollection = {
   type: "FeatureCollection";
   features: SeismicMapFeature[];
+  /** Optional ShakeMap contours for events that have them. */
+  shakemaps?: ShakeMapContours[];
   meta: {
     source: "usgs-spike" | "usgs-ingest";
     feature_count: number;

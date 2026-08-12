@@ -2301,7 +2301,7 @@ export function CrisisMap({
         },
       }, beforeId);
 
-      // Individual earthquake points (magnitude-based color and size)
+      // Individual earthquake epicenters (small markers - de-emphasize in favor of ShakeMaps)
       m.addLayer({
         id: UNCLUSTERED_LAYER,
         type: "circle",
@@ -2310,6 +2310,7 @@ export function CrisisMap({
         paint: {
           "circle-color": [
             "case",
+            ["==", ["get", "has_shakemap"], true], "#000000", // Black epicenter if has ShakeMap
             ["==", ["get", "alert"], "red"], "#DC2626",
             ["==", ["get", "alert"], "orange"], "#F97316",
             ["==", ["get", "alert"], "yellow"], "#FBBF24",
@@ -2317,18 +2318,23 @@ export function CrisisMap({
             "#9CA3AF", // gray for no alert
           ],
           "circle-radius": [
-            "interpolate", ["linear"], ["get", "mag"],
-            3, 6,   // M3 → 6px
-            5, 10,  // M5 → 10px
-            7, 16,  // M7 → 16px
-            9, 24,  // M9 → 24px
+            "case",
+            ["==", ["get", "has_shakemap"], true], 6, // Smaller epicenter if has ShakeMap
+            [
+              "interpolate", ["linear"], ["get", "mag"],
+              3, 5,   // M3 → 5px (smaller)
+              5, 8,   // M5 → 8px
+              7, 12,  // M7 → 12px
+              9, 16,  // M9 → 16px
+            ],
           ],
           "circle-stroke-width": 2,
           "circle-stroke-color": "#fff",
           "circle-opacity": [
             "case",
+            ["==", ["get", "has_shakemap"], true], 1, // Full opacity for epicenters with ShakeMap
             ["==", ["get", "stale"], 1], 0.5, // stale events dimmed
-            0.85,
+            0.7,
           ],
         },
       }, beforeId);
@@ -2400,6 +2406,132 @@ export function CrisisMap({
     } catch (err) {
       console.error("[seismic-signals]", err);
       /* style may be mid-swap */
+    }
+
+    return cleanup;
+  }, [loaded, showSeismicSignals, seismicSignalsGeoJson]);
+
+  // ── ShakeMap Intensity Contours (Isoseismals) ───────────────────────────
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    
+    const cleanup = () => {
+      // Remove all shakemap layers and sources
+      const layers = m.getStyle()?.layers || [];
+      layers.forEach((layer: any) => {
+        if (layer.id?.startsWith("shakemap-")) {
+          try { m.removeLayer(layer.id); } catch { /* ignore */ }
+        }
+      });
+      const sources = Object.keys((m.getStyle() as any)?.sources || {});
+      sources.forEach((sourceId: string) => {
+        if (sourceId.startsWith("shakemap-")) {
+          try { m.removeSource(sourceId); } catch { /* ignore */ }
+        }
+      });
+    };
+
+    if (!showSeismicSignals || !seismicSignalsGeoJson) return;
+
+    const shakemaps = (seismicSignalsGeoJson as any)?.shakemaps;
+    if (!shakemaps || shakemaps.length === 0) return;
+
+    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+    const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
+
+    // MMI color scale (Modified Mercalli Intensity)
+    const mmiColors: Record<number, string> = {
+      1: "#FFFFFF",   // I: Not felt
+      2: "#BFCCFF",   // II-III: Weak
+      3: "#90D5FF",   // III: Weak
+      4: "#7AFF82",   // IV: Light
+      5: "#FFFF00",   // V: Moderate
+      6: "#FFD700",   // VI: Strong
+      7: "#FFA500",   // VII: Very strong
+      8: "#FF6B00",   // VIII: Severe
+      9: "#FF0000",   // IX: Violent
+      10: "#C80000",  // X: Extreme
+    };
+
+    try {
+      shakemaps.forEach((shakemap: any, idx: number) => {
+        const eventId = shakemap.eventId;
+        const sourceId = `shakemap-${eventId}`;
+        const lineLayerId = `shakemap-line-${eventId}`;
+        const labelLayerId = `shakemap-label-${eventId}`;
+
+        // Add source for this ShakeMap
+        m.addSource(sourceId, {
+          type: "geojson",
+          data: shakemap as never,
+        });
+
+        // Draw contour lines with colors based on MMI value
+        m.addLayer({
+          id: lineLayerId,
+          type: "line",
+          source: sourceId,
+          paint: {
+            "line-color": [
+              "match",
+              ["get", "value"],
+              1, mmiColors[1],
+              1.5, mmiColors[2],
+              2, mmiColors[2],
+              2.5, mmiColors[3],
+              3, mmiColors[3],
+              3.5, mmiColors[4],
+              4, mmiColors[4],
+              4.5, mmiColors[5],
+              5, mmiColors[5],
+              5.5, mmiColors[6],
+              6, mmiColors[6],
+              6.5, mmiColors[7],
+              7, mmiColors[7],
+              7.5, mmiColors[8],
+              8, mmiColors[8],
+              8.5, mmiColors[9],
+              9, mmiColors[9],
+              9.5, mmiColors[10],
+              10, mmiColors[10],
+              "#808080", // default gray
+            ],
+            "line-width": [
+              "interpolate", ["linear"], ["get", "value"],
+              1, 1,
+              5, 2,
+              7, 3,
+              9, 4,
+            ],
+            "line-opacity": 0.8,
+          },
+        }, beforeId);
+
+        // Add MMI value labels on the contour lines
+        m.addLayer({
+          id: labelLayerId,
+          type: "symbol",
+          source: sourceId,
+          layout: {
+            "text-field": ["concat", "MMI ", ["get", "value"]],
+            "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+            "text-size": 11,
+            "symbol-placement": "line",
+            "text-rotation-alignment": "map",
+            "text-pitch-alignment": "viewport",
+          },
+          paint: {
+            "text-color": "#000000",
+            "text-halo-color": "#FFFFFF",
+            "text-halo-width": 2,
+          },
+        }, beforeId);
+      });
+
+      console.log(`[shakemap] Painted ${shakemaps.length} ShakeMap contours`);
+    } catch (err) {
+      console.error("[shakemap]", err);
     }
 
     return cleanup;

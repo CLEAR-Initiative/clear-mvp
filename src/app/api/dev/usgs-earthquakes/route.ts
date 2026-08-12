@@ -89,7 +89,49 @@ export async function GET() {
     bbox: DEFAULT_BBOX,
   });
 
-  console.log(`[usgs-spike] Returned ${collection.meta.feature_count} earthquakes`);
+  // Fetch ShakeMap contours for events that have them (parallel)
+  const shakemapPromises = collection.features
+    .filter((f) => f.properties.has_shakemap)
+    .map(async (f) => {
+      try {
+        const eventId = f.properties.id;
+        const detailUrl = `https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/${eventId}.geojson`;
+        const detailRes = await fetch(detailUrl, { cache: "no-store" });
+        if (!detailRes.ok) return null;
+
+        const detail = (await detailRes.json()) as any;
+        const shakemapProduct = detail.properties?.products?.shakemap?.[0];
+        if (!shakemapProduct) return null;
+
+        const contourUrl = shakemapProduct.contents?.["download/cont_mmi.json"]?.url;
+        if (!contourUrl) return null;
+
+        const contourRes = await fetch(contourUrl, { cache: "no-store" });
+        if (!contourRes.ok) return null;
+
+        const contours = (await contourRes.json()) as any;
+        return {
+          eventId,
+          type: "FeatureCollection" as const,
+          features: contours.features || [],
+        };
+      } catch (err) {
+        console.error(`[usgs-spike] Failed to fetch ShakeMap for ${f.properties.id}:`, err);
+        return null;
+      }
+    });
+
+  const shakemaps = (await Promise.all(shakemapPromises)).filter(
+    (s): s is NonNullable<typeof s> => s !== null,
+  );
+
+  if (shakemaps.length > 0) {
+    collection.shakemaps = shakemaps;
+  }
+
+  console.log(
+    `[usgs-spike] Returned ${collection.meta.feature_count} earthquakes, ${shakemaps.length} with ShakeMaps`,
+  );
 
   return NextResponse.json(collection, {
     headers: {
