@@ -20,6 +20,7 @@ import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker }
 import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
 import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
 import { writeDetectionNavContext } from "~/lib/detection-nav-context";
+import { useFeatureEnabled } from "~/components/feature-flags-provider";
 
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
 import { GroundIntelTab } from "./_components/ground-intel-tab";
@@ -239,9 +240,13 @@ function DetectionPageContent() {
   // clear-api rejects every ground query for roles other than admin/analyst,
   // so the tab is hidden for everyone else rather than rendering a surface
   // that can only error. Mirrors event-detail's promote gating pattern.
+  // Additionally gated behind the `ground_intel` feature flag (admin Features
+  // tab) so the whole tab can be switched off for everyone, independent of role.
+  const groundIntelEnabled = useFeatureEnabled("ground_intel");
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const canSeeGround =
-    authData?.user?.role === "admin" || authData?.user?.role === "analyst";
+    groundIntelEnabled &&
+    (authData?.user?.role === "admin" || authData?.user?.role === "analyst");
 
   // Tab order drives the sliding indicator geometry - 4 or 5 equal slots
   // depending on whether the ground tab is visible for this role.
