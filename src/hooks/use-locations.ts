@@ -2,11 +2,8 @@
 
 import { useMemo } from "react";
 import { api } from "~/trpc/react";
-import { countryConfig, resolveCountryConfig } from "~/lib/constants/country-config";
+import { countryConfig, resolveCountryConfig, WORLD_VIEW } from "~/lib/constants/country-config";
 import { flattenLocationTree } from "~/lib/location";
-
-/** Neutral camera used when no country is selected or configured. */
-const WORLD_VIEW = { center: [10, 20] as [number, number], zoom: 1.6 };
 
 interface LocationNode {
   id: string;

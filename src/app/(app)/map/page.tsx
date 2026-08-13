@@ -42,7 +42,7 @@ import {
 } from "./_components/map-markers-data";
 import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
 import { useLocations } from "~/hooks/use-locations";
-import { resolveCountryConfig, shortCountryName } from "~/lib/constants/country-config";
+import { resolveCountryConfig, shortCountryName, WORLD_VIEW } from "~/lib/constants/country-config";
 import { MapPanelBar } from "./_components/map-panel-bar";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapLoadingOverlay, MapPreloader } from "./_components/map-loading-overlay";
@@ -905,13 +905,10 @@ function MapPageContent() {
     if (selectedCountry !== "All Countries") {
       return getCenter(selectedCountry);
     }
-    if (allMarkers.length === 0) return [30.0, 15.5];
-    const avgLng =
-      allMarkers.reduce((sum, m) => sum + m.lng, 0) / allMarkers.length;
-    const avgLat =
-      allMarkers.reduce((sum, m) => sum + m.lat, 0) / allMarkers.length;
-    return [avgLng, avgLat];
-  }, [allMarkers, selectedCountry, focusMarker, markerFocus, returnCamera, cameraSeed, getCenter]);
+    // Global browse: WORLD_VIEW, not marker-average + country zoom (that
+    // framed a Sahel crop that looked like "random Mali").
+    return WORLD_VIEW.center;
+  }, [selectedCountry, focusMarker, markerFocus, returnCamera, cameraSeed, getCenter]);
 
   const mapZoom = useMemo(() => {
     if (markerFocus) return markerFocus.zoom;
@@ -923,8 +920,8 @@ function MapPageContent() {
       // geometry/bbox is available; this is the fallback before that lands.
       return getZoom(selectedCountry);
     }
-    return isMobile ? 4 : 5;
-  }, [selectedCountry, focusMarker, markerFocus, returnCamera, cameraSeed, getZoom, isMobile]);
+    return WORLD_VIEW.zoom;
+  }, [selectedCountry, focusMarker, markerFocus, returnCamera, cameraSeed, getZoom]);
 
   /* ---- Resolve selected location for filtering ---- */
   const selectedLocationId = useMemo(() => {
@@ -1412,6 +1409,7 @@ function MapPageContent() {
     setSelectedCountry(value ?? "All Countries");
     setSelectedRegion("All Regions");
     setCameraSeed(null);
+    setForceFlyToken((n) => n + 1);
     clearOpenPanels();
   };
 
@@ -1711,6 +1709,11 @@ function MapPageContent() {
       {/* Map container with loading overlay - above timeline empty space for zoom hit-testing */}
       <Box
         data-tour="map-canvas"
+        data-testid="map-browse-camera"
+        data-center-lng={mapCenter[0]}
+        data-center-lat={mapCenter[1]}
+        data-zoom={mapZoom}
+        data-country={selectedCountry}
         style={{
           position: "absolute",
           top: 0,
