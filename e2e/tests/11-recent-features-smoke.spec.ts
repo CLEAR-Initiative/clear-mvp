@@ -85,7 +85,7 @@ test.describe("Recent features smoke (case 11)", () => {
     await expect(page.getByText(/Class|Alert|Event|Signal/i).first()).toBeVisible();
   });
 
-  test("Map layers toggle still opens after topography / A/B merges", async ({
+  test("Map layers toggle still opens after topography polish", async ({
     page,
   }) => {
     await page.goto("/map", { waitUntil: "domcontentloaded" });

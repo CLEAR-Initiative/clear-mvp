@@ -57,15 +57,7 @@ import {
   shouldShowPointAltitude,
   type PointAltitudeResult,
 } from "~/lib/map/point-altitude";
-import {
-  DEFAULT_SATELLITE_IMAGERY_SOURCE,
-  resolveMapStyleForBasemap,
-  syncSatelliteImageryAb,
-  type SatelliteImagerySource,
-} from "~/lib/map/satellite-imagery-ab";
 import { signalIconUrl } from "~/lib/signals/resolve-icon";
-
-export type { SatelliteImagerySource };
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
 const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
@@ -232,12 +224,6 @@ interface CrisisMapProps {
   } | null;
   /** Basemap: simple (theme style), topography (hillshade + DEM terrain mesh), or satellite imagery */
   baseMapType?: BaseMapType;
-  /**
-   * TEMP A/B (#160): which satellite imagery stack while basemap is Satellite.
-   * `mapbox` = satellite-v9 / satellite-streets; `esri` = World Imagery raster
-   * on light/dark. Remove after imagery evaluation.
-   */
-  satelliteImagerySource?: SatelliteImagerySource;
   /**
    * Mutable ref filled with project helpers while the map is mounted.
    * Cleared on unmount. Used by `/map` spaghetti connectors.
@@ -547,7 +533,6 @@ export function CrisisMap({
   showBlockages = false,
   blockagesGeoJson = null,
   baseMapType = "simple",
-  satelliteImagerySource = DEFAULT_SATELLITE_IMAGERY_SOURCE,
   mapApiRef,
   onMapMove,
   locationPickActive = false,
@@ -576,16 +561,21 @@ export function CrisisMap({
   );
 
   // Basemap type picks the Mapbox style; roads are an overlay on every type.
-  // Satellite + Mapbox: satellite-v9 / satellite-streets (no separate road layers).
-  // Satellite + Esri (temp A/B #160): light/dark carrier + World Imagery raster.
-  // Topography shares the theme style — relief comes from hillshade + DEM
-  // (see topography-terrain sync). outdoors-v12 was tried and rejected.
-  const mapStyle = resolveMapStyleForBasemap({
-    baseMapType,
-    satelliteImagerySource,
-    showRoads,
-    isDark,
-  });
+  // Satellite has no separate road layers, so roads=on uses satellite-streets.
+  const mapStyle = (() => {
+    if (baseMapType === "satellite") {
+      return showRoads
+        ? "mapbox://styles/mapbox/satellite-streets-v12"
+        : "mapbox://styles/mapbox/satellite-v9";
+    }
+    // Topography shares the theme style - relief comes from hillshade +
+    // DEM terrain mesh (see topography-terrain sync below) instead of a
+    // Mapbox style. outdoors-v12 was tried and rejected: pale landcover,
+    // no dark-mode variant, and boundary overlays drowned in it.
+    return isDark
+      ? "mapbox://styles/mapbox/dark-v11"
+      : "mapbox://styles/mapbox/light-v11";
+  })();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxGLAny>(null);
   const mbRef = useRef<MapboxGLAny>(null);
@@ -863,28 +853,6 @@ export function CrisisMap({
       m.off?.("pitchend", onPitch);
     };
   }, [loaded, baseMapType]);
-
-  // TEMP satellite A/B (#160): Esri World Imagery raster on the light/dark
-  // carrier style. Re-runs after every setStyle (loaded flip) so the layer returns.
-  useEffect(() => {
-    if (!map.current || !loaded) return;
-    const m = map.current;
-    try {
-      syncSatelliteImageryAb(m, { baseMapType, satelliteImagerySource });
-    } catch (err) {
-      console.warn("[satellite-ab] failed to sync Esri imagery", err);
-    }
-    return () => {
-      try {
-        syncSatelliteImageryAb(m, {
-          baseMapType: "simple",
-          satelliteImagerySource: "mapbox",
-        });
-      } catch {
-        /* ignore */
-      }
-    };
-  }, [loaded, baseMapType, satelliteImagerySource]);
 
   // Topography hover probe — orange ground dot + altitude under the cursor.
   // All updates are imperative DOM writes so pan/tilt never re-render React.
@@ -1892,10 +1860,7 @@ export function CrisisMap({
     if (!map.current || !loaded) return;
     const m = map.current;
     const visibility = showRoads ? "visible" : "none";
-    // Esri A/B rides light/dark, so road boost still applies there.
-    const boost =
-      showRoads &&
-      (baseMapType !== "satellite" || satelliteImagerySource === "esri");
+    const boost = showRoads && baseMapType !== "satellite";
     // Corridor-first palette (docs/map-design.md): trunk corridors in warm
     // tan - the supply-route color - visible from the Country band (z5-8),
     // where "which corridor reaches this state" is the actual question.
@@ -1930,7 +1895,7 @@ export function CrisisMap({
         }
       } catch { /* ignore */ }
     }
-  }, [loaded, showRoads, isDark, baseMapType, satelliteImagerySource]);
+  }, [loaded, showRoads, isDark, baseMapType]);
 
   // ── LogIE Blockages (roads + bridges) — smoke / future #277 ─────────────
   useEffect(() => {

@@ -37,7 +37,6 @@ Prep
   [ ] Unclustered pins show type glyphs (Signals icon pack)
   [ ] Marker Location labels fill via ancestor tree (not blank)
   [ ] Topography basemap: tilt hint once, pitch works, far-zoom a11y ok
-  [ ] Satellite A/B chip (Sudan): Mapbox ↔ Esri switches without blanking the map
   [ ] Create/update a signal → pin appears/moves without full page reload (realtime)
 
 3. Team country scope
