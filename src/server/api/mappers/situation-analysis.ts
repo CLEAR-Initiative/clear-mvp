@@ -50,6 +50,7 @@ interface RawSector {
 interface RawContextRisk {
   bullets?: string[];
   source_report_ids?: string[];
+  contributing_sources?: Record<string, string[]>;
 }
 
 interface RawDescribed {
@@ -153,6 +154,9 @@ export interface SaContextRisk {
   items: string[];
   /** Citation numbers (1-based, into `sources`) this domain drew on. */
   refs: number[];
+  /** Per-bullet citations keyed by exact bullet text. Empty on older analyses,
+   *  in which case callers fall back to the domain-level `refs`. */
+  lineRefs: Record<string, number[]>;
 }
 
 export interface SaCoverage {
@@ -429,6 +433,7 @@ function mapContextRisks(
       label: titleise(key),
       items: cleanStrings(v?.bullets),
       refs: refsFrom(v?.source_report_ids),
+      lineRefs: invertContributingSources(v?.contributing_sources, refsFrom),
     }))
     // A risk category with no bullets carries no information - drop it rather
     // than render an empty row.

@@ -126,23 +126,48 @@ export function SituationOverview({
                   {risk.label}
                 </Text>
                 <Box>
-                  {risk.items.map((item, j) => (
-                    <Text
-                      key={j}
-                      c="var(--color-text-primary)"
-                      style={{ fontSize: 13, lineHeight: 1.5 }}
-                    >
-                      {item}
-                      {j === risk.items.length - 1 && (
-                        <Citations
-                          refs={risk.refs}
-                          sources={sources}
-                          onOpen={onOpenSources}
-                          variant="inline"
-                        />
-                      )}
-                    </Text>
-                  ))}
+                  {risk.items.map((item, j) => {
+                    // Per-bullet where the pipeline attributed it; otherwise the
+                    // domain's own refs, once, on the last bullet - so an older
+                    // analysis still shows where the block came from.
+                    const refs = risk.lineRefs[item.trim()] ?? [];
+                    const showDomainRefs =
+                      refs.length === 0 &&
+                      Object.keys(risk.lineRefs).length === 0 &&
+                      j === risk.items.length - 1;
+                    return (
+                      <Group key={j} gap={8} align="flex-start" wrap="nowrap" mb={4}>
+                        <Text
+                          c="var(--color-text-muted)"
+                          style={{ fontSize: 13, lineHeight: 1.5 }}
+                        >
+                          &bull;
+                        </Text>
+                        <Text
+                          c="var(--color-text-primary)"
+                          style={{ fontSize: 13, lineHeight: 1.5 }}
+                        >
+                          {item}
+                          {refs.length > 0 && (
+                            <Citations
+                              refs={refs}
+                              sources={sources}
+                              onOpen={onOpenSources}
+                              variant="inline"
+                            />
+                          )}
+                          {showDomainRefs && (
+                            <Citations
+                              refs={risk.refs}
+                              sources={sources}
+                              onOpen={onOpenSources}
+                              variant="inline"
+                            />
+                          )}
+                        </Text>
+                      </Group>
+                    );
+                  })}
                   <SectionChange note={data.changes.notes[`context_risks.${risk.key}`]} />
                 </Box>
               </Group>
