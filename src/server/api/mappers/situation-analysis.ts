@@ -58,7 +58,11 @@ interface RawDescribed {
 }
 
 export interface SaPayload {
-  ai_summary?: { text?: string | null; source_report_ids?: string[] };
+  ai_summary?: {
+    text?: string | null;
+    source_report_ids?: string[];
+    contributing_sources?: Record<string, string[]>;
+  };
   datapoints?: {
     envelope?: {
       report_count?: number;
@@ -203,8 +207,14 @@ export interface SaBullet {
 export interface SituationAnalysis {
   crisis: SaCrisis;
   summary: string | null;
-  /** Citation numbers the AI summary drew on. */
+  /** Citation numbers the AI summary drew on, as a whole. */
   summaryRefs: number[];
+  /**
+   * Per-sentence citations for the summary: exact sentence -> citation
+   * numbers. Empty when the pipeline produced no per-line attribution, in
+   * which case the UI falls back to the block-level `summaryRefs`.
+   */
+  summaryLineRefs: Record<string, number[]>;
   stats: SaStat[];
   /** Raw numeric datapoints, keyed for the "what changed" numeric diff. Null
    *  where the pipeline did not resolve a value. */
@@ -464,6 +474,10 @@ export function mapSituationAnalysis(
     },
     summary: data.ai_summary?.text?.trim() ?? null,
     summaryRefs: refsFrom(data.ai_summary?.source_report_ids),
+    summaryLineRefs: invertContributingSources(
+      data.ai_summary?.contributing_sources,
+      refsFrom,
+    ),
     stats: mapStats(dp),
     figures: {
       displaced: dp?.population_displaced ?? null,
