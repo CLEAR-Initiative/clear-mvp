@@ -338,9 +338,9 @@ export function CrisisDetailContent({
         const candidate = candidates.find((c) => c.level === level);
         if (!candidate) continue;
         const meta = candidate.metadata?.find((m) => m.type === "iom_dtm_displacement");
-        if (!meta) continue;
-        const displaced = (meta.data as Record<string, unknown>).population_displaced;
-        if (typeof displaced !== "number") continue;
+        if (!meta?.data) continue;
+        const displaced = (meta.data as Record<string, unknown>).population_displaced as number | undefined;
+        if (typeof displaced !== "number" || !isFinite(displaced)) continue;
         const pop = candidate.population ? Number(candidate.population) : popInArea;
         const ratio = pop ? displaced / pop : null;
         return { displaced, ratio, name: candidate.name };
