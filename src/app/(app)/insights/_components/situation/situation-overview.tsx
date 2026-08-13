@@ -4,59 +4,13 @@ import { useTranslations } from "next-intl";
 import { Box, Card, Group, SimpleGrid, Text } from "@mantine/core";
 import { IconSparkles } from "@tabler/icons-react";
 import { CardSection } from "~/components/ui";
-import type { SaSource, SituationAnalysis } from "~/server/api/mappers/situation-analysis";
+import type { SituationAnalysis } from "~/server/api/mappers/situation-analysis";
+import { planSentenceSegments } from "./summary-citations";
 import { BulletCard } from "./bullet-card";
 import { SituationKpis } from "./situation-kpis";
 import { Citations } from "./citations";
 import { SituationChanged } from "./situation-changed";
 import { SectionChange } from "./section-change";
-
-/**
- * Splice per-sentence citation chips into a paragraph.
- *
- * The pipeline attributes whole sentences, so rather than re-splitting the
- * prose (and risking a different sentence boundary than the pipeline used) we
- * locate each cited sentence verbatim inside the paragraph and annotate it in
- * place. Sentences not cited, and prose between them, pass through untouched.
- *
- * Returns null when nothing in this paragraph is cited, so the caller can
- * render the plain string.
- */
-function annotateSentences(
-  para: string,
-  lineRefs: Record<string, number[]>,
-  sources: SaSource[],
-  onOpenSources?: () => void,
-): React.ReactNode[] | null {
-  const hits = Object.entries(lineRefs)
-    .map(([sentence, refs]) => ({ sentence, refs, at: para.indexOf(sentence) }))
-    .filter((h) => h.at !== -1 && h.refs.length > 0)
-    .sort((a, b) => a.at - b.at);
-
-  if (hits.length === 0) return null;
-
-  const out: React.ReactNode[] = [];
-  let cursor = 0;
-  for (const [i, hit] of hits.entries()) {
-    // Overlapping attributions (the same clause credited twice) would rewind
-    // the cursor and duplicate text - keep the first and skip the rest.
-    if (hit.at < cursor) continue;
-    if (hit.at > cursor) out.push(para.slice(cursor, hit.at));
-    out.push(hit.sentence);
-    out.push(
-      <Citations
-        key={`c${i}`}
-        refs={hit.refs}
-        sources={sources}
-        onOpen={onOpenSources}
-        variant="inline"
-      />,
-    );
-    cursor = hit.at + hit.sentence.length;
-  }
-  if (cursor < para.length) out.push(para.slice(cursor));
-  return out;
-}
 
 /**
  * Situation Analysis -> Overview. Every block is conditional: the pipeline
@@ -103,12 +57,7 @@ export function SituationOverview({
             </Text>
           </Group>
           {summary.split(/\n{2,}/).map((para, i, arr) => {
-            const annotated = annotateSentences(
-              para.trim(),
-              data.summaryLineRefs,
-              sources,
-              onOpenSources,
-            );
+            const segments = planSentenceSegments(para.trim(), data.summaryLineRefs);
             return (
               <Text
                 key={i}
@@ -116,7 +65,21 @@ export function SituationOverview({
                 mb={i === arr.length - 1 ? 0 : 12}
                 style={{ fontSize: 13, lineHeight: 1.65 }}
               >
-                {annotated ?? para.trim()}
+                {segments
+                  ? segments.map((seg, j) =>
+                      seg.kind === "text" ? (
+                        seg.text
+                      ) : (
+                        <Citations
+                          key={j}
+                          refs={seg.refs}
+                          sources={sources}
+                          onOpen={onOpenSources}
+                          variant="inline"
+                        />
+                      ),
+                    )
+                  : para.trim()}
                 {/* Block-level fallback only when no sentence in the whole
                     summary carried its own citation - otherwise the trailing
                     list duplicates what is now shown inline. */}
