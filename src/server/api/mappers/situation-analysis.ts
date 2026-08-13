@@ -436,8 +436,8 @@ function mapContextRisks(
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
-function mapSources(raw: SaPayload["sources"]): SaSource[] {
-  return (raw?.reports ?? [])
+function mapSources(raw: SaPayload["sources"], citedIds: string[]): SaSource[] {
+  const sources: SaSource[] = (raw?.reports ?? [])
     .filter((r) => r.report_id)
     .map((r) => ({
       id: r.report_id!,
@@ -445,6 +445,24 @@ function mapSources(raw: SaPayload["sources"]): SaSource[] {
       url: r.source_url ?? null,
       publishedAt: r.published_at ?? null,
     }));
+
+  // The pipeline builds `sources.reports` from the datapoint aggregation's
+  // contributors only, while the narrative cites whatever RAG retrieved - so
+  // most cited reports are missing from it (Venezuela monthly: 2 of 7 summary
+  // citations resolve, 11 listed against 50 on the row). Every unresolvable id
+  // is dropped downstream, which silently deletes the citation.
+  //
+  // Append the cited-but-unlisted ids so they at least get a number. The row's
+  // `sourceReportIds` is the pipeline's own union of every contributing report,
+  // so it is the right authority. Titles are unavailable for these - Citations
+  // falls back to "Report n" - and they sort last, after the titled ones.
+  const known = new Set(sources.map((s) => s.id));
+  for (const id of citedIds) {
+    if (!id || known.has(id)) continue;
+    known.add(id);
+    sources.push({ id, title: "", url: null, publishedAt: null });
+  }
+  return sources;
 }
 
 export function mapSituationAnalysis(
@@ -458,7 +476,7 @@ export function mapSituationAnalysis(
   // Sources first: the citation index keys off their order, and every
   // component resolves its `source_report_ids` through the same resolver so
   // the numbers are stable across the whole analysis.
-  const sources = mapSources(data.sources);
+  const sources = mapSources(data.sources, row.sourceReportIds ?? []);
   const refsFrom = makeRefResolver(sources);
 
   return {

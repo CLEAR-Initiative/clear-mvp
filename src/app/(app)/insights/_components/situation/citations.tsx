@@ -32,7 +32,9 @@ export function Citations({
 
   const chips = refs.map((n) => {
     const src = sources[n - 1];
-    const label = src?.title ?? t("citations.report", { n });
+    // `||` not `??`: reports cited by the narrative but absent from the
+    // pipeline's sources list carry an empty title, not a missing one.
+    const label = src?.title || t("citations.report", { n });
     return (
       <Tooltip key={n} label={label} withArrow multiline w={260} openDelay={200}>
         <Text
