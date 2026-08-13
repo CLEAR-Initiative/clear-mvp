@@ -39,6 +39,12 @@ interface RawSector {
   }>;
   source_report_ids?: string[];
   evidence_scope?: "sector" | "fallback" | null;
+  /**
+   * Per-line attribution from the pipeline (PR #31): report_id -> the exact
+   * generated lines that report supported. Inverted below into line -> refs so
+   * a bullet can cite its own sources rather than the whole sector's.
+   */
+  contributing_sources?: Record<string, string[]>;
 }
 
 interface RawContextRisk {
@@ -165,6 +171,13 @@ export interface SaSector {
   coverage: SaCoverage[];
   /** Citation numbers (1-based, into `sources`) this sector drew on. */
   refs: number[];
+  /**
+   * Per-line citations: bullet text -> citation numbers. Keyed by the exact
+   * generated line, which is how the pipeline emits it. Empty for analyses
+   * generated before per-line attribution shipped, so callers must fall back
+   * to the sector-level `refs`.
+   */
+  lineRefs: Record<string, number[]>;
   /** Distinct contributing reports - a plain evidence-count signal. */
   reportCount: number;
   /** "fallback" when the grade came from an off-sector search (an inference,
@@ -290,6 +303,41 @@ function makeRefResolver(sources: SaSource[]): (ids: string[] | undefined) => nu
   };
 }
 
+/**
+ * Invert the pipeline's `contributing_sources` (report_id -> lines it
+ * supported) into the lookup the UI needs: line -> citation numbers.
+ *
+ * Report IDs that aren't in `sources` resolve to nothing and are skipped, same
+ * as everywhere else. A line whose every citation is unresolvable is omitted
+ * rather than stored empty, so callers can treat "absent" as "no per-line
+ * citation" and fall back to the component-level refs.
+ */
+function invertContributingSources(
+  contributing: Record<string, string[]> | undefined,
+  refsFrom: (ids: string[] | undefined) => number[],
+): Record<string, number[]> {
+  if (!contributing) return {};
+
+  const byLine = new Map<string, Set<number>>();
+  for (const [reportId, lines] of Object.entries(contributing)) {
+    const [ref] = refsFrom([reportId]);
+    if (ref == null) continue;
+    for (const line of lines ?? []) {
+      const key = line.trim();
+      if (!key) continue;
+      const set = byLine.get(key) ?? new Set<number>();
+      set.add(ref);
+      byLine.set(key, set);
+    }
+  }
+
+  const out: Record<string, number[]> = {};
+  for (const [line, refs] of byLine) {
+    out[line] = [...refs].sort((a, b) => a - b);
+  }
+  return out;
+}
+
 // ─── Mapper ──────────────────────────────────────────────────────────────────
 
 /**
@@ -346,6 +394,7 @@ function mapSectors(
           reportCount: c.report_count ?? 0,
         })),
       refs: refsFrom(s?.source_report_ids),
+      lineRefs: invertContributingSources(s?.contributing_sources, refsFrom),
       reportCount: new Set(s?.source_report_ids ?? []).size,
       evidenceScope: s?.evidence_scope ?? null,
     }))
