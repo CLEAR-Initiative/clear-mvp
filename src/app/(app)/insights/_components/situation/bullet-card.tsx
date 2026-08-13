@@ -1,6 +1,7 @@
 import { Box, Card, Group, Text } from "@mantine/core";
 import type { SaBullet, SaSource } from "~/server/api/mappers/situation-analysis";
 import { Citations } from "./citations";
+import { BulletRow } from "./bullet-row";
 
 type BulletTone = "critical" | "warning" | "info" | "success";
 
@@ -53,14 +54,9 @@ export function BulletCard({
       </Group>
 
       {items.map((item, i) => (
-        <Group key={i} gap={8} align="flex-start" wrap="nowrap" mb={i === items.length - 1 ? 0 : 8}>
-          <Text c={color} style={{ fontSize: 13, lineHeight: 1.5 }}>
-            &bull;
-          </Text>
-          <Text c="var(--color-text-primary)" style={{ fontSize: 13, lineHeight: 1.5 }}>
-            {item.text}
-          </Text>
-        </Group>
+        <BulletRow key={i} color={color} last={i === items.length - 1}>
+          {item.text}
+        </BulletRow>
       ))}
 
       <Citations refs={refs} sources={sources} onOpen={onOpenSources} />

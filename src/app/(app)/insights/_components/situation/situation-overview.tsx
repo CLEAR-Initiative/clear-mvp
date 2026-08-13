@@ -6,6 +6,7 @@ import { IconSparkles } from "@tabler/icons-react";
 import { CardSection } from "~/components/ui";
 import type { SituationAnalysis } from "~/server/api/mappers/situation-analysis";
 import { planSentenceSegments, planSummaryParagraphs } from "./summary-citations";
+import { BulletRow } from "./bullet-row";
 import { BulletCard } from "./bullet-card";
 import { SituationKpis } from "./situation-kpis";
 import { Citations } from "./citations";
@@ -136,36 +137,25 @@ export function SituationOverview({
                       Object.keys(risk.lineRefs).length === 0 &&
                       j === risk.items.length - 1;
                     return (
-                      <Group key={j} gap={8} align="flex-start" wrap="nowrap" mb={4}>
-                        <Text
-                          c="var(--color-text-muted)"
-                          style={{ fontSize: 13, lineHeight: 1.5 }}
-                        >
-                          &bull;
-                        </Text>
-                        <Text
-                          c="var(--color-text-primary)"
-                          style={{ fontSize: 13, lineHeight: 1.5 }}
-                        >
-                          {item}
-                          {refs.length > 0 && (
-                            <Citations
-                              refs={refs}
-                              sources={sources}
-                              onOpen={onOpenSources}
-                              variant="inline"
-                            />
-                          )}
-                          {showDomainRefs && (
-                            <Citations
-                              refs={risk.refs}
-                              sources={sources}
-                              onOpen={onOpenSources}
-                              variant="inline"
-                            />
-                          )}
-                        </Text>
-                      </Group>
+                      <BulletRow key={j} last={j === risk.items.length - 1}>
+                        {item}
+                        {refs.length > 0 && (
+                          <Citations
+                            refs={refs}
+                            sources={sources}
+                            onOpen={onOpenSources}
+                            variant="inline"
+                          />
+                        )}
+                        {showDomainRefs && (
+                          <Citations
+                            refs={risk.refs}
+                            sources={sources}
+                            onOpen={onOpenSources}
+                            variant="inline"
+                          />
+                        )}
+                      </BulletRow>
                     );
                   })}
                   <SectionChange note={data.changes.notes[`context_risks.${risk.key}`]} />

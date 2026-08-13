@@ -7,6 +7,7 @@ import { CardSection, SeverityBadge } from "~/components/ui";
 import type { SaSector, SaSource } from "~/server/api/mappers/situation-analysis";
 import { toAppSeverity } from "./severity";
 import { Citations } from "./citations";
+import { BulletRow } from "./bullet-row";
 import { SectionChange } from "./section-change";
 
 /**
@@ -127,20 +128,15 @@ function PillarList({
         // it. Trimmed because the mapper trims when building the index.
         const refs = lineRefs?.[item.trim()] ?? [];
         return (
-          <Group key={i} gap={8} align="flex-start" wrap="nowrap" mb={6}>
-            <Text c="var(--color-text-muted)" style={{ fontSize: 13, lineHeight: 1.5 }}>
-              &bull;
-            </Text>
-            <Text c="var(--color-text-primary)" style={{ fontSize: 13, lineHeight: 1.5 }}>
-              {item}
-              {refs.length > 0 && sources && (
-                <>
-                  {" "}
-                  <Citations refs={refs} sources={sources} variant="inline" />
-                </>
-              )}
-            </Text>
-          </Group>
+          <BulletRow key={i} last={i === items.length - 1}>
+            {item}
+            {refs.length > 0 && sources && (
+              <>
+                {" "}
+                <Citations refs={refs} sources={sources} variant="inline" />
+              </>
+            )}
+          </BulletRow>
         );
       })}
     </Box>
