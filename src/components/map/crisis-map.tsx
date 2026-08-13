@@ -40,6 +40,12 @@ import {
   updateTopographyTerrainExaggeration,
 } from "~/lib/map/topography-terrain";
 import {
+  applyPinElevation,
+  pinElevationFactor,
+} from "~/lib/map/pin-elevation";
+import { bridgeMetaToCtrlForPitch } from "~/lib/map/meta-pitch-bridge";
+import { startIdleGlobeSpin } from "~/lib/map/idle-globe-spin";
+import {
   dismissTopographyTiltHint,
   isTopographyTiltHintDismissed,
   shouldShowTopographyTiltHint,
@@ -51,6 +57,7 @@ import {
   shouldShowPointAltitude,
   type PointAltitudeResult,
 } from "~/lib/map/point-altitude";
+import { signalIconUrl } from "~/lib/signals/resolve-icon";
 
 /** Softer clustering locally so sparse seed data still forms donuts. */
 const CLUSTER_MIN_POINTS = process.env.NODE_ENV === "production" ? 5 : 2;
@@ -65,6 +72,8 @@ export interface MapMarker {
   description?: string;
   popup?: string;
   markerKind?: "event" | "signal" | "crisis";
+  /** CLEAR Signals SVG slug for type glyph on unclustered pins. */
+  iconSlug?: string;
   /** Source pin challenged / correction queued (Location trust v1). */
   locationTrust?: "challenged" | "correction_queued";
   /** Proposed correction pin vs source pin for dual location display. */
@@ -372,18 +381,55 @@ function buildPointEl(
   opts?: {
     locationTrust?: "challenged" | "correction_queued";
     locationPinRole?: "source" | "proposed";
+    iconSlug?: string;
+    /**
+     * Topography-only: stem-capable pin (flat at low pitch; stem grows with
+     * tilt via applyPinElevation). Simple / Satellite keep flat centered dots.
+     */
+    elevated?: boolean;
+    /** Initial pitch factor 0..1 when elevated (from pinElevationFactor). */
+    elevationFactor?: number;
   },
 ): HTMLDivElement {
   const color = severityColors[severity] ?? "#737373";
   const proposed = opts?.locationPinRole === "proposed";
   const challenged =
     opts?.locationTrust === "challenged" || opts?.locationTrust === "correction_queued";
-  const size = severity === "critical" ? 18 : severity === "high" ? 16 : 14;
+  const withGlyph = Boolean(opts?.iconSlug) && !proposed;
+  const elevated = Boolean(opts?.elevated) && !proposed;
+  // Glyph pins need a bit more surface; severity still drives size.
+  const size = withGlyph
+    ? severity === "critical"
+      ? 28
+      : severity === "high"
+        ? 26
+        : 24
+    : severity === "critical"
+      ? 18
+      : severity === "high"
+        ? 16
+        : 14;
+  // Reserve full stem height so bottom-anchor ground contact never jumps.
+  const maxStem = elevated ? Math.max(10, Math.round(size * 0.9)) : 0;
+  const totalH = size + maxStem;
   // Outer: Mapbox sets its positioning transform here - do not animate this element.
   // Do NOT set position:relative — Mapbox relies on .mapboxgl-marker { position:absolute }.
   // Inline relative overrides that and stacks pins in document flow.
   const outer = document.createElement("div");
-  outer.style.cssText = `width:${size}px;height:${size}px;cursor:pointer;`;
+  outer.style.cssText = `width:${size}px;height:${totalH}px;cursor:pointer;`;
+  if (elevated) {
+    outer.dataset.elevatedPin = "1";
+    outer.dataset.maxStem = String(maxStem);
+  }
+
+  // Head hosts the disc / ping / trust ring.
+  // Elevated: absolute; bottom rises with pitch factor (stem grows under it).
+  const head = document.createElement("div");
+  head.className = "marker-pin-head";
+  head.style.cssText = elevated
+    ? `position:absolute;left:0;bottom:0;width:${size}px;height:${size}px;`
+    : `width:${size}px;height:${size}px;`;
+
   // Radar ping ring: expands outward in marker color, hidden until active.
   const ring = document.createElement("div");
   ring.className = "marker-ping-ring";
@@ -394,7 +440,7 @@ function buildPointEl(
     trustRing.className = "marker-trust-ring";
     trustRing.style.cssText =
       "position:absolute;inset:-5px;border-radius:50%;border:2px dashed #D97706;pointer-events:none;opacity:0.95;";
-    outer.appendChild(trustRing);
+    head.appendChild(trustRing);
   }
   // Inner dot: the colored circle, safe to scale independently.
   const inner = document.createElement("div");
@@ -404,11 +450,50 @@ function buildPointEl(
     inner.style.cssText =
       `width:100%;height:100%;border-radius:50%;background:transparent;border:2.5px dashed ${color};box-shadow:none;opacity:0.85;`;
   } else {
-    inner.style.cssText =
-      `width:100%;height:100%;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);`;
+    inner.style.cssText = [
+      `width:100%;height:100%;border-radius:50%;background:${color};`,
+      `border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);`,
+      withGlyph ? "display:flex;align-items:center;justify-content:center;overflow:hidden;" : "",
+    ].join("");
+    if (withGlyph && opts?.iconSlug) {
+      const img = document.createElement("img");
+      img.src = signalIconUrl(opts.iconSlug);
+      img.alt = "";
+      img.draggable = false;
+      // Medium discs are yellow (`#FBBF24`) — white glyphs wash out; use a dark glyph there.
+      const lightDisc = severity === "medium";
+      img.style.cssText = [
+        "width:58%;height:58%;object-fit:contain;pointer-events:none;",
+        lightDisc
+          ? "filter:brightness(0);"
+          : "filter:brightness(0) invert(1);",
+      ].join("");
+      inner.appendChild(img);
+    }
   }
-  outer.appendChild(ring);
-  outer.appendChild(inner);
+  head.appendChild(ring);
+  head.appendChild(inner);
+  outer.appendChild(head);
+
+  if (elevated) {
+    const stem = document.createElement("div");
+    stem.className = "marker-pin-stem";
+    stem.style.cssText = [
+      "position:absolute;left:50%;bottom:0;",
+      `width:2px;height:${maxStem}px;margin-left:-1px;`,
+      `background:${color};`,
+      "border-radius:1px 1px 0 0;",
+      "box-shadow:0 0 0 1px rgba(255,255,255,0.9);",
+      "pointer-events:none;",
+      "transform-origin:bottom center;",
+      "transform:scaleY(0);",
+      "opacity:0;",
+      "will-change:transform;",
+    ].join("");
+    outer.appendChild(stem);
+    applyPinElevation(outer, opts?.elevationFactor ?? 0);
+  }
+
   return outer;
 }
 
@@ -582,12 +667,14 @@ export function CrisisMap({
         attributionControl: false,
       });
 
-      // Right-click / Ctrl+click must drive Mapbox pitch-rotate, not the
-      // browser context menu (all basemap modes).
+      // Right-click / Ctrl+click / ⌘+click must drive Mapbox pitch-rotate, not
+      // the browser context menu (all basemap modes).
       const suppressBrowserMenu = (e: Event) => {
         e.preventDefault();
       };
-      map.current.getCanvas().addEventListener("contextmenu", suppressBrowserMenu);
+      const canvas = map.current.getCanvas() as HTMLCanvasElement;
+      canvas.addEventListener("contextmenu", suppressBrowserMenu);
+      const removeMetaPitchBridge = bridgeMetaToCtrlForPitch(canvas);
       map.current.on("contextmenu", (e: { preventDefault?: () => void; originalEvent?: Event }) => {
         e.preventDefault?.();
         e.originalEvent?.preventDefault?.();
@@ -626,6 +713,9 @@ export function CrisisMap({
         new mapboxgl.NavigationControl({ showCompass: false }),
         "bottom-right",
       );
+
+      // Stash disposer on the map instance for effect cleanup below.
+      (map.current as MapboxGLAny).__clearMetaPitchBridge = removeMetaPitchBridge;
     });
 
     return () => {
@@ -634,6 +724,11 @@ export function CrisisMap({
       appliedStyleRef.current = null;
       setLoaded(false);
       if (mapApiRef) mapApiRef.current = null;
+      try {
+        (map.current as MapboxGLAny)?.__clearMetaPitchBridge?.();
+      } catch {
+        /* ignore */
+      }
       map.current?.remove();
       map.current = null;
     };
@@ -657,10 +752,11 @@ export function CrisisMap({
   }, [mapStyle]);
 
   // Hybrid Topography: hillshade + DEM terrain mesh (`setTerrain`) while
-  // Topography is active. Country-band-boosted exaggeration (numeric —
-  // zoom expressions can leave the mesh off). Pitch is opt-in. Runs before
-  // the focus effect so the dim mask lands above the relief outside the
-  // focus country too.
+  // Topography is active. Mesh off through Mapbox globe→mercator morph (z5–6)
+  // and far Region; Country boost after morph settles (numeric — zoom
+  // expressions can leave the mesh off). Pitch is opt-in. Runs before the
+  // focus effect so the dim mask lands above the relief outside the focus
+  // country too.
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
@@ -686,16 +782,26 @@ export function CrisisMap({
       };
     }
 
-    const onZoomEnd = () => {
-      try {
-        updateTopographyTerrainExaggeration(m);
-      } catch {
-        /* ignore */
-      }
+    // Update mid-gesture so Region fade (exaggeration → 0) applies before
+    // zoomend — otherwise far-zoom can flash black with a stale Country boost.
+    let zoomRaf = 0;
+    const onZoom = () => {
+      if (zoomRaf) return;
+      zoomRaf = requestAnimationFrame(() => {
+        zoomRaf = 0;
+        try {
+          updateTopographyTerrainExaggeration(m);
+        } catch {
+          /* ignore */
+        }
+      });
     };
-    m.on?.("zoomend", onZoomEnd);
+    m.on?.("zoom", onZoom);
+    m.on?.("zoomend", onZoom);
     return () => {
-      m.off?.("zoomend", onZoomEnd);
+      if (zoomRaf) cancelAnimationFrame(zoomRaf);
+      m.off?.("zoom", onZoom);
+      m.off?.("zoomend", onZoom);
       try {
         syncTopographyTerrain(m, "simple", { isDark });
         syncTopographyPitch(m, "simple");
@@ -704,6 +810,49 @@ export function CrisisMap({
       }
     };
   }, [loaded, baseMapType, isDark]);
+
+  // Idle polar-axis globe spin at far zoom (longitude, not bearing turntable).
+  // Enables Mapbox globe once (smooth morph with zoom); spin speed ramps in
+  // during zoom-out; pauses while the user pans / tilts.
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    return startIdleGlobeSpin(map.current);
+  }, [loaded]);
+
+  // Pitch-linked pin stems on Topography — flat ≤45°, full by ~70°.
+  // Imperative DOM only (no remount) so tilt stays smooth.
+  useEffect(() => {
+    if (!map.current || !loaded || baseMapType !== "topography") return;
+    const m = map.current;
+    let raf = 0;
+    const syncPinElevation = () => {
+      raf = 0;
+      const factor = pinElevationFactor(
+        typeof m.getPitch === "function" ? m.getPitch() : 0,
+      );
+      for (const [key, mk] of clusterDomMarkers.current) {
+        if (!key.startsWith("p-")) continue;
+        try {
+          const el = (mk as MapboxGLAny).getElement?.() as HTMLElement | undefined;
+          if (el?.dataset.elevatedPin) applyPinElevation(el, factor);
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+    const onPitch = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(syncPinElevation);
+    };
+    syncPinElevation();
+    m.on?.("pitch", onPitch);
+    m.on?.("pitchend", onPitch);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      m.off?.("pitch", onPitch);
+      m.off?.("pitchend", onPitch);
+    };
+  }, [loaded, baseMapType]);
 
   // Topography hover probe — orange ground dot + altitude under the cursor.
   // All updates are imperative DOM writes so pan/tilt never re-render React.
@@ -1272,6 +1421,7 @@ export function CrisisMap({
         id: mk.id, title: mk.title, severity: mk.severity,
         type: mk.type ?? "", description: mk.description ?? "",
         marker_kind: mk.markerKind ?? "",
+        icon_slug: mk.iconSlug ?? "",
         location_trust: mk.locationTrust ?? "",
         location_pin_role: mk.locationPinRole ?? "",
         is_critical: mk.severity === "critical" ? 1 : 0,
@@ -1497,6 +1647,13 @@ export function CrisisMap({
         const coords = displayLngLat.get(markerId) ?? rawCoords;
         const trust = props.location_trust as string;
         const pinRole = props.location_pin_role as string;
+        // Stem-capable on Topography — flat until pitch > 45°, then grows with tilt.
+        const elevated = baseMapType === "topography";
+        const elevationFactor = elevated
+          ? pinElevationFactor(
+              typeof m.getPitch === "function" ? m.getPitch() : 0,
+            )
+          : 0;
         const el = buildPointEl(props.severity as string, {
           locationTrust:
             trust === "challenged" || trust === "correction_queued"
@@ -1504,6 +1661,15 @@ export function CrisisMap({
               : undefined,
           locationPinRole:
             pinRole === "source" || pinRole === "proposed" ? pinRole : undefined,
+          // Glyphs only in the point density band — Country/donut keeps severity discs.
+          iconSlug:
+            mode === "point" &&
+            typeof props.icon_slug === "string" &&
+            props.icon_slug
+              ? props.icon_slug
+              : undefined,
+          elevated,
+          elevationFactor,
         });
         el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
         // Pick mode: block pin clicks even after pan/zoom rebuilds markers.
@@ -1533,7 +1699,11 @@ export function CrisisMap({
         });
         clusterDomMarkers.current.set(
           `p-${markerId}`,
-          new mb.Marker({ element: el, anchor: "center" }).setLngLat(coords).addTo(m),
+          new mb.Marker({
+            element: el,
+            // Bottom = fixed ground contact while stem grows with pitch.
+            anchor: elevated ? "bottom" : "center",
+          }).setLngLat(coords).addTo(m),
         );
       }
 
@@ -1608,7 +1778,7 @@ export function CrisisMap({
       m.off("moveend", onZoomEnd);
       m.off("sourcedata", onSourceData);
     };
-  }, [markers, loaded, showMarkers]);
+  }, [markers, loaded, showMarkers, baseMapType]);
 
   // ── Marker hover pulse (synced from list) ────────────────────────────────
   useEffect(() => {
@@ -2418,7 +2588,8 @@ export function CrisisMap({
           width: "100%",
           height: "100%",
           // Match basemap lightness so a brief WebGL clear never flashes
-          // light chrome under dark satellite imagery.
+          // light chrome under dark satellite imagery. Topography uses the
+          // same shell as Simple — no separate dark globe palette.
           background:
             baseMapType === "satellite"
               ? "#0a0a0a"

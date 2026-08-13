@@ -49,6 +49,16 @@ function baseEvent(overrides: Partial<GqlEvent> = {}): GqlEvent {
 }
 
 describe("eventsToMarkers / representativePoint", () => {
+  it("resolves iconSlug from GLIDE types", () => {
+    const event = baseEvent({
+      id: "evt-flood",
+      types: ["fl"],
+      representativePoint: pointLoc("a", 30, 14),
+    });
+    const markers = eventsToMarkers([event]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.iconSlug).toBe("flood");
+  });
   it("prefers representativePoint over event and signal locations", () => {
     const event = baseEvent({
       representativePoint: pointLoc("rep", 32.5, 15.5),

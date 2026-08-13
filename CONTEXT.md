@@ -153,8 +153,8 @@ The relief basemap in the triad. **Hybrid**: readable top-down relief by default
 `setTerrain` on the existing terrain DEM — not Cesium) so optional tilt reveals true
 3D height. Visual **exaggeration is Country-band boosted** (stronger at z5–8, relaxes
 toward Site) so Topography is obviously distinct from Simple where program managers
-work — exaggeration is visual only; **Point altitude** remains real DEM metres. UI may
-label it “Terrain”; glossary and code stay **Topography** / `topography`.
+work — exaggeration is visual only; **Point altitude** remains real DEM metres. UI,
+glossary, and code all say **Topography** / `topography` (Layers used to say Terrain).
 _Avoid_: hillshade-only as the finished product; mesh-without-hillshade as the only
 top-down treatment; requiring pitch to understand relief; Cesium / a second map runtime;
 treating Topography as an Access layer; an exaggeration slider in this wedge; shipping

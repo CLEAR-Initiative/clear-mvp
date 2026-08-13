@@ -24,23 +24,37 @@ performs in the Site band is a decoration, not a feature.
 
 ## Base maps
 
-Three exclusive modes (Layers UI still labels Topography as **Terrain**), one
-design language. Product language: **Simple** | **Topography** | **Satellite**
-— see `CONTEXT.md` and [ADR-0004](adr/0004-topography-uses-mapbox-setterrain-not-cesium.md).
+Three exclusive modes, one design language. Product language:
+**Simple** | **Topography** | **Satellite** — see `CONTEXT.md` and
+[ADR-0004](adr/0004-topography-uses-mapbox-setterrain-not-cesium.md).
+Layers labels the basemap **Topography** (not Terrain).
 
 - **Simple** - Mapbox light-v11 / dark-v11 following the app theme. The
   clean canvas for data overlays. Flat camera; no DEM mesh.
-- **Topography** (UI: Terrain) - **Hybrid Topography**: same light/dark
-  cartography as Simple, plus hillshade **and** a Mapbox `setTerrain` mesh on
-  `mapbox-terrain-dem-v1`. NOT a separate Mapbox style: outdoors-v12 was tried
-  and rejected (pale landcover, no dark variant, drowned our overlays).
+- **Topography** - **Hybrid Topography**: **same light/dark cartography as
+  Simple** (no custom fog / void palette), plus subtle hillshade **and** a
+  Mapbox `setTerrain` mesh on `mapbox-terrain-dem-v1`. NOT a separate Mapbox
+  style: outdoors-v12 was tried and rejected (pale landcover, no dark
+  variant, drowned our overlays). Differences vs Simple are tilt, mesh, and
+  elevated pins — world-view a11y must match Simple.
   - **Pitch opt-in** — camera stays top-down (`pitch: 0`) until the analyst
     tilts; no auto-pitch on select; no dedicated Layers “3D” toggle. Leaving
     Topography clears the mesh and resets pitch. A one-time dismissible tilt
     hint teaches the gesture.
-  - **Country-band exaggeration** — visual mesh boost stronger at z5–8,
-    relaxing toward Site. Paint/mesh only; **Point altitude** stays
-    unexaggerated DEM metres.
+  - **Country-band exaggeration** — visual mesh boost after Mapbox’s
+    globe→mercator morph settles (mesh off through z≤6, full by ~7.5),
+    relaxing toward Site; hillshade still fades at far Region zoom.
+    Detaching `setTerrain` during the morph avoids stacking DEM 3D on the
+    sphere→plane unroll (Mapbox hardcodes that morph at z5–6). Paint/mesh
+    only; **Point altitude** stays unexaggerated DEM metres.
+  - **Elevated pins** — Topography unclustered markers are stem-capable with
+    a fixed ground anchor. Flat while pitch ≤ 45°; stem grows smoothly through
+    ~70° (`pinElevationFactor`). Simple / Satellite keep flat centered dots.
+  - **⌘+drag tilt** — same as Ctrl+drag / right-drag (meta→ctrl bridge on Mac).
+  - **Idle globe spin** — Mapbox `globe` projection stays on (Mapbox morphs
+    globe↔mercator with zoom — do not toggle on spin thresholds). At Region /
+    max zoom-out, slow polar-axis longitude drift (not bearing turntable);
+    ramps in during zoom-out; pauses on pan/tilt.
   - **Point altitude** — approximate DEM elevation via
     `queryTerrainElevation` while Topography is active: orange ground probe
     under the cursor (fades over pitched sky) and a row on the open Marker
@@ -103,10 +117,16 @@ override paint on the style's road layers.
 | Focus border | #1D4ED8 | #60A5FA |
 | Focus tint (Simple only) | #1E40AF @ .35 | #1E3A5F @ .45 |
 | Outside mask | #FFF @ .9 (Simple) / #000 @ .4 | #000 @ .55 (Simple) / #000 @ .4 |
-| Markers | severity scale (critical red -> low green), orange accent rings | same |
+| Canvas void (shell behind WebGL) | #FAFAFA | #111111 (Simple + Topography); #0a0a0a (Satellite) |
+| Topography atmosphere | same as Simple (no custom `setFog`) | same — cartography matches Simple; tilt / mesh / elevated pins only |
+| Markers | severity scale (critical red -> low green), orange accent rings; type glyph on unclustered pins; Topography stems grow with pitch (flat ≤45°, full ~70°) | same |
 
 Boundaries are blue, corridors tan, markers orange/severity - three
-distinguishable information channels at every zoom and theme.
+distinguishable information channels at every zoom and theme. On the
+point density band, severity stays the disc color and type is a white
+SVG glyph (`resolveMarkerIconSlug` → `/images/ui-kit/signals/icons/`).
+Heatmap and donut bands stay severity-only so glyphs do not fight
+aggregation.
 
 ## Known limits / roadmap
 

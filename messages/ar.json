@@ -1002,7 +1002,7 @@
   },
   "crisisDetail": {
     "backToAnalysis": "العودة إلى التحليل",
-    "viewOnCrisisMap": "عرض على خريطة الأزمات",
+    "viewOnCrisisMap": "عرض على الخريطة",
     "switchCrisis": "تبديل الأزمة",
     "untitledCrisis": "أزمة بلا عنوان",
     "crisisBadge": "أزمة",
@@ -1463,7 +1463,7 @@
       "oldest": "الأقدم أولاً"
     },
     "feed": {
-      "crisisMap": "خريطة الأزمات",
+      "crisisMap": "خريطة",
       "firstSignal": "أول إشارة: {time}",
       "signalCount": "{count, plural, zero {لا إشارات} one {إشارة واحدة} two {إشارتان} few {# إشارات} many {# إشارةً} other {# إشارة}}",
       "sourceLink": "المصدر",
@@ -1766,7 +1766,7 @@
       "description": "ربما تم حذف هذا الحدث أو أن المعرّف غير صالح."
     },
     "backToEvents": "العودة إلى نظرة عامة على الأحداث",
-    "viewOnCrisisMap": "عرض على خريطة الأزمات",
+    "viewOnCrisisMap": "عرض على الخريطة",
     "status": {
       "active": "نشط",
       "resolved": "محلول"
@@ -1934,7 +1934,7 @@
       "roads": "الطرق",
       "satellite": "الأقمار الصناعية",
       "simple": "بسيطة",
-      "topography": "تضاريس",
+      "topography": "طبوغرافية",
       "operational": "تشغيلي",
       "comingSoon": "قريبًا",
       "blockages": "العوائق",
@@ -2021,7 +2021,7 @@
     },
     "tokenMissing": "لم يُهيَّأ رمز Mapbox. عيّن NEXT_PUBLIC_MAPBOX_TOKEN في ملف .env",
     "tiltHint": {
-      "message": "التضاريس ثلاثية الأبعاد — انقر إمالة، أو Ctrl+سحب (زر أيمن) / إصبعان على اللمس",
+      "message": "الطبوغرافية ثلاثية الأبعاد — انقر إمالة، أو Ctrl/⌘+سحب (زر أيمن) / إصبعان على اللمس",
       "tilt": "إمالة",
       "dismiss": "ليس الآن"
     },
@@ -2588,7 +2588,7 @@
       "description": "ربما تم حذف هذه الإشارة أو أن المعرّف غير صالح."
     },
     "backToEvents": "العودة إلى نظرة عامة على الأحداث",
-    "viewOnCrisisMap": "عرض على خريطة الأزمات",
+    "viewOnCrisisMap": "عرض على الخريطة",
     "signalBadge": "إشارة",
     "fallbackTitleWithLocation": "إشارة - {location}",
     "fallbackTitle": "إشارة",

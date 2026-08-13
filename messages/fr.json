@@ -1002,7 +1002,7 @@
   },
   "crisisDetail": {
     "backToAnalysis": "Retour à l'analyse",
-    "viewOnCrisisMap": "Voir sur la carte des crises",
+    "viewOnCrisisMap": "Voir sur la carte",
     "switchCrisis": "Changer de crise",
     "untitledCrisis": "Crise sans titre",
     "crisisBadge": "Crise",
@@ -1463,7 +1463,7 @@
       "oldest": "Plus anciens d'abord"
     },
     "feed": {
-      "crisisMap": "Carte des crises",
+      "crisisMap": "Carte",
       "firstSignal": "Premier signal : {time}",
       "signalCount": "{count, plural, one {# signal} other {# signaux}}",
       "sourceLink": "Source",
@@ -1766,7 +1766,7 @@
       "description": "Cet événement a peut-être été supprimé ou l'identifiant est invalide."
     },
     "backToEvents": "Retour à la vue d'ensemble des événements",
-    "viewOnCrisisMap": "Voir sur la carte des crises",
+    "viewOnCrisisMap": "Voir sur la carte",
     "status": {
       "active": "Actif",
       "resolved": "Résolu"
@@ -1934,7 +1934,7 @@
       "roads": "Routes",
       "satellite": "Satellite",
       "simple": "Simple",
-      "topography": "Relief",
+      "topography": "Topographie",
       "operational": "Opérationnel",
       "comingSoon": "Bientôt disponible",
       "blockages": "Blocages",
@@ -2021,7 +2021,7 @@
     },
     "tokenMissing": "Jeton Mapbox non configuré. Définissez NEXT_PUBLIC_MAPBOX_TOKEN dans .env",
     "tiltHint": {
-      "message": "Le relief est en 3D — cliquez Incliner, ou Ctrl+glisser (clic droit) / deux doigts sur tactile",
+      "message": "La topographie est en 3D — cliquez Incliner, ou Ctrl/⌘+glisser (clic droit) / deux doigts sur tactile",
       "tilt": "Incliner",
       "dismiss": "Plus tard"
     },
@@ -2588,7 +2588,7 @@
       "description": "Ce signal a peut-être été supprimé ou l'identifiant est invalide."
     },
     "backToEvents": "Retour à la vue d'ensemble des événements",
-    "viewOnCrisisMap": "Voir sur la carte des crises",
+    "viewOnCrisisMap": "Voir sur la carte",
     "signalBadge": "Signal",
     "fallbackTitleWithLocation": "Signal - {location}",
     "fallbackTitle": "Signal",

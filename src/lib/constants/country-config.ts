@@ -9,6 +9,16 @@ export interface CountryConfig {
   pCode?: string;
 }
 
+/**
+ * Neutral camera when no country is selected ("All Countries") or a country
+ * has no config entry. Zoom ~1.6 shows a global/globe frame; country zooms
+ * (4–6) on this center look like a random Sahel/West-Africa crop (near Mali).
+ */
+export const WORLD_VIEW = {
+  center: [10, 20] as [number, number],
+  zoom: 1.6,
+};
+
 export const countryConfig: Record<string, CountryConfig> = {
   Sudan:        { center: [30.0, 15.5], zoom: 5,   pCode: "SD", hasCrisisData: true,  bbox: [21.8,  8.7, 38.6, 23.2], regions: ["All Regions", "Khartoum", "North Darfur", "South Darfur", "West Darfur", "Central Darfur", "Blue Nile", "Red Sea", "Kassala"] },
   Ethiopia:     { center: [40.5,  8.5], zoom: 5.5, pCode: "ET", hasCrisisData: true,  bbox: [33.0,  3.4, 48.0, 14.9], regions: ["All Regions", "Somali", "Oromia", "Afar", "Amhara", "Tigray", "SNNPR"] },

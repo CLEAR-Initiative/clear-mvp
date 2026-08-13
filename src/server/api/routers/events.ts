@@ -159,6 +159,7 @@ const EVENT_DETAIL_FIELDS = `
   firstSignalCreatedAt
   lastSignalCreatedAt
   populationAffected
+  populationDisplaced
   casualties
   representativePoint { ${DETAIL_POINT_LOCATION_FIELDS} }
   generalLocation { ${EVENT_DETAIL_LOCATION_FIELDS} }

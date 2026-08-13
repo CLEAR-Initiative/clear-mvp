@@ -15,13 +15,57 @@ import {
   Button,
   Divider,
 } from "@mantine/core";
-import { IconFilter } from "@tabler/icons-react";
+import { IconFilter, IconX } from "@tabler/icons-react";
 import { mapSeverity } from "~/lib/types/graphql";
 import type { GqlAlert, GqlEvent, GqlSignal } from "~/lib/types/graphql";
 import { DataTable, Table, SeverityBadge, FeedToolbar } from "~/components/ui";
 import { DetectionHistoryTableSkeleton } from "~/components/ui/detection-page-skeleton";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
+import {
+  filterChipStyle,
+  resolveInclusionChipVisual,
+  toggleInclusionFilter,
+} from "~/lib/history-filter-chips";
+
+const SUMMARY_CHIP_STYLE = {
+  background: "var(--color-accent-light)",
+  border: "1px solid var(--color-accent)",
+  color: "var(--color-accent)",
+} as const;
+
+function ActiveFilterChip({
+  label,
+  onDismiss,
+  capitalize = false,
+}: {
+  label: string;
+  onDismiss: () => void;
+  capitalize?: boolean;
+}) {
+  return (
+    <Badge
+      size="sm"
+      variant="outline"
+      rightSection={
+        <IconX
+          size={10}
+          style={{ cursor: "pointer" }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDismiss();
+          }}
+        />
+      }
+      style={{
+        textTransform: capitalize ? "capitalize" : "none",
+        ...SUMMARY_CHIP_STYLE,
+      }}
+    >
+      {label}
+    </Badge>
+  );
+}
 
 export type HistorySortOrder = "sev-desc" | "sev-asc" | "newest" | "oldest";
 
@@ -93,16 +137,12 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
   // can e.g. flip between "alerts only" and "signals only" without losing
   // their global severity/region/date filters.
   //
-  // Default to alerts-only: most history users are scanning escalated items,
-  // not raw signals/events. They can broaden via the chip filter.
-  const [activeClasses, setActiveClasses] = useState<Set<HistoryClass>>(
-    () => new Set<HistoryClass>(["alert"]),
-  );
-  // null = "all sources allowed"; an empty Set explicitly excludes everything.
+  // Class/source/type are all opt-in toggles: null = show all (nothing
+  // selected); an explicit Set narrows to those values.
+  const [activeClasses, setActiveClasses] = useState<Set<HistoryClass> | null>(null);
   const [activeSources, setActiveSources] = useState<Set<string> | null>(null);
   // Stored as L1 disaster *labels* (e.g. "Conflict", "Flood") — same string
-  // the table cell renders via getDisasterPills, so the chip text the user
-  // clicks and the pill text they see in the row line up exactly. null = all.
+  // the table cell renders via getDisasterPills.
   const [activeEventTypes, setActiveEventTypes] = useState<Set<string> | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -158,10 +198,13 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
 
   // Whether the type-filter section is even reachable. Alerts wrap events
   // and carry the same `types[]`, so the filter is meaningful whenever
-  // either class is in scope. Signals contribute no types — when only
-  // signals are selected the section is hidden because there's nothing to
-  // narrow against.
-  const typeFilterApplicable = activeClasses.has("event") || activeClasses.has("alert");
+  // either class is in scope (including the unconstrained null = all).
+  // Signals contribute no types — when only signals are selected the
+  // section is hidden because there's nothing to narrow against.
+  const typeFilterApplicable =
+    activeClasses === null ||
+    activeClasses.has("event") ||
+    activeClasses.has("alert");
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -169,7 +212,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
 
     // Class filter — short-circuit early so source/type passes operate on
     // a smaller set when classes are narrowed.
-    if (activeClasses.size < ALL_CLASSES.length) {
+    if (activeClasses !== null) {
       result = result.filter((row) => activeClasses.has(row.kind));
     }
 
@@ -227,20 +270,15 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
 
   // Compact summary of which filters are narrowing the view — drives the
   // badge counter on the filter button and the "Clear all" affordance.
-  // "Filtering" means "narrower than show-everything", so the alerts-only
-  // default reads as one active filter on first render and the badge
-  // disappears once the user hits Clear all (which opens every class).
+  // null on every dimension = show everything = badge hidden.
   const filterCount =
-    (activeClasses.size < ALL_CLASSES.length ? 1 : 0) +
+    (activeClasses !== null ? 1 : 0) +
     (activeSources !== null ? 1 : 0) +
     (activeEventTypes !== null && typeFilterApplicable ? 1 : 0);
   const isFiltered = filterCount > 0;
 
   const resetFilters = () => {
-    // True "clear all" — opens every class, drops the source and type
-    // filters. The alerts-only default applies on mount only; once the user
-    // chooses to clear, we don't re-impose it.
-    setActiveClasses(new Set<HistoryClass>(ALL_CLASSES));
+    setActiveClasses(null);
     setActiveSources(null);
     setActiveEventTypes(null);
   };
@@ -264,6 +302,7 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
           styles={{ root: { overflow: "visible" } }}
           onClick={() => setFilterOpen((o) => !o)}
           title={t("filters.filter")}
+          aria-label={t("filters.filter")}
         >
           <IconFilter size={13} color={isFiltered ? "var(--color-accent)" : "var(--color-text-muted)"} />
           {isFiltered && (
@@ -287,23 +326,16 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
             <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("history.columns.class")}</Text>
             <Group gap={6} mb={12} wrap="wrap">
               {ALL_CLASSES.map((cls) => {
-                const active = activeClasses.has(cls);
+                const visual = resolveInclusionChipVisual(activeClasses, cls);
                 return (
                   <Badge
                     key={cls}
                     size="sm"
-                    variant={active ? "filled" : "light"}
-                    color="dark"
-                    style={{ cursor: "pointer", textTransform: "capitalize" }}
-                    onClick={() => setActiveClasses((prev) => {
-                      const next = new Set(prev);
-                      // Don't allow zero classes — that would render an empty view
-                      // with no clear way back. Re-arm the toggled class instead.
-                      if (next.has(cls) && next.size === 1) return next;
-                      if (next.has(cls)) next.delete(cls);
-                      else next.add(cls);
-                      return next;
-                    })}
+                    variant="outline"
+                    style={{ cursor: "pointer", textTransform: "capitalize", ...filterChipStyle(visual) }}
+                    onClick={() =>
+                      setActiveClasses((prev) => toggleInclusionFilter(prev, cls, ALL_CLASSES))
+                    }
                   >
                     {t(`history.classes.${cls}`)}
                   </Badge>
@@ -318,25 +350,18 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
                 <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("history.columns.source")}</Text>
                 <Group gap={6} mb={12} wrap="wrap">
                   {allDataSources.map((src) => {
-                    // Mirrors the page-level pattern: `null` means "all sources
-                    // included", any explicit Set narrows. Toggling the last
-                    // remaining source flips back to null so the chip stays
-                    // visually active.
-                    const active = activeSources === null || activeSources.has(src);
+                    const visual = resolveInclusionChipVisual(activeSources, src);
                     return (
                       <Badge
                         key={src}
                         size="sm"
-                        variant={active ? "filled" : "light"}
-                        color={active ? "dark" : "gray"}
-                        style={{ cursor: "pointer", textTransform: "none" }}
-                        onClick={() => setActiveSources((prev) => {
-                          const base = prev ?? new Set(allDataSources);
-                          const next = new Set(base);
-                          if (next.has(src)) next.delete(src);
-                          else next.add(src);
-                          return next.size === allDataSources.length ? null : next;
-                        })}
+                        variant="outline"
+                        style={{ cursor: "pointer", textTransform: "none", ...filterChipStyle(visual) }}
+                        onClick={() =>
+                          setActiveSources((prev) =>
+                            toggleInclusionFilter(prev, src, allDataSources),
+                          )
+                        }
                       >
                         {src}
                       </Badge>
@@ -353,21 +378,18 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
                 <Text size="xs" fw={700} c="var(--color-text-primary)" mb={8}>{t("history.columns.type")}</Text>
                 <Group gap={6} wrap="wrap">
                   {allEventTypes.map((label) => {
-                    const active = activeEventTypes === null || activeEventTypes.has(label);
+                    const visual = resolveInclusionChipVisual(activeEventTypes, label);
                     return (
                       <Badge
                         key={label}
                         size="sm"
-                        variant={active ? "filled" : "light"}
-                        color={active ? "dark" : "gray"}
-                        style={{ cursor: "pointer", textTransform: "none" }}
-                        onClick={() => setActiveEventTypes((prev) => {
-                          const base = prev ?? new Set(allEventTypes);
-                          const next = new Set(base);
-                          if (next.has(label)) next.delete(label);
-                          else next.add(label);
-                          return next.size === allEventTypes.length ? null : next;
-                        })}
+                        variant="outline"
+                        style={{ cursor: "pointer", textTransform: "none", ...filterChipStyle(visual) }}
+                        onClick={() =>
+                          setActiveEventTypes((prev) =>
+                            toggleInclusionFilter(prev, label, allEventTypes),
+                          )
+                        }
                       >
                         {label}
                       </Badge>
@@ -379,6 +401,50 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
       </Popover.Dropdown>
     </Popover>
   );
+
+  // Durable summary of active constraints — visible with the popover closed.
+  // Dismissing the last chip on a dimension clears that constraint (null).
+  const activeFilterSummary = isFiltered ? (
+    <Group gap={6} mb={12} wrap="wrap" align="center">
+      {activeClasses !== null &&
+        ALL_CLASSES.filter((cls) => activeClasses.has(cls)).map((cls) => (
+          <ActiveFilterChip
+            key={`summary-class-${cls}`}
+            label={t(`history.classes.${cls}`)}
+            capitalize
+            onDismiss={() =>
+              setActiveClasses((prev) => toggleInclusionFilter(prev, cls, ALL_CLASSES))
+            }
+          />
+        ))}
+      {activeSources !== null &&
+        [...activeSources].sort().map((src) => (
+          <ActiveFilterChip
+            key={`summary-source-${src}`}
+            label={src}
+            onDismiss={() =>
+              setActiveSources((prev) => toggleInclusionFilter(prev, src, allDataSources))
+            }
+          />
+        ))}
+      {activeEventTypes !== null &&
+        typeFilterApplicable &&
+        [...activeEventTypes].sort().map((label) => (
+          <ActiveFilterChip
+            key={`summary-type-${label}`}
+            label={label}
+            onDismiss={() =>
+              setActiveEventTypes((prev) =>
+                toggleInclusionFilter(prev, label, allEventTypes),
+              )
+            }
+          />
+        ))}
+      <Button size="compact-xs" variant="subtle" color="gray" onClick={resetFilters}>
+        {t("filters.clearAll")}
+      </Button>
+    </Group>
+  ) : null;
 
   return (
     <Box>
@@ -393,6 +459,8 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
         onSortChange={(o) => onSortChange(o as HistorySortOrder)}
         rightSlot={filterPopover}
       />
+
+      {activeFilterSummary}
 
       <Card p={0} style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
         {loading ? (
