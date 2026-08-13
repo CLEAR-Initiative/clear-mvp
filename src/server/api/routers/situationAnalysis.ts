@@ -59,6 +59,52 @@ interface GqlCountry {
   name: string;
 }
 
+interface ReportMeta {
+  reportId: string;
+  reportTitle: string | null;
+  sourceUrl: string | null;
+  publishedAt: string | null;
+}
+
+/**
+ * Look up titles for reports the narrative cites but the payload's own
+ * `sources.reports` omits.
+ *
+ * The pipeline builds that list from the datapoint aggregation's contributors
+ * only, so most RAG-cited reports are missing from it and would otherwise
+ * render as bare numbers. clear-api knows them: one aliased `reportDatapoint`
+ * per id in a single round trip.
+ *
+ * Best-effort - on failure the caller still renders, just without titles.
+ */
+async function fetchReportMeta(
+  ids: string[],
+  headers: Record<string, string>,
+): Promise<Map<string, ReportMeta>> {
+  const out = new Map<string, ReportMeta>();
+  if (ids.length === 0) return out;
+
+  const fields = ids
+    .map((_, i) => `r${i}: reportDatapoint(reportId: $i${i}) { reportId reportTitle sourceUrl publishedAt }`)
+    .join("\n");
+  const params = ids.map((_, i) => `$i${i}: String!`).join(", ");
+  const variables = Object.fromEntries(ids.map((id, i) => [`i${i}`, id]));
+
+  try {
+    const data = await graphqlFetch<Record<string, ReportMeta | null>>(
+      `query ReportMeta(${params}) {\n${fields}\n}`,
+      variables,
+      headers,
+    );
+    for (const meta of Object.values(data ?? {})) {
+      if (meta?.reportId) out.set(meta.reportId, meta);
+    }
+  } catch {
+    // Titles are a nicety; numbering still works without them.
+  }
+  return out;
+}
+
 /**
  * ISO timestamps for the start of the current month and the `back` months
  * before it, newest first. Midnight UTC on the 1st, which is the exact instant
@@ -137,6 +183,33 @@ export const situationAnalysisRouter = createTRPCRouter({
       row ??= await fetchBucket(base);
 
       if (!row) return null;
+
+      // Hydrate the reports the narrative cites but `sources.reports` omits, so
+      // their citation chips resolve to a real title instead of a bare number.
+      const listed = new Set(
+        (row.data?.sources?.reports ?? []).map((r) => r.report_id).filter(Boolean),
+      );
+      const missing = (row.sourceReportIds ?? []).filter((id) => id && !listed.has(id));
+      if (missing.length > 0) {
+        const meta = await fetchReportMeta(missing, cookieHeaders(ctx));
+        const hydrated = missing
+          .map((id) => meta.get(id))
+          .filter((m): m is ReportMeta => !!m)
+          .map((m) => ({
+            report_id: m.reportId,
+            report_title: m.reportTitle ?? undefined,
+            source_url: m.sourceUrl ?? undefined,
+            published_at: m.publishedAt ?? undefined,
+          }));
+        row = {
+          ...row,
+          data: {
+            ...row.data,
+            sources: { reports: [...(row.data?.sources?.reports ?? []), ...hydrated] },
+          },
+        };
+      }
+
       return mapSituationAnalysis(row, input.countryName);
     }),
 });
