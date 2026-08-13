@@ -5,7 +5,7 @@ import { Box, Card, Group, SimpleGrid, Text } from "@mantine/core";
 import { IconSparkles } from "@tabler/icons-react";
 import { CardSection } from "~/components/ui";
 import type { SituationAnalysis } from "~/server/api/mappers/situation-analysis";
-import { planSentenceSegments } from "./summary-citations";
+import { planSentenceSegments, planSummaryParagraphs } from "./summary-citations";
 import { BulletCard } from "./bullet-card";
 import { SituationKpis } from "./situation-kpis";
 import { Citations } from "./citations";
@@ -56,8 +56,8 @@ export function SituationOverview({
               {t("summary.title")}
             </Text>
           </Group>
-          {summary.split(/\n{2,}/).map((para, i, arr) => {
-            const segments = planSentenceSegments(para.trim(), data.summaryLineRefs);
+          {planSummaryParagraphs(summary, data.summaryLineRefs).map((para, i, arr) => {
+            const segments = planSentenceSegments(para, data.summaryLineRefs);
             return (
               <Text
                 key={i}
