@@ -97,7 +97,21 @@ export type ShakeMapContourFeature = {
   };
 };
 
-/** ShakeMap contours for a single earthquake. */
+/**
+ * ShakeMap contours for a single earthquake.
+ * 
+ * VISUALIZATION APPROACH (Topographic Shockwave):
+ * - Contours rendered as thick, overlapping bands with gradient blur
+ * - Color gradient: Green (MMI 1-3, weak) → Yellow (4-5) → Orange (6-7) → Red (8-10, severe)
+ * - Sorted ascending so higher intensities draw on top
+ * - Epicenter: prominent red circle (12px, 4px white border)
+ * 
+ * DATA FORMAT:
+ * - Each feature is a MultiLineString boundary of equal intensity (isoseismal)
+ * - properties.value = MMI level (1-10); higher = closer to epicenter
+ * - Source: USGS ShakeMap API /detail/{eventId}.geojson → products.shakemap[0].contents["download/cont_mmi.json"]
+ * - Size: ~10-50 KB per event (5-15 contours, 100-500 coords each)
+ */
 export type ShakeMapContours = {
   eventId: string;
   type: "FeatureCollection";
