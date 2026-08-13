@@ -1000,7 +1000,7 @@
   },
   "crisisDetail": {
     "backToAnalysis": "Back to Analysis",
-    "viewOnCrisisMap": "View on Crisis Map",
+    "viewOnCrisisMap": "View on Map",
     "switchCrisis": "Switch crisis",
     "untitledCrisis": "Untitled crisis",
     "crisisBadge": "Crisis",
@@ -1461,7 +1461,7 @@
       "oldest": "Oldest first"
     },
     "feed": {
-      "crisisMap": "Crisis Map",
+      "crisisMap": "Map",
       "firstSignal": "First signal: {time}",
       "signalCount": "{count, plural, one {# signal} other {# signals}}",
       "sourceLink": "Source",
@@ -1764,7 +1764,7 @@
       "description": "This event may have been removed or the ID is invalid."
     },
     "backToEvents": "Back to Events Overview",
-    "viewOnCrisisMap": "View on Crisis Map",
+    "viewOnCrisisMap": "View on Map",
     "nav": {
       "previous": "Previous event",
       "next": "Next event",
@@ -2585,7 +2585,7 @@
       "description": "This signal may have been removed or the ID is invalid."
     },
     "backToEvents": "Back to Events Overview",
-    "viewOnCrisisMap": "View on Crisis Map",
+    "viewOnCrisisMap": "View on Map",
     "nav": {
       "previous": "Previous signal",
       "next": "Next signal",
