@@ -9,6 +9,12 @@ import {
   resolveDetailNavIds,
   resolveDetectionNavContext,
 } from "~/lib/detection-nav-context";
+import {
+  isMapNavQueryReady,
+  readMapNavEventIds,
+  readMapNavSignalIds,
+  resolveMapNavContext,
+} from "~/lib/map-nav-context";
 import { getListNavigation } from "~/lib/detail-list-nav";
 import type { GqlEvent, GqlLocation, GqlSignal } from "~/lib/types/graphql";
 
@@ -66,8 +72,8 @@ export type DetailListSource = "detection" | "map";
 export interface DetailNavigationOptions {
   /**
    * `detection` (default): Detection Events/Signals tab order + session filters.
-   * `map`: map feed (`eventsForMap` / `signals.forMap`) so map → detail arrows work
-   * even when the entity is outside the Detection filter window.
+   * `map`: map feed (`eventsForMap` / `signals.forMap`) scoped to the map's
+   * country/region filter so map → detail arrows stay inside that slice.
    */
   listSource?: DetailListSource;
 }
@@ -75,7 +81,8 @@ export interface DetailNavigationOptions {
 /**
  * Hook for event prev/next navigation.
  * Detection entry prefers the id list written by the Detection feed; map entry
- * uses the map events feed (with team + default 30d window).
+ * uses the map events feed scoped to the map's country/region filter (plus the
+ * filtered marker id list written by the map page).
  */
 export function useEventNavigation(
   currentEventId: string,
@@ -90,7 +97,12 @@ export function useEventNavigation(
     () => resolveDetectionNavContext(getLocationId, activeTeamId),
     [getLocationId, activeTeamId],
   );
+  const mapNavContext = useMemo(
+    () => resolveMapNavContext(getLocationId, activeTeamId),
+    [getLocationId, activeTeamId],
+  );
   const hasLocationFilter = !!navContext.locationId;
+  const mapQueryReady = isMapNavQueryReady(mapNavContext);
   const mapWindow = useMemo(() => defaultMapNavTimeWindow(), []);
 
   // Same filtered/ordered page as Detection Events tab (capped at API max).
@@ -112,15 +124,24 @@ export function useEventNavigation(
     { enabled: !fromMap && hasLocationFilter },
   );
 
-  // Map feed — match map page defaults (team + 30d) so the opened pin is present.
+  // Map feed — honor the map's country/region scope + timeframe so arrows
+  // cannot jump Sudan ↔ Venezuela when a country filter was active.
   const mapQuery = api.alerts.eventsForMap.useQuery(
     {
       includeDummy: true,
       teamId: activeTeamId ?? undefined,
-      from: mapWindow.from,
-      to: mapWindow.to,
+      locationId: mapNavContext.locationId ?? undefined,
+      // null = map timeframe "all"; omit bound. Missing → default 30d window.
+      from:
+        mapNavContext.from === null
+          ? undefined
+          : (mapNavContext.from ?? mapWindow.from),
+      to:
+        mapNavContext.to === null
+          ? undefined
+          : (mapNavContext.to ?? mapWindow.to),
     },
-    { enabled: fromMap, staleTime: 60_000 },
+    { enabled: fromMap && mapQueryReady, staleTime: 60_000 },
   );
 
   const items = useMemo(
@@ -129,8 +150,8 @@ export function useEventNavigation(
   );
   const queriedIds = useMemo(() => items.map((e) => e.id), [items]);
   const storedIds = useMemo(
-    () => (fromMap ? null : readDetectionNavEventIds()),
-    // Re-read when the committed event changes (after Detection wrote ids).
+    () => (fromMap ? readMapNavEventIds() : readDetectionNavEventIds()),
+    // Re-read when the committed event changes (after map/Detection wrote ids).
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sessionStorage, not React state
     [fromMap, currentEventId],
   );
@@ -149,7 +170,9 @@ export function useEventNavigation(
     ...nav,
     orderedIds,
     isLoading: fromMap
-      ? mapQuery.isLoading
+      ? hasStoredIds
+        ? false
+        : !mapQueryReady || mapQuery.isLoading
       : hasStoredIds
         ? false
         : !hasLocationFilter || detectionQuery.isLoading,
@@ -182,7 +205,8 @@ export function getSignalMapCenter(signal: GqlSignal | null | undefined): [numbe
 /**
  * Hook for signal prev/next navigation.
  * Detection entry prefers the id list written by the Detection feed; map entry
- * uses the map signals feed (with team + default 30d window).
+ * uses the map signals feed scoped to the map's country/region filter (plus the
+ * filtered marker id list written by the map page).
  */
 export function useSignalNavigation(
   currentSignalId: string,
@@ -197,7 +221,12 @@ export function useSignalNavigation(
     () => resolveDetectionNavContext(getLocationId, activeTeamId),
     [getLocationId, activeTeamId],
   );
+  const mapNavContext = useMemo(
+    () => resolveMapNavContext(getLocationId, activeTeamId),
+    [getLocationId, activeTeamId],
+  );
   const hasLocationFilter = !!navContext.locationId;
+  const mapQueryReady = isMapNavQueryReady(mapNavContext);
   const mapWindow = useMemo(() => defaultMapNavTimeWindow(), []);
 
   const detectionQuery = api.signals.signalsPage.useQuery(
@@ -220,10 +249,17 @@ export function useSignalNavigation(
     {
       includeDummy: true,
       teamId: activeTeamId ?? undefined,
-      from: mapWindow.from,
-      to: mapWindow.to,
+      locationId: mapNavContext.locationId ?? undefined,
+      from:
+        mapNavContext.from === null
+          ? undefined
+          : (mapNavContext.from ?? mapWindow.from),
+      to:
+        mapNavContext.to === null
+          ? undefined
+          : (mapNavContext.to ?? mapWindow.to),
     },
-    { enabled: fromMap, staleTime: 60_000 },
+    { enabled: fromMap && mapQueryReady, staleTime: 60_000 },
   );
 
   const items = useMemo(
@@ -232,7 +268,7 @@ export function useSignalNavigation(
   );
   const queriedIds = useMemo(() => items.map((s) => s.id), [items]);
   const storedIds = useMemo(
-    () => (fromMap ? null : readDetectionNavSignalIds()),
+    () => (fromMap ? readMapNavSignalIds() : readDetectionNavSignalIds()),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sessionStorage, not React state
     [fromMap, currentSignalId],
   );
@@ -251,7 +287,9 @@ export function useSignalNavigation(
     ...nav,
     orderedIds,
     isLoading: fromMap
-      ? mapQuery.isLoading
+      ? hasStoredIds
+        ? false
+        : !mapQueryReady || mapQuery.isLoading
       : hasStoredIds
         ? false
         : !hasLocationFilter || detectionQuery.isLoading,
