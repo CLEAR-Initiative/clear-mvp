@@ -754,9 +754,10 @@ export function CrisisMap({
   // Hybrid Topography: hillshade + DEM terrain mesh (`setTerrain`) while
   // Topography is active. Mesh off through Mapbox globe→mercator morph (z5–6)
   // and far Region; Country boost after morph settles (numeric — zoom
-  // expressions can leave the mesh off). Pitch is opt-in. Runs before the
-  // focus effect so the dim mask lands above the relief outside the focus
-  // country too.
+  // expressions can leave the mesh off). Pitch gestures stay on for all
+  // basemaps (hint is Topography-only; pitch is never reset on swap). Runs
+  // before the focus effect so the dim mask lands above the relief outside
+  // the focus country too.
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;

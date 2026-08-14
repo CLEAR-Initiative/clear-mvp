@@ -38,9 +38,10 @@ Layers labels the basemap **Topography** (not Terrain).
   variant, drowned our overlays). Differences vs Simple are tilt, mesh, and
   elevated pins — world-view a11y must match Simple.
   - **Pitch opt-in** — camera stays top-down (`pitch: 0`) until the analyst
-    tilts; no auto-pitch on select; no dedicated Layers “3D” toggle. Leaving
-    Topography clears the mesh and resets pitch. A one-time dismissible tilt
-    hint teaches the gesture.
+    tilts; no auto-pitch on select; no dedicated Layers “3D” toggle. Tilt
+    gestures work on Simple / Satellite / Topography; leaving Topography
+    clears the mesh but preserves pitch. A one-time dismissible tilt hint
+    (Topography only) teaches the gesture.
   - **Country-band exaggeration** — visual mesh boost after Mapbox’s
     globe→mercator morph settles (mesh off through z≤6, full by ~7.5),
     relaxing toward Site; hillshade still fades at far Region zoom.
