@@ -42,10 +42,7 @@ function EventDetailPageContent({
   // List from committed id; chrome follows scrubId (GH #148 settle-to-commit).
   const listSource = referrer === "map" ? "map" : "detection";
   const listNav = useEventNavigation(activeId, { listSource });
-  const orderedIds = useMemo(
-    () => listNav.listItems.map((e) => e.id),
-    [listNav.listItems],
-  );
+  const orderedIds = listNav.orderedIds;
   const { scrubId } = useDetailKeyboardScrub({
     ids: orderedIds,
     committedId: activeId,

@@ -40,10 +40,7 @@ function SignalDetailPageContent({
   // List from committed id; chrome follows scrubId (GH #148 settle-to-commit).
   const listSource = referrer === "map" ? "map" : "detection";
   const listNav = useSignalNavigation(activeId, { listSource });
-  const orderedIds = useMemo(
-    () => listNav.listItems.map((s) => s.id),
-    [listNav.listItems],
-  );
+  const orderedIds = listNav.orderedIds;
   const { scrubId } = useDetailKeyboardScrub({
     ids: orderedIds,
     committedId: activeId,

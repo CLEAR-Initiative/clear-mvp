@@ -1,9 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  defaultMapNavTimeWindow,
   getDefaultDetectionNavContext,
   readDetectionNavContext,
+  readDetectionNavEventIds,
+  readDetectionNavSignalIds,
+  resolveDetailNavIds,
   resolveDetectionNavContext,
   writeDetectionNavContext,
+  writeDetectionNavEventIds,
+  writeDetectionNavSignalIds,
   type DetectionNavContext,
 } from "~/lib/detection-nav-context";
 
@@ -115,5 +121,49 @@ describe("writeDetectionNavContext / readDetectionNavContext", () => {
     };
     writeDetectionNavContext(ctx);
     expect(readDetectionNavContext()).toEqual(ctx);
+  });
+});
+
+describe("detection nav id lists", () => {
+  it("round-trips event and signal ids", () => {
+    writeDetectionNavEventIds(["e1", "e2", "e3"]);
+    writeDetectionNavSignalIds(["s1", "s2"]);
+    expect(readDetectionNavEventIds()).toEqual(["e1", "e2", "e3"]);
+    expect(readDetectionNavSignalIds()).toEqual(["s1", "s2"]);
+  });
+
+  it("returns null for empty or invalid payloads", () => {
+    writeDetectionNavEventIds([]);
+    expect(readDetectionNavEventIds()).toBeNull();
+    sessionStorage.setItem("detection-nav-event-ids", "{not-json");
+    expect(readDetectionNavEventIds()).toBeNull();
+  });
+});
+
+describe("resolveDetailNavIds", () => {
+  it("prefers the stored Detection list over a re-queried page", () => {
+    expect(resolveDetailNavIds(["a", "b", "c"], ["c", "d"])).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
+  });
+
+  it("falls back to queried ids when nothing was stored", () => {
+    expect(resolveDetailNavIds(null, ["x", "y"])).toEqual(["x", "y"]);
+    expect(resolveDetailNavIds([], ["x", "y"])).toEqual(["x", "y"]);
+  });
+});
+
+describe("defaultMapNavTimeWindow", () => {
+  it("returns a ~30 day window ending near now", () => {
+    const { from, to } = defaultMapNavTimeWindow();
+    const fromMs = Date.parse(from);
+    const toMs = Date.parse(to);
+    expect(Number.isFinite(fromMs)).toBe(true);
+    expect(Number.isFinite(toMs)).toBe(true);
+    const days = (toMs - fromMs) / (24 * 60 * 60 * 1000);
+    expect(days).toBeGreaterThan(29);
+    expect(days).toBeLessThan(31);
   });
 });
