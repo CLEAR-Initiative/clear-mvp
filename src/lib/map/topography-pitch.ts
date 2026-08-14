@@ -1,10 +1,11 @@
 /**
- * Topography pitch opt-in — enable tilt gestures only while Topography is
- * active; never auto-pitch on select; reset pitch when leaving.
+ * Map pitch policy — enable tilt gestures on every basemap; never auto-pitch
+ * on select; never reset pitch when switching layers.
  *
- * Desktop Mapbox pitch is Ctrl+drag, ⌘+drag (via meta→ctrl bridge), or
- * right-click drag (not plain pan). Touch uses two-finger pitch. An explicit
- * “Tilt” action is also opt-in.
+ * The Topography tilt *hint* is separate (`topography-tilt-hint`) and stays
+ * Topography-only. Desktop Mapbox pitch is Ctrl+drag, ⌘+drag (via meta→ctrl
+ * bridge), or right-click drag (not plain pan). Touch uses two-finger pitch.
+ * An explicit “Tilt” action on the hint is also opt-in.
  */
 
 /** Opt-in demo pitch — enough to reveal the DEM mesh without auto-select. */
@@ -74,19 +75,12 @@ export function applyTopographyOptInTilt(map: TopographyPitchMap): void {
 
 /**
  * Sync pitch policy to basemap.
- * Topography: gestures on, pitch unchanged (no auto-tilt).
- * Simple / Satellite: gestures off, pitch forced to 0.
+ * All basemaps: gestures on, pitch unchanged (no auto-tilt, no reset on swap).
+ * `baseMapType` is accepted so callers can keep one sync hook per basemap change.
  */
 export function syncTopographyPitch(
   map: TopographyPitchMap,
-  baseMapType: "simple" | "topography" | "satellite",
+  _baseMapType: "simple" | "topography" | "satellite",
 ): void {
-  if (baseMapType === "topography") {
-    setTopographyPitchGestures(map, true);
-    return;
-  }
-  setTopographyPitchGestures(map, false);
-  if (map.getPitch() !== 0) {
-    resetTopographyPitch(map);
-  }
+  setTopographyPitchGestures(map, true);
 }
