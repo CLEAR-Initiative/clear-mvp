@@ -20,6 +20,9 @@ export interface DetectionNavContext {
 
 const STORAGE_KEY = "detection-nav-context";
 const FILTERS_STORAGE_KEY = "detection-filters";
+/** Ordered entity ids from the Detection feed the analyst actually saw. */
+const EVENT_IDS_STORAGE_KEY = "detection-nav-event-ids";
+const SIGNAL_IDS_STORAGE_KEY = "detection-nav-signal-ids";
 
 export function writeDetectionNavContext(context: DetectionNavContext): void {
   try {
@@ -37,6 +40,45 @@ export function readDetectionNavContext(): DetectionNavContext | null {
   } catch {
     return null;
   }
+}
+
+function writeIdList(key: string, ids: readonly string[]): void {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(ids));
+  } catch {
+    /* private mode / quota */
+  }
+}
+
+function readIdList(key: string): string[] | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const ids = parsed.filter((id): id is string => typeof id === "string" && id.length > 0);
+    return ids.length > 0 ? ids : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Persist Detection Events/Alerts order for detail prev/next (same-tab). */
+export function writeDetectionNavEventIds(ids: readonly string[]): void {
+  writeIdList(EVENT_IDS_STORAGE_KEY, ids);
+}
+
+export function readDetectionNavEventIds(): string[] | null {
+  return readIdList(EVENT_IDS_STORAGE_KEY);
+}
+
+/** Persist Detection Signals order for detail prev/next (same-tab). */
+export function writeDetectionNavSignalIds(ids: readonly string[]): void {
+  writeIdList(SIGNAL_IDS_STORAGE_KEY, ids);
+}
+
+export function readDetectionNavSignalIds(): string[] | null {
+  return readIdList(SIGNAL_IDS_STORAGE_KEY);
 }
 
 function readStoredFilterCountry(): string | null {
@@ -94,4 +136,25 @@ export function resolveDetectionNavContext(
     country,
     locationId,
   };
+}
+
+/** Default map browse window (matches map page timeframe default of 30d). */
+export function defaultMapNavTimeWindow(): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date(to);
+  from.setDate(from.getDate() - 30);
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+/**
+ * Prefer the Detection feed id list the analyst saw; fall back to a re-queried
+ * page of ids. Stored list wins whenever non-empty so load-more order and
+ * filter drift cannot blank the chevrons.
+ */
+export function resolveDetailNavIds(
+  storedIds: readonly string[] | null | undefined,
+  queriedIds: readonly string[],
+): string[] {
+  if (storedIds && storedIds.length > 0) return [...storedIds];
+  return [...queriedIds];
 }
