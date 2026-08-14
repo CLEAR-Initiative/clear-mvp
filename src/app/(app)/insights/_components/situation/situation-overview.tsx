@@ -5,6 +5,8 @@ import { Box, Card, Group, SimpleGrid, Text } from "@mantine/core";
 import { IconSparkles } from "@tabler/icons-react";
 import { CardSection } from "~/components/ui";
 import type { SituationAnalysis } from "~/server/api/mappers/situation-analysis";
+import { planSentenceSegments, planSummaryParagraphs } from "./summary-citations";
+import { BulletRow } from "./bullet-row";
 import { BulletCard } from "./bullet-card";
 import { SituationKpis } from "./situation-kpis";
 import { Citations } from "./citations";
@@ -30,6 +32,7 @@ export function SituationOverview({
   const { hazards, displacement, contextRisks, summary, sources } = data;
   const hasHazards = hazards.hazards.length > 0 || hazards.vulnerabilities.length > 0;
   const hasDisplacement = displacement.push.length > 0 || displacement.return.length > 0;
+  const hasPerSentenceCitations = Object.keys(data.summaryLineRefs).length > 0;
 
   return (
     <Box>
@@ -54,24 +57,44 @@ export function SituationOverview({
               {t("summary.title")}
             </Text>
           </Group>
-          {summary.split(/\n{2,}/).map((para, i, arr) => (
-            <Text
-              key={i}
-              c="var(--color-text-primary)"
-              mb={i === arr.length - 1 ? 0 : 12}
-              style={{ fontSize: 13, lineHeight: 1.65 }}
-            >
-              {para.trim()}
-              {i === arr.length - 1 && (
-                <Citations
-                  refs={data.summaryRefs}
-                  sources={sources}
-                  onOpen={onOpenSources}
-                  variant="inline"
-                />
-              )}
-            </Text>
-          ))}
+          {planSummaryParagraphs(summary, data.summaryLineRefs).map((para, i, arr) => {
+            const segments = planSentenceSegments(para, data.summaryLineRefs);
+            return (
+              <Text
+                key={i}
+                c="var(--color-text-primary)"
+                mb={i === arr.length - 1 ? 0 : 12}
+                style={{ fontSize: 13, lineHeight: 1.65 }}
+              >
+                {segments
+                  ? segments.map((seg, j) =>
+                      seg.kind === "text" ? (
+                        seg.text
+                      ) : (
+                        <Citations
+                          key={j}
+                          refs={seg.refs}
+                          sources={sources}
+                          onOpen={onOpenSources}
+                          variant="inline"
+                        />
+                      ),
+                    )
+                  : para.trim()}
+                {/* Block-level fallback only when no sentence in the whole
+                    summary carried its own citation - otherwise the trailing
+                    list duplicates what is now shown inline. */}
+                {i === arr.length - 1 && !hasPerSentenceCitations && (
+                  <Citations
+                    refs={data.summaryRefs}
+                    sources={sources}
+                    onOpen={onOpenSources}
+                    variant="inline"
+                  />
+                )}
+              </Text>
+            );
+          })}
         </Card>
       )}
 
@@ -104,23 +127,37 @@ export function SituationOverview({
                   {risk.label}
                 </Text>
                 <Box>
-                  {risk.items.map((item, j) => (
-                    <Text
-                      key={j}
-                      c="var(--color-text-primary)"
-                      style={{ fontSize: 13, lineHeight: 1.5 }}
-                    >
-                      {item}
-                      {j === risk.items.length - 1 && (
-                        <Citations
-                          refs={risk.refs}
-                          sources={sources}
-                          onOpen={onOpenSources}
-                          variant="inline"
-                        />
-                      )}
-                    </Text>
-                  ))}
+                  {risk.items.map((item, j) => {
+                    // Per-bullet where the pipeline attributed it; otherwise the
+                    // domain's own refs, once, on the last bullet - so an older
+                    // analysis still shows where the block came from.
+                    const refs = risk.lineRefs[item.trim()] ?? [];
+                    const showDomainRefs =
+                      refs.length === 0 &&
+                      Object.keys(risk.lineRefs).length === 0 &&
+                      j === risk.items.length - 1;
+                    return (
+                      <BulletRow key={j} last={j === risk.items.length - 1}>
+                        {item}
+                        {refs.length > 0 && (
+                          <Citations
+                            refs={refs}
+                            sources={sources}
+                            onOpen={onOpenSources}
+                            variant="inline"
+                          />
+                        )}
+                        {showDomainRefs && (
+                          <Citations
+                            refs={risk.refs}
+                            sources={sources}
+                            onOpen={onOpenSources}
+                            variant="inline"
+                          />
+                        )}
+                      </BulletRow>
+                    );
+                  })}
                   <SectionChange note={data.changes.notes[`context_risks.${risk.key}`]} />
                 </Box>
               </Group>

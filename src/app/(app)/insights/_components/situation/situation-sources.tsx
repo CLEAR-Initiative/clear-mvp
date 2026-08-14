@@ -128,7 +128,9 @@ function Reference({
           </Anchor>
         ) : (
           <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13.5, lineHeight: 1.4 }}>
-            {source.title}
+            {/* Cited by the narrative but absent from the pipeline's sources
+                list, so no title was resolved - show the report id. */}
+            {source.title || `ReliefWeb report ${source.id}`}
           </Text>
         )}
 

@@ -7,6 +7,7 @@ import { CardSection, SeverityBadge } from "~/components/ui";
 import type { SaSector, SaSource } from "~/server/api/mappers/situation-analysis";
 import { toAppSeverity } from "./severity";
 import { Citations } from "./citations";
+import { BulletRow } from "./bullet-row";
 import { SectionChange } from "./section-change";
 
 /**
@@ -98,7 +99,18 @@ export function SituationSectors({
   );
 }
 
-function PillarList({ label, items }: { label: string; items: string[] }) {
+function PillarList({
+  label,
+  items,
+  lineRefs,
+  sources,
+}: {
+  label: string;
+  items: string[];
+  /** Per-line citations keyed by exact bullet text. Empty on older analyses. */
+  lineRefs?: Record<string, number[]>;
+  sources?: SaSource[];
+}) {
   if (items.length === 0) return null;
   return (
     <Box mb={16}>
@@ -111,16 +123,22 @@ function PillarList({ label, items }: { label: string; items: string[] }) {
       >
         {label}
       </Text>
-      {items.map((item, i) => (
-        <Group key={i} gap={8} align="flex-start" wrap="nowrap" mb={6}>
-          <Text c="var(--color-text-muted)" style={{ fontSize: 13, lineHeight: 1.5 }}>
-            &bull;
-          </Text>
-          <Text c="var(--color-text-primary)" style={{ fontSize: 13, lineHeight: 1.5 }}>
+      {items.map((item, i) => {
+        // Keyed on the exact generated line, matching how the pipeline emits
+        // it. Trimmed because the mapper trims when building the index.
+        const refs = lineRefs?.[item.trim()] ?? [];
+        return (
+          <BulletRow key={i} last={i === items.length - 1}>
             {item}
-          </Text>
-        </Group>
-      ))}
+            {refs.length > 0 && sources && (
+              <>
+                {" "}
+                <Citations refs={refs} sources={sources} variant="inline" />
+              </>
+            )}
+          </BulletRow>
+        );
+      })}
     </Box>
   );
 }
@@ -252,11 +270,11 @@ function SectorDetail({
           </Box>
         )}
 
-        <PillarList label={t("sectors.impact")} items={sector.impact} />
-        <PillarList label={t("sectors.humanitarian")} items={sector.humanitarian} />
-        <PillarList label={t("sectors.atRisk")} items={sector.atRisk} />
-        <PillarList label={t("sectors.needs")} items={sector.needs} />
-        <PillarList label={t("sectors.interventions")} items={sector.interventions} />
+        <PillarList label={t("sectors.impact")} items={sector.impact} lineRefs={sector.lineRefs} sources={sources} />
+        <PillarList label={t("sectors.humanitarian")} items={sector.humanitarian} lineRefs={sector.lineRefs} sources={sources} />
+        <PillarList label={t("sectors.atRisk")} items={sector.atRisk} lineRefs={sector.lineRefs} sources={sources} />
+        <PillarList label={t("sectors.needs")} items={sector.needs} lineRefs={sector.lineRefs} sources={sources} />
+        <PillarList label={t("sectors.interventions")} items={sector.interventions} lineRefs={sector.lineRefs} sources={sources} />
 
         {sector.coverage.length > 0 && (
           <Box>

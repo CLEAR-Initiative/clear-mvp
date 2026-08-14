@@ -39,11 +39,18 @@ interface RawSector {
   }>;
   source_report_ids?: string[];
   evidence_scope?: "sector" | "fallback" | null;
+  /**
+   * Per-line attribution from the pipeline (PR #31): report_id -> the exact
+   * generated lines that report supported. Inverted below into line -> refs so
+   * a bullet can cite its own sources rather than the whole sector's.
+   */
+  contributing_sources?: Record<string, string[]>;
 }
 
 interface RawContextRisk {
   bullets?: string[];
   source_report_ids?: string[];
+  contributing_sources?: Record<string, string[]>;
 }
 
 interface RawDescribed {
@@ -52,7 +59,11 @@ interface RawDescribed {
 }
 
 export interface SaPayload {
-  ai_summary?: { text?: string | null; source_report_ids?: string[] };
+  ai_summary?: {
+    text?: string | null;
+    source_report_ids?: string[];
+    contributing_sources?: Record<string, string[]>;
+  };
   datapoints?: {
     envelope?: {
       report_count?: number;
@@ -143,6 +154,9 @@ export interface SaContextRisk {
   items: string[];
   /** Citation numbers (1-based, into `sources`) this domain drew on. */
   refs: number[];
+  /** Per-bullet citations keyed by exact bullet text. Empty on older analyses,
+   *  in which case callers fall back to the domain-level `refs`. */
+  lineRefs: Record<string, number[]>;
 }
 
 export interface SaCoverage {
@@ -165,6 +179,13 @@ export interface SaSector {
   coverage: SaCoverage[];
   /** Citation numbers (1-based, into `sources`) this sector drew on. */
   refs: number[];
+  /**
+   * Per-line citations: bullet text -> citation numbers. Keyed by the exact
+   * generated line, which is how the pipeline emits it. Empty for analyses
+   * generated before per-line attribution shipped, so callers must fall back
+   * to the sector-level `refs`.
+   */
+  lineRefs: Record<string, number[]>;
   /** Distinct contributing reports - a plain evidence-count signal. */
   reportCount: number;
   /** "fallback" when the grade came from an off-sector search (an inference,
@@ -190,8 +211,14 @@ export interface SaBullet {
 export interface SituationAnalysis {
   crisis: SaCrisis;
   summary: string | null;
-  /** Citation numbers the AI summary drew on. */
+  /** Citation numbers the AI summary drew on, as a whole. */
   summaryRefs: number[];
+  /**
+   * Per-sentence citations for the summary: exact sentence -> citation
+   * numbers. Empty when the pipeline produced no per-line attribution, in
+   * which case the UI falls back to the block-level `summaryRefs`.
+   */
+  summaryLineRefs: Record<string, number[]>;
   stats: SaStat[];
   /** Raw numeric datapoints, keyed for the "what changed" numeric diff. Null
    *  where the pipeline did not resolve a value. */
@@ -290,6 +317,41 @@ function makeRefResolver(sources: SaSource[]): (ids: string[] | undefined) => nu
   };
 }
 
+/**
+ * Invert the pipeline's `contributing_sources` (report_id -> lines it
+ * supported) into the lookup the UI needs: line -> citation numbers.
+ *
+ * Report IDs that aren't in `sources` resolve to nothing and are skipped, same
+ * as everywhere else. A line whose every citation is unresolvable is omitted
+ * rather than stored empty, so callers can treat "absent" as "no per-line
+ * citation" and fall back to the component-level refs.
+ */
+function invertContributingSources(
+  contributing: Record<string, string[]> | undefined,
+  refsFrom: (ids: string[] | undefined) => number[],
+): Record<string, number[]> {
+  if (!contributing) return {};
+
+  const byLine = new Map<string, Set<number>>();
+  for (const [reportId, lines] of Object.entries(contributing)) {
+    const [ref] = refsFrom([reportId]);
+    if (ref == null) continue;
+    for (const line of lines ?? []) {
+      const key = line.trim();
+      if (!key) continue;
+      const set = byLine.get(key) ?? new Set<number>();
+      set.add(ref);
+      byLine.set(key, set);
+    }
+  }
+
+  const out: Record<string, number[]> = {};
+  for (const [line, refs] of byLine) {
+    out[line] = [...refs].sort((a, b) => a - b);
+  }
+  return out;
+}
+
 // ─── Mapper ──────────────────────────────────────────────────────────────────
 
 /**
@@ -346,6 +408,7 @@ function mapSectors(
           reportCount: c.report_count ?? 0,
         })),
       refs: refsFrom(s?.source_report_ids),
+      lineRefs: invertContributingSources(s?.contributing_sources, refsFrom),
       reportCount: new Set(s?.source_report_ids ?? []).size,
       evidenceScope: s?.evidence_scope ?? null,
     }))
@@ -370,6 +433,7 @@ function mapContextRisks(
       label: titleise(key),
       items: cleanStrings(v?.bullets),
       refs: refsFrom(v?.source_report_ids),
+      lineRefs: invertContributingSources(v?.contributing_sources, refsFrom),
     }))
     // A risk category with no bullets carries no information - drop it rather
     // than render an empty row.
@@ -377,8 +441,8 @@ function mapContextRisks(
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
-function mapSources(raw: SaPayload["sources"]): SaSource[] {
-  return (raw?.reports ?? [])
+function mapSources(raw: SaPayload["sources"], citedIds: string[]): SaSource[] {
+  const sources: SaSource[] = (raw?.reports ?? [])
     .filter((r) => r.report_id)
     .map((r) => ({
       id: r.report_id!,
@@ -386,6 +450,24 @@ function mapSources(raw: SaPayload["sources"]): SaSource[] {
       url: r.source_url ?? null,
       publishedAt: r.published_at ?? null,
     }));
+
+  // The pipeline builds `sources.reports` from the datapoint aggregation's
+  // contributors only, while the narrative cites whatever RAG retrieved - so
+  // most cited reports are missing from it (Venezuela monthly: 2 of 7 summary
+  // citations resolve, 11 listed against 50 on the row). Every unresolvable id
+  // is dropped downstream, which silently deletes the citation.
+  //
+  // Append the cited-but-unlisted ids so they at least get a number. The row's
+  // `sourceReportIds` is the pipeline's own union of every contributing report,
+  // so it is the right authority. Titles are unavailable for these - Citations
+  // falls back to "Report n" - and they sort last, after the titled ones.
+  const known = new Set(sources.map((s) => s.id));
+  for (const id of citedIds) {
+    if (!id || known.has(id)) continue;
+    known.add(id);
+    sources.push({ id, title: "", url: null, publishedAt: null });
+  }
+  return sources;
 }
 
 export function mapSituationAnalysis(
@@ -399,7 +481,7 @@ export function mapSituationAnalysis(
   // Sources first: the citation index keys off their order, and every
   // component resolves its `source_report_ids` through the same resolver so
   // the numbers are stable across the whole analysis.
-  const sources = mapSources(data.sources);
+  const sources = mapSources(data.sources, row.sourceReportIds ?? []);
   const refsFrom = makeRefResolver(sources);
 
   return {
@@ -415,6 +497,10 @@ export function mapSituationAnalysis(
     },
     summary: data.ai_summary?.text?.trim() ?? null,
     summaryRefs: refsFrom(data.ai_summary?.source_report_ids),
+    summaryLineRefs: invertContributingSources(
+      data.ai_summary?.contributing_sources,
+      refsFrom,
+    ),
     stats: mapStats(dp),
     figures: {
       displaced: dp?.population_displaced ?? null,
