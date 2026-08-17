@@ -1743,12 +1743,15 @@ function MapPageContent() {
           initialPitch={cameraSeed?.pitch ?? restoredView?.camera.pitch ?? 0}
           initialBearing={cameraSeed?.bearing ?? restoredView?.camera.bearing ?? 0}
           forceFlyToken={forceFlyToken}
-          flyDuration={markerFocus ? 500 : 650}
+          flyDuration={markerFocus ? 500 : (!cameraSeed && !focusEntityId && selectedCountry !== "All Countries" ? 1200 : 650)}
           // Keep pin above the ~45vh sheet + breathing room.
           flyPaddingBottom={
             markerFocus && isMobile
               ? Math.round((typeof window !== "undefined" ? window.innerHeight : 700) * 0.45) + 72
               : 0
+          }
+          introFromGlobe={
+            !cameraSeed && !focusEntityId && selectedCountry !== "All Countries"
           }
           onCameraChange={handleCameraChange}
           onMapMove={handleMapMove}
