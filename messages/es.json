@@ -283,6 +283,7 @@
         "informSeverity": "Gravedad INFORM",
         "evidenceBase": "Del último análisis · {reports} informes",
         "freshest": "más reciente {date}",
+        "range": "Rango {range}",
         "info": {
           "informSeverity": "Índice de gravedad INFORM (0-10) de ACAPS, actualizado mensualmente. Medida compuesta de la gravedad de la crisis, independiente del pipeline de análisis de situación.",
           "displaced": "Personas desplazadas internas (PDI). Agregado de los informes fuente siguientes (campo: population_displaced).",

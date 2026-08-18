@@ -67,6 +67,7 @@ export function SituationKpis({ data }: { data: SituationAnalysis }) {
             key={s.key}
             label={t(`stats.${s.key}`)}
             value={s.value}
+            sub={s.range ? t("kpi.range", { range: s.range }) : undefined}
             info={t(`kpi.info.${s.key}`)}
           />
         ))}

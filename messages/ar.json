@@ -283,6 +283,7 @@
         "informSeverity": "شدة INFORM",
         "evidenceBase": "من أحدث تحليل · {reports} تقارير",
         "freshest": "الأحدث {date}",
+        "range": "النطاق {range}",
         "info": {
           "informSeverity": "مؤشر شدة INFORM (0-10) من ACAPS، يُحدَّث شهرياً. مقياس مركّب لشدة الأزمة، مستقل عن خط معالجة التحليل.",
           "displaced": "النازحون داخلياً. مجمّع من التقارير المصدرية (الحقل: population_displaced).",

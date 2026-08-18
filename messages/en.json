@@ -283,6 +283,7 @@
         "informSeverity": "INFORM Severity",
         "evidenceBase": "From the latest analysis · {reports} reports",
         "freshest": "freshest {date}",
+        "range": "Range {range}",
         "info": {
           "informSeverity": "INFORM Severity Index (0-10) from ACAPS, updated monthly. A composite measure of crisis severity, independent of the situation-analysis pipeline.",
           "displaced": "Internally displaced persons (IDPs). Aggregated from the source reports below (field: population_displaced).",
