@@ -283,6 +283,7 @@
         "informSeverity": "Sévérité INFORM",
         "evidenceBase": "D'après la dernière analyse · {reports} rapports",
         "freshest": "plus récent {date}",
+        "range": "Fourchette {range}",
         "info": {
           "informSeverity": "Indice de sévérité INFORM (0-10) d'ACAPS, mis à jour chaque mois. Mesure composite de la sévérité, indépendante du pipeline d'analyse.",
           "displaced": "Personnes déplacées internes (PDI). Agrégé à partir des rapports sources (champ : population_displaced).",
