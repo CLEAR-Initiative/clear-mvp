@@ -1,6 +1,7 @@
 // UI locales. Keep aligned with clear-api/src/utils/locales.ts →
-// SUPPORTED_LOCALES when adding content-translation targets. `es` is
-// registered here for analyst UI (#440); content sidecar still en/fr/ar.
+// SUPPORTED_LOCALES when adding content-translation targets. All four are
+// now content-translation targets too — the sidecar produces es alongside
+// fr/ar (`es` added for analyst UI in #440, then wired for content).
 export const locales = ["en", "fr", "es", "ar"] as const;
 export type Locale = (typeof locales)[number];
 
