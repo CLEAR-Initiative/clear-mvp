@@ -13,6 +13,13 @@ import {
 import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { api } from "~/trpc/react";
 import type { GqlSignal } from "~/lib/types/graphql";
+import {
+  classifyObserveSubmitError,
+  locationFieldsForPayload,
+  parseAtMentionQuery,
+  resolveTeamIdForSubmit,
+  stripTrailingAtMention,
+} from "~/lib/observe/field-signal";
 
 /* ── IndexedDB offline queue ────────────────────────────────── */
 
@@ -226,9 +233,12 @@ function SignalCard({ signal }: { signal: GqlSignal }) {
   );
 }
 
-function SignalsList() {
+function SignalsList({ teamId }: { teamId?: string }) {
   const t = useTranslations("observe.signals");
-  const signalsQuery = api.signals.list.useQuery(undefined, { staleTime: 1000 * 60 });
+  const signalsQuery = api.signals.list.useQuery(
+    { teamId },
+    { staleTime: 1000 * 60, enabled: Boolean(teamId) },
+  );
 
   if (signalsQuery.isLoading) {
     return (
@@ -273,6 +283,7 @@ function makeWelcome(t: ReturnType<typeof useTranslations<"observe">>): ChatMess
           <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet1", { strong })}</span></li>
           <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet2", { strong, locationIcon: () => <span style={iconChip}><IconMapPin size={13} strokeWidth={2.5} /></span> })}</span></li>
           <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet3", { mediaIcon: () => <span style={iconChip}><IconPhoto size={13} strokeWidth={2.5} /></span> })}</span></li>
+          <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet4", { strong })}</span></li>
         </ul>
       </div>
     ),
@@ -308,13 +319,13 @@ export default function ObservePage() {
   const locationsQuery = api.locations.list.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   // /observe lives outside the (app) group and has no team switcher, so we
   // fall back to the user's persisted defaultTeamId to satisfy the backend's
-  // team-scoped createManualSignal gate. Field coordinators without a
-  // defaultTeamId (unusual — should be set at onboarding) will hit
-  // FORBIDDEN; a fix on that path is future work.
+  // team-scoped createManualSignal gate.
   const meQuery = api.auth.me.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
   const defaultTeamId = meQuery.data?.user?.defaultTeamId ?? undefined;
+  const meStatus = meQuery.isPending ? "pending" : meQuery.isError ? "error" : "success";
 
   const mutateFnRef = useRef(createSignal.mutateAsync);
+  const drainingRef = useRef(false);
   useEffect(() => { mutateFnRef.current = createSignal.mutateAsync; });
 
   useEffect(() => {
@@ -337,17 +348,54 @@ export default function ObservePage() {
     : [];
 
   const drainQueue = useCallback(async () => {
-    if (!navigator.onLine) return;
-    const pending = await dbGetPending();
-    for (const { key, data } of pending) {
-      try {
-        await mutateFnRef.current(data);
-        await dbRemove(key);
-        void utils.signals.invalidate();
-        setPendingCount((n) => Math.max(0, n - 1));
-      } catch { break; }
+    if (!navigator.onLine || drainingRef.current) return;
+    if (meStatus === "pending") return;
+    drainingRef.current = true;
+    try {
+      const pending = await dbGetPending();
+      let sent = 0;
+      for (const { key, data } of pending) {
+        const teamId = data.teamId ?? defaultTeamId;
+        if (!teamId) {
+          pushReply({
+            id: `recv-${Date.now()}`,
+            kind: "received",
+            variant: "error",
+            text: t("replies.noTeam"),
+          });
+          break;
+        }
+        try {
+          await mutateFnRef.current({ ...data, teamId });
+          await dbRemove(key);
+          sent += 1;
+          void utils.signals.invalidate();
+          setPendingCount((n) => Math.max(0, n - 1));
+        } catch (err) {
+          const failure = classifyObserveSubmitError(err);
+          if (failure === "noTeam") {
+            pushReply({
+              id: `recv-${Date.now()}`,
+              kind: "received",
+              variant: "error",
+              text: t("replies.noTeam"),
+            });
+          }
+          break;
+        }
+      }
+      if (sent > 0) {
+        pushReply({
+          id: `recv-${Date.now()}`,
+          kind: "received",
+          variant: "success",
+          text: t("replies.drained", { count: sent }),
+        });
+      }
+    } finally {
+      drainingRef.current = false;
     }
-  }, [utils]);
+  }, [utils, defaultTeamId, meStatus, t]);
 
   useEffect(() => {
     void dbGetPending().then((p) => setPendingCount(p.length));
@@ -362,12 +410,11 @@ export default function ObservePage() {
 
   function handleDraftChange(val: string) {
     setDraft(val);
-    const match = val.match(/@([\w\s]*)$/);
-    setAtQuery(match ? (match[1] ?? "") : null);
+    setAtQuery(parseAtMentionQuery(val));
   }
 
   function selectLocationFromAt(loc: { value: string; label: string }) {
-    setDraft((d) => d.replace(/@[\w\s]*$/, ""));
+    setDraft((d) => stripTrailingAtMention(d));
     setLocationId(loc.value);
     setLocationLabel(loc.label);
     setGpsCoords(null);
@@ -444,7 +491,7 @@ export default function ObservePage() {
     });
   }
 
-  const cleanDraft = draft.replace(/@[\w\s]*$/, "").trimEnd();
+  const cleanDraft = stripTrailingAtMention(draft).trimEnd();
   const lines = cleanDraft.split("\n");
   const titleLine = lines[0]?.trim() ?? "";
   const bodyLines = lines.slice(1).join("\n").trim();
@@ -463,6 +510,18 @@ export default function ObservePage() {
         kind: "received",
         variant: "error",
         text: t("replies.mediaNeedsOnline"),
+      });
+      return;
+    }
+
+    const teamGate = resolveTeamIdForSubmit({ meStatus, defaultTeamId });
+    if (!teamGate.ok) {
+      if (teamGate.reason === "loading") return;
+      pushReply({
+        id: `recv-${Date.now()}`,
+        kind: "received",
+        variant: "error",
+        text: teamGate.reason === "noTeam" ? t("replies.noTeam") : t("replies.error"),
       });
       return;
     }
@@ -494,10 +553,8 @@ export default function ObservePage() {
       sourceId,
       title: titleLine || "Field observation",
       description: bodyLines || titleLine || "Field observation",
-      locationId: locationId || undefined,
-      lat: gpsCoords?.lat,
-      lng: gpsCoords?.lng,
-      teamId: defaultTeamId,
+      ...locationFieldsForPayload({ locationId, gps: gpsCoords }),
+      teamId: teamGate.teamId,
     };
 
     if (!navigator.onLine) {
@@ -530,16 +587,12 @@ export default function ObservePage() {
       void utils.signals.invalidate();
       pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "success", text: t("replies.success") });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "";
-      const isNetworkError =
-        message.toLowerCase().includes("fetch") ||
-        message.toLowerCase().includes("network") ||
-        message.toLowerCase().includes("failed");
-      if (isNetworkError) {
+      const failure = classifyObserveSubmitError(err);
+      if (failure === "network") {
         await dbQueue(payload);
         setPendingCount((n) => n + 1);
         pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "queued", text: t("replies.queued") });
-      } else if (message.toLowerCase().includes("forbidden")) {
+      } else if (failure === "noTeam") {
         pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "error", text: t("replies.noTeam") });
       } else {
         pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "error", text: t("replies.error") });
@@ -547,7 +600,7 @@ export default function ObservePage() {
     }
 
     setSubmitting(false);
-  }, [canSubmit, titleLine, bodyLines, locationLabel, locationId, gpsCoords, draftMedia, sourceId, defaultTeamId, createSignal, utils, t]);
+  }, [canSubmit, titleLine, bodyLines, locationLabel, locationId, gpsCoords, draftMedia, sourceId, defaultTeamId, meStatus, createSignal, utils, t]);
 
   const hasLocation = !!locationLabel;
   const hasMedia = draftMedia.length > 0;
@@ -594,7 +647,7 @@ export default function ObservePage() {
       </div>
 
       {/* Signals list tab */}
-      {activeTab === "signals" && <SignalsList />}
+      {activeTab === "signals" && <SignalsList teamId={defaultTeamId} />}
 
       {/* Submit tab */}
       {activeTab === "submit" && <>
