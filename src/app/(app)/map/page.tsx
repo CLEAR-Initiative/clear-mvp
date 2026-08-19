@@ -1826,7 +1826,7 @@ function MapPageContent() {
         {/* Spinner while data loads; error overlay stays up even after queries settle. */}
         {(mapLoadError || (showLoadingOverlay && dataView !== "none")) && (
           <MapLoadingOverlay
-            dataView={dataView}
+            dataView={dataView === "none" ? "alert" : dataView}
             error={mapLoadError ? { message: mapLoadError.message, onRetry: handleRetryMapLoad } : null}
           />
         )}
