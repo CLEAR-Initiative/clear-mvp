@@ -569,11 +569,15 @@ export function CrisisDetailContent({
               <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3 }}>
                 {title}
               </Text>
-              {isAdmin && (
-                <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => { setDraftTitle(crisis.title ?? ""); setEditingTitle(true); }}>
-                  <IconPencil size={13} />
-                </ActionIcon>
-              )}
+              <ActionIcon
+                size="xs"
+                variant="subtle"
+                color="gray"
+                aria-label={t("renameTitle")}
+                onClick={() => { setDraftTitle(crisis.title ?? ""); setEditingTitle(true); }}
+              >
+                <IconPencil size={13} />
+              </ActionIcon>
             </Group>
           )}
         </Group>

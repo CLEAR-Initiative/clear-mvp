@@ -1004,6 +1004,7 @@
     "viewOnCrisisMap": "Ver en el mapa de crisis",
     "switchCrisis": "Cambiar de crisis",
     "untitledCrisis": "Crisis sin título",
+    "renameTitle": "Renombrar crisis",
     "crisisBadge": "Crisis",
     "eventFallback": "Evento",
     "updatedDate": "Actualizado {date}",
@@ -1437,6 +1438,14 @@
     "actions": {
       "createSignal": "Crear señal"
     },
+    "bulk": {
+      "selected": "{count, plural, one {# evento seleccionado} other {# eventos seleccionados}}",
+      "clear": "Quitar selección",
+      "addToCrisis": "Añadir a crisis",
+      "createCrisis": "Crear crisis",
+      "selectEvent": "Seleccionar evento",
+      "linkedBulk": "Se añadieron {count, plural, one {# evento} other {# eventos}} a la crisis."
+    },
     "filters": {
       "filter": "Filtrar",
       "title": "Filtros",
@@ -1837,7 +1846,14 @@
       "linkErrorTitle": "No se pudo vincular el evento",
       "createdTitle": "Crisis creada",
       "createdMessage": "El pipeline generará el título y el resumen en breve.",
-      "createErrorTitle": "No se pudo crear la crisis"
+      "createErrorTitle": "No se pudo crear la crisis",
+      "createdNamedMessage": "«{title}» está lista. El resumen y las necesidades seguirán.",
+      "nameModalTitle": "Nombra esta crisis",
+      "nameModalHint": "{count, plural, one {Crear una crisis a partir de # evento.} other {Crear una crisis a partir de # eventos.}}",
+      "nameLabel": "Nombre de la crisis",
+      "namePlaceholder": "p. ej. Inundaciones en Jartum, agosto 2026",
+      "confirmCreate": "Crear crisis",
+      "cancel": "Cancelar"
     }
   },
   "knowledge": {
