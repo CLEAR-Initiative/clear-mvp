@@ -2134,7 +2134,13 @@
     "replies": {
       "queued": "Got it. Your signal has been saved locally and will be sent to your team automatically once you are back online.",
       "success": "Signal received. A new entry has been added to your team's signal list.",
-      "error": "Something went wrong and your signal was not submitted. Please try again."
+      "error": "Something went wrong and your signal was not submitted. Please try again.",
+      "mediaNeedsOnline": "Photos and videos need a connection. Remove the attachment or try again when you are online.",
+      "noTeam": "This account has no default team, so the signal could not be filed. Set a default team in Settings and try again.",
+      "gpsUnsupported": "This device cannot share a GPS location. Tag a place with @ instead.",
+      "gpsDenied": "Location permission was denied. Allow location for this site, or tag a place with @.",
+      "gpsTimeout": "Could not get a GPS fix in time. Try again, or tag a place with @.",
+      "gpsUnavailable": "GPS location is unavailable right now. Try again, or tag a place with @."
     },
     "compose": {
       "placeholder": "What did you observe?",

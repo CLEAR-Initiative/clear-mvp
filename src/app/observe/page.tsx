@@ -21,6 +21,8 @@ type QueuedPayload = {
   title: string;
   description: string;
   locationId?: string;
+  lat?: number;
+  lng?: number;
   mediaUrls?: string[];
   /**
    * Persisted so a signal queued while offline is authorised the same way
@@ -285,6 +287,7 @@ export default function ObservePage() {
   const [draftMedia, setDraftMedia] = useState<{ file: File; id: string; preview: string; isVideo: boolean }[]>([]);
   const [locationId, setLocationId] = useState("");
   const [locationLabel, setLocationLabel] = useState("");
+  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [sourceId, setSourceId] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -340,7 +343,7 @@ export default function ObservePage() {
       try {
         await mutateFnRef.current(data);
         await dbRemove(key);
-        void utils.signals.list.invalidate();
+        void utils.signals.invalidate();
         setPendingCount((n) => Math.max(0, n - 1));
       } catch { break; }
     }
@@ -367,21 +370,57 @@ export default function ObservePage() {
     setDraft((d) => d.replace(/@[\w\s]*$/, ""));
     setLocationId(loc.value);
     setLocationLabel(loc.label);
+    setGpsCoords(null);
     setAtQuery(null);
     textareaRef.current?.focus();
   }
 
+  function clearLocation() {
+    setLocationId("");
+    setLocationLabel("");
+    setGpsCoords(null);
+  }
+
   function captureGPS() {
-    if (!navigator.geolocation || gpsLoading) return;
-    if (locationLabel) { setLocationId(""); setLocationLabel(""); return; }
+    if (gpsLoading) return;
+    if (locationLabel) {
+      clearLocation();
+      return;
+    }
+    if (!navigator.geolocation) {
+      pushReply({
+        id: `recv-${Date.now()}`,
+        kind: "received",
+        variant: "error",
+        text: t("replies.gpsUnsupported"),
+      });
+      return;
+    }
     setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLocationLabel(formatCoords(pos.coords.latitude, pos.coords.longitude));
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setGpsCoords({ lat, lng });
+        setLocationLabel(formatCoords(lat, lng));
         setLocationId("");
         setGpsLoading(false);
       },
-      () => setGpsLoading(false),
+      (err) => {
+        setGpsLoading(false);
+        const text =
+          err.code === err.PERMISSION_DENIED
+            ? t("replies.gpsDenied")
+            : err.code === err.TIMEOUT
+              ? t("replies.gpsTimeout")
+              : t("replies.gpsUnavailable");
+        pushReply({
+          id: `recv-${Date.now()}`,
+          kind: "received",
+          variant: "error",
+          text,
+        });
+      },
       { enableHighAccuracy: true, timeout: 10000 },
     );
   }
@@ -417,6 +456,17 @@ export default function ObservePage() {
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
+
+    if (!navigator.onLine && draftMedia.length > 0) {
+      pushReply({
+        id: `recv-${Date.now()}`,
+        kind: "received",
+        variant: "error",
+        text: t("replies.mediaNeedsOnline"),
+      });
+      return;
+    }
+
     setSubmitting(true);
     setAtQuery(null);
 
@@ -433,6 +483,7 @@ export default function ObservePage() {
     setDraft("");
     setLocationId("");
     setLocationLabel("");
+    setGpsCoords(null);
     setDraftMedia([]);
 
     setTimeout(() => {
@@ -444,6 +495,8 @@ export default function ObservePage() {
       title: titleLine || "Field observation",
       description: bodyLines || titleLine || "Field observation",
       locationId: locationId || undefined,
+      lat: gpsCoords?.lat,
+      lng: gpsCoords?.lng,
       teamId: defaultTeamId,
     };
 
@@ -458,7 +511,6 @@ export default function ObservePage() {
     }
 
     try {
-      // Upload media files if any - returns S3 keys (presigned URLs generated at read time)
       let mediaKeys: string[] | undefined;
       if (draftMedia.length > 0) {
         const formData = new FormData();
@@ -475,25 +527,27 @@ export default function ObservePage() {
       }
 
       await createSignal.mutateAsync({ ...payload, mediaUrls: mediaKeys });
-      void utils.signals.list.invalidate();
+      void utils.signals.invalidate();
       pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "success", text: t("replies.success") });
     } catch (err) {
-      const isNetworkError = err instanceof Error && (
-        err.message.toLowerCase().includes("fetch") ||
-        err.message.toLowerCase().includes("network") ||
-        err.message.toLowerCase().includes("failed")
-      );
+      const message = err instanceof Error ? err.message : "";
+      const isNetworkError =
+        message.toLowerCase().includes("fetch") ||
+        message.toLowerCase().includes("network") ||
+        message.toLowerCase().includes("failed");
       if (isNetworkError) {
         await dbQueue(payload);
         setPendingCount((n) => n + 1);
         pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "queued", text: t("replies.queued") });
+      } else if (message.toLowerCase().includes("forbidden")) {
+        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "error", text: t("replies.noTeam") });
       } else {
         pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "error", text: t("replies.error") });
       }
     }
 
     setSubmitting(false);
-  }, [canSubmit, titleLine, bodyLines, locationLabel, locationId, draftMedia, sourceId, createSignal, utils]);
+  }, [canSubmit, titleLine, bodyLines, locationLabel, locationId, gpsCoords, draftMedia, sourceId, defaultTeamId, createSignal, utils, t]);
 
   const hasLocation = !!locationLabel;
   const hasMedia = draftMedia.length > 0;
@@ -577,7 +631,7 @@ export default function ObservePage() {
               <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--color-accent-light)", border: "1px solid var(--color-border)", borderRadius: 16, padding: "4px 8px", fontSize: 13, fontWeight: 500, color: "var(--color-accent)" }}>
                 <IconMapPin size={12} strokeWidth={2.5} />
                 <span>{locationLabel}</span>
-                <button onClick={() => { setLocationId(""); setLocationLabel(""); }} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0 0 2px", color: "inherit", display: "flex", alignItems: "center" }}>
+                <button onClick={clearLocation} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0 0 2px", color: "inherit", display: "flex", alignItems: "center" }}>
                   <IconX size={11} />
                 </button>
               </div>

@@ -2134,7 +2134,13 @@
     "replies": {
       "queued": "Recibido. Su señal se ha guardado localmente y se enviará a su equipo automáticamente cuando vuelva a estar en línea.",
       "success": "Señal recibida. Se ha añadido una nueva entrada a la lista de señales de su equipo.",
-      "error": "Algo salió mal y su señal no se envió. Inténtelo de nuevo."
+      "error": "Algo salió mal y su señal no se envió. Inténtelo de nuevo.",
+      "mediaNeedsOnline": "Las fotos y los vídeos necesitan conexión. Quite el adjunto o inténtelo cuando esté en línea.",
+      "noTeam": "Esta cuenta no tiene un equipo predeterminado, así que no se pudo registrar la señal. Asigne un equipo predeterminado en Ajustes e inténtelo de nuevo.",
+      "gpsUnsupported": "Este dispositivo no puede compartir una ubicación GPS. Etiquete un lugar con @.",
+      "gpsDenied": "Se denegó el permiso de ubicación. Permítalo para este sitio, o etiquete un lugar con @.",
+      "gpsTimeout": "No se obtuvo un punto GPS a tiempo. Inténtelo de nuevo o etiquete un lugar con @.",
+      "gpsUnavailable": "La ubicación GPS no está disponible ahora. Inténtelo de nuevo o etiquete un lugar con @."
     },
     "compose": {
       "placeholder": "¿Qué observó?",

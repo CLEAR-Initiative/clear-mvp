@@ -2136,7 +2136,13 @@
     "replies": {
       "queued": "Bien reçu. Votre signal a été enregistré localement et sera transmis automatiquement à votre équipe dès que vous serez de nouveau en ligne.",
       "success": "Signal reçu. Une nouvelle entrée a été ajoutée à la liste des signaux de votre équipe.",
-      "error": "Une erreur est survenue et votre signal n'a pas été soumis. Veuillez réessayer."
+      "error": "Une erreur est survenue et votre signal n'a pas été soumis. Veuillez réessayer.",
+      "mediaNeedsOnline": "Les photos et vidéos nécessitent une connexion. Retirez la pièce jointe ou réessayez une fois en ligne.",
+      "noTeam": "Ce compte n'a pas d'équipe par défaut, le signal n'a pas pu être déposé. Définissez une équipe par défaut dans les paramètres puis réessayez.",
+      "gpsUnsupported": "Cet appareil ne peut pas partager une position GPS. Indiquez un lieu avec @.",
+      "gpsDenied": "L'autorisation de localisation a été refusée. Autorisez-la pour ce site, ou indiquez un lieu avec @.",
+      "gpsTimeout": "Impossible d'obtenir un point GPS à temps. Réessayez, ou indiquez un lieu avec @.",
+      "gpsUnavailable": "La localisation GPS est indisponible pour le moment. Réessayez, ou indiquez un lieu avec @."
     },
     "compose": {
       "placeholder": "Qu'avez-vous observé ?",
