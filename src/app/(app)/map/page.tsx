@@ -57,6 +57,12 @@ import {
   type MapViewCamera,
   type MapViewStateV1,
 } from "~/lib/map-view-state";
+import {
+  ALL_REGIONS,
+  writeMapNavContext,
+  writeMapNavEventIds,
+  writeMapNavSignalIds,
+} from "~/lib/map-nav-context";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getAdjacentItem, orderByProximityTo } from "~/lib/detail-list-nav";
 import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
@@ -1237,6 +1243,39 @@ function MapPageContent() {
       return ym === selectedMonth;
     });
   }, [isFocusMode, allMarkers, markersBeforeTime, selectedMonth]);
+
+  // Persist map filter scope for event/signal detail prev/next. Mirrors
+  // Detection nav-context: without this, detail arrows re-query the unscoped
+  // map feed and jump across countries (e.g. Sudan → Venezuela).
+  useEffect(() => {
+    writeMapNavContext({
+      teamId: activeTeamId,
+      locationId: selectedLocationId,
+      country: selectedCountry,
+      region: selectedRegion !== ALL_REGIONS ? selectedRegion : undefined,
+      // null = timeframe "all" (must survive JSON round-trip; undefined is dropped)
+      from: timeframeRange.from ?? null,
+      to: timeframeRange.to ?? null,
+    });
+  }, [
+    activeTeamId,
+    selectedLocationId,
+    selectedCountry,
+    selectedRegion,
+    timeframeRange.from,
+    timeframeRange.to,
+  ]);
+
+  // Persist the filtered marker id list the analyst actually sees so detail
+  // arrows stay inside that set (country + region + type + timeline).
+  useEffect(() => {
+    if (isFocusMode) return;
+    const ids = currentMarkers
+      .map((m) => m.eventId)
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
+    if (dataView === "event") writeMapNavEventIds(ids);
+    else if (dataView === "signal") writeMapNavSignalIds(ids);
+  }, [isFocusMode, dataView, currentMarkers]);
 
   // Reopen marker panels from the session snapshot once markers are loaded.
   useEffect(() => {
