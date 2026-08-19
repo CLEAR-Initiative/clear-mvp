@@ -1,8 +1,9 @@
 /**
- * Pitch-linked marker elevation for Topography.
+ * Pitch-linked marker elevation for unclustered pins on every basemap.
  *
- * Flat while the camera is mostly top-down (pitch ≤ 45°). Stem grows smoothly
- * from 45° → 70° so tilt readability ramps with the gesture — no marker remount.
+ * Event, Signal, and Crisis pins share this layout. Flat while the camera is
+ * mostly top-down (pitch ≤ 45°). Stem grows smoothly from 45° → 70° so tilt
+ * readability ramps with the gesture — no marker remount.
  */
 
 /** Below this pitch, pins stay flat (stem factor 0). */
@@ -30,7 +31,17 @@ export function pinElevationFactor(pitch: number): number {
 }
 
 /**
- * Apply stem/head layout for a Topography pin element built by crisis-map.
+ * Unclustered pins grow stems when tilted. Ghost “proposed” location pins stay
+ * flat discs. Basemap (Simple / Topography / Satellite) does not matter.
+ */
+export function shouldElevatePointPin(opts: {
+  locationPinRole?: string;
+}): boolean {
+  return opts.locationPinRole !== "proposed";
+}
+
+/**
+ * Apply stem/head layout for a pin element built by crisis-map.
  * Expects `data-max-stem`, `.marker-pin-head`, `.marker-pin-stem`.
  * Ground contact stays fixed (Mapbox `anchor: "bottom"`).
  */

@@ -4,6 +4,7 @@ import {
   PIN_ELEVATE_START_PITCH,
   applyPinElevation,
   pinElevationFactor,
+  shouldElevatePointPin,
 } from "./pin-elevation";
 
 describe("pinElevationFactor", () => {
@@ -31,6 +32,18 @@ describe("pinElevationFactor", () => {
 
   it("treats non-finite pitch as flat", () => {
     expect(pinElevationFactor(Number.NaN)).toBe(0);
+  });
+});
+
+describe("shouldElevatePointPin", () => {
+  it("elevates Event/Signal/Crisis pins on every basemap", () => {
+    expect(shouldElevatePointPin({})).toBe(true);
+    expect(shouldElevatePointPin({ locationPinRole: "source" })).toBe(true);
+    expect(shouldElevatePointPin({ locationPinRole: "" })).toBe(true);
+  });
+
+  it("keeps proposed location pins flat", () => {
+    expect(shouldElevatePointPin({ locationPinRole: "proposed" })).toBe(false);
   });
 });
 

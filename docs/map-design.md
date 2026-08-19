@@ -35,8 +35,9 @@ Layers labels the basemap **Topography** (not Terrain).
   Simple** (no custom fog / void palette), plus subtle hillshade **and** a
   Mapbox `setTerrain` mesh on `mapbox-terrain-dem-v1`. NOT a separate Mapbox
   style: outdoors-v12 was tried and rejected (pale landcover, no dark
-  variant, drowned our overlays). Differences vs Simple are tilt, mesh, and
-  elevated pins — world-view a11y must match Simple.
+  variant, drowned our overlays). Differences vs Simple are the DEM mesh
+  and Point altitude — world-view a11y must match Simple. Tilt and elevated
+  pins are shared with Simple / Satellite.
   - **Pitch opt-in** — camera stays top-down (`pitch: 0`) until the analyst
     tilts; no auto-pitch on select; no dedicated Layers “3D” toggle. Tilt
     gestures work on Simple / Satellite / Topography; leaving Topography
@@ -48,9 +49,11 @@ Layers labels the basemap **Topography** (not Terrain).
     Detaching `setTerrain` during the morph avoids stacking DEM 3D on the
     sphere→plane unroll (Mapbox hardcodes that morph at z5–6). Paint/mesh
     only; **Point altitude** stays unexaggerated DEM metres.
-  - **Elevated pins** — Topography unclustered markers are stem-capable with
-    a fixed ground anchor. Flat while pitch ≤ 45°; stem grows smoothly through
-    ~70° (`pinElevationFactor`). Simple / Satellite keep flat centered dots.
+  - **Elevated pins** — unclustered Event, Signal, and Crisis pins are
+    stem-capable on Simple / Topography / Satellite, with a fixed ground
+    anchor. Flat while pitch ≤ 45°; stem grows smoothly through ~70°
+    (`pinElevationFactor`). Cluster donuts stay flat. Proposed location
+    pins stay ghost discs.
   - **⌘+drag tilt** — same as Ctrl+drag / right-drag (meta→ctrl bridge on Mac).
   - **Globe projection** — Mapbox `globe` enabled at all zooms; Mapbox morphs
     globe↔mercator automatically. Static (no auto-spin); first `/map` visit
@@ -118,7 +121,7 @@ override paint on the style's road layers.
 | Focus tint (Simple only) | #1E40AF @ .35 | #1E3A5F @ .45 |
 | Outside mask | #FFF @ .9 (Simple) / #000 @ .4 | #000 @ .55 (Simple) / #000 @ .4 |
 | Canvas void (shell behind WebGL) | #FAFAFA | #111111 (Simple + Topography); #0a0a0a (Satellite) |
-| Topography atmosphere | same as Simple (no custom `setFog`) | same — cartography matches Simple; tilt / mesh / elevated pins only |
+| Topography atmosphere | same as Simple (no custom `setFog`) | same — cartography matches Simple; tilt / mesh / Point altitude only |
 | Markers | severity scale (critical red -> low green), orange accent rings; type glyph on unclustered pins; Topography stems grow with pitch (flat ≤45°, full ~70°) | same |
 
 Boundaries are blue, corridors tan, markers orange/severity - three

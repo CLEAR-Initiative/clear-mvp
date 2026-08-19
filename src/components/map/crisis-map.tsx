@@ -42,6 +42,7 @@ import {
 import {
   applyPinElevation,
   pinElevationFactor,
+  shouldElevatePointPin,
 } from "~/lib/map/pin-elevation";
 import { bridgeMetaToCtrlForPitch } from "~/lib/map/meta-pitch-bridge";
 import { ensureGlobeProjection } from "~/lib/map/idle-globe-spin";
@@ -388,8 +389,9 @@ function buildPointEl(
     locationPinRole?: "source" | "proposed";
     iconSlug?: string;
     /**
-     * Topography-only: stem-capable pin (flat at low pitch; stem grows with
-     * tilt via applyPinElevation). Simple / Satellite keep flat centered dots.
+     * Stem-capable pin (flat at low pitch; stem grows with tilt via
+     * applyPinElevation). Same layout for Event, Signal, and Crisis pins
+     * on Simple / Topography / Satellite.
      */
     elevated?: boolean;
     /** Initial pitch factor 0..1 when elevated (from pinElevationFactor). */
@@ -827,10 +829,10 @@ export function CrisisMap({
     ensureGlobeProjection(map.current);
   }, [loaded]);
 
-  // Pitch-linked pin stems on Topography — flat ≤45°, full by ~70°.
+  // Pitch-linked pin stems on every basemap — flat ≤45°, full by ~70°.
   // Imperative DOM only (no remount) so tilt stays smooth.
   useEffect(() => {
-    if (!map.current || !loaded || baseMapType !== "topography") return;
+    if (!map.current || !loaded) return;
     const m = map.current;
     let raf = 0;
     const syncPinElevation = () => {
@@ -860,7 +862,7 @@ export function CrisisMap({
       m.off?.("pitch", onPitch);
       m.off?.("pitchend", onPitch);
     };
-  }, [loaded, baseMapType]);
+  }, [loaded]);
 
   // Topography hover probe — orange ground dot + altitude under the cursor.
   // All updates are imperative DOM writes so pan/tilt never re-render React.
@@ -1655,8 +1657,10 @@ export function CrisisMap({
         const coords = displayLngLat.get(markerId) ?? rawCoords;
         const trust = props.location_trust as string;
         const pinRole = props.location_pin_role as string;
-        // Stem-capable on Topography — flat until pitch > 45°, then grows with tilt.
-        const elevated = baseMapType === "topography";
+        // Stem-capable on every basemap — flat until pitch > 45°, then grows.
+        const elevated = shouldElevatePointPin({
+          locationPinRole: pinRole === "source" || pinRole === "proposed" ? pinRole : undefined,
+        });
         const elevationFactor = elevated
           ? pinElevationFactor(
               typeof m.getPitch === "function" ? m.getPitch() : 0,
@@ -2584,7 +2588,10 @@ export function CrisisMap({
           animation: marker-dot-pulse 1.1s ease-in-out infinite;
           z-index: 10 !important;
         }
-        /* Crisis marker enhancements */
+        /* Crisis marker enhancements — overflow visible so stems are not clipped */
+        .crisis-marker {
+          overflow: visible;
+        }
         .crisis-marker .marker-dot {
           filter: brightness(1.1) saturate(1.15);
         }
@@ -2602,6 +2609,7 @@ export function CrisisMap({
         }
         /* Keep GL clear transparent so container basemap color shows if frames drop */
         .mapboxgl-canvas { background: transparent !important; }
+        .mapboxgl-marker { overflow: visible; }
         /* Topography: hide grab hand only while the probe is over terrain.
            Over pitched sky we restore the system cursor so filters/menus
            stay easy to reach. Inline cursor:pointer from markers/blockages
