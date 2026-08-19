@@ -6,7 +6,7 @@ import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
 import { dedupeByProperty } from "~/lib/geo/dedupe-rendered-features";
 import { useIsDark } from "~/hooks/use-is-dark";
-import { countryConfig, staticCountryBounds } from "~/lib/constants/country-config";
+import { countryConfig, staticCountryBounds, WORLD_VIEW } from "~/lib/constants/country-config";
 import {
   aggregationModeForZoom,
   donutCenterCount,
@@ -44,7 +44,7 @@ import {
   pinElevationFactor,
 } from "~/lib/map/pin-elevation";
 import { bridgeMetaToCtrlForPitch } from "~/lib/map/meta-pitch-bridge";
-import { startIdleGlobeSpin } from "~/lib/map/idle-globe-spin";
+import { ensureGlobeProjection } from "~/lib/map/idle-globe-spin";
 import {
   dismissTopographyTiltHint,
   isTopographyTiltHintDismissed,
@@ -238,6 +238,11 @@ interface CrisisMapProps {
   locationPickActive?: boolean;
   /** Map background click (lng/lat). Used while placing a Location correction. */
   onMapClick?: (lngLat: { lng: number; lat: number }) => void;
+  /**
+   * First-visit intro: start at WORLD_VIEW (globe) and fly to country. Skipped
+   * on session restore / deep links. Requires fitBoundsOnFocus=true to work.
+   */
+  introFromGlobe?: boolean;
 }
 
 export type BaseMapType = "simple" | "topography" | "satellite";
@@ -537,6 +542,7 @@ export function CrisisMap({
   onMapMove,
   locationPickActive = false,
   onMapClick,
+  introFromGlobe = false,
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const locale = useLocale();
@@ -655,11 +661,13 @@ export function CrisisMap({
       mbRef.current = mapboxgl;
       mapboxgl.accessToken = MAPBOX_TOKEN;
 
+      // First-visit intro: start at WORLD_VIEW (globe) if introFromGlobe is true.
+      // fitBounds will fly to the country afterwards (bumped duration for intro).
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: mapStyle,
-        center,
-        zoom,
+        center: introFromGlobe ? WORLD_VIEW.center : center,
+        zoom: introFromGlobe ? WORLD_VIEW.zoom : zoom,
         pitch: initialPitch,
         bearing: initialBearing,
         interactive,
@@ -812,12 +820,11 @@ export function CrisisMap({
     };
   }, [loaded, baseMapType, isDark]);
 
-  // Idle polar-axis globe spin at far zoom (longitude, not bearing turntable).
-  // Enables Mapbox globe once (smooth morph with zoom); spin speed ramps in
-  // during zoom-out; pauses while the user pans / tilts.
+  // Enable globe projection for far zoom — static (no auto-spin).
+  // Mapbox morphs globe↔mercator with zoom automatically.
   useEffect(() => {
     if (!map.current || !loaded) return;
-    return startIdleGlobeSpin(map.current);
+    ensureGlobeProjection(map.current);
   }, [loaded]);
 
   // Pitch-linked pin stems on Topography — flat ≤45°, full by ~70°.

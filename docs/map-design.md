@@ -52,10 +52,9 @@ Layers labels the basemap **Topography** (not Terrain).
     a fixed ground anchor. Flat while pitch ≤ 45°; stem grows smoothly through
     ~70° (`pinElevationFactor`). Simple / Satellite keep flat centered dots.
   - **⌘+drag tilt** — same as Ctrl+drag / right-drag (meta→ctrl bridge on Mac).
-  - **Idle globe spin** — Mapbox `globe` projection stays on (Mapbox morphs
-    globe↔mercator with zoom — do not toggle on spin thresholds). At Region /
-    max zoom-out, slow polar-axis longitude drift (not bearing turntable);
-    ramps in during zoom-out; pauses on pan/tilt.
+  - **Globe projection** — Mapbox `globe` enabled at all zooms; Mapbox morphs
+    globe↔mercator automatically. Static (no auto-spin); first `/map` visit
+    starts at global view and flies to team country (800-1200ms).
   - **Point altitude** — approximate DEM elevation via
     `queryTerrainElevation` while Topography is active: orange ground probe
     under the cursor (fades over pitched sky) and a row on the open Marker
