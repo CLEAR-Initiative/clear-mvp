@@ -171,7 +171,15 @@ export interface GqlCrisis {
   summary: string | null;
   severity: number;
   generalLocation: GqlLocation | null;
-  events: Array<{ id: string; types: string[] }>;
+  events: Array<{
+    id: string;
+    types: string[];
+    representativePoint?: GqlLocation | null;
+    generalLocation?: GqlLocation | null;
+    originLocation?: GqlLocation | null;
+    destinationLocation?: GqlLocation | null;
+    signals?: GqlSignal[];
+  }>;
 }
 
 /* ─── Ground intel staging tier ─── */

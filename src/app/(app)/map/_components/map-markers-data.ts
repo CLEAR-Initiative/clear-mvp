@@ -9,6 +9,7 @@ import type {
 import { mapSeverity } from "~/lib/types/graphql";
 import { resolveLocationName } from "~/lib/location";
 import { resolveMarkerIconSlug } from "~/lib/signals/resolve-icon";
+import { toMapPointGeometry } from "~/lib/geo/to-map-point";
 
 export interface CrisisMarker extends MapMarker {
   region?: string;
@@ -362,37 +363,59 @@ export function alertsToRegions(alerts: GqlAlert[]): MapRegion[] {
   return eventsToRegions(alerts.map((a) => a.event));
 }
 
+/**
+ * Crisis pins: Point location, else polygon centroid, else first nested
+ * event representative point. Country-level crises used to vanish because
+ * generalLocation is almost always a MultiPolygon.
+ */
+function crisisPoint(crisis: GqlCrisis) {
+  const fromLoc = pointFromLocation(crisis.generalLocation);
+  if (fromLoc) return fromLoc;
+
+  const loc = crisis.generalLocation;
+  const centroid = toMapPointGeometry(loc?.geometry ?? null);
+  if (loc && centroid) {
+    return {
+      loc: { ...loc, geometry: centroid },
+      lng: centroid.coordinates[0],
+      lat: centroid.coordinates[1],
+    };
+  }
+
+  for (const event of crisis.events ?? []) {
+    const hit = pointLocation(event as GqlEvent);
+    if (hit) return hit;
+  }
+  return null;
+}
+
 export function crisesToMarkers(
   crises: GqlCrisis[],
   locationById?: Map<string, { name: string; level: number }>,
 ): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
   for (const crisis of crises) {
-    const loc = crisis.generalLocation;
-    if (loc?.geometry?.type === "Point") {
-      const [lng, lat] = loc.geometry.coordinates as [number, number];
-      if (typeof lng === "number" && typeof lat === "number") {
-        const eventTypes = crisis.events.flatMap((e) => e.types).map((t) => t.toLowerCase());
-        markers.push({
-          id: Math.abs(crisis.id.split("").reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)),
-          lng,
-          lat,
-          title: crisis.title ?? "Crisis",
-          severity: mapSeverity(crisis.severity),
-          locationId: loc.id,
-          ancestorIds: loc.ancestorIds ?? [],
-          eventTypes,
-          region: resolveLocationName(loc, { locationById }) ?? undefined,
-          eventId: crisis.id,
-          markerKind: "crisis",
-          iconSlug: resolveMarkerIconSlug({
-            types: eventTypes,
-            texts: [crisis.title],
-            markerKind: "crisis",
-          }),
-        });
-      }
-    }
+    const point = crisisPoint(crisis);
+    if (!point) continue;
+    const eventTypes = (crisis.events ?? []).flatMap((e) => e.types).map((t) => t.toLowerCase());
+    markers.push({
+      id: hashId(crisis.id, point.loc.id),
+      lng: point.lng,
+      lat: point.lat,
+      title: crisis.title ?? "Crisis",
+      severity: mapSeverity(crisis.severity),
+      locationId: point.loc.id,
+      ancestorIds: point.loc.ancestorIds ?? [],
+      eventTypes,
+      region: resolveLocationName(point.loc, { locationById }) ?? undefined,
+      eventId: crisis.id,
+      markerKind: "crisis",
+      iconSlug: resolveMarkerIconSlug({
+        types: eventTypes,
+        texts: [crisis.title],
+        markerKind: "crisis",
+      }),
+    });
   }
   return dedupeMarkersByEntity(markers);
 }

@@ -151,7 +151,12 @@ const CRISIS_FIELDS = `
   summary
   severity
   generalLocation { ${LOCATION_FIELDS} }
-  events { id types }
+  events {
+    id
+    types
+    representativePoint { ${MAP_POINT_LOCATION_FIELDS} }
+    generalLocation { ${MAP_POINT_LOCATION_FIELDS} }
+  }
 `;
 
 const EVENTS_LIST_QUERY = `
@@ -373,6 +378,13 @@ export const alertsRouter = createTRPCRouter({
       undefined,
       cookieHeaders(ctx),
     );
+    for (const crisis of data.crises) {
+      sanitizeLocationGeometry(crisis.generalLocation);
+      for (const event of crisis.events ?? []) {
+        sanitizeLocationGeometry(event.representativePoint ?? null);
+        sanitizeLocationGeometry(event.generalLocation ?? null);
+      }
+    }
     return { crises: data.crises };
   }),
 
