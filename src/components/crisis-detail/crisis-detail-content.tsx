@@ -68,6 +68,7 @@ import { mapReturnHref } from "~/lib/map-view-state";
 import { MinimapCard } from "~/components/map/minimap-card";
 import { CommentsSection } from "~/components/comments-section";
 import { NeedsAssessmentPanel } from "~/components/crisis-detail/needs-assessment-panel";
+import { AddEventsToCrisisButton } from "~/components/crisis-detail/add-events-to-crisis-modal";
 import { KpiStack } from "~/components/ui/kpi-stack";
 
 /** Humanitarian need row - parsed from a crisis's free-form `needs` JSON. */
@@ -1886,7 +1887,6 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
 function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events: GqlEvent[]; isAdmin: boolean; crisisId: string; totalEventCount: number }) {
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
-  const format = useFormatter();
   const router = useRouter();
   const utils = api.useUtils();
   const [pendingRemoveEvent, setPendingRemoveEvent] = useState<GqlEvent | null>(null);
@@ -1909,15 +1909,6 @@ function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events
     setPendingRemoveEvent(null);
   }
 
-  if (events.length === 0) {
-    return (
-      <Box p={24} style={{ textAlign: "center" }}>
-        <Text size="sm" c="var(--color-text-muted)">
-          {t("events.empty")}
-        </Text>
-      </Box>
-    );
-  }
   return (
     <>
       <Modal
@@ -1948,18 +1939,30 @@ function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events
         </Group>
       </Modal>
 
-      <Box py={12} px={4}>
-        {events.map((event, idx) => (
-          <TimelineRow
-            key={event.id}
-            event={event}
-            isFirst={idx === 0}
-            isLast={idx === events.length - 1}
-            isAdmin={isAdmin}
-            onRemove={() => setPendingRemoveEvent(event)}
-          />
-        ))}
-      </Box>
+      <Group justify="flex-end" px={12} pt={10} pb={4}>
+        <AddEventsToCrisisButton crisisId={crisisId} canAdd />
+      </Group>
+
+      {events.length === 0 ? (
+        <Box p={24} style={{ textAlign: "center" }}>
+          <Text size="sm" c="var(--color-text-muted)">
+            {t("events.empty")}
+          </Text>
+        </Box>
+      ) : (
+        <Box py={12} px={4}>
+          {events.map((event, idx) => (
+            <TimelineRow
+              key={event.id}
+              event={event}
+              isFirst={idx === 0}
+              isLast={idx === events.length - 1}
+              isAdmin={isAdmin}
+              onRemove={() => setPendingRemoveEvent(event)}
+            />
+          ))}
+        </Box>
+      )}
     </>
   );
 }

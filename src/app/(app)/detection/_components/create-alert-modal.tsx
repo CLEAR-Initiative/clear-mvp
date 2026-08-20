@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Modal,
@@ -14,13 +14,19 @@ import {
   Text,
   Alert,
   Stack,
+  Badge,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { api } from "~/trpc/react";
 
 interface CreateAlertModalProps {
   opened: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  /** When set (bulk Raise Alert), attach these events to the new alert. */
+  eventIds?: string[];
+  suggestedTitle?: string;
+  defaultSeverity?: number;
 }
 
 interface FormData {
@@ -30,7 +36,6 @@ interface FormData {
   status: "draft" | "published";
 }
 
-// labelKey: i18n keys under detection.createAlert.severityOptions.* - resolved via t() at render time.
 const SEVERITY_OPTIONS = [
   { value: "1", labelKey: "low" },
   { value: "2", labelKey: "moderate" },
@@ -47,46 +52,73 @@ const SECTION_LABEL_STYLE = {
   color: "var(--color-text-muted)",
 };
 
-export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModalProps) {
+function clampSeverity(n: number): string {
+  if (!Number.isFinite(n)) return "3";
+  return String(Math.min(5, Math.max(1, Math.round(n))));
+}
+
+export function CreateAlertModal({
+  opened,
+  onClose,
+  onSuccess,
+  eventIds = [],
+  suggestedTitle = "",
+  defaultSeverity = 3,
+}: CreateAlertModalProps) {
   const t = useTranslations("detection");
+  const tBulk = useTranslations("detection.bulk");
+  const utils = api.useUtils();
+  const linkedEventIds = useMemo(() => [...new Set(eventIds)], [eventIds]);
+
   const [form, setForm] = useState<FormData>({
     title: "",
     description: "",
     severity: "",
     status: "draft",
   });
-
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const createMutation = api.alerts.createAlert.useMutation({
-    onSuccess: () => {
-      setSuccessMsg(t("createAlert.success"));
-      setTimeout(() => {
-        setSuccessMsg(null);
-        resetForm();
-        onClose();
-        onSuccess?.();
-      }, 1500);
-    },
-    onError: (err) => {
-      setErrorMsg(err.message);
-    },
-  });
-
-  function resetForm() {
+  useEffect(() => {
+    if (!opened) return;
     setForm({
-      title: "",
+      title: suggestedTitle,
       description: "",
-      severity: "",
+      severity: clampSeverity(defaultSeverity),
       status: "draft",
     });
     setErrorMsg(null);
     setSuccessMsg(null);
-  }
+  }, [opened, suggestedTitle, defaultSeverity]);
+
+  const createMutation = api.alerts.createAlert.useMutation({
+    onSuccess: () => {
+      setSuccessMsg(t("createAlert.success"));
+      void Promise.all([
+        utils.alerts.alertsPage.invalidate(),
+        utils.alerts.getAlerts.invalidate(),
+        utils.alerts.getStats.invalidate(),
+        utils.alerts.eventsPage.invalidate(),
+      ]);
+      setTimeout(() => {
+        setSuccessMsg(null);
+        onClose();
+        onSuccess?.();
+      }, 900);
+    },
+    onError: (err) => {
+      setErrorMsg(err.message);
+      notifications.show({
+        color: "red",
+        title: tBulk("raiseAlertError"),
+        message: err.message,
+      });
+    },
+  });
 
   function handleClose() {
-    resetForm();
+    setErrorMsg(null);
+    setSuccessMsg(null);
     onClose();
   }
 
@@ -103,6 +135,12 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
       description: form.description.trim(),
       severity: Number(form.severity),
       status: form.status,
+      ...(linkedEventIds.length > 0
+        ? {
+            eventIds: linkedEventIds,
+            primaryEventId: linkedEventIds[0],
+          }
+        : {}),
     });
   }
 
@@ -112,7 +150,7 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
       onClose={handleClose}
       title={
         <Text fw={600} size="sm">
-          {t("createAlert.title")}
+          {linkedEventIds.length > 0 ? tBulk("raiseAlertTitle") : t("createAlert.title")}
         </Text>
       }
       size="lg"
@@ -131,7 +169,12 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
       )}
 
       <Stack gap="md">
-        {/* Section 1 - Alert Content */}
+        {linkedEventIds.length > 0 && (
+          <Badge size="sm" variant="light" color="gray" w="fit-content">
+            {tBulk("raiseAlertEvents", { count: linkedEventIds.length })}
+          </Badge>
+        )}
+
         <Divider />
         <Text style={SECTION_LABEL_STYLE}>{t("createAlert.sectionContent")}</Text>
 
@@ -144,6 +187,7 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
             setForm((p) => ({ ...p, title: v }));
           }}
           required
+          data-testid="bulk-alert-title"
         />
 
         <Textarea
@@ -156,9 +200,9 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
           }}
           minRows={4}
           required
+          data-testid="bulk-alert-description"
         />
 
-        {/* Section 2 - Classification */}
         <Divider />
         <Text style={SECTION_LABEL_STYLE}>{t("createAlert.sectionClassification")}</Text>
 
@@ -166,7 +210,10 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
           <Select
             label={<Text style={SECTION_LABEL_STYLE}>{t("createAlert.fieldSeverity")}</Text>}
             placeholder={t("createAlert.severityPlaceholder")}
-            data={SEVERITY_OPTIONS.map((o) => ({ value: o.value, label: t(`createAlert.severityOptions.${o.labelKey}`) }))}
+            data={SEVERITY_OPTIONS.map((o) => ({
+              value: o.value,
+              label: t(`createAlert.severityOptions.${o.labelKey}`),
+            }))}
             value={form.severity}
             onChange={(v) => setForm((p) => ({ ...p, severity: v ?? "" }))}
             required
@@ -192,6 +239,7 @@ export function CreateAlertModal({ opened, onClose, onSuccess }: CreateAlertModa
           disabled={!isValid || createMutation.isPending}
           loading={createMutation.isPending}
           style={{ background: "#E85D3D", borderColor: "#E85D3D" }}
+          data-testid="bulk-alert-submit"
         >
           {t("createAlert.submit")}
         </Button>

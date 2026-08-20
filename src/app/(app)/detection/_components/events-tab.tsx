@@ -152,6 +152,12 @@ export function EventsTab({
     [filtered, selectedIds],
   );
 
+  // Only act on events still visible under current filters/search.
+  const visibleSelectedIds = useMemo(
+    () => selectedEvents.map((e) => e.id),
+    [selectedEvents],
+  );
+
   function toggleSelected(id: string) {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
@@ -180,7 +186,7 @@ export function EventsTab({
         />
 
         <EventBulkBar
-          selectedIds={selectedIds}
+          selectedIds={visibleSelectedIds}
           suggestedTitle={selectedEvents[0]?.title ?? ""}
           defaultSeverity={selectedEvents.reduce((max, e) => Math.max(max, e.severity ?? 3), 3)}
           onClear={() => setSelectedIds([])}

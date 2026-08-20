@@ -1137,7 +1137,26 @@
       "lastEventWarning": "هذا هو الحدث الأخير. ستؤدي إزالته إلى حذف الأزمة بأكملها.",
       "removeAndDelete": "إزالة وحذف الأزمة",
       "remove": "إزالة",
-      "removeFromCrisis": "إزالة من الأزمة"
+      "removeFromCrisis": "إزالة من الأزمة",
+      "addEvent": "إضافة حدث",
+      "addModalTitle": "إضافة أحداث إلى الأزمة",
+      "addModalHint": "تظهر الأحداث الموصى بها أولاً. استخدم البحث للعثور على غيرها.",
+      "searchPlaceholder": "ابحث عن الأحداث بالعنوان أو الموقع",
+      "recommendedHeading": "موصى بها",
+      "searchHeading": "نتائج البحث",
+      "recommendEmpty": "لا توجد أحداث موصى بها الآن. جرّب البحث.",
+      "searchEmpty": "لا توجد أحداث تطابق بحثك.",
+      "add": "إضافة",
+      "addSuccessTitle": "تمت إضافة الحدث",
+      "addSuccessMessage": "تم تحديث الجدول الزمني بالحدث الجديد.",
+      "addErrorTitle": "تعذّرت إضافة الحدث",
+      "reasons": {
+        "location": "قريب",
+        "time": "نفس الفترة",
+        "severity": "خطورة مشابهة",
+        "type": "نفس النوع",
+        "source": "مصدر مشترك"
+      }
     },
     "needs": {
       "saf": {
@@ -1443,6 +1462,10 @@
     "bulk": {
       "selected": "{count, plural, one {حدث واحد محدد} other {# أحداث محددة}}",
       "clear": "مسح",
+      "raiseAlert": "رفع تنبيه",
+      "raiseAlertTitle": "رفع تنبيه من الأحداث المحددة",
+      "raiseAlertEvents": "{count, plural, one {سيُربط حدث واحد} other {سيُربط # أحداث}}",
+      "raiseAlertError": "تعذّر رفع التنبيه",
       "addToCrisis": "إضافة إلى أزمة",
       "createCrisis": "إنشاء أزمة",
       "selectEvent": "تحديد الحدث",

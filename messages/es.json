@@ -1135,7 +1135,26 @@
       "lastEventWarning": "Este es el último evento. Al quitarlo se eliminará toda la crisis.",
       "removeAndDelete": "Quitar y eliminar crisis",
       "remove": "Quitar",
-      "removeFromCrisis": "Quitar de la crisis"
+      "removeFromCrisis": "Quitar de la crisis",
+      "addEvent": "Añadir evento",
+      "addModalTitle": "Añadir eventos a la crisis",
+      "addModalHint": "Los eventos recomendados aparecen primero. Busca para encontrar otros.",
+      "searchPlaceholder": "Buscar eventos por título o ubicación",
+      "recommendedHeading": "Recomendados",
+      "searchHeading": "Resultados de búsqueda",
+      "recommendEmpty": "No hay eventos recomendados ahora. Prueba a buscar.",
+      "searchEmpty": "Ningún evento coincide con tu búsqueda.",
+      "add": "Añadir",
+      "addSuccessTitle": "Evento añadido",
+      "addSuccessMessage": "La línea de tiempo se actualizó con el nuevo evento.",
+      "addErrorTitle": "No se pudo añadir el evento",
+      "reasons": {
+        "location": "Cercano",
+        "time": "Mismo periodo",
+        "severity": "Severidad similar",
+        "type": "Mismo tipo",
+        "source": "Fuente compartida"
+      }
     },
     "needs": {
       "saf": {
@@ -1441,6 +1460,10 @@
     "bulk": {
       "selected": "{count, plural, one {# evento seleccionado} other {# eventos seleccionados}}",
       "clear": "Quitar selección",
+      "raiseAlert": "Generar alerta",
+      "raiseAlertTitle": "Generar alerta desde eventos seleccionados",
+      "raiseAlertEvents": "{count, plural, one {# evento se vinculará} other {# eventos se vincularán}}",
+      "raiseAlertError": "No se pudo generar la alerta",
       "addToCrisis": "Añadir a crisis",
       "createCrisis": "Crear crisis",
       "selectEvent": "Seleccionar evento",

@@ -2,6 +2,12 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
+import {
+  eventMatchesSearch,
+  rankEventsForCrisis,
+  scoreEventAgainstCrisis,
+  buildCrisisRecommendContext,
+} from "~/lib/crisis/recommend-events";
 
 /** Shape returned by the backend `crisis` query. */
 export interface GqlCrisis {
@@ -225,6 +231,34 @@ const ADD_EVENT_TO_CRISIS_MUTATION = `
   }
 `;
 
+/** Slim candidate page for reverse-path add + recommendations. */
+const RECOMMEND_LOCATION_FIELDS = `
+  id name level geoId ancestorIds
+`;
+
+const RECOMMEND_EVENT_FIELDS = `
+  id
+  title
+  description
+  types
+  severity
+  firstSignalCreatedAt
+  lastSignalCreatedAt
+  generalLocation { ${RECOMMEND_LOCATION_FIELDS} }
+  originLocation { ${RECOMMEND_LOCATION_FIELDS} }
+  destinationLocation { ${RECOMMEND_LOCATION_FIELDS} }
+  signals { id source { name } }
+  alerts { id status }
+`;
+
+const EVENTS_FOR_RECOMMEND_QUERY = `
+  query EventsForCrisisRecommend($input: EventsPageInput) {
+    eventsPage(input: $input) {
+      items { ${RECOMMEND_EVENT_FIELDS} }
+    }
+  }
+`;
+
 const REMOVE_EVENT_FROM_CRISIS_MUTATION = `
   mutation RemoveEventFromCrisis($crisisId: String!, $eventId: String!) {
     removeEventFromCrisis(crisisId: $crisisId, eventId: $eventId) {
@@ -329,6 +363,75 @@ export const crisesRouter = createTRPCRouter({
         };
       }>(ADD_EVENT_TO_CRISIS_MUTATION, input, cookieHeaders(ctx));
       return data.addEventToCrisis;
+    }),
+
+  /**
+   * Reverse-path add: search + smart recommendations for events not yet
+   * linked to this crisis. Scoring: location / ±7d time / type / severity / source.
+   */
+  recommendEvents: protectedProcedure
+    .input(
+      z.object({
+        crisisId: z.string(),
+        search: z.string().optional(),
+        teamId: z.string().nullish(),
+        limit: z.number().int().min(1).max(25).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const crisisData = await graphqlFetch<{ crisis: GqlCrisis | null }>(
+        CRISIS_GET_QUERY,
+        { id: input.crisisId },
+        cookieHeaders(ctx),
+      );
+      const crisis = crisisData.crisis;
+      if (!crisis) {
+        return { recommended: [], searchResults: [], linkedIds: [] as string[] };
+      }
+
+      const linkedIds = crisis.events.map((e) => e.id);
+      const linkedSet = new Set(linkedIds);
+
+      const pageData = await graphqlFetch<{ eventsPage: { items: GqlEvent[] } }>(
+        EVENTS_FOR_RECOMMEND_QUERY,
+        {
+          input: {
+            teamId: input.teamId ?? undefined,
+            includeDummy: false,
+            limit: 200,
+            orderBy: "LAST_SIGNAL_DESC",
+          },
+        },
+        cookieHeaders(ctx),
+      );
+      const candidates = pageData.eventsPage.items.filter((e) => !linkedSet.has(e.id));
+      const search = input.search?.trim() ?? "";
+      const limit = input.limit ?? 10;
+
+      const recommended = rankEventsForCrisis(candidates, crisis.events, {
+        excludeIds: linkedSet,
+        limit,
+      }).map((r) => ({
+        event: r.event as GqlEvent,
+        score: r.score,
+        reasons: r.reasons,
+      }));
+
+      if (!search) {
+        return { recommended, searchResults: [] as typeof recommended, linkedIds };
+      }
+
+      const ctxScore = buildCrisisRecommendContext(crisis.events);
+      const searchResults = candidates
+        .filter((e) => eventMatchesSearch(e, search))
+        .map((event) => {
+          const { score, reasons } = scoreEventAgainstCrisis(event, ctxScore);
+          return { event, score, reasons };
+        })
+        .sort((a, b) => b.score - a.score || (b.event.lastSignalCreatedAt ?? "").localeCompare(a.event.lastSignalCreatedAt ?? ""))
+        .slice(0, 40);
+
+      return { recommended, searchResults, linkedIds };
     }),
 
   removeEvent: protectedProcedure

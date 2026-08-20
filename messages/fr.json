@@ -1137,7 +1137,26 @@
       "lastEventWarning": "Il s'agit du dernier événement. Le retirer supprimera la crise entière.",
       "removeAndDelete": "Retirer et supprimer la crise",
       "remove": "Retirer",
-      "removeFromCrisis": "Retirer de la crise"
+      "removeFromCrisis": "Retirer de la crise",
+      "addEvent": "Ajouter un événement",
+      "addModalTitle": "Ajouter des événements à la crise",
+      "addModalHint": "Les événements recommandés apparaissent en premier. Recherchez pour en trouver d'autres.",
+      "searchPlaceholder": "Rechercher des événements par titre ou lieu",
+      "recommendedHeading": "Recommandés",
+      "searchHeading": "Résultats de recherche",
+      "recommendEmpty": "Aucun événement recommandé pour le moment. Essayez une recherche.",
+      "searchEmpty": "Aucun événement ne correspond à votre recherche.",
+      "add": "Ajouter",
+      "addSuccessTitle": "Événement ajouté",
+      "addSuccessMessage": "La chronologie a été mise à jour avec le nouvel événement.",
+      "addErrorTitle": "Impossible d'ajouter l'événement",
+      "reasons": {
+        "location": "À proximité",
+        "time": "Même période",
+        "severity": "Sévérité similaire",
+        "type": "Même type",
+        "source": "Source partagée"
+      }
     },
     "needs": {
       "saf": {
@@ -1443,6 +1462,10 @@
     "bulk": {
       "selected": "{count, plural, one {# événement sélectionné} other {# événements sélectionnés}}",
       "clear": "Effacer",
+      "raiseAlert": "Lever une alerte",
+      "raiseAlertTitle": "Lever une alerte depuis les événements sélectionnés",
+      "raiseAlertEvents": "{count, plural, one {# événement sera lié} other {# événements seront liés}}",
+      "raiseAlertError": "Impossible de lever l'alerte",
       "addToCrisis": "Ajouter à une crise",
       "createCrisis": "Créer une crise",
       "selectEvent": "Sélectionner l'événement",

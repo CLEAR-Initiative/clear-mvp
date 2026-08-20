@@ -1135,7 +1135,26 @@
       "lastEventWarning": "This is the last event. Removing it will delete the entire crisis.",
       "removeAndDelete": "Remove and delete crisis",
       "remove": "Remove",
-      "removeFromCrisis": "Remove from crisis"
+      "removeFromCrisis": "Remove from crisis",
+      "addEvent": "Add event",
+      "addModalTitle": "Add events to crisis",
+      "addModalHint": "Recommended events appear first. Search to find others.",
+      "searchPlaceholder": "Search events by title or location",
+      "recommendedHeading": "Recommended",
+      "searchHeading": "Search results",
+      "recommendEmpty": "No recommended events right now. Try searching.",
+      "searchEmpty": "No events match your search.",
+      "add": "Add",
+      "addSuccessTitle": "Event added",
+      "addSuccessMessage": "The timeline updated with the new event.",
+      "addErrorTitle": "Could not add event",
+      "reasons": {
+        "location": "Nearby",
+        "time": "Same period",
+        "severity": "Similar severity",
+        "type": "Same type",
+        "source": "Shared source"
+      }
     },
     "needs": {
       "saf": {
@@ -1441,6 +1460,10 @@
     "bulk": {
       "selected": "{count, plural, one {# event selected} other {# events selected}}",
       "clear": "Clear",
+      "raiseAlert": "Raise alert",
+      "raiseAlertTitle": "Raise alert from selected events",
+      "raiseAlertEvents": "{count, plural, one {# event will be linked} other {# events will be linked}}",
+      "raiseAlertError": "Could not raise alert",
       "addToCrisis": "Add to crisis",
       "createCrisis": "Create crisis",
       "selectEvent": "Select event",
