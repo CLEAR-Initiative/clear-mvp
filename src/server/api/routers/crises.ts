@@ -151,6 +151,16 @@ const UPDATE_CRISIS_META_MUTATION = `
   }
 `;
 
+/** Any authenticated user — writes a title-edit audit row that locks pipeline overwrites. */
+const UPDATE_CRISIS_TITLE_MUTATION = `
+  mutation UpdateCrisisTitle($id: String!, $title: String!) {
+    updateCrisisTitle(id: $id, title: $title) {
+      id
+      title
+    }
+  }
+`;
+
 const CREATE_CRISIS_FROM_EVENTS_MUTATION = `
   mutation CreateCrisisFromEvents($input: CreateCrisisFromEventsInput!) {
     createCrisisFromEvents(input: $input) {
@@ -343,6 +353,22 @@ export const crisesRouter = createTRPCRouter({
       return data.deleteCrisis;
     }),
 
+  /** Rename a crisis. Uses updateCrisisTitle (any auth user), not admin-only updateCrisisPopulation. */
+  updateTitle: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      title: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ updateCrisisTitle: { id: string; title: string | null } }>(
+        UPDATE_CRISIS_TITLE_MUTATION,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.updateCrisisTitle;
+    }),
+
+  /** Admin-only summary/population path via updateCrisisPopulation. */
   updateMeta: protectedProcedure
     .input(z.object({
       id: z.string(),
