@@ -183,6 +183,19 @@ function MapPageContent() {
     return "alert";
   });
 
+  /** Map load error (offline / style load failure) */
+  const [mapLoadError, setMapLoadError] = useState<{ message: string; isOffline: boolean } | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
+
+  const handleMapLoadError = useCallback((error: { message: string; isOffline: boolean }) => {
+    setMapLoadError(error);
+  }, []);
+
+  const handleRetryMapLoad = useCallback(() => {
+    setMapLoadError(null);
+    setRetryNonce((prev) => prev + 1);
+  }, []);
+
   /* ---- Fetch data ---- */
   const { activeTeamId, activeTeam } = useTeam();
   const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId, locationById } = useLocations();
@@ -1806,11 +1819,16 @@ function MapPageContent() {
           hoveredMarkerId={chromeActiveMarkerId}
           locationPickActive={locationCorrectionDraft?.phase === "picking"}
           onMapClick={handleLocationCorrectionMapClick}
+          onLoadError={handleMapLoadError}
+          key={retryNonce}
         />
 
-        {/* Loading overlay - only shows when map is mounted and data is loading */}
-        {showLoadingOverlay && dataView !== "none" && (
-          <MapLoadingOverlay dataView={dataView} />
+        {/* Spinner while data loads; error overlay stays up even after queries settle. */}
+        {(mapLoadError || (showLoadingOverlay && dataView !== "none")) && (
+          <MapLoadingOverlay
+            dataView={dataView === "none" ? "alert" : dataView}
+            error={mapLoadError ? { message: mapLoadError.message, onRetry: handleRetryMapLoad } : null}
+          />
         )}
       </Box>
 

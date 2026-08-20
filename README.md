@@ -144,6 +144,7 @@ Events store an array of glide codes (e.g. `["fl", "ba"]`). All codes in a singl
 - Build command: `bun run build` (or `npm run vercel-build` which wraps prepare + build).
 - Set the env vars above in Vercel's dashboard for each environment (Preview / Production).
 - PWA caching: service worker is disabled in `development` (see `next.config.js`) and generated at build time for production.
+- Offline hard-refresh: production SW serves `public/offline.html` (`fallbacks.document`). To verify: `bun run build && bun start`, open the app online once (SW installs + precaches), then DevTools → Offline → refresh. Dev (`bun dev`) has no SW, so Chrome’s default offline page still appears.
 
 ## Troubleshooting
 

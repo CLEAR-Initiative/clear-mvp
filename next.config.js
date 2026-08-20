@@ -36,6 +36,11 @@ export default withPWA({
   // build-time memory.
   aggressiveFrontEndNavCaching: false,
   reloadOnOnline: true,
+  // Branded document when a navigation fails offline (hard refresh / uncached
+  // route). Self-contained static HTML so it does not depend on JS chunks.
+  fallbacks: {
+    document: "/offline.html",
+  },
   // Disabled in dev (PWA service worker caches aggressively, breaks HMR) and
   // in Docker builds where memory headroom is tight - next-pwa + workbox
   // generation can push peak build RSS past 5 GB and OOM-kill the container.

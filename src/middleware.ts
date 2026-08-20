@@ -177,7 +177,9 @@ export const config = {
   matcher: [
     /*
      * Match all paths except static files and Next.js internals.
+     * offline.html is the PWA document fallback — must stay public so the
+     * service worker can precache it without an auth session.
      */
-    "/((?!_next/static|_next/image|favicon.ico|manifest.json|manifest.webmanifest|icons/|images/|api/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|offline\\.html|manifest.json|manifest.webmanifest|icons/|images/|api/|sw\\.js|workbox|swe-worker).*)",
   ],
 };
