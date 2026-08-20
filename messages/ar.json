@@ -1006,6 +1006,7 @@
     "viewOnCrisisMap": "عرض على الخريطة",
     "switchCrisis": "تبديل الأزمة",
     "untitledCrisis": "أزمة بلا عنوان",
+    "renameTitle": "إعادة تسمية الأزمة",
     "crisisBadge": "أزمة",
     "eventFallback": "حدث",
     "updatedDate": "تم التحديث {date}",
@@ -1439,6 +1440,14 @@
     "actions": {
       "createSignal": "إنشاء إشارة"
     },
+    "bulk": {
+      "selected": "{count, plural, one {حدث واحد محدد} other {# أحداث محددة}}",
+      "clear": "مسح",
+      "addToCrisis": "إضافة إلى أزمة",
+      "createCrisis": "إنشاء أزمة",
+      "selectEvent": "تحديد الحدث",
+      "linkedBulk": "أُضيف {count, plural, one {حدث واحد} other {# أحداث}} إلى الأزمة."
+    },
     "filters": {
       "filter": "تصفية",
       "title": "المرشحات",
@@ -1834,7 +1843,14 @@
       "linkErrorTitle": "تعذّر ربط الحدث",
       "createdTitle": "تم إنشاء الأزمة",
       "createdMessage": "سيُنشئ خط الأنابيب العنوان والملخص قريباً.",
-      "createErrorTitle": "تعذّر إنشاء الأزمة"
+      "createErrorTitle": "تعذّر إنشاء الأزمة",
+      "createdNamedMessage": "«{title}» جاهزة. سيتبع الملخص والاحتياجات.",
+      "nameModalTitle": "سمِّ هذه الأزمة",
+      "nameModalHint": "{count, plural, one {إنشاء أزمة من حدث واحد.} other {إنشاء أزمة من # أحداث.}}",
+      "nameLabel": "اسم الأزمة",
+      "namePlaceholder": "مثال: فيضانات الخرطوم، أغسطس 2026",
+      "confirmCreate": "إنشاء الأزمة",
+      "cancel": "إلغاء"
     },
     "nav": {
       "previous": "الحدث السابق",

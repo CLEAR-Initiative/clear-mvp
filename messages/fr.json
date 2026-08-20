@@ -1006,6 +1006,7 @@
     "viewOnCrisisMap": "Voir sur la carte",
     "switchCrisis": "Changer de crise",
     "untitledCrisis": "Crise sans titre",
+    "renameTitle": "Renommer la crise",
     "crisisBadge": "Crise",
     "eventFallback": "Événement",
     "updatedDate": "Mise à jour le {date}",
@@ -1439,6 +1440,14 @@
     "actions": {
       "createSignal": "Créer un signal"
     },
+    "bulk": {
+      "selected": "{count, plural, one {# événement sélectionné} other {# événements sélectionnés}}",
+      "clear": "Effacer",
+      "addToCrisis": "Ajouter à une crise",
+      "createCrisis": "Créer une crise",
+      "selectEvent": "Sélectionner l'événement",
+      "linkedBulk": "{count, plural, one {# événement ajouté} other {# événements ajoutés}} à la crise."
+    },
     "filters": {
       "filter": "Filtrer",
       "title": "Filtres",
@@ -1834,7 +1843,14 @@
       "linkErrorTitle": "Impossible de lier l'événement",
       "createdTitle": "Crise créée",
       "createdMessage": "Le pipeline va générer le titre et le résumé sous peu.",
-      "createErrorTitle": "Impossible de créer la crise"
+      "createErrorTitle": "Impossible de créer la crise",
+      "createdNamedMessage": "« {title} » est prête. Le résumé et les besoins suivront.",
+      "nameModalTitle": "Nommer cette crise",
+      "nameModalHint": "{count, plural, one {Créer une crise à partir de # événement.} other {Créer une crise à partir de # événements.}}",
+      "nameLabel": "Nom de la crise",
+      "namePlaceholder": "ex. Inondations à Khartoum, août 2026",
+      "confirmCreate": "Créer la crise",
+      "cancel": "Annuler"
     },
     "nav": {
       "previous": "Événement précédent",

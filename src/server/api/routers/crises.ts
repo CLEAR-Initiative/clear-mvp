@@ -1,8 +1,6 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
-import { isPlatformAdmin } from "~/lib/roles";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 
 /** Shape returned by the backend `crisis` query. */
@@ -149,6 +147,16 @@ const UPDATE_CRISIS_META_MUTATION = `
       id
       title
       summary
+    }
+  }
+`;
+
+/** Any authenticated user — writes a title-edit audit row that locks pipeline overwrites. */
+const UPDATE_CRISIS_TITLE_MUTATION = `
+  mutation UpdateCrisisTitle($id: String!, $title: String!) {
+    updateCrisisTitle(id: $id, title: $title) {
+      id
+      title
     }
   }
 `;
@@ -345,6 +353,22 @@ export const crisesRouter = createTRPCRouter({
       return data.deleteCrisis;
     }),
 
+  /** Rename a crisis. Uses updateCrisisTitle (any auth user), not admin-only updateCrisisPopulation. */
+  updateTitle: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      title: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ updateCrisisTitle: { id: string; title: string | null } }>(
+        UPDATE_CRISIS_TITLE_MUTATION,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.updateCrisisTitle;
+    }),
+
+  /** Admin-only summary/population path via updateCrisisPopulation. */
   updateMeta: protectedProcedure
     .input(z.object({
       id: z.string(),
@@ -352,10 +376,6 @@ export const crisesRouter = createTRPCRouter({
       summary: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const user = (ctx as { user?: { role?: string } }).user;
-      if (!isPlatformAdmin(user?.role)) {
-        throw new TRPCError({ code: "FORBIDDEN" });
-      }
       const { id, ...fields } = input;
       const data = await graphqlFetch<{ updateCrisisPopulation: { id: string; title: string | null; summary: string | null } }>(
         UPDATE_CRISIS_META_MUTATION,

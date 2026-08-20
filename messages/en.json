@@ -1004,6 +1004,7 @@
     "viewOnCrisisMap": "View on Map",
     "switchCrisis": "Switch crisis",
     "untitledCrisis": "Untitled crisis",
+    "renameTitle": "Rename crisis",
     "crisisBadge": "Crisis",
     "eventFallback": "Event",
     "updatedDate": "Updated {date}",
@@ -1437,6 +1438,14 @@
     "actions": {
       "createSignal": "Create Signal"
     },
+    "bulk": {
+      "selected": "{count, plural, one {# event selected} other {# events selected}}",
+      "clear": "Clear",
+      "addToCrisis": "Add to crisis",
+      "createCrisis": "Create crisis",
+      "selectEvent": "Select event",
+      "linkedBulk": "Added {count, plural, one {# event} other {# events}} to the crisis."
+    },
     "filters": {
       "filter": "Filter",
       "title": "Filters",
@@ -1837,7 +1846,14 @@
       "linkErrorTitle": "Could not link event",
       "createdTitle": "Crisis created",
       "createdMessage": "Pipeline will generate the title and summary shortly.",
-      "createErrorTitle": "Could not create crisis"
+      "createdNamedMessage": "“{title}” is ready. Summary and needs will follow.",
+      "createErrorTitle": "Could not create crisis",
+      "nameModalTitle": "Name this crisis",
+      "nameModalHint": "{count, plural, one {Create a crisis from # event.} other {Create a crisis from # events.}}",
+      "nameLabel": "Crisis name",
+      "namePlaceholder": "e.g. Khartoum flooding, August 2026",
+      "confirmCreate": "Create crisis",
+      "cancel": "Cancel"
     }
   },
   "knowledge": {

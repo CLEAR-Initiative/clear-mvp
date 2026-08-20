@@ -25,6 +25,7 @@ import {
   Textarea,
   TextInput,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import {
   IconArrowLeft,
   IconMapPin,
@@ -236,14 +237,37 @@ export function CrisisDetailContent({
 
   const utils = api.useUtils();
 
+  const updateTitle = api.crises.updateTitle.useMutation({
+    onSuccess: (updated) => {
+      utils.crises.get.setData({ id: updated.id }, (prev) =>
+        prev ? { ...prev, title: updated.title } : prev,
+      );
+      void utils.crises.list.invalidate();
+      setEditingTitle(false);
+    },
+    onError: (err) => {
+      notifications.show({
+        title: tCommon("toasts.error"),
+        message: err.message,
+        color: "red",
+      });
+    },
+  });
+
   const updateMeta = api.crises.updateMeta.useMutation({
     onSuccess: (updated) => {
       utils.crises.get.setData({ id: updated.id }, (prev) =>
         prev ? { ...prev, title: updated.title, summary: updated.summary } : prev,
       );
       void utils.crises.list.invalidate();
-      setEditingTitle(false);
       setEditingMeta(false);
+    },
+    onError: (err) => {
+      notifications.show({
+        title: tCommon("toasts.error"),
+        message: err.message,
+        color: "red",
+      });
     },
   });
 
@@ -553,11 +577,11 @@ export function CrisisDetailContent({
                 size="sm"
                 autoFocus
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") updateMeta.mutate({ id: crisis.id, title: draftTitle });
+                  if (e.key === "Enter") updateTitle.mutate({ id: crisis.id, title: draftTitle });
                   if (e.key === "Escape") setEditingTitle(false);
                 }}
               />
-              <ActionIcon size="sm" variant="filled" color="green" loading={updateMeta.isPending} onClick={() => updateMeta.mutate({ id: crisis.id, title: draftTitle })}>
+              <ActionIcon size="sm" variant="filled" color="green" loading={updateTitle.isPending} onClick={() => updateTitle.mutate({ id: crisis.id, title: draftTitle })}>
                 <IconCheck size={14} />
               </ActionIcon>
               <ActionIcon size="sm" variant="subtle" onClick={() => setEditingTitle(false)}>
@@ -569,11 +593,15 @@ export function CrisisDetailContent({
               <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3 }}>
                 {title}
               </Text>
-              {isAdmin && (
-                <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => { setDraftTitle(crisis.title ?? ""); setEditingTitle(true); }}>
-                  <IconPencil size={13} />
-                </ActionIcon>
-              )}
+              <ActionIcon
+                size="xs"
+                variant="subtle"
+                color="gray"
+                aria-label={t("renameTitle")}
+                onClick={() => { setDraftTitle(crisis.title ?? ""); setEditingTitle(true); }}
+              >
+                <IconPencil size={13} />
+              </ActionIcon>
             </Group>
           )}
         </Group>
