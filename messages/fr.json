@@ -2149,7 +2149,8 @@
     "compose": {
       "placeholder": "Qu'avez-vous observé ?",
       "captureLocation": "Capturer la localisation",
-      "addMedia": "Ajouter une photo ou une vidéo"
+      "addMedia": "Ajouter une photo ou une vidéo",
+      "send": "Envoyer le signal"
     }
   },
   "onboarding": {

@@ -82,3 +82,52 @@ export function locationFieldsForPayload(input: {
   }
   return {};
 }
+
+/**
+ * Payload persisted in IndexedDB while `/observe` is offline.
+ * `teamId` is stored at queue time so drain uses the same team auth
+ * as submit — without it a field coordinator can get FORBIDDEN hours later.
+ */
+export type QueuedFieldSignal = {
+  sourceId: string;
+  title: string;
+  description: string;
+  locationId?: string;
+  lat?: number;
+  lng?: number;
+  mediaUrls?: string[];
+  teamId?: string;
+};
+
+export type DrainStop = "done" | "offline" | "noTeam" | "createFailed";
+
+/**
+ * Offline → online pipeline: create each queued field signal, then
+ * acknowledge (drop from the device queue). Stops on the first missing
+ * team or create failure so remaining items stay queued.
+ */
+export async function drainQueuedFieldSignals<K>(opts: {
+  isOnline: boolean;
+  pending: ReadonlyArray<{ key: K; data: QueuedFieldSignal }>;
+  fallbackTeamId?: string;
+  create: (payload: QueuedFieldSignal & { teamId: string }) => Promise<void>;
+  acknowledge: (key: K) => Promise<void>;
+}): Promise<{ sent: number; stop: DrainStop }> {
+  if (!opts.isOnline) return { sent: 0, stop: "offline" };
+
+  let sent = 0;
+  for (const item of opts.pending) {
+    const teamId = item.data.teamId?.trim() || opts.fallbackTeamId?.trim();
+    if (!teamId) return { sent, stop: "noTeam" };
+    try {
+      await opts.create({ ...item.data, teamId });
+      await opts.acknowledge(item.key);
+      sent += 1;
+    } catch (err) {
+      const failure = classifyObserveSubmitError(err);
+      if (failure === "noTeam") return { sent, stop: "noTeam" };
+      return { sent, stop: "createFailed" };
+    }
+  }
+  return { sent, stop: "done" };
+}

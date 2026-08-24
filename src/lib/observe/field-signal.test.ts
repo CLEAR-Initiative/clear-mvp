@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyObserveSubmitError,
+  drainQueuedFieldSignals,
   locationFieldsForPayload,
   parseAtMentionQuery,
   resolveTeamIdForSubmit,
   stripTrailingAtMention,
+  type QueuedFieldSignal,
 } from "./field-signal";
 
 describe("classifyObserveSubmitError", () => {
@@ -92,5 +94,139 @@ describe("locationFieldsForPayload", () => {
     expect(
       locationFieldsForPayload({ locationId: "loc-khartoum", gps: null }),
     ).toEqual({ locationId: "loc-khartoum" });
+  });
+});
+
+describe("drainQueuedFieldSignals", () => {
+  const gpsQueued: QueuedFieldSignal = {
+    sourceId: "source-field-officer",
+    title: "Checkpoint closed at market",
+    description: "Checkpoint closed at market",
+    lat: 15.5007,
+    lng: 32.5599,
+    teamId: "team-nrc-sdn",
+  };
+
+  it("does not create while offline — the device queue stays intact", async () => {
+    const created: QueuedFieldSignal[] = [];
+    const acked: string[] = [];
+    const result = await drainQueuedFieldSignals({
+      isOnline: false,
+      pending: [{ key: "k1", data: gpsQueued }],
+      create: async (payload) => {
+        created.push(payload);
+      },
+      acknowledge: async (key) => {
+        acked.push(String(key));
+      },
+    });
+    expect(result).toEqual({ sent: 0, stop: "offline" });
+    expect(created).toEqual([]);
+    expect(acked).toEqual([]);
+  });
+
+  it("replays a GPS-queued signal with lat/lng and teamId once online", async () => {
+    const created: Array<QueuedFieldSignal & { teamId: string }> = [];
+    const acked: string[] = [];
+    const result = await drainQueuedFieldSignals({
+      isOnline: true,
+      pending: [{ key: "k1", data: gpsQueued }],
+      fallbackTeamId: "team-should-not-win",
+      create: async (payload) => {
+        created.push(payload);
+      },
+      acknowledge: async (key) => {
+        acked.push(String(key));
+      },
+    });
+    expect(result).toEqual({ sent: 1, stop: "done" });
+    expect(created).toEqual([
+      {
+        sourceId: "source-field-officer",
+        title: "Checkpoint closed at market",
+        description: "Checkpoint closed at market",
+        lat: 15.5007,
+        lng: 32.5599,
+        teamId: "team-nrc-sdn",
+      },
+    ]);
+    expect(acked).toEqual(["k1"]);
+  });
+
+  it("uses the session default team when the queued row has none", async () => {
+    const created: Array<QueuedFieldSignal & { teamId: string }> = [];
+    const queued: QueuedFieldSignal = {
+      sourceId: "source-field-officer",
+      title: "Flooding at school",
+      description: "Flooding at school",
+      locationId: "loc-khartoum",
+    };
+    const result = await drainQueuedFieldSignals({
+      isOnline: true,
+      pending: [{ key: "k2", data: queued }],
+      fallbackTeamId: "team-nrc-sdn",
+      create: async (payload) => {
+        created.push(payload);
+      },
+      acknowledge: async () => undefined,
+    });
+    expect(result).toEqual({ sent: 1, stop: "done" });
+    expect(created[0]?.teamId).toBe("team-nrc-sdn");
+    expect(created[0]?.locationId).toBe("loc-khartoum");
+  });
+
+  it("stops before create when neither queued nor session team is present", async () => {
+    const created: unknown[] = [];
+    const result = await drainQueuedFieldSignals({
+      isOnline: true,
+      pending: [{ key: "k3", data: { ...gpsQueued, teamId: undefined } }],
+      create: async (payload) => {
+        created.push(payload);
+      },
+      acknowledge: async () => undefined,
+    });
+    expect(result).toEqual({ sent: 0, stop: "noTeam" });
+    expect(created).toEqual([]);
+  });
+
+  it("keeps later items queued when create fails for a non-team reason", async () => {
+    const createdTitles: string[] = [];
+    const acked: string[] = [];
+    const result = await drainQueuedFieldSignals({
+      isOnline: true,
+      pending: [
+        { key: "k1", data: gpsQueued },
+        {
+          key: "k2",
+          data: { ...gpsQueued, title: "Second observation" },
+        },
+      ],
+      create: async (payload) => {
+        createdTitles.push(payload.title);
+        throw new TypeError("Failed to fetch");
+      },
+      acknowledge: async (key) => {
+        acked.push(String(key));
+      },
+    });
+    expect(result).toEqual({ sent: 0, stop: "createFailed" });
+    expect(createdTitles).toEqual(["Checkpoint closed at market"]);
+    expect(acked).toEqual([]);
+  });
+
+  it("treats FORBIDDEN as noTeam and does not acknowledge", async () => {
+    const acked: string[] = [];
+    const result = await drainQueuedFieldSignals({
+      isOnline: true,
+      pending: [{ key: "k1", data: gpsQueued }],
+      create: async () => {
+        throw { data: { code: "FORBIDDEN" }, message: "FORBIDDEN" };
+      },
+      acknowledge: async (key) => {
+        acked.push(String(key));
+      },
+    });
+    expect(result).toEqual({ sent: 0, stop: "noTeam" });
+    expect(acked).toEqual([]);
   });
 });

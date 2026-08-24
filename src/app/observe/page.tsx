@@ -15,31 +15,17 @@ import { api } from "~/trpc/react";
 import type { GqlSignal } from "~/lib/types/graphql";
 import {
   classifyObserveSubmitError,
+  drainQueuedFieldSignals,
   locationFieldsForPayload,
   parseAtMentionQuery,
   resolveTeamIdForSubmit,
   stripTrailingAtMention,
+  type QueuedFieldSignal,
 } from "~/lib/observe/field-signal";
 
 /* ── IndexedDB offline queue ────────────────────────────────── */
 
-type QueuedPayload = {
-  sourceId: string;
-  title: string;
-  description: string;
-  locationId?: string;
-  lat?: number;
-  lng?: number;
-  mediaUrls?: string[];
-  /**
-   * Persisted so a signal queued while offline is authorised the same way
-   * on replay as it would have been at submission time. Without this a
-   * field coordinator could file a signal offline, then get FORBIDDEN
-   * hours later when the queue drains because `defaultTeamId` wasn't in
-   * the stored payload.
-   */
-  teamId?: string;
-};
+type QueuedPayload = QueuedFieldSignal;
 
 const DB_NAME = "clear-observe";
 const DB_STORE = "pending-signals";
@@ -348,48 +334,38 @@ export default function ObservePage() {
     : [];
 
   const drainQueue = useCallback(async () => {
-    if (!navigator.onLine || drainingRef.current) return;
+    if (drainingRef.current) return;
     if (meStatus === "pending") return;
     drainingRef.current = true;
     try {
       const pending = await dbGetPending();
-      let sent = 0;
-      for (const { key, data } of pending) {
-        const teamId = data.teamId ?? defaultTeamId;
-        if (!teamId) {
-          pushReply({
-            id: `recv-${Date.now()}`,
-            kind: "received",
-            variant: "error",
-            text: t("replies.noTeam"),
-          });
-          break;
-        }
-        try {
-          await mutateFnRef.current({ ...data, teamId });
+      const result = await drainQueuedFieldSignals({
+        isOnline: navigator.onLine,
+        pending,
+        fallbackTeamId: defaultTeamId,
+        create: async (data) => {
+          await mutateFnRef.current(data);
+        },
+        acknowledge: async (key) => {
           await dbRemove(key);
-          sent += 1;
           void utils.signals.invalidate();
           setPendingCount((n) => Math.max(0, n - 1));
-        } catch (err) {
-          const failure = classifyObserveSubmitError(err);
-          if (failure === "noTeam") {
-            pushReply({
-              id: `recv-${Date.now()}`,
-              kind: "received",
-              variant: "error",
-              text: t("replies.noTeam"),
-            });
-          }
-          break;
-        }
+        },
+      });
+      if (result.stop === "noTeam") {
+        pushReply({
+          id: `recv-${Date.now()}`,
+          kind: "received",
+          variant: "error",
+          text: t("replies.noTeam"),
+        });
       }
-      if (sent > 0) {
+      if (result.sent > 0) {
         pushReply({
           id: `recv-${Date.now()}`,
           kind: "received",
           variant: "success",
-          text: t("replies.drained", { count: sent }),
+          text: t("replies.drained", { count: result.sent }),
         });
       }
     } finally {
@@ -740,6 +716,8 @@ export default function ObservePage() {
           <button
             onClick={() => void handleSubmit()}
             disabled={!canSubmit}
+            title={t("compose.send")}
+            aria-label={t("compose.send")}
             style={{ width: 42, height: 42, borderRadius: "50%", background: canSubmit ? "var(--color-accent)" : "var(--color-border-dark)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: canSubmit ? "pointer" : "default", transition: "background 200ms", color: "white", flexShrink: 0 }}>
             {submitting ? <IconLoader2 size={18} style={{ animation: "spin 1s linear infinite" }} /> : <IconSend size={18} style={{ transform: "translateX(1px)" }} />}
           </button>

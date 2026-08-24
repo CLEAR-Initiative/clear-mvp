@@ -2147,7 +2147,8 @@
     "compose": {
       "placeholder": "What did you observe?",
       "captureLocation": "Capture location",
-      "addMedia": "Add photo or video"
+      "addMedia": "Add photo or video",
+      "send": "Send signal"
     }
   },
   "onboarding": {

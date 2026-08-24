@@ -2147,7 +2147,8 @@
     "compose": {
       "placeholder": "¿Qué observó?",
       "captureLocation": "Capturar ubicación",
-      "addMedia": "Añadir foto o video"
+      "addMedia": "Añadir foto o video",
+      "send": "Enviar señal"
     }
   },
   "onboarding": {

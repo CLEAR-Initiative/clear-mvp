@@ -2149,7 +2149,8 @@
     "compose": {
       "placeholder": "ما الذي رصدته؟",
       "captureLocation": "تحديد الموقع",
-      "addMedia": "إضافة صورة أو فيديو"
+      "addMedia": "إضافة صورة أو فيديو",
+      "send": "إرسال الإشارة"
     }
   },
   "onboarding": {
