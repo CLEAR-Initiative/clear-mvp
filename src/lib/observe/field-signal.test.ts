@@ -32,6 +32,13 @@ describe("classifyObserveSubmitError", () => {
       "network",
     );
   });
+
+  it("does not treat a programming TypeError as a queueable network blip", () => {
+    expect(classifyObserveSubmitError(new TypeError("x.foo is not a function"))).toBe("other");
+    expect(classifyObserveSubmitError(new TypeError("Cannot read properties of undefined"))).toBe(
+      "other",
+    );
+  });
 });
 
 describe("resolveTeamIdForSubmit", () => {

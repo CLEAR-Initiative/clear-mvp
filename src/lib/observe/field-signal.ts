@@ -27,6 +27,9 @@ function errorMessage(err: unknown): string {
 /**
  * Queue only true connectivity failures. Matching generic "failed" queued
  * GraphQL/tRPC errors and dropped the field report into IndexedDB forever.
+ * `TypeError` alone is not enough — browsers also throw it for
+ * `undefined is not a function` — so we require a connectivity-shaped
+ * message (same as `fetch()`: "Failed to fetch", Safari "Load failed", …).
  */
 export function classifyObserveSubmitError(err: unknown): ObserveSubmitFailure {
   const code = trpcCode(err);
@@ -36,7 +39,6 @@ export function classifyObserveSubmitError(err: unknown): ObserveSubmitFailure {
   if (lower.includes("forbidden")) return "noTeam";
 
   if (code === "TIMEOUT") return "network";
-  if (err instanceof TypeError) return "network";
   if (lower.includes("failed to fetch")) return "network";
   if (lower.includes("networkerror")) return "network";
   if (lower.includes("network request failed")) return "network";
