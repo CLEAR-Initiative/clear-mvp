@@ -41,6 +41,7 @@ import {
 } from "~/lib/map/topography-terrain";
 import {
   applyPinElevation,
+  parseLocationPinRole,
   pinElevationFactor,
   shouldElevatePointPin,
 } from "~/lib/map/pin-elevation";
@@ -1656,10 +1657,11 @@ export function CrisisMap({
         if (!Number.isFinite(markerId)) continue;
         const coords = displayLngLat.get(markerId) ?? rawCoords;
         const trust = props.location_trust as string;
-        const pinRole = props.location_pin_role as string;
+        const pinRoleRaw = props.location_pin_role;
         // Stem-capable on every basemap — flat until pitch > 45°, then grows.
+        // Pass the raw GeoJSON value so unknown roles fail closed (allowlist).
         const elevated = shouldElevatePointPin({
-          locationPinRole: pinRole === "source" || pinRole === "proposed" ? pinRole : undefined,
+          locationPinRole: pinRoleRaw,
         });
         const elevationFactor = elevated
           ? pinElevationFactor(
@@ -1672,8 +1674,7 @@ export function CrisisMap({
             trust === "challenged" || trust === "correction_queued"
               ? trust
               : undefined,
-          locationPinRole:
-            pinRole === "source" || pinRole === "proposed" ? pinRole : undefined,
+          locationPinRole: parseLocationPinRole(pinRoleRaw),
           // Glyphs only in the point density band — Country/donut keeps severity discs.
           iconSlug:
             mode === "point" &&

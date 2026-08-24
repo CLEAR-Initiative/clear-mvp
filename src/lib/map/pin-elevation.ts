@@ -30,14 +30,26 @@ export function pinElevationFactor(pitch: number): number {
   );
 }
 
+export type LocationPinRole = "source" | "proposed";
+
+/** Narrow GeoJSON `location_pin_role` to the known union. Unknown/empty → undefined. */
+export function parseLocationPinRole(
+  raw: unknown,
+): LocationPinRole | undefined {
+  return raw === "source" || raw === "proposed" ? raw : undefined;
+}
+
 /**
- * Unclustered pins grow stems when tilted. Ghost “proposed” location pins stay
- * flat discs. Basemap (Simple / Topography / Satellite) does not matter.
+ * Unclustered Event, Signal, and Crisis pins grow stems when tilted.
+ * Allowlist: unset/empty and `"source"`. `"proposed"` ghost discs stay
+ * flat. Unknown roles fail closed so a new pin role cannot silently opt
+ * into elevation. Basemap does not matter.
  */
 export function shouldElevatePointPin(opts: {
-  locationPinRole?: string;
+  locationPinRole?: unknown;
 }): boolean {
-  return opts.locationPinRole !== "proposed";
+  const role = opts.locationPinRole;
+  return role == null || role === "" || role === "source";
 }
 
 /**

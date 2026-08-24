@@ -122,7 +122,7 @@ override paint on the style's road layers.
 | Outside mask | #FFF @ .9 (Simple) / #000 @ .4 | #000 @ .55 (Simple) / #000 @ .4 |
 | Canvas void (shell behind WebGL) | #FAFAFA | #111111 (Simple + Topography); #0a0a0a (Satellite) |
 | Topography atmosphere | same as Simple (no custom `setFog`) | same — cartography matches Simple; tilt / mesh / Point altitude only |
-| Markers | severity scale (critical red -> low green), orange accent rings; type glyph on unclustered pins; Topography stems grow with pitch (flat ≤45°, full ~70°) | same |
+| Markers | severity scale (critical red -> low green), orange accent rings; type glyph on unclustered pins; stems grow with pitch on Simple / Topography / Satellite (flat ≤45°, full ~70°); proposed pins stay flat | same |
 
 Boundaries are blue, corridors tan, markers orange/severity - three
 distinguishable information channels at every zoom and theme. On the

@@ -3,6 +3,7 @@ import {
   PIN_ELEVATE_FULL_PITCH,
   PIN_ELEVATE_START_PITCH,
   applyPinElevation,
+  parseLocationPinRole,
   pinElevationFactor,
   shouldElevatePointPin,
 } from "./pin-elevation";
@@ -35,15 +36,31 @@ describe("pinElevationFactor", () => {
   });
 });
 
+describe("parseLocationPinRole", () => {
+  it("keeps source and proposed, drops empty and unknown", () => {
+    expect(parseLocationPinRole("source")).toBe("source");
+    expect(parseLocationPinRole("proposed")).toBe("proposed");
+    expect(parseLocationPinRole("")).toBeUndefined();
+    expect(parseLocationPinRole("cluster")).toBeUndefined();
+    expect(parseLocationPinRole(undefined)).toBeUndefined();
+  });
+});
+
 describe("shouldElevatePointPin", () => {
   it("elevates Event/Signal/Crisis pins on every basemap", () => {
     expect(shouldElevatePointPin({})).toBe(true);
     expect(shouldElevatePointPin({ locationPinRole: "source" })).toBe(true);
     expect(shouldElevatePointPin({ locationPinRole: "" })).toBe(true);
+    expect(shouldElevatePointPin({ locationPinRole: undefined })).toBe(true);
   });
 
   it("keeps proposed location pins flat", () => {
     expect(shouldElevatePointPin({ locationPinRole: "proposed" })).toBe(false);
+  });
+
+  it("fails closed on unknown roles", () => {
+    expect(shouldElevatePointPin({ locationPinRole: "cluster" })).toBe(false);
+    expect(shouldElevatePointPin({ locationPinRole: "ghost" })).toBe(false);
   });
 });
 
