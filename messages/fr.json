@@ -413,7 +413,14 @@
       "unverified": "Non vérifié",
       "statusActive": "Actif",
       "statusPending": "En attente",
-      "activate": "Activer"
+      "activate": "Activer",
+      "roleUpdated": "Rôle mis à jour",
+      "roleUpdatedDetail": "Le rôle est maintenant {role}.",
+      "roleUpdateFailed": "Impossible de mettre à jour le rôle",
+      "approved": "Utilisateur approuvé",
+      "approvedDetail": "Il a désormais un accès lecteur.",
+      "approveFailed": "Impossible d'approuver l'utilisateur",
+      "deleteUnavailable": "La suppression d'utilisateur n'est pas encore disponible"
     },
     "features": {
       "stats": {

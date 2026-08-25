@@ -21,6 +21,7 @@ import {
   Tabs,
   Text,
   TextInput,
+  Tooltip,
 } from "@mantine/core";
 import {
   IconAlertCircle,
@@ -42,6 +43,7 @@ import {
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
+import { notifications } from "@mantine/notifications";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
 import { isPlatformAdmin } from "~/lib/roles";
@@ -69,9 +71,7 @@ type GqlUser = {
 
 type FilterMode = "all" | "pending";
 
-type PendingAction =
-  | { type: "role"; user: GqlUser; newRole: string }
-  | { type: "delete"; user: GqlUser };
+type PendingAction = { type: "role"; user: GqlUser; newRole: string };
 
 // Global roles only. Org and team roles live in /settings/org and
 // /settings/team/<id>. `org_admin` was previously listed here because it
@@ -215,9 +215,8 @@ function ConfirmModal({
 }) {
   const t = useTranslations("admin");
   const tActions = useTranslations("common.actions");
-  const isDelete = action?.type === "delete";
 
-  const title = isDelete ? t("confirm.removeTitle") : t("confirm.roleTitle");
+  const title = t("confirm.roleTitle");
 
   const b = (chunks: React.ReactNode) => (
     <Text component="span" fw={600} c={colors.textPrimary}>
@@ -226,18 +225,14 @@ function ConfirmModal({
   );
 
   const body = action ? (
-    isDelete ? (
-      <>{t.rich("confirm.removeBody", { b, name: action.user.name })}</>
-    ) : (
-      <>
-        {t.rich("confirm.roleBody", {
-          b,
-          name: action.user.name,
-          from: action.user.role,
-          to: (action as Extract<PendingAction, { type: "role" }>).newRole,
-        })}
-      </>
-    )
+    <>
+      {t.rich("confirm.roleBody", {
+        b,
+        name: action.user.name,
+        from: action.user.role,
+        to: action.newRole,
+      })}
+    </>
   ) : null;
 
   return (
@@ -274,8 +269,8 @@ function ConfirmModal({
         </Button>
         <HoldToConfirmButton
           onConfirm={onConfirm}
-          label={isDelete ? t("hold.remove") : t("hold.confirm")}
-          danger={isDelete}
+          label={t("hold.confirm")}
+          danger={false}
         />
       </Group>
     </Modal>
@@ -285,6 +280,7 @@ function ConfirmModal({
 /* ─── Users panel ─────────────────────────────────────────── */
 function UsersPanel() {
   const t = useTranslations("admin.users");
+  const utils = api.useUtils();
   const { data, isLoading } = api.auth.listUsers.useQuery(undefined, {
     staleTime: 30_000,
   });
@@ -326,29 +322,78 @@ function UsersPanel() {
     : null;
 
   const filteredUsers = localUsers.filter((u) => {
-    if (filter === "pending" && u.isActive) return false;
+    if (filter === "pending" && u.role !== "pending") return false;
     if (selectedOrgId && !u.organisations?.some((o) => o.organisationId === selectedOrgId)) return false;
     if (selectedTeamMembershipIds && !u.teamMemberships?.some((m) => selectedTeamMembershipIds.has(m.id))) return false;
     return true;
   });
 
-  const pendingCount = localUsers.filter((u) => !u.isActive).length;
+  const pendingCount = localUsers.filter((u) => u.role === "pending").length;
+
+  const updateUserRole = api.auth.updateUserRole.useMutation({
+    onSuccess: (updated) => {
+      setLocalUsers((prev) =>
+        prev.map((u) => (u.id === updated.id ? { ...u, role: updated.role } : u)),
+      );
+      setPendingRoles((prev) => {
+        const n = { ...prev };
+        delete n[updated.id];
+        return n;
+      });
+      notifications.show({
+        title: t("roleUpdated"),
+        message: t("roleUpdatedDetail", { role: updated.role }),
+        color: "green",
+        autoClose: 2000,
+      });
+      void utils.auth.listUsers.invalidate();
+    },
+    onError: (err) => {
+      notifications.show({
+        title: t("roleUpdateFailed"),
+        message: err.message,
+        color: "red",
+      });
+    },
+  });
+
+  const approveUser = api.auth.approveUser.useMutation({
+    onSuccess: (result) => {
+      const id = result.user.id;
+      setLocalUsers((prev) =>
+        prev.map((u) =>
+          u.id === id
+            ? { ...u, role: result.user.role ?? "viewer", isActive: result.user.isActive ?? true }
+            : u,
+        ),
+      );
+      notifications.show({
+        title: t("approved"),
+        message: t("approvedDetail"),
+        color: "green",
+        autoClose: 2000,
+      });
+      void utils.auth.listUsers.invalidate();
+    },
+    onError: (err) => {
+      notifications.show({
+        title: t("approveFailed"),
+        message: err.message,
+        color: "red",
+      });
+    },
+  });
 
   /* ── handlers ── */
   const handleRoleSelect = (user: GqlUser, newRole: string | null) => {
     if (!newRole || newRole === user.role) return;
+    if (user.role === "pending") return;
     setPendingRoles((prev) => ({ ...prev, [user.id]: newRole }));
     setPendingAction({ type: "role", user, newRole });
   };
 
   const handleActivate = (user: GqlUser) => {
-    setLocalUsers((prev) =>
-      prev.map((u) => (u.id === user.id ? { ...u, isActive: true } : u)),
-    );
-  };
-
-  const handleDelete = (user: GqlUser) => {
-    setPendingAction({ type: "delete", user });
+    approveUser.mutate({ userId: user.id });
   };
 
   const handleModalClose = () => {
@@ -365,24 +410,20 @@ function UsersPanel() {
 
   const handleConfirm = () => {
     if (!pendingAction) return;
-    if (pendingAction.type === "role") {
-      const id = pendingAction.user.id;
-      setLocalUsers((prev) =>
-        prev.map((u) =>
-          u.id === id ? { ...u, role: pendingAction.newRole } : u,
-        ),
-      );
-      setPendingRoles((prev) => {
-        const n = { ...prev };
-        delete n[id];
-        return n;
-      });
-    } else if (pendingAction.type === "delete") {
-      setLocalUsers((prev) =>
-        prev.filter((u) => u.id !== pendingAction.user.id),
-      );
-    }
+    const { user, newRole } = pendingAction;
     setPendingAction(null);
+    updateUserRole.mutate(
+      { userId: user.id, role: newRole as "viewer" | "analyst" | "admin" },
+      {
+        onError: () => {
+          setPendingRoles((prev) => {
+            const n = { ...prev };
+            delete n[user.id];
+            return n;
+          });
+        },
+      },
+    );
   };
 
   /* ── render ── */
@@ -564,6 +605,7 @@ function UsersPanel() {
                       data={ROLES.map((r) => ({ value: r.value, label: t(`roles.${r.labelKey}`) }))}
                       size="xs"
                       w={110}
+                      disabled={user.role === "pending" || updateUserRole.isPending}
                       styles={{
                         input: {
                           fontWeight: 600,
@@ -634,16 +676,17 @@ function UsersPanel() {
                       <Badge
                         size="sm"
                         variant="dot"
-                        color={user.isActive ? "green" : "orange"}
+                        color={user.role === "pending" ? "orange" : "green"}
                       >
-                        {user.isActive ? t("statusActive") : t("statusPending")}
+                        {user.role === "pending" ? t("statusPending") : t("statusActive")}
                       </Badge>
-                      {!user.isActive && (
+                      {user.role === "pending" && (
                         <Button
                           size="xs"
                           variant="light"
                           color="green"
                           leftSection={<IconUserCheck size={12} />}
+                          loading={approveUser.isPending}
                           onClick={() => handleActivate(user)}
                         >
                           {t("activate")}
@@ -652,16 +695,19 @@ function UsersPanel() {
                     </Group>
                   </Table.Td>
 
-                  {/* Delete */}
+                  {/* Delete — no GraphQL mutation exists yet; do not fake-persist. */}
                   <Table.Td>
-                    <ActionIcon
-                      variant="subtle"
-                      color="red"
-                      size="sm"
-                      onClick={() => handleDelete(user)}
-                    >
-                      <IconTrash size={14} />
-                    </ActionIcon>
+                    <Tooltip label={t("deleteUnavailable")}>
+                      <ActionIcon
+                        variant="subtle"
+                        color="red"
+                        size="sm"
+                        disabled
+                        aria-label={t("deleteUnavailable")}
+                      >
+                        <IconTrash size={14} />
+                      </ActionIcon>
+                    </Tooltip>
                   </Table.Td>
                 </Table.Tr>
               ))
