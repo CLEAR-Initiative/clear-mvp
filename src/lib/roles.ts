@@ -11,3 +11,16 @@
 export function isPlatformAdmin(role: string | null | undefined): boolean {
   return role === "admin";
 }
+
+/**
+ * Client twin of clear-api `addEventToCrisis` / `createAlert`
+ * `requireRole(["admin", "analyst"])`. Use this for Add-to-crisis and
+ * Raise-alert chrome — NOT `isPlatformAdmin`, which is admin-only and
+ * would hide those actions from analysts.
+ *
+ * `createCrisisFromEvents` is wider (team writers via `teamId`); do not
+ * reuse this helper to hide Create Crisis.
+ */
+export function canWriteCrisisEvents(role: string | null | undefined): boolean {
+  return isPlatformAdmin(role) || role === "analyst";
+}

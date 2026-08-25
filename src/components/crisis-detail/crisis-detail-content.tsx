@@ -52,7 +52,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { isPlatformAdmin } from "~/lib/roles";
+import { canWriteCrisisEvents, isPlatformAdmin } from "~/lib/roles";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
@@ -806,7 +806,7 @@ export function CrisisDetailContent({
                   </Tabs.List>
                 </Box>
                 <Tabs.Panel value="events" style={{ height: 300, overflowY: "auto" }}>
-                  <EventsTimeline events={eventsNewestFirst} isAdmin={isAdmin} crisisId={crisis.id} totalEventCount={events.length} />
+                  <EventsTimeline events={eventsNewestFirst} isAdmin={isAdmin} canAddEvents={canWriteCrisisEvents(meQuery.data?.user?.role)} crisisId={crisis.id} totalEventCount={events.length} />
                 </Tabs.Panel>
                 <Tabs.Panel value="demography" style={{ height: 300, overflowY: "auto" }}>
                   <DemographyPanel crisis={crisis} />
@@ -1884,7 +1884,7 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
   );
 }
 
-function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events: GqlEvent[]; isAdmin: boolean; crisisId: string; totalEventCount: number }) {
+function EventsTimeline({ events, isAdmin, canAddEvents, crisisId, totalEventCount }: { events: GqlEvent[]; isAdmin: boolean; canAddEvents: boolean; crisisId: string; totalEventCount: number }) {
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
   const router = useRouter();
@@ -1940,7 +1940,7 @@ function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events
       </Modal>
 
       <Group justify="flex-end" px={12} pt={10} pb={4}>
-        <AddEventsToCrisisButton crisisId={crisisId} canAdd />
+        <AddEventsToCrisisButton crisisId={crisisId} canAdd={canAddEvents} />
       </Group>
 
       {events.length === 0 ? (

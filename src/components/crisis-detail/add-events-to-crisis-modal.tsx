@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Badge,
@@ -21,7 +21,7 @@ import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { resolveLocationName } from "~/lib/location";
-import type { RecommendReason } from "~/lib/crisis/recommend-events";
+import { eventMatchesSearch, type RecommendReason } from "~/lib/crisis/recommend-events";
 import { useTeam } from "~/providers/team-provider";
 
 interface AddEventsToCrisisModalProps {
@@ -48,14 +48,15 @@ export function AddEventsToCrisisModal({
   const [search, setSearch] = useState("");
   const [addingId, setAddingId] = useState<string | null>(null);
 
+  // Search stays local — the candidate pool is fetched once when the
+  // modal opens so typing does not re-run the 100-event GraphQL page.
   const query = api.crises.recommendEvents.useQuery(
     {
       crisisId,
-      search: search.trim() || undefined,
       teamId: activeTeamId,
       limit: 10,
     },
-    { enabled: opened },
+    { enabled: opened, staleTime: 30_000 },
   );
 
   const addEvent = api.crises.addEvent.useMutation({
@@ -68,9 +69,20 @@ export function AddEventsToCrisisModal({
   });
 
   const recommended = query.data?.recommended ?? [];
-  const searchResults = query.data?.searchResults ?? [];
+  const pool = query.data?.pool ?? [];
   const showingSearch = search.trim().length > 0;
-  const rows: ScoredRow[] = showingSearch ? searchResults : recommended;
+  const rows: ScoredRow[] = useMemo(() => {
+    if (!showingSearch) return recommended;
+    const q = search.trim();
+    return pool
+      .filter((r) => eventMatchesSearch(r.event, q))
+      .sort(
+        (a, b) =>
+          b.score - a.score ||
+          (b.event.lastSignalCreatedAt ?? "").localeCompare(a.event.lastSignalCreatedAt ?? ""),
+      )
+      .slice(0, 40);
+  }, [showingSearch, search, recommended, pool]);
 
   async function handleAdd(eventId: string) {
     setAddingId(eventId);

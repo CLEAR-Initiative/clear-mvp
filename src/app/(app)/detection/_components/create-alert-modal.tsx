@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Modal,
@@ -78,6 +78,13 @@ export function CreateAlertModal({
   });
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!opened) return;
@@ -99,12 +106,14 @@ export function CreateAlertModal({
         utils.alerts.getAlerts.invalidate(),
         utils.alerts.getStats.invalidate(),
         utils.alerts.eventsPage.invalidate(),
-      ]);
-      setTimeout(() => {
-        setSuccessMsg(null);
-        onClose();
-        onSuccess?.();
-      }, 900);
+      ]).then(() => {
+        if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = setTimeout(() => {
+          setSuccessMsg(null);
+          onClose();
+          onSuccess?.();
+        }, 900);
+      });
     },
     onError: (err) => {
       setErrorMsg(err.message);
@@ -117,9 +126,15 @@ export function CreateAlertModal({
   });
 
   function handleClose() {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    const succeeded = successMsg !== null;
     setErrorMsg(null);
     setSuccessMsg(null);
     onClose();
+    if (succeeded) onSuccess?.();
   }
 
   const isValid =

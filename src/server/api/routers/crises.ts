@@ -3,11 +3,13 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import {
-  eventMatchesSearch,
   rankEventsForCrisis,
   scoreEventAgainstCrisis,
   buildCrisisRecommendContext,
 } from "~/lib/crisis/recommend-events";
+
+/** clear-api `eventsPage` clamps to MAX_LIMIT=100; asking for more is a no-op. */
+const RECOMMEND_CANDIDATE_LIMIT = 100;
 
 /** Shape returned by the backend `crisis` query. */
 export interface GqlCrisis {
@@ -366,14 +368,17 @@ export const crisesRouter = createTRPCRouter({
     }),
 
   /**
-   * Reverse-path add: search + smart recommendations for events not yet
-   * linked to this crisis. Scoring: location / ±7d time / type / severity / source.
+   * Reverse-path add: smart recommendations for events not yet linked
+   * to this crisis. Fetched once per modal open; the client filters
+   * `pool` locally so typing in search does not re-hit GraphQL.
+   *
+   * Candidate set is the newest `RECOMMEND_CANDIDATE_LIMIT` events
+   * (eventsPage max). Scoring: location / ±7d time / type / severity / source.
    */
   recommendEvents: protectedProcedure
     .input(
       z.object({
         crisisId: z.string(),
-        search: z.string().optional(),
         teamId: z.string().nullish(),
         limit: z.number().int().min(1).max(25).optional(),
       }),
@@ -386,7 +391,7 @@ export const crisesRouter = createTRPCRouter({
       );
       const crisis = crisisData.crisis;
       if (!crisis) {
-        return { recommended: [], searchResults: [], linkedIds: [] as string[] };
+        return { recommended: [], pool: [], linkedIds: [] as string[] };
       }
 
       const linkedIds = crisis.events.map((e) => e.id);
@@ -398,15 +403,20 @@ export const crisesRouter = createTRPCRouter({
           input: {
             teamId: input.teamId ?? undefined,
             includeDummy: false,
-            limit: 200,
+            limit: RECOMMEND_CANDIDATE_LIMIT,
             orderBy: "LAST_SIGNAL_DESC",
           },
         },
         cookieHeaders(ctx),
       );
       const candidates = pageData.eventsPage.items.filter((e) => !linkedSet.has(e.id));
-      const search = input.search?.trim() ?? "";
       const limit = input.limit ?? 10;
+      const ctxScore = buildCrisisRecommendContext(crisis.events);
+
+      const pool = candidates.map((event) => {
+        const { score, reasons } = scoreEventAgainstCrisis(event, ctxScore);
+        return { event, score, reasons };
+      });
 
       const recommended = rankEventsForCrisis(candidates, crisis.events, {
         excludeIds: linkedSet,
@@ -417,21 +427,7 @@ export const crisesRouter = createTRPCRouter({
         reasons: r.reasons,
       }));
 
-      if (!search) {
-        return { recommended, searchResults: [] as typeof recommended, linkedIds };
-      }
-
-      const ctxScore = buildCrisisRecommendContext(crisis.events);
-      const searchResults = candidates
-        .filter((e) => eventMatchesSearch(e, search))
-        .map((event) => {
-          const { score, reasons } = scoreEventAgainstCrisis(event, ctxScore);
-          return { event, score, reasons };
-        })
-        .sort((a, b) => b.score - a.score || (b.event.lastSignalCreatedAt ?? "").localeCompare(a.event.lastSignalCreatedAt ?? ""))
-        .slice(0, 40);
-
-      return { recommended, searchResults, linkedIds };
+      return { recommended, pool, linkedIds };
     }),
 
   removeEvent: protectedProcedure

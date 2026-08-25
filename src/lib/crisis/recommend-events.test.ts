@@ -86,6 +86,37 @@ describe("rankEventsForCrisis", () => {
     );
     expect(ranked.map((r) => r.event.id)).toEqual(["best"]);
   });
+
+  it("still excludes crisis-linked events when a custom excludeIds set is passed", () => {
+    const ranked = rankEventsForCrisis(
+      [
+        {
+          id: "c1",
+          types: ["fl"],
+          severity: 4,
+          lastSignalCreatedAt: "2026-08-10T12:00:00.000Z",
+          generalLocation: { id: "loc-a2", ancestorIds: ["loc-a1"] },
+        },
+        {
+          id: "best",
+          types: ["fl"],
+          severity: 4,
+          lastSignalCreatedAt: "2026-08-11T12:00:00.000Z",
+          generalLocation: { id: "loc-a2", ancestorIds: ["loc-a1"] },
+        },
+        {
+          id: "also-out",
+          types: ["fl"],
+          severity: 4,
+          lastSignalCreatedAt: "2026-08-12T12:00:00.000Z",
+          generalLocation: { id: "loc-a2", ancestorIds: ["loc-a1"] },
+        },
+      ],
+      crisisEvents,
+      { excludeIds: new Set(["also-out"]), limit: 5 },
+    );
+    expect(ranked.map((r) => r.event.id)).toEqual(["best"]);
+  });
 });
 
 describe("eventMatchesSearch", () => {

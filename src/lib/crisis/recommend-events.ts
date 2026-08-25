@@ -149,7 +149,10 @@ export function rankEventsForCrisis(
   crisisEvents: RecommendEventLike[],
   opts?: { excludeIds?: Set<string>; limit?: number; minScore?: number },
 ): ScoredEvent[] {
-  const exclude = opts?.excludeIds ?? new Set(crisisEvents.map((e) => e.id));
+  const exclude = new Set(crisisEvents.map((e) => e.id));
+  if (opts?.excludeIds) {
+    for (const id of opts.excludeIds) exclude.add(id);
+  }
   const limit = opts?.limit ?? 10;
   const minScore = opts?.minScore ?? 1;
   const ctx = buildCrisisRecommendContext(crisisEvents);
