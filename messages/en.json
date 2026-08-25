@@ -2114,7 +2114,9 @@
     },
     "header": {
       "appName": "Field Signals",
-      "queued": "{count} queued"
+      "queued": "{count} queued",
+      "online": "Online",
+      "offline": "Offline"
     },
     "tabs": {
       "submit": "Submit",
@@ -2124,7 +2126,8 @@
       "heading": "To submit a signal:",
       "bullet1": "The 1st line of your message will be the <strong>title</strong>, the rest is the <strong>description</strong>. Use Enter to go to a new line.",
       "bullet2": "Use <strong>@</strong> to tag a location, or tap <locationIcon></locationIcon> to let the app locate you.",
-      "bullet3": "Attach images or videos with the <mediaIcon></mediaIcon> button."
+      "bullet3": "Attach images or videos with the <mediaIcon></mediaIcon> button — media needs a connection.",
+      "bullet4": "Offline, <strong>text and a location</strong> are saved on this device and sent automatically when you are back online."
     },
     "signals": {
       "loading": "Loading signals…",
@@ -2133,13 +2136,22 @@
     },
     "replies": {
       "queued": "Got it. Your signal has been saved locally and will be sent to your team automatically once you are back online.",
+      "drained": "{count, plural, one {You're back online. The queued signal has been sent to your team.} other {You're back online. # queued signals have been sent to your team.}}",
       "success": "Signal received. A new entry has been added to your team's signal list.",
-      "error": "Something went wrong and your signal was not submitted. Please try again."
+      "error": "Something went wrong and your signal was not submitted. Please try again.",
+      "drainFailed": "Could not send a queued signal. It is still saved on this device — we will try again when the connection is stable.",
+      "mediaNeedsOnline": "Photos and videos need a connection. Remove the attachment or try again when you are online.",
+      "noTeam": "This account has no default team, so the signal could not be filed. Finish onboarding or ask an admin to add you to a team, then try again.",
+      "gpsUnsupported": "This device cannot share a GPS location. Tag a place with @ instead.",
+      "gpsDenied": "Location permission was denied. Allow location for this site, or tag a place with @.",
+      "gpsTimeout": "Could not get a GPS fix in time. Try again, or tag a place with @.",
+      "gpsUnavailable": "GPS location is unavailable right now. Try again, or tag a place with @."
     },
     "compose": {
       "placeholder": "What did you observe?",
       "captureLocation": "Capture location",
-      "addMedia": "Add photo or video"
+      "addMedia": "Add photo or video",
+      "send": "Send signal"
     }
   },
   "onboarding": {
