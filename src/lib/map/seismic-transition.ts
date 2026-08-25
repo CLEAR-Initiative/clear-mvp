@@ -13,7 +13,7 @@ import type {
   ShakeMapContours,
 } from "~/lib/map/usgs-earthquakes";
 
-export const SEISMIC_TRANSITION_MS = 480;
+export const SEISMIC_TRANSITION_MS = 220;
 
 export function prefersReducedMotion(): boolean {
   if (typeof window === "undefined" || !window.matchMedia) return false;
