@@ -7,8 +7,8 @@ import {
 describe("ensureGlobeProjection", () => {
   it("sets globe once and is a no-op when already globe", () => {
     let name = "mercator";
-    const setProjection = vi.fn((p: string | { name: string }) => {
-      name = typeof p === "string" ? p : p.name;
+    const setProjection = vi.fn((p: string) => {
+      name = p;
     });
     const map: IdleGlobeSpinMap = {
       getProjection: () => ({ name }),

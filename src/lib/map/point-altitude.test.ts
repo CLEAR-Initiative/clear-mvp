@@ -49,12 +49,7 @@ describe("formatAltitudeProbeLabel", () => {
 
 describe("samplePointAltitude", () => {
   it("queries unexaggerated DEM metres", () => {
-    const query = vi.fn(
-      (
-        _lngLat: { lng: number; lat: number } | [number, number],
-        _opts?: { exaggerated?: boolean },
-      ) => 385.2,
-    );
+    const query = vi.fn(() => 385.2);
     const result = samplePointAltitude(
       { queryTerrainElevation: query },
       32.5,
