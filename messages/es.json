@@ -2137,7 +2137,9 @@
     },
     "header": {
       "appName": "Señales de terreno",
-      "queued": "{count} en cola"
+      "queued": "{count} en cola",
+      "online": "En línea",
+      "offline": "Sin conexión"
     },
     "tabs": {
       "submit": "Enviar",
@@ -2147,7 +2149,8 @@
       "heading": "Para enviar una señal:",
       "bullet1": "La 1.ª línea de su mensaje será el <strong>título</strong>; el resto es la <strong>descripción</strong>. Use Intro para pasar a una nueva línea.",
       "bullet2": "Use <strong>@</strong> para etiquetar una ubicación, o pulse <locationIcon></locationIcon> para que la app lo ubique.",
-      "bullet3": "Adjunte imágenes o videos con el botón <mediaIcon></mediaIcon>."
+      "bullet3": "Adjunte imágenes o videos con el botón <mediaIcon></mediaIcon> — los archivos necesitan conexión.",
+      "bullet4": "Sin conexión, el <strong>texto y una ubicación</strong> se guardan en este dispositivo y se envían automáticamente al volver a estar en línea."
     },
     "signals": {
       "loading": "Cargando señales…",
@@ -2156,13 +2159,22 @@
     },
     "replies": {
       "queued": "Recibido. Su señal se ha guardado localmente y se enviará a su equipo automáticamente cuando vuelva a estar en línea.",
+      "drained": "{count, plural, one {Ya está en línea. La señal en cola se ha enviado a su equipo.} other {Ya está en línea. Se han enviado # señales en cola a su equipo.}}",
       "success": "Señal recibida. Se ha añadido una nueva entrada a la lista de señales de su equipo.",
-      "error": "Algo salió mal y su señal no se envió. Inténtelo de nuevo."
+      "error": "Algo salió mal y su señal no se envió. Inténtelo de nuevo.",
+      "drainFailed": "No se pudo enviar una señal en cola. Sigue guardada en este dispositivo: se reintentará cuando la conexión sea estable.",
+      "mediaNeedsOnline": "Las fotos y los vídeos necesitan conexión. Quite el adjunto o inténtelo cuando esté en línea.",
+      "noTeam": "Esta cuenta no tiene un equipo predeterminado, así que no se pudo registrar la señal. Termine la incorporación o pida a un administrador que lo añada a un equipo, e inténtelo de nuevo.",
+      "gpsUnsupported": "Este dispositivo no puede compartir una ubicación GPS. Etiquete un lugar con @.",
+      "gpsDenied": "Se denegó el permiso de ubicación. Permítalo para este sitio, o etiquete un lugar con @.",
+      "gpsTimeout": "No se obtuvo un punto GPS a tiempo. Inténtelo de nuevo o etiquete un lugar con @.",
+      "gpsUnavailable": "La ubicación GPS no está disponible ahora. Inténtelo de nuevo o etiquete un lugar con @."
     },
     "compose": {
       "placeholder": "¿Qué observó?",
       "captureLocation": "Capturar ubicación",
-      "addMedia": "Añadir foto o video"
+      "addMedia": "Añadir foto o video",
+      "send": "Enviar señal"
     }
   },
   "onboarding": {

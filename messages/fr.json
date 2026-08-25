@@ -2139,7 +2139,9 @@
     },
     "header": {
       "appName": "Signaux de terrain",
-      "queued": "{count} en attente"
+      "queued": "{count} en attente",
+      "online": "En ligne",
+      "offline": "Hors ligne"
     },
     "tabs": {
       "submit": "Soumettre",
@@ -2149,7 +2151,8 @@
       "heading": "Pour soumettre un signal :",
       "bullet1": "La 1re ligne de votre message sera le <strong>titre</strong>, le reste constitue la <strong>description</strong>. Utilisez Entrée pour passer à la ligne.",
       "bullet2": "Utilisez <strong>@</strong> pour indiquer une localisation, ou appuyez sur <locationIcon></locationIcon> pour laisser l'application vous localiser.",
-      "bullet3": "Joignez des images ou des vidéos avec le bouton <mediaIcon></mediaIcon>."
+      "bullet3": "Joignez des images ou des vidéos avec le bouton <mediaIcon></mediaIcon> — les médias nécessitent une connexion.",
+      "bullet4": "Hors ligne, le <strong>texte et une localisation</strong> sont enregistrés sur cet appareil et envoyés automatiquement dès que vous êtes de nouveau en ligne."
     },
     "signals": {
       "loading": "Chargement des signaux…",
@@ -2158,13 +2161,22 @@
     },
     "replies": {
       "queued": "Bien reçu. Votre signal a été enregistré localement et sera transmis automatiquement à votre équipe dès que vous serez de nouveau en ligne.",
+      "drained": "{count, plural, one {Vous êtes de nouveau en ligne. Le signal en attente a été transmis à votre équipe.} other {Vous êtes de nouveau en ligne. # signaux en attente ont été transmis à votre équipe.}}",
       "success": "Signal reçu. Une nouvelle entrée a été ajoutée à la liste des signaux de votre équipe.",
-      "error": "Une erreur est survenue et votre signal n'a pas été soumis. Veuillez réessayer."
+      "error": "Une erreur est survenue et votre signal n'a pas été soumis. Veuillez réessayer.",
+      "drainFailed": "Impossible d'envoyer un signal en attente. Il reste enregistré sur cet appareil — nouvel essai dès que la connexion sera stable.",
+      "mediaNeedsOnline": "Les photos et vidéos nécessitent une connexion. Retirez la pièce jointe ou réessayez une fois en ligne.",
+      "noTeam": "Ce compte n'a pas d'équipe par défaut, le signal n'a pas pu être déposé. Terminez l'onboarding ou demandez à un administrateur de vous ajouter à une équipe, puis réessayez.",
+      "gpsUnsupported": "Cet appareil ne peut pas partager une position GPS. Indiquez un lieu avec @.",
+      "gpsDenied": "L'autorisation de localisation a été refusée. Autorisez-la pour ce site, ou indiquez un lieu avec @.",
+      "gpsTimeout": "Impossible d'obtenir un point GPS à temps. Réessayez, ou indiquez un lieu avec @.",
+      "gpsUnavailable": "La localisation GPS est indisponible pour le moment. Réessayez, ou indiquez un lieu avec @."
     },
     "compose": {
       "placeholder": "Qu'avez-vous observé ?",
       "captureLocation": "Capturer la localisation",
-      "addMedia": "Ajouter une photo ou une vidéo"
+      "addMedia": "Ajouter une photo ou une vidéo",
+      "send": "Envoyer le signal"
     }
   },
   "onboarding": {

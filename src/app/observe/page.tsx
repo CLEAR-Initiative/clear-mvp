@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
+  IconAntennaBars5,
+  IconAntennaBarsOff,
   IconMapPin,
   IconX,
   IconLoader2,
@@ -13,24 +15,21 @@ import {
 import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { api } from "~/trpc/react";
 import type { GqlSignal } from "~/lib/types/graphql";
+import {
+  classifyObserveSubmitError,
+  drainQueuedFieldSignals,
+  isObserveQaOverrideAllowed,
+  locationFieldsForPayload,
+  parseAtMentionQuery,
+  resolveTeamIdForSubmit,
+  searchForcesMissingTeam,
+  stripTrailingAtMention,
+  type QueuedFieldSignal,
+} from "~/lib/observe/field-signal";
 
 /* ── IndexedDB offline queue ────────────────────────────────── */
 
-type QueuedPayload = {
-  sourceId: string;
-  title: string;
-  description: string;
-  locationId?: string;
-  mediaUrls?: string[];
-  /**
-   * Persisted so a signal queued while offline is authorised the same way
-   * on replay as it would have been at submission time. Without this a
-   * field coordinator could file a signal offline, then get FORBIDDEN
-   * hours later when the queue drains because `defaultTeamId` wasn't in
-   * the stored payload.
-   */
-  teamId?: string;
-};
+type QueuedPayload = QueuedFieldSignal;
 
 const DB_NAME = "clear-observe";
 const DB_STORE = "pending-signals";
@@ -224,9 +223,12 @@ function SignalCard({ signal }: { signal: GqlSignal }) {
   );
 }
 
-function SignalsList() {
+function SignalsList({ teamId }: { teamId?: string }) {
   const t = useTranslations("observe.signals");
-  const signalsQuery = api.signals.list.useQuery(undefined, { staleTime: 1000 * 60 });
+  const signalsQuery = api.signals.list.useQuery(
+    { teamId },
+    { staleTime: 1000 * 60, enabled: Boolean(teamId) },
+  );
 
   if (signalsQuery.isLoading) {
     return (
@@ -271,6 +273,7 @@ function makeWelcome(t: ReturnType<typeof useTranslations<"observe">>): ChatMess
           <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet1", { strong })}</span></li>
           <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet2", { strong, locationIcon: () => <span style={iconChip}><IconMapPin size={13} strokeWidth={2.5} /></span> })}</span></li>
           <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet3", { mediaIcon: () => <span style={iconChip}><IconPhoto size={13} strokeWidth={2.5} /></span> })}</span></li>
+          <li style={{ display: "flex", gap: 8 }}><span>•</span><span>{t.rich("welcome.bullet4", { strong })}</span></li>
         </ul>
       </div>
     ),
@@ -285,29 +288,38 @@ export default function ObservePage() {
   const [draftMedia, setDraftMedia] = useState<{ file: File; id: string; preview: string; isVideo: boolean }[]>([]);
   const [locationId, setLocationId] = useState("");
   const [locationLabel, setLocationLabel] = useState("");
+  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [sourceId, setSourceId] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [atQuery, setAtQuery] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [forceNoTeam, setForceNoTeam] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
-  const createSignal = api.signals.createManual.useMutation();
+  const utils = api.useUtils();
+  const createSignal = api.signals.createManual.useMutation({
+    onSuccess: async () => {
+      await utils.signals.invalidate();
+    },
+  });
   const sourcesQuery = api.signals.sources.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   const locationsQuery = api.locations.list.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   // /observe lives outside the (app) group and has no team switcher, so we
   // fall back to the user's persisted defaultTeamId to satisfy the backend's
-  // team-scoped createManualSignal gate. Field coordinators without a
-  // defaultTeamId (unusual — should be set at onboarding) will hit
-  // FORBIDDEN; a fix on that path is future work.
+  // team-scoped createManualSignal gate.
   const meQuery = api.auth.me.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
-  const defaultTeamId = meQuery.data?.user?.defaultTeamId ?? undefined;
-  const utils = api.useUtils();
+  const defaultTeamId = forceNoTeam
+    ? undefined
+    : (meQuery.data?.user?.defaultTeamId ?? undefined);
+  const meStatus = meQuery.isPending ? "pending" : meQuery.isError ? "error" : "success";
 
   const mutateFnRef = useRef(createSignal.mutateAsync);
+  const drainingRef = useRef(false);
   useEffect(() => { mutateFnRef.current = createSignal.mutateAsync; });
 
   useEffect(() => {
@@ -330,17 +342,51 @@ export default function ObservePage() {
     : [];
 
   const drainQueue = useCallback(async () => {
-    if (!navigator.onLine) return;
-    const pending = await dbGetPending();
-    for (const { key, data } of pending) {
-      try {
-        await mutateFnRef.current(data);
-        await dbRemove(key);
-        void utils.signals.list.invalidate();
-        setPendingCount((n) => Math.max(0, n - 1));
-      } catch { break; }
+    if (drainingRef.current) return;
+    if (meStatus === "pending") return;
+    drainingRef.current = true;
+    try {
+      const pending = await dbGetPending();
+      const result = await drainQueuedFieldSignals({
+        isOnline: navigator.onLine,
+        pending,
+        fallbackTeamId: defaultTeamId,
+        create: async (data) => {
+          await mutateFnRef.current(data);
+        },
+        acknowledge: async (key) => {
+          await dbRemove(key);
+          void utils.signals.invalidate();
+          setPendingCount((n) => Math.max(0, n - 1));
+        },
+      });
+      if (result.sent > 0) {
+        pushReply({
+          id: `recv-${Date.now()}`,
+          kind: "received",
+          variant: "success",
+          text: t("replies.drained", { count: result.sent }),
+        });
+      }
+      if (result.stop === "noTeam") {
+        pushReply({
+          id: `recv-${Date.now()}`,
+          kind: "received",
+          variant: "error",
+          text: t("replies.noTeam"),
+        });
+      } else if (result.stop === "createFailed") {
+        pushReply({
+          id: `recv-${Date.now()}`,
+          kind: "received",
+          variant: "error",
+          text: t("replies.drainFailed"),
+        });
+      }
+    } finally {
+      drainingRef.current = false;
     }
-  }, [utils]);
+  }, [utils, defaultTeamId, meStatus, t]);
 
   useEffect(() => {
     void dbGetPending().then((p) => setPendingCount(p.length));
@@ -350,34 +396,89 @@ export default function ObservePage() {
   }, [drainQueue]);
 
   useEffect(() => {
+    const syncOnline = () => setIsOnline(navigator.onLine);
+    syncOnline();
+    window.addEventListener("online", syncOnline);
+    window.addEventListener("offline", syncOnline);
+    return () => {
+      window.removeEventListener("online", syncOnline);
+      window.removeEventListener("offline", syncOnline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const allowed = isObserveQaOverrideAllowed({
+      nodeEnv: process.env.NODE_ENV,
+      vercelEnv: process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV,
+    });
+    if (!allowed) return;
+    setForceNoTeam(searchForcesMissingTeam(window.location.search));
+  }, []);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   function handleDraftChange(val: string) {
     setDraft(val);
-    const match = val.match(/@([\w\s]*)$/);
-    setAtQuery(match ? (match[1] ?? "") : null);
+    setAtQuery(parseAtMentionQuery(val));
   }
 
   function selectLocationFromAt(loc: { value: string; label: string }) {
-    setDraft((d) => d.replace(/@[\w\s]*$/, ""));
+    setDraft((d) => stripTrailingAtMention(d));
     setLocationId(loc.value);
     setLocationLabel(loc.label);
+    setGpsCoords(null);
     setAtQuery(null);
     textareaRef.current?.focus();
   }
 
+  function clearLocation() {
+    setLocationId("");
+    setLocationLabel("");
+    setGpsCoords(null);
+  }
+
   function captureGPS() {
-    if (!navigator.geolocation || gpsLoading) return;
-    if (locationLabel) { setLocationId(""); setLocationLabel(""); return; }
+    if (gpsLoading) return;
+    if (locationLabel) {
+      clearLocation();
+      return;
+    }
+    if (!navigator.geolocation) {
+      pushReply({
+        id: `recv-${Date.now()}`,
+        kind: "received",
+        variant: "error",
+        text: t("replies.gpsUnsupported"),
+      });
+      return;
+    }
     setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLocationLabel(formatCoords(pos.coords.latitude, pos.coords.longitude));
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setGpsCoords({ lat, lng });
+        setLocationLabel(formatCoords(lat, lng));
         setLocationId("");
         setGpsLoading(false);
       },
-      () => setGpsLoading(false),
+      (err) => {
+        setGpsLoading(false);
+        const text =
+          err.code === err.PERMISSION_DENIED
+            ? t("replies.gpsDenied")
+            : err.code === err.TIMEOUT
+              ? t("replies.gpsTimeout")
+              : t("replies.gpsUnavailable");
+        pushReply({
+          id: `recv-${Date.now()}`,
+          kind: "received",
+          variant: "error",
+          text,
+        });
+      },
       { enableHighAccuracy: true, timeout: 10000 },
     );
   }
@@ -401,11 +502,15 @@ export default function ObservePage() {
     });
   }
 
-  const cleanDraft = draft.replace(/@[\w\s]*$/, "").trimEnd();
+  const cleanDraft = stripTrailingAtMention(draft).trimEnd();
   const lines = cleanDraft.split("\n");
   const titleLine = lines[0]?.trim() ?? "";
   const bodyLines = lines.slice(1).join("\n").trim();
-  const canSubmit = cleanDraft.trim().length > 0 && sourceId.length > 0 && !submitting;
+  const canSubmit =
+    cleanDraft.trim().length > 0 &&
+    sourceId.length > 0 &&
+    !submitting &&
+    meStatus !== "pending";
 
   function pushReply(msg: ChatMessage) {
     setMessages((prev) => [...prev.filter((m) => m.kind !== "typing"), msg]);
@@ -413,6 +518,29 @@ export default function ObservePage() {
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
+
+    if (!navigator.onLine && draftMedia.length > 0) {
+      pushReply({
+        id: `recv-${Date.now()}`,
+        kind: "received",
+        variant: "error",
+        text: t("replies.mediaNeedsOnline"),
+      });
+      return;
+    }
+
+    const teamGate = resolveTeamIdForSubmit({ meStatus, defaultTeamId });
+    if (!teamGate.ok) {
+      if (teamGate.reason === "loading") return;
+      pushReply({
+        id: `recv-${Date.now()}`,
+        kind: "received",
+        variant: "error",
+        text: teamGate.reason === "noTeam" ? t("replies.noTeam") : t("replies.error"),
+      });
+      return;
+    }
+
     setSubmitting(true);
     setAtQuery(null);
 
@@ -429,6 +557,7 @@ export default function ObservePage() {
     setDraft("");
     setLocationId("");
     setLocationLabel("");
+    setGpsCoords(null);
     setDraftMedia([]);
 
     setTimeout(() => {
@@ -439,8 +568,8 @@ export default function ObservePage() {
       sourceId,
       title: titleLine || "Field observation",
       description: bodyLines || titleLine || "Field observation",
-      locationId: locationId || undefined,
-      teamId: defaultTeamId,
+      ...locationFieldsForPayload({ locationId, gps: gpsCoords }),
+      teamId: teamGate.teamId,
     };
 
     if (!navigator.onLine) {
@@ -454,7 +583,6 @@ export default function ObservePage() {
     }
 
     try {
-      // Upload media files if any - returns S3 keys (presigned URLs generated at read time)
       let mediaKeys: string[] | undefined;
       if (draftMedia.length > 0) {
         const formData = new FormData();
@@ -471,25 +599,23 @@ export default function ObservePage() {
       }
 
       await createSignal.mutateAsync({ ...payload, mediaUrls: mediaKeys });
-      void utils.signals.list.invalidate();
+      void utils.signals.invalidate();
       pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "success", text: t("replies.success") });
     } catch (err) {
-      const isNetworkError = err instanceof Error && (
-        err.message.toLowerCase().includes("fetch") ||
-        err.message.toLowerCase().includes("network") ||
-        err.message.toLowerCase().includes("failed")
-      );
-      if (isNetworkError) {
+      const failure = classifyObserveSubmitError(err);
+      if (failure === "network") {
         await dbQueue(payload);
         setPendingCount((n) => n + 1);
         pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "queued", text: t("replies.queued") });
+      } else if (failure === "noTeam") {
+        pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "error", text: t("replies.noTeam") });
       } else {
         pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "error", text: t("replies.error") });
       }
     }
 
     setSubmitting(false);
-  }, [canSubmit, titleLine, bodyLines, locationLabel, locationId, draftMedia, sourceId, createSignal, utils]);
+  }, [canSubmit, titleLine, bodyLines, locationLabel, locationId, gpsCoords, draftMedia, sourceId, defaultTeamId, meStatus, createSignal, utils, t]);
 
   const hasLocation = !!locationLabel;
   const hasMedia = draftMedia.length > 0;
@@ -512,8 +638,25 @@ export default function ObservePage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", justifyContent: "center", gap: 6, padding: "6px 16px", background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)", flexShrink: 0 }}>
+      {/* Tabs — connectivity sits on the start edge, in line with Submit / Signals */}
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, padding: "6px 16px", background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)", flexShrink: 0, position: "relative" }}>
+        <span
+          role="status"
+          aria-live="polite"
+          aria-label={isOnline ? t("header.online") : t("header.offline")}
+          title={isOnline ? t("header.online") : t("header.offline")}
+          style={{
+            position: "absolute",
+            insetInlineStart: 16,
+            display: "flex",
+            alignItems: "center",
+            color: isOnline ? "var(--color-text-muted)" : "var(--color-warning)",
+          }}
+        >
+          {isOnline
+            ? <IconAntennaBars5 size={18} strokeWidth={2} aria-hidden />
+            : <IconAntennaBarsOff size={18} strokeWidth={2} aria-hidden />}
+        </span>
         {(["submit", "signals"] as const).map((tab) => (
           <button
             key={tab}
@@ -536,7 +679,7 @@ export default function ObservePage() {
       </div>
 
       {/* Signals list tab */}
-      {activeTab === "signals" && <SignalsList />}
+      {activeTab === "signals" && <SignalsList teamId={defaultTeamId} />}
 
       {/* Submit tab */}
       {activeTab === "submit" && <>
@@ -573,7 +716,7 @@ export default function ObservePage() {
               <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--color-accent-light)", border: "1px solid var(--color-border)", borderRadius: 16, padding: "4px 8px", fontSize: 13, fontWeight: 500, color: "var(--color-accent)" }}>
                 <IconMapPin size={12} strokeWidth={2.5} />
                 <span>{locationLabel}</span>
-                <button onClick={() => { setLocationId(""); setLocationLabel(""); }} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0 0 2px", color: "inherit", display: "flex", alignItems: "center" }}>
+                <button onClick={clearLocation} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0 0 2px", color: "inherit", display: "flex", alignItems: "center" }}>
                   <IconX size={11} />
                 </button>
               </div>
@@ -629,6 +772,8 @@ export default function ObservePage() {
           <button
             onClick={() => void handleSubmit()}
             disabled={!canSubmit}
+            title={t("compose.send")}
+            aria-label={t("compose.send")}
             style={{ width: 42, height: 42, borderRadius: "50%", background: canSubmit ? "var(--color-accent)" : "var(--color-border-dark)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: canSubmit ? "pointer" : "default", transition: "background 200ms", color: "white", flexShrink: 0 }}>
             {submitting ? <IconLoader2 size={18} style={{ animation: "spin 1s linear infinite" }} /> : <IconSend size={18} style={{ transform: "translateX(1px)" }} />}
           </button>
