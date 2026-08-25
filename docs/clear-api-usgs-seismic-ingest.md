@@ -62,11 +62,11 @@ authoritative lines as thick bands for readability.
 |---------|---------------|--------------------|
 | Who calls USGS | Next.js route on each FE toggle | Cron every **~10 min** (5–15 ok) |
 | Window | Full 30d query each request | Backfill once; then `updatedafter` |
-| Geography | Hardcoded SA bbox in spike | Focus+adjacent bbox; optional global M5.5+ later |
-| Magnitude | Spike uses M4.0 for testing | Prod default **M5.5+** |
-| ShakeMaps | Fetched live per request for `has_shakemap` | Persist contours; refresh when product URL/`updated` changes |
+| Geography | Map country padded bbox; All Countries = global M5.5+ | Same contract for clear-api |
+| Magnitude | Country M4.0+; All Countries M5.5+ | Prod default **M5.5+** |
+| ShakeMaps | Fetched live per request for `has_shakemap` (capped) | Persist contours; refresh when product URL/`updated` changes |
 | Payload | Slim GeoJSON (~60–75% smaller) | Same slim contract + optional `shakemaps[]` |
-| Worldwide? | Not in spike | M5.5+ global epicenters are fine (~200–300/mo); global M4+ + all contours is the heavy path |
+| Worldwide? | All Countries omits bbox (M5.5+) | M5.5+ global epicenters are fine (~200–300/mo); global M4+ + all contours is the heavy path |
 
 Full continuous-fetch algorithm: see **Continuous fetch playbook** below.
 
@@ -245,18 +245,19 @@ belongs in **clear-api** (scheduled ingest), same pattern as LogIE.
 
 Re-toggling the layer re-fetches. There is **no** client-side interval.
 
-### Why “All countries” still shows only Colombia waves
+### Geography: map country toggle drives the query
 
-Two separate facts:
+The spike (and later clear-api) takes `bbox=minLng,minLat,maxLng,maxLat` from the map
+country switcher — padded ~2.5° past borders so adjacent-plate events still paint.
 
-1. **Epicenters (dots)** — The current **dev spike** queries a **fixed South America bbox**
-   (`[-82, -5, -60, 13]` ≈ Venezuela / Colombia / Ecuador), not the map country toggle.
-   The top “All countries” control does **not** change the seismic query yet.
-2. **ShakeMap shockwaves (bands)** — USGS only publishes ShakeMap products for some events
-   (typically larger / better-instrumented). In the last 30 days for this bbox we often have
-   ~15–20 M4+ quakes but **only 1 ShakeMap** (e.g. the M7.4 near San José del Palmar, Colombia).
-   Venezuela dots can appear without yellow/orange bands — that is upstream coverage, not a
-   missing Venezuela ingest filter.
+| Map selection | USGS query | Magnitude |
+|---------------|------------|-----------|
+| Afghanistan, Venezuela, Sudan, … | That country's padded bbox | M4.0+ |
+| All Countries | No bbox (worldwide) | M5.5+ |
+
+**ShakeMap shockwaves (bands)** — USGS only publishes ShakeMap products for some events
+(typically larger / better-instrumented). Epicenter dots can appear without yellow/orange
+bands — that is upstream coverage, not a missing country filter.
 
 ### Recommended clear-api cadence
 
@@ -303,8 +304,9 @@ Idempotent upserts + `updatedafter` keep each run small (often **0–few events*
 without per-country bbox — still cheap. Do **not** pull global M4.0+ + all ShakeMaps unless
 DS confirms need; contour payloads are the scale risk, not point epicenters.
 
-When the map country toggle should drive data: clear-api accepts `bbox` (or country codes →
-server-derived bbox). FE passes the active country/“all” selection; spike hardcoding goes away.
+The map country toggle already drives the spike via `bbox` (padded country) or omit
+for All Countries. clear-api should accept the same `bbox` (or country codes →
+server-derived bbox) so the FE swap is URL-only.
 
 ### FE acceptance after continuous ingest lands
 

@@ -20,6 +20,10 @@
  */
 
 import type { SeismicMapCollection } from "~/lib/map/usgs-earthquakes";
+import {
+  formatBboxParam,
+  type LngLatBbox,
+} from "~/lib/map/usgs-fdsn-query";
 
 const SPIKE_PATH = "/api/dev/usgs-earthquakes";
 /** Same-origin BFF that forwards cookies to clear-api `/api/usgs/earthquakes`. */
@@ -53,12 +57,20 @@ export function isUsgsSpikeAllowed(): boolean {
  * Resolve the GeoJSON URL.
  * Prefer env override; else spike in development/preview; else BFF in production.
  * Callers must gate on `isSeismicSignalsUiEnabled()` first.
+ * Optional `bbox` is the map country (padded); omit for All Countries / global.
  */
-export function getSeismicSignalsFetchUrl(): string {
+export function getSeismicSignalsFetchUrl(query?: {
+  bbox?: LngLatBbox | null;
+}): string {
   const fromEnv = process.env.NEXT_PUBLIC_USGS_EARTHQUAKES_URL?.trim();
-  if (fromEnv) return fromEnv;
-  if (isUsgsSpikeAllowed()) return SPIKE_PATH;
-  return EARTHQUAKES_BFF_PATH;
+  const path = fromEnv
+    ? fromEnv
+    : isUsgsSpikeAllowed()
+      ? SPIKE_PATH
+      : EARTHQUAKES_BFF_PATH;
+  if (!query?.bbox) return path;
+  const joiner = path.includes("?") ? "&" : "?";
+  return `${path}${joiner}bbox=${encodeURIComponent(formatBboxParam(query.bbox))}`;
 }
 
 export type FetchSeismicSignalsResult = {
@@ -67,21 +79,23 @@ export type FetchSeismicSignalsResult = {
   source: "spike" | "api";
 };
 
-export async function fetchSeismicSignalsMapCollection(
-  init?: RequestInit,
-): Promise<FetchSeismicSignalsResult> {
-  const url = getSeismicSignalsFetchUrl();
+export async function fetchSeismicSignalsMapCollection(opts?: {
+  bbox?: LngLatBbox | null;
+  init?: RequestInit;
+}): Promise<FetchSeismicSignalsResult> {
+  const url = getSeismicSignalsFetchUrl({ bbox: opts?.bbox });
+  const pathOnly = url.split("?")[0] ?? url;
   const source: "spike" | "api" =
-    url === SPIKE_PATH || url.endsWith(SPIKE_PATH) ? "spike" : "api";
+    pathOnly === SPIKE_PATH || pathOnly.endsWith(SPIKE_PATH) ? "spike" : "api";
 
   const res = await fetch(url, {
-    ...init,
+    ...opts?.init,
     // Same-origin BFF needs cookies; harmless for spike. Absolute clear-api
     // URLs also need this + CORS credentials (prefer the BFF instead).
     credentials: "include",
     headers: {
       Accept: "application/json",
-      ...init?.headers,
+      ...opts?.init?.headers,
     },
   });
 

@@ -81,6 +81,7 @@ import {
   fetchSeismicSignalsMapCollection,
   isSeismicSignalsUiEnabled,
 } from "~/lib/map/fetch-usgs-earthquakes";
+import { seismicQueryBboxForCountry } from "~/lib/map/usgs-fdsn-query";
 const MAX_OPEN_PANELS = 4;
 
 interface OpenMarkerPanel {
@@ -846,7 +847,9 @@ function MapPageContent() {
     let cancelled = false;
     setSeismicSignalsLoading(true);
     setSeismicSignalsHint(undefined);
-    fetchSeismicSignalsMapCollection()
+    fetchSeismicSignalsMapCollection({
+      bbox: seismicQueryBboxForCountry(selectedCountry),
+    })
       .then(({ collection, source }) => {
         if (cancelled) return;
         setSeismicSignalsGeoJson(collection);
@@ -865,7 +868,7 @@ function MapPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [seismicSignalsUiEnabled, showSeismicSignals]);
+  }, [seismicSignalsUiEnabled, showSeismicSignals, selectedCountry]);
 
   // Deep-link from detail Back / Full Map: align Layers data-view chrome only.
   // Markers come from the solo focus queries - do not widen timeframe or wipe

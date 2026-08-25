@@ -1,28 +1,30 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { isUsgsSpikeAllowed } from "~/lib/map/fetch-usgs-earthquakes";
 import {
+  buildUsgsFdsnUrl,
+  minMagnitudeForBbox,
+  parseBboxParam,
+} from "~/lib/map/usgs-fdsn-query";
+import {
   toSeismicMapCollection,
+  type ShakeMapContours,
   type UsgsFdsnCollection,
 } from "~/lib/map/usgs-earthquakes";
 
 /**
- * DEV-ONLY USGS earthquakes spike feed.
+ * DEV/preview USGS earthquakes spike feed.
  *
  * Fetches live USGS FDSN Event GeoJSON, applies the slim transform, and returns
- * map-ready SeismicMapCollection. This is the smoke path while clear-api ingest
- * is being built.
+ * map-ready SeismicMapCollection. Geography follows the map country toggle
+ * (`bbox=minLng,minLat,maxLng,maxLat`); omit bbox for global M5.5+.
  *
  * Prod path: clear-api USGS scheduled ingest → BFF proxy → same contract.
  */
 
-const USGS_FDSN_BASE = "https://earthquake.usgs.gov/fdsnws/event/1/query";
-const MIN_MAGNITUDE = 4.0; // Lowered to 4.0 for testing to ensure we see results
 const WINDOW_DAYS = 30;
+const MAX_SHAKEMAP_FETCHES = 20;
 
-// South America (Venezuela, Colombia, Ecuador region) for testing
-const DEFAULT_BBOX: [number, number, number, number] = [-82, -5, -60, 13]; // [minLng, minLat, maxLng, maxLat]
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   if (!isUsgsSpikeAllowed()) {
     return NextResponse.json(
       { error: "USGS earthquakes spike is disabled in production" },
@@ -30,20 +32,11 @@ export async function GET() {
     );
   }
 
+  const bbox = parseBboxParam(request.nextUrl.searchParams.get("bbox"));
+  const minMagnitude = minMagnitudeForBbox(bbox);
   const now = new Date();
   const startTime = new Date(now.getTime() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
-
-  const url = new URL(USGS_FDSN_BASE);
-  url.searchParams.set("format", "geojson");
-  url.searchParams.set("eventtype", "earthquake");
-  url.searchParams.set("minmagnitude", String(MIN_MAGNITUDE));
-  url.searchParams.set("starttime", startTime.toISOString());
-  url.searchParams.set("minlatitude", String(DEFAULT_BBOX[1]));
-  url.searchParams.set("maxlatitude", String(DEFAULT_BBOX[3]));
-  url.searchParams.set("minlongitude", String(DEFAULT_BBOX[0]));
-  url.searchParams.set("maxlongitude", String(DEFAULT_BBOX[2]));
-  url.searchParams.set("orderby", "time");
-  url.searchParams.set("limit", "20000");
+  const url = buildUsgsFdsnUrl({ minMagnitude, startTime, bbox });
 
   console.log("[usgs-spike] Fetching:", url.toString());
 
@@ -85,14 +78,16 @@ export async function GET() {
 
   const collection = toSeismicMapCollection(upstream, {
     source: "usgs-spike",
-    minMagnitude: MIN_MAGNITUDE,
+    minMagnitude,
     windowDays: WINDOW_DAYS,
-    bbox: DEFAULT_BBOX,
+    bbox,
   });
 
-  // Fetch ShakeMap contours for events that have them (parallel)
+  // Fetch ShakeMap contours for events that have them (highest mag first, capped).
   const shakemapPromises = collection.features
     .filter((f) => f.properties.has_shakemap)
+    .sort((a, b) => (b.properties.mag ?? 0) - (a.properties.mag ?? 0))
+    .slice(0, MAX_SHAKEMAP_FETCHES)
     .map(async (f) => {
       try {
         const eventId = f.properties.id;
@@ -100,7 +95,15 @@ export async function GET() {
         const detailRes = await fetch(detailUrl, { cache: "no-store" });
         if (!detailRes.ok) return null;
 
-        const detail = (await detailRes.json()) as any;
+        const detail = (await detailRes.json()) as {
+          properties?: {
+            products?: {
+              shakemap?: Array<{
+                contents?: Record<string, { url?: string }>;
+              }>;
+            };
+          };
+        };
         const shakemapProduct = detail.properties?.products?.shakemap?.[0];
         if (!shakemapProduct) return null;
 
@@ -110,7 +113,7 @@ export async function GET() {
         const contourRes = await fetch(contourUrl, { cache: "no-store" });
         if (!contourRes.ok) return null;
 
-        const contours = (await contourRes.json()) as any;
+        const contours = (await contourRes.json()) as ShakeMapContours;
         return {
           eventId,
           type: "FeatureCollection" as const,

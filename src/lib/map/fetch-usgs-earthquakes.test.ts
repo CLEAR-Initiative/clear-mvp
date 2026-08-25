@@ -39,4 +39,15 @@ describe("getSeismicSignalsFetchUrl", () => {
     vi.stubEnv("NEXT_PUBLIC_USGS_EARTHQUAKES_URL", "/api/usgs/earthquakes");
     expect(getSeismicSignalsFetchUrl()).toBe("/api/usgs/earthquakes");
   });
+
+  it("appends the country bbox so Afghanistan is not the Venezuela test rectangle", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("NEXT_PUBLIC_USGS_EARTHQUAKES_URL", "");
+    const url = getSeismicSignalsFetchUrl({
+      bbox: [58, 26.9, 77.4, 41],
+    });
+    expect(url.startsWith("/api/dev/usgs-earthquakes?bbox=")).toBe(true);
+    expect(url).toContain("58");
+    expect(url).toContain("77.4");
+  });
 });
