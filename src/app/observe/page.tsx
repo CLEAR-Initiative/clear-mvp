@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
+  IconAntennaBars5,
+  IconAntennaBarsOff,
   IconMapPin,
   IconX,
   IconLoader2,
@@ -16,9 +18,11 @@ import type { GqlSignal } from "~/lib/types/graphql";
 import {
   classifyObserveSubmitError,
   drainQueuedFieldSignals,
+  isObserveQaOverrideAllowed,
   locationFieldsForPayload,
   parseAtMentionQuery,
   resolveTeamIdForSubmit,
+  searchForcesMissingTeam,
   stripTrailingAtMention,
   type QueuedFieldSignal,
 } from "~/lib/observe/field-signal";
@@ -290,6 +294,8 @@ export default function ObservePage() {
   const [gpsLoading, setGpsLoading] = useState(false);
   const [atQuery, setAtQuery] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [forceNoTeam, setForceNoTeam] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -307,7 +313,9 @@ export default function ObservePage() {
   // fall back to the user's persisted defaultTeamId to satisfy the backend's
   // team-scoped createManualSignal gate.
   const meQuery = api.auth.me.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
-  const defaultTeamId = meQuery.data?.user?.defaultTeamId ?? undefined;
+  const defaultTeamId = forceNoTeam
+    ? undefined
+    : (meQuery.data?.user?.defaultTeamId ?? undefined);
   const meStatus = meQuery.isPending ? "pending" : meQuery.isError ? "error" : "success";
 
   const mutateFnRef = useRef(createSignal.mutateAsync);
@@ -352,6 +360,14 @@ export default function ObservePage() {
           setPendingCount((n) => Math.max(0, n - 1));
         },
       });
+      if (result.sent > 0) {
+        pushReply({
+          id: `recv-${Date.now()}`,
+          kind: "received",
+          variant: "success",
+          text: t("replies.drained", { count: result.sent }),
+        });
+      }
       if (result.stop === "noTeam") {
         pushReply({
           id: `recv-${Date.now()}`,
@@ -359,13 +375,12 @@ export default function ObservePage() {
           variant: "error",
           text: t("replies.noTeam"),
         });
-      }
-      if (result.sent > 0) {
+      } else if (result.stop === "createFailed") {
         pushReply({
           id: `recv-${Date.now()}`,
           kind: "received",
-          variant: "success",
-          text: t("replies.drained", { count: result.sent }),
+          variant: "error",
+          text: t("replies.drainFailed"),
         });
       }
     } finally {
@@ -379,6 +394,26 @@ export default function ObservePage() {
     window.addEventListener("online", drainQueue);
     return () => window.removeEventListener("online", drainQueue);
   }, [drainQueue]);
+
+  useEffect(() => {
+    const syncOnline = () => setIsOnline(navigator.onLine);
+    syncOnline();
+    window.addEventListener("online", syncOnline);
+    window.addEventListener("offline", syncOnline);
+    return () => {
+      window.removeEventListener("online", syncOnline);
+      window.removeEventListener("offline", syncOnline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const allowed = isObserveQaOverrideAllowed({
+      nodeEnv: process.env.NODE_ENV,
+      vercelEnv: process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV,
+    });
+    if (!allowed) return;
+    setForceNoTeam(searchForcesMissingTeam(window.location.search));
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -471,7 +506,11 @@ export default function ObservePage() {
   const lines = cleanDraft.split("\n");
   const titleLine = lines[0]?.trim() ?? "";
   const bodyLines = lines.slice(1).join("\n").trim();
-  const canSubmit = cleanDraft.trim().length > 0 && sourceId.length > 0 && !submitting;
+  const canSubmit =
+    cleanDraft.trim().length > 0 &&
+    sourceId.length > 0 &&
+    !submitting &&
+    meStatus !== "pending";
 
   function pushReply(msg: ChatMessage) {
     setMessages((prev) => [...prev.filter((m) => m.kind !== "typing"), msg]);
@@ -599,8 +638,25 @@ export default function ObservePage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", justifyContent: "center", gap: 6, padding: "6px 16px", background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)", flexShrink: 0 }}>
+      {/* Tabs — connectivity sits on the start edge, in line with Submit / Signals */}
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, padding: "6px 16px", background: "var(--color-bg-white)", borderBottom: "1px solid var(--color-border)", flexShrink: 0, position: "relative" }}>
+        <span
+          role="status"
+          aria-live="polite"
+          aria-label={isOnline ? t("header.online") : t("header.offline")}
+          title={isOnline ? t("header.online") : t("header.offline")}
+          style={{
+            position: "absolute",
+            insetInlineStart: 16,
+            display: "flex",
+            alignItems: "center",
+            color: isOnline ? "var(--color-text-muted)" : "var(--color-warning)",
+          }}
+        >
+          {isOnline
+            ? <IconAntennaBars5 size={18} strokeWidth={2} aria-hidden />
+            : <IconAntennaBarsOff size={18} strokeWidth={2} aria-hidden />}
+        </span>
         {(["submit", "signals"] as const).map((tab) => (
           <button
             key={tab}

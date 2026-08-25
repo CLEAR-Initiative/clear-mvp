@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   classifyObserveSubmitError,
   drainQueuedFieldSignals,
+  isObserveQaOverrideAllowed,
   locationFieldsForPayload,
   parseAtMentionQuery,
   resolveTeamIdForSubmit,
+  searchForcesMissingTeam,
   stripTrailingAtMention,
   type QueuedFieldSignal,
 } from "./field-signal";
@@ -64,6 +66,22 @@ describe("resolveTeamIdForSubmit", () => {
       ok: true,
       teamId: "team-1",
     });
+  });
+});
+
+describe("observe QA missing-team override", () => {
+  it("allows the flag in next dev and Vercel preview, never in production", () => {
+    expect(isObserveQaOverrideAllowed({ nodeEnv: "development" })).toBe(true);
+    expect(isObserveQaOverrideAllowed({ nodeEnv: "production", vercelEnv: "preview" })).toBe(true);
+    expect(isObserveQaOverrideAllowed({ nodeEnv: "production", vercelEnv: "production" })).toBe(false);
+    expect(isObserveQaOverrideAllowed({ nodeEnv: "production" })).toBe(false);
+  });
+
+  it("reads ?noTeam=1 from the query string", () => {
+    expect(searchForcesMissingTeam("?noTeam=1")).toBe(true);
+    expect(searchForcesMissingTeam("noTeam")).toBe(true);
+    expect(searchForcesMissingTeam("?tab=signals")).toBe(false);
+    expect(searchForcesMissingTeam("")).toBe(false);
   });
 });
 

@@ -57,6 +57,24 @@ export function resolveTeamIdForSubmit(input: {
   return { ok: true, teamId };
 }
 
+/**
+ * Preview / `next dev` only. Production ignores `?noTeam=1` so a field
+ * coordinator cannot lock themselves out of submit.
+ */
+export function isObserveQaOverrideAllowed(env: {
+  nodeEnv?: string;
+  vercelEnv?: string;
+}): boolean {
+  if (env.nodeEnv === "development") return true;
+  return env.vercelEnv === "preview";
+}
+
+/** True when the URL asks to simulate a user with no defaultTeamId. */
+export function searchForcesMissingTeam(search: string): boolean {
+  const q = search.startsWith("?") ? search.slice(1) : search;
+  return new URLSearchParams(q).has("noTeam");
+}
+
 /** Trailing `@…` token used by the compose typeahead. Allows hyphenated and unicode names. */
 export function parseAtMentionQuery(draft: string): string | null {
   const match = draft.match(/@([^\n@]*)$/);

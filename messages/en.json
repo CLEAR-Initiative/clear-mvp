@@ -2114,7 +2114,9 @@
     },
     "header": {
       "appName": "Field Signals",
-      "queued": "{count} queued"
+      "queued": "{count} queued",
+      "online": "Online",
+      "offline": "Offline"
     },
     "tabs": {
       "submit": "Submit",
@@ -2137,6 +2139,7 @@
       "drained": "{count, plural, one {You're back online. The queued signal has been sent to your team.} other {You're back online. # queued signals have been sent to your team.}}",
       "success": "Signal received. A new entry has been added to your team's signal list.",
       "error": "Something went wrong and your signal was not submitted. Please try again.",
+      "drainFailed": "Could not send a queued signal. It is still saved on this device — we will try again when the connection is stable.",
       "mediaNeedsOnline": "Photos and videos need a connection. Remove the attachment or try again when you are online.",
       "noTeam": "This account has no default team, so the signal could not be filed. Finish onboarding or ask an admin to add you to a team, then try again.",
       "gpsUnsupported": "This device cannot share a GPS location. Tag a place with @ instead.",
