@@ -249,7 +249,7 @@ function EventCandidateRow({
   );
 }
 
-/** Compact trigger used above the crisis events timeline. */
+/** Compact trigger pinned outside the scrollable crisis events list. */
 export function AddEventsToCrisisButton({
   crisisId,
   canAdd,

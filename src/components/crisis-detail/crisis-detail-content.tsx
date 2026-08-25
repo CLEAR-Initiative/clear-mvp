@@ -797,16 +797,33 @@ export function CrisisDetailContent({
           <Box px={isCompact ? 16 : 24} pb={isCompact ? 16 : 24}>
             <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
               <Tabs value={leftPanelTab} onChange={setLeftPanelTab}>
-                <Box px={8} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                  <Tabs.List style={{ borderBottom: "none" }}>
+                <Box
+                  px={8}
+                  style={{
+                    borderBottom: "1px solid var(--color-border)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 16,
+                  }}
+                >
+                  <Tabs.List style={{ borderBottom: "none", flex: "1 1 auto", width: "auto", minWidth: 0 }}>
                     <Tabs.Tab value="events">{t("tabs.events")}</Tabs.Tab>
                     <Tabs.Tab value="demography">{t("tabs.demography")}</Tabs.Tab>
                     <Tabs.Tab value="sources">{t("tabs.sources")}</Tabs.Tab>
                     <Tabs.Tab value="confidence">{t("tabs.confidence")}</Tabs.Tab>
                   </Tabs.List>
+                  {leftPanelTab === "events" && (
+                    <Box pr={8} py={8} style={{ flexShrink: 0 }}>
+                      <AddEventsToCrisisButton
+                        crisisId={crisis.id}
+                        canAdd={canWriteCrisisEvents(meQuery.data?.user?.role)}
+                      />
+                    </Box>
+                  )}
                 </Box>
                 <Tabs.Panel value="events" style={{ height: 300, overflowY: "auto" }}>
-                  <EventsTimeline events={eventsNewestFirst} isAdmin={isAdmin} canAddEvents={canWriteCrisisEvents(meQuery.data?.user?.role)} crisisId={crisis.id} totalEventCount={events.length} />
+                  <EventsTimeline events={eventsNewestFirst} isAdmin={isAdmin} crisisId={crisis.id} totalEventCount={events.length} />
                 </Tabs.Panel>
                 <Tabs.Panel value="demography" style={{ height: 300, overflowY: "auto" }}>
                   <DemographyPanel crisis={crisis} />
@@ -1884,7 +1901,7 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
   );
 }
 
-function EventsTimeline({ events, isAdmin, canAddEvents, crisisId, totalEventCount }: { events: GqlEvent[]; isAdmin: boolean; canAddEvents: boolean; crisisId: string; totalEventCount: number }) {
+function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events: GqlEvent[]; isAdmin: boolean; crisisId: string; totalEventCount: number }) {
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
   const router = useRouter();
@@ -1938,10 +1955,6 @@ function EventsTimeline({ events, isAdmin, canAddEvents, crisisId, totalEventCou
           </Button>
         </Group>
       </Modal>
-
-      <Group justify="flex-end" px={12} pt={10} pb={4}>
-        <AddEventsToCrisisButton crisisId={crisisId} canAdd={canAddEvents} />
-      </Group>
 
       {events.length === 0 ? (
         <Box p={24} style={{ textAlign: "center" }}>
