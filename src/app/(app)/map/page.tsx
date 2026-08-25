@@ -821,7 +821,7 @@ function MapPageContent() {
   }, [blockagesUiEnabled, showBlockages]);
 
   /**
-   * Seismic Signals UI: always on (spike in dev, BFF in prod). See `fetch-usgs-earthquakes.ts`.
+   * Seismic Signals UI: always on (spike in dev/preview, BFF in prod). See `fetch-usgs-earthquakes.ts`.
    */
   const seismicSignalsUiEnabled = isSeismicSignalsUiEnabled();
   const [showSeismicSignals, setShowSeismicSignals] = useState(false);

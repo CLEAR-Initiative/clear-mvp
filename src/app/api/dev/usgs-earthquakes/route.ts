@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isUsgsSpikeAllowed } from "~/lib/map/fetch-usgs-earthquakes";
 import {
   toSeismicMapCollection,
   type UsgsFdsnCollection,
@@ -22,7 +23,7 @@ const WINDOW_DAYS = 30;
 const DEFAULT_BBOX: [number, number, number, number] = [-82, -5, -60, 13]; // [minLng, minLat, maxLng, maxLat]
 
 export async function GET() {
-  if (process.env.NODE_ENV === "production") {
+  if (!isUsgsSpikeAllowed()) {
     return NextResponse.json(
       { error: "USGS earthquakes spike is disabled in production" },
       { status: 404 },

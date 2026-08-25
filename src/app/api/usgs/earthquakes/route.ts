@@ -6,8 +6,8 @@ import { API_URL } from "~/server/env";
  *
  * Browser stays same-origin (`/api/usgs/earthquakes`); this route forwards the
  * session cookie to clear-api `GET /api/usgs/earthquakes` (auth required).
- * Map client defaults to this path outside development. Optional override:
- * `NEXT_PUBLIC_USGS_EARTHQUAKES_URL` (plain env only).
+ * Map client uses this path on Vercel production. Preview/dev use the spike.
+ * Optional override: `NEXT_PUBLIC_USGS_EARTHQUAKES_URL` (plain env only).
  */
 export async function GET(request: NextRequest) {
   const incoming = request.nextUrl.searchParams;

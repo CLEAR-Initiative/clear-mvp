@@ -10,8 +10,8 @@
  *
  * | Phase | Source | UI |
  * |-------|--------|-----|
- * | Local spike | `GET /api/dev/usgs-earthquakes` (live USGS FDSN) | Layers toggle |
- * | clear-api ready | `GET /api/usgs/earthquakes` BFF | Same toggle (default outside development) |
+ * | Local + Vercel preview | `GET /api/dev/usgs-earthquakes` (live USGS FDSN) | Layers toggle |
+ * | Production (clear-api) | `GET /api/usgs/earthquakes` BFF | Same toggle |
  *
  * Optional override: `NEXT_PUBLIC_USGS_EARTHQUAKES_URL` (must be a **plain**
  * Vercel env — Sensitive/`encrypted` vars are not available at Next build time).
@@ -35,14 +35,29 @@ export function isSeismicSignalsUiEnabled(): boolean {
 }
 
 /**
+ * Live USGS spike is for `next dev` and Vercel Preview. Production (`VERCEL_ENV=production`)
+ * uses the BFF → clear-api path. Preview must not hit that BFF until ingest exists —
+ * Vercel builds with `NODE_ENV=production`, so a NODE_ENV-only check 404s the spike
+ * and proxies `/api/usgs/earthquakes` to a missing clear-api route.
+ *
+ * `NEXT_PUBLIC_VERCEL_ENV` is inlined into the client bundle at build time.
+ */
+export function isUsgsSpikeAllowed(): boolean {
+  if (process.env.NODE_ENV === "development") return true;
+  const vercelEnv =
+    process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV;
+  return vercelEnv === "preview";
+}
+
+/**
  * Resolve the GeoJSON URL.
- * Prefer env override; else BFF in preview/prod; else local spike in development.
+ * Prefer env override; else spike in development/preview; else BFF in production.
  * Callers must gate on `isSeismicSignalsUiEnabled()` first.
  */
 export function getSeismicSignalsFetchUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_USGS_EARTHQUAKES_URL?.trim();
   if (fromEnv) return fromEnv;
-  if (process.env.NODE_ENV === "development") return SPIKE_PATH;
+  if (isUsgsSpikeAllowed()) return SPIKE_PATH;
   return EARTHQUAKES_BFF_PATH;
 }
 
