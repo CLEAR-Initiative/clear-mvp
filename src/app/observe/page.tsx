@@ -78,6 +78,11 @@ function formatCoords(lat: number, lng: number) {
   return `${Math.abs(lat).toFixed(4)}°${lat >= 0 ? "N" : "S"} ${Math.abs(lng).toFixed(4)}°${lng >= 0 ? "E" : "W"}`;
 }
 
+/** Same observation queued twice (online-event + effect) must not create two rows. */
+function fieldSignalDedupeKey(data: QueuedPayload): string {
+  return [data.sourceId, data.title, data.description, data.lat, data.lng, data.locationId, data.teamId].join("\0");
+}
+
 /* ── Chat message types ─────────────────────────────────────── */
 
 type MessageVariant = "success" | "queued" | "error" | "welcome";
@@ -212,7 +217,11 @@ function SignalCard({ signal }: { signal: GqlSignal }) {
       </div>
 
       {signal.title && <div style={{ fontWeight: 700, fontSize: 15, color: "var(--color-text-primary)", marginBottom: 4, lineHeight: 1.35 }}>{signal.title}</div>}
-      {signal.description && <div style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.45, marginBottom: location ?? hasEvents ? 8 : 0 }}>{signal.description.length > 120 ? signal.description.slice(0, 120) + "…" : signal.description}</div>}
+      {signal.description && signal.description !== signal.title && (
+        <div style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.45, marginBottom: location ?? hasEvents ? 8 : 0 }}>
+          {signal.description.length > 120 ? signal.description.slice(0, 120) + "…" : signal.description}
+        </div>
+      )}
       {(location ?? hasEvents) && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
           {location && <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--color-text-muted)", fontSize: 12 }}><IconMapPin size={11} strokeWidth={2.5} /><span>{location.name}</span></div>}
@@ -227,7 +236,7 @@ function SignalsList({ teamId }: { teamId?: string }) {
   const t = useTranslations("observe.signals");
   const signalsQuery = api.signals.list.useQuery(
     { teamId },
-    { staleTime: 1000 * 60, enabled: Boolean(teamId) },
+    { staleTime: 1000 * 60 },
   );
 
   if (signalsQuery.isLoading) {
@@ -309,17 +318,22 @@ export default function ObservePage() {
   });
   const sourcesQuery = api.signals.sources.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   const locationsQuery = api.locations.list.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
-  // /observe lives outside the (app) group and has no team switcher, so we
-  // fall back to the user's persisted defaultTeamId to satisfy the backend's
-  // team-scoped createManualSignal gate.
+  // /observe lives outside the (app) group and has no team switcher.
+  // Platform callers (admin/analyst) may file without a team hint — the
+  // API ignores teamId for them. Field coordinators still need the
+  // persisted defaultTeamId so createManualSignal can admit the write.
   const meQuery = api.auth.me.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
   const defaultTeamId = forceNoTeam
     ? undefined
     : (meQuery.data?.user?.defaultTeamId ?? undefined);
+  // `?noTeam=1` also drops the platform-role bypass so preview can still
+  // exercise the dedicated missing-team error on an analyst session.
+  const submitRole = forceNoTeam ? undefined : meQuery.data?.user?.role;
   const meStatus = meQuery.isPending ? "pending" : meQuery.isError ? "error" : "success";
 
   const mutateFnRef = useRef(createSignal.mutateAsync);
   const drainingRef = useRef(false);
+  const sentPayloadKeysRef = useRef(new Set<string>());
   useEffect(() => { mutateFnRef.current = createSignal.mutateAsync; });
 
   useEffect(() => {
@@ -343,8 +357,11 @@ export default function ObservePage() {
 
   const drainQueue = useCallback(async () => {
     if (drainingRef.current) return;
-    if (meStatus === "pending") return;
     drainingRef.current = true;
+    if (meStatus === "pending") {
+      drainingRef.current = false;
+      return;
+    }
     try {
       const pending = await dbGetPending();
       const result = await drainQueuedFieldSignals({
@@ -352,7 +369,15 @@ export default function ObservePage() {
         pending,
         fallbackTeamId: defaultTeamId,
         create: async (data) => {
-          await mutateFnRef.current(data);
+          const key = fieldSignalDedupeKey(data);
+          if (sentPayloadKeysRef.current.has(key)) return;
+          sentPayloadKeysRef.current.add(key);
+          try {
+            await mutateFnRef.current(data);
+          } catch (err) {
+            sentPayloadKeysRef.current.delete(key);
+            throw err;
+          }
         },
         acknowledge: async (key) => {
           await dbRemove(key);
@@ -529,7 +554,7 @@ export default function ObservePage() {
       return;
     }
 
-    const teamGate = resolveTeamIdForSubmit({ meStatus, defaultTeamId });
+    const teamGate = resolveTeamIdForSubmit({ meStatus, defaultTeamId, role: submitRole });
     if (!teamGate.ok) {
       if (teamGate.reason === "loading") return;
       pushReply({
@@ -615,7 +640,7 @@ export default function ObservePage() {
     }
 
     setSubmitting(false);
-  }, [canSubmit, titleLine, bodyLines, locationLabel, locationId, gpsCoords, draftMedia, sourceId, defaultTeamId, meStatus, createSignal, utils, t]);
+  }, [canSubmit, titleLine, bodyLines, locationLabel, locationId, gpsCoords, draftMedia, sourceId, defaultTeamId, submitRole, meStatus, createSignal, utils, t]);
 
   const hasLocation = !!locationLabel;
   const hasMedia = draftMedia.length > 0;

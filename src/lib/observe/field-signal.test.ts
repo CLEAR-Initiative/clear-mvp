@@ -3,6 +3,7 @@ import {
   classifyObserveSubmitError,
   drainQueuedFieldSignals,
   isObserveQaOverrideAllowed,
+  isObservePlatformWriter,
   locationFieldsForPayload,
   parseAtMentionQuery,
   resolveTeamIdForSubmit,
@@ -10,6 +11,15 @@ import {
   stripTrailingAtMention,
   type QueuedFieldSignal,
 } from "./field-signal";
+
+describe("isObservePlatformWriter", () => {
+  it("admits admin and analyst, not viewer or empty", () => {
+    expect(isObservePlatformWriter("admin")).toBe(true);
+    expect(isObservePlatformWriter("analyst")).toBe(true);
+    expect(isObservePlatformWriter("viewer")).toBe(false);
+    expect(isObservePlatformWriter(undefined)).toBe(false);
+  });
+});
 
 describe("classifyObserveSubmitError", () => {
   it("treats FORBIDDEN as a missing-team failure, not a queueable network blip", () => {
@@ -50,15 +60,26 @@ describe("resolveTeamIdForSubmit", () => {
     ).toEqual({ ok: false, reason: "loading" });
   });
 
-  it("surfaces a dedicated missing-team path when defaultTeamId is absent", () => {
+  it("surfaces a dedicated missing-team path when a non-platform user has no team", () => {
     expect(resolveTeamIdForSubmit({ meStatus: "success", defaultTeamId: null })).toEqual({
       ok: false,
       reason: "noTeam",
     });
-    expect(resolveTeamIdForSubmit({ meStatus: "success", defaultTeamId: "  " })).toEqual({
+    expect(
+      resolveTeamIdForSubmit({ meStatus: "success", defaultTeamId: "  ", role: "viewer" }),
+    ).toEqual({
       ok: false,
       reason: "noTeam",
     });
+  });
+
+  it("lets admin/analyst submit without a default team (API ignores teamId for them)", () => {
+    expect(
+      resolveTeamIdForSubmit({ meStatus: "success", defaultTeamId: null, role: "analyst" }),
+    ).toEqual({ ok: true, teamId: undefined });
+    expect(
+      resolveTeamIdForSubmit({ meStatus: "success", defaultTeamId: undefined, role: "admin" }),
+    ).toEqual({ ok: true, teamId: undefined });
   });
 
   it("passes through the persisted default team", () => {
@@ -200,8 +221,8 @@ describe("drainQueuedFieldSignals", () => {
     expect(created[0]?.locationId).toBe("loc-khartoum");
   });
 
-  it("stops before create when neither queued nor session team is present", async () => {
-    const created: unknown[] = [];
+  it("attempts create without a teamId when neither queued nor session team is present", async () => {
+    const created: QueuedFieldSignal[] = [];
     const result = await drainQueuedFieldSignals({
       isOnline: true,
       pending: [{ key: "k3", data: { ...gpsQueued, teamId: undefined } }],
@@ -210,8 +231,23 @@ describe("drainQueuedFieldSignals", () => {
       },
       acknowledge: async () => undefined,
     });
+    expect(result).toEqual({ sent: 1, stop: "done" });
+    expect(created).toEqual([{ ...gpsQueued, teamId: undefined }]);
+  });
+
+  it("maps FORBIDDEN from a no-team create into stop: noTeam", async () => {
+    const created: unknown[] = [];
+    const result = await drainQueuedFieldSignals({
+      isOnline: true,
+      pending: [{ key: "k3", data: { ...gpsQueued, teamId: undefined } }],
+      create: async (payload) => {
+        created.push(payload);
+        throw { data: { code: "FORBIDDEN" }, message: "FORBIDDEN" };
+      },
+      acknowledge: async () => undefined,
+    });
     expect(result).toEqual({ sent: 0, stop: "noTeam" });
-    expect(created).toEqual([]);
+    expect(created).toHaveLength(1);
   });
 
   it("keeps later items queued when create fails for a non-team reason", async () => {
