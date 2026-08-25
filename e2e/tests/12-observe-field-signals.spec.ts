@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { test, expect } from "../support/test";
 
 /**
@@ -10,14 +11,48 @@ import { test, expect } from "../support/test";
  */
 
 const KHARTOUM = { latitude: 15.5007, longitude: 32.5599 };
+const KHARTOUM_LABEL = "15.5007°N 32.5599°E";
 
-/** SuperJSON tRPC payloads nest `defaultTeamId` under `json` / `user`. */
-function stripDefaultTeamId(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(stripDefaultTeamId);
+/**
+ * `/observe` SSRs with isOnline=true, so "Online" is not proof of hydration.
+ * Retry fill until React state has the draft (Send enables) — otherwise a
+ * pre-hydrate fill is wiped when the client mounts.
+ */
+async function composeObservation(page: Page, title: string) {
+  const draft = page.getByPlaceholder("What did you observe?");
+  await expect(async () => {
+    await draft.fill(title);
+    await expect(draft).toHaveValue(title);
+    await expect(page.getByRole("button", { name: "Send signal" })).toBeEnabled();
+  }).toPass({ timeout: 20_000 });
+}
+
+async function captureKhartoum(page: Page) {
+  const coords = page.getByText(KHARTOUM_LABEL);
+  await expect(async () => {
+    if (await coords.isVisible()) return;
+    await page.getByRole("button", { name: "Capture location" }).click();
+    await expect(coords).toBeVisible({ timeout: 8_000 });
+  }).toPass({ timeout: 25_000 });
+}
+
+/** SuperJSON tRPC payloads nest session fields under `json` / `user`. */
+function forceNoTeamSession(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(forceNoTeamSession);
   if (value && typeof value === "object") {
+    const rec = value as Record<string, unknown>;
     const out: Record<string, unknown> = {};
-    for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
-      out[key] = key === "defaultTeamId" ? null : stripDefaultTeamId(nested);
+    const isSessionUser = "email" in rec && "role" in rec;
+    for (const [key, nested] of Object.entries(rec)) {
+      if (key === "defaultTeamId") {
+        out[key] = null;
+      } else if (key === "role" && isSessionUser) {
+        // Analysts/admins may file without a team; pin a non-platform role
+        // so this spec still exercises the dedicated missing-team error.
+        out[key] = "viewer";
+      } else {
+        out[key] = forceNoTeamSession(nested);
+      }
     }
     return out;
   }
@@ -33,22 +68,18 @@ test.describe("Observe field signals (case 12)", () => {
   test("an online GPS signal appears on the Signals tab", async ({ page }) => {
     await page.goto("/observe", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("Field Signals")).toBeVisible();
-    await expect(page.getByRole("status", { name: "Online" })).toBeVisible();
 
     const title = `E2E Observe Online ${Date.now()}`;
-    await page.getByPlaceholder("What did you observe?").fill(title);
-    await page.getByRole("button", { name: "Capture location" }).click();
-    await expect(page.getByText("15.5007°N 32.5599°E")).toBeVisible();
+    await composeObservation(page, title);
+    await captureKhartoum(page);
 
-    const send = page.getByRole("button", { name: "Send signal" });
-    await expect(send).toBeEnabled();
-    await send.click();
+    await page.getByRole("button", { name: "Send signal" }).click();
     await expect(page.getByText("Signal received")).toBeVisible({
       timeout: 20_000,
     });
 
     await page.getByRole("button", { name: "Signals" }).click();
-    await expect(page.getByText(title)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(title).first()).toBeVisible({ timeout: 20_000 });
   });
 
   test("an offline GPS signal drains onto the Signals tab when back online", async ({
@@ -60,9 +91,8 @@ test.describe("Observe field signals (case 12)", () => {
     await expect(page.getByRole("status", { name: "Online" })).toBeVisible();
 
     const title = `E2E Observe Offline ${Date.now()}`;
-    await page.getByPlaceholder("What did you observe?").fill(title);
-    await page.getByRole("button", { name: "Capture location" }).click();
-    await expect(page.getByText("15.5007°N 32.5599°E")).toBeVisible();
+    await composeObservation(page, title);
+    await captureKhartoum(page);
 
     await context.setOffline(true);
     await expect(page.getByRole("status", { name: "Offline" })).toBeVisible();
@@ -81,7 +111,7 @@ test.describe("Observe field signals (case 12)", () => {
     });
 
     await page.getByRole("button", { name: "Signals" }).click();
-    await expect(page.getByText(title)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(title).first()).toBeVisible({ timeout: 20_000 });
   });
 
   test("a missing defaultTeamId shows the dedicated error and does not queue", async ({
@@ -95,7 +125,7 @@ test.describe("Observe field signals (case 12)", () => {
         return;
       }
       const response = await route.fetch();
-      const json = stripDefaultTeamId(await response.json());
+      const json = forceNoTeamSession(await response.json());
       await route.fulfill({
         status: response.status(),
         headers: { ...response.headers(), "content-type": "application/json" },
@@ -107,9 +137,8 @@ test.describe("Observe field signals (case 12)", () => {
     await expect(page.getByText("Field Signals")).toBeVisible();
 
     const title = `E2E Observe NoTeam ${Date.now()}`;
-    await page.getByPlaceholder("What did you observe?").fill(title);
+    await composeObservation(page, title);
     const send = page.getByRole("button", { name: "Send signal" });
-    await expect(send).toBeEnabled({ timeout: 20_000 });
     await send.click();
 
     await expect(page.getByText("This account has no default team")).toBeVisible({
