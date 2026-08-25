@@ -45,6 +45,11 @@ ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 ARG NEXT_PUBLIC_SENTRY_ENV="development"
 ENV NEXT_PUBLIC_SENTRY_ENV=${NEXT_PUBLIC_SENTRY_ENV}
 
+# Hermetic Playwright stack only. Lets `/observe?noTeam=1` run against the
+# production Next image (NODE_ENV=production, no Vercel preview env).
+ARG NEXT_PUBLIC_E2E=""
+ENV NEXT_PUBLIC_E2E=${NEXT_PUBLIC_E2E}
+
 # Build the Next.js app. Telemetry off so the build doesn't phone home from CI.
 # NODE_OPTIONS raises Node's heap ceiling — Next.js 15 + Mantine + recharts
 # can hit the default 1.7 GB cap and silently OOM on large bundles.

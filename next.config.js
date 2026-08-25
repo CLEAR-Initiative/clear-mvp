@@ -35,7 +35,9 @@ export default withPWA({
   // disabled for now - runtime caching covers the same use case for less
   // build-time memory.
   aggressiveFrontEndNavCaching: false,
-  reloadOnOnline: true,
+  // Reloading on reconnect races the Observe IndexedDB drain: the dying
+  // page and the new page both POST the same queued signal (~30ms apart).
+  reloadOnOnline: false,
   // Branded document when a navigation fails offline (hard refresh / uncached
   // route). Self-contained static HTML so it does not depend on JS chunks.
   fallbacks: {
