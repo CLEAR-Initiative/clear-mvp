@@ -72,6 +72,8 @@ export type SeismicMapProperties = {
   age_days: number | null;
   /** 1 when age_days >= SEISMIC_STALE_AFTER_DAYS (Mapbox-friendly). */
   stale: 0 | 1;
+  /** 0–1 during month/timeframe interpolation; omit when settled. */
+  transition_opacity?: number;
 };
 
 /** Slim map feature. */
@@ -90,6 +92,8 @@ export type ShakeMapContourFeature = {
     units: string;
     color?: string;
     weight?: number;
+    /** 0–1 during month/timeframe interpolation; omit when settled. */
+    transition_opacity?: number;
   };
   geometry: {
     type: "MultiLineString" | "LineString";
@@ -114,6 +118,8 @@ export type ShakeMapContourFeature = {
  */
 export type ShakeMapContours = {
   eventId: string;
+  /** USGS epicenter id for popups when `eventId` is a paint slot (`slot-N`). */
+  anchorId?: string;
   type: "FeatureCollection";
   features: ShakeMapContourFeature[];
 };
