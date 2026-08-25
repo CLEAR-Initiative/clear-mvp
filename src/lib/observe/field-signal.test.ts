@@ -88,6 +88,38 @@ describe("resolveTeamIdForSubmit", () => {
       teamId: "team-1",
     });
   });
+
+  it("falls back to the first membership team when defaultTeamId is unset", () => {
+    expect(
+      resolveTeamIdForSubmit({
+        meStatus: "success",
+        defaultTeamId: null,
+        membershipsStatus: "success",
+        membershipTeamIds: ["team-nrc-sdn", "team-other"],
+      }),
+    ).toEqual({ ok: true, teamId: "team-nrc-sdn" });
+  });
+
+  it("waits for memberships before treating a missing default as noTeam", () => {
+    expect(
+      resolveTeamIdForSubmit({
+        meStatus: "success",
+        defaultTeamId: null,
+        membershipsStatus: "pending",
+      }),
+    ).toEqual({ ok: false, reason: "loading" });
+  });
+
+  it("lets a platform analyst file without a team and without waiting on memberships", () => {
+    expect(
+      resolveTeamIdForSubmit({
+        meStatus: "success",
+        defaultTeamId: null,
+        membershipsStatus: "pending",
+        globalWriter: true,
+      }),
+    ).toEqual({ ok: true });
+  });
 });
 
 describe("observe QA missing-team override", () => {
@@ -96,6 +128,7 @@ describe("observe QA missing-team override", () => {
     expect(isObserveQaOverrideAllowed({ nodeEnv: "production", vercelEnv: "preview" })).toBe(true);
     expect(isObserveQaOverrideAllowed({ nodeEnv: "production", vercelEnv: "production" })).toBe(false);
     expect(isObserveQaOverrideAllowed({ nodeEnv: "production" })).toBe(false);
+    expect(isObserveQaOverrideAllowed({ nodeEnv: "production", e2e: "1" })).toBe(true);
   });
 
   it("reads ?noTeam=1 from the query string", () => {
@@ -248,6 +281,22 @@ describe("drainQueuedFieldSignals", () => {
     });
     expect(result).toEqual({ sent: 0, stop: "noTeam" });
     expect(created).toHaveLength(1);
+  });
+
+  it("replays a queued signal without a team when the caller is a platform writer", async () => {
+    const created: QueuedFieldSignal[] = [];
+    const result = await drainQueuedFieldSignals({
+      isOnline: true,
+      pending: [{ key: "k4", data: { ...gpsQueued, teamId: undefined } }],
+      allowMissingTeam: true,
+      create: async (payload) => {
+        created.push(payload);
+      },
+      acknowledge: async () => undefined,
+    });
+    expect(result).toEqual({ sent: 1, stop: "done" });
+    expect(created).toHaveLength(1);
+    expect(created[0]?.teamId).toBeUndefined();
   });
 
   it("keeps later items queued when create fails for a non-team reason", async () => {

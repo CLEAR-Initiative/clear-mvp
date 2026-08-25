@@ -32,6 +32,12 @@ import {
 } from "~/lib/map/nrc-office-markers";
 import { BLOCKAGES_STALE_AFTER_DAYS } from "~/lib/map/logie-blockages";
 import {
+  interpolateSeismicMapCollection,
+  prefersReducedMotion,
+  SEISMIC_TRANSITION_MS,
+} from "~/lib/map/seismic-transition";
+import type { SeismicMapCollection } from "~/lib/map/usgs-earthquakes";
+import {
   applyTopographyOptInTilt,
   syncTopographyPitch,
 } from "~/lib/map/topography-pitch";
@@ -224,6 +230,18 @@ interface CrisisMapProps {
       properties: Record<string, unknown>;
     }>;
   } | null;
+  /**
+   * Seismic Signals (USGS earthquake epicenters).
+   */
+  showSeismicSignals?: boolean;
+  seismicSignalsGeoJson?: {
+    type: "FeatureCollection";
+    features: Array<{
+      type: "Feature";
+      geometry: unknown;
+      properties: Record<string, unknown>;
+    }>;
+  } | null;
   /** Basemap: simple (theme style), topography (hillshade + DEM terrain mesh), or satellite imagery */
   baseMapType?: BaseMapType;
   /**
@@ -308,6 +326,25 @@ function escapeHtml(value: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function shakemapMmiStyle(value: number): { color: string; width: number; opacity: number } {
+  if (value >= 9) return { color: "#8B0000", width: 8, opacity: 0.85 };
+  if (value >= 8) return { color: "#DC2626", width: 12, opacity: 0.75 };
+  if (value >= 7) return { color: "#F97316", width: 16, opacity: 0.7 };
+  if (value >= 6) return { color: "#FB923C", width: 20, opacity: 0.65 };
+  if (value >= 5) return { color: "#FDE047", width: 24, opacity: 0.6 };
+  if (value >= 4) return { color: "#FACC15", width: 28, opacity: 0.5 };
+  if (value >= 3) return { color: "#86EFAC", width: 32, opacity: 0.4 };
+  return { color: "#D1FAE5", width: 36, opacity: 0.3 };
+}
+
+function removeShakeMapPaint(m: { getLayer: (id: string) => unknown; removeLayer: (id: string) => void; getSource: (id: string) => unknown; removeSource: (id: string) => void }, ids: Set<string>) {
+  for (const id of ids) {
+    try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
+    try { if (m.getSource(id)) m.removeSource(id); } catch { /* ignore */ }
+  }
+  ids.clear();
 }
 
 function isRoadLayerId(id: string): boolean {
@@ -542,6 +579,8 @@ export function CrisisMap({
   showNrcLocations = false,
   showBlockages = false,
   blockagesGeoJson = null,
+  showSeismicSignals = false,
+  seismicSignalsGeoJson = null,
   baseMapType = "simple",
   mapApiRef,
   onMapMove,
@@ -610,6 +649,11 @@ export function CrisisMap({
   const displayLngLatRef = useRef<Map<number, [number, number]>>(new Map());
   const markersDataRef = useRef<MapMarker[]>(markers);
   const hoveredMarkerIdRef = useRef<number | null>(null);
+  const seismicDisplayedRef = useRef<SeismicMapCollection | null>(null);
+  const seismicAnimRef = useRef<number | null>(null);
+  const shakemapPaintIdsRef = useRef<Set<string>>(new Set());
+  const shakemapHoverBoundRef = useRef<Set<string>>(new Set());
+  const shakemapPopupRef = useRef<any>(null);
   const [loaded, setLoaded] = useState(false);
   const [tiltHintDismissed, setTiltHintDismissed] = useState(() =>
     isTopographyTiltHintDismissed(),
@@ -2209,6 +2253,476 @@ export function CrisisMap({
 
     return cleanup;
   }, [loaded, showBlockages, blockagesGeoJson, isDark]);
+
+  // ── Seismic Signals (USGS earthquake epicenters) ────────────────────────
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const SOURCE = "seismic-signals";
+    const CLUSTER_LAYER = "seismic-cluster";
+    const CLUSTER_COUNT_LAYER = "seismic-cluster-count";
+    const UNCLUSTERED_LAYER = "seismic-unclustered";
+
+    const cleanup = () => {
+      try { if (m.getLayer(CLUSTER_COUNT_LAYER)) m.removeLayer(CLUSTER_COUNT_LAYER); } catch { /* ignore */ }
+      try { if (m.getLayer(CLUSTER_LAYER)) m.removeLayer(CLUSTER_LAYER); } catch { /* ignore */ }
+      try { if (m.getLayer(UNCLUSTERED_LAYER)) m.removeLayer(UNCLUSTERED_LAYER); } catch { /* ignore */ }
+      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
+      removeShakeMapPaint(m, shakemapPaintIdsRef.current);
+      shakemapHoverBoundRef.current.clear();
+    };
+
+    if (!showSeismicSignals) return;
+
+    const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+    const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
+
+    // Marker-only persistence: stay interactive while moving onto the popup,
+    // then briefly hold (~700ms) and fade out so "More details" remains clickable.
+    const POPUP_HOLD_MS = 700;
+    const POPUP_FADE_MS = 220;
+    const popup = new (window as any).mapboxgl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      maxWidth: "300px",
+    });
+    let popupCloseTimer: ReturnType<typeof setTimeout> | null = null;
+    let popupFadeTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const getPopupEl = () => popup.getElement?.() as HTMLElement | undefined;
+
+    const cancelPopupClose = () => {
+      if (popupCloseTimer) clearTimeout(popupCloseTimer);
+      if (popupFadeTimer) clearTimeout(popupFadeTimer);
+      popupCloseTimer = null;
+      popupFadeTimer = null;
+      const el = getPopupEl();
+      if (el) {
+        el.style.transition = "opacity 120ms ease-out";
+        el.style.opacity = "1";
+        el.style.pointerEvents = "auto";
+      }
+    };
+
+    const fadeOutPopup = () => {
+      const el = getPopupEl();
+      if (!el) {
+        popup.remove();
+        return;
+      }
+      el.style.pointerEvents = "none";
+      el.style.transition = `opacity ${POPUP_FADE_MS}ms ease-out`;
+      el.style.opacity = "0";
+      popupFadeTimer = setTimeout(() => {
+        popup.remove();
+        popupFadeTimer = null;
+      }, POPUP_FADE_MS);
+    };
+
+    const schedulePopupClose = () => {
+      cancelPopupClose();
+      popupCloseTimer = setTimeout(fadeOutPopup, POPUP_HOLD_MS);
+    };
+
+    const makePopupInteractive = () => {
+      const element = getPopupEl();
+      if (!element) return;
+      element.style.opacity = "1";
+      element.style.pointerEvents = "auto";
+      if (element.dataset.seismicInteractive === "true") return;
+      element.dataset.seismicInteractive = "true";
+      element.addEventListener("mouseenter", cancelPopupClose);
+      element.addEventListener("mouseleave", schedulePopupClose);
+    };
+
+    try {
+      m.addSource(SOURCE, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 50,
+      });
+
+      // Cluster circles (magnitude-based size from cluster properties)
+      m.addLayer({
+        id: CLUSTER_LAYER,
+        type: "circle",
+        source: SOURCE,
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": [
+            "step",
+            ["get", "point_count"],
+            "#FFA500", // orange for small clusters
+            10,
+            "#FF6B00", // darker orange for medium
+            25,
+            "#FF4500", // red-orange for large
+          ],
+          "circle-radius": [
+            "step",
+            ["get", "point_count"],
+            15, // small
+            10,
+            20, // medium
+            25,
+            25, // large
+          ],
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#fff",
+          "circle-opacity": 0.8,
+        },
+      }, beforeId);
+
+      // Cluster count labels
+      m.addLayer({
+        id: CLUSTER_COUNT_LAYER,
+        type: "symbol",
+        source: SOURCE,
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": "{point_count_abbreviated}",
+          "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+          "text-size": 12,
+        },
+        paint: {
+          "text-color": "#fff",
+        },
+      }, beforeId);
+
+      // Individual earthquake epicenters
+      // ShakeMap epicenters: prominent red circles (center of shockwave)
+      // Others: color by PAGER alert level
+      m.addLayer({
+        id: UNCLUSTERED_LAYER,
+        type: "circle",
+        source: SOURCE,
+        filter: ["!", ["has", "point_count"]],
+        paint: {
+          "circle-color": [
+            "case",
+            ["==", ["get", "has_shakemap"], true], "#DC2626", // Bright red for ShakeMap epicenter
+            ["==", ["get", "alert"], "red"], "#DC2626",
+            ["==", ["get", "alert"], "orange"], "#F97316",
+            ["==", ["get", "alert"], "yellow"], "#FBBF24",
+            ["==", ["get", "alert"], "green"], "#10B981",
+            "#9CA3AF", // gray for no alert
+          ],
+          "circle-radius": [
+            "case",
+            ["==", ["get", "has_shakemap"], true], 12, // Larger for ShakeMap epicenter (center of shockwave)
+            [
+              "interpolate", ["linear"], ["get", "mag"],
+              3, 5,   // M3 → 5px
+              5, 8,   // M5 → 8px
+              7, 12,  // M7 → 12px
+              9, 16,  // M9 → 16px
+            ],
+          ],
+          "circle-stroke-width": [
+            "case",
+            ["==", ["get", "has_shakemap"], true], 4, // Thick border for epicenter
+            2,
+          ],
+          "circle-stroke-color": "#fff",
+          "circle-opacity": [
+            "*",
+            ["coalesce", ["get", "transition_opacity"], 1],
+            [
+              "case",
+              ["==", ["get", "has_shakemap"], true], 1,
+              ["==", ["get", "stale"], 1], 0.5,
+              0.7,
+            ],
+          ],
+        },
+      }, beforeId);
+
+      m.on("mouseenter", UNCLUSTERED_LAYER, (e: any) => {
+        cancelPopupClose();
+        m.getCanvas().style.cursor = "pointer";
+        const coords = e.features?.[0]?.geometry?.coordinates as [number, number];
+        const props = e.features?.[0]?.properties as Record<string, any>;
+        if (!coords || !props) return;
+
+        const mag = escapeHtml(props.mag ? `M ${props.mag}` : "Unknown magnitude");
+        const place = escapeHtml(String(props.place || "Unknown location"));
+        const depth = props.depth_km != null ? escapeHtml(`${props.depth_km} km depth`) : "";
+        const alert = props.alert ? escapeHtml(`PAGER: ${props.alert}`) : "";
+        const age = props.age_days != null ? escapeHtml(`${props.age_days} days ago`) : "";
+        const url = typeof props.url === "string" && /^https:\/\//.test(props.url)
+          ? escapeHtml(props.url)
+          : "";
+
+        const html = `
+          <div style="font-size: 12px; line-height: 1.4;">
+            <strong style="color: #DC2626; font-size: 14px;">${mag}</strong><br/>
+            <span style="color: #6B7280;">${place}</span>
+            ${depth ? `<br/><span style="color: #9CA3AF;">${depth}</span>` : ""}
+            ${alert ? `<br/><span style="color: #F97316;">${alert}</span>` : ""}
+            ${age ? `<br/><span style="color: #9CA3AF;">${age}</span>` : ""}
+            ${url ? `<br/><a href="${url}" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin-top: 8px; color: #2563EB; font-weight: 600; text-decoration: underline;">More details</a>` : ""}
+          </div>
+        `;
+
+        popup.setLngLat(coords).setHTML(html).addTo(m);
+        makePopupInteractive();
+      });
+
+      m.on("mouseleave", UNCLUSTERED_LAYER, () => {
+        m.getCanvas().style.cursor = "";
+        schedulePopupClose();
+      });
+
+      // Click to expand clusters
+      m.on("click", CLUSTER_LAYER, (e: any) => {
+        const features = m.queryRenderedFeatures(e.point, {
+          layers: [CLUSTER_LAYER],
+        });
+        const clusterId = features[0]?.properties?.cluster_id;
+        if (clusterId == null) return;
+
+        const source = m.getSource(SOURCE) as any;
+        source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
+          if (err) return;
+          m.easeTo({
+            center: features[0]!.geometry.coordinates as [number, number],
+            zoom: zoom + 0.5,
+          });
+        });
+      });
+
+      m.on("mouseenter", CLUSTER_LAYER, () => {
+        m.getCanvas().style.cursor = "pointer";
+      });
+
+      m.on("mouseleave", CLUSTER_LAYER, () => {
+        m.getCanvas().style.cursor = "";
+      });
+    } catch (err) {
+      console.error("[seismic-signals]", err);
+      /* style may be mid-swap */
+    }
+
+    return () => {
+      cancelPopupClose();
+      popup.remove();
+      cleanup();
+    };
+  }, [loaded, showSeismicSignals]);
+
+  // ── ShakeMap + epicenter data (interpolate on timeframe/month change) ───
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const SOURCE = "seismic-signals";
+    const empty: SeismicMapCollection = {
+      type: "FeatureCollection",
+      features: [],
+      shakemaps: [],
+      meta: {
+        source: "usgs-spike",
+        feature_count: 0,
+        min_magnitude: null,
+        window_days: null,
+        bbox: null,
+        pulled_at: new Date().toISOString(),
+        bytes_in: 0,
+        bytes_out: 0,
+        reduction_ratio: 1,
+      },
+    };
+
+    const cancelAnim = () => {
+      if (seismicAnimRef.current != null) {
+        cancelAnimationFrame(seismicAnimRef.current);
+        seismicAnimRef.current = null;
+      }
+    };
+
+    if (!showSeismicSignals) {
+      cancelAnim();
+      seismicDisplayedRef.current = null;
+      const src = m.getSource(SOURCE) as { setData?: (d: unknown) => void } | undefined;
+      src?.setData?.({ type: "FeatureCollection", features: [] });
+      removeShakeMapPaint(m, shakemapPaintIdsRef.current);
+      shakemapHoverBoundRef.current.clear();
+      shakemapPopupRef.current?.remove();
+      return;
+    }
+
+    if (!shakemapPopupRef.current) {
+      shakemapPopupRef.current = new (window as any).mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        maxWidth: "320px",
+      });
+    }
+    const bandPopup = shakemapPopupRef.current;
+
+    const styleLayers = (m.getStyle()?.layers ?? []) as Array<{ id: string; type: string }>;
+    const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
+
+    const bindBandHover = (layerId: string, color: string) => {
+      if (shakemapHoverBoundRef.current.has(layerId)) return;
+      shakemapHoverBoundRef.current.add(layerId);
+      m.on("mouseenter", layerId, (e: any) => {
+        m.getCanvas().style.cursor = "pointer";
+        const coords = e.lngLat;
+        const props = e.features?.[0]?.properties;
+        if (!coords || !props) return;
+        let distanceText = "";
+        if (props.epicenterLng != null && props.epicenterLat != null) {
+          const R = 6371;
+          const dLat = ((props.epicenterLat - coords.lat) * Math.PI) / 180;
+          const dLon = ((props.epicenterLng - coords.lng) * Math.PI) / 180;
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos((coords.lat) * Math.PI / 180) *
+              Math.cos((props.epicenterLat) * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          distanceText = `${Math.round(R * c)} km from epicenter`;
+        }
+        const mmi = props.mmi || 0;
+        const mmiDesc =
+          mmi >= 9 ? "Extreme shaking - widespread destruction" :
+          mmi >= 8 ? "Severe shaking - heavy damage" :
+          mmi >= 7 ? "Very strong shaking - considerable damage" :
+          mmi >= 6 ? "Strong shaking - moderate damage" :
+          mmi >= 5 ? "Moderate shaking - light damage" :
+          mmi >= 4 ? "Light shaking - felt by most" :
+          mmi >= 3 ? "Weak shaking - felt by some" :
+          "Not felt or very weak";
+        const mag = escapeHtml(props.mag ? `M ${props.mag}` : "Unknown magnitude");
+        const place = escapeHtml(String(props.place || "Unknown location"));
+        const depth = props.depth_km != null ? escapeHtml(`${props.depth_km} km depth`) : "";
+        const coordsText = `${coords.lat.toFixed(4)}°, ${coords.lng.toFixed(4)}°`;
+        const html = `
+          <div style="font-size: 12px; line-height: 1.5;">
+            <strong style="color: #DC2626; font-size: 14px;">${mag}</strong><br/>
+            <span style="color: #6B7280;">${place}</span>
+            ${depth ? `<br/><span style="color: #9CA3AF;">${depth}</span>` : ""}
+            <br/>
+            <div style="margin-top: 8px; padding: 6px; background: ${color}; border-radius: 4px; color: #000;">
+              <strong>MMI ${mmi}</strong> — ${mmiDesc}
+            </div>
+            ${distanceText ? `<br/><span style="color: #9CA3AF;">${distanceText}</span>` : ""}
+            <br/><span style="color: #9CA3AF; font-size: 11px;">${coordsText}</span>
+          </div>
+        `;
+        bandPopup.setLngLat(coords).setHTML(html).addTo(m);
+      });
+      m.on("mouseleave", layerId, () => {
+        m.getCanvas().style.cursor = "";
+        bandPopup.remove();
+      });
+    };
+
+    const paintShakeMaps = (collection: SeismicMapCollection | null) => {
+      const nextIds = new Set<string>();
+      const shakemaps = collection?.shakemaps ?? [];
+      for (const shakemap of shakemaps) {
+        const eventId = shakemap.eventId;
+        const anchorId = shakemap.anchorId ?? eventId;
+        const epicenter = collection?.features.find((f) => f.properties.id === anchorId);
+        const epicenterCoords = epicenter?.geometry?.coordinates as [number, number] | undefined;
+        const epicenterProps = (epicenter?.properties ?? {}) as Record<string, unknown>;
+        const sorted = [...(shakemap.features ?? [])].sort(
+          (a, b) => a.properties.value - b.properties.value,
+        );
+        for (const feature of sorted) {
+          const mmiValue = feature.properties.value;
+          const style = shakemapMmiStyle(mmiValue);
+          const sourceId = `shakemap-${eventId}-${mmiValue}`;
+          const layerId = `shakemap-band-${eventId}-${mmiValue}`;
+          nextIds.add(layerId);
+          nextIds.add(sourceId);
+          const contourData = {
+            type: "FeatureCollection",
+            features: [{
+              type: "Feature",
+              properties: {
+                mmi: mmiValue,
+                eventId,
+                mag: epicenterProps.mag,
+                place: epicenterProps.place,
+                depth_km: epicenterProps.depth_km,
+                time: epicenterProps.time,
+                alert: epicenterProps.alert,
+                url: epicenterProps.url,
+                epicenterLng: epicenterCoords?.[0],
+                epicenterLat: epicenterCoords?.[1],
+                transition_opacity: feature.properties.transition_opacity,
+              },
+              geometry: feature.geometry,
+            }],
+          };
+          const existing = m.getSource(sourceId) as { setData?: (d: unknown) => void } | undefined;
+          if (existing?.setData) {
+            existing.setData(contourData);
+          } else {
+            m.addSource(sourceId, { type: "geojson", data: contourData as never });
+            m.addLayer({
+              id: layerId,
+              type: "line",
+              source: sourceId,
+              paint: {
+                "line-color": style.color,
+                "line-width": style.width,
+                "line-opacity": [
+                  "*",
+                  ["coalesce", ["get", "transition_opacity"], 1],
+                  style.opacity,
+                ],
+                "line-blur": 4,
+              },
+            }, beforeId);
+            bindBandHover(layerId, style.color);
+          }
+        }
+      }
+      for (const id of [...shakemapPaintIdsRef.current]) {
+        if (nextIds.has(id)) continue;
+        try { if (m.getLayer(id)) m.removeLayer(id); } catch { /* ignore */ }
+        try { if (m.getSource(id)) m.removeSource(id); } catch { /* ignore */ }
+        shakemapHoverBoundRef.current.delete(id);
+      }
+      shakemapPaintIdsRef.current = nextIds;
+    };
+
+    const applyCollection = (collection: SeismicMapCollection | null) => {
+      seismicDisplayedRef.current = collection;
+      const src = m.getSource(SOURCE) as { setData?: (d: unknown) => void } | undefined;
+      src?.setData?.(collection ?? { type: "FeatureCollection", features: [] });
+      paintShakeMaps(collection);
+    };
+
+    const to = (seismicSignalsGeoJson as SeismicMapCollection | null) ?? null;
+    const from = seismicDisplayedRef.current;
+    const fromHasPoints = !!from && from.features.length > 0;
+
+    cancelAnim();
+
+    if (!to || prefersReducedMotion() || !fromHasPoints) {
+      applyCollection(to ? interpolateSeismicMapCollection(null, to, 1) : empty);
+      return () => { cancelAnim(); };
+    }
+
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / SEISMIC_TRANSITION_MS);
+      applyCollection(interpolateSeismicMapCollection(from, to, t));
+      if (t < 1) seismicAnimRef.current = requestAnimationFrame(step);
+      else seismicAnimRef.current = null;
+    };
+    seismicAnimRef.current = requestAnimationFrame(step);
+
+    return () => {
+      cancelAnim();
+    };
+  }, [loaded, showSeismicSignals, seismicSignalsGeoJson]);
 
   // ── Population choropleth (A2 districts, independent layer) ─────────────
   useEffect(() => {

@@ -1973,6 +1973,8 @@
       "satellite": "Satélite",
       "simple": "Simple",
       "topography": "Topografía",
+      "hazards": "Amenazas",
+      "seismicSignals": "Actividad sísmica",
       "operational": "Operacional",
       "comingSoon": "Próximamente",
       "blockages": "Bloqueos",
