@@ -147,7 +147,7 @@ interface MapPanelBarProps {
   blockagesHint?: string;
   blockagesLoading?: boolean;
   /**
-   * When set, Seismic Signals is a live toggle (Expo #465).
+   * When set, Seismic activity is a live toggle (Expo #465).
    * When omitted, stays a Coming-soon stub.
    */
   showSeismicSignals?: boolean;
@@ -389,15 +389,23 @@ export function MapPanelBar({
 
                   {/* "None" data view hides markers — no separate Visible toggle */}
                   <SectionLabel>{t("panels.markers")}</SectionLabel>
-                  <SegmentedControl
-                    value={dataView}
-                    onChange={(v) => onDataViewChange(v as DataView)}
-                    data={DATA_VIEW_OPTIONS.map((o) => ({ value: o.value, label: t(`dataViews.${o.labelKey}`) }))}
-                    size="xs"
-                    fullWidth
-                    styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
-                    mb={6}
-                  />
+                  <Box style={{ marginInlineStart: -6, paddingInlineEnd: 10 }}>
+                    <SegmentedControl
+                      value={dataView}
+                      onChange={(v) => onDataViewChange(v as DataView)}
+                      data={DATA_VIEW_OPTIONS.map((o) => ({ value: o.value, label: t(`dataViews.${o.labelKey}`) }))}
+                      size="xs"
+                      fullWidth
+                      styles={{
+                        root: {
+                          background: "transparent",
+                          padding: 0,
+                        },
+                        label: { fontSize: 11, padding: "3px 4px" },
+                      }}
+                      mb={6}
+                    />
+                  </Box>
 
                   <Divider color="var(--color-bg-muted)" my={10} />
 
@@ -412,7 +420,7 @@ export function MapPanelBar({
 
                   <Divider color="var(--color-bg-muted)" my={10} />
 
-                  {/* Hazards: Seismic Signals live when enabled */}
+                  {/* Hazards: Seismic activity live when enabled */}
                   <SectionLabel>{t("panels.hazards")}</SectionLabel>
                   {seismicSignalsEnabled ? (
                     <LayerCheckRow
