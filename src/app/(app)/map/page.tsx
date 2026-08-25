@@ -663,11 +663,13 @@ function MapPageContent() {
             bearing: 0,
           }
         : null);
-    if (!live) return;
+    const cameraToSave = live ?? readMapViewState()?.camera ?? null;
+    if (!cameraToSave) return;
     writeMapViewState({
-      camera: live,
+      camera: cameraToSave,
       baseMapType: baseMapTypeRef.current,
       openMarkerIds: openPanelsRef.current.map((p) => p.marker.id),
+      showSeismic: showSeismicRef.current,
     });
   }, []);
 
@@ -710,12 +712,17 @@ function MapPageContent() {
   );
   const baseMapTypeRef = useRef(baseMapType);
   baseMapTypeRef.current = baseMapType;
+  const [showSeismicSignals, setShowSeismicSignals] = useState(
+    () => restoredView?.showSeismic === true,
+  );
+  const showSeismicRef = useRef(showSeismicSignals);
+  showSeismicRef.current = showSeismicSignals;
 
   // Persist basemap / open panels even when the camera is still.
   useEffect(() => {
     if (!restoreReady) return;
     persistMapView();
-  }, [baseMapType, openPanels, persistMapView, restoreReady]);
+  }, [baseMapType, openPanels, persistMapView, restoreReady, showSeismicSignals]);
 
   // Flush snapshot on leave so View details → Back always has a fresh copy.
   useEffect(() => {
@@ -822,10 +829,9 @@ function MapPageContent() {
   }, [blockagesUiEnabled, showBlockages]);
 
   /**
-   * Seismic Signals UI: always on (spike in dev/preview, BFF in prod). See `fetch-usgs-earthquakes.ts`.
+   * Seismic activity UI: always on (spike in dev/preview, BFF in prod). See `fetch-usgs-earthquakes.ts`.
    */
   const seismicSignalsUiEnabled = isSeismicSignalsUiEnabled();
-  const [showSeismicSignals, setShowSeismicSignals] = useState(false);
   const [seismicSignalsLoading, setSeismicSignalsLoading] = useState(false);
   const [seismicSignalsHint, setSeismicSignalsHint] = useState<string | undefined>();
   const [seismicSignalsGeoJson, setSeismicSignalsGeoJson] = useState<{

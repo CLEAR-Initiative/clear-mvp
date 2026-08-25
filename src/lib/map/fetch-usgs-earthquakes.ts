@@ -30,7 +30,7 @@ const SPIKE_PATH = "/api/dev/usgs-earthquakes";
 export const EARTHQUAKES_BFF_PATH = "/api/usgs/earthquakes";
 
 /**
- * True when Layers → Seismic Signals should be an interactive toggle (not Coming soon).
+ * True when Layers → Seismic activity should be an interactive toggle (not Coming soon).
  * Always on — the spike is live USGS in dev, BFF in prod. Do not gate on NEXT_PUBLIC_*:
  * Sensitive Vercel envs are runtime-only.
  */
@@ -104,11 +104,11 @@ export async function fetchSeismicSignalsMapCollection(opts?: {
   };
 
   if (!res.ok) {
-    throw new Error(body.error ?? `Seismic Signals fetch failed (HTTP ${res.status})`);
+    throw new Error(body.error ?? `Seismic activity fetch failed (HTTP ${res.status})`);
   }
 
   if (body.type !== "FeatureCollection" || !Array.isArray(body.features)) {
-    throw new Error("Seismic Signals response is not a FeatureCollection");
+    throw new Error("Seismic activity response is not a FeatureCollection");
   }
 
   return { collection: body, source };

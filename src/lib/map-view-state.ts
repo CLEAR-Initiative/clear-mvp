@@ -10,9 +10,10 @@
  * ## Gaps for a later ticket (not in this MVP)
  * - Filters: country / region / timeframe / crisis type / timeline month
  * - Layers: roads, NRC locations, blockages, boundaries, data view
+ *   (Hazards → seismic activity *is* snapshotted — same-tab reload)
  * - Keep-panels-open + multi-panel stack order / z-index / drag offsets
  * - Solo-focus deep links (`?event=`) vs restore coexistence polish
- * - Cross-tab / hard-refresh durable prefs (would need localStorage + TTL UX)
+ * - Cross-tab durable prefs (would need localStorage + TTL UX)
  * - Product Tour / force-fly interaction matrix
  */
 
@@ -36,6 +37,8 @@ export type MapViewStateV1 = {
   baseMapType: MapViewBaseMapType;
   /** Crisis marker numeric ids that had open detail panels. */
   openMarkerIds: number[];
+  /** Hazards → seismic activity overlay. Missing on older snapshots = off. */
+  showSeismic: boolean;
   savedAt: number;
 };
 
@@ -100,6 +103,7 @@ export function parseMapViewState(raw: unknown): MapViewStateV1 | null {
     },
     baseMapType: o.baseMapType,
     openMarkerIds,
+    showSeismic: o.showSeismic === true,
     savedAt: o.savedAt,
   };
 }
@@ -113,7 +117,10 @@ export function isMapViewStateFresh(
 }
 
 export function writeMapViewState(
-  state: Omit<MapViewStateV1, "v" | "savedAt"> & { savedAt?: number },
+  state: Omit<MapViewStateV1, "v" | "savedAt" | "showSeismic"> & {
+    savedAt?: number;
+    showSeismic?: boolean;
+  },
   storage: MapViewStateStorage | null | undefined = defaultSessionStorage(),
 ): void {
   if (!storage) return;
@@ -122,6 +129,7 @@ export function writeMapViewState(
     camera: state.camera,
     baseMapType: state.baseMapType,
     openMarkerIds: state.openMarkerIds,
+    showSeismic: state.showSeismic === true,
     savedAt: state.savedAt ?? Date.now(),
   };
   try {

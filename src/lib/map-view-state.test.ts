@@ -45,6 +45,7 @@ describe("parseMapViewState", () => {
     ).toEqual({
       v: 1,
       ...sample,
+      showSeismic: false,
       savedAt: 1,
     });
   });
@@ -72,6 +73,20 @@ describe("parseMapViewState", () => {
 });
 
 describe("freshness + storage", () => {
+  it("round-trips the seismic activity overlay flag", () => {
+    const storage = memoryStorage();
+    const now = 1_000_000;
+    writeMapViewState({ ...sample, showSeismic: true, savedAt: now }, storage);
+    expect(readMapViewState(storage, now + 1000)?.showSeismic).toBe(true);
+    expect(
+      parseMapViewState({
+        v: 1,
+        ...sample,
+        savedAt: 1,
+      })?.showSeismic,
+    ).toBe(false);
+  });
+
   it("writes and reads a fresh snapshot", () => {
     const storage = memoryStorage();
     const now = 1_000_000;
@@ -85,7 +100,7 @@ describe("freshness + storage", () => {
     const now = 1_000_000;
     writeMapViewState({ ...sample, savedAt: now - 31 * 60 * 1000 }, storage);
     expect(readMapViewState(storage, now)).toBeNull();
-    expect(isMapViewStateFresh({ v: 1, ...sample, savedAt: now }, now)).toBe(
+    expect(isMapViewStateFresh({ v: 1, ...sample, showSeismic: false, savedAt: now }, now)).toBe(
       true,
     );
   });
