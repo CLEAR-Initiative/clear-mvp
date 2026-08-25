@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   ageDaysSinceEpoch,
+  filterSeismicMapCollection,
   formatSeismicFreshness,
   isSeismicEventStale,
   SEISMIC_STALE_AFTER_DAYS,
+  seismicYearMonths,
   toSeismicMapCollection,
+  utcYearMonthFromEpochMs,
+  type SeismicMapCollection,
   type UsgsFdsnCollection,
 } from "./usgs-earthquakes";
 
@@ -234,5 +238,96 @@ describe("formatSeismicFreshness", () => {
   it("returns fallback for unknown time", () => {
     expect(formatSeismicFreshness(null)).toBe("Time unknown");
     expect(formatSeismicFreshness(undefined)).toBe("Time unknown");
+  });
+});
+
+describe("filterSeismicMapCollection", () => {
+  const july = Date.parse("2026-07-28T08:00:00.000Z");
+  const august = Date.parse("2026-08-10T08:00:00.000Z");
+
+  const collection: SeismicMapCollection = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        id: "eq-jul",
+        geometry: { type: "Point", coordinates: [69, 34, 10] },
+        properties: {
+          id: "eq-jul",
+          mag: 5.2,
+          mag_type: "mww",
+          place: "Hindu Kush",
+          title: "M 5.2 - Hindu Kush",
+          time: july,
+          updated: july,
+          depth_km: 10,
+          alert: null,
+          mmi: 4,
+          url: null,
+          has_shakemap: true,
+          status: "reviewed",
+          age_days: 28,
+          stale: 0,
+        },
+      },
+      {
+        type: "Feature",
+        id: "eq-aug",
+        geometry: { type: "Point", coordinates: [69.2, 34.5, 12] },
+        properties: {
+          id: "eq-aug",
+          mag: 6.1,
+          mag_type: "mww",
+          place: "Kabul",
+          title: "M 6.1 - Kabul",
+          time: august,
+          updated: august,
+          depth_km: 12,
+          alert: "yellow",
+          mmi: 6,
+          url: null,
+          has_shakemap: true,
+          status: "reviewed",
+          age_days: 15,
+          stale: 0,
+        },
+      },
+    ],
+    shakemaps: [
+      { eventId: "eq-jul", type: "FeatureCollection", features: [] },
+      { eventId: "eq-aug", type: "FeatureCollection", features: [] },
+    ],
+    meta: {
+      source: "usgs-spike",
+      feature_count: 2,
+      min_magnitude: 4,
+      window_days: 30,
+      bbox: null,
+      pulled_at: "2026-08-25T12:00:00.000Z",
+      bytes_in: 1,
+      bytes_out: 1,
+      reduction_ratio: 1,
+    },
+  };
+
+  it("maps USGS time to UTC YYYY-MM", () => {
+    expect(utcYearMonthFromEpochMs(july)).toBe("2026-07");
+    expect(utcYearMonthFromEpochMs(august)).toBe("2026-08");
+    expect(utcYearMonthFromEpochMs(null)).toBeNull();
+  });
+
+  it("lists earthquake months newest first", () => {
+    expect(seismicYearMonths(collection)).toEqual(["2026-08", "2026-07"]);
+  });
+
+  it("drops ShakeMaps whose epicenter is outside the selected month", () => {
+    const augustOnly = filterSeismicMapCollection(collection, "2026-08");
+    expect(augustOnly.features.map((f) => f.properties.id)).toEqual(["eq-aug"]);
+    expect(augustOnly.shakemaps?.map((s) => s.eventId)).toEqual(["eq-aug"]);
+    expect(augustOnly.meta.feature_count).toBe(1);
+  });
+
+  it("returns the full window when Entire period is selected", () => {
+    expect(filterSeismicMapCollection(collection, null)).toBe(collection);
   });
 });

@@ -4,6 +4,7 @@ import {
   buildUsgsFdsnUrl,
   minMagnitudeForBbox,
   parseBboxParam,
+  seismicQueryWindow,
 } from "~/lib/map/usgs-fdsn-query";
 import {
   toSeismicMapCollection,
@@ -17,11 +18,11 @@ import {
  * Fetches live USGS FDSN Event GeoJSON, applies the slim transform, and returns
  * map-ready SeismicMapCollection. Geography follows the map country toggle
  * (`bbox=minLng,minLat,maxLng,maxLat`); omit bbox for global M5.5+.
+ * Time follows map timeframe (`start`/`end` ISO); default last 30 days, cap 365.
  *
  * Prod path: clear-api USGS scheduled ingest → BFF proxy → same contract.
  */
 
-const WINDOW_DAYS = 30;
 const MAX_SHAKEMAP_FETCHES = 20;
 
 export async function GET(request: NextRequest) {
@@ -34,9 +35,11 @@ export async function GET(request: NextRequest) {
 
   const bbox = parseBboxParam(request.nextUrl.searchParams.get("bbox"));
   const minMagnitude = minMagnitudeForBbox(bbox);
-  const now = new Date();
-  const startTime = new Date(now.getTime() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const url = buildUsgsFdsnUrl({ minMagnitude, startTime, bbox });
+  const { startTime, endTime, windowDays } = seismicQueryWindow({
+    start: request.nextUrl.searchParams.get("start"),
+    end: request.nextUrl.searchParams.get("end"),
+  });
+  const url = buildUsgsFdsnUrl({ minMagnitude, startTime, endTime, bbox });
 
   console.log("[usgs-spike] Fetching:", url.toString());
 
@@ -79,7 +82,7 @@ export async function GET(request: NextRequest) {
   const collection = toSeismicMapCollection(upstream, {
     source: "usgs-spike",
     minMagnitude,
-    windowDays: WINDOW_DAYS,
+    windowDays,
     bbox,
   });
 

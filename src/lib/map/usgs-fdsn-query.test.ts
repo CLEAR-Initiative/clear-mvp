@@ -7,6 +7,7 @@ import {
   parseBboxParam,
   padBbox,
   seismicQueryBboxForCountry,
+  seismicQueryWindow,
 } from "./usgs-fdsn-query";
 
 function contains(
@@ -96,5 +97,47 @@ describe("buildUsgsFdsnUrl", () => {
     expect(Number(url.searchParams.get("minlongitude"))).toBe(bbox[0]);
     expect(Number(url.searchParams.get("maxlatitude"))).toBe(bbox[3]);
     expect(formatBboxParam(bbox)).toBe(bbox.join(","));
+  });
+
+  it("sets optional endtime", () => {
+    const url = buildUsgsFdsnUrl({
+      minMagnitude: 5.5,
+      startTime: start,
+      endTime: new Date("2026-08-25T00:00:00.000Z"),
+      bbox: null,
+    });
+    expect(url.searchParams.get("endtime")).toBe("2026-08-25T00:00:00.000Z");
+  });
+});
+
+describe("seismicQueryWindow", () => {
+  const now = new Date("2026-08-25T12:00:00.000Z");
+
+  it("defaults to 30 days when start is omitted", () => {
+    const w = seismicQueryWindow({ now });
+    expect(w.windowDays).toBe(30);
+    expect(w.endTime).toBeNull();
+    expect(w.startTime.toISOString()).toBe("2026-07-26T12:00:00.000Z");
+  });
+
+  it("uses the map timeframe start/end", () => {
+    const w = seismicQueryWindow({
+      start: "2026-05-27T12:00:00.000Z",
+      end: "2026-08-25T12:00:00.000Z",
+      now,
+    });
+    expect(w.windowDays).toBe(90);
+    expect(w.startTime.toISOString()).toBe("2026-05-27T12:00:00.000Z");
+    expect(w.endTime?.toISOString()).toBe("2026-08-25T12:00:00.000Z");
+  });
+
+  it("clamps start older than 365 days", () => {
+    const w = seismicQueryWindow({
+      start: "2020-01-01T00:00:00.000Z",
+      end: "2026-08-25T12:00:00.000Z",
+      now,
+    });
+    expect(w.windowDays).toBe(365);
+    expect(w.startTime.toISOString()).toBe("2025-08-25T12:00:00.000Z");
   });
 });

@@ -124,7 +124,7 @@ upstream. FE demotes features with `age_days` ≥ **30 days** (reduced opacity) 
 |-------|-------------|
 | Geography | Focus country + adjacent (server-derived bbox) first; global later |
 | Magnitude | **M5.5+** (FDSN `minmagnitude=5.5`) |
-| Time window | **30 days** (FDSN `starttime=NOW-30d`) |
+| Time window | Map **Timeframe** (7d / 30d / 90d); **all** is capped at **365 days** on the live USGS spike. Month chips filter the already-fetched window client-side. Scheduled ingest may still prune to 30 days. |
 | Event types | **earthquakes only** (FDSN `eventtype=earthquake`) |
 | Serving | Slim GeoJSON for map; vector tiles later if point density forces it |
 

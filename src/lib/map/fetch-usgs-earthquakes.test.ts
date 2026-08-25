@@ -50,4 +50,17 @@ describe("getSeismicSignalsFetchUrl", () => {
     expect(url).toContain("58");
     expect(url).toContain("77.4");
   });
+
+  it("appends map timeframe start/end so seismic follows the timeline window", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("NEXT_PUBLIC_USGS_EARTHQUAKES_URL", "");
+    const url = getSeismicSignalsFetchUrl({
+      start: "2026-07-26T12:00:00.000Z",
+      end: "2026-08-25T12:00:00.000Z",
+    });
+    expect(url).toContain("start=");
+    expect(url).toContain("2026-07-26");
+    expect(url).toContain("end=");
+    expect(url).toContain("2026-08-25");
+  });
 });

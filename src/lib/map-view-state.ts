@@ -9,12 +9,13 @@
  *
  * ## Gaps for a later ticket (not in this MVP)
  * - Filters: country / region / timeframe / crisis type / timeline month
- * - Layers: roads, NRC locations, blockages, boundaries, data view
- *   (Hazards → seismic activity *is* snapshotted — same-tab reload)
+ * - Layers: NRC locations, blockages, boundaries, data view
+ *   (Hazards → seismic activity and Overlays → roads *are* snapshotted)
  * - Keep-panels-open + multi-panel stack order / z-index / drag offsets
  * - Solo-focus deep links (`?event=`) vs restore coexistence polish
  * - Cross-tab durable prefs (would need localStorage + TTL UX)
  * - Product Tour / force-fly interaction matrix
+ * - ShakeMap contour animation (polish; not a map-session concern)
  */
 
 export const MAP_VIEW_STATE_STORAGE_KEY = "clear.map.viewState.v1";
@@ -39,6 +40,8 @@ export type MapViewStateV1 = {
   openMarkerIds: number[];
   /** Hazards → seismic activity overlay. Missing on older snapshots = off. */
   showSeismic: boolean;
+  /** Overlays → roads. Missing on older snapshots = on (the historical default). */
+  showRoads: boolean;
   savedAt: number;
 };
 
@@ -104,6 +107,7 @@ export function parseMapViewState(raw: unknown): MapViewStateV1 | null {
     baseMapType: o.baseMapType,
     openMarkerIds,
     showSeismic: o.showSeismic === true,
+    showRoads: o.showRoads !== false,
     savedAt: o.savedAt,
   };
 }
@@ -117,9 +121,10 @@ export function isMapViewStateFresh(
 }
 
 export function writeMapViewState(
-  state: Omit<MapViewStateV1, "v" | "savedAt" | "showSeismic"> & {
+  state: Omit<MapViewStateV1, "v" | "savedAt" | "showSeismic" | "showRoads"> & {
     savedAt?: number;
     showSeismic?: boolean;
+    showRoads?: boolean;
   },
   storage: MapViewStateStorage | null | undefined = defaultSessionStorage(),
 ): void {
@@ -130,6 +135,7 @@ export function writeMapViewState(
     baseMapType: state.baseMapType,
     openMarkerIds: state.openMarkerIds,
     showSeismic: state.showSeismic === true,
+    showRoads: state.showRoads !== false,
     savedAt: state.savedAt ?? Date.now(),
   };
   try {

@@ -61,6 +61,8 @@ export function isUsgsSpikeAllowed(): boolean {
  */
 export function getSeismicSignalsFetchUrl(query?: {
   bbox?: LngLatBbox | null;
+  start?: string | null;
+  end?: string | null;
 }): string {
   const fromEnv = process.env.NEXT_PUBLIC_USGS_EARTHQUAKES_URL?.trim();
   const path = fromEnv
@@ -68,9 +70,14 @@ export function getSeismicSignalsFetchUrl(query?: {
     : isUsgsSpikeAllowed()
       ? SPIKE_PATH
       : EARTHQUAKES_BFF_PATH;
-  if (!query?.bbox) return path;
+  const params = new URLSearchParams();
+  if (query?.bbox) params.set("bbox", formatBboxParam(query.bbox));
+  if (query?.start) params.set("start", query.start);
+  if (query?.end) params.set("end", query.end);
+  const qs = params.toString();
+  if (!qs) return path;
   const joiner = path.includes("?") ? "&" : "?";
-  return `${path}${joiner}bbox=${encodeURIComponent(formatBboxParam(query.bbox))}`;
+  return `${path}${joiner}${qs}`;
 }
 
 export type FetchSeismicSignalsResult = {
@@ -81,9 +88,15 @@ export type FetchSeismicSignalsResult = {
 
 export async function fetchSeismicSignalsMapCollection(opts?: {
   bbox?: LngLatBbox | null;
+  start?: string | null;
+  end?: string | null;
   init?: RequestInit;
 }): Promise<FetchSeismicSignalsResult> {
-  const url = getSeismicSignalsFetchUrl({ bbox: opts?.bbox });
+  const url = getSeismicSignalsFetchUrl({
+    bbox: opts?.bbox,
+    start: opts?.start,
+    end: opts?.end,
+  });
   const pathOnly = url.split("?")[0] ?? url;
   const source: "spike" | "api" =
     pathOnly === SPIKE_PATH || pathOnly.endsWith(SPIKE_PATH) ? "spike" : "api";

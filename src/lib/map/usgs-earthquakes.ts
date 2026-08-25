@@ -153,6 +153,52 @@ export function isSeismicEventStale(ageDays: number | null): boolean {
   return ageDays != null && ageDays >= SEISMIC_STALE_AFTER_DAYS;
 }
 
+/** UTC `YYYY-MM` for timeline chips; null when USGS `time` is missing. */
+export function utcYearMonthFromEpochMs(
+  time: number | null | undefined,
+): string | null {
+  if (time == null || !Number.isFinite(time)) return null;
+  const d = new Date(time);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Distinct UTC months in a collection, newest first. */
+export function seismicYearMonths(collection: SeismicMapCollection): string[] {
+  const set = new Set<string>();
+  for (const f of collection.features) {
+    const ym = utcYearMonthFromEpochMs(f.properties.time);
+    if (ym) set.add(ym);
+  }
+  return [...set].sort().reverse();
+}
+
+/**
+ * Client-side month chip filter. `selectedMonth` null = entire fetched window.
+ * ShakeMaps follow their epicenter’s month.
+ */
+export function filterSeismicMapCollection(
+  collection: SeismicMapCollection,
+  selectedMonth: string | null,
+): SeismicMapCollection {
+  if (!selectedMonth) return collection;
+  const features = collection.features.filter(
+    (f) => utcYearMonthFromEpochMs(f.properties.time) === selectedMonth,
+  );
+  const ids = new Set(features.map((f) => f.properties.id));
+  return {
+    ...collection,
+    features,
+    ...(collection.shakemaps
+      ? { shakemaps: collection.shakemaps.filter((s) => ids.has(s.eventId)) }
+      : {}),
+    meta: {
+      ...collection.meta,
+      feature_count: features.length,
+    },
+  };
+}
+
 /** Format earthquake age for display (e.g. "2026-07-15 (28 days ago)"). */
 export function formatSeismicFreshness(
   timeMs: number | null | undefined,

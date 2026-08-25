@@ -14,6 +14,10 @@ export const COUNTRY_MIN_MAGNITUDE = 4.0;
 export const GLOBAL_MIN_MAGNITUDE = 5.5;
 /** Pad past borders so adjacent-plate events still paint. ~250 km. */
 export const SEISMIC_BBOX_PAD_DEG = 2.5;
+/** Spike default when the map omits `start` (matches the old hardcoded window). */
+export const DEFAULT_SEISMIC_WINDOW_DAYS = 30;
+/** Cap FDSN "all" so preview/live USGS stays bounded. */
+export const SEISMIC_MAX_WINDOW_DAYS = 365;
 
 export const USGS_FDSN_BASE = "https://earthquake.usgs.gov/fdsnws/event/1/query";
 
@@ -58,9 +62,51 @@ export function parseBboxParam(
   return [minLng, minLat, maxLng, maxLat];
 }
 
+export function parseIsoDateParam(raw: string | null | undefined): Date | null {
+  if (!raw?.trim()) return null;
+  const ms = Date.parse(raw);
+  if (!Number.isFinite(ms)) return null;
+  return new Date(ms);
+}
+
+/**
+ * FDSN start/end from map timeframe query params.
+ * Missing `start` → last 30 days. Starts older than {@link SEISMIC_MAX_WINDOW_DAYS} are clamped.
+ */
+export function seismicQueryWindow(opts: {
+  start?: string | null;
+  end?: string | null;
+  now?: Date;
+}): { startTime: Date; endTime: Date | null; windowDays: number } {
+  const now = opts.now ?? new Date();
+  const parsedEnd = parseIsoDateParam(opts.end);
+  const endTime =
+    parsedEnd && parsedEnd.getTime() <= now.getTime() + 60_000 ? parsedEnd : null;
+  const rangeEnd = endTime ?? now;
+  const maxAgo = new Date(
+    rangeEnd.getTime() - SEISMIC_MAX_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  );
+  const parsedStart = parseIsoDateParam(opts.start);
+  let startTime =
+    parsedStart ??
+    new Date(rangeEnd.getTime() - DEFAULT_SEISMIC_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  if (startTime.getTime() < maxAgo.getTime()) startTime = maxAgo;
+  if (startTime.getTime() > rangeEnd.getTime()) {
+    startTime = new Date(
+      rangeEnd.getTime() - DEFAULT_SEISMIC_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+    );
+  }
+  const windowDays = Math.max(
+    1,
+    Math.round((rangeEnd.getTime() - startTime.getTime()) / (24 * 60 * 60 * 1000)),
+  );
+  return { startTime, endTime, windowDays };
+}
+
 export function buildUsgsFdsnUrl(opts: {
   minMagnitude: number;
   startTime: Date;
+  endTime?: Date | null;
   bbox: LngLatBbox | null;
 }): URL {
   const url = new URL(USGS_FDSN_BASE);
@@ -68,6 +114,9 @@ export function buildUsgsFdsnUrl(opts: {
   url.searchParams.set("eventtype", "earthquake");
   url.searchParams.set("minmagnitude", String(opts.minMagnitude));
   url.searchParams.set("starttime", opts.startTime.toISOString());
+  if (opts.endTime) {
+    url.searchParams.set("endtime", opts.endTime.toISOString());
+  }
   url.searchParams.set("orderby", "time");
   url.searchParams.set("limit", "20000");
   if (opts.bbox) {

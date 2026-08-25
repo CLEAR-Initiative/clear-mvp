@@ -81,7 +81,15 @@ import {
   fetchSeismicSignalsMapCollection,
   isSeismicSignalsUiEnabled,
 } from "~/lib/map/fetch-usgs-earthquakes";
-import { seismicQueryBboxForCountry } from "~/lib/map/usgs-fdsn-query";
+import {
+  filterSeismicMapCollection,
+  seismicYearMonths,
+  type SeismicMapCollection,
+} from "~/lib/map/usgs-earthquakes";
+import {
+  SEISMIC_MAX_WINDOW_DAYS,
+  seismicQueryBboxForCountry,
+} from "~/lib/map/usgs-fdsn-query";
 const MAX_OPEN_PANELS = 4;
 
 interface OpenMarkerPanel {
@@ -670,6 +678,7 @@ function MapPageContent() {
       baseMapType: baseMapTypeRef.current,
       openMarkerIds: openPanelsRef.current.map((p) => p.marker.id),
       showSeismic: showSeismicRef.current,
+      showRoads: showRoadsRef.current,
     });
   }, []);
 
@@ -705,7 +714,11 @@ function MapPageContent() {
   }, []);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
-  const [showRoads, setShowRoads] = useState(true);
+  const [showRoads, setShowRoads] = useState(
+    () => restoredView?.showRoads !== false,
+  );
+  const showRoadsRef = useRef(showRoads);
+  showRoadsRef.current = showRoads;
   const [showNrcLocations, setShowNrcLocations] = useState(false);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>(
     () => restoredView?.baseMapType ?? "simple",
@@ -722,7 +735,7 @@ function MapPageContent() {
   useEffect(() => {
     if (!restoreReady) return;
     persistMapView();
-  }, [baseMapType, openPanels, persistMapView, restoreReady, showSeismicSignals]);
+  }, [baseMapType, openPanels, persistMapView, restoreReady, showSeismicSignals, showRoads]);
 
   // Flush snapshot on leave so View details → Back always has a fresh copy.
   useEffect(() => {
@@ -833,38 +846,68 @@ function MapPageContent() {
    */
   const seismicSignalsUiEnabled = isSeismicSignalsUiEnabled();
   const [seismicSignalsLoading, setSeismicSignalsLoading] = useState(false);
-  const [seismicSignalsHint, setSeismicSignalsHint] = useState<string | undefined>();
-  const [seismicSignalsGeoJson, setSeismicSignalsGeoJson] = useState<{
-    type: "FeatureCollection";
-    features: Array<{
-      type: "Feature";
-      geometry: unknown;
-      properties: Record<string, unknown>;
-    }>;
-  } | null>(null);
+  const [seismicSignalsError, setSeismicSignalsError] = useState<string | undefined>();
+  const [seismicSignalsRaw, setSeismicSignalsRaw] =
+    useState<SeismicMapCollection | null>(null);
+  const [seismicSignalsSource, setSeismicSignalsSource] = useState<
+    "spike" | "api" | null
+  >(null);
+
+  const seismicFetchWindow = useMemo(() => {
+    if (timeframe === "all") {
+      const now = new Date();
+      return {
+        start: new Date(
+          now.getTime() - SEISMIC_MAX_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+        end: now.toISOString(),
+      };
+    }
+    return {
+      start: timeframeRange.from,
+      end: timeframeRange.to,
+    };
+  }, [timeframe, timeframeRange.from, timeframeRange.to]);
+
+  const seismicSignalsGeoJson = useMemo(
+    () =>
+      seismicSignalsRaw
+        ? filterSeismicMapCollection(seismicSignalsRaw, selectedMonth)
+        : null,
+    [seismicSignalsRaw, selectedMonth],
+  );
+
+  const seismicSignalsHint = seismicSignalsError
+    ?? (seismicSignalsGeoJson && seismicSignalsSource
+      ? seismicSignalsHintFromMeta(seismicSignalsGeoJson, seismicSignalsSource)
+      : undefined);
 
   useEffect(() => {
     if (!seismicSignalsUiEnabled || !showSeismicSignals) {
-      setSeismicSignalsGeoJson(null);
-      setSeismicSignalsHint(undefined);
+      setSeismicSignalsRaw(null);
+      setSeismicSignalsSource(null);
+      setSeismicSignalsError(undefined);
       setSeismicSignalsLoading(false);
       return;
     }
     let cancelled = false;
     setSeismicSignalsLoading(true);
-    setSeismicSignalsHint(undefined);
+    setSeismicSignalsError(undefined);
     fetchSeismicSignalsMapCollection({
       bbox: seismicQueryBboxForCountry(selectedCountry),
+      start: seismicFetchWindow.start,
+      end: seismicFetchWindow.end,
     })
       .then(({ collection, source }) => {
         if (cancelled) return;
-        setSeismicSignalsGeoJson(collection);
-        setSeismicSignalsHint(seismicSignalsHintFromMeta(collection, source));
+        setSeismicSignalsRaw(collection);
+        setSeismicSignalsSource(source);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setSeismicSignalsGeoJson(null);
-        setSeismicSignalsHint(
+        setSeismicSignalsRaw(null);
+        setSeismicSignalsSource(null);
+        setSeismicSignalsError(
           err instanceof Error ? err.message : "Failed to load",
         );
       })
@@ -874,7 +917,13 @@ function MapPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [seismicSignalsUiEnabled, showSeismicSignals, selectedCountry]);
+  }, [
+    seismicSignalsUiEnabled,
+    showSeismicSignals,
+    selectedCountry,
+    seismicFetchWindow.start,
+    seismicFetchWindow.end,
+  ]);
 
   // Deep-link from detail Back / Full Map: align Layers data-view chrome only.
   // Markers come from the solo focus queries - do not widen timeframe or wipe
@@ -1279,7 +1328,9 @@ function MapPageContent() {
 
   // Distinct months present in the current location/type slice, sorted newest
   // first. Markers with no `occurredAt` (e.g. crisis aggregates) are skipped -
-  // they show up regardless of which month is picked.
+  // they show up regardless of which month is picked. When Seismic activity is
+  // on, earthquake `time` months are unioned in so a ShakeMap can create a chip
+  // even if no alert/event landed that month.
   const availableMonths = useMemo(() => {
     const set = new Set<string>();
     for (const m of markersBeforeTime) {
@@ -1291,8 +1342,11 @@ function MapPageContent() {
       const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
       set.add(ym);
     }
+    if (showSeismicSignals && seismicSignalsRaw) {
+      for (const ym of seismicYearMonths(seismicSignalsRaw)) set.add(ym);
+    }
     return [...set].sort().reverse();
-  }, [markersBeforeTime]);
+  }, [markersBeforeTime, showSeismicSignals, seismicSignalsRaw]);
 
   // Auto-clear the month selection if it's no longer in the current option
   // set (happens when filtering down to a country/region that has no data
