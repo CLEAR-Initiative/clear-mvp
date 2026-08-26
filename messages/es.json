@@ -417,8 +417,7 @@
       "roleUpdateFailed": "No se pudo actualizar el rol",
       "approved": "Usuario aprobado",
       "approvedDetail": "Ahora tiene acceso de visor.",
-      "approveFailed": "No se pudo aprobar al usuario",
-      "deleteUnavailable": "La eliminación de usuarios aún no está disponible"
+      "approveFailed": "No se pudo aprobar al usuario"
     },
     "features": {
       "stats": {

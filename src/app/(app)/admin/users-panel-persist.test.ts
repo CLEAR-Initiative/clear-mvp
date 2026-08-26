@@ -29,12 +29,21 @@ describe("Users tab persist wiring", () => {
   });
 
   it("treats pending as role === pending, not isActive === false", () => {
+    expect(page).toMatch(/filter === "pending" && u\.role !== "pending"/);
     expect(page).toMatch(/u\.role === "pending"/);
     expect(page).toMatch(/user\.role === "pending"/);
+    expect(page).not.toMatch(/filter === "pending" && u\.isActive/);
+    expect(page).not.toMatch(/pendingCount = localUsers\.filter\(\(u\) => !u\.isActive\)/);
   });
 
-  it("does not fake-delete users while no deleteUser mutation exists", () => {
+  it("keeps Users-tab order stable across unordered API refetches", () => {
+    expect(page).toMatch(/sortUsersStable\(data\.users/);
+  });
+
+  it("does not offer user deletion on the platform Users tab", () => {
     expect(page).not.toMatch(/handleDelete/);
-    expect(page).toMatch(/deleteUnavailable/);
+    expect(page).not.toMatch(/deleteUnavailable/);
+    expect(page).toMatch(/\["user", "role", "email", "org", "team", "status"\]/);
+    expect(page).not.toMatch(/\["user", "role", "email", "org", "team", "status", ""\]/);
   });
 });

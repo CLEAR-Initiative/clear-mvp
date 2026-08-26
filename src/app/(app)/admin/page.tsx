@@ -21,7 +21,6 @@ import {
   Tabs,
   Text,
   TextInput,
-  Tooltip,
 } from "@mantine/core";
 import {
   IconAlertCircle,
@@ -50,6 +49,7 @@ import { isPlatformAdmin } from "~/lib/roles";
 import { PageHeader, StatsGrid } from "~/components/ui";
 import type { StatItem } from "~/components/ui";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
+import { sortUsersStable } from "./users-order";
 
 /* ─── Shared ──────────────────────────────────────────────── */
 const border = `1px solid ${colors.border}`;
@@ -310,7 +310,7 @@ function UsersPanel() {
   const [pendingRoles, setPendingRoles] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (data?.users) setLocalUsers(data.users as GqlUser[]);
+    if (data?.users) setLocalUsers(sortUsersStable(data.users as GqlUser[]));
   }, [data]);
 
   // Org teams for the cascading team filter
@@ -528,7 +528,7 @@ function UsersPanel() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr style={{ background: colors.bgPrimary }}>
-              {(["user", "role", "email", "org", "team", "status", ""] as const).map((h) => (
+              {(["user", "role", "email", "org", "team", "status"] as const).map((h) => (
                 <Table.Th
                   key={h}
                   style={{
@@ -537,10 +537,9 @@ function UsersPanel() {
                     fontWeight: 600,
                     textTransform: "uppercase",
                     letterSpacing: "0.05em",
-                    width: h === "" ? 40 : undefined,
                   }}
                 >
-                  {h === "" ? "" : t(`columns.${h}`)}
+                  {t(`columns.${h}`)}
                 </Table.Th>
               ))}
             </Table.Tr>
@@ -548,7 +547,7 @@ function UsersPanel() {
           <Table.Tbody>
             {filteredUsers.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={7}>
+                <Table.Td colSpan={6}>
                   <Text
                     c={colors.textMuted}
                     ta="center"
@@ -671,8 +670,8 @@ function UsersPanel() {
                   </Table.Td>
 
                   {/* Status + Activate */}
-                  <Table.Td>
-                    <Group gap={8} wrap="nowrap">
+                  <Table.Td style={{ whiteSpace: "nowrap" }}>
+                    <Group gap={8} wrap="nowrap" preventGrowOverflow={false}>
                       <Badge
                         size="sm"
                         variant="dot"
@@ -688,26 +687,20 @@ function UsersPanel() {
                           leftSection={<IconUserCheck size={12} />}
                           loading={approveUser.isPending}
                           onClick={() => handleActivate(user)}
+                          styles={{
+                            root: {
+                              flexShrink: 0,
+                              minWidth: "max-content",
+                              paddingInline: 12,
+                            },
+                            inner: { overflow: "visible" },
+                            label: { overflow: "visible", whiteSpace: "nowrap" },
+                          }}
                         >
                           {t("activate")}
                         </Button>
                       )}
                     </Group>
-                  </Table.Td>
-
-                  {/* Delete — no GraphQL mutation exists yet; do not fake-persist. */}
-                  <Table.Td>
-                    <Tooltip label={t("deleteUnavailable")}>
-                      <ActionIcon
-                        variant="subtle"
-                        color="red"
-                        size="sm"
-                        disabled
-                        aria-label={t("deleteUnavailable")}
-                      >
-                        <IconTrash size={14} />
-                      </ActionIcon>
-                    </Tooltip>
                   </Table.Td>
                 </Table.Tr>
               ))

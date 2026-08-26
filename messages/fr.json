@@ -419,8 +419,7 @@
       "roleUpdateFailed": "Impossible de mettre à jour le rôle",
       "approved": "Utilisateur approuvé",
       "approvedDetail": "Il a désormais un accès lecteur.",
-      "approveFailed": "Impossible d'approuver l'utilisateur",
-      "deleteUnavailable": "La suppression d'utilisateur n'est pas encore disponible"
+      "approveFailed": "Impossible d'approuver l'utilisateur"
     },
     "features": {
       "stats": {

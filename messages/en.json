@@ -417,8 +417,7 @@
       "roleUpdateFailed": "Could not update role",
       "approved": "User approved",
       "approvedDetail": "They now have viewer access.",
-      "approveFailed": "Could not approve user",
-      "deleteUnavailable": "User deletion is not available yet"
+      "approveFailed": "Could not approve user"
     },
     "features": {
       "stats": {

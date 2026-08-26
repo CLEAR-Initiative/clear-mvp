@@ -419,8 +419,7 @@
       "roleUpdateFailed": "تعذر تحديث الدور",
       "approved": "تمت الموافقة على المستخدم",
       "approvedDetail": "أصبح لديه صلاحية المشاهد.",
-      "approveFailed": "تعذر الموافقة على المستخدم",
-      "deleteUnavailable": "حذف المستخدم غير متاح بعد"
+      "approveFailed": "تعذر الموافقة على المستخدم"
     },
     "features": {
       "stats": {
