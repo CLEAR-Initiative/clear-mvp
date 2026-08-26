@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   asCameraPose,
   flyToOrientation,
+  keepPreOpenRestore,
   lastDetailCloseRestore,
   mobileMarkerFocusZoom,
 } from "./marker-detail-camera";
@@ -85,5 +86,24 @@ describe("lastDetailCloseRestore", () => {
 
   it("returns null when there was nothing to restore", () => {
     expect(lastDetailCloseRestore(null)).toBeNull();
+  });
+});
+
+describe("keepPreOpenRestore", () => {
+  it("keeps the first-open snapshot when a second pin is tapped", () => {
+    const first = {
+      center: [30, 15] as [number, number],
+      zoom: 6,
+      pitch: 50,
+      bearing: 8,
+    };
+    const secondTap = {
+      center: [31, 16] as [number, number],
+      zoom: 8.5,
+      pitch: 50,
+      bearing: 8,
+    };
+    expect(keepPreOpenRestore(first, secondTap)).toEqual(first);
+    expect(keepPreOpenRestore(null, first)).toEqual(first);
   });
 });

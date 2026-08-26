@@ -80,7 +80,18 @@ export function flyToOrientation(args: {
 
 /** Last detail panel closed — restore the pre-open camera for every pin. */
 export function lastDetailCloseRestore(
-  restore: CameraPose | CenterZoom | null | undefined,
+  restore: CameraPose | null | undefined,
 ): CameraPose | null {
   return asCameraPose(restore);
+}
+
+/**
+ * Pin-to-pin while a sheet is already open must not replace the snapshot.
+ * Close always returns to the camera from immediately before the first open.
+ */
+export function keepPreOpenRestore(
+  existing: CameraPose | null,
+  candidate: CameraPose | null,
+): CameraPose | null {
+  return existing ?? candidate;
 }

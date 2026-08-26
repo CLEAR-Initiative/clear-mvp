@@ -53,6 +53,7 @@ import type { BoundaryLevel } from "./_components/map-settings-popover";
 import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
 import {
   asCameraPose,
+  keepPreOpenRestore,
   lastDetailCloseRestore,
   mobileMarkerFocusZoom,
   type CameraPose,
@@ -1276,6 +1277,7 @@ function MapPageContent() {
       if (target) {
         setReturnCamera(target);
         returnCameraRef.current = target;
+        setForceFlyToken((n) => n + 1);
         return;
       }
     }
@@ -1613,10 +1615,14 @@ function MapPageContent() {
           prior != null;
 
         detailCloseIsGroupRef.current = fromGroup;
-        if (prior) {
-          detailRestoreCameraRef.current = prior;
-          setReturnCamera(prior);
-          returnCameraRef.current = prior;
+        const snapshot = keepPreOpenRestore(
+          detailRestoreCameraRef.current,
+          prior,
+        );
+        if (snapshot) {
+          detailRestoreCameraRef.current = snapshot;
+          setReturnCamera(snapshot);
+          returnCameraRef.current = snapshot;
         } else {
           detailRestoreCameraRef.current = null;
           setReturnCamera(null);
