@@ -420,6 +420,7 @@ function buildDonutEl(props: Record<string, number>): HTMLDivElement {
   const badgeR = Math.max(8, fontSize * 0.85);
 
   const el = document.createElement("div");
+  el.setAttribute("data-testid", "map-cluster-donut");
   el.style.cssText = `cursor:pointer;width:${size}px;height:${size}px;filter:drop-shadow(0 2px 5px rgba(0,0,0,0.22));`;
   el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     ${arcs}
@@ -1410,8 +1411,10 @@ export function CrisisMap({
     // Country fitBounds owns framing whenever a focus country is selected —
     // including while L0 geometry is still loading. Otherwise flyTo races to
     // a wrong fallback center (e.g. Sudan for Venezuela) and fitBounds has to
-    // restart mid-flight (GH #112). Forced restore always wins.
-    if (!forced && focusCountryName && fitBoundsOnFocus && !fitBoundsGeometry) return;
+    // restart mid-flight (GH #112). Forced restore (marker close, tour) still
+    // wins when fitBoundsOnFocus is off; do not let forceFlyToken on country
+    // change cancel the padded mobile country fit.
+    if (focusCountryName && fitBoundsOnFocus && !fitBoundsGeometry) return;
     const paddingChanged = prevPadding.current !== flyPaddingBottom;
     if (
       !forced &&
