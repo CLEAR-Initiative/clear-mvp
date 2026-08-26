@@ -52,6 +52,7 @@ import {
   shouldElevatePointPin,
 } from "~/lib/map/pin-elevation";
 import { bridgeMetaToCtrlForPitch } from "~/lib/map/meta-pitch-bridge";
+import { flyToOrientation } from "~/lib/map/marker-detail-camera";
 import { ensureGlobeProjection } from "~/lib/map/idle-globe-spin";
 import {
   dismissTopographyTiltHint,
@@ -153,7 +154,7 @@ interface CrisisMapProps {
     marker: MapMarker,
     screenPoint: MarkerScreenPoint,
     /** Live Mapbox camera at click time (pre-focus), for layered zoom restore. */
-    camera?: { center: [number, number]; zoom: number },
+    camera?: MapViewCameraSnapshot,
   ) => void;
   onMarkerHover?: (marker: MapMarker | null) => void;
   interactive?: boolean;
@@ -192,6 +193,12 @@ interface CrisisMapProps {
    */
   flyPaddingBottom?: number;
   /**
+   * Explicit flyTo pitch/bearing (close-restore). Omit to keep the live
+   * camera orientation — never flatten because the bottom sheet added padding.
+   */
+  flyPitch?: number;
+  flyBearing?: number;
+  /**
    * Bump to force a flyTo to the current center/zoom props even when they
    * appear unchanged (used when closing a marker detail sheet).
    */
@@ -203,7 +210,7 @@ interface CrisisMapProps {
    * and the number of markers in that cluster.
    */
   onClusterExpand?: (
-    camera: { center: [number, number]; zoom: number },
+    camera: MapViewCameraSnapshot,
     leafCount: number,
   ) => void;
   /** Show/hide boundaries layer */
@@ -570,6 +577,8 @@ export function CrisisMap({
   preserveDrawingBuffer = false,
   flyDuration = 1500,
   flyPaddingBottom = 0,
+  flyPitch,
+  flyBearing,
   forceFlyToken = 0,
   onCameraChange,
   onClusterExpand,
@@ -1428,20 +1437,23 @@ export function CrisisMap({
     prevPadding.current = flyPaddingBottom;
     // Cancel any in-flight country fitBounds so a deep-link marker zoom wins.
     try { map.current.stop(); } catch { /* ignore */ }
-    // Preserve pitch/bearing for Topography session restore + browse.
-    // Mobile marker focus (bottom padding) and forced resets still flatten.
-    const flattenPitch = flyPaddingBottom > 0;
+    const { pitch, bearing } = flyToOrientation({
+      currentPitch: map.current.getPitch?.() ?? 0,
+      currentBearing: map.current.getBearing?.() ?? 0,
+      restorePitch: flyPitch,
+      restoreBearing: flyBearing,
+    });
     map.current.flyTo({
       center,
       zoom,
       duration: flyDuration,
-      pitch: flattenPitch ? 0 : (map.current.getPitch?.() ?? 0),
-      bearing: flattenPitch ? 0 : (map.current.getBearing?.() ?? 0),
+      pitch,
+      bearing,
       padding: flyPaddingBottom > 0
         ? { top: 48, bottom: flyPaddingBottom, left: 24, right: 24 }
         : { top: 0, bottom: 0, left: 0, right: 0 },
     });
-  }, [center, zoom, loaded, focusCountryName, flyDuration, fitBoundsOnFocus, fitBoundsGeometry, flyPaddingBottom, forceFlyToken]);
+  }, [center, zoom, loaded, focusCountryName, flyDuration, fitBoundsOnFocus, fitBoundsGeometry, flyPaddingBottom, flyPitch, flyBearing, forceFlyToken]);
 
   // ── Markers (density ladder: heatmap → donuts → points) ─────────────────
   useEffect(() => {
@@ -1632,7 +1644,12 @@ export function CrisisMap({
             const c = m.getCenter();
             const leafCount = Number(props.point_count) || 0;
             onClusterExpandRef.current?.(
-              { center: [c.lng, c.lat], zoom: m.getZoom() },
+              {
+                center: [c.lng, c.lat],
+                zoom: m.getZoom(),
+                pitch: m.getPitch?.() ?? 0,
+                bearing: m.getBearing?.() ?? 0,
+              },
               leafCount,
             );
             // Fetch all leaves so we can fitBounds to the full set - guarantees
@@ -1771,6 +1788,8 @@ export function CrisisMap({
           onMarkerClickRef.current?.(found, { x: projected.x, y: projected.y }, {
             center: [c.lng, c.lat],
             zoom: m.getZoom(),
+            pitch: m.getPitch?.() ?? 0,
+            bearing: m.getBearing?.() ?? 0,
           });
         });
         el.addEventListener("mouseenter", () => {
