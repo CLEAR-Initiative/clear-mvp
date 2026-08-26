@@ -41,7 +41,7 @@ import {
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, type MouseEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { notifications } from "@mantine/notifications";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
@@ -277,6 +277,65 @@ function ConfirmModal({
   );
 }
 
+const FIELD_CONTROL_SELECTOR =
+  "a, button, input, textarea, select, [role='combobox']";
+
+function UserFieldCard({
+  label,
+  children,
+  onActivate,
+}: {
+  label: string;
+  children: ReactNode;
+  onActivate?: () => void;
+}) {
+  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest(FIELD_CONTROL_SELECTOR)) return;
+    if (onActivate) {
+      onActivate();
+      return;
+    }
+    event.currentTarget.querySelector<HTMLElement>(FIELD_CONTROL_SELECTOR)?.click();
+  };
+
+  return (
+    <Box
+      p={10}
+      data-testid="admin-user-field-card"
+      onClick={handleClick}
+      style={{
+        border,
+        background: colors.bgPrimary,
+        flex: 1,
+        minHeight: 0,
+        cursor: "pointer",
+      }}
+    >
+      <Text
+        style={{
+          fontSize: fontSizesPx.xs,
+          color: colors.textMuted,
+          fontWeight: 600,
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </Text>
+      {children}
+    </Box>
+  );
+}
+
+function roleSelectColor(role: string): string {
+  if (roleColor[role] === "orange" || roleColor[role] === "grape") return colors.accent;
+  if (roleColor[role] === "blue") return colors.info;
+  if (roleColor[role] === "green") return colors.success;
+  return colors.textMuted;
+}
+
 /* ─── Users panel ─────────────────────────────────────────── */
 function UsersPanel() {
   const t = useTranslations("admin.users");
@@ -290,11 +349,11 @@ function UsersPanel() {
   const orgNameMap = Object.fromEntries(
     (orgsData?.organisations ?? []).map((o) => [o.id, o.name]),
   );
-  // membershipId (TeamMember.id) → team name, built from org→team→member hierarchy
-  const teamNameByMembershipId = Object.fromEntries(
+  // membershipId (TeamMember.id) → team name + id, from org→team→member
+  const teamByMembershipId = Object.fromEntries(
     (orgsData?.organisations ?? []).flatMap((o) =>
       (o.teams ?? []).flatMap((t) =>
-        (t.members ?? []).map((m) => [m.id, t.name]),
+        (t.members ?? []).map((m) => [m.id, { name: t.name, teamId: t.id }]),
       ),
     ),
   );
@@ -457,15 +516,16 @@ function UsersPanel() {
   ];
 
   return (
-    <Box p={24}>
+    <Box p={{ base: spacingPx[4], sm: 24 }} style={{ overflowX: "hidden" }}>
       <StatsGrid stats={stats} cols={3} mb={24} />
 
       <Card p={0} style={{ border, overflow: "hidden" }}>
         {/* Card header with filter */}
         <Group
-          px={20}
+          px={{ base: spacingPx[4], sm: 20 }}
           py={12}
           justify="space-between"
+          wrap="wrap"
           style={{ background: colors.bgPrimary, borderBottom: border }}
         >
           <Group gap={8}>
@@ -524,8 +584,9 @@ function UsersPanel() {
           </Group>
         </Group>
 
-        {/* Table */}
-        <Table highlightOnHover>
+        {/* Desktop: six-column table. Mobile: stacked user cards (#502). */}
+        <Box visibleFrom="sm">
+        <Table highlightOnHover data-testid="admin-users-table">
           <Table.Thead>
             <Table.Tr style={{ background: colors.bgPrimary }}>
               {(["user", "role", "email", "org", "team", "status"] as const).map((h) => (
@@ -610,16 +671,7 @@ function UsersPanel() {
                           fontWeight: 600,
                           fontSize: fontSizesPx.sm,
                           textTransform: "capitalize",
-                          color:
-                            roleColor[user.role] === "orange"
-                              ? colors.accent
-                              : roleColor[user.role] === "grape"
-                                ? colors.accent
-                                : roleColor[user.role] === "blue"
-                                  ? colors.info
-                                  : roleColor[user.role] === "green"
-                                    ? colors.success
-                                    : colors.textMuted,
+                          color: roleSelectColor(user.role),
                         },
                       }}
                     />
@@ -659,7 +711,7 @@ function UsersPanel() {
                       <Stack gap={2}>
                         {user.teamMemberships.map((m) => (
                           <Text key={m.id} style={{ fontSize: fontSizesPx.sm, color: colors.textSecondary }}>
-                            {teamNameByMembershipId[m.id] ?? "-"}
+                            {teamByMembershipId[m.id]?.name ?? "-"}
                             <Text span c={colors.textMuted} style={{ fontSize: fontSizesPx.xs }}> ({m.role})</Text>
                           </Text>
                         ))}
@@ -707,6 +759,228 @@ function UsersPanel() {
             )}
           </Table.Tbody>
         </Table>
+        </Box>
+
+        <Box
+          hiddenFrom="sm"
+          p={12}
+          pb={`calc(${spacingPx[8]}px + 64px + env(safe-area-inset-bottom, 0px))`}
+          data-testid="admin-users-mobile-list"
+        >
+          {filteredUsers.length === 0 ? (
+            <Text
+              c={colors.textMuted}
+              ta="center"
+              py={24}
+              style={{ fontSize: fontSizesPx.base }}
+            >
+              {filter === "pending" ? t("emptyPending") : t("empty")}
+            </Text>
+          ) : (
+            <Stack gap={12}>
+              {filteredUsers.map((user) => (
+                <Box
+                  key={user.id}
+                  data-testid="admin-user-card"
+                  p={12}
+                  style={{
+                    width: "100%",
+                    minHeight: "50dvh",
+                    border,
+                    background: colors.bgWhite,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  <UserFieldCard label={t("columns.user")}>
+                    <Group gap={10} wrap="nowrap">
+                      <Avatar
+                        src={user.image}
+                        size={32}
+                        radius="xl"
+                        color="accent"
+                      >
+                        {user.name?.[0]?.toUpperCase() ?? "?"}
+                      </Avatar>
+                      <Box>
+                        <Text
+                          fw={500}
+                          style={{
+                            fontSize: fontSizesPx.base,
+                            color: colors.textPrimary,
+                          }}
+                        >
+                          {user.name}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: fontSizesPx.sm,
+                            color: colors.textMuted,
+                          }}
+                        >
+                          {user.emailVerified ? t("verified") : t("unverified")}
+                        </Text>
+                      </Box>
+                    </Group>
+                  </UserFieldCard>
+                  <UserFieldCard label={t("columns.role")}>
+                    <Select
+                      value={pendingRoles[user.id] ?? toGlobalRole(user.role)}
+                      onChange={(val) => handleRoleSelect(user, val)}
+                      data={ROLES.map((r) => ({
+                        value: r.value,
+                        label: t(`roles.${r.labelKey}`),
+                      }))}
+                      size="sm"
+                      w="100%"
+                      disabled={user.role === "pending" || updateUserRole.isPending}
+                      styles={{
+                        input: {
+                          fontWeight: 600,
+                          fontSize: fontSizesPx.sm,
+                          textTransform: "capitalize",
+                          color: roleSelectColor(user.role),
+                        },
+                      }}
+                    />
+                  </UserFieldCard>
+                  <UserFieldCard label={t("columns.email")}>
+                    {user.email ? (
+                      <Anchor
+                        href={`mailto:${user.email}`}
+                        style={{
+                          fontSize: fontSizesPx.base,
+                          color: colors.textSecondary,
+                        }}
+                      >
+                        {user.email}
+                      </Anchor>
+                    ) : (
+                      <Text
+                        style={{
+                          fontSize: fontSizesPx.base,
+                          color: colors.textSecondary,
+                        }}
+                      >
+                        —
+                      </Text>
+                    )}
+                  </UserFieldCard>
+                  <UserFieldCard label={t("columns.org")}>
+                    {user.organisations && user.organisations.length > 0 ? (
+                      <Stack gap={2}>
+                        {user.organisations.map((o) => (
+                          <Anchor
+                            key={o.id}
+                            component={Link}
+                            href={`/settings/org?id=${o.organisationId}`}
+                            style={{
+                              fontSize: fontSizesPx.sm,
+                              color: colors.textSecondary,
+                            }}
+                          >
+                            {orgNameMap[o.organisationId] ?? o.organisationId.slice(0, 8)}
+                            <Text span c={colors.textMuted} style={{ fontSize: fontSizesPx.xs }}>
+                              {" "}
+                              ({o.role})
+                            </Text>
+                          </Anchor>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Text style={{ fontSize: fontSizesPx.sm, color: colors.textMuted }}>
+                        -
+                      </Text>
+                    )}
+                  </UserFieldCard>
+                  <UserFieldCard label={t("columns.team")}>
+                    {user.teamMemberships && user.teamMemberships.length > 0 ? (
+                      <Stack gap={2}>
+                        {user.teamMemberships.map((m) => {
+                          const team = teamByMembershipId[m.id];
+                          const label = (
+                            <>
+                              {team?.name ?? "-"}
+                              <Text span c={colors.textMuted} style={{ fontSize: fontSizesPx.xs }}>
+                                {" "}
+                                ({m.role})
+                              </Text>
+                            </>
+                          );
+                          return team?.teamId ? (
+                            <Anchor
+                              key={m.id}
+                              component={Link}
+                              href={`/settings/team/${team.teamId}`}
+                              style={{
+                                fontSize: fontSizesPx.sm,
+                                color: colors.textSecondary,
+                              }}
+                            >
+                              {label}
+                            </Anchor>
+                          ) : (
+                            <Text
+                              key={m.id}
+                              style={{
+                                fontSize: fontSizesPx.sm,
+                                color: colors.textSecondary,
+                              }}
+                            >
+                              {label}
+                            </Text>
+                          );
+                        })}
+                      </Stack>
+                    ) : (
+                      <Text style={{ fontSize: fontSizesPx.sm, color: colors.textMuted }}>
+                        -
+                      </Text>
+                    )}
+                  </UserFieldCard>
+                  <UserFieldCard
+                    label={t("columns.status")}
+                    onActivate={
+                      user.role === "pending" ? () => handleActivate(user) : undefined
+                    }
+                  >
+                    <Group gap={8} wrap="nowrap" preventGrowOverflow={false}>
+                      <Badge
+                        size="sm"
+                        variant="dot"
+                        color={user.role === "pending" ? "orange" : "green"}
+                      >
+                        {user.role === "pending" ? t("statusPending") : t("statusActive")}
+                      </Badge>
+                      {user.role === "pending" && (
+                        <Button
+                          size="xs"
+                          variant="light"
+                          color="green"
+                          leftSection={<IconUserCheck size={12} />}
+                          loading={approveUser.isPending}
+                          onClick={() => handleActivate(user)}
+                          styles={{
+                            root: {
+                              flexShrink: 0,
+                              minWidth: "max-content",
+                              paddingInline: 12,
+                            },
+                            inner: { overflow: "visible" },
+                            label: { overflow: "visible", whiteSpace: "nowrap" },
+                          }}
+                        >
+                          {t("activate")}
+                        </Button>
+                      )}
+                    </Group>
+                  </UserFieldCard>
+                </Box>
+              ))}
+            </Stack>
+          )}
+        </Box>
       </Card>
 
       <ConfirmModal
