@@ -413,7 +413,13 @@
       "unverified": "غير محقق",
       "statusActive": "نشط",
       "statusPending": "معلق",
-      "activate": "تفعيل"
+      "activate": "تفعيل",
+      "roleUpdated": "تم تحديث الدور",
+      "roleUpdatedDetail": "الدور الآن {role}.",
+      "roleUpdateFailed": "تعذر تحديث الدور",
+      "approved": "تمت الموافقة على المستخدم",
+      "approvedDetail": "أصبح لديه صلاحية المشاهد.",
+      "approveFailed": "تعذر الموافقة على المستخدم"
     },
     "features": {
       "stats": {

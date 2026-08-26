@@ -411,7 +411,13 @@
       "unverified": "Unverified",
       "statusActive": "Active",
       "statusPending": "Pending",
-      "activate": "Activate"
+      "activate": "Activate",
+      "roleUpdated": "Role updated",
+      "roleUpdatedDetail": "Role is now {role}.",
+      "roleUpdateFailed": "Could not update role",
+      "approved": "User approved",
+      "approvedDetail": "They now have viewer access.",
+      "approveFailed": "Could not approve user"
     },
     "features": {
       "stats": {

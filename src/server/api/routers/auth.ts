@@ -68,6 +68,25 @@ const UPDATE_PROFILE = `
   }
 `;
 
+export const UPDATE_USER_ROLE = `
+  mutation UpdateUserRole($userId: String!, $role: GlobalRole!) {
+    updateUserRole(userId: $userId, role: $role) {
+      id
+      role
+    }
+  }
+`;
+
+export const APPROVE_USER = `
+  mutation ApproveUser($userId: String!) {
+    approveUser(userId: $userId) {
+      user { id role isActive }
+      crmMoved
+      crmWarnings
+    }
+  }
+`;
+
 const GET_USER_DETAILS = `
   query GetUserDetails {
     me {
@@ -232,4 +251,31 @@ export const authRouter = createTRPCRouter({
       };
     }
   }),
+
+  updateUserRole: protectedProcedure
+    .input(
+      z.object({
+        userId: z.string().min(1),
+        role: z.enum(["viewer", "analyst", "admin"]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{
+        updateUserRole: { id: string; role: string };
+      }>(UPDATE_USER_ROLE, input, cookieHeaders(ctx));
+      return data.updateUserRole;
+    }),
+
+  approveUser: protectedProcedure
+    .input(z.object({ userId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{
+        approveUser: {
+          user: { id: string; role: string | null; isActive: boolean | null };
+          crmMoved: boolean;
+          crmWarnings: string[];
+        };
+      }>(APPROVE_USER, input, cookieHeaders(ctx));
+      return data.approveUser;
+    }),
 });

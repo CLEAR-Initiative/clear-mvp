@@ -411,7 +411,13 @@
       "unverified": "No verificado",
       "statusActive": "Activo",
       "statusPending": "Pendiente",
-      "activate": "Activar"
+      "activate": "Activar",
+      "roleUpdated": "Rol actualizado",
+      "roleUpdatedDetail": "El rol ahora es {role}.",
+      "roleUpdateFailed": "No se pudo actualizar el rol",
+      "approved": "Usuario aprobado",
+      "approvedDetail": "Ahora tiene acceso de visor.",
+      "approveFailed": "No se pudo aprobar al usuario"
     },
     "features": {
       "stats": {
