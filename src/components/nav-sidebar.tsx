@@ -32,7 +32,10 @@ import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
 import { isPlatformAdmin } from "~/lib/roles";
-import { useOptimisticNavSegment } from "~/hooks/use-optimistic-nav-segment";
+import {
+  isMapNavOverlay,
+  useOptimisticNavSegment,
+} from "~/hooks/use-optimistic-nav-segment";
 import { useSlidingNavIndicator } from "~/hooks/use-sliding-nav-indicator";
 import { SlidingNavIndicator } from "~/components/ui/sliding-nav-indicator";
 import { usePageTransition } from "~/components/page-transition";
@@ -104,13 +107,17 @@ export function NavSidebar() {
   const searchParams = useSearchParams();
   const activeSegment = segments[0] ?? "";
   const referrer = searchParams.get("from");
-  const { displaySegment: effectiveSegment, setOptimisticSegment } =
-    useOptimisticNavSegment(activeSegment, referrer);
-  // Frost overlay while settled on /map OR optimistically heading there.
-  // Do not drop overlay on optimistic leave — that flex-resizes the Mapbox
-  // canvas (white flash). Veil stays clear of the nav via z-index + inset.
-  const isMapRoute =
-    activeSegment === "map" || effectiveSegment === "map";
+  const {
+    displaySegment: effectiveSegment,
+    optimisticSegment,
+    setOptimisticSegment,
+  } = useOptimisticNavSegment(activeSegment, referrer);
+  // Frost overlay only on real /map (or optimistic navigate-to-map).
+  // Do not key off effectiveSegment — detail `?from=map` highlights Map in
+  // the nav but must keep the solid in-flow sidebar so content isn't under glass.
+  // While still on /map, overlay stays even if optimism leaves — dropping it
+  // early flex-resizes the Mapbox canvas (white flash).
+  const isMapRoute = isMapNavOverlay(activeSegment, optimisticSegment);
   const { beginPageTransition } = usePageTransition();
   const desktopNavRef = useRef<HTMLElement>(null);
   const mobileNavRef = useRef<HTMLElement>(null);

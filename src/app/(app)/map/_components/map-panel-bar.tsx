@@ -146,6 +146,14 @@ interface MapPanelBarProps {
   onShowBlockagesChange?: (v: boolean) => void;
   blockagesHint?: string;
   blockagesLoading?: boolean;
+  /**
+   * When set, Seismic activity is a live toggle (Expo #465).
+   * When omitted, stays a Coming-soon stub.
+   */
+  showSeismicSignals?: boolean;
+  onShowSeismicSignalsChange?: (v: boolean) => void;
+  seismicSignalsHint?: string;
+  seismicSignalsLoading?: boolean;
   baseMapType?: BaseMapType;
   onBaseMapTypeChange?: (v: BaseMapType) => void;
   /** Desktop: accumulate marker detail panels instead of replacing. */
@@ -282,11 +290,16 @@ export function MapPanelBar({
   onShowBlockagesChange = noop,
   blockagesHint,
   blockagesLoading = false,
+  showSeismicSignals,
+  onShowSeismicSignalsChange = noop,
+  seismicSignalsHint,
+  seismicSignalsLoading = false,
   baseMapType = "simple", onBaseMapTypeChange = noop,
   keepPanelsOpen = false, onKeepPanelsOpenChange = noop,
   filters,
 }: MapPanelBarProps) {
   const blockagesEnabled = showBlockages !== undefined;
+  const seismicSignalsEnabled = showSeismicSignals !== undefined;
   const t = useTranslations("map");
   const [active, setActive] = useState<PanelId | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -376,15 +389,23 @@ export function MapPanelBar({
 
                   {/* "None" data view hides markers — no separate Visible toggle */}
                   <SectionLabel>{t("panels.markers")}</SectionLabel>
-                  <SegmentedControl
-                    value={dataView}
-                    onChange={(v) => onDataViewChange(v as DataView)}
-                    data={DATA_VIEW_OPTIONS.map((o) => ({ value: o.value, label: t(`dataViews.${o.labelKey}`) }))}
-                    size="xs"
-                    fullWidth
-                    styles={{ label: { fontSize: 11, padding: "3px 6px" } }}
-                    mb={6}
-                  />
+                  <Box style={{ marginInlineStart: -6, paddingInlineEnd: 10 }}>
+                    <SegmentedControl
+                      value={dataView}
+                      onChange={(v) => onDataViewChange(v as DataView)}
+                      data={DATA_VIEW_OPTIONS.map((o) => ({ value: o.value, label: t(`dataViews.${o.labelKey}`) }))}
+                      size="xs"
+                      fullWidth
+                      styles={{
+                        root: {
+                          background: "transparent",
+                          padding: 0,
+                        },
+                        label: { fontSize: 11, padding: "3px 4px" },
+                      }}
+                      mb={6}
+                    />
+                  </Box>
 
                   <Divider color="var(--color-bg-muted)" my={10} />
 
@@ -396,6 +417,29 @@ export function MapPanelBar({
                     trailing={populationLoading ? <Loader size={12} /> : undefined}
                   />
                   <LayerStubRow label={t("panels.idpDensity")} hint={t("panels.comingSoon")} />
+
+                  <Divider color="var(--color-bg-muted)" my={10} />
+
+                  {/* Hazards: Seismic activity live when enabled */}
+                  <SectionLabel>{t("panels.hazards")}</SectionLabel>
+                  {seismicSignalsEnabled ? (
+                    <LayerCheckRow
+                      label={t("panels.seismicSignals")}
+                      checked={showSeismicSignals}
+                      onChange={onShowSeismicSignalsChange}
+                      trailing={
+                        seismicSignalsLoading ? (
+                          <Loader size={12} />
+                        ) : seismicSignalsHint ? (
+                          <Text size="10px" c="var(--color-text-muted)" style={{ maxWidth: 120 }} truncate>
+                            {seismicSignalsHint}
+                          </Text>
+                        ) : undefined
+                      }
+                    />
+                  ) : (
+                    <LayerStubRow label={t("panels.seismicSignals")} hint={t("panels.comingSoon")} />
+                  )}
 
                   <Divider color="var(--color-bg-muted)" my={10} />
 

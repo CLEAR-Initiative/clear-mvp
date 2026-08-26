@@ -58,6 +58,20 @@ interface RawDescribed {
   source_report_ids?: string[];
 }
 
+/** A headline figure served as a RANGE, not a point (pipeline ADR-0007). `value`
+ *  is the point estimate; `[low, high]` its honest error bar; `bias` says which
+ *  way the pipeline would project the band to one number; `confidence` is the
+ *  field's 0–1 data-quality signal. All nullable; an exact figure has
+ *  `low === high === value`. Legacy pre-v3 rows may still carry a bare number. */
+interface RawRangeFigure {
+  value?: number | null;
+  low?: number | null;
+  high?: number | null;
+  range_width?: number | null;
+  bias?: string | null;
+  confidence?: number | null;
+}
+
 export interface SaPayload {
   ai_summary?: {
     text?: string | null;
@@ -71,13 +85,13 @@ export interface SaPayload {
       oldest_source_at?: string;
       newest_source_at?: string;
     };
-    returnees?: number | null;
+    returnees?: RawRangeFigure | null;
     number_of_events?: number | null;
-    population_in_need?: number | null;
-    population_affected?: number | null;
-    population_displaced?: number | null;
-    funding_received_usd?: number | null;
-    funding_required_usd?: number | null;
+    population_in_need?: RawRangeFigure | null;
+    population_affected?: RawRangeFigure | null;
+    population_displaced?: RawRangeFigure | null;
+    funding_received_usd?: RawRangeFigure | null;
+    funding_required_usd?: RawRangeFigure | null;
   };
   context_risks?: Record<string, RawContextRisk>;
   hazards_and_vulnerabilities?: {
@@ -132,7 +146,13 @@ export type SaStatKey =
 
 export interface SaStat {
   key: SaStatKey;
+  /** Compact point estimate, e.g. "6.5M" (funding rows are prefixed "$"). */
   value: string;
+  /** Compact error bar, e.g. "6.1M – 6.9M" (or "$..."). Null when the figure is
+   *  exact (low === high) or the band is absent - render just the point then. */
+  range: string | null;
+  /** The figure's 0–1 data-quality signal, null when the pipeline didn't set it. */
+  confidence: number | null;
 }
 
 export interface SaCrisis {
@@ -361,26 +381,56 @@ function invertContributingSources(
 function mapStats(dp: SaPayload["datapoints"]): SaStat[] {
   if (!dp) return [];
 
-  const people: Array<[SaStatKey, number | null | undefined]> = [
+  const people: Array<[SaStatKey, RawRangeFigure | null | undefined]> = [
     ["displaced", dp.population_displaced],
     ["affected", dp.population_affected],
     ["inNeed", dp.population_in_need],
     ["returnees", dp.returnees],
   ];
-  const funding: Array<[SaStatKey, number | null | undefined]> = [
+  const funding: Array<[SaStatKey, RawRangeFigure | null | undefined]> = [
     ["fundingRequired", dp.funding_required_usd],
     ["fundingReceived", dp.funding_received_usd],
   ];
 
   const stats: SaStat[] = [];
-  for (const [key, value] of people) {
-    if (typeof value === "number") stats.push({ key, value: compactNumber(value) });
-  }
-  for (const [key, value] of funding) {
-    if (typeof value === "number")
-      stats.push({ key, value: `$${compactNumber(value)}` });
-  }
+  const push = (
+    key: SaStatKey,
+    f: RawRangeFigure | number | null | undefined,
+    prefix: string,
+  ) => {
+    const { value, low, high, confidence } = figureParts(f);
+    if (value == null) return; // no point estimate → no tile ("-" says nothing)
+    // Only surface a band when it is a genuine spread around the point; an exact
+    // source figure (low === high === value) renders as the point alone.
+    const hasBand = low != null && high != null && high > low;
+    const range = hasBand
+      ? `${prefix}${compactNumber(low)} – ${prefix}${compactNumber(high)}`
+      : null;
+    stats.push({ key, value: `${prefix}${compactNumber(value)}`, range, confidence });
+  };
+  for (const [key, f] of people) push(key, f, "");
+  for (const [key, f] of funding) push(key, f, "$");
   return stats;
+}
+
+/** Coerce a served figure - the ADR-0007 range object, or a legacy bare number
+ *  from a pre-v3 row - into its numeric parts. Non-numeric members drop to null. */
+function figureParts(f: RawRangeFigure | number | null | undefined): {
+  value: number | null;
+  low: number | null;
+  high: number | null;
+  confidence: number | null;
+} {
+  if (typeof f === "number")
+    return { value: f, low: null, high: null, confidence: null };
+  if (f && typeof f === "object")
+    return {
+      value: typeof f.value === "number" ? f.value : null,
+      low: typeof f.low === "number" ? f.low : null,
+      high: typeof f.high === "number" ? f.high : null,
+      confidence: typeof f.confidence === "number" ? f.confidence : null,
+    };
+  return { value: null, low: null, high: null, confidence: null };
 }
 
 function mapSectors(
@@ -503,12 +553,12 @@ export function mapSituationAnalysis(
     ),
     stats: mapStats(dp),
     figures: {
-      displaced: dp?.population_displaced ?? null,
-      affected: dp?.population_affected ?? null,
-      inNeed: dp?.population_in_need ?? null,
-      returnees: dp?.returnees ?? null,
-      fundingRequired: dp?.funding_required_usd ?? null,
-      fundingReceived: dp?.funding_received_usd ?? null,
+      displaced: figureParts(dp?.population_displaced).value,
+      affected: figureParts(dp?.population_affected).value,
+      inNeed: figureParts(dp?.population_in_need).value,
+      returnees: figureParts(dp?.returnees).value,
+      fundingRequired: figureParts(dp?.funding_required_usd).value,
+      fundingReceived: figureParts(dp?.funding_received_usd).value,
     },
     contextRisks: mapContextRisks(data.context_risks, refsFrom),
     hazards: {

@@ -19,7 +19,11 @@ import { useLocations } from "~/hooks/use-locations";
 import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
 import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
-import { writeDetectionNavContext } from "~/lib/detection-nav-context";
+import {
+  writeDetectionNavContext,
+  writeDetectionNavEventIds,
+  writeDetectionNavSignalIds,
+} from "~/lib/detection-nav-context";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 
 import { LiveAlertsTab, type AlertSortOrder } from "./_components/live-alerts-tab";
@@ -449,6 +453,26 @@ function DetectionPageContent() {
   const [signalsHasMore, setSignalsHasMore] = useState(false);
   const signalsAppending = useRef(false);
   const [signalsVersion, setSignalsVersion] = useState(0);
+
+  // Persist the exact feed order the analyst sees so detail chevrons do not
+  // depend on a second eventsPage round-trip (filter drift → empty neighbors).
+  useEffect(() => {
+    if (activeTab === "events" && eventsItems.length > 0) {
+      writeDetectionNavEventIds(eventsItems.map((e) => e.id));
+    }
+  }, [activeTab, eventsItems]);
+
+  useEffect(() => {
+    if (activeTab === "alerts" && alertsItems.length > 0) {
+      writeDetectionNavEventIds(alertsItems.map((a) => a.event.id));
+    }
+  }, [activeTab, alertsItems]);
+
+  useEffect(() => {
+    if (activeTab === "signals" && signalsItems.length > 0) {
+      writeDetectionNavSignalIds(signalsItems.map((s) => s.id));
+    }
+  }, [activeTab, signalsItems]);
 
   // History tab accumulation - same pattern as feeds but HISTORY_PAGE_SIZE = 100
   const [historyAlertsItems, setHistoryAlertsItems] = useState<GqlAlert[]>([]);

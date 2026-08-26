@@ -10,5 +10,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function ObserveLayout({ children }: { children: React.ReactNode }) {
-  return <div data-mantine-color-scheme="dark">{children}</div>;
+  return children;
 }

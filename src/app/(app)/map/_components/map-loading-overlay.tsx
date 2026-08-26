@@ -105,10 +105,97 @@ export function MapPreloader({
 
 interface MapLoadingOverlayProps {
   dataView: MapDataView;
+  /** Error state - shows branded offline message instead of spinner */
+  error?: { message: string; onRetry?: () => void } | null;
 }
 
-export function MapLoadingOverlay({ dataView }: MapLoadingOverlayProps) {
+export function MapLoadingOverlay({ dataView, error }: MapLoadingOverlayProps) {
+  if (error) {
+    return <MapErrorState message={error.message} onRetry={error.onRetry} />;
+  }
   return <MapPreloader dataView={dataView} showMessages />;
+}
+
+interface MapErrorStateProps {
+  message: string;
+  onRetry?: () => void;
+}
+
+function MapErrorState({ message, onRetry }: MapErrorStateProps) {
+  const isDark = useIsDark();
+  
+  return (
+    <Box
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 40,
+        background: isDark ? "rgba(17, 17, 17, 0.95)" : "rgba(250, 250, 250, 0.95)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+    >
+      <svg
+        width="64"
+        height="64"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="var(--color-text-tertiary)"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ marginBottom: 24 }}
+      >
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+      
+      <Text size="xl" fw={600} mb="xs" c="var(--color-text-primary)" ta="center">
+        Unable to Load Map
+      </Text>
+      
+      <Text
+        size="sm"
+        c="var(--color-text-secondary)"
+        ta="center"
+        maw={400}
+        mb={onRetry ? 24 : 0}
+      >
+        {message}
+      </Text>
+      
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          style={{
+            padding: "10px 20px",
+            borderRadius: 6,
+            border: `1px solid ${isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}`,
+            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)",
+            color: "var(--color-text-primary)",
+            fontSize: 14,
+            fontWeight: 500,
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)";
+          }}
+        >
+          Try Again
+        </button>
+      )}
+    </Box>
+  );
 }
 
 /**

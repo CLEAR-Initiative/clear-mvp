@@ -163,12 +163,14 @@ Topography that only reads as “slightly shaded Simple” at Country band.
 **Terrain mesh** (Topography):
 The DEM surface enabled with Mapbox `setTerrain` **only** while **Topography** is
 active. Simple and Satellite stay flat (no mesh). **Pitch is opt-in**: camera stays
-top-down (`pitch: 0`) until the analyst tilts (gestures / touch pitch); leaving
-Topography clears the mesh and resets pitch. First Topography selection shows a
-dismissible **tilt hint** (session or until dismissed) — not permanent 3D chrome.
+top-down (`pitch: 0`) until the analyst tilts (gestures / touch pitch on all
+basemaps); leaving Topography clears the mesh but preserves pitch. First Topography
+selection shows a dismissible **tilt hint** (session or until dismissed) — not
+permanent 3D chrome.
 _Avoid_: auto-pitch on selecting Topography; a separate “3D” Layers toggle for v1;
-silent tilt with no teaching; persistent tilt chrome; leaving pitch/mesh stuck after
-switching to Simple or Satellite; draping DEM on Satellite or Simple in this wedge.
+silent tilt with no teaching; persistent tilt chrome; leaving the mesh stuck after
+switching to Simple or Satellite; resetting pitch on basemap swap; draping DEM on
+Satellite or Simple in this wedge.
 
 **Point altitude**:
 The DEM elevation (metres) sampled at a map point while **Topography** is active
@@ -641,8 +643,8 @@ full SDN GeoJSON dumps into the app tree by default.
   pitch-required-only. Location trust may stay parallel — triad/heightmap work need not
   wait on #314. See [ADR-0004](docs/adr/0004-topography-uses-mapbox-setterrain-not-cesium.md).
 - **Terrain mesh** camera — resolved: mesh on while Topography is selected; **pitch
-  opt-in** (no auto-pitch, no dedicated 3D toggle in v1). Leave Topography → clear mesh +
-  reset pitch.
+  opt-in** (no auto-pitch, no dedicated 3D toggle in v1). Tilt gestures on all
+  basemaps; Leave Topography → clear mesh, preserve pitch. Hint stays Topography-only.
 - **Terrain mesh** scope — resolved: **Topography only**; Simple and Satellite remain
   flat in this wedge.
 - Topography paint stack — resolved: **mesh + hillshade** together (hillshade carries

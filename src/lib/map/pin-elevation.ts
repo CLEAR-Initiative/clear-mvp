@@ -1,8 +1,9 @@
 /**
- * Pitch-linked marker elevation for Topography.
+ * Pitch-linked marker elevation for unclustered pins on every basemap.
  *
- * Flat while the camera is mostly top-down (pitch ≤ 45°). Stem grows smoothly
- * from 45° → 70° so tilt readability ramps with the gesture — no marker remount.
+ * Event, Signal, and Crisis pins share this layout. Flat while the camera is
+ * mostly top-down (pitch ≤ 45°). Stem grows smoothly from 45° → 70° so tilt
+ * readability ramps with the gesture — no marker remount.
  */
 
 /** Below this pitch, pins stay flat (stem factor 0). */
@@ -29,8 +30,30 @@ export function pinElevationFactor(pitch: number): number {
   );
 }
 
+export type LocationPinRole = "source" | "proposed";
+
+/** Narrow GeoJSON `location_pin_role` to the known union. Unknown/empty → undefined. */
+export function parseLocationPinRole(
+  raw: unknown,
+): LocationPinRole | undefined {
+  return raw === "source" || raw === "proposed" ? raw : undefined;
+}
+
 /**
- * Apply stem/head layout for a Topography pin element built by crisis-map.
+ * Unclustered Event, Signal, and Crisis pins grow stems when tilted.
+ * Allowlist: unset/empty and `"source"`. `"proposed"` ghost discs stay
+ * flat. Unknown roles fail closed so a new pin role cannot silently opt
+ * into elevation. Basemap does not matter.
+ */
+export function shouldElevatePointPin(opts: {
+  locationPinRole?: unknown;
+}): boolean {
+  const role = opts.locationPinRole;
+  return role == null || role === "" || role === "source";
+}
+
+/**
+ * Apply stem/head layout for a pin element built by crisis-map.
  * Expects `data-max-stem`, `.marker-pin-head`, `.marker-pin-stem`.
  * Ground contact stays fixed (Mapbox `anchor: "bottom"`).
  */

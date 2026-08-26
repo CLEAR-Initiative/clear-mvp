@@ -25,6 +25,7 @@ import {
   Textarea,
   TextInput,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import {
   IconArrowLeft,
   IconMapPin,
@@ -51,7 +52,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { isPlatformAdmin } from "~/lib/roles";
+import { canWriteCrisisEvents, isPlatformAdmin } from "~/lib/roles";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
@@ -67,6 +68,7 @@ import { mapReturnHref } from "~/lib/map-view-state";
 import { MinimapCard } from "~/components/map/minimap-card";
 import { CommentsSection } from "~/components/comments-section";
 import { NeedsAssessmentPanel } from "~/components/crisis-detail/needs-assessment-panel";
+import { AddEventsToCrisisButton } from "~/components/crisis-detail/add-events-to-crisis-modal";
 import { KpiStack } from "~/components/ui/kpi-stack";
 
 /** Humanitarian need row - parsed from a crisis's free-form `needs` JSON. */
@@ -236,14 +238,37 @@ export function CrisisDetailContent({
 
   const utils = api.useUtils();
 
+  const updateTitle = api.crises.updateTitle.useMutation({
+    onSuccess: (updated) => {
+      utils.crises.get.setData({ id: updated.id }, (prev) =>
+        prev ? { ...prev, title: updated.title } : prev,
+      );
+      void utils.crises.list.invalidate();
+      setEditingTitle(false);
+    },
+    onError: (err) => {
+      notifications.show({
+        title: tCommon("toasts.error"),
+        message: err.message,
+        color: "red",
+      });
+    },
+  });
+
   const updateMeta = api.crises.updateMeta.useMutation({
     onSuccess: (updated) => {
       utils.crises.get.setData({ id: updated.id }, (prev) =>
         prev ? { ...prev, title: updated.title, summary: updated.summary } : prev,
       );
       void utils.crises.list.invalidate();
-      setEditingTitle(false);
       setEditingMeta(false);
+    },
+    onError: (err) => {
+      notifications.show({
+        title: tCommon("toasts.error"),
+        message: err.message,
+        color: "red",
+      });
     },
   });
 
@@ -553,11 +578,11 @@ export function CrisisDetailContent({
                 size="sm"
                 autoFocus
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") updateMeta.mutate({ id: crisis.id, title: draftTitle });
+                  if (e.key === "Enter") updateTitle.mutate({ id: crisis.id, title: draftTitle });
                   if (e.key === "Escape") setEditingTitle(false);
                 }}
               />
-              <ActionIcon size="sm" variant="filled" color="green" loading={updateMeta.isPending} onClick={() => updateMeta.mutate({ id: crisis.id, title: draftTitle })}>
+              <ActionIcon size="sm" variant="filled" color="green" loading={updateTitle.isPending} onClick={() => updateTitle.mutate({ id: crisis.id, title: draftTitle })}>
                 <IconCheck size={14} />
               </ActionIcon>
               <ActionIcon size="sm" variant="subtle" onClick={() => setEditingTitle(false)}>
@@ -569,11 +594,15 @@ export function CrisisDetailContent({
               <Text fw={700} c="var(--color-text-primary)" style={{ fontSize: isCompact ? 18 : 22, lineHeight: 1.3 }}>
                 {title}
               </Text>
-              {isAdmin && (
-                <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => { setDraftTitle(crisis.title ?? ""); setEditingTitle(true); }}>
-                  <IconPencil size={13} />
-                </ActionIcon>
-              )}
+              <ActionIcon
+                size="xs"
+                variant="subtle"
+                color="gray"
+                aria-label={t("renameTitle")}
+                onClick={() => { setDraftTitle(crisis.title ?? ""); setEditingTitle(true); }}
+              >
+                <IconPencil size={13} />
+              </ActionIcon>
             </Group>
           )}
         </Group>
@@ -768,13 +797,30 @@ export function CrisisDetailContent({
           <Box px={isCompact ? 16 : 24} pb={isCompact ? 16 : 24}>
             <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
               <Tabs value={leftPanelTab} onChange={setLeftPanelTab}>
-                <Box px={8} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                  <Tabs.List style={{ borderBottom: "none" }}>
+                <Box
+                  px={8}
+                  style={{
+                    borderBottom: "1px solid var(--color-border)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 16,
+                  }}
+                >
+                  <Tabs.List style={{ borderBottom: "none", flex: "1 1 auto", width: "auto", minWidth: 0 }}>
                     <Tabs.Tab value="events">{t("tabs.events")}</Tabs.Tab>
                     <Tabs.Tab value="demography">{t("tabs.demography")}</Tabs.Tab>
                     <Tabs.Tab value="sources">{t("tabs.sources")}</Tabs.Tab>
                     <Tabs.Tab value="confidence">{t("tabs.confidence")}</Tabs.Tab>
                   </Tabs.List>
+                  {leftPanelTab === "events" && (
+                    <Box pr={8} py={8} style={{ flexShrink: 0 }}>
+                      <AddEventsToCrisisButton
+                        crisisId={crisis.id}
+                        canAdd={canWriteCrisisEvents(meQuery.data?.user?.role)}
+                      />
+                    </Box>
+                  )}
                 </Box>
                 <Tabs.Panel value="events" style={{ height: 300, overflowY: "auto" }}>
                   <EventsTimeline events={eventsNewestFirst} isAdmin={isAdmin} crisisId={crisis.id} totalEventCount={events.length} />
@@ -1858,7 +1904,6 @@ function ConfidencePanel({ crisis }: { crisis: GqlCrisis }) {
 function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events: GqlEvent[]; isAdmin: boolean; crisisId: string; totalEventCount: number }) {
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
-  const format = useFormatter();
   const router = useRouter();
   const utils = api.useUtils();
   const [pendingRemoveEvent, setPendingRemoveEvent] = useState<GqlEvent | null>(null);
@@ -1881,15 +1926,6 @@ function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events
     setPendingRemoveEvent(null);
   }
 
-  if (events.length === 0) {
-    return (
-      <Box p={24} style={{ textAlign: "center" }}>
-        <Text size="sm" c="var(--color-text-muted)">
-          {t("events.empty")}
-        </Text>
-      </Box>
-    );
-  }
   return (
     <>
       <Modal
@@ -1920,18 +1956,26 @@ function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events
         </Group>
       </Modal>
 
-      <Box py={12} px={4}>
-        {events.map((event, idx) => (
-          <TimelineRow
-            key={event.id}
-            event={event}
-            isFirst={idx === 0}
-            isLast={idx === events.length - 1}
-            isAdmin={isAdmin}
-            onRemove={() => setPendingRemoveEvent(event)}
-          />
-        ))}
-      </Box>
+      {events.length === 0 ? (
+        <Box p={24} style={{ textAlign: "center" }}>
+          <Text size="sm" c="var(--color-text-muted)">
+            {t("events.empty")}
+          </Text>
+        </Box>
+      ) : (
+        <Box py={12} px={4}>
+          {events.map((event, idx) => (
+            <TimelineRow
+              key={event.id}
+              event={event}
+              isFirst={idx === 0}
+              isLast={idx === events.length - 1}
+              isAdmin={isAdmin}
+              onRemove={() => setPendingRemoveEvent(event)}
+            />
+          ))}
+        </Box>
+      )}
     </>
   );
 }

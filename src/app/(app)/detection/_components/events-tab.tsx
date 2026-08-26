@@ -11,6 +11,8 @@ import {
   Group,
   Badge,
   Loader,
+  Checkbox,
+  UnstyledButton,
 } from "@mantine/core";
 import {
   IconMapPin,
@@ -26,6 +28,7 @@ import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
+import { EventBulkBar } from "./event-bulk-bar";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -98,6 +101,7 @@ export function EventsTab({
   const t = useTranslations("detection");
   const format = useFormatter();
   const [search, setSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
   const [showPopulation, setShowPopulation] = useState(false);
 
@@ -143,6 +147,23 @@ export function EventsTab({
     });
   }, [events, search, activeSeverities, expandedTypeCodesProp, activeSources]);
 
+  const selectedEvents = useMemo(
+    () => filtered.filter((e) => selectedIds.includes(e.id)),
+    [filtered, selectedIds],
+  );
+
+  // Only act on events still visible under current filters/search.
+  const visibleSelectedIds = useMemo(
+    () => selectedEvents.map((e) => e.id),
+    [selectedEvents],
+  );
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
   const countLabel = search || activeSeverities.size < 4 || activeSources !== null || expandedTypeCodesProp
     ? `${filtered.length} / ${format.number(totalCount)}`
     : format.number(totalCount);
@@ -162,6 +183,13 @@ export function EventsTab({
           onSortChange={(o) => onSortChange(o as EventSortOrder)}
           newCount={newCount}
           onRefresh={onRefresh}
+        />
+
+        <EventBulkBar
+          selectedIds={visibleSelectedIds}
+          suggestedTitle={selectedEvents[0]?.title ?? ""}
+          defaultSeverity={selectedEvents.reduce((max, e) => Math.max(max, e.severity ?? 3), 3)}
+          onClear={() => setSelectedIds([])}
         />
 
         <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
@@ -184,16 +212,48 @@ export function EventsTab({
               const sourceName = event.signals[0]?.source?.name;
               const displayTitle = event.title ?? event.description ?? event.types[0] ?? t("feed.events.untitled");
               const isAlert = event.alerts.length > 0;
+              const isSelected = selectedIds.includes(event.id);
 
               return (
-                <Link key={event.id} href={`/event/${event.id}?from=detection`} style={{ textDecoration: "none", color: "inherit" }}>
-                  <Box
-                    px={16} py={12}
-                    className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] cursor-pointer"
-                    style={{ display: "flex", gap: 12, ...getCardProps(event.id).style }}
-                    onMouseEnter={getCardProps(event.id).onMouseEnter}
-                    onMouseLeave={getCardProps(event.id).onMouseLeave}
+                <Box
+                  key={event.id}
+                  className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]"
+                  style={{ display: "flex", alignItems: "stretch", ...getCardProps(event.id).style }}
+                  onMouseEnter={getCardProps(event.id).onMouseEnter}
+                  onMouseLeave={getCardProps(event.id).onMouseLeave}
+                >
+                  <UnstyledButton
+                    aria-label={t("bulk.selectEvent")}
+                    data-testid={`select-event-${event.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleSelected(event.id);
+                    }}
+                    style={{
+                      width: 40,
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                    }}
                   >
+                    <Checkbox
+                      checked={isSelected}
+                      readOnly
+                      tabIndex={-1}
+                      aria-hidden
+                      size="xs"
+                      styles={{ input: { pointerEvents: "none" } }}
+                    />
+                  </UnstyledButton>
+                  <Link href={`/event/${event.id}?from=detection`} style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}>
+                    <Box
+                      px={8} py={12} pr={16}
+                      className="cursor-pointer"
+                      style={{ display: "flex", gap: 12 }}
+                    >
                     <Box style={{ width: 3, background: sevCol, flexShrink: 0, borderRadius: 2 }} />
                     <Box style={{ flex: 1, minWidth: 0 }}>
                       <Group justify="space-between" mb={4}>
@@ -228,8 +288,9 @@ export function EventsTab({
                         </Text>
                       </Group>
                     </Box>
-                  </Box>
-                </Link>
+                    </Box>
+                  </Link>
+                </Box>
               );
             })}
 

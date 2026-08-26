@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   alertsToMarkers,
   applyLocationChallengesToMarkers,
+  crisesToMarkers,
   eventsToMarkers,
   focusEventToMarkers,
   signalsToMarkers,
@@ -271,5 +272,80 @@ describe("applyLocationChallengesToMarkers", () => {
     expect(next[1]?.lng).toBe(33.1);
     expect(next[1]?.lat).toBe(14.2);
     expect(next[1]?.eventId).toBe("sig-2");
+  });
+});
+
+describe("crisesToMarkers", () => {
+  it("plots a Point generalLocation as a crisis pin", () => {
+    const markers = crisesToMarkers([
+      {
+        id: "c-point",
+        title: "Nyala displacement",
+        summary: null,
+        severity: 5,
+        generalLocation: pointLoc("nyala", 24.88, 12.05),
+        events: [{ id: "e1", types: ["FL"] }],
+      },
+    ]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.markerKind).toBe("crisis");
+    expect(markers[0]?.lng).toBe(24.88);
+    expect(markers[0]?.lat).toBe(12.05);
+    expect(markers[0]?.eventId).toBe("c-point");
+  });
+
+  it("falls back to polygon centroid when generalLocation is not a Point", () => {
+    const markers = crisesToMarkers([
+      {
+        id: "c-poly",
+        title: "Sudan country crisis",
+        summary: null,
+        severity: 4,
+        generalLocation: {
+          id: "sd",
+          name: "Sudan",
+          level: 0,
+          ancestorIds: [],
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [21.8, 8.7],
+                [38.6, 8.7],
+                [38.6, 23.2],
+                [21.8, 23.2],
+                [21.8, 8.7],
+              ],
+            ],
+          },
+        },
+        events: [],
+      },
+    ]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.lng).toBeCloseTo(28.52, 1);
+    expect(markers[0]?.lat).toBeCloseTo(14.5, 1);
+  });
+
+  it("falls back to nested event representativePoint when crisis has no geometry", () => {
+    const markers = crisesToMarkers([
+      {
+        id: "c-nested",
+        title: "Khartoum floods",
+        summary: null,
+        severity: 3,
+        generalLocation: null,
+        events: [
+          {
+            id: "e-kh",
+            types: ["FL"],
+            representativePoint: pointLoc("khartoum", 32.56, 15.59),
+          },
+        ],
+      },
+    ]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.lng).toBe(32.56);
+    expect(markers[0]?.lat).toBe(15.59);
   });
 });

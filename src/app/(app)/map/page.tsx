@@ -57,6 +57,12 @@ import {
   type MapViewCamera,
   type MapViewStateV1,
 } from "~/lib/map-view-state";
+import {
+  ALL_REGIONS,
+  writeMapNavContext,
+  writeMapNavEventIds,
+  writeMapNavSignalIds,
+} from "~/lib/map-nav-context";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getAdjacentItem, orderByProximityTo } from "~/lib/detail-list-nav";
 import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
@@ -70,6 +76,20 @@ import {
   fetchBlockagesMapCollection,
   isBlockagesUiEnabled,
 } from "~/lib/map/fetch-blockages";
+import {
+  seismicSignalsHintFromMeta,
+  fetchSeismicSignalsMapCollection,
+  isSeismicSignalsUiEnabled,
+} from "~/lib/map/fetch-usgs-earthquakes";
+import {
+  filterSeismicMapCollection,
+  seismicYearMonths,
+  type SeismicMapCollection,
+} from "~/lib/map/usgs-earthquakes";
+import {
+  SEISMIC_MAX_WINDOW_DAYS,
+  seismicQueryBboxForCountry,
+} from "~/lib/map/usgs-fdsn-query";
 const MAX_OPEN_PANELS = 4;
 
 interface OpenMarkerPanel {
@@ -176,6 +196,19 @@ function MapPageContent() {
     if (urlFocusEventId) return "event";
     return "alert";
   });
+
+  /** Map load error (offline / style load failure) */
+  const [mapLoadError, setMapLoadError] = useState<{ message: string; isOffline: boolean } | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
+
+  const handleMapLoadError = useCallback((error: { message: string; isOffline: boolean }) => {
+    setMapLoadError(error);
+  }, []);
+
+  const handleRetryMapLoad = useCallback(() => {
+    setMapLoadError(null);
+    setRetryNonce((prev) => prev + 1);
+  }, []);
 
   /* ---- Fetch data ---- */
   const { activeTeamId, activeTeam } = useTeam();
@@ -638,11 +671,14 @@ function MapPageContent() {
             bearing: 0,
           }
         : null);
-    if (!live) return;
+    const cameraToSave = live ?? readMapViewState()?.camera ?? null;
+    if (!cameraToSave) return;
     writeMapViewState({
-      camera: live,
+      camera: cameraToSave,
       baseMapType: baseMapTypeRef.current,
       openMarkerIds: openPanelsRef.current.map((p) => p.marker.id),
+      showSeismic: showSeismicRef.current,
+      showRoads: showRoadsRef.current,
     });
   }, []);
 
@@ -678,19 +714,28 @@ function MapPageContent() {
   }, []);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
   const [showPopulation, setShowPopulation] = useState(false);
-  const [showRoads, setShowRoads] = useState(true);
+  const [showRoads, setShowRoads] = useState(
+    () => restoredView?.showRoads !== false,
+  );
+  const showRoadsRef = useRef(showRoads);
+  showRoadsRef.current = showRoads;
   const [showNrcLocations, setShowNrcLocations] = useState(false);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>(
     () => restoredView?.baseMapType ?? "simple",
   );
   const baseMapTypeRef = useRef(baseMapType);
   baseMapTypeRef.current = baseMapType;
+  const [showSeismicSignals, setShowSeismicSignals] = useState(
+    () => restoredView?.showSeismic === true,
+  );
+  const showSeismicRef = useRef(showSeismicSignals);
+  showSeismicRef.current = showSeismicSignals;
 
   // Persist basemap / open panels even when the camera is still.
   useEffect(() => {
     if (!restoreReady) return;
     persistMapView();
-  }, [baseMapType, openPanels, persistMapView, restoreReady]);
+  }, [baseMapType, openPanels, persistMapView, restoreReady, showSeismicSignals, showRoads]);
 
   // Flush snapshot on leave so View details → Back always has a fresh copy.
   useEffect(() => {
@@ -795,6 +840,90 @@ function MapPageContent() {
       cancelled = true;
     };
   }, [blockagesUiEnabled, showBlockages]);
+
+  /**
+   * Seismic activity UI: always on (spike in dev/preview, BFF in prod). See `fetch-usgs-earthquakes.ts`.
+   */
+  const seismicSignalsUiEnabled = isSeismicSignalsUiEnabled();
+  const [seismicSignalsLoading, setSeismicSignalsLoading] = useState(false);
+  const [seismicSignalsError, setSeismicSignalsError] = useState<string | undefined>();
+  const [seismicSignalsRaw, setSeismicSignalsRaw] =
+    useState<SeismicMapCollection | null>(null);
+  const [seismicSignalsSource, setSeismicSignalsSource] = useState<
+    "spike" | "api" | null
+  >(null);
+
+  const seismicFetchWindow = useMemo(() => {
+    if (timeframe === "all") {
+      const now = new Date();
+      return {
+        start: new Date(
+          now.getTime() - SEISMIC_MAX_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+        end: now.toISOString(),
+      };
+    }
+    return {
+      start: timeframeRange.from,
+      end: timeframeRange.to,
+    };
+  }, [timeframe, timeframeRange.from, timeframeRange.to]);
+
+  const seismicSignalsGeoJson = useMemo(
+    () =>
+      seismicSignalsRaw
+        ? filterSeismicMapCollection(seismicSignalsRaw, selectedMonth)
+        : null,
+    [seismicSignalsRaw, selectedMonth],
+  );
+
+  const seismicSignalsHint = seismicSignalsError
+    ?? (seismicSignalsGeoJson && seismicSignalsSource
+      ? seismicSignalsHintFromMeta(seismicSignalsGeoJson, seismicSignalsSource)
+      : undefined);
+
+  useEffect(() => {
+    if (!seismicSignalsUiEnabled || !showSeismicSignals) {
+      setSeismicSignalsRaw(null);
+      setSeismicSignalsSource(null);
+      setSeismicSignalsError(undefined);
+      setSeismicSignalsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setSeismicSignalsLoading(true);
+    setSeismicSignalsError(undefined);
+    fetchSeismicSignalsMapCollection({
+      bbox: seismicQueryBboxForCountry(selectedCountry),
+      start: seismicFetchWindow.start,
+      end: seismicFetchWindow.end,
+    })
+      .then(({ collection, source }) => {
+        if (cancelled) return;
+        setSeismicSignalsRaw(collection);
+        setSeismicSignalsSource(source);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setSeismicSignalsRaw(null);
+        setSeismicSignalsSource(null);
+        setSeismicSignalsError(
+          err instanceof Error ? err.message : "Failed to load",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setSeismicSignalsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    seismicSignalsUiEnabled,
+    showSeismicSignals,
+    selectedCountry,
+    seismicFetchWindow.start,
+    seismicFetchWindow.end,
+  ]);
 
   // Deep-link from detail Back / Full Map: align Layers data-view chrome only.
   // Markers come from the solo focus queries - do not widen timeframe or wipe
@@ -1199,7 +1328,9 @@ function MapPageContent() {
 
   // Distinct months present in the current location/type slice, sorted newest
   // first. Markers with no `occurredAt` (e.g. crisis aggregates) are skipped -
-  // they show up regardless of which month is picked.
+  // they show up regardless of which month is picked. When Seismic activity is
+  // on, earthquake `time` months are unioned in so a ShakeMap can create a chip
+  // even if no alert/event landed that month.
   const availableMonths = useMemo(() => {
     const set = new Set<string>();
     for (const m of markersBeforeTime) {
@@ -1211,8 +1342,11 @@ function MapPageContent() {
       const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
       set.add(ym);
     }
+    if (showSeismicSignals && seismicSignalsRaw) {
+      for (const ym of seismicYearMonths(seismicSignalsRaw)) set.add(ym);
+    }
     return [...set].sort().reverse();
-  }, [markersBeforeTime]);
+  }, [markersBeforeTime, showSeismicSignals, seismicSignalsRaw]);
 
   // Auto-clear the month selection if it's no longer in the current option
   // set (happens when filtering down to a country/region that has no data
@@ -1237,6 +1371,39 @@ function MapPageContent() {
       return ym === selectedMonth;
     });
   }, [isFocusMode, allMarkers, markersBeforeTime, selectedMonth]);
+
+  // Persist map filter scope for event/signal detail prev/next. Mirrors
+  // Detection nav-context: without this, detail arrows re-query the unscoped
+  // map feed and jump across countries (e.g. Sudan → Venezuela).
+  useEffect(() => {
+    writeMapNavContext({
+      teamId: activeTeamId,
+      locationId: selectedLocationId,
+      country: selectedCountry,
+      region: selectedRegion !== ALL_REGIONS ? selectedRegion : undefined,
+      // null = timeframe "all" (must survive JSON round-trip; undefined is dropped)
+      from: timeframeRange.from ?? null,
+      to: timeframeRange.to ?? null,
+    });
+  }, [
+    activeTeamId,
+    selectedLocationId,
+    selectedCountry,
+    selectedRegion,
+    timeframeRange.from,
+    timeframeRange.to,
+  ]);
+
+  // Persist the filtered marker id list the analyst actually sees so detail
+  // arrows stay inside that set (country + region + type + timeline).
+  useEffect(() => {
+    if (isFocusMode) return;
+    const ids = currentMarkers
+      .map((m) => m.eventId)
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
+    if (dataView === "event") writeMapNavEventIds(ids);
+    else if (dataView === "signal") writeMapNavSignalIds(ids);
+  }, [isFocusMode, dataView, currentMarkers]);
 
   // Reopen marker panels from the session snapshot once markers are loaded.
   useEffect(() => {
@@ -1743,12 +1910,15 @@ function MapPageContent() {
           initialPitch={cameraSeed?.pitch ?? restoredView?.camera.pitch ?? 0}
           initialBearing={cameraSeed?.bearing ?? restoredView?.camera.bearing ?? 0}
           forceFlyToken={forceFlyToken}
-          flyDuration={markerFocus ? 500 : 650}
+          flyDuration={markerFocus ? 500 : (!cameraSeed && !focusEntityId && selectedCountry !== "All Countries" ? 1200 : 650)}
           // Keep pin above the ~45vh sheet + breathing room.
           flyPaddingBottom={
             markerFocus && isMobile
               ? Math.round((typeof window !== "undefined" ? window.innerHeight : 700) * 0.45) + 72
               : 0
+          }
+          introFromGlobe={
+            !cameraSeed && !focusEntityId && selectedCountry !== "All Countries"
           }
           onCameraChange={handleCameraChange}
           onMapMove={handleMapMove}
@@ -1760,15 +1930,22 @@ function MapPageContent() {
           showNrcLocations={showNrcLocations}
           showBlockages={blockagesUiEnabled && showBlockages}
           blockagesGeoJson={blockagesGeoJson}
+          showSeismicSignals={seismicSignalsUiEnabled && showSeismicSignals}
+          seismicSignalsGeoJson={seismicSignalsGeoJson}
           baseMapType={baseMapType}
           hoveredMarkerId={chromeActiveMarkerId}
           locationPickActive={locationCorrectionDraft?.phase === "picking"}
           onMapClick={handleLocationCorrectionMapClick}
+          onLoadError={handleMapLoadError}
+          key={retryNonce}
         />
 
-        {/* Loading overlay - only shows when map is mounted and data is loading */}
-        {showLoadingOverlay && dataView !== "none" && (
-          <MapLoadingOverlay dataView={dataView} />
+        {/* Spinner while data loads; error overlay stays up even after queries settle. */}
+        {(mapLoadError || (showLoadingOverlay && dataView !== "none")) && (
+          <MapLoadingOverlay
+            dataView={dataView === "none" ? "alert" : dataView}
+            error={mapLoadError ? { message: mapLoadError.message, onRetry: handleRetryMapLoad } : null}
+          />
         )}
       </Box>
 
@@ -1789,6 +1966,10 @@ function MapPageContent() {
         onShowBlockagesChange={setShowBlockages}
         blockagesHint={blockagesUiEnabled ? blockagesHint : undefined}
         blockagesLoading={blockagesUiEnabled && blockagesLoading}
+        showSeismicSignals={seismicSignalsUiEnabled ? showSeismicSignals : undefined}
+        onShowSeismicSignalsChange={setShowSeismicSignals}
+        seismicSignalsHint={seismicSignalsUiEnabled ? seismicSignalsHint : undefined}
+        seismicSignalsLoading={seismicSignalsUiEnabled && seismicSignalsLoading}
         baseMapType={baseMapType}
         onBaseMapTypeChange={setBaseMapType}
         keepPanelsOpen={keepPanelsOpen}

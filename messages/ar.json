@@ -283,6 +283,7 @@
         "informSeverity": "شدة INFORM",
         "evidenceBase": "من أحدث تحليل · {reports} تقارير",
         "freshest": "الأحدث {date}",
+        "range": "النطاق {range}",
         "info": {
           "informSeverity": "مؤشر شدة INFORM (0-10) من ACAPS، يُحدَّث شهرياً. مقياس مركّب لشدة الأزمة، مستقل عن خط معالجة التحليل.",
           "displaced": "النازحون داخلياً. مجمّع من التقارير المصدرية (الحقل: population_displaced).",
@@ -412,7 +413,13 @@
       "unverified": "غير محقق",
       "statusActive": "نشط",
       "statusPending": "معلق",
-      "activate": "تفعيل"
+      "activate": "تفعيل",
+      "roleUpdated": "تم تحديث الدور",
+      "roleUpdatedDetail": "الدور الآن {role}.",
+      "roleUpdateFailed": "تعذر تحديث الدور",
+      "approved": "تمت الموافقة على المستخدم",
+      "approvedDetail": "أصبح لديه صلاحية المشاهد.",
+      "approveFailed": "تعذر الموافقة على المستخدم"
     },
     "features": {
       "stats": {
@@ -1005,6 +1012,7 @@
     "viewOnCrisisMap": "عرض على الخريطة",
     "switchCrisis": "تبديل الأزمة",
     "untitledCrisis": "أزمة بلا عنوان",
+    "renameTitle": "إعادة تسمية الأزمة",
     "crisisBadge": "أزمة",
     "eventFallback": "حدث",
     "updatedDate": "تم التحديث {date}",
@@ -1135,7 +1143,26 @@
       "lastEventWarning": "هذا هو الحدث الأخير. ستؤدي إزالته إلى حذف الأزمة بأكملها.",
       "removeAndDelete": "إزالة وحذف الأزمة",
       "remove": "إزالة",
-      "removeFromCrisis": "إزالة من الأزمة"
+      "removeFromCrisis": "إزالة من الأزمة",
+      "addEvent": "إضافة حدث",
+      "addModalTitle": "إضافة أحداث إلى الأزمة",
+      "addModalHint": "تظهر الأحداث الموصى بها أولاً. استخدم البحث للعثور على غيرها.",
+      "searchPlaceholder": "ابحث عن الأحداث بالعنوان أو الموقع",
+      "recommendedHeading": "موصى بها",
+      "searchHeading": "نتائج البحث",
+      "recommendEmpty": "لا توجد أحداث موصى بها الآن. جرّب البحث.",
+      "searchEmpty": "لا توجد أحداث تطابق بحثك.",
+      "add": "إضافة",
+      "addSuccessTitle": "تمت إضافة الحدث",
+      "addSuccessMessage": "تم تحديث الجدول الزمني بالحدث الجديد.",
+      "addErrorTitle": "تعذّرت إضافة الحدث",
+      "reasons": {
+        "location": "قريب",
+        "time": "نفس الفترة",
+        "severity": "خطورة مشابهة",
+        "type": "نفس النوع",
+        "source": "مصدر مشترك"
+      }
     },
     "needs": {
       "saf": {
@@ -1437,6 +1464,18 @@
     },
     "actions": {
       "createSignal": "إنشاء إشارة"
+    },
+    "bulk": {
+      "selected": "{count, plural, one {حدث واحد محدد} other {# أحداث محددة}}",
+      "clear": "مسح",
+      "raiseAlert": "رفع تنبيه",
+      "raiseAlertTitle": "رفع تنبيه من الأحداث المحددة",
+      "raiseAlertEvents": "{count, plural, one {سيُربط حدث واحد} other {سيُربط # أحداث}}",
+      "raiseAlertError": "تعذّر رفع التنبيه",
+      "addToCrisis": "إضافة إلى أزمة",
+      "createCrisis": "إنشاء أزمة",
+      "selectEvent": "تحديد الحدث",
+      "linkedBulk": "أُضيف {count, plural, one {حدث واحد} other {# أحداث}} إلى الأزمة."
     },
     "filters": {
       "filter": "تصفية",
@@ -1833,7 +1872,14 @@
       "linkErrorTitle": "تعذّر ربط الحدث",
       "createdTitle": "تم إنشاء الأزمة",
       "createdMessage": "سيُنشئ خط الأنابيب العنوان والملخص قريباً.",
-      "createErrorTitle": "تعذّر إنشاء الأزمة"
+      "createErrorTitle": "تعذّر إنشاء الأزمة",
+      "createdNamedMessage": "«{title}» جاهزة. سيتبع الملخص والاحتياجات.",
+      "nameModalTitle": "سمِّ هذه الأزمة",
+      "nameModalHint": "{count, plural, one {إنشاء أزمة من حدث واحد.} other {إنشاء أزمة من # أحداث.}}",
+      "nameLabel": "اسم الأزمة",
+      "namePlaceholder": "مثال: فيضانات الخرطوم، أغسطس 2026",
+      "confirmCreate": "إنشاء الأزمة",
+      "cancel": "إلغاء"
     },
     "nav": {
       "previous": "الحدث السابق",
@@ -1935,6 +1981,8 @@
       "satellite": "الأقمار الصناعية",
       "simple": "بسيطة",
       "topography": "طبوغرافية",
+      "hazards": "الأخطار",
+      "seismicSignals": "النشاط الزلزالي",
       "operational": "تشغيلي",
       "comingSoon": "قريبًا",
       "blockages": "العوائق",
@@ -2099,7 +2147,9 @@
     },
     "header": {
       "appName": "الإشارات الميدانية",
-      "queued": "{count} في الطابور"
+      "queued": "{count} في الطابور",
+      "online": "متصل",
+      "offline": "غير متصل"
     },
     "tabs": {
       "submit": "إرسال",
@@ -2109,7 +2159,8 @@
       "heading": "لإرسال إشارة:",
       "bullet1": "السطر الأول من رسالتك سيكون <strong>العنوان</strong>، والباقي هو <strong>الوصف</strong>. اضغط Enter للانتقال إلى سطر جديد.",
       "bullet2": "استخدم <strong>@</strong> لوضع علامة على موقع، أو اضغط <locationIcon></locationIcon> للسماح للتطبيق بتحديد موقعك.",
-      "bullet3": "أرفق صوراً أو مقاطع فيديو بزر <mediaIcon></mediaIcon>."
+      "bullet3": "أرفق صوراً أو مقاطع فيديو بزر <mediaIcon></mediaIcon> — الملفات تحتاج إلى اتصال.",
+      "bullet4": "دون اتصال، يُحفظ <strong>النص والموقع</strong> على هذا الجهاز ويُرسلان تلقائياً عند عودتك إلى الإنترنت."
     },
     "signals": {
       "loading": "جارٍ تحميل الإشارات...",
@@ -2118,13 +2169,22 @@
     },
     "replies": {
       "queued": "تم الاستلام. تم حفظ إشارتك محلياً وستُرسَل إلى فريقك تلقائياً حين تعود متصلاً بالإنترنت.",
+      "drained": "{count, plural, zero {عدت إلى الإنترنت.} one {عدت إلى الإنترنت. أُرسلت الإشارة المؤجلة إلى فريقك.} two {عدت إلى الإنترنت. أُرسلت إشارتان مؤجلتان إلى فريقك.} few {عدت إلى الإنترنت. أُرسلت # إشارات مؤجلة إلى فريقك.} many {عدت إلى الإنترنت. أُرسلت # إشارة مؤجلة إلى فريقك.} other {عدت إلى الإنترنت. أُرسلت # إشارة مؤجلة إلى فريقك.}}",
       "success": "تم استلام الإشارة. تمت إضافة إدخال جديد إلى قائمة إشارات فريقك.",
-      "error": "حدث خطأ ما ولم تُرسَل إشارتك. يرجى المحاولة مجدداً."
+      "error": "حدث خطأ ما ولم تُرسَل إشارتك. يرجى المحاولة مجدداً.",
+      "drainFailed": "تعذّر إرسال إشارة مؤجلة. ما زالت محفوظة على هذا الجهاز — سنعيد المحاولة عندما يستقر الاتصال.",
+      "mediaNeedsOnline": "الصور ومقاطع الفيديو تحتاج إلى اتصال. أزل المرفق أو أعد المحاولة عند الاتصال.",
+      "noTeam": "هذا الحساب بلا فريق افتراضي، لذا تعذّر تسجيل الإشارة. أكمل الإعداد أو اطلب من مسؤول إضافتك إلى فريق، ثم أعد المحاولة.",
+      "gpsUnsupported": "لا يمكن لهذا الجهاز مشاركة موقع GPS. ضع علامة على مكان بـ @.",
+      "gpsDenied": "رُفض إذن الموقع. اسمح به لهذا الموقع، أو ضع علامة على مكان بـ @.",
+      "gpsTimeout": "تعذّر الحصول على نقطة GPS في الوقت المحدد. أعد المحاولة أو ضع علامة على مكان بـ @.",
+      "gpsUnavailable": "موقع GPS غير متاح الآن. أعد المحاولة أو ضع علامة على مكان بـ @."
     },
     "compose": {
       "placeholder": "ما الذي رصدته؟",
       "captureLocation": "تحديد الموقع",
-      "addMedia": "إضافة صورة أو فيديو"
+      "addMedia": "إضافة صورة أو فيديو",
+      "send": "إرسال الإشارة"
     }
   },
   "onboarding": {

@@ -283,6 +283,7 @@
         "informSeverity": "Sévérité INFORM",
         "evidenceBase": "D'après la dernière analyse · {reports} rapports",
         "freshest": "plus récent {date}",
+        "range": "Fourchette {range}",
         "info": {
           "informSeverity": "Indice de sévérité INFORM (0-10) d'ACAPS, mis à jour chaque mois. Mesure composite de la sévérité, indépendante du pipeline d'analyse.",
           "displaced": "Personnes déplacées internes (PDI). Agrégé à partir des rapports sources (champ : population_displaced).",
@@ -412,7 +413,13 @@
       "unverified": "Non vérifié",
       "statusActive": "Actif",
       "statusPending": "En attente",
-      "activate": "Activer"
+      "activate": "Activer",
+      "roleUpdated": "Rôle mis à jour",
+      "roleUpdatedDetail": "Le rôle est maintenant {role}.",
+      "roleUpdateFailed": "Impossible de mettre à jour le rôle",
+      "approved": "Utilisateur approuvé",
+      "approvedDetail": "Il a désormais un accès lecteur.",
+      "approveFailed": "Impossible d'approuver l'utilisateur"
     },
     "features": {
       "stats": {
@@ -1005,6 +1012,7 @@
     "viewOnCrisisMap": "Voir sur la carte",
     "switchCrisis": "Changer de crise",
     "untitledCrisis": "Crise sans titre",
+    "renameTitle": "Renommer la crise",
     "crisisBadge": "Crise",
     "eventFallback": "Événement",
     "updatedDate": "Mise à jour le {date}",
@@ -1135,7 +1143,26 @@
       "lastEventWarning": "Il s'agit du dernier événement. Le retirer supprimera la crise entière.",
       "removeAndDelete": "Retirer et supprimer la crise",
       "remove": "Retirer",
-      "removeFromCrisis": "Retirer de la crise"
+      "removeFromCrisis": "Retirer de la crise",
+      "addEvent": "Ajouter un événement",
+      "addModalTitle": "Ajouter des événements à la crise",
+      "addModalHint": "Les événements recommandés apparaissent en premier. Recherchez pour en trouver d'autres.",
+      "searchPlaceholder": "Rechercher des événements par titre ou lieu",
+      "recommendedHeading": "Recommandés",
+      "searchHeading": "Résultats de recherche",
+      "recommendEmpty": "Aucun événement recommandé pour le moment. Essayez une recherche.",
+      "searchEmpty": "Aucun événement ne correspond à votre recherche.",
+      "add": "Ajouter",
+      "addSuccessTitle": "Événement ajouté",
+      "addSuccessMessage": "La chronologie a été mise à jour avec le nouvel événement.",
+      "addErrorTitle": "Impossible d'ajouter l'événement",
+      "reasons": {
+        "location": "À proximité",
+        "time": "Même période",
+        "severity": "Sévérité similaire",
+        "type": "Même type",
+        "source": "Source partagée"
+      }
     },
     "needs": {
       "saf": {
@@ -1437,6 +1464,18 @@
     },
     "actions": {
       "createSignal": "Créer un signal"
+    },
+    "bulk": {
+      "selected": "{count, plural, one {# événement sélectionné} other {# événements sélectionnés}}",
+      "clear": "Effacer",
+      "raiseAlert": "Lever une alerte",
+      "raiseAlertTitle": "Lever une alerte depuis les événements sélectionnés",
+      "raiseAlertEvents": "{count, plural, one {# événement sera lié} other {# événements seront liés}}",
+      "raiseAlertError": "Impossible de lever l'alerte",
+      "addToCrisis": "Ajouter à une crise",
+      "createCrisis": "Créer une crise",
+      "selectEvent": "Sélectionner l'événement",
+      "linkedBulk": "{count, plural, one {# événement ajouté} other {# événements ajoutés}} à la crise."
     },
     "filters": {
       "filter": "Filtrer",
@@ -1833,7 +1872,14 @@
       "linkErrorTitle": "Impossible de lier l'événement",
       "createdTitle": "Crise créée",
       "createdMessage": "Le pipeline va générer le titre et le résumé sous peu.",
-      "createErrorTitle": "Impossible de créer la crise"
+      "createErrorTitle": "Impossible de créer la crise",
+      "createdNamedMessage": "« {title} » est prête. Le résumé et les besoins suivront.",
+      "nameModalTitle": "Nommer cette crise",
+      "nameModalHint": "{count, plural, one {Créer une crise à partir de # événement.} other {Créer une crise à partir de # événements.}}",
+      "nameLabel": "Nom de la crise",
+      "namePlaceholder": "ex. Inondations à Khartoum, août 2026",
+      "confirmCreate": "Créer la crise",
+      "cancel": "Annuler"
     },
     "nav": {
       "previous": "Événement précédent",
@@ -1935,6 +1981,8 @@
       "satellite": "Satellite",
       "simple": "Simple",
       "topography": "Topographie",
+      "hazards": "Aléas",
+      "seismicSignals": "Activité sismique",
       "operational": "Opérationnel",
       "comingSoon": "Bientôt disponible",
       "blockages": "Blocages",
@@ -2099,7 +2147,9 @@
     },
     "header": {
       "appName": "Signaux de terrain",
-      "queued": "{count} en attente"
+      "queued": "{count} en attente",
+      "online": "En ligne",
+      "offline": "Hors ligne"
     },
     "tabs": {
       "submit": "Soumettre",
@@ -2109,7 +2159,8 @@
       "heading": "Pour soumettre un signal :",
       "bullet1": "La 1re ligne de votre message sera le <strong>titre</strong>, le reste constitue la <strong>description</strong>. Utilisez Entrée pour passer à la ligne.",
       "bullet2": "Utilisez <strong>@</strong> pour indiquer une localisation, ou appuyez sur <locationIcon></locationIcon> pour laisser l'application vous localiser.",
-      "bullet3": "Joignez des images ou des vidéos avec le bouton <mediaIcon></mediaIcon>."
+      "bullet3": "Joignez des images ou des vidéos avec le bouton <mediaIcon></mediaIcon> — les médias nécessitent une connexion.",
+      "bullet4": "Hors ligne, le <strong>texte et une localisation</strong> sont enregistrés sur cet appareil et envoyés automatiquement dès que vous êtes de nouveau en ligne."
     },
     "signals": {
       "loading": "Chargement des signaux…",
@@ -2118,13 +2169,22 @@
     },
     "replies": {
       "queued": "Bien reçu. Votre signal a été enregistré localement et sera transmis automatiquement à votre équipe dès que vous serez de nouveau en ligne.",
+      "drained": "{count, plural, one {Vous êtes de nouveau en ligne. Le signal en attente a été transmis à votre équipe.} other {Vous êtes de nouveau en ligne. # signaux en attente ont été transmis à votre équipe.}}",
       "success": "Signal reçu. Une nouvelle entrée a été ajoutée à la liste des signaux de votre équipe.",
-      "error": "Une erreur est survenue et votre signal n'a pas été soumis. Veuillez réessayer."
+      "error": "Une erreur est survenue et votre signal n'a pas été soumis. Veuillez réessayer.",
+      "drainFailed": "Impossible d'envoyer un signal en attente. Il reste enregistré sur cet appareil — nouvel essai dès que la connexion sera stable.",
+      "mediaNeedsOnline": "Les photos et vidéos nécessitent une connexion. Retirez la pièce jointe ou réessayez une fois en ligne.",
+      "noTeam": "Ce compte n'a pas d'équipe par défaut, le signal n'a pas pu être déposé. Terminez l'onboarding ou demandez à un administrateur de vous ajouter à une équipe, puis réessayez.",
+      "gpsUnsupported": "Cet appareil ne peut pas partager une position GPS. Indiquez un lieu avec @.",
+      "gpsDenied": "L'autorisation de localisation a été refusée. Autorisez-la pour ce site, ou indiquez un lieu avec @.",
+      "gpsTimeout": "Impossible d'obtenir un point GPS à temps. Réessayez, ou indiquez un lieu avec @.",
+      "gpsUnavailable": "La localisation GPS est indisponible pour le moment. Réessayez, ou indiquez un lieu avec @."
     },
     "compose": {
       "placeholder": "Qu'avez-vous observé ?",
       "captureLocation": "Capturer la localisation",
-      "addMedia": "Ajouter une photo ou une vidéo"
+      "addMedia": "Ajouter une photo ou une vidéo",
+      "send": "Envoyer le signal"
     }
   },
   "onboarding": {

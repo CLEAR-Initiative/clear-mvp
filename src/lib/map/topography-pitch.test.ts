@@ -99,25 +99,27 @@ describe("syncTopographyPitch", () => {
     expect(map.pitch).toBe(0);
   });
 
-  it("disables gestures and resets pitch when leaving Topography", () => {
+  it("keeps gestures and pitch when leaving Topography", () => {
     const map = createMockPitchMap(35);
     syncTopographyPitch(map, "topography");
     expect(map.dragEnabled).toBe(true);
 
     syncTopographyPitch(map, "simple");
-    expect(map.dragEnabled).toBe(false);
-    expect(map.touchEnabled).toBe(false);
-    expect(map.pitch).toBe(0);
+    expect(map.dragEnabled).toBe(true);
+    expect(map.touchEnabled).toBe(true);
+    expect(map.pitch).toBe(35);
   });
 
-  it("keeps Simple and Satellite flat", () => {
+  it("enables tilt on Simple and Satellite without resetting pitch", () => {
     const map = createMockPitchMap(20);
     syncTopographyPitch(map, "satellite");
-    expect(map.pitch).toBe(0);
-    expect(map.dragEnabled).toBe(false);
+    expect(map.pitch).toBe(20);
+    expect(map.dragEnabled).toBe(true);
+    expect(map.touchEnabled).toBe(true);
 
     syncTopographyPitch(map, "simple");
-    expect(map.pitch).toBe(0);
-    expect(map.dragEnabled).toBe(false);
+    expect(map.pitch).toBe(20);
+    expect(map.dragEnabled).toBe(true);
+    expect(map.touchEnabled).toBe(true);
   });
 });

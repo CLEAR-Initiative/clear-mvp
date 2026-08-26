@@ -1,9 +1,15 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
-import { isPlatformAdmin } from "~/lib/roles";
 import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
+import {
+  rankEventsForCrisis,
+  scoreEventAgainstCrisis,
+  buildCrisisRecommendContext,
+} from "~/lib/crisis/recommend-events";
+
+/** clear-api `eventsPage` clamps to MAX_LIMIT=100; asking for more is a no-op. */
+const RECOMMEND_CANDIDATE_LIMIT = 100;
 
 /** Shape returned by the backend `crisis` query. */
 export interface GqlCrisis {
@@ -153,6 +159,16 @@ const UPDATE_CRISIS_META_MUTATION = `
   }
 `;
 
+/** Any authenticated user — writes a title-edit audit row that locks pipeline overwrites. */
+const UPDATE_CRISIS_TITLE_MUTATION = `
+  mutation UpdateCrisisTitle($id: String!, $title: String!) {
+    updateCrisisTitle(id: $id, title: $title) {
+      id
+      title
+    }
+  }
+`;
+
 const CREATE_CRISIS_FROM_EVENTS_MUTATION = `
   mutation CreateCrisisFromEvents($input: CreateCrisisFromEventsInput!) {
     createCrisisFromEvents(input: $input) {
@@ -213,6 +229,34 @@ const ADD_EVENT_TO_CRISIS_MUTATION = `
       crisisId
       eventId
       collectedAt
+    }
+  }
+`;
+
+/** Slim candidate page for reverse-path add + recommendations. */
+const RECOMMEND_LOCATION_FIELDS = `
+  id name level geoId ancestorIds
+`;
+
+const RECOMMEND_EVENT_FIELDS = `
+  id
+  title
+  description
+  types
+  severity
+  firstSignalCreatedAt
+  lastSignalCreatedAt
+  generalLocation { ${RECOMMEND_LOCATION_FIELDS} }
+  originLocation { ${RECOMMEND_LOCATION_FIELDS} }
+  destinationLocation { ${RECOMMEND_LOCATION_FIELDS} }
+  signals { id source { name } }
+  alerts { id status }
+`;
+
+const EVENTS_FOR_RECOMMEND_QUERY = `
+  query EventsForCrisisRecommend($input: EventsPageInput) {
+    eventsPage(input: $input) {
+      items { ${RECOMMEND_EVENT_FIELDS} }
     }
   }
 `;
@@ -323,6 +367,69 @@ export const crisesRouter = createTRPCRouter({
       return data.addEventToCrisis;
     }),
 
+  /**
+   * Reverse-path add: smart recommendations for events not yet linked
+   * to this crisis. Fetched once per modal open; the client filters
+   * `pool` locally so typing in search does not re-hit GraphQL.
+   *
+   * Candidate set is the newest `RECOMMEND_CANDIDATE_LIMIT` events
+   * (eventsPage max). Scoring: location / ±7d time / type / severity / source.
+   */
+  recommendEvents: protectedProcedure
+    .input(
+      z.object({
+        crisisId: z.string(),
+        teamId: z.string().nullish(),
+        limit: z.number().int().min(1).max(25).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const crisisData = await graphqlFetch<{ crisis: GqlCrisis | null }>(
+        CRISIS_GET_QUERY,
+        { id: input.crisisId },
+        cookieHeaders(ctx),
+      );
+      const crisis = crisisData.crisis;
+      if (!crisis) {
+        return { recommended: [], pool: [], linkedIds: [] as string[] };
+      }
+
+      const linkedIds = crisis.events.map((e) => e.id);
+      const linkedSet = new Set(linkedIds);
+
+      const pageData = await graphqlFetch<{ eventsPage: { items: GqlEvent[] } }>(
+        EVENTS_FOR_RECOMMEND_QUERY,
+        {
+          input: {
+            teamId: input.teamId ?? undefined,
+            includeDummy: false,
+            limit: RECOMMEND_CANDIDATE_LIMIT,
+            orderBy: "LAST_SIGNAL_DESC",
+          },
+        },
+        cookieHeaders(ctx),
+      );
+      const candidates = pageData.eventsPage.items.filter((e) => !linkedSet.has(e.id));
+      const limit = input.limit ?? 10;
+      const ctxScore = buildCrisisRecommendContext(crisis.events);
+
+      const pool = candidates.map((event) => {
+        const { score, reasons } = scoreEventAgainstCrisis(event, ctxScore);
+        return { event, score, reasons };
+      });
+
+      const recommended = rankEventsForCrisis(candidates, crisis.events, {
+        excludeIds: linkedSet,
+        limit,
+      }).map((r) => ({
+        event: r.event as GqlEvent,
+        score: r.score,
+        reasons: r.reasons,
+      }));
+
+      return { recommended, pool, linkedIds };
+    }),
+
   removeEvent: protectedProcedure
     .input(z.object({ crisisId: z.string(), eventId: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -345,6 +452,22 @@ export const crisesRouter = createTRPCRouter({
       return data.deleteCrisis;
     }),
 
+  /** Rename a crisis. Uses updateCrisisTitle (any auth user), not admin-only updateCrisisPopulation. */
+  updateTitle: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      title: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ updateCrisisTitle: { id: string; title: string | null } }>(
+        UPDATE_CRISIS_TITLE_MUTATION,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.updateCrisisTitle;
+    }),
+
+  /** Admin-only summary/population path via updateCrisisPopulation. */
   updateMeta: protectedProcedure
     .input(z.object({
       id: z.string(),
@@ -352,10 +475,6 @@ export const crisesRouter = createTRPCRouter({
       summary: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const user = (ctx as { user?: { role?: string } }).user;
-      if (!isPlatformAdmin(user?.role)) {
-        throw new TRPCError({ code: "FORBIDDEN" });
-      }
       const { id, ...fields } = input;
       const data = await graphqlFetch<{ updateCrisisPopulation: { id: string; title: string | null; summary: string | null } }>(
         UPDATE_CRISIS_META_MUTATION,
