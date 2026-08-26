@@ -52,7 +52,7 @@ import {
   shouldElevatePointPin,
 } from "~/lib/map/pin-elevation";
 import { bridgeMetaToCtrlForPitch } from "~/lib/map/meta-pitch-bridge";
-import { flyToOrientation } from "~/lib/map/marker-detail-camera";
+import { flyToOrientation, countryFitPadding, fitBoundsCameraOptions } from "~/lib/map/marker-detail-camera";
 import { ensureGlobeProjection } from "~/lib/map/idle-globe-spin";
 import {
   dismissTopographyTiltHint,
@@ -1312,16 +1312,21 @@ export function CrisisMap({
     if (!nonceBumped && prevFramedCountry.current === framedKey) return;
     prevFramedCountry.current = framedKey;
 
-    // Narrow viewports: less padding so country fit stays country-level
-    // (80px on a phone shrinks the usable canvas and looks global).
+    // Mobile: inset for header + bottom nav so the full country sits in the
+    // visible hole. 36px uniform padding cropped the bbox under the chrome.
     const narrow =
       typeof window !== "undefined" && window.matchMedia("(max-width: 48em)").matches;
-    const padding = narrow ? 36 : 80;
+    const padding = countryFitPadding(narrow);
 
     try { map.current.stop(); } catch { /* ignore */ }
     map.current.fitBounds(
       [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
-      { padding, duration: 800 },
+      fitBoundsCameraOptions({
+        currentPitch: map.current.getPitch?.() ?? 0,
+        currentBearing: map.current.getBearing?.() ?? 0,
+        padding,
+        duration: 800,
+      }),
     );
   }, [
     focusCountryFitBounds,
@@ -1339,7 +1344,12 @@ export function CrisisMap({
     if (!bounds) return;
     map.current.fitBounds(
       [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
-      { padding: 60, duration: 800 },
+      fitBoundsCameraOptions({
+        currentPitch: map.current.getPitch?.() ?? 0,
+        currentBearing: map.current.getBearing?.() ?? 0,
+        padding: 60,
+        duration: 800,
+      }),
     );
   }, [fitBoundsGeometry, loaded]);
 
@@ -1690,11 +1700,16 @@ export function CrisisMap({
               const sw: [number, number] = [Math.min(...lngs), Math.min(...lats)];
               const ne: [number, number] = [Math.max(...lngs), Math.max(...lats)];
               // Past donut band (z>8) so expand lands on individual pins, not re-clustered donuts.
-              m.fitBounds([sw, ne], {
-                padding: 80,
-                maxZoom: 13,
-                duration: 600,
-              });
+              m.fitBounds(
+                [sw, ne],
+                fitBoundsCameraOptions({
+                  currentPitch: m.getPitch?.() ?? 0,
+                  currentBearing: m.getBearing?.() ?? 0,
+                  padding: 80,
+                  maxZoom: 13,
+                  duration: 600,
+                }),
+              );
             });
           });
           clusterDomMarkers.current.set(

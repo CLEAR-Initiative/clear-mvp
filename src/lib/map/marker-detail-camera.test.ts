@@ -5,6 +5,8 @@ import {
   keepPreOpenRestore,
   lastDetailCloseRestore,
   mobileMarkerFocusZoom,
+  countryFitPadding,
+  fitBoundsCameraOptions,
 } from "./marker-detail-camera";
 
 describe("asCameraPose", () => {
@@ -105,5 +107,33 @@ describe("keepPreOpenRestore", () => {
     };
     expect(keepPreOpenRestore(first, secondTap)).toEqual(first);
     expect(keepPreOpenRestore(null, first)).toEqual(first);
+  });
+});
+
+describe("countryFitPadding", () => {
+  it("insets mobile so the country sits above the bottom nav, not a 36px crop", () => {
+    const mobile = countryFitPadding(true);
+    expect(mobile).toEqual({ top: 80, bottom: 96, left: 28, right: 28 });
+    expect(countryFitPadding(false)).toBe(80);
+  });
+});
+
+describe("fitBoundsCameraOptions", () => {
+  it("keeps live pitch/bearing on cluster expand and country fit", () => {
+    expect(
+      fitBoundsCameraOptions({
+        currentPitch: 52,
+        currentBearing: -18,
+        padding: 80,
+        duration: 600,
+        maxZoom: 13,
+      }),
+    ).toEqual({
+      padding: 80,
+      duration: 600,
+      maxZoom: 13,
+      pitch: 52,
+      bearing: -18,
+    });
   });
 });

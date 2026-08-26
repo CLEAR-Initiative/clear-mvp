@@ -95,3 +95,54 @@ export function keepPreOpenRestore(
 ): CameraPose | null {
   return existing ?? candidate;
 }
+
+export type FitPadding =
+  | number
+  | { top: number; bottom: number; left: number; right: number };
+
+/** Desktop country fit — geometry inset from the panel chrome. */
+export const DESKTOP_COUNTRY_FIT_PADDING = 80;
+
+/**
+ * Mobile country fit. The map canvas is full-viewport while the app shell
+ * header (56px) and bottom nav (72px) cover the top and bottom, so a 36px
+ * uniform inset cropped the bbox. These insets park the country in the
+ * visible hole, including a little breathing room.
+ */
+export const MOBILE_COUNTRY_FIT_PADDING = {
+  top: 80,
+  bottom: 96,
+  left: 28,
+  right: 28,
+} as const;
+
+export function countryFitPadding(narrow: boolean): FitPadding {
+  return narrow ? MOBILE_COUNTRY_FIT_PADDING : DESKTOP_COUNTRY_FIT_PADDING;
+}
+
+/** Mapbox fitBounds options that never flatten live tilt. */
+export function fitBoundsCameraOptions(args: {
+  currentPitch: number;
+  currentBearing: number;
+  padding: FitPadding;
+  duration: number;
+  maxZoom?: number;
+}): {
+  padding: FitPadding;
+  duration: number;
+  pitch: number;
+  bearing: number;
+  maxZoom?: number;
+} {
+  const { pitch, bearing } = flyToOrientation({
+    currentPitch: args.currentPitch,
+    currentBearing: args.currentBearing,
+  });
+  return {
+    padding: args.padding,
+    duration: args.duration,
+    pitch,
+    bearing,
+    ...(args.maxZoom != null ? { maxZoom: args.maxZoom } : {}),
+  };
+}
