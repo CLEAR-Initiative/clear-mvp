@@ -109,6 +109,10 @@ export interface SaPayload {
       source_url?: string | null;
       published_at?: string | null;
       report_title?: string | null;
+      /** Publishing organisation ("IOM DTM", "WFP"). Not part of the pipeline
+       *  payload; the router hydrates it from clear-api's
+       *  `reportDatapoint.source` before mapping. */
+      publisher?: string | null;
     }>;
   };
   changes?: {
@@ -218,6 +222,10 @@ export interface SaSource {
   title: string;
   url: string | null;
   publishedAt: string | null;
+  /** The publishing organisation, resolved by clear-api from the report's
+   *  ReliefWeb `source` (e.g. "OCHA", "WFP"). Null for legacy rows extracted
+   *  before source attribution, where the UI falls back to the URL host. */
+  publisher: string | null;
 }
 
 /** A single sourced claim: the text plus the citation numbers backing it.
@@ -499,6 +507,7 @@ function mapSources(raw: SaPayload["sources"], citedIds: string[]): SaSource[] {
       title: r.report_title?.trim() ?? "Untitled report",
       url: r.source_url ?? null,
       publishedAt: r.published_at ?? null,
+      publisher: r.publisher?.trim() || null,
     }));
 
   // The pipeline builds `sources.reports` from the datapoint aggregation's
@@ -515,7 +524,7 @@ function mapSources(raw: SaPayload["sources"], citedIds: string[]): SaSource[] {
   for (const id of citedIds) {
     if (!id || known.has(id)) continue;
     known.add(id);
-    sources.push({ id, title: "", url: null, publishedAt: null });
+    sources.push({ id, title: "", url: null, publishedAt: null, publisher: null });
   }
   return sources;
 }
