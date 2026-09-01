@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Stack, Badge, Button, CloseButton, ScrollArea, UnstyledButton } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
@@ -409,6 +409,49 @@ export function MapMarkerDetail({
     swipeDeltaRef.current = { x: 0, y: 0 };
   }, [onClose, onSwipeNext, onSwipePrev]);
 
+  const viewDetailsHref = marker.eventId
+    ? marker.markerKind === "crisis"
+      ? `/crisis/${marker.eventId}?from=map`
+      : marker.markerKind === "signal"
+        ? `/signal/${marker.eventId}?from=map`
+        : `/event/${marker.eventId}?from=map`
+    : null;
+
+  const viewDetailsButton = viewDetailsHref ? (
+    <Button
+      size="xs"
+      fullWidth
+      component={Link}
+      href={viewDetailsHref}
+      className="btn-accent"
+      styles={{
+        root: {
+          background: "var(--color-accent)",
+          borderColor: "var(--color-accent)",
+          color: "#FFFFFF",
+          fontWeight: 600,
+          "&:hover": { background: "var(--color-accent-hover)" },
+        },
+      }}
+    >
+      {t("detail.viewDetails")}
+    </Button>
+  ) : null;
+
+  const descriptionBlock = marker.description ? (
+    isMobile ? (
+      <Box className={styles.descriptionClamp}>
+        <Text size="xs" c="var(--color-text-secondary)">
+          {marker.description}
+        </Text>
+      </Box>
+    ) : (
+      <Text size="xs" c="var(--color-text-secondary)" mb={12} pb={8} className="border-b border-[var(--color-border)]">
+        {marker.description}
+      </Text>
+    )
+  ) : null;
+
   return (
     <>
     <Box
@@ -419,7 +462,7 @@ export function MapMarkerDetail({
       onPointerMove={isMobile ? handleSwipeMove : undefined}
       onPointerUp={isMobile ? handleSwipeEnd : undefined}
       onPointerCancel={isMobile ? handleSwipeEnd : undefined}
-      style={isMobile ? { touchAction: "none", cursor: "grab", zIndex: 20 } : {
+      style={isMobile ? { touchAction: "none", cursor: "grab" } : {
         // Desktop: beside the marker, draggable via grip / header
         top: basePos.top,
         left: basePos.left,
@@ -500,7 +543,7 @@ export function MapMarkerDetail({
 
       {/* Mobile header — drag handle + title (gestures on whole sheet) */}
       {isMobile && (
-        <Box>
+        <Box style={{ flexShrink: 0 }}>
           <Box py={8} style={{ display: "flex", justifyContent: "center" }}>
             <Box
               style={{
@@ -526,11 +569,9 @@ export function MapMarkerDetail({
         </Box>
       )}
 
-      {/* Body */}
-      <ScrollArea.Autosize mah={isMobile ? "calc(45vh - 60px)" : 400} type="auto">
-      <Box px={16} py={12}>
-        {/* Severity */}
-        <Group justify="space-between" mb={12}>
+      {/* Body — mobile pins View details below a clamped description so the CTA never sits under the nav. */}
+      <SheetBody mobile={Boolean(isMobile)}>
+          <Group justify="space-between" mb={12}>
           <Box>
             <Text size="xs" c="var(--color-text-muted)" tt="uppercase" style={{ fontSize: 10 }}>{t("detail.severity")}</Text>
             <Badge
@@ -550,11 +591,7 @@ export function MapMarkerDetail({
         </Group>
 
         {/* Description */}
-        {marker.description && (
-          <Text size="xs" c="var(--color-text-secondary)" mb={12} pb={8} className="border-b border-[var(--color-border)]">
-            {marker.description}
-          </Text>
-        )}
+        {descriptionBlock}
 
         {/* Details */}
         <Stack gap={0} mb={12}>
@@ -708,34 +745,11 @@ export function MapMarkerDetail({
           )}
         </Stack>
 
-        {marker.eventId && (
-          <Button
-            size="xs"
-            fullWidth
-            component={Link}
-            href={
-              marker.markerKind === "crisis"
-                ? `/crisis/${marker.eventId}?from=map`
-                : marker.markerKind === "signal"
-                ? `/signal/${marker.eventId}?from=map`
-                : `/event/${marker.eventId}?from=map`
-            }
-            className="btn-accent"
-            styles={{
-              root: {
-                background: "var(--color-accent)",
-                borderColor: "var(--color-accent)",
-                color: "#FFFFFF",
-                fontWeight: 600,
-                "&:hover": { background: "var(--color-accent-hover)" },
-              },
-            }}
-          >
-            {t("detail.viewDetails")}
-          </Button>
-        )}
-      </Box>
-      </ScrollArea.Autosize>
+        {!isMobile && viewDetailsButton}
+      </SheetBody>
+      {isMobile && viewDetailsButton ? (
+        <Box className={styles.ctaMobile}>{viewDetailsButton}</Box>
+      ) : null}
     </Box>
 
       {isSignal && marker.eventId && (
@@ -754,6 +768,29 @@ export function MapMarkerDetail({
         />
       )}
     </>
+  );
+}
+
+function SheetBody({
+  mobile,
+  children,
+}: {
+  mobile: boolean;
+  children: ReactNode;
+}) {
+  if (mobile) {
+    return (
+      <Box className={styles.bodyMobile} data-no-drag>
+        {children}
+      </Box>
+    );
+  }
+  return (
+    <ScrollArea.Autosize mah={400} type="auto">
+      <Box px={16} py={12}>
+        {children}
+      </Box>
+    </ScrollArea.Autosize>
   );
 }
 

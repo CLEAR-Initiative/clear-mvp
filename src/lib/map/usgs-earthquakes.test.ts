@@ -13,7 +13,8 @@ import {
 } from "./usgs-earthquakes";
 
 describe("toSeismicMapCollection", () => {
-  const now = new Date("2026-08-01T12:00:00Z");
+  // Relative to wall clock — slimProperties ages events with Date.now().
+  const now = new Date();
   const recentMs = now.getTime() - 5 * 24 * 60 * 60 * 1000; // 5 days ago
   const staleMs = now.getTime() - 35 * 24 * 60 * 60 * 1000; // 35 days ago
 

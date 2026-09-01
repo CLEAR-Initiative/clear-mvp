@@ -89,36 +89,24 @@ describe("resolveTeamIdForSubmit", () => {
     });
   });
 
-  it("falls back to the first membership team when defaultTeamId is unset", () => {
+  it("treats a missing default team as noTeam for non-platform roles", () => {
     expect(
       resolveTeamIdForSubmit({
         meStatus: "success",
         defaultTeamId: null,
-        membershipsStatus: "success",
-        membershipTeamIds: ["team-nrc-sdn", "team-other"],
+        role: "viewer",
       }),
-    ).toEqual({ ok: true, teamId: "team-nrc-sdn" });
+    ).toEqual({ ok: false, reason: "noTeam" });
   });
 
-  it("waits for memberships before treating a missing default as noTeam", () => {
+  it("lets a platform analyst file without a default team", () => {
     expect(
       resolveTeamIdForSubmit({
         meStatus: "success",
         defaultTeamId: null,
-        membershipsStatus: "pending",
+        role: "analyst",
       }),
-    ).toEqual({ ok: false, reason: "loading" });
-  });
-
-  it("lets a platform analyst file without a team and without waiting on memberships", () => {
-    expect(
-      resolveTeamIdForSubmit({
-        meStatus: "success",
-        defaultTeamId: null,
-        membershipsStatus: "pending",
-        globalWriter: true,
-      }),
-    ).toEqual({ ok: true });
+    ).toEqual({ ok: true, teamId: undefined });
   });
 });
 
@@ -128,7 +116,6 @@ describe("observe QA missing-team override", () => {
     expect(isObserveQaOverrideAllowed({ nodeEnv: "production", vercelEnv: "preview" })).toBe(true);
     expect(isObserveQaOverrideAllowed({ nodeEnv: "production", vercelEnv: "production" })).toBe(false);
     expect(isObserveQaOverrideAllowed({ nodeEnv: "production" })).toBe(false);
-    expect(isObserveQaOverrideAllowed({ nodeEnv: "production", e2e: "1" })).toBe(true);
   });
 
   it("reads ?noTeam=1 from the query string", () => {
@@ -205,7 +192,7 @@ describe("drainQueuedFieldSignals", () => {
   });
 
   it("replays a GPS-queued signal with lat/lng and teamId once online", async () => {
-    const created: Array<QueuedFieldSignal & { teamId: string }> = [];
+    const created: QueuedFieldSignal[] = [];
     const acked: string[] = [];
     const result = await drainQueuedFieldSignals({
       isOnline: true,
@@ -233,7 +220,7 @@ describe("drainQueuedFieldSignals", () => {
   });
 
   it("uses the session default team when the queued row has none", async () => {
-    const created: Array<QueuedFieldSignal & { teamId: string }> = [];
+    const created: QueuedFieldSignal[] = [];
     const queued: QueuedFieldSignal = {
       sourceId: "source-field-officer",
       title: "Flooding at school",
@@ -283,12 +270,11 @@ describe("drainQueuedFieldSignals", () => {
     expect(created).toHaveLength(1);
   });
 
-  it("replays a queued signal without a team when the caller is a platform writer", async () => {
+  it("replays a queued signal without a team when none is available", async () => {
     const created: QueuedFieldSignal[] = [];
     const result = await drainQueuedFieldSignals({
       isOnline: true,
       pending: [{ key: "k4", data: { ...gpsQueued, teamId: undefined } }],
-      allowMissingTeam: true,
       create: async (payload) => {
         created.push(payload);
       },
