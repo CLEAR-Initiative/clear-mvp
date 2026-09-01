@@ -4,7 +4,13 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Drawer, Box, Group, Text, ActionIcon } from "@mantine/core";
-import { IconX, IconExternalLink } from "@tabler/icons-react";
+import { useMediaQuery } from "@mantine/hooks";
+import {
+  IconX,
+  IconExternalLink,
+  IconChevronLeft,
+  IconChevronRight,
+} from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { EventDetailContent } from "./event-detail-content";
@@ -13,17 +19,31 @@ interface EventDetailDrawerProps {
   eventId: string | null;
   opened: boolean;
   onClose: () => void;
+  /** Optional list scrub chrome (Detection feed preview, etc.). */
+  navigation?: {
+    prevId: string | null;
+    nextId: string | null;
+    hasPrev: boolean;
+    hasNext: boolean;
+    position: string;
+  };
+  onNavigatePrev?: () => void;
+  onNavigateNext?: () => void;
 }
 
 export function EventDetailDrawer({
   eventId,
   opened,
   onClose,
+  navigation,
+  onNavigatePrev,
+  onNavigateNext,
 }: EventDetailDrawerProps) {
   const t = useTranslations("eventDetail");
   const router = useRouter();
   const originalPathRef = useRef<string | null>(null);
   const { activeTeamId } = useTeam();
+  const isMobile = useMediaQuery("(max-width: 48em)") === true;
 
   const eventQuery = api.events.get.useQuery(
     { id: eventId! },
@@ -46,9 +66,9 @@ export function EventDetailDrawer({
   useEffect(() => {
     if (opened && eventId != null) {
       if (originalPathRef.current === null) {
-        originalPathRef.current = window.location.pathname;
+        originalPathRef.current = window.location.pathname + window.location.search;
       }
-      window.history.replaceState(null, "", `/event/${eventId}`);
+      window.history.replaceState(null, "", `/event/${eventId}?from=detection`);
     }
   }, [opened, eventId]);
 
@@ -64,7 +84,7 @@ export function EventDetailDrawer({
       opened={opened}
       onClose={onClose}
       position="right"
-      size="min(680px, 85vw)"
+      size={isMobile ? "100%" : "min(680px, 85vw)"}
       withCloseButton={false}
       styles={{
         body: { padding: 0, height: "100%" },
@@ -82,9 +102,45 @@ export function EventDetailDrawer({
         }}
       >
         <Group justify="space-between">
-          <Text fw={600} c="var(--color-text-primary)" size="sm">
-            {t("drawer.title")}
-          </Text>
+          <Group gap={10}>
+            <Text fw={600} c="var(--color-text-primary)" size="sm">
+              {t("drawer.title")}
+            </Text>
+            {navigation && (
+              <Group gap={6}>
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  size="sm"
+                  onClick={onNavigatePrev}
+                  disabled={!navigation.hasPrev}
+                  title={t("nav.previous")}
+                  aria-label={t("nav.previous")}
+                >
+                  <IconChevronLeft size={16} />
+                </ActionIcon>
+                <Text
+                  size="xs"
+                  c="var(--color-text-muted)"
+                  fw={500}
+                  style={{ minWidth: 48, textAlign: "center" }}
+                >
+                  {navigation.position}
+                </Text>
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  size="sm"
+                  onClick={onNavigateNext}
+                  disabled={!navigation.hasNext}
+                  title={t("nav.next")}
+                  aria-label={t("nav.next")}
+                >
+                  <IconChevronRight size={16} />
+                </ActionIcon>
+              </Group>
+            )}
+          </Group>
           <Group gap={8}>
             <ActionIcon
               variant="subtle"
@@ -92,8 +148,13 @@ export function EventDetailDrawer({
               size="sm"
               onClick={() => {
                 if (eventId == null) return;
-                onClose();
-                router.push(`/event/${eventId}`);
+                // Stay open through the route change — do not close/animate the
+                // drawer away first. Clear restore path so unmount does not
+                // rewrite the URL back to Detection under the push.
+                // replaceState already put `/event/:id` in the bar; Next's
+                // router still thinks we are on Detection, so push navigates.
+                originalPathRef.current = null;
+                router.push(`/event/${eventId}?from=detection`);
               }}
               title={t("drawer.openFullPage")}
             >
@@ -120,6 +181,9 @@ export function EventDetailDrawer({
           mode="drawer"
           relatedEvents={relatedQuery.data ?? []}
           relatedLoading={relatedQuery.isLoading}
+          navigation={navigation}
+          onNavigatePrev={onNavigatePrev}
+          onNavigateNext={onNavigateNext}
         />
       </Box>
     </Drawer>
