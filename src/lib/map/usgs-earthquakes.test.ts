@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ageDaysSinceEpoch,
   filterSeismicMapCollection,
@@ -13,10 +13,18 @@ import {
 } from "./usgs-earthquakes";
 
 describe("toSeismicMapCollection", () => {
-  // Relative to wall clock — slimProperties ages events with Date.now().
-  const now = new Date();
+  // Fixed clock — slimProperties ages events with Date.now().
+  const now = new Date("2026-09-01T12:00:00Z");
   const recentMs = now.getTime() - 5 * 24 * 60 * 60 * 1000; // 5 days ago
   const staleMs = now.getTime() - 35 * 24 * 60 * 60 * 1000; // 35 days ago
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   const input: UsgsFdsnCollection = {
     type: "FeatureCollection",
