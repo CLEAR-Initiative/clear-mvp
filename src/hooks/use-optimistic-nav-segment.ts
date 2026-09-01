@@ -14,19 +14,18 @@ export function deriveSettledNavSegment(
 }
 
 /**
- * Frost overlay only while actually on `/map`, or while a click is
- * optimistically heading there. Detail pages with `?from=map` still highlight
- * the Map tab via `deriveSettledNavSegment`, but must stay in-flow (solid
- * sidebar) so content does not mount under the glass.
+ * Frost overlay only while the settled route is `/map`.
  *
- * While still settled on `/map`, overlay stays on even if optimism points
+ * Do **not** key off click optimism toward Map — that turns the sidebar into
+ * glass over the outgoing page (blurred Detection cards) before the Map
+ * preloader paints (#504). Detail `?from=map` still highlights Map via
+ * `deriveSettledNavSegment` but must stay in-flow (solid sidebar).
+ *
+ * While settled on `/map`, overlay stays on even if nav optimism points
  * elsewhere — dropping it early flex-resizes the Mapbox canvas (white flash).
  */
-export function isMapNavOverlay(
-  activeSegment: string,
-  optimisticSegment: string | null,
-): boolean {
-  return activeSegment === "map" || optimisticSegment === "map";
+export function isMapNavOverlay(activeSegment: string): boolean {
+  return activeSegment === "map";
 }
 
 /**
