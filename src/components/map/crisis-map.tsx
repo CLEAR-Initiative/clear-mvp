@@ -217,6 +217,12 @@ interface CrisisMapProps {
   showBoundaries?: boolean;
   /** Show/hide markers layer */
   showMarkers?: boolean;
+  /**
+   * Region-zoom density heatmap (z < 5). Default on for `/map`.
+   * Detection's compact pane is too small for a meaningful heat field —
+   * pass false to keep donuts/points at every zoom.
+   */
+  showDensityHeatmap?: boolean;
   /** Show/hide roads overlay (applies to all basemap types) */
   showRoads?: boolean;
   /**
@@ -585,6 +591,7 @@ export function CrisisMap({
   onClusterExpand,
   showBoundaries = true,
   showMarkers = true,
+  showDensityHeatmap = true,
   showRoads = true,
   showNrcLocations = false,
   showBlockages = false,
@@ -1550,40 +1557,44 @@ export function CrisisMap({
       },
     });
 
+    const densityOpts = { heatmap: showDensityHeatmap };
+
     // Separate unclustered source so the global heatmap sees every active marker.
-    m.addSource(HEAT_SOURCE, {
-      type: "geojson",
-      data: { type: "FeatureCollection", features },
-    });
-    m.addLayer({
-      id: HEAT_LAYER,
-      type: "heatmap",
-      source: HEAT_SOURCE,
-      // No Mapbox maxzoom — opacity is driven from zoom so the layer can
-      // crossfade with donuts instead of vanishing mid-gesture.
-      paint: {
-        "heatmap-weight": ["coalesce", ["get", "heat_weight"], 0.7],
-        "heatmap-intensity": [
-          "interpolate", ["linear"], ["zoom"],
-          0, 0.7,
-          DENSITY_HEATMAP_MAX_ZOOM, 1.35,
-        ],
-        "heatmap-color": [
-          "interpolate", ["linear"], ["heatmap-density"],
-          0, "rgba(0,0,0,0)",
-          0.15, "rgba(251,191,36,0.25)",
-          0.4, "rgba(217,119,6,0.45)",
-          0.7, "rgba(220,38,38,0.7)",
-          1, "rgba(153,27,27,0.9)",
-        ],
-        "heatmap-radius": [
-          "interpolate", ["linear"], ["zoom"],
-          0, 12,
-          DENSITY_HEATMAP_MAX_ZOOM, 28,
-        ],
-        "heatmap-opacity": DENSITY_HEATMAP_PEAK_OPACITY,
-      },
-    });
+    if (showDensityHeatmap) {
+      m.addSource(HEAT_SOURCE, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features },
+      });
+      m.addLayer({
+        id: HEAT_LAYER,
+        type: "heatmap",
+        source: HEAT_SOURCE,
+        // No Mapbox maxzoom — opacity is driven from zoom so the layer can
+        // crossfade with donuts instead of vanishing mid-gesture.
+        paint: {
+          "heatmap-weight": ["coalesce", ["get", "heat_weight"], 0.7],
+          "heatmap-intensity": [
+            "interpolate", ["linear"], ["zoom"],
+            0, 0.7,
+            DENSITY_HEATMAP_MAX_ZOOM, 1.35,
+          ],
+          "heatmap-color": [
+            "interpolate", ["linear"], ["heatmap-density"],
+            0, "rgba(0,0,0,0)",
+            0.15, "rgba(251,191,36,0.25)",
+            0.4, "rgba(217,119,6,0.45)",
+            0.7, "rgba(220,38,38,0.7)",
+            1, "rgba(153,27,27,0.9)",
+          ],
+          "heatmap-radius": [
+            "interpolate", ["linear"], ["zoom"],
+            0, 12,
+            DENSITY_HEATMAP_MAX_ZOOM, 28,
+          ],
+          "heatmap-opacity": DENSITY_HEATMAP_PEAK_OPACITY,
+        },
+      });
+    }
 
     // Ghost layers (opacity 0) - required for queryRenderedFeatures to return
     // cluster and point features so we can drive custom DOM donut markers.
@@ -1651,7 +1662,7 @@ export function CrisisMap({
           const cid    = props.cluster_id;
           if (!isValidLngLat(coords) || cid == null || !Number.isFinite(Number(cid))) continue;
           const el = buildDonutEl(props);
-          el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
+          el.style.opacity = String(markerOpacityForZoom(m.getZoom(), densityOpts));
           el.addEventListener("click", () => {
             // Snapshot donut-level camera + cluster size before expanding.
             const c = m.getCenter();
@@ -1789,7 +1800,7 @@ export function CrisisMap({
         if (isCrisisMarker) {
           el.classList.add("crisis-marker");
         }
-        el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
+        el.style.opacity = String(markerOpacityForZoom(m.getZoom(), densityOpts));
         // Pick mode: block pin clicks even after pan/zoom rebuilds markers.
         if (locationPickActiveRef.current) {
           el.style.pointerEvents = "none";
@@ -1832,13 +1843,13 @@ export function CrisisMap({
 
     const syncDensityVisuals = (rebuildMarkers: boolean) => {
       const z = m.getZoom();
-      const heatOp = heatmapOpacityForZoom(z);
-      const markerOp = markerOpacityForZoom(z);
+      const heatOp = heatmapOpacityForZoom(z, densityOpts);
+      const markerOp = markerOpacityForZoom(z, densityOpts);
       setHeatOpacity(heatOp);
       setDomMarkerOpacity(markerOp);
 
-      const wantMount = markersShouldMount(z);
-      const mode = aggregationModeForZoom(z);
+      const wantMount = markersShouldMount(z, densityOpts);
+      const mode = aggregationModeForZoom(z, densityOpts);
       // In the crossfade below the floor, settled mode is still "heatmap" but
       // markers must already be mounted (as donuts) so they can fade in.
       const renderMode: DensityAggregationMode =
@@ -1898,7 +1909,7 @@ export function CrisisMap({
       m.off("moveend", onZoomEnd);
       m.off("sourcedata", onSourceData);
     };
-  }, [markers, loaded, showMarkers, baseMapType]);
+  }, [markers, loaded, showMarkers, showDensityHeatmap, baseMapType]);
 
   // ── Marker hover pulse (synced from list) ────────────────────────────────
   useEffect(() => {
