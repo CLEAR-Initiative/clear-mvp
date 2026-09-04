@@ -53,6 +53,21 @@ export function useTeamCountry() {
 }
 
 /**
+ * Country names the picker may list.
+ *
+ * A scoped team sees only its bindings. An unscoped team sees every country
+ * the API knows about (global monitoring, same as `buildLocationFilterForTeam`).
+ */
+export function scopeCountryOptions(
+  allCountries: readonly string[],
+  scopedCountryNames: readonly string[],
+): string[] {
+  if (scopedCountryNames.length === 0) return [...allCountries];
+  const scoped = new Set(scopedCountryNames);
+  return allCountries.filter((c) => scoped.has(c));
+}
+
+/**
  * Country names the active team may switch between.
  *
  * Returns every country in the team's scope (a team can be bound to more than
@@ -61,10 +76,56 @@ export function useTeamCountry() {
  * `buildLocationFilterForTeam`.
  */
 export function useScopedCountryOptions(allCountries: string[]): string[] {
-  const { countries, hasCountryScope } = useTeamCountry();
-  return useMemo(() => {
-    if (!hasCountryScope) return allCountries;
-    const scoped = new Set(countries.map((c) => c.name));
-    return allCountries.filter((c) => scoped.has(c));
-  }, [allCountries, countries, hasCountryScope]);
+  const { countries } = useTeamCountry();
+  return useMemo(
+    () => scopeCountryOptions(allCountries, countries.map((c) => c.name)),
+    [allCountries, countries],
+  );
+}
+
+/**
+ * Country the picker should display.
+ *
+ * One binding pins the page (no escape hatch). Several bindings default to
+ * the first name but honour a pick that is still in scope. No bindings
+ * (global monitoring) use the pick as-is, including "All Countries".
+ */
+export function resolveSelectedCountry(
+  scopedCountryNames: readonly string[],
+  pickedCountry: string,
+): string {
+  if (scopedCountryNames.length === 1) return scopedCountryNames[0]!;
+  if (scopedCountryNames.length > 1) {
+    return scopedCountryNames.includes(pickedCountry)
+      ? pickedCountry
+      : scopedCountryNames[0]!;
+  }
+  return pickedCountry;
+}
+
+export type StaleCountryPick = {
+  picked: string;
+  selected: string;
+  options: string[];
+};
+
+/**
+ * True when the picker listed several countries, the user picked one of
+ * them, and the page displayed something else. That is the Detection
+ * "dropdown works but stays Afghanistan" failure — a logic pin, not a throw.
+ *
+ * Empty / out-of-scope picks are not stale: those default to the first
+ * scoped name on purpose.
+ */
+export function staleCountryPick(args: {
+  options: readonly string[];
+  picked: string;
+  selected: string;
+}): StaleCountryPick | null {
+  const { options, picked, selected } = args;
+  if (options.length <= 1) return null;
+  if (!picked) return null;
+  if (!options.includes(picked)) return null;
+  if (selected === picked) return null;
+  return { picked, selected, options: [...options] };
 }

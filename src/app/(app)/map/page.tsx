@@ -27,7 +27,8 @@ import {
 } from "~/lib/map/point-altitude";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
-import { useTeamCountry, useScopedCountryOptions } from "~/hooks/use-team-country";
+import { useTeamCountry, useScopedCountryOptions, resolveSelectedCountry } from "~/hooks/use-team-country";
+import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import {
   type CrisisMarker,
   alertsToMarkers,
@@ -221,7 +222,11 @@ function MapPageContent() {
   /* ---- Fetch data ---- */
   const { activeTeamId, activeTeam } = useTeam();
   const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId, locationById } = useLocations();
-  const { countryName: teamCountryName } = useTeamCountry();
+  const { countries: teamCountries, countryName: teamCountryName } = useTeamCountry();
+  const teamCountryNames = useMemo(
+    () => teamCountries.map((c) => c.name),
+    [teamCountries],
+  );
 
   // Timeline state. Stored as "YYYY-MM"; null means "all time".
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -548,12 +553,11 @@ function MapPageContent() {
     return codes;
   }, [selectedTypes, hierarchy]);
 
-  // Country the user picked. Only consulted when the active team monitors
-  // globally; a team bound to a country is pinned to it via selectedCountry
-  // below, so "All Countries" is not reachable for them.
+  // Country the user picked. A one-country team stays pinned; a multi-country
+  // team can switch inside its scope. Unscoped teams keep "All Countries".
   const [pickedCountry, setPickedCountry] = useState("All Countries");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
-  const selectedCountry = teamCountryName ?? pickedCountry;
+  const selectedCountry = resolveSelectedCountry(teamCountryNames, pickedCountry);
   const setSelectedCountry = setPickedCountry;
 
   // Reset the region whenever the team (and therefore the country) changes.
@@ -1014,6 +1018,7 @@ function MapPageContent() {
     () => (teamCountryName ? scopedCountries : ["All Countries", ...apiCountries]),
     [teamCountryName, scopedCountries, apiCountries],
   );
+  useReportStaleCountryPick(countryOptions, pickedCountry, selectedCountry);
   const regionOptions = useMemo(
     () => selectedCountry !== "All Countries" ? getRegions(selectedCountry) : ["All Regions"],
     [selectedCountry, getRegions],

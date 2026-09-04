@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Box } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import dynamic from "next/dynamic";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { useLocations } from "~/hooks/use-locations";
-import { useTeamCountry } from "~/hooks/use-team-country";
+import { useTeamCountry, resolveSelectedCountry } from "~/hooks/use-team-country";
+import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import {
   alertsToMarkers,
@@ -50,21 +51,29 @@ export default function DashboardPage() {
   const { getLocationId, getCenter, getZoom } = useLocations();
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
 
-  // Frame the map on the active team's country rather than a fixed one. A team
-  // with no level-0 binding monitors globally, so every country-scoped overlay
-  // query below stays disabled and the camera keeps its world view.
-  const { countryId: teamCountryId, countryName: teamCountryName } = useTeamCountry();
+  // Frame the map on the resolved country (pick inside a multi-country
+  // scope, or the single binding). Unscoped teams keep a world view until
+  // the right-panel directory sets a pick.
+  const { countries: teamCountries } = useTeamCountry();
+  const teamCountryNames = useMemo(
+    () => teamCountries.map((c) => c.name),
+    [teamCountries],
+  );
+  const [pickedCountry, setPickedCountry] = useState("");
+  const selectedCountry = resolveSelectedCountry(teamCountryNames, pickedCountry);
+  const setSelectedCountry = setPickedCountry;
+  useReportStaleCountryPick(teamCountryNames, pickedCountry, selectedCountry);
+
   const focusCountryId = useMemo(
-    () => teamCountryId ?? (teamCountryName ? getLocationId(teamCountryName) : null),
-    [teamCountryId, teamCountryName, getLocationId],
+    () => (selectedCountry ? getLocationId(selectedCountry) : null),
+    [selectedCountry, getLocationId],
   );
   const focusCountryL0Query = api.locations.getById.useQuery(
     { id: focusCountryId! },
     { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
   const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
-  const focusCountryPCode = resolveCountryConfig(teamCountryName ?? undefined)?.pCode;
-  const [selectedCountry, setSelectedCountry] = useState(teamCountryName ?? "");
+  const focusCountryPCode = resolveCountryConfig(selectedCountry || undefined)?.pCode;
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(null);
   const [detailAnchor, setDetailAnchor] = useState<MarkerScreenPoint | null>(null);
   const [detailChromeActive, setDetailChromeActive] = useState(false);
@@ -74,12 +83,6 @@ export default function DashboardPage() {
   const [showRoads, setShowRoads] = useState(true);
   const [showNrcLocations, setShowNrcLocations] = useState(false);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
-
-  // Teams resolve after first paint, so the initial state above can be empty.
-  // Adopt the team's country once it arrives.
-  useEffect(() => {
-    if (teamCountryName) setSelectedCountry(teamCountryName);
-  }, [teamCountryName]);
 
   const alertsQuery = api.alerts.alertsForMap.useQuery(
     { activeOnly: true, teamId: activeTeamId },

@@ -12,7 +12,8 @@ import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
-import { useTeamCountry, useScopedCountryOptions } from "~/hooks/use-team-country";
+import { useTeamCountry, useScopedCountryOptions, resolveSelectedCountry } from "~/hooks/use-team-country";
+import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { parseDateFilter, resolveCountryConfig } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
@@ -193,9 +194,8 @@ function DetectionPageContent() {
       commitTabRoute(tab);
     }, TAB_SKELETON_DELAY_MS);
   }, [indicatorTab, clearTabTimers, commitTabRoute]);
-  // Country the user picked. Only consulted when the active team monitors
-  // globally: a team bound to a country is pinned to it (see selectedCountry
-  // below), so the picker cannot take them out of scope.
+  // Country the user picked. A one-country team stays pinned; a multi-country
+  // team can switch inside its scope (see resolveSelectedCountry).
   const [pickedCountry, setPickedCountry] = useState("");
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("Last 30 days");
@@ -230,15 +230,19 @@ function DetectionPageContent() {
 
   const { activeTeamId } = useTeam();
   const { countries, getCenter, getZoom, getLocationId, tree, isLoading: isLocationsLoading } = useLocations();
-  const { countryName: teamCountryName } = useTeamCountry();
+  const { countries: teamCountries } = useTeamCountry();
+  const teamCountryNames = useMemo(
+    () => teamCountries.map((c) => c.name),
+    [teamCountries],
+  );
 
-  // A team's country binding wins over any picked/restored value. Derived
-  // rather than synced through an effect so there is no window where the page
-  // queries one country while the team is scoped to another (that mismatch
-  // ANDs to zero rows server-side and renders an unexplained empty page).
-  const selectedCountry = teamCountryName ?? pickedCountry;
+  // Derived rather than synced through an effect so there is no window where
+  // the page queries one country while the team is scoped to another (that
+  // mismatch ANDs to zero rows server-side and renders an unexplained empty page).
+  const selectedCountry = resolveSelectedCountry(teamCountryNames, pickedCountry);
   const setSelectedCountry = setPickedCountry;
   const countryOptions = useScopedCountryOptions(countries);
+  useReportStaleCountryPick(countryOptions, pickedCountry, selectedCountry);
 
   // Ground intel is a PRIVATE staging tier (sender names, unvetted claims):
   // clear-api rejects every ground query for roles other than admin/analyst,
