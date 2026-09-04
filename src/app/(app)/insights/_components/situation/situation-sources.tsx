@@ -85,7 +85,10 @@ function Reference({
   publishedLabel: string | null;
   visitLabel: string;
 }) {
-  const publisher = publisherFromUrl(source.url);
+  // Prefer the publisher clear-api resolved from the report's ReliefWeb
+  // `source` ("OCHA", "WFP"); the URL host is the label of last resort and
+  // only ever says "reliefweb.int" - the aggregator, not the publisher.
+  const publisher = source.publisher ?? publisherFromUrl(source.url);
 
   return (
     <Box
@@ -175,8 +178,8 @@ function Reference({
   );
 }
 
-/** Bare host as a publisher proxy (e.g. "reliefweb.int"). The pipeline carries
- *  no explicit publisher field, so this is derived from the source URL. */
+/** Bare host as a publisher proxy (e.g. "reliefweb.int"). Fallback for legacy
+ *  (pre-source-attribution) reports whose publisher clear-api cannot resolve. */
 function publisherFromUrl(url: string | null): string | null {
   if (!url) return null;
   try {

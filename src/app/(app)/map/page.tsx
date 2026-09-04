@@ -52,6 +52,14 @@ import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
 import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
 import {
+  asCameraPose,
+  keepPreOpenRestore,
+  lastDetailCloseRestore,
+  mobileMarkerFocusZoom,
+  type CameraPose,
+  type CenterZoom,
+} from "~/lib/map/marker-detail-camera";
+import {
   readMapViewState,
   writeMapViewState,
   type MapViewCamera,
@@ -563,27 +571,27 @@ function MapPageContent() {
   const connectorRafRef = useRef<number | null>(null);
   /** When set, camera flies to this marker; closing restores `returnCamera`. */
   const [markerFocus, setMarkerFocus] = useState<{ lng: number; lat: number; zoom: number } | null>(null);
-  /** Camera to restore when closing a marker sheet (usually the prior cluster/donut layer). */
-  const [returnCamera, setReturnCamera] = useState<{ center: [number, number]; zoom: number } | null>(null);
+  /** Camera to restore when closing a marker sheet (pre-open pose). */
+  const [returnCamera, setReturnCamera] = useState<CameraPose | null>(null);
   /** Bumped on detail close so CrisisMap always flies back to returnCamera. */
   const [forceFlyToken, setForceFlyToken] = useState(0);
   const panelZRef = useRef(10);
   /** Live browse camera from Mapbox (includes cluster fitBounds not tracked by React props). */
-  const browseCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const browseCameraRef = useRef<MapViewCamera | null>(null);
   /** Last browse camera while not in marker focus. */
-  const layerCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const layerCameraRef = useRef<MapViewCamera | null>(null);
   /** Donut-level camera captured when a cluster is tapped (before expand). */
-  const donutCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const donutCameraRef = useRef<MapViewCamera | null>(null);
   /** True after a donut cluster is expanded (until detail closes / panels clear). */
   const openedFromClusterRef = useRef(false);
   /** How many markers were in the last expanded cluster (0 = none). */
   const clusterLeafCountRef = useRef(0);
   /**
-   * Camera to restore when the last detail panel closes (group pins → expanded
-   * cluster framing). Lonely pins keep the detail zoom on close.
-   * Decided at open - never mutated inside a setState updater (Strict Mode safe).
+   * Camera to restore when the last detail panel closes (pre-open pose for
+   * every pin — lonely and group). Decided at open - never mutated inside a
+   * setState updater (Strict Mode safe).
    */
-  const detailRestoreCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const detailRestoreCameraRef = useRef<CameraPose | null>(null);
   /** True when the open detail should close back to group zoom. */
   const detailCloseIsGroupRef = useRef(false);
   const openPanelsRef = useRef(openPanels);
@@ -663,14 +671,7 @@ function MapPageContent() {
     const live =
       camera ??
       mapApiRef.current?.getViewCamera() ??
-      (browseCameraRef.current
-        ? {
-            center: browseCameraRef.current.center,
-            zoom: browseCameraRef.current.zoom,
-            pitch: 0,
-            bearing: 0,
-          }
-        : null);
+      browseCameraRef.current;
     const cameraToSave = live ?? readMapViewState()?.camera ?? null;
     if (!cameraToSave) return;
     writeMapViewState({
@@ -705,7 +706,7 @@ function MapPageContent() {
   }, [persistMapView, restoreReady]);
 
   const handleClusterExpand = useCallback((
-    camera: { center: [number, number]; zoom: number },
+    camera: MapViewCamera,
     leafCount: number,
   ) => {
     donutCameraRef.current = camera;
@@ -1242,7 +1243,7 @@ function MapPageContent() {
 
     if (!closingLast) return;
 
-    const restore = detailRestoreCameraRef.current;
+    const restore = lastDetailCloseRestore(detailRestoreCameraRef.current);
     const wasGroup = detailCloseIsGroupRef.current;
     const focused = markerFocusRef.current;
     detailRestoreCameraRef.current = null;
@@ -1259,27 +1260,26 @@ function MapPageContent() {
     setMarkerFocus(null);
     markerFocusRef.current = null;
 
-    if (wasGroup && restore) {
-      // Group pin → fly back to the expanded-group zoom.
-      const target = {
-        center: [restore.center[0], restore.center[1]] as [number, number],
-        zoom: restore.zoom,
-      };
-      setReturnCamera(target);
-      returnCameraRef.current = target;
+    if (restore) {
+      setReturnCamera(restore);
+      returnCameraRef.current = restore;
       setForceFlyToken((n) => n + 1);
       return;
     }
 
-    // Lonely pin → keep the detail zoom (do not zoom out to country overview).
+    // No snapshot (shouldn't happen on mobile open) — keep framing, don't
+    // fitBounds back to country overview.
     if (focused) {
-      const target = {
-        center: [focused.lng, focused.lat] as [number, number],
+      const target = asCameraPose({
+        center: [focused.lng, focused.lat],
         zoom: focused.zoom,
-      };
-      setReturnCamera(target);
-      returnCameraRef.current = target;
-      return;
+      });
+      if (target) {
+        setReturnCamera(target);
+        returnCameraRef.current = target;
+        setForceFlyToken((n) => n + 1);
+        return;
+      }
     }
 
     setReturnCamera(null);
@@ -1585,7 +1585,7 @@ function MapPageContent() {
     (
       marker: MapMarker,
       screenPoint: MarkerScreenPoint,
-      camera?: { center: [number, number]; zoom: number },
+      camera?: CenterZoom | CameraPose,
     ) => {
       const full =
         currentMarkers.find((m) => m.id === marker.id) ??
@@ -1596,37 +1596,40 @@ function MapPageContent() {
       // Mobile keeps focus-fly so the pin sits above the bottom sheet.
       if (isMobile) {
         // Click-time camera = group framing after donut expand, or country overview.
-        const prior = camera ?? browseCameraRef.current ?? layerCameraRef.current;
+        const live = mapApiRef.current?.getViewCamera();
+        const prior = asCameraPose(
+          camera ?? browseCameraRef.current ?? layerCameraRef.current ?? live,
+          live ?? { pitch: 0, bearing: 0 },
+        );
 
         const countryZoom =
           selectedCountry !== "All Countries"
             ? getZoom(selectedCountry)
             : 4;
 
-        // Group (≥2 markers from a donut): close returns to this group zoom.
-        // Lonely pin: close keeps the detail zoom (no country fitBounds).
+        // Group (≥2 markers from a donut): keep cluster context for siblings.
+        // Every pin — lonely or group — restores this pre-open camera on close.
         const fromGroup =
           openedFromClusterRef.current &&
           clusterLeafCountRef.current >= 2 &&
           prior != null;
 
         detailCloseIsGroupRef.current = fromGroup;
-        if (fromGroup) {
-          const restore = {
-            center: [prior.center[0], prior.center[1]] as [number, number],
-            zoom: prior.zoom,
-          };
-          detailRestoreCameraRef.current = restore;
-          setReturnCamera(restore);
-          returnCameraRef.current = restore;
+        const snapshot = keepPreOpenRestore(
+          detailRestoreCameraRef.current,
+          prior,
+        );
+        if (snapshot) {
+          detailRestoreCameraRef.current = snapshot;
+          setReturnCamera(snapshot);
+          returnCameraRef.current = snapshot;
         } else {
           detailRestoreCameraRef.current = null;
           setReturnCamera(null);
           returnCameraRef.current = null;
         }
 
-        // Zoom in past the current layer so close clearly returns outward.
-        const focusZoom = Math.min(14.5, (prior?.zoom ?? countryZoom) + 2.5);
+        const focusZoom = mobileMarkerFocusZoom(prior?.zoom, countryZoom);
         setMarkerFocus({ lng: full.lng, lat: full.lat, zoom: focusZoom });
         markerFocusRef.current = { lng: full.lng, lat: full.lat, zoom: focusZoom };
       } else {
@@ -1917,6 +1920,8 @@ function MapPageContent() {
               ? Math.round((typeof window !== "undefined" ? window.innerHeight : 700) * 0.45) + 72
               : 0
           }
+          flyPitch={!markerFocus ? returnCamera?.pitch : undefined}
+          flyBearing={!markerFocus ? returnCamera?.bearing : undefined}
           introFromGlobe={
             !cameraSeed && !focusEntityId && selectedCountry !== "All Countries"
           }

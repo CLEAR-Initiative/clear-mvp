@@ -52,6 +52,7 @@ import {
   shouldElevatePointPin,
 } from "~/lib/map/pin-elevation";
 import { bridgeMetaToCtrlForPitch } from "~/lib/map/meta-pitch-bridge";
+import { flyToOrientation, countryFitPadding, fitBoundsCameraOptions } from "~/lib/map/marker-detail-camera";
 import { ensureGlobeProjection } from "~/lib/map/idle-globe-spin";
 import {
   dismissTopographyTiltHint,
@@ -153,7 +154,7 @@ interface CrisisMapProps {
     marker: MapMarker,
     screenPoint: MarkerScreenPoint,
     /** Live Mapbox camera at click time (pre-focus), for layered zoom restore. */
-    camera?: { center: [number, number]; zoom: number },
+    camera?: MapViewCameraSnapshot,
   ) => void;
   onMarkerHover?: (marker: MapMarker | null) => void;
   interactive?: boolean;
@@ -192,6 +193,12 @@ interface CrisisMapProps {
    */
   flyPaddingBottom?: number;
   /**
+   * Explicit flyTo pitch/bearing (close-restore). Omit to keep the live
+   * camera orientation — never flatten because the bottom sheet added padding.
+   */
+  flyPitch?: number;
+  flyBearing?: number;
+  /**
    * Bump to force a flyTo to the current center/zoom props even when they
    * appear unchanged (used when closing a marker detail sheet).
    */
@@ -203,13 +210,19 @@ interface CrisisMapProps {
    * and the number of markers in that cluster.
    */
   onClusterExpand?: (
-    camera: { center: [number, number]; zoom: number },
+    camera: MapViewCameraSnapshot,
     leafCount: number,
   ) => void;
   /** Show/hide boundaries layer */
   showBoundaries?: boolean;
   /** Show/hide markers layer */
   showMarkers?: boolean;
+  /**
+   * Region-zoom density heatmap (z < 5). Default on for `/map`.
+   * Detection's compact pane is too small for a meaningful heat field —
+   * pass false to keep donuts/points at every zoom.
+   */
+  showDensityHeatmap?: boolean;
   /** Show/hide roads overlay (applies to all basemap types) */
   showRoads?: boolean;
   /**
@@ -413,6 +426,7 @@ function buildDonutEl(props: Record<string, number>): HTMLDivElement {
   const badgeR = Math.max(8, fontSize * 0.85);
 
   const el = document.createElement("div");
+  el.setAttribute("data-testid", "map-cluster-donut");
   el.style.cssText = `cursor:pointer;width:${size}px;height:${size}px;filter:drop-shadow(0 2px 5px rgba(0,0,0,0.22));`;
   el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     ${arcs}
@@ -570,11 +584,14 @@ export function CrisisMap({
   preserveDrawingBuffer = false,
   flyDuration = 1500,
   flyPaddingBottom = 0,
+  flyPitch,
+  flyBearing,
   forceFlyToken = 0,
   onCameraChange,
   onClusterExpand,
   showBoundaries = true,
   showMarkers = true,
+  showDensityHeatmap = true,
   showRoads = true,
   showNrcLocations = false,
   showBlockages = false,
@@ -1303,16 +1320,21 @@ export function CrisisMap({
     if (!nonceBumped && prevFramedCountry.current === framedKey) return;
     prevFramedCountry.current = framedKey;
 
-    // Narrow viewports: less padding so country fit stays country-level
-    // (80px on a phone shrinks the usable canvas and looks global).
+    // Mobile: inset for header + bottom nav so the full country sits in the
+    // visible hole. 36px uniform padding cropped the bbox under the chrome.
     const narrow =
       typeof window !== "undefined" && window.matchMedia("(max-width: 48em)").matches;
-    const padding = narrow ? 36 : 80;
+    const padding = countryFitPadding(narrow);
 
     try { map.current.stop(); } catch { /* ignore */ }
     map.current.fitBounds(
       [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
-      { padding, duration: 800 },
+      fitBoundsCameraOptions({
+        currentPitch: map.current.getPitch?.() ?? 0,
+        currentBearing: map.current.getBearing?.() ?? 0,
+        padding,
+        duration: 800,
+      }),
     );
   }, [
     focusCountryFitBounds,
@@ -1330,7 +1352,12 @@ export function CrisisMap({
     if (!bounds) return;
     map.current.fitBounds(
       [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
-      { padding: 60, duration: 800 },
+      fitBoundsCameraOptions({
+        currentPitch: map.current.getPitch?.() ?? 0,
+        currentBearing: map.current.getBearing?.() ?? 0,
+        padding: 60,
+        duration: 800,
+      }),
     );
   }, [fitBoundsGeometry, loaded]);
 
@@ -1391,8 +1418,10 @@ export function CrisisMap({
     // Country fitBounds owns framing whenever a focus country is selected —
     // including while L0 geometry is still loading. Otherwise flyTo races to
     // a wrong fallback center (e.g. Sudan for Venezuela) and fitBounds has to
-    // restart mid-flight (GH #112). Forced restore always wins.
-    if (!forced && focusCountryName && fitBoundsOnFocus && !fitBoundsGeometry) return;
+    // restart mid-flight (GH #112). Forced restore (marker close, tour) still
+    // wins when fitBoundsOnFocus is off; do not let forceFlyToken on country
+    // change cancel the padded mobile country fit.
+    if (focusCountryName && fitBoundsOnFocus && !fitBoundsGeometry) return;
     const paddingChanged = prevPadding.current !== flyPaddingBottom;
     if (
       !forced &&
@@ -1428,20 +1457,23 @@ export function CrisisMap({
     prevPadding.current = flyPaddingBottom;
     // Cancel any in-flight country fitBounds so a deep-link marker zoom wins.
     try { map.current.stop(); } catch { /* ignore */ }
-    // Preserve pitch/bearing for Topography session restore + browse.
-    // Mobile marker focus (bottom padding) and forced resets still flatten.
-    const flattenPitch = flyPaddingBottom > 0;
+    const { pitch, bearing } = flyToOrientation({
+      currentPitch: map.current.getPitch?.() ?? 0,
+      currentBearing: map.current.getBearing?.() ?? 0,
+      restorePitch: flyPitch,
+      restoreBearing: flyBearing,
+    });
     map.current.flyTo({
       center,
       zoom,
       duration: flyDuration,
-      pitch: flattenPitch ? 0 : (map.current.getPitch?.() ?? 0),
-      bearing: flattenPitch ? 0 : (map.current.getBearing?.() ?? 0),
+      pitch,
+      bearing,
       padding: flyPaddingBottom > 0
         ? { top: 48, bottom: flyPaddingBottom, left: 24, right: 24 }
         : { top: 0, bottom: 0, left: 0, right: 0 },
     });
-  }, [center, zoom, loaded, focusCountryName, flyDuration, fitBoundsOnFocus, fitBoundsGeometry, flyPaddingBottom, forceFlyToken]);
+  }, [center, zoom, loaded, focusCountryName, flyDuration, fitBoundsOnFocus, fitBoundsGeometry, flyPaddingBottom, flyPitch, flyBearing, forceFlyToken]);
 
   // ── Markers (density ladder: heatmap → donuts → points) ─────────────────
   useEffect(() => {
@@ -1525,40 +1557,44 @@ export function CrisisMap({
       },
     });
 
+    const densityOpts = { heatmap: showDensityHeatmap };
+
     // Separate unclustered source so the global heatmap sees every active marker.
-    m.addSource(HEAT_SOURCE, {
-      type: "geojson",
-      data: { type: "FeatureCollection", features },
-    });
-    m.addLayer({
-      id: HEAT_LAYER,
-      type: "heatmap",
-      source: HEAT_SOURCE,
-      // No Mapbox maxzoom — opacity is driven from zoom so the layer can
-      // crossfade with donuts instead of vanishing mid-gesture.
-      paint: {
-        "heatmap-weight": ["coalesce", ["get", "heat_weight"], 0.7],
-        "heatmap-intensity": [
-          "interpolate", ["linear"], ["zoom"],
-          0, 0.7,
-          DENSITY_HEATMAP_MAX_ZOOM, 1.35,
-        ],
-        "heatmap-color": [
-          "interpolate", ["linear"], ["heatmap-density"],
-          0, "rgba(0,0,0,0)",
-          0.15, "rgba(251,191,36,0.25)",
-          0.4, "rgba(217,119,6,0.45)",
-          0.7, "rgba(220,38,38,0.7)",
-          1, "rgba(153,27,27,0.9)",
-        ],
-        "heatmap-radius": [
-          "interpolate", ["linear"], ["zoom"],
-          0, 12,
-          DENSITY_HEATMAP_MAX_ZOOM, 28,
-        ],
-        "heatmap-opacity": DENSITY_HEATMAP_PEAK_OPACITY,
-      },
-    });
+    if (showDensityHeatmap) {
+      m.addSource(HEAT_SOURCE, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features },
+      });
+      m.addLayer({
+        id: HEAT_LAYER,
+        type: "heatmap",
+        source: HEAT_SOURCE,
+        // No Mapbox maxzoom — opacity is driven from zoom so the layer can
+        // crossfade with donuts instead of vanishing mid-gesture.
+        paint: {
+          "heatmap-weight": ["coalesce", ["get", "heat_weight"], 0.7],
+          "heatmap-intensity": [
+            "interpolate", ["linear"], ["zoom"],
+            0, 0.7,
+            DENSITY_HEATMAP_MAX_ZOOM, 1.35,
+          ],
+          "heatmap-color": [
+            "interpolate", ["linear"], ["heatmap-density"],
+            0, "rgba(0,0,0,0)",
+            0.15, "rgba(251,191,36,0.25)",
+            0.4, "rgba(217,119,6,0.45)",
+            0.7, "rgba(220,38,38,0.7)",
+            1, "rgba(153,27,27,0.9)",
+          ],
+          "heatmap-radius": [
+            "interpolate", ["linear"], ["zoom"],
+            0, 12,
+            DENSITY_HEATMAP_MAX_ZOOM, 28,
+          ],
+          "heatmap-opacity": DENSITY_HEATMAP_PEAK_OPACITY,
+        },
+      });
+    }
 
     // Ghost layers (opacity 0) - required for queryRenderedFeatures to return
     // cluster and point features so we can drive custom DOM donut markers.
@@ -1626,13 +1662,18 @@ export function CrisisMap({
           const cid    = props.cluster_id;
           if (!isValidLngLat(coords) || cid == null || !Number.isFinite(Number(cid))) continue;
           const el = buildDonutEl(props);
-          el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
+          el.style.opacity = String(markerOpacityForZoom(m.getZoom(), densityOpts));
           el.addEventListener("click", () => {
             // Snapshot donut-level camera + cluster size before expanding.
             const c = m.getCenter();
             const leafCount = Number(props.point_count) || 0;
             onClusterExpandRef.current?.(
-              { center: [c.lng, c.lat], zoom: m.getZoom() },
+              {
+                center: [c.lng, c.lat],
+                zoom: m.getZoom(),
+                pitch: m.getPitch?.() ?? 0,
+                bearing: m.getBearing?.() ?? 0,
+              },
               leafCount,
             );
             // Fetch all leaves so we can fitBounds to the full set - guarantees
@@ -1673,11 +1714,16 @@ export function CrisisMap({
               const sw: [number, number] = [Math.min(...lngs), Math.min(...lats)];
               const ne: [number, number] = [Math.max(...lngs), Math.max(...lats)];
               // Past donut band (z>8) so expand lands on individual pins, not re-clustered donuts.
-              m.fitBounds([sw, ne], {
-                padding: 80,
-                maxZoom: 13,
-                duration: 600,
-              });
+              m.fitBounds(
+                [sw, ne],
+                fitBoundsCameraOptions({
+                  currentPitch: m.getPitch?.() ?? 0,
+                  currentBearing: m.getBearing?.() ?? 0,
+                  padding: 80,
+                  maxZoom: 13,
+                  duration: 600,
+                }),
+              );
             });
           });
           clusterDomMarkers.current.set(
@@ -1754,7 +1800,7 @@ export function CrisisMap({
         if (isCrisisMarker) {
           el.classList.add("crisis-marker");
         }
-        el.style.opacity = String(markerOpacityForZoom(m.getZoom()));
+        el.style.opacity = String(markerOpacityForZoom(m.getZoom(), densityOpts));
         // Pick mode: block pin clicks even after pan/zoom rebuilds markers.
         if (locationPickActiveRef.current) {
           el.style.pointerEvents = "none";
@@ -1771,6 +1817,8 @@ export function CrisisMap({
           onMarkerClickRef.current?.(found, { x: projected.x, y: projected.y }, {
             center: [c.lng, c.lat],
             zoom: m.getZoom(),
+            pitch: m.getPitch?.() ?? 0,
+            bearing: m.getBearing?.() ?? 0,
           });
         });
         el.addEventListener("mouseenter", () => {
@@ -1795,13 +1843,13 @@ export function CrisisMap({
 
     const syncDensityVisuals = (rebuildMarkers: boolean) => {
       const z = m.getZoom();
-      const heatOp = heatmapOpacityForZoom(z);
-      const markerOp = markerOpacityForZoom(z);
+      const heatOp = heatmapOpacityForZoom(z, densityOpts);
+      const markerOp = markerOpacityForZoom(z, densityOpts);
       setHeatOpacity(heatOp);
       setDomMarkerOpacity(markerOp);
 
-      const wantMount = markersShouldMount(z);
-      const mode = aggregationModeForZoom(z);
+      const wantMount = markersShouldMount(z, densityOpts);
+      const mode = aggregationModeForZoom(z, densityOpts);
       // In the crossfade below the floor, settled mode is still "heatmap" but
       // markers must already be mounted (as donuts) so they can fade in.
       const renderMode: DensityAggregationMode =
@@ -1861,7 +1909,7 @@ export function CrisisMap({
       m.off("moveend", onZoomEnd);
       m.off("sourcedata", onSourceData);
     };
-  }, [markers, loaded, showMarkers, baseMapType]);
+  }, [markers, loaded, showMarkers, showDensityHeatmap, baseMapType]);
 
   // ── Marker hover pulse (synced from list) ────────────────────────────────
   useEffect(() => {
