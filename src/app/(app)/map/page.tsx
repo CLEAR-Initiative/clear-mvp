@@ -205,13 +205,27 @@ function MapPageContent() {
   const focusSignalId = focusDismissed ? null : urlFocusSignalId;
   const focusCrisisId = focusDismissed ? null : urlFocusCrisisId;
   const focusEntityId = focusEventId ?? focusSignalId ?? focusCrisisId;
+  
+  /* ---- Fetch data ---- */
+  const { activeTeamId, activeTeam } = useTeam();
+  const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId, locationById } = useLocations();
+  const {
+    countries: teamCountries,
+    countryName: workingCountryName,
+    setWorkingCountry,
+    showCountrySelector,
+    scopeReady,
+  } = useTeamCountry();
+  
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>(() => {
     // URL params override stored preferences
     if (urlFocusSignalId) return "signal";
     if (urlFocusCrisisId) return "crisis";
     if (urlFocusEventId) return "event";
-    return storedPrefs.dataView;
+    // Read stored preference directly in initializer
+    const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
+    return prefs.dataView;
   });
 
   /** Map load error (offline / style load failure) */
@@ -228,20 +242,6 @@ function MapPageContent() {
   }, []);
 
   /* ---- Fetch data ---- */
-  const { activeTeamId, activeTeam } = useTeam();
-  const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId, locationById } = useLocations();
-  const {
-    countries: teamCountries,
-    countryName: workingCountryName,
-    setWorkingCountry,
-    showCountrySelector,
-    scopeReady,
-  } = useTeamCountry();
-
-  // Load stored map preferences for this team
-  const storedPrefs = useMemo(() => {
-    return resolveMapPreferences(getMapPreferences(activeTeamId));
-  }, [activeTeamId]);
 
   // Timeline state. Stored as "YYYY-MM"; null means "all time".
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -732,23 +732,31 @@ function MapPageContent() {
     openedFromClusterRef.current = true;
     clusterLeafCountRef.current = leafCount;
   }, []);
-  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>(
-    () => storedPrefs.boundaryLevel,
-  );
-  const [showPopulation, setShowPopulation] = useState(
-    () => storedPrefs.showPopulation,
-  );
-  const [showRoads, setShowRoads] = useState(
-    () => restoredView?.showRoads ?? storedPrefs.showRoads,
-  );
+  
+  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>(() => {
+    const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
+    return prefs.boundaryLevel;
+  });
+  const [showPopulation, setShowPopulation] = useState(() => {
+    const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
+    return prefs.showPopulation;
+  });
+  const [showRoads, setShowRoads] = useState(() => {
+    if (restoredView?.showRoads !== undefined) return restoredView.showRoads;
+    const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
+    return prefs.showRoads;
+  });
   const showRoadsRef = useRef(showRoads);
   showRoadsRef.current = showRoads;
-  const [showNrcLocations, setShowNrcLocations] = useState(
-    () => storedPrefs.showNrcLocations,
-  );
-  const [baseMapType, setBaseMapType] = useState<BaseMapType>(
-    () => restoredView?.baseMapType ?? storedPrefs.baseMapType,
-  );
+  const [showNrcLocations, setShowNrcLocations] = useState(() => {
+    const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
+    return prefs.showNrcLocations;
+  });
+  const [baseMapType, setBaseMapType] = useState<BaseMapType>(() => {
+    if (restoredView?.baseMapType) return restoredView.baseMapType;
+    const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
+    return prefs.baseMapType;
+  });
   const baseMapTypeRef = useRef(baseMapType);
   baseMapTypeRef.current = baseMapType;
   const [showSeismicSignals, setShowSeismicSignals] = useState(
