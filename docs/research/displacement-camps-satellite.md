@@ -85,6 +85,6 @@ _(Append findings here as research proceeds.)_
 
 ## Related
 
-- Blockages freshness policy: `docs/clear-api-logie-ingest.md`, `docs/logie-blockages-delivery.md`
+- Blockages freshness policy: `docs/clear-api-logie-ingest.md`
 - Access SoT: `docs/adr/0003-logie-is-access-constraint-source.md`
 - Product language: `CONTEXT.md` (IDP Density vs Blockages vs NRC locations)

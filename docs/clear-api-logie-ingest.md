@@ -170,8 +170,6 @@ NEXT_PUBLIC_LOGIE_BLOCKAGES_URL=<auth’d clear-api slim blockages URL>
 Swap point: `src/lib/map/fetch-blockages.ts`. Without that env, production keeps
 Blockages as **Coming soon**; development uses `/api/dev/logie-blockages`.
 
-Delivery model: [`docs/logie-blockages-delivery.md`](./logie-blockages-delivery.md).
-
 ---
 
 ## Acceptance (Expo #317)

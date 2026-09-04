@@ -13,6 +13,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { useTeamCountry, useScopedCountryOptions } from "~/hooks/use-team-country";
+import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { parseDateFilter, resolveCountryConfig } from "~/lib/constants/country-config";
 import { useLocations } from "~/hooks/use-locations";
@@ -193,10 +194,6 @@ function DetectionPageContent() {
       commitTabRoute(tab);
     }, TAB_SKELETON_DELAY_MS);
   }, [indicatorTab, clearTabTimers, commitTabRoute]);
-  // Country the user picked. Only consulted when the active team monitors
-  // globally: a team bound to a country is pinned to it (see selectedCountry
-  // below), so the picker cannot take them out of scope.
-  const [pickedCountry, setPickedCountry] = useState("");
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("Last 30 days");
   const localizedDateOptions = useMemo(() => {
@@ -230,15 +227,38 @@ function DetectionPageContent() {
 
   const { activeTeamId } = useTeam();
   const { countries, getCenter, getZoom, getLocationId, tree, isLoading: isLocationsLoading } = useLocations();
-  const { countryName: teamCountryName } = useTeamCountry();
+  const {
+    countries: teamCountries,
+    countryName: workingCountryName,
+    setWorkingCountry,
+    scopeReady,
+  } = useTeamCountry();
 
-  // A team's country binding wins over any picked/restored value. Derived
-  // rather than synced through an effect so there is no window where the page
-  // queries one country while the team is scoped to another (that mismatch
-  // ANDs to zero rows server-side and renders an unexplained empty page).
-  const selectedCountry = teamCountryName ?? pickedCountry;
-  const setSelectedCountry = setPickedCountry;
-  const countryOptions = useScopedCountryOptions(countries);
+  // Country the user picked. Only consulted when the active team monitors
+  // globally; a team bound to countries uses working country from the hook.
+  const [pickedCountry, setPickedCountry] = useState("");
+  const selectedCountry =
+    workingCountryName ?? (scopeReady ? pickedCountry : "");
+  
+  const handleCountryChange = useCallback(
+    (value: string) => {
+      if (teamCountries.length > 0) {
+        const location = teamCountries.find((c) => c.name === value);
+        if (location) setWorkingCountry(location.id);
+      } else {
+        setPickedCountry(value);
+        setWorkingCountry(getLocationId(value) ?? value, value);
+      }
+      // Reset region when country changes
+      setSelectedRegionId(null);
+    },
+    [teamCountries, setWorkingCountry, getLocationId],
+  );
+  
+  const scopedOptions = useScopedCountryOptions(countries);
+  const countryOptions =
+    !scopeReady && workingCountryName ? [workingCountryName] : scopedOptions;
+  useReportStaleCountryPick(countryOptions, workingCountryName ?? pickedCountry, selectedCountry);
 
   // Ground intel is a PRIVATE staging tier (sender names, unvetted claims):
   // clear-api rejects every ground query for roles other than admin/analyst,
@@ -292,7 +312,10 @@ function DetectionPageContent() {
     }
 
     const storedFilters = readStoredFilters();
-    if (storedFilters.country) setSelectedCountry(storedFilters.country);
+    // Only restore country for unscoped teams; scoped teams use working country
+    if (teamCountries.length === 0 && storedFilters.country) {
+      setPickedCountry(storedFilters.country);
+    }
     if (storedFilters.regionId !== undefined) setSelectedRegionId(storedFilters.regionId ?? null);
     if (storedFilters.date) setSelectedDate(storedFilters.date);
     if (storedFilters.severities) setActiveSeverities(new Set(storedFilters.severities));
@@ -911,7 +934,7 @@ function DetectionPageContent() {
         <Box data-tour="detection-filters">
         <FilterBar
           country={selectedCountry}
-          onCountryChange={(v) => { setSelectedCountry(v); setSelectedRegionId(null); }}
+          onCountryChange={handleCountryChange}
           countries={countryOptions}
           regionsContent={
             <RegionPicker

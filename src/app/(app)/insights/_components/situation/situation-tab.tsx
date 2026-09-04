@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Box, Center, Group, Loader, Select, Tabs, Text } from "@mantine/core";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
 import { SituationOverview } from "./situation-overview";
 import { SituationSectors } from "./situation-sectors";
 import { SituationSources } from "./situation-sources";
@@ -19,19 +20,17 @@ export function SituationTab() {
 
   const { data: countries, isLoading: countriesLoading } =
     api.situationAnalysis.countries.useQuery();
-  const { data: teams, isLoading: teamsLoading } = api.teams.myTeams.useQuery();
+  const { activeTeam, isLoading: teamsLoading } = useTeam();
 
-  // Country ids the user's teams are scoped to (level 0 = country). An empty
-  // scope across every team means global monitoring - offer all countries.
+  // Country ids from the active team's scope (level 0 = country).
   const scopedCountryIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const team of teams ?? []) {
-      for (const loc of team.locations) {
-        if (loc.level === 0) ids.add(loc.id);
-      }
+    if (!activeTeam) return ids;
+    for (const loc of activeTeam.locations) {
+      if (loc.level === 0) ids.add(loc.id);
     }
     return ids;
-  }, [teams]);
+  }, [activeTeam]);
 
   // The countries this user may switch between: their scoped set, or every
   // country when they monitor globally.
@@ -63,7 +62,6 @@ export function SituationTab() {
         onChange={setCountryId}
         data={options.map((c) => ({ value: c.id, label: c.name }))}
         placeholder={t("country")}
-        searchable
         size="xs"
         w={200}
         aria-label={t("country")}

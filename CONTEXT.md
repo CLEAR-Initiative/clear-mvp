@@ -248,6 +248,28 @@ The floating card that shows a map marker's summary and View details CTA. Dragga
 desktop; bottom sheet on mobile.
 _Avoid_: "popup", "window", "modal" (it is not modal — the map stays interactive).
 
+### Country framing
+
+**Country scope**:
+The active team's allowed level-0 countries (location bindings). Not a user choice.
+Empty = global monitoring. A team may be bound to one country, several countries, or
+no countries at all.
+_Avoid_: calling the user's choice "scope" (scope is the set, not the pick).
+
+**Working country**:
+The one country currently framing Map, Overview, Detection, and Insights. Always exactly
+one member of **Country scope** when scope is non-empty; default = alphabetically first;
+persisted per team in a cookie (`clear-working-country`). Changed only via the Country
+picker on Map / Overview / Detection / Insights — not by Full Map or detail Back.
+_Avoid_: "focus country" for the choice (that is the map paint treatment); "selected
+country" without qualifier (ambiguous).
+
+**Focus country** (map paint):
+The visual mask/tint treatment of the **Working country** on the map canvas — dim
+non-focus countries, highlight border, optional blue tint (Simple only). A map concept,
+not a product-wide term.
+_Avoid_: calling the working-country choice "focus country" (that name is for the paint).
+
 ### Map operational layers
 
 **Operational**:
@@ -360,6 +382,10 @@ full SDN GeoJSON dumps into the app tree by default.
 - Sequence for this Access wedge: Expo **#280** (**LogIE spike**, retargeted) → **LogIE
   ingest** (clear-api GeoJSON persist) → Expo **#277** (**Blockages** wire-up). Access IA
   comps are a later ticket if still needed after spike findings.
+- **Country scope** contains zero or more level-0 countries; **Working country** is
+  exactly one of them when scope is non-empty, or null when unscoped. Full Map / Back
+  from a detail page is a visit — it must not write **Working country**. **Focus country**
+  (map paint) visually highlights the **Working country** on the map canvas.
 
 ## Example dialogue
 

@@ -42,6 +42,12 @@ export type MapViewStateV1 = {
   showSeismic: boolean;
   /** Overlays → roads. Missing on older snapshots = on (the historical default). */
   showRoads: boolean;
+  /**
+   * Country the camera was framed for. Missing on older snapshots — those
+   * must not override a restored country pick (Sudan camera + Afghanistan
+   * select).
+   */
+  country?: string;
   savedAt: number;
 };
 
@@ -95,6 +101,8 @@ export function parseMapViewState(raw: unknown): MapViewStateV1 | null {
   const idsRaw = o.openMarkerIds;
   if (!Array.isArray(idsRaw)) return null;
   const openMarkerIds = idsRaw.filter((id): id is number => isFiniteNumber(id));
+  const country =
+    typeof o.country === "string" && o.country.trim() ? o.country.trim() : undefined;
 
   return {
     v: 1,
@@ -108,8 +116,24 @@ export function parseMapViewState(raw: unknown): MapViewStateV1 | null {
     openMarkerIds,
     showSeismic: o.showSeismic === true,
     showRoads: o.showRoads !== false,
+    ...(country ? { country } : {}),
     savedAt: o.savedAt,
   };
+}
+
+/**
+ * Keep a restored camera only when it belongs to the country we are about
+ * to show. A leftover Sudan pose must not win over a Venezuela pick.
+ */
+export function cameraSeedForCountry(
+  view: MapViewStateV1 | null,
+  country: string | null | undefined,
+): MapViewCamera | null {
+  if (!view) return null;
+  if (!country || country === "All Countries") return view.camera;
+  if (view.country && view.country !== country) return null;
+  if (!view.country) return null;
+  return view.camera;
 }
 
 export function isMapViewStateFresh(
@@ -125,10 +149,12 @@ export function writeMapViewState(
     savedAt?: number;
     showSeismic?: boolean;
     showRoads?: boolean;
+    country?: string;
   },
   storage: MapViewStateStorage | null | undefined = defaultSessionStorage(),
 ): void {
   if (!storage) return;
+  const country = state.country?.trim();
   const payload: MapViewStateV1 = {
     v: 1,
     camera: state.camera,
@@ -136,6 +162,7 @@ export function writeMapViewState(
     openMarkerIds: state.openMarkerIds,
     showSeismic: state.showSeismic === true,
     showRoads: state.showRoads !== false,
+    ...(country ? { country } : {}),
     savedAt: state.savedAt ?? Date.now(),
   };
   try {

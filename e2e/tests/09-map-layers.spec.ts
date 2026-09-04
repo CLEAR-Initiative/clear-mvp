@@ -11,9 +11,12 @@ test.describe("Map layers (case 9)", () => {
     page,
   }) => {
     await page.goto("/map", { waitUntil: "domcontentloaded" });
-    // Country filter proves the map page has hydrated — clicking the layers
-    // toggle before that is a no-op on the React handler.
-    await expect(page.getByRole("textbox", { name: "Country" })).toBeVisible();
+    
+    // Wait for the map page to hydrate by checking for the layers toggle button.
+    // The country control varies (Select for multi-country, text for single-country)
+    // so we just wait for stable chrome to prove hydration.
+    await expect(page.getByTestId("map-layers-toggle")).toBeVisible();
+    
     await page.getByTestId("map-layers-toggle").click();
 
     // Visible Select input shows the label; a sibling hidden input holds "A1".

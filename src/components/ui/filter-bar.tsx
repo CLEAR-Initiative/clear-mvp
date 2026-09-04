@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Group, Select, Text } from "@mantine/core";
 import { shortCountryName } from "~/lib/constants/country-config";
+import { reportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import { useTranslations } from "next-intl";
 
 const LABEL_STYLE = {
@@ -52,12 +53,34 @@ export function FilterBar({
   children,
 }: FilterBarProps) {
   const t = useTranslations("common.filters");
-  return (
-    <Group gap={12} wrap="wrap" align="flex-end">
+  const lastPick = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!lastPick.current) return;
+    reportStaleCountryPick({
+      options: countries,
+      picked: lastPick.current,
+      selected: country,
+    });
+  }, [country, countries]);
+
+  const countryControl =
+    countries.length <= 1 ? (
+      <div>
+        <FilterLabel>{t("country")}</FilterLabel>
+        <Text fw={600} style={{ fontSize: 13, minWidth: 130, paddingTop: 4 }}>
+          {shortCountryName(countries[0] ?? country)}
+        </Text>
+      </div>
+    ) : (
       <Select
         size="xs"
         value={country}
-        onChange={(v) => onCountryChange(v ?? country)}
+        onChange={(v) => {
+          const next = v ?? country;
+          lastPick.current = next;
+          onCountryChange(next);
+        }}
         // Value stays the canonical COD name (it keys location lookups);
         // only the label is shortened.
         data={countries.map((c) => ({ value: c, label: shortCountryName(c) }))}
@@ -65,6 +88,11 @@ export function FilterBar({
         styles={{ input: INPUT_STYLE }}
         label={<FilterLabel>{t("country")}</FilterLabel>}
       />
+    );
+
+  return (
+    <Group gap={12} wrap="wrap" align="flex-end">
+      {countryControl}
       {regionsContent ?? (region != null && regions != null && onRegionChange != null && (
         <Select
           size="xs"
