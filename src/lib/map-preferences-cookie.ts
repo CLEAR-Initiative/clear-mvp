@@ -76,9 +76,21 @@ export function setMapPreferencesCookie(
 export function getMapPreferences(
   teamId: string | null,
 ): MapPreferences | null {
-  if (!teamId) return null;
   const map = readMapPreferencesFromDocument();
-  return map[teamId] ?? null;
+  
+  // If we have a teamId, use that team's preferences
+  if (teamId && map[teamId]) {
+    return map[teamId]!;
+  }
+  
+  // If no teamId yet but there's only one team in the cookie, use it
+  // (handles initial render before activeTeamId hydrates)
+  const entries = Object.values(map);
+  if (!teamId && entries.length === 1) {
+    return entries[0]!;
+  }
+  
+  return null;
 }
 
 /**
