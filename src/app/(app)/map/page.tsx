@@ -100,6 +100,12 @@ import {
   SEISMIC_MAX_WINDOW_DAYS,
   seismicQueryBboxForCountry,
 } from "~/lib/map/usgs-fdsn-query";
+import {
+  getMapPreferences,
+  resolveMapPreferences,
+  setMapPreferencesCookie,
+} from "~/lib/map-preferences-cookie";
+
 const MAX_OPEN_PANELS = 4;
 
 interface OpenMarkerPanel {
@@ -201,10 +207,11 @@ function MapPageContent() {
   const focusEntityId = focusEventId ?? focusSignalId ?? focusCrisisId;
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>(() => {
+    // URL params override stored preferences
     if (urlFocusSignalId) return "signal";
     if (urlFocusCrisisId) return "crisis";
     if (urlFocusEventId) return "event";
-    return "alert";
+    return storedPrefs.dataView;
   });
 
   /** Map load error (offline / style load failure) */
@@ -230,6 +237,11 @@ function MapPageContent() {
     showCountrySelector,
     scopeReady,
   } = useTeamCountry();
+
+  // Load stored map preferences for this team
+  const storedPrefs = useMemo(() => {
+    return resolveMapPreferences(getMapPreferences(activeTeamId));
+  }, [activeTeamId]);
 
   // Timeline state. Stored as "YYYY-MM"; null means "all time".
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -720,16 +732,22 @@ function MapPageContent() {
     openedFromClusterRef.current = true;
     clusterLeafCountRef.current = leafCount;
   }, []);
-  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
-  const [showPopulation, setShowPopulation] = useState(false);
+  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>(
+    () => storedPrefs.boundaryLevel,
+  );
+  const [showPopulation, setShowPopulation] = useState(
+    () => storedPrefs.showPopulation,
+  );
   const [showRoads, setShowRoads] = useState(
-    () => restoredView?.showRoads !== false,
+    () => restoredView?.showRoads ?? storedPrefs.showRoads,
   );
   const showRoadsRef = useRef(showRoads);
   showRoadsRef.current = showRoads;
-  const [showNrcLocations, setShowNrcLocations] = useState(false);
+  const [showNrcLocations, setShowNrcLocations] = useState(
+    () => storedPrefs.showNrcLocations,
+  );
   const [baseMapType, setBaseMapType] = useState<BaseMapType>(
-    () => restoredView?.baseMapType ?? "simple",
+    () => restoredView?.baseMapType ?? storedPrefs.baseMapType,
   );
   const baseMapTypeRef = useRef(baseMapType);
   baseMapTypeRef.current = baseMapType;
@@ -744,6 +762,19 @@ function MapPageContent() {
     if (!restoreReady) return;
     persistMapView();
   }, [baseMapType, openPanels, persistMapView, restoreReady, showSeismicSignals, showRoads]);
+
+  // Persist map preferences to cookie (data view, boundaries, layers)
+  useEffect(() => {
+    if (!activeTeamId) return;
+    setMapPreferencesCookie(activeTeamId, {
+      dataView,
+      boundaryLevel,
+      showPopulation,
+      showRoads,
+      showNrcLocations,
+      baseMapType,
+    });
+  }, [activeTeamId, dataView, boundaryLevel, showPopulation, showRoads, showNrcLocations, baseMapType]);
 
   // Flush snapshot on leave so View details → Back always has a fresh copy.
   useEffect(() => {

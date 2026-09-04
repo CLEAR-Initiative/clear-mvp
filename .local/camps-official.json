@@ -1,0 +1,109 @@
+{
+  "asOf": "2026-08-20",
+  "source": "Public-known Sudan IDP camps (local smoke only). Replace with an authorised IOM DTM Admin3 extract before treating as operational.",
+  "license": "Local smoke — not the DTM partner extract",
+  "sites": [
+    {
+      "id": "zamzam",
+      "name": "Zamzam",
+      "state": "North Darfur",
+      "locality": "Al Fasher",
+      "siteClass": "formal_camp",
+      "lng": 25.317,
+      "lat": 13.483,
+      "asOf": "2020-02-20",
+      "status": "open",
+      "population": 80000,
+      "origin": {
+        "state": "Khartoum",
+        "lng": 32.54,
+        "lat": 15.5,
+        "people": 62000,
+        "summary": "Schema smoke — Khartoum city centroid as origin. Replace with DTM place-of-origin breakdown."
+      },
+      "destination": {
+        "kind": "return_home",
+        "state": "North Darfur",
+        "summary": "Schema smoke — replace with DTM movement intention."
+      },
+      "notes": "Widely published formal camp near El Fasher. Local QA pin — not a DTM Admin3 row."
+    },
+    {
+      "id": "abu-shouk",
+      "name": "Abu Shouk",
+      "state": "North Darfur",
+      "locality": "Al Fasher",
+      "siteClass": "formal_camp",
+      "lng": 25.35,
+      "lat": 13.65,
+      "asOf": "2026-08-20",
+      "status": "open",
+      "population": 28000,
+      "origin": {
+        "state": "North Darfur",
+        "locality": "Kutum",
+        "lng": 24.67,
+        "lat": 14.2,
+        "people": 18000
+      }
+    },
+    {
+      "id": "kalma",
+      "name": "Kalma",
+      "state": "South Darfur",
+      "locality": "Nyala",
+      "siteClass": "formal_camp",
+      "lng": 24.183,
+      "lat": 12.167,
+      "asOf": "2026-08-20",
+      "status": "open",
+      "population": 45000,
+      "origin": {
+        "state": "South Darfur",
+        "locality": "Nyala",
+        "lng": 24.88,
+        "lat": 12.05,
+        "people": 30000,
+        "summary": "Schema smoke — Nyala city centroid as origin."
+      },
+      "destination": {
+        "kind": "intended_move",
+        "summary": "Schema smoke — no operational destination."
+      }
+    },
+    {
+      "id": "otash-gathering-smoke",
+      "name": "Nyala gathering (smoke)",
+      "state": "South Darfur",
+      "locality": "Nyala",
+      "siteClass": "gathering",
+      "lng": 24.95,
+      "lat": 12.12,
+      "asOf": "2026-08-20",
+      "status": "unknown",
+      "population": 3500,
+      "notes": "Class smoke for gathering-site styling (temporary tent, no arrow). Replace with DTM classification."
+    },
+    {
+      "id": "geneina-gathering-smoke",
+      "name": "El Geneina gathering (smoke)",
+      "state": "West Darfur",
+      "locality": "El Geneina",
+      "siteClass": "gathering",
+      "lng": 22.45,
+      "lat": 13.45,
+      "asOf": "2026-08-20",
+      "status": "open",
+      "population": 14000,
+      "origin": {
+        "state": "West Darfur",
+        "locality": "Kulbus",
+        "lng": 22.15,
+        "lat": 14.15,
+        "people": 9000,
+        "summary": "Schema smoke — Kulbus-area centroid so a terracotta tent also has an arrow."
+      },
+      "notes": "Gathering + flow smoke. Dummy centroid, not a DTM Admin3 row."
+    }
+  ]
+}
