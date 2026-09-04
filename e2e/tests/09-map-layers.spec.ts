@@ -12,11 +12,10 @@ test.describe("Map layers (case 9)", () => {
   }) => {
     await page.goto("/map", { waitUntil: "domcontentloaded" });
     
-    // Wait for the map page to hydrate. Single-country teams show the country
-    // name as text; multi-country teams show a Select. Either proves hydration.
-    const countrySelect = page.getByRole("textbox", { name: "Country" });
-    const countryLabel = page.getByText("Country");
-    await expect(countryLabel.or(countrySelect)).toBeVisible();
+    // Wait for the map page to hydrate by checking for the layers toggle button.
+    // The country control varies (Select for multi-country, text for single-country)
+    // so we just wait for stable chrome to prove hydration.
+    await expect(page.getByTestId("map-layers-toggle")).toBeVisible();
     
     await page.getByTestId("map-layers-toggle").click();
 
