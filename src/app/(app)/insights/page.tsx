@@ -99,7 +99,6 @@ export default function InsightsPage() {
                     label: shortCountryName(c),
                   }))}
                   placeholder={tFilters("country")}
-                  searchable
                   size="xs"
                   w={200}
                   aria-label={tFilters("country")}

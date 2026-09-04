@@ -62,7 +62,6 @@ export function SituationTab() {
         onChange={setCountryId}
         data={options.map((c) => ({ value: c.id, label: c.name }))}
         placeholder={t("country")}
-        searchable
         size="xs"
         w={200}
         aria-label={t("country")}
