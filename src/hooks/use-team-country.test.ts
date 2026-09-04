@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isTeamScopeReady,
   resolveSelectedCountry,
   scopeCountryOptions,
   staleCountryPick,
@@ -55,6 +56,38 @@ describe("resolveSelectedCountry", () => {
     expect(resolveSelectedCountry([], "Sudan")).toBe("Sudan");
     expect(resolveSelectedCountry([], "All Countries")).toBe("All Countries");
     expect(resolveSelectedCountry([], "")).toBe("");
+  });
+
+  it("holds the pick while team scope is still loading", () => {
+    expect(resolveSelectedCountry([], "Venezuela (Bolivarian Republic of)", false)).toBe(
+      "Venezuela (Bolivarian Republic of)",
+    );
+    expect(resolveSelectedCountry([], "All Countries", false)).toBe("All Countries");
+    expect(resolveSelectedCountry(MULTI, "Sudan", false)).toBe("Sudan");
+  });
+});
+
+describe("isTeamScopeReady", () => {
+  it("is false while the teams query is loading or unset", () => {
+    expect(isTeamScopeReady({ isLoading: true, teams: undefined, activeTeam: null })).toBe(
+      false,
+    );
+    expect(isTeamScopeReady({ isLoading: false, teams: undefined, activeTeam: null })).toBe(
+      false,
+    );
+  });
+
+  it("is false when teams exist but the active team has not hydrated", () => {
+    expect(
+      isTeamScopeReady({ isLoading: false, teams: [{ id: "t1" }], activeTeam: null }),
+    ).toBe(false);
+  });
+
+  it("is true once the active team is known, or the user has no teams", () => {
+    expect(
+      isTeamScopeReady({ isLoading: false, teams: [{ id: "t1" }], activeTeam: { id: "t1" } }),
+    ).toBe(true);
+    expect(isTeamScopeReady({ isLoading: false, teams: [], activeTeam: null })).toBe(true);
   });
 });
 

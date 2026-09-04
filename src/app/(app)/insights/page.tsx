@@ -1,16 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Box, Group, Select, Tabs, Text } from "@mantine/core";
 import { PageHeader } from "~/components/ui";
 import { ReportsTab } from "./_components/reports-tab";
 import { SituationTab } from "./_components/situation/situation-tab";
-import {
-  useTeamCountry,
-  useScopedCountryOptions,
-  resolveSelectedCountry,
-} from "~/hooks/use-team-country";
+import { useTeamCountry, useScopedCountryOptions } from "~/hooks/use-team-country";
 import { useLocations } from "~/hooks/use-locations";
 import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import { shortCountryName } from "~/lib/constants/country-config";
@@ -21,16 +17,43 @@ export default function InsightsPage() {
   const tFilters = useTranslations("common.filters");
   const [activeTab, setActiveTab] = useState<string | null>("crisis");
   const { countries: allCountries } = useLocations();
-  const { countries: teamCountries } = useTeamCountry();
-  const teamCountryNames = useMemo(
-    () => teamCountries.map((c) => c.name),
-    [teamCountries],
-  );
+  const {
+    countries: teamCountries,
+    countryName: workingCountryName,
+    setWorkingCountry,
+    showCountrySelector,
+    scopeReady,
+  } = useTeamCountry();
+  
+  // For unscoped teams, keep local pickedCountry state
   const [pickedCountry, setPickedCountry] = useState("");
-  const countryOptions = useScopedCountryOptions(allCountries);
-  const effectivePick = pickedCountry || countryOptions[0] || "";
-  const selectedCountry = resolveSelectedCountry(teamCountryNames, effectivePick);
-  useReportStaleCountryPick(countryOptions, effectivePick, selectedCountry);
+  const scopedOptions = useScopedCountryOptions(allCountries);
+  const countryOptions =
+    !scopeReady && workingCountryName ? [workingCountryName] : scopedOptions;
+  const selectedCountry =
+    workingCountryName ?? (scopeReady ? pickedCountry || countryOptions[0] || "" : "");
+  
+  const handleCountryChange = useCallback(
+    (value: string | null) => {
+      const nextCountry = value ?? selectedCountry;
+      if (teamCountries.length > 0) {
+        // Scoped team: update working country via the hook
+        const location = teamCountries.find((c) => c.name === nextCountry);
+        if (location) {
+          setWorkingCountry(location.id);
+        }
+      } else {
+        setPickedCountry(nextCountry);
+        setWorkingCountry(nextCountry, nextCountry);
+      }
+    },
+    [selectedCountry, teamCountries, setWorkingCountry],
+  );
+  useReportStaleCountryPick(
+    countryOptions,
+    workingCountryName ?? pickedCountry,
+    selectedCountry,
+  );
 
   // Situation Analysis tab is gated behind the `situation_analysis` feature flag
   // (admin Features tab). When it's off, hide the tab + panel; if it was the
@@ -67,10 +90,10 @@ export default function InsightsPage() {
         {activeTab === "crisis" && (
           <Box data-tour="insights-crises">
             <Group justify="flex-end" mb={16}>
-              {countryOptions.length > 1 ? (
+              {(showCountrySelector || teamCountries.length === 0) ? (
                 <Select
                   value={selectedCountry || null}
-                  onChange={(v) => setPickedCountry(v ?? pickedCountry)}
+                  onChange={handleCountryChange}
                   data={countryOptions.map((c) => ({
                     value: c,
                     label: shortCountryName(c),

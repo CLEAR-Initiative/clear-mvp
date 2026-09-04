@@ -11,9 +11,13 @@ test.describe("Map layers (case 9)", () => {
     page,
   }) => {
     await page.goto("/map", { waitUntil: "domcontentloaded" });
-    // Country filter proves the map page has hydrated — clicking the layers
-    // toggle before that is a no-op on the React handler.
-    await expect(page.getByRole("textbox", { name: "Country" })).toBeVisible();
+    
+    // Wait for the map page to hydrate. Single-country teams show the country
+    // name as text; multi-country teams show a Select. Either proves hydration.
+    const countrySelect = page.getByRole("textbox", { name: "Country" });
+    const countryLabel = page.getByText("Country");
+    await expect(countryLabel.or(countrySelect)).toBeVisible();
+    
     await page.getByTestId("map-layers-toggle").click();
 
     // Visible Select input shows the label; a sibling hidden input holds "A1".

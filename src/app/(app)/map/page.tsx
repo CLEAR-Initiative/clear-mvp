@@ -27,7 +27,7 @@ import {
 } from "~/lib/map/point-altitude";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
-import { useTeamCountry, useScopedCountryOptions, resolveSelectedCountry } from "~/hooks/use-team-country";
+import { useTeamCountry } from "~/hooks/use-team-country";
 import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import {
   type CrisisMarker,
@@ -61,6 +61,7 @@ import {
   type CenterZoom,
 } from "~/lib/map/marker-detail-camera";
 import {
+  cameraSeedForCountry,
   readMapViewState,
   writeMapViewState,
   type MapViewCamera,
@@ -179,7 +180,7 @@ function MapPageContent() {
    * drag/tilt feel staggered.
    */
   const [cameraSeed, setCameraSeed] = useState<MapViewCamera | null>(
-    () => restoredView?.camera ?? null,
+    () => cameraSeedForCountry(restoredView, restoredView?.country ?? null),
   );
   const [pendingRestoreMarkerIds, setPendingRestoreMarkerIds] = useState<number[]>(
     () => restoredView?.openMarkerIds ?? [],
@@ -222,11 +223,13 @@ function MapPageContent() {
   /* ---- Fetch data ---- */
   const { activeTeamId, activeTeam } = useTeam();
   const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId, locationById } = useLocations();
-  const { countries: teamCountries, countryName: teamCountryName } = useTeamCountry();
-  const teamCountryNames = useMemo(
-    () => teamCountries.map((c) => c.name),
-    [teamCountries],
-  );
+  const {
+    countries: teamCountries,
+    countryName: workingCountryName,
+    setWorkingCountry,
+    showCountrySelector,
+    scopeReady,
+  } = useTeamCountry();
 
   // Timeline state. Stored as "YYYY-MM"; null means "all time".
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -553,17 +556,16 @@ function MapPageContent() {
     return codes;
   }, [selectedTypes, hierarchy]);
 
-  // Country the user picked. A one-country team stays pinned; a multi-country
-  // team can switch inside its scope. Unscoped teams keep "All Countries".
-  const [pickedCountry, setPickedCountry] = useState("All Countries");
+  // Unscoped teams keep a local pick. Do not default to "All Countries"
+  // — that is what flashed in the select while the cookie/team hydrated.
+  const [pickedCountry, setPickedCountry] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
-  const selectedCountry = resolveSelectedCountry(teamCountryNames, pickedCountry);
-  const setSelectedCountry = setPickedCountry;
-
-  // Reset the region whenever the team (and therefore the country) changes.
-  useEffect(() => {
-    setSelectedRegion("All Regions");
-  }, [activeTeam?.id]);
+  const selectedCountry =
+    workingCountryName ??
+    (scopeReady && teamCountries.length === 0 ? pickedCountry || "All Countries" : pickedCountry);
+  const selectedCountryRef = useRef(selectedCountry);
+  selectedCountryRef.current = selectedCountry;
+  
   const [openPanels, setOpenPanels] = useState<OpenMarkerPanel[]>([]);
   const [keepPanelsOpen, setKeepPanelsOpen] = useState(false);
   const [chromeActiveMarkerId, setChromeActiveMarkerId] = useState<number | null>(null);
@@ -684,6 +686,7 @@ function MapPageContent() {
       openMarkerIds: openPanelsRef.current.map((p) => p.marker.id),
       showSeismic: showSeismicRef.current,
       showRoads: showRoadsRef.current,
+      country: selectedCountryRef.current,
     });
   }, []);
 
@@ -1011,14 +1014,28 @@ function MapPageContent() {
   );
 
   /* ---- Derive country/region options from API locations ---- */
-  // A team bound to a country gets only that country: no "All Countries"
-  // escape hatch, since the data behind it is now scoped out anyway.
-  const scopedCountries = useScopedCountryOptions(apiCountries);
-  const countryOptions = useMemo(
-    () => (teamCountryName ? scopedCountries : ["All Countries", ...apiCountries]),
-    [teamCountryName, scopedCountries, apiCountries],
-  );
-  useReportStaleCountryPick(countryOptions, pickedCountry, selectedCountry);
+  // Do not treat an empty binding list as unscoped while teams are loading —
+  // that flashes "All Countries" then snaps to Afghanistan.
+  const countryOptions = useMemo(() => {
+    if (!scopeReady) {
+      return workingCountryName ? [workingCountryName] : [];
+    }
+    if (teamCountries.length > 0) {
+      return teamCountries.map((c) => c.name);
+    }
+    return ["All Countries", ...apiCountries];
+  }, [scopeReady, workingCountryName, teamCountries, apiCountries]);
+  useReportStaleCountryPick(countryOptions, workingCountryName ?? pickedCountry, selectedCountry);
+
+  // Restored camera must belong to the working country. A leftover Sudan
+  // pose cannot win over a Venezuela pick (borders/signals vs camera).
+  useEffect(() => {
+    if (!selectedCountry || selectedCountry === "All Countries") return;
+    if (cameraSeedForCountry(restoredView, selectedCountry) != null) return;
+    setCameraSeed(null);
+    setForceFlyToken((n) => n + 1);
+  }, [selectedCountry, restoredView]);
+
   const regionOptions = useMemo(
     () => selectedCountry !== "All Countries" ? getRegions(selectedCountry) : ["All Regions"],
     [selectedCountry, getRegions],
@@ -1572,7 +1589,14 @@ function MapPageContent() {
 
   /* ---- Handlers ---- */
   const handleCountryChange = (value: string | null) => {
-    setSelectedCountry(value ?? "All Countries");
+    const nextCountry = value ?? selectedCountry;
+    const location = teamCountries.find((c) => c.name === nextCountry);
+    if (location) {
+      setWorkingCountry(location.id);
+    } else {
+      setPickedCountry(nextCountry);
+      setWorkingCountry(getLocationId(nextCountry) ?? nextCountry, nextCountry);
+    }
     setSelectedRegion("All Regions");
     setCameraSeed(null);
     setForceFlyToken((n) => n + 1);
@@ -1826,17 +1850,26 @@ function MapPageContent() {
         }}
       >
         <Group gap={12} style={{ pointerEvents: "auto" }} wrap="wrap">
-          <Select
-            size="xs"
-            value={selectedCountry}
-            onChange={handleCountryChange}
-            data={countryOptions.map((c) =>
-              c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
-            )}
-            style={{ minWidth: 140 }}
-            styles={{ input: INPUT_STYLE }}
-            label={<FilterLabel>{t("filters.country")}</FilterLabel>}
-          />
+          {(showCountrySelector || teamCountries.length === 0 || !scopeReady) ? (
+            <Select
+              size="xs"
+              value={selectedCountry || null}
+              onChange={handleCountryChange}
+              data={countryOptions.map((c) =>
+                c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
+              )}
+              style={{ minWidth: 140 }}
+              styles={{ input: INPUT_STYLE }}
+              label={<FilterLabel>{t("filters.country")}</FilterLabel>}
+            />
+          ) : (
+            <Box>
+              <FilterLabel>{t("filters.country")}</FilterLabel>
+              <Text fw={600} style={{ fontSize: 13, minWidth: 130, paddingTop: 4 }}>
+                {shortCountryName(selectedCountry)}
+              </Text>
+            </Box>
+          )}
           <Select
             size="xs"
             value={selectedRegion}
@@ -1986,16 +2019,25 @@ function MapPageContent() {
         onKeepPanelsOpenChange={setKeepPanelsOpen}
         filters={
           <Stack gap={10}>
-            <Select
-              size="xs"
-              value={selectedCountry}
-              onChange={handleCountryChange}
-              data={countryOptions.map((c) =>
-                c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
-              )}
-              styles={{ input: INPUT_STYLE }}
-              label={<FilterLabel>{t("filters.country")}</FilterLabel>}
-            />
+            {(showCountrySelector || teamCountries.length === 0 || !scopeReady) ? (
+              <Select
+                size="xs"
+                value={selectedCountry || null}
+                onChange={handleCountryChange}
+                data={countryOptions.map((c) =>
+                  c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
+                )}
+                styles={{ input: INPUT_STYLE }}
+                label={<FilterLabel>{t("filters.country")}</FilterLabel>}
+              />
+            ) : (
+              <Box>
+                <FilterLabel>{t("filters.country")}</FilterLabel>
+                <Text fw={600} style={{ fontSize: 13, paddingTop: 4 }}>
+                  {shortCountryName(selectedCountry)}
+                </Text>
+              </Box>
+            )}
             <Select
               size="xs"
               value={selectedRegion}

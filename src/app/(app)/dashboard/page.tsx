@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { useLocations } from "~/hooks/use-locations";
-import { useTeamCountry, resolveSelectedCountry } from "~/hooks/use-team-country";
+import { useTeamCountry } from "~/hooks/use-team-country";
 import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import {
@@ -51,23 +51,33 @@ export default function DashboardPage() {
   const { getLocationId, getCenter, getZoom } = useLocations();
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
 
-  // Frame the map on the resolved country (pick inside a multi-country
-  // scope, or the single binding). Unscoped teams keep a world view until
-  // the right-panel directory sets a pick.
-  const { countries: teamCountries } = useTeamCountry();
-  const teamCountryNames = useMemo(
-    () => teamCountries.map((c) => c.name),
-    [teamCountries],
-  );
-  const [pickedCountry, setPickedCountry] = useState("");
-  const selectedCountry = resolveSelectedCountry(teamCountryNames, pickedCountry);
-  const setSelectedCountry = setPickedCountry;
-  useReportStaleCountryPick(teamCountryNames, pickedCountry, selectedCountry);
+  // Frame the map on the working country. Unscoped teams will have null working
+  // country; scoped teams get exactly one (alphabetically first or user's choice).
+  const {
+    countries: teamCountries,
+    countryId: workingCountryId,
+    countryName: workingCountryName,
+    setWorkingCountry,
+  } = useTeamCountry();
 
-  const focusCountryId = useMemo(
-    () => (selectedCountry ? getLocationId(selectedCountry) : null),
-    [selectedCountry, getLocationId],
+  const selectedCountry = workingCountryName ?? "";
+  useReportStaleCountryPick(
+    teamCountries.map((c) => c.name),
+    workingCountryName ?? "",
+    selectedCountry,
   );
+  
+  const handleCountryChange = useCallback(
+    (value: string) => {
+      const location = teamCountries.find((c) => c.name === value);
+      if (location) {
+        setWorkingCountry(location.id);
+      }
+    },
+    [teamCountries, setWorkingCountry],
+  );
+
+  const focusCountryId = workingCountryId;
   const focusCountryL0Query = api.locations.getById.useQuery(
     { id: focusCountryId! },
     { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
@@ -127,11 +137,23 @@ export default function DashboardPage() {
   );
 
   const markers = useMemo(() => {
-    if (dataView === "alert")  return alertsToMarkers(alertsQuery.data?.alerts ?? []);
-    if (dataView === "event")  return eventsToMarkers(eventsQuery.data?.events ?? []);
-    if (dataView === "crisis") return crisesToMarkers(crisesQuery.data?.crises ?? []);
-    return [];
-  }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
+    let allMarkers: CrisisMarker[] = [];
+    if (dataView === "alert") allMarkers = alertsToMarkers(alertsQuery.data?.alerts ?? []);
+    else if (dataView === "event") allMarkers = eventsToMarkers(eventsQuery.data?.events ?? []);
+    else if (dataView === "crisis") allMarkers = crisesToMarkers(crisesQuery.data?.crises ?? []);
+    
+    // Filter markers to working country when scoped
+    if (workingCountryId) {
+      return allMarkers.filter((m) => {
+        // Match by locationId or ancestorIds
+        if (m.locationId === workingCountryId) return true;
+        if (m.ancestorIds && m.ancestorIds.includes(workingCountryId)) return true;
+        return false;
+      });
+    }
+    
+    return allMarkers;
+  }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data, workingCountryId]);
 
   const handleMarkerClick = useCallback((marker: MapMarker, screenPoint: MarkerScreenPoint) => {
     const full = markers.find((m) => m.id === marker.id);
@@ -207,7 +229,7 @@ export default function DashboardPage() {
       <Box hiddenFrom="base" visibleFrom="sm">
         <RightPanel
           selectedCountry={selectedCountry}
-          onCountryChange={setSelectedCountry}
+          onCountryChange={handleCountryChange}
           onViewChange={() => {}}
           activeView="single"
         />

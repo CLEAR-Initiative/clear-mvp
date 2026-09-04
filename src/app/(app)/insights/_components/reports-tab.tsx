@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Badge } from "@mantine/core";
 import { IconLayersIntersect } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import { severityColors } from "~/lib/constants/severity";
-import { resolveLocationName } from "~/lib/location";
+import { locationInCountry, resolveLocationName } from "~/lib/location";
+import { shortCountryName } from "~/lib/constants/country-config";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { CardSection } from "~/components/ui";
 import { InsightsCrisisListSkeleton } from "~/components/ui/insights-page-skeleton";
+import { useLocations } from "~/hooks/use-locations";
 
 interface ReportsTabProps {
   selectedCountry: string;
@@ -27,8 +30,18 @@ export function ReportsTab({
   const t = useTranslations("insights");
   const tCommon = useTranslations("common");
   const format = useFormatter();
+  const { getLocationId } = useLocations();
   const crisesQuery = api.crises.list.useQuery();
-  const crises = crisesQuery.data ?? [];
+  const countryId =
+    selectedCountry && selectedCountry !== "All Countries"
+      ? getLocationId(selectedCountry) ??
+        getLocationId(shortCountryName(selectedCountry) ?? "")
+      : null;
+  const crises = useMemo(() => {
+    const all = crisesQuery.data ?? [];
+    if (!countryId) return all;
+    return all.filter((c) => locationInCountry(c.generalLocation, countryId));
+  }, [crisesQuery.data, countryId]);
 
   const criticalCount = crises.filter((c) => mapSeverity(c.severity) === "critical").length;
 
@@ -61,7 +74,7 @@ export function ReportsTab({
     <Box mb={24}>
       <CardSection
         title={t("reports.activeCrises")}
-        subtitle={`${selectedCountry}${selectedRegion !== "All Regions" ? ` - ${selectedRegion}` : ""}`}
+        subtitle={`${shortCountryName(selectedCountry) || selectedCountry}${selectedRegion !== "All Regions" ? ` - ${selectedRegion}` : ""}`}
         action={
           criticalCount > 0 ? (
             <Badge size="xs" style={{ background: "var(--color-critical-light)", color: "var(--color-critical)" }}>
