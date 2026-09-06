@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Box } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import dynamic from "next/dynamic";
@@ -8,6 +8,7 @@ import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { useLocations } from "~/hooks/use-locations";
 import { useTeamCountry } from "~/hooks/use-team-country";
+import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import {
   alertsToMarkers,
@@ -50,21 +51,39 @@ export default function DashboardPage() {
   const { getLocationId, getCenter, getZoom } = useLocations();
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
 
-  // Frame the map on the active team's country rather than a fixed one. A team
-  // with no level-0 binding monitors globally, so every country-scoped overlay
-  // query below stays disabled and the camera keeps its world view.
-  const { countryId: teamCountryId, countryName: teamCountryName } = useTeamCountry();
-  const focusCountryId = useMemo(
-    () => teamCountryId ?? (teamCountryName ? getLocationId(teamCountryName) : null),
-    [teamCountryId, teamCountryName, getLocationId],
+  // Frame the map on the working country. Unscoped teams will have null working
+  // country; scoped teams get exactly one (alphabetically first or user's choice).
+  const {
+    countries: teamCountries,
+    countryId: workingCountryId,
+    countryName: workingCountryName,
+    setWorkingCountry,
+  } = useTeamCountry();
+
+  const selectedCountry = workingCountryName ?? "";
+  useReportStaleCountryPick(
+    teamCountries.map((c) => c.name),
+    workingCountryName ?? "",
+    selectedCountry,
   );
+  
+  const handleCountryChange = useCallback(
+    (value: string) => {
+      const location = teamCountries.find((c) => c.name === value);
+      if (location) {
+        setWorkingCountry(location.id);
+      }
+    },
+    [teamCountries, setWorkingCountry],
+  );
+
+  const focusCountryId = workingCountryId;
   const focusCountryL0Query = api.locations.getById.useQuery(
     { id: focusCountryId! },
     { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
   const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
-  const focusCountryPCode = resolveCountryConfig(teamCountryName ?? undefined)?.pCode;
-  const [selectedCountry, setSelectedCountry] = useState(teamCountryName ?? "");
+  const focusCountryPCode = resolveCountryConfig(selectedCountry || undefined)?.pCode;
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(null);
   const [detailAnchor, setDetailAnchor] = useState<MarkerScreenPoint | null>(null);
   const [detailChromeActive, setDetailChromeActive] = useState(false);
@@ -74,12 +93,6 @@ export default function DashboardPage() {
   const [showRoads, setShowRoads] = useState(true);
   const [showNrcLocations, setShowNrcLocations] = useState(false);
   const [baseMapType, setBaseMapType] = useState<BaseMapType>("simple");
-
-  // Teams resolve after first paint, so the initial state above can be empty.
-  // Adopt the team's country once it arrives.
-  useEffect(() => {
-    if (teamCountryName) setSelectedCountry(teamCountryName);
-  }, [teamCountryName]);
 
   const alertsQuery = api.alerts.alertsForMap.useQuery(
     { activeOnly: true, teamId: activeTeamId },
@@ -124,11 +137,23 @@ export default function DashboardPage() {
   );
 
   const markers = useMemo(() => {
-    if (dataView === "alert")  return alertsToMarkers(alertsQuery.data?.alerts ?? []);
-    if (dataView === "event")  return eventsToMarkers(eventsQuery.data?.events ?? []);
-    if (dataView === "crisis") return crisesToMarkers(crisesQuery.data?.crises ?? []);
-    return [];
-  }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data]);
+    let allMarkers: CrisisMarker[] = [];
+    if (dataView === "alert") allMarkers = alertsToMarkers(alertsQuery.data?.alerts ?? []);
+    else if (dataView === "event") allMarkers = eventsToMarkers(eventsQuery.data?.events ?? []);
+    else if (dataView === "crisis") allMarkers = crisesToMarkers(crisesQuery.data?.crises ?? []);
+    
+    // Filter markers to working country when scoped
+    if (workingCountryId) {
+      return allMarkers.filter((m) => {
+        // Match by locationId or ancestorIds
+        if (m.locationId === workingCountryId) return true;
+        if (m.ancestorIds && m.ancestorIds.includes(workingCountryId)) return true;
+        return false;
+      });
+    }
+    
+    return allMarkers;
+  }, [dataView, alertsQuery.data, eventsQuery.data, crisesQuery.data, workingCountryId]);
 
   const handleMarkerClick = useCallback((marker: MapMarker, screenPoint: MarkerScreenPoint) => {
     const full = markers.find((m) => m.id === marker.id);
@@ -204,7 +229,7 @@ export default function DashboardPage() {
       <Box hiddenFrom="base" visibleFrom="sm">
         <RightPanel
           selectedCountry={selectedCountry}
-          onCountryChange={setSelectedCountry}
+          onCountryChange={handleCountryChange}
           onViewChange={() => {}}
           activeView="single"
         />

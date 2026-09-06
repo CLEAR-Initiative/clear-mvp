@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MAP_VIEW_STATE_STORAGE_KEY,
+  cameraSeedForCountry,
   clearMapViewState,
   isMapViewStateFresh,
   mapReturnHref,
@@ -8,6 +9,7 @@ import {
   readMapViewState,
   writeMapViewState,
   type MapViewStateStorage,
+  type MapViewStateV1,
 } from "./map-view-state";
 
 function memoryStorage(seed: Record<string, string> = {}): MapViewStateStorage {
@@ -110,6 +112,13 @@ describe("freshness + storage", () => {
     expect(readMapViewState(storage, now + 1000)).toMatchObject(sample);
   });
 
+  it("round-trips the country the camera was framed for", () => {
+    const storage = memoryStorage();
+    const now = 1_000_000;
+    writeMapViewState({ ...sample, country: "Sudan", savedAt: now }, storage);
+    expect(readMapViewState(storage, now + 1000)?.country).toBe("Sudan");
+  });
+
   it("drops stale snapshots", () => {
     const storage = memoryStorage();
     const now = 1_000_000;
@@ -125,6 +134,34 @@ describe("freshness + storage", () => {
     writeMapViewState({ ...sample, savedAt: Date.now() }, storage);
     clearMapViewState(storage);
     expect(storage.getItem(MAP_VIEW_STATE_STORAGE_KEY)).toBeNull();
+  });
+});
+
+describe("cameraSeedForCountry", () => {
+  const view = (country?: string): MapViewStateV1 => ({
+    v: 1,
+    ...sample,
+    showSeismic: false,
+    showRoads: true,
+    savedAt: 1,
+    ...(country ? { country } : {}),
+  });
+
+  it("keeps the camera when it was saved for the same country", () => {
+    expect(cameraSeedForCountry(view("Sudan"), "Sudan")).toEqual(sample.camera);
+  });
+
+  it("drops a leftover camera when the pick is a different country", () => {
+    expect(cameraSeedForCountry(view("Sudan"), "Venezuela (Bolivarian Republic of)")).toBeNull();
+  });
+
+  it("drops a legacy snapshot with no country so the pick can reframe", () => {
+    expect(cameraSeedForCountry(view(), "Venezuela (Bolivarian Republic of)")).toBeNull();
+  });
+
+  it("keeps the camera for All Countries / missing pick", () => {
+    expect(cameraSeedForCountry(view("Sudan"), "All Countries")).toEqual(sample.camera);
+    expect(cameraSeedForCountry(view(), null)).toEqual(sample.camera);
   });
 });
 
