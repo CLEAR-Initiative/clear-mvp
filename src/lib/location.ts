@@ -101,3 +101,24 @@ export function resolveLocationName(
   
   return null;
 }
+
+/**
+ * True when `location` is the country itself or sits under it.
+ * Crisis list payloads ship `ancestorIds` without a full `ancestors` walk.
+ */
+export function locationInCountry(
+  location:
+    | {
+        id: string;
+        ancestorIds?: string[] | null;
+        ancestors?: Array<{ id: string }> | null;
+      }
+    | null
+    | undefined,
+  countryId: string,
+): boolean {
+  if (!location || !countryId) return false;
+  if (location.id === countryId) return true;
+  if (location.ancestorIds?.includes(countryId)) return true;
+  return location.ancestors?.some((a) => a.id === countryId) ?? false;
+}

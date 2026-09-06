@@ -11,6 +11,9 @@
  *
  * Across the heatmap↔marker boundary a short crossfade band keeps both
  * visible so zoom never blanks.
+ *
+ * Compact panes (Detection) pass `{ heatmap: false }` so Region zoom keeps
+ * donuts instead of a heat field that cannot read in a ~480px map.
  */
 
 /**
@@ -40,7 +43,24 @@ export const DENSITY_HEATMAP_PEAK_OPACITY = 0.85;
 
 export type DensityAggregationMode = "heatmap" | "donut" | "point";
 
-export function aggregationModeForZoom(zoom: number): DensityAggregationMode {
+/** Compact panes (Detection) skip the Region-zoom heat field. `/map` keeps it. */
+export type DensityVisualOptions = {
+  heatmap?: boolean;
+};
+
+function heatmapEnabled(options?: DensityVisualOptions): boolean {
+  return options?.heatmap !== false;
+}
+
+export function aggregationModeForZoom(
+  zoom: number,
+  options?: DensityVisualOptions,
+): DensityAggregationMode {
+  // Compact maps never enter the heat field — donuts cover Region + Country.
+  if (!heatmapEnabled(options)) {
+    if (zoom <= DENSITY_DONUT_MAX_ZOOM) return "donut";
+    return "point";
+  }
   // Strictly below country band → heatmap; at the floor → donuts (+ roads).
   if (zoom < DENSITY_COUNTRY_BAND_MIN_ZOOM) return "heatmap";
   if (zoom <= DENSITY_DONUT_MAX_ZOOM) return "donut";
@@ -57,7 +77,11 @@ function clamp01(n: number): number {
  * Heatmap opacity (0…peak) for the current zoom.
  * Full below the blend, zero above it; linear through the crossfade band.
  */
-export function heatmapOpacityForZoom(zoom: number): number {
+export function heatmapOpacityForZoom(
+  zoom: number,
+  options?: DensityVisualOptions,
+): number {
+  if (!heatmapEnabled(options)) return 0;
   const lo = DENSITY_COUNTRY_BAND_MIN_ZOOM - DENSITY_CROSSFADE_HALF;
   const hi = DENSITY_COUNTRY_BAND_MIN_ZOOM + DENSITY_CROSSFADE_HALF;
   if (zoom <= lo) return DENSITY_HEATMAP_PEAK_OPACITY;
@@ -70,7 +94,11 @@ export function heatmapOpacityForZoom(zoom: number): number {
  * DOM marker (donut/point) opacity for the current zoom — inverse of heatmap
  * across the same crossfade band so the two dissolve through each other.
  */
-export function markerOpacityForZoom(zoom: number): number {
+export function markerOpacityForZoom(
+  zoom: number,
+  options?: DensityVisualOptions,
+): number {
+  if (!heatmapEnabled(options)) return 1;
   const lo = DENSITY_COUNTRY_BAND_MIN_ZOOM - DENSITY_CROSSFADE_HALF;
   const hi = DENSITY_COUNTRY_BAND_MIN_ZOOM + DENSITY_CROSSFADE_HALF;
   if (zoom <= lo) return 0;
@@ -79,8 +107,11 @@ export function markerOpacityForZoom(zoom: number): number {
 }
 
 /** True when donut/point DOM should be mounted (any visible marker opacity). */
-export function markersShouldMount(zoom: number): boolean {
-  return markerOpacityForZoom(zoom) > 0.02;
+export function markersShouldMount(
+  zoom: number,
+  options?: DensityVisualOptions,
+): boolean {
+  return markerOpacityForZoom(zoom, options) > 0.02;
 }
 
 export const SEVERITY_ORDER = ["critical", "high", "medium", "low"] as const;

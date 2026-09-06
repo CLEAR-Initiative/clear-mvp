@@ -255,6 +255,7 @@ export function SignalsTab({
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"
+              showDensityHeatmap={false}
               focusCountryPCode={focusCountryPCode}
               focusCountryName={focusCountryName}
               focusCountryGeometry={focusCountryGeometry}

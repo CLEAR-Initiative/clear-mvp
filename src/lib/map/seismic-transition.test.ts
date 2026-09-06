@@ -152,9 +152,11 @@ describe("interpolateSeismicMapCollection", () => {
     const mid = interpolateSeismicMapCollection(from, to, 0.5)!;
     expect(mid.shakemaps?.[0]?.eventId).toBe("slot-0");
     const ring = mid.shakemaps![0]!.features[0]!.geometry;
-    const coords =
-      ring.type === "MultiLineString" ? ring.coordinates[0] : ring.coordinates;
-    const firstLng = (coords as number[][])[0]![0];
+    const coords: number[][] =
+      ring.type === "MultiLineString"
+        ? (ring.coordinates as number[][][])[0]!
+        : (ring.coordinates as number[][]);
+    const firstLng = coords[0]![0];
     expect(firstLng).toBeGreaterThan(0);
     expect(firstLng).toBeLessThan(10);
   });

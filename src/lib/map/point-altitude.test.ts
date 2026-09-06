@@ -55,12 +55,8 @@ describe("samplePointAltitude", () => {
       32.5,
       15.5,
     );
-    expect(query.mock.calls.length).toBe(1);
-    const lngLat = query.mock.calls[0]?.[0] as { lng: number; lat: number };
-    const opts = query.mock.calls[0]?.[1] as { exaggerated?: boolean };
-    expect(lngLat.lng).toBe(32.5);
-    expect(lngLat.lat).toBe(15.5);
-    expect(opts.exaggerated).toBe(false);
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(query).toHaveBeenCalledWith({ lng: 32.5, lat: 15.5 }, { exaggerated: false });
     expect(result.kind).toBe("ok");
     if (result.kind === "ok") {
       expect(result.metres).toBe(385.2);

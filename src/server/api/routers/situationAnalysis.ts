@@ -64,18 +64,23 @@ interface ReportMeta {
   reportTitle: string | null;
   sourceUrl: string | null;
   publishedAt: string | null;
+  /** The publisher clear-api resolved from the report's ReliefWeb `source`.
+   *  Null for legacy rows extracted before source attribution. */
+  source: { name: string } | null;
 }
 
 /**
- * Look up titles for reports the narrative cites but the payload's own
+ * Look up report metadata in clear-api: the publisher for every source, and
+ * title/url/date for reports the narrative cites but the payload's own
  * `sources.reports` omits.
  *
  * The pipeline builds that list from the datapoint aggregation's contributors
  * only, so most RAG-cited reports are missing from it and would otherwise
- * render as bare numbers. clear-api knows them: one aliased `reportDatapoint`
- * per id in a single round trip.
+ * render as bare numbers; and it carries no publisher at all. clear-api knows
+ * both: one aliased `reportDatapoint` per id in a single round trip.
  *
- * Best-effort - on failure the caller still renders, just without titles.
+ * Best-effort - on failure the caller still renders, just without titles or
+ * publishers.
  */
 async function fetchReportMeta(
   ids: string[],
@@ -85,7 +90,10 @@ async function fetchReportMeta(
   if (ids.length === 0) return out;
 
   const fields = ids
-    .map((_, i) => `r${i}: reportDatapoint(reportId: $i${i}) { reportId reportTitle sourceUrl publishedAt }`)
+    .map(
+      (_, i) =>
+        `r${i}: reportDatapoint(reportId: $i${i}) { reportId reportTitle sourceUrl publishedAt source { name } }`,
+    )
     .join("\n");
   const params = ids.map((_, i) => `$i${i}: String!`).join(", ");
   const variables = Object.fromEntries(ids.map((id, i) => [`i${i}`, id]));
@@ -184,14 +192,22 @@ export const situationAnalysisRouter = createTRPCRouter({
 
       if (!row) return null;
 
-      // Hydrate the reports the narrative cites but `sources.reports` omits, so
-      // their citation chips resolve to a real title instead of a bare number.
-      const listed = new Set(
-        (row.data?.sources?.reports ?? []).map((r) => r.report_id).filter(Boolean),
-      );
+      // Hydrate every source from clear-api in one round trip: the publisher
+      // ("OCHA", "WFP") for the reports the payload lists - the pipeline's
+      // `sources.reports` carries none, and the URL host only ever says
+      // "reliefweb.int" - plus title/url/date for the reports the narrative
+      // cites but the list omits, so their citation chips resolve to a real
+      // title instead of a bare number.
+      const listedReports = row.data?.sources?.reports ?? [];
+      const listed = new Set(listedReports.map((r) => r.report_id).filter(Boolean));
       const missing = (row.sourceReportIds ?? []).filter((id) => id && !listed.has(id));
-      if (missing.length > 0) {
-        const meta = await fetchReportMeta(missing, cookieHeaders(ctx));
+      const wanted = [...listed, ...missing].filter((id): id is string => !!id);
+      if (wanted.length > 0) {
+        const meta = await fetchReportMeta(wanted, cookieHeaders(ctx));
+        const withPublisher = listedReports.map((r) => {
+          const name = r.report_id ? meta.get(r.report_id)?.source?.name : undefined;
+          return name ? { ...r, publisher: name } : r;
+        });
         const hydrated = missing
           .map((id) => meta.get(id))
           .filter((m): m is ReportMeta => !!m)
@@ -200,12 +216,13 @@ export const situationAnalysisRouter = createTRPCRouter({
             report_title: m.reportTitle ?? undefined,
             source_url: m.sourceUrl ?? undefined,
             published_at: m.publishedAt ?? undefined,
+            publisher: m.source?.name ?? undefined,
           }));
         row = {
           ...row,
           data: {
             ...row.data,
-            sources: { reports: [...(row.data?.sources?.reports ?? []), ...hydrated] },
+            sources: { reports: [...withPublisher, ...hydrated] },
           },
         };
       }

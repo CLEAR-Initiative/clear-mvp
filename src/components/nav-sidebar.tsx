@@ -109,15 +109,14 @@ export function NavSidebar() {
   const referrer = searchParams.get("from");
   const {
     displaySegment: effectiveSegment,
-    optimisticSegment,
     setOptimisticSegment,
   } = useOptimisticNavSegment(activeSegment, referrer);
-  // Frost overlay only on real /map (or optimistic navigate-to-map).
-  // Do not key off effectiveSegment — detail `?from=map` highlights Map in
-  // the nav but must keep the solid in-flow sidebar so content isn't under glass.
-  // While still on /map, overlay stays even if optimism leaves — dropping it
-  // early flex-resizes the Mapbox canvas (white flash).
-  const isMapRoute = isMapNavOverlay(activeSegment, optimisticSegment);
+  // Frost overlay only on the real /map route — not while optimism highlights
+  // Map during a click away from Detection/Overview (#504). Detail `?from=map`
+  // still highlights Map via effectiveSegment but stays solid in-flow.
+  // While on /map, overlay stays even if optimism leaves — dropping it early
+  // flex-resizes the Mapbox canvas (white flash).
+  const isMapRoute = isMapNavOverlay(activeSegment);
   const { beginPageTransition } = usePageTransition();
   const desktopNavRef = useRef<HTMLElement>(null);
   const mobileNavRef = useRef<HTMLElement>(null);

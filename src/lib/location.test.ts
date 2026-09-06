@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   flattenLocationTree,
+  locationInCountry,
   resolveLocationName,
   resolveNameFromAncestorIds,
 } from "./location";
@@ -174,5 +175,36 @@ describe("resolveLocationName with locationById fallback", () => {
       geometry: null,
     };
     expect(resolveLocationName(loc, { locationById })).toBe("Nyala Airport");
+  });
+});
+
+describe("locationInCountry", () => {
+  const sudan = "country-sd";
+  const venezuela = "country-ve";
+
+  it("matches the country location itself", () => {
+    expect(locationInCountry({ id: sudan }, sudan)).toBe(true);
+  });
+
+  it("matches a district whose ancestorIds include the country", () => {
+    expect(
+      locationInCountry(
+        { id: "nyala", ancestorIds: [sudan, "south-darfur"] },
+        sudan,
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects a location in another country", () => {
+    expect(
+      locationInCountry(
+        { id: "caracas", ancestorIds: [venezuela, "distrito"] },
+        sudan,
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects a crisis with no location", () => {
+    expect(locationInCountry(null, sudan)).toBe(false);
   });
 });

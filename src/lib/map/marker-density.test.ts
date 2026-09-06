@@ -73,6 +73,27 @@ describe("heatmap ↔ marker crossfade", () => {
   });
 });
 
+describe("heatmap disabled (compact Detection map)", () => {
+  const opts = { heatmap: false } as const;
+
+  it("never settles on heatmap: donuts at region zoom, points above the donut band", () => {
+    expect(aggregationModeForZoom(0, opts)).toBe("donut");
+    expect(aggregationModeForZoom(1.6, opts)).toBe("donut");
+    expect(aggregationModeForZoom(DENSITY_COUNTRY_BAND_MIN_ZOOM - 0.01, opts)).toBe("donut");
+    expect(aggregationModeForZoom(DENSITY_COUNTRY_BAND_MIN_ZOOM, opts)).toBe("donut");
+    expect(aggregationModeForZoom(DENSITY_DONUT_MAX_ZOOM, opts)).toBe("donut");
+    expect(aggregationModeForZoom(DENSITY_DONUT_MAX_ZOOM + 0.01, opts)).toBe("point");
+  });
+
+  it("keeps heatmap paint off and markers fully visible at every zoom", () => {
+    expect(heatmapOpacityForZoom(0, opts)).toBe(0);
+    expect(heatmapOpacityForZoom(DENSITY_COUNTRY_BAND_MIN_ZOOM, opts)).toBe(0);
+    expect(markerOpacityForZoom(0, opts)).toBe(1);
+    expect(markerOpacityForZoom(1.6, opts)).toBe(1);
+    expect(markersShouldMount(0, opts)).toBe(true);
+  });
+});
+
 describe("donut center count (active-view semantics)", () => {
   it("reads Mapbox point_count as the clustered item total", () => {
     expect(donutCenterCount({ point_count: 21 })).toBe(21);

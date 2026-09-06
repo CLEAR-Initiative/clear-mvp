@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -19,15 +19,18 @@ import {
 } from "@tabler/icons-react";
 import { FeedToolbar } from "~/components/ui";
 import { DetectionFeedListSkeleton } from "~/components/ui/detection-page-skeleton";
+import { EventDetailDrawer } from "~/components/event-detail";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import type { GqlEvent } from "~/lib/types/graphql";
 import { getDisasterPills, getDisasterL2Pills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
+import { getListNavigation } from "~/lib/detail-list-nav";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { MapSettingsPopover, type BoundaryLevel } from "~/app/(app)/map/_components/map-settings-popover";
 import { MapPanelBar } from "~/app/(app)/map/_components/map-panel-bar";
 import { useMarkerHover } from "~/hooks/use-marker-hover";
+import { useDetailKeyboardNav } from "~/hooks/use-detail-keyboard-nav";
 import { EventBulkBar } from "./event-bulk-bar";
 
 const CrisisMap = dynamic(
@@ -102,6 +105,7 @@ export function EventsTab({
   const format = useFormatter();
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [previewEventId, setPreviewEventId] = useState<string | null>(null);
   const { hoveredMarkerId, getCardProps, onMarkerHover } = useMarkerHover(mapMarkers);
   const [showPopulation, setShowPopulation] = useState(false);
 
@@ -146,6 +150,39 @@ export function EventsTab({
       return true;
     });
   }, [events, search, activeSeverities, expandedTypeCodesProp, activeSources]);
+
+  const filteredIds = useMemo(() => filtered.map((e) => e.id), [filtered]);
+
+  // Drop preview if filters remove the open event from the feed.
+  useEffect(() => {
+    if (previewEventId != null && !filteredIds.includes(previewEventId)) {
+      setPreviewEventId(null);
+    }
+  }, [filteredIds, previewEventId]);
+
+  const previewNav = useMemo(
+    () =>
+      previewEventId != null
+        ? getListNavigation(filteredIds, previewEventId)
+        : null,
+    [filteredIds, previewEventId],
+  );
+
+  const goPreviewPrev = useCallback(() => {
+    if (previewNav?.prevId) setPreviewEventId(previewNav.prevId);
+  }, [previewNav?.prevId]);
+
+  const goPreviewNext = useCallback(() => {
+    if (previewNav?.nextId) setPreviewEventId(previewNav.nextId);
+  }, [previewNav?.nextId]);
+
+  useDetailKeyboardNav({
+    enabled: previewEventId != null,
+    hasPrev: previewNav?.hasPrev ?? false,
+    hasNext: previewNav?.hasNext ?? false,
+    onPrev: goPreviewPrev,
+    onNext: goPreviewNext,
+  });
 
   const selectedEvents = useMemo(
     () => filtered.filter((e) => selectedIds.includes(e.id)),
@@ -214,11 +251,18 @@ export function EventsTab({
               const isAlert = event.alerts.length > 0;
               const isSelected = selectedIds.includes(event.id);
 
+              const isPreview = previewEventId === event.id;
+
               return (
                 <Box
                   key={event.id}
                   className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]"
-                  style={{ display: "flex", alignItems: "stretch", ...getCardProps(event.id).style }}
+                  style={{
+                    display: "flex",
+                    alignItems: "stretch",
+                    background: isPreview ? "var(--color-bg-muted)" : undefined,
+                    ...getCardProps(event.id).style,
+                  }}
                   onMouseEnter={getCardProps(event.id).onMouseEnter}
                   onMouseLeave={getCardProps(event.id).onMouseLeave}
                 >
@@ -248,7 +292,17 @@ export function EventsTab({
                       styles={{ input: { pointerEvents: "none" } }}
                     />
                   </UnstyledButton>
-                  <Link href={`/event/${event.id}?from=detection`} style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}>
+                  <Link
+                    href={`/event/${event.id}?from=detection`}
+                    data-testid={`preview-event-${event.id}`}
+                    onClick={(e) => {
+                      // Modifier / middle-click keeps full-page navigation.
+                      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                      e.preventDefault();
+                      setPreviewEventId(event.id);
+                    }}
+                    style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}
+                  >
                     <Box
                       px={8} py={12} pr={16}
                       className="cursor-pointer"
@@ -329,6 +383,7 @@ export function EventsTab({
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"
+              showDensityHeatmap={false}
               focusCountryPCode={focusCountryPCode}
               focusCountryName={focusCountryName}
               focusCountryGeometry={focusCountryGeometry}
@@ -349,6 +404,15 @@ export function EventsTab({
           </Box>
         </Card>
       </Box>
+
+      <EventDetailDrawer
+        eventId={previewEventId}
+        opened={previewEventId != null}
+        onClose={() => setPreviewEventId(null)}
+        navigation={previewNav ?? undefined}
+        onNavigatePrev={goPreviewPrev}
+        onNavigateNext={goPreviewNext}
+      />
     </Box>
   );
 }

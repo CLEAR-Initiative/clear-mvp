@@ -27,7 +27,8 @@ import {
 } from "~/lib/map/point-altitude";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
-import { useTeamCountry, useScopedCountryOptions } from "~/hooks/use-team-country";
+import { useTeamCountry } from "~/hooks/use-team-country";
+import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import {
   type CrisisMarker,
   alertsToMarkers,
@@ -52,6 +53,15 @@ import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
 import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
 import {
+  asCameraPose,
+  keepPreOpenRestore,
+  lastDetailCloseRestore,
+  mobileMarkerFocusZoom,
+  type CameraPose,
+  type CenterZoom,
+} from "~/lib/map/marker-detail-camera";
+import {
+  cameraSeedForCountry,
   readMapViewState,
   writeMapViewState,
   type MapViewCamera,
@@ -90,6 +100,12 @@ import {
   SEISMIC_MAX_WINDOW_DAYS,
   seismicQueryBboxForCountry,
 } from "~/lib/map/usgs-fdsn-query";
+import {
+  getMapPreferences,
+  resolveMapPreferences,
+  setMapPreferencesCookie,
+} from "~/lib/map-preferences-cookie";
+
 const MAX_OPEN_PANELS = 4;
 
 interface OpenMarkerPanel {
@@ -170,7 +186,7 @@ function MapPageContent() {
    * drag/tilt feel staggered.
    */
   const [cameraSeed, setCameraSeed] = useState<MapViewCamera | null>(
-    () => restoredView?.camera ?? null,
+    () => cameraSeedForCountry(restoredView, restoredView?.country ?? null),
   );
   const [pendingRestoreMarkerIds, setPendingRestoreMarkerIds] = useState<number[]>(
     () => restoredView?.openMarkerIds ?? [],
@@ -189,12 +205,27 @@ function MapPageContent() {
   const focusSignalId = focusDismissed ? null : urlFocusSignalId;
   const focusCrisisId = focusDismissed ? null : urlFocusCrisisId;
   const focusEntityId = focusEventId ?? focusSignalId ?? focusCrisisId;
+  
+  /* ---- Fetch data ---- */
+  const { activeTeamId, activeTeam } = useTeam();
+  const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId, locationById } = useLocations();
+  const {
+    countries: teamCountries,
+    countryName: workingCountryName,
+    setWorkingCountry,
+    showCountrySelector,
+    scopeReady,
+  } = useTeamCountry();
+  
   /* ---- Core state (must precede queries that depend on it) ---- */
   const [dataView, setDataView] = useState<DataView>(() => {
+    // URL params override stored preferences
     if (urlFocusSignalId) return "signal";
     if (urlFocusCrisisId) return "crisis";
     if (urlFocusEventId) return "event";
-    return "alert";
+    // Read stored preference directly in initializer
+    const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
+    return prefs.dataView;
   });
 
   /** Map load error (offline / style load failure) */
@@ -211,9 +242,6 @@ function MapPageContent() {
   }, []);
 
   /* ---- Fetch data ---- */
-  const { activeTeamId, activeTeam } = useTeam();
-  const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId, locationById } = useLocations();
-  const { countryName: teamCountryName } = useTeamCountry();
 
   // Timeline state. Stored as "YYYY-MM"; null means "all time".
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -540,18 +568,16 @@ function MapPageContent() {
     return codes;
   }, [selectedTypes, hierarchy]);
 
-  // Country the user picked. Only consulted when the active team monitors
-  // globally; a team bound to a country is pinned to it via selectedCountry
-  // below, so "All Countries" is not reachable for them.
-  const [pickedCountry, setPickedCountry] = useState("All Countries");
+  // Unscoped teams keep a local pick. Do not default to "All Countries"
+  // — that is what flashed in the select while the cookie/team hydrated.
+  const [pickedCountry, setPickedCountry] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
-  const selectedCountry = teamCountryName ?? pickedCountry;
-  const setSelectedCountry = setPickedCountry;
-
-  // Reset the region whenever the team (and therefore the country) changes.
-  useEffect(() => {
-    setSelectedRegion("All Regions");
-  }, [activeTeam?.id]);
+  const selectedCountry =
+    workingCountryName ??
+    (scopeReady && teamCountries.length === 0 ? pickedCountry || "All Countries" : pickedCountry);
+  const selectedCountryRef = useRef(selectedCountry);
+  selectedCountryRef.current = selectedCountry;
+  
   const [openPanels, setOpenPanels] = useState<OpenMarkerPanel[]>([]);
   const [keepPanelsOpen, setKeepPanelsOpen] = useState(false);
   const [chromeActiveMarkerId, setChromeActiveMarkerId] = useState<number | null>(null);
@@ -563,27 +589,27 @@ function MapPageContent() {
   const connectorRafRef = useRef<number | null>(null);
   /** When set, camera flies to this marker; closing restores `returnCamera`. */
   const [markerFocus, setMarkerFocus] = useState<{ lng: number; lat: number; zoom: number } | null>(null);
-  /** Camera to restore when closing a marker sheet (usually the prior cluster/donut layer). */
-  const [returnCamera, setReturnCamera] = useState<{ center: [number, number]; zoom: number } | null>(null);
+  /** Camera to restore when closing a marker sheet (pre-open pose). */
+  const [returnCamera, setReturnCamera] = useState<CameraPose | null>(null);
   /** Bumped on detail close so CrisisMap always flies back to returnCamera. */
   const [forceFlyToken, setForceFlyToken] = useState(0);
   const panelZRef = useRef(10);
   /** Live browse camera from Mapbox (includes cluster fitBounds not tracked by React props). */
-  const browseCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const browseCameraRef = useRef<MapViewCamera | null>(null);
   /** Last browse camera while not in marker focus. */
-  const layerCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const layerCameraRef = useRef<MapViewCamera | null>(null);
   /** Donut-level camera captured when a cluster is tapped (before expand). */
-  const donutCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const donutCameraRef = useRef<MapViewCamera | null>(null);
   /** True after a donut cluster is expanded (until detail closes / panels clear). */
   const openedFromClusterRef = useRef(false);
   /** How many markers were in the last expanded cluster (0 = none). */
   const clusterLeafCountRef = useRef(0);
   /**
-   * Camera to restore when the last detail panel closes (group pins → expanded
-   * cluster framing). Lonely pins keep the detail zoom on close.
-   * Decided at open - never mutated inside a setState updater (Strict Mode safe).
+   * Camera to restore when the last detail panel closes (pre-open pose for
+   * every pin — lonely and group). Decided at open - never mutated inside a
+   * setState updater (Strict Mode safe).
    */
-  const detailRestoreCameraRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const detailRestoreCameraRef = useRef<CameraPose | null>(null);
   /** True when the open detail should close back to group zoom. */
   const detailCloseIsGroupRef = useRef(false);
   const openPanelsRef = useRef(openPanels);
@@ -663,14 +689,7 @@ function MapPageContent() {
     const live =
       camera ??
       mapApiRef.current?.getViewCamera() ??
-      (browseCameraRef.current
-        ? {
-            center: browseCameraRef.current.center,
-            zoom: browseCameraRef.current.zoom,
-            pitch: 0,
-            bearing: 0,
-          }
-        : null);
+      browseCameraRef.current;
     const cameraToSave = live ?? readMapViewState()?.camera ?? null;
     if (!cameraToSave) return;
     writeMapViewState({
@@ -679,6 +698,7 @@ function MapPageContent() {
       openMarkerIds: openPanelsRef.current.map((p) => p.marker.id),
       showSeismic: showSeismicRef.current,
       showRoads: showRoadsRef.current,
+      country: selectedCountryRef.current,
     });
   }, []);
 
@@ -705,24 +725,38 @@ function MapPageContent() {
   }, [persistMapView, restoreReady]);
 
   const handleClusterExpand = useCallback((
-    camera: { center: [number, number]; zoom: number },
+    camera: MapViewCamera,
     leafCount: number,
   ) => {
     donutCameraRef.current = camera;
     openedFromClusterRef.current = true;
     clusterLeafCountRef.current = leafCount;
   }, []);
-  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A1");
-  const [showPopulation, setShowPopulation] = useState(false);
-  const [showRoads, setShowRoads] = useState(
-    () => restoredView?.showRoads !== false,
-  );
+  
+  const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>(() => {
+    const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
+    return prefs.boundaryLevel;
+  });
+  const [showPopulation, setShowPopulation] = useState(() => {
+    const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
+    return prefs.showPopulation;
+  });
+  const [showRoads, setShowRoads] = useState(() => {
+    if (restoredView?.showRoads !== undefined) return restoredView.showRoads;
+    const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
+    return prefs.showRoads;
+  });
   const showRoadsRef = useRef(showRoads);
   showRoadsRef.current = showRoads;
-  const [showNrcLocations, setShowNrcLocations] = useState(false);
-  const [baseMapType, setBaseMapType] = useState<BaseMapType>(
-    () => restoredView?.baseMapType ?? "simple",
-  );
+  const [showNrcLocations, setShowNrcLocations] = useState(() => {
+    const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
+    return prefs.showNrcLocations;
+  });
+  const [baseMapType, setBaseMapType] = useState<BaseMapType>(() => {
+    if (restoredView?.baseMapType) return restoredView.baseMapType;
+    const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
+    return prefs.baseMapType;
+  });
   const baseMapTypeRef = useRef(baseMapType);
   baseMapTypeRef.current = baseMapType;
   const [showSeismicSignals, setShowSeismicSignals] = useState(
@@ -736,6 +770,19 @@ function MapPageContent() {
     if (!restoreReady) return;
     persistMapView();
   }, [baseMapType, openPanels, persistMapView, restoreReady, showSeismicSignals, showRoads]);
+
+  // Persist map preferences to cookie (data view, boundaries, layers)
+  useEffect(() => {
+    if (!activeTeamId) return;
+    setMapPreferencesCookie(activeTeamId, {
+      dataView,
+      boundaryLevel,
+      showPopulation,
+      showRoads,
+      showNrcLocations,
+      baseMapType,
+    });
+  }, [activeTeamId, dataView, boundaryLevel, showPopulation, showRoads, showNrcLocations, baseMapType]);
 
   // Flush snapshot on leave so View details → Back always has a fresh copy.
   useEffect(() => {
@@ -1006,13 +1053,28 @@ function MapPageContent() {
   );
 
   /* ---- Derive country/region options from API locations ---- */
-  // A team bound to a country gets only that country: no "All Countries"
-  // escape hatch, since the data behind it is now scoped out anyway.
-  const scopedCountries = useScopedCountryOptions(apiCountries);
-  const countryOptions = useMemo(
-    () => (teamCountryName ? scopedCountries : ["All Countries", ...apiCountries]),
-    [teamCountryName, scopedCountries, apiCountries],
-  );
+  // Do not treat an empty binding list as unscoped while teams are loading —
+  // that flashes "All Countries" then snaps to Afghanistan.
+  const countryOptions = useMemo(() => {
+    if (!scopeReady) {
+      return workingCountryName ? [workingCountryName] : [];
+    }
+    if (teamCountries.length > 0) {
+      return teamCountries.map((c) => c.name);
+    }
+    return ["All Countries", ...apiCountries];
+  }, [scopeReady, workingCountryName, teamCountries, apiCountries]);
+  useReportStaleCountryPick(countryOptions, workingCountryName ?? pickedCountry, selectedCountry);
+
+  // Restored camera must belong to the working country. A leftover Sudan
+  // pose cannot win over a Venezuela pick (borders/signals vs camera).
+  useEffect(() => {
+    if (!selectedCountry || selectedCountry === "All Countries") return;
+    if (cameraSeedForCountry(restoredView, selectedCountry) != null) return;
+    setCameraSeed(null);
+    setForceFlyToken((n) => n + 1);
+  }, [selectedCountry, restoredView]);
+
   const regionOptions = useMemo(
     () => selectedCountry !== "All Countries" ? getRegions(selectedCountry) : ["All Regions"],
     [selectedCountry, getRegions],
@@ -1242,7 +1304,7 @@ function MapPageContent() {
 
     if (!closingLast) return;
 
-    const restore = detailRestoreCameraRef.current;
+    const restore = lastDetailCloseRestore(detailRestoreCameraRef.current);
     const wasGroup = detailCloseIsGroupRef.current;
     const focused = markerFocusRef.current;
     detailRestoreCameraRef.current = null;
@@ -1259,27 +1321,26 @@ function MapPageContent() {
     setMarkerFocus(null);
     markerFocusRef.current = null;
 
-    if (wasGroup && restore) {
-      // Group pin → fly back to the expanded-group zoom.
-      const target = {
-        center: [restore.center[0], restore.center[1]] as [number, number],
-        zoom: restore.zoom,
-      };
-      setReturnCamera(target);
-      returnCameraRef.current = target;
+    if (restore) {
+      setReturnCamera(restore);
+      returnCameraRef.current = restore;
       setForceFlyToken((n) => n + 1);
       return;
     }
 
-    // Lonely pin → keep the detail zoom (do not zoom out to country overview).
+    // No snapshot (shouldn't happen on mobile open) — keep framing, don't
+    // fitBounds back to country overview.
     if (focused) {
-      const target = {
-        center: [focused.lng, focused.lat] as [number, number],
+      const target = asCameraPose({
+        center: [focused.lng, focused.lat],
         zoom: focused.zoom,
-      };
-      setReturnCamera(target);
-      returnCameraRef.current = target;
-      return;
+      });
+      if (target) {
+        setReturnCamera(target);
+        returnCameraRef.current = target;
+        setForceFlyToken((n) => n + 1);
+        return;
+      }
     }
 
     setReturnCamera(null);
@@ -1567,7 +1628,14 @@ function MapPageContent() {
 
   /* ---- Handlers ---- */
   const handleCountryChange = (value: string | null) => {
-    setSelectedCountry(value ?? "All Countries");
+    const nextCountry = value ?? selectedCountry;
+    const location = teamCountries.find((c) => c.name === nextCountry);
+    if (location) {
+      setWorkingCountry(location.id);
+    } else {
+      setPickedCountry(nextCountry);
+      setWorkingCountry(getLocationId(nextCountry) ?? nextCountry, nextCountry);
+    }
     setSelectedRegion("All Regions");
     setCameraSeed(null);
     setForceFlyToken((n) => n + 1);
@@ -1585,7 +1653,7 @@ function MapPageContent() {
     (
       marker: MapMarker,
       screenPoint: MarkerScreenPoint,
-      camera?: { center: [number, number]; zoom: number },
+      camera?: CenterZoom | CameraPose,
     ) => {
       const full =
         currentMarkers.find((m) => m.id === marker.id) ??
@@ -1596,37 +1664,40 @@ function MapPageContent() {
       // Mobile keeps focus-fly so the pin sits above the bottom sheet.
       if (isMobile) {
         // Click-time camera = group framing after donut expand, or country overview.
-        const prior = camera ?? browseCameraRef.current ?? layerCameraRef.current;
+        const live = mapApiRef.current?.getViewCamera();
+        const prior = asCameraPose(
+          camera ?? browseCameraRef.current ?? layerCameraRef.current ?? live,
+          live ?? { pitch: 0, bearing: 0 },
+        );
 
         const countryZoom =
           selectedCountry !== "All Countries"
             ? getZoom(selectedCountry)
             : 4;
 
-        // Group (≥2 markers from a donut): close returns to this group zoom.
-        // Lonely pin: close keeps the detail zoom (no country fitBounds).
+        // Group (≥2 markers from a donut): keep cluster context for siblings.
+        // Every pin — lonely or group — restores this pre-open camera on close.
         const fromGroup =
           openedFromClusterRef.current &&
           clusterLeafCountRef.current >= 2 &&
           prior != null;
 
         detailCloseIsGroupRef.current = fromGroup;
-        if (fromGroup) {
-          const restore = {
-            center: [prior.center[0], prior.center[1]] as [number, number],
-            zoom: prior.zoom,
-          };
-          detailRestoreCameraRef.current = restore;
-          setReturnCamera(restore);
-          returnCameraRef.current = restore;
+        const snapshot = keepPreOpenRestore(
+          detailRestoreCameraRef.current,
+          prior,
+        );
+        if (snapshot) {
+          detailRestoreCameraRef.current = snapshot;
+          setReturnCamera(snapshot);
+          returnCameraRef.current = snapshot;
         } else {
           detailRestoreCameraRef.current = null;
           setReturnCamera(null);
           returnCameraRef.current = null;
         }
 
-        // Zoom in past the current layer so close clearly returns outward.
-        const focusZoom = Math.min(14.5, (prior?.zoom ?? countryZoom) + 2.5);
+        const focusZoom = mobileMarkerFocusZoom(prior?.zoom, countryZoom);
         setMarkerFocus({ lng: full.lng, lat: full.lat, zoom: focusZoom });
         markerFocusRef.current = { lng: full.lng, lat: full.lat, zoom: focusZoom };
       } else {
@@ -1818,17 +1889,26 @@ function MapPageContent() {
         }}
       >
         <Group gap={12} style={{ pointerEvents: "auto" }} wrap="wrap">
-          <Select
-            size="xs"
-            value={selectedCountry}
-            onChange={handleCountryChange}
-            data={countryOptions.map((c) =>
-              c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
-            )}
-            style={{ minWidth: 140 }}
-            styles={{ input: INPUT_STYLE }}
-            label={<FilterLabel>{t("filters.country")}</FilterLabel>}
-          />
+          {(showCountrySelector || teamCountries.length === 0 || !scopeReady) ? (
+            <Select
+              size="xs"
+              value={selectedCountry || null}
+              onChange={handleCountryChange}
+              data={countryOptions.map((c) =>
+                c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
+              )}
+              style={{ minWidth: 140 }}
+              styles={{ input: INPUT_STYLE }}
+              label={<FilterLabel>{t("filters.country")}</FilterLabel>}
+            />
+          ) : (
+            <Box>
+              <FilterLabel>{t("filters.country")}</FilterLabel>
+              <Text fw={600} style={{ fontSize: 13, minWidth: 130, paddingTop: 4 }}>
+                {shortCountryName(selectedCountry)}
+              </Text>
+            </Box>
+          )}
           <Select
             size="xs"
             value={selectedRegion}
@@ -1917,6 +1997,8 @@ function MapPageContent() {
               ? Math.round((typeof window !== "undefined" ? window.innerHeight : 700) * 0.45) + 72
               : 0
           }
+          flyPitch={!markerFocus ? returnCamera?.pitch : undefined}
+          flyBearing={!markerFocus ? returnCamera?.bearing : undefined}
           introFromGlobe={
             !cameraSeed && !focusEntityId && selectedCountry !== "All Countries"
           }
@@ -1976,16 +2058,25 @@ function MapPageContent() {
         onKeepPanelsOpenChange={setKeepPanelsOpen}
         filters={
           <Stack gap={10}>
-            <Select
-              size="xs"
-              value={selectedCountry}
-              onChange={handleCountryChange}
-              data={countryOptions.map((c) =>
-                c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
-              )}
-              styles={{ input: INPUT_STYLE }}
-              label={<FilterLabel>{t("filters.country")}</FilterLabel>}
-            />
+            {(showCountrySelector || teamCountries.length === 0 || !scopeReady) ? (
+              <Select
+                size="xs"
+                value={selectedCountry || null}
+                onChange={handleCountryChange}
+                data={countryOptions.map((c) =>
+                  c === "All Countries" ? { value: c, label: t("filters.allCountries") } : { value: c, label: shortCountryName(c) },
+                )}
+                styles={{ input: INPUT_STYLE }}
+                label={<FilterLabel>{t("filters.country")}</FilterLabel>}
+              />
+            ) : (
+              <Box>
+                <FilterLabel>{t("filters.country")}</FilterLabel>
+                <Text fw={600} style={{ fontSize: 13, paddingTop: 4 }}>
+                  {shortCountryName(selectedCountry)}
+                </Text>
+              </Box>
+            )}
             <Select
               size="xs"
               value={selectedRegion}

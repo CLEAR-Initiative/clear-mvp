@@ -25,26 +25,22 @@ describe("deriveSettledNavSegment", () => {
 });
 
 describe("isMapNavOverlay", () => {
-  it("is on while settled on /map even if optimism leaves", () => {
-    expect(isMapNavOverlay("map", null)).toBe(true);
-    expect(isMapNavOverlay("map", "detection")).toBe(true);
+  it("is on only while the settled route is /map", () => {
+    expect(isMapNavOverlay("map")).toBe(true);
   });
 
-  it("is on while optimistically heading to /map", () => {
-    expect(isMapNavOverlay("detection", "map")).toBe(true);
-    expect(isMapNavOverlay("event", "map")).toBe(true);
+  it("stays off while optimistically heading to /map from another route", () => {
+    // Frost over the outgoing Detection page shows blurred cards (#504).
+    expect(isMapNavOverlay("detection")).toBe(false);
+    expect(isMapNavOverlay("event")).toBe(false);
+    expect(isMapNavOverlay("insights")).toBe(false);
   });
 
   it("is off on detail pages even when from=map highlights Map", () => {
     // displaySegment would be "map" via deriveSettledNavSegment — overlay must not follow.
-    expect(isMapNavOverlay("event", null)).toBe(false);
-    expect(isMapNavOverlay("signal", null)).toBe(false);
-    expect(isMapNavOverlay("crisis", null)).toBe(false);
-  });
-
-  it("is off on other settled non-map routes", () => {
-    expect(isMapNavOverlay("detection", null)).toBe(false);
-    expect(isMapNavOverlay("insights", "detection")).toBe(false);
+    expect(isMapNavOverlay("event")).toBe(false);
+    expect(isMapNavOverlay("signal")).toBe(false);
+    expect(isMapNavOverlay("crisis")).toBe(false);
   });
 });
 

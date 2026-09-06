@@ -44,8 +44,8 @@ npm run dev
 ```
 
 Dev route: `GET /api/dev/logie-blockages` → filters/simplifies via `src/lib/map/logie-blockages.ts`.  
-Fetch entry: `src/lib/map/fetch-blockages.ts`. One clear-mvp PR — see
-[`docs/logie-blockages-delivery.md`](../../docs/logie-blockages-delivery.md).
+Fetch entry: `src/lib/map/fetch-blockages.ts`. Ingest contract:
+[`docs/clear-api-logie-ingest.md`](../../docs/clear-api-logie-ingest.md).
 
 ## Note
 

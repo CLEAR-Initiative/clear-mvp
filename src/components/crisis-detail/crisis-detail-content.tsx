@@ -58,6 +58,11 @@ import type { GqlEvent, GqlLocation } from "~/lib/types/graphql";
 import { severityColors, severityLabels } from "~/lib/constants/severity";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { resolveLocationName } from "~/lib/location";
+import {
+  attachmentStillListed,
+  keyFromAttachmentUrl,
+  nameFromAttachmentUrl,
+} from "~/lib/crisis/attachment-key";
 import { useTeamCountry } from "~/hooks/use-team-country";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { IASC_CLUSTERS, type IASCClusterCode } from "~/lib/constants/iasc-clusters";
@@ -1040,22 +1045,6 @@ interface CrisisDoc {
   url: string;
 }
 
-function nameFromAttachmentUrl(url: string): string {
-  try {
-    return decodeURIComponent(new URL(url).pathname.split("/").pop() ?? "Document");
-  } catch {
-    return url.split("/").pop()?.split("?")[0] ?? "Document";
-  }
-}
-
-function keyFromAttachmentUrl(url: string): string {
-  try {
-    return new URL(url).pathname.slice(1);
-  } catch {
-    return url;
-  }
-}
-
 function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
@@ -1077,16 +1066,7 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
     },
   });
 
-  const removeAttachment = api.crises.removeAttachment.useMutation({
-    onSuccess: (data) => {
-      setRemoveError(null);
-      setDocs(data.attachments.map((url) => ({ id: crypto.randomUUID(), name: nameFromAttachmentUrl(url), url })));
-      void utils.crises.get.invalidate({ id: crisis.id });
-    },
-    onError: (err) => {
-      setRemoveError(err.message ?? t("documents.removeFailed"));
-    },
-  });
+  const removeAttachment = api.crises.removeAttachment.useMutation();
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -1108,18 +1088,41 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
     }
   }
 
-  function confirmRemove() {
+  async function confirmRemove() {
     if (!pendingRemove) return;
     const key = keyFromAttachmentUrl(pendingRemove.url);
-    removeAttachment.mutate({ id: crisis.id, key });
-    setPendingRemove(null);
+    setRemoveError(null);
+    try {
+      const data = await removeAttachment.mutateAsync({ id: crisis.id, key });
+      // Backend is idempotent on a missing key — treat "still listed" as failure.
+      if (attachmentStillListed(key, data.attachments)) {
+        setRemoveError(t("documents.removeFailed"));
+        return;
+      }
+      setDocs(
+        data.attachments.map((url) => ({
+          id: crypto.randomUUID(),
+          name: nameFromAttachmentUrl(url),
+          url,
+        })),
+      );
+      setPendingRemove(null);
+      void utils.crises.get.invalidate({ id: crisis.id });
+    } catch (err) {
+      setRemoveError(err instanceof Error ? err.message : t("documents.removeFailed"));
+    }
   }
 
   return (
     <>
       <Modal
         opened={pendingRemove !== null}
-        onClose={() => setPendingRemove(null)}
+        onClose={() => {
+          if (!removeAttachment.isPending) {
+            setPendingRemove(null);
+            setRemoveError(null);
+          }
+        }}
         title={t("documents.removeModalTitle")}
         size="sm"
         centered
@@ -1130,8 +1133,21 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
             strong: (chunks) => <strong>{chunks}</strong>,
           })}
         </Text>
+        {removeError && (
+          <Text size="xs" c="var(--color-critical)" mb={12}>
+            {removeError}
+          </Text>
+        )}
         <Group justify="flex-end" gap={8}>
-          <Button variant="default" size="xs" onClick={() => setPendingRemove(null)}>
+          <Button
+            variant="default"
+            size="xs"
+            disabled={removeAttachment.isPending}
+            onClick={() => {
+              setPendingRemove(null);
+              setRemoveError(null);
+            }}
+          >
             {tCommon("actions.cancel")}
           </Button>
           <Button
@@ -1206,6 +1222,7 @@ function DocumentsSection({ crisis }: { crisis: GqlCrisis }) {
                   </Text>
                 </a>
                 <button
+                  type="button"
                   onClick={() => setPendingRemove(doc)}
                   title={t("documents.remove")}
                   style={{
