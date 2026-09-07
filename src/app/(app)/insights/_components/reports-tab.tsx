@@ -9,34 +9,28 @@ import { api } from "~/trpc/react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import { severityColors } from "~/lib/constants/severity";
 import { locationInCountry, resolveLocationName } from "~/lib/location";
-import { shortCountryName } from "~/lib/constants/country-config";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { CardSection } from "~/components/ui";
 import { InsightsCrisisListSkeleton } from "~/components/ui/insights-page-skeleton";
-import { useLocations } from "~/hooks/use-locations";
 
 interface ReportsTabProps {
-  selectedCountry: string;
+  countryId: string | null;
+  countryDisplayName: string;
   selectedRegion: string;
   summaryStats: { critical: number; total: number; types: string[] };
   realSituationItems: string[] | null;
 }
 
 export function ReportsTab({
-  selectedCountry,
+  countryId,
+  countryDisplayName,
   selectedRegion,
   summaryStats,
 }: ReportsTabProps) {
   const t = useTranslations("insights");
   const tCommon = useTranslations("common");
   const format = useFormatter();
-  const { getLocationId } = useLocations();
   const crisesQuery = api.crises.list.useQuery();
-  const countryId =
-    selectedCountry && selectedCountry !== "All Countries"
-      ? getLocationId(selectedCountry) ??
-        getLocationId(shortCountryName(selectedCountry) ?? "")
-      : null;
   const crises = useMemo(() => {
     const all = crisesQuery.data ?? [];
     if (!countryId) return all;
@@ -74,7 +68,7 @@ export function ReportsTab({
     <Box mb={24}>
       <CardSection
         title={t("reports.activeCrises")}
-        subtitle={`${shortCountryName(selectedCountry) || selectedCountry}${selectedRegion !== "All Regions" ? ` - ${selectedRegion}` : ""}`}
+        subtitle={`${countryDisplayName}${selectedRegion !== "All Regions" ? ` - ${selectedRegion}` : ""}`}
         action={
           criticalCount > 0 ? (
             <Badge size="xs" style={{ background: "var(--color-critical-light)", color: "var(--color-critical)" }}>

@@ -207,4 +207,47 @@ describe("locationInCountry", () => {
   it("rejects a crisis with no location", () => {
     expect(locationInCountry(null, sudan)).toBe(false);
   });
+
+  // NEW: Slim payload cases (crisis list) - parent but no ancestorIds
+  it("matches when ancestorIds is missing but parent chain reaches country", () => {
+    // Khartoum district → parent is Khartoum state → parent is Sudan
+    const khartoumDistrict = {
+      id: "khartoum-district",
+      parent: {
+        id: "khartoum-state",
+        parent: { id: sudan },
+      },
+    };
+    expect(locationInCountry(khartoumDistrict, sudan)).toBe(true);
+  });
+
+  it("matches when parent is directly the country", () => {
+    // State with parent = country
+    const state = {
+      id: "khartoum-state",
+      parent: { id: sudan },
+    };
+    expect(locationInCountry(state, sudan)).toBe(true);
+  });
+
+  it("rejects when parent chain does not reach the target country", () => {
+    const venezuelaDistrict = {
+      id: "caracas-district",
+      parent: {
+        id: "caracas-state",
+        parent: { id: venezuela },
+      },
+    };
+    expect(locationInCountry(venezuelaDistrict, sudan)).toBe(false);
+  });
+
+  it("handles mixed case: no ancestorIds, shallow parent chain", () => {
+    // District with only one-hop parent (state), no further parent
+    const district = {
+      id: "nyala-district",
+      parent: { id: "south-darfur-state" },
+    };
+    // Cannot determine country from incomplete parent chain
+    expect(locationInCountry(district, sudan)).toBe(false);
+  });
 });

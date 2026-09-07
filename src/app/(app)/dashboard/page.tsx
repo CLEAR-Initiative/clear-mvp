@@ -10,6 +10,7 @@ import { useLocations } from "~/hooks/use-locations";
 import { useTeamCountry } from "~/hooks/use-team-country";
 import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
+import { locationInCountry } from "~/lib/location";
 import {
   alertsToMarkers,
   eventsToMarkers,
@@ -145,10 +146,12 @@ export default function DashboardPage() {
     // Filter markers to working country when scoped
     if (workingCountryId) {
       return allMarkers.filter((m) => {
-        // Match by locationId or ancestorIds
-        if (m.locationId === workingCountryId) return true;
-        if (m.ancestorIds && m.ancestorIds.includes(workingCountryId)) return true;
-        return false;
+        // Use the unified locationInCountry matcher
+        const location = {
+          id: m.locationId ?? "",
+          ancestorIds: m.ancestorIds,
+        };
+        return locationInCountry(location, workingCountryId);
       });
     }
     

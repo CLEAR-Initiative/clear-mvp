@@ -10,6 +10,7 @@
     },
     "reports": {
       "activeCrises": "الأزمات النشطة",
+      "allCountries": "جميع الدول",
       "criticalBadge": "{count} حرجة",
       "untitledCrisis": "أزمة بلا عنوان",
       "eventCount": "{count, plural, zero {لا أحداث} one {حدث واحد} two {حدثان} few {# أحداث} many {# حدثاً} other {# حدث}}",

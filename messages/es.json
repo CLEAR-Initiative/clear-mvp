@@ -10,6 +10,7 @@
     },
     "reports": {
       "activeCrises": "Crisis activas",
+      "allCountries": "Todos los países",
       "criticalBadge": "{count} crítica(s)",
       "untitledCrisis": "Crisis sin título",
       "eventCount": "{count, plural, one {# evento} other {# eventos}}",
