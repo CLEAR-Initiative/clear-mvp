@@ -26,8 +26,9 @@ export default function InsightsPage() {
   const [crisisPickedCountry, setCrisisPickedCountry] = useState<string | null>(null);
   
   const scopedOptions = useScopedCountryOptions(allCountries);
+  // Only show picker if team has countries - prevents selecting countries not in team scope
   const countryOptions =
-    !scopeReady ? [] : scopedOptions;
+    !scopeReady || teamCountries.length === 0 ? [] : scopedOptions;
   
   const handleCrisisCountryChange = useCallback(
     (value: string | null) => {
@@ -40,7 +41,12 @@ export default function InsightsPage() {
   const crisisCountryId = useMemo(() => {
     if (!crisisPickedCountry) return null;
     const location = teamCountries.find((c) => c.name === crisisPickedCountry);
-    return location?.id ?? null;
+    if (!location) {
+      // Selected country not in team scope - this shouldn't happen if picker is correct
+      console.warn(`Selected country "${crisisPickedCountry}" not found in team bindings`);
+      return null;
+    }
+    return location.id;
   }, [crisisPickedCountry, teamCountries]);
   
   const crisisCountryDisplayName = crisisPickedCountry
