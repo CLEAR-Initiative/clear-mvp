@@ -105,6 +105,7 @@ export function resolveLocationName(
 /**
  * True when `location` is the country itself or sits under it.
  * Crisis list payloads ship `ancestorIds` without a full `ancestors` walk.
+ * When both are missing, walks the `parent` chain as far as available.
  */
 export function locationInCountry(
   location:
@@ -112,6 +113,7 @@ export function locationInCountry(
         id: string;
         ancestorIds?: string[] | null;
         ancestors?: Array<{ id: string }> | null;
+        parent?: { id: string; parent?: { id: string; parent?: { id: string } } } | null;
       }
     | null
     | undefined,
@@ -119,6 +121,19 @@ export function locationInCountry(
 ): boolean {
   if (!location || !countryId) return false;
   if (location.id === countryId) return true;
+
+  // Fast path: ancestorIds (slim payload often has this)
   if (location.ancestorIds?.includes(countryId)) return true;
-  return location.ancestors?.some((a) => a.id === countryId) ?? false;
+
+  // Full ancestors array (rare in slim payloads)
+  if (location.ancestors?.some((a) => a.id === countryId)) return true;
+
+  // Walk parent chain when ancestorIds/ancestors are missing
+  let current = location.parent;
+  while (current) {
+    if (current.id === countryId) return true;
+    current = current.parent;
+  }
+
+  return false;
 }
