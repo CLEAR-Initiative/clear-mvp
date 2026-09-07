@@ -42,7 +42,6 @@ export default function InsightsPage() {
     if (!crisisPickedCountry) return null;
     const location = teamCountries.find((c) => c.name === crisisPickedCountry);
     if (!location) {
-      // Selected country not in team scope - this shouldn't happen if picker is correct
       console.warn(`Selected country "${crisisPickedCountry}" not found in team bindings`);
       return null;
     }
