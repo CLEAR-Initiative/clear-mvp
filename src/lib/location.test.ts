@@ -303,6 +303,42 @@ describe("crisisInCountry", () => {
     };
     expect(crisisInCountry(crisis, sudan)).toBe(true);
   });
+
+  it("ignores stale crisis generalLocation when remaining events are elsewhere", () => {
+    const crisis = {
+      generalLocation: {
+        id: "kabul",
+        ancestorIds: ["fd3e8bb7-70db-44e8-b1a8-2de13983d594"],
+      },
+      events: [
+        {
+          generalLocation: {
+            id: "nyala",
+            ancestorIds: [sudan, "south-darfur"],
+          },
+        },
+        {
+          generalLocation: {
+            id: "khartoum",
+            ancestorIds: [sudan, "khartoum-state"],
+          },
+        },
+      ],
+    };
+    expect(crisisInCountry(crisis, "fd3e8bb7-70db-44e8-b1a8-2de13983d594")).toBe(false);
+    expect(crisisInCountry(crisis, sudan)).toBe(true);
+  });
+
+  it("uses crisis generalLocation when there are no linked events", () => {
+    const crisis = {
+      generalLocation: {
+        id: "kabul",
+        ancestorIds: ["fd3e8bb7-70db-44e8-b1a8-2de13983d594"],
+      },
+      events: [],
+    };
+    expect(crisisInCountry(crisis, "fd3e8bb7-70db-44e8-b1a8-2de13983d594")).toBe(true);
+  });
 });
 
 describe("resolveCrisisLocationName", () => {
