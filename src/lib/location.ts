@@ -137,3 +137,65 @@ export function locationInCountry(
 
   return false;
 }
+
+/** Location fields used for country scoping (list views, slim payloads). */
+export type CountryScopeLocation = NonNullable<Parameters<typeof locationInCountry>[0]>;
+
+export function pickScopedLocation(
+  ...locations: Array<CountryScopeLocation | null | undefined>
+): CountryScopeLocation | null {
+  for (const loc of locations) {
+    if (loc) return loc;
+  }
+  return null;
+}
+
+/**
+ * True when the crisis itself or any linked event sits under `countryId`.
+ * Crisis list rows often have `generalLocation: null`; events carry the location.
+ */
+export function crisisInCountry(
+  crisis: {
+    generalLocation?: CountryScopeLocation | null;
+    events?: Array<{
+      generalLocation?: CountryScopeLocation | null;
+      originLocation?: CountryScopeLocation | null;
+      destinationLocation?: CountryScopeLocation | null;
+    }> | null;
+  },
+  countryId: string,
+): boolean {
+  if (locationInCountry(crisis.generalLocation, countryId)) return true;
+  for (const event of crisis.events ?? []) {
+    const loc = pickScopedLocation(
+      event.generalLocation,
+      event.originLocation,
+      event.destinationLocation,
+    );
+    if (locationInCountry(loc, countryId)) return true;
+  }
+  return false;
+}
+
+/** Best display name for a crisis, falling back to linked event locations. */
+export function resolveCrisisLocationName(
+  crisis: {
+    generalLocation?: GqlLocation | null;
+    events?: Array<{
+      generalLocation?: GqlLocation | null;
+      originLocation?: GqlLocation | null;
+      destinationLocation?: GqlLocation | null;
+    }> | null;
+  },
+  options?: Parameters<typeof resolveLocationName>[1],
+): string | null {
+  const fromCrisis = resolveLocationName(crisis.generalLocation, options);
+  if (fromCrisis) return fromCrisis;
+  for (const event of crisis.events ?? []) {
+    for (const loc of [event.generalLocation, event.originLocation, event.destinationLocation]) {
+      const name = resolveLocationName(loc, options);
+      if (name) return name;
+    }
+  }
+  return null;
+}
