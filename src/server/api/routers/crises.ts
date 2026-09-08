@@ -109,17 +109,28 @@ const CRISIS_FIELDS = `
   events { ${EVENT_FIELDS} }
 `;
 
+/** Country scoping only — no geometry walk (list payloads stay slim). */
+const CRISIS_LIST_LOCATION_FIELDS = `
+  id name level ancestorIds
+  parent { id parent { id parent { id } } }
+`;
+
 /** Cheaper field set for list views - no per-event detail. */
 const CRISIS_LIST_FIELDS = `
   id
   title
   summary
   severity
-  generalLocation { ${NESTED_LOCATION_FIELDS} }
+  generalLocation { ${CRISIS_LIST_LOCATION_FIELDS} }
   needs
   populationAffected
   populationInArea
-  events { id title severity rank firstSignalCreatedAt lastSignalCreatedAt }
+  events {
+    id title severity rank firstSignalCreatedAt lastSignalCreatedAt
+    generalLocation { ${CRISIS_LIST_LOCATION_FIELDS} }
+    originLocation { ${CRISIS_LIST_LOCATION_FIELDS} }
+    destinationLocation { ${CRISIS_LIST_LOCATION_FIELDS} }
+  }
 `;
 
 const CRISES_LIST_QUERY = `

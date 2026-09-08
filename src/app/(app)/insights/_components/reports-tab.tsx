@@ -8,7 +8,7 @@ import { IconLayersIntersect } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { mapSeverity, severityColor } from "~/lib/types/graphql";
 import { severityColors } from "~/lib/constants/severity";
-import { locationInCountry, resolveLocationName } from "~/lib/location";
+import { crisisInCountry, resolveCrisisLocationName } from "~/lib/location";
 import { getDisasterPills } from "~/lib/disaster-types";
 import { CardSection } from "~/components/ui";
 import { InsightsCrisisListSkeleton } from "~/components/ui/insights-page-skeleton";
@@ -34,7 +34,7 @@ export function ReportsTab({
   const crises = useMemo(() => {
     const all = crisesQuery.data ?? [];
     if (!countryId) return all;
-    return all.filter((c) => locationInCountry(c.generalLocation, countryId));
+    return all.filter((c) => crisisInCountry(c, countryId));
   }, [crisesQuery.data, countryId]);
 
   const criticalCount = crises.filter((c) => mapSeverity(c.severity) === "critical").length;
@@ -89,7 +89,7 @@ export function ReportsTab({
             const sev = mapSeverity(crisis.severity);
             const colors = severityColors[sev] ?? severityColors.medium!;
             const dotColor = severityColor(crisis.severity);
-            const locationName = resolveLocationName(crisis.generalLocation);
+            const locationName = resolveCrisisLocationName(crisis);
             const eventCount = crisis.events?.length ?? 0;
             const firstAt = firstEventAt(crisis);
             const lastAt = lastUpdateAt(crisis);
