@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  crisisInCountry,
   flattenLocationTree,
   locationInCountry,
+  resolveCrisisLocationName,
   resolveLocationName,
   resolveNameFromAncestorIds,
 } from "./location";
@@ -206,5 +208,119 @@ describe("locationInCountry", () => {
 
   it("rejects a crisis with no location", () => {
     expect(locationInCountry(null, sudan)).toBe(false);
+  });
+
+  // NEW: Slim payload cases (crisis list) - parent but no ancestorIds
+  it("matches when ancestorIds is missing but parent chain reaches country", () => {
+    // Khartoum district → parent is Khartoum state → parent is Sudan
+    const khartoumDistrict = {
+      id: "khartoum-district",
+      parent: {
+        id: "khartoum-state",
+        parent: { id: sudan },
+      },
+    };
+    expect(locationInCountry(khartoumDistrict, sudan)).toBe(true);
+  });
+
+  it("matches when parent is directly the country", () => {
+    // State with parent = country
+    const state = {
+      id: "khartoum-state",
+      parent: { id: sudan },
+    };
+    expect(locationInCountry(state, sudan)).toBe(true);
+  });
+
+  it("rejects when parent chain does not reach the target country", () => {
+    const venezuelaDistrict = {
+      id: "caracas-district",
+      parent: {
+        id: "caracas-state",
+        parent: { id: venezuela },
+      },
+    };
+    expect(locationInCountry(venezuelaDistrict, sudan)).toBe(false);
+  });
+
+  it("handles mixed case: no ancestorIds, shallow parent chain", () => {
+    // District with only one-hop parent (state), no further parent
+    const district = {
+      id: "nyala-district",
+      parent: { id: "south-darfur-state" },
+    };
+    // Cannot determine country from incomplete parent chain
+    expect(locationInCountry(district, sudan)).toBe(false);
+  });
+});
+
+describe("crisisInCountry", () => {
+  const sudan = "3c7edcfb-85f1-46e4-8a7b-29651f73d740";
+  const venezuela = "fd3e8bb7-70db-44e8-b1a8-2de13983d594";
+
+  it("matches when crisis generalLocation is null but an event is in country", () => {
+    const crisis = {
+      generalLocation: null,
+      events: [
+        {
+          generalLocation: {
+            id: "port-sudan",
+            ancestorIds: [sudan, "red-sea-state"],
+          },
+        },
+      ],
+    };
+    expect(crisisInCountry(crisis, sudan)).toBe(true);
+  });
+
+  it("rejects when crisis and events have no location in country", () => {
+    const crisis = {
+      generalLocation: null,
+      events: [
+        {
+          generalLocation: {
+            id: "caracas",
+            ancestorIds: [venezuela],
+          },
+        },
+      ],
+    };
+    expect(crisisInCountry(crisis, sudan)).toBe(false);
+  });
+
+  it("falls back to originLocation when generalLocation is missing on event", () => {
+    const crisis = {
+      generalLocation: null,
+      events: [
+        {
+          generalLocation: null,
+          originLocation: {
+            id: "khartoum-district",
+            parent: { id: "khartoum-state", parent: { id: sudan } },
+          },
+        },
+      ],
+    };
+    expect(crisisInCountry(crisis, sudan)).toBe(true);
+  });
+});
+
+describe("resolveCrisisLocationName", () => {
+  it("uses event location when crisis generalLocation is null", () => {
+    const crisis = {
+      generalLocation: null,
+      events: [
+        {
+          generalLocation: {
+            id: "loc-1",
+            name: "Port Sudan",
+            level: 2,
+            ancestorIds: [],
+            geometry: null,
+          },
+        },
+      ],
+    };
+    expect(resolveCrisisLocationName(crisis)).toBe("Port Sudan");
   });
 });

@@ -105,6 +105,7 @@ export function resolveLocationName(
 /**
  * True when `location` is the country itself or sits under it.
  * Crisis list payloads ship `ancestorIds` without a full `ancestors` walk.
+ * When both are missing, walks the `parent` chain as far as available.
  */
 export function locationInCountry(
   location:
@@ -112,6 +113,7 @@ export function locationInCountry(
         id: string;
         ancestorIds?: string[] | null;
         ancestors?: Array<{ id: string }> | null;
+        parent?: { id: string; parent?: { id: string; parent?: { id: string } } } | null;
       }
     | null
     | undefined,
@@ -119,6 +121,81 @@ export function locationInCountry(
 ): boolean {
   if (!location || !countryId) return false;
   if (location.id === countryId) return true;
+
+  // Fast path: ancestorIds (slim payload often has this)
   if (location.ancestorIds?.includes(countryId)) return true;
-  return location.ancestors?.some((a) => a.id === countryId) ?? false;
+
+  // Full ancestors array (rare in slim payloads)
+  if (location.ancestors?.some((a) => a.id === countryId)) return true;
+
+  // Walk parent chain when ancestorIds/ancestors are missing
+  let current = location.parent;
+  while (current) {
+    if (current.id === countryId) return true;
+    current = current.parent;
+  }
+
+  return false;
+}
+
+/** Location fields used for country scoping (list views, slim payloads). */
+export type CountryScopeLocation = NonNullable<Parameters<typeof locationInCountry>[0]>;
+
+export function pickScopedLocation(
+  ...locations: Array<CountryScopeLocation | null | undefined>
+): CountryScopeLocation | null {
+  for (const loc of locations) {
+    if (loc) return loc;
+  }
+  return null;
+}
+
+/**
+ * True when the crisis itself or any linked event sits under `countryId`.
+ * Crisis list rows often have `generalLocation: null`; events carry the location.
+ */
+export function crisisInCountry(
+  crisis: {
+    generalLocation?: CountryScopeLocation | null;
+    events?: Array<{
+      generalLocation?: CountryScopeLocation | null;
+      originLocation?: CountryScopeLocation | null;
+      destinationLocation?: CountryScopeLocation | null;
+    }> | null;
+  },
+  countryId: string,
+): boolean {
+  if (locationInCountry(crisis.generalLocation, countryId)) return true;
+  for (const event of crisis.events ?? []) {
+    const loc = pickScopedLocation(
+      event.generalLocation,
+      event.originLocation,
+      event.destinationLocation,
+    );
+    if (locationInCountry(loc, countryId)) return true;
+  }
+  return false;
+}
+
+/** Best display name for a crisis, falling back to linked event locations. */
+export function resolveCrisisLocationName(
+  crisis: {
+    generalLocation?: GqlLocation | null;
+    events?: Array<{
+      generalLocation?: GqlLocation | null;
+      originLocation?: GqlLocation | null;
+      destinationLocation?: GqlLocation | null;
+    }> | null;
+  },
+  options?: Parameters<typeof resolveLocationName>[1],
+): string | null {
+  const fromCrisis = resolveLocationName(crisis.generalLocation, options);
+  if (fromCrisis) return fromCrisis;
+  for (const event of crisis.events ?? []) {
+    for (const loc of [event.generalLocation, event.originLocation, event.destinationLocation]) {
+      const name = resolveLocationName(loc, options);
+      if (name) return name;
+    }
+  }
+  return null;
 }
