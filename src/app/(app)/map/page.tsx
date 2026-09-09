@@ -244,11 +244,18 @@ function MapPageContent() {
   const focusEntityId = focusEventId ?? focusSignalId ?? focusCrisisId;
 
   // Bare `/map` (Map tab): re-apply in-session entity focus so the chip survives.
+  const reapplyFocusKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (urlFocusEventId || urlFocusSignalId || urlFocusCrisisId) return;
+    if (urlFocusEventId || urlFocusSignalId || urlFocusCrisisId) {
+      reapplyFocusKeyRef.current = null;
+      return;
+    }
     if (focusDismissed) return;
     const session = readMapFocusSession();
     if (!session || session.kind === "place") return;
+    const key = `${session.kind}:${session.id}`;
+    if (reapplyFocusKeyRef.current === key) return;
+    reapplyFocusKeyRef.current = key;
     router.replace(mapFocusHref(session.kind, session.id), { scroll: false });
   }, [
     urlFocusEventId,

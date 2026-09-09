@@ -127,11 +127,15 @@ export async function geocodePlaceQuery(
   if (opts?.language) params.set("language", opts.language);
 
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?${params}`;
-  const res = await fetch(url, { signal: opts?.signal });
-  if (!res.ok) return [];
-  const data = (await res.json()) as MapboxGeocodeResponse;
-  const features = Array.isArray(data.features) ? data.features : [];
-  return features
-    .map(featureToHit)
-    .filter((h): h is GeocodeHit => h != null);
+  try {
+    const res = await fetch(url, { signal: opts?.signal });
+    if (!res.ok) return [];
+    const data = (await res.json()) as MapboxGeocodeResponse;
+    const features = Array.isArray(data.features) ? data.features : [];
+    return features
+      .map(featureToHit)
+      .filter((h): h is GeocodeHit => h != null);
+  } catch {
+    return [];
+  }
 }

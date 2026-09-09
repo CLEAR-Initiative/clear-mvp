@@ -1441,7 +1441,8 @@ export function CrisisMap({
     if (!map.current || !loaded) return;
     const m = map.current;
     const onUserGesture = (e: { originalEvent?: Event }) => {
-      if (!e.originalEvent) return;
+      // Programmatic flyTo/fitBounds omit a DOM UIEvent; ignore those.
+      if (!e.originalEvent || !(e.originalEvent instanceof UIEvent)) return;
       userCameraOverrideRef.current = true;
       try {
         m.stop();

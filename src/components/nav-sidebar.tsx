@@ -71,13 +71,10 @@ interface NavItem {
 
 /** Map / Insights hrefs follow in-session focus chips (#582). */
 function resolveNavHref(item: NavItem): string {
-  if (item.labelKey === "map") {
-    return mapNavHrefFromFocusSession(readMapFocusSession());
-  }
-  if (item.labelKey === "insights") {
-    return insightsNavHrefFromFocusSession(readMapFocusSession());
-  }
-  return item.href;
+  if (item.labelKey !== "map" && item.labelKey !== "insights") return item.href;
+  const session = readMapFocusSession();
+  if (item.labelKey === "map") return mapNavHrefFromFocusSession(session);
+  return insightsNavHrefFromFocusSession(session);
 }
 
 interface NavSection {
