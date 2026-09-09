@@ -1927,9 +1927,9 @@ function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events
 
   const removeEvent = api.crises.removeEvent.useMutation({
     onSuccess: () => {
+      void utils.crises.list.invalidate();
       if (totalEventCount <= 1) {
         // Last event removed - crisis was deleted by the backend
-        void utils.crises.list.invalidate();
         router.push("/insights");
       } else {
         void utils.crises.get.invalidate({ id: crisisId });

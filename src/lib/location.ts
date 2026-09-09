@@ -151,8 +151,12 @@ export function pickScopedLocation(
 }
 
 /**
- * True when the crisis itself or any linked event sits under `countryId`.
- * Crisis list rows often have `generalLocation: null`; events carry the location.
+ * True when any linked event sits under `countryId`, or — when there are no
+ * events — when the crisis row's own `generalLocation` does.
+ *
+ * Linked events are the source of truth for country scoping: `generalLocation`
+ * on the crisis is set at creation and is not always updated when events are
+ * added or removed, so checking it alongside events causes stale matches.
  */
 export function crisisInCountry(
   crisis: {
@@ -165,16 +169,18 @@ export function crisisInCountry(
   },
   countryId: string,
 ): boolean {
-  if (locationInCountry(crisis.generalLocation, countryId)) return true;
-  for (const event of crisis.events ?? []) {
-    const loc = pickScopedLocation(
-      event.generalLocation,
-      event.originLocation,
-      event.destinationLocation,
-    );
-    if (locationInCountry(loc, countryId)) return true;
+  const events = crisis.events ?? [];
+  if (events.length > 0) {
+    return events.some((event) => {
+      const loc = pickScopedLocation(
+        event.generalLocation,
+        event.originLocation,
+        event.destinationLocation,
+      );
+      return locationInCountry(loc, countryId);
+    });
   }
-  return false;
+  return locationInCountry(crisis.generalLocation, countryId);
 }
 
 /** Best display name for a crisis, falling back to linked event locations. */
