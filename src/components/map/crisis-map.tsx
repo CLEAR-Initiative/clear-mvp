@@ -53,6 +53,11 @@ import {
 } from "~/lib/map/pin-elevation";
 import { bridgeMetaToCtrlForPitch } from "~/lib/map/meta-pitch-bridge";
 import { flyToOrientation, countryFitPadding, fitBoundsCameraOptions } from "~/lib/map/marker-detail-camera";
+import {
+  framedCountryAfterFocusChange,
+  shouldSkipCountryFit,
+  worldPickFlyDuration,
+} from "~/lib/map/country-picker-camera";
 import { ensureGlobeProjection } from "~/lib/map/idle-globe-spin";
 import {
   dismissTopographyTiltHint,
@@ -178,10 +183,21 @@ interface CrisisMapProps {
   focusCountryPCode?: string;
   /** Country name used as a fallback when `pCode` doesn't resolve. */
   focusCountryName?: string;
+  /**
+   * ISO 3166-1 alpha-2 codes to outline when no single focus country is set
+   * (All Countries browse). Lets a multi-country team see its scope on the globe.
+   */
+  scopeCountryIsos?: string[];
+  /**
+   * ISO codes that have no paintable A1 GeoJSON (Sudan seed bboxes). Mapbox
+   * admin-1 lines are shown for these even when other countries already
+   * have OCHA polygons.
+   */
+  mapboxAdmin1Isos?: string[];
   /** Admin boundary polygons to render (A1 states or A2 districts). */
   adminBoundaries?: AdminBoundary[];
   /** Level of admin boundaries being rendered - controls visual styling. */
-  adminBoundaryLevel?: 1 | 2;
+  adminBoundaryLevel?: 0 | 1 | 2;
   /** GeoJSON geometry to fit the map bounds to (e.g. a selected region). */
   fitBoundsGeometry?: unknown;
   /** Our own L0 geometry for the focus country highlight (overrides Mapbox tileset). */
@@ -591,6 +607,8 @@ export function CrisisMap({
   interactive = true,
   focusCountryPCode,
   focusCountryName,
+  scopeCountryIsos,
+  mapboxAdmin1Isos,
   adminBoundaries,
   adminBoundaryLevel,
   fitBoundsGeometry,
@@ -1096,6 +1114,95 @@ export function CrisisMap({
 
     cleanup();
 
+    const scopedIsos = (scopeCountryIsos ?? [])
+      .map((iso) => iso.toUpperCase())
+      .filter(Boolean);
+
+    // All Countries + team scope: outline every assigned country on the globe.
+    // No single-country mask flight — just “these are yours” at world zoom.
+    if (!focusIso && scopedIsos.length > 0 && showBoundaries) {
+      const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+      const firstRoadLayer = styleLayers.find((l) => isRoadLayerId(l.id));
+      const firstAdminLayer = styleLayers.find((l) =>
+        l.id === "admin-1-boundary-bg" || l.id === "admin-0-boundary-bg",
+      );
+      const firstSymbolLayer = styleLayers.find((l) => l.type === "symbol");
+      const fillBeforeId: string | undefined =
+        firstRoadLayer?.id ?? firstAdminLayer?.id ?? firstSymbolLayer?.id;
+      const borderBeforeId: string | undefined = firstSymbolLayer?.id;
+      const overlayOnDark = baseMapType === "satellite" || isDark;
+      const maskColor =
+        baseMapType === "simple" && !isDark ? "#FFFFFF" : "#000000";
+      const maskOpacity =
+        baseMapType === "simple" ? (isDark ? 0.45 : 0.75) : 0.35;
+      const borderColor = overlayOnDark ? "#60A5FA" : "#1D4ED8";
+      const isoIn: unknown = ["in", ["get", "iso_3166_1"], ["literal", scopedIsos]];
+      const isoOut: unknown = ["!", isoIn];
+
+      m.addSource(COUNTRY_SOURCE, {
+        type: "vector",
+        url: "mapbox://mapbox.country-boundaries-v1",
+      });
+      m.addLayer(
+        {
+          id: "focus-mask-fill",
+          type: "fill",
+          source: COUNTRY_SOURCE,
+          "source-layer": "country_boundaries",
+          filter: isoOut as never,
+          paint: { "fill-color": maskColor, "fill-opacity": maskOpacity },
+        },
+        fillBeforeId,
+      );
+      m.addLayer(
+        {
+          id: "focus-border-line",
+          type: "line",
+          source: COUNTRY_SOURCE,
+          "source-layer": "country_boundaries",
+          filter: isoIn as never,
+          paint: { "line-color": borderColor, "line-width": 1.75, "line-opacity": 0.9 },
+        },
+        borderBeforeId,
+      );
+
+      const fallbackIsos = (mapboxAdmin1Isos ?? [])
+        .map((iso) => iso.toUpperCase())
+        .filter(Boolean);
+      if (adminBoundaryLevel === 1 && fallbackIsos.length > 0) {
+        const allLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+        const isoFilter: unknown =
+          fallbackIsos.length === 1
+            ? ["==", ["get", "iso_3166_1"], fallbackIsos[0]]
+            : ["in", ["get", "iso_3166_1"], ["literal", fallbackIsos]];
+        for (const layer of allLayers) {
+          const id = layer.id.toLowerCase();
+          if (
+            layer.type === "line" &&
+            id.includes("admin") &&
+            (id.includes("-1-") || id.endsWith("-1"))
+          ) {
+            admin1LayerIds.current.push(layer.id);
+            try {
+              m.setFilter(layer.id, [
+                "all",
+                ["==", ["get", "admin_level"], 1],
+                ["==", ["get", "maritime"], "false"],
+                isoFilter,
+              ] as never);
+              m.setLayerZoomRange(layer.id, 0, 24);
+              m.setPaintProperty(layer.id, "line-color", overlayOnDark ? "#94A3B8" : "#475569");
+              m.setPaintProperty(layer.id, "line-width", 1.4);
+              m.setPaintProperty(layer.id, "line-opacity", 0.85);
+              m.setPaintProperty(layer.id, "line-dasharray", [3, 2]);
+              m.setLayoutProperty(layer.id, "visibility", "visible");
+            } catch { /* ignore */ }
+          }
+        }
+      }
+      return cleanup;
+    }
+
     if (!focusIso) return;
 
     // Layer ordering strategy:
@@ -1314,7 +1421,7 @@ export function CrisisMap({
     }
 
     return cleanup;
-  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries, baseMapType]);
+  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries, baseMapType, scopeCountryIsos, mapboxAdmin1Isos]);
 
   // Frame the focus country instantly from static countryConfig.
   // L0 GeoJSON (focusCountryFitBounds) is for highlight paint only — waiting
@@ -1325,7 +1432,15 @@ export function CrisisMap({
   const prevCountryFitNonce = useRef(countryFitNonce);
   const prevFramedCountry = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (!map.current || !loaded || fitBoundsGeometry) return;
+    if (!map.current || !loaded) return;
+    // All Countries must forget the last frame. Leaving this set to "Sudan"
+    // after zooming out made Sudan → All → Sudan skip the next country fit.
+    if (!focusCountryName) {
+      prevFramedCountry.current = framedCountryAfterFocusChange(undefined);
+      prevCountryFitNonce.current = countryFitNonce;
+      return;
+    }
+    if (fitBoundsGeometry) return;
     const nonceBumped = countryFitNonce !== prevCountryFitNonce.current;
     prevCountryFitNonce.current = countryFitNonce;
     if (!fitBoundsOnFocus && !nonceBumped) return;
@@ -1336,8 +1451,16 @@ export function CrisisMap({
     const bounds = cfgBounds ?? focusCountryFitBounds;
     if (!bounds) return;
 
-    const framedKey = focusCountryName ?? `bounds:${bounds.join(",")}`;
-    if (!nonceBumped && prevFramedCountry.current === framedKey) return;
+    const framedKey = focusCountryName;
+    if (
+      shouldSkipCountryFit({
+        prevFramedKey: prevFramedCountry.current,
+        nextFramedKey: framedKey,
+        nonceBumped,
+      })
+    ) {
+      return;
+    }
     prevFramedCountry.current = framedKey;
 
     // Mobile: inset for header + bottom nav so the full country sits in the
@@ -1528,7 +1651,7 @@ export function CrisisMap({
     map.current.flyTo({
       center,
       zoom,
-      duration: flyDuration,
+      duration: focusCountryName ? flyDuration : worldPickFlyDuration(flyDuration),
       pitch,
       bearing,
       padding: flyPaddingBottom > 0
@@ -2953,12 +3076,13 @@ export function CrisisMap({
     if (features.length === 0) return;
 
     const isA2 = adminBoundaryLevel === 2;
+    const isA0 = adminBoundaryLevel === 0;
     // Contrast against the basemap, not the app theme - satellite imagery
     // is always dark.
     const overlayOnDark = baseMapType === "satellite" || isDark;
     const lineColor = overlayOnDark ? "#60A5FA" : "#1D4ED8";
-    const lineWidth = isA2 ? 1 : 1.5;
-    const lineOpacity = isA2 ? 0.7 : 0.85;
+    const lineWidth = isA2 ? 1 : isA0 ? 2 : 1.5;
+    const lineOpacity = isA2 ? 0.7 : 0.9;
 
     const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
     const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;

@@ -991,7 +991,8 @@
     "filters": {
       "country": "Pays",
       "region": "Région",
-      "date": "Date"
+      "date": "Date",
+      "allCountries": "Tous les pays"
     },
     "regionPicker": {
       "allRegions": "Toutes les régions",

@@ -92,9 +92,13 @@ describe("resolveWorkingCountry", () => {
     expect(resolveWorkingCountry(MULTI, { id: "stale", name: "Sudan" }, true)).toEqual(SD);
   });
 
-  it("defaults to the first scoped country when the store is empty or out of scope", () => {
-    expect(resolveWorkingCountry(MULTI, null, true)).toEqual(AF);
-    expect(resolveWorkingCountry(MULTI, { id: "xx", name: "Chad" }, true)).toEqual(AF);
+  it("leaves a multi-country team unset when the store is empty or out of scope", () => {
+    expect(resolveWorkingCountry(MULTI, null, true)).toBeNull();
+    expect(resolveWorkingCountry(MULTI, { id: "xx", name: "Chad" }, true)).toBeNull();
+  });
+
+  it("pins a one-country team when the store is empty", () => {
+    expect(resolveWorkingCountry([SD], null, true)).toEqual(SD);
   });
 
   it("holds an unscoped pick after scope is ready", () => {

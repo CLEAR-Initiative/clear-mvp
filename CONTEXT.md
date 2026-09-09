@@ -257,10 +257,13 @@ no countries at all.
 _Avoid_: calling the user's choice "scope" (scope is the set, not the pick).
 
 **Working country**:
-The one country currently framing Map, Overview, Detection, and Insights. Always exactly
-one member of **Country scope** when scope is non-empty; default = alphabetically first;
-persisted per team in a cookie (`clear-working-country`). Changed only via the Country
-picker on Map / Overview / Detection / Insights — not by Full Map or detail Back.
+The country currently framing Map, Overview, Detection, and Insights, or unset.
+One-country **Country scope** pins to that country. Multi-country scope: a pick is
+one member of the set; **unset / All Countries** shows every assigned country and
+a world camera (not a zoom on the alphabetically first binding). Unscoped = global
+monitoring. Persisted per team in a cookie (`clear-working-country`); clearing the
+picker deletes that team's entry. Changed only via the Country picker on Map /
+Overview / Detection / Insights — not by Full Map or detail Back.
 _Avoid_: "focus country" for the choice (that is the map paint treatment); "selected
 country" without qualifier (ambiguous).
 
@@ -383,9 +386,10 @@ full SDN GeoJSON dumps into the app tree by default.
   ingest** (clear-api GeoJSON persist) → Expo **#277** (**Blockages** wire-up). Access IA
   comps are a later ticket if still needed after spike findings.
 - **Country scope** contains zero or more level-0 countries; **Working country** is
-  exactly one of them when scope is non-empty, or null when unscoped. Full Map / Back
-  from a detail page is a visit — it must not write **Working country**. **Focus country**
-  (map paint) visually highlights the **Working country** on the map canvas.
+  one of them, or unset (all assigned countries / world camera) on a multi-country
+  team, or null when unscoped. Full Map / Back from a detail page is a visit — it
+  must not write **Working country**. **Focus country** (map paint) visually highlights
+  the **Working country** on the map canvas when one is set.
 
 ## Example dialogue
 

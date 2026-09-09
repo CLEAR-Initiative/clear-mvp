@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   crisisInCountry,
+  filterLocationsByCountryScope,
   flattenLocationTree,
   locationInCountry,
   resolveCrisisLocationName,
@@ -303,6 +304,42 @@ describe("crisisInCountry", () => {
     };
     expect(crisisInCountry(crisis, sudan)).toBe(true);
   });
+
+  it("ignores stale crisis generalLocation when remaining events are elsewhere", () => {
+    const crisis = {
+      generalLocation: {
+        id: "kabul",
+        ancestorIds: ["fd3e8bb7-70db-44e8-b1a8-2de13983d594"],
+      },
+      events: [
+        {
+          generalLocation: {
+            id: "nyala",
+            ancestorIds: [sudan, "south-darfur"],
+          },
+        },
+        {
+          generalLocation: {
+            id: "khartoum",
+            ancestorIds: [sudan, "khartoum-state"],
+          },
+        },
+      ],
+    };
+    expect(crisisInCountry(crisis, "fd3e8bb7-70db-44e8-b1a8-2de13983d594")).toBe(false);
+    expect(crisisInCountry(crisis, sudan)).toBe(true);
+  });
+
+  it("uses crisis generalLocation when there are no linked events", () => {
+    const crisis = {
+      generalLocation: {
+        id: "kabul",
+        ancestorIds: ["fd3e8bb7-70db-44e8-b1a8-2de13983d594"],
+      },
+      events: [],
+    };
+    expect(crisisInCountry(crisis, "fd3e8bb7-70db-44e8-b1a8-2de13983d594")).toBe(true);
+  });
 });
 
 describe("resolveCrisisLocationName", () => {
@@ -322,5 +359,34 @@ describe("resolveCrisisLocationName", () => {
       ],
     };
     expect(resolveCrisisLocationName(crisis)).toBe("Port Sudan");
+  });
+});
+
+describe("filterLocationsByCountryScope", () => {
+  const sd = { id: "sd", ancestorIds: [] as string[] };
+  const khartoum = { id: "krt", ancestorIds: ["sd"] };
+  const ve = { id: "ve", ancestorIds: [] as string[] };
+
+  it("returns every row when scope is empty (unscoped / global)", () => {
+    expect(filterLocationsByCountryScope([sd, khartoum, ve], [])).toEqual([
+      sd,
+      khartoum,
+      ve,
+    ]);
+  });
+
+  it("keeps a country and its children when that country is in scope", () => {
+    expect(filterLocationsByCountryScope([sd, khartoum, ve], ["sd"])).toEqual([
+      sd,
+      khartoum,
+    ]);
+  });
+
+  it("keeps several scoped countries for an All Countries browse", () => {
+    expect(filterLocationsByCountryScope([sd, khartoum, ve], ["sd", "ve"])).toEqual([
+      sd,
+      khartoum,
+      ve,
+    ]);
   });
 });

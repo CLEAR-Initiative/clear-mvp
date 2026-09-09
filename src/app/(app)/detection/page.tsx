@@ -12,11 +12,20 @@ import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
-import { useTeamCountry, useScopedCountryOptions } from "~/hooks/use-team-country";
+import {
+  ALL_COUNTRIES,
+  pickerCountryOptions,
+  resolveSelectedCountry,
+  useTeamCountry,
+} from "~/hooks/use-team-country";
 import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import type { MapMarker } from "~/components/map/crisis-map";
 import { parseDateFilter, resolveCountryConfig } from "~/lib/constants/country-config";
+import { isoForCountryName } from "~/lib/constants/countries";
+import { scopeIsosMissingPaintableBoundaries } from "~/lib/geo/country-mask";
 import { useLocations } from "~/hooks/use-locations";
+import { useLastFocusedCountry } from "~/hooks/use-last-focused-country";
+import { browseMapCamera } from "~/lib/map/country-picker-camera";
 import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
 import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
@@ -234,15 +243,23 @@ function DetectionPageContent() {
     scopeReady,
   } = useTeamCountry();
 
-  // Country the user picked. Only consulted when the active team monitors
-  // globally; a team bound to countries uses working country from the hook.
+  // Country the user picked. Scoped teams use the working-country cookie;
+  // multi-country unset (All Countries) means every assigned country.
   const [pickedCountry, setPickedCountry] = useState("");
-  const selectedCountry =
-    workingCountryName ?? (scopeReady ? pickedCountry : "");
+  const teamCountryNames = useMemo(() => teamCountries.map((c) => c.name), [teamCountries]);
+  const selectedCountry = resolveSelectedCountry(
+    teamCountryNames,
+    workingCountryName ?? pickedCountry,
+    scopeReady,
+  );
+  const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
   
   const handleCountryChange = useCallback(
     (value: string) => {
-      if (teamCountries.length > 0) {
+      if (value === ALL_COUNTRIES) {
+        setPickedCountry(ALL_COUNTRIES);
+        setWorkingCountry("", ALL_COUNTRIES);
+      } else if (teamCountries.length > 0) {
         const location = teamCountries.find((c) => c.name === value);
         if (location) setWorkingCountry(location.id);
       } else {
@@ -255,9 +272,12 @@ function DetectionPageContent() {
     [teamCountries, setWorkingCountry, getLocationId],
   );
   
-  const scopedOptions = useScopedCountryOptions(countries);
-  const countryOptions =
-    !scopeReady && workingCountryName ? [workingCountryName] : scopedOptions;
+  const countryOptions = useMemo(() => {
+    if (!scopeReady) {
+      return workingCountryName ? [workingCountryName] : [];
+    }
+    return pickerCountryOptions(countries, teamCountryNames);
+  }, [scopeReady, workingCountryName, countries, teamCountryNames]);
   useReportStaleCountryPick(countryOptions, workingCountryName ?? pickedCountry, selectedCountry);
 
   // Ground intel is a PRIVATE staging tier (sender names, unvetted claims):
@@ -312,10 +332,10 @@ function DetectionPageContent() {
     }
 
     const storedFilters = readStoredFilters();
-    // Only restore country for unscoped teams; scoped teams use working country
-    if (teamCountries.length === 0 && storedFilters.country) {
-      setPickedCountry(storedFilters.country);
-    }
+    // Country lives in the working-country cookie. Do not restore it from
+    // session here: on the first mount `teamCountries` is still empty, so a
+    // leftover "Venezuela" would look like an unscoped pick and pin Detection
+    // after Map already switched to All Countries.
     if (storedFilters.regionId !== undefined) setSelectedRegionId(storedFilters.regionId ?? null);
     if (storedFilters.date) setSelectedDate(storedFilters.date);
     if (storedFilters.severities) setActiveSeverities(new Set(storedFilters.severities));
@@ -350,7 +370,23 @@ function DetectionPageContent() {
     }
   }, [storageReady, selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
 
-  const selectedCountryId = useMemo(() => getLocationId(selectedCountry), [selectedCountry, getLocationId]);
+  const selectedCountryId = useMemo(
+    () => (selectedCountry !== ALL_COUNTRIES ? getLocationId(selectedCountry) : null),
+    [selectedCountry, getLocationId],
+  );
+  const isGlobalBrowse = selectedCountry === ALL_COUNTRIES;
+  const scopedCountryIds = useMemo(() => teamCountries.map((c) => c.id), [teamCountries]);
+  const globalCountryIds = scopedCountryIds.length > 0 ? scopedCountryIds : undefined;
+  const boundariesReady = isGlobalBrowse ? scopeReady : !!selectedCountryId;
+  const scopeCountryIsos = useMemo(
+    () =>
+      isGlobalBrowse
+        ? teamCountries
+            .map((c) => isoForCountryName(c.name))
+            .filter((iso): iso is string => !!iso)
+        : [],
+    [isGlobalBrowse, teamCountries],
+  );
 
   // Country outline for the map highlight, keyed off whichever country is
   // actually selected rather than a fixed one.
@@ -360,21 +396,41 @@ function DetectionPageContent() {
   );
   const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
 
+  const a0BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
+    { level: 0, countryIds: globalCountryIds },
+    { enabled: boundaryLevel === "A0" && isGlobalBrowse && scopeReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
   const a1BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
-    { level: 1, countryId: selectedCountryId ?? undefined },
-    { enabled: boundaryLevel === "A1" && !!selectedCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    isGlobalBrowse
+      ? { level: 1, countryIds: globalCountryIds }
+      : { level: 1, countryId: selectedCountryId ?? undefined },
+    { enabled: boundaryLevel === "A1" && boundariesReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const a2BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
-    { level: 2, countryId: selectedCountryId ?? undefined },
-    { enabled: boundaryLevel === "A2" && !!selectedCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    isGlobalBrowse
+      ? { level: 2, countryIds: globalCountryIds }
+      : { level: 2, countryId: selectedCountryId ?? undefined },
+    { enabled: boundaryLevel === "A2" && boundariesReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const adminBoundaries = useMemo(() => {
     if (selectedRegionId !== null) return [];
+    if (boundaryLevel === "A0" && isGlobalBrowse) return a0BoundaryQuery.data ?? [];
     if (boundaryLevel === "A1") return a1BoundaryQuery.data ?? [];
     if (boundaryLevel === "A2") return a2BoundaryQuery.data ?? [];
     return [];
-  }, [selectedRegionId, boundaryLevel, a1BoundaryQuery.data, a2BoundaryQuery.data]);
-  const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
+  }, [selectedRegionId, boundaryLevel, isGlobalBrowse, a0BoundaryQuery.data, a1BoundaryQuery.data, a2BoundaryQuery.data]);
+  const adminBoundaryLevel =
+    boundaryLevel === "A0" ? 0 : boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
+  const mapboxAdmin1Isos = useMemo(
+    () =>
+      boundaryLevel === "A1" && isGlobalBrowse && a1BoundaryQuery.isSuccess
+        ? scopeIsosMissingPaintableBoundaries(
+            teamCountries.map((c) => ({ id: c.id, iso: isoForCountryName(c.name) })),
+            a1BoundaryQuery.data ?? [],
+          )
+        : [],
+    [boundaryLevel, isGlobalBrowse, teamCountries, a1BoundaryQuery.isSuccess, a1BoundaryQuery.data],
+  );
 
   const regionQuery = api.locations.getById.useQuery(
     { id: selectedRegionId! },
@@ -843,7 +899,8 @@ function DetectionPageContent() {
   }, [alertsItems, eventsItems, signalsItems]);
 
   const focusCountryPCode = resolveCountryConfig(selectedCountry)?.pCode;
-  const focusCountryName = selectedCountry;
+  const focusCountryName =
+    selectedCountry && selectedCountry !== ALL_COUNTRIES ? selectedCountry : undefined;
 
   const clipToRegion = useCallback((markers: CrisisMarker[]): CrisisMarker[] => {
     if (!selectedLocationId) return markers;
@@ -858,8 +915,16 @@ function DetectionPageContent() {
   const eventMapMarkers: MapMarker[] = useMemo(() => clipToRegion(eventsToMarkers(eventsItems)), [eventsItems, clipToRegion]);
   const signalMapMarkers: MapMarker[] = useMemo(() => clipToRegion(signalsToMarkers(signalsItems)), [signalsItems, clipToRegion]);
 
-  const mapCenter = useMemo<[number, number]>(() => getCenter(selectedCountry), [selectedCountry]);
-  const mapZoom = useMemo(() => getZoom(selectedCountry), [selectedCountry]);
+  const { center: mapCenter, zoom: mapZoom } = useMemo(
+    () =>
+      browseMapCamera({
+        selectedCountry,
+        lastFocusedCountry,
+        getCenter,
+        getZoom,
+      }),
+    [selectedCountry, lastFocusedCountry, getCenter, getZoom],
+  );
 
   // Keep skeleton gate fresh after each render (incl. flushSync after setActiveTab).
   tabNeedsSkeletonRef.current = (tab: string) => {
@@ -1094,7 +1159,9 @@ function DetectionPageContent() {
                 mapZoom={mapZoom}
                 fitBoundsGeometry={fitBoundsGeometry}
                 adminBoundaries={adminBoundaries}
-                adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+                scopeCountryIsos={scopeCountryIsos}
+                mapboxAdmin1Isos={mapboxAdmin1Isos}
+                adminBoundaryLevel={adminBoundaryLevel}
                 boundaryLevel={boundaryLevel}
                 onBoundaryLevelChange={setBoundaryLevel}
                 focusCountryPCode={focusCountryPCode}
@@ -1123,7 +1190,9 @@ function DetectionPageContent() {
                 mapZoom={mapZoom}
                 fitBoundsGeometry={fitBoundsGeometry}
                 adminBoundaries={adminBoundaries}
-                adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+                scopeCountryIsos={scopeCountryIsos}
+                mapboxAdmin1Isos={mapboxAdmin1Isos}
+                adminBoundaryLevel={adminBoundaryLevel}
                 boundaryLevel={boundaryLevel}
                 onBoundaryLevelChange={setBoundaryLevel}
                 focusCountryPCode={focusCountryPCode}
@@ -1152,7 +1221,9 @@ function DetectionPageContent() {
                 mapZoom={mapZoom}
                 fitBoundsGeometry={fitBoundsGeometry}
                 adminBoundaries={adminBoundaries}
-                adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+                scopeCountryIsos={scopeCountryIsos}
+                mapboxAdmin1Isos={mapboxAdmin1Isos}
+                adminBoundaryLevel={adminBoundaryLevel}
                 boundaryLevel={boundaryLevel}
                 onBoundaryLevelChange={setBoundaryLevel}
                 focusCountryPCode={focusCountryPCode}
