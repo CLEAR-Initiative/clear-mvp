@@ -113,6 +113,15 @@ function pointLocation(event: GqlEvent) {
   return null;
 }
 
+function eventDisplayTitle(event: GqlEvent): string {
+  const titled = event.title?.trim();
+  if (titled) return titled;
+  // Prefer a human type label over raw glide codes ("ba", "rl").
+  const typeLabel = event.types.find((t) => t.trim().length > 3)?.trim();
+  if (typeLabel) return typeLabel;
+  return "Event";
+}
+
 function eventToMarker(
   event: GqlEvent,
   loc: NonNullable<ReturnType<typeof pointFromLocation>>,
@@ -122,7 +131,7 @@ function eventToMarker(
     id: hashId(event.id, loc.loc.id),
     lng: loc.lng,
     lat: loc.lat,
-    title: event.title ?? event.types[0] ?? "Event",
+    title: eventDisplayTitle(event),
     severity: mapSeverity(event.severity),
     description: event.description ?? undefined,
     region: resolveLocationName(loc.loc, { locationById }) ?? undefined,
@@ -189,23 +198,28 @@ export function focusCrisisToMarkers(
 ): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
   for (const event of crisis.events ?? []) {
-    // Crisis list/get payloads vary in event richness; pointLocation only needs
-    // locations/signals. Cast through GqlEvent for the shared helper.
+    // crises.get returns full EVENT_FIELDS (title/severity/…); list payloads are
+    // slimmer. Pass display fields through so the detail sheet is not left with
+    // null title → raw type codes like "ba" / "rl".
     const point = pointLocation(event as GqlEvent);
     if (!point) continue;
+    const title =
+      event.title?.trim() ||
+      crisis.title?.trim() ||
+      null;
     markers.push(
       eventToMarker(
         {
           id: event.id,
-          title: null,
-          description: null,
+          title,
+          description: event.description ?? null,
           types: event.types ?? [],
-          severity: null,
-          rank: 0,
+          severity: event.severity ?? null,
+          rank: event.rank ?? 0,
           validFrom: "",
           validTo: "",
-          firstSignalCreatedAt: "",
-          lastSignalCreatedAt: "",
+          firstSignalCreatedAt: event.firstSignalCreatedAt ?? "",
+          lastSignalCreatedAt: event.lastSignalCreatedAt ?? "",
           populationAffected: null,
           populationDisplaced: null,
           casualties: null,
@@ -214,7 +228,7 @@ export function focusCrisisToMarkers(
           destinationLocation: event.destinationLocation ?? null,
           representativePoint: event.representativePoint ?? null,
           signals: event.signals ?? [],
-          alerts: [],
+          alerts: event.alerts ?? [],
         } satisfies GqlEvent,
         point,
         locationById,

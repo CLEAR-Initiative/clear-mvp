@@ -173,12 +173,19 @@ export interface GqlCrisis {
   generalLocation: GqlLocation | null;
   events: Array<{
     id: string;
+    title?: string | null;
+    description?: string | null;
     types: string[];
+    severity?: number | null;
+    rank?: number;
+    firstSignalCreatedAt?: string;
+    lastSignalCreatedAt?: string;
     representativePoint?: GqlLocation | null;
     generalLocation?: GqlLocation | null;
     originLocation?: GqlLocation | null;
     destinationLocation?: GqlLocation | null;
     signals?: GqlSignal[];
+    alerts?: Array<{ id: string; status: string }>;
   }>;
 }
 

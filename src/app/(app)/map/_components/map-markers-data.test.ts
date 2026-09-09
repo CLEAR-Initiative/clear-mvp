@@ -226,10 +226,14 @@ describe("focusCrisisToMarkers", () => {
       events: [
         baseEvent({
           id: "evt-a",
+          title: "Flooding in Khartoum",
+          types: ["ba", "rl"],
           representativePoint: pointLoc("a", 32.1, 15.1),
         }),
         baseEvent({
           id: "evt-b",
+          title: "Displacement corridor",
+          types: ["ba"],
           representativePoint: pointLoc("b", 32.2, 15.2),
         }),
       ],
@@ -239,6 +243,42 @@ describe("focusCrisisToMarkers", () => {
     expect(markers).toHaveLength(2);
     expect(markers.every((m) => m.markerKind === "event")).toBe(true);
     expect(markers.map((m) => m.eventId).sort()).toEqual(["evt-a", "evt-b"]);
+    expect(markers.map((m) => m.title).sort()).toEqual([
+      "Displacement corridor",
+      "Flooding in Khartoum",
+    ]);
+  });
+
+  it("does not fall back to raw type codes when event title is missing", () => {
+    const crisis = {
+      id: "cri-codes",
+      title: "Crisis fallback title",
+      summary: null,
+      severity: 2,
+      generalLocation: pointLoc("cri-pt", 30, 10),
+      needs: null,
+      scenarios: null,
+      populationAffected: null,
+      populationInArea: null,
+      attachments: [],
+      events: [
+        {
+          id: "evt-codes",
+          title: null,
+          types: ["ba", "rl"],
+          representativePoint: pointLoc("c", 32.3, 15.3),
+          generalLocation: null,
+          originLocation: null,
+          destinationLocation: null,
+          signals: [],
+        },
+      ],
+    } as GqlCrisis;
+
+    const markers = focusCrisisToMarkers(crisis);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.title).toBe("Crisis fallback title");
+    expect(markers[0]?.title).not.toMatch(/^(ba|rl)$/i);
   });
 
   it("falls back to the crisis pin when no event has a Point", () => {
