@@ -58,7 +58,9 @@ interface SignalsTabProps {
   mapZoom: number;
   fitBoundsGeometry?: unknown;
   adminBoundaries?: Array<{ id: string; name: string; geometry: unknown }>;
-  adminBoundaryLevel?: 1 | 2;
+  adminBoundaryLevel?: 0 | 1 | 2;
+  scopeCountryIsos?: string[];
+  mapboxAdmin1Isos?: string[];
   boundaryLevel?: BoundaryLevel;
   onBoundaryLevelChange?: (level: BoundaryLevel) => void;
   focusCountryPCode?: string;
@@ -85,6 +87,8 @@ export function SignalsTab({
   fitBoundsGeometry,
   adminBoundaries,
   adminBoundaryLevel,
+  scopeCountryIsos,
+  mapboxAdmin1Isos,
   boundaryLevel = "A1",
   onBoundaryLevelChange,
   focusCountryPCode,
@@ -262,6 +266,8 @@ export function SignalsTab({
               fitBoundsGeometry={fitBoundsGeometry}
               adminBoundaries={adminBoundaries}
               adminBoundaryLevel={adminBoundaryLevel}
+              scopeCountryIsos={scopeCountryIsos}
+              mapboxAdmin1Isos={mapboxAdmin1Isos}
               hoveredMarkerId={hoveredMarkerId}
               onMarkerHover={onMarkerHover}
             />

@@ -177,6 +177,20 @@ export function crisisInCountry(
   return false;
 }
 
+/**
+ * Keep locations that are one of the scoped countries, or sit under them.
+ * An empty `countryIds` list means unscoped / global — return everything.
+ */
+export function filterLocationsByCountryScope<
+  T extends { id: string; ancestorIds?: readonly string[] },
+>(locations: readonly T[], countryIds: readonly string[]): T[] {
+  if (countryIds.length === 0) return [...locations];
+  const scoped = new Set(countryIds);
+  return locations.filter(
+    (l) => scoped.has(l.id) || (l.ancestorIds?.some((id) => scoped.has(id)) ?? false),
+  );
+}
+
 /** Best display name for a crisis, falling back to linked event locations. */
 export function resolveCrisisLocationName(
   crisis: {

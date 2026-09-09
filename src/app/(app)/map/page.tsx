@@ -27,7 +27,12 @@ import {
 } from "~/lib/map/point-altitude";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
-import { useTeamCountry } from "~/hooks/use-team-country";
+import {
+  ALL_COUNTRIES,
+  pickerCountryOptions,
+  resolveSelectedCountry,
+  useTeamCountry,
+} from "~/hooks/use-team-country";
 import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import {
   type CrisisMarker,
@@ -40,7 +45,10 @@ import {
 } from "./_components/map-markers-data";
 import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
 import { useLocations } from "~/hooks/use-locations";
+import { useLastFocusedCountry } from "~/hooks/use-last-focused-country";
 import { resolveCountryConfig, shortCountryName, WORLD_VIEW } from "~/lib/constants/country-config";
+import { isoForCountryName } from "~/lib/constants/countries";
+import { scopeIsosMissingPaintableBoundaries } from "~/lib/geo/country-mask";
 import { MapPanelBar } from "./_components/map-panel-bar";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapLoadingOverlay, MapPreloader } from "./_components/map-loading-overlay";
@@ -568,13 +576,17 @@ function MapPageContent() {
     return codes;
   }, [selectedTypes, hierarchy]);
 
-  // Unscoped teams keep a local pick. Do not default to "All Countries"
-  // — that is what flashed in the select while the cookie/team hydrated.
+  // Unscoped / multi-country teams keep a local pick. Do not invent
+  // All Countries until scope is ready — that flashed while the team hydrated.
   const [pickedCountry, setPickedCountry] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
-  const selectedCountry =
-    workingCountryName ??
-    (scopeReady && teamCountries.length === 0 ? pickedCountry || "All Countries" : pickedCountry);
+  const teamCountryNames = useMemo(() => teamCountries.map((c) => c.name), [teamCountries]);
+  const selectedCountry = resolveSelectedCountry(
+    teamCountryNames,
+    workingCountryName ?? pickedCountry,
+    scopeReady,
+  );
+  const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
   const selectedCountryRef = useRef(selectedCountry);
   selectedCountryRef.current = selectedCountry;
   
@@ -990,29 +1002,62 @@ function MapPageContent() {
 
   // Resolve the currently-selected country's L0 ID for scoping admin
   // boundary queries and for the country highlight overlay. Null when the
-  // user picked "All Countries" - in that case every country-scoped query
-  // below is disabled and the highlight overlay is dropped.
+  // user picked All Countries — then we paint every in-scope country's
+  // borders (A0/A1/A2) instead of a single-country mask.
   const focusCountryId = useMemo(
-    () => (selectedCountry !== "All Countries" ? getLocationId(selectedCountry) : null),
+    () => (selectedCountry !== ALL_COUNTRIES ? getLocationId(selectedCountry) : null),
     [selectedCountry, getLocationId],
   );
+  const isGlobalBrowse = selectedCountry === ALL_COUNTRIES;
+  const scopedCountryIds = useMemo(() => teamCountries.map((c) => c.id), [teamCountries]);
+  const globalCountryIds = scopedCountryIds.length > 0 ? scopedCountryIds : undefined;
+  const boundariesReady = isGlobalBrowse ? scopeReady : !!focusCountryId;
+  const scopeCountryIsos = useMemo(
+    () =>
+      isGlobalBrowse
+        ? teamCountries
+            .map((c) => isoForCountryName(c.name))
+            .filter((iso): iso is string => !!iso)
+        : [],
+    [isGlobalBrowse, teamCountries],
+  );
 
+  const a0Query = api.locations.getAdminBoundaries.useQuery(
+    { level: 0, countryIds: globalCountryIds },
+    { enabled: boundaryLevel === "A0" && isGlobalBrowse && scopeReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
   const a1Query = api.locations.getAdminBoundaries.useQuery(
-    { level: 1, countryId: focusCountryId ?? undefined },
-    { enabled: boundaryLevel === "A1" && !!focusCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    isGlobalBrowse
+      ? { level: 1, countryIds: globalCountryIds }
+      : { level: 1, countryId: focusCountryId ?? undefined },
+    { enabled: boundaryLevel === "A1" && boundariesReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const a2Query = api.locations.getAdminBoundaries.useQuery(
-    { level: 2, countryId: focusCountryId ?? undefined },
-    { enabled: boundaryLevel === "A2" && !!focusCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    isGlobalBrowse
+      ? { level: 2, countryIds: globalCountryIds }
+      : { level: 2, countryId: focusCountryId ?? undefined },
+    { enabled: boundaryLevel === "A2" && boundariesReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const mapboxAdmin1Isos = useMemo(
+    () =>
+      boundaryLevel === "A1" && isGlobalBrowse && a1Query.isSuccess
+        ? scopeIsosMissingPaintableBoundaries(
+            teamCountries.map((c) => ({ id: c.id, iso: isoForCountryName(c.name) })),
+            a1Query.data ?? [],
+          )
+        : [],
+    [boundaryLevel, isGlobalBrowse, teamCountries, a1Query.isSuccess, a1Query.data],
   );
 
   const adminBoundaries = useMemo(() => {
+    if (boundaryLevel === "A0" && isGlobalBrowse) return a0Query.data ?? [];
     if (boundaryLevel === "A1") return a1Query.data ?? [];
     if (boundaryLevel === "A2") return a2Query.data ?? [];
     return [];
-  }, [boundaryLevel, a1Query.data, a2Query.data]);
+  }, [boundaryLevel, isGlobalBrowse, a0Query.data, a1Query.data, a2Query.data]);
 
-  const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
+  const adminBoundaryLevel =
+    boundaryLevel === "A0" ? 0 : boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
   // Population layer: A2 districts with population, lazy-loaded when first enabled.
   // Prefetching on country focus was racing the marker batch and bloating map load.
@@ -1059,11 +1104,8 @@ function MapPageContent() {
     if (!scopeReady) {
       return workingCountryName ? [workingCountryName] : [];
     }
-    if (teamCountries.length > 0) {
-      return teamCountries.map((c) => c.name);
-    }
-    return ["All Countries", ...apiCountries];
-  }, [scopeReady, workingCountryName, teamCountries, apiCountries]);
+    return pickerCountryOptions(apiCountries, teamCountryNames);
+  }, [scopeReady, workingCountryName, teamCountryNames, apiCountries]);
   useReportStaleCountryPick(countryOptions, workingCountryName ?? pickedCountry, selectedCountry);
 
   // Restored camera must belong to the working country. A leftover Sudan
@@ -1090,10 +1132,12 @@ function MapPageContent() {
     if (selectedCountry !== "All Countries") {
       return getCenter(selectedCountry);
     }
-    // Global browse: WORLD_VIEW, not marker-average + country zoom (that
-    // framed a Sahel crop that looked like "random Mali").
-    return WORLD_VIEW.center;
-  }, [selectedCountry, focusMarker, markerFocus, returnCamera, cameraSeed, getCenter]);
+    // Zoom out in place: keep the last country centered instead of jumping
+    // to WORLD_VIEW over the Atlantic/Sahel.
+    return lastFocusedCountry
+      ? getCenter(lastFocusedCountry)
+      : WORLD_VIEW.center;
+  }, [selectedCountry, focusMarker, markerFocus, returnCamera, cameraSeed, getCenter, lastFocusedCountry]);
 
   const mapZoom = useMemo(() => {
     if (markerFocus) return markerFocus.zoom;
@@ -1980,9 +2024,11 @@ function MapPageContent() {
           focusCountryName={
             selectedCountry !== "All Countries" ? selectedCountry : undefined
           }
+          scopeCountryIsos={scopeCountryIsos}
+          mapboxAdmin1Isos={mapboxAdmin1Isos}
           focusCountryGeometry={focusCountryGeometry}
           adminBoundaries={adminBoundaries}
-          adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+          adminBoundaryLevel={adminBoundaryLevel}
           fitBoundsGeometry={focusEntityId || markerFocus ? null : fitBoundsGeometry}
           fitBoundsOnFocus={
             !focusEntityId && !markerFocus && !returnCamera && !cameraSeed

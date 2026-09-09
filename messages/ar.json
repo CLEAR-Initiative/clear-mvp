@@ -991,7 +991,8 @@
     "filters": {
       "country": "الدولة",
       "region": "المنطقة",
-      "date": "التاريخ"
+      "date": "التاريخ",
+      "allCountries": "جميع الدول"
     },
     "regionPicker": {
       "allRegions": "جميع المناطق",

@@ -23,8 +23,9 @@ test.describe("Recent features smoke (case 11)", () => {
     const country = page.getByRole("textbox", { name: "Country" });
     await expect(country).toBeVisible();
 
-    // Unscoped teams keep "All Countries"; scoped teams pin to one country —
-    // either way the browse-camera testid must be present after hydrate.
+    // Unscoped / multi-country teams browse All Countries (WORLD_VIEW);
+    // a one-country team is still pinned. Either way the browse-camera
+    // testid must be present after hydrate.
     const camera = page.getByTestId("map-browse-camera");
     await expect(camera).toBeVisible();
 
