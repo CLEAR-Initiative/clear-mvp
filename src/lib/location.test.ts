@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   crisisInCountry,
+  filterLocationsByCountryScope,
   flattenLocationTree,
   locationInCountry,
   resolveCrisisLocationName,
@@ -358,5 +359,34 @@ describe("resolveCrisisLocationName", () => {
       ],
     };
     expect(resolveCrisisLocationName(crisis)).toBe("Port Sudan");
+  });
+});
+
+describe("filterLocationsByCountryScope", () => {
+  const sd = { id: "sd", ancestorIds: [] as string[] };
+  const khartoum = { id: "krt", ancestorIds: ["sd"] };
+  const ve = { id: "ve", ancestorIds: [] as string[] };
+
+  it("returns every row when scope is empty (unscoped / global)", () => {
+    expect(filterLocationsByCountryScope([sd, khartoum, ve], [])).toEqual([
+      sd,
+      khartoum,
+      ve,
+    ]);
+  });
+
+  it("keeps a country and its children when that country is in scope", () => {
+    expect(filterLocationsByCountryScope([sd, khartoum, ve], ["sd"])).toEqual([
+      sd,
+      khartoum,
+    ]);
+  });
+
+  it("keeps several scoped countries for an All Countries browse", () => {
+    expect(filterLocationsByCountryScope([sd, khartoum, ve], ["sd", "ve"])).toEqual([
+      sd,
+      khartoum,
+      ve,
+    ]);
   });
 });

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
+import { filterLocationsByCountryScope } from "~/lib/location";
 
 interface GqlLocationNode {
   id: string;
@@ -148,7 +149,14 @@ export const locationsRouter = createTRPCRouter({
    * Optionally scoped to a country by its location ID.
    */
   getAdminBoundaries: protectedProcedure
-    .input(z.object({ level: z.number(), countryId: z.string().optional(), stateId: z.string().optional() }))
+    .input(
+      z.object({
+        level: z.number(),
+        countryId: z.string().optional(),
+        countryIds: z.array(z.string()).optional(),
+        stateId: z.string().optional(),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ locations: GqlLocationWithGeometry[] }>(
         LOCATIONS_WITH_GEOMETRY_QUERY,
@@ -158,8 +166,11 @@ export const locationsRouter = createTRPCRouter({
       if (input.stateId) {
         return data.locations.filter((l) => l.ancestorIds.includes(input.stateId!));
       }
+      if (input.countryIds?.length) {
+        return filterLocationsByCountryScope(data.locations, input.countryIds);
+      }
       if (input.countryId) {
-        return data.locations.filter((l) => l.ancestorIds.includes(input.countryId!));
+        return filterLocationsByCountryScope(data.locations, [input.countryId]);
       }
       return data.locations;
     }),

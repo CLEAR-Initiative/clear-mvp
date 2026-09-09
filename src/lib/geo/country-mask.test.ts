@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isBboxLikeGeometry, isPaintableBoundaryGeometry } from "./country-mask";
+import {
+  isBboxLikeGeometry,
+  isPaintableBoundaryGeometry,
+  scopeIsosMissingPaintableBoundaries,
+} from "./country-mask";
 
 /** Closed rectangle matching clear-api seed WKT for Khartoum state. */
 const SEED_BBOX = {
@@ -51,5 +55,36 @@ describe("isPaintableBoundaryGeometry", () => {
     expect(isPaintableBoundaryGeometry(REAL_ISH_POLYGON)).toBe(true);
     expect(isPaintableBoundaryGeometry(SEED_BBOX)).toBe(false);
     expect(isPaintableBoundaryGeometry({ type: "Point", coordinates: [32.5, 15.5] })).toBe(false);
+  });
+});
+
+describe("scopeIsosMissingPaintableBoundaries", () => {
+  const sd = { id: "sd", iso: "SD" };
+  const ve = { id: "ve", iso: "VE" };
+  const af = { id: "af", iso: "AF" };
+
+  it("flags Sudan when only its seed-bbox A1 rows exist beside real VE/AF polygons", () => {
+    expect(
+      scopeIsosMissingPaintableBoundaries(
+        [sd, ve, af],
+        [
+          { ancestorIds: ["sd"], geometry: SEED_BBOX },
+          { ancestorIds: ["ve"], geometry: REAL_ISH_POLYGON },
+          { ancestorIds: ["af"], geometry: REAL_ISH_POLYGON },
+        ],
+      ),
+    ).toEqual(["SD"]);
+  });
+
+  it("is empty when every scoped country has a paintable row", () => {
+    expect(
+      scopeIsosMissingPaintableBoundaries(
+        [ve, af],
+        [
+          { ancestorIds: ["ve"], geometry: REAL_ISH_POLYGON },
+          { ancestorIds: ["af"], geometry: REAL_ISH_POLYGON },
+        ],
+      ),
+    ).toEqual([]);
   });
 });

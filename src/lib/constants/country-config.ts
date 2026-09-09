@@ -19,6 +19,9 @@ export const WORLD_VIEW = {
   zoom: 1.6,
 };
 
+/** Picker value for “no country selected” — all scoped countries, world camera. */
+export const ALL_COUNTRIES = "All Countries";
+
 export const countryConfig: Record<string, CountryConfig> = {
   Sudan:        { center: [30.0, 15.5], zoom: 5,   pCode: "SD", hasCrisisData: true,  bbox: [21.8,  8.7, 38.6, 23.2], regions: ["All Regions", "Khartoum", "North Darfur", "South Darfur", "West Darfur", "Central Darfur", "Blue Nile", "Red Sea", "Kassala"] },
   Ethiopia:     { center: [40.5,  8.5], zoom: 5.5, pCode: "ET", hasCrisisData: true,  bbox: [33.0,  3.4, 48.0, 14.9], regions: ["All Regions", "Somali", "Oromia", "Afar", "Amhara", "Tigray", "SNNPR"] },

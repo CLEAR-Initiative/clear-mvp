@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  ALL_COUNTRIES,
   isTeamScopeReady,
+  pickerCountryOptions,
   resolveSelectedCountry,
   scopeCountryOptions,
   staleCountryPick,
@@ -41,10 +43,10 @@ describe("resolveSelectedCountry", () => {
     );
   });
 
-  it("defaults a multi-country team to the first scoped name when the pick is empty or out of scope", () => {
-    expect(resolveSelectedCountry(MULTI, "")).toBe("Afghanistan");
-    expect(resolveSelectedCountry(MULTI, "All Countries")).toBe("Afghanistan");
-    expect(resolveSelectedCountry(MULTI, "Chad")).toBe("Afghanistan");
+  it("defaults a multi-country team to All Countries when the pick is empty or out of scope", () => {
+    expect(resolveSelectedCountry(MULTI, "")).toBe(ALL_COUNTRIES);
+    expect(resolveSelectedCountry(MULTI, ALL_COUNTRIES)).toBe(ALL_COUNTRIES);
+    expect(resolveSelectedCountry(MULTI, "Chad")).toBe(ALL_COUNTRIES);
   });
 
   it("pins a single-country team even if something else was picked", () => {
@@ -52,10 +54,10 @@ describe("resolveSelectedCountry", () => {
     expect(resolveSelectedCountry(SINGLE, "")).toBe("Sudan");
   });
 
-  it("uses the pick when the team is unscoped", () => {
+  it("uses the pick when the team is unscoped, defaulting empty to All Countries", () => {
     expect(resolveSelectedCountry([], "Sudan")).toBe("Sudan");
-    expect(resolveSelectedCountry([], "All Countries")).toBe("All Countries");
-    expect(resolveSelectedCountry([], "")).toBe("");
+    expect(resolveSelectedCountry([], ALL_COUNTRIES)).toBe(ALL_COUNTRIES);
+    expect(resolveSelectedCountry([], "")).toBe(ALL_COUNTRIES);
   });
 
   it("holds the pick while team scope is still loading", () => {
@@ -91,10 +93,30 @@ describe("isTeamScopeReady", () => {
   });
 });
 
+describe("pickerCountryOptions", () => {
+  it("prepends All Countries for a multi-country team", () => {
+    expect(pickerCountryOptions(ALL, MULTI)).toEqual([ALL_COUNTRIES, ...MULTI]);
+  });
+
+  it("omits All Countries for a one-country team", () => {
+    expect(pickerCountryOptions(ALL, SINGLE)).toEqual(["Sudan"]);
+  });
+
+  it("prepends All Countries for an unscoped team", () => {
+    expect(pickerCountryOptions(ALL, [])).toEqual([ALL_COUNTRIES, ...ALL]);
+  });
+
+  it("falls back to scoped names when the API country list is still empty", () => {
+    expect(pickerCountryOptions([], MULTI)).toEqual([ALL_COUNTRIES, ...MULTI]);
+    expect(pickerCountryOptions([], SINGLE)).toEqual(["Sudan"]);
+  });
+});
+
 describe("dropdown and value stay in sync", () => {
   it("lets the user select every country the dropdown lists (multi-country team)", () => {
-    const options = scopeCountryOptions(ALL, MULTI);
-    expect(options.length).toBeGreaterThan(1);
+    const options = pickerCountryOptions(ALL, MULTI);
+    expect(options[0]).toBe(ALL_COUNTRIES);
+    expect(options.length).toBeGreaterThan(2);
 
     for (const pick of options) {
       expect(resolveSelectedCountry(MULTI, pick)).toBe(pick);

@@ -126,6 +126,31 @@ export function isPaintableBoundaryGeometry(
 }
 
 /**
+ * Scoped-country ISOs whose admin rows are all unpaintable (Sudan L1 seed
+ * bboxes). Those still need Mapbox admin-1 fallback even when Afghanistan
+ * / Venezuela GeoJSON is present — the old "fallback only if every
+ * boundary is empty" gate left Sudan on a country outline.
+ */
+export function scopeIsosMissingPaintableBoundaries(
+  countries: readonly { id: string; iso: string | null }[],
+  boundaries: readonly {
+    id?: string;
+    ancestorIds?: readonly string[];
+    geometry: unknown;
+  }[],
+): string[] {
+  return countries.flatMap((c) => {
+    if (!c.iso) return [];
+    const covered = boundaries.some(
+      (b) =>
+        (b.id === c.id || (b.ancestorIds?.includes(c.id) ?? false)) &&
+        isPaintableBoundaryGeometry(b.geometry as Geometry),
+    );
+    return covered ? [] : [c.iso.toUpperCase()];
+  });
+}
+
+/**
  * Compute a bounding box for a Polygon or MultiPolygon geometry.
  * Returns [west, south, east, north] or null.
  */
