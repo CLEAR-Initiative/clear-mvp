@@ -1443,12 +1443,8 @@ export function CrisisMap({
     const onUserGesture = (e: { originalEvent?: Event }) => {
       // Programmatic flyTo/fitBounds omit a DOM UIEvent; ignore those.
       if (!e.originalEvent || !(e.originalEvent instanceof UIEvent)) return;
-      userCameraOverrideRef.current = true;
-      try {
-        m.stop();
-      } catch {
-        /* ignore */
-      }
+      // Sync prev refs so a later prop echo does not re-fly into the live camera.
+      // Do NOT map.stop() here — that cancels the user's drag/zoom mid-gesture.
       try {
         const c = m.getCenter();
         prevCenter.current = [c.lng, c.lat];
@@ -1456,7 +1452,10 @@ export function CrisisMap({
       } catch {
         /* ignore */
       }
-      onUserCameraInterruptRef.current?.();
+      if (!userCameraOverrideRef.current) {
+        userCameraOverrideRef.current = true;
+        onUserCameraInterruptRef.current?.();
+      }
     };
     m.on("zoomstart", onUserGesture);
     m.on("dragstart", onUserGesture);

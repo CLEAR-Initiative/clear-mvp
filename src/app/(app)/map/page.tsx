@@ -201,12 +201,6 @@ function MapPageContent() {
   const [pendingFocusFly, setPendingFocusFly] = useState(
     () => !!(urlFocusEventId || urlFocusSignalId || urlFocusCrisisId),
   );
-  /**
-   * Once the guided focus fly has started (or the user takes over the
-   * camera), stop driving center/zoom from the focus marker so manual zoom
-   * does not fight a re-fly / radar remount loop.
-   */
-  const [focusCameraReleased, setFocusCameraReleased] = useState(false);
   const [pendingRestoreMarkerIds, setPendingRestoreMarkerIds] = useState<number[]>(
     () => restoredView?.openMarkerIds ?? [],
   );
@@ -233,7 +227,6 @@ function MapPageContent() {
   );
   useEffect(() => {
     setFocusDismissed(false);
-    setFocusCameraReleased(false);
     setPendingFocusFly(
       !!(urlFocusEventId || urlFocusSignalId || urlFocusCrisisId),
     );
@@ -1230,7 +1223,7 @@ function MapPageContent() {
     // Initial restore seed only - live pans stay in Mapbox + sessionStorage.
     // While pendingFocusFly, keep the seed so we restore first, then fly.
     if (cameraSeed) return cameraSeed.center;
-    if (focusMarker && !focusCameraReleased) return [focusMarker.lng, focusMarker.lat];
+    if (focusMarker) return [focusMarker.lng, focusMarker.lat];
     if (selectedCountry !== "All Countries") {
       return getCenter(selectedCountry);
     }
@@ -1240,7 +1233,6 @@ function MapPageContent() {
   }, [
     selectedCountry,
     focusMarker,
-    focusCameraReleased,
     markerFocus,
     placeLookup,
     returnCamera,
@@ -1253,7 +1245,7 @@ function MapPageContent() {
     if (placeLookup) return placeLookup.zoom;
     if (returnCamera) return returnCamera.zoom;
     if (cameraSeed) return cameraSeed.zoom;
-    if (focusMarker && !focusCameraReleased) return MAP_FOCUS_ZOOM;
+    if (focusMarker) return MAP_FOCUS_ZOOM;
     if (selectedCountry !== "All Countries") {
       // Same country zoom on mobile and desktop - fitBounds owns framing when
       // geometry/bbox is available; this is the fallback before that lands.
@@ -1263,7 +1255,6 @@ function MapPageContent() {
   }, [
     selectedCountry,
     focusMarker,
-    focusCameraReleased,
     markerFocus,
     placeLookup,
     returnCamera,
@@ -1272,15 +1263,14 @@ function MapPageContent() {
   ]);
 
   // Full Map: restore persisted camera first, then fly to the focus marker.
+  // After that, CrisisMap's userCameraOverride keeps prop echoes from
+  // re-flying while the analyst pans/zooms (do not swap center props away —
+  // that yanked the camera to world/country and felt staggered).
   useEffect(() => {
     if (!pendingFocusFly || !focusMarker || !focusEntityId) return;
     setCameraSeed(null);
     setPendingFocusFly(false);
-    setFocusCameraReleased(false);
     setForceFlyToken((n) => n + 1);
-    // Release prop-driven camera after the fly so manual zoom does not re-fly.
-    const t = window.setTimeout(() => setFocusCameraReleased(true), 750);
-    return () => window.clearTimeout(t);
   }, [pendingFocusFly, focusMarker, focusEntityId]);
 
   // Multi-event crisis: fit all linked event pins once after restore→fly starts.
@@ -2201,7 +2191,7 @@ function MapPageContent() {
           initialPitch={cameraSeed?.pitch ?? restoredView?.camera.pitch ?? 0}
           initialBearing={cameraSeed?.bearing ?? restoredView?.camera.bearing ?? 0}
           forceFlyToken={forceFlyToken}
-          flyDuration={markerFocus || placeLookup || (focusEntityId && !focusCameraReleased) ? 500 : (!cameraSeed && !focusEntityId && selectedCountry !== "All Countries" ? 1200 : 650)}
+          flyDuration={markerFocus || placeLookup || focusEntityId ? 500 : (!cameraSeed && !focusEntityId && selectedCountry !== "All Countries" ? 1200 : 650)}
           // Keep pin above the ~45vh sheet + breathing room.
           flyPaddingBottom={
             markerFocus && isMobile
@@ -2214,7 +2204,6 @@ function MapPageContent() {
             !cameraSeed && !placeLookup && !focusEntityId && selectedCountry !== "All Countries"
           }
           preferStableDomMarkers={isFocusMode}
-          onUserCameraInterrupt={() => setFocusCameraReleased(true)}
           onCameraChange={handleCameraChange}
           onMapMove={handleMapMove}
           mapApiRef={mapApiRef}
