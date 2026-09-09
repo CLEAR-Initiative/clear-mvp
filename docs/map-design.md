@@ -97,6 +97,34 @@ override paint on the style's road layers.
 - Satellite: no paint override (satellite-streets styles its own roads);
   the toggle switches between satellite-v9 and satellite-streets-v12.
 
+## Blockages = access constraints
+
+LogIE road/bridge constraints are **not** a restyle of the Roads overlay.
+They are a movement-constraint channel and must survive every basemap,
+including Satellite (always a dark canvas) and Roads-on (tan corridors).
+
+Tokens live in `src/lib/map/blockages-paint.ts`. Tune there, not as
+one-off numbers in `crisis-map.tsx`.
+
+- **Status** — Not Passable `#B91C1C`; Restricted `#EA580C` (vivid orange,
+  not the old `#D97706` that sat next to corridor tan). Color is the
+  status encoding; do not invent a third hue family.
+- **Casing** — `#FFFFFF` on every basemap. This is the contrast that
+  keeps the core visible on imagery and on dark Simple/Topography.
+- **Glow** — wide, low-opacity status wash under the casing so a
+  Field Program Manager can scan corridors at z5–8 without hovering.
+- **Width curve** — Country-band anchors (z6 core 4px / z8 5.5px) carry
+  the use case. Do not tune only the Site end.
+- **Fresh vs stale** — stale (≥15 days) stays painted: same width, dashed
+  core + dashed casing, opacity ≥ 0.75. Never hide; never fade to 0.45.
+- **X marks** — sparse high-contrast white disc + dark X along the line
+  and once on each bridge point. They are corridor decoration ("closed
+  access"), not separate incidents. Spacing stays wide (≥120px) so
+  zoom-in does not mint a stampede of fake features.
+- **Stack** — above Roads / population, below settlement labels.
+- **Hover** — popup copy and freshness rules stay in `crisis-map.tsx`;
+  this section is paint only.
+
 ## Layer stack (bottom to top)
 
 1. Basemap land / water / landuse
@@ -106,8 +134,9 @@ override paint on the style's road layers.
 5. Mapbox admin lines / A1 fallback borders
 6. Backend admin boundaries (A1/A2 lines), focus country border
 7. Population choropleth (opt-in)
-8. Labels (style symbols; settlement labels relaxed inside focus country)
-9. Markers, cluster donuts, marker detail (DOM); Point altitude probe (Topography)
+8. **Blockages** (opt-in; glow → white casing → status core → X ticks; point + mark for bridges)
+9. Labels (style symbols; settlement labels relaxed inside focus country)
+10. Markers, cluster donuts, marker detail (DOM); Point altitude probe (Topography)
 
 ## Color roles
 
@@ -123,9 +152,14 @@ override paint on the style's road layers.
 | Canvas void (shell behind WebGL) | #FAFAFA | #111111 (Simple + Topography); #0a0a0a (Satellite) |
 | Topography atmosphere | same as Simple (no custom `setFog`) | same — cartography matches Simple; tilt / mesh / Point altitude only |
 | Markers | severity scale (critical red -> low green), orange accent rings; type glyph on unclustered pins; stems grow with pitch on Simple / Topography / Satellite (flat ≤45°, full ~70°); proposed pins stay flat | same |
+| Blockage not passable | #B91C1C core + #FFF casing + status glow | same |
+| Blockage restricted | #EA580C core + #FFF casing + status glow | same |
 
 Boundaries are blue, corridors tan, markers orange/severity - three
-distinguishable information channels at every zoom and theme. On the
+distinguishable information channels at every zoom and theme. **Blockages**
+are a fourth channel: they must not read as “another road color.” White
+casing + glow + Country-band width + sparse X ticks are what separate them
+from tan corridors and from severity pins. On the
 point density band, severity stays the disc color and type is a white
 SVG glyph (`resolveMarkerIconSlug` → `/images/ui-kit/signals/icons/`).
 Heatmap and donut bands stay severity-only so glyphs do not fight

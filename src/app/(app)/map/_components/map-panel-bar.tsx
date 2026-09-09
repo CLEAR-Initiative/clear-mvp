@@ -14,6 +14,11 @@ import {
   SUDAN_NRC_OFFICE_TYPE_ORDER,
 } from "~/lib/data/sudan-nrc-offices";
 import { signalIconUrl } from "~/lib/signals/resolve-icon";
+import {
+  BLOCKAGES_CASING,
+  BLOCKAGES_NOT_PASSABLE,
+  BLOCKAGES_RESTRICTED,
+} from "~/lib/map/blockages-paint";
 export type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 
 type PanelId = "layers" | "legend" | "filters";
@@ -216,6 +221,41 @@ function SectionLabel({ children }: { children: string }) {
     <Text fw={700} tt="uppercase" c="var(--color-text-muted)" style={{ fontSize: 9, letterSpacing: "0.06em" }} mb={6}>
       {children}
     </Text>
+  );
+}
+
+/** White-cased line chip — matches Blockages map paint (glow lives on the map). */
+function BlockageLineSwatch({
+  color,
+  dashed = false,
+}: {
+  color: string;
+  dashed?: boolean;
+}) {
+  return (
+    <Box
+      w={22}
+      h={8}
+      style={{
+        backgroundColor: BLOCKAGES_CASING,
+        borderRadius: 2,
+        padding: "2px 2px",
+        display: "flex",
+        alignItems: "center",
+        flexShrink: 0,
+        boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.12)",
+      }}
+    >
+      <Box
+        w="100%"
+        h={dashed ? 0 : 3}
+        style={
+          dashed
+            ? { borderTop: `2px dashed ${color}`, opacity: 0.85 }
+            : { backgroundColor: color, borderRadius: 1 }
+        }
+      />
+    </Box>
   );
 }
 
@@ -597,47 +637,24 @@ export function MapPanelBar({
                           <SectionLabel>{t("panels.blockages")}</SectionLabel>
                           <Stack gap={4}>
                             <Group gap={8} wrap="nowrap">
-                              <Box
-                                w={18}
-                                h={3}
-                                style={{ backgroundColor: "#B91C1C", borderRadius: 1, flexShrink: 0 }}
-                              />
+                              <BlockageLineSwatch color={BLOCKAGES_NOT_PASSABLE} />
                               <Text size="xs" style={{ fontSize: 11 }}>{t("panels.blockagesCurrent")}</Text>
                             </Group>
                             <Group gap={8} wrap="nowrap">
-                              <Box
-                                w={18}
-                                h={0}
-                                style={{
-                                  borderTop: "2px dashed #B91C1C",
-                                  opacity: 0.55,
-                                  flexShrink: 0,
-                                  alignSelf: "center",
-                                }}
-                              />
+                              <BlockageLineSwatch color={BLOCKAGES_NOT_PASSABLE} dashed />
                               <Text size="xs" style={{ fontSize: 11 }}>{t("panels.blockagesStale")}</Text>
                             </Group>
                           </Stack>
                         </Box>
                         <Stack gap={4} style={{ flexShrink: 0, paddingTop: 14 }} title={t("panels.blockagesStatus")}>
                           <Group gap={4} wrap="nowrap" justify="flex-end">
-                            <Box
-                              w={14}
-                              h={2}
-                              style={{ backgroundColor: "#B91C1C", borderRadius: 1 }}
-                              title={t("panels.blockagesNotPassable")}
-                            />
+                            <BlockageLineSwatch color={BLOCKAGES_NOT_PASSABLE} />
                             <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 9 }}>
                               {t("panels.blockagesNotPassable")}
                             </Text>
                           </Group>
                           <Group gap={4} wrap="nowrap" justify="flex-end">
-                            <Box
-                              w={14}
-                              h={2}
-                              style={{ backgroundColor: "#D97706", borderRadius: 1 }}
-                              title={t("panels.blockagesRestricted")}
-                            />
+                            <BlockageLineSwatch color={BLOCKAGES_RESTRICTED} />
                             <Text size="xs" c="var(--color-text-muted)" style={{ fontSize: 9 }}>
                               {t("panels.blockagesRestricted")}
                             </Text>
