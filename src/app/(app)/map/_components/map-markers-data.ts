@@ -179,6 +179,52 @@ export function focusEventToMarkers(
   return [...eventMarkers, ...signalMarkers];
 }
 
+/**
+ * Full Map deep-link for a crisis: every linked event pin (not a single
+ * crisis centroid). Falls back to the crisis pin when no event has a Point.
+ */
+export function focusCrisisToMarkers(
+  crisis: GqlCrisis,
+  locationById?: Map<string, { name: string; level: number }>,
+): CrisisMarker[] {
+  const markers: CrisisMarker[] = [];
+  for (const event of crisis.events ?? []) {
+    // Crisis list/get payloads vary in event richness; pointLocation only needs
+    // locations/signals. Cast through GqlEvent for the shared helper.
+    const point = pointLocation(event as GqlEvent);
+    if (!point) continue;
+    markers.push(
+      eventToMarker(
+        {
+          id: event.id,
+          title: null,
+          description: null,
+          types: event.types ?? [],
+          severity: null,
+          rank: 0,
+          validFrom: "",
+          validTo: "",
+          firstSignalCreatedAt: "",
+          lastSignalCreatedAt: "",
+          populationAffected: null,
+          populationDisplaced: null,
+          casualties: null,
+          generalLocation: event.generalLocation ?? null,
+          originLocation: event.originLocation ?? null,
+          destinationLocation: event.destinationLocation ?? null,
+          representativePoint: event.representativePoint ?? null,
+          signals: event.signals ?? [],
+          alerts: [],
+        } satisfies GqlEvent,
+        point,
+        locationById,
+      ),
+    );
+  }
+  if (markers.length > 0) return dedupeMarkersByEntity(markers);
+  return crisesToMarkers([crisis], locationById);
+}
+
 export function alertsToMarkers(
   alerts: GqlAlert[],
   locationById?: Map<string, { name: string; level: number }>,

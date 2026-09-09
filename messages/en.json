@@ -2066,6 +2066,13 @@
       "focusFallbackSignal": "Focused signal",
       "focusFallbackCrisis": "Focused crisis"
     },
+    "placeSearch": {
+      "open": "Search places or coordinates",
+      "placeholder": "Place or lat, lng",
+      "clear": "Clear search",
+      "noResults": "No places found",
+      "error": "Search unavailable"
+    },
     "tokenMissing": "Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env",
     "tiltHint": {
       "message": "Topography is 3D — click Tilt, or Ctrl/⌘+drag (right-click drag) / two-finger drag on touch",
