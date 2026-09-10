@@ -2069,6 +2069,13 @@
       "focusFallbackSignal": "إشارة مركّزة",
       "focusFallbackCrisis": "أزمة مركّزة"
     },
+    "placeSearch": {
+      "open": "البحث عن أماكن أو إحداثيات",
+      "placeholder": "مكان أو خط عرض، خط طول",
+      "clear": "مسح البحث",
+      "noResults": "لم يُعثر على أماكن",
+      "error": "البحث غير متاح"
+    },
     "tokenMissing": "لم يُهيَّأ رمز Mapbox. عيّن NEXT_PUBLIC_MAPBOX_TOKEN في ملف .env",
     "tiltHint": {
       "message": "الطبوغرافية ثلاثية الأبعاد — انقر إمالة، أو Ctrl/⌘+سحب (زر أيمن) / إصبعان على اللمس",

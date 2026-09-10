@@ -108,6 +108,15 @@ export type MapViewCameraSnapshot = {
   bearing: number;
 };
 
+/** Imperative fly target for place/coordinate lookup (preserves live pitch/bearing). */
+export type CrisisMapFlyToArgs = {
+  center: [number, number];
+  zoom?: number;
+  /** west, south, east, north — when set, fitBounds wins over center/zoom. */
+  bbox?: [number, number, number, number];
+  duration?: number;
+};
+
 /** Imperative helpers for overlays that track pins (e.g. spaghetti connectors). */
 export interface CrisisMapApi {
   /**
@@ -125,6 +134,8 @@ export interface CrisisMapApi {
   getViewCamera: () => MapViewCameraSnapshot | null;
   /** Instant restore (no fly) for map ↔ detail round-trips. */
   restoreViewCamera: (camera: MapViewCameraSnapshot) => void;
+  /** Programmatic fly for place search — does not fight React center/zoom props. */
+  flyTo: (args: CrisisMapFlyToArgs) => void;
 }
 
 export interface MapRegion {
@@ -219,6 +230,13 @@ interface CrisisMapProps {
    * appear unchanged (used when closing a marker detail sheet).
    */
   forceFlyToken?: number;
+  /**
+   * When true, skip DOM marker remounts on zoomend while staying in point
+   * mode — keeps radar/pulse CSS animations from restarting (#582).
+   */
+  preferStableDomMarkers?: boolean;
+  /** User interrupted a programmatic fly (wheel/drag) — parent should stop driving camera props. */
+  onUserCameraInterrupt?: () => void;
   /** Fired when the camera settles (pan/zoom/cluster fitBounds). */
   onCameraChange?: (camera: MapViewCameraSnapshot) => void;
   /**
@@ -605,6 +623,8 @@ export function CrisisMap({
   flyPitch,
   flyBearing,
   forceFlyToken = 0,
+  preferStableDomMarkers = false,
+  onUserCameraInterrupt,
   onCameraChange,
   onClusterExpand,
   showBoundaries = true,
@@ -1534,10 +1554,51 @@ export function CrisisMap({
   const prevZoom = useRef(zoom);
   const prevPadding = useRef(flyPaddingBottom);
   const prevForceFly = useRef(forceFlyToken);
+  const userCameraOverrideRef = useRef(false);
+  const onUserCameraInterruptRef = useRef(onUserCameraInterrupt);
+  onUserCameraInterruptRef.current = onUserCameraInterrupt;
+  const preferStableDomMarkersRef = useRef(preferStableDomMarkers);
+  preferStableDomMarkersRef.current = preferStableDomMarkers;
+
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const onUserGesture = (e: { originalEvent?: Event }) => {
+      // Programmatic flyTo/fitBounds omit a DOM UIEvent; ignore those.
+      if (!e.originalEvent || !(e.originalEvent instanceof UIEvent)) return;
+      // Sync prev refs so a later prop echo does not re-fly into the live camera.
+      // Do NOT map.stop() here — that cancels the user's drag/zoom mid-gesture.
+      try {
+        const c = m.getCenter();
+        prevCenter.current = [c.lng, c.lat];
+        prevZoom.current = m.getZoom();
+      } catch {
+        /* ignore */
+      }
+      if (!userCameraOverrideRef.current) {
+        userCameraOverrideRef.current = true;
+        onUserCameraInterruptRef.current?.();
+      }
+    };
+    m.on("zoomstart", onUserGesture);
+    m.on("dragstart", onUserGesture);
+    m.on("rotatestart", onUserGesture);
+    m.on("pitchstart", onUserGesture);
+    return () => {
+      m.off("zoomstart", onUserGesture);
+      m.off("dragstart", onUserGesture);
+      m.off("rotatestart", onUserGesture);
+      m.off("pitchstart", onUserGesture);
+    };
+  }, [loaded]);
+
   useEffect(() => {
     if (!map.current || !loaded) return;
     const forced = forceFlyToken !== prevForceFly.current;
     prevForceFly.current = forceFlyToken;
+    if (forced) {
+      userCameraOverrideRef.current = false;
+    }
     // Country fitBounds owns framing whenever a focus country is selected —
     // including while L0 geometry is still loading. Otherwise flyTo races to
     // a wrong fallback center (e.g. Sudan for Venezuela) and fitBounds has to
@@ -1545,6 +1606,7 @@ export function CrisisMap({
     // wins when fitBoundsOnFocus is off; do not let forceFlyToken on country
     // change cancel the padded mobile country fit.
     if (focusCountryName && fitBoundsOnFocus && !fitBoundsGeometry) return;
+    if (userCameraOverrideRef.current && !forced) return;
     const paddingChanged = prevPadding.current !== flyPaddingBottom;
     if (
       !forced &&
@@ -1990,6 +2052,20 @@ export function CrisisMap({
         mountedMode === "none" ||
         clusterDomMarkers.current.size === 0 ||
         mountedMode !== renderMode;
+
+      // Focus/solo sets are small — remounting on every zoomend restarts the
+      // radar pulse CSS. Keep existing point DOM when mode is unchanged.
+      if (
+        needsMount &&
+        rebuildMarkers &&
+        preferStableDomMarkersRef.current &&
+        mountedMode === "point" &&
+        renderMode === "point" &&
+        clusterDomMarkers.current.size > 0
+      ) {
+        setDomMarkerOpacity(markerOp);
+        return;
+      }
 
       if (needsMount) {
         renderMarkersForMode(renderMode);
@@ -3223,6 +3299,43 @@ export function CrisisMap({
             zoom: camera.zoom,
             pitch: camera.pitch,
             bearing: camera.bearing,
+          });
+        } catch {
+          /* ignore */
+        }
+      },
+      flyTo: (args) => {
+        const m = map.current;
+        if (!m) return;
+        const duration = args.duration ?? 900;
+        const { pitch, bearing } = flyToOrientation({
+          currentPitch: typeof m.getPitch === "function" ? m.getPitch() : 0,
+          currentBearing: typeof m.getBearing === "function" ? m.getBearing() : 0,
+        });
+        try {
+          if (args.bbox && args.bbox.length === 4) {
+            const [west, south, east, north] = args.bbox;
+            m.fitBounds(
+              [
+                [west, south],
+                [east, north],
+              ],
+              {
+                padding: { top: 72, bottom: 96, left: 48, right: 48 },
+                duration,
+                pitch,
+                bearing,
+                maxZoom: args.zoom ?? 14,
+              },
+            );
+            return;
+          }
+          m.flyTo({
+            center: args.center,
+            zoom: args.zoom ?? 12,
+            duration,
+            pitch,
+            bearing,
           });
         } catch {
           /* ignore */

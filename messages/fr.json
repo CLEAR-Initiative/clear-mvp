@@ -2069,6 +2069,13 @@
       "focusFallbackSignal": "Signal ciblé",
       "focusFallbackCrisis": "Crise ciblée"
     },
+    "placeSearch": {
+      "open": "Rechercher un lieu ou des coordonnées",
+      "placeholder": "Lieu ou lat, lng",
+      "clear": "Effacer la recherche",
+      "noResults": "Aucun lieu trouvé",
+      "error": "Recherche indisponible"
+    },
     "tokenMissing": "Jeton Mapbox non configuré. Définissez NEXT_PUBLIC_MAPBOX_TOKEN dans .env",
     "tiltHint": {
       "message": "La topographie est en 3D — cliquez Incliner, ou Ctrl/⌘+glisser (clic droit) / deux doigts sur tactile",

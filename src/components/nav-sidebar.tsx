@@ -40,6 +40,11 @@ import { useSlidingNavIndicator } from "~/hooks/use-sliding-nav-indicator";
 import { SlidingNavIndicator } from "~/components/ui/sliding-nav-indicator";
 import { usePageTransition } from "~/components/page-transition";
 import { isModifiedNavClick } from "~/components/page-transition-intent";
+import {
+  insightsNavHrefFromFocusSession,
+  mapNavHrefFromFocusSession,
+  readMapFocusSession,
+} from "~/lib/map-focus-session";
 
 type NavItemKey =
   | "overview"
@@ -62,6 +67,14 @@ interface NavItem {
   adminOnly?: boolean;
   /** Shown but greyed out with "Coming Soon" for non-admin users */
   comingSoonForNonAdmin?: boolean;
+}
+
+/** Map / Insights hrefs follow in-session focus chips (#582). */
+function resolveNavHref(item: NavItem): string {
+  if (item.labelKey !== "map" && item.labelKey !== "insights") return item.href;
+  const session = readMapFocusSession();
+  if (item.labelKey === "map") return mapNavHrefFromFocusSession(session);
+  return insightsNavHrefFromFocusSession(session);
 }
 
 interface NavSection {
@@ -281,6 +294,7 @@ export function NavSidebar() {
                 {visibleItems.map((item) => {
                   const isDisabled = item.disabled || (!isAdmin && !!item.comingSoonForNonAdmin);
                   const itemSegment = item.href.replace(/^\//, "");
+                  const href = resolveNavHref(item);
                   const isActive = !isDisabled && effectiveSegment === itemSegment;
                   const Icon = item.icon;
                   const content = (
@@ -309,12 +323,12 @@ export function NavSidebar() {
                   ) : (
                     <Link
                       key={item.href}
-                      href={item.href}
+                      href={href}
                       data-nav-segment={itemSegment}
                       onClick={(e) => {
                         if (isModifiedNavClick(e)) return;
                         setOptimisticSegment(itemSegment);
-                        beginPageTransition(item.href);
+                        beginPageTransition(href);
                         closeMobile();
                       }}
                       style={{ textDecoration: "none", display: "block", color: "inherit", position: "relative", zIndex: 1 }}
@@ -571,6 +585,7 @@ export function NavSidebar() {
                 {visibleItems.map((item) => {
                   const isDisabled = item.disabled || (!isAdmin && !!item.comingSoonForNonAdmin);
                   const itemSegment = item.href.replace(/^\//, "");
+                  const href = resolveNavHref(item);
                   const isActive = !isDisabled && effectiveSegment === itemSegment;
                   const Icon = item.icon;
 
@@ -639,12 +654,12 @@ export function NavSidebar() {
                   ) : (
                     <Link
                       key={item.href}
-                      href={item.href}
+                      href={href}
                       data-nav-segment={itemSegment}
                       onClick={(e) => {
                         if (isModifiedNavClick(e)) return;
                         setOptimisticSegment(itemSegment);
-                        beginPageTransition(item.href);
+                        beginPageTransition(href);
                       }}
                       style={{ textDecoration: "none", display: "block", color: "inherit", position: "relative", zIndex: 1 }}
                     >
