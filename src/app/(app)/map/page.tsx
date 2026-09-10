@@ -94,6 +94,7 @@ import {
   fetchBlockagesMapCollection,
   isBlockagesUiEnabled,
 } from "~/lib/map/fetch-blockages";
+import { blockagesIso3ForMapScope } from "~/lib/map/blockages-countries";
 import {
   seismicSignalsHintFromMeta,
   fetchSeismicSignalsMapCollection,
@@ -855,6 +856,8 @@ function MapPageContent() {
 
   /**
    * Blockages UI: always on (BFF default). See `fetch-blockages.ts`.
+   * Scoped by map country → LogIE ISO3 (SDN / AFG / VEN); All Countries
+   * merges the team’s ISO3 list.
    */
   const blockagesUiEnabled = isBlockagesUiEnabled();
   const [showBlockages, setShowBlockages] = useState(false);
@@ -869,6 +872,16 @@ function MapPageContent() {
     }>;
   } | null>(null);
 
+  const blockagesIso3List = useMemo(
+    () =>
+      blockagesIso3ForMapScope({
+        selectedCountry,
+        teamCountryNames,
+      }),
+    [selectedCountry, teamCountryNames],
+  );
+  const blockagesIso3Key = blockagesIso3List.join(",");
+
   useEffect(() => {
     if (!blockagesUiEnabled || !showBlockages) {
       setBlockagesGeoJson(null);
@@ -876,14 +889,20 @@ function MapPageContent() {
       setBlockagesLoading(false);
       return;
     }
+    if (blockagesIso3List.length === 0) {
+      setBlockagesGeoJson(null);
+      setBlockagesHint("No LogIE country in scope");
+      setBlockagesLoading(false);
+      return;
+    }
     let cancelled = false;
     setBlockagesLoading(true);
     setBlockagesHint(undefined);
-    fetchBlockagesMapCollection()
-      .then(({ collection, source }) => {
+    fetchBlockagesMapCollection({ iso3: blockagesIso3List })
+      .then(({ collection, source, iso3 }) => {
         if (cancelled) return;
         setBlockagesGeoJson(collection);
-        setBlockagesHint(blockagesHintFromMeta(collection, source));
+        setBlockagesHint(blockagesHintFromMeta(collection, source, iso3));
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -898,7 +917,7 @@ function MapPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [blockagesUiEnabled, showBlockages]);
+  }, [blockagesUiEnabled, showBlockages, blockagesIso3Key, blockagesIso3List]);
 
   /**
    * Seismic activity UI: always on (spike in dev/preview, BFF in prod). See `fetch-usgs-earthquakes.ts`.
