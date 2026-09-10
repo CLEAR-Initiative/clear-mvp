@@ -4,17 +4,18 @@ import { API_URL } from "~/server/env";
 /**
  * BFF proxy for LogIE Blockages GeoJSON.
  *
- * Browser stays same-origin (`/api/logie/blockages`); this route forwards the
- * session cookie to clear-api `GET /api/logie/blockages` (auth required).
- * Map client defaults to this path outside development. Optional override:
- * `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` (plain env only — Sensitive vars do not
- * inline into the client bundle at build time).
+ * Browser stays same-origin (`/api/logie/blockages?iso3=AFG`); this route
+ * forwards the session cookie to clear-api (auth required).
+ * Callers must pass `iso3` (SDN / AFG / VEN …). If omitted we still default
+ * to SDN for backward compatibility with older clients — new map code always
+ * sends an explicit ISO3.
+ * Optional override: `NEXT_PUBLIC_LOGIE_BLOCKAGES_URL` (plain env only).
  */
 export async function GET(request: NextRequest) {
   const incoming = request.nextUrl.searchParams;
   const upstream = new URL(`${API_URL}/api/logie/blockages`);
   for (const [key, value] of incoming.entries()) {
-    upstream.searchParams.set(key, value);
+    upstream.searchParams.append(key, value);
   }
   if (!upstream.searchParams.has("iso3")) {
     upstream.searchParams.set("iso3", "SDN");

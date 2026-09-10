@@ -76,6 +76,8 @@ export type BlockagesMapCollection = {
     bytes_in: number;
     bytes_out: number;
     reduction_ratio: number;
+    /** LogIE ISO3 when the collection is single-country. */
+    iso3?: string;
   };
 };
 
