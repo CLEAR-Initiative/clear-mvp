@@ -287,7 +287,7 @@
         "range": "Fourchette {range}",
         "info": {
           "informSeverity": "Indice de sévérité INFORM (0-10) d'ACAPS, mis à jour chaque mois. Mesure composite de la sévérité, indépendante du pipeline d'analyse.",
-          "displaced": "Personnes déplacées internes (PDI). Agrégé à partir des rapports sources (champ : population_displaced).",
+          "displaced": "Déplacement actuel estimé (PDI). Issu des datapoints de l'analyse (champ : estimated_current_displacement.stock ; repli sur population_displaced si présent).",
           "inNeed": "Personnes dans le besoin. Agrégé à partir des rapports sources (champ : population_in_need).",
           "affected": "Personnes affectées par la crise - un cercle plus large que les personnes dans le besoin (champ : population_affected).",
           "fundingRequired": "Financement requis pour les appels, en USD (champ : funding_required_usd).",
