@@ -60,6 +60,23 @@ describe("shouldShowTopographyTiltHint", () => {
     ).toBe(false);
   });
 
+  it("honours the flat-pitch boundary at 0.5°", () => {
+    expect(
+      shouldShowTopographyTiltHint({
+        baseMapType: "topography",
+        dismissed: false,
+        pitch: 0.5,
+      }),
+    ).toBe(true);
+    expect(
+      shouldShowTopographyTiltHint({
+        baseMapType: "topography",
+        dismissed: false,
+        pitch: 0.51,
+      }),
+    ).toBe(false);
+  });
+
   it("hides after dismiss even on Topography at pitch 0", () => {
     expect(
       shouldShowTopographyTiltHint({
