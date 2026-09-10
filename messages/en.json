@@ -287,7 +287,7 @@
         "range": "Range {range}",
         "info": {
           "informSeverity": "INFORM Severity Index (0-10) from ACAPS, updated monthly. A composite measure of crisis severity, independent of the situation-analysis pipeline.",
-          "displaced": "Internally displaced persons (IDPs). Aggregated from the source reports below (field: population_displaced).",
+          "displaced": "Estimated current displacement (IDPs). From the analysis datapoints (field: estimated_current_displacement.stock; falls back to population_displaced when present).",
           "inNeed": "People in need of humanitarian assistance. Aggregated from the source reports (field: population_in_need / overall PiN).",
           "affected": "People affected by the crisis - a wider circle than people in need. Aggregated from the source reports (field: population_affected).",
           "fundingRequired": "Funding required across appeals, in USD. Aggregated from the source reports (field: funding_required_usd).",
