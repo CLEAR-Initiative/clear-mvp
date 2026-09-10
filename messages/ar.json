@@ -287,7 +287,7 @@
         "range": "النطاق {range}",
         "info": {
           "informSeverity": "مؤشر شدة INFORM (0-10) من ACAPS، يُحدَّث شهرياً. مقياس مركّب لشدة الأزمة، مستقل عن خط معالجة التحليل.",
-          "displaced": "النازحون داخلياً. مجمّع من التقارير المصدرية (الحقل: population_displaced).",
+          "displaced": "التقدير الحالي للنزوح (النازحون داخلياً). من datapoints التحليل (الحقل: estimated_current_displacement.stock؛ مع الرجوع إلى population_displaced إن وُجد).",
           "inNeed": "المحتاجون للمساعدة الإنسانية. مجمّع من التقارير المصدرية (الحقل: population_in_need).",
           "affected": "المتأثرون بالأزمة - دائرة أوسع من المحتاجين (الحقل: population_affected).",
           "fundingRequired": "التمويل المطلوب للنداءات بالدولار (الحقل: funding_required_usd).",

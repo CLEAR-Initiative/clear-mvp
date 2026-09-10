@@ -287,7 +287,7 @@
         "range": "Rango {range}",
         "info": {
           "informSeverity": "Índice de gravedad INFORM (0-10) de ACAPS, actualizado mensualmente. Medida compuesta de la gravedad de la crisis, independiente del pipeline de análisis de situación.",
-          "displaced": "Personas desplazadas internas (PDI). Agregado de los informes fuente siguientes (campo: population_displaced).",
+          "displaced": "Desplazamiento actual estimado (PDI). De los datapoints del análisis (campo: estimated_current_displacement.stock; usa population_displaced si está presente).",
           "inNeed": "Personas en necesidad de asistencia humanitaria. Agregado de los informes fuente (campo: population_in_need / PiN general).",
           "affected": "Personas afectadas por la crisis: un círculo más amplio que las personas en necesidad. Agregado de los informes fuente (campo: population_affected).",
           "fundingRequired": "Financiación requerida en los llamamientos, en USD. Agregado de los informes fuente (campo: funding_required_usd).",
