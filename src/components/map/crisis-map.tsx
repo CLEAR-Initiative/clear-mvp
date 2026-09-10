@@ -715,7 +715,7 @@ export function CrisisMap({
     isTopographyTiltHintDismissed(),
   );
   /** Pitch for tilt-hint gating only — updates when crossing flat ↔ tilted. */
-  const [tiltHintPitch, setTiltHintPitch] = useState(0);
+  const [tiltHintPitch, setTiltHintPitch] = useState(initialPitch);
   const showTiltHint = shouldShowTopographyTiltHint({
     baseMapType,
     dismissed: tiltHintDismissed,
