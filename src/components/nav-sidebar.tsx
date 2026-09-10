@@ -32,10 +32,7 @@ import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
 import { isPlatformAdmin } from "~/lib/roles";
-import {
-  isMapNavOverlay,
-  useOptimisticNavSegment,
-} from "~/hooks/use-optimistic-nav-segment";
+import { isMapNavOverlay, useOptimisticNavSegment } from "~/hooks/use-optimistic-nav-segment";
 import { useSlidingNavIndicator } from "~/hooks/use-sliding-nav-indicator";
 import { SlidingNavIndicator } from "~/components/ui/sliding-nav-indicator";
 import { usePageTransition } from "~/components/page-transition";
@@ -45,6 +42,7 @@ import {
   mapNavHrefFromFocusSession,
   readMapFocusSession,
 } from "~/lib/map-focus-session";
+import { NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
 
 type NavItemKey =
   | "overview"
@@ -104,7 +102,7 @@ const navSections: NavSection[] = [
   },
 ];
 
-const EXPANDED_W = 240;
+const EXPANDED_W = NAV_EXPANDED_W_PX;
 const COLLAPSED_W = 80;
 const TRANSITION = "200ms ease";
 

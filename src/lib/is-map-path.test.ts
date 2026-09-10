@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isMapPath } from "./is-map-path";
+import { isMapPath, NAV_EXPANDED_W_PX } from "./is-map-path";
 
 describe("isMapPath", () => {
   it("matches /map and nested paths", () => {
@@ -13,5 +13,11 @@ describe("isMapPath", () => {
     expect(isMapPath("/dashboard")).toBe(false);
     expect(isMapPath("/")).toBe(false);
     expect(isMapPath("/mapping")).toBe(false);
+  });
+});
+
+describe("NAV_EXPANDED_W_PX", () => {
+  it("matches the expanded sidebar width used on first /map paint", () => {
+    expect(NAV_EXPANDED_W_PX).toBe(240);
   });
 });

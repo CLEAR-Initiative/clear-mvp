@@ -7,6 +7,8 @@ const PATHNAME_HEADER = "x-pathname";
 
 function nextWithPathname(request: NextRequest, pathname: string): NextResponse {
   const requestHeaders = new Headers(request.headers);
+  // Only trust the server-derived path — drop any client-supplied value first.
+  requestHeaders.delete(PATHNAME_HEADER);
   requestHeaders.set(PATHNAME_HEADER, pathname);
   return NextResponse.next({
     request: { headers: requestHeaders },

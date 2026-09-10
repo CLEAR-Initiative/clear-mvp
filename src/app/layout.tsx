@@ -16,7 +16,7 @@ import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { TRPCReactProvider } from "~/trpc/react";
 import { clearTheme } from "~/app/config/themes";
 import { localeDirection, isLocale, defaultLocale } from "~/i18n/config";
-import { isMapPath } from "~/lib/is-map-path";
+import { isMapPath, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -72,7 +72,7 @@ export default async function RootLayout({
   const pathname = (await headers()).get("x-pathname") ?? "";
   const mapNavOverlay = isMapPath(pathname);
   const bodyStyle = mapNavOverlay
-    ? ({ ["--clear-nav-w" as string]: "240px" } as CSSProperties)
+    ? ({ ["--clear-nav-w" as string]: `${NAV_EXPANDED_W_PX}px` } as CSSProperties)
     : undefined;
 
   return (
