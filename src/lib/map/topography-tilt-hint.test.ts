@@ -3,6 +3,7 @@ import {
   TOPOGRAPHY_TILT_HINT_STORAGE_KEY,
   dismissTopographyTiltHint,
   isTopographyTiltHintDismissed,
+  isTopographyTiltHintFlatPitch,
   shouldShowTopographyTiltHint,
   type TiltHintStorage,
 } from "./topography-tilt-hint";
@@ -18,34 +19,64 @@ function memoryStorage(seed: Record<string, string> = {}): TiltHintStorage {
 }
 
 describe("shouldShowTopographyTiltHint", () => {
-  it("shows only on Topography when not dismissed", () => {
+  it("shows only on Topography when not dismissed and pitch is flat", () => {
     expect(
       shouldShowTopographyTiltHint({
         baseMapType: "topography",
         dismissed: false,
+        pitch: 0,
       }),
     ).toBe(true);
     expect(
       shouldShowTopographyTiltHint({
         baseMapType: "simple",
         dismissed: false,
+        pitch: 0,
       }),
     ).toBe(false);
     expect(
       shouldShowTopographyTiltHint({
         baseMapType: "satellite",
         dismissed: false,
+        pitch: 0,
       }),
     ).toBe(false);
   });
 
-  it("hides after dismiss even on Topography", () => {
+  it("hides when the camera is already tilted", () => {
+    expect(
+      shouldShowTopographyTiltHint({
+        baseMapType: "topography",
+        dismissed: false,
+        pitch: 45,
+      }),
+    ).toBe(false);
+    expect(
+      shouldShowTopographyTiltHint({
+        baseMapType: "topography",
+        dismissed: false,
+        pitch: 1,
+      }),
+    ).toBe(false);
+  });
+
+  it("hides after dismiss even on Topography at pitch 0", () => {
     expect(
       shouldShowTopographyTiltHint({
         baseMapType: "topography",
         dismissed: true,
+        pitch: 0,
       }),
     ).toBe(false);
+  });
+});
+
+describe("isTopographyTiltHintFlatPitch", () => {
+  it("treats sub-degree pitch as flat", () => {
+    expect(isTopographyTiltHintFlatPitch(0)).toBe(true);
+    expect(isTopographyTiltHintFlatPitch(0.4)).toBe(true);
+    expect(isTopographyTiltHintFlatPitch(0.5)).toBe(true);
+    expect(isTopographyTiltHintFlatPitch(0.51)).toBe(false);
   });
 });
 
@@ -68,12 +99,14 @@ describe("dismiss / storage policy", () => {
       shouldShowTopographyTiltHint({
         baseMapType: "simple",
         dismissed: isTopographyTiltHintDismissed(storage),
+        pitch: 0,
       }),
     ).toBe(false);
     expect(
       shouldShowTopographyTiltHint({
         baseMapType: "topography",
         dismissed: isTopographyTiltHintDismissed(storage),
+        pitch: 0,
       }),
     ).toBe(false);
   });

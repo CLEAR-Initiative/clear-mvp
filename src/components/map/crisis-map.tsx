@@ -62,6 +62,7 @@ import { ensureGlobeProjection } from "~/lib/map/idle-globe-spin";
 import {
   dismissTopographyTiltHint,
   isTopographyTiltHintDismissed,
+  isTopographyTiltHintFlatPitch,
   shouldShowTopographyTiltHint,
 } from "~/lib/map/topography-tilt-hint";
 import {
@@ -713,9 +714,12 @@ export function CrisisMap({
   const [tiltHintDismissed, setTiltHintDismissed] = useState(() =>
     isTopographyTiltHintDismissed(),
   );
+  /** Pitch for tilt-hint gating only — updates when crossing flat ↔ tilted. */
+  const [tiltHintPitch, setTiltHintPitch] = useState(0);
   const showTiltHint = shouldShowTopographyTiltHint({
     baseMapType,
     dismissed: tiltHintDismissed,
+    pitch: tiltHintPitch,
   });
   const onDismissTiltHint = () => {
     dismissTopographyTiltHint();
@@ -952,15 +956,23 @@ export function CrisisMap({
 
   // Pitch-linked pin stems on every basemap — flat ≤45°, full by ~70°.
   // Imperative DOM only (no remount) so tilt stays smooth.
+  // Also sync tilt-hint pitch (state only when flat↔tilted crosses).
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
     let raf = 0;
     const syncPinElevation = () => {
       raf = 0;
-      const factor = pinElevationFactor(
-        typeof m.getPitch === "function" ? m.getPitch() : 0,
-      );
+      const pitch =
+        typeof m.getPitch === "function" ? m.getPitch() : 0;
+      const factor = pinElevationFactor(pitch);
+      // Hint only needs flat vs tilted — avoid re-renders on every pitch frame.
+      setTiltHintPitch((prev) => {
+        const prevFlat = isTopographyTiltHintFlatPitch(prev);
+        const nextFlat = isTopographyTiltHintFlatPitch(pitch);
+        if (prevFlat === nextFlat) return prev;
+        return pitch;
+      });
       for (const [key, mk] of clusterDomMarkers.current) {
         if (!key.startsWith("p-")) continue;
         try {
