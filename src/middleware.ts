@@ -2,6 +2,17 @@ import { type NextRequest, NextResponse } from "next/server";
 import { isLocale, LOCALE_COOKIE } from "~/i18n/config";
 import { isPlatformAdmin } from "~/lib/roles";
 
+/** Forwarded to Server Components so /map can SSR nav-overlay chrome offsets. */
+const PATHNAME_HEADER = "x-pathname";
+
+function nextWithPathname(request: NextRequest, pathname: string): NextResponse {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(PATHNAME_HEADER, pathname);
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+}
+
 const API_URL = process.env.API_URL ?? "http://localhost:4000";
 // 8s per attempt × 2 attempts = 16s total budget. Bumped from 3s after
 // observing parallel middleware fan-out (1 page reload = multiple RSC
@@ -48,7 +59,7 @@ export async function middleware(request: NextRequest) {
     "/api/",
   ];
   if (publicPaths.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next();
+    return nextWithPathname(request, pathname);
   }
 
   // Better Auth uses __Secure- prefix when running on HTTPS
@@ -80,7 +91,7 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith("/admin")) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
-    return NextResponse.next();
+    return nextWithPathname(request, pathname);
   }
 
   // Server-side admin route protection
@@ -88,7 +99,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  const response = NextResponse.next();
+  const response = nextWithPathname(request, pathname);
 
   // Seed the locale cookie from the user's persisted language preference
   // ONLY if the cookie is missing. Once set, the cookie is the source of

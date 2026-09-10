@@ -162,17 +162,24 @@ export function NavSidebar() {
     };
   }, [collapsed, isMapRoute]);
 
-  // Enable left transitions only after the first overlay frame — collapse/expand
-  // still animates; first map paint does not.
+  // Enable left transitions only after a committed paint — collapse/expand
+  // still animates; first map paint does not. Double rAF: a single rAF runs
+  // before paint and can still interpolate from the pre-overlay left (#571).
   useEffect(() => {
     if (!isMapRoute) {
       delete document.body.dataset.navOffsetMotion;
       return;
     }
-    const id = requestAnimationFrame(() => {
-      document.body.dataset.navOffsetMotion = "true";
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => {
+        document.body.dataset.navOffsetMotion = "true";
+      });
     });
-    return () => cancelAnimationFrame(id);
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
   }, [isMapRoute]);
 
   const handleLogout = async () => {

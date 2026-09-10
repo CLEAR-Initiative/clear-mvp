@@ -145,7 +145,9 @@ body {
 /* /map: nav overlays the canvas — keep floating chrome glued to the sidebar's
    right edge (same gap expanded or collapsed). Match nav width transition.
    Desktop only: below `sm` the aside is hidden (Drawer), so offsets must not apply.
-   Use `left` (not padding-left) so Mantine px={} can't win on specificity. */
+   Use `left` (not padding-left) so Mantine px={} can't win on specificity.
+   `data-nav-overlay` is SSR'd on /map (root layout + x-pathname) so filters /
+   layers paint at the final left on reload — not at left:0 then slide (#571). */
 @media (min-width: 48em) {
   body[data-nav-overlay="true"] [data-map-chrome-left] {
     left: calc(var(--clear-nav-w, 240px) + 1rem) !important;

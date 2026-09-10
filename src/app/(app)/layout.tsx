@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Box, Group } from "@mantine/core";
 import { NavSidebar } from "~/components/nav-sidebar";
 import { NavSidebarFallback } from "~/components/nav-sidebar-fallback";
@@ -16,6 +16,7 @@ import {
 } from "~/components/page-transition";
 import { api, HydrateClient } from "~/trpc/server";
 import { WORKING_COUNTRY_COOKIE } from "~/lib/working-country-cookie";
+import { isMapPath } from "~/lib/is-map-path";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Prefetch auth.me so the client cache is hydrated on first paint
@@ -24,6 +25,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Read working country cookie for SSR hydration
   const cookieStore = await cookies();
   const workingCountryCookie = cookieStore.get(WORKING_COUNTRY_COOKIE)?.value;
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const mapNavOverlay = isMapPath(pathname);
 
   return (
     <HydrateClient>
@@ -43,7 +46,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                     background: "var(--color-bg-primary)",
                   }}
                 >
-                  <Suspense fallback={<NavSidebarFallback />}>
+                  <Suspense fallback={<NavSidebarFallback overlay={mapNavOverlay} />}>
                     <NavSidebar />
                   </Suspense>
                   <Box

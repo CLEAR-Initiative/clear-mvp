@@ -1,6 +1,8 @@
 import "~/styles/globals.css";
 
+import type { CSSProperties } from "react";
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Inter, Noto_Sans_Arabic } from "next/font/google";
 import {
   MantineProvider,
@@ -14,6 +16,7 @@ import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { TRPCReactProvider } from "~/trpc/react";
 import { clearTheme } from "~/app/config/themes";
 import { localeDirection, isLocale, defaultLocale } from "~/i18n/config";
+import { isMapPath } from "~/lib/is-map-path";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -64,6 +67,13 @@ export default async function RootLayout({
   const locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const messages = await getMessages();
   const dir = localeDirection[locale];
+  // Middleware forwards x-pathname so /map SSR can paint chrome at the final
+  // left offset (client-only data-nav-overlay caused a horizontal slide #571).
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const mapNavOverlay = isMapPath(pathname);
+  const bodyStyle = mapNavOverlay
+    ? ({ ["--clear-nav-w" as string]: "240px" } as CSSProperties)
+    : undefined;
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
@@ -87,7 +97,12 @@ export default async function RootLayout({
           }
         `}} />
       </head>
-      <body className={`${inter.variable} ${notoSansArabic.variable} font-sans antialiased`}>
+      <body
+        className={`${inter.variable} ${notoSansArabic.variable} font-sans antialiased`}
+        data-nav-overlay={mapNavOverlay ? "true" : undefined}
+        style={bodyStyle}
+        suppressHydrationWarning
+      >
         <DirectionProvider initialDirection={dir} detectDirection={false}>
           <MantineProvider theme={clearTheme} defaultColorScheme="auto">
             <NextIntlClientProvider locale={locale} messages={messages}>
