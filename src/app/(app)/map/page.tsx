@@ -55,6 +55,7 @@ import {
   MapPlaceSearch,
   type MapPlaceSearchSelect,
 } from "./_components/map-place-search";
+import { matchPickerCountry } from "~/lib/map/geocode-lookup";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapLoadingOverlay, MapPreloader } from "./_components/map-loading-overlay";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
@@ -687,6 +688,11 @@ function MapPageContent() {
   const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
   const selectedCountryRef = useRef(selectedCountry);
   selectedCountryRef.current = selectedCountry;
+  const countryOptionsRef = useRef<string[]>([]);
+  const teamCountriesRef = useRef(teamCountries);
+  teamCountriesRef.current = teamCountries;
+  const getLocationIdRef = useRef(getLocationId);
+  getLocationIdRef.current = getLocationId;
   
   const [openPanels, setOpenPanels] = useState<OpenMarkerPanel[]>([]);
   const [keepPanelsOpen, setKeepPanelsOpen] = useState(false);
@@ -750,6 +756,28 @@ function MapPageContent() {
       lat: hit.center[1],
       zoom: hit.zoom,
     });
+
+    // When the hit's parent country is in the user's picker, sync the filter
+    // so borders/signals match the search. Out-of-scope countries still fly
+    // to the place; leave All Countries (or current pick) alone.
+    const matched = matchPickerCountry(countryOptionsRef.current, {
+      countryName: hit.countryName,
+      countryCode: hit.countryCode,
+    });
+    if (matched && matched !== selectedCountryRef.current) {
+      const location = teamCountriesRef.current.find((c) => c.name === matched);
+      if (location) {
+        setWorkingCountry(location.id);
+      } else {
+        setPickedCountry(matched);
+        setWorkingCountry(
+          getLocationIdRef.current(matched) ?? matched,
+          matched,
+        );
+      }
+      setSelectedRegion("All Regions");
+    }
+
     setForceFlyToken((n) => n + 1);
     router.replace("/map", { scroll: false });
     // Bbox places get a tighter fit after the prop fly starts.
@@ -764,10 +792,11 @@ function MapPageContent() {
         });
       });
     }
-    // Release prop-driven camera after the fly so browse timeframe/month
-    // filters keep working without re-flying to the place zoom.
+    // Drop the short-lived placeLookup boost after the fly. placeFocus keeps
+    // owning center/zoom so All Countries does not yank the camera back to
+    // global zoom while the place chip is active.
     window.setTimeout(() => setPlaceLookup(null), 850);
-  }, [router]);
+  }, [router, setWorkingCountry]);
 
   const refreshConnectorPins = useCallback(() => {
     const api = mapApiRef.current;
@@ -1244,16 +1273,20 @@ function MapPageContent() {
     }
     return pickerCountryOptions(apiCountries, teamCountryNames);
   }, [scopeReady, workingCountryName, teamCountryNames, apiCountries]);
+  countryOptionsRef.current = countryOptions;
   useReportStaleCountryPick(countryOptions, workingCountryName ?? pickedCountry, selectedCountry);
 
   // Restored camera must belong to the working country. A leftover Sudan
   // pose cannot win over a Venezuela pick (borders/signals vs camera).
+  // Place search owns the camera while its chip is active — do not yank
+  // to country framing after syncing the filter from a geocode hit.
   useEffect(() => {
     if (!selectedCountry || selectedCountry === "All Countries") return;
+    if (placeFocus) return;
     if (cameraSeedForCountry(restoredView, selectedCountry) != null) return;
     setCameraSeed(null);
     setForceFlyToken((n) => n + 1);
-  }, [selectedCountry, restoredView]);
+  }, [selectedCountry, restoredView, placeFocus]);
 
   const regionOptions = useMemo(
     () => selectedCountry !== "All Countries" ? getRegions(selectedCountry) : ["All Regions"],
@@ -1263,6 +1296,10 @@ function MapPageContent() {
   /* ---- Map center ---- */
   const mapCenter: [number, number] = useMemo(() => {
     if (markerFocus) return [markerFocus.lng, markerFocus.lat];
+    // placeFocus (chip) wins over the short-lived placeLookup boost so the
+    // camera stays on the search target after placeLookup clears — including
+    // when the country filter is still "All Countries".
+    if (placeFocus) return placeFocus.center;
     if (placeLookup) return [placeLookup.lng, placeLookup.lat];
     if (returnCamera) return returnCamera.center;
     // Initial restore seed only - live pans stay in Mapbox + sessionStorage.
@@ -1281,6 +1318,7 @@ function MapPageContent() {
     selectedCountry,
     focusMarker,
     markerFocus,
+    placeFocus,
     placeLookup,
     returnCamera,
     cameraSeed,
@@ -1290,6 +1328,7 @@ function MapPageContent() {
 
   const mapZoom = useMemo(() => {
     if (markerFocus) return markerFocus.zoom;
+    if (placeFocus) return placeFocus.zoom;
     if (placeLookup) return placeLookup.zoom;
     if (returnCamera) return returnCamera.zoom;
     if (cameraSeed) return cameraSeed.zoom;
@@ -1304,6 +1343,7 @@ function MapPageContent() {
     selectedCountry,
     focusMarker,
     markerFocus,
+    placeFocus,
     placeLookup,
     returnCamera,
     cameraSeed,
@@ -1884,6 +1924,8 @@ function MapPageContent() {
     setSelectedRegion("All Regions");
     setCameraSeed(null);
     setPlaceLookup(null);
+    setPlaceFocus(null);
+    clearMapFocusSession();
     setForceFlyToken((n) => n + 1);
     clearOpenPanels();
   };
@@ -1892,6 +1934,8 @@ function MapPageContent() {
     setSelectedRegion(value ?? "All Regions");
     setCameraSeed(null);
     setPlaceLookup(null);
+    setPlaceFocus(null);
+    clearMapFocusSession();
     clearOpenPanels();
   };
 
@@ -2234,24 +2278,24 @@ function MapPageContent() {
           focusCountryGeometry={focusCountryGeometry}
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel}
-          fitBoundsGeometry={focusEntityId || markerFocus || placeLookup ? null : fitBoundsGeometry}
+          fitBoundsGeometry={focusEntityId || markerFocus || placeFocus || placeLookup ? null : fitBoundsGeometry}
           fitBoundsOnFocus={
-            !focusEntityId && !markerFocus && !placeLookup && !returnCamera && !cameraSeed
+            !focusEntityId && !markerFocus && !placeFocus && !placeLookup && !returnCamera && !cameraSeed
           }
           initialPitch={cameraSeed?.pitch ?? restoredView?.camera.pitch ?? 0}
           initialBearing={cameraSeed?.bearing ?? restoredView?.camera.bearing ?? 0}
           forceFlyToken={forceFlyToken}
-          flyDuration={markerFocus || placeLookup || focusEntityId ? 500 : (!cameraSeed && !focusEntityId && selectedCountry !== "All Countries" ? 1200 : 650)}
+          flyDuration={markerFocus || placeFocus || placeLookup || focusEntityId ? 500 : (!cameraSeed && !focusEntityId && selectedCountry !== "All Countries" ? 1200 : 650)}
           // Keep pin above the ~45vh sheet + breathing room.
           flyPaddingBottom={
             markerFocus && isMobile
               ? Math.round((typeof window !== "undefined" ? window.innerHeight : 700) * 0.45) + 72
               : 0
           }
-          flyPitch={!markerFocus && !placeLookup ? returnCamera?.pitch : undefined}
-          flyBearing={!markerFocus && !placeLookup ? returnCamera?.bearing : undefined}
+          flyPitch={!markerFocus && !placeFocus && !placeLookup ? returnCamera?.pitch : undefined}
+          flyBearing={!markerFocus && !placeFocus && !placeLookup ? returnCamera?.bearing : undefined}
           introFromGlobe={
-            !cameraSeed && !placeLookup && !focusEntityId && selectedCountry !== "All Countries"
+            !cameraSeed && !placeFocus && !placeLookup && !focusEntityId && selectedCountry !== "All Countries"
           }
           preferStableDomMarkers={isFocusMode}
           onCameraChange={handleCameraChange}

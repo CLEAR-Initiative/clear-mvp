@@ -1,6 +1,9 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import {
+  countryFromMapboxFeature,
   geocodePlaceQuery,
+  matchPickerCountry,
+  normalizeCountryCode,
   parseCoordinateQuery,
   zoomForPlaceTypes,
 } from "./geocode-lookup";
@@ -36,6 +39,64 @@ describe("zoomForPlaceTypes", () => {
   });
 });
 
+describe("normalizeCountryCode", () => {
+  it("uppercases ISO alpha-2", () => {
+    expect(normalizeCountryCode("sd")).toBe("SD");
+    expect(normalizeCountryCode("VE")).toBe("VE");
+  });
+});
+
+describe("countryFromMapboxFeature", () => {
+  it("reads country features and context entries", () => {
+    expect(
+      countryFromMapboxFeature({
+        text: "Sudan",
+        place_name: "Sudan",
+        place_type: ["country"],
+        properties: { short_code: "sd" },
+        center: [30, 15],
+      }),
+    ).toEqual({ countryName: "Sudan", countryCode: "SD" });
+
+    expect(
+      countryFromMapboxFeature({
+        place_name: "Khartoum, Sudan",
+        place_type: ["place"],
+        center: [32.5, 15.5],
+        context: [
+          { id: "region.1", text: "Khartoum" },
+          { id: "country.2", text: "Sudan", short_code: "sd" },
+        ],
+      }),
+    ).toEqual({ countryName: "Sudan", countryCode: "SD" });
+  });
+});
+
+describe("matchPickerCountry", () => {
+  const options = [
+    "All Countries",
+    "Sudan",
+    "Venezuela (Bolivarian Republic of)",
+    "Afghanistan",
+  ];
+
+  it("matches by ISO code onto the picker label", () => {
+    expect(matchPickerCountry(options, { countryCode: "sd" })).toBe("Sudan");
+    expect(
+      matchPickerCountry(options, {
+        countryCode: "ve",
+        countryName: "Venezuela",
+      }),
+    ).toBe("Venezuela (Bolivarian Republic of)");
+  });
+
+  it("returns null when the country is outside the picker", () => {
+    expect(
+      matchPickerCountry(options, { countryCode: "fr", countryName: "France" }),
+    ).toBeNull();
+  });
+});
+
 describe("geocodePlaceQuery", () => {
   const originalFetch = globalThis.fetch;
 
@@ -52,7 +113,7 @@ describe("geocodePlaceQuery", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("maps Mapbox features to hits", async () => {
+  it("maps Mapbox features to hits including country context", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -63,6 +124,7 @@ describe("geocodePlaceQuery", () => {
             center: [32.53, 15.5],
             place_type: ["place"],
             bbox: [32.4, 15.4, 32.6, 15.6],
+            context: [{ id: "country.x", text: "Sudan", short_code: "sd" }],
           },
         ],
       }),
@@ -76,6 +138,8 @@ describe("geocodePlaceQuery", () => {
         center: [32.53, 15.5],
         bbox: [32.4, 15.4, 32.6, 15.6],
         placeTypes: ["place"],
+        countryName: "Sudan",
+        countryCode: "SD",
       },
     ]);
   });

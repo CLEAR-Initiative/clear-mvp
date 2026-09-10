@@ -3,6 +3,12 @@
  * Mapbox Geocoding v5 + a small lat/lng parser for raw coordinates.
  */
 
+import {
+  ALL_COUNTRIES,
+  resolveCountryConfig,
+  shortCountryName,
+} from "~/lib/constants/country-config";
+
 export type GeocodeHit = {
   id: string;
   label: string;
@@ -10,6 +16,10 @@ export type GeocodeHit = {
   /** west, south, east, north — when Mapbox returns a bbox */
   bbox?: [number, number, number, number];
   placeTypes: string[];
+  /** Parent country display name from Mapbox (when known). */
+  countryName?: string;
+  /** ISO 3166-1 alpha-2 from Mapbox `short_code` (e.g. "sd"). */
+  countryCode?: string;
 };
 
 const COORD_RE =
@@ -76,17 +86,113 @@ export function zoomForPlaceTypes(placeTypes: string[]): number {
   return 11;
 }
 
+type MapboxContext = {
+  id?: string;
+  text?: string;
+  short_code?: string;
+};
+
 type MapboxFeature = {
   id?: string;
+  text?: string;
   place_name?: string;
   center?: [number, number];
   bbox?: [number, number, number, number];
   place_type?: string[];
+  context?: MapboxContext[];
+  properties?: { short_code?: string };
 };
 
 type MapboxGeocodeResponse = {
   features?: MapboxFeature[];
 };
+
+/** Normalize Mapbox short_code ("sd", "US") to ISO alpha-2. */
+export function normalizeCountryCode(code: string | undefined | null): string | null {
+  if (!code) return null;
+  const cleaned = code.trim().toUpperCase();
+  if (/^[A-Z]{2}$/.test(cleaned)) return cleaned;
+  // Rare region-style codes — take the country prefix when present ("VE-A").
+  const m = /^([A-Z]{2})(?:-|$)/.exec(cleaned);
+  return m?.[1] ?? null;
+}
+
+/**
+ * Pull parent country name/code from a Mapbox feature (feature itself or context).
+ */
+export function countryFromMapboxFeature(f: MapboxFeature): {
+  countryName?: string;
+  countryCode?: string;
+} {
+  const types = Array.isArray(f.place_type) ? f.place_type : [];
+  if (types.includes("country")) {
+    const name = (f.text ?? f.place_name ?? "").trim() || undefined;
+    const code =
+      normalizeCountryCode(f.properties?.short_code) ?? undefined;
+    return {
+      ...(name ? { countryName: name } : {}),
+      ...(code ? { countryCode: code } : {}),
+    };
+  }
+
+  const ctx = Array.isArray(f.context) ? f.context : [];
+  for (const c of ctx) {
+    if (typeof c.id === "string" && c.id.startsWith("country.")) {
+      const name = (c.text ?? "").trim() || undefined;
+      const code = normalizeCountryCode(c.short_code) ?? undefined;
+      return {
+        ...(name ? { countryName: name } : {}),
+        ...(code ? { countryCode: code } : {}),
+      };
+    }
+  }
+
+  // Last comma segment of "City, Region, Country" as a soft fallback.
+  const parts = (f.place_name ?? "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.length >= 2) {
+    const tail = parts[parts.length - 1]!;
+    return { countryName: tail };
+  }
+  return {};
+}
+
+/**
+ * Map a geocode country onto a picker option the user can select.
+ * Returns null when the country is outside the assigned/available list
+ * (search/fly-to still works; filter stays put).
+ */
+export function matchPickerCountry(
+  pickerOptions: readonly string[],
+  hit: { countryName?: string | null; countryCode?: string | null },
+): string | null {
+  const candidates = pickerOptions.filter((c) => c !== ALL_COUNTRIES);
+  if (candidates.length === 0) return null;
+
+  const iso = normalizeCountryCode(hit.countryCode);
+  if (iso) {
+    for (const opt of candidates) {
+      if (resolveCountryConfig(opt)?.pCode === iso) return opt;
+    }
+  }
+
+  const raw = hit.countryName?.trim();
+  if (!raw) return null;
+  const needle = shortCountryName(raw).toLowerCase();
+  const hitCfg = resolveCountryConfig(raw);
+
+  for (const opt of candidates) {
+    if (opt.toLowerCase() === needle) return opt;
+    if (shortCountryName(opt).toLowerCase() === needle) return opt;
+    const optCfg = resolveCountryConfig(opt);
+    if (hitCfg && optCfg && hitCfg.pCode && hitCfg.pCode === optCfg.pCode) {
+      return opt;
+    }
+  }
+  return null;
+}
 
 function featureToHit(f: MapboxFeature): GeocodeHit | null {
   if (!f.center || f.center.length !== 2) return null;
@@ -94,12 +200,14 @@ function featureToHit(f: MapboxFeature): GeocodeHit | null {
   if (!isLng(lng) || !isLat(lat)) return null;
   const label = (f.place_name ?? "").trim();
   if (!label) return null;
+  const country = countryFromMapboxFeature(f);
   return {
     id: f.id ?? `mb:${lng},${lat}`,
     label,
     center: [lng, lat],
     ...(f.bbox ? { bbox: f.bbox } : {}),
     placeTypes: Array.isArray(f.place_type) ? f.place_type : [],
+    ...country,
   };
 }
 

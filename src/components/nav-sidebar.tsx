@@ -32,10 +32,7 @@ import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
 import { isPlatformAdmin } from "~/lib/roles";
-import {
-  isMapNavOverlay,
-  useOptimisticNavSegment,
-} from "~/hooks/use-optimistic-nav-segment";
+import { isMapNavOverlay, useOptimisticNavSegment } from "~/hooks/use-optimistic-nav-segment";
 import { useSlidingNavIndicator } from "~/hooks/use-sliding-nav-indicator";
 import { SlidingNavIndicator } from "~/components/ui/sliding-nav-indicator";
 import { usePageTransition } from "~/components/page-transition";
@@ -45,6 +42,8 @@ import {
   mapNavHrefFromFocusSession,
   readMapFocusSession,
 } from "~/lib/map-focus-session";
+import { NAV_COLLAPSED_W_PX, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
+import { setNavCollapsedCookie } from "~/lib/nav-collapsed-cookie";
 
 type NavItemKey =
   | "overview"
@@ -104,16 +103,21 @@ const navSections: NavSection[] = [
   },
 ];
 
-const EXPANDED_W = 240;
-const COLLAPSED_W = 80;
+const EXPANDED_W = NAV_EXPANDED_W_PX;
+const COLLAPSED_W = NAV_COLLAPSED_W_PX;
 const TRANSITION = "200ms ease";
 
 
 
-export function NavSidebar() {
+export function NavSidebar({
+  initialCollapsed = false,
+}: {
+  /** SSR cookie so hard refresh matches persisted width (no expand flash). */
+  initialCollapsed?: boolean;
+}) {
   const t = useTranslations("nav");
   const tBadges = useTranslations("common.badges");
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [mobileOpen, { close: closeMobile, toggle: toggleMobile }] = useDisclosure(false);
   const [feedbackOpen, { open: openFeedback, close: closeFeedback }] = useDisclosure(false);
   const segments = useSelectedLayoutSegments();
@@ -149,30 +153,46 @@ export function NavSidebar() {
   const isAdmin = isPlatformAdmin(authData?.user?.role);
   const { flags } = useFeatureFlags();
 
-  // Publish overlay vars before paint so Layers/Filters mount at the final
-  // left offset (useEffect painted left-4 first → 200ms horizontal slide).
+  // Publish overlay width before paint. Keep motion flag out of this cleanup —
+  // clearing it on every collapse/expand disabled chrome `left` transitions.
   useLayoutEffect(() => {
     const w = `${collapsed ? COLLAPSED_W : EXPANDED_W}px`;
     document.documentElement.style.setProperty("--clear-nav-w", w);
     document.body.dataset.navOverlay = isMapRoute ? "true" : "false";
+    if (collapsed) {
+      document.body.dataset.navCollapsed = "true";
+    } else {
+      delete document.body.dataset.navCollapsed;
+    }
+  }, [collapsed, isMapRoute]);
+
+  useLayoutEffect(() => {
     return () => {
       document.documentElement.style.removeProperty("--clear-nav-w");
       delete document.body.dataset.navOverlay;
       delete document.body.dataset.navOffsetMotion;
+      delete document.body.dataset.navCollapsed;
     };
-  }, [collapsed, isMapRoute]);
+  }, []);
 
-  // Enable left transitions only after the first overlay frame — collapse/expand
-  // still animates; first map paint does not.
+  // Enable left transitions only after a committed paint — collapse/expand
+  // still animates; first map paint does not. Double rAF: a single rAF runs
+  // before paint and can still interpolate from the pre-overlay left (#571).
   useEffect(() => {
     if (!isMapRoute) {
       delete document.body.dataset.navOffsetMotion;
       return;
     }
-    const id = requestAnimationFrame(() => {
-      document.body.dataset.navOffsetMotion = "true";
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => {
+        document.body.dataset.navOffsetMotion = "true";
+      });
     });
-    return () => cancelAnimationFrame(id);
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
   }, [isMapRoute]);
 
   const handleLogout = async () => {
@@ -528,7 +548,13 @@ export function NavSidebar() {
 
           <Tooltip label={collapsed ? t("expand") : t("collapse")} position="right" withArrow>
             <UnstyledButton
-              onClick={() => setCollapsed((v) => !v)}
+              onClick={() => {
+                setCollapsed((v) => {
+                  const next = !v;
+                  setNavCollapsedCookie(next);
+                  return next;
+                });
+              }}
               style={{
                 width: 28,
                 height: 28,
