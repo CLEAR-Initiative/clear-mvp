@@ -1,13 +1,17 @@
 import { Box } from "@mantine/core";
-import { NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
+import { NAV_COLLAPSED_W_PX, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
 
 /** Layout-stable placeholder while NavSidebar Suspense resolves. */
 export function NavSidebarFallback({
   /** When true (SSR /map), stay out-of-flow so map chrome left offsets aren't doubled. */
   overlay = false,
+  /** Match persisted collapsed width on non-map routes. */
+  collapsed = false,
 }: {
   overlay?: boolean;
+  collapsed?: boolean;
 }) {
+  const width = collapsed ? NAV_COLLAPSED_W_PX : NAV_EXPANDED_W_PX;
   return (
     <Box
       visibleFrom="sm"
@@ -26,7 +30,7 @@ export function NavSidebarFallback({
               pointerEvents: "none",
             }
           : {
-              width: NAV_EXPANDED_W_PX,
+              width,
               flexShrink: 0,
               minHeight: "100vh",
               background: "var(--color-bg-white)",

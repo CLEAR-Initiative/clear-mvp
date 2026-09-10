@@ -5,3 +5,6 @@ export function isMapPath(pathname: string): boolean {
 
 /** Expanded desktop sidebar width — keep SSR `--clear-nav-w` in sync with NavSidebar. */
 export const NAV_EXPANDED_W_PX = 240;
+
+/** Collapsed desktop sidebar width — keep SSR `--clear-nav-w` in sync with NavSidebar. */
+export const NAV_COLLAPSED_W_PX = 80;

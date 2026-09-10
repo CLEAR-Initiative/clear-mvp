@@ -17,6 +17,10 @@ import {
 import { api, HydrateClient } from "~/trpc/server";
 import { WORKING_COUNTRY_COOKIE } from "~/lib/working-country-cookie";
 import { isMapPath } from "~/lib/is-map-path";
+import {
+  NAV_COLLAPSED_COOKIE,
+  parseNavCollapsedCookie,
+} from "~/lib/nav-collapsed-cookie";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Prefetch auth.me so the client cache is hydrated on first paint
@@ -27,6 +31,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const workingCountryCookie = cookieStore.get(WORKING_COUNTRY_COOKIE)?.value;
   const pathname = (await headers()).get("x-pathname") ?? "";
   const mapNavOverlay = isMapPath(pathname);
+  const navCollapsed = parseNavCollapsedCookie(
+    cookieStore.get(NAV_COLLAPSED_COOKIE)?.value,
+  );
 
   return (
     <HydrateClient>
@@ -46,8 +53,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                     background: "var(--color-bg-primary)",
                   }}
                 >
-                  <Suspense fallback={<NavSidebarFallback overlay={mapNavOverlay} />}>
-                    <NavSidebar />
+                  <Suspense
+                    fallback={
+                      <NavSidebarFallback
+                        overlay={mapNavOverlay}
+                        collapsed={navCollapsed}
+                      />
+                    }
+                  >
+                    <NavSidebar initialCollapsed={navCollapsed} />
                   </Suspense>
                   <Box
                     component="main"

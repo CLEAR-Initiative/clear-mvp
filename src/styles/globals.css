@@ -149,7 +149,12 @@ body {
    `data-nav-overlay` is SSR'd on /map (root layout + x-pathname) so filters /
    layers paint at the final left on reload — not at left:0 then slide (#571).
    `--clear-nav-w` is owned by NavSidebar (documentElement) so collapse/expand
-   can move chrome in lockstep with the sidebar (200ms ease). */
+   can move chrome in lockstep with the sidebar (200ms ease).
+   `data-nav-collapsed` seeds the CSS default from cookie before NavSidebar
+   runs (hard refresh must not flash expanded→collapsed). */
+body[data-nav-collapsed="true"] {
+  --clear-nav-w: 80px;
+}
 @media (min-width: 48em) {
   body[data-nav-overlay="true"] [data-map-chrome-left] {
     left: calc(var(--clear-nav-w, 240px) + 1rem) !important;

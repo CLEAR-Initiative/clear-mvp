@@ -42,7 +42,8 @@ import {
   mapNavHrefFromFocusSession,
   readMapFocusSession,
 } from "~/lib/map-focus-session";
-import { NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
+import { NAV_COLLAPSED_W_PX, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
+import { setNavCollapsedCookie } from "~/lib/nav-collapsed-cookie";
 
 type NavItemKey =
   | "overview"
@@ -103,15 +104,20 @@ const navSections: NavSection[] = [
 ];
 
 const EXPANDED_W = NAV_EXPANDED_W_PX;
-const COLLAPSED_W = 80;
+const COLLAPSED_W = NAV_COLLAPSED_W_PX;
 const TRANSITION = "200ms ease";
 
 
 
-export function NavSidebar() {
+export function NavSidebar({
+  initialCollapsed = false,
+}: {
+  /** SSR cookie so hard refresh matches persisted width (no expand flash). */
+  initialCollapsed?: boolean;
+}) {
   const t = useTranslations("nav");
   const tBadges = useTranslations("common.badges");
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [mobileOpen, { close: closeMobile, toggle: toggleMobile }] = useDisclosure(false);
   const [feedbackOpen, { open: openFeedback, close: closeFeedback }] = useDisclosure(false);
   const segments = useSelectedLayoutSegments();
@@ -153,6 +159,11 @@ export function NavSidebar() {
     const w = `${collapsed ? COLLAPSED_W : EXPANDED_W}px`;
     document.documentElement.style.setProperty("--clear-nav-w", w);
     document.body.dataset.navOverlay = isMapRoute ? "true" : "false";
+    if (collapsed) {
+      document.body.dataset.navCollapsed = "true";
+    } else {
+      delete document.body.dataset.navCollapsed;
+    }
   }, [collapsed, isMapRoute]);
 
   useLayoutEffect(() => {
@@ -160,6 +171,7 @@ export function NavSidebar() {
       document.documentElement.style.removeProperty("--clear-nav-w");
       delete document.body.dataset.navOverlay;
       delete document.body.dataset.navOffsetMotion;
+      delete document.body.dataset.navCollapsed;
     };
   }, []);
 
@@ -536,7 +548,13 @@ export function NavSidebar() {
 
           <Tooltip label={collapsed ? t("expand") : t("collapse")} position="right" withArrow>
             <UnstyledButton
-              onClick={() => setCollapsed((v) => !v)}
+              onClick={() => {
+                setCollapsed((v) => {
+                  const next = !v;
+                  setNavCollapsedCookie(next);
+                  return next;
+                });
+              }}
               style={{
                 width: 28,
                 height: 28,

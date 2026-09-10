@@ -1,7 +1,7 @@
 import "~/styles/globals.css";
 
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Inter, Noto_Sans_Arabic } from "next/font/google";
 import {
   MantineProvider,
@@ -16,6 +16,10 @@ import { TRPCReactProvider } from "~/trpc/react";
 import { clearTheme } from "~/app/config/themes";
 import { localeDirection, isLocale, defaultLocale } from "~/i18n/config";
 import { isMapPath } from "~/lib/is-map-path";
+import {
+  NAV_COLLAPSED_COOKIE,
+  parseNavCollapsedCookie,
+} from "~/lib/nav-collapsed-cookie";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -68,11 +72,14 @@ export default async function RootLayout({
   const dir = localeDirection[locale];
   // Middleware forwards x-pathname so /map SSR can paint chrome at the final
   // left offset (client-only data-nav-overlay caused a horizontal slide #571).
-  // Do NOT pin --clear-nav-w here — an inline body value would override the
-  // nav's documentElement updates and freeze filters during collapse/expand.
-  // CSS `var(--clear-nav-w, 240px)` covers first paint until NavSidebar runs.
+  // Do NOT pin --clear-nav-w as an inline style — that froze collapse/expand.
+  // Cookie + data-nav-collapsed seeds the CSS default until NavSidebar owns
+  // documentElement --clear-nav-w.
   const pathname = (await headers()).get("x-pathname") ?? "";
   const mapNavOverlay = isMapPath(pathname);
+  const navCollapsed = parseNavCollapsedCookie(
+    (await cookies()).get(NAV_COLLAPSED_COOKIE)?.value,
+  );
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
@@ -84,6 +91,9 @@ export default async function RootLayout({
             background: #FAFAFA;
             margin: 0;
             padding: 0;
+          }
+          body[data-nav-collapsed="true"] {
+            --clear-nav-w: 80px;
           }
           @media (prefers-color-scheme: dark) {
             html, body {
@@ -99,6 +109,7 @@ export default async function RootLayout({
       <body
         className={`${inter.variable} ${notoSansArabic.variable} font-sans antialiased`}
         data-nav-overlay={mapNavOverlay ? "true" : undefined}
+        data-nav-collapsed={navCollapsed ? "true" : undefined}
         suppressHydrationWarning
       >
         <DirectionProvider initialDirection={dir} detectDirection={false}>
