@@ -147,7 +147,9 @@ body {
    Desktop only: below `sm` the aside is hidden (Drawer), so offsets must not apply.
    Use `left` (not padding-left) so Mantine px={} can't win on specificity.
    `data-nav-overlay` is SSR'd on /map (root layout + x-pathname) so filters /
-   layers paint at the final left on reload — not at left:0 then slide (#571). */
+   layers paint at the final left on reload — not at left:0 then slide (#571).
+   `--clear-nav-w` is owned by NavSidebar (documentElement) so collapse/expand
+   can move chrome in lockstep with the sidebar (200ms ease). */
 @media (min-width: 48em) {
   body[data-nav-overlay="true"] [data-map-chrome-left] {
     left: calc(var(--clear-nav-w, 240px) + 1rem) !important;
@@ -156,7 +158,8 @@ body {
   body[data-nav-overlay="true"] [data-map-chrome-bottom] {
     left: var(--clear-nav-w, 240px);
   }
-  /* Motion gated so first /map paint doesn't slide Layers/Filters in. */
+  /* Motion gated so first /map paint doesn't slide Layers/Filters in.
+     Collapse/expand keeps this flag set so chrome tracks --clear-nav-w. */
   body[data-nav-overlay="true"][data-nav-offset-motion="true"] [data-map-chrome-left],
   body[data-nav-overlay="true"][data-nav-offset-motion="true"] [data-map-chrome-top],
   body[data-nav-overlay="true"][data-nav-offset-motion="true"] [data-map-chrome-bottom] {

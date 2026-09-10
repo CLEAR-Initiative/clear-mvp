@@ -147,18 +147,21 @@ export function NavSidebar() {
   const isAdmin = isPlatformAdmin(authData?.user?.role);
   const { flags } = useFeatureFlags();
 
-  // Publish overlay vars before paint so Layers/Filters mount at the final
-  // left offset (useEffect painted left-4 first → 200ms horizontal slide).
+  // Publish overlay width before paint. Keep motion flag out of this cleanup —
+  // clearing it on every collapse/expand disabled chrome `left` transitions.
   useLayoutEffect(() => {
     const w = `${collapsed ? COLLAPSED_W : EXPANDED_W}px`;
     document.documentElement.style.setProperty("--clear-nav-w", w);
     document.body.dataset.navOverlay = isMapRoute ? "true" : "false";
+  }, [collapsed, isMapRoute]);
+
+  useLayoutEffect(() => {
     return () => {
       document.documentElement.style.removeProperty("--clear-nav-w");
       delete document.body.dataset.navOverlay;
       delete document.body.dataset.navOffsetMotion;
     };
-  }, [collapsed, isMapRoute]);
+  }, []);
 
   // Enable left transitions only after a committed paint — collapse/expand
   // still animates; first map paint does not. Double rAF: a single rAF runs

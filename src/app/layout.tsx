@@ -1,6 +1,5 @@
 import "~/styles/globals.css";
 
-import type { CSSProperties } from "react";
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Inter, Noto_Sans_Arabic } from "next/font/google";
@@ -16,7 +15,7 @@ import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { TRPCReactProvider } from "~/trpc/react";
 import { clearTheme } from "~/app/config/themes";
 import { localeDirection, isLocale, defaultLocale } from "~/i18n/config";
-import { isMapPath, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
+import { isMapPath } from "~/lib/is-map-path";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -69,11 +68,11 @@ export default async function RootLayout({
   const dir = localeDirection[locale];
   // Middleware forwards x-pathname so /map SSR can paint chrome at the final
   // left offset (client-only data-nav-overlay caused a horizontal slide #571).
+  // Do NOT pin --clear-nav-w here — an inline body value would override the
+  // nav's documentElement updates and freeze filters during collapse/expand.
+  // CSS `var(--clear-nav-w, 240px)` covers first paint until NavSidebar runs.
   const pathname = (await headers()).get("x-pathname") ?? "";
   const mapNavOverlay = isMapPath(pathname);
-  const bodyStyle = mapNavOverlay
-    ? ({ ["--clear-nav-w" as string]: `${NAV_EXPANDED_W_PX}px` } as CSSProperties)
-    : undefined;
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
@@ -100,7 +99,6 @@ export default async function RootLayout({
       <body
         className={`${inter.variable} ${notoSansArabic.variable} font-sans antialiased`}
         data-nav-overlay={mapNavOverlay ? "true" : undefined}
-        style={bodyStyle}
         suppressHydrationWarning
       >
         <DirectionProvider initialDirection={dir} detectDirection={false}>

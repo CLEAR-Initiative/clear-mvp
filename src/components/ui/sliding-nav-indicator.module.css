@@ -5,10 +5,11 @@
   pointer-events: none;
   z-index: 0;
   will-change: transform, width, height;
+  /* Same duration/easing as nav-sidebar width so tab highlight doesn't lag. */
   transition:
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    width 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    height 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 200ms ease,
+    width 200ms ease,
+    height 200ms ease,
     opacity 120ms ease;
 }
 
