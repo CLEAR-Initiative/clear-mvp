@@ -1,0 +1,18 @@
+.checkPath {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: login-draw-check 0.4s ease forwards;
+}
+
+@keyframes login-draw-check {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkPath {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
