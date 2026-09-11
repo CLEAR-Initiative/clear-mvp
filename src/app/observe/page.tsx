@@ -21,6 +21,7 @@ import {
   isObserveQaOverrideAllowed,
   locationFieldsForPayload,
   parseAtMentionQuery,
+  resolveLocationIdFromCompose,
   resolveTeamIdForSubmit,
   searchForcesMissingTeam,
   stripTrailingAtMention,
@@ -569,12 +570,29 @@ export default function ObservePage() {
     setSubmitting(true);
     setAtQuery(null);
 
+    const locationsForResolve = (locationsQuery.data ?? []).map((loc) => ({
+      id: loc.id,
+      name: loc.name,
+      label: loc.parent ? `${loc.name}, ${loc.parent.name}` : loc.name,
+    }));
+    const resolvedLocationId =
+      resolveLocationIdFromCompose({
+        draft,
+        locationId,
+        hasGps: gpsCoords != null,
+        locations: locationsForResolve,
+      }) ?? locationId;
+    const resolvedLocationLabel =
+      locationLabel ||
+      locationsForResolve.find((loc) => loc.id === resolvedLocationId)?.label ||
+      "";
+
     const sentMsg: ChatMessage = {
       id: `sent-${Date.now()}`,
       kind: "sent",
       title: titleLine || undefined,
       body: bodyLines || undefined,
-      locationLabel: locationLabel || undefined,
+      locationLabel: resolvedLocationLabel || undefined,
       media: draftMedia.map((m) => ({ id: m.id, preview: m.preview, isVideo: m.isVideo })),
     };
 
@@ -593,7 +611,7 @@ export default function ObservePage() {
       sourceId,
       title: titleLine || "Field observation",
       description: bodyLines || titleLine || "Field observation",
-      ...locationFieldsForPayload({ locationId, gps: gpsCoords }),
+      ...locationFieldsForPayload({ locationId: resolvedLocationId, gps: gpsCoords }),
       teamId: teamGate.teamId,
     };
 
@@ -640,7 +658,24 @@ export default function ObservePage() {
     }
 
     setSubmitting(false);
-  }, [canSubmit, titleLine, bodyLines, locationLabel, locationId, gpsCoords, draftMedia, sourceId, defaultTeamId, submitRole, meStatus, createSignal, utils, t]);
+  }, [
+    canSubmit,
+    titleLine,
+    bodyLines,
+    draft,
+    locationLabel,
+    locationId,
+    gpsCoords,
+    draftMedia,
+    sourceId,
+    defaultTeamId,
+    submitRole,
+    meStatus,
+    createSignal,
+    utils,
+    t,
+    locationsQuery.data,
+  ]);
 
   const hasLocation = !!locationLabel;
   const hasMedia = draftMedia.length > 0;

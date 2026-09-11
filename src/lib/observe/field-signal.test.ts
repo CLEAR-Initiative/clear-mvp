@@ -6,6 +6,7 @@ import {
   isObservePlatformWriter,
   locationFieldsForPayload,
   parseAtMentionQuery,
+  resolveLocationIdFromCompose,
   resolveTeamIdForSubmit,
   searchForcesMissingTeam,
   stripTrailingAtMention,
@@ -160,6 +161,81 @@ describe("locationFieldsForPayload", () => {
     expect(
       locationFieldsForPayload({ locationId: "loc-khartoum", gps: null }),
     ).toEqual({ locationId: "loc-khartoum" });
+  });
+});
+
+const catalog = [
+  { id: "loc-khartoum", name: "Khartoum", label: "Khartoum, Sudan" },
+  { id: "loc-fashir", name: "Al-Fashir", label: "Al-Fashir, Sudan" },
+  { id: "loc-sudan", name: "Sudan", label: "Sudan" },
+] as const;
+
+describe("resolveLocationIdFromCompose", () => {
+  it("keeps an explicit chip locationId", () => {
+    expect(
+      resolveLocationIdFromCompose({
+        draft: "Flooding @Khartoum",
+        locationId: "loc-khartoum",
+        hasGps: false,
+        locations: catalog,
+      }),
+    ).toBe("loc-khartoum");
+  });
+
+  it("does not resolve places when GPS owns the pin", () => {
+    expect(
+      resolveLocationIdFromCompose({
+        draft: "Flooding in Khartoum",
+        locationId: "",
+        hasGps: true,
+        locations: catalog,
+      }),
+    ).toBeUndefined();
+  });
+
+  it("resolves a trailing @token the user never tapped", () => {
+    expect(
+      resolveLocationIdFromCompose({
+        draft: "Flooding @Khartoum",
+        locationId: "",
+        hasGps: false,
+        locations: catalog,
+      }),
+    ).toBe("loc-khartoum");
+  });
+
+  it("resolves a unique free-text place name in the body", () => {
+    expect(
+      resolveLocationIdFromCompose({
+        draft: "Flooding in Khartoum today",
+        locationId: "",
+        hasGps: false,
+        locations: catalog,
+      }),
+    ).toBe("loc-khartoum");
+  });
+
+  it("does not guess when several places match the draft", () => {
+    expect(
+      resolveLocationIdFromCompose({
+        draft: "Movement between Khartoum and Al-Fashir",
+        locationId: "",
+        hasGps: false,
+        locations: catalog,
+      }),
+    ).toBeUndefined();
+  });
+
+  it("prefers a unique longer place when a shorter name is a nested hit", () => {
+    // "Sudan" alone would also match the country row; only Khartoum is named here.
+    expect(
+      resolveLocationIdFromCompose({
+        draft: "Flooding in Khartoum",
+        locationId: "",
+        hasGps: false,
+        locations: catalog,
+      }),
+    ).toBe("loc-khartoum");
   });
 });
 

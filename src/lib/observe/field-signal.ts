@@ -101,6 +101,91 @@ export function stripTrailingAtMention(draft: string): string {
   return draft.replace(/@[^\n@]*$/, "");
 }
 
+export type ObserveLocationOption = {
+  id: string;
+  name: string;
+  /** Typeahead label, e.g. "Khartoum, Sudan". */
+  label: string;
+};
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * When the user typed `@Place` but never tapped a suggestion, pick a location
+ * only if the trailing token uniquely matches the catalog (exact name/label,
+ * else a single includes-hit like the typeahead).
+ */
+export function resolveTrailingAtLocationId(
+  draft: string,
+  locations: readonly ObserveLocationOption[],
+): string | undefined {
+  const at = parseAtMentionQuery(draft);
+  if (at == null) return undefined;
+  const q = at.trim().toLowerCase();
+  if (!q) return undefined;
+
+  const exact = locations.filter(
+    (loc) => loc.name.toLowerCase() === q || loc.label.toLowerCase() === q,
+  );
+  if (exact.length === 1) return exact[0]!.id;
+
+  const soft = locations.filter(
+    (loc) =>
+      loc.label.toLowerCase().includes(q) || loc.name.toLowerCase().includes(q),
+  );
+  if (soft.length === 1) return soft[0]!.id;
+  return undefined;
+}
+
+/**
+ * Free-text place in the body (e.g. "Flooding in Khartoum") → locationId when
+ * exactly one catalog name appears as a whole phrase. Prefers the longest name
+ * so "Al-Fashir" wins over a shorter substring hit.
+ */
+export function resolveFreeTextLocationId(
+  draft: string,
+  locations: readonly ObserveLocationOption[],
+): string | undefined {
+  const text = stripTrailingAtMention(draft);
+  if (!text.trim() || locations.length === 0) return undefined;
+
+  const hits: ObserveLocationOption[] = [];
+  for (const loc of locations) {
+    const name = loc.name.trim();
+    if (name.length < 2) continue;
+    const re = new RegExp(
+      `(^|[^\\p{L}\\p{N}])${escapeRegExp(name)}($|[^\\p{L}\\p{N}])`,
+      "iu",
+    );
+    if (re.test(text)) hits.push(loc);
+  }
+  if (hits.length === 0) return undefined;
+
+  const ids = new Set(hits.map((h) => h.id));
+  if (ids.size !== 1) return undefined;
+  return hits[0]!.id;
+}
+
+/**
+ * Resolve a place for submit when GPS is unset and the chip was never set.
+ * Order: trailing `@` token, then unique free-text name in the draft.
+ */
+export function resolveLocationIdFromCompose(input: {
+  draft: string;
+  locationId: string;
+  hasGps: boolean;
+  locations: readonly ObserveLocationOption[];
+}): string | undefined {
+  if (input.hasGps) return undefined;
+  if (input.locationId) return input.locationId;
+  return (
+    resolveTrailingAtLocationId(input.draft, input.locations) ??
+    resolveFreeTextLocationId(input.draft, input.locations)
+  );
+}
+
 /**
  * GPS and `@location` are mutually exclusive on the payload: a pin uses
  * coordinates; a tagged place uses `locationId` (map geometry comes from the location).
