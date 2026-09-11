@@ -1407,6 +1407,16 @@ export function CrisisMap({
         } catch { /* ignore */ }
       }
 
+      // Country labels - improve legibility with solid fill (no hollow outline effect).
+      if (layer.type === "symbol" && id === "country-label") {
+        try {
+          m.setPaintProperty(layer.id, "text-color", isDark ? "#E2E8F0" : "#1F2937");
+          m.setPaintProperty(layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.9)");
+          m.setPaintProperty(layer.id, "text-halo-width", 2);
+          m.setPaintProperty(layer.id, "text-halo-blur", 0.3);
+        } catch { /* ignore */ }
+      }
+
       // Settlement labels - restrict to focus country only, and relax
       // filterrank so mid-tier cities (Port Sudan, Nyala, etc.) are visible.
       // All settlement labels outside the focus country are hidden; country
