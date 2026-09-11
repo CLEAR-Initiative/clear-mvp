@@ -497,18 +497,18 @@ export function NavSidebar({
           // Keep layout slot on non-map routes; overlay mode is out-of-flow.
           minWidth: isMapRoute ? undefined : (collapsed ? COLLAPSED_W : EXPANDED_W),
           height: "100vh",
-          position: isMapRoute ? "fixed" : "sticky",
-          top: 0,
-          left: isMapRoute ? 0 : undefined,
-          zIndex: isMapRoute ? 40 : undefined,
-          display: "flex",
-          flexDirection: "column",
-          background: isMapRoute
-            ? "color-mix(in srgb, var(--color-bg-white) 42%, transparent)"
-            : colors.bgWhite,
-          backdropFilter: isMapRoute ? "blur(16px) saturate(1.2)" : undefined,
-          WebkitBackdropFilter: isMapRoute ? "blur(16px) saturate(1.2)" : undefined,
-          borderInlineEnd: `1px solid ${isMapRoute ? "color-mix(in srgb, var(--color-border) 55%, transparent)" : colors.border}`,
+        position: isMapRoute ? "fixed" : "sticky",
+        top: 0,
+        left: isMapRoute ? 0 : undefined,
+        zIndex: isMapRoute ? 40 : undefined,
+        display: "flex",
+        flexDirection: "column",
+        background: isMapRoute
+          ? "var(--map-frost-bg)"
+          : colors.bgWhite,
+        backdropFilter: isMapRoute ? "var(--map-frost-blur)" : undefined,
+        WebkitBackdropFilter: isMapRoute ? "var(--map-frost-blur)" : undefined,
+        borderInlineEnd: `1px solid ${isMapRoute ? "var(--map-frost-border)" : colors.border}`,
           transition: `width ${TRANSITION}, min-width ${TRANSITION}`,
           overflow: "hidden",
           flexShrink: 0,
@@ -516,9 +516,9 @@ export function NavSidebar({
       >
         {/* ── Logo + toggle ─────────────────────────────────────── */}
         <Box
-          style={{
-            height: 64,
-            borderBottom: `1px solid ${isMapRoute ? "color-mix(in srgb, var(--color-border) 70%, transparent)" : colors.border}`,
+        style={{
+          height: 64,
+          borderBottom: `1px solid ${isMapRoute ? "var(--map-frost-border)" : colors.border}`,
             display: "flex",
             alignItems: "flex-start",
             justifyContent: "space-between",

@@ -8,7 +8,9 @@
   border-radius: 999px;
   border: 1px solid var(--color-border-dark);
   /* Match timeline chip chrome so it reads in the same row. */
-  background: var(--color-bg-white);
+  background: var(--map-frost-bg);
+  backdrop-filter: var(--map-frost-blur);
+  -webkit-backdrop-filter: var(--map-frost-blur);
   box-shadow: var(--shadow-sm);
   overflow: visible;
   transition:
@@ -21,7 +23,7 @@
 .shellExpanded {
   width: min(260px, calc(100vw - 72px));
   border-radius: 999px;
-  background: var(--color-bg-white);
+  background: var(--map-frost-bg);
 }
 
 .toggle {
@@ -116,7 +118,9 @@
   list-style: none;
   border-radius: 10px;
   border: 1px solid var(--color-border-dark);
-  background: var(--color-bg-white);
+  background: var(--map-frost-bg);
+  backdrop-filter: var(--map-frost-blur);
+  -webkit-backdrop-filter: var(--map-frost-blur);
   box-shadow: var(--shadow-md);
   max-height: 220px;
   overflow-y: auto;
@@ -152,7 +156,9 @@
   padding: 6px 8px;
   border-radius: 10px;
   border: 1px solid var(--color-border-dark);
-  background: var(--color-bg-white);
+  background: var(--map-frost-bg);
+  backdrop-filter: var(--map-frost-blur);
+  -webkit-backdrop-filter: var(--map-frost-blur);
   color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 600;

@@ -197,6 +197,24 @@ body[data-nav-overlay="true"][data-map-basemap] [data-map-chrome-bottom] {
   --map-frost-hover-text: #a3a3a3;
 }
 
+/*
+ * Map frost surface tokens: translucent backgrounds + blur so basemap reads through.
+ * Light mode uses lower opacity (24%) for transparency; dark keeps current 42%.
+ * Scoped to map routes only via data-nav-overlay.
+ */
+body[data-nav-overlay="true"] {
+  --map-frost-bg: color-mix(in srgb, var(--color-bg-white) 24%, transparent);
+  --map-frost-bg-muted: color-mix(in srgb, var(--color-bg-muted) 24%, transparent);
+  --map-frost-border: color-mix(in srgb, var(--color-border) 55%, transparent);
+  --map-frost-blur: blur(16px) saturate(1.2);
+}
+
+[data-mantine-color-scheme="dark"] body[data-nav-overlay="true"] {
+  --map-frost-bg: color-mix(in srgb, var(--color-bg-white) 42%, transparent);
+  --map-frost-bg-muted: color-mix(in srgb, var(--color-bg-muted) 42%, transparent);
+  --map-frost-border: color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
 /* Mapbox zoom control dark mode overrides */
 [data-mantine-color-scheme="dark"] .mapboxgl-ctrl-group {
   background: var(--color-bg-muted);

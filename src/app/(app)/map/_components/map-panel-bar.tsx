@@ -185,7 +185,9 @@ function IconBtn({
         display: "flex", alignItems: "center", justifyContent: "center",
         width: 30, height: 30,
         border: "1px solid var(--color-border-dark)", borderRadius: 4,
-        background: active ? "var(--color-info-light)" : "var(--color-bg-muted)",
+        background: active ? "var(--color-info-light)" : "var(--map-frost-bg-muted)",
+        backdropFilter: active ? undefined : "var(--map-frost-blur)",
+        WebkitBackdropFilter: active ? undefined : "var(--map-frost-blur)",
         color: active ? "var(--color-info)" : "var(--color-text-secondary)",
         cursor: "pointer", padding: 0,
         boxShadow: "var(--shadow-sm)", flexShrink: 0,
@@ -337,15 +339,15 @@ export function MapPanelBar({
           <Box
             className="flex flex-col max-h-[min(52vh,calc(100dvh-160px))] sm:max-h-[min(72vh,calc(100vh-120px))]"
             data-tour={active === "layers" ? "map-layers-panel" : undefined}
-            style={{
-              width: 260,
-              maxWidth: "calc(100vw - 72px)",
-              // Frost: translucent fill + blur. Keep map container free of
-              // `isolation: isolate` so Chromium can sample the WebGL canvas.
-              background: "color-mix(in srgb, var(--color-bg-muted) 42%, transparent)",
-              backdropFilter: "blur(16px) saturate(1.2)",
-              WebkitBackdropFilter: "blur(16px) saturate(1.2)",
-              border: "1px solid color-mix(in srgb, var(--color-border-dark) 55%, transparent)",
+          style={{
+            width: 260,
+            maxWidth: "calc(100vw - 72px)",
+            // Frost: translucent fill + blur. Keep map container free of
+            // `isolation: isolate` so Chromium can sample the WebGL canvas.
+            background: "var(--map-frost-bg-muted)",
+            backdropFilter: "var(--map-frost-blur)",
+            WebkitBackdropFilter: "var(--map-frost-blur)",
+            border: "1px solid var(--map-frost-border)",
               boxShadow: "var(--shadow-md)",
             }}
           >
