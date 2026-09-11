@@ -2316,7 +2316,10 @@ function MapPageContent() {
           onMapClick={handleLocationCorrectionMapClick}
           onLoadError={handleMapLoadError}
           key={retryNonce}
-        />
+        >
+          {/* Spaghetti under markers (CrisisMap marker z-index 2); panels stay outside. */}
+          {!isMobile && <MapPanelConnectors links={connectorLinks} />}
+        </CrisisMap>
 
         {/* Spinner while data loads; error overlay stays up even after queries settle. */}
         {(mapLoadError || (showLoadingOverlay && dataView !== "none")) && (
@@ -2407,9 +2410,6 @@ function MapPageContent() {
           </Stack>
         }
       />
-
-      {/* ===== Spaghetti connectors (desktop; cleared with panels / data view) ===== */}
-      {!isMobile && <MapPanelConnectors links={connectorLinks} />}
 
       {/* ===== Marker detail panel(s) ===== */}
       {openPanels.map((panel) => {

@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
@@ -47,6 +55,7 @@ import {
 } from "~/lib/map/topography-terrain";
 import {
   applyPinElevation,
+  clientRectCenterInContainer,
   parseLocationPinRole,
   pinElevationFactor,
   shouldElevatePointPin,
@@ -121,8 +130,9 @@ export type CrisisMapFlyToArgs = {
 /** Imperative helpers for overlays that track pins (e.g. spaghetti connectors). */
 export interface CrisisMapApi {
   /**
-   * Project a marker to container pixels. Prefers the live Mapbox Marker
-   * (spiderfy display position) when mounted; otherwise falls back to lng/lat.
+   * Project a marker to container pixels at the pin glyph center (not the
+   * ground tip). Prefers the live Mapbox Marker DOM when mounted; otherwise
+   * falls back to lng/lat `project()`.
    */
   projectMarker: (
     id: number,
@@ -313,6 +323,11 @@ interface CrisisMapProps {
   introFromGlobe?: boolean;
   /** Fired when the map fails to load (offline, style error, etc.). */
   onLoadError?: (error: { message: string; isOffline: boolean }) => void;
+  /**
+   * Overlay content inside the map shell (same stacking context as Mapbox
+   * markers). Used by `/map` spaghetti connectors so lines sit under pins.
+   */
+  children?: ReactNode;
 }
 
 export type BaseMapType = "simple" | "topography" | "satellite";
@@ -644,6 +659,7 @@ export function CrisisMap({
   onMapClick,
   introFromGlobe = false,
   onLoadError,
+  children,
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const locale = useLocale();
@@ -711,6 +727,8 @@ export function CrisisMap({
   const shakemapHoverBoundRef = useRef<Set<string>>(new Set());
   const shakemapPopupRef = useRef<any>(null);
   const [loaded, setLoaded] = useState(false);
+  /** Host inside `.mapboxgl-map` so overlays can sit between canvas and markers. */
+  const [mapOverlayHost, setMapOverlayHost] = useState<HTMLElement | null>(null);
   const [tiltHintDismissed, setTiltHintDismissed] = useState(() =>
     isTopographyTiltHintDismissed(),
   );
@@ -3267,6 +3285,30 @@ export function CrisisMap({
     };
   }, [loaded]);
 
+  // Mount an overlay host inside Mapbox's map container so React overlays
+  // (spaghetti connectors) can stack between the canvas and DOM markers.
+  useEffect(() => {
+    if (!loaded || !map.current) {
+      setMapOverlayHost(null);
+      return;
+    }
+    const container = map.current.getContainer?.() as HTMLElement | undefined;
+    if (!container) {
+      setMapOverlayHost(null);
+      return;
+    }
+    const host = document.createElement("div");
+    host.setAttribute("data-map-overlay-host", "1");
+    host.style.cssText =
+      "position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible;";
+    container.appendChild(host);
+    setMapOverlayHost(host);
+    return () => {
+      host.remove();
+      setMapOverlayHost(null);
+    };
+  }, [loaded]);
+
   // Expose project helpers for overlays (spaghetti connectors on /map).
   useEffect(() => {
     if (!mapApiRef) return;
@@ -3278,11 +3320,20 @@ export function CrisisMap({
       projectMarker: (id, lng, lat) => {
         const m = map.current;
         if (!m) return null;
+        const container = m.getContainer?.() as HTMLElement | undefined;
         const mounted = clusterDomMarkers.current.get(`p-${id}`);
-        if (mounted?.getLngLat) {
-          const ll = mounted.getLngLat() as { lng: number; lat: number };
-          const p = m.project([ll.lng, ll.lat]) as { x: number; y: number };
-          return { x: p.x, y: p.y };
+        // Prefer the live pin head center so bottom-anchored elevated stems
+        // do not attach spaghetti to the ground tip.
+        if (mounted?.getElement && container?.getBoundingClientRect) {
+          const el = mounted.getElement() as HTMLElement;
+          const head =
+            el.querySelector<HTMLElement>(".marker-pin-head") ??
+            el.querySelector<HTMLElement>(".marker-dot") ??
+            el;
+          return clientRectCenterInContainer(
+            head.getBoundingClientRect(),
+            container.getBoundingClientRect(),
+          );
         }
         const display = displayLngLatRef.current.get(id);
         const coords = display ?? ([lng, lat] as [number, number]);
@@ -3442,7 +3493,9 @@ export function CrisisMap({
         }
         /* Keep GL clear transparent so container basemap color shows if frames drop */
         .mapboxgl-canvas { background: transparent !important; }
-        .mapboxgl-marker { overflow: visible; }
+        /* Canvas under overlays; markers above spaghetti connectors (z-index 1). */
+        .mapboxgl-canvas-container { z-index: 0; }
+        .mapboxgl-marker { overflow: visible; z-index: 2; }
         /* Topography: hide grab hand only while the probe is over terrain.
            Over pitched sky we restore the system cursor so filters/menus
            stay easy to reach. Inline cursor:pointer from markers/blockages
@@ -3477,6 +3530,9 @@ export function CrisisMap({
         }}
       >
         <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
+        {mapOverlayHost && children
+          ? createPortal(children, mapOverlayHost)
+          : null}
         {showTiltHint && (
           <div
             role="status"
