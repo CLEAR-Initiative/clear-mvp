@@ -25,6 +25,10 @@ export type GeocodeHit = {
 const COORD_RE =
   /^\s*([+-]?\d+(?:\.\d+)?)\s*[,;\s]\s*([+-]?\d+(?:\.\d+)?)\s*$/;
 
+/** Observe GPS chip / pasted DMS-ish: `33.4445°S 70.6452°W`, `15.5 N, 32.5 E`. */
+const COORD_HEMISPHERE_RE =
+  /^\s*([+-]?\d+(?:\.\d+)?)\s*°?\s*([NSns])?\s*[,;\s/]+\s*([+-]?\d+(?:\.\d+)?)\s*°?\s*([EWew])?\s*$/;
+
 function isLat(n: number): boolean {
   return Number.isFinite(n) && n >= -90 && n <= 90;
 }
@@ -33,13 +37,53 @@ function isLng(n: number): boolean {
   return Number.isFinite(n) && n >= -180 && n <= 180;
 }
 
+function coordHit(lat: number, lng: number): GeocodeHit {
+  const label = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  return {
+    id: `coord:${lng},${lat}`,
+    label,
+    center: [lng, lat],
+    placeTypes: ["coordinate"],
+  };
+}
+
 /**
- * Parse "lat, lng" or "lng, lat".
- * - If only one ordering is valid, use it.
- * - If both are valid (both |n| ≤ 90), prefer **lat, lng** (e.g. `15.5, 32.5`).
+ * Parse "lat, lng" or "lng, lat", including hemisphere suffixes from the
+ * Observe GPS chip (`33.4445°S 70.6452°W`).
+ * - Hemispheres present → signed lat/lng (S/W negative).
+ * - Bare numbers: if only one ordering is valid, use it; if both are valid
+ *   (both |n| ≤ 90), prefer **lat, lng** (e.g. `15.5, 32.5`).
  */
 export function parseCoordinateQuery(query: string): GeocodeHit | null {
-  const m = COORD_RE.exec(query.trim());
+  const q = query.trim();
+  if (!q) return null;
+
+  const hem = COORD_HEMISPHERE_RE.exec(q);
+  if (hem && (hem[2] || hem[4])) {
+    const a = Number(hem[1]);
+    const b = Number(hem[3]);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+    const h1 = (hem[2] ?? "").toUpperCase();
+    const h2 = (hem[4] ?? "").toUpperCase();
+
+    // N/S on first token (or E/W on second) → lat, lng order.
+    // E/W on first token → lng, lat order.
+    const firstIsLng = h1 === "E" || h1 === "W";
+    let lat = firstIsLng ? b : a;
+    let lng = firstIsLng ? a : b;
+    const latHem = firstIsLng ? h2 : h1;
+    const lngHem = firstIsLng ? h1 : h2;
+
+    if (latHem === "S") lat = -Math.abs(lat);
+    else if (latHem === "N") lat = Math.abs(lat);
+    if (lngHem === "W") lng = -Math.abs(lng);
+    else if (lngHem === "E") lng = Math.abs(lng);
+
+    if (!isLat(lat) || !isLng(lng)) return null;
+    return coordHit(lat, lng);
+  }
+
+  const m = COORD_RE.exec(q);
   if (!m) return null;
   const a = Number(m[1]);
   const b = Number(m[2]);
@@ -63,13 +107,7 @@ export function parseCoordinateQuery(query: string): GeocodeHit | null {
     return null;
   }
 
-  const label = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-  return {
-    id: `coord:${lng},${lat}`,
-    label,
-    center: [lng, lat],
-    placeTypes: ["coordinate"],
-  };
+  return coordHit(lat, lng);
 }
 
 /** Zoom framing by Mapbox place type (street-ish for addresses/POIs). */
@@ -218,7 +256,15 @@ function featureToHit(f: MapboxFeature): GeocodeHit | null {
 export async function geocodePlaceQuery(
   query: string,
   accessToken: string,
-  opts?: { limit?: number; signal?: AbortSignal; language?: string },
+  opts?: {
+    limit?: number;
+    signal?: AbortSignal;
+    language?: string;
+    /** ISO 3166-1 alpha-2 (e.g. "sd") — Mapbox country bias. */
+    country?: string;
+    /** [lng, lat] proximity bias. */
+    proximity?: [number, number];
+  },
 ): Promise<GeocodeHit[]> {
   const q = query.trim();
   if (!q || !accessToken) return [];
@@ -233,6 +279,14 @@ export async function geocodePlaceQuery(
     autocomplete: "true",
   });
   if (opts?.language) params.set("language", opts.language);
+  if (opts?.country) {
+    const cc = opts.country.trim().toLowerCase();
+    if (/^[a-z]{2}$/.test(cc)) params.set("country", cc);
+  }
+  if (opts?.proximity) {
+    const [lng, lat] = opts.proximity;
+    if (isLng(lng) && isLat(lat)) params.set("proximity", `${lng},${lat}`);
+  }
 
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?${params}`;
   try {

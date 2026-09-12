@@ -24,6 +24,18 @@ describe("parseCoordinateQuery", () => {
     expect(parseCoordinateQuery("-1.28; 36.82")?.center).toEqual([36.82, -1.28]);
   });
 
+  it("parses Observe GPS chip format with degree marks and hemispheres", () => {
+    // Santiago, Chile — same string formatCoords() shows after Capture location.
+    const hit = parseCoordinateQuery("33.4445°S 70.6452°W");
+    expect(hit?.center[0]).toBeCloseTo(-70.6452, 4);
+    expect(hit?.center[1]).toBeCloseTo(-33.4445, 4);
+  });
+
+  it("applies N/S/E/W without degree marks", () => {
+    expect(parseCoordinateQuery("15.5 N, 32.5 E")?.center).toEqual([32.5, 15.5]);
+    expect(parseCoordinateQuery("33.4445S 70.6452W")?.center?.[0]).toBeCloseTo(-70.6452, 4);
+  });
+
   it("returns null for garbage", () => {
     expect(parseCoordinateQuery("Khartoum")).toBeNull();
     expect(parseCoordinateQuery("")).toBeNull();
@@ -104,6 +116,16 @@ describe("geocodePlaceQuery", () => {
     globalThis.fetch = originalFetch;
   });
 
+  it("short-circuits hemisphere coordinates without fetching", async () => {
+    const fetchMock = vi.fn();
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const hits = await geocodePlaceQuery("33.4445°S 70.6452°W", "tok");
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.center[0]).toBeCloseTo(-70.6452, 4);
+    expect(hits[0]?.center[1]).toBeCloseTo(-33.4445, 4);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("short-circuits coordinates without fetching", async () => {
     const fetchMock = vi.fn();
     globalThis.fetch = fetchMock as unknown as typeof fetch;
@@ -111,6 +133,18 @@ describe("geocodePlaceQuery", () => {
     expect(hits).toHaveLength(1);
     expect(hits[0]?.center).toEqual([32.5, 15.5]);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("forwards country bias to Mapbox", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ features: [] }),
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    await geocodePlaceQuery("National Museum", "tok", { country: "sd" });
+    expect(fetchMock).toHaveBeenCalled();
+    const url = String(fetchMock.mock.calls[0]?.[0] ?? "");
+    expect(url).toContain("country=sd");
   });
 
   it("maps Mapbox features to hits including country context", async () => {

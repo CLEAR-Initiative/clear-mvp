@@ -2174,6 +2174,7 @@
     },
     "signals": {
       "loading": "Chargement des signaux…",
+      "loadingMore": "Chargement d'autres signaux…",
       "empty": "Aucun signal pour le moment",
       "events": "{count, plural, one {# événement} other {# événements}}"
     },
