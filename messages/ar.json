@@ -619,6 +619,7 @@
       "rememberMe": "تذكرني",
       "forgotPassword": "نسيت كلمة المرور؟",
       "submit": "تسجيل الدخول",
+      "success": "تم تسجيل الدخول",
       "failed": "فشل تسجيل الدخول",
       "unexpectedError": "حدث خطأ غير متوقع",
       "demo": {

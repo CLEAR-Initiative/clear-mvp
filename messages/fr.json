@@ -619,6 +619,7 @@
       "rememberMe": "Se souvenir de moi",
       "forgotPassword": "Mot de passe oublié ?",
       "submit": "Se connecter",
+      "success": "Connecté",
       "failed": "Échec de la connexion",
       "unexpectedError": "Une erreur inattendue est survenue",
       "demo": {
