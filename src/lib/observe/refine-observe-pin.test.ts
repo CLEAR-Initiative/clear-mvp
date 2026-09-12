@@ -21,40 +21,87 @@ describe("buildObserveGeocodeQuery", () => {
       ),
     ).toBe("Crowd at the National Museum, Khartoum, Sudan");
   });
+
+  it("always keeps the catalog country even when the draft already says Khartoum", () => {
+    // Regression: previously dropped ", Sudan" when body included "Khartoum",
+    // so Mapbox could return National Museum (Beirut) in Lebanon.
+    expect(
+      buildObserveGeocodeQuery(
+        "National Museum in Khartoum @Khartoum",
+        "Khartoum, Sudan",
+      ),
+    ).toBe("National Museum in Khartoum, Sudan");
+  });
 });
 
 describe("pickPreciseGeocodeHit", () => {
   it("ignores bare city place hits so we keep catalog centroids", () => {
     expect(
-      pickPreciseGeocodeHit([
-        hit({
-          id: "place.1",
-          label: "Khartoum, Sudan",
-          center: [32.5, 15.5],
-          placeTypes: ["place"],
-        }),
-      ]),
+      pickPreciseGeocodeHit(
+        [
+          hit({
+            id: "place.1",
+            label: "Khartoum, Sudan",
+            center: [32.5, 15.5],
+            placeTypes: ["place"],
+          }),
+        ],
+        "Khartoum, Sudan",
+      ),
     ).toBeNull();
   });
 
-  it("selects Mapbox POI / address hits", () => {
+  it("selects Mapbox POI / address hits in the catalog country", () => {
     const museum = hit({
       id: "poi.1",
-      label: "National Museum of Sudan, Khartoum",
+      label: "National Museum of Sudan, Khartoum, Sudan",
       center: [32.514, 15.606],
       placeTypes: ["poi"],
+      countryName: "Sudan",
+      countryCode: "SD",
     });
     expect(
-      pickPreciseGeocodeHit([
-        hit({
-          id: "place.1",
-          label: "Khartoum, Sudan",
-          center: [32.5, 15.5],
-          placeTypes: ["place"],
-        }),
-        museum,
-      ]),
+      pickPreciseGeocodeHit(
+        [
+          hit({
+            id: "place.1",
+            label: "Khartoum, Sudan",
+            center: [32.5, 15.5],
+            placeTypes: ["place"],
+            countryName: "Sudan",
+            countryCode: "SD",
+          }),
+          museum,
+        ],
+        "Khartoum, Sudan",
+      ),
     ).toEqual(museum);
+  });
+
+  it("rejects a National Museum POI in the wrong country (Lebanon vs Sudan)", () => {
+    expect(
+      pickPreciseGeocodeHit(
+        [
+          hit({
+            id: "poi.beirut",
+            label: "National Museum of Beirut, Beirut, Lebanon",
+            center: [35.513, 33.878],
+            placeTypes: ["poi"],
+            countryName: "Lebanon",
+            countryCode: "LB",
+          }),
+          hit({
+            id: "place.khartoum",
+            label: "Khartoum, Sudan",
+            center: [32.5, 15.5],
+            placeTypes: ["place"],
+            countryName: "Sudan",
+            countryCode: "SD",
+          }),
+        ],
+        "Khartoum, Sudan",
+      ),
+    ).toBeNull();
   });
 });
 
@@ -84,12 +131,16 @@ describe("resolveObservePinFields", () => {
         label: "Khartoum, Sudan",
         center: [32.5, 15.5],
         placeTypes: ["place"],
+        countryName: "Sudan",
+        countryCode: "SD",
       }),
       hit({
         id: "poi.museum",
-        label: "National Museum of Sudan, Khartoum",
+        label: "National Museum of Sudan, Khartoum, Sudan",
         center: [32.5142, 15.6061],
         placeTypes: ["poi"],
+        countryName: "Sudan",
+        countryCode: "SD",
       }),
     ]);
 
@@ -108,6 +159,32 @@ describe("resolveObservePinFields", () => {
     });
   });
 
+  it("falls back to catalog when Mapbox only returns an out-of-country POI", async () => {
+    const geocode = vi.fn().mockResolvedValue([
+      hit({
+        id: "poi.beirut",
+        label: "National Museum of Beirut, Beirut, Lebanon",
+        center: [35.513, 33.878],
+        placeTypes: ["poi"],
+        countryName: "Lebanon",
+        countryCode: "LB",
+      }),
+    ]);
+
+    await expect(
+      resolveObservePinFields({
+        draft: "National Museum in Khartoum",
+        locationId: "loc-khartoum",
+        locationLabel: "Khartoum, Sudan",
+        gps: null,
+        geocode,
+      }),
+    ).resolves.toEqual({
+      locationId: "loc-khartoum",
+      pinSource: "catalog",
+    });
+  });
+
   it("falls back to catalog locationId when Mapbox has no POI", async () => {
     const geocode = vi.fn().mockResolvedValue([
       hit({
@@ -115,6 +192,8 @@ describe("resolveObservePinFields", () => {
         label: "Khartoum, Sudan",
         center: [32.5, 15.5],
         placeTypes: ["place"],
+        countryName: "Sudan",
+        countryCode: "SD",
       }),
     ]);
 
@@ -130,5 +209,19 @@ describe("resolveObservePinFields", () => {
       locationId: "loc-khartoum",
       pinSource: "catalog",
     });
+  });
+
+  it("passes country ISO to Mapbox when the catalog label resolves", async () => {
+    const geocode = vi.fn().mockResolvedValue([]);
+    await resolveObservePinFields({
+      draft: "National Museum",
+      locationId: "loc-khartoum",
+      locationLabel: "Khartoum, Sudan",
+      gps: null,
+      geocode,
+    });
+    expect(geocode).toHaveBeenCalled();
+    expect(geocode.mock.calls[0]?.[0]).toBe("National Museum, Khartoum, Sudan");
+    expect(geocode.mock.calls[0]?.[1]).toEqual({ country: "sd" });
   });
 });

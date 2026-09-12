@@ -135,6 +135,18 @@ describe("geocodePlaceQuery", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("forwards country bias to Mapbox", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ features: [] }),
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    await geocodePlaceQuery("National Museum", "tok", { country: "sd" });
+    expect(fetchMock).toHaveBeenCalled();
+    const url = String(fetchMock.mock.calls[0]?.[0] ?? "");
+    expect(url).toContain("country=sd");
+  });
+
   it("maps Mapbox features to hits including country context", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,

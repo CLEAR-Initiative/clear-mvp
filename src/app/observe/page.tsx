@@ -741,7 +741,10 @@ export default function ObservePage() {
       locationId: resolvedLocationId,
       locationLabel: resolvedLocationLabel,
       gps: gpsAtSubmit,
-      geocode: (q) => geocodePlaceQuery(q, MAPBOX_TOKEN),
+      geocode: (q, opts) =>
+        geocodePlaceQuery(q, MAPBOX_TOKEN, {
+          ...(opts?.country ? { country: opts.country } : {}),
+        }),
     });
 
     const payload: QueuedPayload = {

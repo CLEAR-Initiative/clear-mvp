@@ -23,10 +23,11 @@ Observe must leave a **Signal** with geometry the map can paint
    aborting (aborting created Signals with **no** location — invisible on
    team-scoped Detection / `/map`).
 2. **Mapbox POI refine** — when there is no GPS, geocode
-   `draft + catalog label`. If Mapbox returns a **poi / address / landmark**,
-   submit `lat`/`lng` so clear-api `createPointLocation` pins there
-   (e.g. "National Museum" inside Khartoum). Bare city `place` hits are
-   ignored so we keep the catalog centroid.
+   `draft + catalog label` with a **country bias** (`country=sd` for Sudan).
+   Only accept **poi / address / landmark** hits whose country matches the
+   catalog chip (ISO or name). Wrong-country hits (e.g. National Museum of
+   Beirut when the chip is Khartoum, Sudan) fall back to the catalog
+   centroid. Bare city `place` hits are ignored.
 3. **GPS** — exclusive; no catalog / geocode override.
 4. **Observe Signals list** — paginated `signalsPage` for manual sources,
    **without** team location filter (team scope hid out-of-AO GPS pins).

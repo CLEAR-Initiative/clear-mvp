@@ -256,7 +256,15 @@ function featureToHit(f: MapboxFeature): GeocodeHit | null {
 export async function geocodePlaceQuery(
   query: string,
   accessToken: string,
-  opts?: { limit?: number; signal?: AbortSignal; language?: string },
+  opts?: {
+    limit?: number;
+    signal?: AbortSignal;
+    language?: string;
+    /** ISO 3166-1 alpha-2 (e.g. "sd") — Mapbox country bias. */
+    country?: string;
+    /** [lng, lat] proximity bias. */
+    proximity?: [number, number];
+  },
 ): Promise<GeocodeHit[]> {
   const q = query.trim();
   if (!q || !accessToken) return [];
@@ -271,6 +279,14 @@ export async function geocodePlaceQuery(
     autocomplete: "true",
   });
   if (opts?.language) params.set("language", opts.language);
+  if (opts?.country) {
+    const cc = opts.country.trim().toLowerCase();
+    if (/^[a-z]{2}$/.test(cc)) params.set("country", cc);
+  }
+  if (opts?.proximity) {
+    const [lng, lat] = opts.proximity;
+    if (isLng(lng) && isLat(lat)) params.set("proximity", `${lng},${lat}`);
+  }
 
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?${params}`;
   try {
