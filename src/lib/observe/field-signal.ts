@@ -106,16 +106,35 @@ export type ObserveLocationOption = {
   name: string;
   /** Typeahead label, e.g. "Khartoum, Sudan". */
   label: string;
+  /** Admin level when known (0 country … 4 point). Higher = more specific. */
+  level?: number;
 };
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/** Prefer the most specific catalog row (higher level, then longer name). */
+export function pickMostSpecificLocation(
+  hits: readonly ObserveLocationOption[],
+): ObserveLocationOption | undefined {
+  if (hits.length === 0) return undefined;
+  const ids = new Set(hits.map((h) => h.id));
+  if (ids.size === 1) return hits[0];
+
+  return [...hits].sort((a, b) => {
+    const levelDelta = (b.level ?? -1) - (a.level ?? -1);
+    if (levelDelta !== 0) return levelDelta;
+    return b.name.length - a.name.length || b.label.length - a.label.length;
+  })[0];
+}
+
 /**
  * When the user typed `@Place` but never tapped a suggestion, pick a location
  * only if the trailing token uniquely matches the catalog (exact name/label,
- * else a single includes-hit like the typeahead).
+ * else includes-hits). When several rows share a toponym at different admin
+ * levels, pick the most specific rather than aborting — aborting dropped
+ * `locationId` and left the Signal with no map geometry.
  */
 export function resolveTrailingAtLocationId(
   draft: string,
@@ -129,20 +148,20 @@ export function resolveTrailingAtLocationId(
   const exact = locations.filter(
     (loc) => loc.name.toLowerCase() === q || loc.label.toLowerCase() === q,
   );
-  if (exact.length === 1) return exact[0]!.id;
+  const exactPick = pickMostSpecificLocation(exact);
+  if (exactPick) return exactPick.id;
 
   const soft = locations.filter(
     (loc) =>
       loc.label.toLowerCase().includes(q) || loc.name.toLowerCase().includes(q),
   );
-  if (soft.length === 1) return soft[0]!.id;
-  return undefined;
+  return pickMostSpecificLocation(soft)?.id;
 }
 
 /**
  * Free-text place in the body (e.g. "Flooding in Khartoum") → locationId when
- * exactly one catalog name appears as a whole phrase. Prefers the longest name
- * so "Al-Fashir" wins over a shorter substring hit.
+ * catalog names appear as whole phrases. Prefers the longest matching name,
+ * then the most specific admin level when one toponym maps to several rows.
  */
 export function resolveFreeTextLocationId(
   draft: string,
@@ -163,9 +182,21 @@ export function resolveFreeTextLocationId(
   }
   if (hits.length === 0) return undefined;
 
-  const ids = new Set(hits.map((h) => h.id));
-  if (ids.size !== 1) return undefined;
-  return hits[0]!.id;
+  const distinctNames = new Set(hits.map((h) => h.name.trim().toLowerCase()));
+  if (distinctNames.size > 1) {
+    // Drop clear ancestor hints ("Sudan" inside "Khartoum, Sudan") but do not
+    // guess between peer places ("Khartoum" + "Al-Fashir").
+    let bestLen = 0;
+    for (const n of distinctNames) bestLen = Math.max(bestLen, n.length);
+    const dominant = [...distinctNames].filter((n) => n.length >= bestLen - 1);
+    if (dominant.length !== 1) return undefined;
+    const name = dominant[0]!;
+    return pickMostSpecificLocation(
+      hits.filter((h) => h.name.trim().toLowerCase() === name),
+    )?.id;
+  }
+
+  return pickMostSpecificLocation(hits)?.id;
 }
 
 /**

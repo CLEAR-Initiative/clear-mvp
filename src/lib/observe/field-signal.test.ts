@@ -165,9 +165,11 @@ describe("locationFieldsForPayload", () => {
 });
 
 const catalog = [
-  { id: "loc-khartoum", name: "Khartoum", label: "Khartoum, Sudan" },
-  { id: "loc-fashir", name: "Al-Fashir", label: "Al-Fashir, Sudan" },
-  { id: "loc-sudan", name: "Sudan", label: "Sudan" },
+  { id: "loc-khartoum", name: "Khartoum", label: "Khartoum, Sudan", level: 1 },
+  { id: "loc-fashir", name: "Al-Fashir", label: "Al-Fashir, Sudan", level: 2 },
+  { id: "loc-sudan", name: "Sudan", label: "Sudan", level: 0 },
+  // Same toponym at two admin levels — free-text "Khartoum" used to abort (ids.size !== 1).
+  { id: "loc-khartoum-city", name: "Khartoum", label: "Khartoum, Khartoum, Sudan", level: 2 },
 ] as const;
 
 describe("resolveLocationIdFromCompose", () => {
@@ -201,21 +203,21 @@ describe("resolveLocationIdFromCompose", () => {
         hasGps: false,
         locations: catalog,
       }),
-    ).toBe("loc-khartoum");
+    ).toBe("loc-khartoum-city");
   });
 
   it("resolves a unique free-text place name in the body", () => {
     expect(
       resolveLocationIdFromCompose({
-        draft: "Flooding in Khartoum today",
+        draft: "Flooding in Al-Fashir today",
         locationId: "",
         hasGps: false,
         locations: catalog,
       }),
-    ).toBe("loc-khartoum");
+    ).toBe("loc-fashir");
   });
 
-  it("does not guess when several places match the draft", () => {
+  it("does not guess when several distinct places match the draft", () => {
     expect(
       resolveLocationIdFromCompose({
         draft: "Movement between Khartoum and Al-Fashir",
@@ -226,16 +228,31 @@ describe("resolveLocationIdFromCompose", () => {
     ).toBeUndefined();
   });
 
+  it("prefers the most specific catalog row when one toponym matches several levels", () => {
+    expect(
+      resolveLocationIdFromCompose({
+        draft: "Flooding near the National Museum in Khartoum",
+        locationId: "",
+        hasGps: false,
+        locations: catalog,
+      }),
+    ).toBe("loc-khartoum-city");
+  });
+
   it("prefers a unique longer place when a shorter name is a nested hit", () => {
-    // "Sudan" alone would also match the country row; only Khartoum is named here.
+    // "Sudan" alone would also match the country row; only Khartoum is named here —
+    // with multi-level Khartoum rows, pick the most specific.
     expect(
       resolveLocationIdFromCompose({
         draft: "Flooding in Khartoum",
         locationId: "",
         hasGps: false,
-        locations: catalog,
+        locations: [
+          { id: "loc-sudan", name: "Sudan", label: "Sudan", level: 0 },
+          { id: "loc-khartoum-only", name: "Khartoum", label: "Khartoum, Sudan", level: 1 },
+        ],
       }),
-    ).toBe("loc-khartoum");
+    ).toBe("loc-khartoum-only");
   });
 });
 

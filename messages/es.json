@@ -2171,6 +2171,7 @@
     },
     "signals": {
       "loading": "Cargando señales…",
+      "loadingMore": "Cargando más señales…",
       "empty": "Aún no hay señales",
       "events": "{count, plural, one {# evento} other {# eventos}}"
     },
