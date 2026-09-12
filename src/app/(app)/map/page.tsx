@@ -168,7 +168,9 @@ const LABEL_STYLE = { fontSize: 10, letterSpacing: "0.05em" } as const;
 const INPUT_STYLE = {
   fontWeight: 600,
   fontSize: 13,
-  background: "var(--color-bg-muted)",
+  background: "var(--map-frost-bg-muted)",
+  backdropFilter: "var(--map-frost-blur)",
+  WebkitBackdropFilter: "var(--map-frost-blur)",
   border: "1px solid var(--color-border-dark)",
   boxShadow: "var(--shadow-sm)",
 } as const;

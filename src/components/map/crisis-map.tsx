@@ -1407,6 +1407,16 @@ export function CrisisMap({
         } catch { /* ignore */ }
       }
 
+      // Country labels - improve legibility with solid fill (no hollow outline effect).
+      if (layer.type === "symbol" && id === "country-label") {
+        try {
+          m.setPaintProperty(layer.id, "text-color", isDark ? "#E2E8F0" : "#1F2937");
+          m.setPaintProperty(layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.9)");
+          m.setPaintProperty(layer.id, "text-halo-width", 2);
+          m.setPaintProperty(layer.id, "text-halo-blur", 0.3);
+        } catch { /* ignore */ }
+      }
+
       // Settlement labels - restrict to focus country only, and relax
       // filterrank so mid-tier cities (Port Sudan, Nyala, etc.) are visible.
       // All settlement labels outside the focus country are hidden; country
@@ -3262,14 +3272,26 @@ export function CrisisMap({
   // resize — Mapbox keeps the old canvas width unless we call resize().
   // Debounce past the nav width transition (200ms) so we don't resize every
   // animation frame (that blanks satellite tiles mid-reflow).
+  // Skip resize if dimensions are unchanged (within 1px) to prevent spurious
+  // camera nudges during chrome motion when the container size is stable.
   useEffect(() => {
     if (!loaded || !mapContainer.current || !map.current) return;
     const el = mapContainer.current;
     let timer = 0;
+    let lastWidth = el.clientWidth;
+    let lastHeight = el.clientHeight;
     const ro = new ResizeObserver(() => {
       if (timer) window.clearTimeout(timer);
       timer = window.setTimeout(() => {
         timer = 0;
+        const currentWidth = el.clientWidth;
+        const currentHeight = el.clientHeight;
+        // Skip resize if dimensions haven't changed (within 1px tolerance)
+        if (Math.abs(currentWidth - lastWidth) <= 1 && Math.abs(currentHeight - lastHeight) <= 1) {
+          return;
+        }
+        lastWidth = currentWidth;
+        lastHeight = currentHeight;
         try {
           map.current?.resize();
           onMapMoveRef.current?.();

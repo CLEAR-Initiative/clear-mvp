@@ -197,6 +197,55 @@ body[data-nav-overlay="true"][data-map-basemap] [data-map-chrome-bottom] {
   --map-frost-hover-text: #a3a3a3;
 }
 
+/*
+ * Map frost surface tokens: translucent backgrounds + blur so basemap reads through.
+ * Both themes use 42% opacity to match prod (better contrast/legibility).
+ * Scoped to map routes only via data-nav-overlay.
+ */
+body[data-nav-overlay="true"] {
+  --map-frost-bg: color-mix(in srgb, var(--color-bg-white) 42%, transparent);
+  --map-frost-bg-muted: color-mix(in srgb, var(--color-bg-muted) 42%, transparent);
+  --map-frost-border: color-mix(in srgb, var(--color-border) 55%, transparent);
+  --map-frost-blur: blur(16px) saturate(1.2);
+}
+
+/* Map preloader background - SSR-safe (no flash on hard refresh) */
+.map-preloader-bg {
+  background: rgba(250, 250, 250, 0.85);
+}
+
+@media (prefers-color-scheme: dark) {
+  .map-preloader-bg {
+    background: rgba(17, 17, 17, 0.85);
+  }
+}
+
+[data-mantine-color-scheme="dark"] .map-preloader-bg {
+  background: rgba(17, 17, 17, 0.85);
+}
+
+[data-mantine-color-scheme="light"] .map-preloader-bg {
+  background: rgba(250, 250, 250, 0.85);
+}
+
+.map-preloader-error-bg {
+  background: rgba(250, 250, 250, 0.95);
+}
+
+@media (prefers-color-scheme: dark) {
+  .map-preloader-error-bg {
+    background: rgba(17, 17, 17, 0.95);
+  }
+}
+
+[data-mantine-color-scheme="dark"] .map-preloader-error-bg {
+  background: rgba(17, 17, 17, 0.95);
+}
+
+[data-mantine-color-scheme="light"] .map-preloader-error-bg {
+  background: rgba(250, 250, 250, 0.95);
+}
+
 /* Mapbox zoom control dark mode overrides */
 [data-mantine-color-scheme="dark"] .mapboxgl-ctrl-group {
   background: var(--color-bg-muted);
