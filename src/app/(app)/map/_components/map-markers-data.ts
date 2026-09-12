@@ -273,37 +273,54 @@ export function signalsToMarkers(
 ): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
   for (const signal of signals) {
-    const candidates = [signal.generalLocation, signal.originLocation, signal.destinationLocation];
-    for (const loc of candidates) {
-      if (loc?.geometry?.type === "Point") {
-        const [lng, lat] = loc.geometry.coordinates as [number, number];
-        if (typeof lng === "number" && typeof lat === "number") {
-          markers.push({
-            id: hashId(signal.id, loc.id),
-            lng,
-            lat,
-            title: signal.title ?? signal.source.name ?? "Signal",
-            severity: signal.severity ? mapSeverity(signal.severity) : "medium",
-            description: signal.description ?? undefined,
-            region: resolveLocationName(loc, { locationById }) ?? undefined,
-            locationId: loc.id,
-            ancestorIds: loc.ancestorIds ?? [],
-            dataSource: signal.source.name,
-            eventId: signal.id,
-            markerKind: "signal",
-            occurredAt: signal.publishedAt,
-            locationPinRole: "source",
-            iconSlug: resolveMarkerIconSlug({
-              texts: [signal.title, signal.description],
-              markerKind: "signal",
-            }),
-          });
-          break;
-        }
-      }
-    }
+    const point = signalPoint(signal);
+    if (!point) continue;
+    const { loc, lng, lat } = point;
+    markers.push({
+      id: hashId(signal.id, loc.id),
+      lng,
+      lat,
+      title: signal.title ?? signal.source.name ?? "Signal",
+      severity: signal.severity ? mapSeverity(signal.severity) : "medium",
+      description: signal.description ?? undefined,
+      region: resolveLocationName(loc, { locationById }) ?? undefined,
+      locationId: loc.id,
+      ancestorIds: loc.ancestorIds ?? [],
+      dataSource: signal.source.name,
+      eventId: signal.id,
+      markerKind: "signal",
+      occurredAt: signal.publishedAt,
+      locationPinRole: "source",
+      iconSlug: resolveMarkerIconSlug({
+        texts: [signal.title, signal.description],
+        markerKind: "signal",
+      }),
+    });
   }
   return dedupeMarkersByEntity(markers);
+}
+
+/**
+ * Signal pins: Point location, else polygon/MultiPolygon centroid.
+ * Country/state catalog tags (e.g. Venezuela) are almost always polygons —
+ * requiring Point alone dropped Observe pins from `/map?signal=` focus and
+ * any forMap path that skipped sanitize.
+ */
+function signalPoint(signal: GqlSignal) {
+  const candidates = [signal.generalLocation, signal.originLocation, signal.destinationLocation];
+  for (const loc of candidates) {
+    const fromPoint = pointFromLocation(loc);
+    if (fromPoint) return fromPoint;
+    const centroid = toMapPointGeometry(loc?.geometry ?? null);
+    if (loc && centroid) {
+      return {
+        loc: { ...loc, geometry: centroid },
+        lng: centroid.coordinates[0],
+        lat: centroid.coordinates[1],
+      };
+    }
+  }
+  return null;
 }
 
 /**

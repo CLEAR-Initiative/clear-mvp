@@ -45,10 +45,15 @@ call it from the browser without a new authorized mutation.
 ## Manual test plan (add to PR)
 
 - [ ] `/observe` → GPS → short note → Observe **Signals** tab shows the new card after submit (and after refresh)
-- [ ] Same signal on Detection → Signals (team AO) when GPS/place is in-theater
+- [ ] Tap the Observe Signals card → opens `/signal/{id}` (signal detail)
+- [ ] From signal detail → Full Map → `/map?signal={id}` solo-focus pin (works for country polygon tags like Venezuela)
+- [ ] `/map` Layers → Signals with **Venezuela** (or All Countries) selected → pin visible when the team AO includes Venezuela
+- [ ] Same in-theater GPS/place → Detection → Signals
 - [ ] `/observe` → `@Khartoum` chip (no GPS) → `/map` Layers → Signals: pin near Khartoum
 - [ ] `/observe` → `@Khartoum` + body mentioning **National Museum** (or another Mapbox POI) → pin near the museum, not a random city centroid
 - [ ] Free-text `Flooding in Khartoum` without chip → catalog pin (or POI if Mapbox returns one)
 - [ ] Two distinct places in one note (`Khartoum` and `Al-Fashir`) without chip → submit OK, **no** guessed pin
 - [ ] Offline queue → drain keeps lat/lng or locationId
 - [ ] Map search accepts Observe GPS chip format `33.4445°S 70.6452°W` and flies to that point
+
+**Map browse note:** Layers → Signals still applies the map **country** filter and team AO. A Venezuela Observe signal will not appear while the map country is Sudan — switch country to Venezuela / All Countries, or open Full Map from signal detail (solo focus bypasses the country filter).

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   IconAntennaBars5,
@@ -216,7 +217,20 @@ function SignalCard({ signal }: { signal: GqlSignal }) {
   const hasEvents = eventCount > 0;
 
   return (
-    <div style={{ background: "var(--color-bg-white)", borderRadius: 10, padding: "14px 16px", marginBottom: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 8px rgba(0,0,0,0.04)" }}>
+    <Link
+      href={`/signal/${signal.id}?from=observe`}
+      style={{
+        display: "block",
+        background: "var(--color-bg-white)",
+        borderRadius: 10,
+        padding: "14px 16px",
+        marginBottom: 10,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 8px rgba(0,0,0,0.04)",
+        textDecoration: "none",
+        color: "inherit",
+        cursor: "pointer",
+      }}
+    >
 
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
@@ -238,7 +252,7 @@ function SignalCard({ signal }: { signal: GqlSignal }) {
           {hasEvents && <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-info)", background: "var(--color-info-light)", padding: "2px 7px", borderRadius: 8 }}>{t("events", { count: eventCount })}</span>}
         </div>
       )}
-    </div>
+    </Link>
   );
 }
 
