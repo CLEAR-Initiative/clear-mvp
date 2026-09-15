@@ -1,0 +1,252 @@
+/* "Add to CLEAR" confirmation. Deliberately styled unlike the rest of the
+   app: this content is CLEAR's framing of the submission, not the reporter's
+   words. Built on the --color-ai tokens (violet), light and dark. */
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 4, 5, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  padding: 16px;
+}
+
+.shell {
+  width: 760px;
+  max-width: 100%;
+  max-height: 88%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
+  border-radius: 12px;
+  border: 1px solid var(--color-ai-border);
+  background: var(--color-ai-light);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-text-primary);
+}
+
+/* Decorative glow lives on the non-scrolling shell: its negative inset would
+   otherwise create phantom scroll inside the body. */
+.glow {
+  position: absolute;
+  z-index: -1;
+  inset: -45% -28%;
+  pointer-events: none;
+  background:
+    radial-gradient(44% 44% at 78% 32%, color-mix(in oklab, var(--color-ai) 40%, transparent), transparent 72%),
+    radial-gradient(32% 32% at 22% 70%, color-mix(in oklab, var(--color-info) 22%, transparent), transparent 72%);
+}
+
+.header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--color-ai-border);
+  background: color-mix(in oklab, var(--color-ai) 7%, transparent);
+}
+
+.headerLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ai);
+}
+
+.close {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-ai);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: color-mix(in oklab, var(--color-ai) 12%, transparent);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.label {
+  font-family: SFMono-Regular, "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.6;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--color-ai);
+  margin-bottom: 6px;
+}
+
+.field {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-ai-border);
+  background: var(--color-bg-white);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.fieldTitle {
+  composes: field;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 5px 11px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--color-ai-border);
+  background: var(--color-bg-white);
+  color: var(--color-ai);
+  cursor: pointer;
+}
+
+.chip[data-selected="true"] {
+  background: var(--chip-bg);
+  color: var(--chip-fg);
+  border-color: var(--chip-fg);
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.card {
+  width: 128px;
+  border-radius: 8px;
+  border: 1px solid var(--color-ai-border);
+  background: var(--color-bg-white);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+
+.cardIcon {
+  height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ai);
+  background: color-mix(in oklab, var(--color-ai) 8%, transparent);
+}
+
+.cardIcon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cardName {
+  padding: 6px 8px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--color-ai-border);
+}
+
+.footerNote {
+  font-size: 11px;
+  color: var(--color-ai);
+  min-width: 0;
+}
+
+.footerActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cancel {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid var(--color-ai-border);
+  background: transparent;
+  color: var(--color-ai);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.confirm {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 6px;
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.confirm:disabled,
+.cancel:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.error {
+  font-size: 12px;
+  color: var(--color-critical);
+}

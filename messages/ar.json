@@ -2097,6 +2097,7 @@
     "items": {
       "overview": "نظرة عامة",
       "detection": "الكشف",
+      "inbox": "الوارد",
       "map": "الخريطة",
       "insights": "الرؤى",
       "operations": "العمليات",
@@ -2770,5 +2771,90 @@
     "resent": "تم إرسال بريد إلكتروني للتحقق جديد. يرجى مراجعة صندوق الوارد.",
     "resend": "إعادة إرسال بريد التحقق",
     "goToProfile": "الذهاب إلى الملف الشخصي"
+  },
+  "inbox": {
+    "title": "وارد الخط الساخن",
+    "awaiting": "{count, plural, one {# بانتظار المراجعة} other {# بانتظار المراجعة}}",
+    "filters": {
+      "reports": "تقارير ميدانية",
+      "unclassified": "غير مصنّف",
+      "chatter": "دردشة",
+      "all": "الكل"
+    },
+    "search": "بحث في النص ومراجع الاستقبال",
+    "sort": {
+      "reportsFirst": "التقارير أولاً",
+      "newest": "الأحدث"
+    },
+    "list": {
+      "allLoaded": "تم تحميل جميع الإدخالات ({count}) في هذا العرض",
+      "empty": "لا شيء متبقٍ في هذا العرض",
+      "priorEntries": "{count, plural, one {# إدخال سابق} other {# إدخالات سابقة}}"
+    },
+    "classifications": {
+      "field_report": "تقرير ميداني",
+      "unclassified": "غير مصنّف",
+      "chatter": "دردشة",
+      "news_digest": "موجز أخبار",
+      "operational": "تشغيلي"
+    },
+    "pane": {
+      "select": "اختر إدخالاً لقراءته",
+      "noText": "وسائط بدون تعليق",
+      "trustRepeat": "{count, plural, one {# إرسال} other {# إرسالات}} من مرجع الاستقبال هذا في قائمة الانتظار",
+      "attachments": "المرفقات",
+      "attachment": "مرفق {n}",
+      "voiceNote": "رسالة صوتية",
+      "omittedMedia": "{count, plural, one {# مرفق غير مخزّن} other {# مرفقات غير مخزّنة}}",
+      "uncertainty": "وسم المُبلّغ هذا بأنه {value}",
+      "back": "العودة إلى القائمة"
+    },
+    "actions": {
+      "add": "إضافة إلى CLEAR",
+      "archive": "أرشفة",
+      "reject": "رفض",
+      "shortcuts": "A إضافة · E أرشفة · R رفض · J/K تنقّل"
+    },
+    "rejectReasons": {
+      "header": "رفض: سبب لسجل التدقيق",
+      "spam": {
+        "label": "رسائل مزعجة أو احتيال",
+        "help": "إرسال جماعي أو تصيّد أو رسالة متسلسلة"
+      },
+      "not_report": {
+        "label": "ليس تقريراً",
+        "help": "استفسار أو محادثة، لا شيء للفرز"
+      },
+      "unusable": {
+        "label": "يتعذر تحديد الموقع",
+        "help": "لم يُذكر مكان، لا يمكن التعامل معه"
+      },
+      "duplicate": {
+        "label": "مكرر",
+        "help": "موجود بالفعل في المسار كإشارة"
+      },
+      "cancel": "إلغاء"
+    },
+    "modal": {
+      "header": "مُولَّد بواسطة CLEAR",
+      "title": "عنوان الإشارة",
+      "description": "الوصف",
+      "severity": "الشدة",
+      "severityNone": "غير محدد",
+      "readOnlyHint": "يُنقل العنوان والوصف كما أُرسلا. تعديلهما قبل الترقية يتطلب دعماً من الواجهة البرمجية غير متاح بعد.",
+      "attachments": "المرفقات المنقولة إلى الإشارة",
+      "footer": "مُرقّى من {ref} · يبقى سرد المُبلّغ على الإدخال",
+      "cancel": "إلغاء",
+      "confirm": "إضافة إلى CLEAR"
+    },
+    "toast": {
+      "added": "أُضيف إلى CLEAR",
+      "archived": "أُرشف",
+      "rejected": "رُفض · {reason}",
+      "viewSignal": "عرض الإشارة",
+      "close": "إغلاق"
+    },
+    "noAccess": "وارد الخط الساخن متاح للمسؤولين والمحللين فقط.",
+    "loadError": "تعذر تحميل الوارد"
   }
 }
