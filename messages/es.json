@@ -2854,7 +2854,7 @@
       "viewSignal": "Ver señal",
       "close": "Cerrar"
     },
-    "noAccess": "La bandeja de la línea directa es solo para administradores y analistas.",
+    "noAccess": "La bandeja de la línea directa es solo para administradores por ahora.",
     "loadError": "No se pudo cargar la bandeja"
   }
 }

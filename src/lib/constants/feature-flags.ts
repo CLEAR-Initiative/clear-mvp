@@ -99,7 +99,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     key: "hotline_inbox",
     label: "Hotline Inbox",
     description:
-      "WhatsApp hotline triage inbox (also admin/analyst only)",
+      "WhatsApp hotline triage inbox (admin only for now)",
     tier: 2,
     defaultEnabled: true,
     route: "/inbox",

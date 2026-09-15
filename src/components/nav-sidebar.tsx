@@ -32,7 +32,7 @@ import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
-import { canReviewGroundIntel, isPlatformAdmin } from "~/lib/roles";
+import { isPlatformAdmin } from "~/lib/roles";
 import { isMapNavOverlay, useOptimisticNavSegment } from "~/hooks/use-optimistic-nav-segment";
 import { useSlidingNavIndicator } from "~/hooks/use-sliding-nav-indicator";
 import { SlidingNavIndicator } from "~/components/ui/sliding-nav-indicator";
@@ -66,8 +66,6 @@ interface NavItem {
   demo?: boolean;
   /** Hidden entirely for non-admin users */
   adminOnly?: boolean;
-  /** Hidden unless the global role can review ground intel (admin/analyst) */
-  groundReviewerOnly?: boolean;
   /** Shown but greyed out with "Coming Soon" for non-admin users */
   comingSoonForNonAdmin?: boolean;
 }
@@ -93,7 +91,7 @@ const navSections: NavSection[] = [
     items: [
       { labelKey: "overview", href: "/dashboard", icon: IconLayoutDashboard, featureKey: "overview" },
       { labelKey: "detection", href: "/detection", icon: IconTarget, featureKey: "detection" },
-      { labelKey: "inbox", href: "/inbox", icon: IconInbox, featureKey: "hotline_inbox", groundReviewerOnly: true },
+      { labelKey: "inbox", href: "/inbox", icon: IconInbox, featureKey: "hotline_inbox", adminOnly: true },
       { labelKey: "map", href: "/map", icon: IconMapPin, featureKey: "crisis_map" },
       { labelKey: "insights", href: "/insights", icon: IconChartPie, featureKey: "insights" },
       { labelKey: "operations", href: "/operations", icon: IconUser, featureKey: "operations", adminOnly: true },
@@ -156,7 +154,6 @@ export function NavSidebar({
   const router = useRouter();
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const isAdmin = isPlatformAdmin(authData?.user?.role);
-  const isGroundReviewer = canReviewGroundIntel(authData?.user?.role);
   const { flags } = useFeatureFlags();
 
   // Publish overlay width before paint. Keep motion flag out of this cleanup —
@@ -307,7 +304,6 @@ export function NavSidebar({
             if (section.adminOnly && !isAdmin) return null;
             const visibleItems = section.items.filter((item) => {
               if (item.adminOnly && !isAdmin) return false;
-              if (item.groundReviewerOnly && !isGroundReviewer) return false;
               return item.featureKey ? (flags[item.featureKey] ?? true) : true;
             });
             if (visibleItems.length === 0) return null;
@@ -629,7 +625,6 @@ export function NavSidebar({
             if (section.adminOnly && !isAdmin) return null;
             const visibleItems = section.items.filter((item) => {
               if (item.adminOnly && !isAdmin) return false;
-              if (item.groundReviewerOnly && !isGroundReviewer) return false;
               return item.featureKey ? (flags[item.featureKey] ?? true) : true;
             });
             if (visibleItems.length === 0) return null;

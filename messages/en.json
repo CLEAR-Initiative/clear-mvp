@@ -2854,7 +2854,7 @@
       "viewSignal": "View signal",
       "close": "Dismiss"
     },
-    "noAccess": "The hotline inbox is available to admins and analysts only.",
+    "noAccess": "The hotline inbox is available to admins only for now.",
     "loadError": "Could not load the inbox"
   }
 }

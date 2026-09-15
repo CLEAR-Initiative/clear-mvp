@@ -2854,7 +2854,7 @@
       "viewSignal": "Voir le signal",
       "close": "Fermer"
     },
-    "noAccess": "La boîte de réception est réservée aux administrateurs et analystes.",
+    "noAccess": "La boîte de réception est réservée aux administrateurs pour le moment.",
     "loadError": "Impossible de charger la boîte de réception"
   }
 }

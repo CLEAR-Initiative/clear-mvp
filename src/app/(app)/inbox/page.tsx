@@ -7,7 +7,7 @@ import { Box, Loader, Text } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
-import { canReviewGroundIntel } from "~/lib/roles";
+import { isPlatformAdmin } from "~/lib/roles";
 import { canReviewSource } from "~/lib/ground-review";
 import {
   INBOX_FILTERS,
@@ -58,7 +58,7 @@ export default function InboxPage() {
   const enabled = useFeatureEnabled("hotline_inbox");
   const { data: authData, isLoading: authLoading } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const role = authData?.user?.role;
-  const canSee = enabled && canReviewGroundIntel(role);
+  const canSee = enabled && isPlatformAdmin(role);
 
   const inboxQuery = api.ground.hotlineInbox.useQuery(undefined, {
     enabled: canSee,
