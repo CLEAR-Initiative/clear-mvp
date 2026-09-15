@@ -24,3 +24,12 @@ export function isPlatformAdmin(role: string | null | undefined): boolean {
 export function canWriteCrisisEvents(role: string | null | undefined): boolean {
   return isPlatformAdmin(role) || role === "analyst";
 }
+
+/**
+ * Global roles allowed into the ground intel staging tier (detection Ground
+ * intel tab, hotline inbox). Mirrors clear-api's requireRole gate on every
+ * ground query; the UI hides those surfaces for everyone else.
+ */
+export function canReviewGroundIntel(role: string | null | undefined): boolean {
+  return isPlatformAdmin(role) || role === "analyst";
+}

@@ -95,6 +95,16 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     route: "/agent",
   },
 
+  {
+    key: "hotline_inbox",
+    label: "Hotline Inbox",
+    description:
+      "WhatsApp hotline triage inbox (also admin/analyst only)",
+    tier: 2,
+    defaultEnabled: true,
+    route: "/inbox",
+  },
+
   // ── Sub-tab flags (gate a tab within a page, not a nav route — no `route`) ──
   {
     key: "ground_intel",
