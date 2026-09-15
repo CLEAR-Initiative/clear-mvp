@@ -24,7 +24,7 @@ import {
 } from "~/lib/hotline-inbox";
 import { EntryList } from "./_components/entry-list";
 import { ReadingPane } from "./_components/reading-pane";
-import { AddToClearModal } from "./_components/add-to-clear-modal";
+import { AddToClearModal, type SignalDraft } from "./_components/add-to-clear-modal";
 import styles from "./inbox.module.css";
 
 /**
@@ -142,7 +142,8 @@ export default function InboxPage() {
 
   const review = api.ground.review.useMutation();
   const setSeverity = api.signals.updateSeverity.useMutation();
-  const busy = review.isPending || setSeverity.isPending;
+  const setLocation = api.signals.updateLocation.useMutation();
+  const busy = review.isPending || setSeverity.isPending || setLocation.isPending;
 
   const afterAction = useCallback(
     (actedId: string, next: Toast) => {
@@ -188,30 +189,40 @@ export default function InboxPage() {
   );
 
   const confirmAdd = useCallback(
-    (severity: number | null) => {
+    (draft: SignalDraft) => {
       if (!selected || busy) return;
       review.mutate(
         { id: selected.id, decision: "approve_public" },
         {
-          onSuccess: (thread) => {
+          onSuccess: async (thread) => {
+            // Promotion already happened: follow-up failures must not leave
+            // the entry looking un-actioned, so they only downgrade the toast.
             const signalId = thread.promotedSignalId;
-            const done = () => afterAction(selected.id, { message: t("toast.added"), signalId });
-            if (severity && signalId) {
-              setSeverity.mutate(
-                { id: signalId, severity },
-                // Promotion already happened: a severity failure must not
-                // leave the entry looking un-actioned.
-                { onSuccess: done, onError: done },
-              );
-            } else {
-              done();
+            let partial = false;
+            if (signalId) {
+              try {
+                await setLocation.mutateAsync({ id: signalId, locationId: draft.locationId });
+              } catch {
+                partial = true;
+              }
+              if (draft.severity) {
+                try {
+                  await setSeverity.mutateAsync({ id: signalId, severity: draft.severity });
+                } catch {
+                  partial = true;
+                }
+              }
             }
+            afterAction(selected.id, {
+              message: partial ? t("toast.addedPartial") : t("toast.added"),
+              signalId,
+            });
           },
           onError: (err) => setActionError(errorMessage(err)),
         },
       );
     },
-    [selected, busy, review, setSeverity, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
+    [selected, busy, review, setSeverity, setLocation, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   // Keyboard: Escape closes modal > popover; A/E/R act; J/K move.

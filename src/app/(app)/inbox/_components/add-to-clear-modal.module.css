@@ -121,9 +121,35 @@
   line-height: 1.4;
 }
 
+.field:focus,
+.fieldTitle:focus {
+  outline: none;
+  border-color: var(--color-ai);
+}
+
+textarea.field,
+textarea.fieldTitle {
+  resize: vertical;
+  display: block;
+}
+
+.selectInput {
+  background: var(--color-bg-white) !important;
+  border-color: var(--color-ai-border) !important;
+  color: var(--color-text-primary) !important;
+  font-size: 13px !important;
+}
+
 .hint {
   font-size: 11px;
   color: var(--color-text-muted);
+  margin-top: 6px;
+}
+
+.warning {
+  font-size: 11px;
+  color: var(--color-warning);
+  margin-top: 6px;
 }
 
 .chips {

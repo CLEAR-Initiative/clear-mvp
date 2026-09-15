@@ -2841,18 +2841,24 @@
       "description": "Description",
       "severity": "Severity",
       "severityNone": "Not set",
-      "readOnlyHint": "Title and description are carried over as submitted. Editing them before promotion needs API support and is not available yet.",
       "attachments": "Attachments carried into the signal",
       "footer": "Promoted from {ref} · the reporter's account stays on the entry",
       "cancel": "Cancel",
-      "confirm": "Add to CLEAR"
+      "confirm": "Add to CLEAR",
+      "location": "Location",
+      "locationPlaceholder": "Search location",
+      "locationLoading": "Loading locations",
+      "locationNoMatch": "No matching location",
+      "locationRequired": "Location is required before adding to CLEAR",
+      "editsNotSaved": "Title and description edits are not saved yet. Promotion needs API support for overrides; the signal keeps the submitted text."
     },
     "toast": {
       "added": "Added to CLEAR",
       "archived": "Archived",
       "rejected": "Rejected · {reason}",
       "viewSignal": "View signal",
-      "close": "Dismiss"
+      "close": "Dismiss",
+      "addedPartial": "Added to CLEAR, but location or severity could not be saved"
     },
     "noAccess": "The hotline inbox is available to admins only for now.",
     "loadError": "Could not load the inbox"

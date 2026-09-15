@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Select } from "@mantine/core";
 import { IconLayoutGrid, IconMicrophone, IconX } from "@tabler/icons-react";
+import { api } from "~/trpc/react";
 import type { InboxEntry } from "~/lib/hotline-inbox";
 import { severityColors } from "~/lib/constants/severity";
 import styles from "./add-to-clear-modal.module.css";
@@ -15,27 +17,56 @@ const SEVERITIES = [
   { value: 2, bucket: "low" },
 ] as const;
 
+export interface SignalDraft {
+  title: string;
+  description: string;
+  severity: number | null;
+  locationId: string;
+}
+
 interface AddToClearModalProps {
   entry: InboxEntry;
   busy: boolean;
   error: string | null;
   onCancel: () => void;
-  onConfirm: (severity: number | null) => void;
+  onConfirm: (draft: SignalDraft) => void;
 }
 
 /**
- * Confirmation step before promotion. Title and description are what
- * clear-api's promotion derives (thread title, joined message text); they
- * render read-only because the promotion input has no override fields
- * yet. Severity is applied right after promotion via updateSignalSeverity.
+ * Confirmation-and-edit step before promotion. Seeded from the entry
+ * (title = thread title, description = the reporter's text); re-seeded
+ * per entry so edits never leak between entries. Location is mandatory.
+ *
+ * Persistence today: severity and location are applied right after
+ * promotion via updateSignalSeverity / updateSignalLocation. Title and
+ * description edits have no write path until clear-api's promotion
+ * accepts overrides; the modal flags that when they differ from the seed.
  */
 export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: AddToClearModalProps) {
   const t = useTranslations("inbox");
   const tSev = useTranslations("common.severities");
-  const [severity, setSeverity] = useState<number | null>(null);
 
-  // Re-seed per entry so a choice never leaks between entries.
-  useEffect(() => setSeverity(null), [entry.id]);
+  const seed = useMemo<SignalDraft>(
+    () => ({ title: entry.title, description: entry.text, severity: null, locationId: "" }),
+    [entry.id], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const [draft, setDraft] = useState<SignalDraft>(seed);
+  useEffect(() => setDraft(seed), [seed]);
+
+  const locationsQuery = api.locations.list.useQuery(undefined, { staleTime: 10 * 60_000 });
+  const locationOptions = useMemo(
+    () =>
+      (locationsQuery.data ?? [])
+        .filter((loc) => loc.level <= 2)
+        .map((loc) => ({
+          value: loc.id,
+          label: loc.parent ? `${loc.name} (${loc.parent.name})` : loc.name,
+        })),
+    [locationsQuery.data],
+  );
+
+  const textEdited = draft.title !== seed.title || draft.description !== seed.description;
+  const canConfirm = draft.locationId !== "" && !busy;
 
   return (
     <div className={styles.backdrop} onClick={busy ? undefined : onCancel} data-testid="inbox-add-modal">
@@ -54,12 +85,26 @@ export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: Add
         <div className={styles.body}>
           <div>
             <div className={styles.label}>{t("modal.title")}</div>
-            <div className={styles.fieldTitle}>{entry.title || t("pane.noText")}</div>
+            <textarea
+              className={styles.fieldTitle}
+              rows={2}
+              value={draft.title}
+              onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+              data-testid="inbox-draft-title"
+            />
           </div>
           <div>
             <div className={styles.label}>{t("modal.description")}</div>
-            <div className={styles.field}>{entry.text || t("pane.noText")}</div>
-            <p className={styles.hint} style={{ marginTop: 6 }}>{t("modal.readOnlyHint")}</p>
+            <textarea
+              className={styles.field}
+              rows={5}
+              value={draft.description}
+              onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+              data-testid="inbox-draft-description"
+            />
+            {textEdited && (
+              <p className={styles.warning} data-testid="inbox-edits-warning">{t("modal.editsNotSaved")}</p>
+            )}
           </div>
           <div>
             <div className={styles.label}>{t("modal.severity")}</div>
@@ -69,7 +114,7 @@ export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: Add
                   type="button"
                   key={s.value}
                   className={styles.chip}
-                  data-selected={severity === s.value}
+                  data-selected={draft.severity === s.value}
                   data-testid={`inbox-severity-${s.value}`}
                   style={
                     {
@@ -77,7 +122,7 @@ export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: Add
                       "--chip-fg": severityColors[s.bucket]!.text,
                     } as React.CSSProperties
                   }
-                  onClick={() => setSeverity(s.value)}
+                  onClick={() => setDraft((d) => ({ ...d, severity: s.value }))}
                 >
                   {s.value} {tSev(s.bucket)}
                 </button>
@@ -85,18 +130,36 @@ export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: Add
               <button
                 type="button"
                 className={styles.chip}
-                data-selected={severity === null}
+                data-selected={draft.severity === null}
                 style={
                   {
                     "--chip-bg": "var(--color-bg-muted)",
                     "--chip-fg": "var(--color-text-secondary)",
                   } as React.CSSProperties
                 }
-                onClick={() => setSeverity(null)}
+                onClick={() => setDraft((d) => ({ ...d, severity: null }))}
               >
                 {t("modal.severityNone")}
               </button>
             </div>
+          </div>
+          <div>
+            <div className={styles.label}>{t("modal.location")}</div>
+            <Select
+              data={locationOptions}
+              value={draft.locationId || null}
+              onChange={(v) => setDraft((d) => ({ ...d, locationId: v ?? "" }))}
+              placeholder={locationsQuery.isLoading ? t("modal.locationLoading") : t("modal.locationPlaceholder")}
+              searchable
+              clearable
+              required
+              disabled={locationsQuery.isLoading}
+              comboboxProps={{ zIndex: 1000 }}
+              nothingFoundMessage={t("modal.locationNoMatch")}
+              classNames={{ input: styles.selectInput }}
+              data-testid="inbox-draft-location"
+            />
+            {draft.locationId === "" && <p className={styles.hint}>{t("modal.locationRequired")}</p>}
           </div>
           {entry.attachments.length > 0 && (
             <div>
@@ -132,8 +195,8 @@ export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: Add
             <button
               type="button"
               className={styles.confirm}
-              onClick={() => onConfirm(severity)}
-              disabled={busy}
+              onClick={() => onConfirm(draft)}
+              disabled={!canConfirm}
               data-testid="inbox-add-confirm"
             >
               {t("modal.confirm")}

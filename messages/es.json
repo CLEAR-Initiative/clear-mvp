@@ -2841,18 +2841,24 @@
       "description": "Descripción",
       "severity": "Severidad",
       "severityNone": "Sin definir",
-      "readOnlyHint": "El título y la descripción se trasladan tal como se enviaron. Editarlos antes de promover requiere soporte de la API, aún no disponible.",
       "attachments": "Adjuntos trasladados a la señal",
       "footer": "Promovido desde {ref} · el relato del informante permanece en la entrada",
       "cancel": "Cancelar",
-      "confirm": "Añadir a CLEAR"
+      "confirm": "Añadir a CLEAR",
+      "location": "Ubicación",
+      "locationPlaceholder": "Buscar ubicación",
+      "locationLoading": "Cargando ubicaciones",
+      "locationNoMatch": "Ninguna ubicación coincide",
+      "locationRequired": "La ubicación es obligatoria antes de añadir a CLEAR",
+      "editsNotSaved": "Los cambios de título y descripción aún no se guardan. La promoción requiere soporte de la API; la señal conserva el texto enviado."
     },
     "toast": {
       "added": "Añadido a CLEAR",
       "archived": "Archivado",
       "rejected": "Rechazado · {reason}",
       "viewSignal": "Ver señal",
-      "close": "Cerrar"
+      "close": "Cerrar",
+      "addedPartial": "Añadido a CLEAR, pero no se pudo guardar la ubicación o la severidad"
     },
     "noAccess": "La bandeja de la línea directa es solo para administradores por ahora.",
     "loadError": "No se pudo cargar la bandeja"

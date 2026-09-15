@@ -2841,18 +2841,24 @@
       "description": "Description",
       "severity": "Sévérité",
       "severityNone": "Non définie",
-      "readOnlyHint": "Le titre et la description sont repris tels que soumis. Leur modification avant promotion nécessite un support API non encore disponible.",
       "attachments": "Pièces jointes transmises au signal",
       "footer": "Promu depuis {ref} · le récit du rapporteur reste sur l'entrée",
       "cancel": "Annuler",
-      "confirm": "Ajouter à CLEAR"
+      "confirm": "Ajouter à CLEAR",
+      "location": "Lieu",
+      "locationPlaceholder": "Rechercher un lieu",
+      "locationLoading": "Chargement des lieux",
+      "locationNoMatch": "Aucun lieu correspondant",
+      "locationRequired": "Le lieu est obligatoire avant l'ajout à CLEAR",
+      "editsNotSaved": "Les modifications du titre et de la description ne sont pas encore enregistrées. La promotion nécessite un support API ; le signal conserve le texte soumis."
     },
     "toast": {
       "added": "Ajouté à CLEAR",
       "archived": "Archivé",
       "rejected": "Rejeté · {reason}",
       "viewSignal": "Voir le signal",
-      "close": "Fermer"
+      "close": "Fermer",
+      "addedPartial": "Ajouté à CLEAR, mais le lieu ou la sévérité n'a pas pu être enregistré"
     },
     "noAccess": "La boîte de réception est réservée aux administrateurs pour le moment.",
     "loadError": "Impossible de charger la boîte de réception"
