@@ -141,6 +141,15 @@ const CREATE_MANUAL_SIGNAL_MUTATION = `
   }
 `;
 
+const UPDATE_SIGNAL_SEVERITY_MUTATION = `
+  mutation UpdateSignalSeverity($id: String!, $severity: Int!) {
+    updateSignalSeverity(id: $id, severity: $severity) {
+      id
+      severity
+    }
+  }
+`;
+
 // Paginated query for signals list view (moved from alerts.ts for proper architecture)
 const SIGNALS_PAGE_QUERY = `
   query SignalsPage($input: SignalsPageInput) {
@@ -349,5 +358,19 @@ export const signalsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.createManualSignal;
+    }),
+
+  /** Set a signal's severity (1-5). clear-api gates on admin/analyst. Used by
+   *  the hotline inbox right after promotion, since promotion itself carries
+   *  no severity. */
+  updateSeverity: protectedProcedure
+    .input(z.object({ id: z.string(), severity: z.number().int().min(1).max(5) }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ updateSignalSeverity: Pick<GqlSignal, "id" | "severity"> }>(
+        UPDATE_SIGNAL_SEVERITY_MUTATION,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.updateSignalSeverity;
     }),
 });

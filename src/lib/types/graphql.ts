@@ -256,6 +256,20 @@ export interface GqlGroundMessage {
   threadId: string | null;
 }
 
+/** Ground message with presigned media URLs (1 h expiry, generated at read
+ * time). Requested only by the hotline inbox, which renders attachments. */
+export interface GqlGroundInboxMessage extends GqlGroundMessage {
+  mediaUrls: string[];
+}
+
+/** Hotline inbox payload: every hotline source with its open (unverified)
+ * threads and all staged messages, joined client-side. */
+export interface GqlHotlineInbox {
+  sources: GqlGroundSource[];
+  threads: GqlGroundThread[];
+  messages: GqlGroundInboxMessage[];
+}
+
 /* ─── Severity helpers ─── */
 
 /** Map severity (1-5) to a UI severity bucket. Null/undefined = pipeline hasn't set it yet. */
