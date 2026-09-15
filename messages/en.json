@@ -2861,6 +2861,18 @@
       "addedPartial": "Added to CLEAR, but location or severity could not be saved"
     },
     "noAccess": "The hotline inbox is available to admins only for now.",
-    "loadError": "Could not load the inbox"
+    "loadError": "Could not load the inbox",
+    "translate": {
+      "button": "Translate to {locale}",
+      "label": "Translation ({locale})",
+      "pending": "Translating, this can take a moment",
+      "unavailable": "Translation is not available yet",
+      "locales": {
+        "en": "English",
+        "fr": "French",
+        "es": "Spanish",
+        "ar": "Arabic"
+      }
+    }
   }
 }

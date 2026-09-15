@@ -2861,6 +2861,18 @@
       "addedPartial": "Añadido a CLEAR, pero no se pudo guardar la ubicación o la severidad"
     },
     "noAccess": "La bandeja de la línea directa es solo para administradores por ahora.",
-    "loadError": "No se pudo cargar la bandeja"
+    "loadError": "No se pudo cargar la bandeja",
+    "translate": {
+      "button": "Traducir al {locale}",
+      "label": "Traducción ({locale})",
+      "pending": "Traduciendo, puede tardar un momento",
+      "unavailable": "La traducción aún no está disponible",
+      "locales": {
+        "en": "inglés",
+        "fr": "francés",
+        "es": "español",
+        "ar": "árabe"
+      }
+    }
   }
 }

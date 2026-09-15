@@ -24,6 +24,13 @@ import type {
  * clear-api and must never surface anywhere.
  */
 
+/** Translation of a thread's text into one locale. `queued` means the
+ * pipeline drain has not written the row yet; poll. */
+export interface GroundTranslationState {
+  status: "queued" | "ready" | "unavailable";
+  text: string | null;
+}
+
 const GROUND_SOURCE_FIELDS = `id name kind reviewerRoles privacyDefault isActive`;
 
 const GROUND_MESSAGE_FIELDS = `
@@ -213,6 +220,24 @@ export const groundRouter = createTRPCRouter({
       messages: perSource.flatMap((r) => r.groundMessages),
     };
   }),
+
+  /**
+   * STUB: on-demand translation of a hotline thread into the reader's
+   * locale. clear-api has no translation entity for ground messages yet
+   * (Backlog: "On-demand translation of hotline messages: API entity type
+   * and request mutation"). Until it lands both procedures report
+   * "unavailable" so the inbox UI can ship with the full state machine:
+   *   request -> queued (poll) -> ready | unavailable
+   * Replace the bodies with requestGroundMessageTranslation /
+   * GroundMessage.translation(locale) when the API ships.
+   */
+  requestTranslation: protectedProcedure
+    .input(z.object({ threadId: z.string(), locale: z.string() }))
+    .mutation(async (): Promise<GroundTranslationState> => ({ status: "unavailable", text: null })),
+
+  translation: protectedProcedure
+    .input(z.object({ threadId: z.string(), locale: z.string() }))
+    .query(async (): Promise<GroundTranslationState> => ({ status: "unavailable", text: null })),
 
   /** Staged messages, oldest first (clear-api ordering). */
   messages: protectedProcedure

@@ -2861,6 +2861,18 @@
       "addedPartial": "Ajouté à CLEAR, mais le lieu ou la sévérité n'a pas pu être enregistré"
     },
     "noAccess": "La boîte de réception est réservée aux administrateurs pour le moment.",
-    "loadError": "Impossible de charger la boîte de réception"
+    "loadError": "Impossible de charger la boîte de réception",
+    "translate": {
+      "button": "Traduire en {locale}",
+      "label": "Traduction ({locale})",
+      "pending": "Traduction en cours, cela peut prendre un moment",
+      "unavailable": "La traduction n'est pas encore disponible",
+      "locales": {
+        "en": "anglais",
+        "fr": "français",
+        "es": "espagnol",
+        "ar": "arabe"
+      }
+    }
   }
 }

@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import {
   IconArchive,
   IconArrowLeft,
   IconCirclePlus,
   IconCircleX,
+  IconLanguage,
   IconMicrophone,
   IconPaperclip,
   IconShield,
 } from "@tabler/icons-react";
+import { api } from "~/trpc/react";
 import { REJECT_REASONS, type InboxAttachment, type InboxEntry, type RejectReason } from "~/lib/hotline-inbox";
 import { InboxClassificationPill } from "./classification-pill";
 import styles from "../inbox.module.css";
@@ -53,6 +55,63 @@ function Attachment({ attachment, index }: { attachment: InboxAttachment; index:
         </>
       )}
     </a>
+  );
+}
+
+/**
+ * On-demand translation of the narrative into the reader's UI locale.
+ * Request once per entry, poll while queued, render under the original
+ * (never instead of it). The tRPC procedures are stubbed server-side
+ * until clear-api grows a ground translation entity; the UI is final.
+ */
+function TranslationBlock({ entry }: { entry: InboxEntry }) {
+  const t = useTranslations("inbox");
+  const locale = useLocale();
+  const [requested, setRequested] = useState(false);
+  useEffect(() => setRequested(false), [entry.id]);
+
+  const request = api.ground.requestTranslation.useMutation();
+  const poll = api.ground.translation.useQuery(
+    { threadId: entry.id, locale },
+    {
+      enabled: requested && request.data?.status === "queued",
+      refetchInterval: (q) => (q.state.data?.status === "queued" ? 5000 : false),
+    },
+  );
+  const state = poll.data ?? request.data ?? null;
+
+  if (entry.text.length === 0) return null;
+
+  if (!requested) {
+    return (
+      <button
+        type="button"
+        className={styles.translateBtn}
+        onClick={() => {
+          setRequested(true);
+          request.mutate({ threadId: entry.id, locale });
+        }}
+        data-testid="inbox-translate"
+      >
+        <IconLanguage size={14} />
+        {t("translate.button", { locale: t(`translate.locales.${locale}`) })}
+      </button>
+    );
+  }
+
+  return (
+    <div className={styles.translation} data-testid="inbox-translation" data-status={state?.status ?? "queued"}>
+      <div className={styles.sectionLabel}>
+        {t("translate.label", { locale: t(`translate.locales.${locale}`) })}
+      </div>
+      {state?.status === "ready" && state.text ? (
+        <p className={styles.narrative}>{state.text}</p>
+      ) : state?.status === "unavailable" || request.isError ? (
+        <p className={styles.narrativeEmpty}>{t("translate.unavailable")}</p>
+      ) : (
+        <p className={styles.narrativeEmpty}>{t("translate.pending")}</p>
+      )}
+    </div>
   );
 }
 
@@ -113,6 +172,8 @@ export function ReadingPane({
         ) : (
           <p className={styles.narrativeEmpty}>{t("pane.noText")}</p>
         )}
+
+        <TranslationBlock entry={entry} />
 
         {(entry.attachments.length > 0 || entry.omittedMediaCount > 0) && (
           <div>
