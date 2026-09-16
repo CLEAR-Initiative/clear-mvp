@@ -65,6 +65,7 @@ describe("fetchBlockagesMapCollection", () => {
               route_id: iso3,
               name: iso3,
               label: String(iso3),
+              cue_label: `Not Passable · ?`,
               status_code: 4,
               status: "Not Passable",
               status_as_of: null,

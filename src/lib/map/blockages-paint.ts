@@ -6,17 +6,17 @@
  * single source of truth for colors, width curves, layer ids, and add/remove.
  *
  * Stack (bottom → top, still below settlement labels):
- * glow → casing → core → hit → point halo → point → line ticks → point marks.
+ * ghost → glow → casing → core → hit → point halo → point → cues (line text) → marks (point icons).
  *
- * Periodic X marks are corridor decoration ("closed access"), not separate
- * incidents. Spacing is deliberately wide so Country-band scans stay calm;
- * bridge points use the same badge once per feature.
+ * Animation uses opacity fade (not width/trim) - corridors stay thick always.
+ * Cue chips replace periodic X ticks; bridge points keep the closed-access mark.
  */
 
 export const BLOCKAGES_SOURCE_ID = "logie-blockages";
 export const BLOCKAGE_MARK_ICON_ID = "logie-blockage-mark";
 
 export const BLOCKAGES_LAYER_IDS = {
+  ghost: "logie-blockages-ghost",
   glow: "logie-blockages-glow",
   glowStale: "logie-blockages-glow-stale",
   casing: "logie-blockages-casing",
@@ -26,8 +26,7 @@ export const BLOCKAGES_LAYER_IDS = {
   hit: "logie-blockages-line-hit",
   pointHalo: "logie-blockages-point-halo",
   point: "logie-blockages-point",
-  ticks: "logie-blockages-ticks",
-  marks: "logie-blockages-marks",
+  cues: "logie-blockages-cues",
 } as const;
 
 export const BLOCKAGES_PAINT_LAYER_IDS = Object.values(BLOCKAGES_LAYER_IDS);
@@ -38,8 +37,7 @@ export const BLOCKAGES_HOVER_LAYER_IDS = [
   BLOCKAGES_LAYER_IDS.line,
   BLOCKAGES_LAYER_IDS.lineStale,
   BLOCKAGES_LAYER_IDS.point,
-  BLOCKAGES_LAYER_IDS.ticks,
-  BLOCKAGES_LAYER_IDS.marks,
+  BLOCKAGES_LAYER_IDS.cues,
 ] as const;
 
 /** Not Passable (LogIE status_code 4). */
@@ -49,12 +47,12 @@ export const BLOCKAGES_RESTRICTED = "#EA580C";
 /** Halo that keeps the core readable on Simple, Topography, and Satellite. */
 export const BLOCKAGES_CASING = "#FFFFFF";
 
-export const BLOCKAGES_CORE_OPACITY_FRESH = 0.96;
-export const BLOCKAGES_CORE_OPACITY_STALE = 0.78;
+export const BLOCKAGES_CORE_OPACITY_FRESH = 1.0;  // 100% for fresh
+export const BLOCKAGES_CORE_OPACITY_STALE = 0.6;  // 60% for stale
 export const BLOCKAGES_GLOW_OPACITY_FRESH = 0.28;
 export const BLOCKAGES_GLOW_OPACITY_STALE = 0.16;
-export const BLOCKAGES_CASING_OPACITY_FRESH = 0.95;
-export const BLOCKAGES_CASING_OPACITY_STALE = 0.75;
+export const BLOCKAGES_CASING_OPACITY_FRESH = 1.0;  // 100% for fresh
+export const BLOCKAGES_CASING_OPACITY_STALE = 0.6;  // 60% for stale
 
 /** [zoom, px] — Country-band (z6/z8) is the contract, not Site. */
 export const BLOCKAGES_CORE_WIDTH_STOPS = [
@@ -90,11 +88,21 @@ export const BLOCKAGES_POINT_HALO_RADIUS_STOPS = [
   [12, 16],
 ] as const;
 
-/** Screen-pixel spacing for line ticks — keep wide so zoom-in does not mint a stampede. */
-export const BLOCKAGES_TICK_SPACING_STOPS = [
-  [4, 160],
-  [8, 140],
-  [12, 120],
+/** Ghost track: very faint full corridor visible while fill animates. */
+export const BLOCKAGES_GHOST_WIDTH_STOPS = [
+  [4, 1.5],
+  [6, 2],
+  [8, 2.5],
+  [12, 3],
+] as const;
+
+export const BLOCKAGES_GHOST_OPACITY = 0.12; // Much fainter so thick default is clear
+
+/** Screen-pixel spacing for cue text chips — wide so Country zoom stays calm. */
+export const BLOCKAGES_CUE_SPACING_STOPS = [
+  [4, 200],
+  [8, 180],
+  [12, 160],
 ] as const;
 
 export const BLOCKAGES_MARK_SIZE_STOPS = [
@@ -116,6 +124,13 @@ export type BlockagesMapSurface = {
   getSource: (id: string) => unknown;
   removeLayer: (id: string) => void;
   removeSource: (id: string) => void;
+  setPaintProperty: (layerId: string, name: string, value: unknown) => void;
+  queryRenderedFeatures: (
+    point?: unknown,
+    options?: { layers?: string[] },
+  ) => Array<{ geometry?: { type: string; coordinates: unknown } }>;
+  project: (lngLat: [number, number]) => { x: number; y: number };
+  getZoom: () => number;
 };
 
 export type BlockagesGeoJson = {
@@ -316,6 +331,92 @@ export function ensureBlockageMarkIcon(map: BlockagesMapSurface): void {
   });
 }
 
+/**
+ * Update fill animation progress using opacity (not width/trim).
+ * Progress 0 = invisible, 1 = fully visible at base opacity.
+ * Corridors stay thick always - only opacity changes.
+ */
+export function setBlockagesFillProgress(
+  map: BlockagesMapSurface,
+  progress: number,
+): void {
+  const t = Math.max(0, Math.min(1, progress));
+  
+  // Animate opacity for each layer, respecting their base opacity values
+  const layerOpacities = [
+    { id: BLOCKAGES_LAYER_IDS.glow, baseOpacity: BLOCKAGES_GLOW_OPACITY_FRESH },
+    { id: BLOCKAGES_LAYER_IDS.glowStale, baseOpacity: BLOCKAGES_GLOW_OPACITY_STALE },
+    { id: BLOCKAGES_LAYER_IDS.casing, baseOpacity: BLOCKAGES_CASING_OPACITY_FRESH },
+    { id: BLOCKAGES_LAYER_IDS.casingStale, baseOpacity: BLOCKAGES_CASING_OPACITY_STALE },
+    { id: BLOCKAGES_LAYER_IDS.line, baseOpacity: BLOCKAGES_CORE_OPACITY_FRESH },
+    { id: BLOCKAGES_LAYER_IDS.lineStale, baseOpacity: BLOCKAGES_CORE_OPACITY_STALE },
+  ];
+  
+  for (const { id, baseOpacity } of layerOpacities) {
+    try {
+      if (map.getLayer(id)) {
+        // Multiply base opacity by progress to fade in/out
+        map.setPaintProperty(id, "line-opacity", baseOpacity * t);
+      }
+    } catch {
+      /* layer may not exist yet or style mid-swap */
+    }
+  }
+}
+
+/**
+ * Calculate average screen-pixel length of visible blockage lines.
+ * Used to set animation duration proportional to visible length for constant speed.
+ */
+export function getBlockagesAveragePixelLength(map: BlockagesMapSurface): number {
+  try {
+    const features = map.queryRenderedFeatures(undefined, {
+      layers: [BLOCKAGES_LAYER_IDS.line, BLOCKAGES_LAYER_IDS.lineStale],
+    });
+    
+    if (features.length === 0) return 300; // fallback
+    
+    let totalPixels = 0;
+    let lineCount = 0;
+    
+    for (const feature of features) {
+      const geom = feature.geometry;
+      if (!geom || (geom.type !== "LineString" && geom.type !== "MultiLineString")) continue;
+      
+      const coords =
+        geom.type === "LineString"
+          ? [geom.coordinates as number[][]]
+          : (geom.coordinates as number[][][]);
+      
+      for (const line of coords) {
+        if (!Array.isArray(line) || line.length < 2) continue;
+        
+        let linePixels = 0;
+        for (let i = 1; i < line.length; i++) {
+          const prev = line[i - 1];
+          const curr = line[i];
+          if (!Array.isArray(prev) || !Array.isArray(curr)) continue;
+          
+          const p1 = map.project([prev[0] as number, prev[1] as number]);
+          const p2 = map.project([curr[0] as number, curr[1] as number]);
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          linePixels += Math.sqrt(dx * dx + dy * dy);
+        }
+        
+        if (linePixels > 0) {
+          totalPixels += linePixels;
+          lineCount++;
+        }
+      }
+    }
+    
+    return lineCount > 0 ? totalPixels / lineCount : 300;
+  } catch {
+    return 300; // fallback on error
+  }
+}
+
 export function removeBlockagesMapLayers(map: BlockagesMapSurface): void {
   for (const id of [...BLOCKAGES_PAINT_LAYER_IDS].reverse()) {
     try {
@@ -341,6 +442,7 @@ export function addBlockagesMapLayers(
   map.addSource(BLOCKAGES_SOURCE_ID, {
     type: "geojson",
     data: options.data,
+    lineMetrics: true,
   });
 
   const beforeId = options.beforeId;
@@ -351,6 +453,7 @@ export function addBlockagesMapLayers(
   const coreWidth = zoomWidthExpression(BLOCKAGES_CORE_WIDTH_STOPS);
   const casingWidth = zoomWidthExpression(BLOCKAGES_CASING_WIDTH_STOPS);
   const glowWidth = zoomWidthExpression(BLOCKAGES_GLOW_WIDTH_STOPS);
+  const ghostWidth = zoomWidthExpression(BLOCKAGES_GHOST_WIDTH_STOPS);
   const roundCap = { "line-cap": "round", "line-join": "round" };
 
   const lineLayer = (
@@ -365,6 +468,20 @@ export function addBlockagesMapLayers(
     paint,
     layout: roundCap,
   });
+
+  // Ghost track: faint full corridor always visible (extent readable during fill)
+  map.addLayer(
+    lineLayer(
+      BLOCKAGES_LAYER_IDS.ghost,
+      isLine,
+      {
+        "line-color": statusColor,
+        "line-width": ghostWidth,
+        "line-opacity": BLOCKAGES_GHOST_OPACITY,
+      },
+    ),
+    beforeId,
+  );
 
   map.addLayer(
     lineLayer(
@@ -412,7 +529,6 @@ export function addBlockagesMapLayers(
         "line-color": BLOCKAGES_CASING,
         "line-width": casingWidth,
         "line-opacity": BLOCKAGES_CASING_OPACITY_STALE,
-        "line-dasharray": [2, 1.6],
       },
     ),
     beforeId,
@@ -437,7 +553,6 @@ export function addBlockagesMapLayers(
         "line-color": statusColor,
         "line-width": coreWidth,
         "line-opacity": BLOCKAGES_CORE_OPACITY_STALE,
-        "line-dasharray": [2, 1.6],
       },
     ),
     beforeId,
@@ -494,48 +609,28 @@ export function addBlockagesMapLayers(
   );
   map.addLayer(
     {
-      id: BLOCKAGES_LAYER_IDS.ticks,
+      id: BLOCKAGES_LAYER_IDS.cues,
       type: "symbol",
       source: BLOCKAGES_SOURCE_ID,
       filter: isLine,
       layout: {
-        "symbol-placement": "line",
-        "symbol-spacing": zoomWidthExpression(BLOCKAGES_TICK_SPACING_STOPS),
-        "icon-image": BLOCKAGE_MARK_ICON_ID,
-        "icon-size": zoomWidthExpression(BLOCKAGES_MARK_SIZE_STOPS),
-        "icon-rotation-alignment": "map",
-        "icon-allow-overlap": true,
-        "icon-ignore-placement": true,
+        "symbol-placement": "line-center",  // Center on line, not along it
+        "text-field": ["get", "cue_label"],
+        "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
+        "text-size": 11,
+        "text-allow-overlap": false,
+        "text-ignore-placement": false,
+        "text-padding": 4,
+        "text-offset": [0, -1.5],  // Position above the line
+        "text-rotation-alignment": "viewport",  // Keep horizontal
       },
       paint: {
-        "icon-opacity": [
+        "text-color": statusColor,  // Solid red/orange, no halo
+        "text-opacity": [
           "case",
           isStale,
-          0.78,
-          1,
-        ],
-      },
-    },
-    beforeId,
-  );
-  map.addLayer(
-    {
-      id: BLOCKAGES_LAYER_IDS.marks,
-      type: "symbol",
-      source: BLOCKAGES_SOURCE_ID,
-      filter: ["==", ["geometry-type"], "Point"],
-      layout: {
-        "icon-image": BLOCKAGE_MARK_ICON_ID,
-        "icon-size": zoomWidthExpression(BLOCKAGES_MARK_SIZE_STOPS),
-        "icon-allow-overlap": true,
-        "icon-ignore-placement": true,
-      },
-      paint: {
-        "icon-opacity": [
-          "case",
-          isStale,
-          0.78,
-          1,
+          0.6,  // Match line opacity
+          1.0,
         ],
       },
     },

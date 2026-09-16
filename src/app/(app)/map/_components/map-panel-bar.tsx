@@ -641,7 +641,25 @@ export function MapPanelBar({
                               <Text size="xs" style={{ fontSize: 11 }}>{t("panels.blockagesCurrent")}</Text>
                             </Group>
                             <Group gap={8} wrap="nowrap">
-                              <BlockageLineSwatch color={BLOCKAGES_NOT_PASSABLE} dashed />
+                              <Box
+                                w={22}
+                                h={8}
+                                style={{
+                                  backgroundColor: BLOCKAGES_CASING,
+                                  borderRadius: 2,
+                                  padding: "2px 2px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  flexShrink: 0,
+                                  boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.12)",
+                                }}
+                              >
+                                <Box
+                                  w="100%"
+                                  h={3}
+                                  style={{ backgroundColor: BLOCKAGES_NOT_PASSABLE, borderRadius: 1, opacity: 0.78 }}
+                                />
+                              </Box>
                               <Text size="xs" style={{ fontSize: 11 }}>{t("panels.blockagesStale")}</Text>
                             </Group>
                           </Stack>

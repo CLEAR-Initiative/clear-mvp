@@ -43,6 +43,8 @@ export type BlockagesMapProperties = {
   name: string | null;
   /** Always set — name, else remark snippet, else "Road · {status}". */
   label: string;
+  /** Compact mid-line chip for pre-hover cue: cause snippet or status + age. */
+  cue_label: string;
   status_code: number | string | null;
   status: string | null;
   status_as_of: string | null;
@@ -234,6 +236,41 @@ export function formatBlockagesFreshness(
   return `${day} (${ago})`;
 }
 
+/** Compact age for mid-line cue chips: `12d` / `today` / `?`. */
+export function formatBlockagesAgeShort(ageDays: number | null): string {
+  if (ageDays == null) return "?";
+  if (ageDays === 0) return "today";
+  return `${ageDays}d`;
+}
+
+/** Mid-line cue: cause snippet or status, then ` · {age}`, append `·stale` when old. */
+export function blockagesCueLabel(p: Record<string, unknown>): string {
+  const ageDays = typeof p.age_days === "number" ? p.age_days : null;
+  const stale = p.stale === 1 || p.stale === "1";
+  
+  // Cause snippet: first sentence of remark, ~28 chars
+  const remark = typeof p.status_remark === "string" ? p.status_remark.trim() : "";
+  let causeSnippet = "";
+  if (remark && remark.toLowerCase() !== "unknown") {
+    const sentence = remark.split(/[.\n]/)[0]?.trim() ?? "";
+    if (sentence) {
+      causeSnippet = sentence.length > 28 ? sentence.slice(0, 28).trim() + "…" : sentence;
+    }
+  }
+  
+  // Fallback to status
+  const statusRaw = typeof p.status === "string" ? p.status : null;
+  const status = statusRaw
+    ? statusRaw.replace(/Damanged/g, "Damaged")
+    : "Access constraint";
+  
+  const prefix = causeSnippet || status;
+  const age = formatBlockagesAgeShort(ageDays);
+  const staleSuffix = stale ? "·stale" : "";
+  
+  return `${prefix} · ${age}${staleSuffix}`;
+}
+
 function parseReliabilityCode(raw: unknown): number | null {
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;
   if (typeof raw === "string" && raw.trim() !== "") {
@@ -263,11 +300,14 @@ function slimProperties(p: Record<string, unknown>): BlockagesMapProperties | nu
     (p.status_as_of as string | null | undefined) ?? null;
   const ageDays = ageDaysSince(statusAsOf);
   const relCode = parseReliabilityCode(p.source_reliability_code);
+  const stale = isBlockagesStatusStale(ageDays) ? 1 : 0;
+  const propsForCue = { ...p, name, status_remark: remark, status, age_days: ageDays, stale };
   return {
     feature_type: p.feature_type,
     route_id: (p.route_id as string | number | null | undefined) ?? null,
     name,
-    label: blockagesDisplayLabel({ ...p, name, status_remark: remark, status }),
+    label: blockagesDisplayLabel(propsForCue),
+    cue_label: blockagesCueLabel(propsForCue),
     status_code: (p.status_code as number | string | null | undefined) ?? null,
     status,
     status_as_of: statusAsOf,
@@ -278,7 +318,7 @@ function slimProperties(p: Record<string, unknown>): BlockagesMapProperties | nu
     source_reliability:
       relCode != null ? (LOGIE_RELIABILITY_LABELS[relCode] ?? String(relCode)) : null,
     age_days: ageDays,
-    stale: isBlockagesStatusStale(ageDays) ? 1 : 0,
+    stale,
   };
 }
 

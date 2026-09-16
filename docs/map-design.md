@@ -115,15 +115,24 @@ one-off numbers in `crisis-map.tsx`.
   Field Program Manager can scan corridors at z5–8 without hovering.
 - **Width curve** — Country-band anchors (z6 core 4px / z8 5.5px) carry
   the use case. Do not tune only the Site end.
-- **Fresh vs stale** — stale (≥15 days) stays painted: same width, dashed
-  core + dashed casing, opacity ≥ 0.75. Never hide; never fade to 0.45.
-- **X marks** — sparse high-contrast white disc + dark X along the line
-  and once on each bridge point. They are corridor decoration ("closed
-  access"), not separate incidents. Spacing stays wide (≥120px) so
-  zoom-in does not mint a stampede of fake features.
+- **Fresh vs stale** — stale (≥15 days) stays painted: same width, solid vector
+  (no dashes), 60% opacity. Fresh (<15 days) uses 100% opacity. Opacity is the
+  primary staleness indicator. Never hide; never fade below readable.
+- **Fill animation** — **Corridors stay thick always** (width never changes). On layer
+  toggle: smooth opacity fade-in (0→1) over 800ms. On zoom changes: subtle opacity pulse
+  (1→0.3→1) 2 seconds after stabilizing. Duration is zoom-adaptive: faster at country zoom,
+  slower at high zoom to maintain constant perceived speed. Animation uses `line-opacity` only,
+  not `line-trim-offset` or width changes. Very faint ghost track (0.12 opacity) hints at
+  full extent. **Default resting state is always thick and fully opaque** — corridors remain
+  prominent for navigation.
+- **Cue chips** — bold text labels positioned above corridor center (`line-center`,
+  offset -1.5) showing cause snippet or status + age (e.g. `Flooded · 12d`,
+  `Not Passable · 42d·stale`). Solid color (red/orange, no halo) matching corridor
+  status. Opacity matches corridor: 100% fresh, 60% stale. No marks or icons —
+  the animated corridor + cue text is the full visual treatment.
 - **Stack** — above Roads / population, below settlement labels.
-- **Hover** — popup copy and freshness rules stay in `crisis-map.tsx`;
-  this section is paint only.
+- **Hover** — slim 3-line popup (title, status·age, optional remark). Dropped
+  long stale essay, source footer, and reliability from the old hover card.
 
 ## Layer stack (bottom to top)
 
@@ -134,7 +143,7 @@ one-off numbers in `crisis-map.tsx`.
 5. Mapbox admin lines / A1 fallback borders
 6. Backend admin boundaries (A1/A2 lines), focus country border
 7. Population choropleth (opt-in)
-8. **Blockages** (opt-in; glow → white casing → status core → X ticks; point + mark for bridges)
+8. **Blockages** (opt-in; ghost → glow → casing → core → cue text; point halo + circle for bridges)
 9. Labels (style symbols; settlement labels relaxed inside focus country)
 10. Markers, cluster donuts, marker detail (DOM); Point altitude probe (Topography)
 
@@ -158,7 +167,7 @@ one-off numbers in `crisis-map.tsx`.
 Boundaries are blue, corridors tan, markers orange/severity - three
 distinguishable information channels at every zoom and theme. **Blockages**
 are a fourth channel: they must not read as “another road color.” White
-casing + glow + Country-band width + sparse X ticks are what separate them
+casing + glow + Country-band width + fill animation + cue chips are what separate them
 from tan corridors and from severity pins. On the
 point density band, severity stays the disc color and type is a white
 SVG glyph (`resolveMarkerIconSlug` → `/images/ui-kit/signals/icons/`).
