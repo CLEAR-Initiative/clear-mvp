@@ -40,7 +40,6 @@ export function MapPreloader({
   dataView = "alert",
   showMessages = true,
 }: MapPreloaderProps) {
-  const isDark = useIsDark();
   const [messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
@@ -60,9 +59,9 @@ export function MapPreloader({
 
   return (
     <Box
+      className="map-preloader-bg"
       style={{
         ...PRELOADER_LAYER,
-        background: isDark ? "rgba(17, 17, 17, 0.85)" : "rgba(250, 250, 250, 0.85)",
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
       }}
@@ -134,9 +133,9 @@ function MapErrorState({ message, onRetry }: MapErrorStateProps) {
 
   return (
     <Box
+      className="map-preloader-error-bg"
       style={{
         ...PRELOADER_LAYER,
-        background: isDark ? "rgba(17, 17, 17, 0.95)" : "rgba(250, 250, 250, 0.95)",
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
         display: "flex",

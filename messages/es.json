@@ -617,6 +617,7 @@
       "rememberMe": "Recordarme",
       "forgotPassword": "¿Olvidó su contraseña?",
       "submit": "Iniciar sesión",
+      "success": "Sesión iniciada",
       "failed": "Error al iniciar sesión",
       "unexpectedError": "Se produjo un error inesperado",
       "demo": {

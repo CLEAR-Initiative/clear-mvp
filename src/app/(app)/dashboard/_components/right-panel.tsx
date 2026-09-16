@@ -261,12 +261,12 @@ export function RightPanel({
         onClose={closeInformInfo}
         title={t("rightPanel.informModal.title")}
         size="md"
-        styles={{ title: { fontSize: 14, fontWeight: 700, color: "#171717" }, body: { paddingTop: 4 } }}
+        styles={{ title: { fontSize: 14, fontWeight: 700, color: "var(--color-text-primary)" }, body: { paddingTop: 4 } }}
       >
         <Text style={{ fontSize: 13, color: "#525252", marginBottom: 12, lineHeight: 1.6 }}>
           {t.rich("rightPanel.informModal.intro", { strong: (chunks) => <strong>{chunks}</strong> })}
         </Text>
-        <Text style={{ fontSize: 12, fontWeight: 600, color: "#171717", marginBottom: 6 }}>{t("rightPanel.informModal.pillarsHeading")}</Text>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 6 }}>{t("rightPanel.informModal.pillarsHeading")}</Text>
         <List spacing={4} mb={14} styles={{ item: { fontSize: 12, color: "#525252", lineHeight: 1.6 } }}>
           <List.Item>{t.rich("rightPanel.informModal.pillarHazard", { strong: (chunks) => <strong>{chunks}</strong> })}</List.Item>
           <List.Item>{t.rich("rightPanel.informModal.pillarVulnerability", { strong: (chunks) => <strong>{chunks}</strong> })}</List.Item>
@@ -308,7 +308,7 @@ export function RightPanel({
                   className={pin.severity === "critical" ? "animate-pulse" : ""}
                 />
                 <Box style={{ flex: 1, minWidth: 0 }}>
-                  <Text fw={600} c="#171717" style={{ fontSize: 13 }} lineClamp={1}>
+                  <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }} lineClamp={1}>
                     {pin.name}
                   </Text>
                   <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
@@ -362,7 +362,7 @@ export function RightPanel({
                     style={{ backgroundColor: regionColor, borderRadius: "50%", flexShrink: 0 }}
                   />
                   <Box style={{ flex: 1, minWidth: 0 }}>
-                    <Text fw={600} c="#171717" style={{ fontSize: 13 }}>{activity}</Text>
+                    <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>{activity}</Text>
                     <Text c="var(--color-text-muted)" style={{ fontSize: 11 }}>
                       {nrcOperationDescriptions[activity as keyof typeof nrcOperationDescriptions] ?? ""}
                     </Text>
@@ -396,7 +396,7 @@ export function RightPanel({
                       <Group justify="space-between" mb={4}>
                         <Group gap={6} style={{ flex: 1, minWidth: 0 }}>
                           <IconComponent size={13} color={color} />
-                          <Text fw={500} c="#171717" style={{ fontSize: 12 }} lineClamp={1}>
+                          <Text fw={500} c="var(--color-text-primary)" style={{ fontSize: 12 }} lineClamp={1}>
                             {indicator.name}
                           </Text>
                         </Group>
@@ -486,7 +486,7 @@ export function RightPanel({
             </Box>
           </Box>
         ) : (
-          <Text style={{ fontSize: 13, color: "#737373" }}>{t("rightPanel.noLocationInfo")}</Text>
+          <Text style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{t("rightPanel.noLocationInfo")}</Text>
         )}
       </CollapsibleSection>
 
@@ -650,7 +650,7 @@ export function RightPanel({
             </Group>
           </Box>
         ) : (
-          <Text style={{ fontSize: 13, color: "#737373" }}>{t("rightPanel.noResponseData")}</Text>
+          <Text style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{t("rightPanel.noResponseData")}</Text>
         )}
       </CollapsibleSection>
 
@@ -688,7 +688,7 @@ export function RightPanel({
             cursor: "pointer",
             transition: "all 0.15s",
             background: activeView === "nrc-global" ? "#E85D3D" : "white",
-            color: activeView === "nrc-global" ? "white" : "#171717",
+            color: activeView === "nrc-global" ? "white" : "var(--color-text-primary)",
             borderColor: activeView === "nrc-global" ? "#E85D3D" : "#E5E5E5",
           }}
         >
@@ -722,14 +722,14 @@ export function RightPanel({
                 >
                   <Group gap={8}>
                     <Box w={10} h={10} style={{ backgroundColor: rColor, borderRadius: "50%" }} />
-                    <Text fw={600} style={{ fontSize: 12, color: "#171717" }}>{region}</Text>
+                    <Text fw={600} style={{ fontSize: 12, color: "var(--color-text-primary)" }}>{region}</Text>
                     <Badge size="xs" variant="light" color="gray" style={{ fontSize: 9 }}>
                       {regionCountries.length}
                     </Badge>
                   </Group>
                   <IconChevronDown
                     size={16}
-                    color="#737373"
+                    color="var(--color-text-muted)"
                     style={{
                       transition: "transform 0.2s",
                       transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
@@ -761,7 +761,7 @@ export function RightPanel({
                         <IconMapPin size={14} color="#E85D3D" style={{ marginTop: 2, flexShrink: 0 }} />
                         <Box style={{ flex: 1, minWidth: 0 }}>
                           <Group gap={4} wrap="nowrap">
-                            <Text fw={500} style={{ fontSize: 12, color: "#171717" }}>{location.country}</Text>
+                            <Text fw={500} style={{ fontSize: 12, color: "var(--color-text-primary)" }}>{location.country}</Text>
                             {selectedCountry === location.country && (
                               <Badge size="xs" style={{ fontSize: 8, background: "#E85D3D", color: "white" }}>
                                 {t("rightPanel.selectedBadge")}
@@ -770,7 +770,7 @@ export function RightPanel({
                           </Group>
                           {location.description && (
                             <Text
-                              style={{ fontSize: 10, color: "#737373", marginTop: 2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
+                              style={{ fontSize: 10, color: "var(--color-text-muted)", marginTop: 2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
                             >
                               {location.description}
                             </Text>

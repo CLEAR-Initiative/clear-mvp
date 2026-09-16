@@ -362,9 +362,15 @@ export function NavSidebar({
           })}
         </Box>
 
-        {/* Mobile drawer footer */}
-        <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3] }}>
-          {/* Feedback button */}
+        {/* Mobile drawer footer — flat actions (no nested Menu; Sign out always visible). */}
+        <Box
+          style={{
+            borderTop: `1px solid ${colors.border}`,
+            padding: spacingPx[3],
+            paddingBottom: `max(${spacingPx[3]}px, env(safe-area-inset-bottom, 0px))`,
+            flexShrink: 0,
+          }}
+        >
           <UnstyledButton
             onClick={() => { closeMobile(); openFeedback(); }}
             style={{
@@ -377,6 +383,7 @@ export function NavSidebar({
               color: colors.textSecondary,
               marginBottom: spacingPx[1],
               background: "transparent",
+              minHeight: 44,
             }}
             className="hover:bg-[var(--color-bg-muted)] transition-colors"
           >
@@ -384,105 +391,134 @@ export function NavSidebar({
             <Text fw={500} style={{ fontSize: fontSizesPx.lg }}>{t("feedback")}</Text>
           </UnstyledButton>
 
-          {/* User Profile Card */}
-          {authData?.user && (
-            <Menu position="top" offset={8} withArrow>
-              <Menu.Target>
-                <UnstyledButton
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: spacingPx[3],
-                    padding: spacingPx[2],
-                    borderRadius: 8,
-                    background: "var(--color-bg-elevated)",
-                    border: "1px solid var(--color-border)",
-                    width: "100%",
-                    cursor: "pointer",
-                    marginBottom: spacingPx[4],
-                  }}
-                  className="hover:bg-[var(--color-bg-hover)] transition-colors"
-                >
-                  {/* Avatar */}
-                  <Box
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 9999,
-                      border: "1px solid var(--color-accent)",
-                      background: "var(--color-accent-light)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Text fw={600} size="sm" c="var(--color-accent)">
-                      {authData.user.email?.[0]?.toUpperCase() ?? "U"}
-                    </Text>
-                  </Box>
-
-                  {/* User info */}
-                  <Box style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-                    <Text
-                      size="xs"
-                      fw={500}
-                      c="var(--color-text-primary)"
-                      style={{ 
-                        lineHeight: 1.3,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {authData.user.email}
-                    </Text>
-                    <Text
-                      size="10px"
-                      c="var(--color-text-muted)"
-                      style={{ 
-                        lineHeight: 1.5,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {isAdmin ? "Admin Account" : "User Account"}
-                    </Text>
-                  </Box>
-                </UnstyledButton>
-              </Menu.Target>
-
-              <Menu.Dropdown>
-                {isAdmin && (
-                  <Menu.Item
-                    component={Link}
-                    href="/admin"
-                    onClick={closeMobile}
-                    leftSection={<IconShieldCog size={16} />}
-                  >
-                    {t("admin")}
-                  </Menu.Item>
-                )}
-                <Menu.Item
-                  component={Link}
-                  href="/profile"
-                  onClick={closeMobile}
-                  leftSection={<IconSettings size={16} />}
-                >
-                  {t("settings")}
-                </Menu.Item>
-                <Menu.Divider />
-                <Menu.Item
-                  onClick={handleLogout}
-                  leftSection={<IconDoorExit size={16} />}
-                  color="red"
-                >
-                  {t("signOut")}
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
+          {isAdmin && (
+            <UnstyledButton
+              component={Link}
+              href="/admin"
+              onClick={closeMobile}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: spacingPx[3],
+                padding: spacingPx[3],
+                width: "100%",
+                borderRadius: 6,
+                color: colors.textSecondary,
+                marginBottom: spacingPx[1],
+                background: "transparent",
+                minHeight: 44,
+                textDecoration: "none",
+              }}
+              className="hover:bg-[var(--color-bg-muted)] transition-colors"
+            >
+              <IconShieldCog size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
+              <Text fw={500} style={{ fontSize: fontSizesPx.lg }}>{t("admin")}</Text>
+            </UnstyledButton>
           )}
+
+          <UnstyledButton
+            component={Link}
+            href="/profile"
+            onClick={closeMobile}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: spacingPx[3],
+              padding: spacingPx[3],
+              width: "100%",
+              borderRadius: 6,
+              color: colors.textSecondary,
+              marginBottom: spacingPx[1],
+              background: "transparent",
+              minHeight: 44,
+              textDecoration: "none",
+            }}
+            className="hover:bg-[var(--color-bg-muted)] transition-colors"
+          >
+            <IconSettings size={18} style={{ opacity: 0.7, flexShrink: 0 }} />
+            <Text fw={500} style={{ fontSize: fontSizesPx.lg }}>{t("settings")}</Text>
+          </UnstyledButton>
+
+          {authData?.user && (
+            <Box
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: spacingPx[3],
+                padding: spacingPx[2],
+                borderRadius: 8,
+                background: "var(--color-bg-elevated)",
+                border: "1px solid var(--color-border)",
+                width: "100%",
+                marginTop: spacingPx[2],
+                marginBottom: spacingPx[2],
+              }}
+            >
+              <Box
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 9999,
+                  border: "1px solid var(--color-accent)",
+                  background: "var(--color-accent-light)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Text fw={600} size="sm" c="var(--color-accent)">
+                  {authData.user.email?.[0]?.toUpperCase() ?? "U"}
+                </Text>
+              </Box>
+              <Box style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                <Text
+                  size="xs"
+                  fw={500}
+                  c="var(--color-text-primary)"
+                  style={{
+                    lineHeight: 1.3,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {authData.user.email}
+                </Text>
+                <Text
+                  size="10px"
+                  c="var(--color-text-muted)"
+                  style={{
+                    lineHeight: 1.5,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {isAdmin ? "Admin Account" : "User Account"}
+                </Text>
+              </Box>
+            </Box>
+          )}
+
+          <UnstyledButton
+            onClick={() => { void handleLogout(); }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: spacingPx[3],
+              padding: spacingPx[3],
+              width: "100%",
+              borderRadius: 6,
+              color: colors.critical,
+              background: "transparent",
+              minHeight: 44,
+            }}
+            className="hover:bg-[var(--color-bg-muted)] transition-colors"
+          >
+            <IconDoorExit size={18} style={{ flexShrink: 0 }} />
+            <Text fw={600} style={{ fontSize: fontSizesPx.lg }}>{t("signOut")}</Text>
+          </UnstyledButton>
         </Box>
       </Drawer>
 
@@ -497,18 +533,18 @@ export function NavSidebar({
           // Keep layout slot on non-map routes; overlay mode is out-of-flow.
           minWidth: isMapRoute ? undefined : (collapsed ? COLLAPSED_W : EXPANDED_W),
           height: "100vh",
-          position: isMapRoute ? "fixed" : "sticky",
-          top: 0,
-          left: isMapRoute ? 0 : undefined,
-          zIndex: isMapRoute ? 40 : undefined,
-          display: "flex",
-          flexDirection: "column",
-          background: isMapRoute
-            ? "color-mix(in srgb, var(--color-bg-white) 42%, transparent)"
-            : colors.bgWhite,
-          backdropFilter: isMapRoute ? "blur(16px) saturate(1.2)" : undefined,
-          WebkitBackdropFilter: isMapRoute ? "blur(16px) saturate(1.2)" : undefined,
-          borderInlineEnd: `1px solid ${isMapRoute ? "color-mix(in srgb, var(--color-border) 55%, transparent)" : colors.border}`,
+        position: isMapRoute ? "fixed" : "sticky",
+        top: 0,
+        left: isMapRoute ? 0 : undefined,
+        zIndex: isMapRoute ? 40 : undefined,
+        display: "flex",
+        flexDirection: "column",
+        background: isMapRoute
+          ? "var(--map-frost-bg)"
+          : colors.bgWhite,
+        backdropFilter: isMapRoute ? "var(--map-frost-blur)" : undefined,
+        WebkitBackdropFilter: isMapRoute ? "var(--map-frost-blur)" : undefined,
+        borderInlineEnd: `1px solid ${isMapRoute ? "var(--map-frost-border)" : colors.border}`,
           transition: `width ${TRANSITION}, min-width ${TRANSITION}`,
           overflow: "hidden",
           flexShrink: 0,
@@ -516,9 +552,9 @@ export function NavSidebar({
       >
         {/* ── Logo + toggle ─────────────────────────────────────── */}
         <Box
-          style={{
-            height: 64,
-            borderBottom: `1px solid ${isMapRoute ? "color-mix(in srgb, var(--color-border) 70%, transparent)" : colors.border}`,
+        style={{
+          height: 64,
+          borderBottom: `1px solid ${isMapRoute ? "var(--map-frost-border)" : colors.border}`,
             display: "flex",
             alignItems: "flex-start",
             justifyContent: "space-between",

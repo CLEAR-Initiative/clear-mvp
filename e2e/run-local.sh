@@ -57,5 +57,8 @@ echo "── seeding database (prisma/seed.ts) ──"
 echo "── seeding ground-intel fixture (e2e/support/ground-seed.ts) ──"
 "${COMPOSE[@]}" run --rm seed-ground
 
+echo "── rewriting seeded event types to GLIDE codes (e2e/support/event-types-seed.ts) ──"
+"${COMPOSE[@]}" run --rm seed-event-types
+
 echo "── running Playwright smoke suite ──"
 bunx playwright test "$@"

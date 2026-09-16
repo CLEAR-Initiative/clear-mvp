@@ -617,6 +617,7 @@
       "rememberMe": "Remember me",
       "forgotPassword": "Forgot password?",
       "submit": "Sign In",
+      "success": "Signed in",
       "failed": "Login failed",
       "unexpectedError": "An unexpected error occurred",
       "demo": {
