@@ -134,6 +134,31 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # One-shot: rewrites the seeded events' `types` from clear-api's plain slugs
+  # ("conflict", "flood") to the GLIDE codes production events carry, so the
+  # Detection type filter (which emits GLIDE codes) can match them. Same image
+  # and bind-mount pattern as `seed-ground`. Runs after `seed`.
+  seed-event-types:
+    build:
+      context: ../clear-api
+      target: build
+    image: clear-e2e-seed:latest
+    command: ["bun", "/app/e2e-event-types-seed.ts"]
+    volumes:
+      - ./e2e/support/event-types-seed.ts:/app/e2e-event-types-seed.ts:ro
+    environment:
+      DATABASE_URL: postgres://clear:clear@db:5432/clear
+      BETTER_AUTH_SECRET: E2E_SMOKE_BETTER_AUTH_SECRET_0123456789abcdef
+      BETTER_AUTH_URL: http://localhost:4000
+      CELERY_BROKER_URL: redis://redis:6379/0
+      ADMIN_EMAIL: admin@clear.dev
+      ADMIN_PASSWORD: password123
+      NODE_ENV: production
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: "no"
+
   web:
     build:
       context: .
