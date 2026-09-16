@@ -70,7 +70,8 @@ export function RegionPicker({ states, value, onChange, label }: RegionPickerPro
     e.stopPropagation();
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(stateId) ? next.delete(stateId) : next.add(stateId);
+      if (next.has(stateId)) next.delete(stateId);
+      else next.add(stateId);
       return next;
     });
   };

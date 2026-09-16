@@ -725,7 +725,7 @@ export function CrisisMap({
   const seismicAnimRef = useRef<number | null>(null);
   const shakemapPaintIdsRef = useRef<Set<string>>(new Set());
   const shakemapHoverBoundRef = useRef<Set<string>>(new Set());
-  const shakemapPopupRef = useRef<any>(null);
+  const shakemapPopupRef = useRef<MapboxGLAny>(null);
   const [loaded, setLoaded] = useState(false);
   /** Host inside `.mapboxgl-map` so overlays can sit between canvas and markers. */
   const [mapOverlayHost, setMapOverlayHost] = useState<HTMLElement | null>(null);
@@ -2568,7 +2568,7 @@ export function CrisisMap({
     // then briefly hold (~700ms) and fade out so "More details" remains clickable.
     const POPUP_HOLD_MS = 700;
     const POPUP_FADE_MS = 220;
-    const popup = new (window as any).mapboxgl.Popup({
+    const popup = new (window as MapboxGLAny).mapboxgl.Popup({
       closeButton: false,
       closeOnClick: false,
       maxWidth: "300px",
@@ -2726,11 +2726,11 @@ export function CrisisMap({
         },
       }, beforeId);
 
-      m.on("mouseenter", UNCLUSTERED_LAYER, (e: any) => {
+      m.on("mouseenter", UNCLUSTERED_LAYER, (e: MapboxGLAny) => {
         cancelPopupClose();
         m.getCanvas().style.cursor = "pointer";
         const coords = e.features?.[0]?.geometry?.coordinates as [number, number];
-        const props = e.features?.[0]?.properties as Record<string, any>;
+        const props = e.features?.[0]?.properties as Record<string, MapboxGLAny>;
         if (!coords || !props) return;
 
         const mag = escapeHtml(props.mag ? `M ${props.mag}` : "Unknown magnitude");
@@ -2763,15 +2763,15 @@ export function CrisisMap({
       });
 
       // Click to expand clusters
-      m.on("click", CLUSTER_LAYER, (e: any) => {
+      m.on("click", CLUSTER_LAYER, (e: MapboxGLAny) => {
         const features = m.queryRenderedFeatures(e.point, {
           layers: [CLUSTER_LAYER],
         });
         const clusterId = features[0]?.properties?.cluster_id;
         if (clusterId == null) return;
 
-        const source = m.getSource(SOURCE) as any;
-        source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
+        const source = m.getSource(SOURCE) as MapboxGLAny;
+        source.getClusterExpansionZoom(clusterId, (err: MapboxGLAny, zoom: number) => {
           if (err) return;
           m.easeTo({
             center: features[0]!.geometry.coordinates as [number, number],
@@ -2840,7 +2840,7 @@ export function CrisisMap({
     }
 
     if (!shakemapPopupRef.current) {
-      shakemapPopupRef.current = new (window as any).mapboxgl.Popup({
+      shakemapPopupRef.current = new (window as MapboxGLAny).mapboxgl.Popup({
         closeButton: false,
         closeOnClick: false,
         maxWidth: "320px",
@@ -2854,7 +2854,7 @@ export function CrisisMap({
     const bindBandHover = (layerId: string, color: string) => {
       if (shakemapHoverBoundRef.current.has(layerId)) return;
       shakemapHoverBoundRef.current.add(layerId);
-      m.on("mouseenter", layerId, (e: any) => {
+      m.on("mouseenter", layerId, (e: MapboxGLAny) => {
         m.getCanvas().style.cursor = "pointer";
         const coords = e.lngLat;
         const props = e.features?.[0]?.properties;

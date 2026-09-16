@@ -61,7 +61,7 @@ Copy [`.env.example`](./.env.example) to `.env` and fill in:
 bun dev            # Turbopack dev server on :3000
 bun run build      # Production build
 bun start          # Start production server (after build)
-bun run lint       # next lint (ESLint)
+bun run lint       # eslint . (flat config: eslint.config.mjs)
 bun run typecheck  # tsc --noEmit
 bun run check      # lint + typecheck
 ```
