@@ -6,6 +6,9 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   devIndicators: false,
+  // Lint runs as its own CI gate (`bun run lint` in unit-tests.yml); skipping it
+  // here keeps Docker builds, which are already memory-tight, from paying for it twice.
+  eslint: { ignoreDuringBuilds: true },
   output: "standalone",
   // Force @sentry/nextjs and the instrumentation config files into the
   // standalone trace. Without this, Next.js's file tracer can miss them
