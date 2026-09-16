@@ -3,6 +3,8 @@ import {
   PIN_ELEVATE_FULL_PITCH,
   PIN_ELEVATE_START_PITCH,
   applyPinElevation,
+  bottomAnchorGlyphCenterOffset,
+  clientRectCenterInContainer,
   parseLocationPinRole,
   pinElevationFactor,
   shouldElevatePointPin,
@@ -96,5 +98,38 @@ describe("applyPinElevation", () => {
     expect(head.style.bottom).toBe("0px");
     expect(stem.style.transform).toBe("scaleY(0)");
     expect(stem.style.opacity).toBe("0");
+  });
+});
+
+describe("bottomAnchorGlyphCenterOffset", () => {
+  it("offsets flat elevated pins by half the head above the tip", () => {
+    expect(
+      bottomAnchorGlyphCenterOffset({
+        headSizePx: 24,
+        maxStemPx: 20,
+        elevationFactor: 0,
+      }),
+    ).toEqual({ x: 0, y: -12 });
+  });
+
+  it("includes raised stem height at full elevation", () => {
+    expect(
+      bottomAnchorGlyphCenterOffset({
+        headSizePx: 24,
+        maxStemPx: 20,
+        elevationFactor: 1,
+      }),
+    ).toEqual({ x: 0, y: -32 });
+  });
+});
+
+describe("clientRectCenterInContainer", () => {
+  it("maps a glyph rect to container-relative project() space", () => {
+    expect(
+      clientRectCenterInContainer(
+        { left: 220, top: 140, width: 24, height: 24 },
+        { left: 100, top: 50 },
+      ),
+    ).toEqual({ x: 132, y: 102 });
   });
 });

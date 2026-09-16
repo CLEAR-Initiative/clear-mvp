@@ -145,7 +145,16 @@ body {
 /* /map: nav overlays the canvas — keep floating chrome glued to the sidebar's
    right edge (same gap expanded or collapsed). Match nav width transition.
    Desktop only: below `sm` the aside is hidden (Drawer), so offsets must not apply.
-   Use `left` (not padding-left) so Mantine px={} can't win on specificity. */
+   Use `left` (not padding-left) so Mantine px={} can't win on specificity.
+   `data-nav-overlay` is SSR'd on /map (root layout + x-pathname) so filters /
+   layers paint at the final left on reload — not at left:0 then slide (#571).
+   `--clear-nav-w` is owned by NavSidebar (documentElement) so collapse/expand
+   can move chrome in lockstep with the sidebar (200ms ease).
+   `data-nav-collapsed` seeds the CSS default from cookie before NavSidebar
+   runs (hard refresh must not flash expanded→collapsed). */
+body[data-nav-collapsed="true"] {
+  --clear-nav-w: 80px;
+}
 @media (min-width: 48em) {
   body[data-nav-overlay="true"] [data-map-chrome-left] {
     left: calc(var(--clear-nav-w, 240px) + 1rem) !important;
@@ -154,7 +163,8 @@ body {
   body[data-nav-overlay="true"] [data-map-chrome-bottom] {
     left: var(--clear-nav-w, 240px);
   }
-  /* Motion gated so first /map paint doesn't slide Layers/Filters in. */
+  /* Motion gated so first /map paint doesn't slide Layers/Filters in.
+     Collapse/expand keeps this flag set so chrome tracks --clear-nav-w. */
   body[data-nav-overlay="true"][data-nav-offset-motion="true"] [data-map-chrome-left],
   body[data-nav-overlay="true"][data-nav-offset-motion="true"] [data-map-chrome-top],
   body[data-nav-overlay="true"][data-nav-offset-motion="true"] [data-map-chrome-bottom] {
@@ -185,6 +195,55 @@ body[data-nav-overlay="true"][data-map-basemap] [data-map-chrome-bottom] {
   --color-text-secondary: #f5f5f5;
   --color-text-muted: #f5f5f5;
   --map-frost-hover-text: #a3a3a3;
+}
+
+/*
+ * Map frost surface tokens: translucent backgrounds + blur so basemap reads through.
+ * Both themes use 42% opacity to match prod (better contrast/legibility).
+ * Scoped to map routes only via data-nav-overlay.
+ */
+body[data-nav-overlay="true"] {
+  --map-frost-bg: color-mix(in srgb, var(--color-bg-white) 42%, transparent);
+  --map-frost-bg-muted: color-mix(in srgb, var(--color-bg-muted) 42%, transparent);
+  --map-frost-border: color-mix(in srgb, var(--color-border) 55%, transparent);
+  --map-frost-blur: blur(16px) saturate(1.2);
+}
+
+/* Map preloader background - SSR-safe (no flash on hard refresh) */
+.map-preloader-bg {
+  background: rgba(250, 250, 250, 0.85);
+}
+
+@media (prefers-color-scheme: dark) {
+  .map-preloader-bg {
+    background: rgba(17, 17, 17, 0.85);
+  }
+}
+
+[data-mantine-color-scheme="dark"] .map-preloader-bg {
+  background: rgba(17, 17, 17, 0.85);
+}
+
+[data-mantine-color-scheme="light"] .map-preloader-bg {
+  background: rgba(250, 250, 250, 0.85);
+}
+
+.map-preloader-error-bg {
+  background: rgba(250, 250, 250, 0.95);
+}
+
+@media (prefers-color-scheme: dark) {
+  .map-preloader-error-bg {
+    background: rgba(17, 17, 17, 0.95);
+  }
+}
+
+[data-mantine-color-scheme="dark"] .map-preloader-error-bg {
+  background: rgba(17, 17, 17, 0.95);
+}
+
+[data-mantine-color-scheme="light"] .map-preloader-error-bg {
+  background: rgba(250, 250, 250, 0.95);
 }
 
 /* Mapbox zoom control dark mode overrides */

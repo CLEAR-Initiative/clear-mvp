@@ -113,6 +113,15 @@ function pointLocation(event: GqlEvent) {
   return null;
 }
 
+function eventDisplayTitle(event: GqlEvent): string {
+  const titled = event.title?.trim();
+  if (titled) return titled;
+  // Prefer a human type label over raw glide codes ("ba", "rl").
+  const typeLabel = event.types.find((t) => t.trim().length > 3)?.trim();
+  if (typeLabel) return typeLabel;
+  return "Event";
+}
+
 function eventToMarker(
   event: GqlEvent,
   loc: NonNullable<ReturnType<typeof pointFromLocation>>,
@@ -122,7 +131,7 @@ function eventToMarker(
     id: hashId(event.id, loc.loc.id),
     lng: loc.lng,
     lat: loc.lat,
-    title: event.title ?? event.types[0] ?? "Event",
+    title: eventDisplayTitle(event),
     severity: mapSeverity(event.severity),
     description: event.description ?? undefined,
     region: resolveLocationName(loc.loc, { locationById }) ?? undefined,
@@ -177,6 +186,57 @@ export function focusEventToMarkers(
   const eventMarkers = eventsToMarkers([event], locationById);
   const signalMarkers = signalsToMarkers(event.signals ?? [], locationById);
   return [...eventMarkers, ...signalMarkers];
+}
+
+/**
+ * Full Map deep-link for a crisis: every linked event pin (not a single
+ * crisis centroid). Falls back to the crisis pin when no event has a Point.
+ */
+export function focusCrisisToMarkers(
+  crisis: GqlCrisis,
+  locationById?: Map<string, { name: string; level: number }>,
+): CrisisMarker[] {
+  const markers: CrisisMarker[] = [];
+  for (const event of crisis.events ?? []) {
+    // crises.get returns full EVENT_FIELDS (title/severity/…); list payloads are
+    // slimmer. Pass display fields through so the detail sheet is not left with
+    // null title → raw type codes like "ba" / "rl".
+    const point = pointLocation(event as GqlEvent);
+    if (!point) continue;
+    const title =
+      event.title?.trim() ||
+      crisis.title?.trim() ||
+      null;
+    markers.push(
+      eventToMarker(
+        {
+          id: event.id,
+          title,
+          description: event.description ?? null,
+          types: event.types ?? [],
+          severity: event.severity ?? null,
+          rank: event.rank ?? 0,
+          validFrom: "",
+          validTo: "",
+          firstSignalCreatedAt: event.firstSignalCreatedAt ?? "",
+          lastSignalCreatedAt: event.lastSignalCreatedAt ?? "",
+          populationAffected: null,
+          populationDisplaced: null,
+          casualties: null,
+          generalLocation: event.generalLocation ?? null,
+          originLocation: event.originLocation ?? null,
+          destinationLocation: event.destinationLocation ?? null,
+          representativePoint: event.representativePoint ?? null,
+          signals: event.signals ?? [],
+          alerts: event.alerts ?? [],
+        } satisfies GqlEvent,
+        point,
+        locationById,
+      ),
+    );
+  }
+  if (markers.length > 0) return dedupeMarkersByEntity(markers);
+  return crisesToMarkers([crisis], locationById);
 }
 
 export function alertsToMarkers(

@@ -287,7 +287,7 @@
         "range": "Fourchette {range}",
         "info": {
           "informSeverity": "Indice de sévérité INFORM (0-10) d'ACAPS, mis à jour chaque mois. Mesure composite de la sévérité, indépendante du pipeline d'analyse.",
-          "displaced": "Personnes déplacées internes (PDI). Agrégé à partir des rapports sources (champ : population_displaced).",
+          "displaced": "Déplacement actuel estimé (PDI). Issu des datapoints de l'analyse (champ : estimated_current_displacement.stock ; repli sur population_displaced si présent).",
           "inNeed": "Personnes dans le besoin. Agrégé à partir des rapports sources (champ : population_in_need).",
           "affected": "Personnes affectées par la crise - un cercle plus large que les personnes dans le besoin (champ : population_affected).",
           "fundingRequired": "Financement requis pour les appels, en USD (champ : funding_required_usd).",
@@ -377,17 +377,15 @@
     },
     "roles": {
       "member": "Membre",
-      "admin": "Admin",
-      "owner": "Propriétaire",
-      "viewer": "Lecteur",
-      "analyst": "Analyste",
-      "lead": "Responsable"
+      "orgAdmin": "Admin d'organisation",
+      "teamMember": "Membre de l'équipe",
+      "fieldCoordinator": "Coordinateur de terrain",
+      "teamAdmin": "Administrateur d'équipe"
     },
     "users": {
       "roles": {
-        "field": "Terrain",
+        "viewer": "Lecteur",
         "analyst": "Analyste",
-        "orgAdmin": "Admin d'organisation",
         "admin": "Admin"
       },
       "unauthorized": "Vous devez disposer de privilèges administrateur pour accéder à la gestion des utilisateurs.",
@@ -619,6 +617,7 @@
       "rememberMe": "Se souvenir de moi",
       "forgotPassword": "Mot de passe oublié ?",
       "submit": "Se connecter",
+      "success": "Connecté",
       "failed": "Échec de la connexion",
       "unexpectedError": "Une erreur inattendue est survenue",
       "demo": {
@@ -2069,6 +2068,13 @@
       "focusFallbackSignal": "Signal ciblé",
       "focusFallbackCrisis": "Crise ciblée"
     },
+    "placeSearch": {
+      "open": "Rechercher un lieu ou des coordonnées",
+      "placeholder": "Lieu ou lat, lng",
+      "clear": "Effacer la recherche",
+      "noResults": "Aucun lieu trouvé",
+      "error": "Recherche indisponible"
+    },
     "tokenMissing": "Jeton Mapbox non configuré. Définissez NEXT_PUBLIC_MAPBOX_TOKEN dans .env",
     "tiltHint": {
       "message": "La topographie est en 3D — cliquez Incliner, ou Ctrl/⌘+glisser (clic droit) / deux doigts sur tactile",
@@ -2587,15 +2593,11 @@
         "orgRoleLabel": "Rôle dans l'organisation",
         "roles": {
           "member": "Membre",
-          "admin": "Admin",
-          "owner": "Propriétaire"
+          "orgAdmin": "Admin d'organisation"
         },
         "teamsLabel": "Équipes",
         "noTeams": "Cette organisation n'a aucune équipe. Créez-en une avant d'envoyer des invitations.",
         "teamRoles": {
-          "viewer": "Lecteur",
-          "analyst": "Analyste",
-          "lead": "Responsable",
           "team_member": "Membre de l'équipe",
           "field_coordinator": "Coordinateur de terrain",
           "team_admin": "Administrateur d'équipe"

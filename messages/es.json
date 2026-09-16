@@ -287,7 +287,7 @@
         "range": "Rango {range}",
         "info": {
           "informSeverity": "Índice de gravedad INFORM (0-10) de ACAPS, actualizado mensualmente. Medida compuesta de la gravedad de la crisis, independiente del pipeline de análisis de situación.",
-          "displaced": "Personas desplazadas internas (PDI). Agregado de los informes fuente siguientes (campo: population_displaced).",
+          "displaced": "Desplazamiento actual estimado (PDI). De los datapoints del análisis (campo: estimated_current_displacement.stock; usa population_displaced si está presente).",
           "inNeed": "Personas en necesidad de asistencia humanitaria. Agregado de los informes fuente (campo: population_in_need / PiN general).",
           "affected": "Personas afectadas por la crisis: un círculo más amplio que las personas en necesidad. Agregado de los informes fuente (campo: population_affected).",
           "fundingRequired": "Financiación requerida en los llamamientos, en USD. Agregado de los informes fuente (campo: funding_required_usd).",
@@ -617,6 +617,7 @@
       "rememberMe": "Recordarme",
       "forgotPassword": "¿Olvidó su contraseña?",
       "submit": "Iniciar sesión",
+      "success": "Sesión iniciada",
       "failed": "Error al iniciar sesión",
       "unexpectedError": "Se produjo un error inesperado",
       "demo": {
@@ -2066,6 +2067,13 @@
       "focusFallbackEvent": "Evento enfocado",
       "focusFallbackSignal": "Señal enfocada",
       "focusFallbackCrisis": "Crisis enfocada"
+    },
+    "placeSearch": {
+      "open": "Buscar lugares o coordenadas",
+      "placeholder": "Lugar o lat, lng",
+      "clear": "Borrar búsqueda",
+      "noResults": "No se encontraron lugares",
+      "error": "Búsqueda no disponible"
     },
     "tokenMissing": "Token de Mapbox no configurado. Defina NEXT_PUBLIC_MAPBOX_TOKEN en .env",
     "tiltHint": {

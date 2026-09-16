@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Box, Group } from "@mantine/core";
 import { NavSidebar } from "~/components/nav-sidebar";
 import { NavSidebarFallback } from "~/components/nav-sidebar-fallback";
@@ -16,6 +16,11 @@ import {
 } from "~/components/page-transition";
 import { api, HydrateClient } from "~/trpc/server";
 import { WORKING_COUNTRY_COOKIE } from "~/lib/working-country-cookie";
+import { isMapPath } from "~/lib/is-map-path";
+import {
+  NAV_COLLAPSED_COOKIE,
+  parseNavCollapsedCookie,
+} from "~/lib/nav-collapsed-cookie";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Prefetch auth.me so the client cache is hydrated on first paint
@@ -24,6 +29,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Read working country cookie for SSR hydration
   const cookieStore = await cookies();
   const workingCountryCookie = cookieStore.get(WORKING_COUNTRY_COOKIE)?.value;
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const mapNavOverlay = isMapPath(pathname);
+  const navCollapsed = parseNavCollapsedCookie(
+    cookieStore.get(NAV_COLLAPSED_COOKIE)?.value,
+  );
 
   return (
     <HydrateClient>
@@ -43,8 +53,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                     background: "var(--color-bg-primary)",
                   }}
                 >
-                  <Suspense fallback={<NavSidebarFallback />}>
-                    <NavSidebar />
+                  <Suspense
+                    fallback={
+                      <NavSidebarFallback
+                        overlay={mapNavOverlay}
+                        collapsed={navCollapsed}
+                      />
+                    }
+                  >
+                    <NavSidebar initialCollapsed={navCollapsed} />
                   </Suspense>
                   <Box
                     component="main"

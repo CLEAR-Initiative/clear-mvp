@@ -287,7 +287,7 @@
         "range": "النطاق {range}",
         "info": {
           "informSeverity": "مؤشر شدة INFORM (0-10) من ACAPS، يُحدَّث شهرياً. مقياس مركّب لشدة الأزمة، مستقل عن خط معالجة التحليل.",
-          "displaced": "النازحون داخلياً. مجمّع من التقارير المصدرية (الحقل: population_displaced).",
+          "displaced": "التقدير الحالي للنزوح (النازحون داخلياً). من datapoints التحليل (الحقل: estimated_current_displacement.stock؛ مع الرجوع إلى population_displaced إن وُجد).",
           "inNeed": "المحتاجون للمساعدة الإنسانية. مجمّع من التقارير المصدرية (الحقل: population_in_need).",
           "affected": "المتأثرون بالأزمة - دائرة أوسع من المحتاجين (الحقل: population_affected).",
           "fundingRequired": "التمويل المطلوب للنداءات بالدولار (الحقل: funding_required_usd).",
@@ -377,17 +377,15 @@
     },
     "roles": {
       "member": "عضو",
-      "admin": "مدير",
-      "owner": "مالك",
-      "viewer": "مشاهد",
-      "analyst": "محلل",
-      "lead": "قائد"
+      "orgAdmin": "مدير المنظمة",
+      "teamMember": "عضو فريق",
+      "fieldCoordinator": "منسق ميداني",
+      "teamAdmin": "مدير الفريق"
     },
     "users": {
       "roles": {
-        "field": "ميداني",
+        "viewer": "مشاهد",
         "analyst": "محلل",
-        "orgAdmin": "مدير المنظمة",
         "admin": "مدير"
       },
       "unauthorized": "تحتاج إلى صلاحيات المدير لعرض إدارة المستخدمين.",
@@ -619,6 +617,7 @@
       "rememberMe": "تذكرني",
       "forgotPassword": "نسيت كلمة المرور؟",
       "submit": "تسجيل الدخول",
+      "success": "تم تسجيل الدخول",
       "failed": "فشل تسجيل الدخول",
       "unexpectedError": "حدث خطأ غير متوقع",
       "demo": {
@@ -2069,6 +2068,13 @@
       "focusFallbackSignal": "إشارة مركّزة",
       "focusFallbackCrisis": "أزمة مركّزة"
     },
+    "placeSearch": {
+      "open": "البحث عن أماكن أو إحداثيات",
+      "placeholder": "مكان أو خط عرض، خط طول",
+      "clear": "مسح البحث",
+      "noResults": "لم يُعثر على أماكن",
+      "error": "البحث غير متاح"
+    },
     "tokenMissing": "لم يُهيَّأ رمز Mapbox. عيّن NEXT_PUBLIC_MAPBOX_TOKEN في ملف .env",
     "tiltHint": {
       "message": "الطبوغرافية ثلاثية الأبعاد — انقر إمالة، أو Ctrl/⌘+سحب (زر أيمن) / إصبعان على اللمس",
@@ -2587,15 +2593,11 @@
         "orgRoleLabel": "دور المنظمة",
         "roles": {
           "member": "عضو",
-          "admin": "مدير",
-          "owner": "مالك"
+          "orgAdmin": "مدير المنظمة"
         },
         "teamsLabel": "الفرق",
         "noTeams": "لا توجد فرق في هذه المنظمة. أنشئ فريقاً قبل الدعوة.",
         "teamRoles": {
-          "viewer": "مشاهد",
-          "analyst": "محلل",
-          "lead": "قائد",
           "team_member": "عضو فريق",
           "field_coordinator": "منسق ميداني",
           "team_admin": "مدير الفريق"

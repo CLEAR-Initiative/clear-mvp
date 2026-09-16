@@ -3,8 +3,8 @@
   inset: 0;
   /*
    * Above map chrome (z-20) so destination skeleton covers the canvas, but
-   * below overlay nav (z-40). z-45 used to paint over the fixed /map frost
-   * sidebar and looked like the nav unmounted during quick tab jumps.
+   * below overlay nav (z-40). MapPreloader is viewport-fixed at z-35 so the
+   * spinner stays put while chrome left offsets settle underneath.
    */
   z-index: 30;
   /* Block clicks on the outgoing page while destination chrome is painted. */
@@ -13,7 +13,8 @@
   background: var(--color-bg-primary);
 }
 
-/* On /map the nav is fixed over full-bleed main — keep veil in the content column. */
+/* On /map the nav is fixed over full-bleed main — keep veil click-layer in
+   the content column (spinner itself is viewport-fixed, not affected). */
 @media (min-width: 48em) {
   :global(body[data-nav-overlay="true"]) .optimistic {
     left: var(--clear-nav-w, 240px);

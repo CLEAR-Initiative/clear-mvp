@@ -89,7 +89,20 @@ export interface SaPayload {
     number_of_events?: number | null;
     population_in_need?: RawRangeFigure | null;
     population_affected?: RawRangeFigure | null;
+    /** Legacy range figure; prefer `estimated_current_displacement` when both exist. */
     population_displaced?: RawRangeFigure | null;
+    /**
+     * Current displacement stock from the pipeline's DTM/aggregation path.
+     * Shape differs from ADR-0007 range figures: `stock` (preferred) / `total`
+     * are point estimates, not a low–high band.
+     */
+    estimated_current_displacement?: {
+      t0?: string | null;
+      stock?: number | null;
+      total?: number | null;
+      flow_count?: number | null;
+      flows_since?: number | null;
+    } | null;
     funding_received_usd?: RawRangeFigure | null;
     funding_required_usd?: RawRangeFigure | null;
   };
@@ -383,14 +396,30 @@ function invertContributingSources(
 // ─── Mapper ──────────────────────────────────────────────────────────────────
 
 /**
+ * Resolve the displaced KPI. Prefer `estimated_current_displacement`
+ * (`stock`, then `total`) — what current pipeline snapshots carry — and fall
+ * back to the legacy ADR-0007 `population_displaced` range figure.
+ */
+function displacedFigure(
+  dp: SaPayload["datapoints"],
+): RawRangeFigure | number | null | undefined {
+  const est = dp?.estimated_current_displacement;
+  if (est && typeof est === "object") {
+    if (typeof est.stock === "number") return est.stock;
+    if (typeof est.total === "number") return est.total;
+  }
+  return dp?.population_displaced;
+}
+
+/**
  * Build the stat row. Only datapoints the pipeline actually resolved appear -
  * most are null on early runs, and a "-" tile communicates nothing.
  */
 function mapStats(dp: SaPayload["datapoints"]): SaStat[] {
   if (!dp) return [];
 
-  const people: Array<[SaStatKey, RawRangeFigure | null | undefined]> = [
-    ["displaced", dp.population_displaced],
+  const people: Array<[SaStatKey, RawRangeFigure | number | null | undefined]> = [
+    ["displaced", displacedFigure(dp)],
     ["affected", dp.population_affected],
     ["inNeed", dp.population_in_need],
     ["returnees", dp.returnees],
@@ -562,7 +591,7 @@ export function mapSituationAnalysis(
     ),
     stats: mapStats(dp),
     figures: {
-      displaced: figureParts(dp?.population_displaced).value,
+      displaced: figureParts(displacedFigure(dp)).value,
       affected: figureParts(dp?.population_affected).value,
       inNeed: figureParts(dp?.population_in_need).value,
       returnees: figureParts(dp?.returnees).value,

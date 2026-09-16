@@ -39,6 +39,7 @@ import {
   alertsToMarkers,
   eventsToMarkers,
   focusEventToMarkers,
+  focusCrisisToMarkers,
   signalsToMarkers,
   crisesToMarkers,
   applyLocationChallengesToMarkers,
@@ -50,6 +51,11 @@ import { resolveCountryConfig, shortCountryName, WORLD_VIEW } from "~/lib/consta
 import { isoForCountryName } from "~/lib/constants/countries";
 import { scopeIsosMissingPaintableBoundaries } from "~/lib/geo/country-mask";
 import { MapPanelBar } from "./_components/map-panel-bar";
+import {
+  MapPlaceSearch,
+  type MapPlaceSearchSelect,
+} from "./_components/map-place-search";
+import { matchPickerCountry } from "~/lib/map/geocode-lookup";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapLoadingOverlay, MapPreloader } from "./_components/map-loading-overlay";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
@@ -59,7 +65,13 @@ import {
 } from "./_components/map-panel-connectors";
 import type { DataView } from "./_components/map-layers-panel";
 import type { BoundaryLevel } from "./_components/map-settings-popover";
-import { MAP_FOCUS_ZOOM } from "~/lib/map-focus-href";
+import { MAP_FOCUS_ZOOM, mapFocusHref } from "~/lib/map-focus-href";
+import {
+  clearMapFocusSession,
+  readMapFocusSession,
+  writeMapFocusSession,
+  type MapPlaceFocusSession,
+} from "~/lib/map-focus-session";
 import {
   asCameraPose,
   keepPreOpenRestore,
@@ -157,7 +169,9 @@ const LABEL_STYLE = { fontSize: 10, letterSpacing: "0.05em" } as const;
 const INPUT_STYLE = {
   fontWeight: 600,
   fontSize: 13,
-  background: "var(--color-bg-muted)",
+  background: "var(--map-frost-bg-muted)",
+  backdropFilter: "var(--map-frost-blur)",
+  WebkitBackdropFilter: "var(--map-frost-blur)",
   border: "1px solid var(--color-border-dark)",
   boxShadow: "var(--shadow-sm)",
 } as const;
@@ -180,22 +194,24 @@ function MapPageContent() {
   const urlFocusSignalId = searchParams.get("signal");
   const urlFocusCrisisId = searchParams.get("crisis");
   /**
-   * Session restore from map → detail → back. Skipped when the URL asks for
-   * a solo-focus deep link (`?event=` / signal / crisis).
+   * Session camera restore. Kept even for solo-focus deep links so Full Map
+   * can land on the last pose, then fly to the focused entity (#582).
    */
   const [restoredView] = useState<MapViewStateV1 | null>(() => {
     if (typeof window === "undefined") return null;
-    const sp = new URLSearchParams(window.location.search);
-    if (sp.get("event") || sp.get("signal") || sp.get("crisis")) return null;
     return readMapViewState();
   });
   /**
    * Session-restore seed for center/zoom props. Cleared on country/region
-   * change. Never updated from live pans - that re-triggered flyTo and made
-   * drag/tilt feel staggered.
+   * change, or after the guided focus fly starts. Never updated from live
+   * pans - that re-triggered flyTo and made drag/tilt feel staggered.
    */
   const [cameraSeed, setCameraSeed] = useState<MapViewCamera | null>(
     () => cameraSeedForCountry(restoredView, restoredView?.country ?? null),
+  );
+  /** After restore, fly once to the deep-linked focus marker. */
+  const [pendingFocusFly, setPendingFocusFly] = useState(
+    () => !!(urlFocusEventId || urlFocusSignalId || urlFocusCrisisId),
   );
   const [pendingRestoreMarkerIds, setPendingRestoreMarkerIds] = useState<number[]>(
     () => restoredView?.openMarkerIds ?? [],
@@ -207,13 +223,52 @@ function MapPageContent() {
   // Local dismiss so clearing solo focus swaps to browse markers immediately
   // without waiting on the soft URL replace (and without remounting the page).
   const [focusDismissed, setFocusDismissed] = useState(false);
+  /** Place lookup chip (same family as solo-focus chip; does not solo-filter markers). */
+  const [placeFocus, setPlaceFocus] = useState<MapPlaceFocusSession | null>(() => {
+    if (typeof window === "undefined") return null;
+    if (urlFocusEventId || urlFocusSignalId || urlFocusCrisisId) return null;
+    const session = readMapFocusSession();
+    return session?.kind === "place" ? session : null;
+  });
+  /** Place/coordinate search target — same camera path as markerFocus, no panel. */
+  const [placeLookup, setPlaceLookup] = useState<{ lng: number; lat: number; zoom: number } | null>(
+    () =>
+      placeFocus
+        ? { lng: placeFocus.center[0], lat: placeFocus.center[1], zoom: placeFocus.zoom }
+        : null,
+  );
   useEffect(() => {
     setFocusDismissed(false);
+    setPendingFocusFly(
+      !!(urlFocusEventId || urlFocusSignalId || urlFocusCrisisId),
+    );
   }, [urlFocusEventId, urlFocusSignalId, urlFocusCrisisId]);
   const focusEventId = focusDismissed ? null : urlFocusEventId;
   const focusSignalId = focusDismissed ? null : urlFocusSignalId;
   const focusCrisisId = focusDismissed ? null : urlFocusCrisisId;
   const focusEntityId = focusEventId ?? focusSignalId ?? focusCrisisId;
+
+  // Bare `/map` (Map tab): re-apply in-session entity focus so the chip survives.
+  const reapplyFocusKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (urlFocusEventId || urlFocusSignalId || urlFocusCrisisId) {
+      reapplyFocusKeyRef.current = null;
+      return;
+    }
+    if (focusDismissed) return;
+    const session = readMapFocusSession();
+    if (!session || session.kind === "place") return;
+    const key = `${session.kind}:${session.id}`;
+    if (reapplyFocusKeyRef.current === key) return;
+    reapplyFocusKeyRef.current = key;
+    router.replace(mapFocusHref(session.kind, session.id), { scroll: false });
+  }, [
+    urlFocusEventId,
+    urlFocusSignalId,
+    urlFocusCrisisId,
+    focusDismissed,
+    router,
+  ]);
   
   /* ---- Fetch data ---- */
   const { activeTeamId, activeTeam } = useTeam();
@@ -279,6 +334,9 @@ function MapPageContent() {
 
   const clearSoloFocus = useCallback(() => {
     setFocusDismissed(true);
+    setPlaceFocus(null);
+    setPlaceLookup(null);
+    clearMapFocusSession();
     router.replace("/map", { scroll: false });
   }, [router]);
 
@@ -305,15 +363,56 @@ function MapPageContent() {
     if (focusCrisisId) {
       return focusCrisisQuery.data?.title?.trim() || t("timeline.focusFallbackCrisis");
     }
+    if (placeFocus) return placeFocus.label;
     return null;
   }, [
     focusEventId,
     focusSignalId,
     focusCrisisId,
+    placeFocus,
     focusEventQuery.data,
     focusSignalQuery.data,
     focusCrisisQuery.data,
     t,
+  ]);
+
+  // Persist active focus so Map tab / Insights can round-trip without wiping.
+  useEffect(() => {
+    if (focusDismissed) return;
+    if (focusCrisisId) {
+      writeMapFocusSession({
+        kind: "crisis",
+        id: focusCrisisId,
+        ...(focusFilterLabel ? { label: focusFilterLabel } : {}),
+      });
+      return;
+    }
+    if (focusEventId) {
+      writeMapFocusSession({
+        kind: "event",
+        id: focusEventId,
+        ...(focusFilterLabel ? { label: focusFilterLabel } : {}),
+      });
+      return;
+    }
+    if (focusSignalId) {
+      writeMapFocusSession({
+        kind: "signal",
+        id: focusSignalId,
+        ...(focusFilterLabel ? { label: focusFilterLabel } : {}),
+      });
+      return;
+    }
+    if (placeFocus) {
+      writeMapFocusSession(placeFocus);
+    }
+  }, [
+    focusDismissed,
+    focusCrisisId,
+    focusEventId,
+    focusSignalId,
+    placeFocus,
+    focusFilterLabel,
   ]);
 
   // Fetch data for active view ONLY (no parallel loading). Disabled in focus mode.
@@ -517,7 +616,9 @@ function MapPageContent() {
         : [];
     }
     if (focusCrisisId) {
-      return focusCrisisQuery.data ? crisesToMarkers([focusCrisisQuery.data], locationById) : [];
+      return focusCrisisQuery.data
+        ? focusCrisisToMarkers(focusCrisisQuery.data, locationById)
+        : [];
     }
     let markers: CrisisMarker[] = [];
     if (dataView === "alert")  markers = alertsToMarkers(alertsQuery.data?.alerts ?? [], locationById);
@@ -590,6 +691,11 @@ function MapPageContent() {
   const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
   const selectedCountryRef = useRef(selectedCountry);
   selectedCountryRef.current = selectedCountry;
+  const countryOptionsRef = useRef<string[]>([]);
+  const teamCountriesRef = useRef(teamCountries);
+  teamCountriesRef.current = teamCountries;
+  const getLocationIdRef = useRef(getLocationId);
+  getLocationIdRef.current = getLocationId;
   
   const [openPanels, setOpenPanels] = useState<OpenMarkerPanel[]>([]);
   const [keepPanelsOpen, setKeepPanelsOpen] = useState(false);
@@ -631,6 +737,69 @@ function MapPageContent() {
   returnCameraRef.current = returnCamera;
   const markerFocusRef = useRef(markerFocus);
   markerFocusRef.current = markerFocus;
+
+  const handlePlaceSearchSelect = useCallback((hit: MapPlaceSearchSelect) => {
+    // Prefer React center/zoom + forceFly so we do not race country restore
+    // when clearing markerFocus / cameraSeed in the same turn.
+    setMarkerFocus(null);
+    markerFocusRef.current = null;
+    setCameraSeed(null);
+    setFocusDismissed(true);
+    const nextPlace: MapPlaceFocusSession = {
+      kind: "place",
+      id: hit.id,
+      label: hit.label,
+      center: hit.center,
+      zoom: hit.zoom,
+    };
+    setPlaceFocus(nextPlace);
+    writeMapFocusSession(nextPlace);
+    setPlaceLookup({
+      lng: hit.center[0],
+      lat: hit.center[1],
+      zoom: hit.zoom,
+    });
+
+    // When the hit's parent country is in the user's picker, sync the filter
+    // so borders/signals match the search. Out-of-scope countries still fly
+    // to the place; leave All Countries (or current pick) alone.
+    const matched = matchPickerCountry(countryOptionsRef.current, {
+      countryName: hit.countryName,
+      countryCode: hit.countryCode,
+    });
+    if (matched && matched !== selectedCountryRef.current) {
+      const location = teamCountriesRef.current.find((c) => c.name === matched);
+      if (location) {
+        setWorkingCountry(location.id);
+      } else {
+        setPickedCountry(matched);
+        setWorkingCountry(
+          getLocationIdRef.current(matched) ?? matched,
+          matched,
+        );
+      }
+      setSelectedRegion("All Regions");
+    }
+
+    setForceFlyToken((n) => n + 1);
+    router.replace("/map", { scroll: false });
+    // Bbox places get a tighter fit after the prop fly starts.
+    if (hit.bbox) {
+      const bbox = hit.bbox;
+      window.requestAnimationFrame(() => {
+        mapApiRef.current?.flyTo({
+          center: hit.center,
+          zoom: hit.zoom,
+          bbox,
+          duration: 700,
+        });
+      });
+    }
+    // Drop the short-lived placeLookup boost after the fly. placeFocus keeps
+    // owning center/zoom so All Countries does not yank the camera back to
+    // global zoom while the place chip is active.
+    window.setTimeout(() => setPlaceLookup(null), 850);
+  }, [router, setWorkingCountry]);
 
   const refreshConnectorPins = useCallback(() => {
     const api = mapApiRef.current;
@@ -1129,16 +1298,20 @@ function MapPageContent() {
     }
     return pickerCountryOptions(apiCountries, teamCountryNames);
   }, [scopeReady, workingCountryName, teamCountryNames, apiCountries]);
+  countryOptionsRef.current = countryOptions;
   useReportStaleCountryPick(countryOptions, workingCountryName ?? pickedCountry, selectedCountry);
 
   // Restored camera must belong to the working country. A leftover Sudan
   // pose cannot win over a Venezuela pick (borders/signals vs camera).
+  // Place search owns the camera while its chip is active — do not yank
+  // to country framing after syncing the filter from a geocode hit.
   useEffect(() => {
     if (!selectedCountry || selectedCountry === "All Countries") return;
+    if (placeFocus) return;
     if (cameraSeedForCountry(restoredView, selectedCountry) != null) return;
     setCameraSeed(null);
     setForceFlyToken((n) => n + 1);
-  }, [selectedCountry, restoredView]);
+  }, [selectedCountry, restoredView, placeFocus]);
 
   const regionOptions = useMemo(
     () => selectedCountry !== "All Countries" ? getRegions(selectedCountry) : ["All Regions"],
@@ -1148,8 +1321,14 @@ function MapPageContent() {
   /* ---- Map center ---- */
   const mapCenter: [number, number] = useMemo(() => {
     if (markerFocus) return [markerFocus.lng, markerFocus.lat];
+    // placeFocus (chip) wins over the short-lived placeLookup boost so the
+    // camera stays on the search target after placeLookup clears — including
+    // when the country filter is still "All Countries".
+    if (placeFocus) return placeFocus.center;
+    if (placeLookup) return [placeLookup.lng, placeLookup.lat];
     if (returnCamera) return returnCamera.center;
     // Initial restore seed only - live pans stay in Mapbox + sessionStorage.
+    // While pendingFocusFly, keep the seed so we restore first, then fly.
     if (cameraSeed) return cameraSeed.center;
     if (focusMarker) return [focusMarker.lng, focusMarker.lat];
     if (selectedCountry !== "All Countries") {
@@ -1160,10 +1339,22 @@ function MapPageContent() {
     return lastFocusedCountry
       ? getCenter(lastFocusedCountry)
       : WORLD_VIEW.center;
-  }, [selectedCountry, focusMarker, markerFocus, returnCamera, cameraSeed, getCenter, lastFocusedCountry]);
+  }, [
+    selectedCountry,
+    focusMarker,
+    markerFocus,
+    placeFocus,
+    placeLookup,
+    returnCamera,
+    cameraSeed,
+    getCenter,
+    lastFocusedCountry,
+  ]);
 
   const mapZoom = useMemo(() => {
     if (markerFocus) return markerFocus.zoom;
+    if (placeFocus) return placeFocus.zoom;
+    if (placeLookup) return placeLookup.zoom;
     if (returnCamera) return returnCamera.zoom;
     if (cameraSeed) return cameraSeed.zoom;
     if (focusMarker) return MAP_FOCUS_ZOOM;
@@ -1173,7 +1364,59 @@ function MapPageContent() {
       return getZoom(selectedCountry);
     }
     return WORLD_VIEW.zoom;
-  }, [selectedCountry, focusMarker, markerFocus, returnCamera, cameraSeed, getZoom]);
+  }, [
+    selectedCountry,
+    focusMarker,
+    markerFocus,
+    placeFocus,
+    placeLookup,
+    returnCamera,
+    cameraSeed,
+    getZoom,
+  ]);
+
+  // Full Map: restore persisted camera first, then fly to the focus marker.
+  // After that, CrisisMap's userCameraOverride keeps prop echoes from
+  // re-flying while the analyst pans/zooms (do not swap center props away —
+  // that yanked the camera to world/country and felt staggered).
+  useEffect(() => {
+    if (!pendingFocusFly || !focusMarker || !focusEntityId) return;
+    setCameraSeed(null);
+    setPendingFocusFly(false);
+    setForceFlyToken((n) => n + 1);
+  }, [pendingFocusFly, focusMarker, focusEntityId]);
+
+  // Multi-event crisis: fit all linked event pins once after restore→fly starts.
+  const multiEventFitDoneRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusCrisisId) {
+      multiEventFitDoneRef.current = null;
+      return;
+    }
+    if (!focusMarker || cameraSeed || pendingFocusFly) return;
+    if (multiEventFitDoneRef.current === focusCrisisId) return;
+    if (allMarkers.length < 2) {
+      multiEventFitDoneRef.current = focusCrisisId;
+      return;
+    }
+    multiEventFitDoneRef.current = focusCrisisId;
+    const lngs = allMarkers.map((m) => m.lng);
+    const lats = allMarkers.map((m) => m.lat);
+    const west = Math.min(...lngs);
+    const east = Math.max(...lngs);
+    const south = Math.min(...lats);
+    const north = Math.max(...lats);
+    if (east - west < 1e-5 && north - south < 1e-5) return;
+    const id = window.requestAnimationFrame(() => {
+      mapApiRef.current?.flyTo({
+        center: [focusMarker.lng, focusMarker.lat],
+        zoom: MAP_FOCUS_ZOOM,
+        bbox: [west, south, east, north],
+        duration: 700,
+      });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [focusCrisisId, focusMarker, cameraSeed, pendingFocusFly, allMarkers]);
 
   /* ---- Resolve selected location for filtering ---- */
   const selectedLocationId = useMemo(() => {
@@ -1705,6 +1948,9 @@ function MapPageContent() {
     }
     setSelectedRegion("All Regions");
     setCameraSeed(null);
+    setPlaceLookup(null);
+    setPlaceFocus(null);
+    clearMapFocusSession();
     setForceFlyToken((n) => n + 1);
     clearOpenPanels();
   };
@@ -1712,6 +1958,9 @@ function MapPageContent() {
   const handleRegionChange = (value: string | null) => {
     setSelectedRegion(value ?? "All Regions");
     setCameraSeed(null);
+    setPlaceLookup(null);
+    setPlaceFocus(null);
+    clearMapFocusSession();
     clearOpenPanels();
   };
 
@@ -1726,6 +1975,8 @@ function MapPageContent() {
         currentMarkers.find((m) => m.id === marker.id) ??
         allMarkers.find((m) => m.id === marker.id);
       if (!full) return;
+
+      setPlaceLookup(null);
 
       // Desktop: open the panel in place - do not fly/reposition the camera.
       // Mobile keeps focus-fly so the pin sits above the bottom sheet.
@@ -2052,25 +2303,26 @@ function MapPageContent() {
           focusCountryGeometry={focusCountryGeometry}
           adminBoundaries={adminBoundaries}
           adminBoundaryLevel={adminBoundaryLevel}
-          fitBoundsGeometry={focusEntityId || markerFocus ? null : fitBoundsGeometry}
+          fitBoundsGeometry={focusEntityId || markerFocus || placeFocus || placeLookup ? null : fitBoundsGeometry}
           fitBoundsOnFocus={
-            !focusEntityId && !markerFocus && !returnCamera && !cameraSeed
+            !focusEntityId && !markerFocus && !placeFocus && !placeLookup && !returnCamera && !cameraSeed
           }
           initialPitch={cameraSeed?.pitch ?? restoredView?.camera.pitch ?? 0}
           initialBearing={cameraSeed?.bearing ?? restoredView?.camera.bearing ?? 0}
           forceFlyToken={forceFlyToken}
-          flyDuration={markerFocus ? 500 : (!cameraSeed && !focusEntityId && selectedCountry !== "All Countries" ? 1200 : 650)}
+          flyDuration={markerFocus || placeFocus || placeLookup || focusEntityId ? 500 : (!cameraSeed && !focusEntityId && selectedCountry !== "All Countries" ? 1200 : 650)}
           // Keep pin above the ~45vh sheet + breathing room.
           flyPaddingBottom={
             markerFocus && isMobile
               ? Math.round((typeof window !== "undefined" ? window.innerHeight : 700) * 0.45) + 72
               : 0
           }
-          flyPitch={!markerFocus ? returnCamera?.pitch : undefined}
-          flyBearing={!markerFocus ? returnCamera?.bearing : undefined}
+          flyPitch={!markerFocus && !placeFocus && !placeLookup ? returnCamera?.pitch : undefined}
+          flyBearing={!markerFocus && !placeFocus && !placeLookup ? returnCamera?.bearing : undefined}
           introFromGlobe={
-            !cameraSeed && !focusEntityId && selectedCountry !== "All Countries"
+            !cameraSeed && !placeFocus && !placeLookup && !focusEntityId && selectedCountry !== "All Countries"
           }
+          preferStableDomMarkers={isFocusMode}
           onCameraChange={handleCameraChange}
           onMapMove={handleMapMove}
           mapApiRef={mapApiRef}
@@ -2089,7 +2341,10 @@ function MapPageContent() {
           onMapClick={handleLocationCorrectionMapClick}
           onLoadError={handleMapLoadError}
           key={retryNonce}
-        />
+        >
+          {/* Spaghetti under markers (CrisisMap marker z-index 2); panels stay outside. */}
+          {!isMobile && <MapPanelConnectors links={connectorLinks} />}
+        </CrisisMap>
 
         {/* Spinner while data loads; error overlay stays up even after queries settle. */}
         {(mapLoadError || (showLoadingOverlay && dataView !== "none")) && (
@@ -2181,9 +2436,6 @@ function MapPageContent() {
         }
       />
 
-      {/* ===== Spaghetti connectors (desktop; cleared with panels / data view) ===== */}
-      {!isMobile && <MapPanelConnectors links={connectorLinks} />}
-
       {/* ===== Marker detail panel(s) ===== */}
       {openPanels.map((panel) => {
         const ordered = markersForPanelNav(panel);
@@ -2246,10 +2498,10 @@ function MapPageContent() {
         );
       })}
 
-      {/* ===== Timeline (bottom overlay) - desktop only; hide on mobile for map real estate ===== */}
-      {(isFocusMode || availableMonths.length > 0) && !isMobile && (
+      {/* ===== Bottom chrome: place search + timeline chips (desktop) ===== */}
+      {!isMobile && (
         <Box
-          className="absolute left-0 right-0 z-20"
+          className="absolute left-0 right-0 z-30"
           data-map-chrome-bottom
           px={16}
           py={10}
@@ -2261,26 +2513,19 @@ function MapPageContent() {
           <Group
             gap={8}
             wrap="nowrap"
+            align="center"
             style={{
-              // Fit content so empty space does not cover Mapbox zoom (+/−) on the right.
               pointerEvents: "auto",
-              overflowX: "auto",
-              paddingBottom: 2,
               width: "fit-content",
               maxWidth: "100%",
+              // Keep overflow visible so the search suggestions aren't clipped.
+              overflow: "visible",
             }}
           >
-            <Text
-              size="xs"
-              c="var(--color-text-muted)"
-              tt="uppercase"
-              style={{ ...LABEL_STYLE, flexShrink: 0, marginInlineEnd: 8 }}
-            >
-              {t("timeline.title")}
-            </Text>
+            <MapPlaceSearch onSelect={handlePlaceSearchSelect} />
 
-            {/* Solo-focus chip: dismiss to restore the full browse marker set. */}
-            {isFocusMode && focusFilterLabel && (
+            {/* Place / entity focus chip — not the timeline month strip. */}
+            {(isFocusMode || placeFocus) && focusFilterLabel && (
               <button
                 type="button"
                 onClick={clearSoloFocus}
@@ -2316,63 +2561,139 @@ function MapPageContent() {
               </button>
             )}
 
-            {/* "All time" sentinel - clears the month filter */}
-            {!isFocusMode && (
-              <button
-                type="button"
-                onClick={() => setSelectedMonth(null)}
+            {/* Month timeline — browse only; place lookup must not open this. */}
+            {!isFocusMode && availableMonths.length > 0 && (
+              <Group
+                gap={8}
+                wrap="nowrap"
+                align="center"
                 style={{
-                  flexShrink: 0,
-                  padding: "4px 12px",
-                  borderRadius: 999,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  border: "1px solid",
-                  borderColor: selectedMonth === null ? "var(--color-accent)" : "var(--color-border-dark)",
-                  background: selectedMonth === null ? "var(--color-accent)" : "var(--color-bg-white)",
-                  color: selectedMonth === null ? "white" : "var(--color-text-secondary)",
-                  whiteSpace: "nowrap",
+                  overflowX: "auto",
+                  paddingBottom: 2,
+                  minWidth: 0,
+                  maxWidth: "100%",
                 }}
               >
-                {t("timeline.allTime")}
-              </button>
-            )}
+                <Text
+                  size="xs"
+                  c="var(--color-text-muted)"
+                  tt="uppercase"
+                  style={{ ...LABEL_STYLE, flexShrink: 0, marginInlineEnd: 4 }}
+                >
+                  {t("timeline.title")}
+                </Text>
 
-            {/* Months - newest first (already sorted in availableMonths) */}
-            {!isFocusMode &&
-              availableMonths.map((ym) => {
-                // ym is "YYYY-MM"; build a Date on the 1st UTC so format.dateTime
-                // gets a stable instant regardless of viewer timezone.
-                const [yStr, mStr] = ym.split("-");
-                const y = Number(yStr);
-                const mo = Number(mStr);
-                const date = new Date(Date.UTC(y, mo - 1, 1));
-                const active = selectedMonth === ym;
-                return (
-                  <button
-                    key={ym}
-                    type="button"
-                    onClick={() => setSelectedMonth(ym)}
-                    style={{
-                      flexShrink: 0,
-                      padding: "4px 12px",
-                      borderRadius: 999,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      border: "1px solid",
-                      borderColor: active ? "var(--color-accent)" : "var(--color-border-dark)",
-                      background: active ? "var(--color-accent)" : "var(--color-bg-white)",
-                      color: active ? "white" : "var(--color-text-secondary)",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {format.dateTime(date, { month: "short", year: "numeric" })}
-                  </button>
-                );
-              })}
+                {/* "All time" sentinel - clears the month filter */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedMonth(null)}
+                  style={{
+                    flexShrink: 0,
+                    padding: "4px 12px",
+                    borderRadius: 999,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    border: "1px solid",
+                    borderColor: selectedMonth === null ? "var(--color-accent)" : "var(--color-border-dark)",
+                    background: selectedMonth === null ? "var(--color-accent)" : "var(--color-bg-white)",
+                    color: selectedMonth === null ? "white" : "var(--color-text-secondary)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {t("timeline.allTime")}
+                </button>
+
+                {/* Months - newest first (already sorted in availableMonths) */}
+                {availableMonths.map((ym) => {
+                    // ym is "YYYY-MM"; build a Date on the 1st UTC so format.dateTime
+                    // gets a stable instant regardless of viewer timezone.
+                    const [yStr, mStr] = ym.split("-");
+                    const y = Number(yStr);
+                    const mo = Number(mStr);
+                    const date = new Date(Date.UTC(y, mo - 1, 1));
+                    const active = selectedMonth === ym;
+                    return (
+                      <button
+                        key={ym}
+                        type="button"
+                        onClick={() => setSelectedMonth(ym)}
+                        style={{
+                          flexShrink: 0,
+                          padding: "4px 12px",
+                          borderRadius: 999,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          border: "1px solid",
+                          borderColor: active ? "var(--color-accent)" : "var(--color-border-dark)",
+                          background: active ? "var(--color-accent)" : "var(--color-bg-white)",
+                          color: active ? "white" : "var(--color-text-secondary)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {format.dateTime(date, { month: "short", year: "numeric" })}
+                      </button>
+                    );
+                  })}
+              </Group>
+            )}
           </Group>
+        </Box>
+      )}
+
+      {/* Mobile: place search + focus chip (timeline hidden for map real estate) */}
+      {isMobile && (
+        <Box
+          data-map-chrome-place-search
+          style={{
+            position: "absolute",
+            left: 16,
+            bottom: mobileBottomGutter + 20,
+            zIndex: 30,
+            pointerEvents: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            alignItems: "flex-start",
+            maxWidth: "min(280px, calc(100vw - 96px))",
+          }}
+        >
+          <MapPlaceSearch onSelect={handlePlaceSearchSelect} />
+          {(isFocusMode || placeFocus) && focusFilterLabel && (
+            <button
+              type="button"
+              onClick={clearSoloFocus}
+              aria-label={t("timeline.clearFocus")}
+              title={focusFilterLabel}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                maxWidth: "100%",
+                padding: "4px 10px 4px 12px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                border: "1px solid var(--color-accent)",
+                background: "var(--color-accent)",
+                color: "white",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <span
+                style={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  minWidth: 0,
+                }}
+              >
+                {focusFilterLabel}
+              </span>
+              <IconX size={14} stroke={2.25} style={{ flexShrink: 0 }} aria-hidden />
+            </button>
+          )}
         </Box>
       )}
 

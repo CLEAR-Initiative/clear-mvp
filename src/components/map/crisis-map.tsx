@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
@@ -54,6 +62,7 @@ import {
 } from "~/lib/map/topography-terrain";
 import {
   applyPinElevation,
+  clientRectCenterInContainer,
   parseLocationPinRole,
   pinElevationFactor,
   shouldElevatePointPin,
@@ -69,6 +78,7 @@ import { ensureGlobeProjection } from "~/lib/map/idle-globe-spin";
 import {
   dismissTopographyTiltHint,
   isTopographyTiltHintDismissed,
+  isTopographyTiltHintFlatPitch,
   shouldShowTopographyTiltHint,
 } from "~/lib/map/topography-tilt-hint";
 import {
@@ -115,11 +125,21 @@ export type MapViewCameraSnapshot = {
   bearing: number;
 };
 
+/** Imperative fly target for place/coordinate lookup (preserves live pitch/bearing). */
+export type CrisisMapFlyToArgs = {
+  center: [number, number];
+  zoom?: number;
+  /** west, south, east, north — when set, fitBounds wins over center/zoom. */
+  bbox?: [number, number, number, number];
+  duration?: number;
+};
+
 /** Imperative helpers for overlays that track pins (e.g. spaghetti connectors). */
 export interface CrisisMapApi {
   /**
-   * Project a marker to container pixels. Prefers the live Mapbox Marker
-   * (spiderfy display position) when mounted; otherwise falls back to lng/lat.
+   * Project a marker to container pixels at the pin glyph center (not the
+   * ground tip). Prefers the live Mapbox Marker DOM when mounted; otherwise
+   * falls back to lng/lat `project()`.
    */
   projectMarker: (
     id: number,
@@ -132,6 +152,8 @@ export interface CrisisMapApi {
   getViewCamera: () => MapViewCameraSnapshot | null;
   /** Instant restore (no fly) for map ↔ detail round-trips. */
   restoreViewCamera: (camera: MapViewCameraSnapshot) => void;
+  /** Programmatic fly for place search — does not fight React center/zoom props. */
+  flyTo: (args: CrisisMapFlyToArgs) => void;
 }
 
 export interface MapRegion {
@@ -226,6 +248,13 @@ interface CrisisMapProps {
    * appear unchanged (used when closing a marker detail sheet).
    */
   forceFlyToken?: number;
+  /**
+   * When true, skip DOM marker remounts on zoomend while staying in point
+   * mode — keeps radar/pulse CSS animations from restarting (#582).
+   */
+  preferStableDomMarkers?: boolean;
+  /** User interrupted a programmatic fly (wheel/drag) — parent should stop driving camera props. */
+  onUserCameraInterrupt?: () => void;
   /** Fired when the camera settles (pan/zoom/cluster fitBounds). */
   onCameraChange?: (camera: MapViewCameraSnapshot) => void;
   /**
@@ -301,6 +330,11 @@ interface CrisisMapProps {
   introFromGlobe?: boolean;
   /** Fired when the map fails to load (offline, style error, etc.). */
   onLoadError?: (error: { message: string; isOffline: boolean }) => void;
+  /**
+   * Overlay content inside the map shell (same stacking context as Mapbox
+   * markers). Used by `/map` spaghetti connectors so lines sit under pins.
+   */
+  children?: ReactNode;
 }
 
 export type BaseMapType = "simple" | "topography" | "satellite";
@@ -612,6 +646,8 @@ export function CrisisMap({
   flyPitch,
   flyBearing,
   forceFlyToken = 0,
+  preferStableDomMarkers = false,
+  onUserCameraInterrupt,
   onCameraChange,
   onClusterExpand,
   showBoundaries = true,
@@ -630,6 +666,7 @@ export function CrisisMap({
   onMapClick,
   introFromGlobe = false,
   onLoadError,
+  children,
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const locale = useLocale();
@@ -697,12 +734,17 @@ export function CrisisMap({
   const shakemapHoverBoundRef = useRef<Set<string>>(new Set());
   const shakemapPopupRef = useRef<any>(null);
   const [loaded, setLoaded] = useState(false);
+  /** Host inside `.mapboxgl-map` so overlays can sit between canvas and markers. */
+  const [mapOverlayHost, setMapOverlayHost] = useState<HTMLElement | null>(null);
   const [tiltHintDismissed, setTiltHintDismissed] = useState(() =>
     isTopographyTiltHintDismissed(),
   );
+  /** Pitch for tilt-hint gating only — updates when crossing flat ↔ tilted. */
+  const [tiltHintPitch, setTiltHintPitch] = useState(initialPitch);
   const showTiltHint = shouldShowTopographyTiltHint({
     baseMapType,
     dismissed: tiltHintDismissed,
+    pitch: tiltHintPitch,
   });
   const onDismissTiltHint = () => {
     dismissTopographyTiltHint();
@@ -939,15 +981,23 @@ export function CrisisMap({
 
   // Pitch-linked pin stems on every basemap — flat ≤45°, full by ~70°.
   // Imperative DOM only (no remount) so tilt stays smooth.
+  // Also sync tilt-hint pitch (state only when flat↔tilted crosses).
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
     let raf = 0;
     const syncPinElevation = () => {
       raf = 0;
-      const factor = pinElevationFactor(
-        typeof m.getPitch === "function" ? m.getPitch() : 0,
-      );
+      const pitch =
+        typeof m.getPitch === "function" ? m.getPitch() : 0;
+      const factor = pinElevationFactor(pitch);
+      // Hint only needs flat vs tilted — avoid re-renders on every pitch frame.
+      setTiltHintPitch((prev) => {
+        const prevFlat = isTopographyTiltHintFlatPitch(prev);
+        const nextFlat = isTopographyTiltHintFlatPitch(pitch);
+        if (prevFlat === nextFlat) return prev;
+        return pitch;
+      });
       for (const [key, mk] of clusterDomMarkers.current) {
         if (!key.startsWith("p-")) continue;
         try {
@@ -1364,6 +1414,16 @@ export function CrisisMap({
         } catch { /* ignore */ }
       }
 
+      // Country labels - improve legibility with solid fill (no hollow outline effect).
+      if (layer.type === "symbol" && id === "country-label") {
+        try {
+          m.setPaintProperty(layer.id, "text-color", isDark ? "#E2E8F0" : "#1F2937");
+          m.setPaintProperty(layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.9)");
+          m.setPaintProperty(layer.id, "text-halo-width", 2);
+          m.setPaintProperty(layer.id, "text-halo-blur", 0.3);
+        } catch { /* ignore */ }
+      }
+
       // Settlement labels - restrict to focus country only, and relax
       // filterrank so mid-tier cities (Port Sudan, Nyala, etc.) are visible.
       // All settlement labels outside the focus country are hidden; country
@@ -1541,10 +1601,51 @@ export function CrisisMap({
   const prevZoom = useRef(zoom);
   const prevPadding = useRef(flyPaddingBottom);
   const prevForceFly = useRef(forceFlyToken);
+  const userCameraOverrideRef = useRef(false);
+  const onUserCameraInterruptRef = useRef(onUserCameraInterrupt);
+  onUserCameraInterruptRef.current = onUserCameraInterrupt;
+  const preferStableDomMarkersRef = useRef(preferStableDomMarkers);
+  preferStableDomMarkersRef.current = preferStableDomMarkers;
+
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const onUserGesture = (e: { originalEvent?: Event }) => {
+      // Programmatic flyTo/fitBounds omit a DOM UIEvent; ignore those.
+      if (!e.originalEvent || !(e.originalEvent instanceof UIEvent)) return;
+      // Sync prev refs so a later prop echo does not re-fly into the live camera.
+      // Do NOT map.stop() here — that cancels the user's drag/zoom mid-gesture.
+      try {
+        const c = m.getCenter();
+        prevCenter.current = [c.lng, c.lat];
+        prevZoom.current = m.getZoom();
+      } catch {
+        /* ignore */
+      }
+      if (!userCameraOverrideRef.current) {
+        userCameraOverrideRef.current = true;
+        onUserCameraInterruptRef.current?.();
+      }
+    };
+    m.on("zoomstart", onUserGesture);
+    m.on("dragstart", onUserGesture);
+    m.on("rotatestart", onUserGesture);
+    m.on("pitchstart", onUserGesture);
+    return () => {
+      m.off("zoomstart", onUserGesture);
+      m.off("dragstart", onUserGesture);
+      m.off("rotatestart", onUserGesture);
+      m.off("pitchstart", onUserGesture);
+    };
+  }, [loaded]);
+
   useEffect(() => {
     if (!map.current || !loaded) return;
     const forced = forceFlyToken !== prevForceFly.current;
     prevForceFly.current = forceFlyToken;
+    if (forced) {
+      userCameraOverrideRef.current = false;
+    }
     // Country fitBounds owns framing whenever a focus country is selected —
     // including while L0 geometry is still loading. Otherwise flyTo races to
     // a wrong fallback center (e.g. Sudan for Venezuela) and fitBounds has to
@@ -1552,6 +1653,7 @@ export function CrisisMap({
     // wins when fitBoundsOnFocus is off; do not let forceFlyToken on country
     // change cancel the padded mobile country fit.
     if (focusCountryName && fitBoundsOnFocus && !fitBoundsGeometry) return;
+    if (userCameraOverrideRef.current && !forced) return;
     const paddingChanged = prevPadding.current !== flyPaddingBottom;
     if (
       !forced &&
@@ -1997,6 +2099,20 @@ export function CrisisMap({
         mountedMode === "none" ||
         clusterDomMarkers.current.size === 0 ||
         mountedMode !== renderMode;
+
+      // Focus/solo sets are small — remounting on every zoomend restarts the
+      // radar pulse CSS. Keep existing point DOM when mode is unchanged.
+      if (
+        needsMount &&
+        rebuildMarkers &&
+        preferStableDomMarkersRef.current &&
+        mountedMode === "point" &&
+        renderMode === "point" &&
+        clusterDomMarkers.current.size > 0
+      ) {
+        setDomMarkerOpacity(markerOp);
+        return;
+      }
 
       if (needsMount) {
         renderMarkersForMode(renderMode);
@@ -3137,14 +3253,26 @@ export function CrisisMap({
   // resize — Mapbox keeps the old canvas width unless we call resize().
   // Debounce past the nav width transition (200ms) so we don't resize every
   // animation frame (that blanks satellite tiles mid-reflow).
+  // Skip resize if dimensions are unchanged (within 1px) to prevent spurious
+  // camera nudges during chrome motion when the container size is stable.
   useEffect(() => {
     if (!loaded || !mapContainer.current || !map.current) return;
     const el = mapContainer.current;
     let timer = 0;
+    let lastWidth = el.clientWidth;
+    let lastHeight = el.clientHeight;
     const ro = new ResizeObserver(() => {
       if (timer) window.clearTimeout(timer);
       timer = window.setTimeout(() => {
         timer = 0;
+        const currentWidth = el.clientWidth;
+        const currentHeight = el.clientHeight;
+        // Skip resize if dimensions haven't changed (within 1px tolerance)
+        if (Math.abs(currentWidth - lastWidth) <= 1 && Math.abs(currentHeight - lastHeight) <= 1) {
+          return;
+        }
+        lastWidth = currentWidth;
+        lastHeight = currentHeight;
         try {
           map.current?.resize();
           onMapMoveRef.current?.();
@@ -3160,6 +3288,30 @@ export function CrisisMap({
     };
   }, [loaded]);
 
+  // Mount an overlay host inside Mapbox's map container so React overlays
+  // (spaghetti connectors) can stack between the canvas and DOM markers.
+  useEffect(() => {
+    if (!loaded || !map.current) {
+      setMapOverlayHost(null);
+      return;
+    }
+    const container = map.current.getContainer?.() as HTMLElement | undefined;
+    if (!container) {
+      setMapOverlayHost(null);
+      return;
+    }
+    const host = document.createElement("div");
+    host.setAttribute("data-map-overlay-host", "1");
+    host.style.cssText =
+      "position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible;";
+    container.appendChild(host);
+    setMapOverlayHost(host);
+    return () => {
+      host.remove();
+      setMapOverlayHost(null);
+    };
+  }, [loaded]);
+
   // Expose project helpers for overlays (spaghetti connectors on /map).
   useEffect(() => {
     if (!mapApiRef) return;
@@ -3171,11 +3323,20 @@ export function CrisisMap({
       projectMarker: (id, lng, lat) => {
         const m = map.current;
         if (!m) return null;
+        const container = m.getContainer?.() as HTMLElement | undefined;
         const mounted = clusterDomMarkers.current.get(`p-${id}`);
-        if (mounted?.getLngLat) {
-          const ll = mounted.getLngLat() as { lng: number; lat: number };
-          const p = m.project([ll.lng, ll.lat]) as { x: number; y: number };
-          return { x: p.x, y: p.y };
+        // Prefer the live pin head center so bottom-anchored elevated stems
+        // do not attach spaghetti to the ground tip.
+        if (mounted?.getElement && container?.getBoundingClientRect) {
+          const el = mounted.getElement() as HTMLElement;
+          const head =
+            el.querySelector<HTMLElement>(".marker-pin-head") ??
+            el.querySelector<HTMLElement>(".marker-dot") ??
+            el;
+          return clientRectCenterInContainer(
+            head.getBoundingClientRect(),
+            container.getBoundingClientRect(),
+          );
         }
         const display = displayLngLatRef.current.get(id);
         const coords = display ?? ([lng, lat] as [number, number]);
@@ -3204,6 +3365,43 @@ export function CrisisMap({
             zoom: camera.zoom,
             pitch: camera.pitch,
             bearing: camera.bearing,
+          });
+        } catch {
+          /* ignore */
+        }
+      },
+      flyTo: (args) => {
+        const m = map.current;
+        if (!m) return;
+        const duration = args.duration ?? 900;
+        const { pitch, bearing } = flyToOrientation({
+          currentPitch: typeof m.getPitch === "function" ? m.getPitch() : 0,
+          currentBearing: typeof m.getBearing === "function" ? m.getBearing() : 0,
+        });
+        try {
+          if (args.bbox && args.bbox.length === 4) {
+            const [west, south, east, north] = args.bbox;
+            m.fitBounds(
+              [
+                [west, south],
+                [east, north],
+              ],
+              {
+                padding: { top: 72, bottom: 96, left: 48, right: 48 },
+                duration,
+                pitch,
+                bearing,
+                maxZoom: args.zoom ?? 14,
+              },
+            );
+            return;
+          }
+          m.flyTo({
+            center: args.center,
+            zoom: args.zoom ?? 12,
+            duration,
+            pitch,
+            bearing,
           });
         } catch {
           /* ignore */
@@ -3298,7 +3496,9 @@ export function CrisisMap({
         }
         /* Keep GL clear transparent so container basemap color shows if frames drop */
         .mapboxgl-canvas { background: transparent !important; }
-        .mapboxgl-marker { overflow: visible; }
+        /* Canvas under overlays; markers above spaghetti connectors (z-index 1). */
+        .mapboxgl-canvas-container { z-index: 0; }
+        .mapboxgl-marker { overflow: visible; z-index: 2; }
         /* Topography: hide grab hand only while the probe is over terrain.
            Over pitched sky we restore the system cursor so filters/menus
            stay easy to reach. Inline cursor:pointer from markers/blockages
@@ -3333,6 +3533,9 @@ export function CrisisMap({
         }}
       >
         <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
+        {mapOverlayHost && children
+          ? createPortal(children, mapOverlayHost)
+          : null}
         {showTiltHint && (
           <div
             role="status"
