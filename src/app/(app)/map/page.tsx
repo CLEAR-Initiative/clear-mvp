@@ -765,6 +765,10 @@ function MapPageContent() {
     const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
     return prefs.showNrcLocations;
   });
+  const [showBlockages, setShowBlockages] = useState(() => {
+    const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
+    return prefs.showBlockages;
+  });
   const [baseMapType, setBaseMapType] = useState<BaseMapType>(() => {
     if (restoredView?.baseMapType) return restoredView.baseMapType;
     const prefs = resolveMapPreferences(getMapPreferences(activeTeamId));
@@ -793,9 +797,10 @@ function MapPageContent() {
       showPopulation,
       showRoads,
       showNrcLocations,
+      showBlockages,
       baseMapType,
     });
-  }, [activeTeamId, dataView, boundaryLevel, showPopulation, showRoads, showNrcLocations, baseMapType]);
+  }, [activeTeamId, dataView, boundaryLevel, showPopulation, showRoads, showNrcLocations, showBlockages, baseMapType]);
 
   // Flush snapshot on leave so View details → Back always has a fresh copy.
   useEffect(() => {
@@ -860,7 +865,6 @@ function MapPageContent() {
    * merges the team’s ISO3 list.
    */
   const blockagesUiEnabled = isBlockagesUiEnabled();
-  const [showBlockages, setShowBlockages] = useState(false);
   const [blockagesLoading, setBlockagesLoading] = useState(false);
   const [blockagesHint, setBlockagesHint] = useState<string | undefined>();
   const [blockagesGeoJson, setBlockagesGeoJson] = useState<{
