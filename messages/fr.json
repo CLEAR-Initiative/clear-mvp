@@ -377,17 +377,15 @@
     },
     "roles": {
       "member": "Membre",
-      "admin": "Admin",
-      "owner": "Propriétaire",
-      "viewer": "Lecteur",
-      "analyst": "Analyste",
-      "lead": "Responsable"
+      "orgAdmin": "Admin d'organisation",
+      "teamMember": "Membre de l'équipe",
+      "fieldCoordinator": "Coordinateur de terrain",
+      "teamAdmin": "Administrateur d'équipe"
     },
     "users": {
       "roles": {
-        "field": "Terrain",
+        "viewer": "Lecteur",
         "analyst": "Analyste",
-        "orgAdmin": "Admin d'organisation",
         "admin": "Admin"
       },
       "unauthorized": "Vous devez disposer de privilèges administrateur pour accéder à la gestion des utilisateurs.",
@@ -2595,15 +2593,11 @@
         "orgRoleLabel": "Rôle dans l'organisation",
         "roles": {
           "member": "Membre",
-          "admin": "Admin",
-          "owner": "Propriétaire"
+          "orgAdmin": "Admin d'organisation"
         },
         "teamsLabel": "Équipes",
         "noTeams": "Cette organisation n'a aucune équipe. Créez-en une avant d'envoyer des invitations.",
         "teamRoles": {
-          "viewer": "Lecteur",
-          "analyst": "Analyste",
-          "lead": "Responsable",
           "team_member": "Membre de l'équipe",
           "field_coordinator": "Coordinateur de terrain",
           "team_admin": "Administrateur d'équipe"
