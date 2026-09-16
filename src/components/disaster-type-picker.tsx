@@ -78,7 +78,8 @@ export function DisasterTypePicker({
   const toggleExpand = (l1Name: string) =>
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(l1Name) ? next.delete(l1Name) : next.add(l1Name);
+      if (next.has(l1Name)) next.delete(l1Name);
+      else next.add(l1Name);
       return next;
     });
 
