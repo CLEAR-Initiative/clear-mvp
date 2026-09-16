@@ -1,12 +1,12 @@
 name: Unit tests
 
 # Fast gate on every PR to dev: Vitest unit suite, TypeScript typecheck, and the
-# translation-catalog guard (scripts/check-messages.mjs). Runs alongside the
-# heavier E2E smoke workflow; both are required status checks on dev.
+# translation-catalog guard (scripts/check-messages.mjs), plus ESLint. Runs
+# alongside the heavier E2E smoke workflow; both are required status checks on dev.
 #
-# Lint is deliberately NOT here: the repo has no ESLint config, so `next lint`
-# (and therefore `npm run check`) stops at an interactive setup prompt. Add it
-# once an eslint.config.mjs lands.
+# Lint fails on errors only; warnings (unused vars, exhaustive-deps, <img>) are
+# reported but non-blocking until they are burned down. The job name below is
+# the required status check, so it stays "Unit tests + typecheck".
 
 on:
   pull_request:
@@ -35,6 +35,9 @@ jobs:
 
       - name: Install deps
         run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run lint
 
       - name: Vitest
         run: bunx vitest run

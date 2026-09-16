@@ -678,7 +678,6 @@ function DetectionPageContent() {
     setEventsOffset(0);
     setEventsItems([]);
     setEventsVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventsSort]);
 
   useEffect(() => {
@@ -694,7 +693,6 @@ function DetectionPageContent() {
     setAlertsOffset(0);
     setAlertsItems([]);
     setAlertsVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alertsSort]);
 
   useEffect(() => {
@@ -710,7 +708,6 @@ function DetectionPageContent() {
     setSignalsOffset(0);
     setSignalsItems([]);
     setSignalsVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signalsSort]);
 
   // ── Load-more callbacks ────────────────────────────────────────────────────
@@ -878,7 +875,6 @@ function DetectionPageContent() {
     setHistoryEventsItems([]);
     setHistorySignalsItems([]);
     setHistoryVersion((v) => v + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historySortOrder]);
 
   const historyHasMore = historyAlertsHasMore || historyEventsHasMore || historySignalsHasMore;
@@ -1067,7 +1063,8 @@ function DetectionPageContent() {
                         style={{ cursor: "pointer", textTransform: "capitalize" }}
                         onClick={() => setActiveSeverities((prev) => {
                           const next = new Set(prev);
-                          next.has(sev) ? next.delete(sev) : next.add(sev);
+                          if (next.has(sev)) next.delete(sev);
+                          else next.add(sev);
                           return next;
                         })}
                       >
@@ -1095,7 +1092,8 @@ function DetectionPageContent() {
                             onClick={() => setActiveSources((prev) => {
                               const base = prev ?? new Set(allSources);
                               const next = new Set(base);
-                              next.has(src) ? next.delete(src) : next.add(src);
+                              if (next.has(src)) next.delete(src);
+                              else next.add(src);
                               return next.size === allSources.length ? null : next;
                             })}
                           >
