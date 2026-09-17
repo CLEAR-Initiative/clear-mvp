@@ -2284,17 +2284,34 @@ export function CrisisMap({
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let popup: any = null;
+    // map.remove() nulls the canvas. View details unmounts this map; a hover
+    // or cleanup that still writes cursor then throws and Next shows the
+    // full-page "client-side exception" instead of the event page.
+    const setCursor = (value: string) => {
+      try {
+        const canvas = m.getCanvas?.() as HTMLCanvasElement | undefined;
+        if (canvas) canvas.style.cursor = value;
+      } catch {
+        /* map already removed */
+      }
+    };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onMove = (e: any) => {
-      const feats = m.queryRenderedFeatures(e.point, { layers: HOVER_LAYERS }) as Array<{
-        properties?: Record<string, unknown>;
-      }>;
-      if (!feats.length) {
-        popup?.remove();
-        m.getCanvas().style.cursor = "";
+      let feats: Array<{ properties?: Record<string, unknown> }> = [];
+      try {
+        feats = m.queryRenderedFeatures(e.point, { layers: HOVER_LAYERS }) as Array<{
+          properties?: Record<string, unknown>;
+        }>;
+      } catch {
+        setCursor("");
         return;
       }
-      m.getCanvas().style.cursor = "pointer";
+      if (!feats.length) {
+        popup?.remove();
+        setCursor("");
+        return;
+      }
+      setCursor("pointer");
       const p = feats[0]?.properties ?? {};
       const title = escapeHtml(String(p.label || p.name || "Access constraint"));
       const kind =
@@ -2379,18 +2396,22 @@ export function CrisisMap({
     };
     const onLeave = () => {
       popup?.remove();
-      m.getCanvas().style.cursor = "";
+      setCursor("");
     };
 
     const cleanup = () => {
       for (const id of HOVER_LAYERS) {
-        m.off("mousemove", id, onMove);
-        m.off("mouseleave", id, onLeave);
+        try {
+          m.off("mousemove", id, onMove);
+          m.off("mouseleave", id, onLeave);
+        } catch {
+          /* layer never mounted */
+        }
       }
       popup?.remove();
       popup = null;
       removeBlockagesMapLayers(m);
-      m.getCanvas().style.cursor = "";
+      setCursor("");
     };
 
     cleanup();
@@ -2402,6 +2423,7 @@ export function CrisisMap({
 
     let fillRaf: ReturnType<typeof requestAnimationFrame> | null = null;
     let zoomDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let fadeInTimer: ReturnType<typeof setTimeout> | null = null;
     let isZooming = false;
     const abortController = new AbortController();
     
@@ -2482,11 +2504,14 @@ export function CrisisMap({
       // Corridors stay thick always - only opacity changes
       setBlockagesFillProgress(m, 0);
       
-      setTimeout(() => {
+      fadeInTimer = setTimeout(() => {
+        fadeInTimer = null;
+        if (abortController.signal.aborted) return;
         const fadeStart = performance.now();
         const fadeDuration = 800; // Smooth fade-in
         
         const fadeIn = () => {
+          if (abortController.signal.aborted) return;
           const elapsed = performance.now() - fadeStart;
           const t = Math.min(elapsed / fadeDuration, 1);
           
@@ -2520,12 +2545,19 @@ export function CrisisMap({
     })();
 
     return () => {
-      // Cancel any in-flight icon fetches
+      // Cancel any in-flight icon fetches and the fade that was not tracked
+      // by fillRaf (scheduled 100ms later). View details unmounts the map
+      // before that timer fires; touching a removed map is the client exception.
       abortController.abort();
       if (fillRaf) cancelAnimationFrame(fillRaf);
+      if (fadeInTimer) clearTimeout(fadeInTimer);
       if (zoomDebounceTimer) clearTimeout(zoomDebounceTimer);
-      m.off("zoomstart", onZoomStart);
-      m.off("zoomend", onZoomEnd);
+      try {
+        m.off("zoomstart", onZoomStart);
+        m.off("zoomend", onZoomEnd);
+      } catch {
+        /* map already removed */
+      }
       cleanup();
     };
   }, [loaded, showBlockages, blockagesGeoJson, isDark, baseMapType]);
