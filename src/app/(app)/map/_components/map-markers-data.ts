@@ -82,12 +82,17 @@ function hashId(a: string, b: string): number {
   return Math.abs(h);
 }
 
-/** Extract lng/lat from a location when its geometry is a usable Point. */
+/**
+ * Extract lng/lat from a location. Points pass through; Polygon/MultiPolygon
+ * catalog tags (country, city) use a centroid so Observe `@Khartoum` and
+ * aggregated event pins still paint.
+ */
 function pointFromLocation(loc: GqlEvent["generalLocation"] | GqlEvent["representativePoint"]) {
-  if (!loc?.geometry || loc.geometry.type !== "Point") return null;
-  const [lng, lat] = loc.geometry.coordinates as [number, number];
-  if (typeof lng !== "number" || typeof lat !== "number") return null;
-  return { loc, lng, lat };
+  if (!loc) return null;
+  const point = toMapPointGeometry(loc.geometry ?? null);
+  if (!point) return null;
+  const [lng, lat] = point.coordinates;
+  return { loc: { ...loc, geometry: point }, lng, lat };
 }
 
 /**
@@ -273,37 +278,46 @@ export function signalsToMarkers(
 ): CrisisMarker[] {
   const markers: CrisisMarker[] = [];
   for (const signal of signals) {
-    const candidates = [signal.generalLocation, signal.originLocation, signal.destinationLocation];
-    for (const loc of candidates) {
-      if (loc?.geometry?.type === "Point") {
-        const [lng, lat] = loc.geometry.coordinates as [number, number];
-        if (typeof lng === "number" && typeof lat === "number") {
-          markers.push({
-            id: hashId(signal.id, loc.id),
-            lng,
-            lat,
-            title: signal.title ?? signal.source.name ?? "Signal",
-            severity: signal.severity ? mapSeverity(signal.severity) : "medium",
-            description: signal.description ?? undefined,
-            region: resolveLocationName(loc, { locationById }) ?? undefined,
-            locationId: loc.id,
-            ancestorIds: loc.ancestorIds ?? [],
-            dataSource: signal.source.name,
-            eventId: signal.id,
-            markerKind: "signal",
-            occurredAt: signal.publishedAt,
-            locationPinRole: "source",
-            iconSlug: resolveMarkerIconSlug({
-              texts: [signal.title, signal.description],
-              markerKind: "signal",
-            }),
-          });
-          break;
-        }
-      }
-    }
+    const point = signalPoint(signal);
+    if (!point) continue;
+    const { loc, lng, lat } = point;
+    markers.push({
+      id: hashId(signal.id, loc.id),
+      lng,
+      lat,
+      title: signal.title ?? signal.source.name ?? "Signal",
+      severity: signal.severity ? mapSeverity(signal.severity) : "medium",
+      description: signal.description ?? undefined,
+      region: resolveLocationName(loc, { locationById }) ?? undefined,
+      locationId: loc.id,
+      ancestorIds: loc.ancestorIds ?? [],
+      dataSource: signal.source.name,
+      eventId: signal.id,
+      markerKind: "signal",
+      occurredAt: signal.publishedAt,
+      locationPinRole: "source",
+      iconSlug: resolveMarkerIconSlug({
+        texts: [signal.title, signal.description],
+        markerKind: "signal",
+      }),
+    });
   }
   return dedupeMarkersByEntity(markers);
+}
+
+/**
+ * Signal pins: Point location, else polygon/MultiPolygon centroid.
+ * Country/state catalog tags (e.g. Venezuela) are almost always polygons —
+ * requiring Point alone dropped Observe pins from `/map?signal=` focus and
+ * any forMap path that skipped sanitize.
+ */
+function signalPoint(signal: GqlSignal) {
+  const candidates = [signal.generalLocation, signal.originLocation, signal.destinationLocation];
+  for (const loc of candidates) {
+    const hit = pointFromLocation(loc);
+    if (hit) return hit;
+  }
+  return null;
 }
 
 /**

@@ -91,6 +91,35 @@ describe("eventsToMarkers / representativePoint", () => {
     expect(markers[0]?.locationId).toBe("rep");
   });
 
+  it("uses a catalog polygon centroid when the aggregated event has no Point", () => {
+    const event = baseEvent({
+      id: "evt-khartoum",
+      title: "Flooding in Khartoum",
+      generalLocation: {
+        id: "krt",
+        name: "Khartoum",
+        level: 2,
+        ancestorIds: ["sd"],
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [32.4, 15.4],
+              [32.7, 15.4],
+              [32.7, 15.7],
+              [32.4, 15.7],
+              [32.4, 15.4],
+            ],
+          ],
+        },
+      },
+    });
+    const markers = eventsToMarkers([event]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.lng).toBeCloseTo(32.52, 2);
+    expect(markers[0]?.lat).toBeCloseTo(15.52, 2);
+  });
+
   it("falls back to event Point when representativePoint is missing", () => {
     const event = baseEvent({
       originLocation: pointLoc("origin", 30, 12),
@@ -309,6 +338,73 @@ describe("focusCrisisToMarkers", () => {
     expect(markers).toHaveLength(1);
     expect(markers[0]?.markerKind).toBe("crisis");
     expect(markers[0]?.eventId).toBe("cri-poly");
+  });
+});
+
+describe("signalsToMarkers", () => {
+  it("plots a Point generalLocation", () => {
+    const markers = signalsToMarkers([
+      {
+        id: "sig-pt",
+        source: { id: "s", name: "field_officer", type: "manual" },
+        title: "Checkpoint",
+        description: null,
+        severity: 2,
+        url: null,
+        publishedAt: "2026-01-01T00:00:00.000Z",
+        collectedAt: "2026-01-01T00:00:00.000Z",
+        generalLocation: pointLoc("pt", -66.9, 10.5),
+        originLocation: null,
+        destinationLocation: null,
+        events: [],
+      },
+    ]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.lng).toBe(-66.9);
+    expect(markers[0]?.lat).toBe(10.5);
+    expect(markers[0]?.markerKind).toBe("signal");
+  });
+
+  it("falls back to polygon centroid for country-level catalog tags (e.g. Venezuela)", () => {
+    const markers = signalsToMarkers([
+      {
+        id: "sig-ve",
+        source: { id: "s", name: "field_officer", type: "manual" },
+        title: "Field note Venezuela",
+        description: null,
+        severity: 2,
+        url: null,
+        publishedAt: "2026-01-01T00:00:00.000Z",
+        collectedAt: "2026-01-01T00:00:00.000Z",
+        generalLocation: {
+          id: "ve",
+          name: "Venezuela",
+          level: 0,
+          ancestorIds: [],
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [-73.4, 0.6],
+                [-59.8, 0.6],
+                [-59.8, 12.2],
+                [-73.4, 12.2],
+                [-73.4, 0.6],
+              ],
+            ],
+          },
+        },
+        originLocation: null,
+        destinationLocation: null,
+        events: [],
+      },
+    ]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.markerKind).toBe("signal");
+    expect(markers[0]?.eventId).toBe("sig-ve");
+    // Outer-ring arithmetic mean (includes GeoJSON closing vertex)
+    expect(markers[0]?.lng).toBeCloseTo(-67.96, 2);
+    expect(markers[0]?.lat).toBeCloseTo(5.24, 2);
   });
 });
 

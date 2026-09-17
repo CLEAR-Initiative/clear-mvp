@@ -2071,6 +2071,8 @@
     "placeSearch": {
       "open": "Rechercher un lieu ou des coordonnées",
       "placeholder": "Lieu ou lat, lng",
+      "filters": "Filtres de recherche",
+      "removeFilter": "Retirer le filtre {label}",
       "clear": "Effacer la recherche",
       "noResults": "Aucun lieu trouvé",
       "error": "Recherche indisponible"
@@ -2172,6 +2174,7 @@
     },
     "signals": {
       "loading": "Chargement des signaux…",
+      "loadingMore": "Chargement d'autres signaux…",
       "empty": "Aucun signal pour le moment",
       "events": "{count, plural, one {# événement} other {# événements}}"
     },

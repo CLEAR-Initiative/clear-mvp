@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   IconAntennaBars5,
@@ -13,19 +14,28 @@ import {
   IconVideo,
 } from "@tabler/icons-react";
 import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
+import { SkeletonBone, SkeletonPulseStyles } from "~/components/ui/skeleton-bone";
 import { api } from "~/trpc/react";
 import type { GqlSignal } from "~/lib/types/graphql";
 import {
   classifyObserveSubmitError,
   drainQueuedFieldSignals,
   isObserveQaOverrideAllowed,
-  locationFieldsForPayload,
   parseAtMentionQuery,
+  resolveLocationIdFromCompose,
   resolveTeamIdForSubmit,
   searchForcesMissingTeam,
   stripTrailingAtMention,
   type QueuedFieldSignal,
 } from "~/lib/observe/field-signal";
+import { resolveObservePinFields } from "~/lib/observe/refine-observe-pin";
+import { geocodePlaceQuery } from "~/lib/map/geocode-lookup";
+
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+
+/** Manual sources only — Observe is the field intake surface, not the full feed. */
+const OBSERVE_SIGNAL_SOURCES = ["field_officer", "partner", "government"] as const;
+const OBSERVE_PAGE_SIZE = 20;
 
 /* ── IndexedDB offline queue ────────────────────────────────── */
 
@@ -203,10 +213,24 @@ function SignalCard({ signal }: { signal: GqlSignal }) {
   const t = useTranslations("observe.signals");
   const format = useFormatter();
   const location = signal.generalLocation ?? signal.originLocation;
-  const hasEvents = signal.events.length > 0;
+  const eventCount = signal.events?.length ?? 0;
+  const hasEvents = eventCount > 0;
 
   return (
-    <div style={{ background: "var(--color-bg-white)", borderRadius: 10, padding: "14px 16px", marginBottom: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 8px rgba(0,0,0,0.04)" }}>
+    <Link
+      href={`/signal/${signal.id}?from=observe`}
+      style={{
+        display: "block",
+        background: "var(--color-bg-white)",
+        borderRadius: 10,
+        padding: "14px 16px",
+        marginBottom: 10,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 8px rgba(0,0,0,0.04)",
+        textDecoration: "none",
+        color: "inherit",
+        cursor: "pointer",
+      }}
+    >
 
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
@@ -225,32 +249,120 @@ function SignalCard({ signal }: { signal: GqlSignal }) {
       {(location ?? hasEvents) && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
           {location && <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--color-text-muted)", fontSize: 12 }}><IconMapPin size={11} strokeWidth={2.5} /><span>{location.name}</span></div>}
-          {hasEvents && <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-info)", background: "var(--color-info-light)", padding: "2px 7px", borderRadius: 8 }}>{t("events", { count: signal.events.length })}</span>}
+          {hasEvents && <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-info)", background: "var(--color-info-light)", padding: "2px 7px", borderRadius: 8 }}>{t("events", { count: eventCount })}</span>}
         </div>
       )}
+    </Link>
+  );
+}
+
+function SignalCardSkeleton() {
+  return (
+    <div
+      style={{
+        background: "var(--color-bg-white)",
+        borderRadius: 10,
+        padding: "14px 16px",
+        marginBottom: 10,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 8px rgba(0,0,0,0.04)",
+      }}
+      aria-hidden
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <SkeletonBone width={88} height={18} radius={10} />
+        <SkeletonBone width={52} height={12} />
+      </div>
+      <SkeletonBone width="72%" height={15} style={{ marginBottom: 8 }} />
+      <SkeletonBone width="92%" height={12} style={{ marginBottom: 6 }} />
+      <SkeletonBone width="40%" height={12} />
     </div>
   );
 }
 
-function SignalsList({ teamId }: { teamId?: string }) {
+/**
+ * Paginated field-signal feed. Intentionally omits `teamId`: team scope is a
+ * location filter, so a GPS pin outside the team's countries (e.g. Santiago
+ * while the team monitors Sudan) would never appear after submit. Observe is
+ * the intake surface — show recent manual sources globally, newest first.
+ */
+function SignalsList({ listVersion }: { listVersion: number }) {
   const t = useTranslations("observe.signals");
-  const signalsQuery = api.signals.list.useQuery(
-    { teamId },
-    { staleTime: 1000 * 60 },
+  const [offset, setOffset] = useState(0);
+  const [items, setItems] = useState<GqlSignal[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const appendingRef = useRef(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const signalsQuery = api.signals.signalsPage.useQuery(
+    {
+      sourceNames: [...OBSERVE_SIGNAL_SOURCES],
+      orderBy: "PUBLISHED_DESC",
+      limit: OBSERVE_PAGE_SIZE,
+      offset,
+      _v: listVersion,
+    },
+    { staleTime: 30_000 },
   );
 
-  if (signalsQuery.isLoading) {
+  useEffect(() => {
+    setOffset(0);
+    setItems([]);
+    setHasMore(false);
+    appendingRef.current = false;
+  }, [listVersion]);
+
+  useEffect(() => {
+    if (!signalsQuery.data) return;
+    const { items: page, hasMore: more } = signalsQuery.data;
+    setHasMore(more);
+    if (appendingRef.current) {
+      setItems((prev) => {
+        const seen = new Set(prev.map((s) => s.id));
+        return [...prev, ...page.filter((s) => !seen.has(s.id))];
+      });
+      appendingRef.current = false;
+    } else {
+      setItems(page);
+    }
+  }, [signalsQuery.data]);
+
+  const loadMore = useCallback(() => {
+    if (!hasMore || signalsQuery.isFetching || appendingRef.current) return;
+    appendingRef.current = true;
+    setOffset((o) => o + OBSERVE_PAGE_SIZE);
+  }, [hasMore, signalsQuery.isFetching]);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    const root = scrollRef.current;
+    if (!node || !root || !hasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      },
+      { root, rootMargin: "160px", threshold: 0 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore, items.length]);
+
+  const initialLoading = signalsQuery.isLoading && items.length === 0;
+  const showMoreSkeleton =
+    signalsQuery.isFetching && items.length > 0 && (appendingRef.current || hasMore);
+
+  if (initialLoading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, color: "var(--color-text-muted)", fontSize: 14 }}>
-        <IconLoader2 size={20} style={{ animation: "spin 1s linear infinite", marginInlineEnd: 8 }} />
-        {t("loading")}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 24px" }}>
+        <SkeletonPulseStyles />
+        {Array.from({ length: 5 }, (_, i) => (
+          <SignalCardSkeleton key={i} />
+        ))}
       </div>
     );
   }
 
-  const signals = (signalsQuery.data ?? []).slice().sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-
-  if (signals.length === 0) {
+  if (!initialLoading && items.length === 0 && !signalsQuery.isFetching) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, color: "var(--color-text-muted)", fontSize: 14, gap: 8 }}>
         <IconPhoto size={32} strokeWidth={1.5} />
@@ -260,8 +372,18 @@ function SignalsList({ teamId }: { teamId?: string }) {
   }
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 24px" }}>
-      {signals.map((s) => <SignalCard key={s.id} signal={s} />)}
+    <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "16px 16px 24px" }}>
+      <SkeletonPulseStyles />
+      {items.map((s) => (
+        <SignalCard key={s.id} signal={s} />
+      ))}
+      {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
+      {showMoreSkeleton && (
+        <div role="status" aria-label={t("loadingMore")}>
+          <SignalCardSkeleton />
+          <SignalCardSkeleton />
+        </div>
+      )}
     </div>
   );
 }
@@ -305,6 +427,8 @@ export default function ObservePage() {
   const [submitting, setSubmitting] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [forceNoTeam, setForceNoTeam] = useState(false);
+  /** Bumped after a successful create so SignalsList refetches page 0. */
+  const [signalsListVersion, setSignalsListVersion] = useState(0);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -314,6 +438,7 @@ export default function ObservePage() {
   const createSignal = api.signals.createManual.useMutation({
     onSuccess: async () => {
       await utils.signals.invalidate();
+      setSignalsListVersion((v) => v + 1);
     },
   });
   const sourcesQuery = api.signals.sources.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
@@ -382,6 +507,7 @@ export default function ObservePage() {
         acknowledge: async (key) => {
           await dbRemove(key);
           void utils.signals.invalidate();
+          setSignalsListVersion((v) => v + 1);
           setPendingCount((n) => Math.max(0, n - 1));
         },
       });
@@ -569,14 +695,35 @@ export default function ObservePage() {
     setSubmitting(true);
     setAtQuery(null);
 
+    const locationsForResolve = (locationsQuery.data ?? []).map((loc) => ({
+      id: loc.id,
+      name: loc.name,
+      label: loc.parent ? `${loc.name}, ${loc.parent.name}` : loc.name,
+      level: loc.level,
+    }));
+    const resolvedLocationId =
+      resolveLocationIdFromCompose({
+        draft,
+        locationId,
+        hasGps: gpsCoords != null,
+        locations: locationsForResolve,
+      }) ?? locationId;
+    const resolvedLocationLabel =
+      locationLabel ||
+      locationsForResolve.find((loc) => loc.id === resolvedLocationId)?.label ||
+      "";
+
     const sentMsg: ChatMessage = {
       id: `sent-${Date.now()}`,
       kind: "sent",
       title: titleLine || undefined,
       body: bodyLines || undefined,
-      locationLabel: locationLabel || undefined,
+      locationLabel: resolvedLocationLabel || undefined,
       media: draftMedia.map((m) => ({ id: m.id, preview: m.preview, isVideo: m.isVideo })),
     };
+
+    // Capture GPS before clearing compose state (setState is async; closure still holds values).
+    const gpsAtSubmit = gpsCoords;
 
     setMessages((prev) => [...prev, sentMsg]);
     setDraft("");
@@ -589,11 +736,26 @@ export default function ObservePage() {
       setMessages((prev) => [...prev, { id: `typing-${Date.now()}`, kind: "typing" }]);
     }, 400);
 
+    const pin = await resolveObservePinFields({
+      draft,
+      locationId: resolvedLocationId,
+      locationLabel: resolvedLocationLabel,
+      gps: gpsAtSubmit,
+      geocode: (q, opts) =>
+        geocodePlaceQuery(q, MAPBOX_TOKEN, {
+          ...(opts?.country ? { country: opts.country } : {}),
+        }),
+    });
+
     const payload: QueuedPayload = {
       sourceId,
       title: titleLine || "Field observation",
       description: bodyLines || titleLine || "Field observation",
-      ...locationFieldsForPayload({ locationId, gps: gpsCoords }),
+      ...(pin.lat != null && pin.lng != null
+        ? { lat: pin.lat, lng: pin.lng }
+        : pin.locationId
+          ? { locationId: pin.locationId }
+          : {}),
       teamId: teamGate.teamId,
     };
 
@@ -624,7 +786,7 @@ export default function ObservePage() {
       }
 
       await createSignal.mutateAsync({ ...payload, mediaUrls: mediaKeys });
-      void utils.signals.invalidate();
+      // Mutation onSuccess already invalidates + bumps signalsListVersion.
       pushReply({ id: `recv-${Date.now()}`, kind: "received", variant: "success", text: t("replies.success") });
     } catch (err) {
       const failure = classifyObserveSubmitError(err);
@@ -640,7 +802,24 @@ export default function ObservePage() {
     }
 
     setSubmitting(false);
-  }, [canSubmit, titleLine, bodyLines, locationLabel, locationId, gpsCoords, draftMedia, sourceId, defaultTeamId, submitRole, meStatus, createSignal, utils, t]);
+  }, [
+    canSubmit,
+    titleLine,
+    bodyLines,
+    draft,
+    locationLabel,
+    locationId,
+    gpsCoords,
+    draftMedia,
+    sourceId,
+    defaultTeamId,
+    submitRole,
+    meStatus,
+    createSignal,
+    utils,
+    t,
+    locationsQuery.data,
+  ]);
 
   const hasLocation = !!locationLabel;
   const hasMedia = draftMedia.length > 0;
@@ -704,7 +883,7 @@ export default function ObservePage() {
       </div>
 
       {/* Signals list tab */}
-      {activeTab === "signals" && <SignalsList teamId={defaultTeamId} />}
+      {activeTab === "signals" && <SignalsList listVersion={signalsListVersion} />}
 
       {/* Submit tab */}
       {activeTab === "submit" && <>

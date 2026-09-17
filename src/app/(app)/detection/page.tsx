@@ -20,12 +20,13 @@ import {
 } from "~/hooks/use-team-country";
 import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { parseDateFilter, resolveCountryConfig } from "~/lib/constants/country-config";
+import { parseDateFilter, resolveCountryConfig, staticCountryBounds } from "~/lib/constants/country-config";
 import { isoForCountryName } from "~/lib/constants/countries";
 import { scopeIsosMissingPaintableBoundaries } from "~/lib/geo/country-mask";
 import { useLocations } from "~/hooks/use-locations";
 import { useLastFocusedCountry } from "~/hooks/use-last-focused-country";
 import { browseMapCamera } from "~/lib/map/country-picker-camera";
+import { markerMatchesLocationScope } from "~/lib/map/marker-location-match";
 import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
 import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
@@ -903,13 +904,25 @@ function DetectionPageContent() {
     selectedCountry && selectedCountry !== ALL_COUNTRIES ? selectedCountry : undefined;
 
   const clipToRegion = useCallback((markers: CrisisMarker[]): CrisisMarker[] => {
-    if (!selectedLocationId) return markers;
-    return markers.filter((mk) => {
-      if (!mk.locationId) return false;
-      if (mk.locationId === selectedLocationId) return true;
-      return mk.ancestorIds?.includes(selectedLocationId) ?? false;
-    });
-  }, [selectedLocationId]);
+    const countryBbox =
+      !selectedRegionId && selectedCountry !== ALL_COUNTRIES
+        ? staticCountryBounds(selectedCountry)
+        : null;
+    if (!selectedLocationId && !countryBbox) return markers;
+    return markers.filter((mk) =>
+      markerMatchesLocationScope({
+        locationId: mk.locationId,
+        ancestorIds: mk.ancestorIds,
+        region: mk.region,
+        lng: mk.lng,
+        lat: mk.lat,
+        selectedLocationId,
+        selectedLocationName:
+          selectedCountry !== ALL_COUNTRIES ? selectedCountry : null,
+        countryBbox,
+      }),
+    );
+  }, [selectedLocationId, selectedRegionId, selectedCountry]);
 
   const mapMarkers: MapMarker[] = useMemo(() => clipToRegion(alertsToMarkers(alertsItems)), [alertsItems, clipToRegion]);
   const eventMapMarkers: MapMarker[] = useMemo(() => clipToRegion(eventsToMarkers(eventsItems)), [eventsItems, clipToRegion]);
