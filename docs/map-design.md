@@ -97,6 +97,43 @@ override paint on the style's road layers.
 - Satellite: no paint override (satellite-streets styles its own roads);
   the toggle switches between satellite-v9 and satellite-streets-v12.
 
+## Blockages = access constraints
+
+LogIE road/bridge constraints are **not** a restyle of the Roads overlay.
+They are a movement-constraint channel and must survive every basemap,
+including Satellite (always a dark canvas) and Roads-on (tan corridors).
+
+Tokens live in `src/lib/map/blockages-paint.ts`. Tune there, not as
+one-off numbers in `crisis-map.tsx`.
+
+- **Status** — Not Passable `#B91C1C`; Restricted `#EA580C` (vivid orange,
+  not the old `#D97706` that sat next to corridor tan). Color is the
+  status encoding; do not invent a third hue family.
+- **Casing** — `#FFFFFF` on every basemap. This is the contrast that
+  keeps the core visible on imagery and on dark Simple/Topography.
+- **Glow** — wide, low-opacity status wash under the casing so a
+  Field Program Manager can scan corridors at z5–8 without hovering.
+- **Width curve** — Country-band anchors (z6 core 4px / z8 5.5px) carry
+  the use case. Do not tune only the Site end.
+- **Fresh vs stale** — stale (≥15 days) stays painted: same width, solid vector
+  (no dashes), 60% opacity. Fresh (<15 days) uses 100% opacity. Opacity is the
+  primary staleness indicator. Never hide; never fade below readable.
+- **Fill animation** — **Corridors stay thick always** (width never changes). On layer
+  toggle: smooth opacity fade-in (0→1) over 800ms. On zoom changes: subtle opacity pulse
+  (1→0.3→1) 2 seconds after stabilizing. Duration is zoom-adaptive: faster at country zoom,
+  slower at high zoom to maintain constant perceived speed. Animation uses `line-opacity` only,
+  not `line-trim-offset` or width changes. Very faint ghost track (0.12 opacity) hints at
+  full extent. **Default resting state is always thick and fully opaque** — corridors remain
+  prominent for navigation.
+- **Cue chips** — bold text labels positioned above corridor center (`line-center`,
+  offset -1.5) showing cause snippet or status + age (e.g. `Flooded · 12d`,
+  `Not Passable · 42d·stale`). Solid color (red/orange, no halo) matching corridor
+  status. Opacity matches corridor: 100% fresh, 60% stale. No marks or icons —
+  the animated corridor + cue text is the full visual treatment.
+- **Stack** — above Roads / population, below settlement labels.
+- **Hover** — slim 3-line popup (title, status·age, optional remark). Dropped
+  long stale essay, source footer, and reliability from the old hover card.
+
 ## Layer stack (bottom to top)
 
 1. Basemap land / water / landuse
@@ -106,8 +143,9 @@ override paint on the style's road layers.
 5. Mapbox admin lines / A1 fallback borders
 6. Backend admin boundaries (A1/A2 lines), focus country border
 7. Population choropleth (opt-in)
-8. Labels (style symbols; settlement labels relaxed inside focus country)
-9. Markers, cluster donuts, marker detail (DOM); Point altitude probe (Topography)
+8. **Blockages** (opt-in; ghost → glow → casing → core → cue text; point halo + circle for bridges)
+9. Labels (style symbols; settlement labels relaxed inside focus country)
+10. Markers, cluster donuts, marker detail (DOM); Point altitude probe (Topography)
 
 ## Color roles
 
@@ -123,9 +161,14 @@ override paint on the style's road layers.
 | Canvas void (shell behind WebGL) | #FAFAFA | #111111 (Simple + Topography); #0a0a0a (Satellite) |
 | Topography atmosphere | same as Simple (no custom `setFog`) | same — cartography matches Simple; tilt / mesh / Point altitude only |
 | Markers | severity scale (critical red -> low green), orange accent rings; type glyph on unclustered pins; stems grow with pitch on Simple / Topography / Satellite (flat ≤45°, full ~70°); proposed pins stay flat | same |
+| Blockage not passable | #B91C1C core + #FFF casing + status glow | same |
+| Blockage restricted | #EA580C core + #FFF casing + status glow | same |
 
 Boundaries are blue, corridors tan, markers orange/severity - three
-distinguishable information channels at every zoom and theme. On the
+distinguishable information channels at every zoom and theme. **Blockages**
+are a fourth channel: they must not read as “another road color.” White
+casing + glow + Country-band width + fill animation + cue chips are what separate them
+from tan corridors and from severity pins. On the
 point density band, severity stays the disc color and type is a white
 SVG glyph (`resolveMarkerIconSlug` → `/images/ui-kit/signals/icons/`).
 Heatmap and donut bands stay severity-only so glyphs do not fight

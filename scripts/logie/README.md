@@ -12,9 +12,14 @@ Spike additions vs the gist: shaped features **pass through `fclass`**.
 ## Run
 
 ```bash
-npm run logie:spike
+npm run logie:spike          # SDN
+npm run logie:spike:afg      # Afghanistan
+npm run logie:spike:ven      # Venezuela
+npm run logie:spike:all      # SDN + AFG + VEN
 # or
 npx tsx scripts/logie/cli.ts --iso3 SDN
+npx tsx scripts/logie/cli.ts --iso3 AFG
+npx tsx scripts/logie/cli.ts --iso3 VEN
 npx tsx scripts/logie/cli.ts --iso3 SDN --full   # also write full only_blocked=false GeoJSON
 ```
 
@@ -32,20 +37,19 @@ Outputs land in `scripts/logie/out/` (gitignored):
 ## Docs
 
 - Findings / Access mapping: [`docs/logie-spike-sudan.md`](../../docs/logie-spike-sudan.md)
-- clear-api ingest gap + ticket draft: [`docs/clear-api-logie-ingest.md`](../../docs/clear-api-logie-ingest.md)
+- clear-api ingest: [`docs/clear-api-logie-ingest.md`](../../docs/clear-api-logie-ingest.md)
 
 ## Local `/map` smoke
 
-After a spike pull:
-
 ```bash
+npm run logie:spike:all
 npm run dev
-# /map → Layers → Blockages (development; hint shows “spike”)
+# /map → pick Sudan / Afghanistan / Venezuela → Layers → Blockages
+# hint shows count + ISO3 (e.g. `6 · spike · AFG`)
 ```
 
-Dev route: `GET /api/dev/logie-blockages` → filters/simplifies via `src/lib/map/logie-blockages.ts`.  
-Fetch entry: `src/lib/map/fetch-blockages.ts`. Ingest contract:
-[`docs/clear-api-logie-ingest.md`](../../docs/clear-api-logie-ingest.md).
+Dev route: `GET /api/dev/logie-blockages?iso3=AFG` → slim via `src/lib/map/logie-blockages.ts`.  
+Fetch entry: `src/lib/map/fetch-blockages.ts` (always passes `iso3` from the country picker).
 
 ## Note
 

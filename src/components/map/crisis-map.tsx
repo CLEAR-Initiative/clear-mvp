@@ -40,6 +40,13 @@ import {
 } from "~/lib/map/nrc-office-markers";
 import { BLOCKAGES_STALE_AFTER_DAYS } from "~/lib/map/logie-blockages";
 import {
+  addBlockagesMapLayers,
+  BLOCKAGES_HOVER_LAYER_IDS,
+  getBlockagesAveragePixelLength,
+  removeBlockagesMapLayers,
+  setBlockagesFillProgress,
+} from "~/lib/map/blockages-paint";
+import {
   interpolateSeismicMapCollection,
   prefersReducedMotion,
   SEISMIC_TRANSITION_MS,
@@ -2271,12 +2278,7 @@ export function CrisisMap({
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
-    const SOURCE = "logie-blockages";
-    const LINE_LAYER = "logie-blockages-line";
-    const LINE_LAYER_STALE = "logie-blockages-line-stale";
-    const LINE_HIT = "logie-blockages-line-hit";
-    const POINT_LAYER = "logie-blockages-point";
-    const HOVER_LAYERS = [LINE_HIT, LINE_LAYER, LINE_LAYER_STALE, POINT_LAYER];
+    const HOVER_LAYERS = [...BLOCKAGES_HOVER_LAYER_IDS];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mb = (window as unknown as { mapboxgl?: any }).mapboxgl;
 
@@ -2331,49 +2333,43 @@ export function CrisisMap({
       })();
       const remark =
         typeof p.status_remark === "string" && p.status_remark.trim()
-          ? escapeHtml(p.status_remark.trim().slice(0, 160))
+          ? escapeHtml(p.status_remark.trim().slice(0, 80))
           : null;
       // Colors only — chrome lives on `.mapboxgl-popup-content` (avoids white Mapbox default + nested card).
       const titleColor = isDark ? "#f8fafc" : "#0f172a";
       const secondary = isDark ? "#cbd5e1" : "#334155";
       const muted = isDark ? "#94a3b8" : "#64748b";
       const warn = isDark ? "#fbbf24" : "#b45309";
-      const partner =
-        (typeof p.source_label === "string" && p.source_label.trim()
-          ? p.source_label.trim()
-          : typeof p.source_name === "string" && p.source_name.trim()
-            ? p.source_name.trim()
-            : null);
-      const partnerEsc = partner ? escapeHtml(partner) : null;
-      const reliability =
-        typeof p.source_reliability === "string" && p.source_reliability.trim()
-          ? escapeHtml(p.source_reliability.trim())
-          : null;
+      
+      const ageShort =
+        ageDays === 0
+          ? "today"
+          : ageDays === 1
+            ? "1 day ago"
+            : ageDays != null && !Number.isNaN(ageDays)
+              ? `${ageDays} days ago`
+              : "unknown age";
+      
+      // Slim popup: title, status · age, optional one-line remark
       const html = `
-        <div style="padding:10px 12px;font-family:system-ui,-apple-system,sans-serif;min-width:180px;max-width:280px;color:${titleColor};">
-          <div style="font-weight:700;font-size:13px;color:${titleColor};line-height:1.3;margin-bottom:6px;">${title}</div>
-          <div style="font-size:11px;color:${secondary};margin-bottom:4px;">
+        <div style="padding:8px 10px;font-family:system-ui,-apple-system,sans-serif;min-width:140px;max-width:220px;color:${titleColor};">
+          <div style="font-weight:700;font-size:12px;color:${titleColor};line-height:1.3;margin-bottom:4px;">${title}</div>
+          <div style="font-size:10px;color:${secondary};">
             <span style="font-weight:600;">${kind}</span>
             <span style="opacity:0.55;"> · </span>
             <span>${status}</span>
+            <span style="opacity:0.55;"> · </span>
+            <span style="color:${stale ? warn : muted};font-weight:${stale ? 600 : 400};">${ageShort}${stale ? " (stale)" : ""}</span>
           </div>
-          <div style="font-size:10px;color:${stale ? warn : muted};font-weight:${stale ? 600 : 400};">
-            ${escapeHtml(freshness)}
-          </div>
-          ${stale ? `<div style="font-size:10px;color:${warn};margin-top:4px;line-height:1.35;">Still probable this segment is constrained, but the LogIE status is ${ageDays != null && !Number.isNaN(ageDays) ? ageDays : `${BLOCKAGES_STALE_AFTER_DAYS}+`} days old and may no longer be accurate.</div>` : ""}
-          ${remark && remark !== title ? `<div style="font-size:10px;color:${muted};margin-top:6px;line-height:1.4;">${remark}</div>` : ""}
-          <div style="font-size:10px;color:${muted};margin-top:8px;padding-top:6px;border-top:1px solid ${isDark ? "rgba(148,163,184,0.25)" : "rgba(15,23,42,0.08)"};">
-            Source: LogIE (WFP Logistics Cluster)${partnerEsc ? ` · ${partnerEsc}` : ""}
-            ${reliability ? `<div style="margin-top:2px;">Reporter confidence: ${reliability}</div>` : ""}
-          </div>
+          ${remark && remark !== title ? `<div style="font-size:9px;color:${muted};margin-top:4px;line-height:1.3;">${remark}</div>` : ""}
         </div>
       `;
       if (!popup && mb?.Popup) {
         popup = new mb.Popup({
           closeButton: false,
           closeOnClick: false,
-          offset: 10,
-          maxWidth: "280px",
+          offset: 8,
+          maxWidth: "220px",
           className: isDark
             ? "logie-blockages-popup logie-blockages-popup--dark"
             : "logie-blockages-popup logie-blockages-popup--light",
@@ -2393,11 +2389,7 @@ export function CrisisMap({
       }
       popup?.remove();
       popup = null;
-      try { if (m.getLayer(LINE_LAYER)) m.removeLayer(LINE_LAYER); } catch { /* ignore */ }
-      try { if (m.getLayer(LINE_LAYER_STALE)) m.removeLayer(LINE_LAYER_STALE); } catch { /* ignore */ }
-      try { if (m.getLayer(LINE_HIT)) m.removeLayer(LINE_HIT); } catch { /* ignore */ }
-      try { if (m.getLayer(POINT_LAYER)) m.removeLayer(POINT_LAYER); } catch { /* ignore */ }
-      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
+      removeBlockagesMapLayers(m);
       m.getCanvas().style.cursor = "";
     };
 
@@ -2408,138 +2400,135 @@ export function CrisisMap({
     const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
     const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
 
-    try {
-      m.addSource(SOURCE, {
-        type: "geojson",
-        data: blockagesGeoJson as never,
-      });
-
-      // Status severity (road/bridge currstatus_physical). Coerce string props from Mapbox.
-      const lineColor = [
-        "match",
-        ["to-number", ["get", "status_code"]],
-        4, "#B91C1C", // Not Passable
-        3, "#D97706", // Passable with restrictions / Damaged
-        "#DC2626", // fallback
-      ] as never;
-
-      const isLine = [
-        "in",
-        ["geometry-type"],
-        ["literal", ["LineString", "MultiLineString"]],
-      ] as never;
-      // GeoJSON props may arrive as number or string through Mapbox.
-      const isStale = [
-        "any",
-        ["==", ["get", "stale"], 1],
-        ["==", ["get", "stale"], "1"],
-      ] as never;
-      const isFresh = ["!", isStale] as never;
-
-      // Wider invisible hit target so thin roads are easy to hover.
-      m.addLayer(
-        {
-          id: LINE_HIT,
-          type: "line",
-          source: SOURCE,
-          filter: isLine,
-          paint: {
-            "line-color": "#000000",
-            "line-opacity": 0,
-            "line-width": 14,
-          },
-          layout: { "line-cap": "round", "line-join": "round" },
-        },
-        beforeId,
-      );
-
-      m.addLayer(
-        {
-          id: LINE_LAYER,
-          type: "line",
-          source: SOURCE,
-          filter: ["all", isLine, isFresh] as never,
-          paint: {
-            "line-color": lineColor,
-            "line-width": [
-              "interpolate", ["linear"], ["zoom"],
-              4, 1.5,
-              8, 3,
-              12, 5,
-            ],
-            "line-opacity": 0.9,
-          },
-          layout: {
-            "line-cap": "round",
-            "line-join": "round",
-          },
-        },
-        beforeId,
-      );
-
-      // Stale (≥15d): still painted, dashed + lower opacity — do not hide.
-      m.addLayer(
-        {
-          id: LINE_LAYER_STALE,
-          type: "line",
-          source: SOURCE,
-          filter: ["all", isLine, isStale] as never,
-          paint: {
-            "line-color": lineColor,
-            "line-width": [
-              "interpolate", ["linear"], ["zoom"],
-              4, 1.25,
-              8, 2.5,
-              12, 4,
-            ],
-            "line-opacity": 0.45,
-            "line-dasharray": [1.5, 1.5],
-          },
-          layout: {
-            "line-cap": "round",
-            "line-join": "round",
-          },
-        },
-        beforeId,
-      );
-
-      // Bridges (and any Point leftovers) as circles.
-      m.addLayer(
-        {
-          id: POINT_LAYER,
-          type: "circle",
-          source: SOURCE,
-          filter: ["==", ["geometry-type"], "Point"],
-          paint: {
-            "circle-radius": [
-              "interpolate", ["linear"], ["zoom"],
-              4, 3,
-              10, 6,
-            ],
-            "circle-color": lineColor,
-            "circle-opacity": [
-              "case",
-              isStale,
-              0.5,
-              0.95,
-            ],
-            "circle-stroke-width": 1.5,
-            "circle-stroke-color": isDark ? "#0f172a" : "#ffffff",
-          },
-        },
-        beforeId,
-      );
-
-      for (const id of HOVER_LAYERS) {
-        m.on("mousemove", id, onMove);
-        m.on("mouseleave", id, onLeave);
+    let fillRaf: ReturnType<typeof requestAnimationFrame> | null = null;
+    let zoomDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let isZooming = false;
+    const abortController = new AbortController();
+    
+    const ZOOM_DEBOUNCE_MS = 2000;
+    const PIXELS_PER_MS = 0.08; // Very slow for constant visual speed at all zooms
+    
+    // Opacity pulse animation: fade slightly (1 → 0.3) then back to full (1)
+    // Corridors stay thick always - only opacity changes
+    const runPulseAnimation = (onComplete?: () => void) => {
+      if (fillRaf) cancelAnimationFrame(fillRaf);
+      
+      const avgPixelLength = getBlockagesAveragePixelLength(m);
+      const zoom = m.getZoom();
+      const zoomMultiplier = zoom > 12 ? Math.pow(2.5, zoom - 12) : 1;
+      const duration = Math.max(800, Math.min(2000, (avgPixelLength / PIXELS_PER_MS) * zoomMultiplier));
+      
+      const startTime = performance.now();
+      const animatePulse = () => {
+        const elapsed = performance.now() - startTime;
+        const t = Math.min(1, elapsed / duration);
+        
+        // Two-phase: fade to 0.3, then back to 1.0
+        let progress;
+        if (t < 0.5) {
+          // First half: 1.0 → 0.3
+          progress = 1.0 - (t * 2 * 0.7);
+        } else {
+          // Second half: 0.3 → 1.0
+          progress = 0.3 + ((t - 0.5) * 2 * 0.7);
+        }
+        
+        setBlockagesFillProgress(m, progress);
+        
+        if (t < 1) {
+          fillRaf = requestAnimationFrame(animatePulse);
+        } else {
+          // Lock at full opacity (1) as permanent default
+          setBlockagesFillProgress(m, 1);
+          fillRaf = null;
+          if (onComplete) onComplete();
+        }
+      };
+      fillRaf = requestAnimationFrame(animatePulse);
+    };
+    
+    const onZoomStart = () => {
+      isZooming = true;
+      if (zoomDebounceTimer) {
+        clearTimeout(zoomDebounceTimer);
+        zoomDebounceTimer = null;
       }
-    } catch {
-      /* style may be mid-swap */
-    }
+    };
+    
+    const onZoomEnd = () => {
+      isZooming = false;
+      if (zoomDebounceTimer) clearTimeout(zoomDebounceTimer);
+      
+      // Wait 2 seconds after zoom stabilizes, then pulse animation
+      zoomDebounceTimer = setTimeout(() => {
+        if (!isZooming) {
+          runPulseAnimation();
+        }
+        zoomDebounceTimer = null;
+      }, ZOOM_DEBOUNCE_MS);
+    };
+    
+    // Load layers asynchronously (bridge icons are loaded from SVGs)
+    (async () => {
+      try {
+        // Pass abort signal for cancellation on unmount
+        await addBlockagesMapLayers(m, {
+          data: blockagesGeoJson,
+          beforeId,
+          signal: abortController.signal,
+        });
 
-    return cleanup;
-  }, [loaded, showBlockages, blockagesGeoJson, isDark]);
+        // Initial: Fade in from invisible (0) to fully visible (1)
+      // Corridors stay thick always - only opacity changes
+      setBlockagesFillProgress(m, 0);
+      
+      setTimeout(() => {
+        const fadeStart = performance.now();
+        const fadeDuration = 800; // Smooth fade-in
+        
+        const fadeIn = () => {
+          const elapsed = performance.now() - fadeStart;
+          const t = Math.min(elapsed / fadeDuration, 1);
+          
+          // Ease-out curve for smoother animation
+          const progress = 1 - Math.pow(1 - t, 3);
+          
+          setBlockagesFillProgress(m, progress);
+          
+          if (t < 1) {
+            fillRaf = requestAnimationFrame(fadeIn);
+          } else {
+            // Lock at full opacity (1) as permanent default
+            setBlockagesFillProgress(m, 1);
+            fillRaf = null;
+          }
+        };
+        fillRaf = requestAnimationFrame(fadeIn);
+      }, 100);
+      
+      // Re-animate with two-phase after zoom stabilizes
+      m.on("zoomstart", onZoomStart);
+      m.on("zoomend", onZoomEnd);
+
+        for (const id of HOVER_LAYERS) {
+          m.on("mousemove", id, onMove);
+          m.on("mouseleave", id, onLeave);
+        }
+      } catch {
+        /* style may be mid-swap */
+      }
+    })();
+
+    return () => {
+      // Cancel any in-flight icon fetches
+      abortController.abort();
+      if (fillRaf) cancelAnimationFrame(fillRaf);
+      if (zoomDebounceTimer) clearTimeout(zoomDebounceTimer);
+      m.off("zoomstart", onZoomStart);
+      m.off("zoomend", onZoomEnd);
+      cleanup();
+    };
+  }, [loaded, showBlockages, blockagesGeoJson, isDark, baseMapType]);
 
   // ── Seismic Signals (USGS earthquake epicenters) ────────────────────────
   useEffect(() => {
