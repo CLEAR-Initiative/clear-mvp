@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle - CLEAR brand red for Closed -->
+  <circle cx="32" cy="32" r="28" fill="#B91C1C"/>
+  
+  <!-- Bridge structure (white) -->
+  <g stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round">
+    <!-- Top deck -->
+    <line x1="14" y1="34" x2="50" y2="34"/>
+    <!-- Left arch -->
+    <path d="M 18 34 Q 22 38 26 34" fill="none"/>
+    <!-- Center arch -->
+    <path d="M 26 34 Q 32 40 38 34" fill="none"/>
+    <!-- Right arch -->
+    <path d="M 38 34 Q 42 38 46 34" fill="none"/>
+  </g>
+  
+  <!-- Lock overlay (white) -->
+  <g stroke="#FFFFFF" stroke-width="2.5" fill="none">
+    <!-- Lock shackle -->
+    <path d="M 26 26 L 26 22 Q 26 18 32 18 Q 38 18 38 22 L 38 26"/>
+    <!-- Lock body -->
+    <rect x="24" y="26" width="16" height="12" rx="2" fill="#FFFFFF"/>
+    <!-- Keyhole -->
+    <circle cx="32" cy="32" r="2" fill="#3B82F6"/>
+  </g>
+</svg>

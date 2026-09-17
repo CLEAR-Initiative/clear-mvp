@@ -165,14 +165,15 @@ describe("add/remove blockages layers", () => {
     };
   }
 
-  it("adds ghost, glow, casing, core, and cues with lineMetrics (no marks)", () => {
+  it("adds ghost, glow, casing, core, and cues with lineMetrics (no marks)", async () => {
     const map = mockMap();
-    addBlockagesMapLayers(map, {
+    await addBlockagesMapLayers(map, {
       data: { type: "FeatureCollection", features: [] },
     });
 
     expect(map.sources).toEqual([BLOCKAGES_SOURCE_ID]);
-    expect(map.images).toEqual([BLOCKAGE_MARK_ICON_ID]);
+    // Canvas fallback icon + OCHA bridge icons
+    expect(map.images).toContain(BLOCKAGE_MARK_ICON_ID);
     expect(map.layers).toEqual([...BLOCKAGES_PAINT_LAYER_IDS]);
     expect(map.layers).toContain(BLOCKAGES_LAYER_IDS.ghost);
     expect(map.layers).toContain(BLOCKAGES_LAYER_IDS.glow);
@@ -188,9 +189,9 @@ describe("add/remove blockages layers", () => {
     expect(map.paintProps[BLOCKAGES_SOURCE_ID]?.lineMetrics).toBe(true);
   });
 
-  it("remove tears down every paint layer and the source", () => {
+  it("remove tears down every paint layer and the source", async () => {
     const map = mockMap();
-    addBlockagesMapLayers(map, {
+    await addBlockagesMapLayers(map, {
       data: { type: "FeatureCollection", features: [] },
     });
     removeBlockagesMapLayers(map);
@@ -198,9 +199,9 @@ describe("add/remove blockages layers", () => {
     expect(map.sources).toEqual([]);
   });
 
-  it("setBlockagesFillProgress animates opacity, not trim-offset", () => {
+  it("setBlockagesFillProgress animates opacity, not trim-offset", async () => {
     const map = mockMap();
-    addBlockagesMapLayers(map, {
+    await addBlockagesMapLayers(map, {
       data: { type: "FeatureCollection", features: [] },
     });
 

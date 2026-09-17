@@ -2403,6 +2403,7 @@ export function CrisisMap({
     let fillRaf: ReturnType<typeof requestAnimationFrame> | null = null;
     let zoomDebounceTimer: ReturnType<typeof setTimeout> | null = null;
     let isZooming = false;
+    const abortController = new AbortController();
     
     const ZOOM_DEBOUNCE_MS = 2000;
     const PIXELS_PER_MS = 0.08; // Very slow for constant visual speed at all zooms
@@ -2467,13 +2468,17 @@ export function CrisisMap({
       }, ZOOM_DEBOUNCE_MS);
     };
     
-    try {
-      addBlockagesMapLayers(m, {
-        data: blockagesGeoJson,
-        beforeId,
-      });
+    // Load layers asynchronously (bridge icons are loaded from SVGs)
+    (async () => {
+      try {
+        // Pass abort signal for cancellation on unmount
+        await addBlockagesMapLayers(m, {
+          data: blockagesGeoJson,
+          beforeId,
+          signal: abortController.signal,
+        });
 
-      // Initial: Fade in from invisible (0) to fully visible (1)
+        // Initial: Fade in from invisible (0) to fully visible (1)
       // Corridors stay thick always - only opacity changes
       setBlockagesFillProgress(m, 0);
       
@@ -2505,15 +2510,18 @@ export function CrisisMap({
       m.on("zoomstart", onZoomStart);
       m.on("zoomend", onZoomEnd);
 
-      for (const id of HOVER_LAYERS) {
-        m.on("mousemove", id, onMove);
-        m.on("mouseleave", id, onLeave);
+        for (const id of HOVER_LAYERS) {
+          m.on("mousemove", id, onMove);
+          m.on("mouseleave", id, onLeave);
+        }
+      } catch {
+        /* style may be mid-swap */
       }
-    } catch {
-      /* style may be mid-swap */
-    }
+    })();
 
     return () => {
+      // Cancel any in-flight icon fetches
+      abortController.abort();
       if (fillRaf) cancelAnimationFrame(fillRaf);
       if (zoomDebounceTimer) clearTimeout(zoomDebounceTimer);
       m.off("zoomstart", onZoomStart);

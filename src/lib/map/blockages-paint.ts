@@ -15,6 +15,12 @@
 export const BLOCKAGES_SOURCE_ID = "logie-blockages";
 export const BLOCKAGE_MARK_ICON_ID = "logie-blockage-mark";
 
+// OCHA humanitarian bridge icons by status
+export const BRIDGE_ICON_NOT_PASSABLE = "bridge-not-passable";
+export const BRIDGE_ICON_RESTRICTED = "bridge-restricted";
+export const BRIDGE_ICON_CLOSED = "bridge-closed";
+export const BRIDGE_ICON_OPEN = "bridge-open";
+
 export const BLOCKAGES_LAYER_IDS = {
   ghost: "logie-blockages-ghost",
   glow: "logie-blockages-glow",
@@ -24,7 +30,6 @@ export const BLOCKAGES_LAYER_IDS = {
   line: "logie-blockages-line",
   lineStale: "logie-blockages-line-stale",
   hit: "logie-blockages-line-hit",
-  pointHalo: "logie-blockages-point-halo",
   point: "logie-blockages-point",
   cues: "logie-blockages-cues",
 } as const;
@@ -272,6 +277,34 @@ function strokeCircle(
   }
 }
 
+function fillRect(
+  data: Uint8ClampedArray,
+  size: number,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  r: number,
+  g: number,
+  b: number,
+  a: number,
+): void {
+  const minX = Math.max(0, Math.floor(x));
+  const maxX = Math.min(size - 1, Math.ceil(x + width));
+  const minY = Math.max(0, Math.floor(y));
+  const maxY = Math.min(size - 1, Math.ceil(y + height));
+  
+  for (let py = minY; py <= maxY; py++) {
+    for (let px = minX; px <= maxX; px++) {
+      const i = (py * size + px) * 4;
+      data[i] = r;
+      data[i + 1] = g;
+      data[i + 2] = b;
+      data[i + 3] = a;
+    }
+  }
+}
+
 function strokeLine(
   data: Uint8ClampedArray,
   size: number,
@@ -302,21 +335,89 @@ function strokeLine(
  * High-contrast “closed access” badge — white disc, dark ring, X.
  * Pure pixel fill (no canvas) so Node/CI unit tests stay quiet.
  */
+/**
+ * Create a simple bridge icon for blocked bridge points.
+ * Simplified design: just the bridge structure, no background circle.
+ * TODO: Replace with proper OCHA humanitarian icon SVG.
+ */
 export function createBlockageMarkIcon(
   size = BLOCKAGE_MARK_ICON_SIZE,
 ): { width: number; height: number; data: Uint8Array } {
   const data = new Uint8ClampedArray(size * size * 4);
   const cx = size / 2;
   const cy = size / 2;
-  const radius = size * 0.38;
-  const xWidth = size * 0.09;
-  const inset = radius * 0.42;
-
-  fillCircle(data, size, cx, cy, radius, 255, 255, 255, 255);
-  strokeCircle(data, size, cx, cy, radius, size * 0.07, 17, 24, 39, 255);
-  strokeLine(data, size, cx - inset, cy - inset, cx + inset, cy + inset, xWidth, 17, 24, 39, 255);
-  strokeLine(data, size, cx + inset, cy - inset, cx - inset, cy + inset, xWidth, 17, 24, 39, 255);
-
+  
+  // Simple bridge icon (red) - no background, no border
+  const red = 185;
+  const green = 28;
+  const blue = 28;
+  const alpha = 255;
+  
+  // Top deck (thicker horizontal bar)
+  const deckWidth = size * 0.6;
+  const deckThick = size * 0.12;
+  const deckY = cy - size * 0.12;
+  fillRect(
+    data,
+    size,
+    cx - deckWidth / 2,
+    deckY - deckThick / 2,
+    deckWidth,
+    deckThick,
+    red,
+    green,
+    blue,
+    alpha,
+  );
+  
+  // Left support pillar
+  const pillarWidth = size * 0.1;
+  const pillarHeight = size * 0.3;
+  const pillarY = deckY + deckThick / 2;
+  fillRect(
+    data,
+    size,
+    cx - deckWidth * 0.35 - pillarWidth / 2,
+    pillarY,
+    pillarWidth,
+    pillarHeight,
+    red,
+    green,
+    blue,
+    alpha,
+  );
+  
+  // Right support pillar
+  fillRect(
+    data,
+    size,
+    cx + deckWidth * 0.35 - pillarWidth / 2,
+    pillarY,
+    pillarWidth,
+    pillarHeight,
+    red,
+    green,
+    blue,
+    alpha,
+  );
+  
+  // Bottom base (ground connection)
+  const baseWidth = size * 0.7;
+  const baseThick = size * 0.08;
+  const baseY = pillarY + pillarHeight;
+  fillRect(
+    data,
+    size,
+    cx - baseWidth / 2,
+    baseY,
+    baseWidth,
+    baseThick,
+    red,
+    green,
+    blue,
+    alpha,
+  );
+  
   return {
     width: size,
     height: size,
@@ -329,6 +430,118 @@ export function ensureBlockageMarkIcon(map: BlockagesMapSurface): void {
   map.addImage(BLOCKAGE_MARK_ICON_ID, createBlockageMarkIcon(), {
     pixelRatio: BLOCKAGE_MARK_PIXEL_RATIO,
   });
+}
+
+// Icon cache to prevent re-fetching/re-processing on every layer add
+const iconCache = new Map<string, { width: number; height: number; data: Uint8ClampedArray }>();
+
+/**
+ * Load OCHA humanitarian bridge icons from SVG files.
+ * Converts SVG to Mapbox-compatible image format with caching.
+ * 
+ * @param map - Mapbox map instance
+ * @param signal - AbortController signal for cancellation
+ * @throws Error if any critical icon fails to load
+ */
+export async function loadBridgeIcons(
+  map: BlockagesMapSurface,
+  signal?: AbortSignal,
+): Promise<void> {
+  // Skip in test environment (Image loading doesn't work in jsdom/vitest)
+  if (process.env.NODE_ENV === "test" || typeof Image === "undefined") {
+    return;
+  }
+  
+  const icons = [
+    { id: BRIDGE_ICON_NOT_PASSABLE, path: "/images/ui-kit/signals/icons/bridge-not-passable.svg" },
+    { id: BRIDGE_ICON_RESTRICTED, path: "/images/ui-kit/signals/icons/bridge-restricted.svg" },
+    { id: BRIDGE_ICON_CLOSED, path: "/images/ui-kit/signals/icons/bridge-closed.svg" },
+    { id: BRIDGE_ICON_OPEN, path: "/images/ui-kit/signals/icons/bridge-open.svg" },
+  ];
+
+  const loadPromises = icons.map(({ id, path }) => {
+    // Skip if already registered with Mapbox
+    if (map.hasImage(id)) return Promise.resolve({ id, success: true });
+    
+    // Check cache first
+    const cached = iconCache.get(id);
+    if (cached) {
+      map.addImage(id, cached, { pixelRatio: 2 });
+      return Promise.resolve({ id, success: true });
+    }
+    
+    // Load via Image element (more reliable than fetch + createImageBitmap for SVG)
+    return new Promise<{ id: string; success: boolean; error?: string }>((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      
+      // Setup abort handling
+      const onAbort = () => {
+        img.src = "";
+        resolve({ id, success: false, error: "Aborted" });
+      };
+      signal?.addEventListener("abort", onAbort);
+      
+      img.onload = () => {
+        signal?.removeEventListener("abort", onAbort);
+        
+        try {
+          // Convert to Mapbox format using canvas
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width || 64;
+          canvas.height = img.height || 64;
+          const ctx = canvas.getContext("2d");
+          
+          if (!ctx) {
+            resolve({ id, success: false, error: "No canvas context" });
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0);
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          
+          // Cache it
+          const imageData = {
+            width: canvas.width,
+            height: canvas.height,
+            data: new Uint8ClampedArray(imgData.data),
+          };
+          iconCache.set(id, imageData);
+          
+          // Register with Mapbox
+          map.addImage(id, imageData, { pixelRatio: 2 });
+          resolve({ id, success: true });
+          
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          resolve({ id, success: false, error: msg });
+        }
+      };
+      
+      img.onerror = () => {
+        signal?.removeEventListener("abort", onAbort);
+        resolve({ id, success: false, error: "Failed to load image" });
+      };
+      
+      // Trigger load
+      img.src = path;
+    });
+  });
+
+  const results = await Promise.all(loadPromises);
+  
+  // Check if any critical icons failed
+  const failures = results.filter(r => !r.success);
+  const successes = results.filter(r => r.success);
+  
+  if (successes.length > 0) {
+    console.log(`✓ Loaded ${successes.length} bridge icons:`, successes.map(s => s.id).join(", "));
+  }
+  
+  if (failures.length > 0) {
+    console.warn(`✗ Bridge icon loading failures (${failures.length}):`, failures.map(f => f.id).join(", "));
+    // Non-blocking: map will use fallback canvas icon
+  }
 }
 
 /**
@@ -432,18 +645,35 @@ export function removeBlockagesMapLayers(map: BlockagesMapSurface): void {
   }
 }
 
-export function addBlockagesMapLayers(
+export async function addBlockagesMapLayers(
   map: BlockagesMapSurface,
-  options: { data: BlockagesGeoJson; beforeId?: string },
-): void {
+  options: { data: BlockagesGeoJson; beforeId?: string; signal?: AbortSignal },
+): Promise<void> {
   removeBlockagesMapLayers(map);
+  
+  // Load OCHA humanitarian bridge icons (async, with cancellation support)
+  await loadBridgeIcons(map, options.signal);
+  
+  // Ensure fallback canvas icon
   ensureBlockageMarkIcon(map);
 
+  const data = options.data;
   map.addSource(BLOCKAGES_SOURCE_ID, {
     type: "geojson",
-    data: options.data,
+    data,
     lineMetrics: true,
   });
+  
+  // Debug: log feature types and status codes
+  if (data.features.length > 0) {
+    const points = data.features.filter((f: any) => f.geometry.type === "Point");
+    const lines = data.features.filter((f: any) => f.geometry.type === "LineString");
+    console.log(`Blockages: ${points.length} points, ${lines.length} lines`);
+    if (points.length > 0) {
+      const statuses = points.map((p: any) => p.properties?.status_code).filter(Boolean);
+      console.log(`Point status codes:`, [...new Set(statuses)]);
+    }
+  }
 
   const beforeId = options.beforeId;
   const statusColor = blockagesStatusColorExpression;
@@ -566,43 +796,40 @@ export function addBlockagesMapLayers(
     beforeId,
   );
 
-  map.addLayer(
-    {
-      id: BLOCKAGES_LAYER_IDS.pointHalo,
-      type: "circle",
-      source: BLOCKAGES_SOURCE_ID,
-      filter: ["==", ["geometry-type"], "Point"],
-      paint: {
-        "circle-radius": zoomWidthExpression(BLOCKAGES_POINT_HALO_RADIUS_STOPS),
-        "circle-color": statusColor,
-        "circle-opacity": [
-          "case",
-          isStale,
-          0.22,
-          0.38,
-        ],
-        "circle-blur": 0.35,
-      },
-    },
-    beforeId,
-  );
+  // Bridge icons - OCHA humanitarian icons based on status
+  // Note: Icons are loaded async, fallback to canvas icon if not ready
+  
+  // Bridge icon symbol layer with status-based icon selection
   map.addLayer(
     {
       id: BLOCKAGES_LAYER_IDS.point,
-      type: "circle",
+      type: "symbol",
       source: BLOCKAGES_SOURCE_ID,
       filter: ["==", ["geometry-type"], "Point"],
+      layout: {
+        "icon-image": [
+          "case",
+          // Not Passable (status_code 4) → bridge destroyed/closed icon
+          ["==", ["get", "status_code"], 4],
+          BRIDGE_ICON_NOT_PASSABLE,
+          // Restricted/Damaged (status_code 3) → bridge affected icon
+          ["==", ["get", "status_code"], 3],
+          BRIDGE_ICON_RESTRICTED,
+          // Fallback to canvas icon
+          BLOCKAGE_MARK_ICON_ID,
+        ],
+        "icon-size": 0.8, // Constant size at all zoom levels (increased for visibility)
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": false,
+        "icon-padding": 2,
+      },
       paint: {
-        "circle-radius": zoomWidthExpression(BLOCKAGES_POINT_RADIUS_STOPS),
-        "circle-color": statusColor,
-        "circle-opacity": [
+        "icon-opacity": [
           "case",
           isStale,
           BLOCKAGES_CORE_OPACITY_STALE,
           BLOCKAGES_CORE_OPACITY_FRESH,
         ],
-        "circle-stroke-width": 2.5,
-        "circle-stroke-color": BLOCKAGES_CASING,
       },
     },
     beforeId,
