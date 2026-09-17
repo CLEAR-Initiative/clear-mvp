@@ -47,7 +47,7 @@ import {
 import type { GqlSignalLocationChallenge } from "~/lib/types/graphql";
 import { useLocations } from "~/hooks/use-locations";
 import { useLastFocusedCountry } from "~/hooks/use-last-focused-country";
-import { resolveCountryConfig, shortCountryName, WORLD_VIEW } from "~/lib/constants/country-config";
+import { resolveCountryConfig, shortCountryName, staticCountryBounds, WORLD_VIEW } from "~/lib/constants/country-config";
 import { isoForCountryName } from "~/lib/constants/countries";
 import { scopeIsosMissingPaintableBoundaries } from "~/lib/geo/country-mask";
 import { MapPanelBar } from "./_components/map-panel-bar";
@@ -56,6 +56,7 @@ import {
   type MapPlaceSearchSelect,
 } from "./_components/map-place-search";
 import { matchPickerCountry } from "~/lib/map/geocode-lookup";
+import { markerMatchesLocationScope } from "~/lib/map/marker-location-match";
 import type { HierarchyLevel1 } from "~/components/disaster-type-picker";
 import { MapLoadingOverlay, MapPreloader } from "./_components/map-loading-overlay";
 import { MapMarkerDetail } from "./_components/map-marker-detail";
@@ -339,6 +340,17 @@ function MapPageContent() {
     router.replace("/map", { scroll: false });
   }, [router]);
 
+  /** Stacked place-search pills own the orange chips; hide the single place chip. */
+  const [placeStackCount, setPlaceStackCount] = useState(0);
+  const handlePlaceStackChange = useCallback((count: number) => {
+    setPlaceStackCount(count);
+  }, []);
+  const clearPlaceSearch = useCallback(() => {
+    setPlaceFocus(null);
+    setPlaceLookup(null);
+    if (!focusEntityId) clearMapFocusSession();
+  }, [focusEntityId]);
+
   const focusEventQuery = api.events.forMapFocus.useQuery(
     { id: focusEventId! },
     { enabled: !!focusEventId, staleTime: 60_000 },
@@ -447,9 +459,16 @@ function MapPageContent() {
       includeDummy: true,
       from: timeframeRange.from,
       to: timeframeRange.to,
-      teamId: activeTeamId,
+      // Do not pass teamId. Team location scope dropped Observe pins whose
+      // geometry is a monument point (no catalog ancestors) or an @ city the
+      // team list did not enumerate. Country/region filtering stays client-side.
     },
-    { enabled: !isFocusMode && dataView === "signal", staleTime: 60_000, placeholderData: (prev) => prev },
+    {
+      enabled: !isFocusMode && dataView === "signal",
+      staleTime: 0,
+      refetchOnMount: "always",
+      placeholderData: (prev) => prev,
+    },
   );
   const locationChallengesQuery = api.locationChallenge.listForMap.useQuery(
     { teamId: activeTeamId ?? undefined, status: "consideration" },
@@ -1638,23 +1657,32 @@ function MapPageContent() {
   // Split into two passes so the timeline can derive its month chips from
   // what's left after location/type filtering. That way picking Sudan
   // doesn't make the timeline show Afghan-only months and vice versa.
+  // Country bbox keeps landmark points that have coordinates but no
+  // catalog ancestors (Observe monument geocodes). Region picks stay
+  // id-only so a Khartoum pin does not leak into North Darfur.
+  const countryBbox = useMemo(() => {
+    if (selectedRegion !== "All Regions") return null;
+    if (!selectedCountry || selectedCountry === "All Countries" || selectedCountry === ALL_COUNTRIES) {
+      return null;
+    }
+    return staticCountryBounds(selectedCountry);
+  }, [selectedCountry, selectedRegion]);
+
   const markersBeforeTime: CrisisMarker[] = useMemo(() => {
     return allMarkers.filter((m) => {
-      // Location filter (hierarchy + name fallback)
-      if (selectedLocationId ?? selectedLocationName) {
-        let matchesLocation = false;
-        // Try ID-based hierarchy match
-        if (selectedLocationId) {
-          if (m.locationId === selectedLocationId) matchesLocation = true;
-          else if (m.ancestorIds && m.ancestorIds.length > 0 && m.ancestorIds.includes(selectedLocationId)) matchesLocation = true;
-        }
-        // Fallback: name match on region
-        if (!matchesLocation && selectedLocationName && m.region) {
-          const regionLower = m.region.toLowerCase();
-          const selectedLower = selectedLocationName.toLowerCase();
-          matchesLocation = regionLower.includes(selectedLower) || selectedLower.includes(regionLower);
-        }
-        if (!matchesLocation) return false;
+      if (
+        !markerMatchesLocationScope({
+          locationId: m.locationId,
+          ancestorIds: m.ancestorIds,
+          region: m.region,
+          lng: m.lng,
+          lat: m.lat,
+          selectedLocationId,
+          selectedLocationName,
+          countryBbox,
+        })
+      ) {
+        return false;
       }
 
       // Disaster type filter via L1/L2 hierarchy picker
@@ -1672,6 +1700,7 @@ function MapPageContent() {
     selectedLocationId,
     selectedLocationName,
     selectedTypeCodes,
+    countryBbox,
   ]);
 
   // Distinct months present in the current location/type slice, sorted newest
@@ -2499,10 +2528,15 @@ function MapPageContent() {
               overflow: "visible",
             }}
           >
-            <MapPlaceSearch onSelect={handlePlaceSearchSelect} />
+            <MapPlaceSearch
+              onSelect={handlePlaceSearchSelect}
+              onClear={clearPlaceSearch}
+              onStackChange={handlePlaceStackChange}
+            />
 
-            {/* Place / entity focus chip — not the timeline month strip. */}
-            {(isFocusMode || placeFocus) && focusFilterLabel && (
+            {/* Place / entity focus chip — not the timeline month strip.
+                Stacked search pills replace the single place chip. */}
+            {(isFocusMode || (placeFocus && placeStackCount === 0)) && focusFilterLabel && (
               <button
                 type="button"
                 onClick={clearSoloFocus}
@@ -2636,8 +2670,12 @@ function MapPageContent() {
             maxWidth: "min(280px, calc(100vw - 96px))",
           }}
         >
-          <MapPlaceSearch onSelect={handlePlaceSearchSelect} />
-          {(isFocusMode || placeFocus) && focusFilterLabel && (
+          <MapPlaceSearch
+            onSelect={handlePlaceSearchSelect}
+            onClear={clearPlaceSearch}
+            onStackChange={handlePlaceStackChange}
+          />
+          {(isFocusMode || (placeFocus && placeStackCount === 0)) && focusFilterLabel && (
             <button
               type="button"
               onClick={clearSoloFocus}

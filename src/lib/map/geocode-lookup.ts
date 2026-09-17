@@ -264,6 +264,10 @@ export async function geocodePlaceQuery(
     country?: string;
     /** [lng, lat] proximity bias. */
     proximity?: [number, number];
+    /** Mapbox place types, comma-separated (e.g. "place,poi"). */
+    types?: string;
+    /** west, south, east, north — limit hits to this box. */
+    bbox?: [number, number, number, number];
   },
 ): Promise<GeocodeHit[]> {
   const q = query.trim();
@@ -286,6 +290,20 @@ export async function geocodePlaceQuery(
   if (opts?.proximity) {
     const [lng, lat] = opts.proximity;
     if (isLng(lng) && isLat(lat)) params.set("proximity", `${lng},${lat}`);
+  }
+  if (opts?.types) {
+    const types = opts.types
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .join(",");
+    if (types) params.set("types", types);
+  }
+  if (opts?.bbox) {
+    const [west, south, east, north] = opts.bbox;
+    if ([west, south, east, north].every((n) => Number.isFinite(n))) {
+      params.set("bbox", `${west},${south},${east},${north}`);
+    }
   }
 
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?${params}`;

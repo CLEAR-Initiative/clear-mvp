@@ -91,6 +91,35 @@ describe("eventsToMarkers / representativePoint", () => {
     expect(markers[0]?.locationId).toBe("rep");
   });
 
+  it("uses a catalog polygon centroid when the aggregated event has no Point", () => {
+    const event = baseEvent({
+      id: "evt-khartoum",
+      title: "Flooding in Khartoum",
+      generalLocation: {
+        id: "krt",
+        name: "Khartoum",
+        level: 2,
+        ancestorIds: ["sd"],
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [32.4, 15.4],
+              [32.7, 15.4],
+              [32.7, 15.7],
+              [32.4, 15.7],
+              [32.4, 15.4],
+            ],
+          ],
+        },
+      },
+    });
+    const markers = eventsToMarkers([event]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.lng).toBeCloseTo(32.52, 2);
+    expect(markers[0]?.lat).toBeCloseTo(15.52, 2);
+  });
+
   it("falls back to event Point when representativePoint is missing", () => {
     const event = baseEvent({
       originLocation: pointLoc("origin", 30, 12),

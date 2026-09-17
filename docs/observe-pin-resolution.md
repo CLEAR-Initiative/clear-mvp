@@ -38,7 +38,7 @@ Observe must leave a **Signal** with geometry the map can paint
 | --- | --- | --- |
 | Named landmark L4 | `createPointLocation(lat,lng)` labels `"Point 15.6, 32.5"` — not a reusable named place | Extend `CreateManualSignalInput` with `pointName` (already on pipeline `CreateSignalInput`) and call `findOrCreateLandmarkL4` with `pointType: landmark-geocoded` |
 | LLM / geoparser on manual text | Mapbox is string geocode, not crisis NER; multilingual / messy field notes need the same geoparser Dataminr uses | `process_manual_signal` Celery task should run the pipeline geoparser when intake only had a coarse admin `locationId` (requires Redis/Celery healthy in every env) |
-| Team scope vs GPS abroad | `/map` `signals.forMap(teamId)` filters by team locations — Chile GPS never appears for a Sudan-scoped team | Product choice: show creator-visible field Signals on map, or keep AO filter and document that GPS must be in-theater for Layers → Signals |
+| Team scope vs GPS abroad | Map Signals browse no longer sends `teamId`, so a field pin outside the team gazetteer can still paint. Country/region filters stay on the client (ancestor match, or country bbox for orphan landmark points). Alerts/events still use team scope. | Product choice already taken on the map Signals layer: show readable Signals, then clip to the selected country. |
 
 `findOrCreateLandmarkL4` is **admin/pipeline only** today — Observe must not
 call it from the browser without a new authorized mutation.
@@ -57,4 +57,4 @@ call it from the browser without a new authorized mutation.
 - [ ] Offline queue → drain keeps lat/lng or locationId
 - [ ] Map search accepts Observe GPS chip format `33.4445°S 70.6452°W` and flies to that point
 
-**Map browse note:** Layers → Signals still applies the map **country** filter and team AO. A Venezuela Observe signal will not appear while the map country is Sudan — switch country to Venezuela / All Countries, or open Full Map from signal detail (solo focus bypasses the country filter).
+**Map browse note:** Layers → Signals does not apply team AO. It still applies the map **country** filter (catalog ancestors, or a country bbox for landmark points that have no ancestors). A Venezuela Observe signal will not appear while the map country is Sudan — switch country to Venezuela / All Countries, or open Full Map from signal detail (solo focus bypasses the country filter).

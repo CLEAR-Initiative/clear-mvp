@@ -82,12 +82,17 @@ function hashId(a: string, b: string): number {
   return Math.abs(h);
 }
 
-/** Extract lng/lat from a location when its geometry is a usable Point. */
+/**
+ * Extract lng/lat from a location. Points pass through; Polygon/MultiPolygon
+ * catalog tags (country, city) use a centroid so Observe `@Khartoum` and
+ * aggregated event pins still paint.
+ */
 function pointFromLocation(loc: GqlEvent["generalLocation"] | GqlEvent["representativePoint"]) {
-  if (!loc?.geometry || loc.geometry.type !== "Point") return null;
-  const [lng, lat] = loc.geometry.coordinates as [number, number];
-  if (typeof lng !== "number" || typeof lat !== "number") return null;
-  return { loc, lng, lat };
+  if (!loc) return null;
+  const point = toMapPointGeometry(loc.geometry ?? null);
+  if (!point) return null;
+  const [lng, lat] = point.coordinates;
+  return { loc: { ...loc, geometry: point }, lng, lat };
 }
 
 /**
@@ -309,16 +314,8 @@ export function signalsToMarkers(
 function signalPoint(signal: GqlSignal) {
   const candidates = [signal.generalLocation, signal.originLocation, signal.destinationLocation];
   for (const loc of candidates) {
-    const fromPoint = pointFromLocation(loc);
-    if (fromPoint) return fromPoint;
-    const centroid = toMapPointGeometry(loc?.geometry ?? null);
-    if (loc && centroid) {
-      return {
-        loc: { ...loc, geometry: centroid },
-        lng: centroid.coordinates[0],
-        lat: centroid.coordinates[1],
-      };
-    }
+    const hit = pointFromLocation(loc);
+    if (hit) return hit;
   }
   return null;
 }

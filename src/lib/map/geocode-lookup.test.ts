@@ -147,6 +147,22 @@ describe("geocodePlaceQuery", () => {
     expect(url).toContain("country=sd");
   });
 
+  it("forwards types and bbox so suggestions stay inside the previous filter", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ features: [] }),
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    await geocodePlaceQuery("museum", "tok", {
+      country: "sd",
+      types: "poi,address",
+      bbox: [32.4, 15.4, 32.7, 15.7],
+    });
+    const url = String(fetchMock.mock.calls[0]?.[0] ?? "");
+    expect(url).toContain("types=poi%2Caddress");
+    expect(url).toContain("bbox=32.4%2C15.4%2C32.7%2C15.7");
+  });
+
   it("maps Mapbox features to hits including country context", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,

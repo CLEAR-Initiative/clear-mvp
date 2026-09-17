@@ -2071,6 +2071,8 @@
     "placeSearch": {
       "open": "Buscar lugares o coordenadas",
       "placeholder": "Lugar o lat, lng",
+      "filters": "Filtros de búsqueda",
+      "removeFilter": "Quitar filtro {label}",
       "clear": "Borrar búsqueda",
       "noResults": "No se encontraron lugares",
       "error": "Búsqueda no disponible"
