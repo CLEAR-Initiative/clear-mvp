@@ -285,6 +285,7 @@
         "evidenceBase": "Del último análisis · {reports} informes",
         "freshest": "más reciente {date}",
         "range": "Rango {range}",
+        "yearlyPeriod": "{year} anual",
         "info": {
           "informSeverity": "Índice de gravedad INFORM (0-10) de ACAPS, actualizado mensualmente. Medida compuesta de la gravedad de la crisis, independiente del pipeline de análisis de situación.",
           "displaced": "Desplazamiento actual estimado (PDI). De los datapoints del análisis (campo: estimated_current_displacement.stock; usa population_displaced si está presente).",

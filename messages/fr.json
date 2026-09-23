@@ -285,6 +285,7 @@
         "evidenceBase": "D'après la dernière analyse · {reports} rapports",
         "freshest": "plus récent {date}",
         "range": "Fourchette {range}",
+        "yearlyPeriod": "{year} annuel",
         "info": {
           "informSeverity": "Indice de sévérité INFORM (0-10) d'ACAPS, mis à jour chaque mois. Mesure composite de la sévérité, indépendante du pipeline d'analyse.",
           "displaced": "Déplacement actuel estimé (PDI). Issu des datapoints de l'analyse (champ : estimated_current_displacement.stock ; repli sur population_displaced si présent).",

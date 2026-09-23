@@ -354,6 +354,49 @@ shipping only blocked GeoJSON with no domain/counts report; burying the ingest g
 inside `docs/logie-spike-sudan.md` without `docs/clear-api-logie-ingest.md`; committing
 full SDN GeoJSON dumps into the app tree by default.
 
+### Situation Analysis
+
+**Situation Analysis**:
+The country-level snapshot of current humanitarian conditions for one **Analysis
+window** — summary, **Key figures**, sectors, sources. Pre-computed; the app reads
+it and does not generate it on request.
+_Avoid_: treating it as a live query; calling the yearly window the default voice
+when a monthly window exists.
+
+**Analysis window**:
+The time span a **Situation Analysis** covers. Two kinds: **monthly** and **yearly**.
+The monthly window is the voice of the page (current state). The yearly window is
+the year-in-review sibling, used to fill a **Key figure** the monthly window did
+not resolve — never to replace the monthly narrative, sectors, or sources. The
+yearly we borrow from is the same calendar year as the monthly window we kept;
+if that yearly also lacks the figure, the tile is omitted — we do not reach
+into another year. Last month is only a snapshot fallback when the current-month
+row is absent — not a donor for individual figures.
+_Avoid_: "bucket" in product language; switching the whole snapshot because one
+figure is thin.
+
+**Key figure**:
+A quantitative tile on **Situation Analysis** (displaced, in need, affected,
+funding, returnees). Sourced from a pipeline **datapoint** on the chosen
+**Analysis window**. A figure borrowed from the yearly window carries a
+**period qualifier** on that tile only, worded as “{year} yearly” (the donor
+window’s calendar year). Monthly tiles stay unlabeled. If the page *is* the
+yearly snapshot (no monthly row), nothing was borrowed — no per-tile qualifier.
+**INFORM Severity** is also shown as a tile but is a different source — it is
+not a datapoint and is never filled from the yearly window.
+_Avoid_: "KPI" for the pipeline field (overloaded across Dashboard, Detection,
+and Insights); calling INFORM a datapoint; silent mix of monthly and yearly
+numbers; labeling every tile.
+
+**Datapoint**:
+The pipeline's numeric field behind a **Key figure**. A datapoint is **missing**
+only when there is no point estimate after the usual resolution (including the
+displaced stock / total path). Zero is a figure. Low confidence is still a
+figure. An unresolved datapoint is simply absent — not a dash, not a yearly
+overwrite of a number the monthly window already stood behind.
+_Avoid_: rendering a placeholder dash for a missing datapoint; treating
+confidence as absence; sending **INFORM Severity** to the yearly window.
+
 ## Relationships
 
 - A **Thread** contains many question/**Answer** turns
@@ -390,6 +433,12 @@ full SDN GeoJSON dumps into the app tree by default.
   team, or null when unscoped. Full Map / Back from a detail page is a visit — it
   must not write **Working country**. **Focus country** (map paint) visually highlights
   the **Working country** on the map canvas when one is set.
+- A **Situation Analysis** belongs to one **Analysis window** (monthly or yearly)
+  for one country. The page prefers the monthly window. A **Key figure** missing
+  on that monthly window is filled from the yearly window of the same country
+  and year; summary, sectors, and sources stay monthly. The same fill applies
+  to every read, including an `asOf` / “What changed” prior. **INFORM Severity**
+  is not filled this way.
 
 ## Example dialogue
 
@@ -739,6 +788,29 @@ full SDN GeoJSON dumps into the app tree by default.
   Access IA comps ticket if still needed after findings.
 - Detail→map returns — resolved: remove header **View on Crisis Map**; focused
   **Back** / **Full Map** vs default **Map** tab (#108).
+- Situation Analysis fallback unit — resolved: **per-figure fill**. Keep the
+  monthly **Situation Analysis** for narrative, sectors, and sources. Borrow a
+  yearly **Key figure** only when that datapoint is unresolved on the monthly
+  window. Not a whole-snapshot switch. **INFORM Severity** is out of the fill.
+- Situation Analysis “missing” Key figure — resolved: **no point estimate**
+  after existing resolution. Zero stays. Displaced stock/total is tried before
+  yearly. Low confidence does not trigger fill. INFORM never fills from yearly.
+- Situation Analysis borrowed-figure disclosure — resolved: **period qualifier
+  on the borrowed tile only**. Monthly tiles and the evidence-base footer stay
+  unlabeled / monthly. Not a silent mix; not a period on every tile.
+- Situation Analysis yearly fill year — resolved: **same calendar year as the
+  monthly Analysis window we kept**. If that yearly also lacks the figure,
+  omit. Do not borrow from another year.
+- Situation Analysis fill on historical reads — resolved: **same rule on every
+  `get`**, including `asOf`. Fill both the tiles and the raw figures the diff
+  uses. Each read picks the year from its own monthly window. No second “diff
+  only monthly-native figures” path in this slice.
+- Situation Analysis figure donor — resolved: **yearly only**. Last month stays
+  a snapshot fallback when the current-month row is absent. Do not pick figures
+  from last month once a monthly window is the page.
+- Situation Analysis period qualifier copy — resolved: **“{year} yearly”** on
+  borrowed tiles only (year = donor window). No qualifier when the whole page
+  is already the yearly snapshot.
 
 ## Theming language
 

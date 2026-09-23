@@ -285,6 +285,7 @@
         "evidenceBase": "From the latest analysis · {reports} reports",
         "freshest": "freshest {date}",
         "range": "Range {range}",
+        "yearlyPeriod": "{year} yearly",
         "info": {
           "informSeverity": "INFORM Severity Index (0-10) from ACAPS, updated monthly. A composite measure of crisis severity, independent of the situation-analysis pipeline.",
           "displaced": "Estimated current displacement (IDPs). From the analysis datapoints (field: estimated_current_displacement.stock; falls back to population_displaced when present).",

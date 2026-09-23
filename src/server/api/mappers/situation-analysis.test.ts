@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  fillMissingKeyFigures,
   mapSituationAnalysis,
+  needsYearlyFill,
   type SaRow,
 } from "./situation-analysis";
 
@@ -39,6 +41,7 @@ describe("mapSituationAnalysis displaced KPI", () => {
       value: "8.6M",
       range: null,
       confidence: null,
+      periodYear: null,
     });
   });
 
@@ -100,5 +103,111 @@ describe("mapSituationAnalysis displaced KPI", () => {
 
     expect(mapped.figures.displaced).toBeNull();
     expect(mapped.stats.find((s) => s.key === "displaced")).toBeUndefined();
+  });
+});
+
+function yearly(datapoints: SaRow["data"]["datapoints"]): SaRow {
+  return {
+    ...row(datapoints),
+    id: "sa-year",
+    windowStart: "2026-01-01T00:00:00.000Z",
+    windowEnd: "2026-12-31T23:59:59.000Z",
+  };
+}
+
+describe("fillMissingKeyFigures", () => {
+  const allYearly = yearly({
+    estimated_current_displacement: { stock: 1_000_000 },
+    population_affected: { value: 4_000_000 },
+    population_in_need: { value: 3_000_000 },
+    returnees: { value: 10_000 },
+    funding_required_usd: { value: 200_000_000 },
+    funding_received_usd: { value: 50_000_000 },
+  });
+
+  it("fills only missing figures and labels the borrowed tiles", () => {
+    const monthly = mapSituationAnalysis(
+      row({
+        estimated_current_displacement: { stock: 800_000 },
+        population_in_need: { value: 2_500_000 },
+      }),
+      "Venezuela",
+    );
+    const filled = fillMissingKeyFigures(
+      monthly,
+      mapSituationAnalysis(allYearly, "Venezuela"),
+    );
+
+    expect(filled.summary).toBe(monthly.summary);
+    expect(filled.figures.displaced).toBe(800_000);
+    expect(filled.figures.inNeed).toBe(2_500_000);
+    expect(filled.figures.affected).toBe(4_000_000);
+    expect(filled.stats.find((s) => s.key === "displaced")).toMatchObject({
+      periodYear: null,
+    });
+    expect(filled.stats.find((s) => s.key === "affected")).toMatchObject({
+      key: "affected",
+      value: "4M",
+      periodYear: "2026",
+    });
+  });
+
+  it("does not overwrite a monthly zero", () => {
+    const monthly = mapSituationAnalysis(
+      row({ returnees: { value: 0 } }),
+      "Venezuela",
+    );
+    const filled = fillMissingKeyFigures(
+      monthly,
+      mapSituationAnalysis(allYearly, "Venezuela"),
+    );
+
+    expect(filled.figures.returnees).toBe(0);
+    expect(filled.stats.find((s) => s.key === "returnees")?.periodYear).toBeNull();
+  });
+
+  it("does not overwrite a low-confidence monthly figure", () => {
+    const monthly = mapSituationAnalysis(
+      row({
+        population_affected: { value: 100_000, confidence: 0.1 },
+      }),
+      "Venezuela",
+    );
+    const filled = fillMissingKeyFigures(
+      monthly,
+      mapSituationAnalysis(allYearly, "Venezuela"),
+    );
+
+    expect(filled.figures.affected).toBe(100_000);
+    expect(filled.stats.find((s) => s.key === "affected")).toMatchObject({
+      confidence: 0.1,
+      periodYear: null,
+    });
+  });
+
+  it("omits a figure when yearly is also missing it", () => {
+    const monthly = mapSituationAnalysis(
+      row({ estimated_current_displacement: { stock: 800_000 } }),
+      "Venezuela",
+    );
+    const thinYearly = mapSituationAnalysis(
+      yearly({ estimated_current_displacement: { stock: 1_000_000 } }),
+      "Venezuela",
+    );
+    const filled = fillMissingKeyFigures(monthly, thinYearly);
+
+    expect(filled.figures.affected).toBeNull();
+    expect(filled.stats.find((s) => s.key === "affected")).toBeUndefined();
+  });
+
+  it("needs a yearly fill only when a point estimate is absent", () => {
+    const thin = mapSituationAnalysis(
+      row({ estimated_current_displacement: { stock: 800_000 } }),
+      "Venezuela",
+    );
+    const complete = mapSituationAnalysis(allYearly, "Venezuela");
+
+    expect(needsYearlyFill(thin)).toBe(true);
+    expect(needsYearlyFill(complete)).toBe(false);
   });
 });
