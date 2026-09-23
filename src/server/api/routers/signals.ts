@@ -141,6 +141,24 @@ const CREATE_MANUAL_SIGNAL_MUTATION = `
   }
 `;
 
+const UPDATE_SIGNAL_SEVERITY_MUTATION = `
+  mutation UpdateSignalSeverity($id: String!, $severity: Int!) {
+    updateSignalSeverity(id: $id, severity: $severity) {
+      id
+      severity
+    }
+  }
+`;
+
+const UPDATE_SIGNAL_LOCATION_MUTATION = `
+  mutation UpdateSignalLocation($id: String!, $locationId: String!) {
+    updateSignalLocation(id: $id, locationId: $locationId) {
+      id
+      generalLocation { id name }
+    }
+  }
+`;
+
 // Paginated query for signals list view (moved from alerts.ts for proper architecture)
 const SIGNALS_PAGE_QUERY = `
   query SignalsPage($input: SignalsPageInput) {
@@ -349,5 +367,30 @@ export const signalsRouter = createTRPCRouter({
         cookieHeaders(ctx),
       );
       return data.createManualSignal;
+    }),
+
+  /** Set a signal's severity (1-5). clear-api gates on admin/analyst. Used by
+   *  the hotline inbox right after promotion, since promotion itself carries
+   *  no severity. */
+  updateSeverity: protectedProcedure
+    .input(z.object({ id: z.string(), severity: z.number().int().min(1).max(5) }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{ updateSignalSeverity: Pick<GqlSignal, "id" | "severity"> }>(
+        UPDATE_SIGNAL_SEVERITY_MUTATION,
+        input,
+        cookieHeaders(ctx),
+      );
+      return data.updateSignalSeverity;
+    }),
+
+  /** Set a signal's general location. clear-api gates on admin. Used by the
+   *  hotline inbox right after promotion (promotion carries no location). */
+  updateLocation: protectedProcedure
+    .input(z.object({ id: z.string(), locationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{
+        updateSignalLocation: { id: string; generalLocation: { id: string; name: string } | null };
+      }>(UPDATE_SIGNAL_LOCATION_MUTATION, input, cookieHeaders(ctx));
+      return data.updateSignalLocation;
     }),
 });

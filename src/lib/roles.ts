@@ -24,3 +24,4 @@ export function isPlatformAdmin(role: string | null | undefined): boolean {
 export function canWriteCrisisEvents(role: string | null | undefined): boolean {
   return isPlatformAdmin(role) || role === "analyst";
 }
+

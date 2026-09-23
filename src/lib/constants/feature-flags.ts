@@ -95,6 +95,16 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     route: "/agent",
   },
 
+  {
+    key: "hotline_inbox",
+    label: "Hotline Inbox",
+    description:
+      "WhatsApp hotline triage inbox (admin only for now). UI-only gate; clear-api's admin/analyst role check on ground queries is the backend enforcement. Owner: James. Remove once the hotline is Verified in production ([EPIC] WhatsApp Hotline V1).",
+    tier: 2,
+    defaultEnabled: false,
+    route: "/inbox",
+  },
+
   // ── Sub-tab flags (gate a tab within a page, not a nav route — no `route`) ──
   {
     key: "ground_intel",
