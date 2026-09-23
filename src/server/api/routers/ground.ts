@@ -103,16 +103,34 @@ const GROUND_MESSAGES_QUERY = `
   }
 `;
 
-/** Inbox variant: adds presigned mediaUrls (cost: one presign per stored
- * attachment per fetch), so it is kept off the generic messages query. */
+/** Inbox message fields: GROUND_MESSAGE_FIELDS minus senderName (private
+ * tier, must not reach the inbox client) plus presigned mediaUrls (cost:
+ * one presign per stored attachment per fetch, so kept off the generic
+ * messages query). */
+const HOTLINE_INBOX_MESSAGE_FIELDS = `
+  id
+  groundSourceId
+  externalId
+  sentAt
+  senderRef
+  text
+  mediaKeys
+  mediaUrls
+  mediaRefs
+  omittedMediaCount
+  classification
+  uncertainty
+  isEdited
+  threadId
+`;
+
 const HOTLINE_INBOX_SOURCE_QUERY = `
   query HotlineInboxSource($groundSourceId: String, $limit: Int) {
     groundThreads(groundSourceId: $groundSourceId, reviewState: "unverified", limit: $limit) {
       ${GROUND_THREAD_FIELDS}
     }
     groundMessages(groundSourceId: $groundSourceId, limit: $limit) {
-      ${GROUND_MESSAGE_FIELDS}
-      mediaUrls
+      ${HOTLINE_INBOX_MESSAGE_FIELDS}
     }
   }
 `;

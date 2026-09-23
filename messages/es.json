@@ -2850,7 +2850,12 @@
       "locationLoading": "Cargando ubicaciones",
       "locationNoMatch": "Ninguna ubicación coincide",
       "locationRequired": "La ubicación es obligatoria antes de añadir a CLEAR",
-      "editsNotSaved": "Los cambios de título y descripción aún no se guardan. La promoción requiere soporte de la API; la señal conserva el texto enviado."
+      "editsNotSaved": "Los cambios de título y descripción aún no se guardan. La promoción requiere soporte de la API; la señal conserva el texto enviado.",
+      "retryTitle": "Señal creada, pero no guardada por completo",
+      "retryLocationBody": "No se pudo guardar la ubicación. La señal existe pero no tiene ámbito y la agregación la ignorará hasta que se defina una ubicación. Reintente o déjela así.",
+      "retrySeverityBody": "La ubicación se guardó pero la severidad no. Reintente o deje la señal sin severidad.",
+      "retry": "Reintentar",
+      "leaveUnscoped": "Dejar así"
     },
     "toast": {
       "added": "Añadido a CLEAR",
@@ -2858,7 +2863,8 @@
       "rejected": "Rechazado · {reason}",
       "viewSignal": "Ver señal",
       "close": "Cerrar",
-      "addedPartial": "Añadido a CLEAR, pero no se pudo guardar la ubicación o la severidad"
+      "addedPartial": "Añadido a CLEAR, pero no se pudo guardar la ubicación o la severidad",
+      "addedNoSignal": "Aprobado, pero no se devolvió ningún id de señal. Compruebe la señal en Detección antes de confiar en ella."
     },
     "noAccess": "La bandeja de la línea directa es solo para administradores por ahora.",
     "loadError": "No se pudo cargar la bandeja",

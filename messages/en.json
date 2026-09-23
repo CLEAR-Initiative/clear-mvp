@@ -2850,7 +2850,12 @@
       "locationLoading": "Loading locations",
       "locationNoMatch": "No matching location",
       "locationRequired": "Location is required before adding to CLEAR",
-      "editsNotSaved": "Title and description edits are not saved yet. Promotion needs API support for overrides; the signal keeps the submitted text."
+      "editsNotSaved": "Title and description edits are not saved yet. Promotion needs API support for overrides; the signal keeps the submitted text.",
+      "retryTitle": "Signal created, but not fully saved",
+      "retryLocationBody": "The location could not be saved. The signal exists but is unscoped and will be ignored by aggregation until a location is set. Retry, or leave it unscoped.",
+      "retrySeverityBody": "The location is saved but the severity could not be. Retry, or leave the signal without severity.",
+      "retry": "Retry",
+      "leaveUnscoped": "Leave as is"
     },
     "toast": {
       "added": "Added to CLEAR",
@@ -2858,7 +2863,8 @@
       "rejected": "Rejected · {reason}",
       "viewSignal": "View signal",
       "close": "Dismiss",
-      "addedPartial": "Added to CLEAR, but location or severity could not be saved"
+      "addedPartial": "Added to CLEAR, but location or severity could not be saved",
+      "addedNoSignal": "Approved, but no signal id came back. Check the signal in Detection before relying on it."
     },
     "noAccess": "The hotline inbox is available to admins only for now.",
     "loadError": "Could not load the inbox",

@@ -76,6 +76,7 @@ class ResizeObserverStub {
   disconnect() {}
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+Element.prototype.scrollIntoView = () => undefined;
 
 const wrap = (ui: React.ReactElement) => render(<MantineProvider>{ui}</MantineProvider>);
 
@@ -210,7 +211,7 @@ describe("ReadingPane", () => {
 });
 
 describe("AddToClearModal", () => {
-  const baseProps = { busy: false, error: null, onCancel: vi.fn(), onConfirm: vi.fn() };
+  const baseProps = { busy: false, error: null, retry: null, onCancel: vi.fn(), onConfirm: vi.fn() };
 
   it("seeds title and description from the entry and keeps confirm disabled without a location", () => {
     wrap(<AddToClearModal {...baseProps} entry={entry()} />);
@@ -244,6 +245,15 @@ describe("AddToClearModal", () => {
       severity: 4,
       locationId: "kas",
     });
+  });
+
+  it("in retry mode shows the banner, relabels the buttons and ignores the backdrop", () => {
+    wrap(<AddToClearModal {...baseProps} entry={entry()} retry={{ locationDone: false }} />);
+    expect(screen.getByTestId("inbox-retry-banner")).toHaveTextContent("modal.retryLocationBody");
+    expect(screen.getByTestId("inbox-add-confirm")).toHaveTextContent("modal.retry");
+    expect(screen.getByTestId("inbox-add-cancel")).toHaveTextContent("modal.leaveUnscoped");
+    fireEvent.click(screen.getByTestId("inbox-add-modal"));
+    expect(baseProps.onCancel).not.toHaveBeenCalled();
   });
 
   it("closes on backdrop click but not on dialog click", () => {

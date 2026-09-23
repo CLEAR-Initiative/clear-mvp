@@ -233,6 +233,8 @@ export function moveSelection(
 /* ─── Read state (per-browser convenience; nothing server-side yet) ─── */
 
 const READ_KEY = "clear.hotline-inbox.read";
+/** Newest-first cap so the per-browser read set cannot grow unbounded. */
+const READ_MAX = 500;
 
 export function loadReadIds(): Set<string> {
   try {
@@ -246,7 +248,7 @@ export function loadReadIds(): Set<string> {
 
 export function saveReadIds(ids: Set<string>): void {
   try {
-    window.localStorage.setItem(READ_KEY, JSON.stringify([...ids]));
+    window.localStorage.setItem(READ_KEY, JSON.stringify([...ids].slice(-READ_MAX)));
   } catch {
     // Storage unavailable (private mode, quota): read state is a nicety.
   }

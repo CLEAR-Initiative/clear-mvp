@@ -70,6 +70,7 @@ class ResizeObserverStub {
   disconnect() {}
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+Element.prototype.scrollIntoView = () => undefined;
 
 const { default: InboxPage } = await import("./page");
 
@@ -94,7 +95,6 @@ function message(id: string, threadId: string, classification: string | null, se
     externalId: `whatsapp:+1:${id}`,
     sentAt,
     senderRef: `h_${id}`,
-    senderName: null,
     text: `Text of ${threadId}`,
     mediaKeys: [],
     mediaUrls: [],
@@ -210,7 +210,41 @@ describe("InboxPage triage", () => {
     expect(screen.getByText("toast.viewSignal")).toHaveAttribute("href", "/signal/sig1");
   });
 
-  it("downgrades the toast when a follow-up write fails after promotion", async () => {
+  it("keeps the modal open in retry mode when the location write fails, then completes on retry", async () => {
+    reviewMutate.mockImplementation((_input, opts) =>
+      opts.onSuccess({ ...thread("a"), promotedSignalId: "sig1" }),
+    );
+    setLocation.mockRejectedValueOnce(new Error("boom")).mockResolvedValueOnce({});
+    setSeverity.mockResolvedValue({});
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-add"));
+    fireEvent.click(screen.getByTestId("inbox-severity-3"));
+    fireEvent.click(screen.getByTestId("inbox-draft-location"));
+    fireEvent.click(screen.getByText("Kassala (Sudan)"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("inbox-add-confirm"));
+    });
+    await waitFor(() => expect(screen.getByTestId("inbox-retry-banner")).toBeInTheDocument());
+    expect(screen.queryByTestId("inbox-toast")).not.toBeInTheDocument();
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(setSeverity).not.toHaveBeenCalled();
+    // Escape and J must not leave retry mode.
+    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.keyDown(window, { key: "j" });
+    expect(screen.getByTestId("inbox-retry-banner")).toBeInTheDocument();
+    expect(screen.getAllByTestId("inbox-entry")[0]).toHaveAttribute("data-selected", "true");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("inbox-add-confirm"));
+    });
+    expect(reviewMutate).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(setLocation).toHaveBeenCalledTimes(2));
+    expect(setSeverity).toHaveBeenCalledWith({ id: "sig1", severity: 3 });
+    await waitFor(() => expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.added"));
+    expect(invalidate).toHaveBeenCalled();
+  });
+
+  it("lets the reviewer leave the signal unscoped with a partial toast", async () => {
     reviewMutate.mockImplementation((_input, opts) =>
       opts.onSuccess({ ...thread("a"), promotedSignalId: "sig1" }),
     );
@@ -222,8 +256,23 @@ describe("InboxPage triage", () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId("inbox-add-confirm"));
     });
-    await waitFor(() => expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.addedPartial"));
-    expect(setSeverity).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByTestId("inbox-retry-banner")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("inbox-add-cancel"));
+    expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.addedPartial");
+    expect(screen.queryByTestId("inbox-add-modal")).not.toBeInTheDocument();
+  });
+
+  it("never claims success when promotion returns no signal id", async () => {
+    reviewMutate.mockImplementation((_input, opts) => opts.onSuccess(thread("a")));
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-add"));
+    fireEvent.click(screen.getByTestId("inbox-draft-location"));
+    fireEvent.click(screen.getByText("Kassala (Sudan)"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("inbox-add-confirm"));
+    });
+    expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.addedNoSignal");
+    expect(setLocation).not.toHaveBeenCalled();
   });
 
   it("surfaces a review error without leaving the entry", () => {

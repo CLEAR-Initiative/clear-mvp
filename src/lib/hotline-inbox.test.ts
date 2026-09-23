@@ -36,7 +36,6 @@ function message(
     externalId: `whatsapp:+1:${id}`,
     sentAt: "2026-09-15T10:00:00Z",
     senderRef: "h_3f9a2c7b1d0e",
-    senderName: null,
     text: `text ${id}`,
     mediaKeys: [],
     mediaUrls: [],

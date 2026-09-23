@@ -15,6 +15,7 @@ const SEVERITIES = [
   { value: 4, bucket: "high" },
   { value: 3, bucket: "medium" },
   { value: 2, bucket: "low" },
+  { value: 1, bucket: "low" },
 ] as const;
 
 export interface SignalDraft {
@@ -28,6 +29,10 @@ interface AddToClearModalProps {
   entry: InboxEntry;
   busy: boolean;
   error: string | null;
+  /** Set once the signal exists but a follow-up write (location, then
+   * severity) failed. The modal stays open; Confirm becomes Retry and
+   * Cancel becomes "Leave unscoped". Backdrop and Escape no longer close. */
+  retry: { locationDone: boolean } | null;
   onCancel: () => void;
   onConfirm: (draft: SignalDraft) => void;
 }
@@ -42,7 +47,7 @@ interface AddToClearModalProps {
  * description edits have no write path until clear-api's promotion
  * accepts overrides; the modal flags that when they differ from the seed.
  */
-export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: AddToClearModalProps) {
+export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm }: AddToClearModalProps) {
   const t = useTranslations("inbox");
   const tSev = useTranslations("common.severities");
 
@@ -69,7 +74,12 @@ export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: Add
   const canConfirm = draft.locationId !== "" && !busy;
 
   return (
-    <div className={styles.backdrop} onClick={busy ? undefined : onCancel} data-testid="inbox-add-modal">
+    <div
+      className={styles.backdrop}
+      onClick={busy || retry ? undefined : onCancel}
+      data-testid="inbox-add-modal"
+      data-retry={retry !== null}
+    >
       <div className={styles.shell} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className={styles.glow} />
         <div className={styles.header}>
@@ -77,12 +87,20 @@ export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: Add
             <IconLayoutGrid size={15} />
             {t("modal.header")}
           </span>
-          <button type="button" className={styles.close} onClick={onCancel} disabled={busy} aria-label={t("modal.cancel")}>
-            <IconX size={16} />
-          </button>
+          {!retry && (
+            <button type="button" className={styles.close} onClick={onCancel} disabled={busy} aria-label={t("modal.cancel")}>
+              <IconX size={16} />
+            </button>
+          )}
         </div>
 
         <div className={styles.body}>
+          {retry && (
+            <div className={styles.retryBanner} data-testid="inbox-retry-banner">
+              <strong>{t("modal.retryTitle")}</strong>
+              <p>{t(retry.locationDone ? "modal.retrySeverityBody" : "modal.retryLocationBody")}</p>
+            </div>
+          )}
           <div>
             <div className={styles.label}>{t("modal.title")}</div>
             <textarea
@@ -189,8 +207,8 @@ export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: Add
         <div className={styles.footer}>
           <span className={styles.footerNote}>{t("modal.footer", { ref: entry.intakeRef })}</span>
           <div className={styles.footerActions}>
-            <button type="button" className={styles.cancel} onClick={onCancel} disabled={busy}>
-              {t("modal.cancel")}
+            <button type="button" className={styles.cancel} onClick={onCancel} disabled={busy} data-testid="inbox-add-cancel">
+              {t(retry ? "modal.leaveUnscoped" : "modal.cancel")}
             </button>
             <button
               type="button"
@@ -199,7 +217,7 @@ export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: Add
               disabled={!canConfirm}
               data-testid="inbox-add-confirm"
             >
-              {t("modal.confirm")}
+              {t(retry ? "modal.retry" : "modal.confirm")}
             </button>
           </div>
         </div>

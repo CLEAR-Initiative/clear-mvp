@@ -87,6 +87,9 @@ export default function InboxPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Mirrors `followUp` (declared below) for callbacks created before it.
+  const followUpRef = useRef(false);
+
   const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
   useEffect(() => setReadIds(loadReadIds()), []);
 
@@ -102,6 +105,8 @@ export default function InboxPage() {
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
   const select = useCallback((id: string | null) => {
+    // A pending promotion follow-up pins the selection until resolved.
+    if (followUpRef.current) return;
     setSelectedId(id);
     setRejectOpen(false);
     setAddOpen(false);
@@ -188,49 +193,94 @@ export default function InboxPage() {
     [selected, busy, review, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  /**
+   * Promotion is not atomic: approve_public (terminal, creates the signal)
+   * is followed by updateSignalLocation and updateSignalSeverity on the new
+   * signal. An unscoped signal is dropped by downstream aggregation, so a
+   * failed follow-up must never be reported as success or lose its retry
+   * path. While a follow-up is outstanding the modal stays open in retry
+   * mode with the signal id pinned, the entry is NOT removed from the
+   * queue (no invalidate), and Retry re-runs only the missing steps.
+   */
+  const [followUp, setFollowUp] = useState<{
+    entryId: string;
+    signalId: string;
+    locationDone: boolean;
+  } | null>(null);
+  followUpRef.current = followUp !== null;
+
+  const applyFollowUp = useCallback(
+    async (entryId: string, signalId: string, draft: SignalDraft, locationDone: boolean) => {
+      let locOk = locationDone;
+      if (!locOk) {
+        try {
+          await setLocation.mutateAsync({ id: signalId, locationId: draft.locationId });
+          locOk = true;
+        } catch (err) {
+          setFollowUp({ entryId, signalId, locationDone: false });
+          setActionError(errorMessage(err));
+          return;
+        }
+      }
+      if (draft.severity) {
+        try {
+          await setSeverity.mutateAsync({ id: signalId, severity: draft.severity });
+        } catch (err) {
+          setFollowUp({ entryId, signalId, locationDone: true });
+          setActionError(errorMessage(err));
+          return;
+        }
+      }
+      setFollowUp(null);
+      afterAction(entryId, { message: t("toast.added"), signalId });
+    },
+    [setLocation, setSeverity, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   const confirmAdd = useCallback(
     (draft: SignalDraft) => {
       if (!selected || busy) return;
+      setActionError(null);
+      if (followUp && followUp.entryId === selected.id) {
+        // Retry: the signal exists, only the follow-up steps run again.
+        void applyFollowUp(selected.id, followUp.signalId, draft, followUp.locationDone);
+        return;
+      }
       review.mutate(
         { id: selected.id, decision: "approve_public" },
         {
-          onSuccess: async (thread) => {
-            // Promotion already happened: follow-up failures must not leave
-            // the entry looking un-actioned, so they only downgrade the toast.
+          onSuccess: (thread) => {
             const signalId = thread.promotedSignalId;
-            let partial = false;
-            if (signalId) {
-              try {
-                await setLocation.mutateAsync({ id: signalId, locationId: draft.locationId });
-              } catch {
-                partial = true;
-              }
-              if (draft.severity) {
-                try {
-                  await setSeverity.mutateAsync({ id: signalId, severity: draft.severity });
-                } catch {
-                  partial = true;
-                }
-              }
+            if (!signalId) {
+              // Promoted but no signal id came back: nothing can be scoped.
+              // Say so instead of claiming success.
+              afterAction(selected.id, { message: t("toast.addedNoSignal") });
+              return;
             }
-            afterAction(selected.id, {
-              message: partial ? t("toast.addedPartial") : t("toast.added"),
-              signalId,
-            });
+            void applyFollowUp(selected.id, signalId, draft, false);
           },
           onError: (err) => setActionError(errorMessage(err)),
         },
       );
     },
-    [selected, busy, review, setSeverity, setLocation, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
+    [selected, busy, review, followUp, applyFollowUp, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
   );
+
+  /** Leave the follow-up unfinished: the signal exists but is unscoped. */
+  const abandonFollowUp = useCallback(() => {
+    if (!followUp) return;
+    const { entryId, signalId } = followUp;
+    setFollowUp(null);
+    afterAction(entryId, { message: t("toast.addedPartial"), signalId });
+  }, [followUp, afterAction, t]);
 
   // Keyboard: Escape closes modal > popover; A/E/R act; J/K move.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (addOpen) setAddOpen(false);
-        else if (rejectOpen) setRejectOpen(false);
+        // In retry mode the reviewer must choose Retry or Leave explicitly.
+        if (addOpen && !followUp) setAddOpen(false);
+        else if (!addOpen && rejectOpen) setRejectOpen(false);
         return;
       }
       const target = e.target as HTMLElement | null;
@@ -256,7 +306,7 @@ export default function InboxPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [addOpen, rejectOpen, visible, selectedId, selected, canReviewSelected, select, archive]);
+  }, [addOpen, rejectOpen, followUp, visible, selectedId, selected, canReviewSelected, select, archive]);
 
   if (authLoading) {
     return (
@@ -333,7 +383,12 @@ export default function InboxPage() {
           entry={selected}
           busy={busy}
           error={actionError}
-          onCancel={() => { if (!busy) setAddOpen(false); }}
+          retry={followUp?.entryId === selected.id ? { locationDone: followUp.locationDone } : null}
+          onCancel={() => {
+            if (busy) return;
+            if (followUp?.entryId === selected.id) abandonFollowUp();
+            else setAddOpen(false);
+          }}
           onConfirm={confirmAdd}
         />
       )}

@@ -256,11 +256,13 @@ export interface GqlGroundMessage {
   threadId: string | null;
 }
 
-/** Ground message with presigned media URLs (1 h expiry, generated at read
- * time). Requested only by the hotline inbox, which renders attachments. */
-export interface GqlGroundInboxMessage extends GqlGroundMessage {
+/** Ground message as the hotline inbox receives it: presigned media URLs
+ * (1 h expiry, generated at read time) and NO senderName. Hotline sources
+ * store no name, and the private-tier field must not travel to the inbox
+ * client even as null. */
+export type GqlGroundInboxMessage = Omit<GqlGroundMessage, "senderName"> & {
   mediaUrls: string[];
-}
+};
 
 /** Hotline inbox payload: every hotline source with its open (unverified)
  * threads and all staged messages, joined client-side. */

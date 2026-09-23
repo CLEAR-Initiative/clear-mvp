@@ -506,7 +506,7 @@
 
 .popover {
   position: absolute;
-  left: 24px;
+  inset-inline-start: 24px;
   bottom: 58px;
   width: 320px;
   background: var(--color-bg-white);
@@ -627,8 +627,7 @@
     display: none;
   }
   .popover {
-    left: 12px;
-    right: 12px;
+    inset-inline: 12px;
     width: auto;
   }
   .shortcuts {
