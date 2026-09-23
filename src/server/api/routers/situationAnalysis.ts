@@ -2,10 +2,16 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import {
+  fillMissingKeyFigures,
   mapSituationAnalysis,
+  needsYearlyFill,
   type SaRow,
   type SituationAnalysis,
 } from "~/server/api/mappers/situation-analysis";
+import {
+  recentMonthStarts,
+  yearlyWindowStart,
+} from "~/server/api/routers/situationAnalysis-windows";
 
 /**
  * Situation Analysis (SAF Framework).
@@ -113,19 +119,6 @@ async function fetchReportMeta(
   return out;
 }
 
-/**
- * ISO timestamps for the start of the current month and the `back` months
- * before it, newest first. Midnight UTC on the 1st, which is the exact instant
- * the pipeline writes as `windowStart` - the API matches it for equality, so
- * anything else silently returns null.
- */
-function recentMonthStarts(back: number): string[] {
-  const now = new Date();
-  return Array.from({ length: back }, (_, i) =>
-    new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1)).toISOString(),
-  );
-}
-
 export const situationAnalysisRouter = createTRPCRouter({
   /**
    * Countries available in the selector: every level-0 location.
@@ -173,22 +166,32 @@ export const situationAnalysisRouter = createTRPCRouter({
         ...(input.asOf != null ? { asOf: input.asOf } : {}),
       };
 
-      // Prefer the monthly bucket. Both buckets are generated from the same
+      // Prefer the monthly window. Both windows are generated from the same
       // retrieved reports, but the yearly synthesises them as a year in review
       // ("2026 was transformed by...") while the monthly reads as the current
       // state - which is what a situation analysis is for. Monthly also
       // carries fast-moving facts the yearly has been observed to drop.
       //
-      // Falls back a month, then to yearly: a bucket only exists once that
+      // Falls back a month, then to yearly: a window only exists once that
       // month has been generated, so early in a month, or for a country the
       // pipeline has just picked up, the current month can legitimately be
-      // missing.
+      // missing. Last month is a snapshot fallback only — not a figure donor.
+      let source: "monthly" | "yearly" = "yearly";
       let row: SaRow | null = null;
       for (const start of recentMonthStarts(2)) {
         row = await fetchBucket({ ...base, windowKind: "monthly", windowStart: start });
-        if (row) break;
+        if (row) {
+          source = "monthly";
+          break;
+        }
       }
-      row ??= await fetchBucket(base);
+      row ??= await fetchBucket({
+        ...base,
+        windowKind: "yearly",
+        windowStart: yearlyWindowStart(
+          input.year ?? new Date().getUTCFullYear(),
+        ),
+      });
 
       if (!row) return null;
 
@@ -227,6 +230,26 @@ export const situationAnalysisRouter = createTRPCRouter({
         };
       }
 
-      return mapSituationAnalysis(row, input.countryName);
+      const mapped = mapSituationAnalysis(row, input.countryName);
+
+      // Per-figure fill: keep the monthly narrative and borrow only unresolved
+      // Key figures from the same-year yearly window. Skip when the page *is*
+      // already the yearly snapshot (nothing was borrowed) or every figure
+      // already has a point estimate.
+      if (source !== "monthly" || !needsYearlyFill(mapped)) return mapped;
+
+      const year = new Date(row.windowStart).getUTCFullYear();
+      const yearlyRow = await fetchBucket({
+        year,
+        windowKind: "yearly",
+        windowStart: yearlyWindowStart(year),
+        ...(input.asOf != null ? { asOf: input.asOf } : {}),
+      });
+      if (!yearlyRow) return mapped;
+
+      return fillMissingKeyFigures(
+        mapped,
+        mapSituationAnalysis(yearlyRow, input.countryName),
+      );
     }),
 });

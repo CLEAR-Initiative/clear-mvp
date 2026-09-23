@@ -161,6 +161,15 @@ export type SaStatKey =
   | "fundingRequired"
   | "fundingReceived";
 
+export const SA_STAT_KEYS: readonly SaStatKey[] = [
+  "displaced",
+  "affected",
+  "inNeed",
+  "returnees",
+  "fundingRequired",
+  "fundingReceived",
+];
+
 export interface SaStat {
   key: SaStatKey;
   /** Compact point estimate, e.g. "6.5M" (funding rows are prefixed "$"). */
@@ -170,6 +179,9 @@ export interface SaStat {
   range: string | null;
   /** The figure's 0–1 data-quality signal, null when the pipeline didn't set it. */
   confidence: number | null;
+  /** Calendar year of the yearly donor window when this tile was filled.
+   *  Null when the figure is native to the page's Analysis window. */
+  periodYear: string | null;
 }
 
 export interface SaCrisis {
@@ -443,7 +455,13 @@ function mapStats(dp: SaPayload["datapoints"]): SaStat[] {
     const range = hasBand
       ? `${prefix}${compactNumber(low)} – ${prefix}${compactNumber(high)}`
       : null;
-    stats.push({ key, value: `${prefix}${compactNumber(value)}`, range, confidence });
+    stats.push({
+      key,
+      value: `${prefix}${compactNumber(value)}`,
+      range,
+      confidence,
+      periodYear: null,
+    });
   };
   for (const [key, f] of people) push(key, f, "");
   for (const [key, f] of funding) push(key, f, "$");
@@ -616,5 +634,41 @@ export function mapSituationAnalysis(
       comparedTo: data.changes?.compared_to ?? null,
       notes: data.changes?.notes ?? {},
     },
+  };
+}
+
+/** True when at least one pipeline Key figure has no point estimate. */
+export function needsYearlyFill(analysis: SituationAnalysis): boolean {
+  return SA_STAT_KEYS.some((key) => analysis.figures[key] == null);
+}
+
+/**
+ * Per-figure fill: keep the monthly Situation Analysis (narrative, sectors,
+ * sources) and borrow only unresolved Key figures from the same-year yearly
+ * window. A present monthly value — including zero — is never overwritten.
+ * Each borrowed tile is marked with the donor window's calendar year.
+ */
+export function fillMissingKeyFigures(
+  monthly: SituationAnalysis,
+  yearly: SituationAnalysis,
+): SituationAnalysis {
+  const figures = { ...monthly.figures };
+  const statsByKey = new Map(monthly.stats.map((s) => [s.key, s]));
+  const yearlyYear = yearly.crisis.year;
+
+  for (const key of SA_STAT_KEYS) {
+    if (figures[key] != null) continue;
+    if (yearly.figures[key] == null) continue;
+    figures[key] = yearly.figures[key];
+    const donor = yearly.stats.find((s) => s.key === key);
+    if (donor) statsByKey.set(key, { ...donor, periodYear: yearlyYear });
+  }
+
+  return {
+    ...monthly,
+    figures,
+    stats: SA_STAT_KEYS.map((key) => statsByKey.get(key)).filter(
+      (s): s is SaStat => s != null,
+    ),
   };
 }

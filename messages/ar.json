@@ -285,6 +285,7 @@
         "evidenceBase": "من أحدث تحليل · {reports} تقارير",
         "freshest": "الأحدث {date}",
         "range": "النطاق {range}",
+        "yearlyPeriod": "{year} سنوي",
         "info": {
           "informSeverity": "مؤشر شدة INFORM (0-10) من ACAPS، يُحدَّث شهرياً. مقياس مركّب لشدة الأزمة، مستقل عن خط معالجة التحليل.",
           "displaced": "التقدير الحالي للنزوح (النازحون داخلياً). من datapoints التحليل (الحقل: estimated_current_displacement.stock؛ مع الرجوع إلى population_displaced إن وُجد).",
