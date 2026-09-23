@@ -278,9 +278,9 @@ export default function InboxPage() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        // In retry mode the reviewer must choose Retry or Leave explicitly.
-        if (addOpen && !followUp) setAddOpen(false);
-        else if (!addOpen && rejectOpen) setRejectOpen(false);
+        // The Add to CLEAR modal handles its own Escape (Mantine Modal,
+        // locked while a retry is pending); only the popover is ours.
+        if (!addOpen && rejectOpen) setRejectOpen(false);
         return;
       }
       const target = e.target as HTMLElement | null;

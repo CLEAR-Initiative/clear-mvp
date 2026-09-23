@@ -229,7 +229,7 @@ describe("InboxPage triage", () => {
     expect(invalidate).not.toHaveBeenCalled();
     expect(setSeverity).not.toHaveBeenCalled();
     // Escape and J must not leave retry mode.
-    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
     fireEvent.keyDown(window, { key: "j" });
     expect(screen.getByTestId("inbox-retry-banner")).toBeInTheDocument();
     expect(screen.getAllByTestId("inbox-entry")[0]).toHaveAttribute("data-selected", "true");
@@ -291,7 +291,7 @@ describe("InboxPage triage", () => {
     expect(screen.getAllByTestId("inbox-entry")[0]).toHaveAttribute("data-selected", "true");
     fireEvent.keyDown(window, { key: "a" });
     expect(screen.getByTestId("inbox-add-modal")).toBeInTheDocument();
-    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
     expect(screen.queryByTestId("inbox-add-modal")).not.toBeInTheDocument();
   });
 });

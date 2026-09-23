@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Select } from "@mantine/core";
+import { Modal, Select } from "@mantine/core";
 import { IconLayoutGrid, IconMicrophone, IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { InboxEntry } from "~/lib/hotline-inbox";
@@ -74,13 +74,20 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
   const canConfirm = draft.locationId !== "" && !busy;
 
   return (
-    <div
-      className={styles.backdrop}
-      onClick={busy || retry ? undefined : onCancel}
-      data-testid="inbox-add-modal"
-      data-retry={retry !== null}
+    <Modal
+      opened
+      onClose={onCancel}
+      withCloseButton={false}
+      padding={0}
+      size={760}
+      centered
+      closeOnEscape={!busy && !retry}
+      closeOnClickOutside={!busy && !retry}
+      transitionProps={{ duration: 0 }}
+      classNames={{ content: styles.shell, body: styles.shellBody }}
+      overlayProps={{ backgroundOpacity: 0.6 }}
     >
-      <div className={styles.shell} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div className={styles.frame} data-testid="inbox-add-modal" data-retry={retry !== null}>
         <div className={styles.glow} />
         <div className={styles.header}>
           <span className={styles.headerLabel}>
@@ -222,6 +229,6 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

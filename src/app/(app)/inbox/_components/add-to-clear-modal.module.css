@@ -2,24 +2,9 @@
    app: this content is CLEAR's framing of the submission, not the reporter's
    words. Built on the --color-ai tokens (violet), light and dark. */
 
-.backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(3, 4, 5, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 40;
-  padding: 16px;
-}
-
+/* Mantine Modal content: the violet shell. Non-scrolling; .body scrolls. */
 .shell {
-  width: 760px;
-  max-width: 100%;
-  max-height: 88%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  overflow: hidden !important;
   position: relative;
   isolation: isolate;
   border-radius: 12px;
@@ -27,6 +12,23 @@
   background: var(--color-ai-light);
   box-shadow: var(--shadow-lg);
   color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+.shellBody {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  position: relative;
 }
 
 /* Decorative glow lives on the non-scrolling shell: its negative inset would

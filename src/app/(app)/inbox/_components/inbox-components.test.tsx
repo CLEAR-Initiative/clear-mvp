@@ -252,15 +252,20 @@ describe("AddToClearModal", () => {
     expect(screen.getByTestId("inbox-retry-banner")).toHaveTextContent("modal.retryLocationBody");
     expect(screen.getByTestId("inbox-add-confirm")).toHaveTextContent("modal.retry");
     expect(screen.getByTestId("inbox-add-cancel")).toHaveTextContent("modal.leaveUnscoped");
-    fireEvent.click(screen.getByTestId("inbox-add-modal"));
+    fireEvent.mouseDown(document.querySelector(".mantine-Modal-overlay")!);
+    fireEvent.mouseUp(document.querySelector(".mantine-Modal-overlay")!);
+    fireEvent.click(document.querySelector(".mantine-Modal-overlay")!);
     expect(baseProps.onCancel).not.toHaveBeenCalled();
   });
 
-  it("closes on backdrop click but not on dialog click", () => {
+  it("closes on overlay click but not on dialog click", () => {
     wrap(<AddToClearModal {...baseProps} entry={entry()} />);
-    fireEvent.click(screen.getByRole("dialog"));
-    expect(baseProps.onCancel).not.toHaveBeenCalled();
     fireEvent.click(screen.getByTestId("inbox-add-modal"));
+    expect(baseProps.onCancel).not.toHaveBeenCalled();
+    const overlay = document.querySelector(".mantine-Modal-overlay")!;
+    fireEvent.mouseDown(overlay);
+    fireEvent.mouseUp(overlay);
+    fireEvent.click(overlay);
     expect(baseProps.onCancel).toHaveBeenCalled();
   });
 });
