@@ -59,7 +59,7 @@ interface GqlCountry {
   name: string;
 }
 
-interface ReportMeta {
+export interface ReportMeta {
   reportId: string;
   reportTitle: string | null;
   sourceUrl: string | null;
@@ -82,7 +82,7 @@ interface ReportMeta {
  * Best-effort - on failure the caller still renders, just without titles or
  * publishers.
  */
-async function fetchReportMeta(
+export async function fetchReportMeta(
   ids: string[],
   headers: Record<string, string>,
 ): Promise<Map<string, ReportMeta>> {

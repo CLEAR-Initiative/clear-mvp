@@ -5,7 +5,8 @@
       "breadcrumb": "Insights",
       "tabs": {
         "crisis": "Crisis Overview",
-        "situation": "Situation Analysis"
+        "situation": "Situation Analysis",
+        "analysis": "Analysis"
       }
     },
     "reports": {
@@ -229,7 +230,9 @@
         "generated": "Generated {date} by {model} · {reports} reports"
       },
       "summary": {
-        "title": "AI Situation Summary"
+        "title": "AI Situation Summary",
+        "readMore": "Read full summary",
+        "showLess": "Show less"
       },
       "stats": {
         "displaced": "Displaced",
@@ -2885,6 +2888,243 @@
         "fr": "French",
         "es": "Spanish",
         "ar": "Arabic"
+      }
+    }
+  },
+  "analysis": {
+    "scope": {
+      "country": "Country analysis",
+      "wholeCountry": "Whole country",
+      "created": "Created analysis",
+      "areas": "{count, plural, one {# area} other {# areas}}"
+    },
+    "meta": {
+      "updated": "Updated {relative}",
+      "asOf": "as of {date}",
+      "builtFrom": "Built from {reports, plural, one {# report} other {# reports}} and {events, plural, one {# event} other {# events}}"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "needs": "Needs Assessment",
+      "sources": "Sources & Events"
+    },
+    "error": "The analysis could not be loaded.",
+    "empty": {
+      "title": "No analysis yet",
+      "description": "No analysis has been generated for {scope} yet. Country analyses are regenerated weekly."
+    },
+    "noCountry": "Your team has no country assigned, so there is no default analysis scope yet.",
+    "country": "Country",
+    "kpis": {
+      "displaced": "Displaced",
+      "displacedSub": "people currently displaced",
+      "returned": "Returned",
+      "returnedSub": "have returned home. Not counted as displaced.",
+      "inNeed": "In need",
+      "inNeedSub": "people in need",
+      "funding": "Funding",
+      "fundingOf": "of {required}",
+      "fundingSub": "received against the requirement",
+      "received": "Received",
+      "gap": "Gap",
+      "notReported": "Not reported in the current sources",
+      "displacedTotalSub": "people displaced in total, inside {scope} and abroad",
+      "inside": "Inside {scope}",
+      "abroad": "Abroad",
+      "differentDates": "parts may come from different dates",
+      "rangeLabel": "Range across sources",
+      "headline": "Headline",
+      "bySector": "People in need by sector",
+      "sectorOverlap": "One person can be in need in several sectors, so sector figures don't add up to {total}.",
+      "asOf": "As of {date}",
+      "fundingRequiredSub": "required. Funding received is not reported yet.",
+      "sectors": {
+        "food_security": "Food security",
+        "health": "Health",
+        "wash": "WASH",
+        "protection": "Protection",
+        "shelter": "Shelter & NFI",
+        "education": "Education",
+        "nutrition": "Nutrition"
+      }
+    },
+    "map": {
+      "title": "Analysis area",
+      "events": "{count, plural, one {# event} other {# events}} since {date}",
+      "areas": "Where events happened",
+      "areaEvents": "{count, plural, one {# event} other {# events}}",
+      "noEvents": "No events recorded in this area since {date}.",
+      "sample": "Map shows the {count} most recent"
+    },
+    "timeline": {
+      "title": "Events timeline",
+      "today": "Today",
+      "empty": "No events recorded in this period.",
+      "sample": "The {count} most recent events"
+    },
+    "findings": {
+      "hazards": "Hazards",
+      "vulnerabilities": "Vulnerabilities",
+      "vulnerabilitiesTag": "pre-crisis conditions",
+      "displacement": "Displacement",
+      "displacementTag": "key findings",
+      "push": "What is forcing people out",
+      "return": "Return intentions",
+      "count": "{count, plural, one {# finding} other {# findings}}",
+      "showAll": "Show all {count}",
+      "showLess": "Show less",
+      "forecast": "Forecast",
+      "forecastTag": "projections, not observed",
+      "forecastNote": "What sources expect next. Kept apart from the facts above.",
+      "mostLikely": "Most likely",
+      "bestCase": "Best case",
+      "worstCase": "Worst case",
+      "hazardsTitle": "Hazards & Vulnerabilities",
+      "hazardsMeta": "{hazards, plural, one {# hazard} other {# hazards}} · {vulnerabilities, plural, one {# vulnerability} other {# vulnerabilities}}"
+    },
+    "needs": {
+      "severityIntro": "Each sector is graded by the analysis from the sector reporting it cites.",
+      "severityNull": "Not assessed: too little evidence to grade.",
+      "inferred": "Graded from reporting outside this sector. Treat as indicative.",
+      "notAssessed": "Not assessed"
+    },
+    "events": {
+      "title": "Events in this area",
+      "empty": "No events recorded in this area in this period.",
+      "untitled": "Untitled event",
+      "severity": "Severity {value}",
+      "count": "{shown} of {total}"
+    },
+    "sources": {
+      "title": "Sources cited"
+    },
+    "contexts": {
+      "title": "Contexts",
+      "meta": "{categories, plural, one {# category} other {# categories}} · {findings, plural, one {# finding} other {# findings}}",
+      "findings": "{count, plural, one {# finding} other {# findings}}"
+    },
+    "generating": {
+      "title": "Generating the first version",
+      "description": "The pipeline is building this analysis from the knowledge base. This page updates by itself when it is ready."
+    },
+    "cadence": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "home": {
+      "title": "Analyses",
+      "subtitle": "Current analyses for {country}. Open one, or create your own over specific states or districts.",
+      "new": "New analysis",
+      "countryGroup": "Country",
+      "createdGroup": "Created by your team",
+      "wholeCountry": "Whole country",
+      "updated": "Updated {relative}",
+      "generating": "Generating the first version",
+      "paused": "paused",
+      "stale": "Out of date",
+      "noCountryAnalysis": "No analysis generated yet",
+      "createdEmpty": "No created analyses yet. Create one to follow specific states or districts.",
+      "createdEmptyReadOnly": "Your team has not created any analyses yet.",
+      "remove": "Remove",
+      "keep": "Keep",
+      "removeLabel": "Remove {name}",
+      "mapNote": "Highlighted: areas covered by your team's analyses.",
+      "back": "All analyses",
+      "areas": "{count, plural, one {# area} other {# areas}}"
+    },
+    "create": {
+      "title": "New analysis in {country}",
+      "districts": "Districts",
+      "loading": "Loading districts",
+      "noMatch": "No district found",
+      "cadence": "Update frequency",
+      "summary": "Covers events and reports since {since}, kept current and updated {cadence}.",
+      "firstRun": "The first version usually takes a few minutes. You can leave this page meanwhile.",
+      "duplicate": "Your team already has an analysis for these districts: {name}.",
+      "openExisting": "Open it",
+      "error": "The analysis could not be created. Please try again.",
+      "cancel": "Cancel",
+      "submit": "Create analysis",
+      "areas": "States or districts",
+      "areasHint": "Search and add up to {max}. The analysis covers them together.",
+      "search": "Search states and districts",
+      "states": "States",
+      "mapHint": "Click a district on the map to add or remove it.",
+      "selected": "Selected ({count}/{max})",
+      "nothingSelected": "Nothing selected yet.",
+      "removeArea": "Remove {name}",
+      "wholeState": "{name} (whole state)"
+    },
+    "report": {
+      "button": "Create report",
+      "eyebrow": "Situation report",
+      "scopeCountry": "Country analysis",
+      "scopeCreated": "Created analysis",
+      "period": "Covers {start} to date",
+      "versionOf": "Analysis version of {date}",
+      "keyDevelopments": "Key developments",
+      "currentStatus": "Current status",
+      "displaced": "Displaced",
+      "displacedSub": "people displaced",
+      "inNeed": "In need",
+      "inNeedSub": "people in need",
+      "funding": "Funding",
+      "fundingSub": "received / required",
+      "notReported": "Not reported in the current sources",
+      "mapCountry": "Outline: country",
+      "mapArea": "Shaded: analysis area",
+      "mapEvents": "Dots: {count, plural, one {# event} other {# events}} since {date}",
+      "contexts": "Context",
+      "hazards": "Hazards",
+      "displacement": "What is forcing people out",
+      "priorityNeeds": "Priority needs",
+      "responseActivities": "Response activities",
+      "noResponse": "No response activities reported in the current sources.",
+      "outlook": "Outlook (most likely scenario)",
+      "sources": "Sources",
+      "provenance": "Provenance",
+      "generated": "Report created {date} by {author} in CLEAR. Numbers in brackets refer to the sources list.",
+      "footer": "CLEAR · {scope}",
+      "page": "Page {n} of {total}",
+      "unknownAuthor": "a CLEAR user",
+      "error": "The report could not be created. Please try again.",
+      "unsupportedLocale": "Reports can't be created in Arabic yet. Switch the language to English, French or Spanish to create one.",
+      "sections": {
+        "keyDevelopments": "Key developments",
+        "currentStatus": "Current status",
+        "map": "Scope map",
+        "contexts": "Context",
+        "hazards": "Hazards",
+        "displacement": "What is forcing people out",
+        "priorityNeeds": "Priority needs",
+        "responseActivities": "Response activities",
+        "outlook": "Outlook",
+        "sources": "Sources"
+      },
+      "builder": {
+        "title": "Create report",
+        "intro": "Drag the sections into the order you want and tick the ones to include.",
+        "dragLabel": "Drag {section}",
+        "includeLabel": "Include {section}",
+        "empty": "Nothing in this analysis for this section",
+        "alwaysIncluded": "The version stamp, author and page numbers are always included.",
+        "cancel": "Cancel",
+        "create": "Download PDF ({count, plural, one {# section} other {# sections}})",
+        "counts": {
+          "keyDevelopments": "Summary and {count, plural, =0 {no key findings} one {# key finding} other {# key findings}}",
+          "map": "Scope with {count, plural, one {# event} other {# events}}",
+          "contexts": "{count, plural, one {# finding} other {# findings}}",
+          "hazards": "{count, plural, one {# hazard} other {# hazards}}",
+          "displacement": "{count, plural, one {# finding} other {# findings}}",
+          "priorityNeeds": "{count, plural, one {# sector} other {# sectors}}",
+          "responseActivities": "{count, plural, one {# sector} other {# sectors}}",
+          "sources": "{count, plural, one {# source} other {# sources}}"
+        },
+        "hints": {
+          "currentStatus": "Displaced, in need and funding",
+          "outlook": "Most likely scenario"
+        }
       }
     }
   }

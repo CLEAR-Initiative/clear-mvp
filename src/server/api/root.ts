@@ -1,4 +1,5 @@
 import { alertsRouter } from "~/server/api/routers/alerts";
+import { analysisRouter } from "~/server/api/routers/analysis";
 import { commentsRouter } from "~/server/api/routers/comments";
 import { feedbackRouter } from "~/server/api/routers/feedback";
 import { featureFlagsRouter } from "~/server/api/routers/featureFlags";
@@ -21,6 +22,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
   alerts: alertsRouter,
+  analysis: analysisRouter,
   auth: authRouter,
   comments: commentsRouter,
   feedback: feedbackRouter,
