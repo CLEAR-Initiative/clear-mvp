@@ -2808,6 +2808,11 @@
       "omittedMedia": "{count, plural, one {# adjunto no almacenado} other {# adjuntos no almacenados}}",
       "uncertainty": "El informante lo marcó como {value}",
       "back": "Volver a la lista",
+      "voiceNoteN": "Nota de voz {n}",
+      "voiceOpen": "Abrir en una pestaña nueva",
+      "voiceUnsupported": "Este navegador no puede reproducir este formato de audio. Ábralo en una pestaña nueva para descargarlo.",
+      "voiceRefreshing": "El enlace de audio caducó. Se está actualizando; luego pulse reproducir de nuevo.",
+      "voiceFailed": "No se pudo reproducir esta nota de voz aquí. Ábrala en una pestaña nueva.",
       "transcriptLabel": "Transcripción automática · puede contener errores",
       "transcriptPending": "Transcripción pendiente",
       "voiceNotStored": "Nota de voz (audio aún no almacenado)"
@@ -2859,6 +2864,11 @@
       "retrySeverityBody": "La ubicación se guardó pero la severidad no. Reintente o deje la señal sin severidad.",
       "retry": "Reintentar",
       "leaveUnscoped": "Dejar así",
+      "aiSuggested": "Sugerencia de IA",
+      "draftTitleNotSaved": "Título sugerido por la IA, para revisar. Aún no se guarda: hasta que la promoción acepte cambios de título, la señal conserva el título del envío.",
+      "draftLocationUnknown": "No se encontró la ubicación sugerida. Elija una ubicación antes de añadir a CLEAR.",
+      "disasterType": "Tipo de desastre",
+      "disasterTypeReadOnly": "Solo como referencia: las señales aún no tienen un campo de tipo de desastre, así que no se guarda.",
       "transcriptInDescription": "[Transcripción automática] {text}",
       "transcriptsNotSaved": "Incluye las transcripciones automáticas de las notas de voz para revisión. Hasta que la promoción acepte cambios en la descripción, la señal conserva solo el texto enviado."
     },

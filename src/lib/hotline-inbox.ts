@@ -1,6 +1,6 @@
 import type {
   GqlGroundInboxMessage,
-  GqlGroundThread,
+  GqlGroundInboxThread,
   GqlHotlineInbox,
 } from "~/lib/types/graphql";
 
@@ -63,7 +63,8 @@ export interface InboxAttachment {
 export interface InboxEntry {
   /** Thread id (the review unit). */
   id: string;
-  thread: GqlGroundThread;
+  /** Carries the enrichment drafts the Add to CLEAR modal pre-fills from. */
+  thread: GqlGroundInboxThread;
   /** Sent-ascending. */
   messages: GqlGroundInboxMessage[];
   senderRef: string;
@@ -125,6 +126,16 @@ function messageAttachments(m: GqlGroundInboxMessage): InboxAttachment[] {
 export function intakeRef(senderRef: string | null | undefined): string {
   const body = (senderRef ?? "").replace(/^[a-z]_/, "");
   return body.length === 0 ? "HL-?" : `HL-${body.slice(0, 6).toUpperCase()}`;
+}
+
+/**
+ * Stable React key for an attachment: the URL path without the presign
+ * query string. Presigned URLs change on every inbox fetch (1 h expiry);
+ * keying on the path keeps the element (and a voice player's state)
+ * across a refresh instead of remounting it.
+ */
+export function attachmentKey(url: string): string {
+  return url.split("?")[0] ?? url;
 }
 
 export function toInboxClassification(value: string | null | undefined): InboxClassification {

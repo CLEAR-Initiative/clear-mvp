@@ -70,6 +70,24 @@ describe("ground.hotlineInbox", () => {
     expect(vars).toMatchObject({ groundSourceId: "hot1", limit: 500 });
   });
 
+  it("requests the hotline-enrichment drafts on inbox threads", async () => {
+    graphqlFetch
+      .mockResolvedValueOnce({ groundSources: sources })
+      .mockResolvedValueOnce({
+        groundThreads: [{ id: "t1", groundSourceId: "hot1", draftTitle: "Drafted", draftSeverity: 4 }],
+        groundMessages: [],
+      });
+
+    const result = await caller().ground.hotlineInbox();
+
+    const [query] = graphqlFetch.mock.calls[1] as [string];
+    const threadSelection = query.slice(query.indexOf("groundThreads"), query.indexOf("groundMessages"));
+    for (const field of ["draftTitle", "draftSeverity", "draftLocationId", "draftDisasterType"]) {
+      expect(threadSelection).toContain(field);
+    }
+    expect(result.threads[0]).toMatchObject({ draftTitle: "Drafted", draftSeverity: 4 });
+  });
+
   it("returns empty collections when no hotline source is active", async () => {
     graphqlFetch.mockResolvedValueOnce({ groundSources: [sources[1], sources[2]] });
     const result = await caller().ground.hotlineInbox();

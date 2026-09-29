@@ -270,11 +270,23 @@ export type GqlGroundInboxMessage = Omit<GqlGroundMessage, "senderName"> & {
   transcript: string | null;
 };
 
+/** Ground thread as the hotline inbox receives it: the base fields plus the
+ * hotline-enrichment drafts. Drafts are LLM suggestions (never applied
+ * automatically); every one is null until the enrichment job has run. */
+export interface GqlGroundInboxThread extends GqlGroundThread {
+  draftTitle: string | null;
+  /** 1-5. */
+  draftSeverity: number | null;
+  /** `locations` row id (any admin level, incl. L3/L4 landmarks). */
+  draftLocationId: string | null;
+  draftDisasterType: string | null;
+}
+
 /** Hotline inbox payload: every hotline source with its open (unverified)
  * threads and all staged messages, joined client-side. */
 export interface GqlHotlineInbox {
   sources: GqlGroundSource[];
-  threads: GqlGroundThread[];
+  threads: GqlGroundInboxThread[];
   messages: GqlGroundInboxMessage[];
 }
 

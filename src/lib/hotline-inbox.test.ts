@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  attachmentKey,
   attachmentKind,
   buildInboxEntries,
   countByFilter,
@@ -9,9 +10,9 @@ import {
   nextSelection,
   visibleEntries,
 } from "./hotline-inbox";
-import type { GqlGroundInboxMessage, GqlGroundThread, GqlHotlineInbox } from "./types/graphql";
+import type { GqlGroundInboxMessage, GqlGroundInboxThread, GqlHotlineInbox } from "./types/graphql";
 
-function thread(id: string, title: string | null = null): GqlGroundThread {
+function thread(id: string, title: string | null = null): GqlGroundInboxThread {
   return {
     id,
     groundSourceId: "src",
@@ -23,6 +24,10 @@ function thread(id: string, title: string | null = null): GqlGroundThread {
     reviewNote: null,
     promotedSignalId: null,
     createdAt: "2026-09-15T10:00:00Z",
+    draftTitle: null,
+    draftSeverity: null,
+    draftLocationId: null,
+    draftDisasterType: null,
   };
 }
 
@@ -216,5 +221,13 @@ describe("selection helpers", () => {
     expect(moveSelection(visible, "t1", 1)).toBe("t2");
     expect(moveSelection(visible, "t3", 1)).toBe("t3");
     expect(moveSelection([], "t1", 1)).toBeNull();
+  });
+});
+
+describe("attachmentKey", () => {
+  it("is stable across re-presigned URLs for the same object", () => {
+    expect(attachmentKey("https://s3/x/b.ogg?X-Amz-Signature=one")).toBe("https://s3/x/b.ogg");
+    expect(attachmentKey("https://s3/x/b.ogg?X-Amz-Signature=two")).toBe("https://s3/x/b.ogg");
+    expect(attachmentKey("https://s3/x/c.jpg")).toBe("https://s3/x/c.jpg");
   });
 });

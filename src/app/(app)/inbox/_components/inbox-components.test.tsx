@@ -18,8 +18,15 @@ vi.mock("next-intl", () => ({
 }));
 
 const requestTranslation = vi.fn();
+/** locations.getById result for a drafted location missing from the list. */
+let locationById: unknown = null;
+const getLocationById = vi.fn((_input: { id: string }, opts: { enabled: boolean }) => ({
+  data: opts.enabled ? locationById : undefined,
+  isFetching: false,
+}));
 vi.mock("~/trpc/react", () => ({
   api: {
+    useUtils: () => ({ ground: { hotlineInbox: { invalidate: vi.fn(async () => undefined) } } }),
     ground: {
       requestTranslation: { useMutation: () => ({ mutate: requestTranslation, data: undefined, isError: false }) },
       translation: { useQuery: () => ({ data: undefined }) },
@@ -34,6 +41,9 @@ vi.mock("~/trpc/react", () => ({
             { id: "deep", name: "Village", level: 3, parent: { id: "kas", name: "Kassala" } },
           ],
         }),
+      },
+      getById: {
+        useQuery: (input: { id: string }, opts: { enabled: boolean }) => getLocationById(input, opts),
       },
     },
   },
@@ -53,6 +63,10 @@ function entry(overrides: Partial<InboxEntry> = {}): InboxEntry {
       reviewNote: null,
       promotedSignalId: null,
       createdAt: "2026-09-15T10:00:00Z",
+      draftTitle: null,
+      draftSeverity: null,
+      draftLocationId: null,
+      draftDisasterType: null,
     },
     // Consistent with `text` (the modal seeds its description from messages).
     messages: [
@@ -104,12 +118,16 @@ class ResizeObserverStub {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 Element.prototype.scrollIntoView = () => undefined;
+// jsdom has no media stack (canPlayType is always ""); behave like a browser
+// that plays Ogg/Opus so voice notes render their inline player.
+HTMLMediaElement.prototype.canPlayType = () => "maybe";
 
 const wrap = (ui: React.ReactElement) => render(<MantineProvider>{ui}</MantineProvider>);
 
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  locationById = null;
 });
 
 describe("EntryList", () => {
@@ -199,7 +217,10 @@ describe("ReadingPane", () => {
     expect(screen.getByTestId("inbox-narrative")).toHaveTextContent("Water is rising");
     expect(screen.getByTestId("inbox-trust-line")).toHaveTextContent('pane.trustRepeat:{"count":3}');
     expect(screen.getByText('pane.uncertainty:{"value":"rumour"}')).toBeInTheDocument();
-    expect(screen.getAllByTestId("inbox-attachment")).toHaveLength(2);
+    expect(screen.getAllByTestId("inbox-attachment")).toHaveLength(1);
+    // Voice notes play inline, labelled by their position among the attachments.
+    expect(screen.getByLabelText('pane.voiceNoteN:{"n":2}')).toHaveAttribute("src", "https://s3/b.ogg");
+    expect(screen.getByTestId("inbox-voice-open")).toHaveAttribute("href", "https://s3/b.ogg");
     expect(screen.getByText('pane.omittedMedia:{"count":1}')).toBeInTheDocument();
     expect(screen.getByText("HL-3F9A2C · 15 Sep 2026")).toBeInTheDocument();
 
@@ -233,7 +254,9 @@ describe("ReadingPane", () => {
     expect(transcripts[1]).toHaveTextContent("pane.transcriptPending");
     // Voice message whose audio is not stored yet: transcript block only.
     expect(transcripts[2]).toHaveTextContent("pane.voiceNotStored");
-    expect(screen.getAllByTestId("inbox-attachment")).toHaveLength(2);
+    // Two inline players (#664) for the stored voice notes, none for the detached one.
+    expect(screen.getAllByTestId("inbox-voice-note")).toHaveLength(2);
+    expect(transcripts[0]!.previousElementSibling).toHaveAttribute("data-testid", "inbox-voice-note");
   });
 
   it("hides actions for users who cannot review", () => {
@@ -274,6 +297,106 @@ describe("AddToClearModal", () => {
     expect(screen.getByTestId("inbox-add-confirm")).toBeDisabled();
     expect(screen.getByText("modal.locationRequired")).toBeInTheDocument();
     expect(screen.queryByTestId("inbox-edits-warning")).not.toBeInTheDocument();
+    // No drafts: nothing is marked as an AI suggestion.
+    expect(screen.getByTestId("inbox-severity-none")).toHaveAttribute("data-selected", "true");
+    expect(document.querySelector("[data-testid^='inbox-ai-']")).toBeNull();
+    expect(screen.queryByTestId("inbox-draft-disaster-type")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-draft-title-note")).not.toBeInTheDocument();
+  });
+
+  const drafted = (drafts: Partial<InboxEntry["thread"]>) =>
+    entry({ thread: { ...entry().thread, ...drafts } });
+
+  it("pre-fills title, severity and location from the drafts and marks them as AI suggestions", () => {
+    wrap(
+      <AddToClearModal
+        {...baseProps}
+        entry={drafted({
+          draftTitle: "Flash flooding near Kassala market",
+          draftSeverity: 4,
+          draftLocationId: "kas",
+          draftDisasterType: "flash_flood",
+        })}
+      />,
+    );
+    expect(screen.getByTestId("inbox-draft-title")).toHaveValue("Flash flooding near Kassala market");
+    expect(screen.getByTestId("inbox-ai-title")).toHaveTextContent("modal.aiSuggested");
+    expect(screen.getByTestId("inbox-severity-4")).toHaveAttribute("data-selected", "true");
+    expect(screen.getByTestId("inbox-ai-severity")).toBeInTheDocument();
+    expect(screen.getByTestId("inbox-draft-location")).toHaveValue("Kassala (Sudan)");
+    expect(screen.getByTestId("inbox-ai-location")).toBeInTheDocument();
+    // Disaster type is read-only: shown, flagged, never part of the draft.
+    expect(screen.getByTestId("inbox-draft-disaster-type")).toHaveTextContent("flash flood");
+    expect(screen.getByTestId("inbox-draft-disaster-type")).toHaveTextContent("modal.disasterTypeReadOnly");
+    // The drafted title is not persisted yet (#625): its own note says so,
+    // and the edits warning does not fire just because a draft exists.
+    expect(screen.getByTestId("inbox-draft-title-note")).toHaveTextContent("modal.draftTitleNotSaved");
+    expect(screen.queryByTestId("inbox-edits-warning")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-location-hint")).not.toBeInTheDocument();
+
+    const confirm = screen.getByTestId("inbox-add-confirm");
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+    expect(baseProps.onConfirm).toHaveBeenCalledWith({
+      title: "Flash flooding near Kassala market",
+      description: "Water is rising near the market.\n\nFamilies are leaving.",
+      severity: 4,
+      locationId: "kas",
+    });
+  });
+
+  it("lets the reviewer change or clear every suggestion, dropping the AI marker", () => {
+    wrap(
+      <AddToClearModal
+        {...baseProps}
+        entry={drafted({ draftTitle: "Drafted", draftSeverity: 4, draftLocationId: "kas" })}
+      />,
+    );
+    fireEvent.change(screen.getByTestId("inbox-draft-title"), { target: { value: "Reviewer title" } });
+    expect(screen.queryByTestId("inbox-ai-title")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-edits-warning")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("inbox-severity-none"));
+    expect(screen.queryByTestId("inbox-ai-severity")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("inbox-draft-location"));
+    fireEvent.click(screen.getByText("Sudan"));
+    expect(screen.queryByTestId("inbox-ai-location")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("inbox-add-confirm"));
+    expect(baseProps.onConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Reviewer title", severity: null, locationId: "sdn" }),
+    );
+  });
+
+  it("keeps a drafted location deeper than admin level 2 selectable", () => {
+    wrap(<AddToClearModal {...baseProps} entry={drafted({ draftLocationId: "deep" })} />);
+    expect(screen.getByTestId("inbox-draft-location")).toHaveValue("Village (Kassala)");
+    expect(screen.getByTestId("inbox-ai-location")).toBeInTheDocument();
+    expect(screen.getByTestId("inbox-add-confirm")).toBeEnabled();
+    expect(getLocationById).toHaveBeenCalledWith({ id: "deep" }, expect.objectContaining({ enabled: false }));
+  });
+
+  it("fetches a drafted location missing from the list by id", () => {
+    locationById = { id: "far", name: "Wad Sharifey", level: 4, parent: { id: "kas", name: "Kassala" } };
+    wrap(<AddToClearModal {...baseProps} entry={drafted({ draftLocationId: "far" })} />);
+    expect(getLocationById).toHaveBeenCalledWith({ id: "far" }, expect.objectContaining({ enabled: true }));
+    expect(screen.getByTestId("inbox-draft-location")).toHaveValue("Wad Sharifey (Kassala)");
+    expect(screen.getByTestId("inbox-add-confirm")).toBeEnabled();
+  });
+
+  it("does not let an unresolvable drafted location be confirmed", () => {
+    wrap(<AddToClearModal {...baseProps} entry={drafted({ draftLocationId: "gone" })} />);
+    expect(screen.getByTestId("inbox-draft-location")).toHaveValue("");
+    expect(screen.getByTestId("inbox-location-hint")).toHaveTextContent("modal.draftLocationUnknown");
+    expect(screen.queryByTestId("inbox-ai-location")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-add-confirm")).toBeDisabled();
+  });
+
+  it("ignores an out-of-range drafted severity", () => {
+    wrap(<AddToClearModal {...baseProps} entry={drafted({ draftSeverity: 7 })} />);
+    expect(screen.getByTestId("inbox-severity-none")).toHaveAttribute("data-selected", "true");
+    expect(screen.queryByTestId("inbox-ai-severity")).not.toBeInTheDocument();
   });
 
   it("seeds the description with labelled machine transcripts and says they are not saved", () => {
@@ -320,6 +443,24 @@ describe("AddToClearModal", () => {
       severity: 4,
       locationId: "kas",
     });
+  });
+
+  it("plays voice attachments inline and keeps photos as cards", () => {
+    wrap(
+      <AddToClearModal
+        {...baseProps}
+        entry={entry({
+          attachments: [
+            { url: "https://s3/a.jpg?sig=1", kind: "photo" },
+            { url: "https://s3/b.ogg?sig=1", kind: "voice" },
+          ],
+        })}
+      />,
+    );
+    const player = screen.getByTestId("inbox-voice-player");
+    expect(player).toHaveAttribute("preload", "none");
+    expect(player).toHaveAttribute("aria-label", 'pane.voiceNoteN:{"n":2}');
+    expect(screen.getByText('pane.attachment:{"n":1}').closest("a")).toHaveAttribute("href", "https://s3/a.jpg?sig=1");
   });
 
   it("in retry mode shows the banner, relabels the buttons and ignores the backdrop", () => {

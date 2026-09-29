@@ -3,6 +3,7 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type {
   GqlGroundInboxMessage,
+  GqlGroundInboxThread,
   GqlGroundMessage,
   GqlGroundSource,
   GqlGroundThread,
@@ -127,10 +128,22 @@ const HOTLINE_INBOX_MESSAGE_FIELDS = `
   threadId
 `;
 
+/** Inbox thread fields: GROUND_THREAD_FIELDS plus the hotline-enrichment
+ * drafts (LLM suggestions the Add to CLEAR modal pre-fills from). Kept
+ * inbox-only so the detection Ground intel tab's queries do not depend on
+ * the draft columns. */
+const HOTLINE_INBOX_THREAD_FIELDS = `
+  ${GROUND_THREAD_FIELDS}
+  draftTitle
+  draftSeverity
+  draftLocationId
+  draftDisasterType
+`;
+
 const HOTLINE_INBOX_SOURCE_QUERY = `
   query HotlineInboxSource($groundSourceId: String, $limit: Int) {
     groundThreads(groundSourceId: $groundSourceId, reviewState: "unverified", limit: $limit) {
-      ${GROUND_THREAD_FIELDS}
+      ${HOTLINE_INBOX_THREAD_FIELDS}
     }
     groundMessages(groundSourceId: $groundSourceId, limit: $limit) {
       ${HOTLINE_INBOX_MESSAGE_FIELDS}
@@ -228,7 +241,7 @@ export const groundRouter = createTRPCRouter({
     const sources = groundSources.filter((s) => s.kind === "hotline" && s.isActive);
     const perSource = await Promise.all(
       sources.map((s) =>
-        graphqlFetch<{ groundThreads: GqlGroundThread[]; groundMessages: GqlGroundInboxMessage[] }>(
+        graphqlFetch<{ groundThreads: GqlGroundInboxThread[]; groundMessages: GqlGroundInboxMessage[] }>(
           HOTLINE_INBOX_SOURCE_QUERY,
           { groundSourceId: s.id, limit: HOTLINE_INBOX_LIMIT },
           cookieHeaders(ctx),
