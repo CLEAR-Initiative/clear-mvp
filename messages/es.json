@@ -2807,7 +2807,12 @@
       "voiceNote": "Nota de voz",
       "omittedMedia": "{count, plural, one {# adjunto no almacenado} other {# adjuntos no almacenados}}",
       "uncertainty": "El informante lo marcó como {value}",
-      "back": "Volver a la lista"
+      "back": "Volver a la lista",
+      "voiceNoteN": "Nota de voz {n}",
+      "voiceOpen": "Abrir en una pestaña nueva",
+      "voiceUnsupported": "Este navegador no puede reproducir este formato de audio. Ábralo en una pestaña nueva para descargarlo.",
+      "voiceRefreshing": "El enlace de audio caducó. Se está actualizando; luego pulse reproducir de nuevo.",
+      "voiceFailed": "No se pudo reproducir esta nota de voz aquí. Ábrala en una pestaña nueva."
     },
     "actions": {
       "add": "Añadir a CLEAR",

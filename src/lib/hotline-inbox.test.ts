@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  attachmentKey,
   attachmentKind,
   buildInboxEntries,
   countByFilter,
@@ -144,5 +145,13 @@ describe("selection helpers", () => {
     expect(moveSelection(visible, "t1", 1)).toBe("t2");
     expect(moveSelection(visible, "t3", 1)).toBe("t3");
     expect(moveSelection([], "t1", 1)).toBeNull();
+  });
+});
+
+describe("attachmentKey", () => {
+  it("is stable across re-presigned URLs for the same object", () => {
+    expect(attachmentKey("https://s3/x/b.ogg?X-Amz-Signature=one")).toBe("https://s3/x/b.ogg");
+    expect(attachmentKey("https://s3/x/b.ogg?X-Amz-Signature=two")).toBe("https://s3/x/b.ogg");
+    expect(attachmentKey("https://s3/x/c.jpg")).toBe("https://s3/x/c.jpg");
   });
 });
