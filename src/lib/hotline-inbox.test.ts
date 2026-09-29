@@ -86,6 +86,11 @@ describe("attachmentKind", () => {
     expect(attachmentKind("https://s3/x/opaque", false)).toBe("photo");
     // A photo sent alongside a voice note stays a photo.
     expect(attachmentKind("https://s3/x/a.JPG?sig=1", true)).toBe("photo");
+    // Video and PDF sent alongside a voice note don't get an audio player,
+    // but audio/mp4 voice notes (.m4a) still do.
+    expect(attachmentKind("https://s3/x/clip.mp4?sig=1", true)).toBe("photo");
+    expect(attachmentKind("https://s3/x/doc.pdf?sig=1", true)).toBe("photo");
+    expect(attachmentKind("https://s3/x/note.m4a?sig=1", true)).toBe("voice");
   });
 });
 

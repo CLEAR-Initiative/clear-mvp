@@ -86,17 +86,20 @@ export interface InboxEntry {
   priorEntries: number;
 }
 
-const IMAGE_EXT = /\.(jpe?g|png|gif|webp|heic|heif|bmp|tiff?)(\?|$)/i;
+/** Attachments that are recognisably not audio: images, plus the video and
+ * PDF types the hotline also stores (clear-api EXTENSION_BY_CONTENT_TYPE).
+ * `.m4a` (audio/mp4) deliberately doesn't match `mp4`. */
+const NON_VOICE_EXT = /\.(jpe?g|png|gif|webp|heic|heif|bmp|tiff?|mp4|mov|3gp|pdf)(\?|$)/i;
 
 /**
  * Voice detection is message-level: clear-api's hasVoice (from the ingest's
  * per-attachment refs) says whether the message carries a voice note at
  * all. Without it every attachment is a photo; with it, anything that is
- * not recognisably an image is the voice note (a hotline message is
- * almost always a single attachment).
+ * not recognisably an image, video or PDF is the voice note (a hotline
+ * message is almost always a single attachment).
  */
 export function attachmentKind(url: string, hasVoice: boolean): InboxAttachment["kind"] {
-  return hasVoice && !IMAGE_EXT.test(url) ? "voice" : "photo";
+  return hasVoice && !NON_VOICE_EXT.test(url) ? "voice" : "photo";
 }
 
 function voiceTranscript(m: GqlGroundInboxMessage): VoiceTranscript | null {
