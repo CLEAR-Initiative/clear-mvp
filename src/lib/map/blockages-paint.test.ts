@@ -184,7 +184,7 @@ describe("add/remove blockages layers", () => {
     expect(map.layers).not.toContain("logie-blockages-marks");
     expect(BLOCKAGES_HOVER_LAYER_IDS).toContain(BLOCKAGES_LAYER_IDS.hit);
     expect(BLOCKAGES_HOVER_LAYER_IDS).toContain(BLOCKAGES_LAYER_IDS.cues);
-    expect(BLOCKAGES_HOVER_LAYER_IDS).not.toContain("logie-blockages-marks" as any);
+    expect(BLOCKAGES_HOVER_LAYER_IDS as readonly string[]).not.toContain("logie-blockages-marks");
     // Verify lineMetrics is enabled
     expect(map.paintProps[BLOCKAGES_SOURCE_ID]?.lineMetrics).toBe(true);
   });
