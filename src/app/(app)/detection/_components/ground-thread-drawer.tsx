@@ -10,6 +10,7 @@ import type { GqlGroundMessage, GqlGroundThreadDetail } from "~/lib/types/graphq
 import { allowedReviewDecisions, canReviewSource, type GroundReviewDecision } from "~/lib/ground-review";
 import { activeReviewHelp, clearedReviewHelp, reviewHelpMessageKey } from "~/lib/ground-review-help";
 import { isGroundSourceKind, senderDisplay } from "~/lib/ground-source";
+import { REJECT_REASONS, type RejectReason } from "~/lib/hotline-inbox";
 import { ClassificationPill, messageClassification } from "./ground-intel-tab";
 
 /**
@@ -376,13 +377,20 @@ function ChainMessage({
   );
 }
 
+/** Known structured reject reason (clear-api#625), else null. */
+function knownRejectReason(value: string | null): RejectReason | null {
+  return value && (REJECT_REASONS as readonly string[]).includes(value) ? (value as RejectReason) : null;
+}
+
 export function GroundThreadDrawer({ threadId, opened, onClose }: GroundThreadDrawerProps) {
   const t = useTranslations("detection");
+  const tInbox = useTranslations("inbox");
   const threadQuery = api.ground.thread.useQuery(
     { id: threadId ?? "" },
     { enabled: opened && threadId != null },
   );
   const thread = threadQuery.data;
+  const rejectReason = knownRejectReason(thread?.rejectReason ?? null);
 
   // Which review action's explanation to show in the footer panel.
   // Hover and keyboard focus are tracked separately so one can end
@@ -439,6 +447,23 @@ export function GroundThreadDrawer({ threadId, opened, onClose }: GroundThreadDr
               {thread.source.name}
             </Text>
           </Group>
+
+          {rejectReason && (
+            <Box
+              px={12}
+              py={8}
+              style={{
+                background: "var(--color-bg-muted)",
+                borderRadius: 6,
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <Text c="var(--color-text-muted)" fw={600} style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                {t("groundIntel.thread.rejectReason")}
+              </Text>
+              <Text style={{ fontSize: 13 }}>{tInbox(`rejectReasons.${rejectReason}.label`)}</Text>
+            </Box>
+          )}
 
           {thread.reviewNote && (
             <Box

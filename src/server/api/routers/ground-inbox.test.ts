@@ -161,3 +161,69 @@ describe("signals.updateSeverity / updateLocation", () => {
     expect(vars).toEqual({ id: "sig", locationId: "loc" });
   });
 });
+
+describe("ground.review (clear-api#625 overrides / rejectReason)", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            session: { id: "s", userId: "u", expiresAt: "2099-01-01" },
+            user: { id: "u", email: "a@b.c", role: "admin" },
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    graphqlFetch.mockReset();
+  });
+
+  it("sends promotion overrides with approve_public", async () => {
+    graphqlFetch.mockResolvedValueOnce({ reviewGroundThread: { id: "t1", promotedSignalId: "sig" } });
+    await caller().ground.review({
+      id: "t1",
+      decision: "approve_public",
+      overrides: { title: "T", description: "D", severity: 3, locationId: "kas" },
+    });
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("$overrides: GroundPromotionOverridesInput");
+    expect(query).toContain("overrides: $overrides");
+    expect(query).toContain("rejectReason: $rejectReason");
+    expect(query).toContain("rejectReason");
+    expect(vars).toEqual({
+      id: "t1",
+      decision: "approve_public",
+      note: null,
+      rejectReason: null,
+      overrides: { title: "T", description: "D", severity: 3, locationId: "kas" },
+    });
+  });
+
+  it("sends a structured rejectReason with reject", async () => {
+    graphqlFetch.mockResolvedValueOnce({ reviewGroundThread: { id: "t1" } });
+    await caller().ground.review({ id: "t1", decision: "reject", rejectReason: "duplicate" });
+    const [, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(vars).toMatchObject({ decision: "reject", rejectReason: "duplicate", overrides: null });
+  });
+
+  it("keeps plain decisions (detection drawer) free of overrides", async () => {
+    graphqlFetch.mockResolvedValueOnce({ reviewGroundThread: { id: "t1" } });
+    await caller().ground.review({ id: "t1", decision: "approve_public" });
+    const [, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(vars).toMatchObject({ overrides: null, rejectReason: null });
+  });
+
+  it("rejects an unknown reason or out-of-range severity before calling the API", async () => {
+    await expect(
+      caller().ground.review({ id: "t1", decision: "reject", rejectReason: "boring" as "spam" }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      caller().ground.review({ id: "t1", decision: "approve_public", overrides: { severity: 9 } }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+});

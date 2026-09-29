@@ -1754,7 +1754,8 @@
       "thread": {
         "untitled": "Fil sans titre",
         "notFound": "Fil introuvable",
-        "reviewNote": "Note de revue"
+        "reviewNote": "Note de revue",
+        "rejectReason": "Motif du rejet"
       },
       "review": {
         "approvePrivate": "Approuver (privé)",
@@ -2858,19 +2859,11 @@
       "locationLoading": "Chargement des lieux",
       "locationNoMatch": "Aucun lieu correspondant",
       "locationRequired": "Le lieu est obligatoire avant l'ajout à CLEAR",
-      "editsNotSaved": "Les modifications du titre et de la description ne sont pas encore enregistrées. La promotion nécessite un support API ; le signal conserve le texte soumis.",
-      "retryTitle": "Signal créé, mais pas entièrement enregistré",
-      "retryLocationBody": "Le lieu n'a pas pu être enregistré. Le signal existe mais n'est pas localisé et sera ignoré par l'agrégation tant qu'un lieu n'est pas défini. Réessayez, ou laissez-le ainsi.",
-      "retrySeverityBody": "Le lieu est enregistré mais pas la sévérité. Réessayez, ou laissez le signal sans sévérité.",
-      "retry": "Réessayer",
-      "leaveUnscoped": "Laisser tel quel",
       "aiSuggested": "Suggestion IA",
-      "draftTitleNotSaved": "Titre suggéré par l'IA, à vérifier. Il n'est pas encore enregistré : tant que la promotion n'accepte pas les modifications de titre, le signal conserve le titre de la soumission.",
       "draftLocationUnknown": "Le lieu suggéré est introuvable. Choisissez un lieu avant l'ajout à CLEAR.",
       "disasterType": "Type de catastrophe",
       "disasterTypeReadOnly": "À titre indicatif : les signaux n'ont pas encore de champ type de catastrophe, cette valeur n'est donc pas enregistrée.",
-      "transcriptInDescription": "[Transcription automatique] {text}",
-      "transcriptsNotSaved": "Inclut les transcriptions automatiques des messages vocaux pour relecture. Tant que la promotion n'accepte pas les modifications de description, le signal ne conserve que le texte soumis."
+      "transcriptInDescription": "[Transcription automatique] {text}"
     },
     "toast": {
       "added": "Ajouté à CLEAR",
@@ -2878,7 +2871,6 @@
       "rejected": "Rejeté · {reason}",
       "viewSignal": "Voir le signal",
       "close": "Fermer",
-      "addedPartial": "Ajouté à CLEAR, mais le lieu ou la sévérité n'a pas pu être enregistré",
       "addedNoSignal": "Approuvé, mais aucun identifiant de signal n'a été renvoyé. Vérifiez le signal dans Détection avant de vous y fier."
     },
     "noAccess": "La boîte de réception est réservée aux administrateurs pour le moment.",

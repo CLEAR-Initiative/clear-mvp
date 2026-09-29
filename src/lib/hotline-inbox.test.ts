@@ -22,6 +22,7 @@ function thread(id: string, title: string | null = null): GqlGroundInboxThread {
     reviewedBy: null,
     reviewedAt: null,
     reviewNote: null,
+    rejectReason: null,
     promotedSignalId: null,
     createdAt: "2026-09-15T10:00:00Z",
     draftTitle: null,

@@ -52,10 +52,6 @@ interface AddToClearModalProps {
   entry: InboxEntry;
   busy: boolean;
   error: string | null;
-  /** Set once the signal exists but a follow-up write (location, then
-   * severity) failed. The modal stays open; Confirm becomes Retry and
-   * Cancel becomes "Leave unscoped". Backdrop and Escape no longer close. */
-  retry: { locationDone: boolean } | null;
   onCancel: () => void;
   onConfirm: (draft: SignalDraft) => void;
 }
@@ -69,15 +65,15 @@ interface AddToClearModalProps {
  * carry an "AI suggestion" badge while they are unchanged; the reviewer
  * can change or clear every one. Location is mandatory.
  *
- * Persistence today: severity and location are applied right after
- * promotion via updateSignalSeverity / updateSignalLocation. Title and
- * description edits have no write path until clear-api's promotion
- * accepts overrides (#625): a drafted title gets its own note saying so,
- * the edits warning flags the reviewer's own changes (vs the seed), and
- * a note says seeded transcripts are not carried into the signal.
- * The disaster-type draft is shown read-only; signals have no such field.
+ * Persistence: every edited field (title, description, severity,
+ * location) is sent as a promotion override with approve_public
+ * (clear-api#625), so the signal is created exactly as confirmed here —
+ * including the labelled transcripts in the description. A blank title
+ * or description falls back to the thread default server-side. The
+ * disaster-type draft is shown read-only; signals have no such field
+ * (event clustering assigns it).
  */
-export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm }: AddToClearModalProps) {
+export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: AddToClearModalProps) {
   const t = useTranslations("inbox");
   const tSev = useTranslations("common.severities");
 
@@ -127,11 +123,6 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
   const titleSuggested = suggestedTitle !== "" && draft.title === suggestedTitle;
   const severitySuggested = suggestedSeverity !== null && draft.severity === suggestedSeverity;
   const locationSuggested = !!draftLocationId && draft.locationId === draftLocationId && locationSelected;
-  // Promotion keeps the stored title until #625, so say so when the seed is
-  // an AI title that differs from it (the edits warning covers only the
-  // reviewer's own changes, so it does not fire just because a draft exists).
-  const draftTitleNotSaved = suggestedTitle !== "" && suggestedTitle !== entry.title && draft.title !== entry.title;
-  const textEdited = draft.title !== seed.title || draft.description !== seed.description;
   const canConfirm = locationSelected && !busy;
 
   const aiBadge = (field: string) => (
@@ -149,33 +140,25 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
       padding={0}
       size={760}
       centered
-      closeOnEscape={!busy && !retry}
-      closeOnClickOutside={!busy && !retry}
+      closeOnEscape={!busy}
+      closeOnClickOutside={!busy}
       transitionProps={{ duration: 0 }}
       classNames={{ content: styles.shell, body: styles.shellBody }}
       overlayProps={{ backgroundOpacity: 0.6 }}
     >
-      <div className={styles.frame} data-testid="inbox-add-modal" data-retry={retry !== null}>
+      <div className={styles.frame} data-testid="inbox-add-modal">
         <div className={styles.glow} />
         <div className={styles.header}>
           <span className={styles.headerLabel}>
             <IconLayoutGrid size={15} />
             {t("modal.header")}
           </span>
-          {!retry && (
-            <button type="button" className={styles.close} onClick={onCancel} disabled={busy} aria-label={t("modal.cancel")}>
-              <IconX size={16} />
-            </button>
-          )}
+          <button type="button" className={styles.close} onClick={onCancel} disabled={busy} aria-label={t("modal.cancel")}>
+            <IconX size={16} />
+          </button>
         </div>
 
         <div className={styles.body}>
-          {retry && (
-            <div className={styles.retryBanner} data-testid="inbox-retry-banner">
-              <strong>{t("modal.retryTitle")}</strong>
-              <p>{t(retry.locationDone ? "modal.retrySeverityBody" : "modal.retryLocationBody")}</p>
-            </div>
-          )}
           <div>
             <div className={styles.label}>
               {t("modal.title")}
@@ -188,9 +171,6 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
               data-testid="inbox-draft-title"
             />
-            {draftTitleNotSaved && (
-              <p className={styles.hint} data-testid="inbox-draft-title-note">{t("modal.draftTitleNotSaved")}</p>
-            )}
           </div>
           <div>
             <div className={styles.label}>{t("modal.description")}</div>
@@ -201,12 +181,6 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
               onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
               data-testid="inbox-draft-description"
             />
-            {entry.transcripts.length > 0 && !textEdited && (
-              <p className={styles.hint} data-testid="inbox-transcripts-note">{t("modal.transcriptsNotSaved")}</p>
-            )}
-            {textEdited && (
-              <p className={styles.warning} data-testid="inbox-edits-warning">{t("modal.editsNotSaved")}</p>
-            )}
           </div>
           <div>
             <div className={styles.label}>
@@ -311,7 +285,7 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
           <span className={styles.footerNote}>{t("modal.footer", { ref: entry.intakeRef })}</span>
           <div className={styles.footerActions}>
             <button type="button" className={styles.cancel} onClick={onCancel} disabled={busy} data-testid="inbox-add-cancel">
-              {t(retry ? "modal.leaveUnscoped" : "modal.cancel")}
+              {t("modal.cancel")}
             </button>
             <button
               type="button"
@@ -320,7 +294,7 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
               disabled={!canConfirm}
               data-testid="inbox-add-confirm"
             >
-              {t(retry ? "modal.retry" : "modal.confirm")}
+              {t("modal.confirm")}
             </button>
           </div>
         </div>
