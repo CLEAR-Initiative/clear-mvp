@@ -262,6 +262,12 @@ export interface GqlGroundMessage {
  * client even as null. */
 export type GqlGroundInboxMessage = Omit<GqlGroundMessage, "senderName"> & {
   mediaUrls: string[];
+  /** True when any attachment is a voice note. Set at ingest, so it is
+   * true even while the voice media is still being stored. */
+  hasVoice: boolean;
+  /** Machine transcript of the message's voice note(s); null until the
+   * pipeline transcribes it, always null without a voice note. */
+  transcript: string | null;
 };
 
 /** Hotline inbox payload: every hotline source with its open (unverified)

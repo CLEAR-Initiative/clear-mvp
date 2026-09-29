@@ -2807,7 +2807,10 @@
       "voiceNote": "Nota de voz",
       "omittedMedia": "{count, plural, one {# adjunto no almacenado} other {# adjuntos no almacenados}}",
       "uncertainty": "El informante lo marcó como {value}",
-      "back": "Volver a la lista"
+      "back": "Volver a la lista",
+      "transcriptLabel": "Transcripción automática · puede contener errores",
+      "transcriptPending": "Transcripción pendiente",
+      "voiceNotStored": "Nota de voz (audio aún no almacenado)"
     },
     "actions": {
       "add": "Añadir a CLEAR",
@@ -2855,7 +2858,9 @@
       "retryLocationBody": "No se pudo guardar la ubicación. La señal existe pero no tiene ámbito y la agregación la ignorará hasta que se defina una ubicación. Reintente o déjela así.",
       "retrySeverityBody": "La ubicación se guardó pero la severidad no. Reintente o deje la señal sin severidad.",
       "retry": "Reintentar",
-      "leaveUnscoped": "Dejar así"
+      "leaveUnscoped": "Dejar así",
+      "transcriptInDescription": "[Transcripción automática] {text}",
+      "transcriptsNotSaved": "Incluye las transcripciones automáticas de las notas de voz para revisión. Hasta que la promoción acepte cambios en la descripción, la señal conserva solo el texto enviado."
     },
     "toast": {
       "added": "Añadido a CLEAR",

@@ -63,6 +63,10 @@ describe("ground.hotlineInbox", () => {
     const [query, vars] = graphqlFetch.mock.calls[1] as [string, Record<string, unknown>];
     expect(query).toContain('reviewState: "unverified"');
     expect(query).toContain("mediaUrls");
+    // Voice-note fields (clear-api#661) are requested on inbox messages.
+    const messageSelection = query.slice(query.indexOf("groundMessages"));
+    expect(messageSelection).toContain("hasVoice");
+    expect(messageSelection).toContain("transcript");
     expect(vars).toMatchObject({ groundSourceId: "hot1", limit: 500 });
   });
 

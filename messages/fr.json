@@ -2807,7 +2807,10 @@
       "voiceNote": "Note vocale",
       "omittedMedia": "{count, plural, one {# pièce jointe non stockée} other {# pièces jointes non stockées}}",
       "uncertainty": "Le rapporteur a marqué ceci comme {value}",
-      "back": "Retour à la liste"
+      "back": "Retour à la liste",
+      "transcriptLabel": "Transcription automatique · peut contenir des erreurs",
+      "transcriptPending": "Transcription en attente",
+      "voiceNotStored": "Message vocal (audio pas encore stocké)"
     },
     "actions": {
       "add": "Ajouter à CLEAR",
@@ -2855,7 +2858,9 @@
       "retryLocationBody": "Le lieu n'a pas pu être enregistré. Le signal existe mais n'est pas localisé et sera ignoré par l'agrégation tant qu'un lieu n'est pas défini. Réessayez, ou laissez-le ainsi.",
       "retrySeverityBody": "Le lieu est enregistré mais pas la sévérité. Réessayez, ou laissez le signal sans sévérité.",
       "retry": "Réessayer",
-      "leaveUnscoped": "Laisser tel quel"
+      "leaveUnscoped": "Laisser tel quel",
+      "transcriptInDescription": "[Transcription automatique] {text}",
+      "transcriptsNotSaved": "Inclut les transcriptions automatiques des messages vocaux pour relecture. Tant que la promotion n'accepte pas les modifications de description, le signal ne conserve que le texte soumis."
     },
     "toast": {
       "added": "Ajouté à CLEAR",

@@ -2807,7 +2807,10 @@
       "voiceNote": "Voice note",
       "omittedMedia": "{count, plural, one {# attachment not stored} other {# attachments not stored}}",
       "uncertainty": "Reporter marked this as {value}",
-      "back": "Back to list"
+      "back": "Back to list",
+      "transcriptLabel": "Machine transcript · may contain errors",
+      "transcriptPending": "Transcription pending",
+      "voiceNotStored": "Voice note (audio not stored yet)"
     },
     "actions": {
       "add": "Add to CLEAR",
@@ -2855,7 +2858,9 @@
       "retryLocationBody": "The location could not be saved. The signal exists but is unscoped and will be ignored by aggregation until a location is set. Retry, or leave it unscoped.",
       "retrySeverityBody": "The location is saved but the severity could not be. Retry, or leave the signal without severity.",
       "retry": "Retry",
-      "leaveUnscoped": "Leave as is"
+      "leaveUnscoped": "Leave as is",
+      "transcriptInDescription": "[Machine transcript] {text}",
+      "transcriptsNotSaved": "Includes machine transcripts of voice notes for review. Until promotion accepts description edits, the signal keeps only the submitted text."
     },
     "toast": {
       "added": "Added to CLEAR",

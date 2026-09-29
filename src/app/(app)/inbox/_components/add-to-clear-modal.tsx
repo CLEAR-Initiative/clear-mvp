@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Modal, Select } from "@mantine/core";
 import { IconLayoutGrid, IconMicrophone, IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import type { InboxEntry } from "~/lib/hotline-inbox";
+import { entryDescription, type InboxEntry } from "~/lib/hotline-inbox";
 import { severityColors } from "~/lib/constants/severity";
 import styles from "./add-to-clear-modal.module.css";
 
@@ -39,20 +39,29 @@ interface AddToClearModalProps {
 
 /**
  * Confirmation-and-edit step before promotion. Seeded from the entry
- * (title = thread title, description = the reporter's text); re-seeded
- * per entry so edits never leak between entries. Location is mandatory.
+ * (title = thread title, description = the reporter's text plus labelled
+ * machine transcripts of voice notes); re-seeded per entry so edits never
+ * leak between entries. Location is mandatory.
  *
  * Persistence today: severity and location are applied right after
  * promotion via updateSignalSeverity / updateSignalLocation. Title and
  * description edits have no write path until clear-api's promotion
- * accepts overrides; the modal flags that when they differ from the seed.
+ * accepts overrides; the modal flags that when they differ from the seed,
+ * and notes that seeded transcripts are not carried into the signal.
  */
 export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm }: AddToClearModalProps) {
   const t = useTranslations("inbox");
   const tSev = useTranslations("common.severities");
 
+  // The description seed folds in machine transcripts (labelled) so voice
+  // reports do not open with an empty description.
   const seed = useMemo<SignalDraft>(
-    () => ({ title: entry.title, description: entry.text, severity: null, locationId: "" }),
+    () => ({
+      title: entry.title,
+      description: entryDescription(entry, (text) => t("modal.transcriptInDescription", { text })),
+      severity: null,
+      locationId: "",
+    }),
     [entry.id], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const [draft, setDraft] = useState<SignalDraft>(seed);
@@ -127,6 +136,9 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
               onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
               data-testid="inbox-draft-description"
             />
+            {entry.transcripts.length > 0 && !textEdited && (
+              <p className={styles.hint} data-testid="inbox-transcripts-note">{t("modal.transcriptsNotSaved")}</p>
+            )}
             {textEdited && (
               <p className={styles.warning} data-testid="inbox-edits-warning">{t("modal.editsNotSaved")}</p>
             )}

@@ -3,6 +3,7 @@ import {
   attachmentKind,
   buildInboxEntries,
   countByFilter,
+  entryDescription,
   intakeRef,
   moveSelection,
   nextSelection,
@@ -45,6 +46,8 @@ function message(
     uncertainty: null,
     isEdited: false,
     threadId,
+    hasVoice: false,
+    transcript: null,
     ...overrides,
   };
 }
@@ -53,7 +56,13 @@ const payload: GqlHotlineInbox = {
   sources: [],
   threads: [thread("t1", "Flooding in Kassala"), thread("t2"), thread("t3"), thread("empty")],
   messages: [
-    message("m2", "t1", { sentAt: "2026-09-15T10:05:00Z", classification: "field_report", mediaUrls: ["https://s3/x/a.jpg", "https://s3/x/b.ogg?sig=1"] }),
+    message("m2", "t1", {
+      sentAt: "2026-09-15T10:05:00Z",
+      classification: "field_report",
+      mediaUrls: ["https://s3/x/a.jpg", "https://s3/x/b.ogg?sig=1"],
+      hasVoice: true,
+      transcript: "  The bridge on the market road is under water.  ",
+    }),
     message("m1", "t1", { sentAt: "2026-09-15T10:00:00Z", text: "first\nline two" }),
     message("m3", "t2", { sentAt: "2026-09-15T11:00:00Z", senderRef: "h_ffffffffffff", classification: "chatter" }),
     message("m4", "t3", { sentAt: "2026-09-15T12:00:00Z", text: "  " }),
@@ -69,10 +78,14 @@ describe("intakeRef", () => {
 });
 
 describe("attachmentKind", () => {
-  it("detects voice notes by extension, ignoring the query string", () => {
-    expect(attachmentKind("https://s3/x/b.ogg?sig=1")).toBe("voice");
-    expect(attachmentKind("https://s3/x/a.jpg")).toBe("photo");
-    expect(attachmentKind("https://s3/x/opaque")).toBe("photo");
+  it("only finds voice notes on messages flagged hasVoice", () => {
+    expect(attachmentKind("https://s3/x/b.ogg?sig=1", false)).toBe("photo");
+    expect(attachmentKind("https://s3/x/b.ogg?sig=1", true)).toBe("voice");
+    // No extension to go on: hasVoice decides.
+    expect(attachmentKind("https://s3/x/opaque", true)).toBe("voice");
+    expect(attachmentKind("https://s3/x/opaque", false)).toBe("photo");
+    // A photo sent alongside a voice note stays a photo.
+    expect(attachmentKind("https://s3/x/a.JPG?sig=1", true)).toBe("photo");
   });
 });
 
@@ -101,12 +114,66 @@ describe("buildInboxEntries", () => {
   it("flattens attachments and counts prior entries per pseudonym", () => {
     expect(entries[0]!.attachments).toEqual([
       { url: "https://s3/x/a.jpg", kind: "photo" },
-      { url: "https://s3/x/b.ogg?sig=1", kind: "voice" },
+      {
+        url: "https://s3/x/b.ogg?sig=1",
+        kind: "voice",
+        transcript: { status: "ready", text: "The bridge on the market road is under water." },
+      },
     ]);
+    expect(entries[0]!.transcripts).toEqual(["The bridge on the market road is under water."]);
+    expect(entries[0]!.detachedTranscripts).toEqual([]);
     // t1 and t3 share a senderRef; t2 does not.
     expect(entries[0]!.priorEntries).toBe(1);
     expect(entries[1]!.priorEntries).toBe(0);
     expect(entries[2]!.priorEntries).toBe(1);
+  });
+});
+
+describe("voice transcripts", () => {
+  const build = (messages: GqlGroundInboxMessage[]) =>
+    buildInboxEntries({ sources: [], threads: [thread("v")], messages })[0]!;
+
+  it("marks a voice note without a transcript as pending", () => {
+    const e = build([message("v1", "v", { hasVoice: true, mediaUrls: ["https://s3/v.ogg"] })]);
+    expect(e.attachments).toEqual([{ url: "https://s3/v.ogg", kind: "voice", transcript: { status: "pending" } }]);
+    expect(e.transcripts).toEqual([]);
+  });
+
+  it("puts one transcript per message on its last voice attachment", () => {
+    const e = build([
+      message("v1", "v", { hasVoice: true, transcript: "both notes", mediaUrls: ["https://s3/1.ogg", "https://s3/2.ogg"] }),
+    ]);
+    expect(e.attachments[0]!.transcript).toBeUndefined();
+    expect(e.attachments[1]!.transcript).toEqual({ status: "ready", text: "both notes" });
+  });
+
+  it("keeps transcripts of voice messages whose audio is not stored yet", () => {
+    const e = build([
+      message("v1", "v", { hasVoice: true, mediaUrls: [] }),
+      message("v2", "v", { hasVoice: true, transcript: "stored later", mediaUrls: [], sentAt: "2026-09-15T11:00:00Z" }),
+    ]);
+    expect(e.attachments).toEqual([]);
+    expect(e.detachedTranscripts).toEqual([{ status: "pending" }, { status: "ready", text: "stored later" }]);
+  });
+
+  it("ignores transcripts on messages without a voice note", () => {
+    const e = build([message("v1", "v", { transcript: "stray", mediaUrls: ["https://s3/x.ogg"] })]);
+    expect(e.attachments).toEqual([{ url: "https://s3/x.ogg", kind: "photo" }]);
+    expect(e.transcripts).toEqual([]);
+  });
+
+  it("folds labelled transcripts into the modal description, per message in order", () => {
+    const e = build([
+      message("v1", "v", { text: "Road blocked.", sentAt: "2026-09-15T10:00:00Z" }),
+      message("v2", "v", { text: "", hasVoice: true, transcript: "People are stuck.", sentAt: "2026-09-15T10:01:00Z" }),
+      message("v3", "v", { text: "", hasVoice: true, sentAt: "2026-09-15T10:02:00Z" }),
+    ]);
+    expect(entryDescription(e, (text) => `[MT] ${text}`)).toBe("Road blocked.\n\n[MT] People are stuck.");
+  });
+
+  it("searches transcripts", () => {
+    const e = build([message("v1", "v", { text: "", hasVoice: true, transcript: "Checkpoint closed" })]);
+    expect(visibleEntries([e], "all", "checkpoint", "newest")).toHaveLength(1);
   });
 });
 
