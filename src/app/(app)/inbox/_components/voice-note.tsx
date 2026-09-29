@@ -53,7 +53,8 @@ interface VoiceNoteProps {
  *   (fresh presigned URLs flow back in as a new `url`); a second error
  *   gives up and points at the link. Callers key this component on the
  *   URL path (not the full presigned URL) so the retry budget survives
- *   the refresh instead of looping.
+ *   the refresh instead of looping. Successful playback restores the
+ *   budget, so a link that expires again later refreshes again too.
  */
 export function VoiceNote({ url, label }: VoiceNoteProps) {
   const t = useTranslations("inbox");
@@ -107,6 +108,7 @@ export function VoiceNote({ url, label }: VoiceNoteProps) {
           src={url}
           aria-label={label}
           onError={onError}
+          onPlaying={() => setRetried(false)}
           data-testid="inbox-voice-player"
         />
       )}

@@ -97,4 +97,19 @@ describe("VoiceNote", () => {
     expect(screen.getByRole("status")).toHaveTextContent("pane.voiceFailed");
     expect(screen.getByTestId("inbox-voice-open")).toBeInTheDocument();
   });
+
+  it("restores the refresh budget once playback succeeds, so a later expiry refreshes again", async () => {
+    const { rerender } = render(<VoiceNote url={URL_1} label="Voice note 1" />);
+
+    fireEvent.error(screen.getByTestId("inbox-voice-player"));
+    rerender(<VoiceNote url={URL_2} label="Voice note 1" />);
+    await act(async () => resolveInvalidate());
+    await waitFor(() => expect(screen.getByTestId("inbox-voice-note")).toHaveAttribute("data-status", "ready"));
+
+    // The refreshed link plays; an hour later it expires too.
+    fireEvent.playing(screen.getByTestId("inbox-voice-player"));
+    fireEvent.error(screen.getByTestId("inbox-voice-player"));
+    expect(invalidate).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId("inbox-voice-note")).toHaveAttribute("data-status", "refreshing");
+  });
 });
