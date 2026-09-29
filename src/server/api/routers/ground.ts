@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
+import { REJECT_REASONS } from "~/lib/hotline-inbox";
 import type {
   GqlGroundInboxMessage,
   GqlGroundInboxThread,
@@ -60,6 +61,7 @@ const GROUND_THREAD_FIELDS = `
   reviewedBy
   reviewedAt
   reviewNote
+  rejectReason
   promotedSignalId
   createdAt
 `;
@@ -89,8 +91,20 @@ const GROUND_THREAD_QUERY = `
 `;
 
 const REVIEW_GROUND_THREAD_MUTATION = `
-  mutation ReviewGroundThread($id: String!, $decision: String!, $note: String) {
-    reviewGroundThread(id: $id, decision: $decision, note: $note) {
+  mutation ReviewGroundThread(
+    $id: String!
+    $decision: String!
+    $note: String
+    $rejectReason: String
+    $overrides: GroundPromotionOverridesInput
+  ) {
+    reviewGroundThread(
+      id: $id
+      decision: $decision
+      note: $note
+      rejectReason: $rejectReason
+      overrides: $overrides
+    ) {
       ${GROUND_THREAD_FIELDS}
     }
   }
@@ -215,12 +229,30 @@ export const groundRouter = createTRPCRouter({
         id: z.string(),
         decision: z.enum(["approve_private", "approve_public", "reject"]),
         note: z.string().max(2000).optional(),
+        /** reject only (clear-api#625). */
+        rejectReason: z.enum(REJECT_REASONS).optional(),
+        /** approve_public only (clear-api#625): the reviewer's edits, carried
+         * into the promoted signal. Blank title/description = thread default. */
+        overrides: z
+          .object({
+            title: z.string().max(1000).optional(),
+            description: z.string().max(20000).optional(),
+            severity: z.number().int().min(1).max(5).nullable().optional(),
+            locationId: z.string().min(1).optional(),
+          })
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ reviewGroundThread: GqlGroundThread }>(
         REVIEW_GROUND_THREAD_MUTATION,
-        { id: input.id, decision: input.decision, note: input.note ?? null },
+        {
+          id: input.id,
+          decision: input.decision,
+          note: input.note ?? null,
+          rejectReason: input.rejectReason ?? null,
+          overrides: input.overrides ?? null,
+        },
         cookieHeaders(ctx),
       );
       return data.reviewGroundThread;

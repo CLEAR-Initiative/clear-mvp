@@ -222,6 +222,8 @@ export interface GqlGroundThread {
   reviewedBy: string | null;
   reviewedAt: string | null;
   reviewNote: string | null;
+  /** "spam" | "not_report" | "unusable" | "duplicate" while rejected, else null. */
+  rejectReason: string | null;
   promotedSignalId: string | null;
   createdAt: string;
 }

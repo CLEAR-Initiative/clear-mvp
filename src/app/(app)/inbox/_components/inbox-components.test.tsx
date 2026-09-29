@@ -61,6 +61,7 @@ function entry(overrides: Partial<InboxEntry> = {}): InboxEntry {
       reviewedBy: null,
       reviewedAt: null,
       reviewNote: null,
+      rejectReason: null,
       promotedSignalId: null,
       createdAt: "2026-09-15T10:00:00Z",
       draftTitle: null,
@@ -286,7 +287,7 @@ describe("ReadingPane", () => {
 });
 
 describe("AddToClearModal", () => {
-  const baseProps = { busy: false, error: null, retry: null, onCancel: vi.fn(), onConfirm: vi.fn() };
+  const baseProps = { busy: false, error: null, onCancel: vi.fn(), onConfirm: vi.fn() };
 
   it("seeds title and description from the entry and keeps confirm disabled without a location", () => {
     wrap(<AddToClearModal {...baseProps} entry={entry()} />);
@@ -296,12 +297,10 @@ describe("AddToClearModal", () => {
     );
     expect(screen.getByTestId("inbox-add-confirm")).toBeDisabled();
     expect(screen.getByText("modal.locationRequired")).toBeInTheDocument();
-    expect(screen.queryByTestId("inbox-edits-warning")).not.toBeInTheDocument();
     // No drafts: nothing is marked as an AI suggestion.
     expect(screen.getByTestId("inbox-severity-none")).toHaveAttribute("data-selected", "true");
     expect(document.querySelector("[data-testid^='inbox-ai-']")).toBeNull();
     expect(screen.queryByTestId("inbox-draft-disaster-type")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("inbox-draft-title-note")).not.toBeInTheDocument();
   });
 
   const drafted = (drafts: Partial<InboxEntry["thread"]>) =>
@@ -328,10 +327,6 @@ describe("AddToClearModal", () => {
     // Disaster type is read-only: shown, flagged, never part of the draft.
     expect(screen.getByTestId("inbox-draft-disaster-type")).toHaveTextContent("flash flood");
     expect(screen.getByTestId("inbox-draft-disaster-type")).toHaveTextContent("modal.disasterTypeReadOnly");
-    // The drafted title is not persisted yet (#625): its own note says so,
-    // and the edits warning does not fire just because a draft exists.
-    expect(screen.getByTestId("inbox-draft-title-note")).toHaveTextContent("modal.draftTitleNotSaved");
-    expect(screen.queryByTestId("inbox-edits-warning")).not.toBeInTheDocument();
     expect(screen.queryByTestId("inbox-location-hint")).not.toBeInTheDocument();
 
     const confirm = screen.getByTestId("inbox-add-confirm");
@@ -354,7 +349,6 @@ describe("AddToClearModal", () => {
     );
     fireEvent.change(screen.getByTestId("inbox-draft-title"), { target: { value: "Reviewer title" } });
     expect(screen.queryByTestId("inbox-ai-title")).not.toBeInTheDocument();
-    expect(screen.getByTestId("inbox-edits-warning")).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("inbox-severity-none"));
     expect(screen.queryByTestId("inbox-ai-severity")).not.toBeInTheDocument();
@@ -399,7 +393,7 @@ describe("AddToClearModal", () => {
     expect(screen.queryByTestId("inbox-ai-severity")).not.toBeInTheDocument();
   });
 
-  it("seeds the description with labelled machine transcripts and says they are not saved", () => {
+  it("seeds the description with labelled machine transcripts", () => {
     const base = entry();
     wrap(
       <AddToClearModal
@@ -418,14 +412,23 @@ describe("AddToClearModal", () => {
     expect(screen.getByTestId("inbox-draft-description")).toHaveValue(
       'Road blocked.\n\nmodal.transcriptInDescription:{"text":"People are stuck."}',
     );
-    expect(screen.getByTestId("inbox-transcripts-note")).toHaveTextContent("modal.transcriptsNotSaved");
-    expect(screen.queryByTestId("inbox-edits-warning")).not.toBeInTheDocument();
   });
 
-  it("flags unsaved text edits", () => {
+  it("confirms with the reviewer's edited title and description (they are saved now, #625)", () => {
     wrap(<AddToClearModal {...baseProps} entry={entry()} />);
     fireEvent.change(screen.getByTestId("inbox-draft-title"), { target: { value: "New title" } });
-    expect(screen.getByTestId("inbox-edits-warning")).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId("inbox-draft-description"), { target: { value: "New body" } });
+    fireEvent.click(screen.getByTestId("inbox-draft-location"));
+    fireEvent.click(screen.getByText("Kassala (Sudan)"));
+    fireEvent.click(screen.getByTestId("inbox-add-confirm"));
+    expect(baseProps.onConfirm).toHaveBeenCalledWith({
+      title: "New title",
+      description: "New body",
+      severity: null,
+      locationId: "kas",
+    });
+    // No "not saved" caveats remain anywhere in the modal.
+    expect(screen.getByTestId("inbox-add-modal")).not.toHaveTextContent(/NotSaved/);
   });
 
   it("confirms with severity and location once a location is picked", () => {
@@ -461,17 +464,6 @@ describe("AddToClearModal", () => {
     expect(player).toHaveAttribute("preload", "none");
     expect(player).toHaveAttribute("aria-label", 'pane.voiceNoteN:{"n":2}');
     expect(screen.getByText('pane.attachment:{"n":1}').closest("a")).toHaveAttribute("href", "https://s3/a.jpg?sig=1");
-  });
-
-  it("in retry mode shows the banner, relabels the buttons and ignores the backdrop", () => {
-    wrap(<AddToClearModal {...baseProps} entry={entry()} retry={{ locationDone: false }} />);
-    expect(screen.getByTestId("inbox-retry-banner")).toHaveTextContent("modal.retryLocationBody");
-    expect(screen.getByTestId("inbox-add-confirm")).toHaveTextContent("modal.retry");
-    expect(screen.getByTestId("inbox-add-cancel")).toHaveTextContent("modal.leaveUnscoped");
-    fireEvent.mouseDown(document.querySelector(".mantine-Modal-overlay")!);
-    fireEvent.mouseUp(document.querySelector(".mantine-Modal-overlay")!);
-    fireEvent.click(document.querySelector(".mantine-Modal-overlay")!);
-    expect(baseProps.onCancel).not.toHaveBeenCalled();
   });
 
   it("closes on overlay click but not on dialog click", () => {

@@ -28,8 +28,6 @@ vi.mock("~/components/feature-flags-provider", () => ({
 
 let role = "admin";
 const reviewMutate = vi.fn();
-const setSeverity = vi.fn();
-const setLocation = vi.fn();
 const invalidate = vi.fn();
 let inboxData: GqlHotlineInbox;
 
@@ -48,10 +46,6 @@ vi.mock("~/trpc/react", () => ({
       review: { useMutation: () => ({ mutate: reviewMutate, isPending: false }) },
       requestTranslation: { useMutation: () => ({ mutate: vi.fn(), data: undefined, isError: false }) },
       translation: { useQuery: () => ({ data: undefined }) },
-    },
-    signals: {
-      updateSeverity: { useMutation: () => ({ mutateAsync: setSeverity, isPending: false }) },
-      updateLocation: { useMutation: () => ({ mutateAsync: setLocation, isPending: false }) },
     },
     locations: {
       list: {
@@ -85,6 +79,7 @@ function thread(id: string) {
     reviewedBy: null,
     reviewedAt: null,
     reviewNote: null,
+    rejectReason: null,
     promotedSignalId: null,
     createdAt: "2026-09-15T10:00:00Z",
     draftTitle: null as string | null,
@@ -184,108 +179,89 @@ describe("InboxPage triage", () => {
     expect(screen.getAllByTestId("inbox-entry")[1]).toHaveAttribute("data-selected", "true");
   });
 
-  it("rejects with the reason written into the note", () => {
+  it("rejects with the structured reason, not a note", () => {
     reviewMutate.mockImplementation((_input, opts) => opts.onSuccess(thread("a")));
     renderPage();
     fireEvent.click(screen.getByTestId("inbox-reject"));
     fireEvent.click(screen.getByTestId("inbox-reject-spam"));
     expect(reviewMutate).toHaveBeenCalledWith(
-      { id: "a", decision: "reject", note: "spam: rejectReasons.spam.label" },
+      { id: "a", decision: "reject", rejectReason: "spam" },
       expect.any(Object),
     );
     expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.rejected");
   });
 
-  it("promotes, then applies location and severity, and links the signal", async () => {
+  it("promotes in one mutation carrying the reviewer's edits as overrides, and links the signal", async () => {
     reviewMutate.mockImplementation((_input, opts) =>
       opts.onSuccess({ ...thread("a"), promotedSignalId: "sig1" }),
     );
-    setLocation.mockResolvedValue({});
-    setSeverity.mockResolvedValue({});
     renderPage();
     fireEvent.click(screen.getByTestId("inbox-add"));
+    fireEvent.change(screen.getByTestId("inbox-draft-title"), { target: { value: "Edited title" } });
+    fireEvent.change(screen.getByTestId("inbox-draft-description"), { target: { value: "Edited description" } });
     fireEvent.click(screen.getByTestId("inbox-severity-5"));
     fireEvent.click(screen.getByTestId("inbox-draft-location"));
     fireEvent.click(screen.getByText("Kassala (Sudan)"));
     await act(async () => {
       fireEvent.click(screen.getByTestId("inbox-add-confirm"));
     });
-    expect(reviewMutate).toHaveBeenCalledWith({ id: "a", decision: "approve_public" }, expect.any(Object));
-    await waitFor(() => expect(setLocation).toHaveBeenCalledWith({ id: "sig1", locationId: "kas" }));
-    expect(setSeverity).toHaveBeenCalledWith({ id: "sig1", severity: 5 });
+    expect(reviewMutate).toHaveBeenCalledTimes(1);
+    expect(reviewMutate).toHaveBeenCalledWith(
+      {
+        id: "a",
+        decision: "approve_public",
+        overrides: { title: "Edited title", description: "Edited description", severity: 5, locationId: "kas" },
+      },
+      expect.any(Object),
+    );
     await waitFor(() => expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.added"));
     expect(screen.getByText("toast.viewSignal")).toHaveAttribute("href", "/signal/sig1");
+    expect(invalidate).toHaveBeenCalled();
   });
 
-  it("promotes with the drafted severity and location without the reviewer touching them", async () => {
+  it("promotes with the drafted title, severity and location without the reviewer touching them", async () => {
     inboxData.threads[0] = { ...thread("a"), draftTitle: "Drafted title", draftSeverity: 4, draftLocationId: "kas" };
     reviewMutate.mockImplementation((_input, opts) =>
       opts.onSuccess({ ...thread("a"), promotedSignalId: "sig1" }),
     );
-    setLocation.mockResolvedValue({});
-    setSeverity.mockResolvedValue({});
     renderPage();
     fireEvent.click(screen.getByTestId("inbox-add"));
     expect(screen.getByTestId("inbox-draft-title")).toHaveValue("Drafted title");
     await act(async () => {
       fireEvent.click(screen.getByTestId("inbox-add-confirm"));
     });
-    expect(reviewMutate).toHaveBeenCalledWith({ id: "a", decision: "approve_public" }, expect.any(Object));
-    await waitFor(() => expect(setLocation).toHaveBeenCalledWith({ id: "sig1", locationId: "kas" }));
-    expect(setSeverity).toHaveBeenCalledWith({ id: "sig1", severity: 4 });
+    expect(reviewMutate).toHaveBeenCalledWith(
+      {
+        id: "a",
+        decision: "approve_public",
+        overrides: expect.objectContaining({ title: "Drafted title", severity: 4, locationId: "kas" }),
+      },
+      expect.any(Object),
+    );
     await waitFor(() => expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.added"));
   });
 
-  it("keeps the modal open in retry mode when the location write fails, then completes on retry", async () => {
-    reviewMutate.mockImplementation((_input, opts) =>
-      opts.onSuccess({ ...thread("a"), promotedSignalId: "sig1" }),
-    );
-    setLocation.mockRejectedValueOnce(new Error("boom")).mockResolvedValueOnce({});
-    setSeverity.mockResolvedValue({});
+  it("keeps the modal open with the error when promotion fails, and a retry promotes", async () => {
+    reviewMutate.mockImplementationOnce((_input, opts) => opts.onError(new Error("boom")));
     renderPage();
     fireEvent.click(screen.getByTestId("inbox-add"));
-    fireEvent.click(screen.getByTestId("inbox-severity-3"));
     fireEvent.click(screen.getByTestId("inbox-draft-location"));
     fireEvent.click(screen.getByText("Kassala (Sudan)"));
     await act(async () => {
       fireEvent.click(screen.getByTestId("inbox-add-confirm"));
     });
-    await waitFor(() => expect(screen.getByTestId("inbox-retry-banner")).toBeInTheDocument());
+    expect(screen.getByTestId("inbox-add-modal")).toHaveTextContent("boom");
     expect(screen.queryByTestId("inbox-toast")).not.toBeInTheDocument();
     expect(invalidate).not.toHaveBeenCalled();
-    expect(setSeverity).not.toHaveBeenCalled();
-    // Escape and J must not leave retry mode.
-    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
-    fireEvent.keyDown(window, { key: "j" });
-    expect(screen.getByTestId("inbox-retry-banner")).toBeInTheDocument();
-    expect(screen.getAllByTestId("inbox-entry")[0]).toHaveAttribute("data-selected", "true");
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("inbox-add-confirm"));
-    });
-    expect(reviewMutate).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(setLocation).toHaveBeenCalledTimes(2));
-    expect(setSeverity).toHaveBeenCalledWith({ id: "sig1", severity: 3 });
-    await waitFor(() => expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.added"));
-    expect(invalidate).toHaveBeenCalled();
-  });
-
-  it("lets the reviewer leave the signal unscoped with a partial toast", async () => {
-    reviewMutate.mockImplementation((_input, opts) =>
+    reviewMutate.mockImplementationOnce((_input, opts) =>
       opts.onSuccess({ ...thread("a"), promotedSignalId: "sig1" }),
     );
-    setLocation.mockRejectedValue(new Error("boom"));
-    renderPage();
-    fireEvent.click(screen.getByTestId("inbox-add"));
-    fireEvent.click(screen.getByTestId("inbox-draft-location"));
-    fireEvent.click(screen.getByText("Kassala (Sudan)"));
     await act(async () => {
       fireEvent.click(screen.getByTestId("inbox-add-confirm"));
     });
-    await waitFor(() => expect(screen.getByTestId("inbox-retry-banner")).toBeInTheDocument());
-    fireEvent.click(screen.getByTestId("inbox-add-cancel"));
-    expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.addedPartial");
-    expect(screen.queryByTestId("inbox-add-modal")).not.toBeInTheDocument();
+    expect(reviewMutate).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.added"));
   });
 
   it("never claims success when promotion returns no signal id", async () => {
@@ -298,7 +274,6 @@ describe("InboxPage triage", () => {
       fireEvent.click(screen.getByTestId("inbox-add-confirm"));
     });
     expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.addedNoSignal");
-    expect(setLocation).not.toHaveBeenCalled();
   });
 
   it("surfaces a review error without leaving the entry", () => {

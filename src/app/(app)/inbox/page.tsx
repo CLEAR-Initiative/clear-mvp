@@ -32,9 +32,10 @@ import styles from "./inbox.module.css";
  *
  * One entry per open (unverified) ground thread from an active hotline
  * source. Actions map 1:1 onto clear-api's ground review state machine:
- *   Add to CLEAR -> approve_public (promotion; then severity is applied)
+ *   Add to CLEAR -> approve_public, carrying the reviewer's edits (title,
+ *                   description, severity, location) as promotion overrides
  *   Archive      -> approve_private
- *   Reject       -> rejected, with the reason recorded in the review note
+ *   Reject       -> rejected, with the structured rejectReason
  *
  * Acted-on entries leave the queue (they are no longer unverified). There
  * is no Undo: approved_public is terminal and nothing transitions back to
@@ -87,9 +88,6 @@ export default function InboxPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Mirrors `followUp` (declared below) for callbacks created before it.
-  const followUpRef = useRef(false);
-
   const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
   useEffect(() => setReadIds(loadReadIds()), []);
 
@@ -105,8 +103,6 @@ export default function InboxPage() {
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
   const select = useCallback((id: string | null) => {
-    // A pending promotion follow-up pins the selection until resolved.
-    if (followUpRef.current) return;
     setSelectedId(id);
     setRejectOpen(false);
     setAddOpen(false);
@@ -146,9 +142,7 @@ export default function InboxPage() {
     !!selected && canReviewSource(role, sourceById.get(selected.thread.groundSourceId) ?? []);
 
   const review = api.ground.review.useMutation();
-  const setSeverity = api.signals.updateSeverity.useMutation();
-  const setLocation = api.signals.updateLocation.useMutation();
-  const busy = review.isPending || setSeverity.isPending || setLocation.isPending;
+  const busy = review.isPending;
 
   const afterAction = useCallback(
     (actedId: string, next: Toast) => {
@@ -183,7 +177,7 @@ export default function InboxPage() {
       if (!selected || busy) return;
       const label = t(`rejectReasons.${reason}.label`);
       review.mutate(
-        { id: selected.id, decision: "reject", note: `${reason}: ${label}` },
+        { id: selected.id, decision: "reject", rejectReason: reason },
         {
           onSuccess: () => afterAction(selected.id, { message: t("toast.rejected", { reason: label }) }),
           onError: (err) => setActionError(errorMessage(err)),
@@ -194,92 +188,47 @@ export default function InboxPage() {
   );
 
   /**
-   * Promotion is not atomic: approve_public (terminal, creates the signal)
-   * is followed by updateSignalLocation and updateSignalSeverity on the new
-   * signal. An unscoped signal is dropped by downstream aggregation, so a
-   * failed follow-up must never be reported as success or lose its retry
-   * path. While a follow-up is outstanding the modal stays open in retry
-   * mode with the signal id pinned, the entry is NOT removed from the
-   * queue (no invalidate), and Retry re-runs only the missing steps.
+   * Promotion is one atomic mutation: approve_public creates the signal
+   * with the reviewer's edits applied (clear-api#625 overrides). If it
+   * fails, nothing was written — the thread stays reviewable and the
+   * modal stays open with the error.
    */
-  const [followUp, setFollowUp] = useState<{
-    entryId: string;
-    signalId: string;
-    locationDone: boolean;
-  } | null>(null);
-  followUpRef.current = followUp !== null;
-
-  const applyFollowUp = useCallback(
-    async (entryId: string, signalId: string, draft: SignalDraft, locationDone: boolean) => {
-      let locOk = locationDone;
-      if (!locOk) {
-        try {
-          await setLocation.mutateAsync({ id: signalId, locationId: draft.locationId });
-          locOk = true;
-        } catch (err) {
-          setFollowUp({ entryId, signalId, locationDone: false });
-          setActionError(errorMessage(err));
-          return;
-        }
-      }
-      if (draft.severity) {
-        try {
-          await setSeverity.mutateAsync({ id: signalId, severity: draft.severity });
-        } catch (err) {
-          setFollowUp({ entryId, signalId, locationDone: true });
-          setActionError(errorMessage(err));
-          return;
-        }
-      }
-      setFollowUp(null);
-      afterAction(entryId, { message: t("toast.added"), signalId });
-    },
-    [setLocation, setSeverity, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
   const confirmAdd = useCallback(
     (draft: SignalDraft) => {
       if (!selected || busy) return;
       setActionError(null);
-      if (followUp && followUp.entryId === selected.id) {
-        // Retry: the signal exists, only the follow-up steps run again.
-        void applyFollowUp(selected.id, followUp.signalId, draft, followUp.locationDone);
-        return;
-      }
       review.mutate(
-        { id: selected.id, decision: "approve_public" },
+        {
+          id: selected.id,
+          decision: "approve_public",
+          overrides: {
+            title: draft.title,
+            description: draft.description,
+            severity: draft.severity,
+            locationId: draft.locationId,
+          },
+        },
         {
           onSuccess: (thread) => {
             const signalId = thread.promotedSignalId;
-            if (!signalId) {
-              // Promoted but no signal id came back: nothing can be scoped.
-              // Say so instead of claiming success.
-              afterAction(selected.id, { message: t("toast.addedNoSignal") });
-              return;
-            }
-            void applyFollowUp(selected.id, signalId, draft, false);
+            afterAction(
+              selected.id,
+              signalId ? { message: t("toast.added"), signalId } : { message: t("toast.addedNoSignal") },
+            );
           },
           onError: (err) => setActionError(errorMessage(err)),
         },
       );
     },
-    [selected, busy, review, followUp, applyFollowUp, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
+    [selected, busy, review, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
   );
-
-  /** Leave the follow-up unfinished: the signal exists but is unscoped. */
-  const abandonFollowUp = useCallback(() => {
-    if (!followUp) return;
-    const { entryId, signalId } = followUp;
-    setFollowUp(null);
-    afterAction(entryId, { message: t("toast.addedPartial"), signalId });
-  }, [followUp, afterAction, t]);
 
   // Keyboard: Escape closes modal > popover; A/E/R act; J/K move.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        // The Add to CLEAR modal handles its own Escape (Mantine Modal,
-        // locked while a retry is pending); only the popover is ours.
+        // The Add to CLEAR modal handles its own Escape (Mantine Modal);
+        // only the popover is ours.
         if (!addOpen && rejectOpen) setRejectOpen(false);
         return;
       }
@@ -306,7 +255,7 @@ export default function InboxPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [addOpen, rejectOpen, followUp, visible, selectedId, selected, canReviewSelected, select, archive]);
+  }, [addOpen, rejectOpen, visible, selectedId, selected, canReviewSelected, select, archive]);
 
   if (authLoading) {
     return (
@@ -383,11 +332,8 @@ export default function InboxPage() {
           entry={selected}
           busy={busy}
           error={actionError}
-          retry={followUp?.entryId === selected.id ? { locationDone: followUp.locationDone } : null}
           onCancel={() => {
-            if (busy) return;
-            if (followUp?.entryId === selected.id) abandonFollowUp();
-            else setAddOpen(false);
+            if (!busy) setAddOpen(false);
           }}
           onConfirm={confirmAdd}
         />
