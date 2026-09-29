@@ -36,9 +36,6 @@ jobs:
       - name: Install deps
         run: bun install --frozen-lockfile
 
-      - name: Lint
-        run: bun run lint
-
       - name: Vitest
         run: bunx vitest run
 
@@ -47,3 +44,7 @@ jobs:
 
       - name: Translation catalogs in sync
         run: node scripts/check-messages.mjs
+
+      # Last, so a lint error doesn't skip the test/typecheck results above.
+      - name: Lint
+        run: bun run lint
