@@ -247,13 +247,26 @@ describe("analysis router", () => {
         });
         return { a0: null, a1: { id: "last-year", generatedAt: "2025-12-29T00:00:00Z" }, a2: null };
       }
+      if (query.includes("query AnalysisHeadlines")) {
+        // Only the frame that exists (last year's) has its payload read.
+        expect(query).toContain("h0: analysis(frame: $f0) { data }");
+        expect(query).not.toContain("h1");
+        expect(vars).toEqual({ f0: countryFrame("sdn", new Date().getUTCFullYear() - 1) });
+        return { h0: { data: { ai_summary: { text: "Fighting spread to Kordofan. Displacement rose." } } } };
+      }
       throw new Error(`unexpected query ${query.slice(0, 40)}`);
     });
 
     const result = await caller().analysis.scopes({ teamId: "t1", countries: [{ id: "sdn", name: "Sudan" }] });
 
     expect(result.countries).toEqual([
-      { id: "sdn", name: "Sudan", analysisId: "last-year", generatedAt: "2025-12-29T00:00:00Z" },
+      {
+        id: "sdn",
+        name: "Sudan",
+        analysisId: "last-year",
+        generatedAt: "2025-12-29T00:00:00Z",
+        headline: "Fighting spread to Kordofan.",
+      },
     ]);
     expect(result.created[0]).toMatchObject({
       id: "auto-1",
@@ -263,6 +276,16 @@ describe("analysis router", () => {
       analysisId: null,
       generatedAt: null,
     });
+  });
+
+  it("returns a null headline when the country analysis has no summary", async () => {
+    graphqlFetch.mockImplementation(async (query: string) => {
+      if (query.includes("query AnalysisStamps")) return { a0: { id: "now", generatedAt: "2026-09-28T00:00:00Z" }, a1: null };
+      if (query.includes("query AnalysisHeadlines")) return { h0: { data: {} } };
+      throw new Error(`unexpected query ${query.slice(0, 40)}`);
+    });
+    const result = await caller().analysis.scopes({ teamId: null, countries: [{ id: "sdn", name: "Sudan" }] });
+    expect(result.countries[0]).toMatchObject({ analysisId: "now", headline: null });
   });
 
   it("never lists automations without a team (clear-api would return every team's)", async () => {
@@ -338,6 +361,61 @@ describe("analysis router", () => {
     await expect(caller().analysis.create({ teamId: "t1", locationIds: ["x"], cadence: "hourly" as "daily" })).rejects.toThrow();
     await expect(caller().analysis.create({ teamId: "t1", locationIds: [], cadence: "weekly" })).rejects.toThrow();
     expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("creates an on-request analysis as a disabled weekly automation and still requests its first version", async () => {
+    graphqlFetch
+      .mockResolvedValueOnce({
+        createAnalysisAutomation: { id: "auto-9", locationIds: ["x"], eventTypes: [], needSectors: [], windowStart: "2026-07-01T00:00:00.000Z" },
+      })
+      .mockResolvedValueOnce({ updateAnalysisAutomation: { id: "auto-9", cadence: "weekly", enabled: false } })
+      .mockResolvedValueOnce({ requestAnalysis: { id: "req-1", status: "PENDING" } });
+    const result = await caller().analysis.create({ teamId: "t1", locationIds: ["x"], cadence: "manual" });
+
+    const calls = graphqlFetch.mock.calls;
+    expect(calls[0]![0]).toContain("createAnalysisAutomation");
+    expect((calls[0]![1] as { input: { cadence: string } }).input.cadence).toBe("weekly");
+    expect(calls[1]![0]).toContain("updateAnalysisAutomation");
+    expect(calls[1]![1]).toEqual({ id: "auto-9", input: { enabled: false } });
+    expect(calls[2]![0]).toContain("requestAnalysis");
+    expect(result).toEqual({ id: "auto-9", firstVersionRequested: true });
+  });
+
+  it("refreshes by requesting exactly the given frame", async () => {
+    graphqlFetch.mockResolvedValueOnce({ requestAnalysis: { id: "req-2", status: "PENDING" } });
+    const year = new Date().getUTCFullYear();
+    const frame = countryFrame("sdn", year);
+    const result = await caller().analysis.refresh({
+      locationIds: frame.locationIds,
+      windowStart: frame.windowStart,
+      windowEnd: frame.windowEnd,
+      teamId: null,
+    });
+    const [query, vars] = graphqlFetch.mock.calls[0]!;
+    expect(query).toContain("requestAnalysis");
+    expect(vars).toEqual({ input: { ...frame, eventTypes: [], needSectors: [], teamId: null } });
+    expect(result).toEqual({ requested: true });
+  });
+
+  it("propagates a failed refresh", async () => {
+    graphqlFetch.mockRejectedValueOnce(new Error("Forbidden"));
+    await expect(
+      caller().analysis.refresh({
+        locationIds: ["x"],
+        windowStart: "2026-07-01T00:00:00.000Z",
+        windowEnd: null,
+        teamId: "t1",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("pauses an analysis for manual updates and re-enables it on a cadence", async () => {
+    graphqlFetch.mockResolvedValue({ updateAnalysisAutomation: { id: "auto-1" } });
+    await caller().analysis.setCadence({ id: "auto-1", cadence: "manual" });
+    await caller().analysis.setCadence({ id: "auto-1", cadence: "weekly" });
+    expect(graphqlFetch.mock.calls[0]![0]).toContain("updateAnalysisAutomation");
+    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ id: "auto-1", input: { enabled: false } });
+    expect(graphqlFetch.mock.calls[1]![1]).toEqual({ id: "auto-1", input: { cadence: "weekly", enabled: true } });
   });
 
   it("removes an automation", async () => {

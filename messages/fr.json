@@ -2901,7 +2901,10 @@
     "meta": {
       "updated": "Mis à jour {relative}",
       "asOf": "au {date}",
-      "builtFrom": "Établie à partir de {reports, plural, one {# rapport} other {# rapports}} et {events, plural, one {# événement} other {# événements}}"
+      "builtFrom": "Établie à partir de {reports, plural, one {# rapport} other {# rapports}} et {events, plural, one {# événement} other {# événements}}",
+      "covers": "Couvre la période du {start} à ce jour",
+      "period": "Couvre la période du {start} au {end}",
+      "stale": "Pas à jour"
     },
     "tabs": {
       "overview": "Vue d'ensemble",
@@ -3010,7 +3013,8 @@
     "cadence": {
       "daily": "Quotidienne",
       "weekly": "Hebdomadaire",
-      "monthly": "Mensuelle"
+      "monthly": "Mensuelle",
+      "manual": "Sur demande"
     },
     "home": {
       "title": "Analyses",
@@ -3021,7 +3025,7 @@
       "wholeCountry": "Tout le pays",
       "updated": "Mise à jour {relative}",
       "generating": "Génération de la première version",
-      "paused": "en pause",
+      "paused": "mise à jour sur demande",
       "stale": "Pas à jour",
       "noCountryAnalysis": "Aucune analyse générée pour l'instant",
       "createdEmpty": "Aucune analyse créée pour l'instant. Créez-en une pour suivre des États ou districts précis.",
@@ -3031,7 +3035,11 @@
       "removeLabel": "Supprimer {name}",
       "mapNote": "En surbrillance : zones couvertes par les analyses de votre équipe.",
       "back": "Toutes les analyses",
-      "areas": "{count, plural, one {# zone} other {# zones}}"
+      "areas": "{count, plural, one {# zone} other {# zones}}",
+      "frequencyLabel": "Fréquence de mise à jour de {name}",
+      "frequencyError": "La fréquence de mise à jour n'a pas pu être modifiée. Veuillez réessayer.",
+      "mapHint": "Cliquez sur une zone en surbrillance pour ouvrir son analyse.",
+      "mapCard": "{type} · {status}"
     },
     "create": {
       "title": "Nouvelle analyse : {country}",
@@ -3126,6 +3134,11 @@
           "outlook": "Scénario le plus probable"
         }
       }
+    },
+    "refresh": {
+      "button": "Mettre à jour",
+      "requested": "Mise à jour demandée. La nouvelle version prend généralement quelques minutes et s'affiche ici d'elle-même.",
+      "error": "La mise à jour n'a pas pu être demandée. Veuillez réessayer."
     }
   }
 }

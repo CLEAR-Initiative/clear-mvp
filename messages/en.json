@@ -2901,7 +2901,10 @@
     "meta": {
       "updated": "Updated {relative}",
       "asOf": "as of {date}",
-      "builtFrom": "Built from {reports, plural, one {# report} other {# reports}} and {events, plural, one {# event} other {# events}}"
+      "builtFrom": "Built from {reports, plural, one {# report} other {# reports}} and {events, plural, one {# event} other {# events}}",
+      "covers": "Covers {start} to date",
+      "period": "Covers {start} to {end}",
+      "stale": "Out of date"
     },
     "tabs": {
       "overview": "Overview",
@@ -3010,7 +3013,8 @@
     "cadence": {
       "daily": "Daily",
       "weekly": "Weekly",
-      "monthly": "Monthly"
+      "monthly": "Monthly",
+      "manual": "On request"
     },
     "home": {
       "title": "Analyses",
@@ -3021,7 +3025,7 @@
       "wholeCountry": "Whole country",
       "updated": "Updated {relative}",
       "generating": "Generating the first version",
-      "paused": "paused",
+      "paused": "updates on request",
       "stale": "Out of date",
       "noCountryAnalysis": "No analysis generated yet",
       "createdEmpty": "No created analyses yet. Create one to follow specific states or districts.",
@@ -3031,7 +3035,11 @@
       "removeLabel": "Remove {name}",
       "mapNote": "Highlighted: areas covered by your team's analyses.",
       "back": "All analyses",
-      "areas": "{count, plural, one {# area} other {# areas}}"
+      "areas": "{count, plural, one {# area} other {# areas}}",
+      "frequencyLabel": "Update frequency of {name}",
+      "frequencyError": "The update frequency could not be changed. Please try again.",
+      "mapHint": "Click a highlighted area to open its analysis.",
+      "mapCard": "{type} · {status}"
     },
     "create": {
       "title": "New analysis in {country}",
@@ -3126,6 +3134,11 @@
           "outlook": "Most likely scenario"
         }
       }
+    },
+    "refresh": {
+      "button": "Update now",
+      "requested": "Update requested. The new version usually takes a few minutes and appears here by itself.",
+      "error": "The update could not be requested. Please try again."
     }
   }
 }

@@ -103,6 +103,8 @@ vi.mock("~/trpc/react", () => ({
       figures: { useQuery: () => ({ data: figuresResult }) },
       create: { useMutation: () => mutation(createMutate) },
       remove: { useMutation: () => mutation(removeMutate) },
+      refresh: { useMutation: () => mutation(vi.fn()) },
+      setCadence: { useMutation: () => mutation(vi.fn()) },
     },
     locations: {
       getById: { useQuery: () => ({ data: { geometry: null } }) },
@@ -237,7 +239,7 @@ beforeEach(() => {
   role = "analyst";
   activeTeamId = "team-1";
   scopesResult = {
-    countries: [{ id: "sdn", name: "Sudan", analysisId: "a1", generatedAt: "2026-09-27T06:00:00Z" }],
+    countries: [{ id: "sdn", name: "Sudan", analysisId: "a1", generatedAt: "2026-09-27T06:00:00Z", headline: null }],
     created: [],
   };
   frameResult = { data: undefined, isLoading: false, isError: false };
@@ -458,20 +460,23 @@ describe("Insights > Analysis tab", () => {
     return search;
   };
 
+  // The home map behind the modal takes clicks too; click the one in the modal.
+  const modalMapClick = () => fireEvent.click(within(screen.getByRole("dialog")).getByTestId("map-click-sheikan"));
+
   it("adds districts from the search box and the map as removable pills, then creates", async () => {
     const search = await openCreate();
     expect(screen.getByTestId("analysis-create-submit")).toBeDisabled();
     fireEvent.change(search, { target: { value: "um" } });
     expect(screen.queryByText("Sheikan", option)).not.toBeInTheDocument();
     fireEvent.click(await screen.findByText("Um Rawaba", option));
-    fireEvent.click(screen.getByTestId("map-click-sheikan"));
+    modalMapClick();
     expect(screen.getByTestId("analysis-create-pills")).toHaveTextContent("Um Rawaba, North Kordofan");
     expect(screen.getByTestId("analysis-create-pills")).toHaveTextContent("Sheikan, North Kordofan");
     expect(screen.getByTestId("analysis-create-summary")).toHaveTextContent("Um Rawaba and Sheikan, North Kordofan, Sudan");
     // A second map click on the same district takes it out again.
-    fireEvent.click(screen.getByTestId("map-click-sheikan"));
+    modalMapClick();
     expect(screen.queryByTestId("analysis-create-pill-sheikan")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("map-click-sheikan"));
+    modalMapClick();
     // The pill's x removes it too.
     fireEvent.click(screen.getByLabelText('analysis.create.removeArea:{"name":"Um Rawaba"}'));
     expect(screen.queryByTestId("analysis-create-pill-umrawaba")).not.toBeInTheDocument();

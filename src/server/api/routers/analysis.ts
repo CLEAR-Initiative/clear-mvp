@@ -9,6 +9,7 @@ import {
   type AnalysisRow,
 } from "~/server/api/mappers/analysis";
 import { toMapPointGeometry } from "~/lib/geo/to-map-point";
+import { leadSentences } from "~/app/(app)/insights/_components/situation/summary-citations";
 import {
   ANALYSIS_CADENCES,
   MAX_CREATED_LOCATIONS,
@@ -283,6 +284,12 @@ const REQUEST_ANALYSIS_MUTATION = `
   }
 `;
 
+const UPDATE_AUTOMATION_MUTATION = `
+  mutation UpdateAnalysisAutomation($id: String!, $input: UpdateAnalysisAutomationInput!) {
+    updateAnalysisAutomation(id: $id, input: $input) { id cadence enabled }
+  }
+`;
+
 const DELETE_AUTOMATION_MUTATION = `
   mutation DeleteAnalysisAutomation($id: String!) {
     deleteAnalysisAutomation(id: $id)
@@ -306,6 +313,8 @@ export interface CountryAnalysisEntry {
   name: string;
   analysisId: string | null;
   generatedAt: string | null;
+  /** First sentence of the current analysis' summary, for the landing list. */
+  headline: string | null;
 }
 
 export interface CreatedAnalysis {
@@ -386,6 +395,35 @@ async function fetchAnalysisStamps(
     headers,
   );
   return frames.map((_, i) => data?.[`a${i}`] ?? null);
+}
+
+/**
+ * First summary sentence per frame, in input order. Reads `data` only for the
+ * frames given (the ones known to exist). Best-effort: the list still renders
+ * without headlines.
+ */
+async function fetchHeadlines(
+  frames: FrameInput[],
+  headers: Record<string, string>,
+): Promise<(string | null)[]> {
+  if (frames.length === 0) return [];
+  const fields = frames.map((_, i) => `h${i}: analysis(frame: $f${i}) { data }`).join("\n");
+  const params = frames.map((_, i) => `$f${i}: AnalysisFrameInput!`).join(", ");
+  const variables = Object.fromEntries(frames.map((f, i) => [`f${i}`, f]));
+  try {
+    const data = await graphqlFetch<Record<string, { data: { ai_summary?: { text?: unknown } } | null } | null>>(
+      `query AnalysisHeadlines(${params}) {\n${fields}\n}`,
+      variables,
+      headers,
+    );
+    return frames.map((_, i) => {
+      const text = data?.[`h${i}`]?.data?.ai_summary?.text;
+      if (typeof text !== "string" || !text.trim()) return null;
+      return leadSentences(text, 1).lead || null;
+    });
+  } catch {
+    return frames.map(() => null);
+  }
 }
 
 /**
@@ -550,9 +588,29 @@ export const analysisRouter = createTRPCRouter({
         fetchAnalysisStamps(frames, headers),
       ]);
 
-      const countries = input.countries.map((c, i) => {
+      // Headlines only for the country frame that exists (this year's, else last year's).
+      const existing = input.countries
+        .map((c, i) => {
+          if (stamps[2 * i]) return { i, frame: countryFrame(c.id, year) };
+          if (stamps[2 * i + 1]) return { i, frame: countryFrame(c.id, year - 1) };
+          return null;
+        })
+        .filter((e): e is { i: number; frame: ReturnType<typeof countryFrame> } => e !== null);
+      const headlines = await fetchHeadlines(
+        existing.map((e) => e.frame),
+        headers,
+      );
+      const headlineOf = new Map(existing.map((e, k) => [e.i, headlines[k] ?? null]));
+
+      const countries = input.countries.map((c, i): CountryAnalysisEntry => {
         const stamp = stamps[2 * i] ?? stamps[2 * i + 1] ?? null;
-        return { id: c.id, name: c.name, analysisId: stamp?.id ?? null, generatedAt: stamp?.generatedAt ?? null };
+        return {
+          id: c.id,
+          name: c.name,
+          analysisId: stamp?.id ?? null,
+          generatedAt: stamp?.generatedAt ?? null,
+          headline: headlineOf.get(i) ?? null,
+        };
       });
       const offset = input.countries.length * 2;
       const created = automations.map((a, i): CreatedAnalysis => {
@@ -580,8 +638,9 @@ export const analysisRouter = createTRPCRouter({
    * Create an analysis over one or more areas: a rolling automation keeps it
    * current, plus a one-off request for the same rolling frame so the first
    * version comes from the on-demand queue (polled every minute) instead of
-   * waiting for the automation sensor's hourly poll. Admin / analyst, enforced
-   * by clear-api.
+   * waiting for the automation sensor's hourly poll. "manual" creates a
+   * disabled automation, so it only updates on request. Admin / analyst,
+   * enforced by clear-api.
    */
   create: protectedProcedure
     .input(
@@ -599,13 +658,22 @@ export const analysisRouter = createTRPCRouter({
           input: {
             teamId: input.teamId,
             locationIds: input.locationIds,
-            cadence: input.cadence,
+            // clear-api has no "manual" cadence; the automation is disabled below.
+            cadence: input.cadence === "manual" ? "weekly" : input.cadence,
             windowStart: createdWindowStart(),
           },
         },
         headers,
       );
       const automation = res.createAnalysisAutomation;
+      if (input.cadence === "manual") {
+        // Best-effort: at worst it also updates weekly, which the user can change.
+        try {
+          await graphqlFetch(UPDATE_AUTOMATION_MUTATION, { id: automation.id, input: { enabled: false } }, headers);
+        } catch {
+          // Keep going: the first version is still worth requesting.
+        }
+      }
       // Best-effort: without it the automation still generates, just on its hourly poll.
       let firstVersionRequested = true;
       try {
@@ -627,6 +695,42 @@ export const analysisRouter = createTRPCRouter({
         firstVersionRequested = false;
       }
       return { id: automation.id, firstVersionRequested };
+    }),
+
+  /**
+   * Ask for a new version of a frame now. The pipeline drains the request
+   * queue within about a minute and writes a new version of the same frame.
+   * Admin / analyst, enforced by clear-api; errors propagate to the UI.
+   */
+  refresh: protectedProcedure
+    .input(
+      z.object({
+        locationIds: z.array(z.string().min(1)).min(1).max(MAX_CREATED_LOCATIONS),
+        eventTypes: z.array(z.string()).default([]),
+        needSectors: z.array(z.string()).default([]),
+        windowStart: z.string().datetime(),
+        windowEnd: z.string().datetime().nullable(),
+        teamId: z.string().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await graphqlFetch(REQUEST_ANALYSIS_MUTATION, { input }, cookieHeaders(ctx));
+      return { requested: true as const };
+    }),
+
+  /** Change how often a created analysis updates; "manual" pauses the automation. */
+  setCadence: protectedProcedure
+    .input(z.object({ id: z.string().min(1), cadence: z.enum(ANALYSIS_CADENCES) }))
+    .mutation(async ({ ctx, input }) => {
+      await graphqlFetch(
+        UPDATE_AUTOMATION_MUTATION,
+        {
+          id: input.id,
+          input: input.cadence === "manual" ? { enabled: false } : { cadence: input.cadence, enabled: true },
+        },
+        cookieHeaders(ctx),
+      );
+      return { id: input.id };
     }),
 
   /** Stop and remove a created analysis. Its generated rows stay in history. */

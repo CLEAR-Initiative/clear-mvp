@@ -2901,7 +2901,10 @@
     "meta": {
       "updated": "Actualizado {relative}",
       "asOf": "a {date}",
-      "builtFrom": "Elaborado a partir de {reports, plural, one {# informe} other {# informes}} y {events, plural, one {# evento} other {# eventos}}"
+      "builtFrom": "Elaborado a partir de {reports, plural, one {# informe} other {# informes}} y {events, plural, one {# evento} other {# eventos}}",
+      "covers": "Cubre desde el {start} hasta hoy",
+      "period": "Cubre del {start} al {end}",
+      "stale": "Desactualizado"
     },
     "tabs": {
       "overview": "Resumen",
@@ -3010,7 +3013,8 @@
     "cadence": {
       "daily": "Diaria",
       "weekly": "Semanal",
-      "monthly": "Mensual"
+      "monthly": "Mensual",
+      "manual": "A petición"
     },
     "home": {
       "title": "Análisis",
@@ -3021,7 +3025,7 @@
       "wholeCountry": "Todo el país",
       "updated": "Actualizado {relative}",
       "generating": "Generando la primera versión",
-      "paused": "en pausa",
+      "paused": "se actualiza a petición",
       "stale": "Desactualizado",
       "noCountryAnalysis": "Aún no se ha generado ningún análisis",
       "createdEmpty": "Aún no hay análisis creados. Cree uno para seguir estados o distritos concretos.",
@@ -3031,7 +3035,11 @@
       "removeLabel": "Eliminar {name}",
       "mapNote": "Resaltadas: zonas cubiertas por los análisis de su equipo.",
       "back": "Todos los análisis",
-      "areas": "{count, plural, one {# zona} other {# zonas}}"
+      "areas": "{count, plural, one {# zona} other {# zonas}}",
+      "frequencyLabel": "Frecuencia de actualización de {name}",
+      "frequencyError": "No se pudo cambiar la frecuencia de actualización. Inténtelo de nuevo.",
+      "mapHint": "Haga clic en una zona resaltada para abrir su análisis.",
+      "mapCard": "{type} · {status}"
     },
     "create": {
       "title": "Nuevo análisis en {country}",
@@ -3126,6 +3134,11 @@
           "outlook": "Escenario más probable"
         }
       }
+    },
+    "refresh": {
+      "button": "Actualizar ahora",
+      "requested": "Actualización solicitada. La nueva versión suele tardar unos minutos y aparecerá aquí sola.",
+      "error": "No se pudo solicitar la actualización. Inténtelo de nuevo."
     }
   }
 }

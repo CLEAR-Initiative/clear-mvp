@@ -126,6 +126,7 @@ describe("created analysis helpers", () => {
     expect(isStale("2026-09-21T11:00:00Z", "weekly", now)).toBe(true);
     expect(isStale("2026-09-27T11:00:00Z", "daily", now)).toBe(true);
     expect(isStale(null, "daily", now)).toBe(false);
+    expect(isStale("2025-01-01T00:00:00Z", "manual", now)).toBe(false);
   });
 
   it("starts a created window at UTC midnight 90 days back", () => {

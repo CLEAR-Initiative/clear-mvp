@@ -2901,7 +2901,10 @@
     "meta": {
       "updated": "تم التحديث {relative}",
       "asOf": "حتى {date}",
-      "builtFrom": "مبني على {reports, plural, one {تقرير واحد} other {# تقارير}} و{events, plural, one {حدث واحد} other {# أحداث}}"
+      "builtFrom": "مبني على {reports, plural, one {تقرير واحد} other {# تقارير}} و{events, plural, one {حدث واحد} other {# أحداث}}",
+      "covers": "يغطي من {start} حتى اليوم",
+      "period": "يغطي من {start} إلى {end}",
+      "stale": "غير محدَّث"
     },
     "tabs": {
       "overview": "نظرة عامة",
@@ -3010,7 +3013,8 @@
     "cadence": {
       "daily": "يومي",
       "weekly": "أسبوعي",
-      "monthly": "شهري"
+      "monthly": "شهري",
+      "manual": "عند الطلب"
     },
     "home": {
       "title": "التحليلات",
@@ -3021,7 +3025,7 @@
       "wholeCountry": "الدولة بأكملها",
       "updated": "حُدِّث {relative}",
       "generating": "جارٍ إنشاء النسخة الأولى",
-      "paused": "متوقف مؤقتًا",
+      "paused": "يُحدَّث عند الطلب",
       "stale": "غير محدَّث",
       "noCountryAnalysis": "لم يُنشأ أي تحليل بعد",
       "createdEmpty": "لا توجد تحليلات مُنشأة بعد. أنشئ تحليلًا لمتابعة ولايات أو محليات محددة.",
@@ -3031,7 +3035,11 @@
       "removeLabel": "حذف {name}",
       "mapNote": "المظللة: المناطق التي تغطيها تحليلات فريقك.",
       "back": "كل التحليلات",
-      "areas": "{count, plural, one {منطقة واحدة} two {منطقتان} few {# مناطق} many {# منطقة} other {# منطقة}}"
+      "areas": "{count, plural, one {منطقة واحدة} two {منطقتان} few {# مناطق} many {# منطقة} other {# منطقة}}",
+      "frequencyLabel": "وتيرة تحديث {name}",
+      "frequencyError": "تعذّر تغيير وتيرة التحديث. يُرجى المحاولة مرة أخرى.",
+      "mapHint": "انقر على منطقة مظللة لفتح تحليلها.",
+      "mapCard": "{type} · {status}"
     },
     "create": {
       "title": "تحليل جديد في {country}",
@@ -3126,6 +3134,11 @@
           "outlook": "السيناريو الأرجح"
         }
       }
+    },
+    "refresh": {
+      "button": "تحديث الآن",
+      "requested": "تم طلب التحديث. تستغرق النسخة الجديدة عادةً بضع دقائق وستظهر هنا تلقائيًا.",
+      "error": "تعذّر طلب التحديث. يُرجى المحاولة مرة أخرى."
     }
   }
 }

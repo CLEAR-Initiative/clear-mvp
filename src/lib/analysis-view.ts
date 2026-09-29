@@ -98,18 +98,23 @@ export function pickCountry(
   );
 }
 
-/** Update frequencies a user may pick for a created analysis (clear-api cadence strings). */
-export const ANALYSIS_CADENCES = ["daily", "weekly", "monthly"] as const;
+/**
+ * Update frequencies a user may pick for a created analysis (clear-api cadence
+ * strings). "manual" is not a clear-api cadence: it is a disabled automation
+ * that updates only on request.
+ */
+export const ANALYSIS_CADENCES = ["daily", "weekly", "monthly", "manual"] as const;
 export type AnalysisCadence = (typeof ANALYSIS_CADENCES)[number];
 
 const CADENCE_DAYS: Record<string, number> = { daily: 1, weekly: 7, monthly: 30 };
 
 /**
  * Stale when the latest version is older than its update frequency plus a
- * day's grace (a weekly run lands on a schedule, not to the minute).
+ * day's grace (a weekly run lands on a schedule, not to the minute). An
+ * on-request analysis is never stale: nothing promised a newer version.
  */
 export function isStale(generatedAt: string | null, cadence: string, now: Date = new Date()): boolean {
-  if (!generatedAt) return false;
+  if (!generatedAt || cadence === "manual") return false;
   const days = CADENCE_DAYS[cadence] ?? 7;
   return now.getTime() - Date.parse(generatedAt) > (days + 1) * 86_400_000;
 }

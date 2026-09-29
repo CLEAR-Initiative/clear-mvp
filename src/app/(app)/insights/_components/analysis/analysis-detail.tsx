@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
-import { Badge, Box, Center, Group, Loader, SimpleGrid, Tabs, Text, Title, UnstyledButton } from "@mantine/core";
+import { Alert, Badge, Box, Center, Group, Loader, SimpleGrid, Tabs, Text, Title, UnstyledButton } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
+import { useTeam } from "~/providers/team-provider";
+import { isStale } from "~/lib/analysis-view";
 import type { CreatedAnalysis } from "~/server/api/routers/analysis";
 import { AiSummaryCard } from "../situation/ai-summary-card";
 import { SituationSources } from "../situation/situation-sources";
@@ -18,6 +20,7 @@ import { EventsList } from "./events-list";
 import { KeyFindings } from "./key-findings";
 import { Notice } from "./notice";
 import { CreateReportButton } from "./create-report-button";
+import { RefreshButton, type RefreshFrame } from "./refresh-button";
 
 type Tab = "overview" | "needs" | "sources";
 
@@ -33,6 +36,15 @@ export function scopeKey(s: AnalysisScopeRef): string {
 /** A created analysis with no generated row yet is re-polled until the pipeline lands it. */
 const GENERATING_POLL_MS = 30_000;
 
+/** After "Update now", the open analysis is re-polled until a newer version lands. */
+const REFRESH_POLL_MS = 30_000;
+
+/**
+ * How long to wait for a requested version before giving up, so a dropped or
+ * failed run does not block "Update now" (the pipeline drains within about a minute).
+ */
+const REFRESH_TIMEOUT_MS = 15 * 60_000;
+
 /** One analysis: header, then Overview / Needs / Sources tabs. */
 export function AnalysisDetail({
   scope,
@@ -45,6 +57,13 @@ export function AnalysisDetail({
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
   const [tab, setTab] = useState<Tab>("overview");
+  const { activeTeamId } = useTeam();
+  // The version on screen when an update was requested, and when; polling runs
+  // until it changes or the wait times out.
+  const [requested, setRequested] = useState<{ from: string; at: number } | null>(null);
+  const awaitingNewer = (generatedAt: string | undefined) =>
+    !!requested && generatedAt === requested.from && Date.now() - requested.at < REFRESH_TIMEOUT_MS;
+  const utils = api.useUtils();
 
   const isCountry = scope.kind === "country";
   const locationIds = isCountry ? [scope.countryId] : scope.created.locationIds;
@@ -52,7 +71,11 @@ export function AnalysisDetail({
 
   const country = api.analysis.current.useQuery(
     { countryLocationId: scope.countryId, countryName: scope.countryName },
-    { enabled: isCountry, staleTime: 5 * 60_000 },
+    {
+      enabled: isCountry,
+      staleTime: 5 * 60_000,
+      refetchInterval: (q) => (awaitingNewer(q.state.data?.crisis.generatedAt) ? REFRESH_POLL_MS : false),
+    },
   );
   const created = api.analysis.forFrame.useQuery(
     isCountry
@@ -67,11 +90,44 @@ export function AnalysisDetail({
     {
       enabled: !isCountry,
       staleTime: 5 * 60_000,
-      refetchInterval: (q) => (q.state.data ? false : GENERATING_POLL_MS),
+      refetchInterval: (q) =>
+        !q.state.data ? GENERATING_POLL_MS : awaitingNewer(q.state.data.crisis.generatedAt) ? REFRESH_POLL_MS : false,
     },
   );
   const analysis = isCountry ? country : created;
   const data = analysis.data;
+  const waiting = awaitingNewer(data?.crisis.generatedAt);
+
+  // The requested version landed: refresh the landing list so its status matches.
+  const landedAt = data?.crisis.generatedAt;
+  useEffect(() => {
+    if (!requested || !landedAt || landedAt === requested.from) return;
+    setRequested(null);
+    void utils.analysis.scopes.invalidate();
+  }, [requested, landedAt, utils]);
+
+  // A country analysis runs weekly; a created one on its own cadence, or only on request when paused.
+  const cadence = isCountry ? "weekly" : scope.created.enabled ? scope.created.cadence : "manual";
+  const stale = !!data && isStale(data.crisis.generatedAt, cadence, now);
+  const refreshFrame: RefreshFrame | null = !data
+    ? null
+    : isCountry
+      ? {
+          locationIds: data.scope.locationIds,
+          eventTypes: [],
+          needSectors: [],
+          windowStart: data.scope.windowStart,
+          windowEnd: data.scope.windowEnd,
+          teamId: null,
+        }
+      : {
+          locationIds: scope.created.locationIds,
+          eventTypes: scope.created.eventTypes,
+          needSectors: scope.created.needSectors,
+          windowStart: scope.created.windowStart,
+          windowEnd: null,
+          teamId: activeTeamId,
+        };
 
   // Stock breakdowns come from one location's aggregation; a multi-district
   // scope falls back to the analysis' own figures.
@@ -181,16 +237,23 @@ export function AnalysisDetail({
             {name}
           </Title>
         </Box>
-        {data && (
-          <CreateReportButton
-            data={data}
-            figures={figures.data}
-            events={events.data}
-            scopeName={name}
-            countryId={scope.countryId}
-            areaIds={isCountry ? [] : locationIds}
-            isCountry={isCountry}
-          />
+        {data && refreshFrame && (
+          <Group gap={8} wrap="nowrap">
+            <RefreshButton
+              frame={refreshFrame}
+              waiting={waiting}
+              onRequested={() => setRequested({ from: data.crisis.generatedAt, at: Date.now() })}
+            />
+            <CreateReportButton
+              data={data}
+              figures={figures.data}
+              events={events.data}
+              scopeName={name}
+              countryId={scope.countryId}
+              areaIds={isCountry ? [] : locationIds}
+              isCountry={isCountry}
+            />
+          </Group>
         )}
       </Group>
 
@@ -199,11 +262,32 @@ export function AnalysisDetail({
           <Badge
             size="md"
             radius="xl"
-            leftSection={<Box style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--color-success)" }} />}
+            leftSection={<Box style={{ width: 7, height: 7, borderRadius: "50%", background: stale ? "var(--color-warning)" : "var(--color-success)" }} />}
             style={{ background: "var(--color-bg-muted)", color: "var(--color-text-primary)", textTransform: "none", fontWeight: 500 }}
           >
             {t("meta.updated", { relative: format.relativeTime(new Date(data.crisis.generatedAt), now) })}
           </Badge>
+          {stale && (
+            <Badge
+              size="md"
+              radius="xl"
+              data-testid="analysis-stale"
+              style={{ background: "var(--color-warning-light)", color: "var(--color-warning)", textTransform: "none", fontWeight: 500 }}
+            >
+              {t("meta.stale")}
+            </Badge>
+          )}
+          <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
+            {/* A closed frame (e.g. last year's country analysis) states its end date. */}
+            {data.scope.windowEnd && Date.parse(data.scope.windowEnd) < now.getTime()
+              ? t("meta.period", {
+                  start: format.dateTime(new Date(data.scope.windowStart), { day: "numeric", month: "short", year: "numeric" }),
+                  end: format.dateTime(new Date(data.scope.windowEnd), { day: "numeric", month: "short", year: "numeric" }),
+                })
+              : t("meta.covers", {
+                  start: format.dateTime(new Date(data.scope.windowStart), { day: "numeric", month: "short", year: "numeric" }),
+                })}
+          </Text>
           {data.crisis.freshestSourceAt && (
             <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
               {t("meta.asOf", {
@@ -217,6 +301,12 @@ export function AnalysisDetail({
             </Text>
           </UnstyledButton>
         </Group>
+      )}
+
+      {waiting && (
+        <Alert color="blue" variant="light" mb={24} data-testid="analysis-refresh-requested">
+          {t("refresh.requested")}
+        </Alert>
       )}
 
       {body}

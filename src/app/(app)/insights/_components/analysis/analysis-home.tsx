@@ -3,13 +3,14 @@
 import { useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useFormatter, useNow, useTranslations } from "next-intl";
-import { ActionIcon, Badge, Box, Button, Grid, Group, Stack, Text, Title, UnstyledButton } from "@mantine/core";
+import { ActionIcon, Badge, Box, Button, Grid, Group, Select, Stack, Text, Title, UnstyledButton } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { IconChevronRight, IconPlus, IconTrash } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { CountryAnalysisEntry, CreatedAnalysis } from "~/server/api/routers/analysis";
 import type { MapRegion } from "~/components/map/crisis-map";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
-import { ANALYSIS_CADENCES, isStale, type AnalysisCadence } from "~/lib/analysis-view";
+import { ANALYSIS_CADENCES, containsPoint, isStale, type AnalysisCadence } from "~/lib/analysis-view";
 
 const CrisisMap = dynamic(() => import("~/components/map/crisis-map").then((m) => m.CrisisMap), {
   ssr: false,
@@ -58,13 +59,34 @@ export function AnalysisHome({
     onSuccess: () => utils.analysis.scopes.invalidate(),
     onSettled: () => setConfirming(null),
   });
+  const setCadence = api.analysis.setCadence.useMutation({
+    onSuccess: () => utils.analysis.scopes.invalidate(),
+    onError: () => notifications.show({ color: "red", message: t("frequencyError") }),
+  });
 
+  // Generating ones first, then the most recently updated.
+  const sorted = useMemo(
+    () =>
+      [...created].sort((a, b) => {
+        if (!a.generatedAt || !b.generatedAt) return (a.generatedAt ? 1 : 0) - (b.generatedAt ? 1 : 0);
+        return Date.parse(b.generatedAt) - Date.parse(a.generatedAt);
+      }),
+    [created],
+  );
+
+  // Created analyses cover states (level 1) and/or districts (level 2). States
+  // also bound the country, so they load even without created analyses.
+  const boundaryOpts = { staleTime: Infinity, refetchOnWindowFocus: false } as const;
+  const states = api.locations.getAdminBoundaries.useQuery({ level: 1, countryId }, boundaryOpts);
   const districts = api.locations.getAdminBoundaries.useQuery(
     { level: 2, countryId },
-    { enabled: created.length > 0, staleTime: Infinity, refetchOnWindowFocus: false },
+    { ...boundaryOpts, enabled: created.length > 0 },
+  );
+  const geo = useMemo(
+    () => new Map([...(states.data ?? []), ...(districts.data ?? [])].map((a) => [a.id, a.geometry as unknown])),
+    [states.data, districts.data],
   );
   const regions = useMemo<MapRegion[]>(() => {
-    const geo = new Map((districts.data ?? []).map((d) => [d.id, d.geometry]));
     return created.flatMap((c) =>
       c.locationIds
         .filter((id) => geo.get(id))
@@ -75,7 +97,16 @@ export function AnalysisHome({
           title: c.name,
         })),
     );
-  }, [created, districts.data]);
+  }, [created, geo]);
+
+  // Map: a click opens the created analysis whose area is under it, and
+  // anywhere else in the country opens the country analysis.
+  const onMapClick = ({ lng, lat }: { lng: number; lat: number }) => {
+    const hit = sorted.find((c) => c.locationIds.some((id) => containsPoint(geo.get(id), [lng, lat])));
+    if (hit) return onOpenCreated(hit);
+    const inCountry = !states.data?.length || states.data.some((a) => containsPoint(a.geometry, [lng, lat]));
+    if (inCountry) onOpenCountry();
+  };
   const config = resolveCountryConfig(countryName);
 
   const cadenceLabel = (c: string) =>
@@ -121,6 +152,7 @@ export function AnalysisHome({
               <ScopeRow
                 title={countryName}
                 subtitle={t("wholeCountry")}
+                headline={country?.headline ?? null}
                 status={countryStatus.text}
                 stale={countryStatus.stale}
                 onOpen={onOpenCountry}
@@ -138,7 +170,7 @@ export function AnalysisHome({
                 </Box>
               ) : (
                 <Stack gap={8}>
-                  {created.map((c) => {
+                  {sorted.map((c) => {
                     const s = status(c.generatedAt, c.cadence, c.enabled);
                     return (
                       <ScopeRow
@@ -152,32 +184,52 @@ export function AnalysisHome({
                         testId={`analysis-scope-${c.id}`}
                         action={
                           canRemove ? (
-                            confirming === c.id ? (
-                              <Group gap={6} wrap="nowrap">
-                                <Button
-                                  size="compact-xs"
-                                  color="red"
-                                  loading={remove.isPending}
-                                  onClick={() => remove.mutate({ id: c.id })}
-                                  data-testid="analysis-remove-confirm"
+                            <Group gap={8} wrap="nowrap" onClick={(e) => e.stopPropagation()}>
+                              <Select
+                                size="xs"
+                                w={130}
+                                allowDeselect={false}
+                                aria-label={t("frequencyLabel", { name: c.name })}
+                                // While a change is saving, show the pick and block a second one.
+                                value={
+                                  setCadence.isPending && setCadence.variables?.id === c.id
+                                    ? setCadence.variables.cadence
+                                    : c.enabled
+                                      ? c.cadence
+                                      : "manual"
+                                }
+                                disabled={setCadence.isPending && setCadence.variables?.id === c.id}
+                                onChange={(v) => v && setCadence.mutate({ id: c.id, cadence: v as AnalysisCadence })}
+                                data={ANALYSIS_CADENCES.map((k) => ({ value: k, label: tc(k) }))}
+                                data-testid={`analysis-frequency-${c.id}`}
+                              />
+                              {confirming === c.id ? (
+                                <Group gap={6} wrap="nowrap">
+                                  <Button
+                                    size="compact-xs"
+                                    color="red"
+                                    loading={remove.isPending}
+                                    onClick={() => remove.mutate({ id: c.id })}
+                                    data-testid="analysis-remove-confirm"
+                                  >
+                                    {t("remove")}
+                                  </Button>
+                                  <Button size="compact-xs" variant="default" onClick={() => setConfirming(null)}>
+                                    {t("keep")}
+                                  </Button>
+                                </Group>
+                              ) : (
+                                <ActionIcon
+                                  variant="subtle"
+                                  color="gray"
+                                  aria-label={t("removeLabel", { name: c.name })}
+                                  onClick={() => setConfirming(c.id)}
+                                  data-testid="analysis-remove"
                                 >
-                                  {t("remove")}
-                                </Button>
-                                <Button size="compact-xs" variant="default" onClick={() => setConfirming(null)}>
-                                  {t("keep")}
-                                </Button>
-                              </Group>
-                            ) : (
-                              <ActionIcon
-                                variant="subtle"
-                                color="gray"
-                                aria-label={t("removeLabel", { name: c.name })}
-                                onClick={() => setConfirming(c.id)}
-                                data-testid="analysis-remove"
-                              >
-                                <IconTrash size={16} />
-                              </ActionIcon>
-                            )
+                                  <IconTrash size={16} />
+                                </ActionIcon>
+                              )}
+                            </Group>
                           ) : null
                         }
                       />
@@ -198,11 +250,13 @@ export function AnalysisHome({
               focusCountryPCode={config?.pCode}
               focusCountryName={countryName}
               regions={regions}
+              locationPickActive
+              onMapClick={onMapClick}
             />
           </Box>
           {created.length > 0 && (
             <Text c="var(--color-text-muted)" mt={8} style={{ fontSize: 12 }}>
-              {t("mapNote")}
+              {t("mapHint")}
             </Text>
           )}
         </Grid.Col>
@@ -222,6 +276,7 @@ function GroupLabel({ children }: { children: ReactNode }) {
 function ScopeRow({
   title,
   subtitle,
+  headline,
   status,
   stale,
   generating,
@@ -231,6 +286,7 @@ function ScopeRow({
 }: {
   title: string;
   subtitle: string;
+  headline?: string | null;
   status: string;
   stale: boolean;
   generating?: boolean;
@@ -262,6 +318,11 @@ function ScopeRow({
               </Badge>
             )}
           </Group>
+          {headline && (
+            <Text c="var(--color-text-muted)" mt={2} truncate style={{ fontSize: 12 }} data-testid={`${testId}-headline`}>
+              {headline}
+            </Text>
+          )}
           <Text c="var(--color-text-secondary)" mt={2} style={{ fontSize: 12 }}>
             {subtitle}
           </Text>
