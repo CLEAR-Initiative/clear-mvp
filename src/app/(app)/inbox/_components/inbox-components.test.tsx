@@ -26,6 +26,7 @@ const getLocationById = vi.fn((_input: { id: string }, opts: { enabled: boolean 
 }));
 vi.mock("~/trpc/react", () => ({
   api: {
+    useUtils: () => ({ ground: { hotlineInbox: { invalidate: vi.fn(async () => undefined) } } }),
     ground: {
       requestTranslation: { useMutation: () => ({ mutate: requestTranslation, data: undefined, isError: false }) },
       translation: { useQuery: () => ({ data: undefined }) },
@@ -90,6 +91,9 @@ class ResizeObserverStub {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 Element.prototype.scrollIntoView = () => undefined;
+// jsdom has no media stack (canPlayType is always ""); behave like a browser
+// that plays Ogg/Opus so voice notes render their inline player.
+HTMLMediaElement.prototype.canPlayType = () => "maybe";
 
 const wrap = (ui: React.ReactElement) => render(<MantineProvider>{ui}</MantineProvider>);
 
@@ -186,7 +190,10 @@ describe("ReadingPane", () => {
     expect(screen.getByTestId("inbox-narrative")).toHaveTextContent("Water is rising");
     expect(screen.getByTestId("inbox-trust-line")).toHaveTextContent('pane.trustRepeat:{"count":3}');
     expect(screen.getByText('pane.uncertainty:{"value":"rumour"}')).toBeInTheDocument();
-    expect(screen.getAllByTestId("inbox-attachment")).toHaveLength(2);
+    expect(screen.getAllByTestId("inbox-attachment")).toHaveLength(1);
+    // Voice notes play inline, labelled by their position among the attachments.
+    expect(screen.getByLabelText('pane.voiceNoteN:{"n":2}')).toHaveAttribute("src", "https://s3/b.ogg");
+    expect(screen.getByTestId("inbox-voice-open")).toHaveAttribute("href", "https://s3/b.ogg");
     expect(screen.getByText('pane.omittedMedia:{"count":1}')).toBeInTheDocument();
     expect(screen.getByText("HL-3F9A2C · 15 Sep 2026")).toBeInTheDocument();
 
@@ -359,6 +366,24 @@ describe("AddToClearModal", () => {
       severity: 4,
       locationId: "kas",
     });
+  });
+
+  it("plays voice attachments inline and keeps photos as cards", () => {
+    wrap(
+      <AddToClearModal
+        {...baseProps}
+        entry={entry({
+          attachments: [
+            { url: "https://s3/a.jpg?sig=1", kind: "photo" },
+            { url: "https://s3/b.ogg?sig=1", kind: "voice" },
+          ],
+        })}
+      />,
+    );
+    const player = screen.getByTestId("inbox-voice-player");
+    expect(player).toHaveAttribute("preload", "none");
+    expect(player).toHaveAttribute("aria-label", 'pane.voiceNoteN:{"n":2}');
+    expect(screen.getByText('pane.attachment:{"n":1}').closest("a")).toHaveAttribute("href", "https://s3/a.jpg?sig=1");
   });
 
   it("in retry mode shows the banner, relabels the buttons and ignores the backdrop", () => {

@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Modal, Select } from "@mantine/core";
-import { IconLayoutGrid, IconMicrophone, IconSparkles, IconX } from "@tabler/icons-react";
+import { IconLayoutGrid, IconSparkles, IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import type { InboxEntry } from "~/lib/hotline-inbox";
+import { attachmentKey, type InboxEntry } from "~/lib/hotline-inbox";
 import { severityColors } from "~/lib/constants/severity";
+import { VoiceNote } from "./voice-note";
 import styles from "./add-to-clear-modal.module.css";
 
 /** Severity chips: numeric value sent to updateSignalSeverity, bucket for colour. */
@@ -281,21 +282,19 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
             <div>
               <div className={styles.label}>{t("modal.attachments")}</div>
               <div className={styles.cards}>
-                {entry.attachments.map((a, i) => (
-                  <a key={a.url} className={styles.card} href={a.url} target="_blank" rel="noopener noreferrer">
-                    <div className={styles.cardIcon}>
-                      {a.kind === "voice" ? (
-                        <IconMicrophone size={22} />
-                      ) : (
-                        // eslint-disable-next-line @next/next/no-img-element
+                {entry.attachments.map((a, i) =>
+                  a.kind === "voice" ? (
+                    <VoiceNote key={attachmentKey(a.url)} url={a.url} label={t("pane.voiceNoteN", { n: i + 1 })} />
+                  ) : (
+                    <a key={attachmentKey(a.url)} className={styles.card} href={a.url} target="_blank" rel="noopener noreferrer">
+                      <div className={styles.cardIcon}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={a.url} alt="" />
-                      )}
-                    </div>
-                    <div className={styles.cardName}>
-                      {a.kind === "voice" ? t("pane.voiceNote") : t("pane.attachment", { n: i + 1 })}
-                    </div>
-                  </a>
-                ))}
+                      </div>
+                      <div className={styles.cardName}>{t("pane.attachment", { n: i + 1 })}</div>
+                    </a>
+                  ),
+                )}
               </div>
             </div>
           )}

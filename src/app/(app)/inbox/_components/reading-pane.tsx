@@ -8,13 +8,19 @@ import {
   IconCirclePlus,
   IconCircleX,
   IconLanguage,
-  IconMicrophone,
   IconPaperclip,
   IconShield,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { REJECT_REASONS, type InboxAttachment, type InboxEntry, type RejectReason } from "~/lib/hotline-inbox";
+import {
+  REJECT_REASONS,
+  attachmentKey,
+  type InboxAttachment,
+  type InboxEntry,
+  type RejectReason,
+} from "~/lib/hotline-inbox";
 import { InboxClassificationPill } from "./classification-pill";
+import { VoiceNote } from "./voice-note";
 import styles from "../inbox.module.css";
 
 interface ReadingPaneProps {
@@ -34,7 +40,10 @@ interface ReadingPaneProps {
 function Attachment({ attachment, index }: { attachment: InboxAttachment; index: number }) {
   const t = useTranslations("inbox");
   const [broken, setBroken] = useState(false);
-  const label = attachment.kind === "voice" ? t("pane.voiceNote") : t("pane.attachment", { n: index + 1 });
+  if (attachment.kind === "voice") {
+    return <VoiceNote url={attachment.url} label={t("pane.voiceNoteN", { n: index + 1 })} />;
+  }
+  const label = t("pane.attachment", { n: index + 1 });
   return (
     <a
       className={styles.attachment}
@@ -44,13 +53,13 @@ function Attachment({ attachment, index }: { attachment: InboxAttachment; index:
       title={label}
       data-testid="inbox-attachment"
     >
-      {attachment.kind === "photo" && !broken ? (
+      {!broken ? (
         // Presigned S3 URL, not an optimisable static asset.
         // eslint-disable-next-line @next/next/no-img-element
         <img src={attachment.url} alt={label} onError={() => setBroken(true)} />
       ) : (
         <>
-          {attachment.kind === "voice" ? <IconMicrophone size={20} /> : <IconPaperclip size={20} />}
+          <IconPaperclip size={20} />
           <span>{label}</span>
         </>
       )}
@@ -180,7 +189,7 @@ export function ReadingPane({
             <div className={styles.sectionLabel}>{t("pane.attachments")}</div>
             <div className={styles.attachments}>
               {entry.attachments.map((a, i) => (
-                <Attachment key={a.url} attachment={a} index={i} />
+                <Attachment key={attachmentKey(a.url)} attachment={a} index={i} />
               ))}
             </div>
             {entry.omittedMediaCount > 0 && (

@@ -2807,7 +2807,12 @@
       "voiceNote": "Voice note",
       "omittedMedia": "{count, plural, one {# attachment not stored} other {# attachments not stored}}",
       "uncertainty": "Reporter marked this as {value}",
-      "back": "Back to list"
+      "back": "Back to list",
+      "voiceNoteN": "Voice note {n}",
+      "voiceOpen": "Open in new tab",
+      "voiceUnsupported": "This browser cannot play this audio format. Open it in a new tab to download it.",
+      "voiceRefreshing": "The audio link expired. Refreshing it, then press play again.",
+      "voiceFailed": "This voice note could not be played here. Open it in a new tab instead."
     },
     "actions": {
       "add": "Add to CLEAR",

@@ -2807,7 +2807,12 @@
       "voiceNote": "Note vocale",
       "omittedMedia": "{count, plural, one {# pièce jointe non stockée} other {# pièces jointes non stockées}}",
       "uncertainty": "Le rapporteur a marqué ceci comme {value}",
-      "back": "Retour à la liste"
+      "back": "Retour à la liste",
+      "voiceNoteN": "Message vocal {n}",
+      "voiceOpen": "Ouvrir dans un nouvel onglet",
+      "voiceUnsupported": "Ce navigateur ne peut pas lire ce format audio. Ouvrez-le dans un nouvel onglet pour le télécharger.",
+      "voiceRefreshing": "Le lien audio a expiré. Actualisation en cours, puis relancez la lecture.",
+      "voiceFailed": "Ce message vocal n'a pas pu être lu ici. Ouvrez-le plutôt dans un nouvel onglet."
     },
     "actions": {
       "add": "Ajouter à CLEAR",

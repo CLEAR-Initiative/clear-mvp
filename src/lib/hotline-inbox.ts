@@ -91,6 +91,16 @@ export function intakeRef(senderRef: string | null | undefined): string {
   return body.length === 0 ? "HL-?" : `HL-${body.slice(0, 6).toUpperCase()}`;
 }
 
+/**
+ * Stable React key for an attachment: the URL path without the presign
+ * query string. Presigned URLs change on every inbox fetch (1 h expiry);
+ * keying on the path keeps the element (and a voice player's state)
+ * across a refresh instead of remounting it.
+ */
+export function attachmentKey(url: string): string {
+  return url.split("?")[0] ?? url;
+}
+
 export function toInboxClassification(value: string | null | undefined): InboxClassification {
   return (INBOX_CLASSIFICATIONS as readonly string[]).includes(value ?? "")
     ? (value as InboxClassification)
