@@ -256,6 +256,22 @@ export interface GqlGroundMessage {
   threadId: string | null;
 }
 
+/** Ground message as the hotline inbox receives it: presigned media URLs
+ * (1 h expiry, generated at read time) and NO senderName. Hotline sources
+ * store no name, and the private-tier field must not travel to the inbox
+ * client even as null. */
+export type GqlGroundInboxMessage = Omit<GqlGroundMessage, "senderName"> & {
+  mediaUrls: string[];
+};
+
+/** Hotline inbox payload: every hotline source with its open (unverified)
+ * threads and all staged messages, joined client-side. */
+export interface GqlHotlineInbox {
+  sources: GqlGroundSource[];
+  threads: GqlGroundThread[];
+  messages: GqlGroundInboxMessage[];
+}
+
 /* ─── Severity helpers ─── */
 
 /** Map severity (1-5) to a UI severity bucket. Null/undefined = pipeline hasn't set it yet. */

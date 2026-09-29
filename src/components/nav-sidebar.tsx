@@ -10,6 +10,7 @@ import { FeedbackModal } from "~/components/feedback-modal";
 import {
   IconLayoutDashboard,
   IconTarget,
+  IconInbox,
   IconChartPie,
   IconUser,
   IconCurrencyDollar,
@@ -48,6 +49,7 @@ import { setNavCollapsedCookie } from "~/lib/nav-collapsed-cookie";
 type NavItemKey =
   | "overview"
   | "detection"
+  | "inbox"
   | "map"
   | "insights"
   | "operations"
@@ -89,6 +91,7 @@ const navSections: NavSection[] = [
     items: [
       { labelKey: "overview", href: "/dashboard", icon: IconLayoutDashboard, featureKey: "overview" },
       { labelKey: "detection", href: "/detection", icon: IconTarget, featureKey: "detection" },
+      { labelKey: "inbox", href: "/inbox", icon: IconInbox, featureKey: "hotline_inbox", adminOnly: true },
       { labelKey: "map", href: "/map", icon: IconMapPin, featureKey: "crisis_map" },
       { labelKey: "insights", href: "/insights", icon: IconChartPie, featureKey: "insights" },
       { labelKey: "operations", href: "/operations", icon: IconUser, featureKey: "operations", adminOnly: true },

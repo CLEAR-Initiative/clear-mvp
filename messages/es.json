@@ -2097,6 +2097,7 @@
     "items": {
       "overview": "Panorama",
       "detection": "Detección",
+      "inbox": "Bandeja",
       "map": "Mapa",
       "insights": "Hallazgos",
       "operations": "Operaciones",
@@ -2770,5 +2771,114 @@
     "resent": "Se ha enviado un nuevo correo de verificación. Revise su bandeja de entrada.",
     "resend": "Reenviar correo de verificación",
     "goToProfile": "Ir al perfil"
+  },
+  "inbox": {
+    "title": "Bandeja de la línea directa",
+    "awaiting": "{count, plural, one {# pendiente de revisión} other {# pendientes de revisión}}",
+    "filters": {
+      "reports": "Reportes de campo",
+      "unclassified": "Sin clasificar",
+      "chatter": "Charla",
+      "all": "Todo"
+    },
+    "search": "Buscar texto, ref. de ingreso",
+    "sort": {
+      "reportsFirst": "Reportes primero",
+      "newest": "Más recientes"
+    },
+    "list": {
+      "allLoaded": "Las {count} entradas de esta vista están cargadas",
+      "empty": "No queda nada en esta vista",
+      "priorEntries": "{count, plural, one {# entrada previa} other {# entradas previas}}"
+    },
+    "classifications": {
+      "field_report": "Reporte de campo",
+      "unclassified": "Sin clasificar",
+      "chatter": "Charla",
+      "news_digest": "Resumen de noticias",
+      "operational": "Operativo"
+    },
+    "pane": {
+      "select": "Seleccione una entrada para leerla",
+      "noText": "Multimedia sin texto",
+      "trustRepeat": "{count, plural, one {# envío} other {# envíos}} de esta ref. de ingreso en la cola",
+      "attachments": "Adjuntos",
+      "attachment": "Adjunto {n}",
+      "voiceNote": "Nota de voz",
+      "omittedMedia": "{count, plural, one {# adjunto no almacenado} other {# adjuntos no almacenados}}",
+      "uncertainty": "El informante lo marcó como {value}",
+      "back": "Volver a la lista"
+    },
+    "actions": {
+      "add": "Añadir a CLEAR",
+      "archive": "Archivar",
+      "reject": "Rechazar",
+      "shortcuts": "A añadir · E archivar · R rechazar · J/K mover"
+    },
+    "rejectReasons": {
+      "header": "Rechazar: motivo para la auditoría",
+      "spam": {
+        "label": "Spam o estafa",
+        "help": "Envío masivo, phishing o cadena"
+      },
+      "not_report": {
+        "label": "No es un reporte",
+        "help": "Consulta o conversación, nada que clasificar"
+      },
+      "unusable": {
+        "label": "No localizable",
+        "help": "Sin lugar indicado, no accionable"
+      },
+      "duplicate": {
+        "label": "Duplicado",
+        "help": "Ya está en el pipeline como señal"
+      },
+      "cancel": "Cancelar"
+    },
+    "modal": {
+      "header": "Generado por CLEAR",
+      "title": "Título de la señal",
+      "description": "Descripción",
+      "severity": "Severidad",
+      "severityNone": "Sin definir",
+      "attachments": "Adjuntos trasladados a la señal",
+      "footer": "Promovido desde {ref} · el relato del informante permanece en la entrada",
+      "cancel": "Cancelar",
+      "confirm": "Añadir a CLEAR",
+      "location": "Ubicación",
+      "locationPlaceholder": "Buscar ubicación",
+      "locationLoading": "Cargando ubicaciones",
+      "locationNoMatch": "Ninguna ubicación coincide",
+      "locationRequired": "La ubicación es obligatoria antes de añadir a CLEAR",
+      "editsNotSaved": "Los cambios de título y descripción aún no se guardan. La promoción requiere soporte de la API; la señal conserva el texto enviado.",
+      "retryTitle": "Señal creada, pero no guardada por completo",
+      "retryLocationBody": "No se pudo guardar la ubicación. La señal existe pero no tiene ámbito y la agregación la ignorará hasta que se defina una ubicación. Reintente o déjela así.",
+      "retrySeverityBody": "La ubicación se guardó pero la severidad no. Reintente o deje la señal sin severidad.",
+      "retry": "Reintentar",
+      "leaveUnscoped": "Dejar así"
+    },
+    "toast": {
+      "added": "Añadido a CLEAR",
+      "archived": "Archivado",
+      "rejected": "Rechazado · {reason}",
+      "viewSignal": "Ver señal",
+      "close": "Cerrar",
+      "addedPartial": "Añadido a CLEAR, pero no se pudo guardar la ubicación o la severidad",
+      "addedNoSignal": "Aprobado, pero no se devolvió ningún id de señal. Compruebe la señal en Detección antes de confiar en ella."
+    },
+    "noAccess": "La bandeja de la línea directa es solo para administradores por ahora.",
+    "loadError": "No se pudo cargar la bandeja",
+    "translate": {
+      "button": "Traducir al {locale}",
+      "label": "Traducción ({locale})",
+      "pending": "Traduciendo, puede tardar un momento",
+      "unavailable": "La traducción aún no está disponible",
+      "locales": {
+        "en": "inglés",
+        "fr": "francés",
+        "es": "español",
+        "ar": "árabe"
+      }
+    }
   }
 }

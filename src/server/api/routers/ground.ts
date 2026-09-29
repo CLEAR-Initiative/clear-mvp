@@ -2,10 +2,12 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import type {
+  GqlGroundInboxMessage,
   GqlGroundMessage,
   GqlGroundSource,
   GqlGroundThread,
   GqlGroundThreadDetail,
+  GqlHotlineInbox,
 } from "~/lib/types/graphql";
 
 /**
@@ -21,6 +23,13 @@ import type {
  * the Ground-intel tab ONLY. Phone numbers are redacted at persistence by
  * clear-api and must never surface anywhere.
  */
+
+/** Translation of a thread's text into one locale. `queued` means the
+ * pipeline drain has not written the row yet; poll. */
+export interface GroundTranslationState {
+  status: "queued" | "ready" | "unavailable";
+  text: string | null;
+}
 
 const GROUND_SOURCE_FIELDS = `id name kind reviewerRoles privacyDefault isActive`;
 
@@ -94,6 +103,40 @@ const GROUND_MESSAGES_QUERY = `
   }
 `;
 
+/** Inbox message fields: GROUND_MESSAGE_FIELDS minus senderName (private
+ * tier, must not reach the inbox client) plus presigned mediaUrls (cost:
+ * one presign per stored attachment per fetch, so kept off the generic
+ * messages query). */
+const HOTLINE_INBOX_MESSAGE_FIELDS = `
+  id
+  groundSourceId
+  externalId
+  sentAt
+  senderRef
+  text
+  mediaKeys
+  mediaUrls
+  mediaRefs
+  omittedMediaCount
+  classification
+  uncertainty
+  isEdited
+  threadId
+`;
+
+const HOTLINE_INBOX_SOURCE_QUERY = `
+  query HotlineInboxSource($groundSourceId: String, $limit: Int) {
+    groundThreads(groundSourceId: $groundSourceId, reviewState: "unverified", limit: $limit) {
+      ${GROUND_THREAD_FIELDS}
+    }
+    groundMessages(groundSourceId: $groundSourceId, limit: $limit) {
+      ${HOTLINE_INBOX_MESSAGE_FIELDS}
+    }
+  }
+`;
+
+const HOTLINE_INBOX_LIMIT = 500;
+
 export const groundRouter = createTRPCRouter({
   /** Per-source policy records — drives source names + reviewerRoles gating. */
   sources: protectedProcedure.query(async ({ ctx }) => {
@@ -166,6 +209,53 @@ export const groundRouter = createTRPCRouter({
       );
       return data.reviewGroundThread;
     }),
+
+  /**
+   * Hotline inbox (/inbox): every active hotline source with its open
+   * (unverified) threads and staged messages incl. presigned media URLs.
+   * Group sources are excluded — the inbox is the hotline review surface;
+   * group capture stays in the detection Ground intel tab.
+   */
+  hotlineInbox: protectedProcedure.query(async ({ ctx }): Promise<GqlHotlineInbox> => {
+    const { groundSources } = await graphqlFetch<{ groundSources: GqlGroundSource[] }>(
+      GROUND_SOURCES_QUERY,
+      {},
+      cookieHeaders(ctx),
+    );
+    const sources = groundSources.filter((s) => s.kind === "hotline" && s.isActive);
+    const perSource = await Promise.all(
+      sources.map((s) =>
+        graphqlFetch<{ groundThreads: GqlGroundThread[]; groundMessages: GqlGroundInboxMessage[] }>(
+          HOTLINE_INBOX_SOURCE_QUERY,
+          { groundSourceId: s.id, limit: HOTLINE_INBOX_LIMIT },
+          cookieHeaders(ctx),
+        ),
+      ),
+    );
+    return {
+      sources,
+      threads: perSource.flatMap((r) => r.groundThreads),
+      messages: perSource.flatMap((r) => r.groundMessages),
+    };
+  }),
+
+  /**
+   * STUB: on-demand translation of a hotline thread into the reader's
+   * locale. clear-api has no translation entity for ground messages yet
+   * (Backlog: "On-demand translation of hotline messages: API entity type
+   * and request mutation"). Until it lands both procedures report
+   * "unavailable" so the inbox UI can ship with the full state machine:
+   *   request -> queued (poll) -> ready | unavailable
+   * Replace the bodies with requestGroundMessageTranslation /
+   * GroundMessage.translation(locale) when the API ships.
+   */
+  requestTranslation: protectedProcedure
+    .input(z.object({ threadId: z.string(), locale: z.string() }))
+    .mutation(async (): Promise<GroundTranslationState> => ({ status: "unavailable", text: null })),
+
+  translation: protectedProcedure
+    .input(z.object({ threadId: z.string(), locale: z.string() }))
+    .query(async (): Promise<GroundTranslationState> => ({ status: "unavailable", text: null })),
 
   /** Staged messages, oldest first (clear-api ordering). */
   messages: protectedProcedure
