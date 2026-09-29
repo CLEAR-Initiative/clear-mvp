@@ -1,6 +1,6 @@
 import type {
   GqlGroundInboxMessage,
-  GqlGroundThread,
+  GqlGroundInboxThread,
   GqlHotlineInbox,
 } from "~/lib/types/graphql";
 
@@ -56,7 +56,8 @@ export interface InboxAttachment {
 export interface InboxEntry {
   /** Thread id (the review unit). */
   id: string;
-  thread: GqlGroundThread;
+  /** Carries the enrichment drafts the Add to CLEAR modal pre-fills from. */
+  thread: GqlGroundInboxThread;
   /** Sent-ascending. */
   messages: GqlGroundInboxMessage[];
   senderRef: string;

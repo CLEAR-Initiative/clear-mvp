@@ -9,9 +9,9 @@ import {
   nextSelection,
   visibleEntries,
 } from "./hotline-inbox";
-import type { GqlGroundInboxMessage, GqlGroundThread, GqlHotlineInbox } from "./types/graphql";
+import type { GqlGroundInboxMessage, GqlGroundInboxThread, GqlHotlineInbox } from "./types/graphql";
 
-function thread(id: string, title: string | null = null): GqlGroundThread {
+function thread(id: string, title: string | null = null): GqlGroundInboxThread {
   return {
     id,
     groundSourceId: "src",
@@ -23,6 +23,10 @@ function thread(id: string, title: string | null = null): GqlGroundThread {
     reviewNote: null,
     promotedSignalId: null,
     createdAt: "2026-09-15T10:00:00Z",
+    draftTitle: null,
+    draftSeverity: null,
+    draftLocationId: null,
+    draftDisasterType: null,
   };
 }
 

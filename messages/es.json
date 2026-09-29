@@ -2860,7 +2860,12 @@
       "retryLocationBody": "No se pudo guardar la ubicación. La señal existe pero no tiene ámbito y la agregación la ignorará hasta que se defina una ubicación. Reintente o déjela así.",
       "retrySeverityBody": "La ubicación se guardó pero la severidad no. Reintente o deje la señal sin severidad.",
       "retry": "Reintentar",
-      "leaveUnscoped": "Dejar así"
+      "leaveUnscoped": "Dejar así",
+      "aiSuggested": "Sugerencia de IA",
+      "draftTitleNotSaved": "Título sugerido por la IA, para revisar. Aún no se guarda: hasta que la promoción acepte cambios de título, la señal conserva el título del envío.",
+      "draftLocationUnknown": "No se encontró la ubicación sugerida. Elija una ubicación antes de añadir a CLEAR.",
+      "disasterType": "Tipo de desastre",
+      "disasterTypeReadOnly": "Solo como referencia: las señales aún no tienen un campo de tipo de desastre, así que no se guarda."
     },
     "toast": {
       "added": "Añadido a CLEAR",

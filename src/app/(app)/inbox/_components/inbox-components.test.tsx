@@ -18,6 +18,12 @@ vi.mock("next-intl", () => ({
 }));
 
 const requestTranslation = vi.fn();
+/** locations.getById result for a drafted location missing from the list. */
+let locationById: unknown = null;
+const getLocationById = vi.fn((_input: { id: string }, opts: { enabled: boolean }) => ({
+  data: opts.enabled ? locationById : undefined,
+  isFetching: false,
+}));
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => ({ ground: { hotlineInbox: { invalidate: vi.fn(async () => undefined) } } }),
@@ -35,6 +41,9 @@ vi.mock("~/trpc/react", () => ({
             { id: "deep", name: "Village", level: 3, parent: { id: "kas", name: "Kassala" } },
           ],
         }),
+      },
+      getById: {
+        useQuery: (input: { id: string }, opts: { enabled: boolean }) => getLocationById(input, opts),
       },
     },
   },
@@ -54,6 +63,10 @@ function entry(overrides: Partial<InboxEntry> = {}): InboxEntry {
       reviewNote: null,
       promotedSignalId: null,
       createdAt: "2026-09-15T10:00:00Z",
+      draftTitle: null,
+      draftSeverity: null,
+      draftLocationId: null,
+      draftDisasterType: null,
     },
     messages: [],
     senderRef: "h_3f9a2c7b1d0e",
@@ -87,6 +100,7 @@ const wrap = (ui: React.ReactElement) => render(<MantineProvider>{ui}</MantinePr
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  locationById = null;
 });
 
 describe("EntryList", () => {
@@ -229,6 +243,106 @@ describe("AddToClearModal", () => {
     expect(screen.getByTestId("inbox-add-confirm")).toBeDisabled();
     expect(screen.getByText("modal.locationRequired")).toBeInTheDocument();
     expect(screen.queryByTestId("inbox-edits-warning")).not.toBeInTheDocument();
+    // No drafts: nothing is marked as an AI suggestion.
+    expect(screen.getByTestId("inbox-severity-none")).toHaveAttribute("data-selected", "true");
+    expect(document.querySelector("[data-testid^='inbox-ai-']")).toBeNull();
+    expect(screen.queryByTestId("inbox-draft-disaster-type")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-draft-title-note")).not.toBeInTheDocument();
+  });
+
+  const drafted = (drafts: Partial<InboxEntry["thread"]>) =>
+    entry({ thread: { ...entry().thread, ...drafts } });
+
+  it("pre-fills title, severity and location from the drafts and marks them as AI suggestions", () => {
+    wrap(
+      <AddToClearModal
+        {...baseProps}
+        entry={drafted({
+          draftTitle: "Flash flooding near Kassala market",
+          draftSeverity: 4,
+          draftLocationId: "kas",
+          draftDisasterType: "flash_flood",
+        })}
+      />,
+    );
+    expect(screen.getByTestId("inbox-draft-title")).toHaveValue("Flash flooding near Kassala market");
+    expect(screen.getByTestId("inbox-ai-title")).toHaveTextContent("modal.aiSuggested");
+    expect(screen.getByTestId("inbox-severity-4")).toHaveAttribute("data-selected", "true");
+    expect(screen.getByTestId("inbox-ai-severity")).toBeInTheDocument();
+    expect(screen.getByTestId("inbox-draft-location")).toHaveValue("Kassala (Sudan)");
+    expect(screen.getByTestId("inbox-ai-location")).toBeInTheDocument();
+    // Disaster type is read-only: shown, flagged, never part of the draft.
+    expect(screen.getByTestId("inbox-draft-disaster-type")).toHaveTextContent("flash flood");
+    expect(screen.getByTestId("inbox-draft-disaster-type")).toHaveTextContent("modal.disasterTypeReadOnly");
+    // The drafted title is not persisted yet (#625): its own note says so,
+    // and the edits warning does not fire just because a draft exists.
+    expect(screen.getByTestId("inbox-draft-title-note")).toHaveTextContent("modal.draftTitleNotSaved");
+    expect(screen.queryByTestId("inbox-edits-warning")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-location-hint")).not.toBeInTheDocument();
+
+    const confirm = screen.getByTestId("inbox-add-confirm");
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+    expect(baseProps.onConfirm).toHaveBeenCalledWith({
+      title: "Flash flooding near Kassala market",
+      description: "Water is rising near the market.\n\nFamilies are leaving.",
+      severity: 4,
+      locationId: "kas",
+    });
+  });
+
+  it("lets the reviewer change or clear every suggestion, dropping the AI marker", () => {
+    wrap(
+      <AddToClearModal
+        {...baseProps}
+        entry={drafted({ draftTitle: "Drafted", draftSeverity: 4, draftLocationId: "kas" })}
+      />,
+    );
+    fireEvent.change(screen.getByTestId("inbox-draft-title"), { target: { value: "Reviewer title" } });
+    expect(screen.queryByTestId("inbox-ai-title")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-edits-warning")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("inbox-severity-none"));
+    expect(screen.queryByTestId("inbox-ai-severity")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("inbox-draft-location"));
+    fireEvent.click(screen.getByText("Sudan"));
+    expect(screen.queryByTestId("inbox-ai-location")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("inbox-add-confirm"));
+    expect(baseProps.onConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Reviewer title", severity: null, locationId: "sdn" }),
+    );
+  });
+
+  it("keeps a drafted location deeper than admin level 2 selectable", () => {
+    wrap(<AddToClearModal {...baseProps} entry={drafted({ draftLocationId: "deep" })} />);
+    expect(screen.getByTestId("inbox-draft-location")).toHaveValue("Village (Kassala)");
+    expect(screen.getByTestId("inbox-ai-location")).toBeInTheDocument();
+    expect(screen.getByTestId("inbox-add-confirm")).toBeEnabled();
+    expect(getLocationById).toHaveBeenCalledWith({ id: "deep" }, expect.objectContaining({ enabled: false }));
+  });
+
+  it("fetches a drafted location missing from the list by id", () => {
+    locationById = { id: "far", name: "Wad Sharifey", level: 4, parent: { id: "kas", name: "Kassala" } };
+    wrap(<AddToClearModal {...baseProps} entry={drafted({ draftLocationId: "far" })} />);
+    expect(getLocationById).toHaveBeenCalledWith({ id: "far" }, expect.objectContaining({ enabled: true }));
+    expect(screen.getByTestId("inbox-draft-location")).toHaveValue("Wad Sharifey (Kassala)");
+    expect(screen.getByTestId("inbox-add-confirm")).toBeEnabled();
+  });
+
+  it("does not let an unresolvable drafted location be confirmed", () => {
+    wrap(<AddToClearModal {...baseProps} entry={drafted({ draftLocationId: "gone" })} />);
+    expect(screen.getByTestId("inbox-draft-location")).toHaveValue("");
+    expect(screen.getByTestId("inbox-location-hint")).toHaveTextContent("modal.draftLocationUnknown");
+    expect(screen.queryByTestId("inbox-ai-location")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-add-confirm")).toBeDisabled();
+  });
+
+  it("ignores an out-of-range drafted severity", () => {
+    wrap(<AddToClearModal {...baseProps} entry={drafted({ draftSeverity: 7 })} />);
+    expect(screen.getByTestId("inbox-severity-none")).toHaveAttribute("data-selected", "true");
+    expect(screen.queryByTestId("inbox-ai-severity")).not.toBeInTheDocument();
   });
 
   it("flags unsaved text edits", () => {
