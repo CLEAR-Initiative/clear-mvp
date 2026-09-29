@@ -100,6 +100,30 @@
   letter-spacing: 0.18em;
   color: var(--color-ai);
   margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Marks a value pre-filled from the hotline-enrichment drafts. Shown only
+ * while the value is unchanged, so it always describes what is on screen. */
+.aiBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--color-ai-border);
+  background: color-mix(in oklab, var(--color-ai) 10%, transparent);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+.readonlyValue {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  text-transform: capitalize;
 }
 
 .field {

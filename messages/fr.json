@@ -2855,7 +2855,12 @@
       "retryLocationBody": "Le lieu n'a pas pu être enregistré. Le signal existe mais n'est pas localisé et sera ignoré par l'agrégation tant qu'un lieu n'est pas défini. Réessayez, ou laissez-le ainsi.",
       "retrySeverityBody": "Le lieu est enregistré mais pas la sévérité. Réessayez, ou laissez le signal sans sévérité.",
       "retry": "Réessayer",
-      "leaveUnscoped": "Laisser tel quel"
+      "leaveUnscoped": "Laisser tel quel",
+      "aiSuggested": "Suggestion IA",
+      "draftTitleNotSaved": "Titre suggéré par l'IA, à vérifier. Il n'est pas encore enregistré : tant que la promotion n'accepte pas les modifications de titre, le signal conserve le titre de la soumission.",
+      "draftLocationUnknown": "Le lieu suggéré est introuvable. Choisissez un lieu avant l'ajout à CLEAR.",
+      "disasterType": "Type de catastrophe",
+      "disasterTypeReadOnly": "À titre indicatif : les signaux n'ont pas encore de champ type de catastrophe, cette valeur n'est donc pas enregistrée."
     },
     "toast": {
       "added": "Ajouté à CLEAR",

@@ -60,6 +60,7 @@ vi.mock("~/trpc/react", () => ({
           data: [{ id: "kas", name: "Kassala", level: 1, parent: { id: "sdn", name: "Sudan" } }],
         }),
       },
+      getById: { useQuery: () => ({ data: undefined, isFetching: false }) },
     },
   },
 }));
@@ -86,6 +87,10 @@ function thread(id: string) {
     reviewNote: null,
     promotedSignalId: null,
     createdAt: "2026-09-15T10:00:00Z",
+    draftTitle: null as string | null,
+    draftSeverity: null as number | null,
+    draftLocationId: null as string | null,
+    draftDisasterType: null as string | null,
   };
 }
 function message(id: string, threadId: string, classification: string | null, sentAt: string) {
@@ -208,6 +213,25 @@ describe("InboxPage triage", () => {
     expect(setSeverity).toHaveBeenCalledWith({ id: "sig1", severity: 5 });
     await waitFor(() => expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.added"));
     expect(screen.getByText("toast.viewSignal")).toHaveAttribute("href", "/signal/sig1");
+  });
+
+  it("promotes with the drafted severity and location without the reviewer touching them", async () => {
+    inboxData.threads[0] = { ...thread("a"), draftTitle: "Drafted title", draftSeverity: 4, draftLocationId: "kas" };
+    reviewMutate.mockImplementation((_input, opts) =>
+      opts.onSuccess({ ...thread("a"), promotedSignalId: "sig1" }),
+    );
+    setLocation.mockResolvedValue({});
+    setSeverity.mockResolvedValue({});
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-add"));
+    expect(screen.getByTestId("inbox-draft-title")).toHaveValue("Drafted title");
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("inbox-add-confirm"));
+    });
+    expect(reviewMutate).toHaveBeenCalledWith({ id: "a", decision: "approve_public" }, expect.any(Object));
+    await waitFor(() => expect(setLocation).toHaveBeenCalledWith({ id: "sig1", locationId: "kas" }));
+    expect(setSeverity).toHaveBeenCalledWith({ id: "sig1", severity: 4 });
+    await waitFor(() => expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.added"));
   });
 
   it("keeps the modal open in retry mode when the location write fails, then completes on retry", async () => {

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Modal, Select } from "@mantine/core";
-import { IconLayoutGrid, IconMicrophone, IconX } from "@tabler/icons-react";
+import { IconLayoutGrid, IconMicrophone, IconSparkles, IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { InboxEntry } from "~/lib/hotline-inbox";
 import { severityColors } from "~/lib/constants/severity";
@@ -17,6 +17,28 @@ const SEVERITIES = [
   { value: 2, bucket: "low" },
   { value: 1, bucket: "low" },
 ] as const;
+
+/** Enrichment drafts are LLM output: accept only what updateSignalSeverity
+ * accepts (an integer 1-5), anything else seeds as "not set". */
+function draftedSeverity(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 5 ? value : null;
+}
+
+/** Display form of the free-text disaster-type guess ("flash_flood" -> "flash flood"). */
+function disasterTypeLabel(value: string): string {
+  return value.replace(/[_-]+/g, " ").trim();
+}
+
+interface LocationOptionSource {
+  id: string;
+  name: string;
+  parent: { name: string } | null;
+}
+
+const toLocationOption = (loc: LocationOptionSource) => ({
+  value: loc.id,
+  label: loc.parent ? `${loc.name} (${loc.parent.name})` : loc.name,
+});
 
 export interface SignalDraft {
   title: string;
@@ -38,40 +60,82 @@ interface AddToClearModalProps {
 }
 
 /**
- * Confirmation-and-edit step before promotion. Seeded from the entry
- * (title = thread title, description = the reporter's text); re-seeded
- * per entry so edits never leak between entries. Location is mandatory.
+ * Confirmation-and-edit step before promotion. Seeded from the entry and
+ * the thread's hotline-enrichment drafts (title = draftTitle, else thread
+ * title; severity = draftSeverity; location = draftLocationId; description
+ * = the reporter's text); re-seeded per entry so edits never leak between
+ * entries. Drafted values carry an "AI suggestion" badge while they are
+ * unchanged; the reviewer can change or clear every one. Location is
+ * mandatory.
  *
  * Persistence today: severity and location are applied right after
  * promotion via updateSignalSeverity / updateSignalLocation. Title and
  * description edits have no write path until clear-api's promotion
- * accepts overrides; the modal flags that when they differ from the seed.
+ * accepts overrides (#625): a drafted title gets its own note saying so,
+ * and the edits warning flags the reviewer's own changes (vs the seed).
+ * The disaster-type draft is shown read-only; signals have no such field.
  */
 export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm }: AddToClearModalProps) {
   const t = useTranslations("inbox");
   const tSev = useTranslations("common.severities");
 
+  const { draftTitle, draftSeverity, draftLocationId, draftDisasterType } = entry.thread;
+  const suggestedTitle = draftTitle?.trim() ?? "";
+  const suggestedSeverity = draftedSeverity(draftSeverity);
+
   const seed = useMemo<SignalDraft>(
-    () => ({ title: entry.title, description: entry.text, severity: null, locationId: "" }),
+    () => ({
+      title: suggestedTitle || entry.title,
+      description: entry.text,
+      severity: suggestedSeverity,
+      locationId: draftLocationId ?? "",
+    }),
     [entry.id], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const [draft, setDraft] = useState<SignalDraft>(seed);
   useEffect(() => setDraft(seed), [seed]);
 
   const locationsQuery = api.locations.list.useQuery(undefined, { staleTime: 10 * 60_000 });
-  const locationOptions = useMemo(
-    () =>
-      (locationsQuery.data ?? [])
-        .filter((loc) => loc.level <= 2)
-        .map((loc) => ({
-          value: loc.id,
-          label: loc.parent ? `${loc.name} (${loc.parent.name})` : loc.name,
-        })),
-    [locationsQuery.data],
+  // The Select lists admin levels 0-2 only, but the geoparser can resolve a
+  // deeper place (L3/L4). Keep the drafted location selectable: take it from
+  // the full list when present, else fetch it by id.
+  const draftInList = draftLocationId
+    ? locationsQuery.data?.find((loc) => loc.id === draftLocationId)
+    : undefined;
+  const draftLocationQuery = api.locations.getById.useQuery(
+    { id: draftLocationId ?? "" },
+    { enabled: !!draftLocationId && !!locationsQuery.data && !draftInList, staleTime: 10 * 60_000 },
   );
+  const draftLocation = draftInList ?? draftLocationQuery.data ?? null;
+  const locationOptions = useMemo(() => {
+    const options = (locationsQuery.data ?? []).filter((loc) => loc.level <= 2).map(toLocationOption);
+    if (draftLocation && !options.some((o) => o.value === draftLocation.id)) {
+      options.unshift(toLocationOption(draftLocation));
+    }
+    return options;
+  }, [locationsQuery.data, draftLocation]);
 
+  // Only a location the Select can show counts: a drafted id that resolves
+  // to nothing must not be confirmable while the field looks empty.
+  const locationResolving = locationsQuery.isLoading || draftLocationQuery.isFetching;
+  const locationSelected = draft.locationId !== "" && locationOptions.some((o) => o.value === draft.locationId);
+
+  const titleSuggested = suggestedTitle !== "" && draft.title === suggestedTitle;
+  const severitySuggested = suggestedSeverity !== null && draft.severity === suggestedSeverity;
+  const locationSuggested = !!draftLocationId && draft.locationId === draftLocationId && locationSelected;
+  // Promotion keeps the stored title until #625, so say so when the seed is
+  // an AI title that differs from it (the edits warning covers only the
+  // reviewer's own changes, so it does not fire just because a draft exists).
+  const draftTitleNotSaved = suggestedTitle !== "" && suggestedTitle !== entry.title && draft.title !== entry.title;
   const textEdited = draft.title !== seed.title || draft.description !== seed.description;
-  const canConfirm = draft.locationId !== "" && !busy;
+  const canConfirm = locationSelected && !busy;
+
+  const aiBadge = (field: string) => (
+    <span className={styles.aiBadge} data-testid={`inbox-ai-${field}`}>
+      <IconSparkles size={11} />
+      {t("modal.aiSuggested")}
+    </span>
+  );
 
   return (
     <Modal
@@ -109,7 +173,10 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
             </div>
           )}
           <div>
-            <div className={styles.label}>{t("modal.title")}</div>
+            <div className={styles.label}>
+              {t("modal.title")}
+              {titleSuggested && aiBadge("title")}
+            </div>
             <textarea
               className={styles.fieldTitle}
               rows={2}
@@ -117,6 +184,9 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
               data-testid="inbox-draft-title"
             />
+            {draftTitleNotSaved && (
+              <p className={styles.hint} data-testid="inbox-draft-title-note">{t("modal.draftTitleNotSaved")}</p>
+            )}
           </div>
           <div>
             <div className={styles.label}>{t("modal.description")}</div>
@@ -132,7 +202,10 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
             )}
           </div>
           <div>
-            <div className={styles.label}>{t("modal.severity")}</div>
+            <div className={styles.label}>
+              {t("modal.severity")}
+              {severitySuggested && aiBadge("severity")}
+            </div>
             <div className={styles.chips}>
               {SEVERITIES.map((s) => (
                 <button
@@ -156,6 +229,7 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
                 type="button"
                 className={styles.chip}
                 data-selected={draft.severity === null}
+                data-testid="inbox-severity-none"
                 style={
                   {
                     "--chip-bg": "var(--color-bg-muted)",
@@ -169,12 +243,15 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
             </div>
           </div>
           <div>
-            <div className={styles.label}>{t("modal.location")}</div>
+            <div className={styles.label}>
+              {t("modal.location")}
+              {locationSuggested && aiBadge("location")}
+            </div>
             <Select
               data={locationOptions}
-              value={draft.locationId || null}
+              value={locationSelected ? draft.locationId : null}
               onChange={(v) => setDraft((d) => ({ ...d, locationId: v ?? "" }))}
-              placeholder={locationsQuery.isLoading ? t("modal.locationLoading") : t("modal.locationPlaceholder")}
+              placeholder={locationResolving ? t("modal.locationLoading") : t("modal.locationPlaceholder")}
               searchable
               clearable
               required
@@ -184,8 +261,22 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
               classNames={{ input: styles.selectInput }}
               data-testid="inbox-draft-location"
             />
-            {draft.locationId === "" && <p className={styles.hint}>{t("modal.locationRequired")}</p>}
+            {!locationSelected && !locationResolving && (
+              <p className={styles.hint} data-testid="inbox-location-hint">
+                {t(draft.locationId === "" ? "modal.locationRequired" : "modal.draftLocationUnknown")}
+              </p>
+            )}
           </div>
+          {draftDisasterType && (
+            <div data-testid="inbox-draft-disaster-type">
+              <div className={styles.label}>
+                {t("modal.disasterType")}
+                {aiBadge("disaster-type")}
+              </div>
+              <div className={styles.readonlyValue}>{disasterTypeLabel(draftDisasterType)}</div>
+              <p className={styles.hint}>{t("modal.disasterTypeReadOnly")}</p>
+            </div>
+          )}
           {entry.attachments.length > 0 && (
             <div>
               <div className={styles.label}>{t("modal.attachments")}</div>

@@ -2855,7 +2855,12 @@
       "retryLocationBody": "The location could not be saved. The signal exists but is unscoped and will be ignored by aggregation until a location is set. Retry, or leave it unscoped.",
       "retrySeverityBody": "The location is saved but the severity could not be. Retry, or leave the signal without severity.",
       "retry": "Retry",
-      "leaveUnscoped": "Leave as is"
+      "leaveUnscoped": "Leave as is",
+      "aiSuggested": "AI suggestion",
+      "draftTitleNotSaved": "AI-suggested title, for review. It is not saved yet: until promotion accepts title edits, the signal keeps the title from the submission.",
+      "draftLocationUnknown": "The suggested location could not be found. Pick a location before adding to CLEAR.",
+      "disasterType": "Disaster type",
+      "disasterTypeReadOnly": "For reference only: signals have no disaster type field yet, so this is not saved."
     },
     "toast": {
       "added": "Added to CLEAR",
