@@ -68,7 +68,11 @@ function entry(overrides: Partial<InboxEntry> = {}): InboxEntry {
       draftLocationId: null,
       draftDisasterType: null,
     },
-    messages: [],
+    // Consistent with `text` (the modal seeds its description from messages).
+    messages: [
+      { ...message("m1"), text: "Water is rising near the market." },
+      { ...message("m2"), text: "Families are leaving." },
+    ],
     senderRef: "h_3f9a2c7b1d0e",
     intakeRef: "HL-3F9A2C",
     title: "Flooding in Kassala",
@@ -76,10 +80,33 @@ function entry(overrides: Partial<InboxEntry> = {}): InboxEntry {
     classification: "field_report",
     sentAt: "2026-09-15T10:05:00Z",
     attachments: [],
+    detachedTranscripts: [],
+    transcripts: [],
     omittedMediaCount: 0,
     uncertainty: null,
     priorEntries: 0,
     ...overrides,
+  };
+}
+
+function message(id: string): InboxEntry["messages"][number] {
+  return {
+    id,
+    groundSourceId: "src",
+    externalId: `whatsapp:+1:${id}`,
+    sentAt: "2026-09-15T10:00:00Z",
+    senderRef: "h_3f9a2c7b1d0e",
+    text: "",
+    mediaKeys: [],
+    mediaUrls: [],
+    mediaRefs: [],
+    omittedMediaCount: 0,
+    classification: null,
+    uncertainty: null,
+    isEdited: false,
+    threadId: "t1",
+    hasVoice: false,
+    transcript: null,
   };
 }
 
@@ -203,6 +230,33 @@ describe("ReadingPane", () => {
     expect(baseProps.onArchive).toHaveBeenCalled();
     fireEvent.click(screen.getByTestId("inbox-reject"));
     expect(baseProps.onRejectOpenChange).toHaveBeenCalledWith(true);
+  });
+
+  it("shows machine transcripts under voice notes, with a pending state", () => {
+    wrap(
+      <ReadingPane
+        {...baseProps}
+        entry={entry({
+          attachments: [
+            { url: "https://s3/a.ogg", kind: "voice", transcript: { status: "ready", text: "The bridge is under water." } },
+            { url: "https://s3/b.ogg", kind: "voice", transcript: { status: "pending" } },
+          ],
+          detachedTranscripts: [{ status: "pending" }],
+        })}
+      />,
+    );
+    const transcripts = screen.getAllByTestId("inbox-transcript");
+    expect(transcripts).toHaveLength(3);
+    expect(transcripts[0]).toHaveAttribute("data-status", "ready");
+    expect(transcripts[0]).toHaveTextContent("pane.transcriptLabel");
+    expect(transcripts[0]).toHaveTextContent("The bridge is under water.");
+    expect(transcripts[1]).toHaveAttribute("data-status", "pending");
+    expect(transcripts[1]).toHaveTextContent("pane.transcriptPending");
+    // Voice message whose audio is not stored yet: transcript block only.
+    expect(transcripts[2]).toHaveTextContent("pane.voiceNotStored");
+    // Two inline players (#664) for the stored voice notes, none for the detached one.
+    expect(screen.getAllByTestId("inbox-voice-note")).toHaveLength(2);
+    expect(transcripts[0]!.previousElementSibling).toHaveAttribute("data-testid", "inbox-voice-note");
   });
 
   it("hides actions for users who cannot review", () => {
@@ -343,6 +397,29 @@ describe("AddToClearModal", () => {
     wrap(<AddToClearModal {...baseProps} entry={drafted({ draftSeverity: 7 })} />);
     expect(screen.getByTestId("inbox-severity-none")).toHaveAttribute("data-selected", "true");
     expect(screen.queryByTestId("inbox-ai-severity")).not.toBeInTheDocument();
+  });
+
+  it("seeds the description with labelled machine transcripts and says they are not saved", () => {
+    const base = entry();
+    wrap(
+      <AddToClearModal
+        {...baseProps}
+        entry={entry({
+          text: "Road blocked.",
+          transcripts: ["People are stuck."],
+          messages: [
+            { ...message("m1"), text: "Road blocked." },
+            { ...message("m2"), text: "", hasVoice: true, transcript: "People are stuck." },
+          ],
+          thread: base.thread,
+        })}
+      />,
+    );
+    expect(screen.getByTestId("inbox-draft-description")).toHaveValue(
+      'Road blocked.\n\nmodal.transcriptInDescription:{"text":"People are stuck."}',
+    );
+    expect(screen.getByTestId("inbox-transcripts-note")).toHaveTextContent("modal.transcriptsNotSaved");
+    expect(screen.queryByTestId("inbox-edits-warning")).not.toBeInTheDocument();
   });
 
   it("flags unsaved text edits", () => {

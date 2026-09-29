@@ -46,11 +46,18 @@ const CLASSIFICATION_RANK: Record<InboxClassification, number> = {
 export const REJECT_REASONS = ["spam", "not_report", "unusable", "duplicate"] as const;
 export type RejectReason = (typeof REJECT_REASONS)[number];
 
+/** A message's voice-note transcript: machine text, or not written yet. */
+export type VoiceTranscript = { status: "ready"; text: string } | { status: "pending" };
+
 export interface InboxAttachment {
   url: string;
-  /** Best-effort from the presigned URL path; unknown URLs render as photos
-   * and fall back to a generic card when the image fails to load. */
+  /** "voice" only on messages flagged hasVoice (see attachmentKind);
+   * everything else renders as a photo and falls back to a generic card
+   * when the image fails to load. */
   kind: "photo" | "voice";
+  /** On the message's last voice attachment only: the transcript covers
+   * all of the message's voice notes, so it is shown once. */
+  transcript?: VoiceTranscript;
 }
 
 export interface InboxEntry {
@@ -69,16 +76,46 @@ export interface InboxEntry {
   /** Latest message timestamp (ISO). */
   sentAt: string;
   attachments: InboxAttachment[];
+  /** Transcripts of voice messages with no stored voice attachment yet
+   * (hasVoice is set at ingest, before the media is stored). */
+  detachedTranscripts: VoiceTranscript[];
+  /** All ready transcripts, oldest first (search + modal seed). */
+  transcripts: string[];
   omittedMediaCount: number;
   uncertainty: string | null;
   /** Other open entries from the same pseudonymous reporter. */
   priorEntries: number;
 }
 
-const VOICE_EXT = /\.(ogg|opus|oga|mp3|m4a|aac|amr|wav|webm)(\?|$)/i;
+/** Attachments that are recognisably not audio: images, plus the video and
+ * PDF types the hotline also stores (clear-api EXTENSION_BY_CONTENT_TYPE).
+ * `.m4a` (audio/mp4) deliberately doesn't match `mp4`. */
+const NON_VOICE_EXT = /\.(jpe?g|png|gif|webp|heic|heif|bmp|tiff?|mp4|mov|3gp|pdf)(\?|$)/i;
 
-export function attachmentKind(url: string): InboxAttachment["kind"] {
-  return VOICE_EXT.test(url) ? "voice" : "photo";
+/**
+ * Voice detection is message-level: clear-api's hasVoice (from the ingest's
+ * per-attachment refs) says whether the message carries a voice note at
+ * all. Without it every attachment is a photo; with it, anything that is
+ * not recognisably an image, video or PDF is the voice note (a hotline
+ * message is almost always a single attachment).
+ */
+export function attachmentKind(url: string, hasVoice: boolean): InboxAttachment["kind"] {
+  return hasVoice && !NON_VOICE_EXT.test(url) ? "voice" : "photo";
+}
+
+function voiceTranscript(m: GqlGroundInboxMessage): VoiceTranscript | null {
+  if (!m.hasVoice) return null;
+  const text = m.transcript?.trim() ?? "";
+  return text.length > 0 ? { status: "ready", text } : { status: "pending" };
+}
+
+/** One message's attachments, with its transcript on the last voice one. */
+function messageAttachments(m: GqlGroundInboxMessage): InboxAttachment[] {
+  const attachments: InboxAttachment[] = m.mediaUrls.map((url) => ({ url, kind: attachmentKind(url, m.hasVoice) }));
+  const transcript = voiceTranscript(m);
+  const lastVoice = attachments.map((a) => a.kind).lastIndexOf("voice");
+  if (transcript && lastVoice !== -1) attachments[lastVoice] = { ...attachments[lastVoice]!, transcript };
+  return attachments;
 }
 
 /**
@@ -138,6 +175,7 @@ export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
       .map((m) => m.text.trim())
       .filter((t) => t.length > 0)
       .join("\n\n");
+    const media = messages.map((m) => ({ attachments: messageAttachments(m), transcript: voiceTranscript(m) }));
     entries.push({
       id: thread.id,
       thread,
@@ -148,9 +186,11 @@ export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
       text,
       classification: entryClassification(messages),
       sentAt: last.sentAt,
-      attachments: messages.flatMap((m) =>
-        m.mediaUrls.map((url) => ({ url, kind: attachmentKind(url) })),
+      attachments: media.flatMap((p) => p.attachments),
+      detachedTranscripts: media.flatMap((p) =>
+        p.transcript && !p.attachments.some((a) => a.kind === "voice") ? [p.transcript] : [],
       ),
+      transcripts: media.flatMap((p) => (p.transcript?.status === "ready" ? [p.transcript.text] : [])),
       omittedMediaCount: messages.reduce((n, m) => n + m.omittedMediaCount, 0),
       uncertainty: messages.find((m) => m.uncertainty)?.uncertainty ?? null,
       priorEntries: 0,
@@ -162,6 +202,24 @@ export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
   for (const e of entries) e.priorEntries = (bySender.get(e.senderRef) ?? 1) - 1;
 
   return entries;
+}
+
+/**
+ * Default description for the Add to CLEAR modal: per message (oldest
+ * first) the reporter's text, then its machine transcript prefixed by the
+ * caller's localized `transcriptLabel` (e.g. "[Machine transcript] …"), so
+ * voice-only reports are not promoted with an empty description.
+ */
+export function entryDescription(entry: InboxEntry, transcriptLabel: (text: string) => string): string {
+  return entry.messages
+    .flatMap((m) => {
+      const parts = [m.text.trim()];
+      const tr = voiceTranscript(m);
+      if (tr?.status === "ready") parts.push(transcriptLabel(tr.text));
+      return parts;
+    })
+    .filter((p) => p.length > 0)
+    .join("\n\n");
 }
 
 export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
@@ -183,6 +241,7 @@ export function matchesSearch(entry: InboxEntry, query: string): boolean {
   return (
     entry.title.toLowerCase().includes(q) ||
     entry.text.toLowerCase().includes(q) ||
+    entry.transcripts.some((tr) => tr.toLowerCase().includes(q)) ||
     entry.intakeRef.toLowerCase().includes(q)
   );
 }

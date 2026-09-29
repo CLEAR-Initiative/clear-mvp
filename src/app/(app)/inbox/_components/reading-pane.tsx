@@ -18,6 +18,7 @@ import {
   type InboxAttachment,
   type InboxEntry,
   type RejectReason,
+  type VoiceTranscript,
 } from "~/lib/hotline-inbox";
 import { InboxClassificationPill } from "./classification-pill";
 import { VoiceNote } from "./voice-note";
@@ -64,6 +65,24 @@ function Attachment({ attachment, index }: { attachment: InboxAttachment; index:
         </>
       )}
     </a>
+  );
+}
+
+/** A voice note's machine transcript (or its pending state), always
+ * labelled as machine output. `dir="auto"` so Arabic transcripts render
+ * right-to-left whatever the UI locale. */
+function TranscriptBlock({ transcript, caption }: { transcript: VoiceTranscript; caption?: string }) {
+  const t = useTranslations("inbox");
+  return (
+    <div className={styles.transcript} data-testid="inbox-transcript" data-status={transcript.status}>
+      {caption && <div className={styles.transcriptCaption}>{caption}</div>}
+      <div className={styles.sectionLabel}>{t("pane.transcriptLabel")}</div>
+      {transcript.status === "ready" ? (
+        <p className={styles.narrative} dir="auto">{transcript.text}</p>
+      ) : (
+        <p className={styles.narrativeEmpty}>{t("pane.transcriptPending")}</p>
+      )}
+    </div>
   );
 }
 
@@ -184,12 +203,24 @@ export function ReadingPane({
 
         <TranslationBlock entry={entry} />
 
-        {(entry.attachments.length > 0 || entry.omittedMediaCount > 0) && (
+        {(entry.attachments.length > 0 || entry.omittedMediaCount > 0 || entry.detachedTranscripts.length > 0) && (
           <div>
             <div className={styles.sectionLabel}>{t("pane.attachments")}</div>
             <div className={styles.attachments}>
-              {entry.attachments.map((a, i) => (
-                <Attachment key={attachmentKey(a.url)} attachment={a} index={i} />
+              {entry.attachments.map((a, i) =>
+                a.transcript ? (
+                  <div key={attachmentKey(a.url)} className={styles.voiceWithTranscript}>
+                    <Attachment attachment={a} index={i} />
+                    <TranscriptBlock transcript={a.transcript} />
+                  </div>
+                ) : (
+                  <Attachment key={attachmentKey(a.url)} attachment={a} index={i} />
+                ),
+              )}
+              {entry.detachedTranscripts.map((tr, i) => (
+                <div key={`detached-${i}`} className={styles.voiceWithTranscript}>
+                  <TranscriptBlock transcript={tr} caption={t("pane.voiceNotStored")} />
+                </div>
               ))}
             </div>
             {entry.omittedMediaCount > 0 && (

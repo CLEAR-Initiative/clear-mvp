@@ -107,7 +107,8 @@ const GROUND_MESSAGES_QUERY = `
 /** Inbox message fields: GROUND_MESSAGE_FIELDS minus senderName (private
  * tier, must not reach the inbox client) plus presigned mediaUrls (cost:
  * one presign per stored attachment per fetch, so kept off the generic
- * messages query). */
+ * messages query) and the voice-note fields hasVoice / transcript
+ * (clear-api#661; inbox-only so the detection tab does not depend on them). */
 const HOTLINE_INBOX_MESSAGE_FIELDS = `
   id
   groundSourceId
@@ -119,6 +120,8 @@ const HOTLINE_INBOX_MESSAGE_FIELDS = `
   mediaUrls
   mediaRefs
   omittedMediaCount
+  hasVoice
+  transcript
   classification
   uncertainty
   isEdited

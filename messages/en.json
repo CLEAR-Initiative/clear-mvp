@@ -2812,7 +2812,10 @@
       "voiceOpen": "Open in new tab",
       "voiceUnsupported": "This browser cannot play this audio format. Open it in a new tab to download it.",
       "voiceRefreshing": "The audio link expired. Refreshing it, then press play again.",
-      "voiceFailed": "This voice note could not be played here. Open it in a new tab instead."
+      "voiceFailed": "This voice note could not be played here. Open it in a new tab instead.",
+      "transcriptLabel": "Machine transcript · may contain errors",
+      "transcriptPending": "Transcription pending",
+      "voiceNotStored": "Voice note (audio not stored yet)"
     },
     "actions": {
       "add": "Add to CLEAR",
@@ -2865,7 +2868,9 @@
       "draftTitleNotSaved": "AI-suggested title, for review. It is not saved yet: until promotion accepts title edits, the signal keeps the title from the submission.",
       "draftLocationUnknown": "The suggested location could not be found. Pick a location before adding to CLEAR.",
       "disasterType": "Disaster type",
-      "disasterTypeReadOnly": "For reference only: signals have no disaster type field yet, so this is not saved."
+      "disasterTypeReadOnly": "For reference only: signals have no disaster type field yet, so this is not saved.",
+      "transcriptInDescription": "[Machine transcript] {text}",
+      "transcriptsNotSaved": "Includes machine transcripts of voice notes for review. Until promotion accepts description edits, the signal keeps only the submitted text."
     },
     "toast": {
       "added": "Added to CLEAR",

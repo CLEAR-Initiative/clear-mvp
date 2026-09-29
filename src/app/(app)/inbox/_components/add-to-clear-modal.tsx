@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Modal, Select } from "@mantine/core";
 import { IconLayoutGrid, IconSparkles, IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { attachmentKey, type InboxEntry } from "~/lib/hotline-inbox";
+import { attachmentKey, entryDescription, type InboxEntry } from "~/lib/hotline-inbox";
 import { severityColors } from "~/lib/constants/severity";
 import { VoiceNote } from "./voice-note";
 import styles from "./add-to-clear-modal.module.css";
@@ -64,16 +64,17 @@ interface AddToClearModalProps {
  * Confirmation-and-edit step before promotion. Seeded from the entry and
  * the thread's hotline-enrichment drafts (title = draftTitle, else thread
  * title; severity = draftSeverity; location = draftLocationId; description
- * = the reporter's text); re-seeded per entry so edits never leak between
- * entries. Drafted values carry an "AI suggestion" badge while they are
- * unchanged; the reviewer can change or clear every one. Location is
- * mandatory.
+ * = the reporter's text plus labelled machine transcripts of voice notes);
+ * re-seeded per entry so edits never leak between entries. Drafted values
+ * carry an "AI suggestion" badge while they are unchanged; the reviewer
+ * can change or clear every one. Location is mandatory.
  *
  * Persistence today: severity and location are applied right after
  * promotion via updateSignalSeverity / updateSignalLocation. Title and
  * description edits have no write path until clear-api's promotion
  * accepts overrides (#625): a drafted title gets its own note saying so,
- * and the edits warning flags the reviewer's own changes (vs the seed).
+ * the edits warning flags the reviewer's own changes (vs the seed), and
+ * a note says seeded transcripts are not carried into the signal.
  * The disaster-type draft is shown read-only; signals have no such field.
  */
 export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm }: AddToClearModalProps) {
@@ -84,10 +85,12 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
   const suggestedTitle = draftTitle?.trim() ?? "";
   const suggestedSeverity = draftedSeverity(draftSeverity);
 
+  // The description seed folds in machine transcripts (labelled) so voice
+  // reports do not open with an empty description.
   const seed = useMemo<SignalDraft>(
     () => ({
       title: suggestedTitle || entry.title,
-      description: entry.text,
+      description: entryDescription(entry, (text) => t("modal.transcriptInDescription", { text })),
       severity: suggestedSeverity,
       locationId: draftLocationId ?? "",
     }),
@@ -198,6 +201,9 @@ export function AddToClearModal({ entry, busy, error, retry, onCancel, onConfirm
               onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
               data-testid="inbox-draft-description"
             />
+            {entry.transcripts.length > 0 && !textEdited && (
+              <p className={styles.hint} data-testid="inbox-transcripts-note">{t("modal.transcriptsNotSaved")}</p>
+            )}
             {textEdited && (
               <p className={styles.warning} data-testid="inbox-edits-warning">{t("modal.editsNotSaved")}</p>
             )}

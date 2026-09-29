@@ -2812,7 +2812,10 @@
       "voiceOpen": "Ouvrir dans un nouvel onglet",
       "voiceUnsupported": "Ce navigateur ne peut pas lire ce format audio. Ouvrez-le dans un nouvel onglet pour le télécharger.",
       "voiceRefreshing": "Le lien audio a expiré. Actualisation en cours, puis relancez la lecture.",
-      "voiceFailed": "Ce message vocal n'a pas pu être lu ici. Ouvrez-le plutôt dans un nouvel onglet."
+      "voiceFailed": "Ce message vocal n'a pas pu être lu ici. Ouvrez-le plutôt dans un nouvel onglet.",
+      "transcriptLabel": "Transcription automatique · peut contenir des erreurs",
+      "transcriptPending": "Transcription en attente",
+      "voiceNotStored": "Message vocal (audio pas encore stocké)"
     },
     "actions": {
       "add": "Ajouter à CLEAR",
@@ -2865,7 +2868,9 @@
       "draftTitleNotSaved": "Titre suggéré par l'IA, à vérifier. Il n'est pas encore enregistré : tant que la promotion n'accepte pas les modifications de titre, le signal conserve le titre de la soumission.",
       "draftLocationUnknown": "Le lieu suggéré est introuvable. Choisissez un lieu avant l'ajout à CLEAR.",
       "disasterType": "Type de catastrophe",
-      "disasterTypeReadOnly": "À titre indicatif : les signaux n'ont pas encore de champ type de catastrophe, cette valeur n'est donc pas enregistrée."
+      "disasterTypeReadOnly": "À titre indicatif : les signaux n'ont pas encore de champ type de catastrophe, cette valeur n'est donc pas enregistrée.",
+      "transcriptInDescription": "[Transcription automatique] {text}",
+      "transcriptsNotSaved": "Inclut les transcriptions automatiques des messages vocaux pour relecture. Tant que la promotion n'accepte pas les modifications de description, le signal ne conserve que le texte soumis."
     },
     "toast": {
       "added": "Ajouté à CLEAR",
