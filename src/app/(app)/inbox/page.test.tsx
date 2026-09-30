@@ -47,6 +47,9 @@ vi.mock("~/trpc/react", () => ({
       requestTranslation: { useMutation: () => ({ mutate: vi.fn(), data: undefined, isError: false }) },
       translation: { useQuery: () => ({ data: undefined }) },
     },
+    subscriptions: {
+      disasterTypes: { useQuery: () => ({ isLoading: false, data: [] }) },
+    },
     locations: {
       list: {
         useQuery: () => ({

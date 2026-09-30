@@ -26,10 +26,15 @@ export function useDisasterTypes() {
     return glideToName.get(glideNumber) ?? glideNumber.toUpperCase();
   };
 
+  /** Display name for a glide number, or undefined when it isn't a known
+   * type. Case-insensitive: glide codes are stored lowercase ("fl"). */
+  const findTypeName = (glideNumber: string): string | undefined =>
+    glideToName.get(glideNumber) ?? glideToName.get(glideNumber.toLowerCase());
+
   /** Convert an array of glide numbers to display names. */
   const getTypeNames = (glideNumbers: string[]): string[] => {
     return glideNumbers.map(getTypeName);
   };
 
-  return { getTypeName, getTypeNames, isLoading: query.isLoading };
+  return { getTypeName, getTypeNames, findTypeName, isLoading: query.isLoading };
 }

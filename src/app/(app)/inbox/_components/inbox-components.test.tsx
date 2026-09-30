@@ -31,6 +31,11 @@ vi.mock("~/trpc/react", () => ({
       requestTranslation: { useMutation: () => ({ mutate: requestTranslation, data: undefined, isError: false }) },
       translation: { useQuery: () => ({ data: undefined }) },
     },
+    subscriptions: {
+      disasterTypes: {
+        useQuery: () => ({ isLoading: false, data: [{ id: "dt-fl", glideNumber: "fl", disasterType: "Flood" }] }),
+      },
+    },
     locations: {
       list: {
         useQuery: () => ({
@@ -305,6 +310,11 @@ describe("AddToClearModal", () => {
 
   const drafted = (drafts: Partial<InboxEntry["thread"]>) =>
     entry({ thread: { ...entry().thread, ...drafts } });
+
+  it("shows a drafted glide code by its taxonomy name, not the raw code", () => {
+    wrap(<AddToClearModal {...baseProps} entry={drafted({ draftDisasterType: "fl" })} />);
+    expect(screen.getByTestId("inbox-draft-disaster-type")).toHaveTextContent("Flood");
+  });
 
   it("pre-fills title, severity and location from the drafts and marks them as AI suggestions", () => {
     wrap(
