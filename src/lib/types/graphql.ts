@@ -270,6 +270,18 @@ export type GqlGroundInboxMessage = Omit<GqlGroundMessage, "senderName"> & {
   /** Machine transcript of the message's voice note(s); null until the
    * pipeline transcribes it, always null without a voice note. */
   transcript: string | null;
+  /** Set when clear-pipeline's enrichment drain (classification + thread
+   * draft) gave up on the message. While set the message is out of the
+   * queue for good; retryGroundMessage(stage: ENRICH) clears it. */
+  enrichFailedAt: string | null;
+  /** Last enrichment error (truncated, phone-redacted). */
+  enrichError: string | null;
+  /** Set when the transcription drain gave up on the voice note. The
+   * message then also leaves the enrichment queue (nothing to classify);
+   * retryGroundMessage(stage: TRANSCRIBE) clears it. */
+  transcribeFailedAt: string | null;
+  /** Last transcription error (truncated, phone-redacted). */
+  transcribeError: string | null;
 };
 
 /** Ground thread as the hotline inbox receives it: the base fields plus the

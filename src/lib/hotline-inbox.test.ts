@@ -6,6 +6,8 @@ import {
   countByFilter,
   entryDescription,
   intakeRef,
+  matchesFilter,
+  messageFailures,
   moveSelection,
   nextSelection,
   visibleEntries,
@@ -54,6 +56,10 @@ function message(
     threadId,
     hasVoice: false,
     transcript: null,
+    enrichFailedAt: null,
+    enrichError: null,
+    transcribeFailedAt: null,
+    transcribeError: null,
     ...overrides,
   };
 }
@@ -185,6 +191,107 @@ describe("voice transcripts", () => {
   it("searches transcripts", () => {
     const e = build([message("v1", "v", { text: "", hasVoice: true, transcript: "Checkpoint closed" })]);
     expect(visibleEntries([e], "all", "checkpoint", "newest")).toHaveLength(1);
+  });
+});
+
+describe("pipeline processing state", () => {
+  const build = (messages: GqlGroundInboxMessage[]) =>
+    buildInboxEntries({ sources: [], threads: [thread("p")], messages })[0]!;
+  const FAILED_AT = "2026-09-15T12:00:00Z";
+
+  it("is pending while an unlabeled message is still queued", () => {
+    const e = build([message("p1", "p")]);
+    expect(e.classification).toBe("unclassified");
+    expect(e.processing).toBe("pending");
+    expect(e.failures).toEqual([]);
+  });
+
+  it("is classified once a message is labeled", () => {
+    const e = build([message("p1", "p", { classification: "chatter" })]);
+    expect(e.processing).toBe("classified");
+    expect(e.failures).toEqual([]);
+  });
+
+  it("is failed when the enrichment drain gave up, and carries the error", () => {
+    const e = build([
+      message("p1", "p", { enrichFailedAt: FAILED_AT, enrichError: "Claude API timeout" }),
+    ]);
+    expect(e.classification).toBe("unclassified");
+    expect(e.processing).toBe("failed");
+    expect(e.failures).toEqual([
+      { messageId: "p1", stage: "ENRICH", error: "Claude API timeout", failedAt: FAILED_AT },
+    ]);
+  });
+
+  it("is failed when transcription gave up, and marks the voice transcript failed", () => {
+    const e = build([
+      message("p1", "p", {
+        hasVoice: true,
+        mediaUrls: ["https://s3/v.ogg"],
+        transcribeFailedAt: FAILED_AT,
+        transcribeError: "unsupported codec",
+      }),
+    ]);
+    expect(e.processing).toBe("failed");
+    expect(e.failures.map((f) => f.stage)).toEqual(["TRANSCRIBE"]);
+    expect(e.attachments).toEqual([
+      { url: "https://s3/v.ogg", kind: "voice", transcript: { status: "failed", error: "unsupported codec" } },
+    ]);
+    expect(e.transcripts).toEqual([]);
+  });
+
+  it("keeps a failed transcript on a voice note whose audio is not stored", () => {
+    const e = build([message("p1", "p", { hasVoice: true, transcribeFailedAt: FAILED_AT })]);
+    expect(e.detachedTranscripts).toEqual([{ status: "failed", error: null }]);
+  });
+
+  it("a ready transcript wins over a stale transcription marker", () => {
+    const e = build([
+      message("p1", "p", { hasVoice: true, transcript: "Road closed", transcribeFailedAt: FAILED_AT }),
+    ]);
+    expect(e.detachedTranscripts).toEqual([{ status: "ready", text: "Road closed" }]);
+  });
+
+  it("lists transcription before enrichment, oldest message first", () => {
+    const e = build([
+      message("p2", "p", { sentAt: "2026-09-15T11:00:00Z", enrichFailedAt: FAILED_AT }),
+      message("p1", "p", {
+        sentAt: "2026-09-15T10:00:00Z",
+        hasVoice: true,
+        enrichFailedAt: FAILED_AT,
+        transcribeFailedAt: FAILED_AT,
+      }),
+    ]);
+    expect(e.failures.map((f) => `${f.messageId}:${f.stage}`)).toEqual(["p1:TRANSCRIBE", "p1:ENRICH", "p2:ENRICH"]);
+  });
+
+  it("flags a failure on a thread that is already labeled, keeping the label", () => {
+    const e = build([
+      message("p1", "p", { sentAt: "2026-09-15T10:00:00Z", classification: "field_report" }),
+      message("p2", "p", { sentAt: "2026-09-15T11:00:00Z", enrichFailedAt: FAILED_AT }),
+    ]);
+    expect(e.classification).toBe("field_report");
+    expect(e.processing).toBe("failed");
+    expect(matchesFilter(e, "reports")).toBe(true);
+    expect(matchesFilter(e, "unclassified")).toBe(false);
+  });
+
+  it("keeps pending and failed entries together under the unclassified filter", () => {
+    const entries = buildInboxEntries({
+      sources: [],
+      threads: [thread("pending"), thread("failed")],
+      messages: [
+        message("a", "pending"),
+        message("b", "failed", { enrichFailedAt: FAILED_AT }),
+      ],
+    });
+    expect(entries.map((e) => e.processing)).toEqual(["pending", "failed"]);
+    expect(entries.every((e) => matchesFilter(e, "unclassified"))).toBe(true);
+    expect(countByFilter(entries).unclassified).toBe(2);
+  });
+
+  it("reports no failures for an unmarked message", () => {
+    expect(messageFailures(message("x", "p"))).toEqual([]);
   });
 });
 

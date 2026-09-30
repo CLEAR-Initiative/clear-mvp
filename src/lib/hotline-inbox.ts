@@ -46,8 +46,37 @@ const CLASSIFICATION_RANK: Record<InboxClassification, number> = {
 export const REJECT_REASONS = ["spam", "not_report", "unusable", "duplicate"] as const;
 export type RejectReason = (typeof REJECT_REASONS)[number];
 
-/** A message's voice-note transcript: machine text, or not written yet. */
-export type VoiceTranscript = { status: "ready"; text: string } | { status: "pending" };
+/** clear-pipeline ground drains that can give up on a message (clear-api
+ * GroundPipelineStage): ENRICH = classification + thread draft,
+ * TRANSCRIBE = voice-note transcription. */
+export const GROUND_PIPELINE_STAGES = ["ENRICH", "TRANSCRIBE"] as const;
+export type GroundPipelineStage = (typeof GROUND_PIPELINE_STAGES)[number];
+
+/** One stage the pipeline gave up on for one message. The message stays
+ * out of that stage's queue until retryGroundMessage clears the marker. */
+export interface InboxFailure {
+  messageId: string;
+  stage: GroundPipelineStage;
+  /** Last error from the drain; null when none was recorded. */
+  error: string | null;
+  failedAt: string;
+}
+
+/**
+ * Where the pipeline is with an entry:
+ *   classified — a message is labeled and nothing failed
+ *   pending    — nothing labeled yet, still waiting in the pipeline queue
+ *   failed     — a drain gave up on at least one message, which left the
+ *                queue for good; only a reviewer retry brings it back
+ */
+export type InboxProcessing = "classified" | "pending" | "failed";
+
+/** A message's voice-note transcript: machine text, not written yet, or
+ * given up on by the transcription drain. */
+export type VoiceTranscript =
+  | { status: "ready"; text: string }
+  | { status: "pending" }
+  | { status: "failed"; error: string | null };
 
 export interface InboxAttachment {
   url: string;
@@ -73,6 +102,13 @@ export interface InboxEntry {
   /** Reporter's own words: message texts joined, empty when media-only. */
   text: string;
   classification: InboxClassification;
+  /** Pipeline state: tells "still queued" from "given up on" (both show
+   * as classification "unclassified" when nothing is labeled). */
+  processing: InboxProcessing;
+  /** Failed pipeline stages across the entry's messages, oldest message
+   * first, transcription before enrichment (enrichment needs the
+   * transcript). Empty unless processing is "failed". */
+  failures: InboxFailure[];
   /** Latest message timestamp (ISO). */
   sentAt: string;
   attachments: InboxAttachment[];
@@ -106,7 +142,30 @@ export function attachmentKind(url: string, hasVoice: boolean): InboxAttachment[
 function voiceTranscript(m: GqlGroundInboxMessage): VoiceTranscript | null {
   if (!m.hasVoice) return null;
   const text = m.transcript?.trim() ?? "";
-  return text.length > 0 ? { status: "ready", text } : { status: "pending" };
+  if (text.length > 0) return { status: "ready", text };
+  return m.transcribeFailedAt ? { status: "failed", error: m.transcribeError } : { status: "pending" };
+}
+
+/** A message's failure markers, transcription first: a failed
+ * transcription also holds the message out of enrichment, so it is the
+ * one to retry first. */
+export function messageFailures(m: GqlGroundInboxMessage): InboxFailure[] {
+  const failures: InboxFailure[] = [];
+  if (m.transcribeFailedAt) {
+    failures.push({ messageId: m.id, stage: "TRANSCRIBE", error: m.transcribeError, failedAt: m.transcribeFailedAt });
+  }
+  if (m.enrichFailedAt) {
+    failures.push({ messageId: m.id, stage: "ENRICH", error: m.enrichError, failedAt: m.enrichFailedAt });
+  }
+  return failures;
+}
+
+export function entryProcessing(
+  classification: InboxClassification,
+  failures: readonly InboxFailure[],
+): InboxProcessing {
+  if (failures.length > 0) return "failed";
+  return classification === "unclassified" ? "pending" : "classified";
 }
 
 /** One message's attachments, with its transcript on the last voice one. */
@@ -176,6 +235,8 @@ export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
       .filter((t) => t.length > 0)
       .join("\n\n");
     const media = messages.map((m) => ({ attachments: messageAttachments(m), transcript: voiceTranscript(m) }));
+    const classification = entryClassification(messages);
+    const failures = messages.flatMap(messageFailures);
     entries.push({
       id: thread.id,
       thread,
@@ -184,7 +245,9 @@ export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
       intakeRef: intakeRef(first.senderRef),
       title: thread.title ?? text.split("\n")[0]?.trim() ?? "",
       text,
-      classification: entryClassification(messages),
+      classification,
+      processing: entryProcessing(classification, failures),
+      failures,
       sentAt: last.sentAt,
       attachments: media.flatMap((p) => p.attachments),
       detachedTranscripts: media.flatMap((p) =>
@@ -222,6 +285,8 @@ export function entryDescription(entry: InboxEntry, transcriptLabel: (text: stri
     .join("\n\n");
 }
 
+/** "unclassified" covers both pending and failed entries: neither has a
+ * label yet. The row pill tells them apart. */
 export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
   switch (filter) {
     case "reports":
