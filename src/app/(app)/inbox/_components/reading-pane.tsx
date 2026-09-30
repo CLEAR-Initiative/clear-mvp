@@ -87,12 +87,20 @@ function TranscriptBlock({ transcript, caption }: { transcript: VoiceTranscript;
 }
 
 /**
+ * Off until the backend exists: the tRPC procedures below are stubs that
+ * always answer "unavailable", so the button could only ever show that.
+ * Flip to true once clear-api ships requestGroundMessageTranslation
+ * (Exponential #627) and the pipeline drain translates (#626).
+ */
+export const TRANSLATION_ENABLED = false;
+
+/**
  * On-demand translation of the narrative into the reader's UI locale.
  * Request once per entry, poll while queued, render under the original
  * (never instead of it). The tRPC procedures are stubbed server-side
  * until clear-api grows a ground translation entity; the UI is final.
  */
-function TranslationBlock({ entry }: { entry: InboxEntry }) {
+export function TranslationBlock({ entry }: { entry: InboxEntry }) {
   const t = useTranslations("inbox");
   const locale = useLocale();
   const [requested, setRequested] = useState(false);
@@ -201,7 +209,7 @@ export function ReadingPane({
           <p className={styles.narrativeEmpty}>{t("pane.noText")}</p>
         )}
 
-        <TranslationBlock entry={entry} />
+        {TRANSLATION_ENABLED && <TranslationBlock entry={entry} />}
 
         {(entry.attachments.length > 0 || entry.omittedMediaCount > 0 || entry.detachedTranscripts.length > 0) && (
           <div>
