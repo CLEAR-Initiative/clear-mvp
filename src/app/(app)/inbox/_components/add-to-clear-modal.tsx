@@ -7,6 +7,7 @@ import { IconLayoutGrid, IconSparkles, IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { attachmentKey, entryDescription, type InboxEntry } from "~/lib/hotline-inbox";
 import { severityColors } from "~/lib/constants/severity";
+import { useDisasterTypes } from "~/hooks/use-disaster-types";
 import { VoiceNote } from "./voice-note";
 import styles from "./add-to-clear-modal.module.css";
 
@@ -25,7 +26,8 @@ function draftedSeverity(value: number | null | undefined): number | null {
   return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 5 ? value : null;
 }
 
-/** Display form of the free-text disaster-type guess ("flash_flood" -> "flash flood"). */
+/** Display form of a disaster-type guess the taxonomy doesn't know
+ * ("flash_flood" -> "flash flood"). Known glide codes use the taxonomy name. */
 function disasterTypeLabel(value: string): string {
   return value.replace(/[_-]+/g, " ").trim();
 }
@@ -76,6 +78,8 @@ interface AddToClearModalProps {
 export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: AddToClearModalProps) {
   const t = useTranslations("inbox");
   const tSev = useTranslations("common.severities");
+  // The enrichment drafts a glide code ("fl"), not a name.
+  const { findTypeName } = useDisasterTypes();
 
   const { draftTitle, draftSeverity, draftLocationId, draftDisasterType } = entry.thread;
   const suggestedTitle = draftTitle?.trim() ?? "";
@@ -254,7 +258,7 @@ export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: Add
                 {t("modal.disasterType")}
                 {aiBadge("disaster-type")}
               </div>
-              <div className={styles.readonlyValue}>{disasterTypeLabel(draftDisasterType)}</div>
+              <div className={styles.readonlyValue}>{findTypeName(draftDisasterType) ?? disasterTypeLabel(draftDisasterType)}</div>
               <p className={styles.hint}>{t("modal.disasterTypeReadOnly")}</p>
             </div>
           )}
