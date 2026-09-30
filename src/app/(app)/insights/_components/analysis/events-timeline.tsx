@@ -7,7 +7,7 @@ import { Box, SimpleGrid, Text, Tooltip } from "@mantine/core";
 import { IconTimeline } from "@tabler/icons-react";
 import { severityColor } from "~/lib/types/graphql";
 import { timelineLayout } from "~/lib/analysis-view";
-import type { AnalysisEvent } from "~/server/api/routers/analysis";
+import type { AnalysisEvent } from "~/server/api/mappers/analysis";
 import { CollapsibleSection } from "./collapsible-section";
 
 /**

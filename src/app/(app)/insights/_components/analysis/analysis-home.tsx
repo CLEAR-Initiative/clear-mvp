@@ -7,10 +7,10 @@ import { ActionIcon, Badge, Box, Button, Grid, Group, Select, Stack, Text, Title
 import { notifications } from "@mantine/notifications";
 import { IconChevronRight, IconPlus, IconTrash } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import type { CountryAnalysisEntry, CreatedAnalysis } from "~/server/api/routers/analysis";
+import type { CountryAnalysisEntry, CreatedAnalysis } from "~/server/api/mappers/analysis";
 import type { MapRegion } from "~/components/map/crisis-map";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
-import { ANALYSIS_CADENCES, containsPoint, isStale, type AnalysisCadence } from "~/lib/analysis-view";
+import { ANALYSIS_CADENCES, containsPoint, generationOverdue, isStale, type AnalysisCadence } from "~/lib/analysis-view";
 
 const CrisisMap = dynamic(() => import("~/components/map/crisis-map").then((m) => m.CrisisMap), {
   ssr: false,
@@ -32,6 +32,7 @@ export function AnalysisHome({
   loading,
   canCreate,
   canRemove,
+  teamId,
   selector,
   onOpenCountry,
   onOpenCreated,
@@ -44,6 +45,8 @@ export function AnalysisHome({
   loading: boolean;
   canCreate: boolean;
   canRemove: boolean;
+  /** The active team, which the server checks owns the analysis on remove and frequency changes. */
+  teamId: string | null;
   selector: ReactNode;
   onOpenCountry: () => void;
   onOpenCreated: (c: CreatedAnalysis) => void;
@@ -171,7 +174,11 @@ export function AnalysisHome({
               ) : (
                 <Stack gap={8}>
                   {sorted.map((c) => {
-                    const s = status(c.generatedAt, c.cadence, c.enabled);
+                    // No first version long after creation: the request likely failed.
+                    const overdue = generationOverdue(c, now);
+                    const s = overdue
+                      ? { text: t("notGenerated"), stale: false }
+                      : status(c.generatedAt, c.cadence, c.enabled);
                     return (
                       <ScopeRow
                         key={c.id}
@@ -179,11 +186,12 @@ export function AnalysisHome({
                         subtitle={t("areas", { count: c.locationIds.length })}
                         status={s.text}
                         stale={s.stale}
-                        generating={!c.generatedAt}
+                        generating={!c.generatedAt && !overdue}
+                        overdue={overdue}
                         onOpen={() => onOpenCreated(c)}
                         testId={`analysis-scope-${c.id}`}
                         action={
-                          canRemove ? (
+                          canRemove && teamId ? (
                             <Group gap={8} wrap="nowrap" onClick={(e) => e.stopPropagation()}>
                               <Select
                                 size="xs"
@@ -199,7 +207,7 @@ export function AnalysisHome({
                                       : "manual"
                                 }
                                 disabled={setCadence.isPending && setCadence.variables?.id === c.id}
-                                onChange={(v) => v && setCadence.mutate({ id: c.id, cadence: v as AnalysisCadence })}
+                                onChange={(v) => v && setCadence.mutate({ id: c.id, cadence: v as AnalysisCadence, teamId })}
                                 data={ANALYSIS_CADENCES.map((k) => ({ value: k, label: tc(k) }))}
                                 data-testid={`analysis-frequency-${c.id}`}
                               />
@@ -209,7 +217,7 @@ export function AnalysisHome({
                                     size="compact-xs"
                                     color="red"
                                     loading={remove.isPending}
-                                    onClick={() => remove.mutate({ id: c.id })}
+                                    onClick={() => remove.mutate({ id: c.id, teamId })}
                                     data-testid="analysis-remove-confirm"
                                   >
                                     {t("remove")}
@@ -280,6 +288,7 @@ function ScopeRow({
   status,
   stale,
   generating,
+  overdue,
   onOpen,
   action,
   testId,
@@ -290,6 +299,7 @@ function ScopeRow({
   status: string;
   stale: boolean;
   generating?: boolean;
+  overdue?: boolean;
   onOpen: () => void;
   action?: ReactNode;
   testId: string;
@@ -326,7 +336,11 @@ function ScopeRow({
           <Text c="var(--color-text-secondary)" mt={2} style={{ fontSize: 12 }}>
             {subtitle}
           </Text>
-          <Text c={generating ? "var(--color-info)" : "var(--color-text-muted)"} mt={2} style={{ fontSize: 12 }}>
+          <Text
+            c={generating ? "var(--color-info)" : overdue ? "var(--color-warning)" : "var(--color-text-muted)"}
+            mt={2}
+            style={{ fontSize: 12 }}
+          >
             {status}
           </Text>
         </Box>

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { Analysis } from "~/server/api/mappers/analysis";
-import type { AnalysisEvents, AnalysisFigures, AnalysisScopes, CreatedAnalysis } from "~/server/api/routers/analysis";
+import type { AnalysisEvents, AnalysisFigures, AnalysisScopes, CreatedAnalysis } from "~/server/api/mappers/analysis";
 
 vi.mock("next-intl", () => ({
   useTranslations: (ns?: string) => (key: string, vars?: Record<string, unknown>) =>
@@ -61,6 +61,9 @@ const frameQuery = vi.fn();
 const scopesQuery = vi.fn();
 const eventsQuery = vi.fn();
 const createMutate = vi.fn();
+let createOpts: { onSuccess?: (res: unknown, input: unknown) => Promise<void> | void } = {};
+const showNotification = vi.fn();
+vi.mock("@mantine/notifications", () => ({ notifications: { show: (n: unknown) => showNotification(n) } }));
 const removeMutate = vi.fn();
 const square = (x: number, y: number) => ({
   type: "Polygon",
@@ -82,6 +85,9 @@ vi.mock("~/trpc/react", () => ({
       analysis: { scopes: { invalidate: vi.fn() } },
       locations: { getById: { fetch: async () => ({ geometry: null }) } },
     }),
+    // ScopeMap loads each created area's geometry.
+    useQueries: (build: (q: { locations: { getById: (input: { id: string }) => unknown } }) => unknown[]) =>
+      build({ locations: { getById: () => null } }).map(() => ({ data: { geometry: null } })),
     auth: { me: { useQuery: () => ({ data: { user: { role } } }) } },
     analysis: {
       scopes: {
@@ -101,7 +107,7 @@ vi.mock("~/trpc/react", () => ({
       },
       events: { useQuery: (input: unknown) => (eventsQuery(input), eventsResult) },
       figures: { useQuery: () => ({ data: figuresResult }) },
-      create: { useMutation: () => mutation(createMutate) },
+      create: { useMutation: (opts: typeof createOpts) => ((createOpts = opts), mutation(createMutate)) },
       remove: { useMutation: () => mutation(removeMutate) },
       refresh: { useMutation: () => mutation(vi.fn()) },
       setCadence: { useMutation: () => mutation(vi.fn()) },
@@ -382,7 +388,8 @@ describe("Insights > Analysis tab", () => {
   it("lands on the analyses list: the country analysis and the team's created ones in that country", () => {
     scopesResult.created = [
       created(),
-      created({ id: "auto-2", name: "Kassala, Kassala, Sudan", generatedAt: null, analysisId: null }),
+      // Created minutes ago, so still within the generation window.
+      created({ id: "auto-2", name: "Kassala, Kassala, Sudan", generatedAt: null, analysisId: null, createdAt: "2026-09-29T11:50:00.000Z" }),
       created({ id: "auto-3", name: "Old one, Sudan", generatedAt: "2026-09-01T00:00:00Z" }),
       created({ id: "auto-4", name: "Kabul, Afghanistan", countryId: "afg" }),
     ];
@@ -427,7 +434,7 @@ describe("Insights > Analysis tab", () => {
   });
 
   it("shows the generating state until the first version of a created analysis lands", () => {
-    scopesResult.created = [created({ generatedAt: null, analysisId: null })];
+    scopesResult.created = [created({ generatedAt: null, analysisId: null, createdAt: "2026-09-29T11:50:00.000Z" })];
     frameResult = { data: null, isLoading: false, isError: false };
     renderHome();
     fireEvent.click(within(screen.getByTestId("analysis-scope-auto-1")).getAllByRole("button")[0]!);
@@ -448,7 +455,20 @@ describe("Insights > Analysis tab", () => {
     fireEvent.click(screen.getByTestId("analysis-remove"));
     expect(removeMutate).not.toHaveBeenCalled();
     fireEvent.click(screen.getByTestId("analysis-remove-confirm"));
-    expect(removeMutate).toHaveBeenCalledWith({ id: "auto-1" });
+    expect(removeMutate).toHaveBeenCalledWith({ id: "auto-1", teamId: "team-1" });
+  });
+
+  it("lists an analysis whose country could not be looked up under every country", () => {
+    team = { countries: [AFG, SUDAN], countryId: "afg" };
+    scopesResult.created = [created({ id: "auto-x", countryId: null }), created({ id: "auto-4", countryId: "afg" })];
+    renderHome();
+    expect(screen.getByTestId("analysis-scope-auto-x")).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-scope-auto-4")).toBeInTheDocument();
+    cleanup();
+    team = { countries: [AFG, SUDAN], countryId: "sdn" };
+    renderHome();
+    expect(screen.getByTestId("analysis-scope-auto-x")).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-scope-auto-4")).not.toBeInTheDocument();
   });
 
   const option = { selector: "[role=option] *, [role=option]" };
@@ -484,6 +504,27 @@ describe("Insights > Analysis tab", () => {
     fireEvent.click(screen.getByText("analysis.cadence.daily"));
     fireEvent.click(screen.getByTestId("analysis-create-submit"));
     expect(createMutate).toHaveBeenCalledWith({ teamId: "team-1", locationIds: ["sheikan"], cadence: "daily" });
+    await createOpts.onSuccess?.({ id: "auto-9", firstVersionRequested: true, existing: false, cadence: "daily" }, {});
+    expect(showNotification).not.toHaveBeenCalled();
+  });
+
+  it("tells the user when the team already had the analysis and opens that one", async () => {
+    await openCreate();
+    await createOpts.onSuccess?.(
+      { id: "auto-1", firstVersionRequested: false, existing: true, cadence: "weekly" },
+      { teamId: "team-1", locationIds: ["sheikan"], cadence: "weekly" },
+    );
+    expect(showNotification).toHaveBeenCalledWith({ message: "analysis.create.existing" });
+    expect(showNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it("warns when an on-request analysis fell back to weekly because its first version could not be requested", async () => {
+    await openCreate();
+    await createOpts.onSuccess?.(
+      { id: "auto-9", firstVersionRequested: false, existing: false, cadence: "weekly" },
+      { teamId: "team-1", locationIds: ["sheikan"], cadence: "manual" },
+    );
+    expect(showNotification).toHaveBeenCalledWith({ color: "yellow", message: "analysis.create.manualFallback" });
   });
 
   it("lets a whole state replace its districts in the selection", async () => {

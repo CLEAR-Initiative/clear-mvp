@@ -1,23 +1,36 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import { fetchReportMeta, type ReportMeta } from "~/server/api/routers/situationAnalysis";
 import {
   eventIdFromCitation,
   mapAnalysis,
+  mapFigures,
+  countryFrame,
+  toAnalysisEvent,
+  toCreatedAnalysis,
   type Analysis,
+  type AnalysisEvents,
+  type AnalysisFigures,
   type AnalysisRow,
+  type AnalysisScopes,
+  type CountryAnalysisEntry,
+  type GqlAnalysisEvent,
+  type GqlAutomation,
+  type GqlLabelLocation,
 } from "~/server/api/mappers/analysis";
-import { toMapPointGeometry } from "~/lib/geo/to-map-point";
 import { leadSentences } from "~/app/(app)/insights/_components/situation/summary-citations";
 import {
   ANALYSIS_CADENCES,
   MAX_CREATED_LOCATIONS,
   createdWindowStart,
-  scopeLabel,
-  type LabelLocation,
+  sameLocations,
+  type AnalysisCadence,
 } from "~/lib/analysis-view";
+import { isPlatformAdmin } from "~/lib/roles";
 
+// Domain types live in the mapper; re-exported so existing imports keep compiling.
 /**
  * Unified frame-scoped analysis (clear-api ADR-0007).
  *
@@ -81,155 +94,8 @@ const FIGURES_QUERY = `
   }
 `;
 
-/** SAF sectors the pipeline extracts a people-in-need figure for (`pin_<sector>`). */
-export const PIN_SECTORS = [
-  "food_security",
-  "health",
-  "wash",
-  "protection",
-  "shelter",
-  "education",
-  "nutrition",
-] as const;
-export type PinSector = (typeof PIN_SECTORS)[number];
-
-interface RawEnvelope {
-  value?: number | null;
-  value_low?: number | null;
-  value_high?: number | null;
-  newest_report_at?: string | null;
-}
-
-export interface AnalysisFigure {
-  value: number;
-  low: number | null;
-  high: number | null;
-  newestAt: string | null;
-}
-
-/**
- * The scope's current stock figures from the all-time aggregation tier: the
- * latest reported value per field, which is what "current" means for stocks
- * (displaced, refugees, people in need). Flows and funding are deliberately
- * not read here: an all-time tier sums them across years.
- */
-export interface AnalysisFigures {
-  idpStock: AnalysisFigure | null;
-  refugees: AnalysisFigure | null;
-  returneeStock: AnalysisFigure | null;
-  overallPin: AnalysisFigure | null;
-  pinBySector: { sector: PinSector; figure: AnalysisFigure }[];
-}
-
-function toFigure(raw: unknown): AnalysisFigure | null {
-  if (!raw || typeof raw !== "object") return null;
-  const e = raw as RawEnvelope;
-  if (typeof e.value !== "number" || !Number.isFinite(e.value)) return null;
-  const num = (n: unknown) => (typeof n === "number" && Number.isFinite(n) ? n : null);
-  return {
-    value: Math.round(e.value),
-    low: num(e.value_low),
-    high: num(e.value_high),
-    newestAt: typeof e.newest_report_at === "string" ? e.newest_report_at : null,
-  };
-}
-
-export function mapFigures(data: Record<string, unknown> | null | undefined): AnalysisFigures {
-  const d = data ?? {};
-  return {
-    idpStock: toFigure(d.idp_stock),
-    refugees: toFigure(d.refugees),
-    returneeStock: toFigure(d.returnee_stock),
-    overallPin: toFigure(d.overall_pin),
-    pinBySector: PIN_SECTORS.map((sector) => ({ sector, figure: toFigure(d[`pin_${sector}`]) }))
-      .filter((r): r is { sector: PinSector; figure: AnalysisFigure } => r.figure !== null)
-      .sort((a, b) => b.figure.value - a.figure.value),
-  };
-}
-
 /** clear-api clamps `eventsPage.limit` to 100. */
 const EVENTS_LIMIT = 100;
-
-interface GqlAnalysisLocation {
-  id: string;
-  name: string;
-  level: number;
-  geometry?: unknown;
-  ancestors?: { id: string; name: string; level: number }[] | null;
-}
-
-interface GqlAnalysisEvent {
-  id: string;
-  title: string | null;
-  types: string[];
-  severity: number | null;
-  firstSignalCreatedAt: string;
-  lastSignalCreatedAt: string;
-  casualties: number | null;
-  populationDisplaced: string | null;
-  representativePoint: GqlAnalysisLocation | null;
-  generalLocation: GqlAnalysisLocation | null;
-}
-
-export interface AnalysisEvent {
-  id: string;
-  title: string | null;
-  types: string[];
-  severity: number | null;
-  startedAt: string;
-  lastSignalAt: string;
-  casualties: number | null;
-  populationDisplaced: number | null;
-  /** [lng, lat] for the map marker, null when the event has no geometry. */
-  point: [number, number] | null;
-  locationName: string | null;
-  /** The admin-1 area the event sits in, for the scope panel's breakdown. */
-  admin1: { id: string; name: string } | null;
-}
-
-export interface AnalysisEvents {
-  totalCount: number;
-  items: AnalysisEvent[];
-}
-
-/**
- * The frame the weekly pipeline writes for a country: the calendar year to
- * date, regenerated weekly. clear-api matches `windowEnd` exactly, so this must
- * stay byte-identical to the pipeline's `_calendar_year_window`.
- */
-export function countryFrame(countryLocationId: string, year: number) {
-  return {
-    locationIds: [countryLocationId],
-    windowStart: `${year}-01-01T00:00:00Z`,
-    windowEnd: `${year}-12-31T23:59:59Z`,
-  };
-}
-
-function admin1Of(loc: GqlAnalysisLocation | null): { id: string; name: string } | null {
-  if (!loc) return null;
-  if (loc.level === 1) return { id: loc.id, name: loc.name };
-  const a1 = loc.ancestors?.find((a) => a.level === 1);
-  return a1 ? { id: a1.id, name: a1.name } : null;
-}
-
-export function toAnalysisEvent(e: GqlAnalysisEvent): AnalysisEvent {
-  const geometry = (e.representativePoint?.geometry ?? null) as Parameters<typeof toMapPointGeometry>[0];
-  const point = toMapPointGeometry(geometry)?.coordinates ?? null;
-  const displaced = e.populationDisplaced != null ? Number(e.populationDisplaced) : null;
-  return {
-    id: e.id,
-    title: e.title,
-    types: e.types ?? [],
-    severity: e.severity,
-    startedAt: e.firstSignalCreatedAt,
-    lastSignalAt: e.lastSignalCreatedAt,
-    casualties: e.casualties,
-    populationDisplaced: displaced != null && Number.isFinite(displaced) ? displaced : null,
-    point,
-    locationName: e.generalLocation?.name ?? e.representativePoint?.name ?? null,
-    admin1: admin1Of(e.generalLocation),
-  };
-}
 
 /** Title/date for cited events, one aliased round trip. Best-effort. */
 async function fetchEventMeta(
@@ -266,9 +132,21 @@ const AUTOMATION_FIELDS = `
   createdAt
 `;
 
-const AUTOMATIONS_QUERY = `
-  query AnalysisAutomations($teamId: String) {
+/**
+ * The caller's teams and a team's automations in one round trip: clear-api
+ * checks only the role on automation writes and lists any team's automations
+ * (S1/S2), so membership is checked here as well.
+ */
+const TEAM_AUTOMATIONS_QUERY = `
+  query TeamAnalysisAutomations($teamId: String) {
+    myTeams { id }
     analysisAutomations(teamId: $teamId) { ${AUTOMATION_FIELDS} }
+  }
+`;
+
+const MY_TEAMS_QUERY = `
+  query AnalysisMyTeams {
+    myTeams { id }
   }
 `;
 
@@ -296,58 +174,74 @@ const DELETE_AUTOMATION_MUTATION = `
   }
 `;
 
-interface GqlAutomation {
-  id: string;
-  locationIds: string[];
-  eventTypes: string[];
-  needSectors: string[];
-  windowStart: string;
-  cadence: string;
-  teamId: string | null;
-  enabled: boolean;
-  createdAt: string;
+type Caller = { user: { role: string } };
+
+/** A team's automations, with whether the caller belongs to the team. */
+async function fetchTeamAutomations(
+  teamId: string,
+  headers: Record<string, string>,
+): Promise<{ member: boolean; automations: GqlAutomation[] }> {
+  const data = await graphqlFetch<{ myTeams: { id: string }[] | null; analysisAutomations: GqlAutomation[] | null }>(
+    TEAM_AUTOMATIONS_QUERY,
+    { teamId },
+    headers,
+  );
+  return {
+    member: (data.myTeams ?? []).some((t) => t.id === teamId),
+    automations: data.analysisAutomations ?? [],
+  };
 }
 
-export interface CountryAnalysisEntry {
-  id: string;
-  name: string;
-  analysisId: string | null;
-  generatedAt: string | null;
-  /** First sentence of the current analysis' summary, for the landing list. */
-  headline: string | null;
+/** The cadence a user picked for an automation: a disabled one updates only on request. */
+function cadenceOf(a: GqlAutomation): AnalysisCadence {
+  if (!a.enabled) return "manual";
+  return (ANALYSIS_CADENCES as readonly string[]).includes(a.cadence) ? (a.cadence as AnalysisCadence) : "weekly";
 }
 
-export interface CreatedAnalysis {
-  /** Automation id. */
-  id: string;
-  name: string;
-  locationIds: string[];
-  eventTypes: string[];
-  needSectors: string[];
-  /** Country the scope sits in, for filtering by the selected country. */
-  countryId: string | null;
-  windowStart: string;
-  cadence: string;
-  enabled: boolean;
-  createdAt: string;
-  /** Null until the first run has generated the analysis. */
-  analysisId: string | null;
-  generatedAt: string | null;
+function forbidden(): never {
+  throw new TRPCError({ code: "FORBIDDEN", message: "You are not a member of this team" });
 }
 
-export interface AnalysisScopes {
-  countries: CountryAnalysisEntry[];
-  created: CreatedAnalysis[];
+/** The team's automations; rejects a caller outside the team unless a platform admin. */
+async function requireTeamAutomations(
+  ctx: Caller,
+  teamId: string,
+  headers: Record<string, string>,
+): Promise<GqlAutomation[]> {
+  const { member, automations } = await fetchTeamAutomations(teamId, headers);
+  if (!member && !isPlatformAdmin(ctx.user.role)) forbidden();
+  return automations;
 }
 
-type GqlLabelLocation = LabelLocation & { level: number };
-
-function countryOf(loc: GqlLabelLocation): string | null {
-  if (loc.level === 0) return loc.id;
-  return loc.ancestors?.find((a) => a.level === 0)?.id ?? null;
+/**
+ * An automation write: the caller must belong to `teamId` and the automation
+ * to that team. Platform admins skip both checks (and the round trip).
+ */
+async function requireTeamAutomation(
+  ctx: Caller,
+  teamId: string,
+  id: string,
+  headers: Record<string, string>,
+): Promise<void> {
+  if (isPlatformAdmin(ctx.user.role)) return;
+  const automations = await requireTeamAutomations(ctx, teamId, headers);
+  if (!automations.some((a) => a.id === id)) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Analysis not found in this team" });
+  }
 }
 
-/** Names and ancestor chains for scope labels, one aliased round trip. Best-effort. */
+/** A team-scoped request: the caller must belong to `teamId` unless a platform admin. */
+async function requireTeamMember(ctx: Caller, teamId: string, headers: Record<string, string>): Promise<void> {
+  if (isPlatformAdmin(ctx.user.role)) return;
+  const data = await graphqlFetch<{ myTeams: { id: string }[] | null }>(MY_TEAMS_QUERY, {}, headers);
+  if (!(data.myTeams ?? []).some((t) => t.id === teamId)) forbidden();
+}
+
+/**
+ * Names and ancestor chains for scope labels, one aliased round trip, retried
+ * once. Best-effort: an empty map leaves raw ids in the label and a null
+ * country, which the UI lists everywhere rather than hiding.
+ */
 async function fetchLabelLocations(
   ids: string[],
   headers: Record<string, string>,
@@ -359,15 +253,18 @@ async function fetchLabelLocations(
     .join("\n");
   const params = ids.map((_, i) => `$l${i}: String!`).join(", ");
   const variables = Object.fromEntries(ids.map((id, i) => [`l${i}`, id]));
-  try {
-    const data = await graphqlFetch<Record<string, GqlLabelLocation | null>>(
-      `query ScopeLocations(${params}) {\n${fields}\n}`,
-      variables,
-      headers,
-    );
-    for (const loc of Object.values(data ?? {})) if (loc?.id) out.set(loc.id, loc);
-  } catch {
-    // Falls back to raw ids in the label.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const data = await graphqlFetch<Record<string, GqlLabelLocation | null>>(
+        `query ScopeLocations(${params}) {\n${fields}\n}`,
+        variables,
+        headers,
+      );
+      for (const loc of Object.values(data ?? {})) if (loc?.id) out.set(loc.id, loc);
+      return out;
+    } catch {
+      // Retry once, then fall back to raw ids in the label.
+    }
   }
   return out;
 }
@@ -561,16 +458,13 @@ export const analysisRouter = createTRPCRouter({
       const headers = cookieHeaders(ctx);
       const year = new Date().getUTCFullYear();
 
-      // Without a team, clear-api would list every team's automations.
-      const automations = input.teamId
-        ? (
-            await graphqlFetch<{ analysisAutomations: GqlAutomation[] }>(
-              AUTOMATIONS_QUERY,
-              { teamId: input.teamId },
-              headers,
-            )
-          ).analysisAutomations
-        : [];
+      // Without a team, clear-api would list every team's automations; it
+      // would also list a team the caller is not in, so that is checked here.
+      let automations: GqlAutomation[] = [];
+      if (input.teamId) {
+        const team = await fetchTeamAutomations(input.teamId, headers);
+        if (team.member || isPlatformAdmin(ctx.user.role)) automations = team.automations;
+      }
 
       const locationIds = [...new Set(automations.flatMap((a) => a.locationIds))];
       const frames = [
@@ -613,24 +507,7 @@ export const analysisRouter = createTRPCRouter({
         };
       });
       const offset = input.countries.length * 2;
-      const created = automations.map((a, i): CreatedAnalysis => {
-        const locs = a.locationIds.map((id) => locations.get(id)).filter((l): l is GqlLabelLocation => !!l);
-        const stamp = stamps[offset + i] ?? null;
-        return {
-          id: a.id,
-          name: scopeLabel(locs) || a.locationIds.join(", "),
-          locationIds: a.locationIds,
-          eventTypes: a.eventTypes,
-          needSectors: a.needSectors,
-          countryId: locs[0] ? countryOf(locs[0]) : null,
-          windowStart: a.windowStart,
-          cadence: a.cadence,
-          enabled: a.enabled,
-          createdAt: a.createdAt,
-          analysisId: stamp?.id ?? null,
-          generatedAt: stamp?.generatedAt ?? null,
-        };
-      });
+      const created = automations.map((a, i) => toCreatedAnalysis(a, locations, stamps[offset + i] ?? null));
       return { countries, created };
     }),
 
@@ -638,9 +515,12 @@ export const analysisRouter = createTRPCRouter({
    * Create an analysis over one or more areas: a rolling automation keeps it
    * current, plus a one-off request for the same rolling frame so the first
    * version comes from the on-demand queue (polled every minute) instead of
-   * waiting for the automation sensor's hourly poll. "manual" creates a
-   * disabled automation, so it only updates on request. Admin / analyst,
-   * enforced by clear-api.
+   * waiting for the automation sensor's hourly poll. "manual" disables the
+   * automation once that request is in, so it only updates on request; if
+   * the request fails the automation stays on weekly so a first version still
+   * comes. The team already covering the same areas gets that analysis back
+   * instead of a second one. Team membership is checked here; the role
+   * (admin / analyst) by clear-api.
    */
   create: protectedProcedure
     .input(
@@ -650,52 +530,70 @@ export const analysisRouter = createTRPCRouter({
         cadence: z.enum(ANALYSIS_CADENCES),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      const headers = cookieHeaders(ctx);
-      const res = await graphqlFetch<{ createAnalysisAutomation: GqlAutomation }>(
-        CREATE_AUTOMATION_MUTATION,
-        {
-          input: {
-            teamId: input.teamId,
-            locationIds: input.locationIds,
-            // clear-api has no "manual" cadence; the automation is disabled below.
-            cadence: input.cadence === "manual" ? "weekly" : input.cadence,
-            windowStart: createdWindowStart(),
-          },
-        },
-        headers,
-      );
-      const automation = res.createAnalysisAutomation;
-      if (input.cadence === "manual") {
-        // Best-effort: at worst it also updates weekly, which the user can change.
-        try {
-          await graphqlFetch(UPDATE_AUTOMATION_MUTATION, { id: automation.id, input: { enabled: false } }, headers);
-        } catch {
-          // Keep going: the first version is still worth requesting.
+    .mutation(
+      async ({
+        ctx,
+        input,
+      }): Promise<{ id: string; firstVersionRequested: boolean; existing: boolean; cadence: AnalysisCadence }> => {
+        const headers = cookieHeaders(ctx);
+        const automations = await requireTeamAutomations(ctx, input.teamId, headers);
+        const same = automations.find((a) => sameLocations(a.locationIds, input.locationIds));
+        if (same) {
+          return { id: same.id, firstVersionRequested: false, existing: true, cadence: cadenceOf(same) };
         }
-      }
-      // Best-effort: without it the automation still generates, just on its hourly poll.
-      let firstVersionRequested = true;
-      try {
-        await graphqlFetch(
-          REQUEST_ANALYSIS_MUTATION,
+
+        const res = await graphqlFetch<{ createAnalysisAutomation: GqlAutomation }>(
+          CREATE_AUTOMATION_MUTATION,
           {
             input: {
               teamId: input.teamId,
-              locationIds: automation.locationIds,
-              eventTypes: automation.eventTypes,
-              needSectors: automation.needSectors,
-              windowStart: automation.windowStart,
-              windowEnd: null,
+              locationIds: input.locationIds,
+              // clear-api has no "manual" cadence; the automation is disabled below.
+              cadence: input.cadence === "manual" ? "weekly" : input.cadence,
+              windowStart: createdWindowStart(),
             },
           },
           headers,
         );
-      } catch {
-        firstVersionRequested = false;
-      }
-      return { id: automation.id, firstVersionRequested };
-    }),
+        const automation = res.createAnalysisAutomation;
+
+        // Best-effort: without it the automation still generates, just on its hourly poll.
+        let firstVersionRequested = true;
+        try {
+          await graphqlFetch(
+            REQUEST_ANALYSIS_MUTATION,
+            {
+              input: {
+                teamId: input.teamId,
+                locationIds: automation.locationIds,
+                eventTypes: automation.eventTypes,
+                needSectors: automation.needSectors,
+                windowStart: automation.windowStart,
+                windowEnd: null,
+              },
+            },
+            headers,
+          );
+        } catch {
+          firstVersionRequested = false;
+        }
+
+        let cadence: AnalysisCadence = input.cadence;
+        if (input.cadence === "manual") {
+          // Disabled before its first version, it would never generate: stay weekly.
+          cadence = "weekly";
+          if (firstVersionRequested) {
+            try {
+              await graphqlFetch(UPDATE_AUTOMATION_MUTATION, { id: automation.id, input: { enabled: false } }, headers);
+              cadence = "manual";
+            } catch {
+              // Still weekly, which the user can change.
+            }
+          }
+        }
+        return { id: automation.id, firstVersionRequested, existing: false, cadence };
+      },
+    ),
 
   /**
    * Ask for a new version of a frame now. The pipeline drains the request
@@ -714,34 +612,42 @@ export const analysisRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await graphqlFetch(REQUEST_ANALYSIS_MUTATION, { input }, cookieHeaders(ctx));
+      const headers = cookieHeaders(ctx);
+      if (input.teamId) await requireTeamMember(ctx, input.teamId, headers);
+      await graphqlFetch(REQUEST_ANALYSIS_MUTATION, { input }, headers);
       return { requested: true as const };
     }),
 
-  /** Change how often a created analysis updates; "manual" pauses the automation. */
+  /**
+   * Change how often a created analysis updates; "manual" pauses the
+   * automation. The caller must belong to the team that owns it.
+   */
   setCadence: protectedProcedure
-    .input(z.object({ id: z.string().min(1), cadence: z.enum(ANALYSIS_CADENCES) }))
+    .input(z.object({ id: z.string().min(1), cadence: z.enum(ANALYSIS_CADENCES), teamId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      const headers = cookieHeaders(ctx);
+      await requireTeamAutomation(ctx, input.teamId, input.id, headers);
       await graphqlFetch(
         UPDATE_AUTOMATION_MUTATION,
         {
           id: input.id,
           input: input.cadence === "manual" ? { enabled: false } : { cadence: input.cadence, enabled: true },
         },
-        cookieHeaders(ctx),
+        headers,
       );
       return { id: input.id };
     }),
 
-  /** Stop and remove a created analysis. Its generated rows stay in history. */
+  /**
+   * Stop and remove a created analysis. Its generated rows stay in history.
+   * The caller must belong to the team that owns it.
+   */
   remove: protectedProcedure
-    .input(z.object({ id: z.string().min(1) }))
+    .input(z.object({ id: z.string().min(1), teamId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      await graphqlFetch<{ deleteAnalysisAutomation: boolean }>(
-        DELETE_AUTOMATION_MUTATION,
-        { id: input.id },
-        cookieHeaders(ctx),
-      );
+      const headers = cookieHeaders(ctx);
+      await requireTeamAutomation(ctx, input.teamId, input.id, headers);
+      await graphqlFetch<{ deleteAnalysisAutomation: boolean }>(DELETE_AUTOMATION_MUTATION, { id: input.id }, headers);
       return { id: input.id };
     }),
 

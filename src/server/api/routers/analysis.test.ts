@@ -13,7 +13,41 @@ vi.mock("~/server/api/graphql", () => ({
 }));
 
 const { createCaller } = await import("~/server/api/root");
-const { countryFrame, mapFigures, toAnalysisEvent } = await import("~/server/api/routers/analysis");
+const { countryFrame, mapFigures, toAnalysisEvent } = await import("~/server/api/mappers/analysis");
+
+function stubSession(role: string) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          session: { id: "s", userId: "u", expiresAt: "2099-01-01" },
+          user: { id: "u", email: "a@b.c", role },
+        }),
+        { status: 200 },
+      ),
+    ),
+  );
+}
+
+const auto = (id: string, locationIds: string[], extra: Record<string, unknown> = {}) => ({
+  id,
+  locationIds,
+  eventTypes: [],
+  needSectors: [],
+  windowStart: "2026-07-01T00:00:00.000Z",
+  cadence: "weekly",
+  teamId: "t1",
+  enabled: true,
+  createdAt: "2026-09-28T00:00:00.000Z",
+  ...extra,
+});
+
+/** The membership + automations round trip: the caller is in `teams`, the team has `automations`. */
+const teamAutomations = (automations: unknown[], teams = ["t1"]) => ({
+  myTeams: teams.map((id) => ({ id })),
+  analysisAutomations: automations,
+});
 
 function caller() {
   return createCaller({ headers: new Headers({ cookie: "better-auth.session_token=x" }) });
@@ -39,18 +73,7 @@ const row = {
 
 describe("analysis router", () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify({
-            session: { id: "s", userId: "u", expiresAt: "2099-01-01" },
-            user: { id: "u", email: "a@b.c", role: "viewer" },
-          }),
-          { status: 200 },
-        ),
-      ),
-    );
+    stubSession("viewer");
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -206,23 +229,9 @@ describe("analysis router", () => {
 
   it("lists the country frame and the team's automations with names and generation stamps", async () => {
     graphqlFetch.mockImplementation(async (query: string, vars: Record<string, unknown>) => {
-      if (query.includes("query AnalysisAutomations")) {
+      if (query.includes("query TeamAnalysisAutomations")) {
         expect(vars).toEqual({ teamId: "t1" });
-        return {
-          analysisAutomations: [
-            {
-              id: "auto-1",
-              locationIds: ["sheikan", "umrawaba"],
-              eventTypes: [],
-              needSectors: [],
-              windowStart: "2026-07-01T00:00:00.000Z",
-              cadence: "weekly",
-              teamId: "t1",
-              enabled: true,
-              createdAt: "2026-09-28T00:00:00.000Z",
-            },
-          ],
-        };
+        return teamAutomations([auto("auto-1", ["sheikan", "umrawaba"])]);
       }
       if (query.includes("query ScopeLocations")) {
         const chain = [
@@ -322,17 +331,19 @@ describe("analysis router", () => {
       windowStart: "2026-07-01T00:00:00.000Z",
     };
     graphqlFetch
+      .mockResolvedValueOnce(teamAutomations([]))
       .mockResolvedValueOnce({ createAnalysisAutomation: automation })
       .mockResolvedValueOnce({ requestAnalysis: { id: "req-1", status: "PENDING" } });
     const result = await caller().analysis.create({ teamId: "t1", locationIds: ["sheikan"], cadence: "daily" });
 
-    const [createQuery, createVars] = graphqlFetch.mock.calls[0]!;
+    expect(graphqlFetch.mock.calls[0]![0]).toContain("query TeamAnalysisAutomations");
+    const [createQuery, createVars] = graphqlFetch.mock.calls[1]!;
     expect(createQuery).toContain("createAnalysisAutomation");
     const input = (createVars as { input: Record<string, unknown> }).input;
     expect(input).toMatchObject({ teamId: "t1", locationIds: ["sheikan"], cadence: "daily" });
     expect(input.windowStart).toMatch(/T00:00:00\.000Z$/);
 
-    const [requestQuery, requestVars] = graphqlFetch.mock.calls[1]!;
+    const [requestQuery, requestVars] = graphqlFetch.mock.calls[2]!;
     expect(requestQuery).toContain("requestAnalysis");
     expect(requestVars).toEqual({
       input: {
@@ -344,17 +355,18 @@ describe("analysis router", () => {
         windowEnd: null,
       },
     });
-    expect(result).toEqual({ id: "auto-9", firstVersionRequested: true });
+    expect(result).toEqual({ id: "auto-9", firstVersionRequested: true, existing: false, cadence: "daily" });
   });
 
   it("still creates the analysis when the first-version request fails", async () => {
     graphqlFetch
+      .mockResolvedValueOnce(teamAutomations([]))
       .mockResolvedValueOnce({
         createAnalysisAutomation: { id: "auto-9", locationIds: ["x"], eventTypes: [], needSectors: [], windowStart: "2026-07-01T00:00:00.000Z" },
       })
       .mockRejectedValueOnce(new Error("boom"));
     const result = await caller().analysis.create({ teamId: "t1", locationIds: ["x"], cadence: "weekly" });
-    expect(result).toEqual({ id: "auto-9", firstVersionRequested: false });
+    expect(result).toEqual({ id: "auto-9", firstVersionRequested: false, existing: false, cadence: "weekly" });
   });
 
   it("rejects unknown cadences and empty scopes before calling clear-api", async () => {
@@ -363,22 +375,66 @@ describe("analysis router", () => {
     expect(graphqlFetch).not.toHaveBeenCalled();
   });
 
-  it("creates an on-request analysis as a disabled weekly automation and still requests its first version", async () => {
+  it("creates an on-request analysis weekly, requests its first version, then disables it", async () => {
     graphqlFetch
+      .mockResolvedValueOnce(teamAutomations([]))
       .mockResolvedValueOnce({
         createAnalysisAutomation: { id: "auto-9", locationIds: ["x"], eventTypes: [], needSectors: [], windowStart: "2026-07-01T00:00:00.000Z" },
       })
-      .mockResolvedValueOnce({ updateAnalysisAutomation: { id: "auto-9", cadence: "weekly", enabled: false } })
-      .mockResolvedValueOnce({ requestAnalysis: { id: "req-1", status: "PENDING" } });
+      .mockResolvedValueOnce({ requestAnalysis: { id: "req-1", status: "PENDING" } })
+      .mockResolvedValueOnce({ updateAnalysisAutomation: { id: "auto-9", cadence: "weekly", enabled: false } });
     const result = await caller().analysis.create({ teamId: "t1", locationIds: ["x"], cadence: "manual" });
 
     const calls = graphqlFetch.mock.calls;
-    expect(calls[0]![0]).toContain("createAnalysisAutomation");
-    expect((calls[0]![1] as { input: { cadence: string } }).input.cadence).toBe("weekly");
-    expect(calls[1]![0]).toContain("updateAnalysisAutomation");
-    expect(calls[1]![1]).toEqual({ id: "auto-9", input: { enabled: false } });
+    expect(calls[1]![0]).toContain("createAnalysisAutomation");
+    expect((calls[1]![1] as { input: { cadence: string } }).input.cadence).toBe("weekly");
     expect(calls[2]![0]).toContain("requestAnalysis");
-    expect(result).toEqual({ id: "auto-9", firstVersionRequested: true });
+    expect(calls[3]![0]).toContain("updateAnalysisAutomation");
+    expect(calls[3]![1]).toEqual({ id: "auto-9", input: { enabled: false } });
+    expect(result).toEqual({ id: "auto-9", firstVersionRequested: true, existing: false, cadence: "manual" });
+  });
+
+  it("keeps an on-request analysis weekly and enabled when its first-version request fails", async () => {
+    graphqlFetch
+      .mockResolvedValueOnce(teamAutomations([]))
+      .mockResolvedValueOnce({
+        createAnalysisAutomation: { id: "auto-9", locationIds: ["x"], eventTypes: [], needSectors: [], windowStart: "2026-07-01T00:00:00.000Z" },
+      })
+      .mockRejectedValueOnce(new Error("queue down"));
+    const result = await caller().analysis.create({ teamId: "t1", locationIds: ["x"], cadence: "manual" });
+
+    expect(graphqlFetch).toHaveBeenCalledTimes(3);
+    expect(graphqlFetch.mock.calls.some(([q]) => (q as string).includes("updateAnalysisAutomation"))).toBe(false);
+    expect(result).toEqual({ id: "auto-9", firstVersionRequested: false, existing: false, cadence: "weekly" });
+  });
+
+  it("returns the team's analysis over the same areas instead of creating a second one", async () => {
+    graphqlFetch.mockResolvedValueOnce(
+      teamAutomations([auto("auto-1", ["umrawaba", "sheikan"], { enabled: false })]),
+    );
+    const result = await caller().analysis.create({ teamId: "t1", locationIds: ["sheikan", "umrawaba"], cadence: "daily" });
+    expect(graphqlFetch).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ id: "auto-1", firstVersionRequested: false, existing: true, cadence: "manual" });
+  });
+
+  it("rejects creating an analysis for a team the caller is not in", async () => {
+    graphqlFetch.mockResolvedValueOnce(teamAutomations([], ["other"]));
+    await expect(
+      caller().analysis.create({ teamId: "t1", locationIds: ["x"], cadence: "weekly" }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(graphqlFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets a platform admin create for a team they are not in", async () => {
+    stubSession("admin");
+    graphqlFetch
+      .mockResolvedValueOnce(teamAutomations([], []))
+      .mockResolvedValueOnce({
+        createAnalysisAutomation: { id: "auto-9", locationIds: ["x"], eventTypes: [], needSectors: [], windowStart: "2026-07-01T00:00:00.000Z" },
+      })
+      .mockResolvedValueOnce({ requestAnalysis: { id: "req-1", status: "PENDING" } });
+    const result = await caller().analysis.create({ teamId: "t1", locationIds: ["x"], cadence: "weekly" });
+    expect(result).toMatchObject({ id: "auto-9", existing: false });
   });
 
   it("refreshes by requesting exactly the given frame", async () => {
@@ -397,8 +453,16 @@ describe("analysis router", () => {
     expect(result).toEqual({ requested: true });
   });
 
+  it("rejects a team refresh from outside the team", async () => {
+    graphqlFetch.mockResolvedValueOnce({ myTeams: [{ id: "other" }] });
+    await expect(
+      caller().analysis.refresh({ locationIds: ["x"], windowStart: "2026-07-01T00:00:00.000Z", windowEnd: null, teamId: "t1" }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(graphqlFetch).toHaveBeenCalledTimes(1);
+  });
+
   it("propagates a failed refresh", async () => {
-    graphqlFetch.mockRejectedValueOnce(new Error("Forbidden"));
+    graphqlFetch.mockResolvedValueOnce({ myTeams: [{ id: "t1" }] }).mockRejectedValueOnce(new Error("Forbidden"));
     await expect(
       caller().analysis.refresh({
         locationIds: ["x"],
@@ -410,18 +474,100 @@ describe("analysis router", () => {
   });
 
   it("pauses an analysis for manual updates and re-enables it on a cadence", async () => {
-    graphqlFetch.mockResolvedValue({ updateAnalysisAutomation: { id: "auto-1" } });
-    await caller().analysis.setCadence({ id: "auto-1", cadence: "manual" });
-    await caller().analysis.setCadence({ id: "auto-1", cadence: "weekly" });
-    expect(graphqlFetch.mock.calls[0]![0]).toContain("updateAnalysisAutomation");
-    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ id: "auto-1", input: { enabled: false } });
-    expect(graphqlFetch.mock.calls[1]![1]).toEqual({ id: "auto-1", input: { cadence: "weekly", enabled: true } });
+    graphqlFetch.mockImplementation(async (query: string) => {
+      if (query.includes("query TeamAnalysisAutomations")) return teamAutomations([auto("auto-1", ["x"])]);
+      return { updateAnalysisAutomation: { id: "auto-1" } };
+    });
+    await caller().analysis.setCadence({ id: "auto-1", cadence: "manual", teamId: "t1" });
+    await caller().analysis.setCadence({ id: "auto-1", cadence: "weekly", teamId: "t1" });
+    const updates = graphqlFetch.mock.calls.filter(([q]) => (q as string).includes("updateAnalysisAutomation"));
+    expect(updates.map(([, v]) => v)).toEqual([
+      { id: "auto-1", input: { enabled: false } },
+      { id: "auto-1", input: { cadence: "weekly", enabled: true } },
+    ]);
   });
 
-  it("removes an automation", async () => {
-    graphqlFetch.mockResolvedValueOnce({ deleteAnalysisAutomation: true });
-    await caller().analysis.remove({ id: "auto-1" });
-    expect(graphqlFetch.mock.calls[0]![1]).toEqual({ id: "auto-1" });
+  it("removes an automation of the caller's team", async () => {
+    graphqlFetch
+      .mockResolvedValueOnce(teamAutomations([auto("auto-1", ["x"])]))
+      .mockResolvedValueOnce({ deleteAnalysisAutomation: true });
+    await caller().analysis.remove({ id: "auto-1", teamId: "t1" });
+    expect(graphqlFetch.mock.calls[1]![0]).toContain("deleteAnalysisAutomation");
+    expect(graphqlFetch.mock.calls[1]![1]).toEqual({ id: "auto-1" });
+  });
+
+  it("rejects remove and setCadence on a team the caller is not in", async () => {
+    graphqlFetch.mockResolvedValue(teamAutomations([auto("auto-1", ["x"])], ["other"]));
+    await expect(caller().analysis.remove({ id: "auto-1", teamId: "t1" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      caller().analysis.setCadence({ id: "auto-1", cadence: "daily", teamId: "t1" }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(graphqlFetch.mock.calls.every(([q]) => (q as string).includes("query TeamAnalysisAutomations"))).toBe(true);
+  });
+
+  it("rejects remove and setCadence on an automation outside the given team", async () => {
+    graphqlFetch.mockResolvedValue(teamAutomations([auto("auto-1", ["x"])]));
+    await expect(caller().analysis.remove({ id: "auto-other", teamId: "t1" })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      caller().analysis.setCadence({ id: "auto-other", cadence: "daily", teamId: "t1" }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(graphqlFetch.mock.calls.every(([q]) => (q as string).includes("query TeamAnalysisAutomations"))).toBe(true);
+  });
+
+  it("lets a platform admin remove and set cadence without the team checks", async () => {
+    stubSession("admin");
+    graphqlFetch.mockResolvedValue({ deleteAnalysisAutomation: true, updateAnalysisAutomation: { id: "auto-1" } });
+    await caller().analysis.remove({ id: "auto-1", teamId: "t1" });
+    await caller().analysis.setCadence({ id: "auto-1", cadence: "daily", teamId: "t1" });
+    expect(graphqlFetch).toHaveBeenCalledTimes(2);
+    expect(graphqlFetch.mock.calls[0]![0]).toContain("deleteAnalysisAutomation");
+    expect(graphqlFetch.mock.calls[1]![0]).toContain("updateAnalysisAutomation");
+  });
+
+  it("lists no created analyses for a team the caller is not in", async () => {
+    graphqlFetch.mockImplementation(async (query: string) => {
+      if (query.includes("query TeamAnalysisAutomations")) return teamAutomations([auto("auto-1", ["x"])], ["other"]);
+      if (query.includes("query AnalysisStamps")) return { a0: null, a1: null };
+      throw new Error(`unexpected query ${query.slice(0, 40)}`);
+    });
+    const result = await caller().analysis.scopes({ teamId: "t1", countries: [{ id: "sdn", name: "Sudan" }] });
+    expect(result.created).toEqual([]);
+  });
+
+  it("keeps created analyses with a null country when the location lookup fails twice", async () => {
+    let lookups = 0;
+    graphqlFetch.mockImplementation(async (query: string) => {
+      if (query.includes("query TeamAnalysisAutomations")) return teamAutomations([auto("auto-1", ["sheikan"])]);
+      if (query.includes("query ScopeLocations")) {
+        lookups += 1;
+        throw new Error("timeout");
+      }
+      if (query.includes("query AnalysisStamps")) return { a0: null, a1: null, a2: null };
+      throw new Error(`unexpected query ${query.slice(0, 40)}`);
+    });
+    const result = await caller().analysis.scopes({ teamId: "t1", countries: [{ id: "sdn", name: "Sudan" }] });
+    expect(lookups).toBe(2);
+    expect(result.created).toHaveLength(1);
+    expect(result.created[0]).toMatchObject({ id: "auto-1", name: "sheikan", countryId: null });
+  });
+
+  it("retries a failed location lookup once and uses the second answer", async () => {
+    let lookups = 0;
+    graphqlFetch.mockImplementation(async (query: string) => {
+      if (query.includes("query TeamAnalysisAutomations")) return teamAutomations([auto("auto-1", ["sheikan"])]);
+      if (query.includes("query ScopeLocations")) {
+        lookups += 1;
+        if (lookups === 1) throw new Error("timeout");
+        return {
+          l0: { id: "sheikan", name: "Sheikan", level: 2, parent: null, ancestors: [{ id: "sdn", name: "Sudan", level: 0 }] },
+        };
+      }
+      if (query.includes("query AnalysisStamps")) return { a0: null, a1: null, a2: null };
+      throw new Error(`unexpected query ${query.slice(0, 40)}`);
+    });
+    const result = await caller().analysis.scopes({ teamId: "t1", countries: [{ id: "sdn", name: "Sudan" }] });
+    expect(lookups).toBe(2);
+    expect(result.created[0]).toMatchObject({ name: "Sheikan, Sudan", countryId: "sdn" });
   });
 
   it("merges a multi-district scope's events, newest first, without duplicates", async () => {

@@ -3008,7 +3008,9 @@
     },
     "generating": {
       "title": "Generating the first version",
-      "description": "The pipeline is building this analysis from the knowledge base. This page updates by itself when it is ready."
+      "description": "The pipeline is building this analysis from the knowledge base. This page updates by itself when it is ready.",
+      "overdueTitle": "Not generated yet",
+      "overdueDescription": "The first version has not arrived. It may have failed; request it again with Update now."
     },
     "cadence": {
       "daily": "Daily",
@@ -3039,7 +3041,8 @@
       "frequencyLabel": "Update frequency of {name}",
       "frequencyError": "The update frequency could not be changed. Please try again.",
       "mapHint": "Click a highlighted area to open its analysis.",
-      "mapCard": "{type} · {status}"
+      "mapCard": "{type} · {status}",
+      "notGenerated": "Not generated yet"
     },
     "create": {
       "title": "New analysis in {country}",
@@ -3062,7 +3065,9 @@
       "selected": "Selected ({count}/{max})",
       "nothingSelected": "Nothing selected yet.",
       "removeArea": "Remove {name}",
-      "wholeState": "{name} (whole state)"
+      "wholeState": "{name} (whole state)",
+      "manualFallback": "This analysis could not be set to update on request, so it updates weekly for now. You can change the frequency in the list.",
+      "existing": "Your team already has this analysis, so it was opened instead."
     },
     "report": {
       "button": "Create report",

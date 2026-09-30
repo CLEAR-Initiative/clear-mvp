@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { Box, Group, Text } from "@mantine/core";
 import { severityColor } from "~/lib/types/graphql";
-import type { AnalysisEvents } from "~/server/api/routers/analysis";
+import type { AnalysisEvents } from "~/server/api/mappers/analysis";
 
 export function EventsList({ events }: { events: AnalysisEvents | undefined }) {
   const t = useTranslations("analysis.events");

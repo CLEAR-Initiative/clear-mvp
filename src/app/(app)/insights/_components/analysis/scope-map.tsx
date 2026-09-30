@@ -6,31 +6,30 @@ import { Box, Grid, Stack, Text } from "@mantine/core";
 import { api } from "~/trpc/react";
 import { MinimapCard } from "~/components/map/minimap-card";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { mapSeverity, type GqlLocation } from "~/lib/types/graphql";
+import { mapSeverity } from "~/lib/types/graphql";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import { eventsByArea } from "~/lib/analysis-view";
-import type { AnalysisEvents } from "~/server/api/routers/analysis";
+import type { AnalysisEvents } from "~/server/api/mappers/analysis";
 
 const MAX_AREAS = 8;
 
 /**
  * The existing minimap, outlining the scope and plotting its events, with the
- * scope panel beside it. A district scope zooms to the first district's state.
+ * scope panel beside it. An area scope outlines every area and fits them all.
  */
 export function ScopeMap({
   countryId,
   countryName,
   scopeName,
-  districtId,
-  districtCount,
+  areaIds,
   since,
   events,
 }: {
   countryId: string;
   countryName: string;
   scopeName: string;
-  districtId: string | null;
-  districtCount: number;
+  /** The created analysis' areas; empty for the whole country. */
+  areaIds: string[];
   since: string;
   events: AnalysisEvents | undefined;
 }) {
@@ -40,9 +39,23 @@ export function ScopeMap({
     { id: countryId },
     { staleTime: Infinity, refetchOnWindowFocus: false },
   );
-  const district = api.locations.getById.useQuery(
-    { id: districtId ?? "" },
-    { enabled: !!districtId, staleTime: Infinity, refetchOnWindowFocus: false },
+  const areaQueries = api.useQueries((q) =>
+    areaIds.map((id) => q.locations.getById({ id }, { staleTime: Infinity, refetchOnWindowFocus: false })),
+  );
+  // Rebuilt only when an area's geometry arrives, so the map does not refit on every render.
+  const areaGeometries = areaQueries.map((a) => a.data?.geometry ?? null);
+  const areaKey = areaQueries.map((a, i) => `${areaIds[i]}:${a.data ? 1 : 0}`).join(",");
+  const scopeAreas = useMemo(
+    () =>
+      areaIds.length === 0
+        ? undefined
+        : areaIds.map((id, i) => ({
+            id,
+            name: areaQueries[i]?.data?.name ?? id,
+            geometry: areaGeometries[i] ?? null,
+          })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [areaKey],
   );
   const config = resolveCountryConfig(countryName);
   const center: [number, number] = config?.center ?? [10, 20];
@@ -78,8 +91,9 @@ export function ScopeMap({
           countryId={countryId}
           countryName={countryName}
           countryPCode={config?.pCode}
-          location={(district.data as GqlLocation | null | undefined) ?? null}
+          location={null}
           locationName={scopeName}
+          scopeAreas={scopeAreas}
         />
       </Grid.Col>
 
@@ -93,7 +107,7 @@ export function ScopeMap({
             {scopeName}
           </Text>
           <Text c="var(--color-text-secondary)" style={{ fontSize: 13 }}>
-            {districtId ? t("scope.areas", { count: districtCount }) : t("scope.wholeCountry")}
+            {areaIds.length > 0 ? t("scope.areas", { count: areaIds.length }) : t("scope.wholeCountry")}
           </Text>
           <Text c="var(--color-text-primary)" mt={10} style={{ fontSize: 13 }}>
             {t("map.events", { count: total, date: sinceLabel })}

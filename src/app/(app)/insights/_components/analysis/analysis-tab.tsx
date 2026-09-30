@@ -51,7 +51,9 @@ export function AnalysisTab() {
     },
   );
   const created = useMemo(
-    () => (scopes.data?.created ?? []).filter((c) => c.countryId === country?.id),
+    // A null country means the server could not look up its areas: show it in
+    // every country's list rather than hide it.
+    () => (scopes.data?.created ?? []).filter((c) => c.countryId === country?.id || c.countryId === null),
     [scopes.data, country?.id],
   );
 
@@ -115,6 +117,7 @@ export function AnalysisTab() {
         loading={scopes.isLoading}
         canCreate={canManage}
         canRemove={canManage}
+        teamId={activeTeamId}
         selector={selector}
         onOpenCountry={() => setOpenKey(`country:${country.id}`)}
         onOpenCreated={(c) => setOpenKey(`created:${c.id}`)}

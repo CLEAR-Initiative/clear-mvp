@@ -17,9 +17,10 @@ import {
   TextInput,
   useCombobox,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { IconSearch } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import type { CreatedAnalysis } from "~/server/api/routers/analysis";
+import type { CreatedAnalysis } from "~/server/api/mappers/analysis";
 import type { MapRegion } from "~/components/map/crisis-map";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
 import {
@@ -155,8 +156,14 @@ export function NewAnalysisModal({
   const duplicate = existing.find((c) => sameLocations(c.locationIds, selected));
 
   const create = api.analysis.create.useMutation({
-    onSuccess: async (res) => {
+    onSuccess: async (res, input) => {
       await utils.analysis.scopes.invalidate();
+      // The team already had these areas (e.g. another member created them).
+      if (res.existing) notifications.show({ message: t("existing") });
+      // "On request" could not be set up (first version not requested, or the
+      // switch-off failed): the server leaves it weekly, so say so.
+      else if (input.cadence === "manual" && res.cadence === "weekly")
+        notifications.show({ color: "yellow", message: t("manualFallback") });
       reset();
       onCreated(res.id);
     },

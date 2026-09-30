@@ -2,7 +2,7 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { CountryAnalysisEntry, CreatedAnalysis } from "~/server/api/routers/analysis";
+import type { CountryAnalysisEntry, CreatedAnalysis } from "~/server/api/mappers/analysis";
 
 vi.mock("next-intl", () => ({
   useTranslations: (ns?: string) => (key: string, vars?: Record<string, unknown>) =>
@@ -42,13 +42,14 @@ const districts = [
   { id: "umrawaba", name: "Um Rawaba", geometry: square(31, 13) },
 ];
 const setCadenceMutate = vi.fn();
+const removeMutate = vi.fn();
 let cadenceOpts: { onSuccess?: () => void; onError?: () => void } = {};
 let cadencePending: { id: string; cadence: string } | null = null;
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => ({ analysis: { scopes: { invalidate: vi.fn() } } }),
     analysis: {
-      remove: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      remove: { useMutation: () => ({ mutate: removeMutate, isPending: false }) },
       setCadence: {
         useMutation: (opts: typeof cadenceOpts) => (
           (cadenceOpts = opts),
@@ -108,6 +109,7 @@ function renderHome({
         loading={false}
         canCreate={manage}
         canRemove={manage}
+        teamId="team-1"
         selector={null}
         onOpenCountry={onOpenCountry}
         onOpenCreated={onOpenCreated}
@@ -125,6 +127,7 @@ async function pick(testId: string, label: string) {
 
 beforeEach(() => {
   setCadenceMutate.mockReset();
+  removeMutate.mockReset();
   onOpenCreated.mockReset();
   onOpenCountry.mockReset();
   cadencePending = null;
@@ -157,9 +160,9 @@ describe("AnalysisHome", () => {
   it("changes the update frequency of a created analysis", async () => {
     renderHome({ list: [created({ id: "c1", generatedAt: "2026-09-28T00:00:00Z" })] });
     await pick("analysis-frequency-c1", "analysis.cadence.manual");
-    expect(setCadenceMutate).toHaveBeenLastCalledWith({ id: "c1", cadence: "manual" });
+    expect(setCadenceMutate).toHaveBeenLastCalledWith({ id: "c1", cadence: "manual", teamId: "team-1" });
     await pick("analysis-frequency-c1", "analysis.cadence.daily");
-    expect(setCadenceMutate).toHaveBeenLastCalledWith({ id: "c1", cadence: "daily" });
+    expect(setCadenceMutate).toHaveBeenLastCalledWith({ id: "c1", cadence: "daily", teamId: "team-1" });
     expect(onOpenCreated).not.toHaveBeenCalled();
 
     cadenceOpts.onError?.();
@@ -181,6 +184,28 @@ describe("AnalysisHome", () => {
     const row = screen.getByTestId("analysis-scope-c1");
     expect(within(row).getByText(/analysis\.home\.paused/)).toBeInTheDocument();
     expect(within(row).queryByText("analysis.home.stale")).toBeNull();
+  });
+
+  it("removes a created analysis for the active team after confirming", () => {
+    renderHome({ list: [created({ id: "c1", generatedAt: "2026-09-28T00:00:00Z" })] });
+    fireEvent.click(screen.getByTestId("analysis-remove"));
+    fireEvent.click(screen.getByTestId("analysis-remove-confirm"));
+    expect(removeMutate).toHaveBeenCalledWith({ id: "c1", teamId: "team-1" });
+  });
+
+  it("shows an analysis whose first version never arrived as not generated, not generating", () => {
+    renderHome({
+      list: [
+        // Created well past the overdue window with no version.
+        created({ id: "stuck", createdAt: "2026-09-29T10:00:00Z" }),
+        // Created minutes ago: still generating.
+        created({ id: "fresh", createdAt: "2026-09-29T11:50:00Z" }),
+      ],
+    });
+    const stuck = screen.getByTestId("analysis-scope-stuck");
+    expect(within(stuck).getByText("analysis.home.notGenerated")).toBeInTheDocument();
+    expect(within(stuck).queryByText("analysis.home.generating")).toBeNull();
+    expect(within(screen.getByTestId("analysis-scope-fresh")).getByText("analysis.home.generating")).toBeInTheDocument();
   });
 
   it("hides the frequency control from non-managers", () => {

@@ -3008,7 +3008,9 @@
     },
     "generating": {
       "title": "Génération de la première version",
-      "description": "Le pipeline construit cette analyse à partir de la base de connaissances. Cette page se met à jour d'elle-même lorsqu'elle est prête."
+      "description": "Le pipeline construit cette analyse à partir de la base de connaissances. Cette page se met à jour d'elle-même lorsqu'elle est prête.",
+      "overdueTitle": "Pas encore générée",
+      "overdueDescription": "La première version n'est pas arrivée. Elle a peut-être échoué ; demandez-la à nouveau avec Mettre à jour."
     },
     "cadence": {
       "daily": "Quotidienne",
@@ -3039,7 +3041,8 @@
       "frequencyLabel": "Fréquence de mise à jour de {name}",
       "frequencyError": "La fréquence de mise à jour n'a pas pu être modifiée. Veuillez réessayer.",
       "mapHint": "Cliquez sur une zone en surbrillance pour ouvrir son analyse.",
-      "mapCard": "{type} · {status}"
+      "mapCard": "{type} · {status}",
+      "notGenerated": "Pas encore générée"
     },
     "create": {
       "title": "Nouvelle analyse : {country}",
@@ -3062,7 +3065,9 @@
       "selected": "Sélection ({count}/{max})",
       "nothingSelected": "Rien de sélectionné pour l'instant.",
       "removeArea": "Retirer {name}",
-      "wholeState": "{name} (tout l'État)"
+      "wholeState": "{name} (tout l'État)",
+      "manualFallback": "Cette analyse n'a pas pu être configurée en mise à jour sur demande ; elle est donc mise à jour chaque semaine pour l'instant. Vous pouvez modifier la fréquence dans la liste.",
+      "existing": "Votre équipe a déjà cette analyse, elle a donc été ouverte."
     },
     "report": {
       "button": "Créer un rapport",

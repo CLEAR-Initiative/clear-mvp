@@ -6,13 +6,15 @@ import {
   createdWindowStart,
   eventsByArea,
   fundingSplit,
+  generationOverdue,
+  GENERATION_OVERDUE_MS,
   isStale,
   pickCountry,
   sameLocations,
   scopeLabel,
   timelineLayout,
 } from "~/lib/analysis-view";
-import type { AnalysisEvent } from "~/server/api/routers/analysis";
+import type { AnalysisEvent } from "~/server/api/mappers/analysis";
 
 function ev(id: string, startedAt: string, severity: number | null, admin1: AnalysisEvent["admin1"] = null): AnalysisEvent {
   return {
@@ -164,5 +166,26 @@ describe("area picking", () => {
     expect(addArea(["sheikan", "kassala"], a("nk"), areas)).toEqual(["kassala", "nk"]);
     expect(addArea(["nk"], a("sheikan"), areas)).toEqual(["nk"]);
     expect(addArea(["kassala"], a("kassala"), areas)).toEqual(["kassala"]);
+  });
+});
+
+describe("generationOverdue", () => {
+  const now = new Date("2026-09-30T12:00:00Z");
+  const ago = (ms: number) => new Date(now.getTime() - ms).toISOString();
+
+  it("is overdue once the first version is late", () => {
+    expect(generationOverdue({ generatedAt: null, createdAt: ago(GENERATION_OVERDUE_MS + 1) }, now)).toBe(true);
+  });
+
+  it("is not overdue while the first version may still land", () => {
+    expect(generationOverdue({ generatedAt: null, createdAt: ago(GENERATION_OVERDUE_MS - 1000) }, now)).toBe(false);
+  });
+
+  it("is never overdue once a version exists", () => {
+    expect(generationOverdue({ generatedAt: ago(1000), createdAt: ago(GENERATION_OVERDUE_MS * 10) }, now)).toBe(false);
+  });
+
+  it("is not overdue with an unreadable creation time", () => {
+    expect(generationOverdue({ generatedAt: null, createdAt: "not a date" }, now)).toBe(false);
   });
 });

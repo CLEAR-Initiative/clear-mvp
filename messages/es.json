@@ -3008,7 +3008,9 @@
     },
     "generating": {
       "title": "Generando la primera versión",
-      "description": "El pipeline está construyendo este análisis a partir de la base de conocimiento. Esta página se actualiza sola cuando esté listo."
+      "description": "El pipeline está construyendo este análisis a partir de la base de conocimiento. Esta página se actualiza sola cuando esté listo.",
+      "overdueTitle": "Aún no generado",
+      "overdueDescription": "La primera versión no ha llegado. Puede haber fallado; vuelva a solicitarla con Actualizar ahora."
     },
     "cadence": {
       "daily": "Diaria",
@@ -3039,7 +3041,8 @@
       "frequencyLabel": "Frecuencia de actualización de {name}",
       "frequencyError": "No se pudo cambiar la frecuencia de actualización. Inténtelo de nuevo.",
       "mapHint": "Haga clic en una zona resaltada para abrir su análisis.",
-      "mapCard": "{type} · {status}"
+      "mapCard": "{type} · {status}",
+      "notGenerated": "Aún no generado"
     },
     "create": {
       "title": "Nuevo análisis en {country}",
@@ -3062,7 +3065,9 @@
       "selected": "Seleccionados ({count}/{max})",
       "nothingSelected": "Aún no hay nada seleccionado.",
       "removeArea": "Quitar {name}",
-      "wholeState": "{name} (todo el estado)"
+      "wholeState": "{name} (todo el estado)",
+      "manualFallback": "No se pudo configurar este análisis para actualizarse a petición, así que por ahora se actualiza semanalmente. Puede cambiar la frecuencia en la lista.",
+      "existing": "Su equipo ya tiene este análisis, así que se ha abierto."
     },
     "report": {
       "button": "Crear informe",

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { Analysis } from "~/server/api/mappers/analysis";
-import type { CreatedAnalysis } from "~/server/api/routers/analysis";
+import type { CreatedAnalysis } from "~/server/api/mappers/analysis";
 
 vi.mock("next-intl", () => ({
   useTranslations: (ns?: string) => (key: string, vars?: Record<string, unknown>) =>
@@ -20,7 +20,13 @@ let role = "analyst";
 let activeTeamId: string | null = "team-1";
 vi.mock("~/providers/team-provider", () => ({ useTeam: () => ({ activeTeamId }) }));
 vi.mock("next/dynamic", () => ({ default: () => () => <div data-testid="crisis-map" /> }));
-vi.mock("~/components/map/minimap-card", () => ({ MinimapCard: () => <div data-testid="minimap" /> }));
+vi.mock("~/components/map/minimap-card", () => ({
+  MinimapCard: ({ scopeAreas }: { scopeAreas?: { id: string; geometry: unknown }[] }) => (
+    <div data-testid="minimap">
+      {(scopeAreas ?? []).map((a) => `${a.id}:${a.geometry ? "outlined" : "none"}`).join(",")}
+    </div>
+  ),
+}));
 const notify = vi.fn();
 vi.mock("@mantine/notifications", () => ({ notifications: { show: (o: unknown) => notify(o) } }));
 
@@ -59,6 +65,14 @@ vi.mock("~/trpc/react", () => ({
       },
     },
     locations: { getById: { useQuery: () => ({ data: { geometry: null } }) } },
+    useQueries: (build: (q: unknown) => unknown[]) =>
+      build({
+        locations: {
+          getById: ({ id }: { id: string }) => ({
+            data: { id, name: id, geometry: { type: "Polygon", coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] } },
+          }),
+        },
+      }),
   },
 }));
 vi.mock("@react-pdf/renderer", () => ({ pdf: () => ({ toBlob: async () => new Blob([]) }) }));
@@ -261,5 +275,68 @@ describe("AnalysisDetail header", () => {
     React.act(() => refreshOpts.onError?.());
     expect(notify).toHaveBeenCalledWith(expect.objectContaining({ color: "red", message: "analysis.refresh.error" }));
     expect(screen.queryByTestId("analysis-refresh-requested")).not.toBeInTheDocument();
+  });
+});
+
+describe("AnalysisDetail generating", () => {
+  const pending = (createdAt: string) => created({ analysisId: null, generatedAt: null, createdAt });
+  const interval = () =>
+    (frameQuery.mock.lastCall![1] as { refetchInterval: (q: unknown) => number | false }).refetchInterval;
+
+  it("polls for a first version while it is recent", () => {
+    analysisResult.data = null;
+    renderDetail(createdScope(pending("2026-09-29T11:50:00Z")));
+    expect(screen.getByTestId("analysis-generating")).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-overdue")).not.toBeInTheDocument();
+    expect(interval()({ state: { data: undefined } })).toBe(30_000);
+  });
+
+  it("offers a retry and stops polling when the first version is overdue", () => {
+    analysisResult.data = null;
+    renderDetail(createdScope(pending("2026-09-29T10:00:00Z")));
+    expect(screen.getByTestId("analysis-overdue")).toHaveTextContent("analysis.generating.overdueTitle");
+    expect(screen.getByTestId("analysis-overdue")).toHaveTextContent("analysis.generating.overdueDescription");
+    expect(screen.queryByTestId("analysis-generating")).not.toBeInTheDocument();
+    expect(interval()({ state: { data: undefined } })).toBe(false);
+
+    fireEvent.click(screen.getByTestId("analysis-refresh"));
+    expect(refreshMutate).toHaveBeenCalledWith({
+      locationIds: ["sheikan"],
+      eventTypes: ["conflict"],
+      needSectors: ["health"],
+      windowStart: "2026-07-01T00:00:00.000Z",
+      windowEnd: null,
+      teamId: "team-1",
+    });
+
+    // Requested: back to generating, and polling resumes.
+    React.act(() => refreshOpts.onSuccess?.());
+    expect(screen.queryByTestId("analysis-overdue")).not.toBeInTheDocument();
+    expect(screen.getByTestId("analysis-generating")).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-refresh-requested")).toBeInTheDocument();
+    expect(interval()({ state: { data: undefined } })).toBe(30_000);
+  });
+
+  it("hides the retry from viewers", () => {
+    role = "viewer";
+    analysisResult.data = null;
+    renderDetail(createdScope(pending("2026-09-29T10:00:00Z")));
+    expect(screen.getByTestId("analysis-overdue")).toBeInTheDocument();
+    expect(screen.queryByTestId("analysis-refresh")).not.toBeInTheDocument();
+  });
+});
+
+describe("AnalysisDetail map", () => {
+  it("outlines every area of a created analysis", () => {
+    analysisResult.data = analysis({}, { locationIds: ["sheikan", "bara", "umm-ruwaba"], windowEnd: null });
+    renderDetail(createdScope(created({ locationIds: ["sheikan", "bara", "umm-ruwaba"] })));
+    expect(screen.getByTestId("minimap")).toHaveTextContent("sheikan:outlined,bara:outlined,umm-ruwaba:outlined");
+    expect(screen.getByTestId("analysis-map").parentElement).toHaveTextContent('analysis.scope.areas:{"count":3}');
+  });
+
+  it("outlines no areas for a country", () => {
+    renderDetail(COUNTRY);
+    expect(screen.getByTestId("minimap")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("analysis-map").parentElement).toHaveTextContent("analysis.scope.wholeCountry");
   });
 });

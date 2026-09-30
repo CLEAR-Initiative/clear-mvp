@@ -7,7 +7,7 @@ import { notifications } from "@mantine/notifications";
 import { IconFileDownload } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import type { Analysis } from "~/server/api/mappers/analysis";
-import type { AnalysisEvents, AnalysisFigures } from "~/server/api/routers/analysis";
+import type { AnalysisEvents, AnalysisFigures } from "~/server/api/mappers/analysis";
 import { kpiValues } from "~/lib/analysis-view";
 import { defaultReportSections, projectReportMap, reportFileName, type ReportSectionChoice } from "~/lib/analysis-report";
 import type { ReportLabels } from "./report/report-document";

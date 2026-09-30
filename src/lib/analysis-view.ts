@@ -1,5 +1,4 @@
-import type { AnalysisEvent, AnalysisFigure, AnalysisFigures } from "~/server/api/routers/analysis";
-import type { Analysis } from "~/server/api/mappers/analysis";
+import type { Analysis, AnalysisEvent, AnalysisFigure, AnalysisFigures } from "~/server/api/mappers/analysis";
 
 /** Events per admin-1 area, most first. Events with no area are left out. */
 export function eventsByArea(events: AnalysisEvent[]): { id: string; name: string; count: number }[] {
@@ -117,6 +116,23 @@ export function isStale(generatedAt: string | null, cadence: string, now: Date =
   if (!generatedAt || cadence === "manual") return false;
   const days = CADENCE_DAYS[cadence] ?? 7;
   return now.getTime() - Date.parse(generatedAt) > (days + 1) * 86_400_000;
+}
+
+/**
+ * How long a created analysis may wait for its first version before the page
+ * stops showing it as generating. The on-demand queue drains within minutes;
+ * past this the request most likely failed.
+ */
+export const GENERATION_OVERDUE_MS = 30 * 60_000;
+
+/** True when no version has landed yet and the analysis was created longer than GENERATION_OVERDUE_MS ago. */
+export function generationOverdue(
+  c: { generatedAt: string | null; createdAt: string },
+  now: Date = new Date(),
+): boolean {
+  if (c.generatedAt) return false;
+  const created = Date.parse(c.createdAt);
+  return Number.isFinite(created) && now.getTime() - created > GENERATION_OVERDUE_MS;
 }
 
 /** Districts one created analysis may cover (the events fetch runs per district). */

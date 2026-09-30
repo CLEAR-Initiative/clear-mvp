@@ -7,8 +7,9 @@ import { Box, Text, Group, Select, Checkbox } from "@mantine/core";
 import Link from "next/link";
 import { IconMap, IconMapPin, IconLayersLinked } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import type { MapMarker } from "~/components/map/crisis-map";
+import type { MapMarker, MapRegion } from "~/components/map/crisis-map";
 import type { GqlLocation } from "~/lib/types/graphql";
+import { combineGeometries } from "~/lib/analysis-view";
 
 const CrisisMap = dynamic(
   () => import("~/components/map/crisis-map").then((m) => m.CrisisMap),
@@ -50,9 +51,15 @@ interface MinimapCardProps {
   holdRegionFit?: boolean;
   /** flyTo duration when center changes (ms). */
   flyDuration?: number;
+  /**
+   * Areas to outline together (e.g. every area of a created analysis). When
+   * given, each is drawn as a region and the map fits their combined bounds
+   * instead of the `location`'s state.
+   */
+  scopeAreas?: { id: string; name: string; geometry: unknown }[];
 }
 
-export function MinimapCard({ markers, center, countryGeometry, countryId, countryName, countryPCode, location, locationName, fullMapHref = "/map", holdRegionFit = false, flyDuration }: MinimapCardProps) {
+export function MinimapCard({ markers, center, countryGeometry, countryId, countryName, countryPCode, location, locationName, fullMapHref = "/map", holdRegionFit = false, flyDuration, scopeAreas }: MinimapCardProps) {
   const t = useTranslations("map");
   const [layersOpen, setLayersOpen] = useState(false);
   const [boundaryLevel, setBoundaryLevel] = useState<BoundaryLevel>("A2");
@@ -76,7 +83,24 @@ export function MinimapCard({ markers, center, countryGeometry, countryId, count
     { enabled: !!a1StateId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
 
-  const fitBoundsGeometry = stateQuery.data?.geometry ?? undefined;
+  const scopeRegions = useMemo<MapRegion[] | undefined>(
+    () =>
+      scopeAreas
+        ?.filter((a) => !!a.geometry)
+        .map((a) => ({
+          id: a.id,
+          geometry: a.geometry as MapRegion["geometry"],
+          severity: "unknown" as const,
+          title: a.name,
+        })),
+    [scopeAreas],
+  );
+  const scopeGeometry = useMemo(
+    () => (scopeAreas ? (combineGeometries(scopeAreas.map((a) => a.geometry)) ?? undefined) : undefined),
+    [scopeAreas],
+  );
+
+  const fitBoundsGeometry = scopeAreas ? scopeGeometry : (stateQuery.data?.geometry ?? undefined);
 
   if (!holdRegionFit && fitBoundsGeometry !== undefined) {
     stableFitBoundsRef.current = fitBoundsGeometry;
@@ -137,6 +161,7 @@ export function MinimapCard({ markers, center, countryGeometry, countryId, count
       <Box style={{ aspectRatio: "4/3", position: "relative" }}>
         <CrisisMap
           markers={markers}
+          regions={scopeRegions}
           center={center}
           zoom={4.5}
           className="w-full h-full"

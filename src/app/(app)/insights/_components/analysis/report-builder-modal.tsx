@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box, Button, Checkbox, Group, Modal, Stack, Text } from "@mantine/core";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
@@ -27,10 +27,13 @@ export function ReportBuilderModal({
   const t = useTranslations("analysis.report");
   const [sections, setSections] = useState(initial);
 
-  // Start from the analysis' current content each time the builder opens.
-  useEffect(() => {
+  // Start from the analysis' current content each time the builder opens, but
+  // keep the reader's choices when that content changes while it is open.
+  const [wasOpened, setWasOpened] = useState(opened);
+  if (opened !== wasOpened) {
+    setWasOpened(opened);
     if (opened) setSections(initial);
-  }, [opened, initial]);
+  }
 
   const onDragEnd = ({ source, destination }: DropResult) => {
     if (destination) setSections((s) => moveItem(s, source.index, destination.index));

@@ -5,7 +5,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Box, SimpleGrid, Stack, Text } from "@mantine/core";
 import { compactNumber } from "~/server/api/mappers/situation-analysis";
 import type { Analysis } from "~/server/api/mappers/analysis";
-import type { AnalysisFigure, AnalysisFigures } from "~/server/api/routers/analysis";
+import type { AnalysisFigure, AnalysisFigures } from "~/server/api/mappers/analysis";
 import { fundingSplit, kpiValues } from "~/lib/analysis-view";
 
 const INK = "var(--color-text-primary)";

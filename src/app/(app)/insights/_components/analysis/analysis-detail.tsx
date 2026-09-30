@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
-import { Alert, Badge, Box, Center, Group, Loader, SimpleGrid, Tabs, Text, Title, UnstyledButton } from "@mantine/core";
+import { Alert, Badge, Box, Center, Group, Loader, SimpleGrid, Stack, Tabs, Text, Title, UnstyledButton } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
-import { isStale } from "~/lib/analysis-view";
-import type { CreatedAnalysis } from "~/server/api/routers/analysis";
+import { generationOverdue, isStale } from "~/lib/analysis-view";
+import type { CreatedAnalysis } from "~/server/api/mappers/analysis";
 import { AiSummaryCard } from "../situation/ai-summary-card";
 import { SituationSources } from "../situation/situation-sources";
 import { AnalysisKpis } from "./analysis-kpis";
@@ -58,9 +58,9 @@ export function AnalysisDetail({
   const now = useNow({ updateInterval: 60_000 });
   const [tab, setTab] = useState<Tab>("overview");
   const { activeTeamId } = useTeam();
-  // The version on screen when an update was requested, and when; polling runs
-  // until it changes or the wait times out.
-  const [requested, setRequested] = useState<{ from: string; at: number } | null>(null);
+  // The version on screen when an update was requested (none yet for an overdue
+  // first version), and when; polling runs until it changes or the wait times out.
+  const [requested, setRequested] = useState<{ from: string | undefined; at: number } | null>(null);
   const awaitingNewer = (generatedAt: string | undefined) =>
     !!requested && generatedAt === requested.from && Date.now() - requested.at < REFRESH_TIMEOUT_MS;
   const utils = api.useUtils();
@@ -90,8 +90,15 @@ export function AnalysisDetail({
     {
       enabled: !isCountry,
       staleTime: 5 * 60_000,
+      // An overdue first version stops polling until someone requests it again.
       refetchInterval: (q) =>
-        !q.state.data ? GENERATING_POLL_MS : awaitingNewer(q.state.data.crisis.generatedAt) ? REFRESH_POLL_MS : false,
+        !q.state.data
+          ? !isCountry && generationOverdue(scope.created, now) && !awaitingNewer(undefined)
+            ? false
+            : GENERATING_POLL_MS
+          : awaitingNewer(q.state.data.crisis.generatedAt)
+            ? REFRESH_POLL_MS
+            : false,
     },
   );
   const analysis = isCountry ? country : created;
@@ -109,6 +116,17 @@ export function AnalysisDetail({
   // A country analysis runs weekly; a created one on its own cadence, or only on request when paused.
   const cadence = isCountry ? "weekly" : scope.created.enabled ? scope.created.cadence : "manual";
   const stale = !!data && isStale(data.crisis.generatedAt, cadence, now);
+  // A created analysis is a rolling frame from its start.
+  const createdFrame: RefreshFrame | null = isCountry
+    ? null
+    : {
+        locationIds: scope.created.locationIds,
+        eventTypes: scope.created.eventTypes,
+        needSectors: scope.created.needSectors,
+        windowStart: scope.created.windowStart,
+        windowEnd: null,
+        teamId: activeTeamId,
+      };
   const refreshFrame: RefreshFrame | null = !data
     ? null
     : isCountry
@@ -120,14 +138,9 @@ export function AnalysisDetail({
           windowEnd: data.scope.windowEnd,
           teamId: null,
         }
-      : {
-          locationIds: scope.created.locationIds,
-          eventTypes: scope.created.eventTypes,
-          needSectors: scope.created.needSectors,
-          windowStart: scope.created.windowStart,
-          windowEnd: null,
-          teamId: activeTeamId,
-        };
+      : createdFrame;
+  // No first version long after creation: the run was likely dropped, so offer a retry.
+  const overdue = !isCountry && !data && !waiting && generationOverdue(scope.created, now);
 
   // Stock breakdowns come from one location's aggregation; a multi-district
   // scope falls back to the analysis' own figures.
@@ -157,6 +170,17 @@ export function AnalysisDetail({
   } else if (!data) {
     body = isCountry ? (
       <Notice title={t("empty.title")} text={t("empty.description", { scope: name })} />
+    ) : overdue && createdFrame ? (
+      <Stack gap={12}>
+        <Notice title={t("generating.overdueTitle")} text={t("generating.overdueDescription")} testId="analysis-overdue" />
+        <Center>
+          <RefreshButton
+            frame={createdFrame}
+            waiting={false}
+            onRequested={() => setRequested({ from: undefined, at: Date.now() })}
+          />
+        </Center>
+      </Stack>
     ) : (
       <Notice title={t("generating.title")} text={t("generating.description")} loading testId="analysis-generating" />
     );
@@ -182,8 +206,7 @@ export function AnalysisDetail({
               countryId={scope.countryId}
               countryName={scope.countryName}
               scopeName={name}
-              districtId={isCountry ? null : (locationIds[0] ?? null)}
-              districtCount={isCountry ? 0 : locationIds.length}
+              areaIds={isCountry ? [] : locationIds}
               since={data.scope.windowStart}
               events={events.data}
             />
