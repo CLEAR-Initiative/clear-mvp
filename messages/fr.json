@@ -5,7 +5,8 @@
       "breadcrumb": "Constats",
       "tabs": {
         "crisis": "Vue d'ensemble de la crise",
-        "situation": "Analyse de situation"
+        "situation": "Analyse de situation",
+        "analysis": "Analyse"
       }
     },
     "reports": {
@@ -229,7 +230,9 @@
         "generated": "Généré le {date} par {model} · {reports} rapports"
       },
       "summary": {
-        "title": "Résumé de situation par IA"
+        "title": "Résumé de situation par IA",
+        "readMore": "Lire le résumé complet",
+        "showLess": "Afficher moins"
       },
       "stats": {
         "displaced": "Personnes déplacées",
@@ -2886,6 +2889,261 @@
         "es": "espagnol",
         "ar": "arabe"
       }
+    }
+  },
+  "analysis": {
+    "scope": {
+      "country": "Analyse pays",
+      "wholeCountry": "Tout le pays",
+      "created": "Analyse créée",
+      "areas": "{count, plural, one {# zone} other {# zones}}"
+    },
+    "meta": {
+      "updated": "Mis à jour {relative}",
+      "asOf": "au {date}",
+      "builtFrom": "Établie à partir de {reports, plural, one {# rapport} other {# rapports}} et {events, plural, one {# événement} other {# événements}}",
+      "covers": "Couvre la période du {start} à ce jour",
+      "period": "Couvre la période du {start} au {end}",
+      "stale": "Pas à jour"
+    },
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "needs": "Évaluation des besoins",
+      "sources": "Sources et événements"
+    },
+    "error": "L'analyse n'a pas pu être chargée.",
+    "empty": {
+      "title": "Pas encore d'analyse",
+      "description": "Aucune analyse n'a encore été générée pour {scope}. Les analyses pays sont régénérées chaque semaine."
+    },
+    "noCountry": "Aucun pays n'est attribué à votre équipe, il n'y a donc pas encore de périmètre d'analyse par défaut.",
+    "country": "Pays",
+    "kpis": {
+      "displaced": "Déplacés",
+      "displacedSub": "personnes actuellement déplacées",
+      "returned": "Retournés",
+      "returnedSub": "sont rentrés chez eux. Non comptés parmi les déplacés.",
+      "inNeed": "Dans le besoin",
+      "inNeedSub": "personnes dans le besoin",
+      "funding": "Financement",
+      "fundingOf": "sur {required}",
+      "fundingSub": "reçus par rapport aux besoins",
+      "received": "Reçu",
+      "gap": "Déficit",
+      "notReported": "Non rapporté dans les sources actuelles",
+      "displacedTotalSub": "personnes déplacées au total, à l'intérieur du pays ({scope}) et à l'étranger",
+      "inside": "En {scope}",
+      "abroad": "À l'étranger",
+      "differentDates": "les parts peuvent dater de moments différents",
+      "rangeLabel": "Fourchette selon les sources",
+      "headline": "Chiffre retenu",
+      "bySector": "Personnes dans le besoin par secteur",
+      "sectorOverlap": "Une même personne peut avoir des besoins dans plusieurs secteurs : les chiffres sectoriels ne s'additionnent donc pas pour atteindre {total}.",
+      "asOf": "Au {date}",
+      "fundingRequiredSub": "requis. Le financement reçu n'est pas encore rapporté.",
+      "sectors": {
+        "food_security": "Sécurité alimentaire",
+        "health": "Santé",
+        "wash": "EAH",
+        "protection": "Protection",
+        "shelter": "Abris et BNA",
+        "education": "Éducation",
+        "nutrition": "Nutrition"
+      }
+    },
+    "map": {
+      "title": "Zone d'analyse",
+      "events": "{count, plural, one {# événement} other {# événements}} depuis le {date}",
+      "areas": "Où les événements ont eu lieu",
+      "areaEvents": "{count, plural, one {# événement} other {# événements}}",
+      "noEvents": "Aucun événement enregistré dans cette zone depuis le {date}.",
+      "sample": "La carte montre les {count} plus récents"
+    },
+    "timeline": {
+      "title": "Chronologie des événements",
+      "today": "Aujourd'hui",
+      "empty": "Aucun événement enregistré sur cette période.",
+      "sample": "Les {count} événements les plus récents"
+    },
+    "findings": {
+      "hazards": "Aléas",
+      "vulnerabilities": "Vulnérabilités",
+      "vulnerabilitiesTag": "conditions d'avant-crise",
+      "displacement": "Déplacements",
+      "displacementTag": "constats clés",
+      "push": "Ce qui pousse les gens à partir",
+      "return": "Intentions de retour",
+      "count": "{count, plural, one {# constat} other {# constats}}",
+      "showAll": "Tout afficher ({count})",
+      "showLess": "Afficher moins",
+      "forecast": "Prévisions",
+      "forecastTag": "projections, non observées",
+      "forecastNote": "Ce que les sources prévoient. Séparé des faits ci-dessus.",
+      "mostLikely": "Le plus probable",
+      "bestCase": "Meilleur scénario",
+      "worstCase": "Pire scénario",
+      "hazardsTitle": "Aléas et vulnérabilités",
+      "hazardsMeta": "{hazards, plural, one {# aléa} other {# aléas}} · {vulnerabilities, plural, one {# vulnérabilité} other {# vulnérabilités}}"
+    },
+    "needs": {
+      "severityIntro": "Chaque secteur est évalué par l'analyse à partir des rapports sectoriels qu'elle cite.",
+      "severityNull": "Non évalué : trop peu d'éléments pour noter.",
+      "inferred": "Évalué à partir de rapports hors de ce secteur. À considérer comme indicatif.",
+      "notAssessed": "Non évalué"
+    },
+    "events": {
+      "title": "Événements dans cette zone",
+      "empty": "Aucun événement enregistré dans cette zone sur cette période.",
+      "untitled": "Événement sans titre",
+      "severity": "Gravité {value}",
+      "count": "{shown} sur {total}"
+    },
+    "sources": {
+      "title": "Sources citées"
+    },
+    "contexts": {
+      "title": "Contextes",
+      "meta": "{categories, plural, one {# catégorie} other {# catégories}} · {findings, plural, one {# constat} other {# constats}}",
+      "findings": "{count, plural, one {# constat} other {# constats}}"
+    },
+    "generating": {
+      "title": "Génération de la première version",
+      "description": "Le pipeline construit cette analyse à partir de la base de connaissances. Cette page se met à jour d'elle-même lorsqu'elle est prête.",
+      "overdueTitle": "Pas encore générée",
+      "overdueDescription": "La première version n'est pas arrivée. Elle a peut-être échoué ; demandez-la à nouveau avec Mettre à jour."
+    },
+    "cadence": {
+      "daily": "Quotidienne",
+      "weekly": "Hebdomadaire",
+      "monthly": "Mensuelle",
+      "manual": "Sur demande"
+    },
+    "home": {
+      "title": "Analyses",
+      "subtitle": "Analyses actuelles pour {country}. Ouvrez-en une ou créez la vôtre sur des États ou districts précis.",
+      "new": "Nouvelle analyse",
+      "countryGroup": "Pays",
+      "createdGroup": "Créées par votre équipe",
+      "wholeCountry": "Tout le pays",
+      "updated": "Mise à jour {relative}",
+      "generating": "Génération de la première version",
+      "paused": "mise à jour sur demande",
+      "stale": "Pas à jour",
+      "noCountryAnalysis": "Aucune analyse générée pour l'instant",
+      "createdEmpty": "Aucune analyse créée pour l'instant. Créez-en une pour suivre des États ou districts précis.",
+      "createdEmptyReadOnly": "Votre équipe n'a encore créé aucune analyse.",
+      "remove": "Supprimer",
+      "keep": "Conserver",
+      "removeLabel": "Supprimer {name}",
+      "mapNote": "En surbrillance : zones couvertes par les analyses de votre équipe.",
+      "back": "Toutes les analyses",
+      "areas": "{count, plural, one {# zone} other {# zones}}",
+      "frequencyLabel": "Fréquence de mise à jour de {name}",
+      "frequencyError": "La fréquence de mise à jour n'a pas pu être modifiée. Veuillez réessayer.",
+      "mapHint": "Cliquez sur une zone en surbrillance pour ouvrir son analyse.",
+      "mapCard": "{type} · {status}",
+      "notGenerated": "Pas encore générée"
+    },
+    "create": {
+      "title": "Nouvelle analyse : {country}",
+      "districts": "Districts",
+      "loading": "Chargement des districts",
+      "noMatch": "Aucun district trouvé",
+      "cadence": "Fréquence de mise à jour",
+      "summary": "Couvre les événements et rapports depuis le {since}, tenue à jour, mise à jour {cadence}.",
+      "firstRun": "La première version prend généralement quelques minutes. Vous pouvez quitter cette page en attendant.",
+      "duplicate": "Votre équipe a déjà une analyse pour ces districts : {name}.",
+      "openExisting": "L'ouvrir",
+      "error": "L'analyse n'a pas pu être créée. Veuillez réessayer.",
+      "cancel": "Annuler",
+      "submit": "Créer l'analyse",
+      "areas": "États ou districts",
+      "areasHint": "Recherchez et ajoutez-en jusqu'à {max}. L'analyse les couvre ensemble.",
+      "search": "Rechercher des États et des districts",
+      "states": "États",
+      "mapHint": "Cliquez sur un district de la carte pour l'ajouter ou le retirer.",
+      "selected": "Sélection ({count}/{max})",
+      "nothingSelected": "Rien de sélectionné pour l'instant.",
+      "removeArea": "Retirer {name}",
+      "wholeState": "{name} (tout l'État)",
+      "manualFallback": "Cette analyse n'a pas pu être configurée en mise à jour sur demande ; elle est donc mise à jour chaque semaine pour l'instant. Vous pouvez modifier la fréquence dans la liste.",
+      "existing": "Votre équipe a déjà cette analyse, elle a donc été ouverte."
+    },
+    "report": {
+      "button": "Créer un rapport",
+      "eyebrow": "Rapport de situation",
+      "scopeCountry": "Analyse pays",
+      "scopeCreated": "Analyse créée",
+      "period": "Couvre la période du {start} à ce jour",
+      "versionOf": "Version de l'analyse du {date}",
+      "keyDevelopments": "Faits marquants",
+      "currentStatus": "Situation actuelle",
+      "displaced": "Déplacés",
+      "displacedSub": "personnes déplacées",
+      "inNeed": "Dans le besoin",
+      "inNeedSub": "personnes dans le besoin",
+      "funding": "Financement",
+      "fundingSub": "reçu / requis",
+      "notReported": "Non signalé dans les sources actuelles",
+      "mapCountry": "Contour : pays",
+      "mapArea": "En couleur : zone analysée",
+      "mapEvents": "Points : {count, plural, one {# événement} other {# événements}} depuis le {date}",
+      "contexts": "Contexte",
+      "hazards": "Aléas",
+      "displacement": "Ce qui pousse les gens à partir",
+      "priorityNeeds": "Besoins prioritaires",
+      "responseActivities": "Activités de réponse",
+      "noResponse": "Aucune activité de réponse signalée dans les sources actuelles.",
+      "outlook": "Perspectives (scénario le plus probable)",
+      "sources": "Sources",
+      "provenance": "Provenance",
+      "generated": "Rapport créé le {date} par {author} dans CLEAR. Les nombres entre crochets renvoient à la liste des sources.",
+      "footer": "CLEAR · {scope}",
+      "page": "Page {n} sur {total}",
+      "unknownAuthor": "un utilisateur CLEAR",
+      "error": "Le rapport n'a pas pu être créé. Veuillez réessayer.",
+      "unsupportedLocale": "Les rapports ne peuvent pas encore être créés en arabe. Passez en anglais, français ou espagnol pour en créer un.",
+      "sections": {
+        "keyDevelopments": "Faits marquants",
+        "currentStatus": "Situation actuelle",
+        "map": "Carte de la zone",
+        "contexts": "Contexte",
+        "hazards": "Aléas",
+        "displacement": "Ce qui pousse les gens à partir",
+        "priorityNeeds": "Besoins prioritaires",
+        "responseActivities": "Activités de réponse",
+        "outlook": "Perspectives",
+        "sources": "Sources"
+      },
+      "builder": {
+        "title": "Créer un rapport",
+        "intro": "Faites glisser les sections dans l'ordre voulu et cochez celles à inclure.",
+        "dragLabel": "Déplacer {section}",
+        "includeLabel": "Inclure {section}",
+        "empty": "Rien dans cette analyse pour cette section",
+        "alwaysIncluded": "La version, l'auteur et les numéros de page sont toujours inclus.",
+        "cancel": "Annuler",
+        "create": "Télécharger le PDF ({count, plural, one {# section} other {# sections}})",
+        "counts": {
+          "keyDevelopments": "Résumé et {count, plural, =0 {aucun point clé} one {# point clé} other {# points clés}}",
+          "map": "Zone avec {count, plural, one {# événement} other {# événements}}",
+          "contexts": "{count, plural, one {# constat} other {# constats}}",
+          "hazards": "{count, plural, one {# aléa} other {# aléas}}",
+          "displacement": "{count, plural, one {# constat} other {# constats}}",
+          "priorityNeeds": "{count, plural, one {# secteur} other {# secteurs}}",
+          "responseActivities": "{count, plural, one {# secteur} other {# secteurs}}",
+          "sources": "{count, plural, one {# source} other {# sources}}"
+        },
+        "hints": {
+          "currentStatus": "Déplacés, besoins et financement",
+          "outlook": "Scénario le plus probable"
+        }
+      }
+    },
+    "refresh": {
+      "button": "Mettre à jour",
+      "requested": "Mise à jour demandée. La nouvelle version prend généralement quelques minutes et s'affiche ici d'elle-même.",
+      "error": "La mise à jour n'a pas pu être demandée. Veuillez réessayer."
     }
   }
 }

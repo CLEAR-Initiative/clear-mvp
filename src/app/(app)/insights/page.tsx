@@ -6,6 +6,7 @@ import { Box, Group, Select, Tabs, Text } from "@mantine/core";
 import { PageHeader } from "~/components/ui";
 import { ReportsTab } from "./_components/reports-tab";
 import { SituationTab } from "./_components/situation/situation-tab";
+import { AnalysisTab } from "./_components/analysis/analysis-tab";
 import { useTeamCountry, useScopedCountryOptions } from "~/hooks/use-team-country";
 import { useLocations } from "~/hooks/use-locations";
 import { shortCountryName } from "~/lib/constants/country-config";
@@ -57,9 +58,11 @@ export default function InsightsPage() {
   // active tab (e.g. a deep link or the admin just toggled it off), fall back to
   // the always-present Crisis tab so the page never strands on an empty panel.
   const situationEnabled = useFeatureEnabled("situation_analysis");
+  const analysisEnabled = useFeatureEnabled("analysis_v2");
   useEffect(() => {
     if (!situationEnabled && activeTab === "situation") setActiveTab("crisis");
-  }, [situationEnabled, activeTab]);
+    if (!analysisEnabled && activeTab === "analysis") setActiveTab("crisis");
+  }, [situationEnabled, analysisEnabled, activeTab]);
 
   return (
     <Box>
@@ -80,6 +83,9 @@ export default function InsightsPage() {
             <Tabs.Tab value="crisis">{t("page.tabs.crisis")}</Tabs.Tab>
             {situationEnabled && (
               <Tabs.Tab value="situation">{t("page.tabs.situation")}</Tabs.Tab>
+            )}
+            {analysisEnabled && (
+              <Tabs.Tab value="analysis">{t("page.tabs.analysis")}</Tabs.Tab>
             )}
           </Tabs.List>
         </Tabs>
@@ -114,6 +120,7 @@ export default function InsightsPage() {
         )}
 
         {activeTab === "situation" && situationEnabled && <SituationTab />}
+        {activeTab === "analysis" && analysisEnabled && <AnalysisTab />}
       </Box>
     </Box>
   );

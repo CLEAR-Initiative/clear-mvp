@@ -5,7 +5,8 @@
       "breadcrumb": "الرؤى",
       "tabs": {
         "crisis": "نظرة عامة على الأزمة",
-        "situation": "تحليل الوضع"
+        "situation": "تحليل الوضع",
+        "analysis": "التحليل"
       }
     },
     "reports": {
@@ -229,7 +230,9 @@
         "generated": "أُنشئ في {date} بواسطة {model} · {reports} تقارير"
       },
       "summary": {
-        "title": "ملخص الوضع بالذكاء الاصطناعي"
+        "title": "ملخص الوضع بالذكاء الاصطناعي",
+        "readMore": "قراءة الملخص كاملًا",
+        "showLess": "عرض أقل"
       },
       "stats": {
         "displaced": "النازحون",
@@ -2886,6 +2889,261 @@
         "es": "الإسبانية",
         "ar": "العربية"
       }
+    }
+  },
+  "analysis": {
+    "scope": {
+      "country": "تحليل البلد",
+      "wholeCountry": "البلد بأكمله",
+      "created": "تحليل مُنشأ",
+      "areas": "{count, plural, one {منطقة واحدة} two {منطقتان} few {# مناطق} many {# منطقة} other {# منطقة}}"
+    },
+    "meta": {
+      "updated": "تم التحديث {relative}",
+      "asOf": "حتى {date}",
+      "builtFrom": "مبني على {reports, plural, one {تقرير واحد} other {# تقارير}} و{events, plural, one {حدث واحد} other {# أحداث}}",
+      "covers": "يغطي من {start} حتى اليوم",
+      "period": "يغطي من {start} إلى {end}",
+      "stale": "غير محدَّث"
+    },
+    "tabs": {
+      "overview": "نظرة عامة",
+      "needs": "تقييم الاحتياجات",
+      "sources": "المصادر والأحداث"
+    },
+    "error": "تعذر تحميل التحليل.",
+    "empty": {
+      "title": "لا يوجد تحليل بعد",
+      "description": "لم يتم إنشاء أي تحليل لـ {scope} بعد. يتم تجديد تحليلات البلدان أسبوعيًا."
+    },
+    "noCountry": "لم يتم تعيين أي بلد لفريقك، لذلك لا يوجد نطاق تحليل افتراضي بعد.",
+    "country": "البلد",
+    "kpis": {
+      "displaced": "النازحون",
+      "displacedSub": "شخص نازح حاليًا",
+      "returned": "العائدون",
+      "returnedSub": "عادوا إلى ديارهم. غير محسوبين ضمن النازحين.",
+      "inNeed": "المحتاجون",
+      "inNeedSub": "شخص بحاجة إلى المساعدة",
+      "funding": "التمويل",
+      "fundingOf": "من أصل {required}",
+      "fundingSub": "تم استلامها مقابل المتطلبات",
+      "received": "المستلم",
+      "gap": "الفجوة",
+      "notReported": "غير مذكور في المصادر الحالية",
+      "displacedTotalSub": "شخص نازح إجمالًا، داخل {scope} وخارجه",
+      "inside": "داخل {scope}",
+      "abroad": "في الخارج",
+      "differentDates": "قد تعود الأجزاء إلى تواريخ مختلفة",
+      "rangeLabel": "النطاق بين المصادر",
+      "headline": "الرقم الرئيسي",
+      "bySector": "المحتاجون حسب القطاع",
+      "sectorOverlap": "قد يكون الشخص نفسه محتاجًا في عدة قطاعات، لذا لا يساوي مجموع أرقام القطاعات {total}.",
+      "asOf": "حتى {date}",
+      "fundingRequiredSub": "مطلوبة. لم يُبلَّغ عن التمويل المستلم بعد.",
+      "sectors": {
+        "food_security": "الأمن الغذائي",
+        "health": "الصحة",
+        "wash": "المياه والصرف الصحي والنظافة",
+        "protection": "الحماية",
+        "shelter": "المأوى والمواد غير الغذائية",
+        "education": "التعليم",
+        "nutrition": "التغذية"
+      }
+    },
+    "map": {
+      "title": "منطقة التحليل",
+      "events": "{count, plural, one {حدث واحد} other {# أحداث}} منذ {date}",
+      "areas": "أين وقعت الأحداث",
+      "areaEvents": "{count, plural, one {حدث واحد} other {# أحداث}}",
+      "noEvents": "لم تُسجَّل أي أحداث في هذه المنطقة منذ {date}.",
+      "sample": "تعرض الخريطة أحدث {count}"
+    },
+    "timeline": {
+      "title": "الجدول الزمني للأحداث",
+      "today": "اليوم",
+      "empty": "لم تُسجَّل أي أحداث في هذه الفترة.",
+      "sample": "أحدث {count} حدثًا"
+    },
+    "findings": {
+      "hazards": "المخاطر",
+      "vulnerabilities": "نقاط الضعف",
+      "vulnerabilitiesTag": "ظروف ما قبل الأزمة",
+      "displacement": "النزوح",
+      "displacementTag": "النتائج الرئيسية",
+      "push": "ما يدفع الناس إلى المغادرة",
+      "return": "نوايا العودة",
+      "count": "{count, plural, one {نتيجة واحدة} other {# نتائج}}",
+      "showAll": "عرض الكل ({count})",
+      "showLess": "عرض أقل",
+      "forecast": "التوقعات",
+      "forecastTag": "إسقاطات، غير مرصودة",
+      "forecastNote": "ما تتوقعه المصادر لاحقًا. منفصل عن الوقائع أعلاه.",
+      "mostLikely": "الأكثر ترجيحًا",
+      "bestCase": "أفضل الاحتمالات",
+      "worstCase": "أسوأ الاحتمالات",
+      "hazardsTitle": "المخاطر ونقاط الضعف",
+      "hazardsMeta": "{hazards, plural, one {خطر واحد} other {# مخاطر}} · {vulnerabilities, plural, one {نقطة ضعف واحدة} other {# نقاط ضعف}}"
+    },
+    "needs": {
+      "severityIntro": "يقيّم التحليل كل قطاع بناءً على التقارير القطاعية التي يستشهد بها.",
+      "severityNull": "لم يُقيَّم: الأدلة غير كافية للتقييم.",
+      "inferred": "تم التقييم من تقارير خارج هذا القطاع. يُعتبر إرشاديًا.",
+      "notAssessed": "لم يُقيَّم"
+    },
+    "events": {
+      "title": "الأحداث في هذه المنطقة",
+      "empty": "لم تُسجَّل أي أحداث في هذه المنطقة خلال هذه الفترة.",
+      "untitled": "حدث بلا عنوان",
+      "severity": "الخطورة {value}",
+      "count": "{shown} من {total}"
+    },
+    "sources": {
+      "title": "المصادر المستشهد بها"
+    },
+    "contexts": {
+      "title": "السياقات",
+      "meta": "{categories, plural, one {فئة واحدة} other {# فئات}} · {findings, plural, one {نتيجة واحدة} other {# نتائج}}",
+      "findings": "{count, plural, one {نتيجة واحدة} other {# نتائج}}"
+    },
+    "generating": {
+      "title": "جارٍ إنشاء النسخة الأولى",
+      "description": "يبني خط المعالجة هذا التحليل من قاعدة المعرفة. ستتحدث هذه الصفحة تلقائيًا عند جاهزيته.",
+      "overdueTitle": "لم يُنشأ بعد",
+      "overdueDescription": "لم تصل النسخة الأولى بعد. ربما فشلت؛ اطلبها مرة أخرى عبر تحديث الآن."
+    },
+    "cadence": {
+      "daily": "يومي",
+      "weekly": "أسبوعي",
+      "monthly": "شهري",
+      "manual": "عند الطلب"
+    },
+    "home": {
+      "title": "التحليلات",
+      "subtitle": "التحليلات الحالية لـ {country}. افتح أحدها أو أنشئ تحليلك الخاص لولايات أو محليات محددة.",
+      "new": "تحليل جديد",
+      "countryGroup": "الدولة",
+      "createdGroup": "أنشأها فريقك",
+      "wholeCountry": "الدولة بأكملها",
+      "updated": "حُدِّث {relative}",
+      "generating": "جارٍ إنشاء النسخة الأولى",
+      "paused": "يُحدَّث عند الطلب",
+      "stale": "غير محدَّث",
+      "noCountryAnalysis": "لم يُنشأ أي تحليل بعد",
+      "createdEmpty": "لا توجد تحليلات مُنشأة بعد. أنشئ تحليلًا لمتابعة ولايات أو محليات محددة.",
+      "createdEmptyReadOnly": "لم ينشئ فريقك أي تحليلات بعد.",
+      "remove": "حذف",
+      "keep": "إبقاء",
+      "removeLabel": "حذف {name}",
+      "mapNote": "المظللة: المناطق التي تغطيها تحليلات فريقك.",
+      "back": "كل التحليلات",
+      "areas": "{count, plural, one {منطقة واحدة} two {منطقتان} few {# مناطق} many {# منطقة} other {# منطقة}}",
+      "frequencyLabel": "وتيرة تحديث {name}",
+      "frequencyError": "تعذّر تغيير وتيرة التحديث. يُرجى المحاولة مرة أخرى.",
+      "mapHint": "انقر على منطقة مظللة لفتح تحليلها.",
+      "mapCard": "{type} · {status}",
+      "notGenerated": "لم يُنشأ بعد"
+    },
+    "create": {
+      "title": "تحليل جديد في {country}",
+      "districts": "المحليات",
+      "loading": "جارٍ تحميل المحليات",
+      "noMatch": "لم يُعثر على محلية",
+      "cadence": "وتيرة التحديث",
+      "summary": "يغطي الأحداث والتقارير منذ {since}، ويبقى محدَّثًا بتحديث {cadence}.",
+      "firstRun": "تستغرق النسخة الأولى عادةً بضع دقائق. يمكنك مغادرة هذه الصفحة في الأثناء.",
+      "duplicate": "لدى فريقك تحليل لهذه المحليات بالفعل: {name}.",
+      "openExisting": "فتحه",
+      "error": "تعذّر إنشاء التحليل. يُرجى المحاولة مرة أخرى.",
+      "cancel": "إلغاء",
+      "submit": "إنشاء التحليل",
+      "areas": "الولايات أو المحليات",
+      "areasHint": "ابحث وأضف حتى {max}. يغطيها التحليل معًا.",
+      "search": "ابحث عن الولايات والمحليات",
+      "states": "الولايات",
+      "mapHint": "انقر على محلية في الخريطة لإضافتها أو إزالتها.",
+      "selected": "المحدد ({count}/{max})",
+      "nothingSelected": "لم يُحدَّد شيء بعد.",
+      "removeArea": "إزالة {name}",
+      "wholeState": "{name} (الولاية بأكملها)",
+      "manualFallback": "تعذّر ضبط هذا التحليل على التحديث عند الطلب، لذا يُحدَّث أسبوعيًا في الوقت الحالي. يمكنك تغيير الوتيرة من القائمة.",
+      "existing": "لدى فريقك هذا التحليل بالفعل، لذا فُتح بدلًا من ذلك."
+    },
+    "report": {
+      "button": "إنشاء تقرير",
+      "eyebrow": "تقرير الوضع",
+      "scopeCountry": "تحليل الدولة",
+      "scopeCreated": "تحليل مُنشأ",
+      "period": "يغطي من {start} حتى اليوم",
+      "versionOf": "نسخة التحليل بتاريخ {date}",
+      "keyDevelopments": "أبرز التطورات",
+      "currentStatus": "الوضع الحالي",
+      "displaced": "النازحون",
+      "displacedSub": "شخص نازح",
+      "inNeed": "المحتاجون",
+      "inNeedSub": "شخص بحاجة",
+      "funding": "التمويل",
+      "fundingSub": "المستلم / المطلوب",
+      "notReported": "غير مذكور في المصادر الحالية",
+      "mapCountry": "الحدود: الدولة",
+      "mapArea": "المظلل: منطقة التحليل",
+      "mapEvents": "النقاط: {count, plural, one {حدث واحد} two {حدثان} few {# أحداث} many {# حدثًا} other {# حدث}} منذ {date}",
+      "contexts": "السياق",
+      "hazards": "المخاطر",
+      "displacement": "ما يدفع الناس إلى النزوح",
+      "priorityNeeds": "الاحتياجات ذات الأولوية",
+      "responseActivities": "أنشطة الاستجابة",
+      "noResponse": "لا توجد أنشطة استجابة مذكورة في المصادر الحالية.",
+      "outlook": "التوقعات (السيناريو الأرجح)",
+      "sources": "المصادر",
+      "provenance": "المصدر",
+      "generated": "أُنشئ التقرير في {date} بواسطة {author} في CLEAR. تشير الأرقام بين الأقواس إلى قائمة المصادر.",
+      "footer": "CLEAR · {scope}",
+      "page": "صفحة {n} من {total}",
+      "unknownAuthor": "مستخدم CLEAR",
+      "error": "تعذّر إنشاء التقرير. يُرجى المحاولة مرة أخرى.",
+      "unsupportedLocale": "لا يمكن إنشاء التقارير بالعربية بعد. غيّر اللغة إلى الإنجليزية أو الفرنسية أو الإسبانية لإنشاء تقرير.",
+      "sections": {
+        "keyDevelopments": "أبرز التطورات",
+        "currentStatus": "الوضع الحالي",
+        "map": "خريطة النطاق",
+        "contexts": "السياق",
+        "hazards": "المخاطر",
+        "displacement": "ما يدفع الناس إلى النزوح",
+        "priorityNeeds": "الاحتياجات ذات الأولوية",
+        "responseActivities": "أنشطة الاستجابة",
+        "outlook": "التوقعات",
+        "sources": "المصادر"
+      },
+      "builder": {
+        "title": "إنشاء تقرير",
+        "intro": "اسحب الأقسام إلى الترتيب الذي تريده وحدد الأقسام المراد تضمينها.",
+        "dragLabel": "سحب {section}",
+        "includeLabel": "تضمين {section}",
+        "empty": "لا يوجد محتوى لهذا القسم في هذا التحليل",
+        "alwaysIncluded": "تُضمَّن دائمًا النسخة والمؤلف وأرقام الصفحات.",
+        "cancel": "إلغاء",
+        "create": "تنزيل PDF ({count, plural, one {قسم واحد} two {قسمان} few {# أقسام} many {# قسمًا} other {# قسم}})",
+        "counts": {
+          "keyDevelopments": "الملخص و{count, plural, =0 {بلا نتائج رئيسية} one {نتيجة رئيسية واحدة} two {نتيجتان رئيسيتان} few {# نتائج رئيسية} many {# نتيجة رئيسية} other {# نتيجة رئيسية}}",
+          "map": "النطاق مع {count, plural, one {حدث واحد} two {حدثين} few {# أحداث} many {# حدثًا} other {# حدث}}",
+          "contexts": "{count, plural, one {نتيجة واحدة} two {نتيجتان} few {# نتائج} many {# نتيجة} other {# نتيجة}}",
+          "hazards": "{count, plural, one {خطر واحد} two {خطران} few {# مخاطر} many {# خطرًا} other {# خطر}}",
+          "displacement": "{count, plural, one {نتيجة واحدة} two {نتيجتان} few {# نتائج} many {# نتيجة} other {# نتيجة}}",
+          "priorityNeeds": "{count, plural, one {قطاع واحد} two {قطاعان} few {# قطاعات} many {# قطاعًا} other {# قطاع}}",
+          "responseActivities": "{count, plural, one {قطاع واحد} two {قطاعان} few {# قطاعات} many {# قطاعًا} other {# قطاع}}",
+          "sources": "{count, plural, one {مصدر واحد} two {مصدران} few {# مصادر} many {# مصدرًا} other {# مصدر}}"
+        },
+        "hints": {
+          "currentStatus": "النازحون والمحتاجون والتمويل",
+          "outlook": "السيناريو الأرجح"
+        }
+      }
+    },
+    "refresh": {
+      "button": "تحديث الآن",
+      "requested": "تم طلب التحديث. تستغرق النسخة الجديدة عادةً بضع دقائق وستظهر هنا تلقائيًا.",
+      "error": "تعذّر طلب التحديث. يُرجى المحاولة مرة أخرى."
     }
   }
 }

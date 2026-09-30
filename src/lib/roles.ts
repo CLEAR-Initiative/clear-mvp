@@ -25,3 +25,11 @@ export function canWriteCrisisEvents(role: string | null | undefined): boolean {
   return isPlatformAdmin(role) || role === "analyst";
 }
 
+/**
+ * Client twin of clear-api `createAnalysisAutomation` /
+ * `deleteAnalysisAutomation` `requireRole(["admin", "analyst"])`: who may
+ * create or remove an analysis.
+ */
+export function canManageAnalyses(role: string | null | undefined): boolean {
+  return isPlatformAdmin(role) || role === "analyst";
+}

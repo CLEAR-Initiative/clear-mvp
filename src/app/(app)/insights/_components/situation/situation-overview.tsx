@@ -1,11 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Box, Card, Group, SimpleGrid, Text } from "@mantine/core";
-import { IconSparkles } from "@tabler/icons-react";
+import { Box, Group, SimpleGrid, Text } from "@mantine/core";
 import { CardSection } from "~/components/ui";
 import type { SituationAnalysis } from "~/server/api/mappers/situation-analysis";
-import { planSentenceSegments, planSummaryParagraphs } from "./summary-citations";
+import { AiSummaryCard } from "./ai-summary-card";
 import { BulletRow } from "./bullet-row";
 import { BulletCard } from "./bullet-card";
 import { SituationKpis } from "./situation-kpis";
@@ -32,71 +31,12 @@ export function SituationOverview({
   const { hazards, displacement, contextRisks, summary, sources } = data;
   const hasHazards = hazards.hazards.length > 0 || hazards.vulnerabilities.length > 0;
   const hasDisplacement = displacement.push.length > 0 || displacement.return.length > 0;
-  const hasPerSentenceCitations = Object.keys(data.summaryLineRefs).length > 0;
 
   return (
     <Box>
       <SituationKpis data={data} />
 
-      {summary && (
-        <Card
-          p={16}
-          style={{
-            border: "1px solid var(--color-ai-border)",
-            background: "var(--color-ai-light)",
-          }}
-        >
-          <Group gap={8} mb={8} align="center">
-            <IconSparkles size={14} color="var(--color-ai)" />
-            <Text
-              fw={700}
-              tt="uppercase"
-              c="var(--color-ai)"
-              style={{ fontSize: 11, letterSpacing: "0.5px" }}
-            >
-              {t("summary.title")}
-            </Text>
-          </Group>
-          {planSummaryParagraphs(summary, data.summaryLineRefs).map((para, i, arr) => {
-            const segments = planSentenceSegments(para, data.summaryLineRefs);
-            return (
-              <Text
-                key={i}
-                c="var(--color-text-primary)"
-                mb={i === arr.length - 1 ? 0 : 12}
-                style={{ fontSize: 13, lineHeight: 1.65 }}
-              >
-                {segments
-                  ? segments.map((seg, j) =>
-                      seg.kind === "text" ? (
-                        seg.text
-                      ) : (
-                        <Citations
-                          key={j}
-                          refs={seg.refs}
-                          sources={sources}
-                          onOpen={onOpenSources}
-                          variant="inline"
-                        />
-                      ),
-                    )
-                  : para.trim()}
-                {/* Block-level fallback only when no sentence in the whole
-                    summary carried its own citation - otherwise the trailing
-                    list duplicates what is now shown inline. */}
-                {i === arr.length - 1 && !hasPerSentenceCitations && (
-                  <Citations
-                    refs={data.summaryRefs}
-                    sources={sources}
-                    onOpen={onOpenSources}
-                    variant="inline"
-                  />
-                )}
-              </Text>
-            );
-          })}
-        </Card>
-      )}
+      <AiSummaryCard data={data} onOpenSources={onOpenSources} />
 
       {summary && (
         <Box mb={24}>
