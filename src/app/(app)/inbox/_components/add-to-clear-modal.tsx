@@ -151,7 +151,6 @@ export function AddToClearModal({ entry, busy, error, onCancel, onConfirm }: Add
       overlayProps={{ backgroundOpacity: 0.6 }}
     >
       <div className={styles.frame} data-testid="inbox-add-modal">
-        <div className={styles.glow} />
         <div className={styles.header}>
           <span className={styles.headerLabel}>
             <IconLayoutGrid size={15} />
