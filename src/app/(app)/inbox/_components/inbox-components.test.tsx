@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { InboxEntry } from "~/lib/hotline-inbox";
 import { EntryList } from "./entry-list";
-import { ReadingPane } from "./reading-pane";
+import { ReadingPane, TranslationBlock } from "./reading-pane";
 import { AddToClearModal } from "./add-to-clear-modal";
 
 vi.mock("next-intl", () => ({
@@ -277,17 +277,28 @@ describe("ReadingPane", () => {
     expect(baseProps.onReject).toHaveBeenCalledWith("duplicate");
   });
 
-  it("requests a translation in the reader's locale and shows the pending state", () => {
+  it("does not offer translation while the backend is stubbed", () => {
     wrap(<ReadingPane {...baseProps} entry={entry()} />);
+    expect(screen.queryByTestId("inbox-translate")).not.toBeInTheDocument();
+  });
+
+  it("marks media-only entries as having no text", () => {
+    wrap(<ReadingPane {...baseProps} entry={entry({ text: "" })} />);
+    expect(screen.getAllByText("pane.noText").length).toBeGreaterThan(0);
+  });
+});
+
+describe("TranslationBlock", () => {
+  it("requests a translation in the reader's locale and shows the pending state", () => {
+    wrap(<TranslationBlock entry={entry()} />);
     fireEvent.click(screen.getByTestId("inbox-translate"));
     expect(requestTranslation).toHaveBeenCalledWith({ threadId: "t1", locale: "en" });
     expect(screen.getByTestId("inbox-translation")).toHaveTextContent("translate.pending");
   });
 
   it("does not offer translation for media-only entries", () => {
-    wrap(<ReadingPane {...baseProps} entry={entry({ text: "" })} />);
+    wrap(<TranslationBlock entry={entry({ text: "" })} />);
     expect(screen.queryByTestId("inbox-translate")).not.toBeInTheDocument();
-    expect(screen.getAllByText("pane.noText").length).toBeGreaterThan(0);
   });
 });
 
