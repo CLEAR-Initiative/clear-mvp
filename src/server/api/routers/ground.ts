@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
-import { REJECT_REASONS } from "~/lib/hotline-inbox";
+import {
+  REJECT_REASONS,
+  combineTranslations,
+  textMessages,
+  type GroundTranslationState,
+} from "~/lib/hotline-inbox";
+import { locales } from "~/i18n/config";
 import type {
   GqlGroundInboxMessage,
   GqlGroundInboxThread,
@@ -25,13 +31,6 @@ import type {
  * the Ground-intel tab ONLY. Phone numbers are redacted at persistence by
  * clear-api and must never surface anywhere.
  */
-
-/** Translation of a thread's text into one locale. `queued` means the
- * pipeline drain has not written the row yet; poll. */
-export interface GroundTranslationState {
-  status: "queued" | "ready" | "unavailable";
-  text: string | null;
-}
 
 const GROUND_SOURCE_FIELDS = `id name kind reviewerRoles privacyDefault isActive`;
 
@@ -136,6 +135,7 @@ const HOTLINE_INBOX_MESSAGE_FIELDS = `
   omittedMediaCount
   hasVoice
   transcript
+  language
   classification
   uncertainty
   isEdited
@@ -166,6 +166,42 @@ const HOTLINE_INBOX_SOURCE_QUERY = `
 `;
 
 const HOTLINE_INBOX_LIMIT = 500;
+
+/** A thread's message ids and texts — what a translation request fans out
+ * over (clear-api translates per message; the inbox shows per thread). */
+const THREAD_MESSAGE_TEXTS_QUERY = `
+  query GroundThreadMessageTexts($id: String!) {
+    groundThread(id: $id) {
+      messages { id text }
+    }
+  }
+`;
+
+const REQUEST_GROUND_MESSAGE_TRANSLATION_MUTATION = `
+  mutation RequestGroundMessageTranslation($messageId: String!, $locale: String!) {
+    requestGroundMessageTranslation(messageId: $messageId, locale: $locale) {
+      status
+      text
+    }
+  }
+`;
+
+const THREAD_TRANSLATION_QUERY = `
+  query GroundThreadTranslation($id: String!, $locale: String!) {
+    groundThread(id: $id) {
+      messages {
+        id
+        text
+        translation(locale: $locale) { status text }
+      }
+    }
+  }
+`;
+
+/** Translation procedures' input: the entry (thread) and the reader's UI
+ * locale, which is also the target (`en` included — hotline text is
+ * usually Arabic). */
+const translationInput = z.object({ threadId: z.string(), locale: z.enum(locales) });
 
 export const groundRouter = createTRPCRouter({
   /** Per-source policy records — drives source names + reviewerRoles gating. */
@@ -288,22 +324,44 @@ export const groundRouter = createTRPCRouter({
   }),
 
   /**
-   * STUB: on-demand translation of a hotline thread into the reader's
-   * locale. clear-api has no translation entity for ground messages yet
-   * (Backlog: "On-demand translation of hotline messages: API entity type
-   * and request mutation"). Until it lands both procedures report
-   * "unavailable" so the inbox UI can ship with the full state machine:
-   *   request -> queued (poll) -> ready | unavailable
-   * Replace the bodies with requestGroundMessageTranslation /
-   * GroundMessage.translation(locale) when the API ships.
+   * On-demand translation of an inbox entry into the reader's locale
+   * (clear-api#627, drained by clear-pipeline#626). The entry is a thread;
+   * clear-api translates per message, so this requests every message that
+   * has text and folds their states into one (combineTranslations):
+   *   request -> queued (poll `translation`) -> ready | unavailable
+   * Idempotent server-side: re-requesting a ready or queued message costs
+   * nothing. The original text is never changed.
    */
   requestTranslation: protectedProcedure
-    .input(z.object({ threadId: z.string(), locale: z.string() }))
-    .mutation(async (): Promise<GroundTranslationState> => ({ status: "unavailable", text: null })),
+    .input(translationInput)
+    .mutation(async ({ ctx, input }): Promise<GroundTranslationState> => {
+      const { groundThread } = await graphqlFetch<{
+        groundThread: { messages: Array<{ id: string; text: string }> } | null;
+      }>(THREAD_MESSAGE_TEXTS_QUERY, { id: input.threadId }, cookieHeaders(ctx));
+      const states = await Promise.all(
+        textMessages(groundThread?.messages ?? []).map(async (m) => {
+          const data = await graphqlFetch<{ requestGroundMessageTranslation: GroundTranslationState }>(
+            REQUEST_GROUND_MESSAGE_TRANSLATION_MUTATION,
+            { messageId: m.id, locale: input.locale },
+            cookieHeaders(ctx),
+          );
+          return data.requestGroundMessageTranslation;
+        }),
+      );
+      return combineTranslations(states);
+    }),
 
+  /** Current translation state of an entry — polled while `queued`. */
   translation: protectedProcedure
-    .input(z.object({ threadId: z.string(), locale: z.string() }))
-    .query(async (): Promise<GroundTranslationState> => ({ status: "unavailable", text: null })),
+    .input(translationInput)
+    .query(async ({ ctx, input }): Promise<GroundTranslationState> => {
+      const { groundThread } = await graphqlFetch<{
+        groundThread: {
+          messages: Array<{ id: string; text: string; translation: GroundTranslationState }>;
+        } | null;
+      }>(THREAD_TRANSLATION_QUERY, { id: input.threadId, locale: input.locale }, cookieHeaders(ctx));
+      return combineTranslations(textMessages(groundThread?.messages ?? []).map((m) => m.translation));
+    }),
 
   /** Staged messages, oldest first (clear-api ordering). */
   messages: protectedProcedure

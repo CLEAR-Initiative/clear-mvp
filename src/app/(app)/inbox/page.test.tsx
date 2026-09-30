@@ -109,6 +109,7 @@ function message(id: string, threadId: string, classification: string | null, se
     threadId,
     hasVoice: false,
     transcript: null as string | null,
+    language: null as string | null,
   };
 }
 

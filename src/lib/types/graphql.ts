@@ -270,6 +270,9 @@ export type GqlGroundInboxMessage = Omit<GqlGroundMessage, "senderName"> & {
   /** Machine transcript of the message's voice note(s); null until the
    * pipeline transcribes it, always null without a voice note. */
   transcript: string | null;
+  /** Language of `text` detected at intake ("ar", "en", "fr", "es"); null
+   * when unknown (clear-api#627). */
+  language: string | null;
 };
 
 /** Ground thread as the hotline inbox receives it: the base fields plus the

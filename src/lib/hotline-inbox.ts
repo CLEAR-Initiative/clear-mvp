@@ -18,6 +18,13 @@ import type {
  * is a display-only rendering of it and resolves to nothing outside CLEAR.
  */
 
+/** An entry's on-demand translation into one locale (clear-api#627).
+ * `queued` means the pipeline drain has not written it yet; poll. */
+export interface GroundTranslationState {
+  status: "queued" | "ready" | "unavailable";
+  text: string | null;
+}
+
 export const INBOX_FILTERS = ["reports", "unclassified", "chatter", "all"] as const;
 export type InboxFilter = (typeof INBOX_FILTERS)[number];
 
@@ -322,4 +329,34 @@ export function saveReadIds(ids: Set<string>): void {
   } catch {
     // Storage unavailable (private mode, quota): read state is a nicety.
   }
+}
+
+/** Messages whose text an entry's narrative (and its translation) is built
+ * from — the same filter `buildInboxEntries` applies to `text`. */
+export function textMessages<T extends { text: string }>(messages: T[]): T[] {
+  return messages.filter((m) => m.text.trim().length > 0);
+}
+
+/**
+ * Whether to offer translating an entry into `locale`: it has text, and at
+ * least one text message isn't already in `locale` by clear-api's intake
+ * detection (an unknown language counts as not).
+ */
+export function needsTranslation(entry: InboxEntry, locale: string): boolean {
+  return textMessages(entry.messages).some((m) => m.language !== locale);
+}
+
+/**
+ * Fold per-message translation states into the entry's: ready (texts joined
+ * by a blank line, like `InboxEntry.text`) only once every text message is,
+ * queued while any still is, otherwise unavailable — a translation missing
+ * part of the report is not shown as the report's translation.
+ */
+export function combineTranslations(states: GroundTranslationState[]): GroundTranslationState {
+  if (states.length === 0) return { status: "unavailable", text: null };
+  if (states.some((s) => s.status === "queued")) return { status: "queued", text: null };
+  if (states.every((s) => s.status === "ready" && s.text)) {
+    return { status: "ready", text: states.map((s) => s.text!.trim()).join("\n\n") };
+  }
+  return { status: "unavailable", text: null };
 }
