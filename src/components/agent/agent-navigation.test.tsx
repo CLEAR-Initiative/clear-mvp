@@ -5,7 +5,7 @@ import { MantineProvider } from "@mantine/core";
 import { NextIntlClientProvider } from "next-intl";
 import type { UIMessage } from "ai";
 import enMessages from "../../../messages/en.json";
-import { AgentProvider, useAgent } from "~/components/agent/agent-provider";
+import { AgentProvider, AgentViewBoundary, useAgent } from "~/components/agent/agent-provider";
 import { AgentMessage } from "~/components/agent/agent-message";
 import { AgentThread } from "~/components/agent/agent-thread";
 
@@ -82,6 +82,26 @@ describe("Agent navigation", () => {
     expect(push).toHaveBeenLastCalledWith("/map?layer=events");
     expect(sessionStorage.getItem("map-nav-context")).toBe('{"country":"Sudan"}');
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+  });
+
+  it("remounts the page on Back, so it re-reads the restored state", () => {
+    const mounts = vi.fn();
+    function Page() {
+      React.useEffect(() => {
+        mounts();
+      }, []);
+      return null;
+    }
+    renderWith(
+      <AgentViewBoundary>
+        <Page />
+      </AgentViewBoundary>,
+    );
+    expect(mounts).toHaveBeenCalledTimes(1);
+    act(() => agent.applyNavigation("nav-1", result));
+    expect(mounts).toHaveBeenCalledTimes(1);
+    act(() => agent.goBack("nav-1"));
+    expect(mounts).toHaveBeenCalledTimes(2);
   });
 
   it("acts on a navigate result as it streams in, even with no Thread on screen", () => {

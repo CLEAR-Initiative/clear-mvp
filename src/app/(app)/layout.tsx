@@ -5,7 +5,7 @@ import { NavSidebar } from "~/components/nav-sidebar";
 import { NavSidebarFallback } from "~/components/nav-sidebar-fallback";
 import { MobileBottomNav } from "~/components/mobile-bottom-nav";
 import { FeatureFlagsProvider } from "~/components/feature-flags-provider";
-import { AgentProvider } from "~/components/agent/agent-provider";
+import { AgentProvider, AgentViewBoundary } from "~/components/agent/agent-provider";
 import { AgentDrawer } from "~/components/agent/agent-drawer";
 import { TeamProvider } from "~/providers/team-provider";
 import { WorkingCountryProvider } from "~/providers/working-country-provider";
@@ -79,7 +79,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                     pt={{ base: 56, sm: 0 }}
                     pb={{ base: 72, sm: 0 }}
                   >
-                    {children}
+                    <AgentViewBoundary>{children}</AgentViewBoundary>
                     <PageTransitionVeil />
                   </Box>
                 </Group>

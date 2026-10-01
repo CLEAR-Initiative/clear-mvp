@@ -9,6 +9,7 @@
  */
 
 import {
+  Fragment,
   createContext,
   useCallback,
   useContext,
@@ -61,6 +62,8 @@ export interface AgentContextValue {
   canGoBack: (toolCallId: string) => boolean;
   /** Restore the exact view from before this navigation. */
   goBack: (toolCallId: string) => void;
+  /** Changes on every Back, so the page remounts and re-reads restored state. */
+  viewKey: number;
 }
 
 const AgentContext = createContext<AgentContextValue | null>(null);
@@ -192,6 +195,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   // ── Agent navigation ───────────────────────────────────────────────────
   const router = useRouter();
   const [backStack, setBackStack] = useState<BackEntry[]>([]);
+  const [viewKey, setViewKey] = useState(0);
   /**
    * Navigate tool calls already acted on, or history: every chat seeded with
    * stored turns registers their calls here before it is shown, so a loaded
@@ -239,6 +243,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       // This move and any made after it are undone together.
       setBackStack(backStack.slice(0, index));
       restoreNavContexts(entry.snapshot);
+      // Remount the page: a page staying mounted across Back (Detection to
+      // Detection) would otherwise keep the Agent's filters in its state and
+      // write them over the restored ones.
+      setViewKey((k) => k + 1);
       router.push(entry.url);
     },
     [backStack, router],
@@ -280,8 +288,9 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       applyNavigation,
       canGoBack,
       goBack,
+      viewKey,
     }),
-    [available, state, setOpen, chat, openThread, newThread, applyNavigation, canGoBack, goBack],
+    [available, state, setOpen, chat, openThread, newThread, applyNavigation, canGoBack, goBack, viewKey],
   );
 
   return (
@@ -322,6 +331,12 @@ function NavigationWatcher({
     }
   }, [messages, apply]);
   return null;
+}
+
+/** The page, remounted when the user goes Back from an Agent navigation. */
+export function AgentViewBoundary({ children }: { children: ReactNode }) {
+  const agent = useContext(AgentContext);
+  return <Fragment key={agent?.viewKey ?? 0}>{children}</Fragment>;
 }
 
 /** The Agent context, or null outside an AgentProvider (e.g. isolated tests). */
