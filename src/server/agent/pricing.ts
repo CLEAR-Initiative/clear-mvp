@@ -7,7 +7,7 @@
  * budget errs on the side of counting too much.
  *
  * A configured model with no price here fails startup
- * (`assertClearAgentModelPriced`, called from instrumentation): the budget
+ * (`assertClearAgentModelConfigured`, called from instrumentation): the budget
  * must never be bypassed by a model nobody priced.
  */
 

@@ -80,9 +80,14 @@ describe.each(stores)("memory storage contract: %s", (_name, create) => {
     it("updates title and metadata independently", async () => {
       await store.saveThread({ thread: thread("t1", 0, { metadata: { a: 1 } }) });
       await store.updateThread({ id: "t1", title: "Renamed" });
-      expect(await store.getThreadById({ threadId: "t1" })).toMatchObject({ title: "Renamed", metadata: { a: 1 } });
+      let read = await store.getThreadById({ threadId: "t1" });
+      expect(read?.title).toBe("Renamed");
+      expect(read?.metadata).toEqual({ a: 1 });
+      // Metadata merges into what the thread has.
       await store.updateThread({ id: "t1", metadata: { b: 2 } });
-      expect(await store.getThreadById({ threadId: "t1" })).toMatchObject({ title: "Renamed", metadata: { b: 2 } });
+      read = await store.getThreadById({ threadId: "t1" });
+      expect(read?.title).toBe("Renamed");
+      expect(read?.metadata).toEqual({ a: 1, b: 2 });
     });
 
     it("lists the resource's threads with page metadata", async () => {

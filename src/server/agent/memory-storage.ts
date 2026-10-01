@@ -87,10 +87,12 @@ export class ClearApiMemoryStorage extends MemoryStorage {
     title?: string;
     metadata?: Record<string, unknown>;
   }): Promise<StorageThreadType> {
+    // Mastra merges metadata into what the thread has; clear-api replaces it.
+    const current = metadata !== undefined ? await this.api.get(id) : null;
     const row = await this.api.upsert({
       id,
       ...(title !== undefined ? { title } : {}),
-      ...(metadata !== undefined ? { metadata } : {}),
+      ...(metadata !== undefined ? { metadata: { ...(current?.metadata ?? {}), ...metadata } } : {}),
     });
     return toThread(row);
   }
