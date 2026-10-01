@@ -1,5 +1,5 @@
 import { test, expect } from "../support/test";
-import { ADMIN, BASE_URL } from "../support/data";
+import { enableFeatureFlags } from "../support/helpers";
 
 /**
  * CLEAR Agent V1: ask from the Agent drawer on the Map, see the Answer with
@@ -13,19 +13,8 @@ import { ADMIN, BASE_URL } from "../support/data";
  */
 
 test.beforeAll(async ({ playwright }) => {
-  // The `agent` flag defaults off. Turn it on as the seeded admin, through
-  // the app's own (admin-only) toggle.
-  const admin = await playwright.request.newContext({ baseURL: BASE_URL });
-  const signIn = await admin.post("/api/auth/sign-in/email", {
-    data: { email: ADMIN.email, password: ADMIN.password },
-    headers: { Origin: BASE_URL },
-  });
-  expect(signIn.ok()).toBe(true);
-  const toggle = await admin.post("/api/trpc/featureFlags.toggle", {
-    data: { json: { key: "agent", enabled: true } },
-  });
-  expect(toggle.ok()).toBe(true);
-  await admin.dispose();
+  // The `agent` flag defaults off.
+  await enableFeatureFlags(playwright, ["agent"]);
 });
 
 test("ask in the Agent drawer, then continue the Thread on the Agent page", async ({ page }) => {

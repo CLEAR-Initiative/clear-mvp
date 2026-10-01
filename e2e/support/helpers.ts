@@ -1,4 +1,5 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type PlaywrightWorkerArgs } from "@playwright/test";
+import { ADMIN, BASE_URL } from "./data";
 
 /**
  * Open the Detection page and make sure the Events tab is active. Filters and
@@ -41,3 +42,31 @@ export async function gotoEventByTitle(page: Page, title: string) {
   await expect(page.getByRole("link", { name: /Back to Events/i })).toBeVisible();
   await expect(page.getByText(title).first()).toBeVisible();
 }
+
+/**
+ * Turn feature flags on as the seeded admin, through the app's own
+ * admin-only toggle (flags are platform-wide; the hermetic stack starts
+ * with them at their defaults).
+ */
+export async function enableFeatureFlags(
+  playwright: PlaywrightWorkerArgs["playwright"],
+  keys: string[],
+): Promise<void> {
+  const admin = await playwright.request.newContext({ baseURL: BASE_URL });
+  try {
+    const signIn = await admin.post("/api/auth/sign-in/email", {
+      data: { email: ADMIN.email, password: ADMIN.password },
+      headers: { Origin: BASE_URL },
+    });
+    expect(signIn.ok()).toBe(true);
+    for (const key of keys) {
+      const toggle = await admin.post("/api/trpc/featureFlags.toggle", {
+        data: { json: { key, enabled: true } },
+      });
+      expect(toggle.ok()).toBe(true);
+    }
+  } finally {
+    await admin.dispose();
+  }
+}
+
