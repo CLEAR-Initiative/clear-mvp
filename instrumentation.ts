@@ -7,6 +7,10 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     await import("./sentry.server.config");
+    // Refuse to start with a CLEAR Agent model that has no price: the
+    // daily Agent budget would silently stop counting.
+    const { assertClearAgentModelPriced } = await import("./src/server/agent/pricing");
+    assertClearAgentModelPriced();
   }
   if (process.env.NEXT_RUNTIME === "edge") {
     await import("./sentry.edge.config");

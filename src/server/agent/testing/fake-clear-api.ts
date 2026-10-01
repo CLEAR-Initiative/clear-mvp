@@ -53,6 +53,7 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
   const conversations = new Map<string, Row>();
   const messages = new Map<string, MessageRow>();
   const calls: GraphQLCall[] = [];
+  const budget = { limitUsd: 2, spentTodayUsd: 0, resetsAt: "2026-10-02T00:00:00.000Z" };
   let clock = Date.parse("2026-10-01T08:00:00.000Z");
   const now = () => new Date((clock += 1000)).toISOString();
 
@@ -128,6 +129,7 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
       ownConversation(user, message.conversationId);
       if (message.costUsd !== undefined) throw new GraphQLFailure("Already recorded", "FORBIDDEN");
       Object.assign(message, v.usage);
+      budget.spentTodayUsd += (v.usage as { costUsd: number }).costUsd;
       return { recordConversationTurnUsage: { id: message.id } };
     }
     if (query.includes("conversationMessagesByIds(")) {
@@ -162,7 +164,7 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
       };
     }
     if (query.includes("myAgentBudget")) {
-      return { myAgentBudget: { limitUsd: 2, spentTodayUsd: 0, resetsAt: "2026-10-02T00:00:00.000Z" } };
+      return { myAgentBudget: { ...budget } };
     }
     throw new Error(`fake clear-api: unhandled operation ${query.slice(0, 80)}`);
   }
@@ -171,6 +173,8 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
     conversations,
     messages,
     calls,
+    /** The caller's Agent budget; mutate to simulate spend. */
+    budget,
     /** Answer one GraphQL HTTP request. */
     async handle(init: RequestInit | undefined): Promise<Response> {
       const { query, variables = {} } = JSON.parse(init?.body as string) as {

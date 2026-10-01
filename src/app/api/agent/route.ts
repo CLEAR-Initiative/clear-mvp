@@ -16,7 +16,10 @@ import { handleChatStream } from "@mastra/ai-sdk";
 import { createUIMessageStreamResponse } from "ai";
 import { z } from "zod";
 import { canReadContent } from "~/lib/roles";
+import { createConversationsApi } from "~/server/agent/conversations";
 import { CLEAR_AGENT_ID, createClearAgent } from "~/server/agent/create-clear-agent";
+import { clearAgentModelId } from "~/server/agent/model";
+import { turnCostUsd } from "~/server/agent/pricing";
 import { getSessionUser } from "~/server/session";
 
 const bodySchema = z.object({
@@ -75,6 +78,32 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: "The message is too long." }, { status: 413 });
   }
 
+  let modelId: string;
+  try {
+    modelId = clearAgentModelId();
+    turnCostUsd(modelId, { inputTokens: 0, outputTokens: 0 }); // priced, or refuse
+  } catch (err) {
+    console.error("[agent]", (err as Error).message);
+    return Response.json({ error: "The CLEAR Agent is not configured." }, { status: 503 });
+  }
+
+  // clear-api owns spend (the usage lives there); this only reads it.
+  const conversations = createConversationsApi(cookie);
+  const budget = await conversations.budget().catch((err: unknown) => {
+    console.error("[agent] could not read the Agent budget:", err);
+    return null;
+  });
+  if (!budget) {
+    return Response.json({ error: "The CLEAR Agent could not start." }, { status: 502 });
+  }
+  if (budget.spentTodayUsd >= budget.limitUsd) {
+    return Response.json(
+      { error: "Your daily Agent budget is spent.", code: "AGENT_BUDGET_EXCEEDED", resetsAt: budget.resetsAt },
+      { status: 429 },
+    );
+  }
+
+  const startedAt = Date.now();
   const mastra = createClearAgent({ user: session.user, cookie });
   let stream: Awaited<ReturnType<typeof handleChatStream>>;
   try {
@@ -89,6 +118,26 @@ export async function POST(req: Request): Promise<Response> {
         memory: {
           thread: { id: threadId, title: titleFrom(text) },
           resource: session.user.id,
+        },
+        // Awaited before the stream closes. Never fails the turn: a missed
+        // record is logged, and the Answer still reaches the user.
+        onFinish: async ({ totalUsage }) => {
+          const tokens = {
+            inputTokens: totalUsage?.inputTokens ?? 0,
+            outputTokens: totalUsage?.outputTokens ?? 0,
+          };
+          try {
+            const answerId = await conversations.latestAnswerId(threadId);
+            if (!answerId) throw new Error(`no Answer stored in Thread ${threadId}`);
+            await conversations.recordTurnUsage(answerId, {
+              model: modelId,
+              ...tokens,
+              costUsd: turnCostUsd(modelId, tokens),
+              latencyMs: Date.now() - startedAt,
+            });
+          } catch (err) {
+            console.error("[agent] could not record turn usage:", err);
+          }
         },
       },
     });

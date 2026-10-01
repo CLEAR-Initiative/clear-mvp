@@ -12,8 +12,9 @@ import {
 vi.mock("server-only", () => ({}));
 
 const scripted = vi.hoisted(() => ({ model: undefined as unknown }));
+// The configured id is a real, priced one; the model behind it is scripted.
 vi.mock("~/server/agent/model", () => ({
-  clearAgentModelId: () => "test/scripted",
+  clearAgentModelId: () => "anthropic/claude-sonnet-5-5",
   resolveClearAgentModel: () => scripted.model,
 }));
 
@@ -230,5 +231,56 @@ describe("POST /api/agent — a Thread", () => {
       error: "NRC Find returned 502.",
     });
     expect(chunks.some((c) => c.type === "error")).toBe(false);
+  });
+});
+
+describe("POST /api/agent — Agent budget and usage", () => {
+  it("records the turn's model, tokens, cost and latency on its Answer", async () => {
+    useScript([
+      { toolCalls: [{ name: "nrc_find", input: { question: "Access in North Darfur in 2026?" } }] },
+      { text: "Restricted." },
+    ]);
+    const POST = await loadRoute();
+    await (await POST(agentRequest(ALICE, turn("t1", "Darfur?")))).text();
+
+    const answer = clearApi.messagesOf("t1").find((m) => m.role === "assistant")!;
+    // Two model calls of 1,000 in / 200 out at $2 / $10 per MTok.
+    expect(answer).toMatchObject({
+      model: "anthropic/claude-sonnet-5-5",
+      inputTokens: 2_000,
+      outputTokens: 400,
+      costUsd: (2_000 * 2 + 400 * 10) / 1_000_000,
+    });
+    expect(answer.latencyMs).toBeGreaterThanOrEqual(0);
+    const record = clearApi.calls.find((c) => c.query.includes("recordConversationTurnUsage"));
+    expect(record?.cookie).toBe(ALICE);
+  });
+
+  it("declines a turn with 429 once the daily budget is spent, and runs nothing", async () => {
+    clearApi.budget.spentTodayUsd = 2;
+    const POST = await loadRoute();
+    const res = await POST(agentRequest(ALICE, turn("t1", "Darfur?")));
+
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({
+      error: "Your daily Agent budget is spent.",
+      code: "AGENT_BUDGET_EXCEEDED",
+      resetsAt: "2026-10-02T00:00:00.000Z",
+    });
+    expect(prompts).toHaveLength(0);
+    expect(findCalls()).toHaveLength(0);
+    expect(clearApi.conversations.size).toBe(0);
+  });
+
+  it("refuses to run an unpriced model", async () => {
+    vi.doMock("~/server/agent/model", () => ({
+      clearAgentModelId: () => "someone/unpriced-model",
+      resolveClearAgentModel: () => scripted.model,
+    }));
+    const POST = await loadRoute();
+    const res = await POST(agentRequest(ALICE, turn("t1", "Darfur?")));
+    vi.doUnmock("~/server/agent/model");
+    expect(res.status).toBe(503);
+    expect(prompts).toHaveLength(0);
   });
 });

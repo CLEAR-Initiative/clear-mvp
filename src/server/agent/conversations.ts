@@ -28,6 +28,21 @@ export interface ConversationMessageRow {
   createdAt: string;
 }
 
+export interface AgentBudget {
+  limitUsd: number;
+  spentTodayUsd: number;
+  /** ISO time of the next reset (UTC midnight). */
+  resetsAt: string;
+}
+
+export interface TurnUsage {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  latencyMs: number;
+}
+
 export interface ConversationMessageInput {
   id: string;
   role: string;
@@ -112,6 +127,34 @@ export function createConversationsApi(cookie: string) {
           { conversationId, messages: messages.slice(i, i + MESSAGES_PER_CALL) },
         );
       }
+    },
+
+    async budget(): Promise<AgentBudget> {
+      const data = await gql<{ myAgentBudget: AgentBudget }>(
+        `query { myAgentBudget { limitUsd spentTodayUsd resetsAt } }`,
+      );
+      return data.myAgentBudget;
+    },
+
+    /** The id of the newest Answer in a Thread, if any. */
+    async latestAnswerId(conversationId: string): Promise<string | null> {
+      const data = await gql<{
+        conversation: { messages: Array<{ id: string; role: string }> } | null;
+      }>(
+        `query($id: String!) { conversation(id: $id) { messages(first: 10) { id role } } }`,
+        { id: conversationId },
+      );
+      const messages = data.conversation?.messages ?? [];
+      return [...messages].reverse().find((m) => m.role === "assistant")?.id ?? null;
+    },
+
+    async recordTurnUsage(messageId: string, usage: TurnUsage): Promise<void> {
+      await gql(
+        `mutation($messageId: String!, $usage: ConversationTurnUsageInput!) {
+          recordConversationTurnUsage(messageId: $messageId, usage: $usage) { id }
+        }`,
+        { messageId, usage },
+      );
     },
 
     async messagesByIds(ids: string[]): Promise<ConversationMessageRow[]> {
