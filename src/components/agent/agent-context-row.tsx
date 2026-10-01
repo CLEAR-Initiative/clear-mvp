@@ -9,7 +9,7 @@
 
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Box, Group, Text, Tooltip } from "@mantine/core";
+import { Badge, Group, Text, Tooltip } from "@mantine/core";
 import {
   IconAlertOctagon,
   IconAntenna,
@@ -87,17 +87,8 @@ export function AgentContextRow() {
         key="filters"
         icon={<IconFilter size={12} />}
         label={t("filters", { count: filters.length })}
-        tooltip={
-          <Box>
-            {filters.map(([key, value]) => (
-              <Text key={key} size="xs">
-                {t(`filterKeys.${key}`)}
-                {/* A location id means nothing to a reader; its name isn't in the view. */}
-                {key === "locationId" ? null : `: ${Array.isArray(value) ? value.join(", ") : String(value)}`}
-              </Text>
-            ))}
-          </Box>
-        }
+        // Names only: the values are codes and ids, not something to read.
+        tooltip={filters.map(([key]) => t(`filterKeys.${key}`)).join(", ")}
       />,
     );
   }
