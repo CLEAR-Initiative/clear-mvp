@@ -1,10 +1,14 @@
 /**
  * Agent navigation, client side: the exact view to return to on Back.
  *
- * A view is the URL plus the filter state the Map and Detection keep in
- * sessionStorage (their nav contexts). Back restores both, so the page comes
- * back with the filters it had, not just the address.
+ * A view is the URL plus the state the Map and Detection keep in
+ * sessionStorage: their nav contexts and filters, and the Map's view state
+ * (camera, panels, region, timeframe) and remembered focus. Back restores
+ * both, so the page comes back as it was, not just the address.
  */
+
+import { MAP_FOCUS_SESSION_STORAGE_KEY } from "~/lib/map-focus-session";
+import { MAP_VIEW_STATE_STORAGE_KEY } from "~/lib/map-view-state";
 
 /** sessionStorage keys that hold a page's filter state. */
 export const NAV_CONTEXT_KEYS = [
@@ -12,6 +16,8 @@ export const NAV_CONTEXT_KEYS = [
   "detection-nav-context",
   "detection-filters",
   "detection-link-filters",
+  MAP_VIEW_STATE_STORAGE_KEY,
+  MAP_FOCUS_SESSION_STORAGE_KEY,
 ] as const;
 
 export type NavSnapshot = Record<string, string | null>;

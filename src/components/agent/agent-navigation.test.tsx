@@ -9,9 +9,26 @@ import { AgentProvider, AgentViewBoundary, useAgent } from "~/components/agent/a
 import { AgentMessage } from "~/components/agent/agent-message";
 import { AgentThread } from "~/components/agent/agent-thread";
 
-const push = vi.fn();
 let pathname = "/map";
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), usePathname: () => pathname }));
+let search = "";
+/** The router: push is a transition; the URL changes only when it lands (`land`). */
+let pushed: string | null = null;
+const push = vi.fn((url: string) => {
+  pushed = url;
+});
+function commitPush() {
+  if (!pushed) return;
+  const u = new URL(pushed, "http://app.local");
+  pathname = u.pathname;
+  search = u.search.slice(1);
+  window.history.pushState({}, "", pushed);
+  pushed = null;
+}
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+  usePathname: () => pathname,
+  useSearchParams: () => new URLSearchParams(search),
+}));
 vi.mock("~/components/feature-flags-provider", () => ({ useFeatureEnabled: () => true }));
 vi.mock("~/trpc/react", () => ({
   api: {
@@ -43,7 +60,7 @@ function Probe() {
 }
 
 function renderWith(children: React.ReactNode) {
-  return render(
+  const tree = () => (
     <NextIntlClientProvider locale="en" messages={enMessages}>
       <MantineProvider>
         <AgentProvider>
@@ -51,12 +68,21 @@ function renderWith(children: React.ReactNode) {
           {children}
         </AgentProvider>
       </MantineProvider>
-    </NextIntlClientProvider>,
+    </NextIntlClientProvider>
   );
+  const view = render(tree());
+  /** The router commits the URL it was pushed to. */
+  const land = () => {
+    commitPush();
+    view.rerender(tree());
+  };
+  return { ...view, land };
 }
 
 beforeEach(() => {
   pathname = "/map";
+  search = "layer=events";
+  pushed = null;
   push.mockClear();
   sessionStorage.clear();
   window.history.pushState({}, "", "/map?layer=events");
@@ -66,42 +92,61 @@ afterEach(() => cleanup());
 describe("Agent navigation", () => {
   it("moves once, announces it with Back, and Back restores the exact view", () => {
     sessionStorage.setItem("map-nav-context", '{"country":"Sudan"}');
-    renderWith(<AgentMessage message={answer()} />);
+    sessionStorage.setItem("clear.map.viewState.v1", '{"region":"North Darfur"}');
+    const { land } = renderWith(<AgentMessage message={answer()} />);
 
     act(() => agent.applyNavigation("nav-1", result));
     act(() => agent.applyNavigation("nav-1", result)); // a re-render must not move again
     expect(push).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenCalledWith("/event/ev-1");
+    land();
 
-    // The page the user lands on rewrites the filters…
+    // The page the user lands on rewrites the filters and the Map's view…
     sessionStorage.setItem("map-nav-context", '{"country":"Chad"}');
+    sessionStorage.setItem("clear.map.viewState.v1", '{"region":"Ouaddaï"}');
     expect(screen.getByTestId("agent-navigation")).toHaveTextContent("Moved you to Event: Floods in Kassala");
 
-    // …and Back puts both the address and the filters back.
+    // …and Back puts the address, the filters and the view back, once the
+    // address has landed.
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(push).toHaveBeenLastCalledWith("/map?layer=events");
+    land();
     expect(sessionStorage.getItem("map-nav-context")).toBe('{"country":"Sudan"}');
+    expect(sessionStorage.getItem("clear.map.viewState.v1")).toBe('{"region":"North Darfur"}');
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
   });
 
-  it("remounts the page on Back, so it re-reads the restored state", () => {
-    const mounts = vi.fn();
+  it("keeps the page unmounted until Back lands, then remounts it on the restored URL and state", () => {
+    sessionStorage.setItem("detection-filters", '{"regionId":"loc-nd"}');
+    const seen: Array<{ url: string; stored: string | null }> = [];
+    const unmounts = vi.fn();
     function Page() {
       React.useEffect(() => {
-        mounts();
+        seen.push({ url: `${pathname}?${search}`, stored: sessionStorage.getItem("detection-filters") });
+        return unmounts;
       }, []);
       return null;
     }
-    renderWith(
+    const { land } = renderWith(
       <AgentViewBoundary>
         <Page />
       </AgentViewBoundary>,
     );
-    expect(mounts).toHaveBeenCalledTimes(1);
     act(() => agent.applyNavigation("nav-1", result));
-    expect(mounts).toHaveBeenCalledTimes(1);
+    land();
+    // The page the Agent opened writes its own filters.
+    sessionStorage.setItem("detection-filters", '{"regionId":null}');
+
     act(() => agent.goBack("nav-1"));
-    expect(mounts).toHaveBeenCalledTimes(2);
+    // Unmounted at once; nothing renders on the Agent's URL meanwhile.
+    expect(unmounts).toHaveBeenCalledTimes(1);
+    expect(seen).toHaveLength(1);
+
+    land();
+    expect(seen).toEqual([
+      { url: "/map?layer=events", stored: '{"regionId":"loc-nd"}' },
+      { url: "/map?layer=events", stored: '{"regionId":"loc-nd"}' },
+    ]);
   });
 
   it("acts on a navigate result as it streams in, even with no Thread on screen", () => {

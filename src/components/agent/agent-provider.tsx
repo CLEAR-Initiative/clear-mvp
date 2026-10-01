@@ -10,6 +10,7 @@
 
 import {
   Fragment,
+  Suspense,
   createContext,
   useCallback,
   useContext,
@@ -19,7 +20,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Chat, useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
@@ -30,9 +31,11 @@ import {
   markAgentDeepLink,
   navigateCallIds,
   restoreNavContexts,
+  sameHref,
   snapshotNavContexts,
   type BackEntry,
   type NavigateResult,
+  type NavSnapshot,
 } from "~/lib/agent-navigation";
 import { canReadContent } from "~/lib/roles";
 import { api } from "~/trpc/react";
@@ -66,7 +69,20 @@ export interface AgentContextValue {
   goBack: (toolCallId: string) => void;
   /** Changes on every Back, so the page remounts and re-reads restored state. */
   viewKey: number;
+  /** A Back is on its way: the page stays unmounted until it lands. */
+  returning: boolean;
 }
+
+/** A Back on its way to `url`, with the state to restore when it lands. */
+interface Return {
+  url: string;
+  /** Where the user was when they pressed Back. */
+  from: string;
+  snapshot: NavSnapshot;
+}
+
+/** Give up waiting for a Back's URL after this, and restore anyway. */
+const RETURN_TIMEOUT_MS = 5_000;
 
 const AgentContext = createContext<AgentContextValue | null>(null);
 
@@ -245,6 +261,15 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     [backStack],
   );
 
+  /**
+   * Back unmounts the page at once and remounts it only once the restored
+   * URL has landed, with the snapshot written back just before. Remounting
+   * any earlier ran the page on the Agent's URL (router.push is a
+   * transition): its deep link re-applied and its persist effects wrote the
+   * Agent's filters over the snapshot.
+   */
+  const [returning, setReturning] = useState<Return | null>(null);
+  const returningRef = useRef<Return | null>(null);
   const goBack = useCallback(
     (toolCallId: string) => {
       const index = backStack.findIndex((e) => e.toolCallId === toolCallId);
@@ -252,15 +277,22 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       const entry = backStack[index]!;
       // This move and any made after it are undone together.
       setBackStack(backStack.slice(0, index));
-      restoreNavContexts(entry.snapshot);
-      // Remount the page: a page staying mounted across Back (Detection to
-      // Detection) would otherwise keep the Agent's filters in its state and
-      // write them over the restored ones.
-      setViewKey((k) => k + 1);
+      const { pathname, search } = window.location;
+      const pending = { url: entry.url, from: `${pathname}${search}`, snapshot: entry.snapshot };
+      returningRef.current = pending;
+      setReturning(pending);
       router.push(entry.url);
     },
     [backStack, router],
   );
+  const finishReturn = useCallback(() => {
+    const pending = returningRef.current;
+    if (!pending) return;
+    returningRef.current = null;
+    restoreNavContexts(pending.snapshot);
+    setReturning(null);
+    setViewKey((k) => k + 1);
+  }, []);
 
   const setOpen = useCallback(
     (open: boolean) => update({ ...state, open }),
@@ -299,8 +331,9 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       canGoBack,
       goBack,
       viewKey,
+      returning: returning !== null,
     }),
-    [available, state, setOpen, chat, openThread, newThread, applyNavigation, canGoBack, goBack, viewKey],
+    [available, state, setOpen, chat, openThread, newThread, applyNavigation, canGoBack, goBack, viewKey, returning],
   );
 
   return (
@@ -308,9 +341,29 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       {available && (
         <NavigationWatcher chat={chat} apply={applyNavigation} />
       )}
+      {returning && (
+        <Suspense fallback={null}>
+          <ReturnWatcher pending={returning} finish={finishReturn} />
+        </Suspense>
+      )}
       {children}
     </AgentContext.Provider>
   );
+}
+
+/** Finishes a Back once its URL is on screen (or the router went elsewhere). */
+function ReturnWatcher({ pending, finish }: { pending: Return; finish: () => void }) {
+  const pathname = usePathname();
+  const search = useSearchParams().toString();
+  const href = `${pathname}${search ? `?${search}` : ""}`;
+  useEffect(() => {
+    if (sameHref(href, pending.url) || !sameHref(href, pending.from)) finish();
+  }, [href, pending, finish]);
+  useEffect(() => {
+    const timer = window.setTimeout(finish, RETURN_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+  }, [finish]);
+  return null;
 }
 
 /**
@@ -346,6 +399,7 @@ function NavigationWatcher({
 /** The page, remounted when the user goes Back from an Agent navigation. */
 export function AgentViewBoundary({ children }: { children: ReactNode }) {
   const agent = useContext(AgentContext);
+  if (agent?.returning) return null;
   return <Fragment key={agent?.viewKey ?? 0}>{children}</Fragment>;
 }
 
