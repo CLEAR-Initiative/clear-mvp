@@ -11,6 +11,7 @@ import { AgentDrawer } from "~/components/agent/agent-drawer";
 
 let flagOn = true;
 let role: string | undefined = "viewer";
+let userId = "u-alice";
 let pathname = "/map";
 
 vi.mock("~/components/feature-flags-provider", () => ({
@@ -21,7 +22,7 @@ const getConversation = vi.fn();
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => ({ agent: { listConversations: { invalidate: vi.fn() } } }),
-    auth: { me: { useQuery: () => ({ data: role ? { user: { role } } : undefined }) } },
+    auth: { me: { useQuery: () => ({ data: role ? { user: { id: userId, role } } : undefined }) } },
     agent: {
       getConversation: {
         useQuery: (input: { id: string }, opts: { enabled: boolean }) => {
@@ -67,6 +68,7 @@ const launcher = () => screen.queryByRole("button", { name: "Open the Agent draw
 beforeEach(() => {
   flagOn = true;
   role = "viewer";
+  userId = "u-alice";
   pathname = "/map";
   agent = undefined;
   storedConversation = null;
@@ -115,7 +117,7 @@ describe("AgentDrawer state", () => {
     fireEvent.click(launcher()!);
     expect(await screen.findByLabelText("Message the CLEAR Agent")).toBeInTheDocument();
     const stored = JSON.parse(sessionStorage.getItem("agent-drawer")!);
-    expect(stored).toEqual({ open: true, threadId: agent!.threadId });
+    expect(stored).toEqual({ open: true, threadId: agent!.threadId, userId: "u-alice" });
 
     cleanup();
     renderDrawer();
@@ -136,7 +138,10 @@ describe("AgentDrawer state", () => {
 
 describe("Thread restore", () => {
   it("loads a restored Thread's stored turns into its chat after a reload", () => {
-    sessionStorage.setItem("agent-drawer", JSON.stringify({ open: false, threadId: "t-saved" }));
+    sessionStorage.setItem(
+      "agent-drawer",
+      JSON.stringify({ open: false, threadId: "t-saved", userId: "u-alice" }),
+    );
     storedConversation = {
       id: "t-saved",
       title: "Darfur",
@@ -149,6 +154,26 @@ describe("Thread restore", () => {
     expect(agent!.threadId).toBe("t-saved");
     expect(agent!.chat.id).toBe("t-saved");
     expect(agent!.chat.messages.map((m) => m.id)).toEqual(["m1", "m2"]);
+  });
+
+  it("never restores another user's Thread on the same tab, and forgets it", () => {
+    sessionStorage.setItem(
+      "agent-drawer",
+      JSON.stringify({ open: true, threadId: "t-bob", userId: "u-bob" }),
+    );
+    storedConversation = { id: "t-bob", title: "Bob's", messages: [] };
+    renderDrawer();
+    expect(agent!.threadId).not.toBe("t-bob");
+    expect(agent!.open).toBe(false);
+    expect(getConversation).not.toHaveBeenCalledWith({ id: "t-bob" }, expect.objectContaining({ enabled: true }));
+    expect(sessionStorage.getItem("agent-drawer")).toBeNull();
+  });
+
+  it("keeps the live chat when the active Thread is opened again", () => {
+    renderDrawer();
+    const chat = agent!.chat;
+    act(() => agent!.openThread(agent!.threadId));
+    expect(agent!.chat).toBe(chat);
   });
 
   it("starts a fresh Thread with nothing to load", () => {

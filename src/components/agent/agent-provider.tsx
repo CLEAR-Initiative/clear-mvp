@@ -14,6 +14,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -28,6 +29,8 @@ const STORAGE_KEY = "agent-drawer";
 interface StoredAgentState {
   open: boolean;
   threadId: string;
+  /** Whose Thread this is: never restored for anyone else on the same tab. */
+  userId?: string;
 }
 
 export interface AgentContextValue {
@@ -52,7 +55,11 @@ function readStored(): StoredAgentState | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<StoredAgentState>;
     if (typeof parsed.threadId !== "string" || !parsed.threadId) return null;
-    return { open: parsed.open === true, threadId: parsed.threadId };
+    return {
+      open: parsed.open === true,
+      threadId: parsed.threadId,
+      ...(typeof parsed.userId === "string" ? { userId: parsed.userId } : {}),
+    };
   } catch {
     return null;
   }
@@ -63,6 +70,15 @@ function writeStored(state: StoredAgentState): void {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
     /* private mode / quota */
+  }
+}
+
+/** Forget the drawer state, e.g. on sign-out on a shared device. */
+export function clearAgentSession(): void {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* private mode */
   }
 }
 
@@ -89,11 +105,14 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const flagOn = useFeatureEnabled("agent");
   const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const available = flagOn && canReadContent(me.data?.user?.role);
+  const userId = me.data?.user?.id;
 
   const utils = api.useUtils();
-  // A finished turn changes the Thread's place in the history list.
+  // A finished turn changes the Thread's place in the history list and its
+  // stored turns.
   const onTurnFinished = useCallback(() => {
     void utils.agent.listConversations.invalidate();
+    void utils.agent.getConversation.invalidate();
   }, [utils]);
 
   const [state, setState] = useState<StoredAgentState>(() => ({
@@ -104,20 +123,27 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   /** A Thread whose stored turns still have to be loaded into its chat. */
   const [pendingLoad, setPendingLoad] = useState<string | null>(null);
 
-  // Restore after mount so server and client render the same first frame.
+  // Restore once the user is known (after mount, so server and client render
+  // the same first frame), and only their own Thread: a tab outlives a
+  // sign-out on a shared device.
+  const restored = useRef(false);
   useEffect(() => {
-    const stored = readStored();
-    if (stored) {
-      setState(stored);
-      setChat(createAgentChat(stored.threadId, undefined, onTurnFinished));
-      setPendingLoad(stored.threadId);
+    if (!userId || restored.current) return;
+    restored.current = true;
+    const saved = readStored();
+    if (saved?.userId === userId) {
+      setState(saved);
+      setChat(createAgentChat(saved.threadId, undefined, onTurnFinished));
+      setPendingLoad(saved.threadId);
+    } else if (saved) {
+      clearAgentSession();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
-  }, []);
+  }, [userId, onTurnFinished]);
 
   const stored = api.agent.getConversation.useQuery(
     { id: pendingLoad ?? "" },
-    { enabled: available && pendingLoad !== null, staleTime: Infinity, retry: false },
+    // Always fresh: a cached copy would miss the Thread's latest turns.
+    { enabled: available && pendingLoad !== null, staleTime: 0, gcTime: 0, retry: false },
   );
   useEffect(() => {
     if (!pendingLoad || !stored.isSuccess || stored.data?.id !== pendingLoad) {
@@ -131,10 +157,14 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     setPendingLoad(null);
   }, [pendingLoad, stored.isSuccess, stored.data, chat, onTurnFinished]);
 
-  const update = useCallback((next: StoredAgentState) => {
-    setState(next);
-    writeStored(next);
-  }, []);
+  const update = useCallback(
+    (next: StoredAgentState) => {
+      const owned = { ...next, ...(userId ? { userId } : {}) };
+      setState(owned);
+      writeStored(owned);
+    },
+    [userId],
+  );
 
   const setOpen = useCallback(
     (open: boolean) => update({ ...state, open }),
@@ -143,6 +173,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
 
   const openThread = useCallback(
     (threadId: string, messages?: UIMessage[]) => {
+      // Re-opening the active Thread would orphan a stream in progress.
+      if (threadId === state.threadId) return;
       update({ ...state, threadId });
       setChat(createAgentChat(threadId, messages, onTurnFinished));
       setPendingLoad(messages ? null : threadId);

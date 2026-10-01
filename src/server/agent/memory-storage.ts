@@ -30,6 +30,7 @@ import {
   type StorageListThreadsInput,
   type StorageListThreadsOutput,
 } from "@mastra/core/storage";
+import { GraphQLRequestError } from "~/server/api/graphql";
 import type {
   ConversationMessageRow,
   ConversationRow,
@@ -57,7 +58,13 @@ export class ClearApiMemoryStorage extends MemoryStorage {
 
   async getThreadById({ threadId }: { threadId: string }): Promise<StorageThreadType | null> {
     const row = await this.api.get(threadId);
-    return row ? toThread(row) : null;
+    if (!row) return null;
+    // clear-api lets platform admins read anyone's Conversation; the Agent
+    // still only ever continues the user's own.
+    if (row.userId !== this.userId) {
+      throw new GraphQLRequestError("This Thread belongs to another user", "FORBIDDEN");
+    }
+    return toThread(row);
   }
 
   async saveThread({ thread }: { thread: StorageThreadType }): Promise<StorageThreadType> {

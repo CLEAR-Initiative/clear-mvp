@@ -209,6 +209,25 @@ describe("ClearApiMemoryStorage beyond the contract", () => {
     await expect(store.deleteMessages(["m1"])).rejects.toThrow(/never deleted/);
   });
 
+  it("refuses another user's Thread even when clear-api would serve it (admins)", async () => {
+    const fake = createFakeClearApi({ admin: "u-admin" });
+    vi.stubGlobal("fetch", (_url: string, init?: RequestInit) => fake.handle(init));
+    fake.conversations.set("t-bob", {
+      id: "t-bob",
+      userId: "u-bob",
+      title: null,
+      metadata: null,
+      createdAt: at(0).toISOString(),
+      updatedAt: at(0).toISOString(),
+    });
+    // The fake serves the admin's own reads only by cookie user; serve Bob's
+    // row as clear-api does for an admin.
+    const api = createConversationsApi("better-auth.session_token=admin");
+    api.get = async () => ({ ...fake.conversations.get("t-bob")!, cursor: "c" });
+    const admin = new ClearApiMemoryStorage(api, "u-admin");
+    await expect(admin.getThreadById({ threadId: "t-bob" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
   it("only knows the signed-in user's resource", async () => {
     expect(await store.getResourceById({ resourceId: "u-bob" })).toBeNull();
     await expect(store.updateResource({ resourceId: "u-bob", workingMemory: "x" })).rejects.toThrow(
