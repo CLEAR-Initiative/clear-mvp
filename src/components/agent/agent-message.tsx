@@ -7,6 +7,9 @@
  *
  * Markdown is rendered without raw HTML, and links open in a new tab with no
  * referrer, so nothing a model or a document writes can inject markup.
+ * Images are never loaded: an image URL is fetched with no click, so text
+ * injected through a document could make the model leak the conversation
+ * into one. They render as their alt text.
  */
 
 import { useTranslations } from "next-intl";
@@ -103,6 +106,7 @@ function Markdown({ text }: { text: string }) {
               {children}
             </Anchor>
           ),
+          img: ({ alt }) => (alt ? <span>{alt}</span> : null),
         }}
       >
         {text}

