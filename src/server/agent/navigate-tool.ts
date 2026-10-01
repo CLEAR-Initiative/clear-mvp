@@ -1,16 +1,25 @@
 /**
  * Agent navigation: the CLEAR Agent changing what the user is looking at,
  * never any data (CONTEXT.md). The model picks a target from a closed set —
- * an Event, Signal or Crisis — so it can't send the user anywhere else
- * (admin pages are never targets). An entity target is fetched first with
- * the matching clear_get_* tool, as the user, so it exists and they can see
- * it. The client performs the move, announces it in the Thread and offers
+ * an Event, Signal or Crisis, or the Map or Detection with filters — so it
+ * can't send the user anywhere else (admin pages are never targets). An
+ * entity target is fetched first with the matching clear_get_* tool, as the
+ * user, so it exists and they can see it; place names in filters are
+ * resolved with clear_find_location, so the page gets names and ids it
+ * knows. The client performs the move, announces it in the Thread and offers
  * Back to the exact previous view.
  */
 
 import "server-only";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import {
+  DETECTION_ROLLING_DATES,
+  DETECTION_SEVERITIES,
+  MAP_TIMEFRAMES,
+  detectionDeepLinkHref,
+  mapDeepLinkHref,
+} from "~/lib/agent-deep-link";
 import type { CuratedToolOutcome } from "~/server/agent/clear-data-tools";
 
 export const NAVIGATE_TOOL_ID = "navigate";
@@ -31,13 +40,35 @@ const entityTarget = z.object({
   id: z.string().min(1).max(128).describe("The entity's id, from a clear_* tool result."),
 });
 
-export const navigateInputSchema = z.object({ target: entityTarget });
+const place = z.string().trim().min(1).max(100);
+const mapTarget = z.object({
+  kind: z.literal("map"),
+  filters: z.object({
+    country: place.optional().describe("Country name, e.g. \"Sudan\". Omit for all countries."),
+    region: place.optional().describe("State/province name within that country."),
+    timeframe: z.enum(MAP_TIMEFRAMES).optional().describe("Default 30d."),
+  }),
+});
+const detectionTarget = z.object({
+  kind: z.literal("detection"),
+  filters: z.object({
+    country: place.optional().describe("Country name, e.g. \"Sudan\"."),
+    region: place.optional().describe("State/province name within that country."),
+    date: z.enum(DETECTION_ROLLING_DATES).optional().describe("Default Last 30 days."),
+    severities: z.array(z.enum(DETECTION_SEVERITIES)).min(1).max(4).optional(),
+  }),
+});
+
+export const navigateInputSchema = z.object({
+  target: z.union([entityTarget, mapTarget, detectionTarget]),
+});
 export type NavigateInput = z.infer<typeof navigateInputSchema>;
+type NavigateError = { error: { code: string; message: string } };
 
 /** What the client needs to make the move and announce it. */
 export interface NavigateOutput {
   moved: true;
-  target: NavigateInput["target"];
+  target: { kind: string; id?: string };
   /** App path; always one of the fixed entity routes. */
   url: string;
   /** Short name for the announcement. Plain text from CLEAR's data. */
@@ -53,11 +84,76 @@ function labelOf(kind: EntityKind, id: string, item: Record<string, unknown>): s
   return name.length > LABEL_CHARS ? `${name.slice(0, LABEL_CHARS - 1)}…` : name;
 }
 
+/** Resolve a place name to the location CLEAR knows, as the user. */
+async function findPlace(
+  run: RunCuratedTool,
+  query: string,
+  level: 0 | 1,
+  withinLocationId: string | undefined,
+  signal?: AbortSignal,
+): Promise<{ id: string; name: string } | NavigateError> {
+  const outcome = await run(
+    "clear_find_location",
+    { query, level, ...(withinLocationId ? { withinLocationId } : {}), limit: 1 },
+    signal,
+  );
+  if (!outcome.ok) return { error: outcome.error };
+  const found = (outcome.value as { items?: Array<{ id: string; name: string }> }).items?.[0];
+  if (!found) {
+    return { error: { code: "NOT_FOUND", message: `CLEAR has no ${level ? "region" : "country"} called ${query}.` } };
+  }
+  return found;
+}
+
+const isError = (v: unknown): v is NavigateError => !!v && typeof v === "object" && "error" in v;
+
+async function resolveScope(
+  filters: { country?: string; region?: string },
+  run: RunCuratedTool,
+  signal?: AbortSignal,
+): Promise<{ country?: { id: string; name: string }; region?: { id: string; name: string } } | NavigateError> {
+  if (filters.region && !filters.country) {
+    return { error: { code: "BAD_USER_INPUT", message: "A region needs its country." } };
+  }
+  if (!filters.country) return {};
+  const country = await findPlace(run, filters.country, 0, undefined, signal);
+  if (isError(country)) return country;
+  if (!filters.region) return { country };
+  const region = await findPlace(run, filters.region, 1, country.id, signal);
+  if (isError(region)) return region;
+  return { country, region };
+}
+
+function scopeLabel(parts: Array<string | undefined>): string {
+  return parts.filter(Boolean).join(" · ");
+}
+
 export async function resolveNavigation(
   { target }: NavigateInput,
   run: RunCuratedTool,
   signal?: AbortSignal,
-): Promise<NavigateOutput | { error: { code: string; message: string } }> {
+): Promise<NavigateOutput | NavigateError> {
+  if (target.kind === "map" || target.kind === "detection") {
+    const scope = await resolveScope(target.filters, run, signal);
+    if (isError(scope)) return scope;
+    if (target.kind === "map") {
+      const { timeframe } = target.filters;
+      return {
+        moved: true,
+        target: { kind: "map" },
+        url: mapDeepLinkHref({ country: scope.country?.name, region: scope.region?.name, timeframe }),
+        label: scopeLabel([scope.country?.name ?? "All countries", scope.region?.name, timeframe]),
+      };
+    }
+    const { date, severities } = target.filters;
+    return {
+      moved: true,
+      target: { kind: "detection" },
+      url: detectionDeepLinkHref({ country: scope.country?.name, region: scope.region?.id, date, severities }),
+      label: scopeLabel([scope.country?.name ?? "All countries", scope.region?.name, date, severities?.join(", ")]),
+    };
+  }
+
   const outcome = await run(GET_TOOL[target.kind], { id: target.id }, signal);
   if (!outcome.ok) return { error: outcome.error };
   const item = (outcome.value as { item?: Record<string, unknown> | null }).item;
@@ -76,9 +172,10 @@ export function createNavigateTool(run: RunCuratedTool) {
   return createTool({
     id: NAVIGATE_TOOL_ID,
     description:
-      "Move the user's screen to an Event, Signal or Crisis so they can see it. Changes no " +
-      "data. The app announces the move in the Thread and offers Back. Use it when the user " +
-      "asks to see, open or go to something, with an id from a clear_* tool result.",
+      "Move the user's screen so they can see something: an Event, Signal or Crisis (by id " +
+      "from a clear_* tool result), or the Map or Detection with filters (country and region " +
+      "by name; the app resolves them). Changes no data. The app announces the move in the " +
+      "Thread and offers Back. Use it when the user asks to see, open, show or go to something.",
     inputSchema: navigateInputSchema,
     // No outputSchema: an error value must reach the model as-is.
     execute: async (input, context) => resolveNavigation(input, run, context?.abortSignal),

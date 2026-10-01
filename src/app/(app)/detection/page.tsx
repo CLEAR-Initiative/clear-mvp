@@ -45,6 +45,11 @@ import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
 import detectionTabsStyles from "./detection-tabs.module.css";
 import { detectionFiltersForAgent, useAgentCurrentView } from "~/lib/agent-current-view";
+import {
+  DETECTION_DEEP_LINK_PARAMS,
+  readDetectionDeepLink,
+  withoutDeepLink,
+} from "~/lib/agent-deep-link";
 
 const PAGE_SIZE = 25;
 const HISTORY_PAGE_SIZE = 100;
@@ -249,15 +254,22 @@ function DetectionPageContent() {
   // multi-country unset (All Countries) means every assigned country.
   const [pickedCountry, setPickedCountry] = useState("");
   const teamCountryNames = useMemo(() => teamCountries.map((c) => c.name), [teamCountries]);
+  // An Agent navigation deep link's country holds for this visit only and
+  // doesn't touch the working country; picking a country drops it.
+  const detectionDeepLink = useMemo(() => readDetectionDeepLink(searchParams), [searchParams]);
   const selectedCountry = resolveSelectedCountry(
     teamCountryNames,
-    workingCountryName ?? pickedCountry,
+    detectionDeepLink.country ?? workingCountryName ?? pickedCountry,
     scopeReady,
   );
   const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
   
   const handleCountryChange = useCallback(
     (value: string) => {
+      if (detectionDeepLink.country) {
+        const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), ["country"]);
+        router.replace(`/detection${rest}`, { scroll: false });
+      }
       if (value === ALL_COUNTRIES) {
         setPickedCountry(ALL_COUNTRIES);
         setWorkingCountry("", ALL_COUNTRIES);
@@ -271,7 +283,7 @@ function DetectionPageContent() {
       // Reset region when country changes
       setSelectedRegionId(null);
     },
-    [teamCountries, setWorkingCountry, getLocationId],
+    [teamCountries, setWorkingCountry, getLocationId, detectionDeepLink.country, searchParams, router],
   );
   
   const countryOptions = useMemo(() => {
@@ -350,6 +362,24 @@ function DetectionPageContent() {
     // Mount-only restore; searchParams read intentionally for initial URL tab check.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Apply an Agent navigation deep link's filters (after the stored ones,
+  // so they win), then take them out of the URL: from here they are
+  // ordinary filter state the user can change. Only `country` stays.
+  useEffect(() => {
+    const { region, date, severities, types, sources } = detectionDeepLink;
+    if (!region && !date && !severities && !types && !sources) return;
+    if (region) setSelectedRegionId(region);
+    if (date) setSelectedDate(date);
+    if (severities) setActiveSeverities(new Set(severities));
+    if (types) setSelectedTypeFilters(types);
+    if (sources) setActiveSources(new Set(sources));
+    const rest = withoutDeepLink(
+      new URLSearchParams(searchParams.toString()),
+      DETECTION_DEEP_LINK_PARAMS.filter((key) => key !== "country"),
+    );
+    router.replace(`/detection${rest}`, { scroll: false });
+  }, [detectionDeepLink, searchParams, router]);
 
   // Mirror filter selections into sessionStorage so they survive navigating
   // to a signal/event detail page and back (that route change unmounts this

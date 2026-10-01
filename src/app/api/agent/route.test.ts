@@ -544,4 +544,56 @@ describe("POST /api/agent — Agent navigation", () => {
     );
     expect(clearApi.calls.some((c) => c.query.includes("ClearGet"))).toBe(false);
   });
+
+  describe("to the Map or Detection with filters", () => {
+    beforeEach(() => {
+      clearApi.dataHandlers.set("ClearLocationIndex", () => ({
+        countries: [{ id: "loc-sdn", name: "Sudan", level: 0, pCode: "SD", ancestorIds: [] }],
+        states: [{ id: "loc-nd", name: "North Darfur", level: 1, pCode: "SD02", ancestorIds: ["loc-sdn"] }],
+        districts: [],
+      }));
+    });
+
+    async function navigateTo(target: Record<string, unknown>) {
+      useScript([{ toolCalls: [{ name: "navigate", input: { target } }] }, { text: "Done." }]);
+      const POST = await loadRoute();
+      const chunks = parseUIMessageStream(await (await POST(agentRequest(ALICE, turn("t1", "Show me")))).text());
+      return navigateOutput(chunks);
+    }
+
+    it("builds a Map deep link from names CLEAR resolves", async () => {
+      expect(
+        await navigateTo({ kind: "map", filters: { country: "sudan", region: "north darfur", timeframe: "7d" } }),
+      ).toEqual({
+        moved: true,
+        target: { kind: "map" },
+        url: "/map?country=Sudan&region=North+Darfur&timeframe=7d",
+        label: "Sudan · North Darfur · 7d",
+      });
+    });
+
+    it("gives Detection the region's location id", async () => {
+      const output = (await navigateTo({
+        kind: "detection",
+        filters: { country: "Sudan", region: "North Darfur", date: "Last 7 days", severities: ["critical", "high"] },
+      })) as { url: string };
+      const params = new URL(output.url, "http://x").searchParams;
+      expect(output.url.startsWith("/detection?")).toBe(true);
+      expect(Object.fromEntries(params)).toEqual({
+        country: "Sudan",
+        region: "loc-nd",
+        date: "Last 7 days",
+        severities: "critical,high",
+      });
+    });
+
+    it("refuses a place CLEAR doesn't know, and a region without its country", async () => {
+      expect(await navigateTo({ kind: "map", filters: { country: "Atlantis" } })).toEqual({
+        error: { code: "NOT_FOUND", message: "CLEAR has no country called Atlantis." },
+      });
+      expect(await navigateTo({ kind: "map", filters: { region: "North Darfur" } })).toEqual({
+        error: { code: "BAD_USER_INPUT", message: "A region needs its country." },
+      });
+    });
+  });
 });

@@ -128,6 +128,12 @@ import {
   setMapPreferencesCookie,
 } from "~/lib/map-preferences-cookie";
 import { mapFiltersForAgent, useAgentCurrentView } from "~/lib/agent-current-view";
+import {
+  hasDeepLink,
+  MAP_DEEP_LINK_PARAMS,
+  readMapDeepLink,
+  withoutDeepLink,
+} from "~/lib/agent-deep-link";
 
 const MAX_OPEN_PANELS = 4;
 
@@ -316,7 +322,12 @@ function MapPageContent() {
   // "all" additionally pulls archived history so the timeline can scrub
   // back through past months. Default is a 30-day window - the archived
   // backlog is ~5x the published set and dominated page load time.
-  const [timeframe, setTimeframe] = useState<"7d" | "30d" | "90d" | "all">("30d");
+  // An Agent navigation deep link (?country&region&timeframe) sets the
+  // filters for this visit only; the user changing any of them drops it.
+  const mapDeepLink = useMemo(() => readMapDeepLink(searchParams), [searchParams]);
+  const [timeframe, setTimeframe] = useState<"7d" | "30d" | "90d" | "all">(
+    () => mapDeepLink.timeframe ?? "30d",
+  );
 
   // Compute from/to dates for server-side filtering
   const timeframeRange = useMemo(() => {
@@ -705,10 +716,28 @@ function MapPageContent() {
   const teamCountryNames = useMemo(() => teamCountries.map((c) => c.name), [teamCountries]);
   const selectedCountry = resolveSelectedCountry(
     teamCountryNames,
-    workingCountryName ?? pickedCountry,
+    mapDeepLink.country ?? workingCountryName ?? pickedCountry,
     scopeReady,
   );
   const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
+
+  // Apply a deep link's region and timeframe when it arrives (including a
+  // second Agent navigation while the Map is already open).
+  useEffect(() => {
+    if (mapDeepLink.timeframe) setTimeframe(mapDeepLink.timeframe);
+    if (mapDeepLink.region) setSelectedRegion(mapDeepLink.region);
+  }, [mapDeepLink.timeframe, mapDeepLink.region]);
+
+  /** The user took over: drop the deep link so their picks win. */
+  const dropMapDeepLink = useCallback(() => {
+    if (!hasDeepLink(mapDeepLink)) return;
+    const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), MAP_DEEP_LINK_PARAMS);
+    router.replace(`/map${rest}`, { scroll: false });
+  }, [mapDeepLink, searchParams, router]);
+  const changeTimeframe = (value: string | null) => {
+    dropMapDeepLink();
+    setTimeframe((value ?? "30d") as "7d" | "30d" | "90d" | "all");
+  };
   const selectedCountryRef = useRef(selectedCountry);
   selectedCountryRef.current = selectedCountry;
   const countryOptionsRef = useRef<string[]>([]);
@@ -1980,6 +2009,7 @@ function MapPageContent() {
 
   /* ---- Handlers ---- */
   const handleCountryChange = (value: string | null) => {
+    dropMapDeepLink();
     const nextCountry = value ?? selectedCountry;
     const location = teamCountries.find((c) => c.name === nextCountry);
     if (location) {
@@ -1998,6 +2028,7 @@ function MapPageContent() {
   };
 
   const handleRegionChange = (value: string | null) => {
+    dropMapDeepLink();
     setSelectedRegion(value ?? "All Regions");
     setCameraSeed(null);
     setPlaceLookup(null);
@@ -2292,7 +2323,7 @@ function MapPageContent() {
           <Select
             size="xs"
             value={timeframe}
-            onChange={(v) => setTimeframe((v ?? "30d") as typeof timeframe)}
+            onChange={changeTimeframe}
             data={[
               { value: "7d",  label: t("filters.last7days") },
               { value: "30d", label: t("filters.last30days") },
@@ -2463,7 +2494,7 @@ function MapPageContent() {
             <Select
               size="xs"
               value={timeframe}
-              onChange={(v) => setTimeframe((v ?? "30d") as typeof timeframe)}
+              onChange={changeTimeframe}
               data={[
                 { value: "7d",  label: t("filters.last7days") },
                 { value: "30d", label: t("filters.last30days") },

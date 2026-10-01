@@ -302,7 +302,9 @@ export function createScriptedModel(steps: ScriptedStep[]) {
         step.toolCalls.forEach((call, i) =>
           parts.push({
             type: "tool-call",
-            toolCallId: `call-${next}-${i}`,
+            // Unique across a Thread, as a real model's are: a reused id makes
+            // Mastra match an earlier turn's stored result.
+            toolCallId: `call-${next}-${i}-${crypto.randomUUID().slice(0, 8)}`,
             toolName: call.name,
             input: JSON.stringify(call.input),
           }),
