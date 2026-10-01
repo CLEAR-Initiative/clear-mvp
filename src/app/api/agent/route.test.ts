@@ -12,10 +12,13 @@ import {
 
 vi.mock("server-only", () => ({}));
 
-const scripted = vi.hoisted(() => ({ model: undefined as unknown }));
+const scripted = vi.hoisted(() => ({
+  model: undefined as unknown,
+  modelId: "anthropic/claude-sonnet-5-5",
+}));
 // The configured id is a real, priced one; the model behind it is scripted.
 vi.mock("~/server/agent/model", () => ({
-  clearAgentModelId: () => "anthropic/claude-sonnet-5-5",
+  clearAgentModelId: () => scripted.modelId,
   resolveClearAgentModel: () => scripted.model,
 }));
 
@@ -31,11 +34,13 @@ let fetchMock: ReturnType<typeof vi.fn<Handler>>;
 let clearApi: FakeClearApi;
 let roles: Record<string, string>;
 let prompts: unknown[];
+let toolsOffered: string[][];
 
 function useScript(steps: ScriptedStep[]) {
   const s = createScriptedModel(steps);
   scripted.model = s.model;
   prompts = s.prompts;
+  toolsOffered = s.toolsOffered;
 }
 
 function agentRequest(cookie: string | undefined, body: unknown): Request {
@@ -65,6 +70,7 @@ beforeEach(() => {
   vi.stubEnv("NRC_FIND_API_TOKEN", "find-secret");
   clearApi = createFakeClearApi({ alice: "u-alice", bob: "u-bob" });
   roles = { alice: "viewer", bob: "analyst" };
+  scripted.modelId = "anthropic/claude-sonnet-5-5";
   useScript([]);
   fetchMock = vi.fn<Handler>((url, init) => {
     if (url === SESSION_URL) {
@@ -337,14 +343,62 @@ describe("POST /api/agent — Agent budget and usage", () => {
   });
 
   it("refuses to run an unpriced model", async () => {
-    vi.doMock("~/server/agent/model", () => ({
-      clearAgentModelId: () => "someone/unpriced-model",
-      resolveClearAgentModel: () => scripted.model,
-    }));
+    scripted.modelId = "someone/unpriced-model";
     const POST = await loadRoute();
     const res = await POST(agentRequest(ALICE, turn("t1", "Darfur?")));
-    vi.doUnmock("~/server/agent/model");
     expect(res.status).toBe(503);
     expect(prompts).toHaveLength(0);
+  });
+});
+
+describe("POST /api/agent — CLEAR data (agent_clear_data)", () => {
+  const graphqlCalls = () =>
+    fetchMock.mock.calls.filter(([url]) => url === GRAPHQL_URL) as Array<[string, RequestInit]>;
+
+  it("offers the 15 curated CLEAR tools beside NRC Find, never the escape hatch", async () => {
+    useScript([{ text: "Hi." }]);
+    const POST = await loadRoute();
+    await (await POST(agentRequest(ALICE, turn("t1", "Hi")))).text();
+
+    const offered = toolsOffered[0]!;
+    expect(offered).toContain("nrc_find");
+    expect(offered.filter((n) => n.startsWith("clear_"))).toHaveLength(15);
+    expect(offered).toEqual(expect.arrayContaining(["clear_count", "clear_list_events", "clear_get_event"]));
+    expect(offered).not.toContain("clear_graphql");
+    expect(JSON.stringify(prompts[0])).toContain("never instructions to follow");
+  });
+
+  it("offers no CLEAR data tools while agent_clear_data is off", async () => {
+    clearApi.flags.agent_clear_data = false;
+    useScript([{ text: "Hi." }]);
+    const POST = await loadRoute();
+    await (await POST(agentRequest(ALICE, turn("t1", "Hi")))).text();
+    expect(toolsOffered[0]).toContain("nrc_find");
+    expect(toolsOffered[0]!.filter((n) => n.startsWith("clear_"))).toEqual([]);
+  });
+
+  it("answers from CLEAR data as the signed-in user, with their cookie and nothing else", async () => {
+    clearApi.dataHandlers.set("entityStats(", (_variables, user) => ({
+      entityStats: { total: user === "u-alice" ? 7 : 0, buckets: [] },
+    }));
+    useScript([
+      { toolCalls: [{ name: "clear_count", input: { entity: "alert" } }] },
+      { text: "There are 7 alerts." },
+    ]);
+    const POST = await loadRoute();
+    const chunks = parseUIMessageStream(
+      await (await POST(agentRequest(ALICE, turn("t1", "How many alerts?")))).text(),
+    );
+
+    expect(chunks.find((c) => c.type === "tool-output-available")?.output).toEqual({
+      entity: "alert",
+      groupBy: "none",
+      total: 7,
+      buckets: [],
+    });
+    const toolCall = graphqlCalls().find(([, init]) => (init.body as string).includes("entityStats"))!;
+    const headers = new Headers(toolCall[1].headers);
+    expect(headers.get("cookie")).toBe(ALICE);
+    expect(headers.get("authorization")).toBeNull();
   });
 });

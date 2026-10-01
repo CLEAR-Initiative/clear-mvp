@@ -16,6 +16,7 @@ import { createConversationsApi } from "~/server/agent/conversations";
 import { clearAgentInstructions } from "~/server/agent/instructions";
 import { ClearApiMemoryStorage } from "~/server/agent/memory-storage";
 import { resolveClearAgentModel } from "~/server/agent/model";
+import { createClearDataTools } from "~/server/agent/clear-data-tools";
 import { createNrcFindTool, NRC_FIND_TOOL_ID } from "~/server/agent/nrc-find-tool";
 import type { Locale } from "~/i18n/config";
 import type { SessionUser } from "~/server/session";
@@ -31,9 +32,11 @@ export interface ClearAgentRequest {
   cookie: string;
   /** The user's interface language; the Agent answers in it. */
   locale: Locale;
+  /** `agent_clear_data` on: offer CLEAR's own data as tools. */
+  clearData: boolean;
 }
 
-export function createClearAgent({ user, cookie, locale }: ClearAgentRequest): Mastra {
+export function createClearAgent({ user, cookie, locale, clearData }: ClearAgentRequest): Mastra {
   const storage = new MastraCompositeStore({
     id: "clear-api-conversations",
     domains: {
@@ -44,9 +47,12 @@ export function createClearAgent({ user, cookie, locale }: ClearAgentRequest): M
   const agent = new Agent({
     id: CLEAR_AGENT_ID,
     name: "CLEAR Agent",
-    instructions: clearAgentInstructions(locale),
+    instructions: clearAgentInstructions(locale, { clearData }),
     model: resolveClearAgentModel(),
-    tools: { [NRC_FIND_TOOL_ID]: createNrcFindTool() },
+    tools: {
+      [NRC_FIND_TOOL_ID]: createNrcFindTool(),
+      ...(clearData ? createClearDataTools({ cookie, locale }) : {}),
+    },
     memory: new Memory({
       storage,
       options: {

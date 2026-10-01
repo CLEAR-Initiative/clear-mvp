@@ -20,7 +20,7 @@ import { LOCALE_COOKIE, pickLocale } from "~/i18n/config";
 import { canReadContent } from "~/lib/roles";
 import { createConversationsApi } from "~/server/agent/conversations";
 import { CLEAR_AGENT_ID, createClearAgent } from "~/server/agent/create-clear-agent";
-import { agentFlagEnabled } from "~/server/agent/flag";
+import { readAgentFlags } from "~/server/agent/flag";
 import { clearAgentModelId } from "~/server/agent/model";
 import { turnCostUsd } from "~/server/agent/pricing";
 import { getSessionUser } from "~/server/session";
@@ -55,7 +55,8 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  if (!(await agentFlagEnabled(cookie))) {
+  const flags = await readAgentFlags(cookie);
+  if (!flags.agent) {
     return Response.json(
       { error: "The CLEAR Agent is turned off.", code: "AGENT_DISABLED" },
       { status: 404 },
@@ -119,7 +120,7 @@ export async function POST(req: Request): Promise<Response> {
   const locale = pickLocale(readCookie(cookie, LOCALE_COOKIE), req.headers.get("accept-language"));
   let mastra: ReturnType<typeof createClearAgent>;
   try {
-    mastra = createClearAgent({ user: session.user, cookie, locale });
+    mastra = createClearAgent({ user: session.user, cookie, locale, clearData: flags.clearData });
   } catch (err) {
     console.error("[agent] could not build the Agent:", err);
     return Response.json(

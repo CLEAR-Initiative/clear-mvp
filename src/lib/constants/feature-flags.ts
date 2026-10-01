@@ -130,6 +130,14 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     tier: 3,
     defaultEnabled: false,
   },
+  {
+    key: "agent_clear_data",
+    label: "CLEAR Agent: CLEAR data and navigation",
+    description:
+      "Lets the CLEAR Agent (needs `agent`) answer from CLEAR's own data (Signals, Events, Alerts, Crises, situation analyses, knowledge base) through the curated clear-mcp tools, see the user's Current view, and move the app with Agent navigation (always announced, with Back). Enforced in /api/agent, not only the UI. Off: the Agent answers from NRC Find only, as in V1.",
+    tier: 4,
+    defaultEnabled: false,
+  },
 ];
 
 export const TIER_LABELS: Record<number, string> = {
