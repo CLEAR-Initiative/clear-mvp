@@ -126,7 +126,10 @@ export function EventDetailContent({
   // Tell the CLEAR Agent which event is on screen (identifiers only).
   // Only a loaded event's id: the route segment is whatever the URL says.
   const agentViewId = event?.id;
-  useAgentCurrentView(agentViewId ? { entity: { kind: "event", id: agentViewId } } : null);
+  // Its title rides along for the Agent drawer's context row only.
+  useAgentCurrentView(
+    agentViewId ? { entity: { kind: "event", id: agentViewId, label: event?.title ?? undefined } } : null,
+  );
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
 
   // TODO: after Prisma migration use event.title directly; remove this fallback

@@ -8,7 +8,7 @@ import arMessages from "../../../messages/ar.json";
 
 import { AgentProvider, useAgent } from "~/components/agent/agent-provider";
 import { AgentDrawer } from "~/components/agent/agent-drawer";
-import { publishCurrentView } from "~/lib/agent-current-view";
+import { publishCurrentView, resetCurrentViews } from "~/lib/agent-current-view";
 
 let flagOn = true;
 let role: string | undefined = "viewer";
@@ -20,16 +20,24 @@ vi.mock("~/components/feature-flags-provider", () => ({
   useFeatureEnabled: (key: string) =>
     key === "agent" ? flagOn : key === "agent_clear_data" ? clearDataOn : true,
 }));
+let conversations: Array<{ id: string; title: string | null; updatedAt: string }> = [];
+let team: { activeTeamId: string; activeTeam: { id: string; name: string } } | null = null;
+vi.mock("~/providers/team-provider", () => ({ useOptionalTeam: () => team }));
 let storedConversation: { id: string; title: string; messages: unknown[] } | null = null;
+let conversationLoading = false;
 const getConversation = vi.fn();
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => ({ agent: { listConversations: { invalidate: vi.fn() } } }),
     auth: { me: { useQuery: () => ({ data: role ? { user: { id: userId, role } } : undefined }) } },
     agent: {
+      listConversations: {
+        useQuery: () => ({ data: { items: conversations, nextCursor: null }, isLoading: false, isSuccess: true }),
+      },
       getConversation: {
         useQuery: (input: { id: string }, opts: { enabled: boolean }) => {
           getConversation(input, opts);
+          if (opts.enabled && conversationLoading) return { isSuccess: false, data: undefined };
           return opts.enabled
             ? { isSuccess: true, data: storedConversation?.id === input.id ? storedConversation : null }
             : { isSuccess: false, data: undefined };
@@ -80,8 +88,13 @@ beforeEach(() => {
   pathname = "/map";
   agent = undefined;
   storedConversation = null;
+  conversationLoading = false;
+  conversations = [];
+  team = null;
   getConversation.mockClear();
   sessionStorage.clear();
+  localStorage.clear();
+  resetCurrentViews();
 });
 
 afterEach(() => cleanup());
@@ -164,6 +177,18 @@ describe("Thread restore", () => {
     expect(agent!.chat.messages.map((m) => m.id)).toEqual(["m1", "m2"]);
   });
 
+  it("doesn't offer a loading Thread's empty state, so its turns can't be hidden", async () => {
+    sessionStorage.setItem(
+      "agent-drawer",
+      JSON.stringify({ open: true, threadId: "t-saved", userId: "u-alice" }),
+    );
+    conversationLoading = true;
+    renderDrawer();
+    expect(await screen.findByTestId("agent-thread-loading")).toBeInTheDocument();
+    expect(screen.queryByTestId("agent-suggestion")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Message the CLEAR Agent" })).toBeDisabled();
+  });
+
   it("never restores another user's Thread on the same tab, and forgets it", () => {
     sessionStorage.setItem(
       "agent-drawer",
@@ -232,5 +257,94 @@ describe("Current view on each turn", () => {
     clearDataOn = false;
     const body = await sentBody();
     expect(body).not.toHaveProperty("currentView");
+  });
+});
+
+describe("AgentDrawer header", () => {
+  function openDrawer() {
+    renderDrawer();
+    fireEvent.click(launcher()!);
+  }
+
+  it("names the CLEAR Agent, with a new Thread's subtitle", async () => {
+    openDrawer();
+    const header = await screen.findByTestId("agent-drawer-header");
+    expect(header).toHaveTextContent("CLEAR Agent");
+    expect(header).toHaveTextContent("New thread");
+  });
+
+  it("shows the active Thread's title once it has one", async () => {
+    renderDrawer();
+    conversations = [{ id: agent!.threadId, title: "Access in Darfur", updatedAt: "2026-10-01T10:00:00Z" }];
+    fireEvent.click(launcher()!);
+    expect(await screen.findByTestId("agent-drawer-header")).toHaveTextContent("Access in Darfur");
+  });
+
+  it("remembers the chosen width for next time", async () => {
+    openDrawer();
+    fireEvent.click(await screen.findByRole("radio", { name: "Large" }));
+    expect(localStorage.getItem("agent-drawer-width")).toBe("l");
+    cleanup();
+    renderDrawer(); // reopens: the drawer's open state is restored too
+    expect(await screen.findByRole("radio", { name: "Large" })).toBeChecked();
+  });
+
+  it("opens a recent Conversation from the history menu", async () => {
+    conversations = [
+      { id: "t-darfur", title: "Access in Darfur", updatedAt: "2026-10-01T10:00:00Z" },
+      { id: "t-untitled", title: null, updatedAt: "2026-09-30T10:00:00Z" },
+    ];
+    openDrawer();
+    fireEvent.click(await screen.findByRole("button", { name: "Recent conversations" }));
+    // `hidden`: jsdom measures every element at 0×0, so Mantine's hideDetached
+    // treats the target as detached and sets the open dropdown display:none.
+    const item = (name: RegExp) => screen.findByRole("menuitem", { name, hidden: true });
+    expect(await item(/Untitled thread/)).toBeInTheDocument();
+    expect(await item(/Access in Darfur/)).not.toHaveAttribute("aria-current");
+    expect(await item(/All conversations/)).toHaveAttribute("href", "/agent");
+    fireEvent.click(await item(/Access in Darfur/));
+    expect(agent!.threadId).toBe("t-darfur");
+    fireEvent.click(screen.getByRole("button", { name: "Recent conversations" }));
+    expect(await item(/Access in Darfur/)).toHaveAttribute("aria-current", "true");
+  });
+
+  it("expands to the Agent page", async () => {
+    openDrawer();
+    expect(await screen.findByRole("link", { name: "Open Agent page" })).toHaveAttribute("href", "/agent");
+  });
+});
+
+describe("AgentDrawer context row", () => {
+  it("shows the Current view the next turn will send, by name", async () => {
+    team = { activeTeamId: "team-1", activeTeam: { id: "team-1", name: "NRC Sudan" } };
+    pathname = "/detection";
+    publishCurrentView({ filters: { teamId: "team-1", country: "SDN", severityMin: 3 } });
+    publishCurrentView({ entity: { kind: "event", id: "ev-1", label: "Floods in Kassala" } });
+    renderDrawer();
+    fireEvent.click(launcher()!);
+    const row = await screen.findByTestId("agent-context");
+    expect(row).toHaveTextContent("NRC Sudan");
+    expect(row).toHaveTextContent("Detection");
+    expect(row).toHaveTextContent("Floods in Kassala");
+    expect(row).toHaveTextContent("2 filters");
+  });
+
+  it("names the entity by its kind until it has a title", async () => {
+    pathname = "/signal/s-1";
+    publishCurrentView({ entity: { kind: "signal", id: "s-1" } });
+    renderDrawer();
+    fireEvent.click(launcher()!);
+    const row = await screen.findByTestId("agent-context");
+    expect(row).toHaveTextContent("Signal");
+    expect(row).not.toHaveTextContent("Detection");
+  });
+
+  it("is hidden while no Current view is sent (agent_clear_data off)", async () => {
+    clearDataOn = false;
+    publishCurrentView({ entity: { kind: "event", id: "ev-1", label: "Floods in Kassala" } });
+    renderDrawer();
+    fireEvent.click(launcher()!);
+    await screen.findByTestId("agent-drawer-header");
+    expect(screen.queryByTestId("agent-context")).not.toBeInTheDocument();
   });
 });

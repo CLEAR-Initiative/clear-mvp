@@ -3155,7 +3155,14 @@
       "close": "Fermer le panneau de l'Agent",
       "launcherTooltip": "Interroger l'Agent CLEAR",
       "newThread": "Nouvelle conversation",
-      "openPage": "Ouvrir la page de l'Agent"
+      "openPage": "Ouvrir la page de l'Agent",
+      "width": "Largeur du panneau",
+      "widthSmall": "Petit",
+      "widthMedium": "Moyen",
+      "widthLarge": "Grand",
+      "history": "Conversations récentes",
+      "historyEmpty": "Aucune conversation pour l'instant.",
+      "allConversations": "Toutes les conversations →"
     },
     "page": {
       "title": "Agent",
@@ -3168,9 +3175,42 @@
     },
     "thread": {
       "inputLabel": "Écrire à l'Agent CLEAR",
-      "inputPlaceholder": "Posez une question sur une crise, un lieu ou le travail du NRC…",
+      "inputPlaceholder": "Posez une question",
       "send": "Envoyer",
-      "thinking": "Réflexion…"
+      "thinking": "Réflexion…",
+      "intro": "Posez une question sur une crise, un lieu, les Alertes récentes ou le travail du NRC. L'Agent CLEAR indique les sources utilisées.",
+      "suggestions": {
+        "general": {
+          "q1": "Quelles sont les crises les plus graves en ce moment ?",
+          "q2": "Quoi de neuf ces dernières 24 heures ?",
+          "q3": "Que disent les documents du NRC sur l'accès humanitaire ?"
+        },
+        "event": {
+          "q1": "Résume cet Événement",
+          "q2": "Sur quels Signaux repose cet Événement ?",
+          "q3": "Y a-t-il des Événements similaires à proximité ?"
+        },
+        "signal": {
+          "q1": "Résume ce Signal",
+          "q2": "Ce Signal fait-il partie d'un Événement ?",
+          "q3": "Cette source est-elle fiable ?"
+        },
+        "crisis": {
+          "q1": "Résume cette Crise",
+          "q2": "Qu'est-ce qui a changé dans cette Crise cette semaine ?",
+          "q3": "Quels sont les principaux besoins humanitaires ?"
+        },
+        "map": {
+          "q1": "Que se passe-t-il dans cette zone ?",
+          "q2": "Quels Événements ici sont les plus graves ?",
+          "q3": "Quoi de neuf ici cette semaine ?"
+        },
+        "detection": {
+          "q1": "Quoi de neuf dans ces filtres cette semaine ?",
+          "q2": "Lesquels de ces Événements sont les plus graves ?",
+          "q3": "Résume les grandes tendances ici"
+        }
+      }
     },
     "message": {
       "sources": "Sources ({count})",
@@ -3207,6 +3247,26 @@
       },
       "outOfScope": "{country} ne fait pas partie du périmètre de votre équipe ; il n'est pas affiché.",
       "placeUnavailable": "Ce lieu ne vous est pas accessible ; il n'est pas affiché."
+    },
+    "context": {
+      "label": "Contexte",
+      "filters": "{count, plural, one {# filtre} other {# filtres}}",
+      "kinds": {
+        "event": "Événement",
+        "signal": "Signal",
+        "crisis": "Crise"
+      },
+      "filterKeys": {
+        "locationId": "Lieu",
+        "country": "Pays",
+        "region": "Région",
+        "from": "Du",
+        "to": "Au",
+        "severityMin": "Gravité minimale",
+        "severityMax": "Gravité maximale",
+        "eventTypes": "Types d'événement",
+        "sourceNames": "Sources"
+      }
     }
   }
 }

@@ -40,6 +40,8 @@ _Avoid_: "quota", "credits", "rate limit" (a rate limit is about bursts, the bud
 What the user is looking at when they send a turn — the page, the Event/Signal/Crisis on
 screen, and the active map or detection filters — expressed as identifiers and filters, never
 as the data itself. Sent to the **CLEAR Agent** with every turn and kept with that turn.
+Shown to the user beside the **Thread**, by name; it changes only when what the user is
+looking at changes — the user never edits it directly.
 _Avoid_: "page context", "screen state".
 
 **NRC Find**:

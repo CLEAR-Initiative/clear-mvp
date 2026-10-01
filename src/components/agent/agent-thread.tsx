@@ -4,15 +4,22 @@
  * One Thread with the CLEAR Agent, rendered from a shared `Chat` so the
  * Agent drawer and the Agent page show the same live Thread. Turns are
  * stored as a Conversation in clear-api by `/api/agent`.
+ *
+ * It fills its container: the turns scroll, and the input box stays pinned
+ * to the bottom. An empty Thread introduces the Agent and suggests questions
+ * about what is on screen; neither is ever stored as a turn.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useChat, type Chat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
-import { Alert, Button, Group, Loader, Stack, Text, Textarea } from "@mantine/core";
+import { ActionIcon, Alert, Box, Button, Group, Loader, Stack, Text, Textarea } from "@mantine/core";
 import { IconAlertTriangle, IconClockPause, IconSend } from "@tabler/icons-react";
 import { AgentMessage } from "~/components/agent/agent-message";
+import { useOptionalAgent } from "~/components/agent/agent-provider";
+import { useShownCurrentView } from "~/components/agent/use-shown-current-view";
+import { sectionOf, type DisplayedCurrentView } from "~/lib/agent-current-view";
 
 /**
  * The transport surfaces a failed request's body as the error message; turn
@@ -52,55 +59,165 @@ export function AgentThread({ chat }: AgentThreadProps) {
   const { messages, sendMessage, status, error } = useChat({ chat });
 
   const [draft, setDraft] = useState("");
-  const busy = status === "submitted" || status === "streaming";
+  // A stored Thread whose turns are still loading looks empty: sending now
+  // would stop its turns ever being shown, so wait.
+  const agent = useOptionalAgent();
+  const loading = agent?.loading === true && agent.threadId === chat.id;
+  const busy = loading || status === "submitted" || status === "streaming";
 
-  function send() {
+  // Follow the newest turn as it streams, unless the user has scrolled up to read.
+  const scroller = useRef<HTMLDivElement>(null);
+  const following = useRef(true);
+
+  function send(text: string) {
+    if (!text || busy) return;
+    following.current = true; // a new turn brings the user back to the bottom
+    void sendMessage({ text });
+  }
+  function sendDraft() {
     const text = draft.trim();
     if (!text || busy) return;
     setDraft("");
-    void sendMessage({ text });
+    send(text);
   }
 
+  // Changes whenever the turns grow: text streaming in, or a tool moving on
+  // to its result (sources, a navigation notice).
+  const streamed = messages
+    .map((m) => m.parts.map((p) => (p.type === "text" ? p.text.length : `${p.type}:${(p as { state?: string }).state ?? ""}`)).join())
+    .join("|");
+  useEffect(() => {
+    const el = scroller.current;
+    if (el && following.current) el.scrollTop = el.scrollHeight;
+  }, [streamed, status]);
+
   return (
-    <Stack gap={16}>
-      {messages.map((message) => (
-        <AgentMessage key={message.id} message={message} />
-      ))}
-      {status === "submitted" && (
-        <Group gap={8}>
-          <Loader size={12} />
-          <Text size="xs" c="dimmed">
-            {t("thinking")}
-          </Text>
-        </Group>
-      )}
-
-      {error && <AgentError error={error} />}
-
-      <Textarea
-        aria-label={t("inputLabel")}
-        placeholder={t("inputPlaceholder")}
-        autosize
-        minRows={2}
-        maxRows={8}
-        value={draft}
-        onChange={(e) => setDraft(e.currentTarget.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            send();
-          }
+    <Box style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, height: "100%" }}>
+      <Box
+        ref={scroller}
+        style={{ flex: 1, minHeight: 0, overflowY: "auto" }}
+        pb={16}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          following.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
         }}
-      />
-      <Group justify="flex-end">
-        <Button
-          leftSection={busy ? <Loader size={14} color="white" /> : <IconSend size={16} />}
-          onClick={send}
+      >
+        <Stack gap={16}>
+          {loading ? (
+            <Group gap={8} data-testid="agent-thread-loading">
+              <Loader size={12} />
+            </Group>
+          ) : (
+            messages.length === 0 && <EmptyThread onAsk={send} disabled={busy} />
+          )}
+          {messages.map((message) => (
+            <AgentMessage key={message.id} message={message} />
+          ))}
+          {status === "submitted" && (
+            <Group gap={8}>
+              <Loader size={12} />
+              <Text size="xs" c="dimmed">
+                {t("thinking")}
+              </Text>
+            </Group>
+          )}
+
+          {error && <AgentError error={error} />}
+        </Stack>
+      </Box>
+
+      <Group
+        gap={8}
+        wrap="nowrap"
+        align="flex-end"
+        p={8}
+        style={{
+          flexShrink: 0,
+          border: "1px solid var(--color-border)",
+          borderRadius: 12,
+          background: "var(--color-bg-muted)",
+        }}
+      >
+        <Textarea
+          variant="unstyled"
+          aria-label={t("inputLabel")}
+          placeholder={t("inputPlaceholder")}
+          autosize
+          minRows={1}
+          maxRows={8}
+          disabled={loading}
+          style={{ flex: 1 }}
+          px={8}
+          value={draft}
+          onChange={(e) => setDraft(e.currentTarget.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              sendDraft();
+            }
+          }}
+        />
+        <ActionIcon
+          size={36}
+          radius="xl"
+          variant="filled"
+          color="var(--color-accent)"
+          aria-label={t("send")}
+          loading={busy && !loading}
           disabled={busy || !draft.trim()}
+          onClick={sendDraft}
         >
-          {t("send")}
-        </Button>
+          <IconSend size={18} />
+        </ActionIcon>
       </Group>
+    </Box>
+  );
+}
+
+/** Which suggested questions fit what is on screen. */
+type SuggestionSet = "general" | "event" | "signal" | "crisis" | "map" | "detection";
+
+export function suggestionSetFor(view: DisplayedCurrentView | null): SuggestionSet {
+  if (!view) return "general";
+  if (view.entity) return view.entity.kind;
+  const section = sectionOf(view.route);
+  if (section === "map" || section === "detection") return section;
+  return "general";
+}
+
+const SUGGESTION_KEYS = ["q1", "q2", "q3"] as const;
+
+/**
+ * The CLEAR Agent's introduction, with questions it can answer about what is
+ * on screen. Only what the Agent is actually told: while no Current view is
+ * sent, the suggestions stay general.
+ */
+function EmptyThread({ onAsk, disabled }: { onAsk: (text: string) => void; disabled: boolean }) {
+  const t = useTranslations("agent.thread");
+  const suggestionSet = suggestionSetFor(useShownCurrentView());
+  return (
+    <Stack gap={12}>
+      <Text data-testid="agent-intro">{t("intro")}</Text>
+      <Stack gap={6} align="flex-start">
+        {SUGGESTION_KEYS.map((key) => {
+          const question = t(`suggestions.${suggestionSet}.${key}`);
+          return (
+            <Button
+              key={key}
+              data-testid="agent-suggestion"
+              variant="default"
+              radius="xl"
+              size="xs"
+              disabled={disabled}
+              styles={{ label: { whiteSpace: "normal", textAlign: "start" }, root: { height: "auto", minHeight: 30 } }}
+              py={6}
+              onClick={() => onAsk(question)}
+            >
+              {question}
+            </Button>
+          );
+        })}
+      </Stack>
     </Stack>
   );
 }

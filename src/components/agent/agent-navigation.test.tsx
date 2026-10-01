@@ -36,7 +36,10 @@ vi.mock("~/trpc/react", () => ({
       agent: { listConversations: { invalidate: vi.fn() }, getConversation: { invalidate: vi.fn() } },
     }),
     auth: { me: { useQuery: () => ({ data: { user: { id: "u-alice", role: "viewer" } } }) } },
-    agent: { getConversation: { useQuery: () => ({ isSuccess: false, data: undefined }) } },
+    agent: {
+      listConversations: { useQuery: () => ({ data: undefined }) },
+      getConversation: { useQuery: () => ({ isSuccess: false, data: undefined }) },
+    },
   },
 }));
 

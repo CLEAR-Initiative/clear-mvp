@@ -3155,7 +3155,14 @@
       "close": "Close the Agent drawer",
       "launcherTooltip": "Ask the CLEAR Agent",
       "newThread": "New thread",
-      "openPage": "Open Agent page"
+      "openPage": "Open Agent page",
+      "width": "Drawer width",
+      "widthSmall": "Small",
+      "widthMedium": "Medium",
+      "widthLarge": "Large",
+      "history": "Recent conversations",
+      "historyEmpty": "No conversations yet.",
+      "allConversations": "All conversations →"
     },
     "page": {
       "title": "Agent",
@@ -3168,9 +3175,42 @@
     },
     "thread": {
       "inputLabel": "Message the CLEAR Agent",
-      "inputPlaceholder": "Ask about a crisis, a place or NRC's work…",
+      "inputPlaceholder": "Ask anything",
       "send": "Send",
-      "thinking": "Thinking…"
+      "thinking": "Thinking…",
+      "intro": "Ask about a crisis, a place, recent Alerts or NRC's work. The CLEAR Agent shows which sources it used.",
+      "suggestions": {
+        "general": {
+          "q1": "What are the most severe crises right now?",
+          "q2": "What's new in the last 24 hours?",
+          "q3": "What do NRC's documents say about humanitarian access?"
+        },
+        "event": {
+          "q1": "Summarise this Event",
+          "q2": "What Signals is this Event based on?",
+          "q3": "Are there similar Events nearby?"
+        },
+        "signal": {
+          "q1": "Summarise this Signal",
+          "q2": "Is this Signal part of an Event?",
+          "q3": "How reliable is this source?"
+        },
+        "crisis": {
+          "q1": "Summarise this Crisis",
+          "q2": "What changed in this Crisis this week?",
+          "q3": "What are the main humanitarian needs?"
+        },
+        "map": {
+          "q1": "What's happening in this area?",
+          "q2": "Which Events here are the most severe?",
+          "q3": "What's new here this week?"
+        },
+        "detection": {
+          "q1": "What's new in these filters this week?",
+          "q2": "Which of these Events are the most severe?",
+          "q3": "Summarise the main trends here"
+        }
+      }
     },
     "message": {
       "sources": "Sources ({count})",
@@ -3207,6 +3247,26 @@
       },
       "outOfScope": "{country} isn't in your team's scope, so it isn't shown.",
       "placeUnavailable": "That place isn't available to you, so it isn't shown."
+    },
+    "context": {
+      "label": "Context",
+      "filters": "{count, plural, one {# filter} other {# filters}}",
+      "kinds": {
+        "event": "Event",
+        "signal": "Signal",
+        "crisis": "Crisis"
+      },
+      "filterKeys": {
+        "locationId": "Location",
+        "country": "Country",
+        "region": "Region",
+        "from": "From",
+        "to": "To",
+        "severityMin": "Minimum severity",
+        "severityMax": "Maximum severity",
+        "eventTypes": "Event types",
+        "sourceNames": "Sources"
+      }
     }
   }
 }

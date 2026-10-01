@@ -227,7 +227,10 @@ export function CrisisDetailContent({
 }: CrisisDetailContentProps) {
   // Tell the CLEAR Agent which crisis is on screen (identifiers only).
   const agentViewId = crisis?.id;
-  useAgentCurrentView(agentViewId ? { entity: { kind: "crisis", id: agentViewId } } : null);
+  // Its title rides along for the Agent drawer's context row only.
+  useAgentCurrentView(
+    agentViewId ? { entity: { kind: "crisis", id: agentViewId, label: crisis?.title ?? undefined } } : null,
+  );
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
   const format = useFormatter();

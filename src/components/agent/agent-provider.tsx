@@ -55,6 +55,10 @@ export interface AgentContextValue {
   open: boolean;
   setOpen: (open: boolean) => void;
   threadId: string;
+  /** The active Thread's stored turns are still being loaded into its chat. */
+  loading: boolean;
+  /** The active Thread's stored title, once it has been loaded; null otherwise. */
+  loadedTitle: string | null;
   /** The active Thread's chat, shared by the drawer and the Agent page. */
   chat: Chat<UIMessage>;
   /** Switch to an existing Thread, optionally seeding its stored turns. */
@@ -178,6 +182,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [chat, setChat] = useState(() => createAgentChat(state.threadId, undefined, onTurnFinished, readCurrentView));
   /** A Thread whose stored turns still have to be loaded into its chat. */
   const [pendingLoad, setPendingLoad] = useState<string | null>(null);
+  /** The title of the last Thread loaded from clear-api. */
+  const [loadedThread, setLoadedThread] = useState<{ id: string; title: string | null } | null>(null);
 
   // Restore once the user is known (after mount, so server and client render
   // the same first frame), and only their own Thread: a tab outlives a
@@ -206,6 +212,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       if (stored.isSuccess && !stored.data) setPendingLoad(null); // a new Thread
       return;
     }
+    setLoadedThread({ id: stored.data.id, title: stored.data.title });
     // Seed only a chat nobody has typed into yet.
     if (chat.id === pendingLoad && chat.messages.length === 0) {
       const history = stored.data.messages as UIMessage[];
@@ -324,6 +331,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       open: available && state.open,
       setOpen,
       threadId: state.threadId,
+      loading: available && pendingLoad !== null && pendingLoad === state.threadId,
+      loadedTitle: loadedThread?.id === state.threadId ? loadedThread.title : null,
       chat,
       openThread,
       newThread,
@@ -333,7 +342,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       viewKey,
       returning: returning !== null,
     }),
-    [available, state, setOpen, chat, openThread, newThread, applyNavigation, canGoBack, goBack, viewKey, returning],
+    [available, state, pendingLoad, loadedThread, setOpen, chat, openThread, newThread, applyNavigation, canGoBack, goBack, viewKey, returning],
   );
 
   return (
