@@ -75,6 +75,7 @@ import { CommentsSection } from "~/components/comments-section";
 import { NeedsAssessmentPanel } from "~/components/crisis-detail/needs-assessment-panel";
 import { AddEventsToCrisisButton } from "~/components/crisis-detail/add-events-to-crisis-modal";
 import { KpiStack } from "~/components/ui/kpi-stack";
+import { useAgentCurrentView } from "~/lib/agent-current-view";
 
 /** Humanitarian need row - parsed from a crisis's free-form `needs` JSON. */
 interface ClusterNeed {
@@ -224,6 +225,9 @@ export function CrisisDetailContent({
   relatedCrises = [],
   referrer = "insights",
 }: CrisisDetailContentProps) {
+  // Tell the CLEAR Agent which crisis is on screen (identifiers only).
+  const agentViewId = crisis?.id;
+  useAgentCurrentView(agentViewId ? { entity: { kind: "crisis", id: agentViewId } } : null);
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
   const format = useFormatter();

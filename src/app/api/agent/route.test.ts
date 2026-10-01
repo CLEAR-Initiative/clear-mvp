@@ -427,4 +427,45 @@ describe("POST /api/agent — CLEAR data (agent_clear_data)", () => {
     expect(answering).toContain("tell them they lack access");
     expect(answering).toContain("never guess");
   });
+
+  const eventView = { route: "/event/ev-42", entity: { kind: "event", id: "ev-42" } };
+
+  it("tells the model the Current view for this turn and stores it with the turn", async () => {
+    useScript([{ text: "That event is severity 4 because…" }]);
+    const POST = await loadRoute();
+    await (
+      await POST(agentRequest(ALICE, { ...turn("t1", "Why is this one severity 4?"), currentView: eventView }))
+    ).text();
+
+    const prompt = JSON.stringify(prompts[0]);
+    expect(prompt).toContain("Current view");
+    expect(prompt).toContain('\\"id\\":\\"ev-42\\"');
+    const userTurn = clearApi.messagesOf("t1")[0]!;
+    expect(userTurn.role).toBe("user");
+    expect(userTurn.currentView).toEqual(eventView);
+    // The note is for the model; the user's words are stored as they wrote them.
+    expect(JSON.stringify(userTurn.content)).toContain("Why is this one severity 4?");
+    expect(JSON.stringify(userTurn.content)).not.toContain("Current view —");
+  });
+
+  it("ignores the Current view while agent_clear_data is off", async () => {
+    clearApi.flags.agent_clear_data = false;
+    useScript([{ text: "Hi." }]);
+    const POST = await loadRoute();
+    await (await POST(agentRequest(ALICE, { ...turn("t1", "Hi"), currentView: eventView }))).text();
+    expect(JSON.stringify(prompts[0])).not.toContain("Current view");
+    expect(clearApi.messagesOf("t1")[0]!.currentView).toBeUndefined();
+  });
+
+  it("drops a malformed Current view without failing the turn", async () => {
+    useScript([{ text: "Hi." }]);
+    const POST = await loadRoute();
+    const res = await POST(
+      agentRequest(ALICE, { ...turn("t1", "Hi"), currentView: { route: "javascript:alert(1)", entity: { kind: "user" } } }),
+    );
+    expect(res.status).toBe(200);
+    await res.text();
+    expect(JSON.stringify(prompts[0])).not.toContain("Current view");
+    expect(clearApi.messagesOf("t1")[0]!.currentView).toBeUndefined();
+  });
 });

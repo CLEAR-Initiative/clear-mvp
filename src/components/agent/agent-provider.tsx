@@ -21,6 +21,7 @@ import {
 import { Chat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
+import { currentViewFor, type CurrentView } from "~/lib/agent-current-view";
 import { canReadContent } from "~/lib/roles";
 import { api } from "~/trpc/react";
 
@@ -86,6 +87,8 @@ export function createAgentChat(
   threadId: string,
   messages?: UIMessage[],
   onFinish?: () => void,
+  /** The Current view to send with a turn, read at send time; none when absent. */
+  currentView?: () => CurrentView | undefined,
 ): Chat<UIMessage> {
   return new Chat<UIMessage>({
     id: threadId,
@@ -94,15 +97,27 @@ export function createAgentChat(
     transport: new DefaultChatTransport<UIMessage>({
       api: "/api/agent",
       // Only the newest message: the Agent loads the earlier turns itself.
-      prepareSendMessagesRequest: ({ messages: all, id }) => ({
-        body: { threadId: id, message: all[all.length - 1] },
-      }),
+      prepareSendMessagesRequest: ({ messages: all, id }) => {
+        const view = currentView?.();
+        return {
+          body: { threadId: id, message: all[all.length - 1], ...(view ? { currentView: view } : {}) },
+        };
+      },
     }),
   });
 }
 
 export function AgentProvider({ children }: { children: ReactNode }) {
   const flagOn = useFeatureEnabled("agent");
+  // V2 (agent_clear_data): send the Current view with each turn. Read
+  // through a ref so chats built earlier see the flag's current value.
+  const clearDataOn = useFeatureEnabled("agent_clear_data");
+  const clearDataRef = useRef(clearDataOn);
+  clearDataRef.current = clearDataOn;
+  const readCurrentView = useCallback(
+    () => (clearDataRef.current ? currentViewFor(window.location.pathname) : undefined),
+    [],
+  );
   const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const available = flagOn && canReadContent(me.data?.user?.role);
   const userId = me.data?.user?.id;
@@ -119,7 +134,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     open: false,
     threadId: crypto.randomUUID(),
   }));
-  const [chat, setChat] = useState(() => createAgentChat(state.threadId, undefined, onTurnFinished));
+  const [chat, setChat] = useState(() => createAgentChat(state.threadId, undefined, onTurnFinished, readCurrentView));
   /** A Thread whose stored turns still have to be loaded into its chat. */
   const [pendingLoad, setPendingLoad] = useState<string | null>(null);
 
@@ -133,12 +148,12 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     const saved = readStored();
     if (saved?.userId === userId) {
       setState(saved);
-      setChat(createAgentChat(saved.threadId, undefined, onTurnFinished));
+      setChat(createAgentChat(saved.threadId, undefined, onTurnFinished, readCurrentView));
       setPendingLoad(saved.threadId);
     } else if (saved) {
       clearAgentSession();
     }
-  }, [userId, onTurnFinished]);
+  }, [userId, onTurnFinished, readCurrentView]);
 
   const stored = api.agent.getConversation.useQuery(
     { id: pendingLoad ?? "" },
@@ -152,10 +167,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     }
     // Seed only a chat nobody has typed into yet.
     if (chat.id === pendingLoad && chat.messages.length === 0) {
-      setChat(createAgentChat(pendingLoad, stored.data.messages as UIMessage[], onTurnFinished));
+      setChat(createAgentChat(pendingLoad, stored.data.messages as UIMessage[], onTurnFinished, readCurrentView));
     }
     setPendingLoad(null);
-  }, [pendingLoad, stored.isSuccess, stored.data, chat, onTurnFinished]);
+  }, [pendingLoad, stored.isSuccess, stored.data, chat, onTurnFinished, readCurrentView]);
 
   const update = useCallback(
     (next: StoredAgentState) => {
@@ -176,18 +191,18 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       // Re-opening the active Thread would orphan a stream in progress.
       if (threadId === state.threadId) return;
       update({ ...state, threadId });
-      setChat(createAgentChat(threadId, messages, onTurnFinished));
+      setChat(createAgentChat(threadId, messages, onTurnFinished, readCurrentView));
       setPendingLoad(messages ? null : threadId);
     },
-    [state, update, onTurnFinished],
+    [state, update, onTurnFinished, readCurrentView],
   );
 
   const newThread = useCallback(() => {
     const threadId = crypto.randomUUID();
     update({ ...state, threadId });
-    setChat(createAgentChat(threadId, undefined, onTurnFinished));
+    setChat(createAgentChat(threadId, undefined, onTurnFinished, readCurrentView));
     setPendingLoad(null);
-  }, [state, update, onTurnFinished]);
+  }, [state, update, onTurnFinished, readCurrentView]);
 
   const value = useMemo<AgentContextValue>(
     () => ({

@@ -70,6 +70,7 @@ import {
   SystemDataCardSkeleton,
   MinimapCardSkeleton,
 } from "~/components/ui/detail-navigation-skeletons";
+import { useAgentCurrentView } from "~/lib/agent-current-view";
 
 function bigIntStrToNumber(s: string | null | undefined): number | null {
   if (s === null || s === undefined) return null;
@@ -122,6 +123,9 @@ export function EventDetailContent({
   navigationMapCenter,
   referrer = "detection",
 }: EventDetailContentProps) {
+  // Tell the CLEAR Agent which event is on screen (identifiers only).
+  const agentViewId = event?.id ?? entityId;
+  useAgentCurrentView(agentViewId ? { entity: { kind: "event", id: agentViewId } } : null);
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
 
   // TODO: after Prisma migration use event.title directly; remove this fallback

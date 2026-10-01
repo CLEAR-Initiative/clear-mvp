@@ -30,6 +30,7 @@ interface MessageRow {
   outputTokens?: number;
   costUsd?: number;
   latencyMs?: number;
+  currentView?: unknown;
 }
 
 export interface GraphQLCall {
@@ -112,6 +113,9 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
           role: m.role,
           type: m.type ?? null,
           content: m.content,
+          ...((m as { currentView?: unknown }).currentView !== undefined
+            ? { currentView: (m as { currentView?: unknown }).currentView }
+            : {}),
           createdAt: m.createdAt ?? existing?.createdAt ?? now(),
         });
       }

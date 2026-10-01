@@ -8,14 +8,17 @@ import arMessages from "../../../messages/ar.json";
 
 import { AgentProvider, useAgent } from "~/components/agent/agent-provider";
 import { AgentDrawer } from "~/components/agent/agent-drawer";
+import { publishCurrentView } from "~/lib/agent-current-view";
 
 let flagOn = true;
 let role: string | undefined = "viewer";
 let userId = "u-alice";
 let pathname = "/map";
 
+let clearDataOn = true;
 vi.mock("~/components/feature-flags-provider", () => ({
-  useFeatureEnabled: (key: string) => (key === "agent" ? flagOn : true),
+  useFeatureEnabled: (key: string) =>
+    key === "agent" ? flagOn : key === "agent_clear_data" ? clearDataOn : true,
 }));
 let storedConversation: { id: string; title: string; messages: unknown[] } | null = null;
 const getConversation = vi.fn();
@@ -67,6 +70,7 @@ const launcher = () => screen.queryByRole("button", { name: "Open the Agent draw
 
 beforeEach(() => {
   flagOn = true;
+  clearDataOn = true;
   role = "viewer";
   userId = "u-alice";
   pathname = "/map";
@@ -198,5 +202,31 @@ describe("AgentDrawer languages", () => {
     const affix = button.closest(".mantine-Affix-root") as HTMLElement;
     expect(affix.style.getPropertyValue("--affix-left")).not.toBe("");
     expect(affix.style.getPropertyValue("--affix-right")).toBe("");
+  });
+});
+
+describe("Current view on each turn", () => {
+  async function sentBody(): Promise<Record<string, unknown>> {
+    const fetchMock = vi.fn(async () => new Response("", { status: 500 }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderDrawer();
+    await agent!.chat.sendMessage({ text: "Why is this one severity 4?" }).catch(() => undefined);
+    vi.unstubAllGlobals();
+    const init = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1];
+    return JSON.parse(init.body as string) as Record<string, unknown>;
+  }
+
+  it("sends what is on screen with the turn", async () => {
+    window.history.pushState({}, "", "/event/ev-42");
+    const unpublish = publishCurrentView({ entity: { kind: "event", id: "ev-42" } });
+    const body = await sentBody();
+    unpublish();
+    expect(body.currentView).toEqual({ route: "/event/ev-42", entity: { kind: "event", id: "ev-42" } });
+  });
+
+  it("sends no Current view while agent_clear_data is off", async () => {
+    clearDataOn = false;
+    const body = await sentBody();
+    expect(body).not.toHaveProperty("currentView");
   });
 });
