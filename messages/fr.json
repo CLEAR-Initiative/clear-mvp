@@ -3183,7 +3183,10 @@
       "nrcFindUnavailable": "Documents du NRC indisponibles",
       "running": "Exécution de {tool}…",
       "done": "{tool} exécuté",
-      "unavailable": "{tool} indisponible"
+      "unavailable": "{tool} indisponible",
+      "navigateRunning": "Déplacement…",
+      "navigateDone": "Déplacé",
+      "navigateUnavailable": "Impossible de vous y amener"
     },
     "errors": {
       "budgetSpent": "Votre budget quotidien de l'Agent est épuisé.",
@@ -3191,6 +3194,19 @@
       "forbiddenThread": "Cette conversation appartient à un autre utilisateur.",
       "notConfigured": "L'Agent CLEAR n'est pas configuré sur ce serveur.",
       "generic": "L'Agent CLEAR n'a pas pu répondre. Veuillez réessayer."
+    },
+    "navigation": {
+      "movedTo": "Vous voici sur {kind} : {label}",
+      "back": "Retour",
+      "kinds": {
+        "event": "l'événement",
+        "signal": "le signal",
+        "crisis": "la crise",
+        "map": "la carte",
+        "detection": "la détection"
+      },
+      "outOfScope": "{country} ne fait pas partie du périmètre de votre équipe ; il n'est pas affiché.",
+      "placeUnavailable": "Ce lieu ne vous est pas accessible ; il n'est pas affiché."
     }
   }
 }

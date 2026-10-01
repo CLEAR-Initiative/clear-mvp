@@ -3183,7 +3183,10 @@
       "nrcFindUnavailable": "وثائق المجلس النرويجي للاجئين غير متاحة",
       "running": "جارٍ تشغيل {tool}…",
       "done": "تم تشغيل {tool}",
-      "unavailable": "{tool} غير متاح"
+      "unavailable": "{tool} غير متاح",
+      "navigateRunning": "جارٍ نقلك…",
+      "navigateDone": "تم النقل",
+      "navigateUnavailable": "تعذّر نقلك إلى هناك"
     },
     "errors": {
       "budgetSpent": "نفدت ميزانيتك اليومية للوكيل.",
@@ -3191,6 +3194,19 @@
       "forbiddenThread": "هذه المحادثة تخص مستخدمًا آخر.",
       "notConfigured": "وكيل CLEAR غير مُعدّ على هذا الخادم.",
       "generic": "تعذّر على وكيل CLEAR الإجابة. يرجى المحاولة مرة أخرى."
+    },
+    "navigation": {
+      "movedTo": "نقلتك إلى {kind}: {label}",
+      "back": "رجوع",
+      "kinds": {
+        "event": "الحدث",
+        "signal": "الإشارة",
+        "crisis": "الأزمة",
+        "map": "الخريطة",
+        "detection": "الرصد"
+      },
+      "outOfScope": "{country} خارج نطاق فريقك، لذلك لا يُعرض.",
+      "placeUnavailable": "هذا المكان غير متاح لك، لذلك لا يُعرض."
     }
   }
 }

@@ -283,11 +283,18 @@ function toMessage(row: ConversationMessageRow, userId: string): MastraDBMessage
 }
 
 function toMessageInput(message: MastraDBMessage) {
+  // A user turn's Current view travels in its message metadata; clear-api
+  // keeps it in its own column too, so a turn's view is queryable.
+  const currentView =
+    message.role === "user"
+      ? (message.content.metadata as { currentView?: unknown } | undefined)?.currentView
+      : undefined;
   return {
     id: message.id,
     role: message.role,
     type: message.type ?? null,
     content: message.content,
+    ...(currentView !== undefined ? { currentView } : {}),
     createdAt: toIso(message.createdAt),
   };
 }

@@ -64,6 +64,7 @@ import {
   SignalSourceCardSkeleton,
   SystemDataCardSkeleton,
 } from "~/components/ui/detail-navigation-skeletons";
+import { useAgentCurrentView } from "~/lib/agent-current-view";
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -165,6 +166,10 @@ export function SignalDetailContent({
   navigationMapCenter,
   referrer = "detection",
 }: SignalDetailContentProps) {
+  // Tell the CLEAR Agent which signal is on screen (identifiers only).
+  // Only a loaded signal's id: the route segment is whatever the URL says.
+  const agentViewId = signal?.id;
+  useAgentCurrentView(agentViewId ? { entity: { kind: "signal", id: agentViewId } } : null);
   const t = useTranslations("signalDetail");
   const tCommon = useTranslations("common");
   const tChallenge = useTranslations("locationChallenge");

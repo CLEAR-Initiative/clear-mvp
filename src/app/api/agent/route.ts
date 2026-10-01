@@ -20,7 +20,8 @@ import { LOCALE_COOKIE, pickLocale } from "~/i18n/config";
 import { canReadContent } from "~/lib/roles";
 import { createConversationsApi } from "~/server/agent/conversations";
 import { CLEAR_AGENT_ID, createClearAgent } from "~/server/agent/create-clear-agent";
-import { agentFlagEnabled } from "~/server/agent/flag";
+import { currentViewNote, parseCurrentView } from "~/server/agent/current-view";
+import { readAgentFlags } from "~/server/agent/flag";
 import { clearAgentModelId } from "~/server/agent/model";
 import { turnCostUsd } from "~/server/agent/pricing";
 import { getSessionUser } from "~/server/session";
@@ -32,6 +33,8 @@ const bodySchema = z.object({
   message: z.object({
     parts: z.array(z.object({ type: z.string(), text: z.string().optional() }).passthrough()),
   }),
+  /** Checked part by part below: a bad part is dropped, never the turn. */
+  currentView: z.unknown().optional(),
 });
 
 /** Long enough for any real question; stops a pasted document. */
@@ -55,7 +58,8 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  if (!(await agentFlagEnabled(cookie))) {
+  const flags = await readAgentFlags(cookie);
+  if (!flags.agent) {
     return Response.json(
       { error: "The CLEAR Agent is turned off.", code: "AGENT_DISABLED" },
       { status: 404 },
@@ -73,6 +77,15 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: "A `threadId` and a `message` are required." }, { status: 400 });
   }
   const { threadId, message } = parsed.data;
+  // Only with agent_clear_data: without the CLEAR data tools it means nothing.
+  const { view: currentView, dropped } = flags.clearData
+    ? parseCurrentView(parsed.data.currentView)
+    : { view: undefined, dropped: [] };
+  if (dropped.length > 0) {
+    // A publisher sending what the contract refuses is a bug (or tampering):
+    // visible in the logs, never fatal.
+    console.warn("[agent] left out of the Current view:", dropped.join(", "));
+  }
   // Rebuild the message from its text alone: whatever else the client sent
   // (roles, tool results, files) never reaches the model.
   const text = message.parts
@@ -117,9 +130,15 @@ export async function POST(req: Request): Promise<Response> {
 
   const startedAt = Date.now();
   const locale = pickLocale(readCookie(cookie, LOCALE_COOKIE), req.headers.get("accept-language"));
-  let mastra: ReturnType<typeof createClearAgent>;
+  let mastra: Awaited<ReturnType<typeof createClearAgent>>;
   try {
-    mastra = createClearAgent({ user: session.user, cookie, locale });
+    mastra = await createClearAgent({
+      user: session.user,
+      cookie,
+      locale,
+      clearData: flags.clearData,
+      activeTeamId: currentView?.teamId,
+    });
   } catch (err) {
     console.error("[agent] could not build the Agent:", err);
     return Response.json(
@@ -141,7 +160,17 @@ export async function POST(req: Request): Promise<Response> {
       params: {
         // A fresh id, never the client's: reusing a stored id would fold the
         // turn into an existing message and it would go unstored and unpaid.
-        messages: [{ id: randomUUID(), role: "user", parts: [{ type: "text", text }] }],
+        messages: [
+          {
+            id: randomUUID(),
+            role: "user",
+            parts: [{ type: "text", text }],
+            // Kept with the turn (clear-api stores it as the turn's currentView).
+            ...(currentView ? { metadata: { currentView } } : {}),
+          },
+        ],
+        // Told to the model for this turn only, as identifiers.
+        ...(currentView ? { system: currentViewNote(currentView) } : {}),
         // The resource is always the session user, never anything from the body.
         // The title only applies when this turn creates the Thread.
         memory: {

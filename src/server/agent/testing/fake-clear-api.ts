@@ -30,6 +30,7 @@ interface MessageRow {
   outputTokens?: number;
   costUsd?: number;
   latencyMs?: number;
+  currentView?: unknown;
 }
 
 export interface GraphQLCall {
@@ -57,7 +58,13 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
     string,
     { userId: string; workingMemory: string | null; metadata: unknown; createdAt: string; updatedAt: string }
   >();
-  const flags = { agent: true };
+  const flags: Record<string, boolean> = { agent: true, agent_clear_data: true };
+  /**
+   * Answers for CLEAR data queries (what the clear-mcp tools send), keyed by
+   * a substring of the query. Return data, or throw a GraphQLFailure-like
+   * `{ message, code }` via `fail`.
+   */
+  const dataHandlers = new Map<string, (variables: Record<string, unknown>, user: string) => unknown>();
   const budget = { limitUsd: 2, spentTodayUsd: 0, resetsAt: "2026-10-02T00:00:00.000Z" };
   let clock = Date.parse("2026-10-01T08:00:00.000Z");
   const now = () => new Date((clock += 1000)).toISOString();
@@ -106,6 +113,9 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
           role: m.role,
           type: m.type ?? null,
           content: m.content,
+          ...((m as { currentView?: unknown }).currentView !== undefined
+            ? { currentView: (m as { currentView?: unknown }).currentView }
+            : {}),
           createdAt: m.createdAt ?? existing?.createdAt ?? now(),
         });
       }
@@ -193,6 +203,9 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
     if (query.includes("myAgentBudget")) {
       return { myAgentBudget: { ...budget } };
     }
+    for (const [match, handler] of dataHandlers) {
+      if (query.includes(match)) return handler(v, user);
+    }
     throw new Error(`fake clear-api: unhandled operation ${query.slice(0, 80)}`);
   }
 
@@ -203,6 +216,11 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
     workingMemory,
     /** Feature flags as clear-api reports them; mutate to turn the Agent off. */
     flags,
+    dataHandlers,
+    /** Throw from a data handler to answer with a clear-api GraphQL error. */
+    fail: (message: string, code: string): never => {
+      throw new GraphQLFailure(message, code);
+    },
     /** The caller's Agent budget; mutate to simulate spend. */
     budget,
     /** Answer one GraphQL HTTP request. */
@@ -231,6 +249,30 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
 
 export type FakeClearApi = ReturnType<typeof createFakeClearApi>;
 
+/** An `event(id)` row in the shape clear_get_event reads. */
+export function fakeEvent(id: string, title: string) {
+  return {
+    id,
+    severity: 4,
+    types: ["FL"],
+    title,
+    description: "Synthetic event.",
+    firstSignalCreatedAt: "2026-09-30T08:00:00.000Z",
+    lastSignalCreatedAt: "2026-10-01T08:00:00.000Z",
+    startedAt: null,
+    casualties: null,
+    populationAffected: null,
+    populationDisplaced: null,
+    rank: 1,
+    isDummy: false,
+    originLocation: null,
+    destinationLocation: null,
+    generalLocation: null,
+    alerts: [],
+    signals: [],
+  };
+}
+
 /** One model step: either call tools or answer in text. */
 export type ScriptedStep =
   | { toolCalls: Array<{ name: string; input: Record<string, unknown> }> }
@@ -247,17 +289,22 @@ export const SCRIPTED_USAGE = {
  */
 export function createScriptedModel(steps: ScriptedStep[]) {
   const prompts: unknown[] = [];
+  /** The tool names offered to the model, per call. */
+  const toolsOffered: string[][] = [];
   let next = 0;
   const model = new MockLanguageModelV3({
     doStream: async (options) => {
       prompts.push(options.prompt);
+      toolsOffered.push((options.tools ?? []).map((t) => t.name));
       const step = steps[next++] ?? { text: "(no more scripted steps)" };
       const parts: unknown[] = [{ type: "stream-start", warnings: [] }];
       if ("toolCalls" in step) {
         step.toolCalls.forEach((call, i) =>
           parts.push({
             type: "tool-call",
-            toolCallId: `call-${next}-${i}`,
+            // Unique across a Thread, as a real model's are: a reused id makes
+            // Mastra match an earlier turn's stored result.
+            toolCallId: `call-${next}-${i}-${crypto.randomUUID().slice(0, 8)}`,
             toolName: call.name,
             input: JSON.stringify(call.input),
           }),
@@ -274,7 +321,7 @@ export function createScriptedModel(steps: ScriptedStep[]) {
       return { stream: convertArrayToReadableStream(parts as never[]) };
     },
   });
-  return { model, prompts };
+  return { model, prompts, toolsOffered };
 }
 
 /** Parse an AI SDK UI message stream (SSE) into its chunks. */

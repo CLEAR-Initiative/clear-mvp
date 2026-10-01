@@ -50,6 +50,7 @@ export interface AgentThreadProps {
 export function AgentThread({ chat }: AgentThreadProps) {
   const t = useTranslations("agent.thread");
   const { messages, sendMessage, status, error } = useChat({ chat });
+
   const [draft, setDraft] = useState("");
   const busy = status === "submitted" || status === "streaming";
 

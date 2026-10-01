@@ -16,6 +16,7 @@ import { createConversationsApi } from "~/server/agent/conversations";
 import { clearAgentInstructions } from "~/server/agent/instructions";
 import { ClearApiMemoryStorage } from "~/server/agent/memory-storage";
 import { resolveClearAgentModel } from "~/server/agent/model";
+import { createNavigateTool, NAVIGATE_TOOL_ID } from "~/server/agent/navigate-tool";
 import { createNrcFindTool, NRC_FIND_TOOL_ID } from "~/server/agent/nrc-find-tool";
 import type { Locale } from "~/i18n/config";
 import type { SessionUser } from "~/server/session";
@@ -31,9 +32,19 @@ export interface ClearAgentRequest {
   cookie: string;
   /** The user's interface language; the Agent answers in it. */
   locale: Locale;
+  /** `agent_clear_data` on: offer CLEAR's own data as tools. */
+  clearData: boolean;
+  /** The user's active team, from the turn's Current view (Agent navigation's scope check). */
+  activeTeamId?: string;
 }
 
-export function createClearAgent({ user, cookie, locale }: ClearAgentRequest): Mastra {
+export async function createClearAgent({
+  user,
+  cookie,
+  locale,
+  clearData,
+  activeTeamId,
+}: ClearAgentRequest): Promise<Mastra> {
   const storage = new MastraCompositeStore({
     id: "clear-api-conversations",
     domains: {
@@ -41,12 +52,21 @@ export function createClearAgent({ user, cookie, locale }: ClearAgentRequest): M
     },
   });
 
+  // V2 (agent_clear_data): CLEAR's own data, and Agent navigation over it.
+  // Loaded only when on, so with the flag off the V1 Agent never touches the
+  // clear-mcp library (a bad upgrade can't take V1 down with it).
+  const lib = clearData ? await import("~/server/agent/clear-data-tools") : null;
+  const clear = lib ? lib.createClearData({ cookie, locale }) : null;
+
   const agent = new Agent({
     id: CLEAR_AGENT_ID,
     name: "CLEAR Agent",
-    instructions: clearAgentInstructions(locale),
+    instructions: clearAgentInstructions(locale, lib ? { clearData: { contentRule: lib.CLEAR_MCP_CONTENT_RULE } } : {}),
     model: resolveClearAgentModel(),
-    tools: { [NRC_FIND_TOOL_ID]: createNrcFindTool() },
+    tools: {
+      [NRC_FIND_TOOL_ID]: createNrcFindTool(),
+      ...(clear ? { ...clear.tools, [NAVIGATE_TOOL_ID]: createNavigateTool(clear.run, { activeTeamId }) } : {}),
+    },
     memory: new Memory({
       storage,
       options: {

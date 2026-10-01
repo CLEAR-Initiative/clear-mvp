@@ -56,6 +56,7 @@ export interface ConversationMessageInput {
   role: string;
   type?: string | null;
   content: unknown;
+  currentView?: unknown;
   createdAt?: string;
 }
 

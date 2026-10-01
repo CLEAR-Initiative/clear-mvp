@@ -3183,7 +3183,10 @@
       "nrcFindUnavailable": "NRC documents unavailable",
       "running": "Running {tool}…",
       "done": "Ran {tool}",
-      "unavailable": "{tool} unavailable"
+      "unavailable": "{tool} unavailable",
+      "navigateRunning": "Moving you…",
+      "navigateDone": "Moved",
+      "navigateUnavailable": "Couldn't move you there"
     },
     "errors": {
       "budgetSpent": "Your daily Agent budget is spent.",
@@ -3191,6 +3194,19 @@
       "forbiddenThread": "This Thread belongs to another user.",
       "notConfigured": "The CLEAR Agent isn't configured on this server.",
       "generic": "The CLEAR Agent couldn't answer. Please try again."
+    },
+    "navigation": {
+      "movedTo": "Moved you to {kind}: {label}",
+      "back": "Back",
+      "kinds": {
+        "event": "Event",
+        "signal": "Signal",
+        "crisis": "Crisis",
+        "map": "the Map",
+        "detection": "Detection"
+      },
+      "outOfScope": "{country} isn't in your team's scope, so it isn't shown.",
+      "placeUnavailable": "That place isn't available to you, so it isn't shown."
     }
   }
 }

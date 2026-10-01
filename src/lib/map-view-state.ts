@@ -7,8 +7,11 @@
  * Follows the Detection nav-context pattern (session, not localStorage):
  * same-tab soft nav only; dies with the tab.
  *
+ * Region and timeframe are kept apart, in map-filters-session.ts: they must
+ * survive without a camera (no Mapbox token, or before the map loads).
+ *
  * ## Gaps for a later ticket (not in this MVP)
- * - Filters: country / region / timeframe / crisis type / timeline month
+ * - Filters: crisis type / timeline month
  * - Layers: NRC locations, blockages, boundaries, data view
  *   (Hazards → seismic activity and Overlays → roads *are* snapshotted)
  * - Solo-focus deep links (`?event=` / `?crisis=`) restore the session camera

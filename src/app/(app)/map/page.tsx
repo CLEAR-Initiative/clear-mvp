@@ -127,6 +127,16 @@ import {
   resolveMapPreferences,
   setMapPreferencesCookie,
 } from "~/lib/map-preferences-cookie";
+import { mapFiltersForAgent, useAgentCurrentView } from "~/lib/agent-current-view";
+import {
+  MAP_DEEP_LINK_PARAMS,
+  MAP_ONE_SHOT_PARAMS,
+  readMapDeepLink,
+  resolveLinkScope,
+  withoutDeepLink,
+} from "~/lib/agent-deep-link";
+import { useAgentDeepLink } from "~/components/agent/use-agent-deep-link";
+import { readMapFiltersSession, writeMapFiltersSession } from "~/lib/map-filters-session";
 
 const MAX_OPEN_PANELS = 4;
 
@@ -194,6 +204,11 @@ function MapPageContent() {
   const urlFocusEventId = searchParams.get("event");
   const urlFocusSignalId = searchParams.get("signal");
   const urlFocusCrisisId = searchParams.get("crisis");
+  // An Agent navigation deep link (?countryId&regionId&timeframe) sets the
+  // filters for this visit only, ahead of stored state and any remembered
+  // focus; the user changing the country drops it.
+  const mapDeepLink = useMemo(() => readMapDeepLink(searchParams), [searchParams]);
+  const hasMapDeepLink = mapDeepLink.countryId !== undefined;
   /**
    * Session camera restore. Kept even for solo-focus deep links so Full Map
    * can land on the last pose, then fly to the focused entity (#582).
@@ -228,6 +243,7 @@ function MapPageContent() {
   const [placeFocus, setPlaceFocus] = useState<MapPlaceFocusSession | null>(() => {
     if (typeof window === "undefined") return null;
     if (urlFocusEventId || urlFocusSignalId || urlFocusCrisisId) return null;
+    if (hasMapDeepLink) return null; // the Agent's scope wins over a remembered place
     const session = readMapFocusSession();
     return session?.kind === "place" ? session : null;
   });
@@ -257,6 +273,9 @@ function MapPageContent() {
       return;
     }
     if (focusDismissed) return;
+    // An Agent deep link names the scope to show; don't swap it for an
+    // earlier in-session focus.
+    if (hasMapDeepLink) return;
     const session = readMapFocusSession();
     if (!session || session.kind === "place") return;
     const key = `${session.kind}:${session.id}`;
@@ -268,12 +287,22 @@ function MapPageContent() {
     urlFocusSignalId,
     urlFocusCrisisId,
     focusDismissed,
+    hasMapDeepLink,
     router,
   ]);
   
   /* ---- Fetch data ---- */
   const { activeTeamId, activeTeam } = useTeam();
-  const { countries: apiCountries, getRegions, getCenter, getZoom, getLocationId, locationById } = useLocations();
+  const {
+    countries: apiCountries,
+    getRegions,
+    getCenter,
+    getZoom,
+    getLocationId,
+    getStateId,
+    locationById,
+    tree: locationTree,
+  } = useLocations();
   const {
     countries: teamCountries,
     countryName: workingCountryName,
@@ -702,12 +731,32 @@ function MapPageContent() {
   const [pickedCountry, setPickedCountry] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const teamCountryNames = useMemo(() => teamCountries.map((c) => c.name), [teamCountries]);
+  // A deep link's place, by id against this page's own locations tree and
+  // the active team's scope: only a place the page can show ever overrides.
+  const linkScope = useMemo(
+    () =>
+      resolveLinkScope({
+        countryId: mapDeepLink.countryId,
+        regionId: mapDeepLink.regionId,
+        tree: locationTree,
+        teamCountryNames,
+        scopeReady,
+      }),
+    [mapDeepLink.countryId, mapDeepLink.regionId, locationTree, teamCountryNames, scopeReady],
+  );
+  const linkCountry = linkScope.status === "honoured" ? linkScope.country : undefined;
   const selectedCountry = resolveSelectedCountry(
     teamCountryNames,
-    workingCountryName ?? pickedCountry,
+    linkCountry ?? workingCountryName ?? pickedCountry,
     scopeReady,
   );
   const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
+
+  /** Whether the region on screen came from the deep link (it goes when the link does). */
+  const linkedRegionRef = useRef(false);
+  const changeTimeframe = (value: string | null) => {
+    setTimeframe((value ?? "30d") as "7d" | "30d" | "90d" | "all");
+  };
   const selectedCountryRef = useRef(selectedCountry);
   selectedCountryRef.current = selectedCountry;
   const countryOptionsRef = useRef<string[]>([]);
@@ -1296,8 +1345,8 @@ function MapPageContent() {
 
   // Region zoom: fetch selected region geometry and fit map to it.
   const selectedRegionId = useMemo(
-    () => (selectedRegion !== "All Regions" ? getLocationId(selectedRegion) : null),
-    [selectedRegion, getLocationId],
+    () => (selectedRegion !== "All Regions" ? getStateId(selectedCountry, selectedRegion) : null),
+    [selectedCountry, selectedRegion, getStateId],
   );
   const regionQuery = api.locations.getById.useQuery(
     { id: selectedRegionId! },
@@ -1318,7 +1367,11 @@ function MapPageContent() {
     return pickerCountryOptions(apiCountries, teamCountryNames);
   }, [scopeReady, workingCountryName, teamCountryNames, apiCountries]);
   countryOptionsRef.current = countryOptions;
-  useReportStaleCountryPick(countryOptions, workingCountryName ?? pickedCountry, selectedCountry);
+  useReportStaleCountryPick(
+    countryOptions,
+    linkCountry ?? workingCountryName ?? pickedCountry,
+    selectedCountry,
+  );
 
   // Restored camera must belong to the working country. A leftover Sudan
   // pose cannot win over a Venezuela pick (borders/signals vs camera).
@@ -1439,10 +1492,10 @@ function MapPageContent() {
 
   /* ---- Resolve selected location for filtering ---- */
   const selectedLocationId = useMemo(() => {
-    if (selectedRegion !== "All Regions") return getLocationId(selectedRegion);
+    if (selectedRegion !== "All Regions") return getStateId(selectedCountry, selectedRegion);
     if (selectedCountry !== "All Countries") return getLocationId(selectedCountry);
     return null;
-  }, [selectedCountry, selectedRegion, getLocationId]);
+  }, [selectedCountry, selectedRegion, getLocationId, getStateId]);
 
   const selectedLocationName = useMemo(() => {
     if (selectedRegion !== "All Regions") return selectedRegion;
@@ -1794,6 +1847,18 @@ function MapPageContent() {
     timeframeRange.to,
   ]);
 
+  // The same scope, as the CLEAR Agent's Current view (identifiers only).
+  useAgentCurrentView({
+    filters: mapFiltersForAgent({
+      teamId: activeTeamId,
+      locationId: selectedLocationId,
+      country: selectedCountry,
+      region: selectedRegion !== ALL_REGIONS ? selectedRegion : undefined,
+      from: timeframeRange.from ?? null,
+      to: timeframeRange.to ?? null,
+    }),
+  });
+
   // Persist the filtered marker id list the analyst actually sees so detail
   // arrows stay inside that set (country + region + type + timeline).
   useEffect(() => {
@@ -1967,6 +2032,11 @@ function MapPageContent() {
 
   /* ---- Handlers ---- */
   const handleCountryChange = (value: string | null) => {
+    // Picking a country ends a deep link's override.
+    if (hasMapDeepLink) {
+      const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), MAP_DEEP_LINK_PARAMS);
+      router.replace(`/map${rest}`, { scroll: false });
+    }
     const nextCountry = value ?? selectedCountry;
     const location = teamCountries.find((c) => c.name === nextCountry);
     if (location) {
@@ -1985,6 +2055,7 @@ function MapPageContent() {
   };
 
   const handleRegionChange = (value: string | null) => {
+    linkedRegionRef.current = false;
     setSelectedRegion(value ?? "All Regions");
     setCameraSeed(null);
     setPlaceLookup(null);
@@ -1992,6 +2063,55 @@ function MapPageContent() {
     clearMapFocusSession();
     clearOpenPanels();
   };
+
+  // Region and timeframe as the Map had them in this tab (details and back, a
+  // reload, a revisit of a deep link, an Agent navigation's Back), once the
+  // country on screen is known, and only for the country they were chosen
+  // in. Declared before the deep link, so a fresh Agent move wins.
+  const [filtersRestored, setFiltersRestored] = useState(false);
+  useEffect(() => {
+    if (filtersRestored) return;
+    if (!scopeReady || locationTree.length === 0 || linkScope.status === "pending") return;
+    setFiltersRestored(true);
+    const saved = readMapFiltersSession();
+    if (!saved || saved.country !== selectedCountry) return;
+    if (saved.region && getRegions(selectedCountry).includes(saved.region)) setSelectedRegion(saved.region);
+    setTimeframe(saved.timeframe);
+  }, [filtersRestored, scopeReady, locationTree.length, linkScope.status, selectedCountry, getRegions]);
+  // Saved on every change (after the restore, so defaults never overwrite them).
+  useEffect(() => {
+    if (!filtersRestored) return;
+    writeMapFiltersSession({ country: selectedCountry, region: selectedRegion, timeframe });
+  }, [filtersRestored, selectedCountry, selectedRegion, timeframe]);
+
+  // An Agent deep link: a fresh move applies like picking that country (and
+  // region and timeframe) by hand, without touching the working country; a
+  // revisit keeps what the restore above brought back. Region and timeframe
+  // then leave the URL as ordinary state; the country stays in it as this
+  // visit's override.
+  useAgentDeepLink({
+    path: "/map",
+    params: MAP_DEEP_LINK_PARAMS,
+    oneShot: MAP_ONE_SHOT_PARAMS,
+    scope: linkScope,
+    apply: (fresh) => {
+      if (!fresh || linkScope.status !== "honoured") return;
+      setSelectedRegion(linkScope.region?.name ?? "All Regions");
+      linkedRegionRef.current = !!linkScope.region;
+      if (mapDeepLink.timeframe) setTimeframe(mapDeepLink.timeframe);
+      setCameraSeed(null);
+      setPlaceLookup(null);
+      setPlaceFocus(null);
+      clearMapFocusSession();
+      setForceFlyToken((n) => n + 1);
+      clearOpenPanels();
+    },
+    onGone: () => {
+      // A region the link set belongs to its country, not the one now shown.
+      if (linkedRegionRef.current) setSelectedRegion("All Regions");
+      linkedRegionRef.current = false;
+    },
+  });
 
 
   const handleMarkerClick = useCallback(
@@ -2279,7 +2399,7 @@ function MapPageContent() {
           <Select
             size="xs"
             value={timeframe}
-            onChange={(v) => setTimeframe((v ?? "30d") as typeof timeframe)}
+            onChange={changeTimeframe}
             data={[
               { value: "7d",  label: t("filters.last7days") },
               { value: "30d", label: t("filters.last30days") },
@@ -2450,7 +2570,7 @@ function MapPageContent() {
             <Select
               size="xs"
               value={timeframe}
-              onChange={(v) => setTimeframe((v ?? "30d") as typeof timeframe)}
+              onChange={changeTimeframe}
               data={[
                 { value: "7d",  label: t("filters.last7days") },
                 { value: "30d", label: t("filters.last30days") },

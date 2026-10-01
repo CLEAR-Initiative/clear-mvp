@@ -21,6 +21,9 @@ const nextConfig = {
       "./sentry.edge.config.ts",
     ],
   },
+  // The clear-mcp Tool library is Node-only (it reads its own package.json
+  // at load), so it is required at runtime instead of bundled.
+  serverExternalPackages: ["@clear-initiative/mcp"],
   experimental: {
     // Optimize large icon/component libraries to prevent webpack JSON parse crash
     optimizePackageImports: ["@mantine/core", "@mantine/hooks", "@tabler/icons-react"],

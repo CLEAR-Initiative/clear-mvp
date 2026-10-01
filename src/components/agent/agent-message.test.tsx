@@ -119,6 +119,49 @@ describe("AgentMessage", () => {
     expect(screen.queryByTestId("agent-sources")).toBeNull();
   });
 
+  it("shows a CLEAR data tool that returned an error value as unavailable", () => {
+    renderMessage(
+      answer([
+        {
+          type: "tool-clear_count",
+          toolCallId: "c3",
+          state: "output-available",
+          output: { error: { code: "FORBIDDEN", message: "No access." } },
+        },
+      ]),
+    );
+    expect(screen.getByText("clear_count unavailable")).toBeInTheDocument();
+  });
+
+  it("shows a navigate that returned an error value as not moved", () => {
+    renderMessage(
+      answer([
+        {
+          type: "tool-navigate",
+          toolCallId: "n1",
+          state: "output-available",
+          output: { error: { code: "OUT_OF_SCOPE", message: "Chad is outside the team's scope." } },
+        },
+      ]),
+    );
+    expect(screen.getByText("Couldn't move you there")).toBeInTheDocument();
+    expect(screen.queryByText("Moved")).toBeNull();
+  });
+
+  it("shows a navigate result the client won't act on as not moved", () => {
+    renderMessage(
+      answer([
+        {
+          type: "tool-navigate",
+          toolCallId: "n2",
+          state: "output-available",
+          output: { moved: true, target: { kind: "event" }, url: "//evil.test", content: { label: "x" } },
+        },
+      ]),
+    );
+    expect(screen.getByText("Couldn't move you there")).toBeInTheDocument();
+  });
+
   it("names an unknown tool generically", () => {
     renderMessage(answer([{ type: "tool-clear_count", toolCallId: "c2", state: "input-streaming" }]));
     expect(screen.getByText("Running clear_count…")).toBeInTheDocument();

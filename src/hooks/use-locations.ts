@@ -65,6 +65,16 @@ export function useLocations() {
     };
   }, [tree]);
 
+  /**
+   * A state's id by name within one country. Region names repeat across
+   * countries ("Northern" is in Sudan, Ghana, Uganda…), so a region is only
+   * ever looked up inside its country, never with `getLocationId`.
+   */
+  const getStateId = useMemo(() => {
+    return (countryName: string, stateName: string): string | null =>
+      tree.find((c) => c.name === countryName)?.states.find((s) => s.name === stateName)?.id ?? null;
+  }, [tree]);
+
   /** Get location ID by name (for API queries) */
   const getLocationId = useMemo(() => {
     return (name: string): string | null => {
@@ -104,6 +114,7 @@ export function useLocations() {
     getRegions,
     getDistricts,
     getLocationId,
+    getStateId,
     getCenter,
     getZoom,
     locationById,
