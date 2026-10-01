@@ -12,9 +12,22 @@ let pathname = "/map";
 vi.mock("~/components/feature-flags-provider", () => ({
   useFeatureEnabled: (key: string) => (key === "agent" ? flagOn : true),
 }));
+let storedConversation: { id: string; title: string; messages: unknown[] } | null = null;
+const getConversation = vi.fn();
 vi.mock("~/trpc/react", () => ({
   api: {
+    useUtils: () => ({ agent: { listConversations: { invalidate: vi.fn() } } }),
     auth: { me: { useQuery: () => ({ data: role ? { user: { role } } : undefined }) } },
+    agent: {
+      getConversation: {
+        useQuery: (input: { id: string }, opts: { enabled: boolean }) => {
+          getConversation(input, opts);
+          return opts.enabled
+            ? { isSuccess: true, data: storedConversation?.id === input.id ? storedConversation : null }
+            : { isSuccess: false, data: undefined };
+        },
+      },
+    },
   },
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
@@ -50,6 +63,8 @@ beforeEach(() => {
   role = "viewer";
   pathname = "/map";
   agent = undefined;
+  storedConversation = null;
+  getConversation.mockClear();
   sessionStorage.clear();
 });
 
@@ -110,5 +125,30 @@ describe("AgentDrawer state", () => {
     expect(agent!.chat).not.toBe(first);
     expect(agent!.chat.id).toBe(agent!.threadId);
     expect(JSON.parse(sessionStorage.getItem("agent-drawer")!).threadId).toBe(agent!.threadId);
+  });
+});
+
+describe("Thread restore", () => {
+  it("loads a restored Thread's stored turns into its chat after a reload", () => {
+    sessionStorage.setItem("agent-drawer", JSON.stringify({ open: false, threadId: "t-saved" }));
+    storedConversation = {
+      id: "t-saved",
+      title: "Darfur",
+      messages: [
+        { id: "m1", role: "user", parts: [{ type: "text", text: "Access in Darfur?" }] },
+        { id: "m2", role: "assistant", parts: [{ type: "text", text: "Restricted." }] },
+      ],
+    };
+    renderDrawer();
+    expect(agent!.threadId).toBe("t-saved");
+    expect(agent!.chat.id).toBe("t-saved");
+    expect(agent!.chat.messages.map((m) => m.id)).toEqual(["m1", "m2"]);
+  });
+
+  it("starts a fresh Thread with nothing to load", () => {
+    renderDrawer();
+    act(() => agent!.newThread());
+    expect(agent!.chat.messages).toEqual([]);
+    expect(getConversation).not.toHaveBeenCalledWith({ id: agent!.threadId }, expect.objectContaining({ enabled: true }));
   });
 });

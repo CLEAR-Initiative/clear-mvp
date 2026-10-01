@@ -1,3 +1,4 @@
+import { agentRouter } from "~/server/api/routers/agent";
 import { alertsRouter } from "~/server/api/routers/alerts";
 import { analysisRouter } from "~/server/api/routers/analysis";
 import { commentsRouter } from "~/server/api/routers/comments";
@@ -21,6 +22,7 @@ import { subscriptionsRouter } from "~/server/api/routers/subscriptions";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
+  agent: agentRouter,
   alerts: alertsRouter,
   analysis: analysisRouter,
   auth: authRouter,

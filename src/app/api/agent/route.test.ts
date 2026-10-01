@@ -180,6 +180,8 @@ describe("POST /api/agent — a Thread", () => {
     expect(second).toContain("Restricted.");
     expect(second).toContain("And in Lebanon?");
     expect(clearApi.messagesOf("t1")).toHaveLength(4);
+    // Titled once, from the question that started it.
+    expect(clearApi.conversations.get("t1")?.title).toBe("Access in Darfur?");
   });
 
   it("stores the Thread as the session user even when the body claims otherwise", async () => {

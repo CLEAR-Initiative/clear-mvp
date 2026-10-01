@@ -66,10 +66,15 @@ function writeStored(state: StoredAgentState): void {
   }
 }
 
-export function createAgentChat(threadId: string, messages?: UIMessage[]): Chat<UIMessage> {
+export function createAgentChat(
+  threadId: string,
+  messages?: UIMessage[],
+  onFinish?: () => void,
+): Chat<UIMessage> {
   return new Chat<UIMessage>({
     id: threadId,
     messages,
+    onFinish,
     transport: new DefaultChatTransport<UIMessage>({
       api: "/api/agent",
       // Only the newest message: the Agent loads the earlier turns itself.
@@ -85,20 +90,46 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const available = flagOn && canReadContent(me.data?.user?.role);
 
+  const utils = api.useUtils();
+  // A finished turn changes the Thread's place in the history list.
+  const onTurnFinished = useCallback(() => {
+    void utils.agent.listConversations.invalidate();
+  }, [utils]);
+
   const [state, setState] = useState<StoredAgentState>(() => ({
     open: false,
     threadId: crypto.randomUUID(),
   }));
-  const [chat, setChat] = useState(() => createAgentChat(state.threadId));
+  const [chat, setChat] = useState(() => createAgentChat(state.threadId, undefined, onTurnFinished));
+  /** A Thread whose stored turns still have to be loaded into its chat. */
+  const [pendingLoad, setPendingLoad] = useState<string | null>(null);
 
   // Restore after mount so server and client render the same first frame.
   useEffect(() => {
     const stored = readStored();
     if (stored) {
       setState(stored);
-      setChat(createAgentChat(stored.threadId));
+      setChat(createAgentChat(stored.threadId, undefined, onTurnFinished));
+      setPendingLoad(stored.threadId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
   }, []);
+
+  const stored = api.agent.getConversation.useQuery(
+    { id: pendingLoad ?? "" },
+    { enabled: available && pendingLoad !== null, staleTime: Infinity, retry: false },
+  );
+  useEffect(() => {
+    if (!pendingLoad || !stored.isSuccess || stored.data?.id !== pendingLoad) {
+      if (stored.isSuccess && !stored.data) setPendingLoad(null); // a new Thread
+      return;
+    }
+    // Seed only a chat nobody has typed into yet.
+    if (chat.id === pendingLoad && chat.messages.length === 0) {
+      setChat(createAgentChat(pendingLoad, stored.data.messages as UIMessage[], onTurnFinished));
+    }
+    setPendingLoad(null);
+  }, [pendingLoad, stored.isSuccess, stored.data, chat, onTurnFinished]);
 
   const update = useCallback((next: StoredAgentState) => {
     setState(next);
@@ -113,14 +144,18 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const openThread = useCallback(
     (threadId: string, messages?: UIMessage[]) => {
       update({ ...state, threadId });
-      setChat(createAgentChat(threadId, messages));
+      setChat(createAgentChat(threadId, messages, onTurnFinished));
+      setPendingLoad(messages ? null : threadId);
     },
-    [state, update],
+    [state, update, onTurnFinished],
   );
 
   const newThread = useCallback(() => {
-    openThread(crypto.randomUUID());
-  }, [openThread]);
+    const threadId = crypto.randomUUID();
+    update({ ...state, threadId });
+    setChat(createAgentChat(threadId, undefined, onTurnFinished));
+    setPendingLoad(null);
+  }, [state, update, onTurnFinished]);
 
   const value = useMemo<AgentContextValue>(
     () => ({

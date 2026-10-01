@@ -31,6 +31,8 @@ const bodySchema = z.object({
 
 /** Long enough for any real question; stops a pasted document. */
 const MAX_MESSAGE_CHARS = 8_000;
+/** A new Thread is titled with its first question, cut to this length. */
+const TITLE_CHARS = 80;
 
 export async function POST(req: Request): Promise<Response> {
   const cookie = req.headers.get("cookie");
@@ -83,7 +85,11 @@ export async function POST(req: Request): Promise<Response> {
       params: {
         messages: [{ id: message.id, role: "user", parts: [{ type: "text", text }] }],
         // The resource is always the session user, never anything from the body.
-        memory: { thread: threadId, resource: session.user.id },
+        // The title only applies when this turn creates the Thread.
+        memory: {
+          thread: { id: threadId, title: titleFrom(text) },
+          resource: session.user.id,
+        },
       },
     });
   } catch (err) {
@@ -96,6 +102,11 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: "The CLEAR Agent could not start." }, { status: 502 });
   }
   return createUIMessageStreamResponse({ stream });
+}
+
+function titleFrom(text: string): string {
+  const line = text.replace(/\s+/g, " ").trim();
+  return line.length > TITLE_CHARS ? `${line.slice(0, TITLE_CHARS - 1)}…` : line;
 }
 
 /**
