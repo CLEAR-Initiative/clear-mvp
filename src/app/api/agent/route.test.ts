@@ -378,6 +378,24 @@ describe("POST /api/agent — CLEAR data (agent_clear_data)", () => {
     expect(toolsOffered[0]!.filter((n) => n.startsWith("clear_"))).toEqual([]);
   });
 
+  it("still answers while agent_clear_data is off even if the clear-mcp library can't load", async () => {
+    clearApi.flags.agent_clear_data = false;
+    vi.doMock("@clear-initiative/mcp/library", () => {
+      throw new Error("clear-mcp library failed to load");
+    });
+    try {
+      useScript([{ text: "Hi." }]);
+      const POST = await loadRoute();
+      const res = await POST(agentRequest(ALICE, turn("t1", "Hi")));
+      expect(res.status).toBe(200);
+      await res.text();
+      expect(toolsOffered[0]).toContain("nrc_find");
+      expect(toolsOffered[0]!.filter((n) => n.startsWith("clear_") || n === "navigate")).toEqual([]);
+    } finally {
+      vi.doUnmock("@clear-initiative/mcp/library");
+    }
+  });
+
   it("answers from CLEAR data as the signed-in user, with their cookie and nothing else", async () => {
     clearApi.dataHandlers.set("entityStats(", (_variables, user) => ({
       entityStats: { total: user === "u-alice" ? 7 : 0, buckets: [] },

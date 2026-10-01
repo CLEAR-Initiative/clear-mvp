@@ -130,9 +130,9 @@ export async function POST(req: Request): Promise<Response> {
 
   const startedAt = Date.now();
   const locale = pickLocale(readCookie(cookie, LOCALE_COOKIE), req.headers.get("accept-language"));
-  let mastra: ReturnType<typeof createClearAgent>;
+  let mastra: Awaited<ReturnType<typeof createClearAgent>>;
   try {
-    mastra = createClearAgent({ user: session.user, cookie, locale, clearData: flags.clearData });
+    mastra = await createClearAgent({ user: session.user, cookie, locale, clearData: flags.clearData });
   } catch (err) {
     console.error("[agent] could not build the Agent:", err);
     return Response.json(

@@ -16,7 +16,6 @@ import { createConversationsApi } from "~/server/agent/conversations";
 import { clearAgentInstructions } from "~/server/agent/instructions";
 import { ClearApiMemoryStorage } from "~/server/agent/memory-storage";
 import { resolveClearAgentModel } from "~/server/agent/model";
-import { createClearData } from "~/server/agent/clear-data-tools";
 import { createNavigateTool, NAVIGATE_TOOL_ID } from "~/server/agent/navigate-tool";
 import { createNrcFindTool, NRC_FIND_TOOL_ID } from "~/server/agent/nrc-find-tool";
 import type { Locale } from "~/i18n/config";
@@ -37,7 +36,7 @@ export interface ClearAgentRequest {
   clearData: boolean;
 }
 
-export function createClearAgent({ user, cookie, locale, clearData }: ClearAgentRequest): Mastra {
+export async function createClearAgent({ user, cookie, locale, clearData }: ClearAgentRequest): Promise<Mastra> {
   const storage = new MastraCompositeStore({
     id: "clear-api-conversations",
     domains: {
@@ -46,12 +45,15 @@ export function createClearAgent({ user, cookie, locale, clearData }: ClearAgent
   });
 
   // V2 (agent_clear_data): CLEAR's own data, and Agent navigation over it.
-  const clear = clearData ? createClearData({ cookie, locale }) : null;
+  // Loaded only when on, so with the flag off the V1 Agent never touches the
+  // clear-mcp library (a bad upgrade can't take V1 down with it).
+  const lib = clearData ? await import("~/server/agent/clear-data-tools") : null;
+  const clear = lib ? lib.createClearData({ cookie, locale }) : null;
 
   const agent = new Agent({
     id: CLEAR_AGENT_ID,
     name: "CLEAR Agent",
-    instructions: clearAgentInstructions(locale, { clearData }),
+    instructions: clearAgentInstructions(locale, lib ? { clearData: { contentRule: lib.CLEAR_MCP_CONTENT_RULE } } : {}),
     model: resolveClearAgentModel(),
     tools: {
       [NRC_FIND_TOOL_ID]: createNrcFindTool(),

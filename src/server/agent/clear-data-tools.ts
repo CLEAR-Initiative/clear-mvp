@@ -19,6 +19,7 @@ import {
   curatedTools,
   runTool,
   silentLogger,
+  THIRD_PARTY_CONTENT_RULE,
   type Config,
 } from "@clear-initiative/mcp/library";
 import { createTool } from "@mastra/core/tools";
@@ -32,6 +33,9 @@ import { API_URL } from "~/server/env";
 const CURATED_TOOLS = curatedTools({ locationIndex: createLocationIndex() });
 
 export const CLEAR_DATA_TOOL_NAMES: readonly string[] = CURATED_TOOLS.map((t) => t.name);
+
+/** clear-mcp's rule for third-party text, for the system prompt. */
+export const CLEAR_MCP_CONTENT_RULE: string = THIRD_PARTY_CONTENT_RULE;
 
 export interface ClearDataToolsRequest {
   /** The signed-in user's Cookie header, forwarded to clear-api as-is. */
