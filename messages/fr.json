@@ -2902,7 +2902,8 @@
       },
       "noError": "Aucun détail d'erreur enregistré",
       "retry": "Relancer",
-      "retrying": "Relance…"
+      "retrying": "Relance…",
+      "partial": "Remis en file : {done} message(s) sur {total}. {error}"
     }
   },
   "analysis": {

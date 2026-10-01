@@ -2902,7 +2902,8 @@
       },
       "noError": "No error details recorded",
       "retry": "Retry",
-      "retrying": "Retrying…"
+      "retrying": "Retrying…",
+      "partial": "Queued again: {done} of {total} messages. {error}"
     }
   },
   "analysis": {

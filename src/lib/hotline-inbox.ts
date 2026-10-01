@@ -139,22 +139,28 @@ export function attachmentKind(url: string, hasVoice: boolean): InboxAttachment[
   return hasVoice && !NON_VOICE_EXT.test(url) ? "voice" : "photo";
 }
 
+function transcriptText(m: GqlGroundInboxMessage): string {
+  return m.transcript?.trim() ?? "";
+}
+
 function voiceTranscript(m: GqlGroundInboxMessage): VoiceTranscript | null {
   if (!m.hasVoice) return null;
-  const text = m.transcript?.trim() ?? "";
+  const text = transcriptText(m);
   if (text.length > 0) return { status: "ready", text };
   return m.transcribeFailedAt ? { status: "failed", error: m.transcribeError } : { status: "pending" };
 }
 
 /** A message's failure markers, transcription first: a failed
  * transcription also holds the message out of enrichment, so it is the
- * one to retry first. */
+ * one to retry first. A stage whose output exists wins over its marker:
+ * clear-api does not clear the marker when a late transcript or
+ * classification lands after the drain gave up. */
 export function messageFailures(m: GqlGroundInboxMessage): InboxFailure[] {
   const failures: InboxFailure[] = [];
-  if (m.transcribeFailedAt) {
+  if (m.transcribeFailedAt && transcriptText(m).length === 0) {
     failures.push({ messageId: m.id, stage: "TRANSCRIBE", error: m.transcribeError, failedAt: m.transcribeFailedAt });
   }
-  if (m.enrichFailedAt) {
+  if (m.enrichFailedAt && !m.classification) {
     failures.push({ messageId: m.id, stage: "ENRICH", error: m.enrichError, failedAt: m.enrichFailedAt });
   }
   return failures;

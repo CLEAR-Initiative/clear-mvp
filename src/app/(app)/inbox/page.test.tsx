@@ -448,4 +448,57 @@ describe("InboxPage pipeline failures", () => {
     await act(async () => resolve());
     await waitFor(() => expect(screen.getByTestId("inbox-retry")).not.toBeDisabled());
   });
+
+  it("keeps review actions off while the entry's retry is in flight", async () => {
+    let resolve: () => void = () => undefined;
+    retryMutateAsync.mockImplementation(() => new Promise<void>((r) => { resolve = r; }));
+    openUnclassified();
+    fireEvent.click(rowFor("Thread d"));
+    fireEvent.click(screen.getByTestId("inbox-retry"));
+    expect(screen.getByTestId("inbox-archive")).toBeDisabled();
+    fireEvent.keyDown(window, { key: "e" });
+    expect(reviewMutate).not.toHaveBeenCalled();
+    await act(async () => resolve());
+    await waitFor(() => expect(screen.getByTestId("inbox-archive")).not.toBeDisabled());
+  });
+
+  it("keeps a retry's state on its own entry when the reader moves on mid-retry", async () => {
+    let reject: (err: Error) => void = () => undefined;
+    retryMutateAsync.mockImplementation(() => new Promise<void>((_r, rj) => { reject = rj; }));
+    openUnclassified();
+    fireEvent.click(rowFor("Thread d"));
+    fireEvent.click(screen.getByTestId("inbox-retry"));
+
+    fireEvent.click(rowFor("Thread e"));
+    expect(screen.getByTestId("inbox-retry")).not.toBeDisabled();
+    expect(screen.getByTestId("inbox-retry")).toHaveTextContent("failure.retry");
+
+    await act(async () => reject(new Error("Ground message not found")));
+    await waitFor(() => expect(invalidate).toHaveBeenCalledTimes(1));
+    expect(screen.getByTestId("inbox-failure")).not.toHaveTextContent("Ground message not found");
+    expect(screen.queryByTestId("inbox-toast")).not.toBeInTheDocument();
+  });
+
+  it("retries every message even when one keeps failing, and says how many went back", async () => {
+    inboxData.threads.push(thread("f"));
+    inboxData.messages.push(
+      { ...message("m6", "f", null, "2026-09-15T05:00:00Z"), enrichFailedAt: FAILED_AT },
+      { ...message("m7", "f", null, "2026-09-15T05:30:00Z"), enrichFailedAt: FAILED_AT },
+    );
+    retryMutateAsync.mockImplementation(async ({ messageId }: { messageId: string }) => {
+      if (messageId === "m6") throw new Error("upstream 503");
+      return {};
+    });
+    openUnclassified();
+    fireEvent.click(rowFor("Thread f"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("inbox-retry"));
+    });
+    expect(retryMutateAsync.mock.calls.map(([input]) => input.messageId)).toEqual(["m6", "m7"]);
+    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("inbox-failure")).toHaveTextContent(
+      'failure.partial:{"done":1,"total":2,"error":"upstream 503"}',
+    );
+    expect(screen.queryByTestId("inbox-toast")).not.toBeInTheDocument();
+  });
 });

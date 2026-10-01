@@ -2902,7 +2902,8 @@
       },
       "noError": "No se registraron detalles del error",
       "retry": "Reintentar",
-      "retrying": "Reintentando…"
+      "retrying": "Reintentando…",
+      "partial": "De nuevo en cola: {done} de {total} mensajes. {error}"
     }
   },
   "analysis": {

@@ -94,7 +94,7 @@ function TranscriptBlock({ transcript, caption }: { transcript: VoiceTranscript;
       ) : transcript.status === "failed" ? (
         <p className={styles.transcriptFailed}>
           {t("pane.transcriptFailed")}
-          {transcript.error && <span className={styles.failureError}>{transcript.error}</span>}
+          {transcript.error && <span className={styles.failureError} dir="auto">{transcript.error}</span>}
         </p>
       ) : (
         <p className={styles.narrativeEmpty}>{t("pane.transcriptPending")}</p>
@@ -120,11 +120,14 @@ export const TRANSLATION_ENABLED = false;
 function FailureNotice({
   entry,
   retrying,
+  disabled,
   error,
   onRetry,
 }: {
   entry: InboxEntry;
   retrying: boolean;
+  /** Another action on this entry is in flight. */
+  disabled: boolean;
   error: string | null;
   onRetry: () => void;
 }) {
@@ -140,7 +143,7 @@ function FailureNotice({
         {entry.failures.map((f) => (
           <li key={`${f.messageId}:${f.stage}`} data-testid="inbox-failure-item" data-stage={f.stage}>
             <span className={styles.failureStage}>{t(`failure.stages.${f.stage}`)}</span>
-            <span className={styles.failureError}>{f.error ?? t("failure.noError")}</span>
+            <span className={styles.failureError} dir="auto">{f.error ?? t("failure.noError")}</span>
           </li>
         ))}
       </ul>
@@ -148,14 +151,18 @@ function FailureNotice({
         <button
           type="button"
           className={styles.btn}
-          disabled={retrying}
+          disabled={retrying || disabled}
           onClick={onRetry}
           data-testid="inbox-retry"
         >
           <IconRefresh size={15} />
           {t(retrying ? "failure.retrying" : "failure.retry")}
         </button>
-        {error && <span className={styles.actionError}>{error}</span>}
+        {error && (
+          <span className={styles.actionError} role="alert">
+            {error}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -261,7 +268,7 @@ export function ReadingPane({
 
       <div className={styles.paneBody}>
         {entry.processing === "failed" && (
-          <FailureNotice entry={entry} retrying={retrying} error={retryError} onRetry={onRetry} />
+          <FailureNotice entry={entry} retrying={retrying} disabled={busy} error={retryError} onRetry={onRetry} />
         )}
         {entry.priorEntries > 0 && (
           <div className={styles.trust} data-testid="inbox-trust-line">
