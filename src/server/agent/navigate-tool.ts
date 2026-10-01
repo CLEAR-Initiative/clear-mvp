@@ -88,7 +88,17 @@ function labelOf(kind: EntityKind, id: string, item: Record<string, unknown>): s
   return name.length > LABEL_CHARS ? `${name.slice(0, LABEL_CHARS - 1)}…` : name;
 }
 
-/** Resolve a place name to the location CLEAR knows, as the user. */
+/** Candidates fetched per lookup: enough to tell a clear match from a tie. */
+const PLACE_CANDIDATES = 5;
+/** clear_find_location's score for an exact name match. */
+const EXACT_MATCH = 100;
+
+/**
+ * Resolve a place name to the one location CLEAR knows by it, as the user.
+ * An exact name match wins; so does the only match. Anything else is
+ * AMBIGUOUS with the candidates, so the Agent asks rather than moving the
+ * user to whichever "… Darfur" happens to sort first.
+ */
 async function findPlace(
   run: RunCuratedTool,
   query: string,
@@ -98,34 +108,66 @@ async function findPlace(
 ): Promise<{ id: string; name: string } | NavigateError> {
   const outcome = await run(
     "clear_find_location",
-    { query, level, ...(withinLocationId ? { withinLocationId } : {}), limit: 1 },
+    { query, level, ...(withinLocationId ? { withinLocationId } : {}), limit: PLACE_CANDIDATES },
     signal,
   );
   if (!outcome.ok) return { error: outcome.error };
-  const found = (outcome.value as { items?: Array<{ id: string; name: string }> }).items?.[0];
-  if (!found) {
-    return { error: { code: "NOT_FOUND", message: `CLEAR has no ${level ? "region" : "country"} called ${query}.` } };
+  const { items = [], totalCount = items.length } = outcome.value as {
+    items?: Array<{ id: string; name: string; score?: number }>;
+    totalCount?: number;
+  };
+  const kind = level ? "region" : "country";
+  if (items.length === 0) {
+    return { error: { code: "NOT_FOUND", message: `CLEAR has no ${kind} called ${query}.` } };
   }
-  return found;
+  const exact = items.filter((i) => i.score === EXACT_MATCH);
+  if (exact.length === 1) return pick(exact[0]!);
+  if (exact.length === 0 && totalCount === 1) return pick(items[0]!);
+  const names = (exact.length > 1 ? exact : items).map((i) => i.name);
+  return {
+    error: {
+      code: "AMBIGUOUS",
+      message: `More than one ${kind} matches ${query}: ${names.join(", ")}${totalCount > items.length ? ", …" : ""}. Ask the user which one.`,
+    },
+  };
 }
+
+const pick = ({ id, name }: { id: string; name: string }) => ({ id, name });
 
 const isError = (v: unknown): v is NavigateError => !!v && typeof v === "object" && "error" in v;
 
+/** What navigate knows about the turn beyond its input. */
+export interface NavigateContext {
+  /**
+   * The user's active team, from the turn's Current view. The pages scope to
+   * this team only, so scope is checked against it when it's known.
+   */
+  activeTeamId?: string;
+}
+
 /**
- * Whether the user's teams let them see this country. A team without a
- * country (level 0) binding monitors globally, as the pages treat it; with
- * only country-scoped teams, the country must be one of their bindings.
+ * Whether the page will show this country. A team without a country
+ * (level 0) binding monitors globally, as the pages treat it; a
+ * country-scoped team must have the country among its bindings. The pages
+ * scope to the active team, so that is the team checked; only when the turn
+ * didn't say which team is active does any of the user's teams do.
  */
 async function countryInScope(
   run: RunCuratedTool,
   country: { id: string; name: string },
+  { activeTeamId }: NavigateContext,
   signal?: AbortSignal,
 ): Promise<true | NavigateError> {
   const outcome = await run("clear_whoami", {}, signal);
   if (!outcome.ok) return { error: outcome.error };
-  const teams =
-    (outcome.value as { teams?: Array<{ locations?: Array<{ id: string; name: string; level: number }> }> })
-      .teams ?? [];
+  const allTeams =
+    (
+      outcome.value as {
+        teams?: Array<{ id: string; locations?: Array<{ id: string; name: string; level: number }> }>;
+      }
+    ).teams ?? [];
+  const active = activeTeamId ? allTeams.filter((t) => t.id === activeTeamId) : [];
+  const teams = active.length > 0 ? active : allTeams;
   const bound = teams.map((t) => (t.locations ?? []).filter((l) => l.level === 0));
   if (bound.length === 0 || bound.some((countries) => countries.length === 0)) return true;
   const allowed = bound.flat();
@@ -134,7 +176,7 @@ async function countryInScope(
   return {
     error: {
       code: "OUT_OF_SCOPE",
-      message: `${country.name} is outside the user's team scope (${names}); the page can't show it.`,
+      message: `${country.name} is outside the ${active.length > 0 ? "active team's" : "user's team"} scope (${names}); the page can't show it.`,
     },
   };
 }
@@ -142,6 +184,7 @@ async function countryInScope(
 async function resolveScope(
   filters: { country?: string; region?: string },
   run: RunCuratedTool,
+  context: NavigateContext,
   signal?: AbortSignal,
 ): Promise<{ country?: { id: string; name: string }; region?: { id: string; name: string } } | NavigateError> {
   if (filters.region && !filters.country) {
@@ -150,7 +193,7 @@ async function resolveScope(
   if (!filters.country) return {};
   const country = await findPlace(run, filters.country, 0, undefined, signal);
   if (isError(country)) return country;
-  const inScope = await countryInScope(run, country, signal);
+  const inScope = await countryInScope(run, country, context, signal);
   if (isError(inScope)) return inScope;
   if (!filters.region) return { country };
   const region = await findPlace(run, filters.region, 1, country.id, signal);
@@ -165,10 +208,11 @@ function scopeLabel(parts: Array<string | undefined>): string {
 export async function resolveNavigation(
   { target }: NavigateInput,
   run: RunCuratedTool,
+  context: NavigateContext = {},
   signal?: AbortSignal,
 ): Promise<NavigateOutput | NavigateError> {
   if (target.kind === "map" || target.kind === "detection") {
-    const scope = await resolveScope(target.filters, run, signal);
+    const scope = await resolveScope(target.filters, run, context, signal);
     if (isError(scope)) return scope;
     if (target.kind === "map") {
       const { timeframe } = target.filters;
@@ -204,7 +248,7 @@ export async function resolveNavigation(
   };
 }
 
-export function createNavigateTool(run: RunCuratedTool) {
+export function createNavigateTool(run: RunCuratedTool, context: NavigateContext = {}) {
   return createTool({
     id: NAVIGATE_TOOL_ID,
     description:
@@ -214,6 +258,6 @@ export function createNavigateTool(run: RunCuratedTool) {
       "Thread and offers Back. Use it when the user asks to see, open, show or go to something.",
     inputSchema: navigateInputSchema,
     // No outputSchema: an error value must reach the model as-is.
-    execute: async (input, context) => resolveNavigation(input, run, context?.abortSignal),
+    execute: async (input, toolContext) => resolveNavigation(input, run, context, toolContext?.abortSignal),
   });
 }

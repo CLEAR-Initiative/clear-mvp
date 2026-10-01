@@ -667,12 +667,56 @@ describe("POST /api/agent — Agent navigation", () => {
       expect(await navigateTo({ kind: "map", filters: { country: "Sudan" } })).toMatchObject({ moved: true });
     });
 
-    async function navigateTo(target: Record<string, unknown>) {
+    async function navigateTo(target: Record<string, unknown>, currentView?: Record<string, unknown>) {
       useScript([{ toolCalls: [{ name: "navigate", input: { target } }] }, { text: "Done." }]);
       const POST = await loadRoute();
-      const chunks = parseUIMessageStream(await (await POST(agentRequest(ALICE, turn("t1", "Show me")))).text());
+      const body = { ...turn("t1", "Show me"), ...(currentView ? { currentView } : {}) };
+      const chunks = parseUIMessageStream(await (await POST(agentRequest(ALICE, body))).text());
       return navigateOutput(chunks);
     }
+
+    it("checks scope against the active team when the Current view names it", async () => {
+      myTeams = [
+        { id: "team-chad", name: "Chad team", locations: [{ id: "loc-tcd", name: "Chad", level: 0 }] },
+        { id: "team-global", name: "Global", locations: [] },
+      ];
+      expect(
+        await navigateTo({ kind: "map", filters: { country: "Sudan" } }, { route: "/event/ev-1", teamId: "team-chad" }),
+      ).toEqual({
+        error: {
+          code: "OUT_OF_SCOPE",
+          message: "Sudan is outside the active team's scope (Chad); the page can't show it.",
+        },
+      });
+      expect(
+        await navigateTo({ kind: "map", filters: { country: "Sudan" } }, { route: "/event/ev-1", teamId: "team-global" }),
+      ).toMatchObject({ moved: true });
+    });
+
+    it("asks rather than guessing when a place name matches several", async () => {
+      clearApi.dataHandlers.set("ClearLocationIndex", () => ({
+        countries: [{ id: "loc-sdn", name: "Sudan", level: 0, pCode: "SD", ancestorIds: [] }],
+        states: ["North Darfur", "South Darfur", "West Darfur"].map((name, i) => ({
+          id: `loc-d${i}`,
+          name,
+          level: 1,
+          pCode: `SD0${i}`,
+          ancestorIds: ["loc-sdn"],
+        })),
+        districts: [],
+      }));
+      const output = (await navigateTo({ kind: "map", filters: { country: "Sudan", region: "Darfur" } })) as {
+        error: { code: string; message: string };
+      };
+      expect(output.error.code).toBe("AMBIGUOUS");
+      expect(output.error.message).toContain("North Darfur");
+      expect(output.error.message).toContain("West Darfur");
+      // An exact name still wins over its look-alikes.
+      expect(await navigateTo({ kind: "map", filters: { country: "Sudan", region: "South Darfur" } })).toMatchObject({
+        moved: true,
+        content: { label: "Sudan · South Darfur" },
+      });
+    });
 
     it("builds a Map deep link from names CLEAR resolves", async () => {
       expect(

@@ -34,9 +34,17 @@ export interface ClearAgentRequest {
   locale: Locale;
   /** `agent_clear_data` on: offer CLEAR's own data as tools. */
   clearData: boolean;
+  /** The user's active team, from the turn's Current view (Agent navigation's scope check). */
+  activeTeamId?: string;
 }
 
-export async function createClearAgent({ user, cookie, locale, clearData }: ClearAgentRequest): Promise<Mastra> {
+export async function createClearAgent({
+  user,
+  cookie,
+  locale,
+  clearData,
+  activeTeamId,
+}: ClearAgentRequest): Promise<Mastra> {
   const storage = new MastraCompositeStore({
     id: "clear-api-conversations",
     domains: {
@@ -57,7 +65,7 @@ export async function createClearAgent({ user, cookie, locale, clearData }: Clea
     model: resolveClearAgentModel(),
     tools: {
       [NRC_FIND_TOOL_ID]: createNrcFindTool(),
-      ...(clear ? { ...clear.tools, [NAVIGATE_TOOL_ID]: createNavigateTool(clear.run) } : {}),
+      ...(clear ? { ...clear.tools, [NAVIGATE_TOOL_ID]: createNavigateTool(clear.run, { activeTeamId }) } : {}),
     },
     memory: new Memory({
       storage,
