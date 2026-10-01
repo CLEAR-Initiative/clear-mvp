@@ -1,39 +1,23 @@
 "use client";
 
 /**
- * One Thread with the CLEAR Agent. Streams turns from `/api/agent`, which
- * stores them as a Conversation in clear-api, so only the newest message is
- * sent: the Agent loads the earlier turns itself.
+ * One Thread with the CLEAR Agent, rendered from a shared `Chat` so the
+ * Agent drawer and the Agent page show the same live Thread. Turns are
+ * stored as a Conversation in clear-api by `/api/agent`.
  */
 
-import { useMemo, useState } from "react";
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import { useState } from "react";
+import { useChat, type Chat } from "@ai-sdk/react";
+import type { UIMessage } from "ai";
 import { Alert, Box, Button, Group, Loader, Stack, Text, Textarea } from "@mantine/core";
 import { IconAlertTriangle, IconSend } from "@tabler/icons-react";
 
 export interface AgentThreadProps {
-  threadId: string;
-  /** Turns already stored for this Thread, oldest first. */
-  initialMessages?: UIMessage[];
+  chat: Chat<UIMessage>;
 }
 
-export function AgentThread({ threadId, initialMessages }: AgentThreadProps) {
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport<UIMessage>({
-        api: "/api/agent",
-        prepareSendMessagesRequest: ({ messages, id }) => ({
-          body: { threadId: id, message: messages[messages.length - 1] },
-        }),
-      }),
-    [],
-  );
-  const { messages, sendMessage, status, error } = useChat({
-    id: threadId,
-    messages: initialMessages,
-    transport,
-  });
+export function AgentThread({ chat }: AgentThreadProps) {
+  const { messages, sendMessage, status, error } = useChat({ chat });
   const [draft, setDraft] = useState("");
   const busy = status === "submitted" || status === "streaming";
 
