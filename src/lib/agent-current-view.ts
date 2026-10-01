@@ -8,7 +8,7 @@
  * page that unmounts withdraws what it published.
  */
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
   CURRENT_VIEW_MAX_LIST,
   type CurrentViewEntityKind,
@@ -35,7 +35,26 @@ export interface CurrentView {
   filters?: CurrentViewFilters;
 }
 
-export type PublishedView = Omit<CurrentView, "route" | "teamId">;
+/** An entity with its display name, which stays on screen and is never sent with a turn. */
+export interface LabelledEntity extends CurrentViewEntity {
+  label?: string;
+}
+
+/** What a page publishes: the Current view's parts, the entity with its name. */
+export interface PublishedView {
+  entity?: LabelledEntity;
+  filters?: CurrentViewFilters;
+}
+
+/** The Current view as the Agent drawer shows it: with the entity's name. */
+export interface DisplayedCurrentView extends Omit<CurrentView, "teamId"> {
+  entity?: LabelledEntity;
+}
+
+/** The app section a route belongs to: its first path segment (`/map/x` → `map`). */
+export function sectionOf(route: string): string {
+  return route.split("/")[1] ?? "";
+}
 
 interface Entry {
   token: symbol;
@@ -45,13 +64,25 @@ interface Entry {
 // Module state: one browser tab, one Current view. A stack, so a drawer
 // over a page hands the view back to the page when it closes.
 let published: Entry[] = [];
+const listeners = new Set<() => void>();
+
+function setPublished(next: Entry[]): void {
+  published = next;
+  for (const listener of listeners) listener();
+}
 
 export function publishCurrentView(view: PublishedView): () => void {
   const token = Symbol("current-view");
-  published = [...published, { token, view }];
-  return () => {
-    published = published.filter((e) => e.token !== token);
-  };
+  setPublished([...published, { token, view }]);
+  return () => setPublished(published.filter((e) => e.token !== token));
+}
+
+/** The newest published entity and filters, each from whoever has one. */
+function newest(): PublishedView {
+  const newestFirst = [...published].reverse();
+  const entity = newestFirst.find((e) => e.view.entity)?.view.entity;
+  const filters = newestFirst.find((e) => e.view.filters)?.view.filters;
+  return { ...(entity ? { entity } : {}), ...(filters ? { filters } : {}) };
 }
 
 /**
@@ -60,15 +91,32 @@ export function publishCurrentView(view: PublishedView): () => void {
  * drawer over Detection reports the event within Detection's filters.
  */
 export function currentViewFor(pathname: string, teamId?: string | null): CurrentView {
-  const newestFirst = [...published].reverse();
-  const entity = newestFirst.find((e) => e.view.entity)?.view.entity;
-  const filters = newestFirst.find((e) => e.view.filters)?.view.filters;
+  const { entity, filters } = newest();
   return {
     route: pathname,
-    ...(entity ? { entity } : {}),
+    // Identifiers only: the display name stays on screen.
+    ...(entity ? { entity: { kind: entity.kind, id: entity.id } } : {}),
     ...(teamId ? { teamId } : {}),
     ...(filters ? { filters } : {}),
   };
+}
+
+/** The Current view as the Agent drawer shows it, entity names included. */
+export function displayedCurrentView(pathname: string): DisplayedCurrentView {
+  return { route: pathname, ...newest() };
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+const snapshot = () => published;
+
+/** The Current view as shown, re-rendering whenever a page publishes or withdraws. */
+export function useDisplayedCurrentView(pathname: string): DisplayedCurrentView {
+  // Subscribing to the stack itself: a new array on every change.
+  useSyncExternalStore(subscribe, snapshot, snapshot);
+  return displayedCurrentView(pathname);
 }
 
 /**
@@ -86,7 +134,7 @@ export function useAgentCurrentView(view: PublishedView | null): void {
 
 /** Test seam: forget everything published. */
 export function resetCurrentViews(): void {
-  published = [];
+  setPublished([]);
 }
 
 // ── Filters from the pages' nav contexts ──────────────────────────────────

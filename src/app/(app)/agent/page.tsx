@@ -24,7 +24,9 @@ export default function AgentPage() {
   const conversations = history.data?.pages.flatMap((p) => p.items) ?? [];
 
   return (
-    <>
+    // Exactly the viewport (less the mobile top bar and bottom nav), so the
+    // Thread scrolls inside it and its input box stays on screen.
+    <Box h={{ base: "calc(100dvh - 128px)", sm: "100dvh" }} style={{ display: "flex", flexDirection: "column" }}>
       <PageHeader
         title={t("page.title")}
         subtitle={t("page.subtitle")}
@@ -46,7 +48,7 @@ export default function AgentPage() {
               <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={newThread}>
                 {t("drawer.newThread")}
               </Button>
-              <ScrollArea.Autosize mah="calc(100vh - 220px)">
+              <ScrollArea.Autosize mah="calc(100dvh - 220px)">
                 {history.isLoading && <Loader size="sm" />}
                 {conversations.map((c) => (
                   <NavLink
@@ -76,8 +78,9 @@ export default function AgentPage() {
               </ScrollArea.Autosize>
             </Stack>
           </Box>
-          <Box p={24} style={{ flex: 1, minWidth: 0, overflowY: "auto" }}>
-            <Box style={{ maxWidth: 820 }}>
+          {/* The Thread fills the height: its turns scroll, its input box stays at the bottom. */}
+          <Box p={24} style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <Box style={{ maxWidth: 820, width: "100%", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
               <Group justify="flex-end" mb={16} hiddenFrom="sm">
                 <Button size="xs" variant="subtle" leftSection={<IconPlus size={14} />} onClick={newThread}>
                   {t("drawer.newThread")}
@@ -88,6 +91,6 @@ export default function AgentPage() {
           </Box>
         </Group>
       )}
-    </>
+    </Box>
   );
 }

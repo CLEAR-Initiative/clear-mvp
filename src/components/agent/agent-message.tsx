@@ -196,7 +196,7 @@ export function AgentMessage({ message }: { message: UIMessage }) {
       .join("\n");
     return (
       <Group justify="flex-end" data-role="user">
-        <Paper radius="md" px={14} py={10} bg="var(--mantine-color-gray-1)" maw="85%">
+        <Paper radius="md" px={14} py={10} bg="var(--color-bg-muted)" maw="85%">
           <Text style={{ whiteSpace: "pre-wrap" }}>{text}</Text>
         </Paper>
       </Group>

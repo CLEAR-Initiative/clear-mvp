@@ -169,7 +169,10 @@ export function SignalDetailContent({
   // Tell the CLEAR Agent which signal is on screen (identifiers only).
   // Only a loaded signal's id: the route segment is whatever the URL says.
   const agentViewId = signal?.id;
-  useAgentCurrentView(agentViewId ? { entity: { kind: "signal", id: agentViewId } } : null);
+  // Its title rides along for the Agent drawer's context row only.
+  useAgentCurrentView(
+    agentViewId ? { entity: { kind: "signal", id: agentViewId, label: signal?.title ?? undefined } } : null,
+  );
   const t = useTranslations("signalDetail");
   const tCommon = useTranslations("common");
   const tChallenge = useTranslations("locationChallenge");

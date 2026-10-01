@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import {
   currentViewFor,
   detectionFiltersForAgent,
+  displayedCurrentView,
   mapFiltersForAgent,
   publishCurrentView,
   resetCurrentViews,
   useAgentCurrentView,
+  useDisplayedCurrentView,
 } from "~/lib/agent-current-view";
 
 afterEach(() => resetCurrentViews());
@@ -88,5 +90,26 @@ describe("filters from the pages' nav contexts", () => {
       entity: { kind: "event", id: "e1" },
       filters: { country: "Sudan" },
     });
+  });
+});
+
+describe("what the Agent drawer shows of the Current view", () => {
+  it("keeps an entity's display name on screen and never sends it", () => {
+    const unpublish = publishCurrentView({ entity: { kind: "event", id: "e1", label: "Floods in Kassala" } });
+    expect(currentViewFor("/event/e1").entity).toEqual({ kind: "event", id: "e1" });
+    expect(displayedCurrentView("/event/e1").entity).toEqual({ kind: "event", id: "e1", label: "Floods in Kassala" });
+    unpublish();
+  });
+
+  it("re-renders a subscriber when a page publishes or withdraws", () => {
+    const { result } = renderHook(() => useDisplayedCurrentView("/map"));
+    expect(result.current.entity).toBeUndefined();
+    let unpublish = () => {};
+    act(() => {
+      unpublish = publishCurrentView({ entity: { kind: "crisis", id: "c1", label: "Sudan" } });
+    });
+    expect(result.current.entity?.label).toBe("Sudan");
+    act(() => unpublish());
+    expect(result.current.entity).toBeUndefined();
   });
 });
