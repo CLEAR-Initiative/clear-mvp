@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { act, renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook } from "@testing-library/react";
 import {
   currentViewFor,
   detectionFiltersForAgent,
@@ -11,7 +11,10 @@ import {
   useDisplayedCurrentView,
 } from "~/lib/agent-current-view";
 
-afterEach(() => resetCurrentViews());
+afterEach(() => {
+  cleanup();
+  resetCurrentViews();
+});
 
 describe("Current view registry", () => {
   it("is just the route when nothing is published", () => {
