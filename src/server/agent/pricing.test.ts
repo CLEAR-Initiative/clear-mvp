@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertClearAgentModelPriced, MODEL_PRICES, turnCostUsd } from "~/server/agent/pricing";
+import { assertClearAgentModelConfigured, MODEL_PRICES, turnCostUsd } from "~/server/agent/pricing";
 
 describe("Agent pricing", () => {
   it("prices a turn from input and output tokens per million", () => {
@@ -9,16 +9,29 @@ describe("Agent pricing", () => {
   });
 
   it("fails startup for a configured model with no price", () => {
-    expect(() => assertClearAgentModelPriced({ CLEAR_AGENT_MODEL: "openai/whatever" })).toThrow(
+    expect(() => assertClearAgentModelConfigured({ CLEAR_AGENT_MODEL: "openai/whatever" })).toThrow(
       /no price/,
     );
   });
 
   it("starts with every priced model, and with no model configured", () => {
     for (const id of Object.keys(MODEL_PRICES)) {
-      expect(() => assertClearAgentModelPriced({ CLEAR_AGENT_MODEL: id })).not.toThrow();
+      expect(() => assertClearAgentModelConfigured({ CLEAR_AGENT_MODEL: id })).not.toThrow();
     }
-    expect(() => assertClearAgentModelPriced({})).not.toThrow();
+    expect(() => assertClearAgentModelConfigured({})).not.toThrow();
+  });
+
+  it("fails startup for the scripted test model in production unless allowed", () => {
+    expect(() =>
+      assertClearAgentModelConfigured({ CLEAR_AGENT_MODEL: "scripted/e2e", NODE_ENV: "production" }),
+    ).toThrow(/for tests/);
+    expect(() =>
+      assertClearAgentModelConfigured({
+        CLEAR_AGENT_MODEL: "scripted/e2e",
+        NODE_ENV: "production",
+        CLEAR_AGENT_ALLOW_SCRIPTED_MODEL: "1",
+      }),
+    ).not.toThrow();
   });
 
   it("does not treat inherited object keys as prices", () => {

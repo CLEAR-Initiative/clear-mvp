@@ -49,13 +49,22 @@ export function turnCostUsd(modelId: string, tokens: TurnTokens): number {
 }
 
 /**
- * Fail startup when the configured model has no price. An unset model is
- * fine at startup — the Agent just answers 503 until one is configured.
+ * Fail startup when the configured model can't run as configured: it has no
+ * price, or it is the scripted test model in production without the explicit
+ * allow. An unset model is fine at startup — the Agent answers 503 until one
+ * is configured.
  */
-export function assertClearAgentModelPriced(
+export function assertClearAgentModelConfigured(
   env: Record<string, string | undefined> = process.env,
 ): void {
   const id = env.CLEAR_AGENT_MODEL?.trim();
+  if (
+    id === SCRIPTED_MODEL_ID &&
+    env.NODE_ENV === "production" &&
+    env.CLEAR_AGENT_ALLOW_SCRIPTED_MODEL !== "1"
+  ) {
+    throw new Error(`CLEAR_AGENT_MODEL "${id}" is for tests; set a real model.`);
+  }
   if (id && !priceFor(id)) {
     throw new Error(
       `CLEAR_AGENT_MODEL "${id}" has no price in src/server/agent/pricing.ts. ` +

@@ -117,7 +117,16 @@ export async function POST(req: Request): Promise<Response> {
 
   const startedAt = Date.now();
   const locale = pickLocale(readCookie(cookie, LOCALE_COOKIE), req.headers.get("accept-language"));
-  const mastra = createClearAgent({ user: session.user, cookie, locale });
+  let mastra: ReturnType<typeof createClearAgent>;
+  try {
+    mastra = createClearAgent({ user: session.user, cookie, locale });
+  } catch (err) {
+    console.error("[agent] could not build the Agent:", err);
+    return Response.json(
+      { error: "The CLEAR Agent is not configured.", code: "AGENT_NOT_CONFIGURED" },
+      { status: 503 },
+    );
+  }
   let stream: Awaited<ReturnType<typeof handleChatStream>>;
   try {
     stream = await handleChatStream({
