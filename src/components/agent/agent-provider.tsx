@@ -55,6 +55,8 @@ export interface AgentContextValue {
   open: boolean;
   setOpen: (open: boolean) => void;
   threadId: string;
+  /** The active Thread's stored turns are still being loaded into its chat. */
+  loading: boolean;
   /** The active Thread's stored title, once it has been loaded; null otherwise. */
   loadedTitle: string | null;
   /** The active Thread's chat, shared by the drawer and the Agent page. */
@@ -329,6 +331,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       open: available && state.open,
       setOpen,
       threadId: state.threadId,
+      loading: available && pendingLoad !== null && pendingLoad === state.threadId,
       loadedTitle: loadedThread?.id === state.threadId ? loadedThread.title : null,
       chat,
       openThread,
@@ -339,7 +342,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       viewKey,
       returning: returning !== null,
     }),
-    [available, state, loadedThread, setOpen, chat, openThread, newThread, applyNavigation, canGoBack, goBack, viewKey, returning],
+    [available, state, pendingLoad, loadedThread, setOpen, chat, openThread, newThread, applyNavigation, canGoBack, goBack, viewKey, returning],
   );
 
   return (

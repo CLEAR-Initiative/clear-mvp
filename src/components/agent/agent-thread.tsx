@@ -17,6 +17,7 @@ import type { UIMessage } from "ai";
 import { ActionIcon, Alert, Box, Button, Group, Loader, Stack, Text, Textarea } from "@mantine/core";
 import { IconAlertTriangle, IconClockPause, IconSend } from "@tabler/icons-react";
 import { AgentMessage } from "~/components/agent/agent-message";
+import { useOptionalAgent } from "~/components/agent/agent-provider";
 import { useShownCurrentView } from "~/components/agent/use-shown-current-view";
 import { sectionOf, type DisplayedCurrentView } from "~/lib/agent-current-view";
 
@@ -58,7 +59,11 @@ export function AgentThread({ chat }: AgentThreadProps) {
   const { messages, sendMessage, status, error } = useChat({ chat });
 
   const [draft, setDraft] = useState("");
-  const busy = status === "submitted" || status === "streaming";
+  // A stored Thread whose turns are still loading looks empty: sending now
+  // would stop its turns ever being shown, so wait.
+  const agent = useOptionalAgent();
+  const loading = agent?.loading === true && agent.threadId === chat.id;
+  const busy = loading || status === "submitted" || status === "streaming";
 
   // Follow the newest turn as it streams, unless the user has scrolled up to read.
   const scroller = useRef<HTMLDivElement>(null);
@@ -76,10 +81,11 @@ export function AgentThread({ chat }: AgentThreadProps) {
     send(text);
   }
 
-  const streamed = messages.reduce(
-    (n, m) => n + m.parts.reduce((k, p) => k + (p.type === "text" ? p.text.length : 1), 0),
-    0,
-  );
+  // Changes whenever the turns grow: text streaming in, or a tool moving on
+  // to its result (sources, a navigation notice).
+  const streamed = messages
+    .map((m) => m.parts.map((p) => (p.type === "text" ? p.text.length : `${p.type}:${(p as { state?: string }).state ?? ""}`)).join())
+    .join("|");
   useEffect(() => {
     const el = scroller.current;
     if (el && following.current) el.scrollTop = el.scrollHeight;
@@ -97,7 +103,13 @@ export function AgentThread({ chat }: AgentThreadProps) {
         }}
       >
         <Stack gap={16}>
-          {messages.length === 0 && <EmptyThread onAsk={send} disabled={busy} />}
+          {loading ? (
+            <Group gap={8} data-testid="agent-thread-loading">
+              <Loader size={12} />
+            </Group>
+          ) : (
+            messages.length === 0 && <EmptyThread onAsk={send} disabled={busy} />
+          )}
           {messages.map((message) => (
             <AgentMessage key={message.id} message={message} />
           ))}
@@ -133,6 +145,7 @@ export function AgentThread({ chat }: AgentThreadProps) {
           autosize
           minRows={1}
           maxRows={8}
+          disabled={loading}
           style={{ flex: 1 }}
           px={8}
           value={draft}
@@ -150,7 +163,7 @@ export function AgentThread({ chat }: AgentThreadProps) {
           variant="filled"
           color="var(--color-accent)"
           aria-label={t("send")}
-          loading={busy}
+          loading={busy && !loading}
           disabled={busy || !draft.trim()}
           onClick={sendDraft}
         >

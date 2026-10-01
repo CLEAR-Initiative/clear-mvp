@@ -24,6 +24,7 @@ let conversations: Array<{ id: string; title: string | null; updatedAt: string }
 let team: { activeTeamId: string; activeTeam: { id: string; name: string } } | null = null;
 vi.mock("~/providers/team-provider", () => ({ useOptionalTeam: () => team }));
 let storedConversation: { id: string; title: string; messages: unknown[] } | null = null;
+let conversationLoading = false;
 const getConversation = vi.fn();
 vi.mock("~/trpc/react", () => ({
   api: {
@@ -36,6 +37,7 @@ vi.mock("~/trpc/react", () => ({
       getConversation: {
         useQuery: (input: { id: string }, opts: { enabled: boolean }) => {
           getConversation(input, opts);
+          if (opts.enabled && conversationLoading) return { isSuccess: false, data: undefined };
           return opts.enabled
             ? { isSuccess: true, data: storedConversation?.id === input.id ? storedConversation : null }
             : { isSuccess: false, data: undefined };
@@ -86,6 +88,7 @@ beforeEach(() => {
   pathname = "/map";
   agent = undefined;
   storedConversation = null;
+  conversationLoading = false;
   conversations = [];
   team = null;
   getConversation.mockClear();
@@ -172,6 +175,18 @@ describe("Thread restore", () => {
     expect(agent!.threadId).toBe("t-saved");
     expect(agent!.chat.id).toBe("t-saved");
     expect(agent!.chat.messages.map((m) => m.id)).toEqual(["m1", "m2"]);
+  });
+
+  it("doesn't offer a loading Thread's empty state, so its turns can't be hidden", async () => {
+    sessionStorage.setItem(
+      "agent-drawer",
+      JSON.stringify({ open: true, threadId: "t-saved", userId: "u-alice" }),
+    );
+    conversationLoading = true;
+    renderDrawer();
+    expect(await screen.findByTestId("agent-thread-loading")).toBeInTheDocument();
+    expect(screen.queryByTestId("agent-suggestion")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Message the CLEAR Agent" })).toBeDisabled();
   });
 
   it("never restores another user's Thread on the same tab, and forgets it", () => {
@@ -289,6 +304,8 @@ describe("AgentDrawer header", () => {
     expect(await item(/All conversations/)).toHaveAttribute("href", "/agent");
     fireEvent.click(await item(/Access in Darfur/));
     expect(agent!.threadId).toBe("t-darfur");
+    fireEvent.click(screen.getByRole("button", { name: "Recent conversations" }));
+    expect(await item(/Access in Darfur/)).toHaveAttribute("aria-current", "true");
   });
 
   it("expands to the Agent page", async () => {
