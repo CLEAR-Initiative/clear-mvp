@@ -12,6 +12,11 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   return <TeamContext.Provider value={team}>{children}</TeamContext.Provider>;
 }
 
+/** The team context, or null outside a TeamProvider (e.g. isolated tests). */
+export function useOptionalTeam() {
+  return useContext(TeamContext);
+}
+
 export function useTeam() {
   const ctx = useContext(TeamContext);
   if (!ctx) throw new Error("useTeam must be used within TeamProvider");

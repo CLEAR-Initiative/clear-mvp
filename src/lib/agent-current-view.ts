@@ -9,27 +9,33 @@
  */
 
 import { useEffect } from "react";
+import {
+  CURRENT_VIEW_MAX_LIST,
+  type CurrentViewEntityKind,
+  type CurrentViewFilterKey,
+  type CurrentViewFilters,
+  type CurrentViewFilterValue,
+} from "~/lib/agent-current-view-contract";
 import type { DetectionNavContext } from "~/lib/detection-nav-context";
 import type { MapNavContext } from "~/lib/map-nav-context";
 
-export type CurrentViewEntityKind = "event" | "signal" | "crisis";
+export type { CurrentViewEntityKind, CurrentViewFilterValue } from "~/lib/agent-current-view-contract";
 
 export interface CurrentViewEntity {
   kind: CurrentViewEntityKind;
   id: string;
 }
 
-/** Filter values are what the Map and Detection nav contexts store. */
-export type CurrentViewFilterValue = string | number | boolean | null | string[];
-
 export interface CurrentView {
   /** The page path, e.g. `/event/abc`. */
   route: string;
   entity?: CurrentViewEntity;
-  filters?: Record<string, CurrentViewFilterValue>;
+  /** The user's active team, which the pages scope to. */
+  teamId?: string;
+  filters?: CurrentViewFilters;
 }
 
-export type PublishedView = Omit<CurrentView, "route">;
+export type PublishedView = Omit<CurrentView, "route" | "teamId">;
 
 interface Entry {
   token: symbol;
@@ -53,11 +59,16 @@ export function publishCurrentView(view: PublishedView): () => void {
  * each come from the newest publisher that has one, so an event preview
  * drawer over Detection reports the event within Detection's filters.
  */
-export function currentViewFor(pathname: string): CurrentView {
+export function currentViewFor(pathname: string, teamId?: string | null): CurrentView {
   const newestFirst = [...published].reverse();
   const entity = newestFirst.find((e) => e.view.entity)?.view.entity;
   const filters = newestFirst.find((e) => e.view.filters)?.view.filters;
-  return { route: pathname, ...(entity ? { entity } : {}), ...(filters ? { filters } : {}) };
+  return {
+    route: pathname,
+    ...(entity ? { entity } : {}),
+    ...(teamId ? { teamId } : {}),
+    ...(filters ? { filters } : {}),
+  };
 }
 
 /**
@@ -80,22 +91,18 @@ export function resetCurrentViews(): void {
 
 // ── Filters from the pages' nav contexts ──────────────────────────────────
 
-/** List filters are capped: the Agent needs the scope, not a dump. */
-const MAX_LIST = 50;
-
-function compactFilters(
-  entries: Record<string, CurrentViewFilterValue | undefined>,
-): Record<string, CurrentViewFilterValue> {
-  const out: Record<string, CurrentViewFilterValue> = {};
-  for (const [key, value] of Object.entries(entries)) {
+/** Keys come from the shared contract, so the route accepts every one. */
+function compactFilters(entries: Partial<Record<CurrentViewFilterKey, CurrentViewFilterValue | undefined>>): CurrentViewFilters {
+  const out: CurrentViewFilters = {};
+  for (const [key, value] of Object.entries(entries) as Array<[CurrentViewFilterKey, CurrentViewFilterValue | undefined]>) {
     if (value === undefined) continue; // unset; null stays (e.g. "all time")
-    out[key] = Array.isArray(value) ? value.slice(0, MAX_LIST) : value;
+    out[key] = Array.isArray(value) ? value.slice(0, CURRENT_VIEW_MAX_LIST) : value;
   }
   return out;
 }
 
 /** The Map's filters, from the shape it already writes for detail prev/next. */
-export function mapFiltersForAgent(ctx: MapNavContext): Record<string, CurrentViewFilterValue> {
+export function mapFiltersForAgent(ctx: MapNavContext): CurrentViewFilters {
   return compactFilters({
     teamId: ctx.teamId,
     locationId: ctx.locationId,
@@ -107,9 +114,7 @@ export function mapFiltersForAgent(ctx: MapNavContext): Record<string, CurrentVi
 }
 
 /** Detection's filters, from the shape it already writes for detail prev/next. */
-export function detectionFiltersForAgent(
-  ctx: DetectionNavContext,
-): Record<string, CurrentViewFilterValue> {
+export function detectionFiltersForAgent(ctx: DetectionNavContext): CurrentViewFilters {
   return compactFilters({
     teamId: ctx.teamId,
     locationId: ctx.locationId,

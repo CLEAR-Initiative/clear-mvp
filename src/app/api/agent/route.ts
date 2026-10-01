@@ -20,7 +20,7 @@ import { LOCALE_COOKIE, pickLocale } from "~/i18n/config";
 import { canReadContent } from "~/lib/roles";
 import { createConversationsApi } from "~/server/agent/conversations";
 import { CLEAR_AGENT_ID, createClearAgent } from "~/server/agent/create-clear-agent";
-import { currentViewNote, currentViewSchema } from "~/server/agent/current-view";
+import { currentViewNote, parseCurrentView } from "~/server/agent/current-view";
 import { readAgentFlags } from "~/server/agent/flag";
 import { clearAgentModelId } from "~/server/agent/model";
 import { turnCostUsd } from "~/server/agent/pricing";
@@ -33,7 +33,8 @@ const bodySchema = z.object({
   message: z.object({
     parts: z.array(z.object({ type: z.string(), text: z.string().optional() }).passthrough()),
   }),
-  currentView: currentViewSchema.optional().catch(undefined),
+  /** Checked part by part below: a bad part is dropped, never the turn. */
+  currentView: z.unknown().optional(),
 });
 
 /** Long enough for any real question; stops a pasted document. */
@@ -77,7 +78,14 @@ export async function POST(req: Request): Promise<Response> {
   }
   const { threadId, message } = parsed.data;
   // Only with agent_clear_data: without the CLEAR data tools it means nothing.
-  const currentView = flags.clearData ? parsed.data.currentView : undefined;
+  const { view: currentView, dropped } = flags.clearData
+    ? parseCurrentView(parsed.data.currentView)
+    : { view: undefined, dropped: [] };
+  if (dropped.length > 0) {
+    // A publisher sending what the contract refuses is a bug (or tampering):
+    // visible in the logs, never fatal.
+    console.warn("[agent] left out of the Current view:", dropped.join(", "));
+  }
   // Rebuild the message from its text alone: whatever else the client sent
   // (roles, tool results, files) never reaches the model.
   const text = message.parts

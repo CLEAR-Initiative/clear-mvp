@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { Chat, useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
+import { useOptionalTeam } from "~/providers/team-provider";
 import { currentViewFor, type CurrentView } from "~/lib/agent-current-view";
 import {
   isNavigateResult,
@@ -132,8 +133,13 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const clearDataOn = useFeatureEnabled("agent_clear_data");
   const clearDataRef = useRef(clearDataOn);
   clearDataRef.current = clearDataOn;
+  // The active team rides along, so Agent navigation checks scope the way
+  // the pages do (against this team, not every team the user is in).
+  const activeTeamId = useOptionalTeam()?.activeTeamId ?? null;
+  const activeTeamRef = useRef(activeTeamId);
+  activeTeamRef.current = activeTeamId;
   const readCurrentView = useCallback(
-    () => (clearDataRef.current ? currentViewFor(window.location.pathname) : undefined),
+    () => (clearDataRef.current ? currentViewFor(window.location.pathname, activeTeamRef.current) : undefined),
     [],
   );
   const me = api.auth.me.useQuery(undefined, { staleTime: 60_000 });

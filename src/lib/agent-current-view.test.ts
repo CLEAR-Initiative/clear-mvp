@@ -16,6 +16,11 @@ describe("Current view registry", () => {
     expect(currentViewFor("/map")).toEqual({ route: "/map" });
   });
 
+  it("carries the active team when there is one", () => {
+    expect(currentViewFor("/event/e1", "team-1")).toEqual({ route: "/event/e1", teamId: "team-1" });
+    expect(currentViewFor("/event/e1", null)).toEqual({ route: "/event/e1" });
+  });
+
   it("uses the newest publisher, and hands back to the page when a drawer closes", () => {
     const unpublishPage = publishCurrentView({ entity: { kind: "crisis", id: "c1" } });
     const unpublishDrawer = publishCurrentView({ entity: { kind: "event", id: "e1" } });
