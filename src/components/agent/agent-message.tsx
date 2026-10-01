@@ -108,10 +108,14 @@ function ToolActivity({ part }: { part: Part }) {
   const labels = key
     ? { running: t(`${key}Running`), done: t(`${key}Done`), unavailable: t(`${key}Unavailable`) }
     : { running: t("running", { tool: name }), done: t("done", { tool: name }), unavailable: t("unavailable", { tool: name }) };
+  // Errors are values: nrc_find returns `{ error: string }`, the clear_*
+  // tools and navigate `{ error: { code, message } }`. A navigate result the
+  // client refused to act on didn't move anyone either.
   const failed =
     tool.state === "output-error" ||
     (tool.state === "output-available" &&
-      typeof (tool.output as { error?: unknown } | undefined)?.error === "string");
+      (!!(tool.output as { error?: unknown } | undefined)?.error ||
+        (name === "navigate" && !isNavigateResult(tool.output))));
   const done = tool.state === "output-available" || tool.state === "output-error";
 
   return (
