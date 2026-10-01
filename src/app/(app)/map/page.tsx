@@ -134,6 +134,7 @@ import {
   readMapDeepLink,
   withoutDeepLink,
 } from "~/lib/agent-deep-link";
+import { useDeepLinkCountryScope } from "~/components/agent/use-deep-link-scope";
 
 const MAX_OPEN_PANELS = 4;
 
@@ -739,6 +740,12 @@ function MapPageContent() {
     const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), MAP_DEEP_LINK_PARAMS);
     router.replace(`/map${rest}`, { scroll: false });
   }, [mapDeepLink.country, searchParams, router]);
+  useDeepLinkCountryScope({
+    linkCountry: mapDeepLink.country,
+    selectedCountry,
+    scopeReady,
+    drop: dropMapDeepLinkCountry,
+  });
   const changeTimeframe = (value: string | null) => {
     setTimeframe((value ?? "30d") as "7d" | "30d" | "90d" | "all");
   };

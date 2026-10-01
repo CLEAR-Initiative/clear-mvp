@@ -50,6 +50,7 @@ import {
   readDetectionDeepLink,
   withoutDeepLink,
 } from "~/lib/agent-deep-link";
+import { useDeepLinkCountryScope } from "~/components/agent/use-deep-link-scope";
 
 const PAGE_SIZE = 25;
 const HISTORY_PAGE_SIZE = 100;
@@ -263,6 +264,16 @@ function DetectionPageContent() {
     scopeReady,
   );
   const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
+  const dropDetectionDeepLinkCountry = useCallback(() => {
+    const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), ["country"]);
+    router.replace(`/detection${rest}`, { scroll: false });
+  }, [searchParams, router]);
+  useDeepLinkCountryScope({
+    linkCountry: detectionDeepLink.country,
+    selectedCountry,
+    scopeReady,
+    drop: dropDetectionDeepLinkCountry,
+  });
   
   const handleCountryChange = useCallback(
     (value: string) => {

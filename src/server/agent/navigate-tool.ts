@@ -107,6 +107,34 @@ async function findPlace(
 
 const isError = (v: unknown): v is NavigateError => !!v && typeof v === "object" && "error" in v;
 
+/**
+ * Whether the user's teams let them see this country. A team without a
+ * country (level 0) binding monitors globally, as the pages treat it; with
+ * only country-scoped teams, the country must be one of their bindings.
+ */
+async function countryInScope(
+  run: RunCuratedTool,
+  country: { id: string; name: string },
+  signal?: AbortSignal,
+): Promise<true | NavigateError> {
+  const outcome = await run("clear_whoami", {}, signal);
+  if (!outcome.ok) return { error: outcome.error };
+  const teams =
+    (outcome.value as { teams?: Array<{ locations?: Array<{ id: string; name: string; level: number }> }> })
+      .teams ?? [];
+  const bound = teams.map((t) => (t.locations ?? []).filter((l) => l.level === 0));
+  if (bound.length === 0 || bound.some((countries) => countries.length === 0)) return true;
+  const allowed = bound.flat();
+  if (allowed.some((c) => c.id === country.id)) return true;
+  const names = [...new Set(allowed.map((c) => c.name))].join(", ");
+  return {
+    error: {
+      code: "OUT_OF_SCOPE",
+      message: `${country.name} is outside the user's team scope (${names}); the page can't show it.`,
+    },
+  };
+}
+
 async function resolveScope(
   filters: { country?: string; region?: string },
   run: RunCuratedTool,
@@ -118,6 +146,8 @@ async function resolveScope(
   if (!filters.country) return {};
   const country = await findPlace(run, filters.country, 0, undefined, signal);
   if (isError(country)) return country;
+  const inScope = await countryInScope(run, country, signal);
+  if (isError(inScope)) return inScope;
   if (!filters.region) return { country };
   const region = await findPlace(run, filters.region, 1, country.id, signal);
   if (isError(region)) return region;

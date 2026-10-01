@@ -554,6 +554,33 @@ describe("POST /api/agent — Agent navigation", () => {
       }));
     });
 
+    let myTeams: Array<{ id: string; name: string; locations: Array<{ id: string; name: string; level: number }> }>;
+    beforeEach(() => {
+      myTeams = [];
+      clearApi.dataHandlers.set("ClearWhoami", () => ({
+        me: { id: "u-alice", name: "Alice", role: "viewer", language: "en", isActive: true, defaultTeam: null },
+        myTeams,
+      }));
+    });
+
+    it("refuses a country outside the user's team scope", async () => {
+      myTeams = [{ id: "team-chad", name: "Chad team", locations: [{ id: "loc-tcd", name: "Chad", level: 0 }] }];
+      expect(await navigateTo({ kind: "map", filters: { country: "Sudan" } })).toEqual({
+        error: {
+          code: "OUT_OF_SCOPE",
+          message: "Sudan is outside the user's team scope (Chad); the page can't show it.",
+        },
+      });
+    });
+
+    it("lets a team without a country binding (global monitoring) go anywhere", async () => {
+      myTeams = [
+        { id: "team-chad", name: "Chad team", locations: [{ id: "loc-tcd", name: "Chad", level: 0 }] },
+        { id: "team-global", name: "Global", locations: [] },
+      ];
+      expect(await navigateTo({ kind: "map", filters: { country: "Sudan" } })).toMatchObject({ moved: true });
+    });
+
     async function navigateTo(target: Record<string, unknown>) {
       useScript([{ toolCalls: [{ name: "navigate", input: { target } }] }, { text: "Done." }]);
       const POST = await loadRoute();

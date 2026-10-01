@@ -3189,7 +3189,8 @@
         "crisis": "Crisis",
         "map": "the Map",
         "detection": "Detection"
-      }
+      },
+      "outOfScope": "{country} isn't in your team's scope, so it isn't shown."
     }
   }
 }

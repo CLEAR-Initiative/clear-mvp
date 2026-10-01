@@ -3189,7 +3189,8 @@
         "crisis": "la crise",
         "map": "la carte",
         "detection": "la détection"
-      }
+      },
+      "outOfScope": "{country} ne fait pas partie du périmètre de votre équipe ; il n'est pas affiché."
     }
   }
 }
