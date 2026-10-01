@@ -250,12 +250,26 @@ describe("pipeline processing state", () => {
       message("p1", "p", { hasVoice: true, transcript: "Road closed", transcribeFailedAt: FAILED_AT }),
     ]);
     expect(e.detachedTranscripts).toEqual([{ status: "ready", text: "Road closed" }]);
-    expect(e.failures).toEqual([]);
-    expect(e.processing).toBe("pending");
   });
 
-  it("a classification wins over a stale enrichment marker", () => {
-    const e = build([message("p1", "p", { classification: "field_report", enrichFailedAt: FAILED_AT })]);
+  it("keeps a transcription marker retryable beside a late transcript: it still holds enrichment", () => {
+    const e = build([
+      message("p1", "p", { hasVoice: true, transcript: "Road closed", transcribeFailedAt: FAILED_AT }),
+    ]);
+    expect(e.failures.map((f) => f.stage)).toEqual(["TRANSCRIBE"]);
+    expect(e.processing).toBe("failed");
+  });
+
+  it("a classification wins over stale failure markers", () => {
+    const e = build([
+      message("p1", "p", {
+        hasVoice: true,
+        transcript: "Road closed",
+        classification: "field_report",
+        enrichFailedAt: FAILED_AT,
+        transcribeFailedAt: FAILED_AT,
+      }),
+    ]);
     expect(e.failures).toEqual([]);
     expect(e.processing).toBe("classified");
   });
