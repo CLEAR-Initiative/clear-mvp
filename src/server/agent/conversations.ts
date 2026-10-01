@@ -164,18 +164,6 @@ export function createConversationsApi(cookie: string) {
       return data.myAgentBudget;
     },
 
-    /** The id of the newest Answer in a Thread, if any. */
-    async latestAnswerId(conversationId: string): Promise<string | null> {
-      const data = await gql<{
-        conversation: { messages: Array<{ id: string; role: string }> } | null;
-      }>(
-        `query($id: String!) { conversation(id: $id) { messages(first: 10) { id role } } }`,
-        { id: conversationId },
-      );
-      const messages = data.conversation?.messages ?? [];
-      return [...messages].reverse().find((m) => m.role === "assistant")?.id ?? null;
-    },
-
     async recordTurnUsage(messageId: string, usage: TurnUsage): Promise<void> {
       await gql(
         `mutation($messageId: String!, $usage: ConversationTurnUsageInput!) {

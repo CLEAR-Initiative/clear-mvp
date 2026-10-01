@@ -12,6 +12,7 @@
  * enforces who owns which Thread.
  */
 
+import { randomUUID } from "node:crypto";
 import { handleChatStream } from "@mastra/ai-sdk";
 import { createUIMessageStreamResponse } from "ai";
 import { z } from "zod";
@@ -28,7 +29,6 @@ const bodySchema = z.object({
   threadId: z.string().min(1).max(128),
   /** The newest user message, as `useChat` sends it. Only its text is used. */
   message: z.object({
-    id: z.string().min(1).max(128),
     parts: z.array(z.object({ type: z.string(), text: z.string().optional() }).passthrough()),
   }),
 });
@@ -117,7 +117,9 @@ export async function POST(req: Request): Promise<Response> {
       agentId: CLEAR_AGENT_ID,
       version: "v7",
       params: {
-        messages: [{ id: message.id, role: "user", parts: [{ type: "text", text }] }],
+        // A fresh id, never the client's: reusing a stored id would fold the
+        // turn into an existing message and it would go unstored and unpaid.
+        messages: [{ id: randomUUID(), role: "user", parts: [{ type: "text", text }] }],
         // The resource is always the session user, never anything from the body.
         // The title only applies when this turn creates the Thread.
         memory: {
@@ -126,14 +128,21 @@ export async function POST(req: Request): Promise<Response> {
         },
         // Awaited before the stream closes. Never fails the turn: a missed
         // record is logged, and the Answer still reaches the user.
-        onFinish: async ({ totalUsage }) => {
+        onFinish: async ({ totalUsage, response }) => {
+          // Charge this run's own Answer, never "the newest in the Thread":
+          // a concurrent turn in another tab would get the wrong bill.
+          const answerId = (response as { uiMessages?: Array<{ id: string; role: string }> })
+            .uiMessages?.filter((m) => m.role === "assistant")
+            .at(-1)?.id;
+          if (totalUsage?.inputTokens === undefined || totalUsage.outputTokens === undefined) {
+            console.error(`[agent] ${modelId} reported no token usage; turn charged as $0`);
+          }
           const tokens = {
             inputTokens: totalUsage?.inputTokens ?? 0,
             outputTokens: totalUsage?.outputTokens ?? 0,
           };
           try {
-            const answerId = await conversations.latestAnswerId(threadId);
-            if (!answerId) throw new Error(`no Answer stored in Thread ${threadId}`);
+            if (!answerId) throw new Error(`no Answer in the stream for Thread ${threadId}`);
             await conversations.recordTurnUsage(answerId, {
               model: modelId,
               ...tokens,
@@ -141,6 +150,8 @@ export async function POST(req: Request): Promise<Response> {
               latencyMs: Date.now() - startedAt,
             });
           } catch (err) {
+            // The Answer still reaches the user; an unrecorded turn is an
+            // audit and budget gap, so it is logged as an error.
             console.error("[agent] could not record turn usage:", err);
           }
         },

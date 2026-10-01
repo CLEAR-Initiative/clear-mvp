@@ -282,6 +282,18 @@ describe("POST /api/agent — Agent budget and usage", () => {
     expect(record?.cookie).toBe(ALICE);
   });
 
+  it("stores and charges every turn even when the client reuses a message id", async () => {
+    useScript([{ text: "One." }, { text: "Two." }, { text: "Three." }]);
+    const POST = await loadRoute();
+    for (const text of ["First?", "Second?", "Third?"]) {
+      await (await POST(agentRequest(ALICE, turn("t1", text, "fixed-id")))).text();
+    }
+    const stored = clearApi.messagesOf("t1");
+    expect(stored.map((m) => m.role)).toEqual(["user", "assistant", "user", "assistant", "user", "assistant"]);
+    expect(stored.filter((m) => m.role === "assistant").every((m) => m.costUsd !== undefined)).toBe(true);
+    expect(clearApi.budget.spentTodayUsd).toBeCloseTo(3 * ((1_000 * 2 + 200 * 10) / 1_000_000));
+  });
+
   it("declines a turn with 429 once the daily budget is spent, and runs nothing", async () => {
     clearApi.budget.spentTodayUsd = 2;
     const POST = await loadRoute();
