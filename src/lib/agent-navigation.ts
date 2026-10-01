@@ -52,9 +52,15 @@ export interface NavigateResult {
   label: string;
 }
 
+/**
+ * The only places Agent navigation may send the user: an entity page or the
+ * Map/Detection with a query. Never another origin (`//host`, `/\host`).
+ */
+const NAVIGABLE_URL = /^\/(?:(?:event|signal|crisis)\/[A-Za-z0-9_%-]+|(?:map|detection)(?:\?[^#\\]*)?)$/;
+
 export function isNavigateResult(value: unknown): value is NavigateResult {
   const v = value as Partial<NavigateResult> | null;
-  return !!v && v.moved === true && typeof v.url === "string" && v.url.startsWith("/");
+  return !!v && v.moved === true && typeof v.url === "string" && NAVIGABLE_URL.test(v.url);
 }
 
 /** Every navigate tool call already in some messages (restored history). */
