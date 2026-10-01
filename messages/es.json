@@ -3168,7 +3168,10 @@
       "nrcFindUnavailable": "Documentos del NRC no disponibles",
       "running": "Ejecutando {tool}…",
       "done": "{tool} ejecutado",
-      "unavailable": "{tool} no disponible"
+      "unavailable": "{tool} no disponible",
+      "navigateRunning": "Moviéndole…",
+      "navigateDone": "Movido",
+      "navigateUnavailable": "No se pudo llevarle allí"
     },
     "errors": {
       "budgetSpent": "Se ha agotado su presupuesto diario del Agente.",
@@ -3176,6 +3179,17 @@
       "forbiddenThread": "Esta conversación pertenece a otro usuario.",
       "notConfigured": "El Agente CLEAR no está configurado en este servidor.",
       "generic": "El Agente CLEAR no pudo responder. Inténtelo de nuevo."
+    },
+    "navigation": {
+      "movedTo": "Le llevé a {kind}: {label}",
+      "back": "Volver",
+      "kinds": {
+        "event": "el evento",
+        "signal": "la señal",
+        "crisis": "la crisis",
+        "map": "el mapa",
+        "detection": "Detección"
+      }
     }
   }
 }

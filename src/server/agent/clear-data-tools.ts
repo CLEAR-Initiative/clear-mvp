@@ -39,7 +39,15 @@ export interface ClearDataToolsRequest {
   locale: Locale;
 }
 
-export function createClearDataTools({ cookie, locale }: ClearDataToolsRequest) {
+export type CuratedToolOutcome =
+  | { ok: true; value: unknown }
+  | { ok: false; error: { code: string; subCode?: string; message: string } };
+
+/**
+ * The CLEAR data tools for one request, as Mastra tools, plus `run` for
+ * calling one directly (Agent navigation validates its targets with it).
+ */
+export function createClearData({ cookie, locale }: ClearDataToolsRequest) {
   const config: Config = {
     apiUrl: API_URL,
     credential: { kind: "headers", headers: { cookie } },
@@ -50,7 +58,13 @@ export function createClearDataTools({ cookie, locale }: ClearDataToolsRequest) 
   const upstream = createUpstream({ config });
   const log = silentLogger();
 
-  return Object.fromEntries(
+  const run = async (name: string, input: unknown, signal?: AbortSignal): Promise<CuratedToolOutcome> => {
+    const tool = CURATED_TOOLS.find((t) => t.name === name);
+    if (!tool) throw new Error(`No curated tool ${name}`);
+    return runTool(tool, input, { config, upstream, log, signal }) as Promise<CuratedToolOutcome>;
+  };
+
+  const tools = Object.fromEntries(
     CURATED_TOOLS.map((tool) => [
       tool.name,
       createTool({
@@ -59,15 +73,12 @@ export function createClearDataTools({ cookie, locale }: ClearDataToolsRequest) 
         inputSchema: tool.input,
         // No outputSchema: an error value must reach the model as-is.
         execute: async (input, context) => {
-          const outcome = await runTool(tool, input, {
-            config,
-            upstream,
-            log,
-            signal: context?.abortSignal,
-          });
+          const outcome = await run(tool.name, input, context?.abortSignal);
           return outcome.ok ? outcome.value : { error: outcome.error };
         },
       }),
     ]),
   );
+
+  return { tools, run };
 }

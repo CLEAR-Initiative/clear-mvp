@@ -16,7 +16,8 @@ import { createConversationsApi } from "~/server/agent/conversations";
 import { clearAgentInstructions } from "~/server/agent/instructions";
 import { ClearApiMemoryStorage } from "~/server/agent/memory-storage";
 import { resolveClearAgentModel } from "~/server/agent/model";
-import { createClearDataTools } from "~/server/agent/clear-data-tools";
+import { createClearData } from "~/server/agent/clear-data-tools";
+import { createNavigateTool, NAVIGATE_TOOL_ID } from "~/server/agent/navigate-tool";
 import { createNrcFindTool, NRC_FIND_TOOL_ID } from "~/server/agent/nrc-find-tool";
 import type { Locale } from "~/i18n/config";
 import type { SessionUser } from "~/server/session";
@@ -44,6 +45,9 @@ export function createClearAgent({ user, cookie, locale, clearData }: ClearAgent
     },
   });
 
+  // V2 (agent_clear_data): CLEAR's own data, and Agent navigation over it.
+  const clear = clearData ? createClearData({ cookie, locale }) : null;
+
   const agent = new Agent({
     id: CLEAR_AGENT_ID,
     name: "CLEAR Agent",
@@ -51,7 +55,7 @@ export function createClearAgent({ user, cookie, locale, clearData }: ClearAgent
     model: resolveClearAgentModel(),
     tools: {
       [NRC_FIND_TOOL_ID]: createNrcFindTool(),
-      ...(clearData ? createClearDataTools({ cookie, locale }) : {}),
+      ...(clear ? { ...clear.tools, [NAVIGATE_TOOL_ID]: createNavigateTool(clear.run) } : {}),
     },
     memory: new Memory({
       storage,

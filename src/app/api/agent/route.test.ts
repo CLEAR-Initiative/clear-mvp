@@ -4,6 +4,7 @@ import { MockLanguageModelV3 } from "ai/test";
 import {
   createFakeClearApi,
   createScriptedModel,
+  fakeEvent,
   nrcFindResponse,
   parseUIMessageStream,
   type FakeClearApi,
@@ -467,5 +468,80 @@ describe("POST /api/agent — CLEAR data (agent_clear_data)", () => {
     await res.text();
     expect(JSON.stringify(prompts[0])).not.toContain("Current view");
     expect(clearApi.messagesOf("t1")[0]!.currentView).toBeUndefined();
+  });
+});
+
+describe("POST /api/agent — Agent navigation", () => {
+  function navigateOutput(chunks: Array<Record<string, unknown>>) {
+    return chunks.find((c) => c.type === "tool-output-available" && c.toolCallId)?.output;
+  }
+
+  beforeEach(() => {
+    clearApi.dataHandlers.set("ClearGetEvent", (variables) => ({
+      event: variables.id === "ev-1" ? fakeEvent("ev-1", "Floods in Kassala") : null,
+    }));
+  });
+
+  it("offers navigate only with agent_clear_data", async () => {
+    useScript([{ text: "Hi." }]);
+    const POST = await loadRoute();
+    await (await POST(agentRequest(ALICE, turn("t1", "Hi")))).text();
+    expect(toolsOffered[0]).toContain("navigate");
+
+    clearApi.flags.agent_clear_data = false;
+    useScript([{ text: "Hi." }]);
+    await (await POST(agentRequest(ALICE, turn("t2", "Hi")))).text();
+    expect(toolsOffered[0]).not.toContain("navigate");
+  });
+
+  it("checks the target exists, as the user, and returns its route and name", async () => {
+    useScript([
+      { toolCalls: [{ name: "navigate", input: { target: { kind: "event", id: "ev-1" } } }] },
+      { text: "Here it is." },
+    ]);
+    const POST = await loadRoute();
+    const chunks = parseUIMessageStream(await (await POST(agentRequest(ALICE, turn("t1", "Open it")))).text());
+    expect(navigateOutput(chunks)).toEqual({
+      moved: true,
+      target: { kind: "event", id: "ev-1" },
+      url: "/event/ev-1",
+      label: "Floods in Kassala",
+    });
+    const lookup = clearApi.calls.find((c) => c.query.includes("ClearGetEvent"));
+    expect(lookup?.cookie).toBe(ALICE);
+    expect(lookup?.variables).toEqual({ id: "ev-1" });
+  });
+
+  it("refuses a target that doesn't exist or that the user can't see", async () => {
+    clearApi.dataHandlers.set("ClearGetSignal", () => clearApi.fail("Not visible to you", "FORBIDDEN"));
+    useScript([
+      {
+        toolCalls: [
+          { name: "navigate", input: { target: { kind: "event", id: "ev-missing" } } },
+          { name: "navigate", input: { target: { kind: "signal", id: "sig-secret" } } },
+        ],
+      },
+      { text: "I couldn't open those." },
+    ]);
+    const POST = await loadRoute();
+    const chunks = parseUIMessageStream(await (await POST(agentRequest(ALICE, turn("t1", "Open both")))).text());
+    const outputs = chunks.filter((c) => c.type === "tool-output-available").map((c) => c.output);
+    expect(outputs).toEqual([
+      { error: { code: "NOT_FOUND", message: "No event has id ev-missing." } },
+      { error: expect.objectContaining({ code: "FORBIDDEN" }) },
+    ]);
+  });
+
+  it("only takes targets from its closed set", async () => {
+    useScript([
+      { toolCalls: [{ name: "navigate", input: { target: { kind: "admin", id: "users" } } }] },
+      { text: "I can't go there." },
+    ]);
+    const POST = await loadRoute();
+    const chunks = parseUIMessageStream(await (await POST(agentRequest(ALICE, turn("t1", "Open the admin page")))).text());
+    expect(chunks.some((c) => c.type === "tool-output-available" && (c.output as { moved?: boolean })?.moved)).toBe(
+      false,
+    );
+    expect(clearApi.calls.some((c) => c.query.includes("ClearGet"))).toBe(false);
   });
 });

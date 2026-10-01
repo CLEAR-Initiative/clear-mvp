@@ -6,13 +6,15 @@
  * stored as a Conversation in clear-api by `/api/agent`.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useChat, type Chat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import { Alert, Button, Group, Loader, Stack, Text, Textarea } from "@mantine/core";
 import { IconAlertTriangle, IconClockPause, IconSend } from "@tabler/icons-react";
 import { AgentMessage } from "~/components/agent/agent-message";
+import { useOptionalAgent } from "~/components/agent/agent-provider";
+import { isNavigateResult } from "~/lib/agent-navigation";
 
 /**
  * The transport surfaces a failed request's body as the error message; turn
@@ -50,6 +52,25 @@ export interface AgentThreadProps {
 export function AgentThread({ chat }: AgentThreadProps) {
   const t = useTranslations("agent.thread");
   const { messages, sendMessage, status, error } = useChat({ chat });
+  const agent = useOptionalAgent();
+
+  // Agent navigation: act on a navigate result as soon as it arrives. The
+  // provider applies each tool call once, and never one from loaded history.
+  useEffect(() => {
+    if (!agent) return;
+    for (const message of messages) {
+      for (const part of message.parts as Array<{ type: string; toolCallId?: string; state?: string; output?: unknown }>) {
+        if (
+          part.type === "tool-navigate" &&
+          part.state === "output-available" &&
+          part.toolCallId &&
+          isNavigateResult(part.output)
+        ) {
+          agent.applyNavigation(part.toolCallId, part.output);
+        }
+      }
+    }
+  }, [messages, agent]);
   const [draft, setDraft] = useState("");
   const busy = status === "submitted" || status === "streaming";
 

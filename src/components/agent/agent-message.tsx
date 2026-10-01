@@ -16,8 +16,10 @@ import { useTranslations } from "next-intl";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { UIMessage } from "ai";
-import { Anchor, Box, Card, Group, Loader, Paper, Spoiler, Stack, Text } from "@mantine/core";
-import { IconAlertTriangle, IconCheck, IconFileText } from "@tabler/icons-react";
+import { Anchor, Box, Button, Card, Group, Loader, Paper, Spoiler, Stack, Text } from "@mantine/core";
+import { IconAlertTriangle, IconArrowBackUp, IconCheck, IconFileText, IconRoute } from "@tabler/icons-react";
+import { useOptionalAgent } from "~/components/agent/agent-provider";
+import { isNavigateResult, type NavigateResult } from "~/lib/agent-navigation";
 
 type Part = UIMessage["parts"][number];
 
@@ -37,7 +39,41 @@ interface ToolPart {
 }
 
 /** Tools with their own activity wording; others are named generically. */
-const TOOL_KEYS: Record<string, "nrcFind"> = { nrc_find: "nrcFind" };
+const TOOL_KEYS: Record<string, "nrcFind" | "navigate"> = { nrc_find: "nrcFind", navigate: "navigate" };
+
+const NAV_KINDS = ["event", "signal", "crisis", "map", "detection"] as const;
+type NavKind = (typeof NAV_KINDS)[number];
+
+/**
+ * An Agent navigation, announced where it happened in the Thread, with Back
+ * while it can still be undone.
+ */
+function NavigationNotice({ toolCallId, result }: { toolCallId: string; result: NavigateResult }) {
+  const t = useTranslations("agent.navigation");
+  const agent = useOptionalAgent();
+  const kind = (NAV_KINDS as readonly string[]).includes(result.target.kind)
+    ? (result.target.kind as NavKind)
+    : null;
+  const canGoBack = agent?.canGoBack(toolCallId) ?? false;
+  return (
+    <Group gap={8} wrap="nowrap" data-testid="agent-navigation">
+      <IconRoute size={14} style={{ flexShrink: 0 }} color="var(--mantine-color-dimmed)" />
+      <Text size="sm" style={{ flex: 1, minWidth: 0 }} lineClamp={2}>
+        {t("movedTo", { kind: kind ? t(`kinds.${kind}`) : result.target.kind, label: result.label })}
+      </Text>
+      {canGoBack && (
+        <Button
+          size="compact-xs"
+          variant="light"
+          leftSection={<IconArrowBackUp size={12} />}
+          onClick={() => agent?.goBack(toolCallId)}
+        >
+          {t("back")}
+        </Button>
+      )}
+    </Group>
+  );
+}
 
 function toolName(part: Part): string | null {
   return part.type.startsWith("tool-") ? part.type.slice("tool-".length) : null;
@@ -167,6 +203,10 @@ export function AgentMessage({ message }: { message: UIMessage }) {
   return (
     <Stack gap={8} data-role="assistant">
       {message.parts.map((part, i) => {
+        const tool = part as ToolPart;
+        if (toolName(part) === "navigate" && tool.state === "output-available" && isNavigateResult(tool.output)) {
+          return <NavigationNotice key={i} toolCallId={tool.toolCallId ?? String(i)} result={tool.output} />;
+        }
         if (toolName(part)) return <ToolActivity key={i} part={part} />;
         if (part.type === "text" && part.text) return <Markdown key={i} text={part.text} />;
         return null;

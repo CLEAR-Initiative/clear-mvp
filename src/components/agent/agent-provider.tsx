@@ -18,10 +18,18 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import { Chat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { currentViewFor, type CurrentView } from "~/lib/agent-current-view";
+import {
+  navigateCallIds,
+  restoreNavContexts,
+  snapshotNavContexts,
+  type BackEntry,
+  type NavigateResult,
+} from "~/lib/agent-navigation";
 import { canReadContent } from "~/lib/roles";
 import { api } from "~/trpc/react";
 
@@ -46,6 +54,12 @@ export interface AgentContextValue {
   openThread: (threadId: string, messages?: UIMessage[]) => void;
   /** Start a fresh Thread. */
   newThread: () => void;
+  /** Perform an Agent navigation once (later calls for the same tool call are no-ops). */
+  applyNavigation: (toolCallId: string, result: NavigateResult) => void;
+  /** Whether Back can still undo this navigation. */
+  canGoBack: (toolCallId: string) => boolean;
+  /** Restore the exact view from before this navigation. */
+  goBack: (toolCallId: string) => void;
 }
 
 const AgentContext = createContext<AgentContextValue | null>(null);
@@ -172,6 +186,47 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     setPendingLoad(null);
   }, [pendingLoad, stored.isSuccess, stored.data, chat, onTurnFinished, readCurrentView]);
 
+  // ── Agent navigation ───────────────────────────────────────────────────
+  const router = useRouter();
+  const [backStack, setBackStack] = useState<BackEntry[]>([]);
+  /** Navigate tool calls already acted on, or already history when loaded. */
+  const applied = useRef(new Set<string>());
+  useEffect(() => {
+    for (const id of navigateCallIds(chat.messages)) applied.current.add(id);
+  }, [chat]);
+
+  const applyNavigation = useCallback(
+    (toolCallId: string, result: NavigateResult) => {
+      if (applied.current.has(toolCallId)) return;
+      applied.current.add(toolCallId);
+      const { pathname, search, hash } = window.location;
+      setBackStack((stack) => [
+        ...stack,
+        { toolCallId, url: `${pathname}${search}${hash}`, snapshot: snapshotNavContexts() },
+      ]);
+      router.push(result.url);
+    },
+    [router],
+  );
+
+  const canGoBack = useCallback(
+    (toolCallId: string) => backStack.some((e) => e.toolCallId === toolCallId),
+    [backStack],
+  );
+
+  const goBack = useCallback(
+    (toolCallId: string) => {
+      const index = backStack.findIndex((e) => e.toolCallId === toolCallId);
+      if (index < 0) return;
+      const entry = backStack[index]!;
+      // This move and any made after it are undone together.
+      setBackStack(backStack.slice(0, index));
+      restoreNavContexts(entry.snapshot);
+      router.push(entry.url);
+    },
+    [backStack, router],
+  );
+
   const update = useCallback(
     (next: StoredAgentState) => {
       const owned = { ...next, ...(userId ? { userId } : {}) };
@@ -213,11 +268,19 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       chat,
       openThread,
       newThread,
+      applyNavigation,
+      canGoBack,
+      goBack,
     }),
-    [available, state, setOpen, chat, openThread, newThread],
+    [available, state, setOpen, chat, openThread, newThread, applyNavigation, canGoBack, goBack],
   );
 
   return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;
+}
+
+/** The Agent context, or null outside an AgentProvider (e.g. isolated tests). */
+export function useOptionalAgent(): AgentContextValue | null {
+  return useContext(AgentContext);
 }
 
 export function useAgent(): AgentContextValue {

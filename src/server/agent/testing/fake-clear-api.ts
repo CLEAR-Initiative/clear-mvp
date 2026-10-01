@@ -249,6 +249,30 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
 
 export type FakeClearApi = ReturnType<typeof createFakeClearApi>;
 
+/** An `event(id)` row in the shape clear_get_event reads. */
+export function fakeEvent(id: string, title: string) {
+  return {
+    id,
+    severity: 4,
+    types: ["FL"],
+    title,
+    description: "Synthetic event.",
+    firstSignalCreatedAt: "2026-09-30T08:00:00.000Z",
+    lastSignalCreatedAt: "2026-10-01T08:00:00.000Z",
+    startedAt: null,
+    casualties: null,
+    populationAffected: null,
+    populationDisplaced: null,
+    rank: 1,
+    isDummy: false,
+    originLocation: null,
+    destinationLocation: null,
+    generalLocation: null,
+    alerts: [],
+    signals: [],
+  };
+}
+
 /** One model step: either call tools or answer in text. */
 export type ScriptedStep =
   | { toolCalls: Array<{ name: string; input: Record<string, unknown> }> }
