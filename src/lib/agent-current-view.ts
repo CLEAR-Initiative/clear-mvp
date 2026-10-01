@@ -9,6 +9,8 @@
  */
 
 import { useEffect } from "react";
+import type { DetectionNavContext } from "~/lib/detection-nav-context";
+import type { MapNavContext } from "~/lib/map-nav-context";
 
 export type CurrentViewEntityKind = "event" | "signal" | "crisis";
 
@@ -46,10 +48,16 @@ export function publishCurrentView(view: PublishedView): () => void {
   };
 }
 
-/** The Current view for a turn sent now, from `pathname`. */
+/**
+ * The Current view for a turn sent now, from `pathname`. Entity and filters
+ * each come from the newest publisher that has one, so an event preview
+ * drawer over Detection reports the event within Detection's filters.
+ */
 export function currentViewFor(pathname: string): CurrentView {
-  const top = published[published.length - 1]?.view;
-  return { route: pathname, ...(top?.entity ? { entity: top.entity } : {}), ...(top?.filters ? { filters: top.filters } : {}) };
+  const newestFirst = [...published].reverse();
+  const entity = newestFirst.find((e) => e.view.entity)?.view.entity;
+  const filters = newestFirst.find((e) => e.view.filters)?.view.filters;
+  return { route: pathname, ...(entity ? { entity } : {}), ...(filters ? { filters } : {}) };
 }
 
 /**
@@ -68,4 +76,50 @@ export function useAgentCurrentView(view: PublishedView | null): void {
 /** Test seam: forget everything published. */
 export function resetCurrentViews(): void {
   published = [];
+}
+
+// ── Filters from the pages' nav contexts ──────────────────────────────────
+
+/** List filters are capped: the Agent needs the scope, not a dump. */
+const MAX_LIST = 50;
+
+function compactFilters(
+  entries: Record<string, CurrentViewFilterValue | undefined>,
+): Record<string, CurrentViewFilterValue> {
+  const out: Record<string, CurrentViewFilterValue> = {};
+  for (const [key, value] of Object.entries(entries)) {
+    if (value === undefined) continue; // unset; null stays (e.g. "all time")
+    out[key] = Array.isArray(value) ? value.slice(0, MAX_LIST) : value;
+  }
+  return out;
+}
+
+/** The Map's filters, from the shape it already writes for detail prev/next. */
+export function mapFiltersForAgent(ctx: MapNavContext): Record<string, CurrentViewFilterValue> {
+  return compactFilters({
+    teamId: ctx.teamId,
+    locationId: ctx.locationId,
+    country: ctx.country,
+    region: ctx.region,
+    from: ctx.from,
+    to: ctx.to,
+  });
+}
+
+/** Detection's filters, from the shape it already writes for detail prev/next. */
+export function detectionFiltersForAgent(
+  ctx: DetectionNavContext,
+): Record<string, CurrentViewFilterValue> {
+  return compactFilters({
+    teamId: ctx.teamId,
+    locationId: ctx.locationId,
+    country: ctx.country,
+    from: ctx.from,
+    to: ctx.to,
+    severityMin: ctx.severityMin,
+    severityMax: ctx.severityMax,
+    eventTypes: ctx.eventTypes,
+    sourceNames: ctx.sourceNames,
+    orderBy: ctx.orderBy,
+  });
 }

@@ -127,6 +127,7 @@ import {
   resolveMapPreferences,
   setMapPreferencesCookie,
 } from "~/lib/map-preferences-cookie";
+import { mapFiltersForAgent, useAgentCurrentView } from "~/lib/agent-current-view";
 
 const MAX_OPEN_PANELS = 4;
 
@@ -1793,6 +1794,18 @@ function MapPageContent() {
     timeframeRange.from,
     timeframeRange.to,
   ]);
+
+  // The same scope, as the CLEAR Agent's Current view (identifiers only).
+  useAgentCurrentView({
+    filters: mapFiltersForAgent({
+      teamId: activeTeamId,
+      locationId: selectedLocationId,
+      country: selectedCountry,
+      region: selectedRegion !== ALL_REGIONS ? selectedRegion : undefined,
+      from: timeframeRange.from ?? null,
+      to: timeframeRange.to ?? null,
+    }),
+  });
 
   // Persist the filtered marker id list the analyst actually sees so detail
   // arrows stay inside that set (country + region + type + timeline).

@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { renderHook } from "@testing-library/react";
 import {
   currentViewFor,
+  detectionFiltersForAgent,
+  mapFiltersForAgent,
   publishCurrentView,
   resetCurrentViews,
   useAgentCurrentView,
@@ -33,5 +35,53 @@ describe("Current view registry", () => {
     expect(currentViewFor("/signal/s1").entity).toEqual({ kind: "signal", id: "s1" });
     unmount();
     expect(currentViewFor("/signal/s1").entity).toBeUndefined();
+  });
+});
+
+describe("filters from the pages' nav contexts", () => {
+  it("maps the Map's scope, keeping null (all time) and dropping unset fields", () => {
+    expect(
+      mapFiltersForAgent({
+        teamId: null,
+        locationId: "loc-sdn",
+        country: "Sudan",
+        region: undefined,
+        from: null,
+        to: null,
+      }),
+    ).toEqual({ teamId: null, locationId: "loc-sdn", country: "Sudan", from: null, to: null });
+  });
+
+  it("maps Detection's scope and caps long lists", () => {
+    const filters = detectionFiltersForAgent({
+      teamId: "team-1",
+      locationId: "loc-sdn",
+      country: "Sudan",
+      from: "2026-09-01T00:00:00.000Z",
+      to: "2026-10-01T00:00:00.000Z",
+      severityMin: 3,
+      eventTypes: Array.from({ length: 80 }, (_, i) => `T${i}`),
+      orderBy: "SEVERITY_DESC",
+      signalOrderBy: "PUBLISHED_DESC",
+    });
+    expect(filters).toMatchObject({
+      teamId: "team-1",
+      locationId: "loc-sdn",
+      severityMin: 3,
+      orderBy: "SEVERITY_DESC",
+    });
+    expect(filters.eventTypes).toHaveLength(50);
+    expect(filters).not.toHaveProperty("severityMax");
+    expect(filters).not.toHaveProperty("signalOrderBy");
+  });
+
+  it("reports a preview drawer's entity within the page's filters", () => {
+    publishCurrentView({ filters: { country: "Sudan" } });
+    publishCurrentView({ entity: { kind: "event", id: "e1" } });
+    expect(currentViewFor("/detection")).toEqual({
+      route: "/detection",
+      entity: { kind: "event", id: "e1" },
+      filters: { country: "Sudan" },
+    });
   });
 });

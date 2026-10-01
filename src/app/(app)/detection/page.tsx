@@ -44,6 +44,7 @@ import { EventsTab, type EventSortOrder } from "./_components/events-tab";
 import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
 import detectionTabsStyles from "./detection-tabs.module.css";
+import { detectionFiltersForAgent, useAgentCurrentView } from "~/lib/agent-current-view";
 
 const PAGE_SIZE = 25;
 const HISTORY_PAGE_SIZE = 100;
@@ -508,6 +509,26 @@ function DetectionPageContent() {
       sourceNames: activeSources ? [...activeSources] : undefined,
     });
   }, [activeTeamId, selectedLocationId, selectedCountry, fromIso, effectiveTo, severityMin, severityMax, expandedTypeCodes?.join(","), eventsSort, signalsSort, activeSources]);
+
+  // The same scope, as the CLEAR Agent's Current view (identifiers only).
+  useAgentCurrentView(
+    selectedLocationId
+      ? {
+          filters: detectionFiltersForAgent({
+            teamId: activeTeamId,
+            locationId: selectedLocationId,
+            country: selectedCountry,
+            from: fromIso,
+            to: effectiveTo,
+            severityMin,
+            severityMax,
+            eventTypes: expandedTypeCodes ?? undefined,
+            orderBy: EVENT_ORDER_MAP[eventsSort],
+            sourceNames: activeSources ? [...activeSources] : undefined,
+          }),
+        }
+      : null,
+  );
 
   // ── Per-feed accumulated items + offset ───────────────────────────────────
   const [eventsItems, setEventsItems] = useState<GqlEvent[]>([]);
