@@ -344,10 +344,14 @@ describe("TranslationBlock", () => {
   it("requests a translation in the reader's locale and shows the pending state", () => {
     wrap(<TranslationBlock entry={entry()} />);
     fireEvent.click(screen.getByTestId("inbox-translate"));
-    expect(requestTranslation).toHaveBeenCalledWith({ threadId: "t1", locale: "en" });
-    // A fresh request never reads a poll answer cached by an earlier one.
-    expect(resetTranslation).toHaveBeenCalledWith({ threadId: "t1", locale: "en" });
+    expect(requestTranslation).toHaveBeenCalledWith({ threadId: "t1", locale: "en" }, expect.anything());
     expect(screen.getByTestId("inbox-translation")).toHaveTextContent("translate.pending");
+    // Earlier poll answers are forgotten only once the request is in (the
+    // poll is disabled until then, so the reset can't refetch a stale state).
+    expect(resetTranslation).not.toHaveBeenCalled();
+    const [, opts] = requestTranslation.mock.calls[0] as [unknown, { onSuccess: () => void }];
+    opts.onSuccess();
+    expect(resetTranslation).toHaveBeenCalledWith({ threadId: "t1", locale: "en" });
   });
 
   it("shows a ready translation right-to-left aware, without polling", () => {

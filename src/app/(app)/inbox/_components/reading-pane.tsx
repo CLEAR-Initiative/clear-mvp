@@ -202,9 +202,11 @@ export function TranslationBlock({ entry }: { entry: InboxEntry }) {
   if (!needsTranslation(entry, locale)) return null;
 
   const start = () => {
-    void utils.ground.translation.reset(input);
     setStartedAt(Date.now());
-    request.mutate(input);
+    // Forget earlier answers only once this request is in: until then the
+    // poll is disabled, so the reset can't refetch the state from before the
+    // re-queue (which would show the old "unavailable" again).
+    request.mutate(input, { onSuccess: () => void utils.ground.translation.reset(input) });
   };
 
   if (startedAt === null) {
