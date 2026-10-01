@@ -415,12 +415,6 @@ export function needsTranslation(entry: InboxEntry, locale: string): boolean {
   return textMessages(entry.messages).some((m) => m.language !== locale);
 }
 
-/**
- * Fold per-message translation states into the entry's: ready (texts joined
- * by a blank line, like `InboxEntry.text`) only once every text message is,
- * queued while any still is, otherwise unavailable — a translation missing
- * part of the report is not shown as the report's translation.
- */
 /** How often the reading pane polls a queued translation, and for how long
  * before it gives up and offers a retry (the drain may be paused). */
 export const TRANSLATION_POLL_MS = 5_000;
@@ -451,6 +445,12 @@ export function shownTranslation(r: {
   return r.pollingForMs >= TRANSLATION_POLL_LIMIT_MS ? unavailable : queued;
 }
 
+/**
+ * Fold per-message translation states into the entry's: ready (texts joined
+ * by a blank line, like `InboxEntry.text`) only once every text message is,
+ * queued while any still is, otherwise unavailable — a translation missing
+ * part of the report is not shown as the report's translation.
+ */
 export function combineTranslations(states: GroundTranslationState[]): GroundTranslationState {
   if (states.length === 0) return { status: "unavailable", text: null };
   if (states.some((s) => s.status === "queued")) return { status: "queued", text: null };

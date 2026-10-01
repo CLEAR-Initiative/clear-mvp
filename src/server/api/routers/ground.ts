@@ -376,7 +376,9 @@ export const groundRouter = createTRPCRouter({
     return {
       sources,
       threads: perSource.flatMap((r) => r.groundThreads),
-      // Unselected while translation is off: unknown, which offers nothing.
+      // Unselected while translation is off: unknown. (The button is hidden
+      // then anyway; with it on, unknown offers translation, and the router
+      // keeps any message already in the locale as written.)
       messages: perSource.flatMap((r) => r.groundMessages.map((m) => ({ ...m, language: m.language ?? null }))),
     };
   }),
