@@ -84,22 +84,26 @@ describe("Agent navigation", () => {
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
   });
 
-  it("acts on a navigate result as it arrives in the Thread", () => {
+  it("acts on a navigate result as it streams in, even with no Thread on screen", () => {
     renderWith(null);
-    const chat = agent.chat;
     act(() => {
-      chat.messages = [answer()];
+      agent.chat.messages = [answer("input-available")];
     });
-    cleanup();
-    // A fresh Thread render over that chat applies the move once.
-    renderWith(<AgentThreadOver chat={chat} />);
+    expect(push).not.toHaveBeenCalled();
+    act(() => {
+      agent.chat.messages = [answer()];
+    });
     expect(push).toHaveBeenCalledWith("/event/ev-1");
   });
 
-  it("never replays a move from a Thread's loaded history", () => {
-    renderWith(null);
+  it("never replays a move from a Thread opened from history, with the Thread on screen", () => {
+    function OpenThread() {
+      const { chat } = useAgent();
+      return <AgentThread key={chat.id} chat={chat} />;
+    }
+    renderWith(<OpenThread />);
     act(() => agent.openThread("t-old", [answer()]));
-    act(() => agent.applyNavigation("nav-1", result));
+    expect(screen.getByTestId("agent-navigation")).toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
   });
 });
@@ -140,6 +144,3 @@ describe("Agent navigation from the Agent page", () => {
   });
 });
 
-function AgentThreadOver({ chat }: { chat: ReturnType<typeof useAgent>["chat"] }) {
-  return <AgentThread chat={chat} />;
-}

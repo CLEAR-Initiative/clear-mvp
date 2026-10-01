@@ -19,11 +19,12 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Chat } from "@ai-sdk/react";
+import { Chat, useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { currentViewFor, type CurrentView } from "~/lib/agent-current-view";
 import {
+  isNavigateResult,
   navigateCallIds,
   restoreNavContexts,
   snapshotNavContexts,
@@ -181,7 +182,9 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     }
     // Seed only a chat nobody has typed into yet.
     if (chat.id === pendingLoad && chat.messages.length === 0) {
-      setChat(createAgentChat(pendingLoad, stored.data.messages as UIMessage[], onTurnFinished, readCurrentView));
+      const history = stored.data.messages as UIMessage[];
+      for (const id of navigateCallIds(history)) applied.current.add(id);
+      setChat(createAgentChat(pendingLoad, history, onTurnFinished, readCurrentView));
     }
     setPendingLoad(null);
   }, [pendingLoad, stored.isSuccess, stored.data, chat, onTurnFinished, readCurrentView]);
@@ -189,11 +192,12 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   // ── Agent navigation ───────────────────────────────────────────────────
   const router = useRouter();
   const [backStack, setBackStack] = useState<BackEntry[]>([]);
-  /** Navigate tool calls already acted on, or already history when loaded. */
+  /**
+   * Navigate tool calls already acted on, or history: every chat seeded with
+   * stored turns registers their calls here before it is shown, so a loaded
+   * Thread never replays a move.
+   */
   const applied = useRef(new Set<string>());
-  useEffect(() => {
-    for (const id of navigateCallIds(chat.messages)) applied.current.add(id);
-  }, [chat]);
 
   // Declared before the navigation callbacks that use it.
   const update = useCallback(
@@ -250,6 +254,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       // Re-opening the active Thread would orphan a stream in progress.
       if (threadId === state.threadId) return;
       update({ ...state, threadId });
+      for (const id of navigateCallIds(messages ?? [])) applied.current.add(id);
       setChat(createAgentChat(threadId, messages, onTurnFinished, readCurrentView));
       setPendingLoad(messages ? null : threadId);
     },
@@ -279,7 +284,44 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     [available, state, setOpen, chat, openThread, newThread, applyNavigation, canGoBack, goBack],
   );
 
-  return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;
+  return (
+    <AgentContext.Provider value={value}>
+      {available && (
+        <NavigationWatcher chat={chat} apply={applyNavigation} />
+      )}
+      {children}
+    </AgentContext.Provider>
+  );
+}
+
+/**
+ * Acts on Agent navigation as results stream in, whether or not a Thread is
+ * on screen (the drawer unmounts its content when closed, and the Agent page
+ * when the user leaves it).
+ */
+function NavigationWatcher({
+  chat,
+  apply,
+}: {
+  chat: Chat<UIMessage>;
+  apply: (toolCallId: string, result: NavigateResult) => void;
+}) {
+  const { messages } = useChat({ chat });
+  useEffect(() => {
+    for (const message of messages) {
+      for (const part of message.parts as Array<{ type: string; toolCallId?: string; state?: string; output?: unknown }>) {
+        if (
+          part.type === "tool-navigate" &&
+          part.toolCallId &&
+          part.state === "output-available" &&
+          isNavigateResult(part.output)
+        ) {
+          apply(part.toolCallId, part.output);
+        }
+      }
+    }
+  }, [messages, apply]);
+  return null;
 }
 
 /** The Agent context, or null outside an AgentProvider (e.g. isolated tests). */
