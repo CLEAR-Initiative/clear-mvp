@@ -195,6 +195,16 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     for (const id of navigateCallIds(chat.messages)) applied.current.add(id);
   }, [chat]);
 
+  // Declared before the navigation callbacks that use it.
+  const update = useCallback(
+    (next: StoredAgentState) => {
+      const owned = { ...next, ...(userId ? { userId } : {}) };
+      setState(owned);
+      writeStored(owned);
+    },
+    [userId],
+  );
+
   const applyNavigation = useCallback(
     (toolCallId: string, result: NavigateResult) => {
       if (applied.current.has(toolCallId)) return;
@@ -204,9 +214,12 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         ...stack,
         { toolCallId, url: `${pathname}${search}${hash}`, snapshot: snapshotNavContexts() },
       ]);
+      // Leaving the Agent page: carry the Thread into the drawer first, so
+      // the conversation stays beside what the Agent just opened.
+      if (pathname === "/agent") update({ ...state, open: true });
       router.push(result.url);
     },
-    [router],
+    [router, state, update],
   );
 
   const canGoBack = useCallback(
@@ -225,15 +238,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       router.push(entry.url);
     },
     [backStack, router],
-  );
-
-  const update = useCallback(
-    (next: StoredAgentState) => {
-      const owned = { ...next, ...(userId ? { userId } : {}) };
-      setState(owned);
-      writeStored(owned);
-    },
-    [userId],
   );
 
   const setOpen = useCallback(

@@ -10,7 +10,8 @@ import { AgentMessage } from "~/components/agent/agent-message";
 import { AgentThread } from "~/components/agent/agent-thread";
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), usePathname: () => "/map" }));
+let pathname = "/map";
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), usePathname: () => pathname }));
 vi.mock("~/components/feature-flags-provider", () => ({ useFeatureEnabled: () => true }));
 vi.mock("~/trpc/react", () => ({
   api: {
@@ -55,6 +56,7 @@ function renderWith(children: React.ReactNode) {
 }
 
 beforeEach(() => {
+  pathname = "/map";
   push.mockClear();
   sessionStorage.clear();
   window.history.pushState({}, "", "/map?layer=events");
@@ -99,6 +101,42 @@ describe("Agent navigation", () => {
     act(() => agent.openThread("t-old", [answer()]));
     act(() => agent.applyNavigation("nav-1", result));
     expect(push).not.toHaveBeenCalled();
+  });
+});
+
+describe("Agent navigation from the Agent page", () => {
+  it("opens the Agent drawer on the same Thread before moving", async () => {
+    const { AgentDrawer } = await import("~/components/agent/agent-drawer");
+    window.history.pushState({}, "", "/agent");
+    pathname = "/agent";
+    const view = renderWith(<AgentDrawer />);
+    const threadId = agent.threadId;
+    expect(agent.open).toBe(false);
+
+    act(() => agent.applyNavigation("nav-1", result));
+    expect(agent.open).toBe(true);
+    expect(agent.threadId).toBe(threadId);
+    expect(push).toHaveBeenCalledWith("/event/ev-1");
+
+    // On the new page the drawer shows that same Thread.
+    pathname = "/event/ev-1";
+    view.rerender(
+      <NextIntlClientProvider locale="en" messages={enMessages}>
+        <MantineProvider>
+          <AgentProvider>
+            <Probe />
+            <AgentDrawer />
+          </AgentProvider>
+        </MantineProvider>
+      </NextIntlClientProvider>,
+    );
+    expect(await screen.findByLabelText("Message the CLEAR Agent")).toBeInTheDocument();
+  });
+
+  it("leaves the drawer alone when moving from any other page", () => {
+    renderWith(null);
+    act(() => agent.applyNavigation("nav-2", result));
+    expect(agent.open).toBe(false);
   });
 });
 
