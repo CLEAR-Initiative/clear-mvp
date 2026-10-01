@@ -9,8 +9,9 @@
 import { useState } from "react";
 import { useChat, type Chat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
-import { Alert, Box, Button, Group, Loader, Stack, Text, Textarea } from "@mantine/core";
+import { Alert, Button, Group, Loader, Stack, Text, Textarea } from "@mantine/core";
 import { IconAlertTriangle, IconSend } from "@tabler/icons-react";
+import { AgentMessage } from "~/components/agent/agent-message";
 
 export interface AgentThreadProps {
   chat: Chat<UIMessage>;
@@ -31,29 +32,16 @@ export function AgentThread({ chat }: AgentThreadProps) {
   return (
     <Stack gap={16}>
       {messages.map((message) => (
-        <Box key={message.id} data-role={message.role}>
-          {message.parts.map((part, i) => {
-            if (part.type === "text") {
-              return (
-                <Text key={i} style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
-                  {part.text}
-                </Text>
-              );
-            }
-            if (part.type.startsWith("tool-") && "state" in part && part.state !== "output-available") {
-              return (
-                <Group key={i} gap={8}>
-                  <Loader size={12} />
-                  <Text size="sm" c="dimmed">
-                    Working…
-                  </Text>
-                </Group>
-              );
-            }
-            return null;
-          })}
-        </Box>
+        <AgentMessage key={message.id} message={message} />
       ))}
+      {status === "submitted" && (
+        <Group gap={8}>
+          <Loader size={12} />
+          <Text size="xs" c="dimmed">
+            Thinking…
+          </Text>
+        </Group>
+      )}
 
       {error && (
         <Alert color="red" icon={<IconAlertTriangle size={16} />}>

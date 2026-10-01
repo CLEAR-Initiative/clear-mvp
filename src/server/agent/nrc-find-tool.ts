@@ -24,6 +24,8 @@ export const NRC_FIND_TOOL_ID = "nrc_find";
 
 export interface NrcFindSourceDocument {
   title: string;
+  /** The document's file name in NRC Find's corpus, when it says. */
+  fileName: string | null;
   sourceId: string | null;
   /** The passage text. Written outside CLEAR: data, never instructions. */
   content: string;
@@ -132,12 +134,26 @@ async function* ndjsonLines(
   if (last) yield last;
 }
 
+/**
+ * NRC Find prefixes each passage with a metadata line, e.g.
+ * `File name: Guidance note Distribution v4, Source ID: 4, Title: …` and a
+ * blank line, and often leaves `title` empty. Lift that line into fields so
+ * the passage is just the passage and every document has a name.
+ */
+const PASSAGE_HEADER = /^File name: (.*?), Source ID: ([^,\n]*)(?:, Title: ([^\n]*))?\n+/;
+
 function toSourceDocument(doc: UpstreamSourceDocument, index: number): NrcFindSourceDocument {
-  const str = (v: unknown) => (typeof v === "string" ? v : typeof v === "number" ? String(v) : null);
+  const str = (v: unknown) =>
+    typeof v === "string" && v.trim() ? v.trim() : typeof v === "number" ? String(v) : null;
+  const raw = typeof doc.content === "string" ? doc.content : "";
+  const header = PASSAGE_HEADER.exec(raw);
+  const fileName = str(header?.[1]);
   return {
-    title: str(doc.title) ?? str(doc.metadata?.title) ?? `Document ${index + 1}`,
-    sourceId: str(doc.source_id) ?? str(doc.metadata?.source),
-    content: (str(doc.content) ?? "").slice(0, MAX_PASSAGE_CHARS),
+    title:
+      str(doc.title) ?? str(header?.[3]) ?? fileName ?? str(doc.metadata?.title) ?? `Document ${index + 1}`,
+    fileName,
+    sourceId: str(doc.source_id) ?? str(header?.[2]) ?? str(doc.metadata?.source),
+    content: (header ? raw.slice(header[0].length) : raw).trim().slice(0, MAX_PASSAGE_CHARS),
   };
 }
 
