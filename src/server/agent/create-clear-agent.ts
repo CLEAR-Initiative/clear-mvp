@@ -17,6 +17,7 @@ import { clearAgentInstructions } from "~/server/agent/instructions";
 import { ClearApiMemoryStorage } from "~/server/agent/memory-storage";
 import { resolveClearAgentModel } from "~/server/agent/model";
 import { createNrcFindTool, NRC_FIND_TOOL_ID } from "~/server/agent/nrc-find-tool";
+import type { Locale } from "~/i18n/config";
 import type { SessionUser } from "~/server/session";
 
 export const CLEAR_AGENT_ID = "clear-agent";
@@ -28,9 +29,11 @@ export interface ClearAgentRequest {
   user: SessionUser;
   /** The signed-in user's Cookie header, forwarded to clear-api as-is. */
   cookie: string;
+  /** The user's interface language; the Agent answers in it. */
+  locale: Locale;
 }
 
-export function createClearAgent({ user, cookie }: ClearAgentRequest): Mastra {
+export function createClearAgent({ user, cookie, locale }: ClearAgentRequest): Mastra {
   const storage = new MastraCompositeStore({
     id: "clear-api-conversations",
     domains: {
@@ -41,7 +44,7 @@ export function createClearAgent({ user, cookie }: ClearAgentRequest): Mastra {
   const agent = new Agent({
     id: CLEAR_AGENT_ID,
     name: "CLEAR Agent",
-    instructions: clearAgentInstructions(),
+    instructions: clearAgentInstructions(locale),
     model: resolveClearAgentModel(),
     tools: { [NRC_FIND_TOOL_ID]: createNrcFindTool() },
     memory: new Memory({

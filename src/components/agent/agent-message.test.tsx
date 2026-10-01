@@ -2,6 +2,8 @@ import React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
+import { NextIntlClientProvider } from "next-intl";
+import enMessages from "../../../messages/en.json";
 import type { UIMessage } from "ai";
 import { AgentMessage, sourceDocumentsOf } from "~/components/agent/agent-message";
 
@@ -9,9 +11,11 @@ afterEach(() => cleanup());
 
 function renderMessage(message: UIMessage) {
   return render(
-    <MantineProvider>
-      <AgentMessage message={message} />
-    </MantineProvider>,
+    <NextIntlClientProvider locale="en" messages={enMessages}>
+      <MantineProvider>
+        <AgentMessage message={message} />
+      </MantineProvider>
+    </NextIntlClientProvider>,
   );
 }
 
@@ -102,7 +106,7 @@ describe("AgentMessage", () => {
         { type: "text", text: "NRC Find is unavailable." },
       ]),
     );
-    expect(screen.getByText("Searched NRC documents — unavailable")).toBeInTheDocument();
+    expect(screen.getByText("NRC documents unavailable")).toBeInTheDocument();
     expect(screen.queryByTestId("agent-sources")).toBeNull();
   });
 

@@ -9,7 +9,6 @@ import { groundRouter } from "~/server/api/routers/ground";
 import { eventsRouter } from "~/server/api/routers/events";
 import { hapiRouter } from "~/server/api/routers/hapi";
 import { informRouter } from "~/server/api/routers/inform";
-import { llmRouter } from "~/server/api/routers/llm";
 import { pipelineRouter } from "~/server/api/routers/pipeline";
 import { signalsRouter } from "~/server/api/routers/signals";
 import { situationAnalysisRouter } from "~/server/api/routers/situationAnalysis";
@@ -32,7 +31,6 @@ export const appRouter = createTRPCRouter({
   ground: groundRouter,
   hapi: hapiRouter,
   inform: informRouter,
-  llm: llmRouter,
   invitations: invitationsRouter,
   locations: locationsRouter,
   locationChallenge: locationChallengeRouter,

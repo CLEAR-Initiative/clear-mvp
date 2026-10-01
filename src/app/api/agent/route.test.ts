@@ -199,6 +199,18 @@ describe("POST /api/agent — a Thread", () => {
     expect(JSON.stringify(prompts[0])).toContain("Focus: North Darfur");
   });
 
+  it("answers in the user's interface language: the locale cookie, else Accept-Language", async () => {
+    useScript([{ text: "مرحبا" }, { text: "Bonjour" }]);
+    const POST = await loadRoute();
+    await (await POST(agentRequest(`${ALICE}; NEXT_LOCALE=ar`, turn("t-ar", "Hi")))).text();
+    const fr = agentRequest(ALICE, turn("t-fr", "Hi"));
+    fr.headers.set("accept-language", "fr-FR,fr;q=0.9,en;q=0.8");
+    await (await POST(fr)).text();
+
+    expect(JSON.stringify(prompts[0])).toContain("Answer in Arabic");
+    expect(JSON.stringify(prompts[1])).toContain("Answer in French");
+  });
+
   it("stores the Thread as the session user even when the body claims otherwise", async () => {
     useScript([{ text: "Hello." }]);
     const POST = await loadRoute();

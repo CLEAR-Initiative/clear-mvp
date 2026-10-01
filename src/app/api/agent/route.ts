@@ -15,6 +15,7 @@
 import { handleChatStream } from "@mastra/ai-sdk";
 import { createUIMessageStreamResponse } from "ai";
 import { z } from "zod";
+import { LOCALE_COOKIE, pickLocale } from "~/i18n/config";
 import { canReadContent } from "~/lib/roles";
 import { createConversationsApi } from "~/server/agent/conversations";
 import { CLEAR_AGENT_ID, createClearAgent } from "~/server/agent/create-clear-agent";
@@ -84,7 +85,10 @@ export async function POST(req: Request): Promise<Response> {
     turnCostUsd(modelId, { inputTokens: 0, outputTokens: 0 }); // priced, or refuse
   } catch (err) {
     console.error("[agent]", (err as Error).message);
-    return Response.json({ error: "The CLEAR Agent is not configured." }, { status: 503 });
+    return Response.json(
+      { error: "The CLEAR Agent is not configured.", code: "AGENT_NOT_CONFIGURED" },
+      { status: 503 },
+    );
   }
 
   // clear-api owns spend (the usage lives there); this only reads it.
@@ -104,7 +108,8 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const startedAt = Date.now();
-  const mastra = createClearAgent({ user: session.user, cookie });
+  const locale = pickLocale(readCookie(cookie, LOCALE_COOKIE), req.headers.get("accept-language"));
+  const mastra = createClearAgent({ user: session.user, cookie, locale });
   let stream: Awaited<ReturnType<typeof handleChatStream>>;
   try {
     stream = await handleChatStream({
@@ -145,12 +150,28 @@ export async function POST(req: Request): Promise<Response> {
     // Loading the Thread runs before the stream opens; clear-api refuses
     // another user's Conversation.
     if (clearApiCode(err) === "FORBIDDEN") {
-      return Response.json({ error: "This Thread belongs to another user." }, { status: 403 });
+      return Response.json(
+        { error: "This Thread belongs to another user.", code: "THREAD_FORBIDDEN" },
+        { status: 403 },
+      );
     }
     console.error("[agent] could not start a turn:", err);
     return Response.json({ error: "The CLEAR Agent could not start." }, { status: 502 });
   }
   return createUIMessageStreamResponse({ stream });
+}
+
+function readCookie(header: string, name: string): string | undefined {
+  for (const pair of header.split(";")) {
+    const [key, ...rest] = pair.trim().split("=");
+    if (key !== name) continue;
+    try {
+      return decodeURIComponent(rest.join("="));
+    } catch {
+      return rest.join("=");
+    }
+  }
+  return undefined;
 }
 
 function titleFrom(text: string): string {

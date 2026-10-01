@@ -2,6 +2,10 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
+import { NextIntlClientProvider } from "next-intl";
+import enMessages from "../../../messages/en.json";
+import arMessages from "../../../messages/ar.json";
+
 import { AgentProvider, useAgent } from "~/components/agent/agent-provider";
 import { AgentDrawer } from "~/components/agent/agent-drawer";
 
@@ -45,14 +49,16 @@ function Probe() {
   return null;
 }
 
-function renderDrawer() {
+function renderDrawer(locale: "en" | "ar" = "en") {
   return render(
-    <MantineProvider>
-      <AgentProvider>
-        <Probe />
-        <AgentDrawer />
-      </AgentProvider>
-    </MantineProvider>,
+    <NextIntlClientProvider locale={locale} messages={locale === "ar" ? arMessages : enMessages}>
+      <MantineProvider>
+        <AgentProvider>
+          <Probe />
+          <AgentDrawer />
+        </AgentProvider>
+      </MantineProvider>
+    </NextIntlClientProvider>,
   );
 }
 
@@ -150,5 +156,22 @@ describe("Thread restore", () => {
     act(() => agent!.newThread());
     expect(agent!.chat.messages).toEqual([]);
     expect(getConversation).not.toHaveBeenCalledWith({ id: agent!.threadId }, expect.objectContaining({ enabled: true }));
+  });
+});
+
+describe("AgentDrawer languages", () => {
+  it("puts the launcher on the inline-end side: right for English", () => {
+    renderDrawer("en");
+    const affix = launcher()!.closest(".mantine-Affix-root") as HTMLElement;
+    expect(affix.style.getPropertyValue("--affix-right")).not.toBe("");
+    expect(affix.style.getPropertyValue("--affix-left")).toBe("");
+  });
+
+  it("mirrors to the left, with Arabic labels, under Arabic", () => {
+    renderDrawer("ar");
+    const button = screen.getByRole("button", { name: "فتح لوحة الوكيل" });
+    const affix = button.closest(".mantine-Affix-root") as HTMLElement;
+    expect(affix.style.getPropertyValue("--affix-left")).not.toBe("");
+    expect(affix.style.getPropertyValue("--affix-right")).toBe("");
   });
 });

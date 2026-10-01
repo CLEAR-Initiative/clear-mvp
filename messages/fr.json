@@ -1939,19 +1939,6 @@
       "email": "E-mail",
       "call": "Appeler",
       "empty": "Aucun contact trouvé pour ce lieu"
-    },
-    "humchat": {
-      "subtitle": "Assistant IA humanitaire",
-      "online": "En ligne",
-      "clearChat": "Effacer la conversation",
-      "collapse": "Réduire le panneau",
-      "inputPlaceholder": "Posez une question sur la réponse humanitaire...",
-      "welcome": "Bonjour ! Je suis **HumChat**, votre assistant IA pour les opérations humanitaires. Je suis entraîné sur les directives de l'IASC, les standards Sphère et le contexte humanitaire spécifique à l'Éthiopie.\n\nJe peux vous aider avec :\n- **Analyse de situation** et notes de crise\n- **Planification de la réponse** et allocation des ressources\n- **Orientations sur les protocoles** d'urgence\n- **Appui à la coordination** et communications\n\nQuel défi humanitaire puis-je vous aider à relever aujourd'hui ?",
-      "examples": {
-        "displacement": "Analyser les tendances de déplacement dans la région Somali",
-        "interventions": "Quelles sont les interventions prioritaires pour les urgences sanitaires ?",
-        "assessment": "Générer un plan d'évaluation rapide pour les risques de protection"
-      }
     }
   },
   "map": {
@@ -3144,6 +3131,51 @@
       "button": "Mettre à jour",
       "requested": "Mise à jour demandée. La nouvelle version prend généralement quelques minutes et s'affiche ici d'elle-même.",
       "error": "La mise à jour n'a pas pu être demandée. Veuillez réessayer."
+    }
+  },
+  "agent": {
+    "name": "Agent CLEAR",
+    "drawer": {
+      "open": "Ouvrir le panneau de l'Agent",
+      "close": "Fermer le panneau de l'Agent",
+      "launcherTooltip": "Interroger l'Agent CLEAR",
+      "newThread": "Nouvelle conversation",
+      "openPage": "Ouvrir la page de l'Agent"
+    },
+    "page": {
+      "title": "Agent",
+      "subtitle": "Interroger l'Agent CLEAR",
+      "unavailable": "L'Agent CLEAR n'est pas disponible pour votre compte.",
+      "historyLabel": "Vos conversations",
+      "untitled": "Conversation sans titre",
+      "empty": "Aucune conversation pour l'instant.",
+      "loadMore": "Charger plus"
+    },
+    "thread": {
+      "inputLabel": "Écrire à l'Agent CLEAR",
+      "inputPlaceholder": "Posez une question sur une crise, un lieu ou le travail du NRC…",
+      "send": "Envoyer",
+      "thinking": "Réflexion…"
+    },
+    "message": {
+      "sources": "Sources ({count})",
+      "showMore": "Afficher plus",
+      "showLess": "Afficher moins"
+    },
+    "tools": {
+      "nrcFindRunning": "Recherche dans les documents du NRC…",
+      "nrcFindDone": "Documents du NRC consultés",
+      "nrcFindUnavailable": "Documents du NRC indisponibles",
+      "running": "Exécution de {tool}…",
+      "done": "{tool} exécuté",
+      "unavailable": "{tool} indisponible"
+    },
+    "errors": {
+      "budgetSpent": "Votre budget quotidien de l'Agent est épuisé.",
+      "budgetResets": "Il sera réinitialisé à {time}.",
+      "forbiddenThread": "Cette conversation appartient à un autre utilisateur.",
+      "notConfigured": "L'Agent CLEAR n'est pas configuré sur ce serveur.",
+      "generic": "L'Agent CLEAR n'a pas pu répondre. Veuillez réessayer."
     }
   }
 }

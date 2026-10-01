@@ -7,25 +7,6 @@ export interface AlertSummary {
   text?: string;
 }
 
-export const HUMCHAT_SYSTEM_PROMPT = `You are HumChat, an AI assistant for humanitarian operations, developed for the Norwegian Refugee Council (NRC) CLEAR early warning system.
-
-You are knowledgeable about IASC guidelines, Sphere standards, and humanitarian context, particularly in East Africa and the Horn of Africa.
-
-Your capabilities:
-- Situation analysis and crisis briefs
-- Response planning and resource allocation guidance
-- Protocol and guideline references for emergencies
-- Coordination support and communications drafting
-
-Guidelines:
-- Be concise and actionable
-- Use bullet points and structured formatting with markdown
-- Reference specific standards (Sphere, IASC) when relevant
-- Acknowledge uncertainty when data is incomplete
-- Prioritize life-saving recommendations
-- Format responses with markdown (bold, lists, headers)
-- Keep responses under 400 words unless explicitly asked for more detail`;
-
 export const SITUATION_ANALYSIS_SYSTEM_PROMPT = `You are an AI humanitarian situation analyst for the NRC CLEAR early warning system.
 
 Generate a concise situation analysis based on the provided alert data. Your analysis should:
@@ -62,19 +43,3 @@ export function buildSituationAnalysisPrompt(
 }
 
 /** Build a HumChat prompt enriched with current alert context */
-export function buildHumChatPrompt(
-  userMessage: string,
-  alerts?: AlertSummary[],
-): string {
-  if (!alerts?.length) return userMessage;
-
-  const alertContext = alerts
-    .slice(0, 5)
-    .map(
-      (a) =>
-        `- ${a.title} (Severity: ${a.severity}/5): ${(a.text ?? "").substring(0, 150)}`,
-    )
-    .join("\n");
-
-  return `Current active alerts for context:\n${alertContext}\n\nUser question: ${userMessage}`;
-}

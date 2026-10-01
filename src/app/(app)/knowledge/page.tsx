@@ -27,14 +27,12 @@ import {
   allDocuments,
   allContacts,
 } from "./_components/knowledge-data";
-import { HumChatSidebar } from "./_components/humchat-sidebar";
 import { CrisisResources } from "./_components/crisis-resources";
 import { DocumentLibrary } from "./_components/document-library";
 import { ContactsPanel } from "./_components/contacts-panel";
 
 export default function KnowledgePage() {
   const t = useTranslations("knowledge");
-  const [isChatExpanded, setIsChatExpanded] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Location filters
@@ -228,21 +226,6 @@ export default function KnowledgePage() {
         </Box>
       </Box>
 
-      {/* HumChat Sidebar */}
-      <Box
-        style={{
-          width: isChatExpanded ? 380 : 0,
-          flexShrink: 0,
-          transition: "width 0.3s ease",
-          overflow: "hidden",
-          height: "100vh",
-        }}
-      >
-        <HumChatSidebar isExpanded={isChatExpanded} onToggle={() => setIsChatExpanded(!isChatExpanded)} />
-      </Box>
-      {!isChatExpanded && (
-        <HumChatSidebar isExpanded={false} onToggle={() => setIsChatExpanded(true)} />
-      )}
     </Box>
   );
 }

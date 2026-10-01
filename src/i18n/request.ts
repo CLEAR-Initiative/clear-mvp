@@ -2,39 +2,15 @@ import { getRequestConfig } from "next-intl/server";
 import { cookies, headers } from "next/headers";
 import type enMessages from "../../messages/en.json";
 
-import {
-  defaultLocale,
-  defaultTimeZone,
-  isLocale,
-  LOCALE_COOKIE,
-  TIMEZONE_COOKIE,
-  type Locale,
-} from "./config";
-
-/**
- * Picks the first supported locale from an Accept-Language header value,
- * e.g. "fr-FR,fr;q=0.9,en;q=0.8" -> "fr". Tokens arrive in client
- * preference order, so the first match wins.
- */
-function matchAcceptLanguage(header: string | null): Locale | undefined {
-  if (!header) return undefined;
-  for (const part of header.split(",")) {
-    const tag = part.split(";")[0]?.trim().toLowerCase();
-    if (!tag) continue;
-    const base = tag.split("-")[0];
-    if (isLocale(base)) return base;
-  }
-  return undefined;
-}
+import { defaultTimeZone, LOCALE_COOKIE, pickLocale, TIMEZONE_COOKIE } from "./config";
 
 export default getRequestConfig(async () => {
   const cookieStore = await cookies();
 
-  const cookieLocale = cookieStore.get(LOCALE_COOKIE)?.value;
-  const locale = isLocale(cookieLocale)
-    ? cookieLocale
-    : (matchAcceptLanguage((await headers()).get("accept-language")) ??
-      defaultLocale);
+  const locale = pickLocale(
+    cookieStore.get(LOCALE_COOKIE)?.value,
+    (await headers()).get("accept-language"),
+  );
 
   // Cookie values are URL-encoded on write ("Africa%2FKhartoum"); decode
   // defensively since RequestCookies does not always decode on read.

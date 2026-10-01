@@ -7,6 +7,7 @@
  */
 
 import { useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { useChat, type Chat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import { Alert, Button, Group, Loader, Stack, Text, Textarea } from "@mantine/core";
@@ -17,24 +18,37 @@ import { AgentMessage } from "~/components/agent/agent-message";
  * The transport surfaces a failed request's body as the error message; turn
  * the route's JSON errors into something to show.
  */
-export function describeAgentError(error: Error): { budgetResetsAt?: Date; message: string } {
+export function describeAgentError(error: Error): {
+  code?: string;
+  budgetResetsAt?: Date;
+  message: string;
+} {
   try {
     const body = JSON.parse(error.message) as { error?: unknown; code?: unknown; resetsAt?: unknown };
-    if (body.code === "AGENT_BUDGET_EXCEEDED" && typeof body.resetsAt === "string") {
-      return { budgetResetsAt: new Date(body.resetsAt), message: "Your daily Agent budget is spent." };
+    const code = typeof body.code === "string" ? body.code : undefined;
+    const message = typeof body.error === "string" ? body.error : error.message;
+    if (code === "AGENT_BUDGET_EXCEEDED" && typeof body.resetsAt === "string") {
+      return { code, budgetResetsAt: new Date(body.resetsAt), message };
     }
-    if (typeof body.error === "string") return { message: body.error };
+    return { code, message };
   } catch {
     /* not JSON: a network or stream error */
   }
-  return { message: error.message || "Something went wrong." };
+  return { message: error.message };
 }
+
+/** Error codes from /api/agent with a translated message. */
+const ERROR_KEYS: Record<string, "forbiddenThread" | "notConfigured"> = {
+  THREAD_FORBIDDEN: "forbiddenThread",
+  AGENT_NOT_CONFIGURED: "notConfigured",
+};
 
 export interface AgentThreadProps {
   chat: Chat<UIMessage>;
 }
 
 export function AgentThread({ chat }: AgentThreadProps) {
+  const t = useTranslations("agent.thread");
   const { messages, sendMessage, status, error } = useChat({ chat });
   const [draft, setDraft] = useState("");
   const busy = status === "submitted" || status === "streaming";
@@ -55,7 +69,7 @@ export function AgentThread({ chat }: AgentThreadProps) {
         <Group gap={8}>
           <Loader size={12} />
           <Text size="xs" c="dimmed">
-            Thinking…
+            {t("thinking")}
           </Text>
         </Group>
       )}
@@ -63,7 +77,8 @@ export function AgentThread({ chat }: AgentThreadProps) {
       {error && <AgentError error={error} />}
 
       <Textarea
-        aria-label="Message the CLEAR Agent"
+        aria-label={t("inputLabel")}
+        placeholder={t("inputPlaceholder")}
         autosize
         minRows={2}
         maxRows={8}
@@ -82,7 +97,7 @@ export function AgentThread({ chat }: AgentThreadProps) {
           onClick={send}
           disabled={busy || !draft.trim()}
         >
-          Send
+          {t("send")}
         </Button>
       </Group>
     </Stack>
@@ -90,18 +105,25 @@ export function AgentThread({ chat }: AgentThreadProps) {
 }
 
 function AgentError({ error }: { error: Error }) {
-  const { budgetResetsAt, message } = describeAgentError(error);
+  const t = useTranslations("agent.errors");
+  const format = useFormatter();
+  const { code, budgetResetsAt } = describeAgentError(error);
   if (budgetResetsAt) {
     return (
-      <Alert color="yellow" icon={<IconClockPause size={16} />} title={message} data-testid="agent-budget-spent">
-        It resets at{" "}
-        {budgetResetsAt.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}.
+      <Alert
+        color="yellow"
+        icon={<IconClockPause size={16} />}
+        title={t("budgetSpent")}
+        data-testid="agent-budget-spent"
+      >
+        {t("budgetResets", { time: format.dateTime(budgetResetsAt, { dateStyle: "medium", timeStyle: "short" }) })}
       </Alert>
     );
   }
+  const key = code ? ERROR_KEYS[code] : undefined;
   return (
-    <Alert color="red" icon={<IconAlertTriangle size={16} />}>
-      {message}
+    <Alert color="red" icon={<IconAlertTriangle size={16} />} data-testid="agent-error">
+      {t(key ?? "generic")}
     </Alert>
   );
 }

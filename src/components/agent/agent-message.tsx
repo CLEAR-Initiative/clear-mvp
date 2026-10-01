@@ -9,6 +9,7 @@
  * referrer, so nothing a model or a document writes can inject markup.
  */
 
+import { useTranslations } from "next-intl";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { UIMessage } from "ai";
@@ -32,9 +33,8 @@ interface ToolPart {
   errorText?: string;
 }
 
-const TOOL_LABELS: Record<string, { running: string; done: string }> = {
-  nrc_find: { running: "Searching NRC documents…", done: "Searched NRC documents" },
-};
+/** Tools with their own activity wording; others are named generically. */
+const TOOL_KEYS: Record<string, "nrcFind"> = { nrc_find: "nrcFind" };
 
 function toolName(part: Part): string | null {
   return part.type.startsWith("tool-") ? part.type.slice("tool-".length) : null;
@@ -62,9 +62,13 @@ export function sourceDocumentsOf(parts: readonly Part[]): SourceDocument[] {
 }
 
 function ToolActivity({ part }: { part: Part }) {
+  const t = useTranslations("agent.tools");
   const name = toolName(part)!;
   const tool = part as ToolPart;
-  const labels = TOOL_LABELS[name] ?? { running: `Running ${name}…`, done: `Ran ${name}` };
+  const key = TOOL_KEYS[name];
+  const labels = key
+    ? { running: t(`${key}Running`), done: t(`${key}Done`), unavailable: t(`${key}Unavailable`) }
+    : { running: t("running", { tool: name }), done: t("done", { tool: name }), unavailable: t("unavailable", { tool: name }) };
   const failed =
     tool.state === "output-error" ||
     (tool.state === "output-available" &&
@@ -81,7 +85,7 @@ function ToolActivity({ part }: { part: Part }) {
         <Loader size={12} />
       )}
       <Text size="xs" c="dimmed">
-        {failed ? `${labels.done} — unavailable` : done ? labels.done : labels.running}
+        {failed ? labels.unavailable : done ? labels.done : labels.running}
       </Text>
     </Group>
   );
@@ -108,10 +112,11 @@ function Markdown({ text }: { text: string }) {
 }
 
 function SourceDocuments({ docs }: { docs: SourceDocument[] }) {
+  const t = useTranslations("agent.message");
   return (
     <Stack gap={6} data-testid="agent-sources">
       <Text size="xs" fw={600} c="dimmed">
-        Sources ({docs.length})
+        {t("sources", { count: docs.length })}
       </Text>
       {docs.map((doc, i) => (
         <Card key={i} withBorder radius="sm" p={10}>
@@ -127,7 +132,7 @@ function SourceDocuments({ docs }: { docs: SourceDocument[] }) {
             </Text>
           )}
           {doc.content && (
-            <Spoiler maxHeight={60} showLabel="Show more" hideLabel="Show less">
+            <Spoiler maxHeight={60} showLabel={t("showMore")} hideLabel={t("showLess")}>
               <Text size="xs" c="dimmed" style={{ whiteSpace: "pre-wrap" }}>
                 {doc.content}
               </Text>

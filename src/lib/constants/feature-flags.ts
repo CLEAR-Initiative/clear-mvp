@@ -81,15 +81,16 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
   {
     key: "knowledge_hub",
     label: "Knowledge Hub",
-    description: "Document library, contacts panel, and HumChat",
+    description: "Document library and contacts panel",
     tier: 4,
     defaultEnabled: true,
     route: "/knowledge",
   },
   {
     key: "agent",
-    label: "Agent",
-    description: "NRC Find agent",
+    label: "CLEAR Agent",
+    description:
+      "The CLEAR Agent: the Agent drawer on every page and the Agent page. Answers from NRC Find; Threads are stored as Conversations in clear-api under a daily Agent budget.",
     tier: 4,
     defaultEnabled: false,
     route: "/agent",
