@@ -5,6 +5,8 @@
  *
  * The fake keys callers by Cookie, so tests can prove that every call carries
  * the right user's session and that one user can't reach another's Thread.
+ * Like clear-api, it takes Conversation writes only with the Agent's key in
+ * `X-Clear-Agent-Key` as well (`FAKE_AGENT_KEY`).
  */
 
 import { MockLanguageModelV3, convertArrayToReadableStream } from "ai/test";
@@ -32,10 +34,21 @@ interface MessageRow {
   latencyMs?: number;
 }
 
+/** The Agent key the fake accepts; tests set CLEAR_AGENT_API_KEY to it. */
+export const FAKE_AGENT_KEY = "sk_live_fake-clear-agent-key";
+
+const WRITES = [
+  "upsertConversationMessages(",
+  "upsertConversation(",
+  "recordConversationTurnUsage(",
+  "saveAgentWorkingMemory(",
+];
+
 export interface GraphQLCall {
   query: string;
   variables: Record<string, unknown>;
   cookie: string | null;
+  agentKey: string | null;
 }
 
 class GraphQLFailure extends Error {
@@ -82,11 +95,19 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
     return row;
   }
 
-  function execute(query: string, v: Record<string, unknown>, cookie: string | null) {
+  function execute(
+    query: string,
+    v: Record<string, unknown>,
+    cookie: string | null,
+    agentKey: string | null,
+  ) {
     if (query.includes("featureFlags")) {
       return { featureFlags: Object.entries(flags).map(([key, enabled]) => ({ key, enabled })) };
     }
     const user = userFor(cookie);
+    if (WRITES.some((op) => query.includes(op)) && agentKey !== FAKE_AGENT_KEY) {
+      throw new GraphQLFailure("Conversations are written only by the CLEAR Agent in the app", "FORBIDDEN");
+    }
 
     if (query.includes("upsertConversationMessages(")) {
       const id = v.conversationId as string;
@@ -211,10 +232,12 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
         query: string;
         variables?: Record<string, unknown>;
       };
-      const cookie = new Headers(init?.headers).get("cookie");
-      calls.push({ query, variables, cookie });
+      const headers = new Headers(init?.headers);
+      const cookie = headers.get("cookie");
+      const agentKey = headers.get("x-clear-agent-key");
+      calls.push({ query, variables, cookie, agentKey });
       try {
-        return Response.json({ data: execute(query, variables, cookie) });
+        return Response.json({ data: execute(query, variables, cookie, agentKey) });
       } catch (err) {
         if (err instanceof GraphQLFailure) {
           return Response.json({

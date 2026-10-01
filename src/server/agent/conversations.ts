@@ -1,9 +1,11 @@
 /**
  * clear-api's Conversation operations, as the CLEAR Agent's memory uses them.
  *
- * Every call carries the signed-in user's Cookie, so clear-api enforces
- * ownership on each one (ADR-0009 in clear-api). Nothing here holds a
- * credential of its own.
+ * Every call carries two credentials (ADR-0009 in clear-api): the signed-in
+ * user's Cookie, so clear-api enforces ownership, and the CLEAR Agent's own
+ * key in `X-Clear-Agent-Key`, so clear-api knows the write comes from the
+ * Agent and not from the user calling it directly. clear-api only accepts
+ * Conversation writes that carry both.
  */
 
 import "server-only";
@@ -65,10 +67,20 @@ const MESSAGE_FIELDS = `id conversationId role type content createdAt`;
 /** clear-api caps one upsertConversationMessages call at 200 messages. */
 const MESSAGES_PER_CALL = 200;
 
+/**
+ * The CLEAR Agent's clear-api key (the `agent` service user's, minted by
+ * clear-api's scripts/create-agent-user.ts). Server-only configuration.
+ */
+export function clearAgentApiKey(): string {
+  const key = process.env.CLEAR_AGENT_API_KEY?.trim();
+  if (!key) throw new Error("CLEAR_AGENT_API_KEY is not configured on the server.");
+  return key;
+}
+
 export type ConversationsApi = ReturnType<typeof createConversationsApi>;
 
 export function createConversationsApi(cookie: string) {
-  const headers = { Cookie: cookie };
+  const headers = { Cookie: cookie, "X-Clear-Agent-Key": clearAgentApiKey() };
   const gql = <T>(query: string, variables?: Record<string, unknown>) =>
     graphqlFetch<T>(query, variables, headers);
 

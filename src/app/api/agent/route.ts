@@ -18,7 +18,7 @@ import { createUIMessageStreamResponse } from "ai";
 import { z } from "zod";
 import { LOCALE_COOKIE, pickLocale } from "~/i18n/config";
 import { canReadContent } from "~/lib/roles";
-import { createConversationsApi } from "~/server/agent/conversations";
+import { clearAgentApiKey, createConversationsApi } from "~/server/agent/conversations";
 import { CLEAR_AGENT_ID, createClearAgent } from "~/server/agent/create-clear-agent";
 import { agentFlagEnabled } from "~/server/agent/flag";
 import { clearAgentModelId } from "~/server/agent/model";
@@ -91,6 +91,7 @@ export async function POST(req: Request): Promise<Response> {
   try {
     modelId = clearAgentModelId();
     turnCostUsd(modelId, { inputTokens: 0, outputTokens: 0 }); // priced, or refuse
+    clearAgentApiKey(); // clear-api only takes Conversation writes with it
   } catch (err) {
     console.error("[agent]", (err as Error).message);
     return Response.json(
