@@ -27,7 +27,7 @@ const result = {
   moved: true as const,
   target: { kind: "event", id: "ev-1" },
   url: "/event/ev-1",
-  label: "Floods in Kassala",
+  content: { label: "Floods in Kassala" },
 };
 const answer = (state = "output-available"): UIMessage =>
   ({

@@ -94,7 +94,7 @@ describe("scripted model: navigation", () => {
       { role: "user", content: [{ type: "text", text: "Show it on the map" }] },
       {
         role: "tool",
-        content: [{ type: "tool-result", output: { type: "json", value: { moved: true, label: "Sudan" } } }],
+        content: [{ type: "tool-result", output: { type: "json", value: { moved: true, content: { label: "Sudan" } } } }],
       },
     ]);
     const text = parts.filter((p) => p.type === "text-delta").map((p) => p.delta).join("");

@@ -49,7 +49,7 @@ export interface NavigateResult {
   moved: true;
   target: { kind: string; id?: string };
   url: string;
-  label: string;
+  content: { label: string };
 }
 
 /**
@@ -60,7 +60,13 @@ const NAVIGABLE_URL = /^\/(?:(?:event|signal|crisis)\/[A-Za-z0-9_%-]+|(?:map|det
 
 export function isNavigateResult(value: unknown): value is NavigateResult {
   const v = value as Partial<NavigateResult> | null;
-  return !!v && v.moved === true && typeof v.url === "string" && NAVIGABLE_URL.test(v.url);
+  return (
+    !!v &&
+    v.moved === true &&
+    typeof v.url === "string" &&
+    NAVIGABLE_URL.test(v.url) &&
+    typeof v.content?.label === "string"
+  );
 }
 
 /** Every navigate tool call already in some messages (restored history). */

@@ -77,7 +77,7 @@ export function createScriptedModel() {
       if (last?.role === "tool" && (toolResultOf(last) ?? {}).moved === true) {
         const result = toolResultOf(last)!;
         const text =
-          `Moved you to ${String(result.label)}.` +
+          `Moved you to ${String((result.content as { label?: unknown } | undefined)?.label)}.` +
           (viewing ? ` You were viewing ${viewing.kind} ${viewing.id}.` : "");
         parts.push(
           { type: "text-start", id },

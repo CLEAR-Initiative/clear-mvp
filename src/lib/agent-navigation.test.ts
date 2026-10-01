@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isNavigateResult } from "~/lib/agent-navigation";
 
-const result = (url: string) => ({ moved: true, target: { kind: "map" }, url, label: "x" });
+const result = (url: string) => ({ moved: true, target: { kind: "map" }, url, content: { label: "x" } });
 
 describe("isNavigateResult", () => {
   it.each(["/event/ev-1", "/signal/s_2", "/crisis/c%201", "/map", "/map?country=Sudan", "/detection?date=Last+7+days"])(

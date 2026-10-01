@@ -528,7 +528,7 @@ describe("POST /api/agent — Agent navigation", () => {
       moved: true,
       target: { kind: "event", id: "ev-1" },
       url: "/event/ev-1",
-      label: "Floods in Kassala",
+      content: { label: "Floods in Kassala" },
     });
     const lookup = clearApi.calls.find((c) => c.query.includes("ClearGetEvent"));
     expect(lookup?.cookie).toBe(ALICE);
@@ -618,7 +618,7 @@ describe("POST /api/agent — Agent navigation", () => {
         moved: true,
         target: { kind: "map" },
         url: "/map?country=Sudan&region=North+Darfur&timeframe=7d",
-        label: "Sudan · North Darfur · 7d",
+        content: { label: "Sudan · North Darfur · 7d" },
       });
     });
 

@@ -59,7 +59,7 @@ function NavigationNotice({ toolCallId, result }: { toolCallId: string; result: 
     <Group gap={8} wrap="nowrap" data-testid="agent-navigation">
       <IconRoute size={14} style={{ flexShrink: 0 }} color="var(--mantine-color-dimmed)" />
       <Text size="sm" style={{ flex: 1, minWidth: 0 }} lineClamp={2}>
-        {t("movedTo", { kind: kind ? t(`kinds.${kind}`) : result.target.kind, label: result.label })}
+        {t("movedTo", { kind: kind ? t(`kinds.${kind}`) : result.target.kind, label: result.content.label })}
       </Text>
       {canGoBack && (
         <Button

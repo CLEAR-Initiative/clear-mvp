@@ -71,8 +71,12 @@ export interface NavigateOutput {
   target: { kind: string; id?: string };
   /** App path; always one of the fixed entity routes. */
   url: string;
-  /** Short name for the announcement. Plain text from CLEAR's data. */
-  label: string;
+  /**
+   * The announcement's short name. Under `content` because an entity's name
+   * is its title, which can come from outside CLEAR (a Signal's headline):
+   * the system prompt's third-party rule covers text under a `content` key.
+   */
+  content: { label: string };
 }
 
 type RunCuratedTool = (name: string, input: unknown, signal?: AbortSignal) => Promise<CuratedToolOutcome>;
@@ -172,7 +176,7 @@ export async function resolveNavigation(
         moved: true,
         target: { kind: "map" },
         url: mapDeepLinkHref({ country: scope.country?.name, region: scope.region?.name, timeframe }),
-        label: scopeLabel([scope.country?.name ?? "All countries", scope.region?.name, timeframe]),
+        content: { label: scopeLabel([scope.country?.name ?? "All countries", scope.region?.name, timeframe]) },
       };
     }
     const { date, severities } = target.filters;
@@ -180,7 +184,9 @@ export async function resolveNavigation(
       moved: true,
       target: { kind: "detection" },
       url: detectionDeepLinkHref({ country: scope.country?.name, region: scope.region?.id, date, severities }),
-      label: scopeLabel([scope.country?.name ?? "All countries", scope.region?.name, date, severities?.join(", ")]),
+      content: {
+        label: scopeLabel([scope.country?.name ?? "All countries", scope.region?.name, date, severities?.join(", ")]),
+      },
     };
   }
 
@@ -194,7 +200,7 @@ export async function resolveNavigation(
     moved: true,
     target,
     url: `/${target.kind}/${encodeURIComponent(target.id)}`,
-    label: labelOf(target.kind, target.id, item),
+    content: { label: labelOf(target.kind, target.id, item) },
   };
 }
 
