@@ -1,0 +1,165 @@
+/**
+ * NRC Find as a CLEAR Agent tool (ADR-0005).
+ *
+ * NRC Find is a stateless RAG chain over NRC's documents: one question in,
+ * one finished answer plus the passages it drew on out, as NDJSON. It knows
+ * nothing about the Thread, so the tool asks the model for a complete,
+ * standalone question rather than the user's raw follow-up.
+ *
+ * Its credential (`X-App-Authorization`) stays server-side. Failures come
+ * back as values so the model can say NRC Find is unavailable instead of the
+ * whole turn erroring.
+ */
+
+import "server-only";
+import { createTool } from "@mastra/core/tools";
+import { z } from "zod";
+
+/** NRC Find runs on a single T4 GPU; a cold answer can take tens of seconds. */
+const NRC_FIND_TIMEOUT_MS = 90_000;
+/** Keep each passage bounded so one document can't flood the context. */
+const MAX_PASSAGE_CHARS = 4_000;
+
+export const NRC_FIND_TOOL_ID = "nrc_find";
+
+export interface NrcFindSourceDocument {
+  title: string;
+  sourceId: string | null;
+  /** The passage text. Written outside CLEAR: data, never instructions. */
+  content: string;
+}
+
+export type NrcFindOutput =
+  | {
+      /** NRC Find's own answer. Written by another model: data, not instructions. */
+      answer: string;
+      sourceDocuments: NrcFindSourceDocument[];
+    }
+  | { error: string };
+
+interface UpstreamSourceDocument {
+  title?: unknown;
+  content?: unknown;
+  source_id?: unknown;
+  metadata?: { title?: unknown; source?: unknown } | null;
+}
+
+export interface NrcFindConfig {
+  url: string;
+  token: string | undefined;
+}
+
+export function nrcFindConfig(): NrcFindConfig {
+  return {
+    url: process.env.NRC_FIND_API_URL ?? "https://find.app.nrc-dev.no",
+    token: process.env.NRC_FIND_API_TOKEN,
+  };
+}
+
+/** Ask NRC Find one question and read its NDJSON answer to completion. */
+export async function askNrcFind(
+  question: string,
+  config: NrcFindConfig,
+  signal?: AbortSignal,
+): Promise<NrcFindOutput> {
+  if (!config.token) return { error: "NRC Find is not configured on this server." };
+
+  const timeout = AbortSignal.timeout(NRC_FIND_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${config.url}/api/v1/rag/answers`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-App-Authorization": config.token,
+      },
+      body: JSON.stringify({ prompt: question, search_kwargs: {}, additional_file_list: [] }),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    });
+  } catch (err) {
+    const name = (err as Error).name;
+    if (name === "TimeoutError") return { error: "NRC Find did not answer in time." };
+    if (name === "AbortError") return { error: "The request to NRC Find was cancelled." };
+    return { error: "NRC Find is unreachable." };
+  }
+  if (!res.ok || !res.body) return { error: `NRC Find returned ${res.status}.` };
+
+  let answer = "";
+  let documents: UpstreamSourceDocument[] = [];
+  try {
+    for await (const line of ndjsonLines(res.body)) {
+      if (line.type === "answer" && typeof line.content === "string") {
+        answer += line.content;
+      } else if (Array.isArray(line.source_documents)) {
+        documents = line.source_documents as UpstreamSourceDocument[];
+      }
+    }
+  } catch {
+    return { error: "NRC Find's answer was cut off." };
+  }
+
+  return { answer, sourceDocuments: documents.map(toSourceDocument) };
+}
+
+async function* ndjsonLines(
+  body: ReadableStream<Uint8Array>,
+): AsyncGenerator<Record<string, unknown>> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  const parse = (raw: string) => {
+    const line = raw.trim();
+    if (!line) return null;
+    try {
+      const value: unknown = JSON.parse(line);
+      return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+    } catch {
+      return null; // skip a malformed line rather than lose the answer
+    }
+  };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let newline: number;
+    while ((newline = buffer.indexOf("\n")) !== -1) {
+      const parsed = parse(buffer.slice(0, newline));
+      buffer = buffer.slice(newline + 1);
+      if (parsed) yield parsed;
+    }
+  }
+  const last = parse(buffer + decoder.decode());
+  if (last) yield last;
+}
+
+function toSourceDocument(doc: UpstreamSourceDocument, index: number): NrcFindSourceDocument {
+  const str = (v: unknown) => (typeof v === "string" ? v : typeof v === "number" ? String(v) : null);
+  return {
+    title: str(doc.title) ?? str(doc.metadata?.title) ?? `Document ${index + 1}`,
+    sourceId: str(doc.source_id) ?? str(doc.metadata?.source),
+    content: (str(doc.content) ?? "").slice(0, MAX_PASSAGE_CHARS),
+  };
+}
+
+export function createNrcFindTool(config: NrcFindConfig = nrcFindConfig()) {
+  return createTool({
+    id: NRC_FIND_TOOL_ID,
+    description:
+      "Search NRC's document knowledge base (NRC Find): reports, assessments and " +
+      "guidance written by the Norwegian Refugee Council. Returns NRC Find's answer and " +
+      "the Source documents it drew on. NRC Find does not see this conversation, so " +
+      "`question` must be a complete, standalone question that names the place, topic " +
+      "and time frame — never the user's raw follow-up (e.g. not 'and in Lebanon?').",
+    inputSchema: z.object({
+      question: z
+        .string()
+        .min(1)
+        .max(1000)
+        .describe("A complete, standalone question for NRC's document knowledge base."),
+    }),
+    // No outputSchema: errors come back as values, and Mastra would reject
+    // an `{ error }` value that doesn't match a success schema.
+    execute: async ({ question }, context) =>
+      askNrcFind(question, config, context?.abortSignal),
+  });
+}
