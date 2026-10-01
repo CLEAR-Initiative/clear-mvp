@@ -2872,6 +2872,7 @@
       "label": "Traduction ({locale})",
       "pending": "Traduction en cours, cela peut prendre un moment",
       "unavailable": "La traduction n'est pas encore disponible",
+      "retry": "Réessayer",
       "locales": {
         "en": "anglais",
         "fr": "français",
@@ -3233,7 +3234,9 @@
       "budgetResets": "Il sera réinitialisé à {time}.",
       "forbiddenThread": "Cette conversation appartient à un autre utilisateur.",
       "notConfigured": "L'Agent CLEAR n'est pas configuré sur ce serveur.",
-      "generic": "L'Agent CLEAR n'a pas pu répondre. Veuillez réessayer."
+      "generic": "L'Agent CLEAR n'a pas pu répondre. Veuillez réessayer.",
+      "loadFailed": "Impossible de charger cette conversation.",
+      "retryLoad": "Réessayer"
     },
     "navigation": {
       "movedTo": "Vous voici sur {kind} : {label}",

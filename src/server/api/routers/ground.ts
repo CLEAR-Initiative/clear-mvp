@@ -9,6 +9,7 @@ import {
   type GroundTranslationState,
 } from "~/lib/hotline-inbox";
 import { locales } from "~/i18n/config";
+import { readFeatureFlag } from "~/server/feature-flags";
 import type {
   GqlGroundInboxMessage,
   GqlGroundInboxThread,
@@ -138,7 +139,6 @@ const HOTLINE_INBOX_MESSAGE_FIELDS = `
   omittedMediaCount
   hasVoice
   transcript
-  language
   classification
   uncertainty
   isEdited
@@ -161,16 +161,23 @@ const HOTLINE_INBOX_THREAD_FIELDS = `
   draftDisasterType
 `;
 
-const HOTLINE_INBOX_SOURCE_QUERY = `
+/** The per-source inbox query. `language` (clear-api#627) is selected only
+ * while `hotline_translation` is on: a field clear-api doesn't have fails
+ * the whole document, so the flag stays off until the API is live on that
+ * environment, and turning it off contains a rollback without a deploy. */
+function hotlineInboxSourceQuery(withLanguage: boolean): string {
+  return `
   query HotlineInboxSource($groundSourceId: String, $limit: Int) {
     groundThreads(groundSourceId: $groundSourceId, reviewState: "unverified", limit: $limit) {
       ${HOTLINE_INBOX_THREAD_FIELDS}
     }
     groundMessages(groundSourceId: $groundSourceId, limit: $limit) {
       ${HOTLINE_INBOX_MESSAGE_FIELDS}
+      ${withLanguage ? "language" : ""}
     }
   }
 `;
+}
 
 const HOTLINE_INBOX_LIMIT = 500;
 
@@ -184,12 +191,13 @@ const RETRY_GROUND_MESSAGE_MUTATION = `
   }
 `;
 
-/** A thread's message ids and texts — what a translation request fans out
- * over (clear-api translates per message; the inbox shows per thread). */
+/** A thread's message ids, texts and detected languages — what a
+ * translation request fans out over (clear-api translates per message; the
+ * inbox shows per thread). */
 const THREAD_MESSAGE_TEXTS_QUERY = `
   query GroundThreadMessageTexts($id: String!) {
     groundThread(id: $id) {
-      messages { id text }
+      messages { id text language }
     }
   }
 `;
@@ -209,6 +217,7 @@ const THREAD_TRANSLATION_QUERY = `
       messages {
         id
         text
+        language
         translation(locale: $locale) { status text }
       }
     }
@@ -219,6 +228,37 @@ const THREAD_TRANSLATION_QUERY = `
  * locale, which is also the target (`en` included — hotline text is
  * usually Arabic). */
 const translationInput = z.object({ threadId: z.string(), locale: z.enum(locales) });
+
+const TRANSLATION_FLAG = "hotline_translation";
+const UNAVAILABLE: GroundTranslationState = { status: "unavailable", text: null };
+/** At most this many translation requests to clear-api at once per entry. */
+const TRANSLATION_CONCURRENCY = 4;
+
+interface ThreadMessageText {
+  id: string;
+  text: string;
+  language: string | null;
+}
+
+/** A message already in the target locale needs no translation: its own
+ * words stand in for it (and no LLM call paraphrases them). */
+function alreadyIn(locale: string, m: ThreadMessageText): GroundTranslationState | null {
+  return m.language === locale ? { status: "ready", text: m.text } : null;
+}
+
+/** `fn` over `items`, at most `limit` at a time, results in input order. */
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  async function worker(): Promise<void> {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i]!);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
 
 export const groundRouter = createTRPCRouter({
   /** Per-source policy records — drives source names + reviewerRoles gating. */
@@ -318,16 +358,16 @@ export const groundRouter = createTRPCRouter({
    * group capture stays in the detection Ground intel tab.
    */
   hotlineInbox: protectedProcedure.query(async ({ ctx }): Promise<GqlHotlineInbox> => {
-    const { groundSources } = await graphqlFetch<{ groundSources: GqlGroundSource[] }>(
-      GROUND_SOURCES_QUERY,
-      {},
-      cookieHeaders(ctx),
-    );
+    const [{ groundSources }, withLanguage] = await Promise.all([
+      graphqlFetch<{ groundSources: GqlGroundSource[] }>(GROUND_SOURCES_QUERY, {}, cookieHeaders(ctx)),
+      readFeatureFlag(TRANSLATION_FLAG, cookieHeaders(ctx)),
+    ]);
     const sources = groundSources.filter((s) => s.kind === "hotline" && s.isActive);
+    const query = hotlineInboxSourceQuery(withLanguage);
     const perSource = await Promise.all(
       sources.map((s) =>
         graphqlFetch<{ groundThreads: GqlGroundInboxThread[]; groundMessages: GqlGroundInboxMessage[] }>(
-          HOTLINE_INBOX_SOURCE_QUERY,
+          query,
           { groundSourceId: s.id, limit: HOTLINE_INBOX_LIMIT },
           cookieHeaders(ctx),
         ),
@@ -336,7 +376,8 @@ export const groundRouter = createTRPCRouter({
     return {
       sources,
       threads: perSource.flatMap((r) => r.groundThreads),
-      messages: perSource.flatMap((r) => r.groundMessages),
+      // Unselected while translation is off: unknown, which offers nothing.
+      messages: perSource.flatMap((r) => r.groundMessages.map((m) => ({ ...m, language: m.language ?? null }))),
     };
   }),
 
@@ -356,28 +397,41 @@ export const groundRouter = createTRPCRouter({
 
   /**
    * On-demand translation of an inbox entry into the reader's locale
-   * (clear-api#627, drained by clear-pipeline#626). The entry is a thread;
-   * clear-api translates per message, so this requests every message that
-   * has text and folds their states into one (combineTranslations):
+   * (clear-api#627, drained by clear-pipeline#626), while `hotline_translation`
+   * is on. The entry is a thread; clear-api translates per message, so this
+   * requests every message that has text and isn't already in the locale,
+   * and folds their states into one (combineTranslations):
    *   request -> queued (poll `translation`) -> ready | unavailable
    * Idempotent server-side: re-requesting a ready or queued message costs
-   * nothing. The original text is never changed.
+   * nothing, and an unavailable one is queued again (the inbox's retry). One
+   * message failing doesn't fail the rest. The original text is never changed.
    */
   requestTranslation: protectedProcedure
     .input(translationInput)
     .mutation(async ({ ctx, input }): Promise<GroundTranslationState> => {
+      if (!(await readFeatureFlag(TRANSLATION_FLAG, cookieHeaders(ctx)))) return UNAVAILABLE;
       const { groundThread } = await graphqlFetch<{
-        groundThread: { messages: Array<{ id: string; text: string }> } | null;
+        groundThread: { messages: ThreadMessageText[] } | null;
       }>(THREAD_MESSAGE_TEXTS_QUERY, { id: input.threadId }, cookieHeaders(ctx));
-      const states = await Promise.all(
-        textMessages(groundThread?.messages ?? []).map(async (m) => {
-          const data = await graphqlFetch<{ requestGroundMessageTranslation: GroundTranslationState }>(
-            REQUEST_GROUND_MESSAGE_TRANSLATION_MUTATION,
-            { messageId: m.id, locale: input.locale },
-            cookieHeaders(ctx),
-          );
-          return data.requestGroundMessageTranslation;
-        }),
+      const states = await mapWithConcurrency(
+        textMessages(groundThread?.messages ?? []),
+        TRANSLATION_CONCURRENCY,
+        async (m) => {
+          const same = alreadyIn(input.locale, m);
+          if (same) return same;
+          try {
+            const data = await graphqlFetch<{ requestGroundMessageTranslation: GroundTranslationState }>(
+              REQUEST_GROUND_MESSAGE_TRANSLATION_MUTATION,
+              { messageId: m.id, locale: input.locale },
+              cookieHeaders(ctx),
+            );
+            return data.requestGroundMessageTranslation;
+          } catch (err) {
+            // Ids only: hotline text never goes to the logs.
+            console.error(`requestGroundMessageTranslation failed for message ${m.id}:`, err);
+            return UNAVAILABLE;
+          }
+        },
       );
       return combineTranslations(states);
     }),
@@ -386,12 +440,15 @@ export const groundRouter = createTRPCRouter({
   translation: protectedProcedure
     .input(translationInput)
     .query(async ({ ctx, input }): Promise<GroundTranslationState> => {
+      if (!(await readFeatureFlag(TRANSLATION_FLAG, cookieHeaders(ctx)))) return UNAVAILABLE;
       const { groundThread } = await graphqlFetch<{
         groundThread: {
-          messages: Array<{ id: string; text: string; translation: GroundTranslationState }>;
+          messages: Array<ThreadMessageText & { translation: GroundTranslationState }>;
         } | null;
       }>(THREAD_TRANSLATION_QUERY, { id: input.threadId, locale: input.locale }, cookieHeaders(ctx));
-      return combineTranslations(textMessages(groundThread?.messages ?? []).map((m) => m.translation));
+      return combineTranslations(
+        textMessages(groundThread?.messages ?? []).map((m) => alreadyIn(input.locale, m) ?? m.translation),
+      );
     }),
 
   /** Staged messages, oldest first (clear-api ordering). */

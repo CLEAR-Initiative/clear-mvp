@@ -11,6 +11,8 @@ import {
   messageFailures,
   moveSelection,
   needsTranslation,
+  shownTranslation,
+  TRANSLATION_POLL_LIMIT_MS,
   nextSelection,
   visibleEntries,
 } from "./hotline-inbox";
@@ -392,5 +394,23 @@ describe("translation helpers", () => {
     expect(needsTranslation({ ...entry!, messages: [message("m3", "t1", { text: "x" })] }, "ar")).toBe(true);
     // No text at all → nothing to translate.
     expect(needsTranslation({ ...entry!, messages: [message("m4", "t1", { text: " " })] }, "en")).toBe(false);
+  });
+
+  it("shownTranslation prefers the request's own answer, then this request's poll", () => {
+    const base = { requested: queued, requestFailed: false, polled: undefined, pollFailed: false, pollingForMs: 0 };
+    expect(shownTranslation({ ...base, requested: undefined })).toEqual(queued);
+    expect(shownTranslation({ ...base, requested: ready("Shelling") })).toEqual(ready("Shelling"));
+    // A stale poll answer never overrides a request that isn't queued.
+    expect(shownTranslation({ ...base, requested: ready("Shelling"), polled: queued })).toEqual(ready("Shelling"));
+    expect(shownTranslation({ ...base, polled: ready("Where") })).toEqual(ready("Where"));
+    expect(shownTranslation({ ...base, polled: queued })).toEqual(queued);
+  });
+
+  it("shownTranslation turns failures and an endless queue into unavailable (retryable)", () => {
+    const base = { requested: queued, requestFailed: false, polled: queued, pollFailed: false, pollingForMs: 0 };
+    expect(shownTranslation({ ...base, requestFailed: true })).toEqual(unavailable);
+    expect(shownTranslation({ ...base, pollFailed: true })).toEqual(unavailable);
+    expect(shownTranslation({ ...base, pollingForMs: TRANSLATION_POLL_LIMIT_MS - 1 })).toEqual(queued);
+    expect(shownTranslation({ ...base, pollingForMs: TRANSLATION_POLL_LIMIT_MS })).toEqual(unavailable);
   });
 });

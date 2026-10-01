@@ -2,7 +2,7 @@ import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { InboxEntry } from "~/lib/hotline-inbox";
+import type { GroundTranslationState, InboxEntry } from "~/lib/hotline-inbox";
 import { EntryList } from "./entry-list";
 import { ReadingPane, TranslationBlock } from "./reading-pane";
 import { AddToClearModal } from "./add-to-clear-modal";
@@ -18,6 +18,15 @@ vi.mock("next-intl", () => ({
 }));
 
 const requestTranslation = vi.fn();
+const resetTranslation = vi.fn(async () => undefined);
+const translationQuery = vi.fn();
+/** The translation mutation's and poll's current results, per test. */
+let requested: { data: GroundTranslationState | undefined; isError: boolean } = { data: undefined, isError: false };
+let polled: { data: GroundTranslationState | undefined; isError: boolean; dataUpdatedAt: number } = {
+  data: undefined,
+  isError: false,
+  dataUpdatedAt: 0,
+};
 /** locations.getById result for a drafted location missing from the list. */
 let locationById: unknown = null;
 const getLocationById = vi.fn((_input: { id: string }, opts: { enabled: boolean }) => ({
@@ -26,10 +35,20 @@ const getLocationById = vi.fn((_input: { id: string }, opts: { enabled: boolean 
 }));
 vi.mock("~/trpc/react", () => ({
   api: {
-    useUtils: () => ({ ground: { hotlineInbox: { invalidate: vi.fn(async () => undefined) } } }),
+    useUtils: () => ({
+      ground: {
+        hotlineInbox: { invalidate: vi.fn(async () => undefined) },
+        translation: { reset: resetTranslation },
+      },
+    }),
     ground: {
-      requestTranslation: { useMutation: () => ({ mutate: requestTranslation, data: undefined, isError: false }) },
-      translation: { useQuery: () => ({ data: undefined }) },
+      requestTranslation: { useMutation: () => ({ mutate: requestTranslation, ...requested }) },
+      translation: {
+        useQuery: (input: unknown, opts: { enabled: boolean }) => {
+          translationQuery(input, opts);
+          return opts.enabled ? polled : { data: undefined, isError: false, dataUpdatedAt: 0 };
+        },
+      },
     },
     subscriptions: {
       disasterTypes: {
@@ -141,6 +160,8 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   locationById = null;
+  requested = { data: undefined, isError: false };
+  polled = { data: undefined, isError: false, dataUpdatedAt: 0 };
 });
 
 describe("EntryList", () => {
@@ -195,6 +216,7 @@ describe("EntryList", () => {
 
 describe("ReadingPane", () => {
   const baseProps = {
+    translation: true,
     canReview: true,
     busy: false,
     error: null,
@@ -293,6 +315,25 @@ describe("ReadingPane", () => {
     expect(screen.getByTestId("inbox-translate")).toHaveTextContent("translate.button");
   });
 
+  it("doesn't offer translation while hotline_translation is off", () => {
+    wrap(<ReadingPane {...baseProps} entry={entry()} translation={false} />);
+    expect(screen.queryByTestId("inbox-translate")).not.toBeInTheDocument();
+  });
+
+  it("starts over on another entry: no translation carries over", () => {
+    const { rerender } = wrap(<ReadingPane {...baseProps} entry={entry()} />);
+    requested = { data: { status: "ready", text: "Translated A" }, isError: false };
+    fireEvent.click(screen.getByTestId("inbox-translate"));
+    expect(screen.getByTestId("inbox-translation")).toHaveTextContent("Translated A");
+    rerender(
+      <MantineProvider>
+        <ReadingPane {...baseProps} entry={entry({ id: "t2" })} />
+      </MantineProvider>,
+    );
+    expect(screen.queryByTestId("inbox-translation")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-translate")).toBeInTheDocument();
+  });
+
   it("marks media-only entries as having no text", () => {
     wrap(<ReadingPane {...baseProps} entry={entry({ text: "" })} />);
     expect(screen.getAllByText("pane.noText").length).toBeGreaterThan(0);
@@ -304,7 +345,52 @@ describe("TranslationBlock", () => {
     wrap(<TranslationBlock entry={entry()} />);
     fireEvent.click(screen.getByTestId("inbox-translate"));
     expect(requestTranslation).toHaveBeenCalledWith({ threadId: "t1", locale: "en" });
+    // A fresh request never reads a poll answer cached by an earlier one.
+    expect(resetTranslation).toHaveBeenCalledWith({ threadId: "t1", locale: "en" });
     expect(screen.getByTestId("inbox-translation")).toHaveTextContent("translate.pending");
+  });
+
+  it("shows a ready translation right-to-left aware, without polling", () => {
+    requested = { data: { status: "ready", text: "Water is rising" }, isError: false };
+    wrap(<TranslationBlock entry={entry()} />);
+    fireEvent.click(screen.getByTestId("inbox-translate"));
+    const text = screen.getByText("Water is rising");
+    expect(text).toHaveAttribute("dir", "auto");
+    expect(translationQuery).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ enabled: false }));
+  });
+
+  it("polls while queued and shows the polled translation", () => {
+    requested = { data: { status: "queued", text: null }, isError: false };
+    polled = { data: { status: "ready", text: "Families are leaving" }, isError: false, dataUpdatedAt: Date.now() };
+    wrap(<TranslationBlock entry={entry()} />);
+    fireEvent.click(screen.getByTestId("inbox-translate"));
+    expect(translationQuery).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ enabled: true }));
+    expect(screen.getByTestId("inbox-translation")).toHaveTextContent("Families are leaving");
+  });
+
+  it("offers a retry when unavailable, which requests it again", () => {
+    requested = { data: { status: "unavailable", text: null }, isError: false };
+    wrap(<TranslationBlock entry={entry()} />);
+    fireEvent.click(screen.getByTestId("inbox-translate"));
+    expect(screen.getByTestId("inbox-translation")).toHaveTextContent("translate.unavailable");
+    fireEvent.click(screen.getByTestId("inbox-translate-retry"));
+    expect(requestTranslation).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows a failed poll as unavailable, not pending forever", () => {
+    requested = { data: { status: "queued", text: null }, isError: false };
+    polled = { data: undefined, isError: true, dataUpdatedAt: 0 };
+    wrap(<TranslationBlock entry={entry()} />);
+    fireEvent.click(screen.getByTestId("inbox-translate"));
+    expect(screen.getByTestId("inbox-translation")).toHaveAttribute("data-status", "unavailable");
+    expect(screen.getByTestId("inbox-translate-retry")).toBeInTheDocument();
+  });
+
+  it("shows a failed request as unavailable", () => {
+    requested = { data: undefined, isError: true };
+    wrap(<TranslationBlock entry={entry()} />);
+    fireEvent.click(screen.getByTestId("inbox-translate"));
+    expect(screen.getByTestId("inbox-translation")).toHaveAttribute("data-status", "unavailable");
   });
 
   it("does not offer translation for media-only entries", () => {

@@ -108,6 +108,14 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
 
   // ── Sub-tab flags (gate a tab within a page, not a nav route — no `route`) ──
   {
+    key: "hotline_translation",
+    label: "Hotline translation",
+    description:
+      "On-demand translation of hotline messages in the Hotline Inbox (needs `hotline_inbox`), into the reader's language. Turn on only where clear-api has on-demand translation (clear-api#627) and the pipeline's translate drain (clear-pipeline#626) are live: while on, the inbox asks clear-api for each message's detected language, and an API without it fails the whole inbox. Enforced in the ground router, not only the UI, so turning it off also contains a rollback without a deploy.",
+    tier: 4,
+    defaultEnabled: false,
+  },
+  {
     key: "ground_intel",
     label: "Ground Intel",
     description:

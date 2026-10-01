@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import {
   IconAlertTriangle,
@@ -16,8 +16,11 @@ import {
 import { api } from "~/trpc/react";
 import {
   REJECT_REASONS,
+  TRANSLATION_POLL_LIMIT_MS,
+  TRANSLATION_POLL_MS,
   attachmentKey,
   needsTranslation,
+  shownTranslation,
   type InboxAttachment,
   type InboxEntry,
   type RejectReason,
@@ -29,6 +32,8 @@ import styles from "../inbox.module.css";
 
 interface ReadingPaneProps {
   entry: InboxEntry | null;
+  /** The `hotline_translation` flag: offer on-demand translation. */
+  translation: boolean;
   canReview: boolean;
   busy: boolean;
   error: string | null;
@@ -105,13 +110,6 @@ function TranscriptBlock({ transcript, caption }: { transcript: VoiceTranscript;
 }
 
 /**
- * Kill switch for on-demand translation. Backed by clear-api
- * requestGroundMessageTranslation (Exponential #627) and the pipeline's
- * translate drain (#626); set false to hide the button without a revert.
- */
-export const TRANSLATION_ENABLED = true;
-
-/**
  * The pipeline gave up on one or more of the entry's messages: say which
  * stage failed with the recorded error, and offer the retry that puts the
  * messages back in the queue. Without it a failed entry would sit as
@@ -170,55 +168,77 @@ function FailureNotice({
 
 /**
  * On-demand translation of the narrative into the reader's UI locale.
- * Request once per entry, poll while queued, render under the original
- * (never instead of it). Not offered when every message is already in the
- * reader's locale (clear-api's intake language detection). `dir="auto"` so
- * an Arabic translation renders right-to-left whatever the UI locale.
+ * Request, poll while queued (up to a limit), render under the original
+ * (never instead of it); unavailable offers a retry, which re-queues it.
+ * Not offered when every message is already in the reader's locale
+ * (clear-api's intake language detection). `dir="auto"` so an Arabic
+ * translation renders right-to-left whatever the UI locale. Keyed by entry
+ * where it is rendered, so nothing carries over from another entry.
  */
 export function TranslationBlock({ entry }: { entry: InboxEntry }) {
   const t = useTranslations("inbox");
   const locale = useLocale();
-  const [requested, setRequested] = useState(false);
-  useEffect(() => setRequested(false), [entry.id]);
+  const utils = api.useUtils();
+  const input = { threadId: entry.id, locale };
+  /** When the current request was made; null until the first one. */
+  const [startedAt, setStartedAt] = useState<number | null>(null);
 
   const request = api.ground.requestTranslation.useMutation();
-  const poll = api.ground.translation.useQuery(
-    { threadId: entry.id, locale },
-    {
-      enabled: requested && request.data?.status === "queued",
-      refetchInterval: (q) => (q.state.data?.status === "queued" ? 5000 : false),
-    },
-  );
-  const state = poll.data ?? request.data ?? null;
+  const awaiting = startedAt !== null && request.data?.status === "queued";
+  const poll = api.ground.translation.useQuery(input, {
+    enabled: awaiting,
+    // Only this request's answers: never one cached from an earlier request.
+    staleTime: 0,
+    gcTime: 0,
+    refetchInterval: (q) =>
+      q.state.status !== "error" &&
+      q.state.data?.status === "queued" &&
+      startedAt !== null &&
+      q.state.dataUpdatedAt - startedAt < TRANSLATION_POLL_LIMIT_MS
+        ? TRANSLATION_POLL_MS
+        : false,
+  });
 
   if (!needsTranslation(entry, locale)) return null;
 
-  if (!requested) {
+  const start = () => {
+    void utils.ground.translation.reset(input);
+    setStartedAt(Date.now());
+    request.mutate(input);
+  };
+
+  if (startedAt === null) {
     return (
-      <button
-        type="button"
-        className={styles.translateBtn}
-        onClick={() => {
-          setRequested(true);
-          request.mutate({ threadId: entry.id, locale });
-        }}
-        data-testid="inbox-translate"
-      >
+      <button type="button" className={styles.translateBtn} onClick={start} data-testid="inbox-translate">
         <IconLanguage size={14} />
         {t("translate.button", { locale: t(`translate.locales.${locale}`) })}
       </button>
     );
   }
 
+  const state = shownTranslation({
+    requested: request.data,
+    requestFailed: request.isError,
+    polled: awaiting ? poll.data : undefined,
+    pollFailed: awaiting && poll.isError,
+    pollingForMs: awaiting && poll.data ? poll.dataUpdatedAt - startedAt : 0,
+  });
+
   return (
-    <div className={styles.translation} data-testid="inbox-translation" data-status={state?.status ?? "queued"}>
+    <div className={styles.translation} data-testid="inbox-translation" data-status={state.status}>
       <div className={styles.sectionLabel}>
         {t("translate.label", { locale: t(`translate.locales.${locale}`) })}
       </div>
-      {state?.status === "ready" && state.text ? (
+      {state.status === "ready" && state.text ? (
         <p className={styles.narrative} dir="auto">{state.text}</p>
-      ) : state?.status === "unavailable" || request.isError ? (
-        <p className={styles.narrativeEmpty}>{t("translate.unavailable")}</p>
+      ) : state.status === "unavailable" ? (
+        <p className={styles.narrativeEmpty}>
+          {t("translate.unavailable")}{" "}
+          <button type="button" className={styles.translateBtn} onClick={start} data-testid="inbox-translate-retry">
+            <IconRefresh size={14} />
+            {t("translate.retry")}
+          </button>
+        </p>
       ) : (
         <p className={styles.narrativeEmpty}>{t("translate.pending")}</p>
       )}
@@ -228,6 +248,7 @@ export function TranslationBlock({ entry }: { entry: InboxEntry }) {
 
 export function ReadingPane({
   entry,
+  translation,
   canReview,
   busy,
   error,
@@ -290,7 +311,7 @@ export function ReadingPane({
           <p className={styles.narrativeEmpty}>{t("pane.noText")}</p>
         )}
 
-        {TRANSLATION_ENABLED && <TranslationBlock entry={entry} />}
+        {translation && <TranslationBlock key={entry.id} entry={entry} />}
 
         {(entry.attachments.length > 0 || entry.omittedMediaCount > 0 || entry.detachedTranscripts.length > 0) && (
           <div>
