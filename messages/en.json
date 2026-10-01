@@ -1939,19 +1939,6 @@
       "email": "Email",
       "call": "Call",
       "empty": "No contacts found for this location"
-    },
-    "humchat": {
-      "subtitle": "Humanitarian AI Assistant",
-      "online": "Online",
-      "clearChat": "Clear chat",
-      "collapse": "Collapse panel",
-      "inputPlaceholder": "Ask about humanitarian response...",
-      "welcome": "Hello! I'm **HumChat**, your AI assistant for humanitarian operations. I'm trained on IASC guidelines, Sphere standards, and Ethiopia-specific humanitarian context.\n\nI can help you with:\n- **Situation analysis** and crisis briefs\n- **Response planning** and resource allocation\n- **Protocol guidance** for emergencies\n- **Coordination** support and communications\n\nWhat humanitarian challenge can I help you address today?",
-      "examples": {
-        "displacement": "Analyze displacement trends in Somali Region",
-        "interventions": "What are the priority interventions for health emergencies?",
-        "assessment": "Generate a rapid assessment plan for protection risks"
-      }
     }
   },
   "map": {
@@ -2819,7 +2806,8 @@
       "voiceFailed": "This voice note could not be played here. Open it in a new tab instead.",
       "transcriptLabel": "Machine transcript · may contain errors",
       "transcriptPending": "Transcription pending",
-      "voiceNotStored": "Voice note (audio not stored yet)"
+      "voiceNotStored": "Voice note (audio not stored yet)",
+      "transcriptFailed": "Transcription failed"
     },
     "actions": {
       "add": "Add to CLEAR",
@@ -2874,7 +2862,8 @@
       "rejected": "Rejected · {reason}",
       "viewSignal": "View signal",
       "close": "Dismiss",
-      "addedNoSignal": "Approved, but no signal id came back. Check the signal in Detection before relying on it."
+      "addedNoSignal": "Approved, but no signal id came back. Check the signal in Detection before relying on it.",
+      "retried": "Queued for another attempt"
     },
     "noAccess": "The hotline inbox is available to admins only for now.",
     "loadError": "Could not load the inbox",
@@ -2889,6 +2878,19 @@
         "es": "Spanish",
         "ar": "Arabic"
       }
+    },
+    "failure": {
+      "pill": "Classification failed",
+      "title": "Automatic processing gave up",
+      "help": "The pipeline failed on this entry after repeated attempts, so it is no longer queued. Retry to queue it again.",
+      "stages": {
+        "ENRICH": "Classification",
+        "TRANSCRIBE": "Transcription"
+      },
+      "noError": "No error details recorded",
+      "retry": "Retry",
+      "retrying": "Retrying…",
+      "partial": "Queued again: {done} of {total} messages. {error}"
     }
   },
   "analysis": {
@@ -3144,6 +3146,67 @@
       "button": "Update now",
       "requested": "Update requested. The new version usually takes a few minutes and appears here by itself.",
       "error": "The update could not be requested. Please try again."
+    }
+  },
+  "agent": {
+    "name": "CLEAR Agent",
+    "drawer": {
+      "open": "Open the Agent drawer",
+      "close": "Close the Agent drawer",
+      "launcherTooltip": "Ask the CLEAR Agent",
+      "newThread": "New thread",
+      "openPage": "Open Agent page"
+    },
+    "page": {
+      "title": "Agent",
+      "subtitle": "Ask the CLEAR Agent",
+      "unavailable": "The CLEAR Agent isn't available for your account.",
+      "historyLabel": "Your Conversations",
+      "untitled": "Untitled thread",
+      "empty": "No threads yet.",
+      "loadMore": "Load more"
+    },
+    "thread": {
+      "inputLabel": "Message the CLEAR Agent",
+      "inputPlaceholder": "Ask about a crisis, a place or NRC's work…",
+      "send": "Send",
+      "thinking": "Thinking…"
+    },
+    "message": {
+      "sources": "Sources ({count})",
+      "showMore": "Show more",
+      "showLess": "Show less"
+    },
+    "tools": {
+      "nrcFindRunning": "Searching NRC documents…",
+      "nrcFindDone": "Searched NRC documents",
+      "nrcFindUnavailable": "NRC documents unavailable",
+      "running": "Running {tool}…",
+      "done": "Ran {tool}",
+      "unavailable": "{tool} unavailable",
+      "navigateRunning": "Moving you…",
+      "navigateDone": "Moved",
+      "navigateUnavailable": "Couldn't move you there"
+    },
+    "errors": {
+      "budgetSpent": "Your daily Agent budget is spent.",
+      "budgetResets": "It resets at {time}.",
+      "forbiddenThread": "This Thread belongs to another user.",
+      "notConfigured": "The CLEAR Agent isn't configured on this server.",
+      "generic": "The CLEAR Agent couldn't answer. Please try again."
+    },
+    "navigation": {
+      "movedTo": "Moved you to {kind}: {label}",
+      "back": "Back",
+      "kinds": {
+        "event": "Event",
+        "signal": "Signal",
+        "crisis": "Crisis",
+        "map": "the Map",
+        "detection": "Detection"
+      },
+      "outOfScope": "{country} isn't in your team's scope, so it isn't shown.",
+      "placeUnavailable": "That place isn't available to you, so it isn't shown."
     }
   }
 }

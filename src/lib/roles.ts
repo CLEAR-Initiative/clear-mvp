@@ -33,3 +33,14 @@ export function canWriteCrisisEvents(role: string | null | undefined): boolean {
 export function canManageAnalyses(role: string | null | undefined): boolean {
   return isPlatformAdmin(role) || role === "analyst";
 }
+
+/**
+ * Twin of clear-api `requireContentReader`: only approved global roles may
+ * read platform content. `pending` (awaiting admin approval) and any unknown
+ * role are refused — this is an allowlist, not a `!== "pending"` check.
+ */
+const CONTENT_READER_ROLES: ReadonlySet<string> = new Set(["admin", "analyst", "viewer"]);
+
+export function canReadContent(role: string | null | undefined): boolean {
+  return !!role && CONTENT_READER_ROLES.has(role);
+}

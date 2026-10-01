@@ -5,6 +5,8 @@ import { NavSidebar } from "~/components/nav-sidebar";
 import { NavSidebarFallback } from "~/components/nav-sidebar-fallback";
 import { MobileBottomNav } from "~/components/mobile-bottom-nav";
 import { FeatureFlagsProvider } from "~/components/feature-flags-provider";
+import { AgentProvider, AgentViewBoundary } from "~/components/agent/agent-provider";
+import { AgentDrawer } from "~/components/agent/agent-drawer";
 import { TeamProvider } from "~/providers/team-provider";
 import { WorkingCountryProvider } from "~/providers/working-country-provider";
 import { OnboardingGuard } from "~/components/onboarding-guard";
@@ -40,6 +42,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <TeamProvider>
         <WorkingCountryProvider initialCookieValue={workingCountryCookie}>
           <FeatureFlagsProvider>
+          <AgentProvider>
           <ConsoleBufferInit />
           <PageTransitionProvider>
             <Suspense fallback={null}>
@@ -76,15 +79,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                     pt={{ base: 56, sm: 0 }}
                     pb={{ base: 72, sm: 0 }}
                   >
-                    {children}
+                    <AgentViewBoundary>{children}</AgentViewBoundary>
                     <PageTransitionVeil />
                   </Box>
                 </Group>
                 <MobileBottomNav />
                 <ProductTourHost />
+                <AgentDrawer />
               </OnboardingGuard>
             </Suspense>
           </PageTransitionProvider>
+          </AgentProvider>
         </FeatureFlagsProvider>
       </WorkingCountryProvider>
       </TeamProvider>

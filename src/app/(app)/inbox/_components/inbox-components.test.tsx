@@ -84,6 +84,8 @@ function entry(overrides: Partial<InboxEntry> = {}): InboxEntry {
     title: "Flooding in Kassala",
     text: "Water is rising near the market.\n\nFamilies are leaving.",
     classification: "field_report",
+    processing: "classified",
+    failures: [],
     sentAt: "2026-09-15T10:05:00Z",
     attachments: [],
     detachedTranscripts: [],
@@ -114,6 +116,10 @@ function message(id: string): InboxEntry["messages"][number] {
     hasVoice: false,
     transcript: null,
     language: null,
+    enrichFailedAt: null,
+    enrichError: null,
+    transcribeFailedAt: null,
+    transcribeError: null,
   };
 }
 
@@ -197,6 +203,9 @@ describe("ReadingPane", () => {
     onAdd: vi.fn(),
     onArchive: vi.fn(),
     onReject: vi.fn(),
+    onRetry: vi.fn(),
+    retrying: false,
+    retryError: null,
     onBack: vi.fn(),
   };
 

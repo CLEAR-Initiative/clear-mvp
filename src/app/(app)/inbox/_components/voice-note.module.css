@@ -29,6 +29,19 @@
   text-overflow: ellipsis;
 }
 
+.failed {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--color-critical);
+  color: var(--color-critical);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .open {
   display: inline-flex;
   align-items: center;

@@ -112,4 +112,20 @@ describe("VoiceNote", () => {
     expect(invalidate).toHaveBeenCalledTimes(2);
     expect(screen.getByTestId("inbox-voice-note")).toHaveAttribute("data-status", "refreshing");
   });
+
+  it("tags a note whose transcription failed, with the error on the tooltip", () => {
+    render(<VoiceNote url={URL_1} label="Voice note 1" transcriptionFailed={{ error: "unsupported codec" }} />);
+    expect(screen.getByTestId("inbox-voice-note")).toHaveAttribute("data-transcription", "failed");
+    const tag = screen.getByTestId("inbox-voice-transcription-failed");
+    expect(tag).toHaveTextContent("pane.transcriptFailed");
+    expect(tag).toHaveAttribute("title", "unsupported codec");
+    // The audio itself is fine: the player stays.
+    expect(screen.getByLabelText("Voice note 1").tagName).toBe("AUDIO");
+  });
+
+  it("has no failed tag while transcription is pending or done", () => {
+    render(<VoiceNote url={URL_1} label="Voice note 1" />);
+    expect(screen.queryByTestId("inbox-voice-transcription-failed")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-voice-note")).not.toHaveAttribute("data-transcription");
+  });
 });

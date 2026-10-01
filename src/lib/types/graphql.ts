@@ -273,6 +273,18 @@ export type GqlGroundInboxMessage = Omit<GqlGroundMessage, "senderName"> & {
   /** Language of `text` detected at intake ("ar", "en", "fr", "es"); null
    * when unknown (clear-api#627). */
   language: string | null;
+  /** Set when clear-pipeline's enrichment drain (classification + thread
+   * draft) gave up on the message. While set the message is out of the
+   * queue for good; retryGroundMessage(stage: ENRICH) clears it. */
+  enrichFailedAt: string | null;
+  /** Last enrichment error (truncated, phone-redacted). */
+  enrichError: string | null;
+  /** Set when the transcription drain gave up on the voice note. The
+   * message then also leaves the enrichment queue (nothing to classify);
+   * retryGroundMessage(stage: TRANSCRIBE) clears it. */
+  transcribeFailedAt: string | null;
+  /** Last transcription error (truncated, phone-redacted). */
+  transcribeError: string | null;
 };
 
 /** Ground thread as the hotline inbox receives it: the base fields plus the

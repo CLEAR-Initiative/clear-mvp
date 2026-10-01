@@ -81,15 +81,16 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
   {
     key: "knowledge_hub",
     label: "Knowledge Hub",
-    description: "Document library, contacts panel, and HumChat",
+    description: "Document library and contacts panel",
     tier: 4,
     defaultEnabled: true,
     route: "/knowledge",
   },
   {
     key: "agent",
-    label: "Agent",
-    description: "NRC Find agent",
+    label: "CLEAR Agent",
+    description:
+      "The CLEAR Agent: the Agent drawer on every page and the Agent page. Answers from NRC Find; Threads are stored as Conversations in clear-api under a daily Agent budget.",
     tier: 4,
     defaultEnabled: false,
     route: "/agent",
@@ -127,6 +128,14 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     description:
       "Analysis tab in the Insights page: the unified scoped analysis (PRD Situation analysis (neo)), country scope first, read from clear-api's frame-scoped `analysis` (ADR-0007). UI-only gate. Remove once it replaces the Crisis and Situation Analysis tabs.",
     tier: 3,
+    defaultEnabled: false,
+  },
+  {
+    key: "agent_clear_data",
+    label: "CLEAR Agent: CLEAR data and navigation",
+    description:
+      "Lets the CLEAR Agent (needs `agent`) answer from CLEAR's own data (Signals, Events, Alerts, Crises, situation analyses, knowledge base) through the curated clear-mcp tools, see the user's Current view, and move the app with Agent navigation (always announced, with Back). Enforced in /api/agent, not only the UI. Off: the Agent answers from NRC Find only, as in V1.",
+    tier: 4,
     defaultEnabled: false,
   },
 ];

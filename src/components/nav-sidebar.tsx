@@ -27,6 +27,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { cn } from "~/lib/utils";
+import { clearAgentSession } from "~/components/agent/agent-provider";
 import { authClient } from "~/lib/auth-client";
 import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
@@ -205,6 +206,7 @@ export function NavSidebar({
     // preferences. Better Auth manages the session cookie, and the hard
     // redirect below tears down all in-memory React state. If a specific
     // app key ever needs clearing on sign-out, remove it explicitly here.
+    clearAgentSession(); // the active Agent Thread belongs to this user
     window.location.href = "/auth/login";
   };
 

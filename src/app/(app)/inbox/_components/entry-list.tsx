@@ -3,7 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { IconPaperclip, IconSearch } from "@tabler/icons-react";
 import type { InboxEntry, InboxSort } from "~/lib/hotline-inbox";
-import { InboxClassificationPill } from "./classification-pill";
+import { InboxEntryPills } from "./classification-pill";
 import styles from "../inbox.module.css";
 
 interface EntryListProps {
@@ -60,6 +60,7 @@ export function EntryList({
               data-testid="inbox-entry"
               data-selected={entry.id === selectedId}
               data-unread={unread}
+              data-processing={entry.processing}
               onClick={() => onSelect(entry.id)}
             >
               <span className={styles.gutter}>{unread && <span className={styles.unreadDot} />}</span>
@@ -74,7 +75,7 @@ export function EntryList({
                   {entry.text.length > 0 ? entry.text.split("\n\n")[0] : t("pane.noText")}
                 </span>
                 <span className={styles.entryMeta}>
-                  <InboxClassificationPill value={entry.classification} />
+                  <InboxEntryPills entry={entry} />
                   {mediaCount > 0 && (
                     <span className={styles.metaIcon}>
                       <IconPaperclip size={12} />

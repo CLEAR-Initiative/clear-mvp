@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { graphqlFetch, cookieHeaders } from "~/server/api/graphql";
 import {
+  GROUND_PIPELINE_STAGES,
   REJECT_REASONS,
   combineTranslations,
   textMessages,
@@ -120,8 +121,10 @@ const GROUND_MESSAGES_QUERY = `
 /** Inbox message fields: GROUND_MESSAGE_FIELDS minus senderName (private
  * tier, must not reach the inbox client) plus presigned mediaUrls (cost:
  * one presign per stored attachment per fetch, so kept off the generic
- * messages query) and the voice-note fields hasVoice / transcript
- * (clear-api#661; inbox-only so the detection tab does not depend on them). */
+ * messages query), the voice-note fields hasVoice / transcript
+ * (clear-api#661) and the pipeline failure markers, which tell a message
+ * still queued for classification from one the pipeline gave up on
+ * (inbox-only so the detection tab does not depend on them). */
 const HOTLINE_INBOX_MESSAGE_FIELDS = `
   id
   groundSourceId
@@ -140,6 +143,10 @@ const HOTLINE_INBOX_MESSAGE_FIELDS = `
   uncertainty
   isEdited
   threadId
+  enrichFailedAt
+  enrichError
+  transcribeFailedAt
+  transcribeError
 `;
 
 /** Inbox thread fields: GROUND_THREAD_FIELDS plus the hotline-enrichment
@@ -166,6 +173,16 @@ const HOTLINE_INBOX_SOURCE_QUERY = `
 `;
 
 const HOTLINE_INBOX_LIMIT = 500;
+
+const RETRY_GROUND_MESSAGE_MUTATION = `
+  mutation RetryGroundMessage($messageId: String!, $stage: GroundPipelineStage!) {
+    retryGroundMessage(messageId: $messageId, stage: $stage) {
+      id
+      enrichFailedAt
+      transcribeFailedAt
+    }
+  }
+`;
 
 /** A thread's message ids and texts — what a translation request fans out
  * over (clear-api translates per message; the inbox shows per thread). */
@@ -322,6 +339,20 @@ export const groundRouter = createTRPCRouter({
       messages: perSource.flatMap((r) => r.groundMessages),
     };
   }),
+
+  /**
+   * Clear one pipeline stage's failure marker on a message so the drain
+   * picks it up again on its next run (clear-api retryGroundMessage,
+   * admin/analyst). Idempotent: an unmarked stage is a no-op.
+   */
+  retryMessage: protectedProcedure
+    .input(z.object({ messageId: z.string().min(1), stage: z.enum(GROUND_PIPELINE_STAGES) }))
+    .mutation(async ({ ctx, input }) => {
+      const data = await graphqlFetch<{
+        retryGroundMessage: { id: string; enrichFailedAt: string | null; transcribeFailedAt: string | null };
+      }>(RETRY_GROUND_MESSAGE_MUTATION, { messageId: input.messageId, stage: input.stage }, cookieHeaders(ctx));
+      return data.retryGroundMessage;
+    }),
 
   /**
    * On-demand translation of an inbox entry into the reader's locale

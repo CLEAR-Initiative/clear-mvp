@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { IconExternalLink, IconMicrophone } from "@tabler/icons-react";
+import { IconAlertTriangle, IconExternalLink, IconMicrophone } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import styles from "./voice-note.module.css";
 
@@ -39,6 +39,10 @@ interface VoiceNoteProps {
   url: string;
   /** Accessible name of the player, e.g. "Voice note 2". */
   label: string;
+  /** Set when the transcription drain gave up on this note (clear-api
+   * transcribeFailedAt). The audio still plays; only the transcript is
+   * missing, and the reading pane's failure notice offers the retry. */
+  transcriptionFailed?: { error: string | null };
 }
 
 /**
@@ -55,8 +59,10 @@ interface VoiceNoteProps {
  *   URL path (not the full presigned URL) so the retry budget survives
  *   the refresh instead of looping. Successful playback restores the
  *   budget, so a link that expires again later refreshes again too.
+ * - Transcription failed: a danger-toned "Transcription failed" tag in
+ *   the header, with the pipeline's error on its tooltip.
  */
-export function VoiceNote({ url, label }: VoiceNoteProps) {
+export function VoiceNote({ url, label, transcriptionFailed }: VoiceNoteProps) {
   const t = useTranslations("inbox");
   const utils = api.useUtils();
   const [status, setStatus] = useState<Status>("ready");
@@ -85,10 +91,25 @@ export function VoiceNote({ url, label }: VoiceNoteProps) {
   const showPlayer = status === "ready" || status === "refreshing";
 
   return (
-    <div className={styles.voice} data-testid="inbox-voice-note" data-status={status}>
+    <div
+      className={styles.voice}
+      data-testid="inbox-voice-note"
+      data-status={status}
+      data-transcription={transcriptionFailed ? "failed" : undefined}
+    >
       <div className={styles.header}>
         <IconMicrophone size={14} aria-hidden />
         <span className={styles.label}>{label}</span>
+        {transcriptionFailed && (
+          <span
+            className={styles.failed}
+            title={transcriptionFailed.error ?? t("failure.noError")}
+            data-testid="inbox-voice-transcription-failed"
+          >
+            <IconAlertTriangle size={11} aria-hidden />
+            {t("pane.transcriptFailed")}
+          </span>
+        )}
         <a
           className={styles.open}
           href={url}

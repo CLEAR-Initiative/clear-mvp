@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import {
+  IconAlertTriangle,
   IconArchive,
   IconArrowLeft,
   IconCirclePlus,
   IconCircleX,
   IconLanguage,
   IconPaperclip,
+  IconRefresh,
   IconShield,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -21,7 +23,7 @@ import {
   type RejectReason,
   type VoiceTranscript,
 } from "~/lib/hotline-inbox";
-import { InboxClassificationPill } from "./classification-pill";
+import { InboxEntryPills } from "./classification-pill";
 import { VoiceNote } from "./voice-note";
 import styles from "../inbox.module.css";
 
@@ -35,6 +37,10 @@ interface ReadingPaneProps {
   onAdd: () => void;
   onArchive: () => void;
   onReject: (reason: RejectReason) => void;
+  /** Re-queue the entry's failed pipeline stages (retryGroundMessage). */
+  onRetry: () => void;
+  retrying: boolean;
+  retryError: string | null;
   /** Mobile only: return to the list. */
   onBack: () => void;
 }
@@ -43,7 +49,13 @@ function Attachment({ attachment, index }: { attachment: InboxAttachment; index:
   const t = useTranslations("inbox");
   const [broken, setBroken] = useState(false);
   if (attachment.kind === "voice") {
-    return <VoiceNote url={attachment.url} label={t("pane.voiceNoteN", { n: index + 1 })} />;
+    return (
+      <VoiceNote
+        url={attachment.url}
+        label={t("pane.voiceNoteN", { n: index + 1 })}
+        transcriptionFailed={attachment.transcript?.status === "failed" ? attachment.transcript : undefined}
+      />
+    );
   }
   const label = t("pane.attachment", { n: index + 1 });
   return (
@@ -69,9 +81,9 @@ function Attachment({ attachment, index }: { attachment: InboxAttachment; index:
   );
 }
 
-/** A voice note's machine transcript (or its pending state), always
- * labelled as machine output. `dir="auto"` so Arabic transcripts render
- * right-to-left whatever the UI locale. */
+/** A voice note's machine transcript (or its pending / failed state),
+ * always labelled as machine output. `dir="auto"` so Arabic transcripts
+ * render right-to-left whatever the UI locale. */
 function TranscriptBlock({ transcript, caption }: { transcript: VoiceTranscript; caption?: string }) {
   const t = useTranslations("inbox");
   return (
@@ -80,6 +92,11 @@ function TranscriptBlock({ transcript, caption }: { transcript: VoiceTranscript;
       <div className={styles.sectionLabel}>{t("pane.transcriptLabel")}</div>
       {transcript.status === "ready" ? (
         <p className={styles.narrative} dir="auto">{transcript.text}</p>
+      ) : transcript.status === "failed" ? (
+        <p className={styles.transcriptFailed}>
+          {t("pane.transcriptFailed")}
+          {transcript.error && <span className={styles.failureError} dir="auto">{transcript.error}</span>}
+        </p>
       ) : (
         <p className={styles.narrativeEmpty}>{t("pane.transcriptPending")}</p>
       )}
@@ -93,6 +110,63 @@ function TranscriptBlock({ transcript, caption }: { transcript: VoiceTranscript;
  * translate drain (#626); set false to hide the button without a revert.
  */
 export const TRANSLATION_ENABLED = true;
+
+/**
+ * The pipeline gave up on one or more of the entry's messages: say which
+ * stage failed with the recorded error, and offer the retry that puts the
+ * messages back in the queue. Without it a failed entry would sit as
+ * "unclassified" forever.
+ */
+function FailureNotice({
+  entry,
+  retrying,
+  disabled,
+  error,
+  onRetry,
+}: {
+  entry: InboxEntry;
+  retrying: boolean;
+  /** Another action on this entry is in flight. */
+  disabled: boolean;
+  error: string | null;
+  onRetry: () => void;
+}) {
+  const t = useTranslations("inbox");
+  return (
+    <div className={styles.failure} data-testid="inbox-failure">
+      <div className={styles.failureTitle}>
+        <IconAlertTriangle size={14} aria-hidden />
+        {t("failure.title")}
+      </div>
+      <p className={styles.failureHelp}>{t("failure.help")}</p>
+      <ul className={styles.failureList}>
+        {entry.failures.map((f) => (
+          <li key={`${f.messageId}:${f.stage}`} data-testid="inbox-failure-item" data-stage={f.stage}>
+            <span className={styles.failureStage}>{t(`failure.stages.${f.stage}`)}</span>
+            <span className={styles.failureError} dir="auto">{f.error ?? t("failure.noError")}</span>
+          </li>
+        ))}
+      </ul>
+      <div className={styles.failureActions}>
+        <button
+          type="button"
+          className={styles.btn}
+          disabled={retrying || disabled}
+          onClick={onRetry}
+          data-testid="inbox-retry"
+        >
+          <IconRefresh size={15} />
+          {t(retrying ? "failure.retrying" : "failure.retry")}
+        </button>
+        {error && (
+          <span className={styles.actionError} role="alert">
+            {error}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /**
  * On-demand translation of the narrative into the reader's UI locale.
@@ -162,6 +236,9 @@ export function ReadingPane({
   onAdd,
   onArchive,
   onReject,
+  onRetry,
+  retrying,
+  retryError,
   onBack,
 }: ReadingPaneProps) {
   const t = useTranslations("inbox");
@@ -183,7 +260,7 @@ export function ReadingPane({
             <IconArrowLeft size={16} />
           </button>
           <span className={styles.paneTitle}>{entry.title || t("pane.noText")}</span>
-          <InboxClassificationPill value={entry.classification} />
+          <InboxEntryPills entry={entry} />
         </div>
         <span className={styles.paneRef}>
           {entry.intakeRef} · {format.dateTime(new Date(entry.sentAt), "short")}
@@ -191,6 +268,9 @@ export function ReadingPane({
       </header>
 
       <div className={styles.paneBody}>
+        {entry.processing === "failed" && (
+          <FailureNotice entry={entry} retrying={retrying} disabled={busy} error={retryError} onRetry={onRetry} />
+        )}
         {entry.priorEntries > 0 && (
           <div className={styles.trust} data-testid="inbox-trust-line">
             <IconShield size={14} />

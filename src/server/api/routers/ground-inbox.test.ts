@@ -67,6 +67,10 @@ describe("ground.hotlineInbox", () => {
     const messageSelection = query.slice(query.indexOf("groundMessages"));
     expect(messageSelection).toContain("hasVoice");
     expect(messageSelection).toContain("transcript");
+    // Pipeline failure markers tell "still queued" from "given up on".
+    for (const field of ["enrichFailedAt", "enrichError", "transcribeFailedAt", "transcribeError"]) {
+      expect(messageSelection).toContain(field);
+    }
     expect(vars).toMatchObject({ groundSourceId: "hot1", limit: 500 });
   });
 
@@ -170,6 +174,25 @@ describe("ground.hotlineInbox", () => {
   it("rejects unauthenticated callers", async () => {
     const anon = createCaller({ headers: new Headers() });
     await expect(anon.ground.hotlineInbox()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("retryMessage forwards the message and stage to retryGroundMessage", async () => {
+    graphqlFetch.mockResolvedValueOnce({
+      retryGroundMessage: { id: "m1", enrichFailedAt: null, transcribeFailedAt: null },
+    });
+    const result = await caller().ground.retryMessage({ messageId: "m1", stage: "TRANSCRIBE" });
+    expect(result).toEqual({ id: "m1", enrichFailedAt: null, transcribeFailedAt: null });
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("$stage: GroundPipelineStage!");
+    expect(query).toContain("retryGroundMessage(messageId: $messageId, stage: $stage)");
+    expect(vars).toEqual({ messageId: "m1", stage: "TRANSCRIBE" });
+  });
+
+  it("retryMessage rejects an unknown stage before calling the API", async () => {
+    await expect(
+      caller().ground.retryMessage({ messageId: "m1", stage: "CLASSIFY" as "ENRICH" }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
   });
 });
 
