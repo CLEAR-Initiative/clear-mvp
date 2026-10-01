@@ -8,30 +8,58 @@ that proxies to backend services; it owns no domain data of its own.
 
 ### Agent
 
-**Agent**:
-The `/agent` page — a chat surface where a user asks the **NRC Find** knowledge base a
-question and reads a streamed **Answer** with its **Source documents**.
-_Avoid_: "the bot", "assistant" (in CLEAR, "Agent" is the page/feature, not a persona).
+**CLEAR Agent**:
+The one Agent a user chats with in CLEAR. It answers by calling tools on the user's behalf —
+over CLEAR's own data (Signals, Events, Alerts, Crises, situation analyses), CLEAR's knowledge
+base, and **NRC Find** — and shows which sources it drew on.
+_Avoid_: "the bot", "assistant", personas; "data agent", "Mastra agent" (Mastra is the
+framework, not the concept); "Find Agent" (retired — NRC Find is a source, not an Agent).
+
+**Agent drawer**:
+The right-hand slide-out, reachable from anywhere in the app, where the user chats with the
+**CLEAR Agent**.
+_Avoid_: "chat panel", "sidebar" (ambiguous with app navigation).
+
+**Agent page**:
+The full-screen `/agent` view of the same **Threads** as the **Agent drawer** — a list of the
+user's past **Conversations** beside the open **Thread**.
+_Avoid_: "chat history page", "the Agent" (the page is not the **CLEAR Agent**).
+
+**Agent navigation**:
+The **CLEAR Agent** changing what the user is looking at — opening an Event, Signal or
+Crisis, or setting map/detection filters — without changing any data. Always announced in
+the **Thread** and always reversible with **Back** to the exact previous view.
+_Avoid_: "agent actions" (implies data changes), "auto-navigate".
+
+**Agent budget**:
+A user's daily allowance of **CLEAR Agent** usage. Once spent, the CLEAR Agent declines new
+turns until it resets.
+_Avoid_: "quota", "credits", "rate limit" (a rate limit is about bursts, the budget is about spend).
+
+**Current view**:
+What the user is looking at when they send a turn — the page, the Event/Signal/Crisis on
+screen, and the active map or detection filters — expressed as identifiers and filters, never
+as the data itself. Sent to the **CLEAR Agent** with every turn and kept with that turn.
+_Avoid_: "page context", "screen state".
 
 **NRC Find**:
-NRC's external Retrieval-Augmented-Generation knowledge base, reached via
-`POST /api/v1/rag/answers`. It is **stateless**: each call takes one `prompt` and returns
-one Answer plus Source documents, with no memory of prior calls.
-_Avoid_: "the LLM", "the model" (NRC Find is the retrieval service, not a raw model).
+NRC's self-hosted knowledge base of NRC documents, answered by an open-weight model running
+on NRC infrastructure. Stateless: each question is answered alone, with no memory of prior
+questions. In CLEAR it is one of the sources the **CLEAR Agent** consults, not a separate Agent.
+_Avoid_: "the LLM", "the model" (NRC Find is a knowledge source, not a raw model).
 
 **Answer**:
-The generated response to a single question, streamed token-by-token over NDJSON.
+The **CLEAR Agent**'s response to one turn, streamed as it is written.
 
 **Source document**:
-A knowledge-base passage NRC Find cited for an Answer (title + excerpt). Belongs to the
-one Answer it was returned with.
+A passage from a knowledge base (**NRC Find** or CLEAR's own) that an **Answer** cites.
+Belongs to the one Answer it was cited in.
 _Avoid_: "citation", "reference", "result".
 
 **Thread**:
-The on-screen sequence of question/Answer turns for one conversation. A **UI-only**
-construct — turns are *not* sent back to NRC Find, so each question is answered
-independently (see [ADR-0001](docs/adr/0001-agent-is-a-stateless-rag-thread.md)).
-_Avoid_: "conversation history" (implies the backend remembers — it does not).
+The on-screen view of one **Conversation** (stored in clear-api) with the **CLEAR Agent**.
+Earlier turns are part of what the Agent answers from.
+_Avoid_: "chat" (as the stored record — that is a **Conversation**).
 
 ### Detection hierarchy
 
@@ -358,7 +386,12 @@ full SDN GeoJSON dumps into the app tree by default.
 
 - A **Thread** contains many question/**Answer** turns
 - An **Answer** has zero or more **Source documents**
-- Each turn is one independent **NRC Find** call; the **Thread** gives it no prior context
+- The **CLEAR Agent** turns a follow-up into a complete, standalone question before consulting **NRC Find**
+- The **CLEAR Agent** is offered only to approved users (not pending), and never sees more
+  than the user could see in the app
+- **Agent navigation** never changes data and never takes the user somewhere they could not go themselves
+- A **Thread** can be opened in the **Agent page** or the **Agent drawer** and continued in either;
+  **Agent navigation** from the **Agent page** carries the **Thread** into the **Agent drawer**
 - One or more **Signals** compose an **Event**
 - An **Event** may be raised into one or more **Alerts** (non-empty `event.alerts` =
   flagged as an alert)
@@ -393,11 +426,10 @@ full SDN GeoJSON dumps into the app tree by default.
 
 ## Example dialogue
 
-> **Dev:** "If the user asks a follow-up like 'tell me more', does the **Agent** send the
-> previous **Answer** so **NRC Find** has context?"
-> **Domain expert:** "No — **NRC Find** is stateless. The **Thread** is just what the user
-> sees; every question is a fresh retrieval. A vague follow-up will retrieve against those
-> words alone."
+> **Dev:** "If the user asks a follow-up like 'and in Lebanon?', does **NRC Find** get the
+> earlier turns?"
+> **Domain expert:** "No — **NRC Find** is still stateless. The **CLEAR Agent** has the whole
+> **Thread**, so it rewrites the follow-up into a complete question before it consults NRC Find."
 
 > **Dev:** "Quick Navigation works but content flashes when it loads — keep a fade-in?"
 > **Domain expert:** "No. Instant swap: skeletons → content. Chrome never blinks; no
@@ -652,7 +684,8 @@ full SDN GeoJSON dumps into the app tree by default.
 - "alert" vs raw feed — resolved: **Alert** is the attention lifecycle object; raw
   observations are **Signals**.
 - "conversation" was used to mean both the visible **Thread** and remembered backend
-  history — resolved: only the UI **Thread** exists; there is no server-side history.
+  history — resolved: the stored record is a **Conversation** (in clear-api); the **Thread** is
+  its on-screen view. Whether the Agent *answers from* earlier turns depends on the **Agent**.
 - Quick Navigation post-load flash — resolved: instant skeleton→content swap; no resolve
   fade-in.
 - "window persistence" / "compare mode" — resolved: the Layers control is **Keep panels
