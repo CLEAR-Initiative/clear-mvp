@@ -3190,7 +3190,8 @@
         "map": "el mapa",
         "detection": "Detección"
       },
-      "outOfScope": "{country} no está en el ámbito de su equipo, así que no se muestra."
+      "outOfScope": "{country} no está en el ámbito de su equipo, así que no se muestra.",
+      "placeUnavailable": "Ese lugar no está disponible para usted, así que no se muestra."
     }
   }
 }

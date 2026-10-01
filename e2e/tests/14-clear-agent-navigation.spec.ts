@@ -29,7 +29,7 @@ test("Agent navigation from an Event to the Map, then Back", async ({ page }) =>
   await drawer.getByRole("button", { name: "Send" }).click();
 
   // The move happens, and is announced where it happened in the Thread.
-  await page.waitForURL(/\/map\?country=Sudan/, { timeout: 30_000 });
+  await page.waitForURL(/\/map\?countryId=/, { timeout: 30_000 });
   const notice = drawer.getByTestId("agent-navigation");
   await expect(notice).toHaveText(/Moved you to the Map: Sudan/);
   // The turn carried the Event page's Current view.

@@ -13,7 +13,9 @@
 import "server-only";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import { ID_PATTERN } from "~/lib/agent-current-view-contract";
 import {
+  ALL_COUNTRIES_LINK,
   DETECTION_ROLLING_DATES,
   DETECTION_SEVERITIES,
   MAP_TIMEFRAMES,
@@ -37,7 +39,7 @@ const LABEL_CHARS = 80;
 
 const entityTarget = z.object({
   kind: z.enum(ENTITY_KINDS),
-  id: z.string().min(1).max(128).describe("The entity's id, from a clear_* tool result."),
+  id: z.string().regex(ID_PATTERN).describe("The entity's id, from a clear_* tool result."),
 });
 
 const place = z.string().trim().min(1).max(100);
@@ -146,18 +148,16 @@ export interface NavigateContext {
 }
 
 /**
- * Whether the page will show this country. A team without a country
- * (level 0) binding monitors globally, as the pages treat it; a
- * country-scoped team must have the country among its bindings. The pages
- * scope to the active team, so that is the team checked; only when the turn
- * didn't say which team is active does any of the user's teams do.
+ * The country bindings of the teams the pages scope to. The pages scope to
+ * the active team, so that is the team read; only when the turn didn't say
+ * which team is active do all of the user's teams count. A team without a
+ * country (level 0) binding monitors globally, as the pages treat it.
  */
-async function countryInScope(
+async function scopeCountries(
   run: RunCuratedTool,
-  country: { id: string; name: string },
   { activeTeamId }: NavigateContext,
   signal?: AbortSignal,
-): Promise<true | NavigateError> {
+): Promise<{ bound: Array<Array<{ id: string; name: string }>>; activeTeam: boolean } | NavigateError> {
   const outcome = await run("clear_whoami", {}, signal);
   if (!outcome.ok) return { error: outcome.error };
   const allTeams =
@@ -168,7 +168,17 @@ async function countryInScope(
     ).teams ?? [];
   const active = activeTeamId ? allTeams.filter((t) => t.id === activeTeamId) : [];
   const teams = active.length > 0 ? active : allTeams;
-  const bound = teams.map((t) => (t.locations ?? []).filter((l) => l.level === 0));
+  return {
+    bound: teams.map((t) => (t.locations ?? []).filter((l) => l.level === 0).map(({ id, name }) => ({ id, name }))),
+    activeTeam: active.length > 0,
+  };
+}
+
+/** Whether the page will show this country under those teams. */
+function countryInScope(
+  country: { id: string; name: string },
+  { bound, activeTeam }: { bound: Array<Array<{ id: string; name: string }>>; activeTeam: boolean },
+): true | NavigateError {
   if (bound.length === 0 || bound.some((countries) => countries.length === 0)) return true;
   const allowed = bound.flat();
   if (allowed.some((c) => c.id === country.id)) return true;
@@ -176,9 +186,18 @@ async function countryInScope(
   return {
     error: {
       code: "OUT_OF_SCOPE",
-      message: `${country.name} is outside the ${active.length > 0 ? "active team's" : "user's team"} scope (${names}); the page can't show it.`,
+      message: `${country.name} is outside the ${activeTeam ? "active team's" : "user's team"} scope (${names}); the page can't show it.`,
     },
   };
+}
+
+/** Where a Map/Detection move lands: a country (or all), and maybe a region in it. */
+interface ResolvedScope {
+  /** A country's location id, or `all`. */
+  countryId: string;
+  /** For the announcement; absent for all countries. */
+  countryName?: string;
+  region?: { id: string; name: string };
 }
 
 async function resolveScope(
@@ -186,19 +205,30 @@ async function resolveScope(
   run: RunCuratedTool,
   context: NavigateContext,
   signal?: AbortSignal,
-): Promise<{ country?: { id: string; name: string }; region?: { id: string; name: string } } | NavigateError> {
+): Promise<ResolvedScope | NavigateError> {
   if (filters.region && !filters.country) {
     return { error: { code: "BAD_USER_INPUT", message: "A region needs its country." } };
   }
-  if (!filters.country) return {};
+  if (!filters.country) {
+    // "All countries" is what the page shows only if the active team can
+    // see more than one: a team pinned to one country sees just that one,
+    // so name it rather than announce "All countries" over it.
+    if (!context.activeTeamId) return { countryId: ALL_COUNTRIES_LINK };
+    const teams = await scopeCountries(run, context, signal);
+    if (isError(teams)) return teams;
+    const only = teams.activeTeam && teams.bound.length === 1 && teams.bound[0]!.length === 1 ? teams.bound[0]![0]! : null;
+    return only ? { countryId: only.id, countryName: only.name } : { countryId: ALL_COUNTRIES_LINK };
+  }
   const country = await findPlace(run, filters.country, 0, undefined, signal);
   if (isError(country)) return country;
-  const inScope = await countryInScope(run, country, context, signal);
+  const teams = await scopeCountries(run, context, signal);
+  if (isError(teams)) return teams;
+  const inScope = countryInScope(country, teams);
   if (isError(inScope)) return inScope;
-  if (!filters.region) return { country };
+  if (!filters.region) return { countryId: country.id, countryName: country.name };
   const region = await findPlace(run, filters.region, 1, country.id, signal);
   if (isError(region)) return region;
-  return { country, region };
+  return { countryId: country.id, countryName: country.name, region };
 }
 
 function scopeLabel(parts: Array<string | undefined>): string {
@@ -219,17 +249,17 @@ export async function resolveNavigation(
       return {
         moved: true,
         target: { kind: "map" },
-        url: mapDeepLinkHref({ country: scope.country?.name, region: scope.region?.name, timeframe }),
-        content: { label: scopeLabel([scope.country?.name ?? "All countries", scope.region?.name, timeframe]) },
+        url: mapDeepLinkHref({ countryId: scope.countryId, regionId: scope.region?.id, timeframe }),
+        content: { label: scopeLabel([scope.countryName ?? "All countries", scope.region?.name, timeframe]) },
       };
     }
     const { date, severities } = target.filters;
     return {
       moved: true,
       target: { kind: "detection" },
-      url: detectionDeepLinkHref({ country: scope.country?.name, region: scope.region?.id, date, severities }),
+      url: detectionDeepLinkHref({ countryId: scope.countryId, regionId: scope.region?.id, date, severities }),
       content: {
-        label: scopeLabel([scope.country?.name ?? "All countries", scope.region?.name, date, severities?.join(", ")]),
+        label: scopeLabel([scope.countryName ?? "All countries", scope.region?.name, date, severities?.join(", ")]),
       },
     };
   }
@@ -243,7 +273,8 @@ export async function resolveNavigation(
   return {
     moved: true,
     target,
-    url: `/${target.kind}/${encodeURIComponent(target.id)}`,
+    // The id is id-shaped (letters, digits, `_`, `-`), as the client accepts.
+    url: `/${target.kind}/${target.id}`,
     content: { label: labelOf(target.kind, target.id, item) },
   };
 }

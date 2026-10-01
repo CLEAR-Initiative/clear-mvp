@@ -47,10 +47,12 @@ import detectionTabsStyles from "./detection-tabs.module.css";
 import { detectionFiltersForAgent, useAgentCurrentView } from "~/lib/agent-current-view";
 import {
   DETECTION_DEEP_LINK_PARAMS,
+  DETECTION_ONE_SHOT_PARAMS,
   readDetectionDeepLink,
+  resolveLinkScope,
   withoutDeepLink,
 } from "~/lib/agent-deep-link";
-import { useDeepLinkCountryScope } from "~/components/agent/use-deep-link-scope";
+import { useAgentDeepLink } from "~/components/agent/use-agent-deep-link";
 
 const PAGE_SIZE = 25;
 const HISTORY_PAGE_SIZE = 100;
@@ -91,6 +93,12 @@ function normalizeDetectionTab(raw: string | null): string | null {
 
 const TAB_STORAGE_KEY = "detection-active-tab";
 const FILTERS_STORAGE_KEY = "detection-filters";
+/**
+ * Filters chosen during a deep-linked visit (an Agent navigation), kept
+ * apart from the page's defaults and tagged with the link's country, so a
+ * revisit of that link restores them and an ordinary visit never sees them.
+ */
+const LINK_FILTERS_STORAGE_KEY = "detection-link-filters";
 /** Gap after underline paints before skeleton - one frame, not a full CSS duration. */
 const TAB_SKELETON_DELAY_MS = 0;
 
@@ -106,10 +114,10 @@ interface StoredFilters {
   boundaryLevel?: "none" | "A0" | "A1" | "A2";
 }
 
-function readStoredFilters(): StoredFilters {
+function readStoredFilters(key = FILTERS_STORAGE_KEY): StoredFilters & { countryId?: string } {
   try {
-    const raw = sessionStorage.getItem(FILTERS_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as StoredFilters) : {};
+    const raw = sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as StoredFilters & { countryId?: string }) : {};
   } catch {
     return {}; // sessionStorage unavailable (SSR or private mode)
   }
@@ -256,29 +264,34 @@ function DetectionPageContent() {
   const [pickedCountry, setPickedCountry] = useState("");
   const teamCountryNames = useMemo(() => teamCountries.map((c) => c.name), [teamCountries]);
   // An Agent navigation deep link's country holds for this visit only and
-  // doesn't touch the working country; picking a country drops it.
+  // doesn't touch the working country; picking a country drops it. Its place
+  // is matched by id against this page's locations tree and the active
+  // team's scope: only a place the page can show ever overrides.
   const detectionDeepLink = useMemo(() => readDetectionDeepLink(searchParams), [searchParams]);
+  const linkScope = useMemo(
+    () =>
+      resolveLinkScope({
+        countryId: detectionDeepLink.countryId,
+        regionId: detectionDeepLink.regionId,
+        tree,
+        teamCountryNames,
+        scopeReady,
+      }),
+    [detectionDeepLink.countryId, detectionDeepLink.regionId, tree, teamCountryNames, scopeReady],
+  );
+  const linkCountry = linkScope.status === "honoured" ? linkScope.country : undefined;
   const selectedCountry = resolveSelectedCountry(
     teamCountryNames,
-    detectionDeepLink.country ?? workingCountryName ?? pickedCountry,
+    linkCountry ?? workingCountryName ?? pickedCountry,
     scopeReady,
   );
   const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
-  const dropDetectionDeepLinkCountry = useCallback(() => {
-    const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), ["country"]);
-    router.replace(`/detection${rest}`, { scroll: false });
-  }, [searchParams, router]);
-  useDeepLinkCountryScope({
-    linkCountry: detectionDeepLink.country,
-    selectedCountry,
-    scopeReady,
-    drop: dropDetectionDeepLinkCountry,
-  });
   
   const handleCountryChange = useCallback(
     (value: string) => {
-      if (detectionDeepLink.country) {
-        const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), ["country"]);
+      // Picking a country ends a deep link's override.
+      if (detectionDeepLink.countryId) {
+        const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), DETECTION_DEEP_LINK_PARAMS);
         router.replace(`/detection${rest}`, { scroll: false });
       }
       if (value === ALL_COUNTRIES) {
@@ -294,7 +307,7 @@ function DetectionPageContent() {
       // Reset region when country changes
       setSelectedRegionId(null);
     },
-    [teamCountries, setWorkingCountry, getLocationId, detectionDeepLink.country, searchParams, router],
+    [teamCountries, setWorkingCountry, getLocationId, detectionDeepLink.countryId, searchParams, router],
   );
   
   const countryOptions = useMemo(() => {
@@ -305,7 +318,7 @@ function DetectionPageContent() {
   }, [scopeReady, workingCountryName, countries, teamCountryNames]);
   useReportStaleCountryPick(
     countryOptions,
-    detectionDeepLink.country ?? workingCountryName ?? pickedCountry,
+    linkCountry ?? workingCountryName ?? pickedCountry,
     selectedCountry,
   );
 
@@ -378,47 +391,50 @@ function DetectionPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Apply an Agent navigation deep link's filters (after the stored ones,
-  // so they win), then take them out of the URL: from here they are
-  // ordinary filter state the user can change. Only `country` stays, as
-  // this visit's override. A new country resets the region like picking
-  // it by hand; if the override goes away, a region it set goes with it.
-  const lastLinkCountryRef = useRef<string | undefined>(undefined);
+  // An Agent navigation deep link, after the stored defaults so it wins. A
+  // fresh move applies its filters like picking them by hand (a new country
+  // resets the region); a revisit (details and back, a reload, Back) brings
+  // back the filters chosen during that visit. From then on they are
+  // ordinary filter state; only the country stays in the URL, as this
+  // visit's override, and a region it set goes with it.
   const linkedRegionRef = useRef(false);
-  useEffect(() => {
-    const { country, region, date, severities, types, sources } = detectionDeepLink;
-    if (country === undefined && lastLinkCountryRef.current !== undefined) {
+  useAgentDeepLink({
+    path: "/detection",
+    params: DETECTION_DEEP_LINK_PARAMS,
+    oneShot: DETECTION_ONE_SHOT_PARAMS,
+    scope: linkScope,
+    apply: (fresh) => {
+      if (linkScope.status !== "honoured") return;
+      if (!fresh) {
+        const visit = readStoredFilters(LINK_FILTERS_STORAGE_KEY);
+        if (visit.countryId !== detectionDeepLink.countryId) return;
+        setSelectedRegionId(visit.regionId ?? null);
+        linkedRegionRef.current = !!visit.regionId;
+        if (visit.date) setSelectedDate(visit.date);
+        if (visit.severities) setActiveSeverities(new Set(visit.severities));
+        if (visit.typeFilters) setSelectedTypeFilters(visit.typeFilters);
+        if (visit.sources !== undefined) setActiveSources(visit.sources ? new Set(visit.sources) : null);
+        if (visit.boundaryLevel) setBoundaryLevel(visit.boundaryLevel);
+        return;
+      }
+      setSelectedRegionId(linkScope.region?.id ?? null);
+      linkedRegionRef.current = !!linkScope.region;
+      if (detectionDeepLink.date) setSelectedDate(detectionDeepLink.date);
+      if (detectionDeepLink.severities) setActiveSeverities(new Set(detectionDeepLink.severities));
+    },
+    onGone: () => {
       if (linkedRegionRef.current) setSelectedRegionId(null);
-      lastLinkCountryRef.current = undefined;
       linkedRegionRef.current = false;
-    }
-    const newCountry = country !== undefined && country !== lastLinkCountryRef.current;
-    if (!newCountry && !region && !date && !severities && !types && !sources) return;
-    if (country !== undefined) lastLinkCountryRef.current = country;
-    if (newCountry || region) {
-      setSelectedRegionId(region ?? null);
-      linkedRegionRef.current = !!region;
-    }
-    if (!region && !date && !severities && !types && !sources) return;
-    if (date) setSelectedDate(date);
-    if (severities) setActiveSeverities(new Set(severities));
-    if (types) setSelectedTypeFilters(types);
-    if (sources) setActiveSources(new Set(sources));
-    const rest = withoutDeepLink(
-      new URLSearchParams(searchParams.toString()),
-      DETECTION_DEEP_LINK_PARAMS.filter((key) => key !== "country"),
-    );
-    router.replace(`/detection${rest}`, { scroll: false });
-  }, [detectionDeepLink, searchParams, router]);
+    },
+  });
 
   // Mirror filter selections into sessionStorage so they survive navigating
   // to a signal/event detail page and back (that route change unmounts this
-  // component, resetting the useState defaults above without this).
+  // component, resetting the useState defaults above without this). During
+  // a deep-linked visit they go under the link instead: they hold for that
+  // visit and never become the page's defaults.
   useEffect(() => {
-    if (!storageReady) return;
-    // A deep-linked country holds for this visit only, and so do filters
-    // chosen within it: they never become the stored defaults.
-    if (detectionDeepLink.country) return;
+    if (!storageReady || linkScope.status === "pending") return;
     try {
       const toStore: StoredFilters = {
         country: selectedCountry,
@@ -429,11 +445,18 @@ function DetectionPageContent() {
         sources: activeSources ? Array.from(activeSources) : null,
         boundaryLevel,
       };
-      sessionStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(toStore));
+      if (linkScope.status === "honoured") {
+        sessionStorage.setItem(
+          LINK_FILTERS_STORAGE_KEY,
+          JSON.stringify({ ...toStore, countryId: detectionDeepLink.countryId }),
+        );
+      } else {
+        sessionStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(toStore));
+      }
     } catch {
       /* sessionStorage unavailable (SSR or private mode) */
     }
-  }, [storageReady, detectionDeepLink.country, selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
+  }, [storageReady, linkScope.status, detectionDeepLink.countryId, selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
 
   const selectedCountryId = useMemo(
     () => (selectedCountry !== ALL_COUNTRIES ? getLocationId(selectedCountry) : null),

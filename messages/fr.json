@@ -3190,7 +3190,8 @@
         "map": "la carte",
         "detection": "la détection"
       },
-      "outOfScope": "{country} ne fait pas partie du périmètre de votre équipe ; il n'est pas affiché."
+      "outOfScope": "{country} ne fait pas partie du périmètre de votre équipe ; il n'est pas affiché.",
+      "placeUnavailable": "Ce lieu ne vous est pas accessible ; il n'est pas affiché."
     }
   }
 }

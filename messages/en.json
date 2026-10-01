@@ -3190,7 +3190,8 @@
         "map": "the Map",
         "detection": "Detection"
       },
-      "outOfScope": "{country} isn't in your team's scope, so it isn't shown."
+      "outOfScope": "{country} isn't in your team's scope, so it isn't shown.",
+      "placeUnavailable": "That place isn't available to you, so it isn't shown."
     }
   }
 }

@@ -718,15 +718,29 @@ describe("POST /api/agent — Agent navigation", () => {
       });
     });
 
-    it("builds a Map deep link from names CLEAR resolves", async () => {
+    it("builds a Map deep link from the ids of the places CLEAR resolves", async () => {
       expect(
         await navigateTo({ kind: "map", filters: { country: "sudan", region: "north darfur", timeframe: "7d" } }),
       ).toEqual({
         moved: true,
         target: { kind: "map" },
-        url: "/map?country=Sudan&region=North+Darfur&timeframe=7d",
+        url: "/map?countryId=loc-sdn&regionId=loc-nd&timeframe=7d",
         content: { label: "Sudan · North Darfur · 7d" },
       });
+    });
+
+    it("sends all countries explicitly, or names a pinned team's one country", async () => {
+      // No team in view: all countries, said so in the URL so the page shows them.
+      expect(await navigateTo({ kind: "map", filters: {} })).toEqual({
+        moved: true,
+        target: { kind: "map" },
+        url: "/map?countryId=all",
+        content: { label: "All countries" },
+      });
+      myTeams = [{ id: "team-chad", name: "Chad team", locations: [{ id: "loc-tcd", name: "Chad", level: 0 }] }];
+      expect(
+        await navigateTo({ kind: "detection", filters: { date: "Last 7 days" } }, { route: "/map", teamId: "team-chad" }),
+      ).toMatchObject({ url: "/detection?countryId=loc-tcd&date=Last+7+days", content: { label: "Chad · Last 7 days" } });
     });
 
     it("gives Detection the region's location id", async () => {
@@ -737,8 +751,8 @@ describe("POST /api/agent — Agent navigation", () => {
       const params = new URL(output.url, "http://x").searchParams;
       expect(output.url.startsWith("/detection?")).toBe(true);
       expect(Object.fromEntries(params)).toEqual({
-        country: "Sudan",
-        region: "loc-nd",
+        countryId: "loc-sdn",
+        regionId: "loc-nd",
         date: "Last 7 days",
         severities: "critical,high",
       });

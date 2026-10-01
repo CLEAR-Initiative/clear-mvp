@@ -70,3 +70,18 @@ export async function enableFeatureFlags(
   }
 }
 
+
+/**
+ * A country's location id, as the signed-in user (Agent deep links carry
+ * ids, never names).
+ */
+export async function countryIdByName(page: Page, name: string): Promise<string> {
+  const res = await page.request.post("/api/graphql", {
+    data: { query: "{ locations(level: 0) { id name } }" },
+  });
+  expect(res.ok()).toBe(true);
+  const body = (await res.json()) as { data?: { locations?: Array<{ id: string; name: string }> } };
+  const id = body.data?.locations?.find((l) => l.name === name)?.id;
+  if (!id) throw new Error(`no country called ${name}`);
+  return id;
+}

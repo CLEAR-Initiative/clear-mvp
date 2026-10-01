@@ -27,6 +27,7 @@ import { useOptionalTeam } from "~/providers/team-provider";
 import { currentViewFor, type CurrentView } from "~/lib/agent-current-view";
 import {
   isNavigateResult,
+  markAgentDeepLink,
   navigateCallIds,
   restoreNavContexts,
   snapshotNavContexts,
@@ -231,6 +232,9 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       // Leaving the Agent page: carry the Thread into the drawer first, so
       // the conversation stays beside what the Agent just opened.
       if (pathname === "/agent") update({ ...state, open: true });
+      // A fresh move: the page applies its deep link as new, where arriving
+      // on the same URL later (Back, a reload) restores what it had.
+      markAgentDeepLink(result.url);
       router.push(result.url);
     },
     [router, state, update],
