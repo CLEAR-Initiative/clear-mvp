@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { GqlHotlineInbox } from "~/lib/types/graphql";
 
@@ -28,7 +28,8 @@ vi.mock("~/components/feature-flags-provider", () => ({
 
 let role = "admin";
 const reviewMutate = vi.fn();
-const invalidate = vi.fn();
+const retryMutateAsync = vi.fn();
+const invalidate = vi.fn(async () => undefined);
 let inboxData: GqlHotlineInbox;
 
 vi.mock("~/trpc/react", () => ({
@@ -44,6 +45,7 @@ vi.mock("~/trpc/react", () => ({
     ground: {
       hotlineInbox: { useQuery: () => ({ data: inboxData, isFetching: false, error: null }) },
       review: { useMutation: () => ({ mutate: reviewMutate, isPending: false }) },
+      retryMessage: { useMutation: () => ({ mutateAsync: retryMutateAsync }) },
       requestTranslation: { useMutation: () => ({ mutate: vi.fn(), data: undefined, isError: false }) },
       translation: { useQuery: () => ({ data: undefined }) },
     },
@@ -109,6 +111,10 @@ function message(id: string, threadId: string, classification: string | null, se
     threadId,
     hasVoice: false,
     transcript: null as string | null,
+    enrichFailedAt: null as string | null,
+    enrichError: null as string | null,
+    transcribeFailedAt: null as string | null,
+    transcribeError: null as string | null,
   };
 }
 
@@ -129,6 +135,8 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  retryMutateAsync.mockReset();
+  invalidate.mockReset();
 });
 
 const renderPage = () => render(<MantineProvider><InboxPage /></MantineProvider>);
@@ -297,5 +305,200 @@ describe("InboxPage triage", () => {
     expect(screen.getByTestId("inbox-add-modal")).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
     expect(screen.queryByTestId("inbox-add-modal")).not.toBeInTheDocument();
+  });
+});
+
+describe("InboxPage pipeline failures", () => {
+  const FAILED_AT = "2026-09-15T12:00:00Z";
+
+  /** c: still queued. d: enrichment gave up. e: voice note whose
+   * transcription gave up (and so also holds enrichment). */
+  beforeEach(() => {
+    inboxData.threads.push(thread("d"), thread("e"));
+    inboxData.messages.push(
+      {
+        ...message("m4", "d", null, "2026-09-15T07:00:00Z"),
+        enrichFailedAt: FAILED_AT,
+        enrichError: "Claude API timeout",
+      },
+      {
+        ...message("m5", "e", null, "2026-09-15T06:00:00Z"),
+        hasVoice: true,
+        mediaUrls: ["https://s3/hotline/e/voice.ogg?sig=1"],
+        transcribeFailedAt: FAILED_AT,
+        transcribeError: "unsupported codec",
+        enrichFailedAt: FAILED_AT,
+        enrichError: "no content",
+      },
+    );
+  });
+
+  const openUnclassified = () => {
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-filter-unclassified"));
+    return screen.getAllByTestId("inbox-entry");
+  };
+  const rowFor = (title: string) =>
+    screen.getAllByTestId("inbox-entry").find((r) => r.textContent?.includes(title))!;
+
+  it("keeps queued and failed entries under Unclassified but pills them differently", () => {
+    const rows = openUnclassified();
+    expect(rows).toHaveLength(3);
+    expect(screen.getByTestId("inbox-filter-unclassified")).toHaveTextContent("3");
+
+    const queued = rowFor("Thread c");
+    expect(queued).toHaveAttribute("data-processing", "pending");
+    expect(within(queued).getByTestId("inbox-classification-pill")).toHaveTextContent("classifications.unclassified");
+    expect(within(queued).queryByTestId("inbox-failed-pill")).not.toBeInTheDocument();
+
+    const failed = rowFor("Thread d");
+    expect(failed).toHaveAttribute("data-processing", "failed");
+    expect(within(failed).queryByTestId("inbox-classification-pill")).not.toBeInTheDocument();
+    const pill = within(failed).getByTestId("inbox-failed-pill");
+    expect(pill).toHaveTextContent("failure.pill");
+    expect(pill).toHaveAttribute("title", "failure.stages.ENRICH: Claude API timeout");
+  });
+
+  it("shows no failure notice or Retry for a queued entry", () => {
+    openUnclassified();
+    fireEvent.click(rowFor("Thread c"));
+    expect(screen.queryByTestId("inbox-failure")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-retry")).not.toBeInTheDocument();
+  });
+
+  it("shows the recorded error in the reading pane", () => {
+    openUnclassified();
+    fireEvent.click(rowFor("Thread d"));
+    const notice = screen.getByTestId("inbox-failure");
+    expect(notice).toHaveTextContent("failure.stages.ENRICH");
+    expect(notice).toHaveTextContent("Claude API timeout");
+    expect(within(screen.getByTestId("inbox-pane")).getByTestId("inbox-failed-pill")).toBeInTheDocument();
+  });
+
+  it("retries enrichment, refetches, and the entry goes back to queued", async () => {
+    retryMutateAsync.mockResolvedValue({ id: "m4", enrichFailedAt: null, transcribeFailedAt: null });
+    // The refetch brings the message back without its marker.
+    invalidate.mockImplementation(async () => {
+      inboxData = {
+        ...inboxData,
+        messages: inboxData.messages.map((m) =>
+          m.id === "m4" ? { ...m, enrichFailedAt: null, enrichError: null } : m,
+        ),
+      };
+    });
+    openUnclassified();
+    fireEvent.click(rowFor("Thread d"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("inbox-retry"));
+    });
+
+    expect(retryMutateAsync).toHaveBeenCalledTimes(1);
+    expect(retryMutateAsync).toHaveBeenCalledWith({ messageId: "m4", stage: "ENRICH" });
+    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.retried");
+    // Still selected, now queued: no notice, the warning pill is back.
+    const row = rowFor("Thread d");
+    expect(row).toHaveAttribute("data-selected", "true");
+    expect(row).toHaveAttribute("data-processing", "pending");
+    expect(within(row).getByTestId("inbox-classification-pill")).toHaveTextContent("classifications.unclassified");
+    expect(screen.queryByTestId("inbox-failure")).not.toBeInTheDocument();
+  });
+
+  it("retries transcription before enrichment for a failed voice note", async () => {
+    retryMutateAsync.mockResolvedValue({});
+    openUnclassified();
+    fireEvent.click(rowFor("Thread e"));
+    expect(screen.getByTestId("inbox-voice-transcription-failed")).toHaveAttribute("title", "unsupported codec");
+    expect(screen.getByTestId("inbox-transcript")).toHaveAttribute("data-status", "failed");
+    expect(screen.getAllByTestId("inbox-failure-item").map((li) => li.dataset.stage)).toEqual(["TRANSCRIBE", "ENRICH"]);
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("inbox-retry"));
+    });
+    expect(retryMutateAsync.mock.calls.map(([input]) => input)).toEqual([
+      { messageId: "m5", stage: "TRANSCRIBE" },
+      { messageId: "m5", stage: "ENRICH" },
+    ]);
+    expect(invalidate).toHaveBeenCalledTimes(1);
+  });
+
+  it("surfaces a retry error, still refetches, and does not toast success", async () => {
+    retryMutateAsync.mockRejectedValue(new Error("Ground message not found"));
+    openUnclassified();
+    fireEvent.click(rowFor("Thread d"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("inbox-retry"));
+    });
+    expect(screen.getByTestId("inbox-failure")).toHaveTextContent("Ground message not found");
+    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("inbox-toast")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId("inbox-retry")).not.toBeDisabled());
+  });
+
+  it("disables Retry while the retry is in flight", async () => {
+    let resolve: () => void = () => undefined;
+    retryMutateAsync.mockImplementation(() => new Promise<void>((r) => { resolve = r; }));
+    openUnclassified();
+    fireEvent.click(rowFor("Thread d"));
+    fireEvent.click(screen.getByTestId("inbox-retry"));
+    expect(screen.getByTestId("inbox-retry")).toBeDisabled();
+    expect(screen.getByTestId("inbox-retry")).toHaveTextContent("failure.retrying");
+    fireEvent.click(screen.getByTestId("inbox-retry"));
+    expect(retryMutateAsync).toHaveBeenCalledTimes(1);
+    await act(async () => resolve());
+    await waitFor(() => expect(screen.getByTestId("inbox-retry")).not.toBeDisabled());
+  });
+
+  it("keeps review actions off while the entry's retry is in flight", async () => {
+    let resolve: () => void = () => undefined;
+    retryMutateAsync.mockImplementation(() => new Promise<void>((r) => { resolve = r; }));
+    openUnclassified();
+    fireEvent.click(rowFor("Thread d"));
+    fireEvent.click(screen.getByTestId("inbox-retry"));
+    expect(screen.getByTestId("inbox-archive")).toBeDisabled();
+    fireEvent.keyDown(window, { key: "e" });
+    expect(reviewMutate).not.toHaveBeenCalled();
+    await act(async () => resolve());
+    await waitFor(() => expect(screen.getByTestId("inbox-archive")).not.toBeDisabled());
+  });
+
+  it("keeps a retry's state on its own entry when the reader moves on mid-retry", async () => {
+    let reject: (err: Error) => void = () => undefined;
+    retryMutateAsync.mockImplementation(() => new Promise<void>((_r, rj) => { reject = rj; }));
+    openUnclassified();
+    fireEvent.click(rowFor("Thread d"));
+    fireEvent.click(screen.getByTestId("inbox-retry"));
+
+    fireEvent.click(rowFor("Thread e"));
+    expect(screen.getByTestId("inbox-retry")).not.toBeDisabled();
+    expect(screen.getByTestId("inbox-retry")).toHaveTextContent("failure.retry");
+
+    await act(async () => reject(new Error("Ground message not found")));
+    await waitFor(() => expect(invalidate).toHaveBeenCalledTimes(1));
+    expect(screen.getByTestId("inbox-failure")).not.toHaveTextContent("Ground message not found");
+    expect(screen.queryByTestId("inbox-toast")).not.toBeInTheDocument();
+  });
+
+  it("retries every message even when one keeps failing, and says how many went back", async () => {
+    inboxData.threads.push(thread("f"));
+    inboxData.messages.push(
+      { ...message("m6", "f", null, "2026-09-15T05:00:00Z"), enrichFailedAt: FAILED_AT },
+      { ...message("m7", "f", null, "2026-09-15T05:30:00Z"), enrichFailedAt: FAILED_AT },
+    );
+    retryMutateAsync.mockImplementation(async ({ messageId }: { messageId: string }) => {
+      if (messageId === "m6") throw new Error("upstream 503");
+      return {};
+    });
+    openUnclassified();
+    fireEvent.click(rowFor("Thread f"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("inbox-retry"));
+    });
+    expect(retryMutateAsync.mock.calls.map(([input]) => input.messageId)).toEqual(["m6", "m7"]);
+    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("inbox-failure")).toHaveTextContent(
+      'failure.partial:{"done":1,"total":2,"error":"upstream 503"}',
+    );
+    expect(screen.queryByTestId("inbox-toast")).not.toBeInTheDocument();
   });
 });

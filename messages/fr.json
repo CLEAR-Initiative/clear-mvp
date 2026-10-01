@@ -2806,7 +2806,8 @@
       "voiceFailed": "Ce message vocal n'a pas pu être lu ici. Ouvrez-le plutôt dans un nouvel onglet.",
       "transcriptLabel": "Transcription automatique · peut contenir des erreurs",
       "transcriptPending": "Transcription en attente",
-      "voiceNotStored": "Message vocal (audio pas encore stocké)"
+      "voiceNotStored": "Message vocal (audio pas encore stocké)",
+      "transcriptFailed": "Échec de la transcription"
     },
     "actions": {
       "add": "Ajouter à CLEAR",
@@ -2861,7 +2862,8 @@
       "rejected": "Rejeté · {reason}",
       "viewSignal": "Voir le signal",
       "close": "Fermer",
-      "addedNoSignal": "Approuvé, mais aucun identifiant de signal n'a été renvoyé. Vérifiez le signal dans Détection avant de vous y fier."
+      "addedNoSignal": "Approuvé, mais aucun identifiant de signal n'a été renvoyé. Vérifiez le signal dans Détection avant de vous y fier.",
+      "retried": "Remis en file pour une nouvelle tentative"
     },
     "noAccess": "La boîte de réception est réservée aux administrateurs pour le moment.",
     "loadError": "Impossible de charger la boîte de réception",
@@ -2876,6 +2878,19 @@
         "es": "espagnol",
         "ar": "arabe"
       }
+    },
+    "failure": {
+      "pill": "Échec de la classification",
+      "title": "Le traitement automatique a abandonné",
+      "help": "Le pipeline a échoué sur cette entrée après plusieurs tentatives, elle n'est donc plus en file d'attente. Relancez pour la remettre en file.",
+      "stages": {
+        "ENRICH": "Classification",
+        "TRANSCRIBE": "Transcription"
+      },
+      "noError": "Aucun détail d'erreur enregistré",
+      "retry": "Relancer",
+      "retrying": "Relance…",
+      "partial": "Remis en file : {done} message(s) sur {total}. {error}"
     }
   },
   "analysis": {

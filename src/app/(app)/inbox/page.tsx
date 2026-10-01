@@ -18,6 +18,7 @@ import {
   nextSelection,
   saveReadIds,
   visibleEntries,
+  type InboxFailure,
   type InboxFilter,
   type InboxSort,
   type RejectReason,
@@ -37,6 +38,9 @@ import styles from "./inbox.module.css";
  *   Archive      -> approve_private
  *   Reject       -> rejected, with the structured rejectReason
  *
+ * Retry (entries the pipeline gave up on) -> retryGroundMessage per failed
+ *                   stage, then refetch; the entry goes back to "pending"
+ *
  * Acted-on entries leave the queue (they are no longer unverified). There
  * is no Undo: approved_public is terminal and nothing transitions back to
  * unverified, so the toast only confirms.
@@ -50,6 +54,18 @@ const TOAST_MS = 6000;
 interface Toast {
   message: string;
   signalId?: string | null;
+}
+
+interface RetryState {
+  pending: boolean;
+  error: string | null;
+}
+
+/** Drop settled retries (their errors belong to the entry the reader is
+ * leaving) but keep the ones still running. */
+function pendingOnly(prev: Record<string, RetryState>): Record<string, RetryState> {
+  const entries = Object.entries(prev).filter(([, r]) => r.pending);
+  return entries.length === Object.keys(prev).length ? prev : Object.fromEntries(entries);
 }
 
 export default function InboxPage() {
@@ -86,6 +102,11 @@ export default function InboxPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  /** Retries by entry id. Keyed so a retry that outlives its selection
+   * (J/K mid-retry) never shows its spinner, error or toast on another entry. */
+  const [retries, setRetries] = useState<Record<string, RetryState>>({});
+  const selectedIdRef = useRef(selectedId);
+  useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
@@ -107,6 +128,7 @@ export default function InboxPage() {
     setRejectOpen(false);
     setAddOpen(false);
     setActionError(null);
+    setRetries(pendingOnly);
     setToast(null);
     if (id) {
       setMobilePane(true);
@@ -142,7 +164,11 @@ export default function InboxPage() {
     !!selected && canReviewSource(role, sourceById.get(selected.thread.groundSourceId) ?? []);
 
   const review = api.ground.review.useMutation();
-  const busy = review.isPending;
+  const selectedRetry = selectedId ? retries[selectedId] : undefined;
+  // Review actions and Retry on the same entry exclude each other: archiving
+  // a thread while its messages go back on the queue would re-enrich (and
+  // pay for) a thread that is already reviewed.
+  const busy = review.isPending || !!selectedRetry?.pending;
 
   const afterAction = useCallback(
     (actedId: string, next: Toast) => {
@@ -151,6 +177,7 @@ export default function InboxPage() {
       setRejectOpen(false);
       setAddOpen(false);
       setActionError(null);
+      setRetries(pendingOnly);
       showToast(next);
       void utils.ground.hotlineInbox.invalidate();
       void utils.ground.threads.invalidate();
@@ -160,6 +187,55 @@ export default function InboxPage() {
   );
 
   const errorMessage = (err: unknown) => (err instanceof Error ? err.message : t("loadError"));
+
+  const retryMessage = api.ground.retryMessage.useMutation();
+
+  /**
+   * Clear every failure marker on the selected entry so the drains pick the
+   * messages up again, then refetch. Each message's stages run in order
+   * (transcription before enrichment, see InboxEntry.failures), but messages
+   * settle independently: one that keeps failing does not hold the others
+   * out of the queue. The refetch runs even after a partial failure, since
+   * cleared stages are back in the queue either way. Not gated on the
+   * source's reviewerRoles: retry is not a review decision, and clear-api
+   * allows it to every admin/analyst.
+   */
+  const retry = useCallback(async () => {
+    if (!selected || busy || selected.failures.length === 0) return;
+    const entryId = selected.id;
+    const setRetry = (state: RetryState | null) =>
+      setRetries((prev) => {
+        const next = { ...prev };
+        if (state) next[entryId] = state;
+        else delete next[entryId];
+        return next;
+      });
+    setRetry({ pending: true, error: null });
+
+    const byMessage = new Map<string, InboxFailure[]>();
+    for (const f of selected.failures) byMessage.set(f.messageId, [...(byMessage.get(f.messageId) ?? []), f]);
+    const results = await Promise.allSettled(
+      [...byMessage.values()].map(async (stages) => {
+        for (const f of stages) await retryMessage.mutateAsync({ messageId: f.messageId, stage: f.stage });
+      }),
+    );
+    await utils.ground.hotlineInbox.invalidate().catch(() => undefined);
+
+    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+    if (rejected.length === 0) {
+      setRetry(null);
+      if (selectedIdRef.current === entryId) showToast({ message: t("toast.retried") });
+      return;
+    }
+    const reason = errorMessage(rejected[0]!.reason);
+    setRetry({
+      pending: false,
+      error:
+        results.length > 1
+          ? t("failure.partial", { done: results.length - rejected.length, total: results.length, error: reason })
+          : reason,
+    });
+  }, [selected, busy, retryMessage, utils, showToast, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const archive = useCallback(() => {
     if (!selected || busy) return;
@@ -323,6 +399,9 @@ export default function InboxPage() {
           onAdd={() => { setRejectOpen(false); setAddOpen(true); }}
           onArchive={archive}
           onReject={reject}
+          onRetry={() => void retry()}
+          retrying={!!selectedRetry?.pending}
+          retryError={selectedRetry?.error ?? null}
           onBack={() => setMobilePane(false)}
         />
       </div>

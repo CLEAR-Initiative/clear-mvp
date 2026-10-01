@@ -2806,7 +2806,8 @@
       "voiceFailed": "No se pudo reproducir esta nota de voz aquí. Ábrala en una pestaña nueva.",
       "transcriptLabel": "Transcripción automática · puede contener errores",
       "transcriptPending": "Transcripción pendiente",
-      "voiceNotStored": "Nota de voz (audio aún no almacenado)"
+      "voiceNotStored": "Nota de voz (audio aún no almacenado)",
+      "transcriptFailed": "Transcripción fallida"
     },
     "actions": {
       "add": "Añadir a CLEAR",
@@ -2861,7 +2862,8 @@
       "rejected": "Rechazado · {reason}",
       "viewSignal": "Ver señal",
       "close": "Cerrar",
-      "addedNoSignal": "Aprobado, pero no se devolvió ningún id de señal. Compruebe la señal en Detección antes de confiar en ella."
+      "addedNoSignal": "Aprobado, pero no se devolvió ningún id de señal. Compruebe la señal en Detección antes de confiar en ella.",
+      "retried": "En cola para un nuevo intento"
     },
     "noAccess": "La bandeja de la línea directa es solo para administradores por ahora.",
     "loadError": "No se pudo cargar la bandeja",
@@ -2876,6 +2878,19 @@
         "es": "español",
         "ar": "árabe"
       }
+    },
+    "failure": {
+      "pill": "Clasificación fallida",
+      "title": "El procesamiento automático se detuvo",
+      "help": "El pipeline falló en esta entrada tras varios intentos, así que ya no está en cola. Reintenta para volver a ponerla en cola.",
+      "stages": {
+        "ENRICH": "Clasificación",
+        "TRANSCRIBE": "Transcripción"
+      },
+      "noError": "No se registraron detalles del error",
+      "retry": "Reintentar",
+      "retrying": "Reintentando…",
+      "partial": "De nuevo en cola: {done} de {total} mensajes. {error}"
     }
   },
   "analysis": {

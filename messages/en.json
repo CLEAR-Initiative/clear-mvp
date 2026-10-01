@@ -2806,7 +2806,8 @@
       "voiceFailed": "This voice note could not be played here. Open it in a new tab instead.",
       "transcriptLabel": "Machine transcript · may contain errors",
       "transcriptPending": "Transcription pending",
-      "voiceNotStored": "Voice note (audio not stored yet)"
+      "voiceNotStored": "Voice note (audio not stored yet)",
+      "transcriptFailed": "Transcription failed"
     },
     "actions": {
       "add": "Add to CLEAR",
@@ -2861,7 +2862,8 @@
       "rejected": "Rejected · {reason}",
       "viewSignal": "View signal",
       "close": "Dismiss",
-      "addedNoSignal": "Approved, but no signal id came back. Check the signal in Detection before relying on it."
+      "addedNoSignal": "Approved, but no signal id came back. Check the signal in Detection before relying on it.",
+      "retried": "Queued for another attempt"
     },
     "noAccess": "The hotline inbox is available to admins only for now.",
     "loadError": "Could not load the inbox",
@@ -2876,6 +2878,19 @@
         "es": "Spanish",
         "ar": "Arabic"
       }
+    },
+    "failure": {
+      "pill": "Classification failed",
+      "title": "Automatic processing gave up",
+      "help": "The pipeline failed on this entry after repeated attempts, so it is no longer queued. Retry to queue it again.",
+      "stages": {
+        "ENRICH": "Classification",
+        "TRANSCRIBE": "Transcription"
+      },
+      "noError": "No error details recorded",
+      "retry": "Retry",
+      "retrying": "Retrying…",
+      "partial": "Queued again: {done} of {total} messages. {error}"
     }
   },
   "analysis": {
