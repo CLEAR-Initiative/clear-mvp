@@ -10,6 +10,7 @@
 
 import "server-only";
 import type { MastraModelConfig } from "@mastra/core/llm";
+import { createScriptedModel, SCRIPTED_MODEL_ID } from "~/server/agent/scripted-model";
 
 export function clearAgentModelId(): string {
   const id = process.env.CLEAR_AGENT_MODEL?.trim();
@@ -18,5 +19,12 @@ export function clearAgentModelId(): string {
 }
 
 export function resolveClearAgentModel(): MastraModelConfig {
-  return clearAgentModelId();
+  const id = clearAgentModelId();
+  if (id === SCRIPTED_MODEL_ID) {
+    if (process.env.NODE_ENV === "production" && process.env.CLEAR_AGENT_ALLOW_SCRIPTED_MODEL !== "1") {
+      throw new Error(`${SCRIPTED_MODEL_ID} is for tests; set a real CLEAR_AGENT_MODEL.`);
+    }
+    return createScriptedModel() as unknown as MastraModelConfig;
+  }
+  return id;
 }

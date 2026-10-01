@@ -11,6 +11,8 @@
  * must never be bypassed by a model nobody priced.
  */
 
+import { SCRIPTED_MODEL_ID } from "~/server/agent/scripted-model-id";
+
 export interface ModelPrice {
   inputPerMTok: number;
   outputPerMTok: number;
@@ -23,6 +25,8 @@ export const MODEL_PRICES: Readonly<Record<string, ModelPrice>> = {
   "anthropic/claude-sonnet-5-5": { inputPerMTok: 2, outputPerMTok: 10 },
   "anthropic/claude-sonnet-5": { inputPerMTok: 2, outputPerMTok: 10 },
   "anthropic/claude-haiku-4-5": { inputPerMTok: 1, outputPerMTok: 5 },
+  // The deterministic e2e stand-in costs nothing.
+  [SCRIPTED_MODEL_ID]: { inputPerMTok: 0, outputPerMTok: 0 },
 };
 
 export function priceFor(modelId: string): ModelPrice | undefined {
