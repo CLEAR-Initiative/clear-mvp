@@ -46,16 +46,7 @@ import {
 } from "~/lib/map-focus-session";
 import { NAV_COLLAPSED_W_PX, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
 import { setNavCollapsedCookie } from "~/lib/nav-collapsed-cookie";
-
-type NavItemKey =
-  | "overview"
-  | "detection"
-  | "inbox"
-  | "map"
-  | "insights"
-  | "operations"
-  | "cash"
-  | "knowledge";
+import { NAV_ROUTES, type NavItemKey } from "~/lib/nav-routes";
 
 interface NavItem {
   labelKey: NavItemKey;
@@ -90,19 +81,19 @@ const navSections: NavSection[] = [
   {
     titleKey: "main",
     items: [
-      { labelKey: "overview", href: "/dashboard", icon: IconLayoutDashboard, featureKey: "overview" },
-      { labelKey: "detection", href: "/detection", icon: IconTarget, featureKey: "detection" },
-      { labelKey: "inbox", href: "/inbox", icon: IconInbox, featureKey: "hotline_inbox", adminOnly: true },
-      { labelKey: "map", href: "/map", icon: IconMapPin, featureKey: "crisis_map" },
-      { labelKey: "insights", href: "/insights", icon: IconChartPie, featureKey: "insights" },
-      { labelKey: "operations", href: "/operations", icon: IconUser, featureKey: "operations", adminOnly: true },
-      { labelKey: "cash", href: "/cash", icon: IconCurrencyDollar, featureKey: "cash_assistance", adminOnly: true },
+      { labelKey: "overview", href: NAV_ROUTES.overview, icon: IconLayoutDashboard, featureKey: "overview" },
+      { labelKey: "detection", href: NAV_ROUTES.detection, icon: IconTarget, featureKey: "detection" },
+      { labelKey: "inbox", href: NAV_ROUTES.inbox, icon: IconInbox, featureKey: "hotline_inbox", adminOnly: true },
+      { labelKey: "map", href: NAV_ROUTES.map, icon: IconMapPin, featureKey: "crisis_map" },
+      { labelKey: "insights", href: NAV_ROUTES.insights, icon: IconChartPie, featureKey: "insights" },
+      { labelKey: "operations", href: NAV_ROUTES.operations, icon: IconUser, featureKey: "operations", adminOnly: true },
+      { labelKey: "cash", href: NAV_ROUTES.cash, icon: IconCurrencyDollar, featureKey: "cash_assistance", adminOnly: true },
     ],
   },
   {
     titleKey: "resources",
     items: [
-      { labelKey: "knowledge", href: "/knowledge", icon: IconBook, featureKey: "knowledge_hub", comingSoonForNonAdmin: true },
+      { labelKey: "knowledge", href: NAV_ROUTES.knowledge, icon: IconBook, featureKey: "knowledge_hub", comingSoonForNonAdmin: true },
     ],
   },
 ];

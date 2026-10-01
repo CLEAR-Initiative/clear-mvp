@@ -16,7 +16,7 @@ import type { MastraDBMessage, StorageThreadType } from "@mastra/core/memory";
 import { InMemoryDB, InMemoryMemory, type MemoryStorage } from "@mastra/core/storage";
 import { createConversationsApi } from "~/server/agent/conversations";
 import { ClearApiMemoryStorage } from "~/server/agent/memory-storage";
-import { createFakeClearApi } from "~/server/agent/testing/fake-clear-api";
+import { createFakeClearApi, FAKE_AGENT_KEY } from "~/server/agent/testing/fake-clear-api";
 
 vi.mock("server-only", () => ({}));
 
@@ -30,6 +30,7 @@ const stores: Array<[string, () => MemoryStorage]> = [
     () => {
       const fake = createFakeClearApi({ alice: USER });
       vi.stubGlobal("fetch", (_url: string, init?: RequestInit) => fake.handle(init));
+      vi.stubEnv("CLEAR_AGENT_API_KEY", FAKE_AGENT_KEY);
       return new ClearApiMemoryStorage(createConversationsApi(COOKIE), USER);
     },
   ],
@@ -217,6 +218,7 @@ describe("ClearApiMemoryStorage beyond the contract", () => {
   it("refuses another user's Thread even when clear-api would serve it (admins)", async () => {
     const fake = createFakeClearApi({ admin: "u-admin" });
     vi.stubGlobal("fetch", (_url: string, init?: RequestInit) => fake.handle(init));
+    vi.stubEnv("CLEAR_AGENT_API_KEY", FAKE_AGENT_KEY);
     fake.conversations.set("t-bob", {
       id: "t-bob",
       userId: "u-bob",

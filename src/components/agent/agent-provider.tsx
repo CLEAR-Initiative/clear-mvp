@@ -57,6 +57,10 @@ export interface AgentContextValue {
   threadId: string;
   /** The active Thread's stored turns are still being loaded into its chat. */
   loading: boolean;
+  /** Loading the active Thread's stored turns failed; `retryLoad` tries again. */
+  loadFailed: boolean;
+  /** Load the active Thread's stored turns again after `loadFailed`. */
+  retryLoad: () => void;
   /** The active Thread's stored title, once it has been loaded; null otherwise. */
   loadedTitle: string | null;
   /** The active Thread's chat, shared by the drawer and the Agent page. */
@@ -182,6 +186,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [chat, setChat] = useState(() => createAgentChat(state.threadId, undefined, onTurnFinished, readCurrentView));
   /** A Thread whose stored turns still have to be loaded into its chat. */
   const [pendingLoad, setPendingLoad] = useState<string | null>(null);
+  /** A Thread whose stored turns couldn't be loaded (until a retry). */
+  const [failedLoad, setFailedLoad] = useState<string | null>(null);
   /** The title of the last Thread loaded from clear-api. */
   const [loadedThread, setLoadedThread] = useState<{ id: string; title: string | null } | null>(null);
 
@@ -208,6 +214,13 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     { enabled: available && pendingLoad !== null, staleTime: 0, gcTime: 0, retry: false },
   );
   useEffect(() => {
+    // A failed load must not hold the Thread in `loading` for good (retry is
+    // off): stop waiting and let the Thread offer a retry.
+    if (pendingLoad && stored.isError) {
+      setFailedLoad(pendingLoad);
+      setPendingLoad(null);
+      return;
+    }
     if (!pendingLoad || !stored.isSuccess || stored.data?.id !== pendingLoad) {
       if (stored.isSuccess && !stored.data) setPendingLoad(null); // a new Thread
       return;
@@ -220,7 +233,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       setChat(createAgentChat(pendingLoad, history, onTurnFinished, readCurrentView));
     }
     setPendingLoad(null);
-  }, [pendingLoad, stored.isSuccess, stored.data, chat, onTurnFinished, readCurrentView]);
+  }, [pendingLoad, stored.isSuccess, stored.isError, stored.data, chat, onTurnFinished, readCurrentView]);
 
   // ── Agent navigation ───────────────────────────────────────────────────
   const router = useRouter();
@@ -314,6 +327,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       for (const id of navigateCallIds(messages ?? [])) applied.current.add(id);
       setChat(createAgentChat(threadId, messages, onTurnFinished, readCurrentView));
       setPendingLoad(messages ? null : threadId);
+      setFailedLoad(null);
     },
     [state, update, onTurnFinished, readCurrentView],
   );
@@ -323,7 +337,14 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     update({ ...state, threadId });
     setChat(createAgentChat(threadId, undefined, onTurnFinished, readCurrentView));
     setPendingLoad(null);
+    setFailedLoad(null);
   }, [state, update, onTurnFinished, readCurrentView]);
+
+  const retryLoad = useCallback(() => {
+    if (failedLoad !== state.threadId) return;
+    setFailedLoad(null);
+    setPendingLoad(state.threadId);
+  }, [failedLoad, state.threadId]);
 
   const value = useMemo<AgentContextValue>(
     () => ({
@@ -332,6 +353,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       setOpen,
       threadId: state.threadId,
       loading: available && pendingLoad !== null && pendingLoad === state.threadId,
+      loadFailed: available && failedLoad !== null && failedLoad === state.threadId,
+      retryLoad,
       loadedTitle: loadedThread?.id === state.threadId ? loadedThread.title : null,
       chat,
       openThread,
@@ -342,7 +365,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       viewKey,
       returning: returning !== null,
     }),
-    [available, state, pendingLoad, loadedThread, setOpen, chat, openThread, newThread, applyNavigation, canGoBack, goBack, viewKey, returning],
+    [available, state, pendingLoad, failedLoad, retryLoad, loadedThread, setOpen, chat, openThread, newThread, applyNavigation, canGoBack, goBack, viewKey, returning],
   );
 
   return (

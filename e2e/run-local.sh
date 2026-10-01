@@ -60,5 +60,8 @@ echo "── seeding ground-intel fixture (e2e/support/ground-seed.ts) ──"
 echo "── rewriting seeded event types to GLIDE codes (e2e/support/event-types-seed.ts) ──"
 "${COMPOSE[@]}" run --rm seed-event-types
 
+echo "── seeding the CLEAR Agent's clear-api key (e2e/support/agent-key-seed.ts) ──"
+"${COMPOSE[@]}" run --rm seed-agent-key
+
 echo "── running Playwright smoke suite ──"
 bunx playwright test "$@"

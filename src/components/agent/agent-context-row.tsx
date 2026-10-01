@@ -19,42 +19,11 @@ import {
   IconLayoutDashboard,
 } from "@tabler/icons-react";
 import { useShownCurrentView } from "~/components/agent/use-shown-current-view";
-import { sectionOf } from "~/lib/agent-current-view";
-import type {
-  CurrentViewFilterKey,
-  CurrentViewFilters,
-  CurrentViewFilterValue,
-} from "~/lib/agent-current-view-contract";
+import { narrowingFilters } from "~/lib/agent-current-view";
+import { navItemForRoute } from "~/lib/nav-routes";
 import { useOptionalTeam } from "~/providers/team-provider";
 
-/** App sections with a name in the nav, by their first path segment. */
-const SECTIONS: Record<string, "overview" | "detection" | "inbox" | "map" | "insights" | "operations" | "cash" | "knowledge"> = {
-  dashboard: "overview",
-  detection: "detection",
-  inbox: "inbox",
-  map: "map",
-  insights: "insights",
-  operations: "operations",
-  cash: "cash",
-  knowledge: "knowledge",
-};
-
 const ENTITY_ICONS = { event: IconBolt, signal: IconAntenna, crisis: IconAlertOctagon } as const;
-
-/** Filter keys shown as filters: the team has its own chip, and the sort isn't a filter. */
-type ShownFilterKey = Exclude<CurrentViewFilterKey, "teamId" | "orderBy">;
-
-/** Filters that narrow what is shown, leaving out "any" (null or empty). */
-function shownFilters(filters: CurrentViewFilters | undefined): Array<[ShownFilterKey, CurrentViewFilterValue]> {
-  return Object.entries(filters ?? {}).filter(
-    (entry): entry is [ShownFilterKey, CurrentViewFilterValue] => {
-      const [key, value] = entry;
-      if (key === "teamId" || key === "orderBy") return false;
-      if (value === null || value === undefined || value === "") return false;
-      return !Array.isArray(value) || value.length > 0;
-    },
-  );
-}
 
 export function AgentContextRow() {
   const t = useTranslations("agent.context");
@@ -63,9 +32,9 @@ export function AgentContextRow() {
   const team = useOptionalTeam()?.activeTeam ?? null;
   if (!view) return null;
 
-  const section = SECTIONS[sectionOf(view.route)];
+  const section = navItemForRoute(view.route);
   const entity = view.entity;
-  const filters = shownFilters(view.filters);
+  const filters = narrowingFilters(view.filters);
 
   const chips: ReactNode[] = [];
   if (team) chips.push(<ContextChip key="team" icon={<IconBuilding size={12} />} label={team.name} />);

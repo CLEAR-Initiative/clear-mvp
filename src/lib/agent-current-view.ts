@@ -8,7 +8,7 @@
  * page that unmounts withdraws what it published.
  */
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import {
   CURRENT_VIEW_MAX_LIST,
   type CurrentViewEntityKind,
@@ -56,6 +56,23 @@ export function sectionOf(route: string): string {
   return route.split("/")[1] ?? "";
 }
 
+/** Filter keys that narrow what is shown: the team is its own scope, and the sort isn't a filter. */
+export type NarrowingFilterKey = Exclude<CurrentViewFilterKey, "teamId" | "orderBy">;
+
+/** The filters that narrow what is shown, leaving out "any" (null or empty). */
+export function narrowingFilters(
+  filters: CurrentViewFilters | undefined,
+): Array<[NarrowingFilterKey, CurrentViewFilterValue]> {
+  return Object.entries(filters ?? {}).filter(
+    (entry): entry is [NarrowingFilterKey, CurrentViewFilterValue] => {
+      const [key, value] = entry;
+      if (key === "teamId" || key === "orderBy") return false;
+      if (value === null || value === undefined || value === "") return false;
+      return !Array.isArray(value) || value.length > 0;
+    },
+  );
+}
+
 interface Entry {
   token: symbol;
   view: PublishedView;
@@ -71,10 +88,33 @@ function setPublished(next: Entry[]): void {
   for (const listener of listeners) listener();
 }
 
-export function publishCurrentView(view: PublishedView): () => void {
+function publish(view: PublishedView): symbol {
   const token = Symbol("current-view");
   setPublished([...published, { token, view }]);
-  return () => setPublished(published.filter((e) => e.token !== token));
+  return token;
+}
+
+function withdraw(token: symbol): void {
+  setPublished(published.filter((e) => e.token !== token));
+}
+
+/** Rename a published entity where it stands: a new title never moves it up the stack. */
+function relabel(token: symbol, label: string | undefined): void {
+  const index = published.findIndex((e) => e.token === token);
+  const entity = published[index]?.view.entity;
+  if (!entity || entity.label === label) return;
+  const next = [...published];
+  next[index] = { token, view: { ...published[index]!.view, entity: withLabel(entity, label) } };
+  setPublished(next);
+}
+
+function withLabel(entity: CurrentViewEntity, label: string | undefined): LabelledEntity {
+  return label === undefined ? { kind: entity.kind, id: entity.id } : { kind: entity.kind, id: entity.id, label };
+}
+
+export function publishCurrentView(view: PublishedView): () => void {
+  const token = publish(view);
+  return () => withdraw(token);
 }
 
 /** The newest published entity and filters, each from whoever has one. */
@@ -124,12 +164,27 @@ export function useDisplayedCurrentView(pathname: string): DisplayedCurrentView 
  * Pass `null` to publish nothing (e.g. while the entity is still loading).
  */
 export function useAgentCurrentView(view: PublishedView | null): void {
-  // Keyed by content, so a re-render with the same view doesn't churn.
-  const key = view ? JSON.stringify(view) : null;
+  // Keyed by content, so a re-render with the same view doesn't churn — and
+  // without the entity's name: a renamed entity is relabelled in place, never
+  // re-published on top of a drawer opened after it.
+  const label = view?.entity?.label;
+  const key = view ? JSON.stringify(view.entity ? { ...view, entity: withLabel(view.entity, undefined) } : view) : null;
+  const labelRef = useRef(label);
+  labelRef.current = label;
+  const token = useRef<symbol | null>(null);
   useEffect(() => {
     if (!key) return;
-    return publishCurrentView(JSON.parse(key) as PublishedView);
+    const parsed = JSON.parse(key) as PublishedView;
+    const own = publish(parsed.entity ? { ...parsed, entity: withLabel(parsed.entity, labelRef.current) } : parsed);
+    token.current = own;
+    return () => {
+      token.current = null;
+      withdraw(own);
+    };
   }, [key]);
+  useEffect(() => {
+    if (token.current) relabel(token.current, label);
+  }, [label]);
 }
 
 /** Test seam: forget everything published. */

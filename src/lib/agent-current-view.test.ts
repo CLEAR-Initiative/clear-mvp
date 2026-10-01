@@ -104,6 +104,22 @@ describe("what the Agent drawer shows of the Current view", () => {
     unpublish();
   });
 
+  it("renames a published entity where it stands, never on top of a later publisher", () => {
+    const page = renderHook(({ label }) => useAgentCurrentView({ entity: { kind: "crisis", id: "c1", label } }), {
+      initialProps: { label: "Sudan" },
+    });
+    const unpublishDrawer = publishCurrentView({ entity: { kind: "event", id: "e1", label: "Floods" } });
+
+    page.rerender({ label: "Sudan: displacement" });
+
+    // The drawer opened later is still what the Agent is told about.
+    expect(currentViewFor("/crisis/c1").entity).toEqual({ kind: "event", id: "e1" });
+    unpublishDrawer();
+    expect(displayedCurrentView("/crisis/c1").entity).toEqual({ kind: "crisis", id: "c1", label: "Sudan: displacement" });
+    page.unmount();
+    expect(displayedCurrentView("/crisis/c1").entity).toBeUndefined();
+  });
+
   it("re-renders a subscriber when a page publishes or withdraws", () => {
     const { result } = renderHook(() => useDisplayedCurrentView("/map"));
     expect(result.current.entity).toBeUndefined();

@@ -242,9 +242,8 @@ export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
     messages.sort((a, b) => Date.parse(a.sentAt) - Date.parse(b.sentAt));
     const first = messages[0]!;
     const last = messages[messages.length - 1]!;
-    const text = messages
+    const text = textMessages(messages)
       .map((m) => m.text.trim())
-      .filter((t) => t.length > 0)
       .join("\n\n");
     const media = messages.map((m) => ({ attachments: messageAttachments(m), transcript: voiceTranscript(m) }));
     const classification = entryClassification(messages);
@@ -402,7 +401,7 @@ export function saveReadIds(ids: Set<string>): void {
 }
 
 /** Messages whose text an entry's narrative (and its translation) is built
- * from — the same filter `buildInboxEntries` applies to `text`. */
+ * from — `buildInboxEntries` joins these into `text`. */
 export function textMessages<T extends { text: string }>(messages: T[]): T[] {
   return messages.filter((m) => m.text.trim().length > 0);
 }
@@ -414,6 +413,36 @@ export function textMessages<T extends { text: string }>(messages: T[]): T[] {
  */
 export function needsTranslation(entry: InboxEntry, locale: string): boolean {
   return textMessages(entry.messages).some((m) => m.language !== locale);
+}
+
+/** How often the reading pane polls a queued translation, and for how long
+ * before it gives up and offers a retry (the drain may be paused). */
+export const TRANSLATION_POLL_MS = 5_000;
+export const TRANSLATION_POLL_LIMIT_MS = 2 * 60_000;
+
+/**
+ * What the reading pane shows for one translation request: the request's
+ * own answer unless it is `queued`, then this request's polled answer.
+ * Errors, and a translation still queued past the poll limit, show as
+ * unavailable (which offers a retry); no answer yet is queued.
+ */
+export function shownTranslation(r: {
+  requested: GroundTranslationState | undefined;
+  requestFailed: boolean;
+  /** The poll's answer for this request (never an earlier request's). */
+  polled: GroundTranslationState | undefined;
+  pollFailed: boolean;
+  /** Since the request, as of the poll's latest answer. */
+  pollingForMs: number;
+}): GroundTranslationState {
+  const queued: GroundTranslationState = { status: "queued", text: null };
+  const unavailable: GroundTranslationState = { status: "unavailable", text: null };
+  if (r.requestFailed) return unavailable;
+  if (!r.requested) return queued;
+  if (r.requested.status !== "queued") return r.requested;
+  if (r.pollFailed) return unavailable;
+  if (r.polled && r.polled.status !== "queued") return r.polled;
+  return r.pollingForMs >= TRANSLATION_POLL_LIMIT_MS ? unavailable : queued;
 }
 
 /**

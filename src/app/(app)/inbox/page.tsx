@@ -73,6 +73,7 @@ export default function InboxPage() {
   const utils = api.useUtils();
 
   const enabled = useFeatureEnabled("hotline_inbox");
+  const translation = useFeatureEnabled("hotline_translation");
   const { data: authData, isLoading: authLoading } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const role = authData?.user?.role;
   const canSee = enabled && isPlatformAdmin(role);
@@ -391,6 +392,7 @@ export default function InboxPage() {
         />
         <ReadingPane
           entry={selected}
+          translation={translation}
           canReview={canReviewSelected}
           busy={busy}
           error={actionError}
