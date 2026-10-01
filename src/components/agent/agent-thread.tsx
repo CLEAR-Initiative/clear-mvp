@@ -63,10 +63,11 @@ export function AgentThread({ chat }: AgentThreadProps) {
   // would stop its turns ever being shown, so wait.
   const agent = useOptionalAgent();
   const loading = agent?.loading === true && agent.threadId === chat.id;
-  const busy = loading || status === "submitted" || status === "streaming";
-  // Its turns couldn't be loaded: say so and offer a retry, but leave the
-  // input usable (New thread is always there too).
+  // Its turns couldn't be loaded: say so and offer a retry. Sending is held
+  // until they load (or the user starts a New thread), for the same reason
+  // as while loading: a sent turn would stop the stored ones ever showing.
   const loadFailed = agent?.loadFailed === true && agent.threadId === chat.id && messages.length === 0;
+  const busy = loading || loadFailed || status === "submitted" || status === "streaming";
 
   // Follow the newest turn as it streams, unless the user has scrolled up to read.
   const scroller = useRef<HTMLDivElement>(null);

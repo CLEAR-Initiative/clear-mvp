@@ -192,7 +192,7 @@ describe("Thread restore", () => {
     expect(screen.getByRole("textbox", { name: "Message the CLEAR Agent" })).toBeDisabled();
   });
 
-  it("doesn't hold a Thread whose turns failed to load: it says so, offers a retry, and the input works", async () => {
+  it("doesn't hang on a Thread whose turns failed to load: it says so and offers a retry", async () => {
     sessionStorage.setItem(
       "agent-drawer",
       JSON.stringify({ open: true, threadId: "t-saved", userId: "u-alice" }),
@@ -203,7 +203,11 @@ describe("Thread restore", () => {
       "This conversation couldn't be loaded.",
     );
     expect(screen.queryByTestId("agent-thread-loading")).not.toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Message the CLEAR Agent" })).toBeEnabled();
+    // Typing works, but sending waits for the turns (or a New thread).
+    const input = screen.getByRole("textbox", { name: "Message the CLEAR Agent" });
+    expect(input).toBeEnabled();
+    fireEvent.change(input, { target: { value: "Any update?" } });
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
 
     // Retry loads it again, and this time it arrives.
     conversationFailed = false;
