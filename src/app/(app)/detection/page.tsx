@@ -292,7 +292,11 @@ function DetectionPageContent() {
     }
     return pickerCountryOptions(countries, teamCountryNames);
   }, [scopeReady, workingCountryName, countries, teamCountryNames]);
-  useReportStaleCountryPick(countryOptions, workingCountryName ?? pickedCountry, selectedCountry);
+  useReportStaleCountryPick(
+    countryOptions,
+    detectionDeepLink.country ?? workingCountryName ?? pickedCountry,
+    selectedCountry,
+  );
 
   // Ground intel is a PRIVATE staging tier (sender names, unvetted claims):
   // clear-api rejects every ground query for roles other than admin/analyst,

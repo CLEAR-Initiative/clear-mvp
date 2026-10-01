@@ -1352,7 +1352,11 @@ function MapPageContent() {
     return pickerCountryOptions(apiCountries, teamCountryNames);
   }, [scopeReady, workingCountryName, teamCountryNames, apiCountries]);
   countryOptionsRef.current = countryOptions;
-  useReportStaleCountryPick(countryOptions, workingCountryName ?? pickedCountry, selectedCountry);
+  useReportStaleCountryPick(
+    countryOptions,
+    mapDeepLink.country ?? workingCountryName ?? pickedCountry,
+    selectedCountry,
+  );
 
   // Restored camera must belong to the working country. A leftover Sudan
   // pose cannot win over a Venezuela pick (borders/signals vs camera).
