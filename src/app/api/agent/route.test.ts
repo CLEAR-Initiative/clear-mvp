@@ -125,6 +125,16 @@ describe("POST /api/agent — access", () => {
     expect(clearApi.calls).toHaveLength(0);
   });
 
+  it("returns 404 and runs nothing while the agent flag is off", async () => {
+    clearApi.flags.agent = false;
+    const POST = await loadRoute();
+    const res = await POST(agentRequest(ALICE, turn("t1", "Hi")));
+    expect(res.status).toBe(404);
+    expect((await res.json()).code).toBe("AGENT_DISABLED");
+    expect(prompts).toHaveLength(0);
+    expect(clearApi.conversations.size).toBe(0);
+  });
+
   it("returns 400 without a threadId or message text", async () => {
     const POST = await loadRoute();
     expect((await POST(agentRequest(ALICE, { message: turn("t1", "x").message }))).status).toBe(400);

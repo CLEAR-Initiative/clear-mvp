@@ -20,6 +20,7 @@ import { LOCALE_COOKIE, pickLocale } from "~/i18n/config";
 import { canReadContent } from "~/lib/roles";
 import { createConversationsApi } from "~/server/agent/conversations";
 import { CLEAR_AGENT_ID, createClearAgent } from "~/server/agent/create-clear-agent";
+import { agentFlagEnabled } from "~/server/agent/flag";
 import { clearAgentModelId } from "~/server/agent/model";
 import { turnCostUsd } from "~/server/agent/pricing";
 import { getSessionUser } from "~/server/session";
@@ -51,6 +52,13 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json(
       { error: "Your account is awaiting admin approval." },
       { status: 403 },
+    );
+  }
+
+  if (!(await agentFlagEnabled(cookie))) {
+    return Response.json(
+      { error: "The CLEAR Agent is turned off.", code: "AGENT_DISABLED" },
+      { status: 404 },
     );
   }
 

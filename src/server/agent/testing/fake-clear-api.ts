@@ -57,6 +57,7 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
     string,
     { userId: string; workingMemory: string | null; metadata: unknown; createdAt: string; updatedAt: string }
   >();
+  const flags = { agent: true };
   const budget = { limitUsd: 2, spentTodayUsd: 0, resetsAt: "2026-10-02T00:00:00.000Z" };
   let clock = Date.parse("2026-10-01T08:00:00.000Z");
   const now = () => new Date((clock += 1000)).toISOString();
@@ -82,6 +83,9 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
   }
 
   function execute(query: string, v: Record<string, unknown>, cookie: string | null) {
+    if (query.includes("featureFlags")) {
+      return { featureFlags: Object.entries(flags).map(([key, enabled]) => ({ key, enabled })) };
+    }
     const user = userFor(cookie);
 
     if (query.includes("upsertConversationMessages(")) {
@@ -197,6 +201,8 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
     messages,
     calls,
     workingMemory,
+    /** Feature flags as clear-api reports them; mutate to turn the Agent off. */
+    flags,
     /** The caller's Agent budget; mutate to simulate spend. */
     budget,
     /** Answer one GraphQL HTTP request. */
