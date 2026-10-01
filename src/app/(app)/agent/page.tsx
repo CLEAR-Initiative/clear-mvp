@@ -25,7 +25,8 @@ export default function AgentPage() {
 
   return (
     // Exactly the viewport (less the mobile top bar and bottom nav), so the
-    // Thread scrolls inside it and its input box stays on screen.
+    // Thread scrolls inside it and its input box stays on screen. The nav is
+    // 64px with its safe-area inset inside (border-box), so no inset here.
     <Box h={{ base: "calc(100dvh - 128px)", sm: "100dvh" }} style={{ display: "flex", flexDirection: "column" }}>
       <PageHeader
         title={t("page.title")}

@@ -2872,6 +2872,7 @@
       "label": "Translation ({locale})",
       "pending": "Translating, this can take a moment",
       "unavailable": "Translation is not available yet",
+      "retry": "Try again",
       "locales": {
         "en": "English",
         "fr": "French",
@@ -3233,7 +3234,9 @@
       "budgetResets": "It resets at {time}.",
       "forbiddenThread": "This Thread belongs to another user.",
       "notConfigured": "The CLEAR Agent isn't configured on this server.",
-      "generic": "The CLEAR Agent couldn't answer. Please try again."
+      "generic": "The CLEAR Agent couldn't answer. Please try again.",
+      "loadFailed": "This conversation couldn't be loaded.",
+      "retryLoad": "Try again"
     },
     "navigation": {
       "movedTo": "Moved you to {kind}: {label}",

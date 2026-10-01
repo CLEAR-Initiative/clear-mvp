@@ -6,7 +6,7 @@ import { NextIntlClientProvider } from "next-intl";
 import enMessages from "../../../messages/en.json";
 import { Chat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
-import { AgentThread, describeAgentError } from "~/components/agent/agent-thread";
+import { AgentThread, describeAgentError, suggestionSetFor } from "~/components/agent/agent-thread";
 import { publishCurrentView, resetCurrentViews } from "~/lib/agent-current-view";
 
 let pathname = "/map";
@@ -124,6 +124,28 @@ describe("An empty Thread", () => {
     fireEvent.click(suggestion);
     await vi.waitFor(() => expect(sent).toEqual([suggestion.textContent]));
     expect(screen.queryByTestId("agent-intro")).not.toBeInTheDocument();
+  });
+});
+
+describe("suggestionSetFor", () => {
+  it("asks about the entity on screen", () => {
+    expect(suggestionSetFor({ route: "/event/e1", entity: { kind: "event", id: "e1" } })).toBe("event");
+  });
+
+  it("asks about 'this area' only when the map is filtered to one", () => {
+    expect(suggestionSetFor({ route: "/map" })).toBe("general");
+    expect(suggestionSetFor({ route: "/map", filters: { teamId: "team-1", from: "2026-09-01" } })).toBe("general");
+    expect(suggestionSetFor({ route: "/map", filters: { country: "SDN" } })).toBe("map");
+    expect(suggestionSetFor({ route: "/map", filters: { locationId: "loc-1" } })).toBe("map");
+  });
+
+  it("asks about 'these filters' only when Detection has some", () => {
+    expect(suggestionSetFor({ route: "/detection", filters: { teamId: "team-1", orderBy: "newest" } })).toBe("general");
+    expect(suggestionSetFor({ route: "/detection", filters: { severityMin: 3 } })).toBe("detection");
+  });
+
+  it("is general with no Current view", () => {
+    expect(suggestionSetFor(null)).toBe("general");
   });
 });
 

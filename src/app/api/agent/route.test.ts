@@ -9,6 +9,7 @@ import {
   parseUIMessageStream,
   type FakeClearApi,
   type ScriptedStep,
+  FAKE_AGENT_KEY,
 } from "~/server/agent/testing/fake-clear-api";
 
 vi.mock("server-only", () => ({}));
@@ -69,6 +70,7 @@ beforeEach(() => {
   vi.resetModules();
   vi.stubEnv("NRC_FIND_API_URL", FIND_URL);
   vi.stubEnv("NRC_FIND_API_TOKEN", "find-secret");
+  vi.stubEnv("CLEAR_AGENT_API_KEY", FAKE_AGENT_KEY);
   clearApi = createFakeClearApi({ alice: "u-alice", bob: "u-bob" });
   roles = { alice: "viewer", bob: "analyst" };
   scripted.modelId = "anthropic/claude-sonnet-5-5";
@@ -186,6 +188,11 @@ describe("POST /api/agent — a Thread", () => {
     expect(stored.map((m) => m.role)).toEqual(["user", "assistant"]);
     expect(JSON.stringify(stored[1]!.content)).toContain("Darfur access report");
     expect(clearApi.calls.every((c) => c.cookie === ALICE)).toBe(true);
+    // ...and every Conversation call also carried the Agent's key, without
+    // which clear-api refuses Conversation writes.
+    const conversationCalls = clearApi.calls.filter((c) => !c.query.includes("featureFlags"));
+    expect(conversationCalls.length).toBeGreaterThan(0);
+    expect(conversationCalls.every((c) => c.agentKey === FAKE_AGENT_KEY)).toBe(true);
   });
 
   it("answers a follow-up from the earlier turns of the Thread", async () => {
@@ -341,6 +348,17 @@ describe("POST /api/agent — Agent budget and usage", () => {
     expect(prompts).toHaveLength(0);
     expect(findCalls()).toHaveLength(0);
     expect(clearApi.conversations.size).toBe(0);
+  });
+
+  it("returns 503 and runs nothing without the Agent's clear-api key", async () => {
+    vi.stubEnv("CLEAR_AGENT_API_KEY", "");
+    const POST = await loadRoute();
+    const res = await POST(agentRequest(ALICE, turn("t1", "Darfur?")));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ code: "AGENT_NOT_CONFIGURED" });
+    // Only the feature-flag check reached clear-api; no Conversation call.
+    expect(clearApi.calls.filter((c) => !c.query.includes("featureFlags"))).toHaveLength(0);
+    expect(prompts).toHaveLength(0);
   });
 
   it("refuses to run an unpriced model", async () => {

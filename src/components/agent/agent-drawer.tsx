@@ -47,7 +47,7 @@ import { api } from "~/trpc/react";
 const WIDTH_KEY = "agent-drawer-width";
 const WIDTHS = { s: 380, m: 480, l: 720 } as const;
 type Width = keyof typeof WIDTHS;
-const isWidth = (v: unknown): v is Width => typeof v === "string" && v in WIDTHS;
+const isWidth = (v: unknown): v is Width => typeof v === "string" && Object.hasOwn(WIDTHS, v);
 
 /** The user's chosen width, remembered per browser (a preference, not part of the Thread). */
 function useDrawerWidth(): [Width, (w: Width) => void] {

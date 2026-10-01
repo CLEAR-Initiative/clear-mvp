@@ -25,6 +25,7 @@ let team: { activeTeamId: string; activeTeam: { id: string; name: string } } | n
 vi.mock("~/providers/team-provider", () => ({ useOptionalTeam: () => team }));
 let storedConversation: { id: string; title: string; messages: unknown[] } | null = null;
 let conversationLoading = false;
+let conversationFailed = false;
 const getConversation = vi.fn();
 vi.mock("~/trpc/react", () => ({
   api: {
@@ -38,6 +39,7 @@ vi.mock("~/trpc/react", () => ({
         useQuery: (input: { id: string }, opts: { enabled: boolean }) => {
           getConversation(input, opts);
           if (opts.enabled && conversationLoading) return { isSuccess: false, data: undefined };
+          if (opts.enabled && conversationFailed) return { isSuccess: false, isError: true, data: undefined };
           return opts.enabled
             ? { isSuccess: true, data: storedConversation?.id === input.id ? storedConversation : null }
             : { isSuccess: false, data: undefined };
@@ -89,6 +91,7 @@ beforeEach(() => {
   agent = undefined;
   storedConversation = null;
   conversationLoading = false;
+  conversationFailed = false;
   conversations = [];
   team = null;
   getConversation.mockClear();
@@ -187,6 +190,37 @@ describe("Thread restore", () => {
     expect(await screen.findByTestId("agent-thread-loading")).toBeInTheDocument();
     expect(screen.queryByTestId("agent-suggestion")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Message the CLEAR Agent" })).toBeDisabled();
+  });
+
+  it("doesn't hang on a Thread whose turns failed to load: it says so and offers a retry", async () => {
+    sessionStorage.setItem(
+      "agent-drawer",
+      JSON.stringify({ open: true, threadId: "t-saved", userId: "u-alice" }),
+    );
+    conversationFailed = true;
+    renderDrawer();
+    expect(await screen.findByTestId("agent-thread-load-failed")).toHaveTextContent(
+      "This conversation couldn't be loaded.",
+    );
+    expect(screen.queryByTestId("agent-thread-loading")).not.toBeInTheDocument();
+    // Typing works, but sending waits for the turns (or a New thread).
+    const input = screen.getByRole("textbox", { name: "Message the CLEAR Agent" });
+    expect(input).toBeEnabled();
+    fireEvent.change(input, { target: { value: "Any update?" } });
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+
+    // Retry loads it again, and this time it arrives.
+    conversationFailed = false;
+    storedConversation = {
+      id: "t-saved",
+      title: "Access",
+      messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "Access in Darfur?" }] }],
+    };
+    getConversation.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await vi.waitFor(() => expect(agent!.chat.messages.map((m) => m.id)).toEqual(["m1"]));
+    expect(getConversation).toHaveBeenCalledWith({ id: "t-saved" }, expect.objectContaining({ enabled: true }));
+    expect(screen.queryByTestId("agent-thread-load-failed")).not.toBeInTheDocument();
   });
 
   it("never restores another user's Thread on the same tab, and forgets it", () => {

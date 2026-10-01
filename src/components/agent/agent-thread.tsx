@@ -19,7 +19,7 @@ import { IconAlertTriangle, IconClockPause, IconSend } from "@tabler/icons-react
 import { AgentMessage } from "~/components/agent/agent-message";
 import { useOptionalAgent } from "~/components/agent/agent-provider";
 import { useShownCurrentView } from "~/components/agent/use-shown-current-view";
-import { sectionOf, type DisplayedCurrentView } from "~/lib/agent-current-view";
+import { narrowingFilters, sectionOf, type DisplayedCurrentView } from "~/lib/agent-current-view";
 
 /**
  * The transport surfaces a failed request's body as the error message; turn
@@ -63,7 +63,11 @@ export function AgentThread({ chat }: AgentThreadProps) {
   // would stop its turns ever being shown, so wait.
   const agent = useOptionalAgent();
   const loading = agent?.loading === true && agent.threadId === chat.id;
-  const busy = loading || status === "submitted" || status === "streaming";
+  // Its turns couldn't be loaded: say so and offer a retry. Sending is held
+  // until they load (or the user starts a New thread), for the same reason
+  // as while loading: a sent turn would stop the stored ones ever showing.
+  const loadFailed = agent?.loadFailed === true && agent.threadId === chat.id && messages.length === 0;
+  const busy = loading || loadFailed || status === "submitted" || status === "streaming";
 
   // Follow the newest turn as it streams, unless the user has scrolled up to read.
   const scroller = useRef<HTMLDivElement>(null);
@@ -107,6 +111,8 @@ export function AgentThread({ chat }: AgentThreadProps) {
             <Group gap={8} data-testid="agent-thread-loading">
               <Loader size={12} />
             </Group>
+          ) : loadFailed ? (
+            <LoadFailed onRetry={() => agent?.retryLoad()} />
           ) : (
             messages.length === 0 && <EmptyThread onAsk={send} disabled={busy} />
           )}
@@ -177,11 +183,21 @@ export function AgentThread({ chat }: AgentThreadProps) {
 /** Which suggested questions fit what is on screen. */
 type SuggestionSet = "general" | "event" | "signal" | "crisis" | "map" | "detection";
 
+/** Location filters: the only "area" the Agent is told about on the map (not its viewport). */
+const AREA_FILTERS = new Set(["locationId", "country", "region"]);
+
+/**
+ * The map and detection sets ask about "this area" or "these filters", so
+ * they are only offered once the Current view carries one; otherwise the
+ * Agent would be asked about something it was never told.
+ */
 export function suggestionSetFor(view: DisplayedCurrentView | null): SuggestionSet {
   if (!view) return "general";
   if (view.entity) return view.entity.kind;
   const section = sectionOf(view.route);
-  if (section === "map" || section === "detection") return section;
+  const filters = narrowingFilters(view.filters);
+  if (section === "map" && filters.some(([key]) => AREA_FILTERS.has(key))) return "map";
+  if (section === "detection" && filters.length > 0) return "detection";
   return "general";
 }
 
@@ -219,6 +235,21 @@ function EmptyThread({ onAsk, disabled }: { onAsk: (text: string) => void; disab
         })}
       </Stack>
     </Stack>
+  );
+}
+
+/** The stored Thread's turns couldn't be loaded. */
+function LoadFailed({ onRetry }: { onRetry: () => void }) {
+  const t = useTranslations("agent.errors");
+  return (
+    <Alert color="red" icon={<IconAlertTriangle size={16} />} data-testid="agent-thread-load-failed">
+      <Stack gap={8} align="flex-start">
+        <Text size="sm">{t("loadFailed")}</Text>
+        <Button size="xs" variant="light" color="red" onClick={onRetry}>
+          {t("retryLoad")}
+        </Button>
+      </Stack>
+    </Alert>
   );
 }
 
