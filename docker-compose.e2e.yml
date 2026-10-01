@@ -159,6 +159,32 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # One-shot: the CLEAR Agent's clear-api key (the `agent` service user and
+  # a fixed, test-only key), which clear-api requires on every Conversation
+  # write (clear-api#182). The web service gets the same CLEAR_AGENT_API_KEY.
+  # Same image and bind-mount pattern as `seed-ground`. Runs after `seed`.
+  seed-agent-key:
+    build:
+      context: ../clear-api
+      target: build
+    image: clear-e2e-seed:latest
+    command: ["bun", "/app/e2e-agent-key-seed.ts"]
+    volumes:
+      - ./e2e/support/agent-key-seed.ts:/app/e2e-agent-key-seed.ts:ro
+    environment:
+      DATABASE_URL: postgres://clear:clear@db:5432/clear
+      BETTER_AUTH_SECRET: E2E_SMOKE_BETTER_AUTH_SECRET_0123456789abcdef
+      BETTER_AUTH_URL: http://localhost:4000
+      CELERY_BROKER_URL: redis://redis:6379/0
+      ADMIN_EMAIL: admin@clear.dev
+      ADMIN_PASSWORD: password123
+      NODE_ENV: production
+      CLEAR_AGENT_API_KEY: sk_live_e2e-clear-agent-key-test-only
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: "no"
+
   # Stand-in for NRC Find (the CLEAR Agent's document tool): a tiny node
   # server answering in NRC Find's NDJSON shape. See e2e/support/nrc-find-stub.mjs.
   nrc-find:
@@ -199,6 +225,8 @@ services:
       CLEAR_AGENT_ALLOW_SCRIPTED_MODEL: "1"
       NRC_FIND_API_URL: http://nrc-find:8080
       NRC_FIND_API_TOKEN: e2e-nrc-find-token
+      # Seeded into clear-api by `seed-agent-key`; test-only, not a secret.
+      CLEAR_AGENT_API_KEY: sk_live_e2e-clear-agent-key-test-only
     ports:
       - "3000:3000"
     depends_on:
