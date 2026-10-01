@@ -115,8 +115,12 @@ export function AgentDrawer() {
         // Never wider than the screen; full width on a phone.
         size={isMobile ? "100%" : `min(${WIDTHS[width]}px, 100vw)`}
         lockScroll={false}
+        // Via `styles.content`, not `style` on Drawer.Content: Mantine applies
+        // that `style` to the fixed inner wrapper too, and a column there turns
+        // `position="right"` into a panel at the bottom of the screen.
+        styles={{ content: { display: "flex", flexDirection: "column", overflow: "hidden" } }}
       >
-        <Drawer.Content style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <Drawer.Content>
           <DrawerHeader width={width} onWidth={setWidth} showWidth={!isMobile} />
           <AgentContextRow />
           <Drawer.Body

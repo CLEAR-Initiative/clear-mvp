@@ -225,6 +225,18 @@ describe("AgentDrawer languages", () => {
     expect(affix.style.getPropertyValue("--affix-left")).toBe("");
   });
 
+  it("opens as a side panel, not a strip along the bottom", async () => {
+    renderDrawer();
+    fireEvent.click(launcher()!);
+    const dialog = await screen.findByRole("dialog");
+    // The content lays its header, context row and Thread out in a column…
+    expect(dialog.style.flexDirection).toBe("column");
+    // …but the fixed wrapper keeps Mantine's row, or `justify-content:
+    // flex-end` sends the panel to the bottom instead of the right.
+    const inner = dialog.closest(".mantine-Drawer-inner") as HTMLElement;
+    expect(inner.style.flexDirection).toBe("");
+  });
+
   it("mirrors to the left, with Arabic labels, under Arabic", () => {
     renderDrawer("ar");
     const button = screen.getByRole("button", { name: "فتح لوحة الوكيل" });
