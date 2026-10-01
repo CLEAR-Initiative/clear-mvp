@@ -3178,12 +3178,12 @@
       "inputPlaceholder": "Posez une question",
       "send": "Envoyer",
       "thinking": "Réflexion…",
-      "intro": "Posez une question sur une crise, un lieu, les Alertes récentes ou le travail du NRC. J'indiquerai les sources utilisées.",
+      "intro": "Posez une question sur une crise, un lieu, les Alertes récentes ou le travail du NRC. L'Agent CLEAR indique les sources utilisées.",
       "suggestions": {
         "general": {
           "q1": "Quelles sont les crises les plus graves en ce moment ?",
           "q2": "Quoi de neuf ces dernières 24 heures ?",
-          "q3": "Que sait le NRC des contraintes d'accès au Soudan ?"
+          "q3": "Que disent les documents du NRC sur l'accès humanitaire ?"
         },
         "event": {
           "q1": "Résume cet Événement",

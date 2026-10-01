@@ -3178,12 +3178,12 @@
       "inputPlaceholder": "Pregunta lo que quieras",
       "send": "Enviar",
       "thinking": "Pensando…",
-      "intro": "Pregunta sobre una crisis, un lugar, las Alertas recientes o el trabajo del NRC. Mostraré qué fuentes utilicé.",
+      "intro": "Pregunta sobre una crisis, un lugar, las Alertas recientes o el trabajo del NRC. El Agente CLEAR muestra qué fuentes utilizó.",
       "suggestions": {
         "general": {
           "q1": "¿Cuáles son las crisis más graves ahora mismo?",
           "q2": "¿Qué hay de nuevo en las últimas 24 horas?",
-          "q3": "¿Qué sabe el NRC sobre las restricciones de acceso en Sudán?"
+          "q3": "¿Qué dicen los documentos del NRC sobre el acceso humanitario?"
         },
         "event": {
           "q1": "Resume este Evento",

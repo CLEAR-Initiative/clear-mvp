@@ -97,7 +97,7 @@ describe("AgentThread", () => {
 describe("An empty Thread", () => {
   it("introduces the CLEAR Agent with general suggestions", () => {
     renderThread(recordingChat().chat);
-    expect(screen.getByTestId("agent-intro")).toHaveTextContent("I'll show which sources I used");
+    expect(screen.getByTestId("agent-intro")).toHaveTextContent("shows which sources it used");
     expect(screen.getAllByTestId("agent-suggestion")).toHaveLength(3);
   });
 

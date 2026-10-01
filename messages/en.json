@@ -3178,12 +3178,12 @@
       "inputPlaceholder": "Ask anything",
       "send": "Send",
       "thinking": "Thinking…",
-      "intro": "Ask about a crisis, a place, recent Alerts or NRC's work. I'll show which sources I used.",
+      "intro": "Ask about a crisis, a place, recent Alerts or NRC's work. The CLEAR Agent shows which sources it used.",
       "suggestions": {
         "general": {
           "q1": "What are the most severe crises right now?",
           "q2": "What's new in the last 24 hours?",
-          "q3": "What does NRC know about access constraints in Sudan?"
+          "q3": "What do NRC's documents say about humanitarian access?"
         },
         "event": {
           "q1": "Summarise this Event",
