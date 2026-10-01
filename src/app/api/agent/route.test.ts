@@ -401,4 +401,30 @@ describe("POST /api/agent — CLEAR data (agent_clear_data)", () => {
     expect(headers.get("cookie")).toBe(ALICE);
     expect(headers.get("authorization")).toBeNull();
   });
+
+  it("hands the model a FORBIDDEN outcome as a value, with the rule to say the user lacks access", async () => {
+    clearApi.dataHandlers.set("entityStats(", () =>
+      clearApi.fail("Your account is awaiting admin approval.", "FORBIDDEN"),
+    );
+    useScript([
+      { toolCalls: [{ name: "clear_count", input: { entity: "alert" } }] },
+      { text: "You don't have access to CLEAR's alerts." },
+    ]);
+    const POST = await loadRoute();
+    const chunks = parseUIMessageStream(
+      await (await POST(agentRequest(ALICE, turn("t1", "How many alerts?")))).text(),
+    );
+
+    // Not a failed turn: the error is the tool's result.
+    expect(chunks.some((c) => c.type === "error")).toBe(false);
+    const output = chunks.find((c) => c.type === "tool-output-available")?.output as {
+      error?: { code: string };
+    };
+    expect(output.error?.code).toBe("FORBIDDEN");
+    // The model saw that value, under the rule for what to do with it.
+    const answering = JSON.stringify(prompts[1]);
+    expect(answering).toContain("FORBIDDEN");
+    expect(answering).toContain("tell them they lack access");
+    expect(answering).toContain("never guess");
+  });
 });

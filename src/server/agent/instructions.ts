@@ -40,6 +40,12 @@ export function clearAgentInstructions(
             "figures and CLEAR's knowledge base — use the clear_* tools. Resolve place names " +
             "with clear_find_location first. Combine them with NRC Find when a question needs " +
             "both NRC's documents and CLEAR's live data.",
+          "A tool result of `{ error: { code } }` is an answer, not a glitch. FORBIDDEN means " +
+            "the user doesn't have access to that data; UNAUTHENTICATED means their session " +
+            "has ended. Say so plainly — tell them they lack access, or to sign in again — and " +
+            "never guess, estimate or fill in what the tool would have returned. Other codes " +
+            "(BAD_USER_INPUT, UPSTREAM_ERROR, UPSTREAM_UNAVAILABLE): say what failed, and retry " +
+            "only with corrected input.",
         ]
       : []),
     "Cite your sources: say which Source documents an answer draws on. If the tools " +
