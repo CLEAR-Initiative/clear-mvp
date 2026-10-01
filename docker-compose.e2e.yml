@@ -159,6 +159,21 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # Stand-in for NRC Find (the CLEAR Agent's document tool): a tiny node
+  # server answering in NRC Find's NDJSON shape. See e2e/support/nrc-find-stub.mjs.
+  nrc-find:
+    image: node:22-alpine
+    command: ["node", "/stub/nrc-find-stub.mjs"]
+    volumes:
+      - ./e2e/support/nrc-find-stub.mjs:/stub/nrc-find-stub.mjs:ro
+    environment:
+      NRC_FIND_API_TOKEN: e2e-nrc-find-token
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
   web:
     build:
       context: .
@@ -177,9 +192,18 @@ services:
       NODE_ENV: production
       PORT: "3000"
       HOSTNAME: 0.0.0.0
+      # The CLEAR Agent runs a deterministic scripted model (no model key, no
+      # spend) against the NRC Find stub. The scripted model is refused in
+      # production unless explicitly allowed, as here.
+      CLEAR_AGENT_MODEL: scripted/e2e
+      CLEAR_AGENT_ALLOW_SCRIPTED_MODEL: "1"
+      NRC_FIND_API_URL: http://nrc-find:8080
+      NRC_FIND_API_TOKEN: e2e-nrc-find-token
     ports:
       - "3000:3000"
     depends_on:
       api:
+        condition: service_healthy
+      nrc-find:
         condition: service_healthy
     # Healthcheck is inherited from the image (wget http://127.0.0.1:3000/).

@@ -1,3 +1,4 @@
+import { agentRouter } from "~/server/api/routers/agent";
 import { alertsRouter } from "~/server/api/routers/alerts";
 import { analysisRouter } from "~/server/api/routers/analysis";
 import { commentsRouter } from "~/server/api/routers/comments";
@@ -8,7 +9,6 @@ import { groundRouter } from "~/server/api/routers/ground";
 import { eventsRouter } from "~/server/api/routers/events";
 import { hapiRouter } from "~/server/api/routers/hapi";
 import { informRouter } from "~/server/api/routers/inform";
-import { llmRouter } from "~/server/api/routers/llm";
 import { pipelineRouter } from "~/server/api/routers/pipeline";
 import { signalsRouter } from "~/server/api/routers/signals";
 import { situationAnalysisRouter } from "~/server/api/routers/situationAnalysis";
@@ -21,6 +21,7 @@ import { subscriptionsRouter } from "~/server/api/routers/subscriptions";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
+  agent: agentRouter,
   alerts: alertsRouter,
   analysis: analysisRouter,
   auth: authRouter,
@@ -30,7 +31,6 @@ export const appRouter = createTRPCRouter({
   ground: groundRouter,
   hapi: hapiRouter,
   inform: informRouter,
-  llm: llmRouter,
   invitations: invitationsRouter,
   locations: locationsRouter,
   locationChallenge: locationChallengeRouter,
