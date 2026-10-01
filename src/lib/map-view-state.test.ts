@@ -119,19 +119,6 @@ describe("freshness + storage", () => {
     expect(readMapViewState(storage, now + 1000)?.country).toBe("Sudan");
   });
 
-  it("round-trips the region and timeframe filters (All Regions and unknown timeframes left out)", () => {
-    const storage = memoryStorage();
-    writeMapViewState({ ...sample, country: "Sudan", region: "North Darfur", timeframe: "90d" }, storage);
-    expect(readMapViewState(storage)).toMatchObject({ country: "Sudan", region: "North Darfur", timeframe: "90d" });
-
-    writeMapViewState({ ...sample, country: "Sudan", region: "All Regions" }, storage);
-    const plain = readMapViewState(storage)!;
-    expect(plain.region).toBeUndefined();
-    expect(plain.timeframe).toBeUndefined();
-
-    expect(parseMapViewState({ v: 1, ...sample, savedAt: 1, timeframe: "forever" })?.timeframe).toBeUndefined();
-  });
-
   it("drops stale snapshots", () => {
     const storage = memoryStorage();
     const now = 1_000_000;

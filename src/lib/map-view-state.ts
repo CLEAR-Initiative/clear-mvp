@@ -7,8 +7,8 @@
  * Follows the Detection nav-context pattern (session, not localStorage):
  * same-tab soft nav only; dies with the tab.
  *
- * Region and timeframe come back too, for the country they were chosen in
- * (so do an Agent navigation's Back and a revisit of a deep-linked Map).
+ * Region and timeframe are kept apart, in map-filters-session.ts: they must
+ * survive without a camera (no Mapbox token, or before the map loads).
  *
  * ## Gaps for a later ticket (not in this MVP)
  * - Filters: crisis type / timeline month
@@ -52,15 +52,8 @@ export type MapViewStateV1 = {
    * select).
    */
   country?: string;
-  /** Region filter within `country` (absent = All Regions). */
-  region?: string;
-  /** Timeframe filter. Absent on older snapshots = the default (30d). */
-  timeframe?: MapViewTimeframe;
   savedAt: number;
 };
-
-export const MAP_VIEW_TIMEFRAMES = ["7d", "30d", "90d", "all"] as const;
-export type MapViewTimeframe = (typeof MAP_VIEW_TIMEFRAMES)[number];
 
 export type MapViewStateStorage = {
   getItem: (key: string) => string | null;
@@ -114,11 +107,6 @@ export function parseMapViewState(raw: unknown): MapViewStateV1 | null {
   const openMarkerIds = idsRaw.filter((id): id is number => isFiniteNumber(id));
   const country =
     typeof o.country === "string" && o.country.trim() ? o.country.trim() : undefined;
-  const region =
-    typeof o.region === "string" && o.region.trim() ? o.region.trim() : undefined;
-  const timeframe = (MAP_VIEW_TIMEFRAMES as readonly unknown[]).includes(o.timeframe)
-    ? (o.timeframe as MapViewTimeframe)
-    : undefined;
 
   return {
     v: 1,
@@ -133,8 +121,6 @@ export function parseMapViewState(raw: unknown): MapViewStateV1 | null {
     showSeismic: o.showSeismic === true,
     showRoads: o.showRoads !== false,
     ...(country ? { country } : {}),
-    ...(region ? { region } : {}),
-    ...(timeframe ? { timeframe } : {}),
     savedAt: o.savedAt,
   };
 }
@@ -173,7 +159,6 @@ export function writeMapViewState(
 ): void {
   if (!storage) return;
   const country = state.country?.trim();
-  const region = state.region?.trim();
   const payload: MapViewStateV1 = {
     v: 1,
     camera: state.camera,
@@ -182,8 +167,6 @@ export function writeMapViewState(
     showSeismic: state.showSeismic === true,
     showRoads: state.showRoads !== false,
     ...(country ? { country } : {}),
-    ...(region && region !== "All Regions" ? { region } : {}),
-    ...(state.timeframe ? { timeframe: state.timeframe } : {}),
     savedAt: state.savedAt ?? Date.now(),
   };
   try {

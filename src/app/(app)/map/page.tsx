@@ -136,6 +136,7 @@ import {
   withoutDeepLink,
 } from "~/lib/agent-deep-link";
 import { useAgentDeepLink } from "~/components/agent/use-agent-deep-link";
+import { readMapFiltersSession, writeMapFiltersSession } from "~/lib/map-filters-session";
 
 const MAX_OPEN_PANELS = 4;
 
@@ -758,10 +759,6 @@ function MapPageContent() {
   };
   const selectedCountryRef = useRef(selectedCountry);
   selectedCountryRef.current = selectedCountry;
-  const selectedRegionRef = useRef(selectedRegion);
-  selectedRegionRef.current = selectedRegion;
-  const timeframeRef = useRef(timeframe);
-  timeframeRef.current = timeframe;
   const countryOptionsRef = useRef<string[]>([]);
   const teamCountriesRef = useRef(teamCountries);
   teamCountriesRef.current = teamCountries;
@@ -952,8 +949,6 @@ function MapPageContent() {
       showSeismic: showSeismicRef.current,
       showRoads: showRoadsRef.current,
       country: selectedCountryRef.current,
-      region: selectedRegionRef.current,
-      timeframe: timeframeRef.current,
     });
   }, []);
 
@@ -2073,21 +2068,21 @@ function MapPageContent() {
   // reload, a revisit of a deep link, an Agent navigation's Back), once the
   // country on screen is known, and only for the country they were chosen
   // in. Declared before the deep link, so a fresh Agent move wins.
-  const filtersRestoredRef = useRef(false);
+  const [filtersRestored, setFiltersRestored] = useState(false);
   useEffect(() => {
-    if (filtersRestoredRef.current) return;
+    if (filtersRestored) return;
     if (!scopeReady || locationTree.length === 0 || linkScope.status === "pending") return;
-    filtersRestoredRef.current = true;
-    if (!restoredView || restoredView.country !== selectedCountry) return;
-    if (restoredView.region && getRegions(selectedCountry).includes(restoredView.region)) {
-      setSelectedRegion(restoredView.region);
-    }
-    if (restoredView.timeframe) setTimeframe(restoredView.timeframe);
-  }, [scopeReady, locationTree.length, linkScope.status, restoredView, selectedCountry, getRegions]);
-  // Keep them with the camera so the next visit can restore them.
+    setFiltersRestored(true);
+    const saved = readMapFiltersSession();
+    if (!saved || saved.country !== selectedCountry) return;
+    if (saved.region && getRegions(selectedCountry).includes(saved.region)) setSelectedRegion(saved.region);
+    setTimeframe(saved.timeframe);
+  }, [filtersRestored, scopeReady, locationTree.length, linkScope.status, selectedCountry, getRegions]);
+  // Saved on every change (after the restore, so defaults never overwrite them).
   useEffect(() => {
-    if (filtersRestoredRef.current && restoreReady) persistMapView();
-  }, [selectedRegion, timeframe, restoreReady, persistMapView]);
+    if (!filtersRestored) return;
+    writeMapFiltersSession({ country: selectedCountry, region: selectedRegion, timeframe });
+  }, [filtersRestored, selectedCountry, selectedRegion, timeframe]);
 
   // An Agent deep link: a fresh move applies like picking that country (and
   // region and timeframe) by hand, without touching the working country; a
