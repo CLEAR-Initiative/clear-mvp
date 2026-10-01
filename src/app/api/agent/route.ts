@@ -7,7 +7,15 @@
  *
  * Upstream: POST {NRC_FIND_API_URL}/api/v1/rag/answers
  * Auth:     X-App-Authorization: <NRC_FIND_API_TOKEN>  (client_id "clear-platform")
+ *
+ * Callers must hold an approved CLEAR session. Middleware skips `/api/*`, so
+ * this handler checks the session itself — without it, anyone could spend
+ * CLEAR's NRC Find credential. Role rule mirrors clear-api
+ * `requireContentReader`: `pending` users get 403.
  */
+
+import { canReadContent } from "~/lib/roles";
+import { getSessionUser } from "~/server/session";
 
 const NRC_FIND_API_URL = process.env.NRC_FIND_API_URL ?? "https://find.app.nrc-dev.no";
 const NRC_FIND_API_TOKEN = process.env.NRC_FIND_API_TOKEN;
@@ -17,6 +25,20 @@ interface AgentRequestBody {
 }
 
 export async function POST(req: Request): Promise<Response> {
+  const session = await getSessionUser(req.headers.get("cookie"));
+  if (session.status === "unavailable") {
+    return Response.json({ error: "Auth service unavailable." }, { status: 503 });
+  }
+  if (session.status === "unauthenticated") {
+    return Response.json({ error: "Not authenticated." }, { status: 401 });
+  }
+  if (!canReadContent(session.user.role)) {
+    return Response.json(
+      { error: "Your account is awaiting admin approval." },
+      { status: 403 },
+    );
+  }
+
   if (!NRC_FIND_API_TOKEN) {
     return Response.json(
       { error: "NRC_FIND_API_TOKEN is not configured on the server." },
