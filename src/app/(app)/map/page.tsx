@@ -201,6 +201,11 @@ function MapPageContent() {
   const urlFocusEventId = searchParams.get("event");
   const urlFocusSignalId = searchParams.get("signal");
   const urlFocusCrisisId = searchParams.get("crisis");
+  // An Agent navigation deep link (?country&region&timeframe) sets the
+  // filters for this visit only, ahead of stored state and any remembered
+  // focus; the user changing the country drops it.
+  const mapDeepLink = useMemo(() => readMapDeepLink(searchParams), [searchParams]);
+  const hasMapDeepLink = hasDeepLink(mapDeepLink);
   /**
    * Session camera restore. Kept even for solo-focus deep links so Full Map
    * can land on the last pose, then fly to the focused entity (#582).
@@ -235,6 +240,7 @@ function MapPageContent() {
   const [placeFocus, setPlaceFocus] = useState<MapPlaceFocusSession | null>(() => {
     if (typeof window === "undefined") return null;
     if (urlFocusEventId || urlFocusSignalId || urlFocusCrisisId) return null;
+    if (hasMapDeepLink) return null; // the Agent's scope wins over a remembered place
     const session = readMapFocusSession();
     return session?.kind === "place" ? session : null;
   });
@@ -264,6 +270,9 @@ function MapPageContent() {
       return;
     }
     if (focusDismissed) return;
+    // An Agent deep link names the scope to show; don't swap it for an
+    // earlier in-session focus.
+    if (hasMapDeepLink) return;
     const session = readMapFocusSession();
     if (!session || session.kind === "place") return;
     const key = `${session.kind}:${session.id}`;
@@ -275,6 +284,7 @@ function MapPageContent() {
     urlFocusSignalId,
     urlFocusCrisisId,
     focusDismissed,
+    hasMapDeepLink,
     router,
   ]);
   
@@ -322,9 +332,6 @@ function MapPageContent() {
   // "all" additionally pulls archived history so the timeline can scrub
   // back through past months. Default is a 30-day window - the archived
   // backlog is ~5x the published set and dominated page load time.
-  // An Agent navigation deep link (?country&region&timeframe) sets the
-  // filters for this visit only; the user changing any of them drops it.
-  const mapDeepLink = useMemo(() => readMapDeepLink(searchParams), [searchParams]);
   const [timeframe, setTimeframe] = useState<"7d" | "30d" | "90d" | "all">(
     () => mapDeepLink.timeframe ?? "30d",
   );
