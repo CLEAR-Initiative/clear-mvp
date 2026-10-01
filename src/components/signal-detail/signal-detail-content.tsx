@@ -167,7 +167,8 @@ export function SignalDetailContent({
   referrer = "detection",
 }: SignalDetailContentProps) {
   // Tell the CLEAR Agent which signal is on screen (identifiers only).
-  const agentViewId = signal?.id ?? entityId;
+  // Only a loaded signal's id: the route segment is whatever the URL says.
+  const agentViewId = signal?.id;
   useAgentCurrentView(agentViewId ? { entity: { kind: "signal", id: agentViewId } } : null);
   const t = useTranslations("signalDetail");
   const tCommon = useTranslations("common");

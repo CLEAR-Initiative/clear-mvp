@@ -124,7 +124,8 @@ export function EventDetailContent({
   referrer = "detection",
 }: EventDetailContentProps) {
   // Tell the CLEAR Agent which event is on screen (identifiers only).
-  const agentViewId = event?.id ?? entityId;
+  // Only a loaded event's id: the route segment is whatever the URL says.
+  const agentViewId = event?.id;
   useAgentCurrentView(agentViewId ? { entity: { kind: "event", id: agentViewId } } : null);
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
 
