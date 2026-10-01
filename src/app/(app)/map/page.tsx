@@ -728,21 +728,18 @@ function MapPageContent() {
   );
   const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
 
-  // Apply a deep link's region and timeframe when it arrives (including a
-  // second Agent navigation while the Map is already open).
-  useEffect(() => {
-    if (mapDeepLink.timeframe) setTimeframe(mapDeepLink.timeframe);
-    if (mapDeepLink.region) setSelectedRegion(mapDeepLink.region);
-  }, [mapDeepLink.timeframe, mapDeepLink.region]);
-
-  /** The user took over: drop the deep link so their picks win. */
-  const dropMapDeepLink = useCallback(() => {
-    if (!hasDeepLink(mapDeepLink)) return;
+  /** The deep-link country the page last applied, and whether its region came with it. */
+  const lastLinkCountryRef = useRef<string | undefined>(undefined);
+  const linkedRegionRef = useRef(false);
+  /** The user picked a country: the deep-link country stops overriding. */
+  const dropMapDeepLinkCountry = useCallback(() => {
+    if (!mapDeepLink.country) return;
+    lastLinkCountryRef.current = undefined;
+    linkedRegionRef.current = false;
     const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), MAP_DEEP_LINK_PARAMS);
     router.replace(`/map${rest}`, { scroll: false });
-  }, [mapDeepLink, searchParams, router]);
+  }, [mapDeepLink.country, searchParams, router]);
   const changeTimeframe = (value: string | null) => {
-    dropMapDeepLink();
     setTimeframe((value ?? "30d") as "7d" | "30d" | "90d" | "all");
   };
   const selectedCountryRef = useRef(selectedCountry);
@@ -2016,7 +2013,7 @@ function MapPageContent() {
 
   /* ---- Handlers ---- */
   const handleCountryChange = (value: string | null) => {
-    dropMapDeepLink();
+    dropMapDeepLinkCountry();
     const nextCountry = value ?? selectedCountry;
     const location = teamCountries.find((c) => c.name === nextCountry);
     if (location) {
@@ -2035,7 +2032,7 @@ function MapPageContent() {
   };
 
   const handleRegionChange = (value: string | null) => {
-    dropMapDeepLink();
+    linkedRegionRef.current = false;
     setSelectedRegion(value ?? "All Regions");
     setCameraSeed(null);
     setPlaceLookup(null);
@@ -2043,6 +2040,39 @@ function MapPageContent() {
     clearMapFocusSession();
     clearOpenPanels();
   };
+
+  // Apply an Agent deep link as it arrives, like picking that country (and
+  // region and timeframe) by hand but without touching the working country.
+  // Region and timeframe then become ordinary state and leave the URL; the
+  // country stays in it as this visit's override.
+  useEffect(() => {
+    const { country, region, timeframe: linkTimeframe } = mapDeepLink;
+    if (country === undefined && lastLinkCountryRef.current !== undefined) {
+      // The override went away while the Map stayed open: a region it set
+      // belongs to that country, not the working country now shown.
+      if (linkedRegionRef.current) setSelectedRegion("All Regions");
+      lastLinkCountryRef.current = undefined;
+      linkedRegionRef.current = false;
+    }
+    const newCountry = country !== undefined && country !== lastLinkCountryRef.current;
+    if (!newCountry && !region && !linkTimeframe) return;
+    if (country !== undefined) lastLinkCountryRef.current = country;
+    if (newCountry || region) {
+      setSelectedRegion(region ?? "All Regions");
+      linkedRegionRef.current = !!region;
+    }
+    if (linkTimeframe) setTimeframe(linkTimeframe);
+    setCameraSeed(null);
+    setPlaceLookup(null);
+    setPlaceFocus(null);
+    clearMapFocusSession();
+    setForceFlyToken((n) => n + 1);
+    clearOpenPanels();
+    if (region || linkTimeframe) {
+      const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), ["region", "timeframe"]);
+      router.replace(`/map${rest}`, { scroll: false });
+    }
+  }, [mapDeepLink, searchParams, router, clearOpenPanels]);
 
 
   const handleMarkerClick = useCallback(

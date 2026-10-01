@@ -365,11 +365,26 @@ function DetectionPageContent() {
 
   // Apply an Agent navigation deep link's filters (after the stored ones,
   // so they win), then take them out of the URL: from here they are
-  // ordinary filter state the user can change. Only `country` stays.
+  // ordinary filter state the user can change. Only `country` stays, as
+  // this visit's override. A new country resets the region like picking
+  // it by hand; if the override goes away, a region it set goes with it.
+  const lastLinkCountryRef = useRef<string | undefined>(undefined);
+  const linkedRegionRef = useRef(false);
   useEffect(() => {
-    const { region, date, severities, types, sources } = detectionDeepLink;
+    const { country, region, date, severities, types, sources } = detectionDeepLink;
+    if (country === undefined && lastLinkCountryRef.current !== undefined) {
+      if (linkedRegionRef.current) setSelectedRegionId(null);
+      lastLinkCountryRef.current = undefined;
+      linkedRegionRef.current = false;
+    }
+    const newCountry = country !== undefined && country !== lastLinkCountryRef.current;
+    if (!newCountry && !region && !date && !severities && !types && !sources) return;
+    if (country !== undefined) lastLinkCountryRef.current = country;
+    if (newCountry || region) {
+      setSelectedRegionId(region ?? null);
+      linkedRegionRef.current = !!region;
+    }
     if (!region && !date && !severities && !types && !sources) return;
-    if (region) setSelectedRegionId(region);
     if (date) setSelectedDate(date);
     if (severities) setActiveSeverities(new Set(severities));
     if (types) setSelectedTypeFilters(types);
@@ -386,6 +401,9 @@ function DetectionPageContent() {
   // component, resetting the useState defaults above without this).
   useEffect(() => {
     if (!storageReady) return;
+    // A deep-linked country holds for this visit only, and so do filters
+    // chosen within it: they never become the stored defaults.
+    if (detectionDeepLink.country) return;
     try {
       const toStore: StoredFilters = {
         country: selectedCountry,
@@ -400,7 +418,7 @@ function DetectionPageContent() {
     } catch {
       /* sessionStorage unavailable (SSR or private mode) */
     }
-  }, [storageReady, selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
+  }, [storageReady, detectionDeepLink.country, selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
 
   const selectedCountryId = useMemo(
     () => (selectedCountry !== ALL_COUNTRIES ? getLocationId(selectedCountry) : null),
