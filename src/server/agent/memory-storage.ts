@@ -24,6 +24,7 @@ import {
   InMemoryDB,
   InMemoryMemory,
   MemoryStorage,
+  type StorageResourceType,
   type StorageListMessagesInput,
   type StorageListMessagesOutput,
   type StorageListThreadsInput,
@@ -33,6 +34,7 @@ import type {
   ConversationMessageRow,
   ConversationRow,
   ConversationsApi,
+  WorkingMemoryRow,
 } from "~/server/agent/conversations";
 
 /** myConversations returns at most 100 per page. */
@@ -86,7 +88,7 @@ export class ClearApiMemoryStorage extends MemoryStorage {
     return toThread(row);
   }
 
-  async deleteThread(): Promise<void> {
+  async deleteThread(_args: { threadId: string }): Promise<void> {
     throw new Error("Conversations are an audit record and are never deleted");
   }
 
@@ -161,12 +163,50 @@ export class ClearApiMemoryStorage extends MemoryStorage {
     return updated;
   }
 
-  async deleteMessages(): Promise<void> {
+  async deleteMessages(_messageIds: string[]): Promise<void> {
     throw new Error("Conversations are an audit record and are never deleted");
   }
 
   async dangerouslyClearAll(): Promise<void> {
     throw new Error("Conversations are an audit record and are never deleted");
+  }
+
+  // ── Resource (working memory) ─────────────────────────────────────────
+  // The resource is the signed-in user, stored as clear-api's Agent working
+  // memory. Nobody else's resource exists from here.
+
+  async getResourceById({ resourceId }: { resourceId: string }): Promise<StorageResourceType | null> {
+    if (resourceId !== this.userId) return null;
+    const row = await this.api.workingMemory();
+    return row ? toResource(row) : null;
+  }
+
+  async saveResource({ resource }: { resource: StorageResourceType }): Promise<StorageResourceType> {
+    this.assertOwnResource(resource.id);
+    await this.api.saveWorkingMemory({
+      workingMemory: resource.workingMemory ?? null,
+      metadata: resource.metadata ?? null,
+    });
+    return resource;
+  }
+
+  async updateResource({
+    resourceId,
+    workingMemory,
+    metadata,
+  }: {
+    resourceId: string;
+    workingMemory?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<StorageResourceType> {
+    this.assertOwnResource(resourceId);
+    // Mastra's semantics: an omitted workingMemory is kept, metadata merges.
+    const current = await this.api.workingMemory();
+    const row = await this.api.saveWorkingMemory({
+      ...(workingMemory !== undefined ? { workingMemory } : {}),
+      metadata: { ...(current?.metadata ?? {}), ...(metadata ?? {}) },
+    });
+    return toResource(row);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────
@@ -198,6 +238,16 @@ export class ClearApiMemoryStorage extends MemoryStorage {
 function toIso(value: Date | string | undefined): string | undefined {
   if (!value) return undefined;
   return (value instanceof Date ? value : new Date(value)).toISOString();
+}
+
+function toResource(row: WorkingMemoryRow): StorageResourceType {
+  return {
+    id: row.userId,
+    workingMemory: row.workingMemory ?? undefined,
+    metadata: row.metadata ?? undefined,
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
+  };
 }
 
 function toThread(row: ConversationRow): StorageThreadType {

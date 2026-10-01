@@ -185,6 +185,20 @@ describe("POST /api/agent — a Thread", () => {
     expect(clearApi.conversations.get("t1")?.title).toBe("Access in Darfur?");
   });
 
+  it("offers the model the user's working memory and a tool to update it", async () => {
+    clearApi.workingMemory.set("u-alice", {
+      userId: "u-alice",
+      workingMemory: "# Analyst\n- Focus: North Darfur",
+      metadata: null,
+      createdAt: "2026-10-01T08:00:00.000Z",
+      updatedAt: "2026-10-01T08:00:00.000Z",
+    });
+    useScript([{ text: "Noted." }]);
+    const POST = await loadRoute();
+    await (await POST(agentRequest(ALICE, turn("t1", "Hi")))).text();
+    expect(JSON.stringify(prompts[0])).toContain("Focus: North Darfur");
+  });
+
   it("stores the Thread as the session user even when the body claims otherwise", async () => {
     useScript([{ text: "Hello." }]);
     const POST = await loadRoute();

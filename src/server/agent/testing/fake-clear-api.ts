@@ -53,6 +53,10 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
   const conversations = new Map<string, Row>();
   const messages = new Map<string, MessageRow>();
   const calls: GraphQLCall[] = [];
+  const workingMemory = new Map<
+    string,
+    { userId: string; workingMemory: string | null; metadata: unknown; createdAt: string; updatedAt: string }
+  >();
   const budget = { limitUsd: 2, spentTodayUsd: 0, resetsAt: "2026-10-02T00:00:00.000Z" };
   let clock = Date.parse("2026-10-01T08:00:00.000Z");
   const now = () => new Date((clock += 1000)).toISOString();
@@ -163,6 +167,25 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
           : withCursor(row),
       };
     }
+    if (query.includes("saveAgentWorkingMemory(")) {
+      const input = v.input as { workingMemory?: string | null; metadata?: unknown };
+      const existing = workingMemory.get(user);
+      const at = now();
+      const row = {
+        userId: user,
+        workingMemory: existing?.workingMemory ?? null,
+        metadata: existing?.metadata ?? null,
+        createdAt: existing?.createdAt ?? at,
+        updatedAt: at,
+      };
+      if (input.workingMemory !== undefined) row.workingMemory = input.workingMemory;
+      if (input.metadata !== undefined) row.metadata = input.metadata;
+      workingMemory.set(user, row);
+      return { saveAgentWorkingMemory: row };
+    }
+    if (query.includes("myAgentWorkingMemory")) {
+      return { myAgentWorkingMemory: workingMemory.get(user) ?? null };
+    }
     if (query.includes("myAgentBudget")) {
       return { myAgentBudget: { ...budget } };
     }
@@ -173,6 +196,7 @@ export function createFakeClearApi(usersByCookie: Record<string, string>) {
     conversations,
     messages,
     calls,
+    workingMemory,
     /** The caller's Agent budget; mutate to simulate spend. */
     budget,
     /** Answer one GraphQL HTTP request. */

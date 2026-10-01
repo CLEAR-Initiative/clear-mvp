@@ -48,8 +48,11 @@ export function createClearAgent({ user, cookie }: ClearAgentRequest): Mastra {
       storage,
       options: {
         lastMessages: HISTORY_MESSAGES,
-        // ADR-0009 staging: history first; semantic recall and observational
-        // memory only if long Threads need them.
+        // What the Agent keeps about the user across Threads, stored as
+        // clear-api's Agent working memory for the session user.
+        workingMemory: { enabled: true, scope: "resource" },
+        // ADR-0009 staging: history and working memory first; semantic
+        // recall and observational memory only if long Threads need them.
         semanticRecall: false,
       },
     }),

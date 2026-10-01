@@ -43,6 +43,14 @@ export interface TurnUsage {
   latencyMs: number;
 }
 
+export interface WorkingMemoryRow {
+  userId: string;
+  workingMemory: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ConversationMessageInput {
   id: string;
   role: string;
@@ -127,6 +135,26 @@ export function createConversationsApi(cookie: string) {
           { conversationId, messages: messages.slice(i, i + MESSAGES_PER_CALL) },
         );
       }
+    },
+
+    async workingMemory(): Promise<WorkingMemoryRow | null> {
+      const data = await gql<{ myAgentWorkingMemory: WorkingMemoryRow | null }>(
+        `query { myAgentWorkingMemory { userId workingMemory metadata createdAt updatedAt } }`,
+      );
+      return data.myAgentWorkingMemory;
+    },
+
+    async saveWorkingMemory(input: {
+      workingMemory?: string | null;
+      metadata?: Record<string, unknown> | null;
+    }): Promise<WorkingMemoryRow> {
+      const data = await gql<{ saveAgentWorkingMemory: WorkingMemoryRow }>(
+        `mutation($input: SaveAgentWorkingMemoryInput!) {
+          saveAgentWorkingMemory(input: $input) { userId workingMemory metadata createdAt updatedAt }
+        }`,
+        { input },
+      );
+      return data.saveAgentWorkingMemory;
     },
 
     async budget(): Promise<AgentBudget> {
