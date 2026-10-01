@@ -24,13 +24,10 @@ export default function AgentPage() {
   const conversations = history.data?.pages.flatMap((p) => p.items) ?? [];
 
   return (
-    // Exactly the viewport (less the mobile top bar and bottom nav, whose
-    // height includes the safe-area inset), so the Thread scrolls inside it
-    // and its input box stays on screen above the nav.
-    <Box
-      h={{ base: "calc(100dvh - 128px - env(safe-area-inset-bottom, 0px))", sm: "100dvh" }}
-      style={{ display: "flex", flexDirection: "column" }}
-    >
+    // Exactly the viewport (less the mobile top bar and bottom nav), so the
+    // Thread scrolls inside it and its input box stays on screen. The nav is
+    // 64px with its safe-area inset inside (border-box), so no inset here.
+    <Box h={{ base: "calc(100dvh - 128px)", sm: "100dvh" }} style={{ display: "flex", flexDirection: "column" }}>
       <PageHeader
         title={t("page.title")}
         subtitle={t("page.subtitle")}
