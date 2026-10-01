@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MockLanguageModelV3 } from "ai/test";
 import {
   createFakeClearApi,
   createScriptedModel,
@@ -246,6 +247,21 @@ describe("POST /api/agent — a Thread", () => {
     expect(res.status).toBe(403);
     expect(clearApi.messagesOf("t-bob").map((m) => m.role)).toEqual(["user", "assistant"]);
     expect(JSON.stringify(clearApi.messagesOf("t-bob"))).not.toContain("Let me in");
+  });
+
+  it("sends the browser a generic error when the model fails, never the server's", async () => {
+    scripted.model = new MockLanguageModelV3({
+      doStream: async () => {
+        throw new Error("overloaded at /srv/app/secret/path.ts:12");
+      },
+    });
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const POST = await loadRoute();
+    const body = await (await POST(agentRequest(ALICE, turn("t1", "Hi")))).text();
+    errors.mockRestore();
+    const error = parseUIMessageStream(body).find((c) => c.type === "error");
+    expect(error?.errorText).toBe("The CLEAR Agent hit an error.");
+    expect(body).not.toContain("/srv/app/secret");
   });
 
   it("turns an NRC Find failure into a tool result, not a failed turn", async () => {

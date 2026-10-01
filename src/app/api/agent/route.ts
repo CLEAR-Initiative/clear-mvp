@@ -124,6 +124,11 @@ export async function POST(req: Request): Promise<Response> {
       mastra,
       agentId: CLEAR_AGENT_ID,
       version: "v7",
+      // Log the real error; send the browser a generic one, never a stack.
+      onError: (error) => {
+        console.error("[agent] turn failed:", error);
+        return "The CLEAR Agent hit an error.";
+      },
       params: {
         // A fresh id, never the client's: reusing a stored id would fold the
         // turn into an existing message and it would go unstored and unpaid.
