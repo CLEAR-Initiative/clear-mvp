@@ -99,16 +99,75 @@ describe("ground.hotlineInbox", () => {
     expect(graphqlFetch).toHaveBeenCalledTimes(1);
   });
 
-  it("translation stubs report unavailable until clear-api ships the entity", async () => {
-    const c = caller();
-    await expect(c.ground.requestTranslation({ threadId: "t1", locale: "en" })).resolves.toEqual({
+  it("requests the detected language on inbox messages", async () => {
+    graphqlFetch
+      .mockResolvedValueOnce({ groundSources: sources })
+      .mockResolvedValueOnce({ groundThreads: [], groundMessages: [] });
+    await caller().ground.hotlineInbox();
+    const [query] = graphqlFetch.mock.calls[1] as [string];
+    expect(query.slice(query.indexOf("groundMessages"))).toContain("language");
+  });
+
+  it("requestTranslation resolves the thread's text messages and requests each one", async () => {
+    graphqlFetch
+      .mockResolvedValueOnce({
+        groundThread: { messages: [{ id: "m1", text: "قصف" }, { id: "m2", text: "  " }, { id: "m3", text: "وين" }] },
+      })
+      .mockResolvedValueOnce({ requestGroundMessageTranslation: { status: "queued", text: null } })
+      .mockResolvedValueOnce({ requestGroundMessageTranslation: { status: "ready", text: "Where" } });
+
+    const state = await caller().ground.requestTranslation({ threadId: "t1", locale: "en" });
+
+    expect(state).toEqual({ status: "queued", text: null });
+    const [threadQuery, threadVars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(threadQuery).toContain("groundThread(id: $id)");
+    expect(threadVars).toEqual({ id: "t1" });
+    // One mutation per message with text — the media-only m2 is skipped.
+    const requested = graphqlFetch.mock.calls.slice(1).map((c) => c[1] as Record<string, unknown>);
+    expect(requested).toEqual([
+      { messageId: "m1", locale: "en" },
+      { messageId: "m3", locale: "en" },
+    ]);
+    expect(graphqlFetch.mock.calls[1]![0]).toContain("requestGroundMessageTranslation(messageId: $messageId, locale: $locale)");
+  });
+
+  it("requestTranslation is unavailable for a media-only or missing thread", async () => {
+    graphqlFetch.mockResolvedValueOnce({ groundThread: { messages: [{ id: "m1", text: "" }] } });
+    await expect(caller().ground.requestTranslation({ threadId: "t1", locale: "en" })).resolves.toEqual({
       status: "unavailable",
       text: null,
     });
-    await expect(c.ground.translation({ threadId: "t1", locale: "en" })).resolves.toEqual({
+    graphqlFetch.mockResolvedValueOnce({ groundThread: null });
+    await expect(caller().ground.requestTranslation({ threadId: "gone", locale: "en" })).resolves.toEqual({
       status: "unavailable",
       text: null,
     });
+    expect(graphqlFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("translation folds the thread's per-message states into the entry's", async () => {
+    graphqlFetch.mockResolvedValueOnce({
+      groundThread: {
+        messages: [
+          { id: "m1", text: "قصف", translation: { status: "ready", text: "Shelling" } },
+          { id: "m2", text: "", translation: { status: "unavailable", text: null } },
+          { id: "m3", text: "وين", translation: { status: "ready", text: "Where" } },
+        ],
+      },
+    });
+
+    const state = await caller().ground.translation({ threadId: "t1", locale: "ar" });
+
+    expect(state).toEqual({ status: "ready", text: "Shelling\n\nWhere" });
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("translation(locale: $locale) { status text }");
+    expect(vars).toEqual({ id: "t1", locale: "ar" });
+  });
+
+  it("rejects a locale the app doesn't ship before calling the API", async () => {
+    await expect(
+      caller().ground.requestTranslation({ threadId: "t1", locale: "de" as "en" }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(graphqlFetch).not.toHaveBeenCalled();
   });
 

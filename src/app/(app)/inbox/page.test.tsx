@@ -111,6 +111,7 @@ function message(id: string, threadId: string, classification: string | null, se
     threadId,
     hasVoice: false,
     transcript: null as string | null,
+    language: null as string | null,
     enrichFailedAt: null as string | null,
     enrichError: null as string | null,
     transcribeFailedAt: null as string | null,

@@ -17,6 +17,7 @@ import { api } from "~/trpc/react";
 import {
   REJECT_REASONS,
   attachmentKey,
+  needsTranslation,
   type InboxAttachment,
   type InboxEntry,
   type RejectReason,
@@ -104,12 +105,11 @@ function TranscriptBlock({ transcript, caption }: { transcript: VoiceTranscript;
 }
 
 /**
- * Off until the backend exists: the tRPC procedures below are stubs that
- * always answer "unavailable", so the button could only ever show that.
- * Flip to true once clear-api ships requestGroundMessageTranslation
- * (Exponential #627) and the pipeline drain translates (#626).
+ * Kill switch for on-demand translation. Backed by clear-api
+ * requestGroundMessageTranslation (Exponential #627) and the pipeline's
+ * translate drain (#626); set false to hide the button without a revert.
  */
-export const TRANSLATION_ENABLED = false;
+export const TRANSLATION_ENABLED = true;
 
 /**
  * The pipeline gave up on one or more of the entry's messages: say which
@@ -171,8 +171,9 @@ function FailureNotice({
 /**
  * On-demand translation of the narrative into the reader's UI locale.
  * Request once per entry, poll while queued, render under the original
- * (never instead of it). The tRPC procedures are stubbed server-side
- * until clear-api grows a ground translation entity; the UI is final.
+ * (never instead of it). Not offered when every message is already in the
+ * reader's locale (clear-api's intake language detection). `dir="auto"` so
+ * an Arabic translation renders right-to-left whatever the UI locale.
  */
 export function TranslationBlock({ entry }: { entry: InboxEntry }) {
   const t = useTranslations("inbox");
@@ -190,7 +191,7 @@ export function TranslationBlock({ entry }: { entry: InboxEntry }) {
   );
   const state = poll.data ?? request.data ?? null;
 
-  if (entry.text.length === 0) return null;
+  if (!needsTranslation(entry, locale)) return null;
 
   if (!requested) {
     return (
@@ -215,7 +216,7 @@ export function TranslationBlock({ entry }: { entry: InboxEntry }) {
         {t("translate.label", { locale: t(`translate.locales.${locale}`) })}
       </div>
       {state?.status === "ready" && state.text ? (
-        <p className={styles.narrative}>{state.text}</p>
+        <p className={styles.narrative} dir="auto">{state.text}</p>
       ) : state?.status === "unavailable" || request.isError ? (
         <p className={styles.narrativeEmpty}>{t("translate.unavailable")}</p>
       ) : (

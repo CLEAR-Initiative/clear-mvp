@@ -270,6 +270,9 @@ export type GqlGroundInboxMessage = Omit<GqlGroundMessage, "senderName"> & {
   /** Machine transcript of the message's voice note(s); null until the
    * pipeline transcribes it, always null without a voice note. */
   transcript: string | null;
+  /** Language of `text` detected at intake ("ar", "en", "fr", "es"); null
+   * when unknown (clear-api#627). */
+  language: string | null;
   /** Set when clear-pipeline's enrichment drain (classification + thread
    * draft) gave up on the message. While set the message is out of the
    * queue for good; retryGroundMessage(stage: ENRICH) clears it. */

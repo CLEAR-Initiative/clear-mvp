@@ -3,12 +3,14 @@ import {
   attachmentKey,
   attachmentKind,
   buildInboxEntries,
+  combineTranslations,
   countByFilter,
   entryDescription,
   intakeRef,
   matchesFilter,
   messageFailures,
   moveSelection,
+  needsTranslation,
   nextSelection,
   visibleEntries,
 } from "./hotline-inbox";
@@ -56,6 +58,7 @@ function message(
     threadId,
     hasVoice: false,
     transcript: null,
+    language: null,
     enrichFailedAt: null,
     enrichError: null,
     transcribeFailedAt: null,
@@ -359,5 +362,35 @@ describe("attachmentKey", () => {
     expect(attachmentKey("https://s3/x/b.ogg?X-Amz-Signature=one")).toBe("https://s3/x/b.ogg");
     expect(attachmentKey("https://s3/x/b.ogg?X-Amz-Signature=two")).toBe("https://s3/x/b.ogg");
     expect(attachmentKey("https://s3/x/c.jpg")).toBe("https://s3/x/c.jpg");
+  });
+});
+
+describe("translation helpers", () => {
+  const ready = (text: string) => ({ status: "ready" as const, text });
+  const queued = { status: "queued" as const, text: null };
+  const unavailable = { status: "unavailable" as const, text: null };
+
+  it("combineTranslations is ready only once every message is, joined like the entry text", () => {
+    expect(combineTranslations([ready(" Shelling "), ready("Where")])).toEqual(ready("Shelling\n\nWhere"));
+    expect(combineTranslations([ready("Shelling"), queued])).toEqual(queued);
+    expect(combineTranslations([ready("Shelling"), unavailable])).toEqual(unavailable);
+    expect(combineTranslations([])).toEqual(unavailable);
+  });
+
+  it("needsTranslation skips entries already entirely in the reader's locale", () => {
+    const [entry] = buildInboxEntries({
+      sources: [],
+      threads: [thread("t1")],
+      messages: [
+        message("m1", "t1", { text: "قصف", language: "ar" }),
+        message("m2", "t1", { text: "", language: null }), // media-only, ignored
+      ],
+    });
+    expect(needsTranslation(entry!, "ar")).toBe(false);
+    expect(needsTranslation(entry!, "en")).toBe(true);
+    // Unknown language → offer it.
+    expect(needsTranslation({ ...entry!, messages: [message("m3", "t1", { text: "x" })] }, "ar")).toBe(true);
+    // No text at all → nothing to translate.
+    expect(needsTranslation({ ...entry!, messages: [message("m4", "t1", { text: " " })] }, "en")).toBe(false);
   });
 });

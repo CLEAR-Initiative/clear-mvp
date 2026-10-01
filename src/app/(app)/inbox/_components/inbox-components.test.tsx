@@ -115,6 +115,7 @@ function message(id: string): InboxEntry["messages"][number] {
     threadId: "t1",
     hasVoice: false,
     transcript: null,
+    language: null,
     enrichFailedAt: null,
     enrichError: null,
     transcribeFailedAt: null,
@@ -286,9 +287,10 @@ describe("ReadingPane", () => {
     expect(baseProps.onReject).toHaveBeenCalledWith("duplicate");
   });
 
-  it("does not offer translation while the backend is stubbed", () => {
+  it("offers translation of the reporter's text under the original", () => {
     wrap(<ReadingPane {...baseProps} entry={entry()} />);
-    expect(screen.queryByTestId("inbox-translate")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-narrative")).toBeInTheDocument();
+    expect(screen.getByTestId("inbox-translate")).toHaveTextContent("translate.button");
   });
 
   it("marks media-only entries as having no text", () => {
@@ -306,8 +308,26 @@ describe("TranslationBlock", () => {
   });
 
   it("does not offer translation for media-only entries", () => {
-    wrap(<TranslationBlock entry={entry({ text: "" })} />);
+    wrap(<TranslationBlock entry={entry({ text: "", messages: [message("m1")] })} />);
     expect(screen.queryByTestId("inbox-translate")).not.toBeInTheDocument();
+  });
+
+  it("does not offer translation when every message is already in the reader's locale", () => {
+    const messages = [
+      { ...message("m1"), text: "Water is rising near the market.", language: "en" },
+      { ...message("m2"), text: "Families are leaving.", language: "en" },
+    ];
+    wrap(<TranslationBlock entry={entry({ messages })} />);
+    expect(screen.queryByTestId("inbox-translate")).not.toBeInTheDocument();
+  });
+
+  it("offers it when any message is in another or an unknown language", () => {
+    const messages = [
+      { ...message("m1"), text: "Water is rising near the market.", language: "en" },
+      { ...message("m2"), text: "الأسر تغادر", language: "ar" },
+    ];
+    wrap(<TranslationBlock entry={entry({ messages })} />);
+    expect(screen.getByTestId("inbox-translate")).toBeInTheDocument();
   });
 });
 
