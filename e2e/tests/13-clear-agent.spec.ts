@@ -29,7 +29,7 @@ test("ask in the Agent drawer, then continue the Thread on the Agent page", asyn
   await expect(drawer.getByText("Searched NRC documents")).toBeVisible({ timeout: 30_000 });
   await expect(drawer.getByText(/NRC Find received: What limits access in North Darfur\?/)).toBeVisible();
   const sources = drawer.getByTestId("agent-sources");
-  await expect(sources.getByText("Sources (2)")).toBeVisible();
+  await expect(sources.getByText("Sources from NRC Find (2)")).toBeVisible();
   await expect(sources.getByText("E2E North Darfur access report")).toBeVisible();
   await expect(sources.getByText("E2E Protection monitoring brief")).toBeVisible();
 
