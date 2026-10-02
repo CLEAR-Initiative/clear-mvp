@@ -157,8 +157,8 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
     summaryRefs: [1, 2],
     summaryLineRefs: {},
     stats: [
-      { key: "displaced", value: "8.6M", range: null, confidence: null },
-      { key: "inNeed", value: "33.7M", range: "19M – 33.7M", confidence: null },
+      { key: "displaced", value: "8.6M", range: null, confidence: null, periodYear: null },
+      { key: "inNeed", value: "33.7M", range: "19M – 33.7M", confidence: null, periodYear: null },
     ],
     figures: { displaced: 8.6e6, affected: null, inNeed: 33.7e6, returnees: null, fundingRequired: 3e9, fundingReceived: 1.2e9 },
     contextRisks: [
