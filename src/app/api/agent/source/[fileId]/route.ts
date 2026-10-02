@@ -9,25 +9,12 @@
  */
 
 import { canReadContent } from "~/lib/roles";
+import { fileNameOf } from "~/server/agent/source-file-name";
 import { readAgentFlags } from "~/server/agent/flag";
 import { NRC_FIND_FILE_ID, nrcFindConfig } from "~/server/agent/nrc-find-tool";
 import { getSessionUser } from "~/server/session";
 
 const DOWNLOAD_TIMEOUT_MS = 60_000;
-
-/** The file name NRC Find gave, made safe for a header; else the id. */
-function fileNameOf(disposition: string | null, fileId: string): string {
-  // NRC Find sends `inline; filename=<name>` last and unquoted, spaces and all.
-  const raw = /filename\*?=(?:UTF-8'')?(.*)$/i.exec(disposition ?? "")?.[1]?.trim();
-  let name = raw?.replace(/^"(.*)"$/, "$1") ?? "";
-  try {
-    name = decodeURIComponent(name);
-  } catch {
-    /* not encoded */
-  }
-  name = name.replace(/[\u0000-\u001f\u007f/\\]/g, "").slice(0, 200);
-  return name || fileId;
-}
 
 export async function GET(req: Request, { params }: { params: Promise<{ fileId: string }> }): Promise<Response> {
   const cookie = req.headers.get("cookie");
@@ -54,25 +41,37 @@ export async function GET(req: Request, { params }: { params: Promise<{ fileId: 
     return Response.json({ error: "NRC Find is not configured on this server." }, { status: 503 });
   }
 
+  // The timeout covers reaching NRC Find, not the download: once headers
+  // arrive it is cleared, so a large file on a slow link isn't cut off.
+  const connect = new AbortController();
+  const timer = setTimeout(() => connect.abort(new DOMException("timeout", "TimeoutError")), DOWNLOAD_TIMEOUT_MS);
   let upstream: Response;
   try {
     upstream = await fetch(`${config.url}/api/v1/common/files/${fileId}`, {
       headers: { "X-App-Authorization": config.token },
-      signal: AbortSignal.any([req.signal, AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS)]),
+      signal: AbortSignal.any([req.signal, connect.signal]),
     });
-  } catch {
+  } catch (err) {
+    console.warn("[agent] source download: NRC Find unreachable", (err as Error).name);
     return Response.json({ error: "NRC Find is unreachable." }, { status: 502 });
+  } finally {
+    clearTimeout(timer);
   }
   if (upstream.status === 404) {
+    await upstream.body?.cancel();
     return Response.json({ error: "NRC Find no longer has this document." }, { status: 404 });
   }
   if (!upstream.ok || !upstream.body) {
+    await upstream.body?.cancel();
+    console.warn(`[agent] source download: NRC Find returned ${upstream.status}`);
     return Response.json({ error: `NRC Find returned ${upstream.status}.` }, { status: 502 });
   }
 
   const name = fileNameOf(upstream.headers.get("content-disposition"), fileId);
   const ascii = name.replace(/[^\x20-\x7e]|["\\]/g, "_");
-  const length = upstream.headers.get("content-length");
+  // fetch decodes a compressed body but keeps the compressed length; only a
+  // plain body's length is still true.
+  const length = upstream.headers.get("content-encoding") ? null : upstream.headers.get("content-length");
   return new Response(upstream.body, {
     headers: {
       "Content-Type": "application/octet-stream",

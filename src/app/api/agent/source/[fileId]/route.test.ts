@@ -104,4 +104,51 @@ describe("GET /api/agent/source/[fileId]", () => {
     };
     expect((await get(FILE_ID)).status).toBe(502);
   });
+
+  it("does not cut off a download that outlasts the connect timeout", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      let seen: AbortSignal | undefined;
+      fetchMock.mockImplementation((url, init) => {
+        if (url.startsWith(FIND_URL)) {
+          seen = init?.signal ?? undefined;
+          return new Response("docx-bytes");
+        }
+        if (url === SESSION_URL) {
+          return Response.json({ session: { id: "s1", userId: "u1", expiresAt: "2099-01-01T00:00:00Z" }, user: { id: "u1", role } });
+        }
+        return Response.json({ data: { featureFlags: [{ key: "agent", enabled: true }] } });
+      });
+      const res = await get(FILE_ID);
+      vi.advanceTimersByTime(120_000);
+      expect(seen?.aborted).toBe(false);
+      expect(await res.text()).toBe("docx-bytes");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("drops Content-Length when NRC Find's body was compressed", async () => {
+    file = () => new Response("docx-bytes", { headers: { "Content-Encoding": "gzip", "Content-Length": "4" } });
+    const res = await get(FILE_ID);
+    expect(res.headers.get("content-length")).toBeNull();
+  });
+});
+
+describe("fileNameOf", () => {
+  it("reads quoted, encoded and bare forms, preferring filename*", async () => {
+    const { fileNameOf } = await import("~/server/agent/source-file-name");
+    expect(fileNameOf('attachment; filename="a.pdf"', FILE_ID)).toBe("a.pdf");
+    expect(fileNameOf("attachment; filename*=utf-8''Plan%202024.docx", FILE_ID)).toBe("Plan 2024.docx");
+    expect(fileNameOf(`attachment; filename="a.pdf"; filename*=UTF-8''b%C3%A9.pdf`, FILE_ID)).toBe("bé.pdf");
+    expect(fileNameOf("inline; filename=Sudan EPP 2023.docx", FILE_ID)).toBe("Sudan EPP 2023.docx");
+    expect(fileNameOf(null, FILE_ID)).toBe(FILE_ID);
+  });
+
+  it("never splits a surrogate pair or keeps bidi overrides", async () => {
+    const { fileNameOf } = await import("~/server/agent/source-file-name");
+    const name = fileNameOf(`attachment; filename*=UTF-8''${encodeURIComponent("a".repeat(199) + "😀x")}`, FILE_ID);
+    expect(() => encodeURIComponent(name)).not.toThrow();
+    expect(fileNameOf(`attachment; filename*=UTF-8''${encodeURIComponent("cod‮fdp.exe")}`, FILE_ID)).toBe("codfdp.exe");
+  });
 });
