@@ -137,6 +137,10 @@ export async function askNrcFind(
   if (!excludeClearSnapshots) return { answer, sourceDocuments };
   const nrcDocuments = sourceDocuments.filter((d) => d.sourceName !== CLEAR_SNAPSHOT_SOURCE);
   if (nrcDocuments.length === sourceDocuments.length) return { answer, sourceDocuments };
+  console.info(
+    `[agent] nrc_find left out ${sourceDocuments.length - nrcDocuments.length}/${sourceDocuments.length} ` +
+      "CLEAR snapshot passages, and NRC Find's answer",
+  );
   return {
     answer: "",
     sourceDocuments: nrcDocuments,
