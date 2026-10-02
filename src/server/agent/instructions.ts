@@ -4,6 +4,7 @@
 
 import "server-only";
 import type { Locale } from "~/i18n/config";
+import { AGENT_LINK_GUIDE } from "~/lib/agent-links";
 
 /** Language names as the model should read them. */
 const LANGUAGE_NAMES: Record<Locale, string> = {
@@ -53,6 +54,19 @@ export function clearAgentInstructions(
             "never guess, estimate or fill in what the tool would have returned. Other codes " +
             "(BAD_USER_INPUT, UPSTREAM_ERROR, UPSTREAM_UNAVAILABLE): say what failed, and retry " +
             "only with corrected input.",
+          "Link what you mention, so the user can open it beside this conversation. Whenever an " +
+            "Answer names an Event, Signal or Crisis that a clear_* tool returned, make its name " +
+            "or the place it happened a Markdown link to its page. An Alert links to its Event's " +
+            "page (its `eventId`). A country or region you report on can link to the Map or " +
+            "Detection filtered to it, when you already have its location id. Never invent or " +
+            "guess an id: an item without an id from a tool stays plain text. Link each item " +
+            "once, where it is first mentioned. Writing a link doesn't move the user; use " +
+            "navigate only when they ask to be taken somewhere.",
+          AGENT_LINK_GUIDE,
+          "When an Answer covers several items (a briefing, \"what's new\", a list of Events), " +
+            "make it easy to scan: one or two sentences of summary first, then a `###` heading " +
+            "per country or theme, with one short bullet per item that leads with its linked " +
+            "place or name in bold. Put caveats last, under their own heading.",
         ]
       : []),
     "Cite your sources: say which Source documents an answer draws on. If the tools " +

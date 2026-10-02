@@ -6,12 +6,15 @@
  * documents that Answer cited.
  *
  * Markdown is rendered without raw HTML, and links open in a new tab with no
- * referrer, so nothing a model or a document writes can inject markup.
+ * referrer, so nothing a model or a document writes can inject markup. The
+ * one exception is a link to an app page in the Agent's link structure
+ * (agent-links.ts), which opens in the app with the Thread kept beside it.
  * Images are never loaded: an image URL is fetched with no click, so text
  * injected through a document could make the model leak the conversation
  * into one. They render as their alt text.
  */
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -19,7 +22,8 @@ import type { UIMessage } from "ai";
 import { Anchor, Box, Button, Card, Group, Loader, Paper, Spoiler, Stack, Text } from "@mantine/core";
 import { IconAlertTriangle, IconArrowBackUp, IconCheck, IconFileText, IconRoute } from "@tabler/icons-react";
 import { useOptionalAgent } from "~/components/agent/agent-provider";
-import { isNavigateResult, type NavigateResult } from "~/lib/agent-navigation";
+import { agentLink, type AgentLink } from "~/lib/agent-links";
+import { isNavigateResult, markAgentDeepLink, type NavigateResult } from "~/lib/agent-navigation";
 
 type Part = UIMessage["parts"][number];
 
@@ -135,17 +139,32 @@ function ToolActivity({ part }: { part: Part }) {
 }
 
 function Markdown({ text }: { text: string }) {
+  const agent = useOptionalAgent();
+  const onAppLink = (link: AgentLink) => {
+    // Leaving the Agent page: carry the Thread into the drawer, so the Answer
+    // stays beside what its link opened (as Agent navigation does).
+    if (window.location.pathname === "/agent") agent?.setOpen(true);
+    // The Map and Detection apply a filtered link as a fresh move.
+    if (link.kind === "filtered") markAgentDeepLink(link.href);
+  };
   return (
     <Box className="agent-markdown" style={{ lineHeight: 1.6, overflowWrap: "anywhere" }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         skipHtml
         components={{
-          a: ({ href, children }) => (
-            <Anchor href={href} target="_blank" rel="noopener noreferrer nofollow">
-              {children}
-            </Anchor>
-          ),
+          a: ({ href, children }) => {
+            const link = agentLink(href);
+            return link ? (
+              <Anchor component={Link} href={link.href} onClick={() => onAppLink(link)} data-testid="agent-app-link">
+                {children}
+              </Anchor>
+            ) : (
+              <Anchor href={href} target="_blank" rel="noopener noreferrer nofollow">
+                {children}
+              </Anchor>
+            );
+          },
           img: ({ alt }) => (alt ? <span>{alt}</span> : null),
         }}
       >
