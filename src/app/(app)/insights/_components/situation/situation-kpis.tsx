@@ -12,9 +12,10 @@ import type { SaStatKey, SituationAnalysis } from "~/server/api/mappers/situatio
  * INFORM Severity is always the first tile when available (it comes from the
  * ACAPS INFORM Severity Index via our INFORM integration, independent of the
  * pipeline). The remaining slots are filled from the resolved pipeline
- * datapoints in a fixed priority order, so a thin corpus simply shows fewer
- * tiles rather than empty ones. Each tile carries an info button explaining
- * where its number comes from.
+ * datapoints in a fixed priority order. A thin monthly window may still fill
+ * a missing tile from the same-year yearly window (period qualifier on that
+ * tile only). Each tile carries an info button explaining where its number
+ * comes from.
  */
 
 /** Order datapoints compete for the remaining KPI slots. */
@@ -67,7 +68,14 @@ export function SituationKpis({ data }: { data: SituationAnalysis }) {
             key={s.key}
             label={t(`stats.${s.key}`)}
             value={s.value}
-            sub={s.range ? t("kpi.range", { range: s.range }) : undefined}
+            sub={
+              [
+                s.range ? t("kpi.range", { range: s.range }) : null,
+                s.periodYear ? t("kpi.yearlyPeriod", { year: s.periodYear }) : null,
+              ]
+                .filter((p): p is string => p != null)
+                .join(" · ") || undefined
+            }
             info={t(`kpi.info.${s.key}`)}
           />
         ))}
