@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   ageDaysSince,
   blockagesDisplayLabel,
+  blockagesCueLabel,
   BLOCKAGES_STALE_AFTER_DAYS,
+  formatBlockagesAgeShort,
   formatBlockagesFreshness,
   isBlockagesStatusStale,
   normalizeBlockagesSourceName,
@@ -154,5 +156,58 @@ describe("toBlockagesMapCollection", () => {
     const road = out.features.find((f) => f.properties.feature_type === "road")!;
     const coords = road.geometry!.coordinates as number[][];
     expect(coords.length).toBeLessThan(4);
+  });
+
+  it("formats age short for cue chips", () => {
+    expect(formatBlockagesAgeShort(0)).toBe("today");
+    expect(formatBlockagesAgeShort(1)).toBe("1d");
+    expect(formatBlockagesAgeShort(12)).toBe("12d");
+    expect(formatBlockagesAgeShort(42)).toBe("42d");
+    expect(formatBlockagesAgeShort(null)).toBe("?");
+  });
+
+  it("builds cue label with cause snippet and age", () => {
+    expect(
+      blockagesCueLabel({
+        status: "Not Passable",
+        status_remark: "Flooded road section near bridge",
+        age_days: 12,
+        stale: 0,
+      }),
+    ).toBe("Flooded road section near br… · 12d");
+
+    expect(
+      blockagesCueLabel({
+        status: "Restricted",
+        status_remark: "Short remark",
+        age_days: 3,
+        stale: 0,
+      }),
+    ).toBe("Short remark · 3d");
+
+    expect(
+      blockagesCueLabel({
+        status: "Not Passable",
+        status_remark: "",
+        age_days: 42,
+        stale: 1,
+      }),
+    ).toBe("Not Passable · 42d·stale");
+
+    expect(
+      blockagesCueLabel({
+        status: "Restricted",
+        status_remark: null,
+        age_days: null,
+        stale: 0,
+      }),
+    ).toBe("Restricted · ?");
+  });
+
+  it("includes cue_label in slim properties", () => {
+    const out = toBlockagesMapCollection(input, { source: "logie-spike-smoke" });
+    expect(out.features[0]!.properties.cue_label).toBeDefined();
+    expect(typeof out.features[0]!.properties.cue_label).toBe("string");
+    expect(out.features[0]!.properties.cue_label).toContain("·");
   });
 });

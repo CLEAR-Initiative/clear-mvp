@@ -1,8 +1,10 @@
 /**
- * Working country cookie — one L0 location per team.
+ * Working country cookie — one L0 location per team, or unset.
  *
  * Client-readable (not httpOnly) so Map / Detection / Overview / Insights
  * can frame the last country before team bindings finish loading.
+ * A missing entry on a multi-country team means all assigned countries
+ * (world camera), not the alphabetically first binding.
  */
 
 export const WORKING_COUNTRY_COOKIE = "clear-working-country";
@@ -86,13 +88,26 @@ export function readWorkingCountryCookieFromDocument(): WorkingCountryMap {
   }
 }
 
+function writeWorkingCountryCookie(map: WorkingCountryMap): void {
+  if (typeof document === "undefined") return;
+  document.cookie = `${WORKING_COUNTRY_COOKIE}=${encodeURIComponent(
+    serializeWorkingCountryCookie(map),
+  )}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
+}
+
 export function setWorkingCountryCookie(teamId: string, entry: WorkingCountryEntry): void {
   if (typeof document === "undefined") return;
   const map = readWorkingCountryCookieFromDocument();
   map[teamId] = { id: entry.id, name: entry.name };
-  document.cookie = `${WORKING_COUNTRY_COOKIE}=${encodeURIComponent(
-    serializeWorkingCountryCookie(map),
-  )}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
+  writeWorkingCountryCookie(map);
+}
+
+/** Persist “no country selected” for this team (all assigned countries). */
+export function clearWorkingCountryCookie(teamId: string): void {
+  if (typeof document === "undefined") return;
+  const map = readWorkingCountryCookieFromDocument();
+  delete map[teamId];
+  writeWorkingCountryCookie(map);
 }
 
 export function storedWorkingCountry(
@@ -109,9 +124,10 @@ export function storedWorkingCountry(
  * Working country for the picker / map frame.
  *
  * While scope is not ready, hold the cookie entry (name included) so a
- * reload cannot flash "All Countries" then land on Afghanistan.
- * Once bindings are known, honour a still-in-scope store; otherwise the
- * alphabetically first country.
+ * reload cannot flash All Countries then land on a leftover pick.
+ * Once bindings are known: one country pins; several honour a still-in-scope
+ * store and otherwise stay unset (all assigned countries / world camera);
+ * unscoped keeps a named pick.
  */
 export function resolveWorkingCountry(
   countries: readonly { id: string; name: string }[],
@@ -133,5 +149,6 @@ export function resolveWorkingCountry(
       if (byName) return byName;
     }
   }
-  return countries[0] ?? null;
+  // One binding pins. Several with no in-scope store → unset (all assigned).
+  return countries.length === 1 ? (countries[0] ?? null) : null;
 }

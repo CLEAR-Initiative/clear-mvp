@@ -12,11 +12,21 @@ import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
-import { useTeamCountry, useScopedCountryOptions } from "~/hooks/use-team-country";
+import {
+  ALL_COUNTRIES,
+  pickerCountryOptions,
+  resolveSelectedCountry,
+  useTeamCountry,
+} from "~/hooks/use-team-country";
 import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import type { MapMarker } from "~/components/map/crisis-map";
-import { parseDateFilter, resolveCountryConfig } from "~/lib/constants/country-config";
+import { parseDateFilter, resolveCountryConfig, staticCountryBounds } from "~/lib/constants/country-config";
+import { isoForCountryName } from "~/lib/constants/countries";
+import { scopeIsosMissingPaintableBoundaries } from "~/lib/geo/country-mask";
 import { useLocations } from "~/hooks/use-locations";
+import { useLastFocusedCountry } from "~/hooks/use-last-focused-country";
+import { browseMapCamera } from "~/lib/map/country-picker-camera";
+import { markerMatchesLocationScope } from "~/lib/map/marker-location-match";
 import { alertsToMarkers, eventsToMarkers, signalsToMarkers, type CrisisMarker } from "../map/_components/map-markers-data";
 import { PageHeader, FilterBar, RegionPicker } from "~/components/ui";
 import type { GqlEvent, GqlAlert, GqlSignal } from "~/lib/types/graphql";
@@ -34,6 +44,15 @@ import { EventsTab, type EventSortOrder } from "./_components/events-tab";
 import { SignalsTab, type SignalSortOrder } from "./_components/signals-tab";
 import { CreateSignalModal } from "~/components/create-signal-modal";
 import detectionTabsStyles from "./detection-tabs.module.css";
+import { detectionFiltersForAgent, useAgentCurrentView } from "~/lib/agent-current-view";
+import {
+  DETECTION_DEEP_LINK_PARAMS,
+  DETECTION_ONE_SHOT_PARAMS,
+  readDetectionDeepLink,
+  resolveLinkScope,
+  withoutDeepLink,
+} from "~/lib/agent-deep-link";
+import { useAgentDeepLink } from "~/components/agent/use-agent-deep-link";
 
 const PAGE_SIZE = 25;
 const HISTORY_PAGE_SIZE = 100;
@@ -74,6 +93,12 @@ function normalizeDetectionTab(raw: string | null): string | null {
 
 const TAB_STORAGE_KEY = "detection-active-tab";
 const FILTERS_STORAGE_KEY = "detection-filters";
+/**
+ * Filters chosen during a deep-linked visit (an Agent navigation), kept
+ * apart from the page's defaults and tagged with the link's country, so a
+ * revisit of that link restores them and an ordinary visit never sees them.
+ */
+const LINK_FILTERS_STORAGE_KEY = "detection-link-filters";
 /** Gap after underline paints before skeleton - one frame, not a full CSS duration. */
 const TAB_SKELETON_DELAY_MS = 0;
 
@@ -89,10 +114,10 @@ interface StoredFilters {
   boundaryLevel?: "none" | "A0" | "A1" | "A2";
 }
 
-function readStoredFilters(): StoredFilters {
+function readStoredFilters(key = FILTERS_STORAGE_KEY): StoredFilters & { countryId?: string } {
   try {
-    const raw = sessionStorage.getItem(FILTERS_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as StoredFilters) : {};
+    const raw = sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as StoredFilters & { countryId?: string }) : {};
   } catch {
     return {}; // sessionStorage unavailable (SSR or private mode)
   }
@@ -234,15 +259,45 @@ function DetectionPageContent() {
     scopeReady,
   } = useTeamCountry();
 
-  // Country the user picked. Only consulted when the active team monitors
-  // globally; a team bound to countries uses working country from the hook.
+  // Country the user picked. Scoped teams use the working-country cookie;
+  // multi-country unset (All Countries) means every assigned country.
   const [pickedCountry, setPickedCountry] = useState("");
-  const selectedCountry =
-    workingCountryName ?? (scopeReady ? pickedCountry : "");
+  const teamCountryNames = useMemo(() => teamCountries.map((c) => c.name), [teamCountries]);
+  // An Agent navigation deep link's country holds for this visit only and
+  // doesn't touch the working country; picking a country drops it. Its place
+  // is matched by id against this page's locations tree and the active
+  // team's scope: only a place the page can show ever overrides.
+  const detectionDeepLink = useMemo(() => readDetectionDeepLink(searchParams), [searchParams]);
+  const linkScope = useMemo(
+    () =>
+      resolveLinkScope({
+        countryId: detectionDeepLink.countryId,
+        regionId: detectionDeepLink.regionId,
+        tree,
+        teamCountryNames,
+        scopeReady,
+      }),
+    [detectionDeepLink.countryId, detectionDeepLink.regionId, tree, teamCountryNames, scopeReady],
+  );
+  const linkCountry = linkScope.status === "honoured" ? linkScope.country : undefined;
+  const selectedCountry = resolveSelectedCountry(
+    teamCountryNames,
+    linkCountry ?? workingCountryName ?? pickedCountry,
+    scopeReady,
+  );
+  const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
   
   const handleCountryChange = useCallback(
     (value: string) => {
-      if (teamCountries.length > 0) {
+      // Picking a country ends a deep link's override.
+      if (detectionDeepLink.countryId) {
+        const rest = withoutDeepLink(new URLSearchParams(searchParams.toString()), DETECTION_DEEP_LINK_PARAMS);
+        router.replace(`/detection${rest}`, { scroll: false });
+      }
+      if (value === ALL_COUNTRIES) {
+        setPickedCountry(ALL_COUNTRIES);
+        setWorkingCountry("", ALL_COUNTRIES);
+      } else if (teamCountries.length > 0) {
         const location = teamCountries.find((c) => c.name === value);
         if (location) setWorkingCountry(location.id);
       } else {
@@ -252,13 +307,20 @@ function DetectionPageContent() {
       // Reset region when country changes
       setSelectedRegionId(null);
     },
-    [teamCountries, setWorkingCountry, getLocationId],
+    [teamCountries, setWorkingCountry, getLocationId, detectionDeepLink.countryId, searchParams, router],
   );
   
-  const scopedOptions = useScopedCountryOptions(countries);
-  const countryOptions =
-    !scopeReady && workingCountryName ? [workingCountryName] : scopedOptions;
-  useReportStaleCountryPick(countryOptions, workingCountryName ?? pickedCountry, selectedCountry);
+  const countryOptions = useMemo(() => {
+    if (!scopeReady) {
+      return workingCountryName ? [workingCountryName] : [];
+    }
+    return pickerCountryOptions(countries, teamCountryNames);
+  }, [scopeReady, workingCountryName, countries, teamCountryNames]);
+  useReportStaleCountryPick(
+    countryOptions,
+    linkCountry ?? workingCountryName ?? pickedCountry,
+    selectedCountry,
+  );
 
   // Ground intel is a PRIVATE staging tier (sender names, unvetted claims):
   // clear-api rejects every ground query for roles other than admin/analyst,
@@ -312,10 +374,10 @@ function DetectionPageContent() {
     }
 
     const storedFilters = readStoredFilters();
-    // Only restore country for unscoped teams; scoped teams use working country
-    if (teamCountries.length === 0 && storedFilters.country) {
-      setPickedCountry(storedFilters.country);
-    }
+    // Country lives in the working-country cookie. Do not restore it from
+    // session here: on the first mount `teamCountries` is still empty, so a
+    // leftover "Venezuela" would look like an unscoped pick and pin Detection
+    // after Map already switched to All Countries.
     if (storedFilters.regionId !== undefined) setSelectedRegionId(storedFilters.regionId ?? null);
     if (storedFilters.date) setSelectedDate(storedFilters.date);
     if (storedFilters.severities) setActiveSeverities(new Set(storedFilters.severities));
@@ -329,11 +391,50 @@ function DetectionPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // An Agent navigation deep link, after the stored defaults so it wins. A
+  // fresh move applies its filters like picking them by hand (a new country
+  // resets the region); a revisit (details and back, a reload, Back) brings
+  // back the filters chosen during that visit. From then on they are
+  // ordinary filter state; only the country stays in the URL, as this
+  // visit's override, and a region it set goes with it.
+  const linkedRegionRef = useRef(false);
+  useAgentDeepLink({
+    path: "/detection",
+    params: DETECTION_DEEP_LINK_PARAMS,
+    oneShot: DETECTION_ONE_SHOT_PARAMS,
+    scope: linkScope,
+    apply: (fresh) => {
+      if (linkScope.status !== "honoured") return;
+      if (!fresh) {
+        const visit = readStoredFilters(LINK_FILTERS_STORAGE_KEY);
+        if (visit.countryId !== detectionDeepLink.countryId) return;
+        setSelectedRegionId(visit.regionId ?? null);
+        linkedRegionRef.current = !!visit.regionId;
+        if (visit.date) setSelectedDate(visit.date);
+        if (visit.severities) setActiveSeverities(new Set(visit.severities));
+        if (visit.typeFilters) setSelectedTypeFilters(visit.typeFilters);
+        if (visit.sources !== undefined) setActiveSources(visit.sources ? new Set(visit.sources) : null);
+        if (visit.boundaryLevel) setBoundaryLevel(visit.boundaryLevel);
+        return;
+      }
+      setSelectedRegionId(linkScope.region?.id ?? null);
+      linkedRegionRef.current = !!linkScope.region;
+      if (detectionDeepLink.date) setSelectedDate(detectionDeepLink.date);
+      if (detectionDeepLink.severities) setActiveSeverities(new Set(detectionDeepLink.severities));
+    },
+    onGone: () => {
+      if (linkedRegionRef.current) setSelectedRegionId(null);
+      linkedRegionRef.current = false;
+    },
+  });
+
   // Mirror filter selections into sessionStorage so they survive navigating
   // to a signal/event detail page and back (that route change unmounts this
-  // component, resetting the useState defaults above without this).
+  // component, resetting the useState defaults above without this). During
+  // a deep-linked visit they go under the link instead: they hold for that
+  // visit and never become the page's defaults.
   useEffect(() => {
-    if (!storageReady) return;
+    if (!storageReady || linkScope.status === "pending") return;
     try {
       const toStore: StoredFilters = {
         country: selectedCountry,
@@ -344,13 +445,36 @@ function DetectionPageContent() {
         sources: activeSources ? Array.from(activeSources) : null,
         boundaryLevel,
       };
-      sessionStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(toStore));
+      if (linkScope.status === "honoured") {
+        sessionStorage.setItem(
+          LINK_FILTERS_STORAGE_KEY,
+          JSON.stringify({ ...toStore, countryId: detectionDeepLink.countryId }),
+        );
+      } else {
+        sessionStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(toStore));
+      }
     } catch {
       /* sessionStorage unavailable (SSR or private mode) */
     }
-  }, [storageReady, selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
+  }, [storageReady, linkScope.status, detectionDeepLink.countryId, selectedCountry, selectedRegionId, selectedDate, activeSeverities, selectedTypeFilters, activeSources, boundaryLevel]);
 
-  const selectedCountryId = useMemo(() => getLocationId(selectedCountry), [selectedCountry, getLocationId]);
+  const selectedCountryId = useMemo(
+    () => (selectedCountry !== ALL_COUNTRIES ? getLocationId(selectedCountry) : null),
+    [selectedCountry, getLocationId],
+  );
+  const isGlobalBrowse = selectedCountry === ALL_COUNTRIES;
+  const scopedCountryIds = useMemo(() => teamCountries.map((c) => c.id), [teamCountries]);
+  const globalCountryIds = scopedCountryIds.length > 0 ? scopedCountryIds : undefined;
+  const boundariesReady = isGlobalBrowse ? scopeReady : !!selectedCountryId;
+  const scopeCountryIsos = useMemo(
+    () =>
+      isGlobalBrowse
+        ? teamCountries
+            .map((c) => isoForCountryName(c.name))
+            .filter((iso): iso is string => !!iso)
+        : [],
+    [isGlobalBrowse, teamCountries],
+  );
 
   // Country outline for the map highlight, keyed off whichever country is
   // actually selected rather than a fixed one.
@@ -360,21 +484,41 @@ function DetectionPageContent() {
   );
   const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
 
+  const a0BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
+    { level: 0, countryIds: globalCountryIds },
+    { enabled: boundaryLevel === "A0" && isGlobalBrowse && scopeReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
   const a1BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
-    { level: 1, countryId: selectedCountryId ?? undefined },
-    { enabled: boundaryLevel === "A1" && !!selectedCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    isGlobalBrowse
+      ? { level: 1, countryIds: globalCountryIds }
+      : { level: 1, countryId: selectedCountryId ?? undefined },
+    { enabled: boundaryLevel === "A1" && boundariesReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const a2BoundaryQuery = api.locations.getAdminBoundaries.useQuery(
-    { level: 2, countryId: selectedCountryId ?? undefined },
-    { enabled: boundaryLevel === "A2" && !!selectedCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    isGlobalBrowse
+      ? { level: 2, countryIds: globalCountryIds }
+      : { level: 2, countryId: selectedCountryId ?? undefined },
+    { enabled: boundaryLevel === "A2" && boundariesReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const adminBoundaries = useMemo(() => {
     if (selectedRegionId !== null) return [];
+    if (boundaryLevel === "A0" && isGlobalBrowse) return a0BoundaryQuery.data ?? [];
     if (boundaryLevel === "A1") return a1BoundaryQuery.data ?? [];
     if (boundaryLevel === "A2") return a2BoundaryQuery.data ?? [];
     return [];
-  }, [selectedRegionId, boundaryLevel, a1BoundaryQuery.data, a2BoundaryQuery.data]);
-  const adminBoundaryLevel = boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
+  }, [selectedRegionId, boundaryLevel, isGlobalBrowse, a0BoundaryQuery.data, a1BoundaryQuery.data, a2BoundaryQuery.data]);
+  const adminBoundaryLevel =
+    boundaryLevel === "A0" ? 0 : boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
+  const mapboxAdmin1Isos = useMemo(
+    () =>
+      boundaryLevel === "A1" && isGlobalBrowse && a1BoundaryQuery.isSuccess
+        ? scopeIsosMissingPaintableBoundaries(
+            teamCountries.map((c) => ({ id: c.id, iso: isoForCountryName(c.name) })),
+            a1BoundaryQuery.data ?? [],
+          )
+        : [],
+    [boundaryLevel, isGlobalBrowse, teamCountries, a1BoundaryQuery.isSuccess, a1BoundaryQuery.data],
+  );
 
   const regionQuery = api.locations.getById.useQuery(
     { id: selectedRegionId! },
@@ -451,6 +595,26 @@ function DetectionPageContent() {
       sourceNames: activeSources ? [...activeSources] : undefined,
     });
   }, [activeTeamId, selectedLocationId, selectedCountry, fromIso, effectiveTo, severityMin, severityMax, expandedTypeCodes?.join(","), eventsSort, signalsSort, activeSources]);
+
+  // The same scope, as the CLEAR Agent's Current view (identifiers only).
+  useAgentCurrentView(
+    selectedLocationId
+      ? {
+          filters: detectionFiltersForAgent({
+            teamId: activeTeamId,
+            locationId: selectedLocationId,
+            country: selectedCountry,
+            from: fromIso,
+            to: effectiveTo,
+            severityMin,
+            severityMax,
+            eventTypes: expandedTypeCodes ?? undefined,
+            orderBy: EVENT_ORDER_MAP[eventsSort],
+            sourceNames: activeSources ? [...activeSources] : undefined,
+          }),
+        }
+      : null,
+  );
 
   // ── Per-feed accumulated items + offset ───────────────────────────────────
   const [eventsItems, setEventsItems] = useState<GqlEvent[]>([]);
@@ -843,23 +1007,44 @@ function DetectionPageContent() {
   }, [alertsItems, eventsItems, signalsItems]);
 
   const focusCountryPCode = resolveCountryConfig(selectedCountry)?.pCode;
-  const focusCountryName = selectedCountry;
+  const focusCountryName =
+    selectedCountry && selectedCountry !== ALL_COUNTRIES ? selectedCountry : undefined;
 
   const clipToRegion = useCallback((markers: CrisisMarker[]): CrisisMarker[] => {
-    if (!selectedLocationId) return markers;
-    return markers.filter((mk) => {
-      if (!mk.locationId) return false;
-      if (mk.locationId === selectedLocationId) return true;
-      return mk.ancestorIds?.includes(selectedLocationId) ?? false;
-    });
-  }, [selectedLocationId]);
+    const countryBbox =
+      !selectedRegionId && selectedCountry !== ALL_COUNTRIES
+        ? staticCountryBounds(selectedCountry)
+        : null;
+    if (!selectedLocationId && !countryBbox) return markers;
+    return markers.filter((mk) =>
+      markerMatchesLocationScope({
+        locationId: mk.locationId,
+        ancestorIds: mk.ancestorIds,
+        region: mk.region,
+        lng: mk.lng,
+        lat: mk.lat,
+        selectedLocationId,
+        selectedLocationName:
+          selectedCountry !== ALL_COUNTRIES ? selectedCountry : null,
+        countryBbox,
+      }),
+    );
+  }, [selectedLocationId, selectedRegionId, selectedCountry]);
 
   const mapMarkers: MapMarker[] = useMemo(() => clipToRegion(alertsToMarkers(alertsItems)), [alertsItems, clipToRegion]);
   const eventMapMarkers: MapMarker[] = useMemo(() => clipToRegion(eventsToMarkers(eventsItems)), [eventsItems, clipToRegion]);
   const signalMapMarkers: MapMarker[] = useMemo(() => clipToRegion(signalsToMarkers(signalsItems)), [signalsItems, clipToRegion]);
 
-  const mapCenter = useMemo<[number, number]>(() => getCenter(selectedCountry), [selectedCountry]);
-  const mapZoom = useMemo(() => getZoom(selectedCountry), [selectedCountry]);
+  const { center: mapCenter, zoom: mapZoom } = useMemo(
+    () =>
+      browseMapCamera({
+        selectedCountry,
+        lastFocusedCountry,
+        getCenter,
+        getZoom,
+      }),
+    [selectedCountry, lastFocusedCountry, getCenter, getZoom],
+  );
 
   // Keep skeleton gate fresh after each render (incl. flushSync after setActiveTab).
   tabNeedsSkeletonRef.current = (tab: string) => {
@@ -1094,7 +1279,9 @@ function DetectionPageContent() {
                 mapZoom={mapZoom}
                 fitBoundsGeometry={fitBoundsGeometry}
                 adminBoundaries={adminBoundaries}
-                adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+                scopeCountryIsos={scopeCountryIsos}
+                mapboxAdmin1Isos={mapboxAdmin1Isos}
+                adminBoundaryLevel={adminBoundaryLevel}
                 boundaryLevel={boundaryLevel}
                 onBoundaryLevelChange={setBoundaryLevel}
                 focusCountryPCode={focusCountryPCode}
@@ -1123,7 +1310,9 @@ function DetectionPageContent() {
                 mapZoom={mapZoom}
                 fitBoundsGeometry={fitBoundsGeometry}
                 adminBoundaries={adminBoundaries}
-                adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+                scopeCountryIsos={scopeCountryIsos}
+                mapboxAdmin1Isos={mapboxAdmin1Isos}
+                adminBoundaryLevel={adminBoundaryLevel}
                 boundaryLevel={boundaryLevel}
                 onBoundaryLevelChange={setBoundaryLevel}
                 focusCountryPCode={focusCountryPCode}
@@ -1152,7 +1341,9 @@ function DetectionPageContent() {
                 mapZoom={mapZoom}
                 fitBoundsGeometry={fitBoundsGeometry}
                 adminBoundaries={adminBoundaries}
-                adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+                scopeCountryIsos={scopeCountryIsos}
+                mapboxAdmin1Isos={mapboxAdmin1Isos}
+                adminBoundaryLevel={adminBoundaryLevel}
                 boundaryLevel={boundaryLevel}
                 onBoundaryLevelChange={setBoundaryLevel}
                 focusCountryPCode={focusCountryPCode}

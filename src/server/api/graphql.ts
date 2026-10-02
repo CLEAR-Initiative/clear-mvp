@@ -3,7 +3,19 @@ import { GRAPHQL_URL } from "~/server/env";
 
 interface GraphQLResponse<T> {
   data: T;
-  errors?: Array<{ message: string }>;
+  errors?: Array<{ message: string; extensions?: { code?: unknown } }>;
+}
+
+/** A GraphQL error from clear-api, keeping its `extensions.code`. */
+export class GraphQLRequestError extends Error {
+  constructor(
+    message: string,
+    /** clear-api's error code, e.g. `FORBIDDEN` or `NOT_FOUND`. */
+    readonly code: string | undefined,
+  ) {
+    super(message);
+    this.name = "GraphQLRequestError";
+  }
 }
 
 const AUTH_ERROR_PATTERNS = [
@@ -35,7 +47,8 @@ export async function graphqlFetch<T>(
     if (isAuthError(msg)) {
       throw new TRPCError({ code: "UNAUTHORIZED", message: msg });
     }
-    throw new Error(msg);
+    const code = json.errors[0]?.extensions?.code;
+    throw new GraphQLRequestError(msg, typeof code === "string" ? code : undefined);
   }
 
   return json.data;

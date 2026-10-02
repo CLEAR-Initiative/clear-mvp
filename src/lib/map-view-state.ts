@@ -7,12 +7,16 @@
  * Follows the Detection nav-context pattern (session, not localStorage):
  * same-tab soft nav only; dies with the tab.
  *
+ * Region and timeframe are kept apart, in map-filters-session.ts: they must
+ * survive without a camera (no Mapbox token, or before the map loads).
+ *
  * ## Gaps for a later ticket (not in this MVP)
- * - Filters: country / region / timeframe / crisis type / timeline month
+ * - Filters: crisis type / timeline month
  * - Layers: NRC locations, blockages, boundaries, data view
  *   (Hazards → seismic activity and Overlays → roads *are* snapshotted)
+ * - Solo-focus deep links (`?event=` / `?crisis=`) restore the session camera
+ *   first, then fly to the focused entity (see map page pendingFocusFly).
  * - Keep-panels-open + multi-panel stack order / z-index / drag offsets
- * - Solo-focus deep links (`?event=`) vs restore coexistence polish
  * - Cross-tab durable prefs (would need localStorage + TTL UX)
  * - Product Tour / force-fly interaction matrix
  * - ShakeMap contour animation (polish; not a map-session concern)

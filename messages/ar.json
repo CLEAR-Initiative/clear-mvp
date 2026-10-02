@@ -5,7 +5,8 @@
       "breadcrumb": "الرؤى",
       "tabs": {
         "crisis": "نظرة عامة على الأزمة",
-        "situation": "تحليل الوضع"
+        "situation": "تحليل الوضع",
+        "analysis": "التحليل"
       }
     },
     "reports": {
@@ -229,7 +230,9 @@
         "generated": "أُنشئ في {date} بواسطة {model} · {reports} تقارير"
       },
       "summary": {
-        "title": "ملخص الوضع بالذكاء الاصطناعي"
+        "title": "ملخص الوضع بالذكاء الاصطناعي",
+        "readMore": "قراءة الملخص كاملًا",
+        "showLess": "عرض أقل"
       },
       "stats": {
         "displaced": "النازحون",
@@ -285,6 +288,7 @@
         "evidenceBase": "من أحدث تحليل · {reports} تقارير",
         "freshest": "الأحدث {date}",
         "range": "النطاق {range}",
+        "yearlyPeriod": "{year} سنوي",
         "info": {
           "informSeverity": "مؤشر شدة INFORM (0-10) من ACAPS، يُحدَّث شهرياً. مقياس مركّب لشدة الأزمة، مستقل عن خط معالجة التحليل.",
           "displaced": "التقدير الحالي للنزوح (النازحون داخلياً). من datapoints التحليل (الحقل: estimated_current_displacement.stock؛ مع الرجوع إلى population_displaced إن وُجد).",
@@ -377,17 +381,15 @@
     },
     "roles": {
       "member": "عضو",
-      "admin": "مدير",
-      "owner": "مالك",
-      "viewer": "مشاهد",
-      "analyst": "محلل",
-      "lead": "قائد"
+      "orgAdmin": "مدير المنظمة",
+      "teamMember": "عضو فريق",
+      "fieldCoordinator": "منسق ميداني",
+      "teamAdmin": "مدير الفريق"
     },
     "users": {
       "roles": {
-        "field": "ميداني",
+        "viewer": "مشاهد",
         "analyst": "محلل",
-        "orgAdmin": "مدير المنظمة",
         "admin": "مدير"
       },
       "unauthorized": "تحتاج إلى صلاحيات المدير لعرض إدارة المستخدمين.",
@@ -619,6 +621,7 @@
       "rememberMe": "تذكرني",
       "forgotPassword": "نسيت كلمة المرور؟",
       "submit": "تسجيل الدخول",
+      "success": "تم تسجيل الدخول",
       "failed": "فشل تسجيل الدخول",
       "unexpectedError": "حدث خطأ غير متوقع",
       "demo": {
@@ -991,7 +994,8 @@
     "filters": {
       "country": "الدولة",
       "region": "المنطقة",
-      "date": "التاريخ"
+      "date": "التاريخ",
+      "allCountries": "جميع الدول"
     },
     "regionPicker": {
       "allRegions": "جميع المناطق",
@@ -1754,7 +1758,8 @@
       "thread": {
         "untitled": "سلسلة بدون عنوان",
         "notFound": "السلسلة غير موجودة",
-        "reviewNote": "ملاحظة المراجعة"
+        "reviewNote": "ملاحظة المراجعة",
+        "rejectReason": "سبب الرفض"
       },
       "review": {
         "approvePrivate": "اعتماد (خاص)",
@@ -1935,19 +1940,6 @@
       "email": "البريد الإلكتروني",
       "call": "اتصال",
       "empty": "لم تُعثر على جهات اتصال لهذا الموقع"
-    },
-    "humchat": {
-      "subtitle": "مساعد الذكاء الاصطناعي الإنساني",
-      "online": "متصل",
-      "clearChat": "مسح المحادثة",
-      "collapse": "طي اللوحة",
-      "inputPlaceholder": "اسأل عن الاستجابة الإنسانية...",
-      "welcome": "مرحباً! أنا **HumChat**، مساعدك الذكي للعمليات الإنسانية. لقد دُرِّبتُ على إرشادات IASC ومعايير سفير والسياق الإنساني الخاص بإثيوبيا.\n\nيمكنني مساعدتك في:\n- **تحليل الأوضاع** وإعداد موجزات الأزمات\n- **تخطيط الاستجابة** وتخصيص الموارد\n- **توجيه البروتوكولات** في حالات الطوارئ\n- دعم **التنسيق** والاتصالات\n\nما التحدي الإنساني الذي يمكنني مساعدتك في معالجته اليوم؟",
-      "examples": {
-        "displacement": "تحليل اتجاهات النزوح في المنطقة الصومالية",
-        "interventions": "ما أولويات التدخل في حالات الطوارئ الصحية؟",
-        "assessment": "إنشاء خطة تقييم سريع لمخاطر الحماية"
-      }
     }
   },
   "map": {
@@ -1987,9 +1979,9 @@
       "operational": "تشغيلي",
       "comingSoon": "قريبًا",
       "blockages": "العوائق",
-      "blockagesCurrent": "متصل · < 15 يومًا",
-      "blockagesStale": "متقطع · ≥ 15 يومًا",
-      "blockagesStaleNote": "مرّر للتاريخ. المتقطع قد يظل مقيدًا.",
+      "blockagesCurrent": "حديث · < 15 يومًا",
+      "blockagesStale": "باهت · ≥ 15 يومًا",
+      "blockagesStaleNote": "مرّر للتاريخ. الباهت قد يظل مقيدًا.",
       "blockagesStatus": "لون الحالة",
       "blockagesNotPassable": "غير قابل للمرور",
       "blockagesRestricted": "مقيد",
@@ -2068,6 +2060,15 @@
       "focusFallbackSignal": "إشارة مركّزة",
       "focusFallbackCrisis": "أزمة مركّزة"
     },
+    "placeSearch": {
+      "open": "البحث عن أماكن أو إحداثيات",
+      "placeholder": "مكان أو خط عرض، خط طول",
+      "filters": "عوامل تصفية البحث",
+      "removeFilter": "إزالة عامل التصفية {label}",
+      "clear": "مسح البحث",
+      "noResults": "لم يُعثر على أماكن",
+      "error": "البحث غير متاح"
+    },
     "tokenMissing": "لم يُهيَّأ رمز Mapbox. عيّن NEXT_PUBLIC_MAPBOX_TOKEN في ملف .env",
     "tiltHint": {
       "message": "الطبوغرافية ثلاثية الأبعاد — انقر إمالة، أو Ctrl/⌘+سحب (زر أيمن) / إصبعان على اللمس",
@@ -2088,6 +2089,7 @@
     "items": {
       "overview": "نظرة عامة",
       "detection": "الكشف",
+      "inbox": "الوارد",
       "map": "الخريطة",
       "insights": "الرؤى",
       "operations": "العمليات",
@@ -2165,6 +2167,7 @@
     },
     "signals": {
       "loading": "جارٍ تحميل الإشارات...",
+      "loadingMore": "جارٍ تحميل المزيد من الإشارات...",
       "empty": "لا توجد إشارات بعد",
       "events": "{count, plural, zero {لا أحداث} one {حدث واحد} two {حدثان} few {# أحداث} many {# حدثاً} other {# حدث}}"
     },
@@ -2586,17 +2589,14 @@
         "orgRoleLabel": "دور المنظمة",
         "roles": {
           "member": "عضو",
-          "admin": "مدير",
-          "owner": "مالك"
+          "orgAdmin": "مدير المنظمة"
         },
         "teamsLabel": "الفرق",
         "noTeams": "لا توجد فرق في هذه المنظمة. أنشئ فريقاً قبل الدعوة.",
         "teamRoles": {
-          "viewer": "مشاهد",
-          "analyst": "محلل",
-          "lead": "قائد",
           "team_member": "عضو فريق",
           "field_coordinator": "منسق ميداني",
+          "emergency_response_manager": "مدير الاستجابة للطوارئ",
           "team_admin": "مدير الفريق"
         },
         "selectAtLeastOneTeam": "اختر فريقاً واحداً على الأقل",
@@ -2764,5 +2764,518 @@
     "resent": "تم إرسال بريد إلكتروني للتحقق جديد. يرجى مراجعة صندوق الوارد.",
     "resend": "إعادة إرسال بريد التحقق",
     "goToProfile": "الذهاب إلى الملف الشخصي"
+  },
+  "inbox": {
+    "title": "وارد الخط الساخن",
+    "awaiting": "{count, plural, one {# بانتظار المراجعة} other {# بانتظار المراجعة}}",
+    "filters": {
+      "reports": "تقارير ميدانية",
+      "unclassified": "غير مصنّف",
+      "chatter": "دردشة",
+      "all": "الكل"
+    },
+    "search": "بحث في النص ومراجع الاستقبال",
+    "sort": {
+      "reportsFirst": "التقارير أولاً",
+      "newest": "الأحدث"
+    },
+    "list": {
+      "allLoaded": "تم تحميل جميع الإدخالات ({count}) في هذا العرض",
+      "empty": "لا شيء متبقٍ في هذا العرض",
+      "priorEntries": "{count, plural, one {# إدخال سابق} other {# إدخالات سابقة}}"
+    },
+    "classifications": {
+      "field_report": "تقرير ميداني",
+      "unclassified": "غير مصنّف",
+      "chatter": "دردشة",
+      "news_digest": "موجز أخبار",
+      "operational": "تشغيلي"
+    },
+    "pane": {
+      "select": "اختر إدخالاً لقراءته",
+      "noText": "وسائط بدون تعليق",
+      "trustRepeat": "{count, plural, one {# إرسال} other {# إرسالات}} من مرجع الاستقبال هذا في قائمة الانتظار",
+      "attachments": "المرفقات",
+      "attachment": "مرفق {n}",
+      "voiceNote": "رسالة صوتية",
+      "omittedMedia": "{count, plural, one {# مرفق غير مخزّن} other {# مرفقات غير مخزّنة}}",
+      "uncertainty": "وسم المُبلّغ هذا بأنه {value}",
+      "back": "العودة إلى القائمة",
+      "voiceNoteN": "رسالة صوتية {n}",
+      "voiceOpen": "فتح في علامة تبويب جديدة",
+      "voiceUnsupported": "لا يستطيع هذا المتصفح تشغيل صيغة الصوت هذه. افتحها في علامة تبويب جديدة لتنزيلها.",
+      "voiceRefreshing": "انتهت صلاحية رابط الصوت. جارٍ تحديثه، ثم اضغط تشغيل مرة أخرى.",
+      "voiceFailed": "تعذّر تشغيل هذه الرسالة الصوتية هنا. افتحها في علامة تبويب جديدة بدلًا من ذلك.",
+      "transcriptLabel": "نص مُفرَّغ آليًا · قد يحتوي على أخطاء",
+      "transcriptPending": "التفريغ النصي قيد الانتظار",
+      "voiceNotStored": "رسالة صوتية (لم يُخزَّن الصوت بعد)",
+      "transcriptFailed": "فشل التفريغ النصي"
+    },
+    "actions": {
+      "add": "إضافة إلى CLEAR",
+      "archive": "أرشفة",
+      "reject": "رفض",
+      "shortcuts": "A إضافة · E أرشفة · R رفض · J/K تنقّل"
+    },
+    "rejectReasons": {
+      "header": "رفض: سبب لسجل التدقيق",
+      "spam": {
+        "label": "رسائل مزعجة أو احتيال",
+        "help": "إرسال جماعي أو تصيّد أو رسالة متسلسلة"
+      },
+      "not_report": {
+        "label": "ليس تقريراً",
+        "help": "استفسار أو محادثة، لا شيء للفرز"
+      },
+      "unusable": {
+        "label": "يتعذر تحديد الموقع",
+        "help": "لم يُذكر مكان، لا يمكن التعامل معه"
+      },
+      "duplicate": {
+        "label": "مكرر",
+        "help": "موجود بالفعل في المسار كإشارة"
+      },
+      "cancel": "إلغاء"
+    },
+    "modal": {
+      "header": "مُولَّد بواسطة CLEAR",
+      "title": "عنوان الإشارة",
+      "description": "الوصف",
+      "severity": "الشدة",
+      "severityNone": "غير محدد",
+      "attachments": "المرفقات المنقولة إلى الإشارة",
+      "footer": "مُرقّى من {ref} · يبقى سرد المُبلّغ على الإدخال",
+      "cancel": "إلغاء",
+      "confirm": "إضافة إلى CLEAR",
+      "location": "الموقع",
+      "locationPlaceholder": "ابحث عن موقع",
+      "locationLoading": "جارٍ تحميل المواقع",
+      "locationNoMatch": "لا يوجد موقع مطابق",
+      "locationRequired": "الموقع مطلوب قبل الإضافة إلى CLEAR",
+      "aiSuggested": "اقتراح الذكاء الاصطناعي",
+      "draftLocationUnknown": "تعذّر العثور على الموقع المقترح. اختر موقعًا قبل الإضافة إلى CLEAR.",
+      "disasterType": "نوع الكارثة",
+      "disasterTypeReadOnly": "للاطلاع فقط: لا تحتوي الإشارات بعد على حقل لنوع الكارثة، لذا لا يُحفظ هذا.",
+      "transcriptInDescription": "[نص مُفرَّغ آليًا] {text}"
+    },
+    "toast": {
+      "added": "أُضيف إلى CLEAR",
+      "archived": "أُرشف",
+      "rejected": "رُفض · {reason}",
+      "viewSignal": "عرض الإشارة",
+      "close": "إغلاق",
+      "addedNoSignal": "تمت الموافقة لكن لم يُعد أي معرّف إشارة. تحقق من الإشارة في الكشف قبل الاعتماد عليها.",
+      "retried": "أُعيد إلى قائمة الانتظار لمحاولة أخرى"
+    },
+    "noAccess": "وارد الخط الساخن متاح للمسؤولين فقط حالياً.",
+    "loadError": "تعذر تحميل الوارد",
+    "translate": {
+      "button": "ترجمة إلى {locale}",
+      "label": "الترجمة ({locale})",
+      "pending": "جارٍ الترجمة، قد يستغرق ذلك لحظة",
+      "unavailable": "الترجمة غير متاحة بعد",
+      "retry": "إعادة المحاولة",
+      "locales": {
+        "en": "الإنجليزية",
+        "fr": "الفرنسية",
+        "es": "الإسبانية",
+        "ar": "العربية"
+      }
+    },
+    "failure": {
+      "pill": "فشل التصنيف",
+      "title": "توقفت المعالجة التلقائية",
+      "help": "فشلت المعالجة الآلية لهذا الإدخال بعد عدة محاولات، لذا لم يعد في قائمة الانتظار. أعد المحاولة لإعادته إلى القائمة.",
+      "stages": {
+        "ENRICH": "التصنيف",
+        "TRANSCRIBE": "التفريغ النصي"
+      },
+      "noError": "لم تُسجَّل تفاصيل الخطأ",
+      "retry": "إعادة المحاولة",
+      "retrying": "جارٍ إعادة المحاولة…",
+      "partial": "أُعيد إلى قائمة الانتظار: {done} من أصل {total} رسائل. {error}"
+    }
+  },
+  "analysis": {
+    "scope": {
+      "country": "تحليل البلد",
+      "wholeCountry": "البلد بأكمله",
+      "created": "تحليل مُنشأ",
+      "areas": "{count, plural, one {منطقة واحدة} two {منطقتان} few {# مناطق} many {# منطقة} other {# منطقة}}"
+    },
+    "meta": {
+      "updated": "تم التحديث {relative}",
+      "asOf": "حتى {date}",
+      "builtFrom": "مبني على {reports, plural, one {تقرير واحد} other {# تقارير}} و{events, plural, one {حدث واحد} other {# أحداث}}",
+      "covers": "يغطي من {start} حتى اليوم",
+      "period": "يغطي من {start} إلى {end}",
+      "stale": "غير محدَّث"
+    },
+    "tabs": {
+      "overview": "نظرة عامة",
+      "needs": "تقييم الاحتياجات",
+      "sources": "المصادر والأحداث"
+    },
+    "error": "تعذر تحميل التحليل.",
+    "empty": {
+      "title": "لا يوجد تحليل بعد",
+      "description": "لم يتم إنشاء أي تحليل لـ {scope} بعد. يتم تجديد تحليلات البلدان أسبوعيًا."
+    },
+    "noCountry": "لم يتم تعيين أي بلد لفريقك، لذلك لا يوجد نطاق تحليل افتراضي بعد.",
+    "country": "البلد",
+    "kpis": {
+      "displaced": "النازحون",
+      "displacedSub": "شخص نازح حاليًا",
+      "returned": "العائدون",
+      "returnedSub": "عادوا إلى ديارهم. غير محسوبين ضمن النازحين.",
+      "inNeed": "المحتاجون",
+      "inNeedSub": "شخص بحاجة إلى المساعدة",
+      "funding": "التمويل",
+      "fundingOf": "من أصل {required}",
+      "fundingSub": "تم استلامها مقابل المتطلبات",
+      "received": "المستلم",
+      "gap": "الفجوة",
+      "notReported": "غير مذكور في المصادر الحالية",
+      "displacedTotalSub": "شخص نازح إجمالًا، داخل {scope} وخارجه",
+      "inside": "داخل {scope}",
+      "abroad": "في الخارج",
+      "differentDates": "قد تعود الأجزاء إلى تواريخ مختلفة",
+      "rangeLabel": "النطاق بين المصادر",
+      "headline": "الرقم الرئيسي",
+      "bySector": "المحتاجون حسب القطاع",
+      "sectorOverlap": "قد يكون الشخص نفسه محتاجًا في عدة قطاعات، لذا لا يساوي مجموع أرقام القطاعات {total}.",
+      "asOf": "حتى {date}",
+      "fundingRequiredSub": "مطلوبة. لم يُبلَّغ عن التمويل المستلم بعد.",
+      "sectors": {
+        "food_security": "الأمن الغذائي",
+        "health": "الصحة",
+        "wash": "المياه والصرف الصحي والنظافة",
+        "protection": "الحماية",
+        "shelter": "المأوى والمواد غير الغذائية",
+        "education": "التعليم",
+        "nutrition": "التغذية"
+      }
+    },
+    "map": {
+      "title": "منطقة التحليل",
+      "events": "{count, plural, one {حدث واحد} other {# أحداث}} منذ {date}",
+      "areas": "أين وقعت الأحداث",
+      "areaEvents": "{count, plural, one {حدث واحد} other {# أحداث}}",
+      "noEvents": "لم تُسجَّل أي أحداث في هذه المنطقة منذ {date}.",
+      "sample": "تعرض الخريطة أحدث {count}"
+    },
+    "timeline": {
+      "title": "الجدول الزمني للأحداث",
+      "today": "اليوم",
+      "empty": "لم تُسجَّل أي أحداث في هذه الفترة.",
+      "sample": "أحدث {count} حدثًا"
+    },
+    "findings": {
+      "hazards": "المخاطر",
+      "vulnerabilities": "نقاط الضعف",
+      "vulnerabilitiesTag": "ظروف ما قبل الأزمة",
+      "displacement": "النزوح",
+      "displacementTag": "النتائج الرئيسية",
+      "push": "ما يدفع الناس إلى المغادرة",
+      "return": "نوايا العودة",
+      "count": "{count, plural, one {نتيجة واحدة} other {# نتائج}}",
+      "showAll": "عرض الكل ({count})",
+      "showLess": "عرض أقل",
+      "forecast": "التوقعات",
+      "forecastTag": "إسقاطات، غير مرصودة",
+      "forecastNote": "ما تتوقعه المصادر لاحقًا. منفصل عن الوقائع أعلاه.",
+      "mostLikely": "الأكثر ترجيحًا",
+      "bestCase": "أفضل الاحتمالات",
+      "worstCase": "أسوأ الاحتمالات",
+      "hazardsTitle": "المخاطر ونقاط الضعف",
+      "hazardsMeta": "{hazards, plural, one {خطر واحد} other {# مخاطر}} · {vulnerabilities, plural, one {نقطة ضعف واحدة} other {# نقاط ضعف}}"
+    },
+    "needs": {
+      "severityIntro": "يقيّم التحليل كل قطاع بناءً على التقارير القطاعية التي يستشهد بها.",
+      "severityNull": "لم يُقيَّم: الأدلة غير كافية للتقييم.",
+      "inferred": "تم التقييم من تقارير خارج هذا القطاع. يُعتبر إرشاديًا.",
+      "notAssessed": "لم يُقيَّم"
+    },
+    "events": {
+      "title": "الأحداث في هذه المنطقة",
+      "empty": "لم تُسجَّل أي أحداث في هذه المنطقة خلال هذه الفترة.",
+      "untitled": "حدث بلا عنوان",
+      "severity": "الخطورة {value}",
+      "count": "{shown} من {total}"
+    },
+    "sources": {
+      "title": "المصادر المستشهد بها"
+    },
+    "contexts": {
+      "title": "السياقات",
+      "meta": "{categories, plural, one {فئة واحدة} other {# فئات}} · {findings, plural, one {نتيجة واحدة} other {# نتائج}}",
+      "findings": "{count, plural, one {نتيجة واحدة} other {# نتائج}}"
+    },
+    "generating": {
+      "title": "جارٍ إنشاء النسخة الأولى",
+      "description": "يبني خط المعالجة هذا التحليل من قاعدة المعرفة. ستتحدث هذه الصفحة تلقائيًا عند جاهزيته.",
+      "overdueTitle": "لم يُنشأ بعد",
+      "overdueDescription": "لم تصل النسخة الأولى بعد. ربما فشلت؛ اطلبها مرة أخرى عبر تحديث الآن."
+    },
+    "cadence": {
+      "daily": "يومي",
+      "weekly": "أسبوعي",
+      "monthly": "شهري",
+      "manual": "عند الطلب"
+    },
+    "home": {
+      "title": "التحليلات",
+      "subtitle": "التحليلات الحالية لـ {country}. افتح أحدها أو أنشئ تحليلك الخاص لولايات أو محليات محددة.",
+      "new": "تحليل جديد",
+      "countryGroup": "الدولة",
+      "createdGroup": "أنشأها فريقك",
+      "wholeCountry": "الدولة بأكملها",
+      "updated": "حُدِّث {relative}",
+      "generating": "جارٍ إنشاء النسخة الأولى",
+      "paused": "يُحدَّث عند الطلب",
+      "stale": "غير محدَّث",
+      "noCountryAnalysis": "لم يُنشأ أي تحليل بعد",
+      "createdEmpty": "لا توجد تحليلات مُنشأة بعد. أنشئ تحليلًا لمتابعة ولايات أو محليات محددة.",
+      "createdEmptyReadOnly": "لم ينشئ فريقك أي تحليلات بعد.",
+      "remove": "حذف",
+      "keep": "إبقاء",
+      "removeLabel": "حذف {name}",
+      "mapNote": "المظللة: المناطق التي تغطيها تحليلات فريقك.",
+      "back": "كل التحليلات",
+      "areas": "{count, plural, one {منطقة واحدة} two {منطقتان} few {# مناطق} many {# منطقة} other {# منطقة}}",
+      "frequencyLabel": "وتيرة تحديث {name}",
+      "frequencyError": "تعذّر تغيير وتيرة التحديث. يُرجى المحاولة مرة أخرى.",
+      "mapHint": "انقر على منطقة مظللة لفتح تحليلها.",
+      "mapCard": "{type} · {status}",
+      "notGenerated": "لم يُنشأ بعد"
+    },
+    "create": {
+      "title": "تحليل جديد في {country}",
+      "districts": "المحليات",
+      "loading": "جارٍ تحميل المحليات",
+      "noMatch": "لم يُعثر على محلية",
+      "cadence": "وتيرة التحديث",
+      "summary": "يغطي الأحداث والتقارير منذ {since}، ويبقى محدَّثًا بتحديث {cadence}.",
+      "firstRun": "تستغرق النسخة الأولى عادةً بضع دقائق. يمكنك مغادرة هذه الصفحة في الأثناء.",
+      "duplicate": "لدى فريقك تحليل لهذه المحليات بالفعل: {name}.",
+      "openExisting": "فتحه",
+      "error": "تعذّر إنشاء التحليل. يُرجى المحاولة مرة أخرى.",
+      "cancel": "إلغاء",
+      "submit": "إنشاء التحليل",
+      "areas": "الولايات أو المحليات",
+      "areasHint": "ابحث وأضف حتى {max}. يغطيها التحليل معًا.",
+      "search": "ابحث عن الولايات والمحليات",
+      "states": "الولايات",
+      "mapHint": "انقر على محلية في الخريطة لإضافتها أو إزالتها.",
+      "selected": "المحدد ({count}/{max})",
+      "nothingSelected": "لم يُحدَّد شيء بعد.",
+      "removeArea": "إزالة {name}",
+      "wholeState": "{name} (الولاية بأكملها)",
+      "manualFallback": "تعذّر ضبط هذا التحليل على التحديث عند الطلب، لذا يُحدَّث أسبوعيًا في الوقت الحالي. يمكنك تغيير الوتيرة من القائمة.",
+      "existing": "لدى فريقك هذا التحليل بالفعل، لذا فُتح بدلًا من ذلك."
+    },
+    "report": {
+      "button": "إنشاء تقرير",
+      "eyebrow": "تقرير الوضع",
+      "scopeCountry": "تحليل الدولة",
+      "scopeCreated": "تحليل مُنشأ",
+      "period": "يغطي من {start} حتى اليوم",
+      "versionOf": "نسخة التحليل بتاريخ {date}",
+      "keyDevelopments": "أبرز التطورات",
+      "currentStatus": "الوضع الحالي",
+      "displaced": "النازحون",
+      "displacedSub": "شخص نازح",
+      "inNeed": "المحتاجون",
+      "inNeedSub": "شخص بحاجة",
+      "funding": "التمويل",
+      "fundingSub": "المستلم / المطلوب",
+      "notReported": "غير مذكور في المصادر الحالية",
+      "mapCountry": "الحدود: الدولة",
+      "mapArea": "المظلل: منطقة التحليل",
+      "mapEvents": "النقاط: {count, plural, one {حدث واحد} two {حدثان} few {# أحداث} many {# حدثًا} other {# حدث}} منذ {date}",
+      "contexts": "السياق",
+      "hazards": "المخاطر",
+      "displacement": "ما يدفع الناس إلى النزوح",
+      "priorityNeeds": "الاحتياجات ذات الأولوية",
+      "responseActivities": "أنشطة الاستجابة",
+      "noResponse": "لا توجد أنشطة استجابة مذكورة في المصادر الحالية.",
+      "outlook": "التوقعات (السيناريو الأرجح)",
+      "sources": "المصادر",
+      "provenance": "المصدر",
+      "generated": "أُنشئ التقرير في {date} بواسطة {author} في CLEAR. تشير الأرقام بين الأقواس إلى قائمة المصادر.",
+      "footer": "CLEAR · {scope}",
+      "page": "صفحة {n} من {total}",
+      "unknownAuthor": "مستخدم CLEAR",
+      "error": "تعذّر إنشاء التقرير. يُرجى المحاولة مرة أخرى.",
+      "unsupportedLocale": "لا يمكن إنشاء التقارير بالعربية بعد. غيّر اللغة إلى الإنجليزية أو الفرنسية أو الإسبانية لإنشاء تقرير.",
+      "sections": {
+        "keyDevelopments": "أبرز التطورات",
+        "currentStatus": "الوضع الحالي",
+        "map": "خريطة النطاق",
+        "contexts": "السياق",
+        "hazards": "المخاطر",
+        "displacement": "ما يدفع الناس إلى النزوح",
+        "priorityNeeds": "الاحتياجات ذات الأولوية",
+        "responseActivities": "أنشطة الاستجابة",
+        "outlook": "التوقعات",
+        "sources": "المصادر"
+      },
+      "builder": {
+        "title": "إنشاء تقرير",
+        "intro": "اسحب الأقسام إلى الترتيب الذي تريده وحدد الأقسام المراد تضمينها.",
+        "dragLabel": "سحب {section}",
+        "includeLabel": "تضمين {section}",
+        "empty": "لا يوجد محتوى لهذا القسم في هذا التحليل",
+        "alwaysIncluded": "تُضمَّن دائمًا النسخة والمؤلف وأرقام الصفحات.",
+        "cancel": "إلغاء",
+        "create": "تنزيل PDF ({count, plural, one {قسم واحد} two {قسمان} few {# أقسام} many {# قسمًا} other {# قسم}})",
+        "counts": {
+          "keyDevelopments": "الملخص و{count, plural, =0 {بلا نتائج رئيسية} one {نتيجة رئيسية واحدة} two {نتيجتان رئيسيتان} few {# نتائج رئيسية} many {# نتيجة رئيسية} other {# نتيجة رئيسية}}",
+          "map": "النطاق مع {count, plural, one {حدث واحد} two {حدثين} few {# أحداث} many {# حدثًا} other {# حدث}}",
+          "contexts": "{count, plural, one {نتيجة واحدة} two {نتيجتان} few {# نتائج} many {# نتيجة} other {# نتيجة}}",
+          "hazards": "{count, plural, one {خطر واحد} two {خطران} few {# مخاطر} many {# خطرًا} other {# خطر}}",
+          "displacement": "{count, plural, one {نتيجة واحدة} two {نتيجتان} few {# نتائج} many {# نتيجة} other {# نتيجة}}",
+          "priorityNeeds": "{count, plural, one {قطاع واحد} two {قطاعان} few {# قطاعات} many {# قطاعًا} other {# قطاع}}",
+          "responseActivities": "{count, plural, one {قطاع واحد} two {قطاعان} few {# قطاعات} many {# قطاعًا} other {# قطاع}}",
+          "sources": "{count, plural, one {مصدر واحد} two {مصدران} few {# مصادر} many {# مصدرًا} other {# مصدر}}"
+        },
+        "hints": {
+          "currentStatus": "النازحون والمحتاجون والتمويل",
+          "outlook": "السيناريو الأرجح"
+        }
+      }
+    },
+    "refresh": {
+      "button": "تحديث الآن",
+      "requested": "تم طلب التحديث. تستغرق النسخة الجديدة عادةً بضع دقائق وستظهر هنا تلقائيًا.",
+      "error": "تعذّر طلب التحديث. يُرجى المحاولة مرة أخرى."
+    }
+  },
+  "agent": {
+    "name": "وكيل CLEAR",
+    "drawer": {
+      "open": "فتح لوحة الوكيل",
+      "close": "إغلاق لوحة الوكيل",
+      "launcherTooltip": "اسأل وكيل CLEAR",
+      "newThread": "محادثة جديدة",
+      "openPage": "فتح صفحة الوكيل",
+      "width": "عرض اللوحة",
+      "widthSmall": "صغير",
+      "widthMedium": "متوسط",
+      "widthLarge": "كبير",
+      "history": "المحادثات الأخيرة",
+      "historyEmpty": "لا توجد محادثات بعد.",
+      "allConversations": "كل المحادثات ←"
+    },
+    "page": {
+      "title": "الوكيل",
+      "subtitle": "اسأل وكيل CLEAR",
+      "unavailable": "وكيل CLEAR غير متاح لحسابك.",
+      "historyLabel": "محادثاتك",
+      "untitled": "محادثة بلا عنوان",
+      "empty": "لا توجد محادثات بعد.",
+      "loadMore": "تحميل المزيد"
+    },
+    "thread": {
+      "inputLabel": "راسل وكيل CLEAR",
+      "inputPlaceholder": "اسأل أي شيء",
+      "send": "إرسال",
+      "thinking": "جارٍ التفكير…",
+      "intro": "اسأل عن أزمة أو مكان أو التنبيهات الأخيرة أو عمل المجلس النرويجي للاجئين. يوضح وكيل CLEAR المصادر التي استخدمها.",
+      "suggestions": {
+        "general": {
+          "q1": "ما هي أشد الأزمات خطورة حاليًا؟",
+          "q2": "ما الجديد خلال الساعات الـ24 الماضية؟",
+          "q3": "ماذا تقول وثائق المجلس النرويجي للاجئين عن الوصول الإنساني؟"
+        },
+        "event": {
+          "q1": "لخّص هذا الحدث",
+          "q2": "على أي إشارات يستند هذا الحدث؟",
+          "q3": "هل توجد أحداث مشابهة قريبة؟"
+        },
+        "signal": {
+          "q1": "لخّص هذه الإشارة",
+          "q2": "هل هذه الإشارة جزء من حدث؟",
+          "q3": "ما مدى موثوقية هذا المصدر؟"
+        },
+        "crisis": {
+          "q1": "لخّص هذه الأزمة",
+          "q2": "ما الذي تغيّر في هذه الأزمة هذا الأسبوع؟",
+          "q3": "ما هي الاحتياجات الإنسانية الرئيسية؟"
+        },
+        "map": {
+          "q1": "ماذا يحدث في هذه المنطقة؟",
+          "q2": "أي الأحداث هنا هي الأشد خطورة؟",
+          "q3": "ما الجديد هنا هذا الأسبوع؟"
+        },
+        "detection": {
+          "q1": "ما الجديد ضمن عوامل التصفية هذه هذا الأسبوع؟",
+          "q2": "أي هذه الأحداث هي الأشد خطورة؟",
+          "q3": "لخّص الاتجاهات الرئيسية هنا"
+        }
+      }
+    },
+    "message": {
+      "sources": "مصادر من NRC Find ({count})",
+      "showMore": "عرض المزيد",
+      "showLess": "عرض أقل",
+      "passages": "{count, plural, one {مقطع واحد} two {مقطعان} few {# مقاطع} many {# مقطعًا} other {# مقطع}}",
+      "download": "تنزيل {name}",
+      "clearEvent": "حدث CLEAR",
+      "hidePassages": "إخفاء المقاطع"
+    },
+    "tools": {
+      "nrcFindRunning": "جارٍ البحث في وثائق المجلس النرويجي للاجئين…",
+      "nrcFindDone": "تم البحث في وثائق المجلس النرويجي للاجئين",
+      "nrcFindUnavailable": "وثائق المجلس النرويجي للاجئين غير متاحة",
+      "running": "جارٍ تشغيل {tool}…",
+      "done": "تم تشغيل {tool}",
+      "unavailable": "{tool} غير متاح",
+      "navigateRunning": "جارٍ نقلك…",
+      "navigateDone": "تم النقل",
+      "navigateUnavailable": "تعذّر نقلك إلى هناك"
+    },
+    "errors": {
+      "budgetSpent": "نفدت ميزانيتك اليومية للوكيل.",
+      "budgetResets": "تتم إعادة تعيينها في {time}.",
+      "forbiddenThread": "هذه المحادثة تخص مستخدمًا آخر.",
+      "notConfigured": "وكيل CLEAR غير مُعدّ على هذا الخادم.",
+      "generic": "تعذّر على وكيل CLEAR الإجابة. يرجى المحاولة مرة أخرى.",
+      "loadFailed": "تعذّر تحميل هذه المحادثة.",
+      "retryLoad": "إعادة المحاولة"
+    },
+    "navigation": {
+      "movedTo": "نقلتك إلى {kind}: {label}",
+      "back": "رجوع",
+      "kinds": {
+        "event": "الحدث",
+        "signal": "الإشارة",
+        "crisis": "الأزمة",
+        "map": "الخريطة",
+        "detection": "الرصد"
+      },
+      "outOfScope": "{country} خارج نطاق فريقك، لذلك لا يُعرض.",
+      "placeUnavailable": "هذا المكان غير متاح لك، لذلك لا يُعرض."
+    },
+    "context": {
+      "label": "السياق",
+      "filters": "{count, plural, zero {لا عوامل تصفية} one {عامل تصفية واحد} two {عاملا تصفية} few {# عوامل تصفية} many {# عامل تصفية} other {# عامل تصفية}}",
+      "kinds": {
+        "event": "حدث",
+        "signal": "إشارة",
+        "crisis": "أزمة"
+      },
+      "filterKeys": {
+        "locationId": "الموقع",
+        "country": "البلد",
+        "region": "المنطقة",
+        "from": "من",
+        "to": "إلى",
+        "severityMin": "الحد الأدنى للخطورة",
+        "severityMax": "الحد الأقصى للخطورة",
+        "eventTypes": "أنواع الأحداث",
+        "sourceNames": "المصادر"
+      }
+    }
   }
 }

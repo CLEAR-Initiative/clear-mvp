@@ -81,21 +81,40 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
   {
     key: "knowledge_hub",
     label: "Knowledge Hub",
-    description: "Document library, contacts panel, and HumChat",
+    description: "Document library and contacts panel",
     tier: 4,
     defaultEnabled: true,
     route: "/knowledge",
   },
   {
     key: "agent",
-    label: "Agent",
-    description: "NRC Find agent",
+    label: "CLEAR Agent",
+    description:
+      "The CLEAR Agent: the Agent drawer on every page and the Agent page. Answers from NRC Find; Threads are stored as Conversations in clear-api under a daily Agent budget.",
     tier: 4,
     defaultEnabled: false,
     route: "/agent",
   },
 
+  {
+    key: "hotline_inbox",
+    label: "Hotline Inbox",
+    description:
+      "WhatsApp hotline triage inbox (admin only for now). UI-only gate; clear-api's admin/analyst role check on ground queries is the backend enforcement. Owner: James. Remove once the hotline is Verified in production ([EPIC] WhatsApp Hotline V1).",
+    tier: 2,
+    defaultEnabled: false,
+    route: "/inbox",
+  },
+
   // ── Sub-tab flags (gate a tab within a page, not a nav route — no `route`) ──
+  {
+    key: "hotline_translation",
+    label: "Hotline translation",
+    description:
+      "On-demand translation of hotline messages in the Hotline Inbox (needs `hotline_inbox`), into the reader's language. Turn on only where clear-api has on-demand translation (clear-api#627) and the pipeline's translate drain (clear-pipeline#626) are live: while on, the inbox asks clear-api for each message's detected language, and an API without it fails the whole inbox. Enforced in the ground router, not only the UI, so turning it off also contains a rollback without a deploy.",
+    tier: 4,
+    defaultEnabled: false,
+  },
   {
     key: "ground_intel",
     label: "Ground Intel",
@@ -105,11 +124,35 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     defaultEnabled: true,
   },
   {
+    key: "crisis_overview",
+    label: "Crisis Overview",
+    description:
+      "Crisis Overview tab in the Insights page (the crises list). UI-only gate; when off the page falls back to the next enabled Insights tab.",
+    tier: 3,
+    defaultEnabled: true,
+  },
+  {
     key: "situation_analysis",
     label: "Situation Analysis",
     description: "Situation Analysis tab in the Insights page",
     tier: 3,
     defaultEnabled: true,
+  },
+  {
+    key: "analysis_v2",
+    label: "Analysis",
+    description:
+      "Analysis tab in the Insights page: the unified scoped analysis (PRD Situation analysis (neo)), country scope first, read from clear-api's frame-scoped `analysis` (ADR-0007). UI-only gate. Remove once it replaces the Crisis and Situation Analysis tabs.",
+    tier: 3,
+    defaultEnabled: false,
+  },
+  {
+    key: "agent_clear_data",
+    label: "CLEAR Agent: CLEAR data and navigation",
+    description:
+      "Lets the CLEAR Agent (needs `agent`) answer from CLEAR's own data (Signals, Events, Alerts, Crises, situation analyses, knowledge base) through the curated clear-mcp tools, see the user's Current view, and move the app with Agent navigation (always announced, with Back). Enforced in /api/agent, not only the UI. Off: the Agent answers from NRC Find only, as in V1.",
+    tier: 4,
+    defaultEnabled: false,
   },
 ];
 

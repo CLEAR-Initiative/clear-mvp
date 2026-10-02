@@ -83,7 +83,10 @@ export function FilterBar({
         }}
         // Value stays the canonical COD name (it keys location lookups);
         // only the label is shortened.
-        data={countries.map((c) => ({ value: c, label: shortCountryName(c) }))}
+        data={countries.map((c) => ({
+          value: c,
+          label: c === "All Countries" ? t("allCountries") : shortCountryName(c),
+        }))}
         style={{ minWidth: 130, flex: "1 1 130px", maxWidth: 200 }}
         styles={{ input: INPUT_STYLE }}
         label={<FilterLabel>{t("country")}</FilterLabel>}

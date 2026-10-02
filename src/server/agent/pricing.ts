@@ -1,0 +1,74 @@
+/**
+ * What a CLEAR Agent turn costs, for the daily Agent budget.
+ *
+ * USD per million tokens, keyed by the exact `CLEAR_AGENT_MODEL` router
+ * string. Anthropic first-party rates as of 2026-09-25. All input tokens
+ * are priced at the full input rate (cache reads are cheaper), so the
+ * budget errs on the side of counting too much.
+ *
+ * A configured model with no price here fails startup
+ * (`assertClearAgentModelConfigured`, called from instrumentation): the budget
+ * must never be bypassed by a model nobody priced.
+ */
+
+import { SCRIPTED_MODEL_ID } from "~/server/agent/scripted-model-id";
+
+export interface ModelPrice {
+  inputPerMTok: number;
+  outputPerMTok: number;
+}
+
+export const MODEL_PRICES: Readonly<Record<string, ModelPrice>> = {
+  "anthropic/claude-fable-5-1": { inputPerMTok: 10, outputPerMTok: 50 },
+  "anthropic/claude-opus-5-5": { inputPerMTok: 4, outputPerMTok: 20 },
+  "anthropic/claude-opus-5": { inputPerMTok: 5, outputPerMTok: 25 },
+  "anthropic/claude-sonnet-5-5": { inputPerMTok: 2, outputPerMTok: 10 },
+  "anthropic/claude-sonnet-5": { inputPerMTok: 2, outputPerMTok: 10 },
+  "anthropic/claude-haiku-4-5": { inputPerMTok: 1, outputPerMTok: 5 },
+  // The deterministic e2e stand-in costs nothing.
+  [SCRIPTED_MODEL_ID]: { inputPerMTok: 0, outputPerMTok: 0 },
+};
+
+export function priceFor(modelId: string): ModelPrice | undefined {
+  return Object.hasOwn(MODEL_PRICES, modelId) ? MODEL_PRICES[modelId] : undefined;
+}
+
+export interface TurnTokens {
+  inputTokens: number;
+  outputTokens: number;
+}
+
+/** Cost of one turn in USD. Throws for an unpriced model. */
+export function turnCostUsd(modelId: string, tokens: TurnTokens): number {
+  const price = priceFor(modelId);
+  if (!price) throw new Error(`No price for CLEAR_AGENT_MODEL "${modelId}"`);
+  return (
+    (tokens.inputTokens * price.inputPerMTok + tokens.outputTokens * price.outputPerMTok) /
+    1_000_000
+  );
+}
+
+/**
+ * Fail startup when the configured model can't run as configured: it has no
+ * price, or it is the scripted test model in production without the explicit
+ * allow. An unset model is fine at startup — the Agent answers 503 until one
+ * is configured.
+ */
+export function assertClearAgentModelConfigured(
+  env: Record<string, string | undefined> = process.env,
+): void {
+  const id = env.CLEAR_AGENT_MODEL?.trim();
+  if (
+    id === SCRIPTED_MODEL_ID &&
+    env.NODE_ENV === "production" &&
+    env.CLEAR_AGENT_ALLOW_SCRIPTED_MODEL !== "1"
+  ) {
+    throw new Error(`CLEAR_AGENT_MODEL "${id}" is for tests; set a real model.`);
+  }
+  if (id && !priceFor(id)) {
+    throw new Error(
+      `CLEAR_AGENT_MODEL "${id}" has no price in src/server/agent/pricing.ts. ` +
+        "Add one so the daily Agent budget can be enforced.",
+    );
+  }
+}

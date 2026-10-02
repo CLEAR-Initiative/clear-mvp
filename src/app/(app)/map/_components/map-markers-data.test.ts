@@ -4,11 +4,13 @@ import {
   applyLocationChallengesToMarkers,
   crisesToMarkers,
   eventsToMarkers,
+  focusCrisisToMarkers,
   focusEventToMarkers,
   signalsToMarkers,
 } from "./map-markers-data";
 import type {
   GqlAlert,
+  GqlCrisis,
   GqlEvent,
   GqlLocation,
   GqlSignal,
@@ -87,6 +89,35 @@ describe("eventsToMarkers / representativePoint", () => {
     expect(markers[0]?.lng).toBe(32.5);
     expect(markers[0]?.lat).toBe(15.5);
     expect(markers[0]?.locationId).toBe("rep");
+  });
+
+  it("uses a catalog polygon centroid when the aggregated event has no Point", () => {
+    const event = baseEvent({
+      id: "evt-khartoum",
+      title: "Flooding in Khartoum",
+      generalLocation: {
+        id: "krt",
+        name: "Khartoum",
+        level: 2,
+        ancestorIds: ["sd"],
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [32.4, 15.4],
+              [32.7, 15.4],
+              [32.7, 15.7],
+              [32.4, 15.7],
+              [32.4, 15.4],
+            ],
+          ],
+        },
+      },
+    });
+    const markers = eventsToMarkers([event]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.lng).toBeCloseTo(32.52, 2);
+    expect(markers[0]?.lat).toBeCloseTo(15.52, 2);
   });
 
   it("falls back to event Point when representativePoint is missing", () => {
@@ -205,6 +236,175 @@ describe("focusEventToMarkers", () => {
     expect(markers.some((m) => m.eventId === "evt-focus" && m.markerKind === "event")).toBe(true);
     expect(markers.some((m) => m.eventId === "sig-a")).toBe(true);
     expect(markers.some((m) => m.eventId === "sig-b")).toBe(true);
+  });
+});
+
+describe("focusCrisisToMarkers", () => {
+  it("marks every linked event, not a single crisis pin", () => {
+    const crisis = {
+      id: "cri-multi",
+      title: "Multi",
+      summary: null,
+      severity: 3,
+      generalLocation: pointLoc("cri-pt", 30, 10),
+      needs: null,
+      scenarios: null,
+      populationAffected: null,
+      populationInArea: null,
+      attachments: [],
+      events: [
+        baseEvent({
+          id: "evt-a",
+          title: "Flooding in Khartoum",
+          types: ["ba", "rl"],
+          representativePoint: pointLoc("a", 32.1, 15.1),
+        }),
+        baseEvent({
+          id: "evt-b",
+          title: "Displacement corridor",
+          types: ["ba"],
+          representativePoint: pointLoc("b", 32.2, 15.2),
+        }),
+      ],
+    } as GqlCrisis;
+
+    const markers = focusCrisisToMarkers(crisis);
+    expect(markers).toHaveLength(2);
+    expect(markers.every((m) => m.markerKind === "event")).toBe(true);
+    expect(markers.map((m) => m.eventId).sort()).toEqual(["evt-a", "evt-b"]);
+    expect(markers.map((m) => m.title).sort()).toEqual([
+      "Displacement corridor",
+      "Flooding in Khartoum",
+    ]);
+  });
+
+  it("does not fall back to raw type codes when event title is missing", () => {
+    const crisis = {
+      id: "cri-codes",
+      title: "Crisis fallback title",
+      summary: null,
+      severity: 2,
+      generalLocation: pointLoc("cri-pt", 30, 10),
+      needs: null,
+      scenarios: null,
+      populationAffected: null,
+      populationInArea: null,
+      attachments: [],
+      events: [
+        {
+          id: "evt-codes",
+          title: null,
+          types: ["ba", "rl"],
+          representativePoint: pointLoc("c", 32.3, 15.3),
+          generalLocation: null,
+          originLocation: null,
+          destinationLocation: null,
+          signals: [],
+        },
+      ],
+    } as GqlCrisis;
+
+    const markers = focusCrisisToMarkers(crisis);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.title).toBe("Crisis fallback title");
+    expect(markers[0]?.title).not.toMatch(/^(ba|rl)$/i);
+  });
+
+  it("falls back to the crisis pin when no event has a Point", () => {
+    const crisis = {
+      id: "cri-poly",
+      title: "Poly only",
+      summary: null,
+      severity: 2,
+      generalLocation: pointLoc("cri-only", 31, 12),
+      needs: null,
+      scenarios: null,
+      populationAffected: null,
+      populationInArea: null,
+      attachments: [],
+      events: [
+        baseEvent({
+          id: "evt-empty",
+          representativePoint: null,
+          generalLocation: null,
+          originLocation: null,
+          destinationLocation: null,
+          signals: [],
+        }),
+      ],
+    } as GqlCrisis;
+
+    const markers = focusCrisisToMarkers(crisis);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.markerKind).toBe("crisis");
+    expect(markers[0]?.eventId).toBe("cri-poly");
+  });
+});
+
+describe("signalsToMarkers", () => {
+  it("plots a Point generalLocation", () => {
+    const markers = signalsToMarkers([
+      {
+        id: "sig-pt",
+        source: { id: "s", name: "field_officer", type: "manual" },
+        title: "Checkpoint",
+        description: null,
+        severity: 2,
+        url: null,
+        publishedAt: "2026-01-01T00:00:00.000Z",
+        collectedAt: "2026-01-01T00:00:00.000Z",
+        generalLocation: pointLoc("pt", -66.9, 10.5),
+        originLocation: null,
+        destinationLocation: null,
+        events: [],
+      },
+    ]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.lng).toBe(-66.9);
+    expect(markers[0]?.lat).toBe(10.5);
+    expect(markers[0]?.markerKind).toBe("signal");
+  });
+
+  it("falls back to polygon centroid for country-level catalog tags (e.g. Venezuela)", () => {
+    const markers = signalsToMarkers([
+      {
+        id: "sig-ve",
+        source: { id: "s", name: "field_officer", type: "manual" },
+        title: "Field note Venezuela",
+        description: null,
+        severity: 2,
+        url: null,
+        publishedAt: "2026-01-01T00:00:00.000Z",
+        collectedAt: "2026-01-01T00:00:00.000Z",
+        generalLocation: {
+          id: "ve",
+          name: "Venezuela",
+          level: 0,
+          ancestorIds: [],
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [-73.4, 0.6],
+                [-59.8, 0.6],
+                [-59.8, 12.2],
+                [-73.4, 12.2],
+                [-73.4, 0.6],
+              ],
+            ],
+          },
+        },
+        originLocation: null,
+        destinationLocation: null,
+        events: [],
+      },
+    ]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.markerKind).toBe("signal");
+    expect(markers[0]?.eventId).toBe("sig-ve");
+    // Outer-ring arithmetic mean (includes GeoJSON closing vertex)
+    expect(markers[0]?.lng).toBeCloseTo(-67.96, 2);
+    expect(markers[0]?.lat).toBeCloseTo(5.24, 2);
   });
 });
 

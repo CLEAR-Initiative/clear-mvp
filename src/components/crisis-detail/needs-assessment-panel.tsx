@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, type ReactNode } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Box, Text, Group, Badge, Stack, Modal, List } from "@mantine/core";
 import {
@@ -82,9 +82,17 @@ type SectorIcon = React.ComponentType<{ size?: number; color?: string }>;
 
 // key doubles as the i18n key under crisisDetail.needs.sectors.*;
 // label stays English because it is also the lookup key into the pipeline `needs.sector` payload.
-type SectorKey = "shelter" | "wash" | "protection" | "health" | "food" | "education";
+export type NeedsSectorKey = "shelter" | "wash" | "protection" | "health" | "food" | "education";
+type SectorKey = NeedsSectorKey;
 
-const SECTORS: {
+/** Resolved severity pill: the adapter owns the scale, the table only renders it. */
+export interface NeedsSeverity {
+  label: string;
+  color: string;
+  bg: string;
+}
+
+export const NEEDS_SECTORS: {
   key: SectorKey;
   label: string;
   icon: SectorIcon;
@@ -98,6 +106,8 @@ const SECTORS: {
   { key: "food",       label: "Food Security", icon: IconToolsKitchen2, ochaCodes: ["FSL", "FSC", "FOOD", "FSLA"], msnaKey: "FSL"        },
   { key: "education",  label: "Education",     icon: IconBook,          ochaCodes: ["EDU"],                        msnaKey: "Education"  },
 ];
+
+const SECTORS = NEEDS_SECTORS;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -274,6 +284,7 @@ function SectorRow({
   Icon,
   severity,
   description,
+  detail,
   responseGap,
   nrcRelevant,
   ochaData,
@@ -285,8 +296,9 @@ function SectorRow({
 }: {
   label: string;
   Icon: SectorIcon;
-  severity: string | null;
+  severity: NeedsSeverity;
   description: string | null;
+  detail?: ReactNode;
   responseGap: boolean | null;
   nrcRelevant: boolean | null;
   ochaData: Ocha3wSector | null;
@@ -299,10 +311,6 @@ function SectorRow({
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
-  const saf = getSafColors(severity);
-  const rawLevel = severity ?? "Unknown";
-  const safKey = SAF_LABEL_KEYS[rawLevel];
-  const displayLevel = safKey ? t(`needs.saf.${safKey}`) : rawLevel;
   const Chevron = open ? IconChevronDown : IconChevronRight;
 
   return (
@@ -348,11 +356,11 @@ function SectorRow({
               fontWeight: 700,
               letterSpacing: "0.04em",
               textTransform: "uppercase",
-              background: saf.bg,
-              color: saf.color,
+              background: severity.bg,
+              color: severity.color,
             }}
           >
-            {displayLevel}
+            {severity.label}
           </span>
         </Box>
 
@@ -417,6 +425,7 @@ function SectorRow({
         >
           <Stack gap={14}>
             {/* Summary */}
+            {detail ?? (
             <Box>
               <Group gap={6} mb={6} align="center">
                 <Text size="xs" fw={700} c="var(--color-text-secondary)" tt="uppercase" style={{ letterSpacing: "0.04em", fontSize: 10 }}>
@@ -436,6 +445,7 @@ function SectorRow({
                 </Text>
               )}
             </Box>
+            )}
 
             {/* Indicators */}
             {(responseGap === true || nrcRelevant === true) && (
@@ -515,12 +525,16 @@ function ColHeader({ children, style }: { children: React.ReactNode; style?: Rea
 
 // ── Needs summary card ────────────────────────────────────────────────────────
 
-interface SectorRowData {
+export interface NeedsSectorRow {
   key: SectorKey;
   label: string;
   icon: SectorIcon;
-  severity: string | null;
+  severity: NeedsSeverity;
+  /** Sort rank, 0 = most severe. */
+  severityRank: number;
   description: string | null;
+  /** Replaces the default AI-summary block in the expanded row. */
+  detail?: ReactNode;
   responseGap: boolean | null;
   nrcRelevant: boolean | null;
   ochaMatch: Ocha3wSector | null;
@@ -687,16 +701,13 @@ interface NeedsAssessmentPanelProps {
   crisis: GqlCrisis;
 }
 
+/** Crisis adapter: MSNA / OCHA 3W on the crisis's A2 plus the pipeline's
+ *  `crisis.needs`, on the SAF scale. */
 export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
   const t = useTranslations("crisisDetail");
   const ocha3w = useMemo(() => parseOcha3w(crisis), [crisis]);
   const msna = useMemo(() => parseMsna(crisis), [crisis]);
   const a2 = useMemo(() => resolveA2(crisis), [crisis]);
-  const [severityInfoOpen, setSeverityInfoOpen] = useState(false);
-  const [presenceInfoOpen, setPresenceInfoOpen] = useState(false);
-  const [pinInfoOpen, setPinInfoOpen] = useState(false);
-  const [assessmentInfoOpen, setAssessmentInfoOpen] = useState(false);
-  const [precisionInfoOpen, setPrecisionInfoOpen] = useState(false);
 
   const a2Pop = useMemo(() => {
     const raw = a2?.population;
@@ -705,7 +716,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
     return isNaN(n) ? null : n;
   }, [a2]);
 
-  const rows = useMemo<SectorRowData[]>(() => {
+  const rows = useMemo<NeedsSectorRow[]>(() => {
     const needsSector = (crisis.needs as Record<string, unknown> | null | undefined)?.sector as Record<string, Record<string, unknown>> | null | undefined;
     return SECTORS.map((sector) => {
       const ochaMatch = ocha3w ? matchOchasector(ocha3w.sectors, sector.ochaCodes) : null;
@@ -722,12 +733,18 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
       // contextual signals and reports rather than MSNA baseline data only.
       const assessmentLevel: AssessmentLevel = 1;
       const precision: Precision | null = a2 ? "District" : null;
+      const rawSeverity = typeof pipelineData?.severity === "string" ? pipelineData.severity : msnaSeverity;
+      const safKey = SAF_LABEL_KEYS[rawSeverity ?? "Unknown"];
 
       return {
         key: sector.key,
         label: sector.label,
         icon: sector.icon,
-        severity: typeof pipelineData?.severity === "string" ? pipelineData.severity : msnaSeverity,
+        severity: {
+          ...getSafColors(rawSeverity),
+          label: safKey ? t(`needs.saf.${safKey}`) : (rawSeverity ?? ""),
+        },
+        severityRank: SAF_ORDER[rawSeverity ?? "Unknown"] ?? 5,
         description: typeof pipelineData?.description === "string" ? pipelineData.description : null,
         responseGap: typeof pipelineData?.responseGap === "boolean" ? pipelineData.responseGap : null,
         nrcRelevant: typeof pipelineData?.nrcRelevant === "boolean" ? pipelineData.nrcRelevant : null,
@@ -737,13 +754,79 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
         assessmentLevel,
         precision,
       };
-    }).sort((a, b) => (SAF_ORDER[a.severity ?? "Unknown"] ?? 5) - (SAF_ORDER[b.severity ?? "Unknown"] ?? 5));
-  }, [crisis.needs, ocha3w, msna, a2Pop]);
+    });
+  }, [crisis.needs, ocha3w, msna, a2Pop, a2, t]);
+
+  return (
+    <NeedsAssessmentView
+      rows={rows}
+      summary={<NeedsSummaryCard crisis={crisis} ocha3w={ocha3w} hasMsna={msna !== null} />}
+      scopeBadge={a2?.name ?? null}
+      severityLegend={<SafSeverityLegend />}
+    />
+  );
+}
+
+function SafSeverityLegend() {
+  const t = useTranslations("crisisDetail");
+  return (
+    <Stack gap={16}>
+      <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
+        {t("needs.severityModal.intro")}
+      </Text>
+
+      <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
+        <Box style={{ display: "grid", gridTemplateColumns: "90px 1fr", background: "var(--color-bg-muted)", padding: "6px 12px", borderBottom: "1px solid var(--color-border)" }}>
+          <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>{t("needs.severityModal.score")}</Text>
+          <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>{t("needs.severityModal.level")}</Text>
+        </Box>
+        {([
+          { range: "80-100", levelKey: "catastrophic", color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
+          { range: "65-79",  levelKey: "extreme",      color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
+          { range: "45-64",  levelKey: "severe",       color: "var(--color-warning)",   bg: "var(--color-warning-light)"  },
+          { range: "25-44",  levelKey: "stressed",     color: "var(--color-info)",      bg: "var(--color-info-light)"     },
+          { range: "0-24",   levelKey: "minimal",      color: "var(--color-success)",   bg: "var(--color-success-light)"  },
+          { range: null,     levelKey: "unknown",      color: "var(--color-text-muted)",bg: "var(--color-bg-muted)"       },
+        ] as const).map((row) => (
+          <Box key={row.levelKey} style={{ display: "grid", gridTemplateColumns: "90px 1fr", padding: "8px 12px", borderTop: "1px solid var(--color-border)", alignItems: "center" }}>
+            <Text size="xs" c="var(--color-text-secondary)">{row.range ?? t("needs.severityModal.noData")}</Text>
+            <span style={{ display: "inline-block", padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", background: row.bg, color: row.color }}>
+              {t(`needs.saf.${row.levelKey}`)}
+            </span>
+          </Box>
+        ))}
+      </Box>
+
+      <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
+        {t("needs.severityModal.footnote")}
+      </Text>
+    </Stack>
+  );
+}
+
+interface NeedsAssessmentViewProps {
+  rows: NeedsSectorRow[];
+  /** Rendered above the sector table; omit to show the table only. */
+  summary?: ReactNode;
+  /** Scope label next to the table title (e.g. the A2 district). */
+  scopeBadge?: string | null;
+  /** Body of the severity-column info modal; the adapter owns the scale. */
+  severityLegend: ReactNode;
+}
+
+/** Sector needs table shared by every scope: rows arrive fully resolved. */
+export function NeedsAssessmentView({ rows: unsorted, summary, scopeBadge, severityLegend }: NeedsAssessmentViewProps) {
+  const t = useTranslations("crisisDetail");
+  const [severityInfoOpen, setSeverityInfoOpen] = useState(false);
+  const [presenceInfoOpen, setPresenceInfoOpen] = useState(false);
+  const [pinInfoOpen, setPinInfoOpen] = useState(false);
+  const [assessmentInfoOpen, setAssessmentInfoOpen] = useState(false);
+  const [precisionInfoOpen, setPrecisionInfoOpen] = useState(false);
+  const rows = useMemo(() => [...unsorted].sort((a, b) => a.severityRank - b.severityRank), [unsorted]);
 
   return (
     <Box p={24}>
-      {/* Summary */}
-      <NeedsSummaryCard crisis={crisis} ocha3w={ocha3w} hasMsna={msna !== null} />
+      {summary}
 
       {/* Panel card */}
       <Box style={{ border: "1px solid var(--color-border)", background: "var(--color-bg-white)" }}>
@@ -754,9 +837,9 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
               <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
                 {t("needs.sectorsTitle")}
               </Text>
-              {a2 && (
+              {scopeBadge && (
                 <Badge size="xs" style={{ background: "var(--color-info-light)", color: "var(--color-info)" }}>
-                  {a2.name}
+                  {scopeBadge}
                 </Badge>
               )}
             </Group>
@@ -807,6 +890,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
             Icon={row.icon}
             severity={row.severity}
             description={row.description}
+            detail={row.detail}
             responseGap={row.responseGap}
             nrcRelevant={row.nrcRelevant}
             ochaData={row.ochaMatch}
@@ -826,37 +910,7 @@ export function NeedsAssessmentPanel({ crisis }: NeedsAssessmentPanelProps) {
         title={<Text fw={700} size="sm" c="var(--color-text-primary)">{t("needs.severityModal.title")}</Text>}
         size="sm"
       >
-        <Stack gap={16}>
-          <Text size="sm" c="var(--color-text-secondary)" style={{ lineHeight: 1.65 }}>
-            {t("needs.severityModal.intro")}
-          </Text>
-
-          <Box style={{ border: "1px solid var(--color-border)", overflow: "hidden" }}>
-            <Box style={{ display: "grid", gridTemplateColumns: "90px 1fr", background: "var(--color-bg-muted)", padding: "6px 12px", borderBottom: "1px solid var(--color-border)" }}>
-              <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>{t("needs.severityModal.score")}</Text>
-              <Text style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>{t("needs.severityModal.level")}</Text>
-            </Box>
-            {([
-              { range: "80-100", levelKey: "catastrophic", color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
-              { range: "65-79",  levelKey: "extreme",      color: "var(--color-critical)",  bg: "var(--color-critical-light)" },
-              { range: "45-64",  levelKey: "severe",       color: "var(--color-warning)",   bg: "var(--color-warning-light)"  },
-              { range: "25-44",  levelKey: "stressed",     color: "var(--color-info)",      bg: "var(--color-info-light)"     },
-              { range: "0-24",   levelKey: "minimal",      color: "var(--color-success)",   bg: "var(--color-success-light)"  },
-              { range: null,     levelKey: "unknown",      color: "var(--color-text-muted)",bg: "var(--color-bg-muted)"       },
-            ] as const).map((row) => (
-              <Box key={row.levelKey} style={{ display: "grid", gridTemplateColumns: "90px 1fr", padding: "8px 12px", borderTop: "1px solid var(--color-border)", alignItems: "center" }}>
-                <Text size="xs" c="var(--color-text-secondary)">{row.range ?? t("needs.severityModal.noData")}</Text>
-                <span style={{ display: "inline-block", padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", background: row.bg, color: row.color }}>
-                  {t(`needs.saf.${row.levelKey}`)}
-                </span>
-              </Box>
-            ))}
-          </Box>
-
-          <Text size="xs" c="var(--color-text-muted)" style={{ lineHeight: 1.55 }}>
-            {t("needs.severityModal.footnote")}
-          </Text>
-        </Stack>
+        {severityLegend}
       </Modal>
 
       {/* ── People in Need info modal ───────────────────────────────────── */}

@@ -25,7 +25,7 @@ import { IconPlus, IconTrash, IconUserPlus } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { isPlatformAdmin } from "~/lib/roles";
 
-type TeamRole = "team_admin" | "field_coordinator" | "team_member";
+type TeamRole = "team_admin" | "field_coordinator" | "emergency_response_manager" | "team_member";
 
 function slugify(value: string) {
   return value
@@ -624,6 +624,7 @@ function OrgDetail({ orgId, userRole }: { orgId: string; userRole: string }) {
                         data={[
                           { value: "team_member", label: t("invite.teamRoles.team_member") },
                           { value: "field_coordinator", label: t("invite.teamRoles.field_coordinator") },
+                          { value: "emergency_response_manager", label: t("invite.teamRoles.emergency_response_manager") },
                           { value: "team_admin", label: t("invite.teamRoles.team_admin") },
                         ]}
                         disabled={!isSelected}

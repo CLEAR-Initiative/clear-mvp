@@ -1,5 +1,5 @@
 ---
-status: accepted (provisional — revisit with the upcoming agent/conversation architecture work)
+status: superseded by ADR-0005
 ---
 
 # Agent chat is a stateless RAG thread

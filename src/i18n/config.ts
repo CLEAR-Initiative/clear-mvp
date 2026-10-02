@@ -29,3 +29,24 @@ export const localeLabels: Record<Locale, string> = {
 export function isLocale(value: unknown): value is Locale {
   return typeof value === "string" && (locales as readonly string[]).includes(value);
 }
+
+/**
+ * Picks the first supported locale from an Accept-Language header value,
+ * e.g. "fr-FR,fr;q=0.9,en;q=0.8" -> "fr". Tokens arrive in client
+ * preference order, so the first match wins.
+ */
+export function matchAcceptLanguage(header: string | null | undefined): Locale | undefined {
+  if (!header) return undefined;
+  for (const part of header.split(",")) {
+    const tag = part.split(";")[0]?.trim().toLowerCase();
+    if (!tag) continue;
+    const base = tag.split("-")[0];
+    if (isLocale(base)) return base;
+  }
+  return undefined;
+}
+
+/** The UI locale for a request: the locale cookie, else Accept-Language. */
+export function pickLocale(cookieLocale: string | undefined, acceptLanguage: string | null | undefined): Locale {
+  return isLocale(cookieLocale) ? cookieLocale : (matchAcceptLanguage(acceptLanguage) ?? defaultLocale);
+}

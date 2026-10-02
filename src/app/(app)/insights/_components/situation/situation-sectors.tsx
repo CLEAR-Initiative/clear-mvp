@@ -99,7 +99,7 @@ export function SituationSectors({
   );
 }
 
-function PillarList({
+export function PillarList({
   label,
   items,
   lineRefs,

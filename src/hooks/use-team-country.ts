@@ -3,6 +3,9 @@
 import { useMemo } from "react";
 import { useWorkingCountry } from "~/providers/working-country-provider";
 import { isTeamScopeReady } from "~/lib/team-scope-ready";
+import { ALL_COUNTRIES } from "~/lib/constants/country-config";
+
+export { ALL_COUNTRIES };
 
 export { isTeamScopeReady };
 
@@ -53,11 +56,28 @@ export function useScopedCountryOptions(allCountries: string[]): string[] {
 }
 
 /**
+ * Picker rows: scoped names, plus All Countries unless the team is pinned
+ * to a single binding (that team gets a label, not a dropdown).
+ */
+export function pickerCountryOptions(
+  allCountries: readonly string[],
+  scopedCountryNames: readonly string[],
+): string[] {
+  const listed = scopeCountryOptions(allCountries, scopedCountryNames);
+  if (scopedCountryNames.length === 1) {
+    return listed.length > 0 ? listed : [...scopedCountryNames];
+  }
+  const names = listed.length > 0 ? listed : [...scopedCountryNames];
+  return [ALL_COUNTRIES, ...names];
+}
+
+/**
  * Country the picker should display.
  *
- * One binding pins the page (no escape hatch). Several bindings default to
- * the first name but honour a pick that is still in scope. No bindings
- * (global monitoring) use the pick as-is, including "All Countries".
+ * One binding pins the page (no escape hatch). Several bindings honour an
+ * in-scope pick; empty / All Countries / out-of-scope means all assigned
+ * countries (world camera). No bindings (global monitoring) use the pick
+ * as-is, defaulting to All Countries when ready.
  *
  * While `scopeReady` is false, hold the pick — do not treat an empty
  * binding list as unscoped.
@@ -72,9 +92,9 @@ export function resolveSelectedCountry(
   if (scopedCountryNames.length > 1) {
     return scopedCountryNames.includes(pickedCountry)
       ? pickedCountry
-      : scopedCountryNames[0]!;
+      : ALL_COUNTRIES;
   }
-  return pickedCountry;
+  return pickedCountry || ALL_COUNTRIES;
 }
 
 export type StaleCountryPick = {
@@ -88,8 +108,8 @@ export type StaleCountryPick = {
  * them, and the page displayed something else. That is the Detection
  * "dropdown works but stays Afghanistan" failure — a logic pin, not a throw.
  *
- * Empty / out-of-scope picks are not stale: those default to the first
- * scoped name on purpose.
+ * Empty / out-of-scope picks are not stale: those resolve to All Countries
+ * on a multi-country team (all assigned countries, world camera).
  */
 export function staleCountryPick(args: {
   options: readonly string[];

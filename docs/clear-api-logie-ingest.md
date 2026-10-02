@@ -33,7 +33,8 @@ for #317 (parked research).
 ## Must do
 
 1. **Server-side pull** of LogIE (or accept a controlled upload from the spike script
-   shape) for at least `iso3=SDN`. Credentials / ArcGIS URLs stay in clear-api.
+   shape) for **`iso3` ∈ {SDN, AFG, VEN}** (CLEAR deployments). Credentials / ArcGIS
+   URLs stay in clear-api. Missing country → empty FeatureCollection, not SDN bleed.
 2. **Persist** (see field map below) and expose an authenticated map endpoint that
    returns the **slim Blockages FeatureCollection** (or raw persist + transform to
    that contract before response).
@@ -58,7 +59,7 @@ for #317 (parked research).
 
 | Topic | Expectation |
 |-------|-------------|
-| Country | `iso3=SDN` first; multi-country later |
+| Country | `iso3` query — **SDN, AFG, VEN** (CLEAR deployments); more later |
 | Blockages layers | **road + bridge** only (blocked codes per layer) |
 | Later layers | crossing, aerodrome; port/PAC as data allows — separate FE toggles |
 | Status model | Persist status field name, code, resolved label, `status_as_of` |
@@ -148,9 +149,13 @@ Prefer **A** so clients never download fat dumps (~450KB blocked SDN → ~60KB s
   feature_count: number,
   simplify_tolerance_deg?: number,
   pulled_at: string, // ISO — CLEAR sync time
-  iso3?: "SDN"
+  iso3?: "SDN" | "AFG" | "VEN" | string
 }
 ```
+
+clear-mvp always sends `iso3` from the map country picker (All Countries
+merges the team’s ISO3 list with parallel requests). BFF forwards the query
+param; do not assume SDN-only.
 
 ### Paint semantics (FE — do not change server-side)
 
@@ -172,18 +177,19 @@ Blockages as **Coming soon**; development uses `/api/dev/logie-blockages`.
 
 ---
 
-## Acceptance (Expo #317)
+## Acceptance (Expo #317 + multi-country)
 
-1. clear-api can pull (or accept) LogIE access-issue features for at least SDN.
+1. clear-api can pull (or accept) LogIE access-issue features for **SDN, AFG, and VEN**.
 2. Persists geometry, identity, status code + label, `status_as_of`, `source_name`,
    `source_reliability_code` when present, `fclass` when present, and ingest
-   `pulled_at`.
+   `pulled_at` / response `meta.iso3`.
 3. Documented refresh path; provenance = LogIE / OSM.
-4. clear-mvp can fetch persisted slim features **without** embedding ArcGIS in Next.js.
+4. clear-mvp can fetch persisted slim features **without** embedding ArcGIS in Next.js,
+   always passing `iso3` from the country picker (All Countries = parallel merge).
 5. Response matches (or transforms to) `src/lib/map/logie-blockages.ts`, including
    freshness fields at the **15-day** threshold.
-6. Out of scope: Access IA comps; Overpass; sprites; #277 paint work; inventing
-   reliability; satellite double-check.
+6. Out of scope: Access IA comps; Overpass; sprites; inventing reliability;
+   satellite double-check.
 
 ## Related
 

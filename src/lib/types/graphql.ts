@@ -173,12 +173,19 @@ export interface GqlCrisis {
   generalLocation: GqlLocation | null;
   events: Array<{
     id: string;
+    title?: string | null;
+    description?: string | null;
     types: string[];
+    severity?: number | null;
+    rank?: number;
+    firstSignalCreatedAt?: string;
+    lastSignalCreatedAt?: string;
     representativePoint?: GqlLocation | null;
     generalLocation?: GqlLocation | null;
     originLocation?: GqlLocation | null;
     destinationLocation?: GqlLocation | null;
     signals?: GqlSignal[];
+    alerts?: Array<{ id: string; status: string }>;
   }>;
 }
 
@@ -215,6 +222,8 @@ export interface GqlGroundThread {
   reviewedBy: string | null;
   reviewedAt: string | null;
   reviewNote: string | null;
+  /** "spam" | "not_report" | "unusable" | "duplicate" while rejected, else null. */
+  rejectReason: string | null;
   promotedSignalId: string | null;
   createdAt: string;
 }
@@ -247,6 +256,56 @@ export interface GqlGroundMessage {
   uncertainty: string | null;
   isEdited: boolean;
   threadId: string | null;
+}
+
+/** Ground message as the hotline inbox receives it: presigned media URLs
+ * (1 h expiry, generated at read time) and NO senderName. Hotline sources
+ * store no name, and the private-tier field must not travel to the inbox
+ * client even as null. */
+export type GqlGroundInboxMessage = Omit<GqlGroundMessage, "senderName"> & {
+  mediaUrls: string[];
+  /** True when any attachment is a voice note. Set at ingest, so it is
+   * true even while the voice media is still being stored. */
+  hasVoice: boolean;
+  /** Machine transcript of the message's voice note(s); null until the
+   * pipeline transcribes it, always null without a voice note. */
+  transcript: string | null;
+  /** Language of `text` detected at intake ("ar", "en", "fr", "es"); null
+   * when unknown (clear-api#627), and always null while the
+   * `hotline_translation` flag is off (not selected then). */
+  language: string | null;
+  /** Set when clear-pipeline's enrichment drain (classification + thread
+   * draft) gave up on the message. While set the message is out of the
+   * queue for good; retryGroundMessage(stage: ENRICH) clears it. */
+  enrichFailedAt: string | null;
+  /** Last enrichment error (truncated, phone-redacted). */
+  enrichError: string | null;
+  /** Set when the transcription drain gave up on the voice note. The
+   * message then also leaves the enrichment queue (nothing to classify);
+   * retryGroundMessage(stage: TRANSCRIBE) clears it. */
+  transcribeFailedAt: string | null;
+  /** Last transcription error (truncated, phone-redacted). */
+  transcribeError: string | null;
+};
+
+/** Ground thread as the hotline inbox receives it: the base fields plus the
+ * hotline-enrichment drafts. Drafts are LLM suggestions (never applied
+ * automatically); every one is null until the enrichment job has run. */
+export interface GqlGroundInboxThread extends GqlGroundThread {
+  draftTitle: string | null;
+  /** 1-5. */
+  draftSeverity: number | null;
+  /** `locations` row id (any admin level, incl. L3/L4 landmarks). */
+  draftLocationId: string | null;
+  draftDisasterType: string | null;
+}
+
+/** Hotline inbox payload: every hotline source with its open (unverified)
+ * threads and all staged messages, joined client-side. */
+export interface GqlHotlineInbox {
+  sources: GqlGroundSource[];
+  threads: GqlGroundInboxThread[];
+  messages: GqlGroundInboxMessage[];
 }
 
 /* ─── Severity helpers ─── */

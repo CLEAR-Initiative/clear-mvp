@@ -74,3 +74,33 @@ export function applyPinElevation(
     stem.style.opacity = t < 0.02 ? "0" : "1";
   }
 }
+
+/**
+ * Screen-space offset from a bottom-anchored Mapbox `project()` tip to the
+ * glyph (head) center. Y grows downward; stem raises the head by `maxStem * t`.
+ * Center-anchored (non-elevated) pins need no offset.
+ */
+export function bottomAnchorGlyphCenterOffset(opts: {
+  headSizePx: number;
+  maxStemPx: number;
+  elevationFactor: number;
+}): { x: number; y: number } {
+  const head = Number.isFinite(opts.headSizePx) ? opts.headSizePx : 0;
+  const maxStem = Number.isFinite(opts.maxStemPx) ? opts.maxStemPx : 0;
+  const t = Math.min(1, Math.max(0, opts.elevationFactor));
+  if (head <= 0) return { x: 0, y: 0 };
+  return { x: 0, y: -(maxStem * t + head / 2) };
+}
+
+/**
+ * Center of a client rect in Mapbox `project()` space (container top-left, Y down).
+ */
+export function clientRectCenterInContainer(
+  rect: Pick<DOMRect, "left" | "top" | "width" | "height">,
+  container: Pick<DOMRect, "left" | "top">,
+): { x: number; y: number } {
+  return {
+    x: rect.left + rect.width / 2 - container.left,
+    y: rect.top + rect.height / 2 - container.top,
+  };
+}

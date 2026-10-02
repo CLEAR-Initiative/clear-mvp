@@ -40,6 +40,7 @@ interface MapPanelConnectorsProps {
 /**
  * Dashed orange SVG “spaghetti” diagonals from each open marker panel to its pin.
  * Desktop `/map` only — pointer-events none so the map stays interactive.
+ * Rendered inside CrisisMap so lines sit above the canvas but under markers.
  */
 export function MapPanelConnectors({ links }: MapPanelConnectorsProps) {
   if (links.length === 0) return null;
@@ -52,7 +53,8 @@ export function MapPanelConnectors({ links }: MapPanelConnectorsProps) {
         inset: 0,
         width: "100%",
         height: "100%",
-        zIndex: 15,
+        // Below Mapbox markers (z-index 2 in crisis-map) but above the canvas.
+        zIndex: 1,
         pointerEvents: "none",
         overflow: "visible",
       }}

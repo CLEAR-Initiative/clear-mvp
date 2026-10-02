@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canWriteCrisisEvents, isPlatformAdmin } from "./roles";
+import { canReadContent, canWriteCrisisEvents, isPlatformAdmin } from "./roles";
 
 describe("isPlatformAdmin", () => {
   it("is true only for the global admin role", () => {
@@ -17,5 +17,17 @@ describe("canWriteCrisisEvents", () => {
     expect(canWriteCrisisEvents("viewer")).toBe(false);
     expect(canWriteCrisisEvents("pending")).toBe(false);
     expect(canWriteCrisisEvents(undefined)).toBe(false);
+  });
+});
+
+describe("canReadContent", () => {
+  it("matches clear-api requireContentReader (admin, analyst or viewer)", () => {
+    expect(canReadContent("admin")).toBe(true);
+    expect(canReadContent("analyst")).toBe(true);
+    expect(canReadContent("viewer")).toBe(true);
+    expect(canReadContent("pending")).toBe(false);
+    expect(canReadContent("something-new")).toBe(false);
+    expect(canReadContent("")).toBe(false);
+    expect(canReadContent(null)).toBe(false);
   });
 });

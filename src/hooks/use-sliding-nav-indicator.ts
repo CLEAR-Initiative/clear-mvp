@@ -18,6 +18,9 @@ export interface SlidingNavBox {
 
 const EMPTY: SlidingNavBox = { x: 0, y: 0, width: 0, height: 0, ready: false };
 
+/** Match nav-sidebar width transition — indicator must not lag behind it. */
+const LAYOUT_SETTLE_MS = 220;
+
 /**
  * Measures the active `[data-nav-segment]` child inside a nav container so a
  * CSS-transformed indicator can slide between items.
@@ -30,6 +33,9 @@ export function useSlidingNavIndicator(
 ): SlidingNavBox {
   const [box, setBox] = useState<SlidingNavBox>(EMPTY);
   const placedRef = useRef(false);
+  /** While sidebar width animates, snap (no CSS transition) so we track live boxes. */
+  const layoutSnapRef = useRef(false);
+  const layoutEpochRef = useRef(0);
 
   const measure = useCallback(() => {
     const root = containerRef.current;
@@ -50,28 +56,67 @@ export function useSlidingNavIndicator(
 
     const rootRect = root.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
+    const allowSlide = placedRef.current && !layoutSnapRef.current;
     const next = {
       x: elRect.left - rootRect.left + root.scrollLeft,
       y: elRect.top - rootRect.top + root.scrollTop,
       width: elRect.width,
       height: elRect.height,
-      ready: placedRef.current,
+      ready: allowSlide,
     };
 
     setBox(next);
 
-    // First successful place: snap without transition, then enable sliding.
-    if (!placedRef.current) {
+    // First successful place (not during collapse/expand): snap, then enable sliding.
+    if (!placedRef.current && !layoutSnapRef.current) {
       placedRef.current = true;
       requestAnimationFrame(() => {
+        if (layoutSnapRef.current) return;
         setBox((prev) => ({ ...prev, ready: true }));
       });
     }
   }, [activeKey, containerRef]);
 
+  const measureRef = useRef(measure);
+  measureRef.current = measure;
+
   useLayoutEffect(() => {
     measure();
-  }, [measure, layoutKey]);
+  }, [measure]);
+
+  // Collapse/expand: disable indicator CSS transitions and track ResizeObserver
+  // boxes live until the sidebar width transition settles — otherwise the pill
+  // restarts a 200ms ease toward every intermediate width (staggered lag).
+  useLayoutEffect(() => {
+    layoutEpochRef.current += 1;
+    const epoch = layoutEpochRef.current;
+    layoutSnapRef.current = true;
+    placedRef.current = false;
+    measureRef.current();
+
+    const finish = () => {
+      if (layoutEpochRef.current !== epoch) return;
+      layoutSnapRef.current = false;
+      placedRef.current = true;
+      measureRef.current();
+    };
+
+    const root = containerRef.current;
+    const aside = root?.closest("aside") ?? root?.parentElement;
+    const onEnd = (e: TransitionEvent) => {
+      if (e.target !== aside) return;
+      if (e.propertyName !== "width" && e.propertyName !== "min-width") return;
+      aside?.removeEventListener("transitionend", onEnd);
+      finish();
+    };
+    aside?.addEventListener("transitionend", onEnd);
+    const timer = window.setTimeout(finish, LAYOUT_SETTLE_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+      aside?.removeEventListener("transitionend", onEnd);
+    };
+  }, [layoutKey, containerRef]);
 
   useLayoutEffect(() => {
     const root = containerRef.current;

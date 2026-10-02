@@ -18,6 +18,7 @@ export type MapPreferences = {
   showPopulation?: boolean;
   showRoads?: boolean;
   showNrcLocations?: boolean;
+  showBlockages?: boolean;
   baseMapType?: BaseMapType;
 };
 
@@ -105,6 +106,7 @@ export function resolveMapPreferences(
     showPopulation: stored?.showPopulation ?? false,
     showRoads: stored?.showRoads ?? true,
     showNrcLocations: stored?.showNrcLocations ?? false,
+    showBlockages: stored?.showBlockages ?? false,
     baseMapType: stored?.baseMapType ?? "simple",
   };
 }

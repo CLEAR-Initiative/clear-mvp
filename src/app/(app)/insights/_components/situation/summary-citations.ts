@@ -105,3 +105,18 @@ export function planSummaryParagraphs(
 
   return paragraphs.filter(Boolean);
 }
+
+/**
+ * The first `count` sentences of the summary, sliced from the original string
+ * so per-sentence citation keys still match. Returns the whole text when it is
+ * no longer than that.
+ */
+export function leadSentences(text: string, count: number): { lead: string; truncated: boolean } {
+  const body = text.trim();
+  let seen = 0;
+  for (const m of body.matchAll(SENTENCE_END)) {
+    seen += 1;
+    if (seen === count) return { lead: body.slice(0, m.index).trim(), truncated: true };
+  }
+  return { lead: body, truncated: false };
+}

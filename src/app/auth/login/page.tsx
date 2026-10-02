@@ -19,12 +19,35 @@ import {
 import { useTranslations } from "next-intl";
 import { IconAlertCircle, IconLogin } from "@tabler/icons-react";
 import { authClient } from "~/lib/auth-client";
+import styles from "./login-success-check.module.css";
 
 export default function LoginPage() {
   return (
     <Suspense>
       <LoginForm />
     </Suspense>
+  );
+}
+
+function SuccessCheck({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden
+    >
+      <path
+        className={styles.checkPath}
+        d="M3.5 8.5l3 3 6-7"
+        pathLength={1}
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -41,12 +64,15 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
+
+  const busy = status !== "idle";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     setError("");
-    setLoading(true);
+    setStatus("loading");
 
     try {
       const { error: signInError } = await authClient.signIn.email({
@@ -55,13 +81,16 @@ function LoginForm() {
       });
       if (signInError) {
         setError(signInError.message ?? t("failed"));
-      } else {
-        router.push(callbackUrl);
+        setStatus("idle");
+        return;
       }
+      // Keep a success state through the redirect gap so the button does not
+      // snap back to idle while router.push is still resolving the next page.
+      setStatus("success");
+      router.push(callbackUrl);
     } catch {
       setError(t("unexpectedError"));
-    } finally {
-      setLoading(false);
+      setStatus("idle");
     }
   };
 
@@ -117,6 +146,7 @@ function LoginForm() {
                 required
                 autoComplete="email"
                 autoFocus
+                disabled={busy}
                 styles={{
                   label: { fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 4 },
                   input: { borderColor: "var(--color-border)", fontSize: 14 },
@@ -130,6 +160,7 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.currentTarget.value)}
                 required
                 autoComplete="current-password"
+                disabled={busy}
                 styles={{
                   label: { fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 4 },
                   input: { borderColor: "var(--color-border)", fontSize: 14 },
@@ -140,6 +171,7 @@ function LoginForm() {
                 <Checkbox
                   label={t("rememberMe")}
                   size="sm"
+                  disabled={busy}
                   styles={{ label: { fontSize: 13, color: "var(--color-text-secondary)" } }}
                 />
                 <Anchor
@@ -148,6 +180,7 @@ function LoginForm() {
                   size="sm"
                   c="var(--color-accent)"
                   fw={500}
+                  style={busy ? { pointerEvents: "none", opacity: 0.5 } : undefined}
                 >
                   {t("forgotPassword")}
                 </Anchor>
@@ -156,13 +189,21 @@ function LoginForm() {
               <Button
                 type="submit"
                 fullWidth
-                color="dark"
-                loading={loading}
-                leftSection={<IconLogin size={16} />}
+                color={status === "success" ? "teal" : "dark"}
+                loading={status === "loading"}
+                disabled={busy}
+                leftSection={
+                  status === "success" ? <SuccessCheck size={16} /> : <IconLogin size={16} />
+                }
                 mt={8}
-                style={{ fontWeight: 600, fontSize: 14 }}
+                style={{
+                  fontWeight: 600,
+                  fontSize: 14,
+                  // Keep the success check fully visible through the redirect gap.
+                  ...(status === "success" ? { opacity: 1, cursor: "default" } : null),
+                }}
               >
-                {t("submit")}
+                {status === "success" ? t("success") : t("submit")}
               </Button>
             </Stack>
           </form>

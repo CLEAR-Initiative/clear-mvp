@@ -5,7 +5,8 @@
       "breadcrumb": "Insights",
       "tabs": {
         "crisis": "Crisis Overview",
-        "situation": "Situation Analysis"
+        "situation": "Situation Analysis",
+        "analysis": "Analysis"
       }
     },
     "reports": {
@@ -229,7 +230,9 @@
         "generated": "Generated {date} by {model} · {reports} reports"
       },
       "summary": {
-        "title": "AI Situation Summary"
+        "title": "AI Situation Summary",
+        "readMore": "Read full summary",
+        "showLess": "Show less"
       },
       "stats": {
         "displaced": "Displaced",
@@ -285,6 +288,7 @@
         "evidenceBase": "From the latest analysis · {reports} reports",
         "freshest": "freshest {date}",
         "range": "Range {range}",
+        "yearlyPeriod": "{year} yearly",
         "info": {
           "informSeverity": "INFORM Severity Index (0-10) from ACAPS, updated monthly. A composite measure of crisis severity, independent of the situation-analysis pipeline.",
           "displaced": "Estimated current displacement (IDPs). From the analysis datapoints (field: estimated_current_displacement.stock; falls back to population_displaced when present).",
@@ -617,6 +621,7 @@
       "rememberMe": "Remember me",
       "forgotPassword": "Forgot password?",
       "submit": "Sign In",
+      "success": "Signed in",
       "failed": "Login failed",
       "unexpectedError": "An unexpected error occurred",
       "demo": {
@@ -989,7 +994,8 @@
     "filters": {
       "country": "Country",
       "region": "Region",
-      "date": "Date"
+      "date": "Date",
+      "allCountries": "All Countries"
     },
     "regionPicker": {
       "allRegions": "All Regions",
@@ -1752,7 +1758,8 @@
       "thread": {
         "untitled": "Untitled thread",
         "notFound": "Thread not found",
-        "reviewNote": "Review note"
+        "reviewNote": "Review note",
+        "rejectReason": "Reject reason"
       },
       "review": {
         "approvePrivate": "Approve (private)",
@@ -1933,19 +1940,6 @@
       "email": "Email",
       "call": "Call",
       "empty": "No contacts found for this location"
-    },
-    "humchat": {
-      "subtitle": "Humanitarian AI Assistant",
-      "online": "Online",
-      "clearChat": "Clear chat",
-      "collapse": "Collapse panel",
-      "inputPlaceholder": "Ask about humanitarian response...",
-      "welcome": "Hello! I'm **HumChat**, your AI assistant for humanitarian operations. I'm trained on IASC guidelines, Sphere standards, and Ethiopia-specific humanitarian context.\n\nI can help you with:\n- **Situation analysis** and crisis briefs\n- **Response planning** and resource allocation\n- **Protocol guidance** for emergencies\n- **Coordination** support and communications\n\nWhat humanitarian challenge can I help you address today?",
-      "examples": {
-        "displacement": "Analyze displacement trends in Somali Region",
-        "interventions": "What are the priority interventions for health emergencies?",
-        "assessment": "Generate a rapid assessment plan for protection risks"
-      }
     }
   },
   "map": {
@@ -1985,9 +1979,9 @@
       "operational": "Operational",
       "comingSoon": "Coming soon",
       "blockages": "Blockages",
-      "blockagesCurrent": "Solid · < 15 days",
-      "blockagesStale": "Dashed · ≥ 15 days",
-      "blockagesStaleNote": "Hover for exact status date. Dashed may still be constrained.",
+      "blockagesCurrent": "Fresh · < 15 days",
+      "blockagesStale": "Faded · ≥ 15 days",
+      "blockagesStaleNote": "Hover for exact status date. Faded may still be constrained.",
       "blockagesStatus": "Status color",
       "blockagesNotPassable": "Not passable",
       "blockagesRestricted": "Restricted",
@@ -2066,6 +2060,15 @@
       "focusFallbackSignal": "Focused signal",
       "focusFallbackCrisis": "Focused crisis"
     },
+    "placeSearch": {
+      "open": "Search places or coordinates",
+      "placeholder": "Place or lat, lng",
+      "filters": "Search filters",
+      "removeFilter": "Remove filter {label}",
+      "clear": "Clear search",
+      "noResults": "No places found",
+      "error": "Search unavailable"
+    },
     "tokenMissing": "Mapbox token not configured. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env",
     "tiltHint": {
       "message": "Topography is 3D — click Tilt, or Ctrl/⌘+drag (right-click drag) / two-finger drag on touch",
@@ -2086,6 +2089,7 @@
     "items": {
       "overview": "Overview",
       "detection": "Detection",
+      "inbox": "Inbox",
       "map": "Map",
       "insights": "Insights",
       "operations": "Operations",
@@ -2163,6 +2167,7 @@
     },
     "signals": {
       "loading": "Loading signals…",
+      "loadingMore": "Loading more signals…",
       "empty": "No signals yet",
       "events": "{count, plural, one {# event} other {# events}}"
     },
@@ -2591,6 +2596,7 @@
         "teamRoles": {
           "team_member": "Team member",
           "field_coordinator": "Field coordinator",
+          "emergency_response_manager": "Emergency response manager",
           "team_admin": "Team admin"
         },
         "selectAtLeastOneTeam": "Select at least one team",
@@ -2758,5 +2764,518 @@
     "resent": "A new verification email has been sent. Please check your inbox.",
     "resend": "Resend Verification Email",
     "goToProfile": "Go to Profile"
+  },
+  "inbox": {
+    "title": "Hotline Inbox",
+    "awaiting": "{count, plural, one {# awaiting review} other {# awaiting review}}",
+    "filters": {
+      "reports": "Field reports",
+      "unclassified": "Unclassified",
+      "chatter": "Chatter",
+      "all": "Everything"
+    },
+    "search": "Search text, intake refs",
+    "sort": {
+      "reportsFirst": "Reports first",
+      "newest": "Newest"
+    },
+    "list": {
+      "allLoaded": "All {count} entries in this view loaded",
+      "empty": "Nothing left in this view",
+      "priorEntries": "{count, plural, one {# prior entry} other {# prior entries}}"
+    },
+    "classifications": {
+      "field_report": "Field report",
+      "unclassified": "Unclassified",
+      "chatter": "Chatter",
+      "news_digest": "News digest",
+      "operational": "Operational"
+    },
+    "pane": {
+      "select": "Select an entry to read it",
+      "noText": "Media without caption",
+      "trustRepeat": "{count, plural, one {# submission} other {# submissions}} from this intake ref in the queue",
+      "attachments": "Attachments",
+      "attachment": "Attachment {n}",
+      "voiceNote": "Voice note",
+      "omittedMedia": "{count, plural, one {# attachment not stored} other {# attachments not stored}}",
+      "uncertainty": "Reporter marked this as {value}",
+      "back": "Back to list",
+      "voiceNoteN": "Voice note {n}",
+      "voiceOpen": "Open in new tab",
+      "voiceUnsupported": "This browser cannot play this audio format. Open it in a new tab to download it.",
+      "voiceRefreshing": "The audio link expired. Refreshing it, then press play again.",
+      "voiceFailed": "This voice note could not be played here. Open it in a new tab instead.",
+      "transcriptLabel": "Machine transcript · may contain errors",
+      "transcriptPending": "Transcription pending",
+      "voiceNotStored": "Voice note (audio not stored yet)",
+      "transcriptFailed": "Transcription failed"
+    },
+    "actions": {
+      "add": "Add to CLEAR",
+      "archive": "Archive",
+      "reject": "Reject",
+      "shortcuts": "A add · E archive · R reject · J/K move"
+    },
+    "rejectReasons": {
+      "header": "Reject: reason for the audit trail",
+      "spam": {
+        "label": "Spam or scam",
+        "help": "Bulk-sent, phishing or chain message"
+      },
+      "not_report": {
+        "label": "Not a report",
+        "help": "Enquiry or conversation, nothing to triage"
+      },
+      "unusable": {
+        "label": "Cannot be located",
+        "help": "No place named, cannot be actioned"
+      },
+      "duplicate": {
+        "label": "Duplicate",
+        "help": "Already in the pipeline as a signal"
+      },
+      "cancel": "Cancel"
+    },
+    "modal": {
+      "header": "Generated by CLEAR",
+      "title": "Signal title",
+      "description": "Description",
+      "severity": "Severity",
+      "severityNone": "Not set",
+      "attachments": "Attachments carried into the signal",
+      "footer": "Promoted from {ref} · the reporter's account stays on the entry",
+      "cancel": "Cancel",
+      "confirm": "Add to CLEAR",
+      "location": "Location",
+      "locationPlaceholder": "Search location",
+      "locationLoading": "Loading locations",
+      "locationNoMatch": "No matching location",
+      "locationRequired": "Location is required before adding to CLEAR",
+      "aiSuggested": "AI suggestion",
+      "draftLocationUnknown": "The suggested location could not be found. Pick a location before adding to CLEAR.",
+      "disasterType": "Disaster type",
+      "disasterTypeReadOnly": "For reference only: signals have no disaster type field yet, so this is not saved.",
+      "transcriptInDescription": "[Machine transcript] {text}"
+    },
+    "toast": {
+      "added": "Added to CLEAR",
+      "archived": "Archived",
+      "rejected": "Rejected · {reason}",
+      "viewSignal": "View signal",
+      "close": "Dismiss",
+      "addedNoSignal": "Approved, but no signal id came back. Check the signal in Detection before relying on it.",
+      "retried": "Queued for another attempt"
+    },
+    "noAccess": "The hotline inbox is available to admins only for now.",
+    "loadError": "Could not load the inbox",
+    "translate": {
+      "button": "Translate to {locale}",
+      "label": "Translation ({locale})",
+      "pending": "Translating, this can take a moment",
+      "unavailable": "Translation is not available yet",
+      "retry": "Try again",
+      "locales": {
+        "en": "English",
+        "fr": "French",
+        "es": "Spanish",
+        "ar": "Arabic"
+      }
+    },
+    "failure": {
+      "pill": "Classification failed",
+      "title": "Automatic processing gave up",
+      "help": "The pipeline failed on this entry after repeated attempts, so it is no longer queued. Retry to queue it again.",
+      "stages": {
+        "ENRICH": "Classification",
+        "TRANSCRIBE": "Transcription"
+      },
+      "noError": "No error details recorded",
+      "retry": "Retry",
+      "retrying": "Retrying…",
+      "partial": "Queued again: {done} of {total} messages. {error}"
+    }
+  },
+  "analysis": {
+    "scope": {
+      "country": "Country analysis",
+      "wholeCountry": "Whole country",
+      "created": "Created analysis",
+      "areas": "{count, plural, one {# area} other {# areas}}"
+    },
+    "meta": {
+      "updated": "Updated {relative}",
+      "asOf": "as of {date}",
+      "builtFrom": "Built from {reports, plural, one {# report} other {# reports}} and {events, plural, one {# event} other {# events}}",
+      "covers": "Covers {start} to date",
+      "period": "Covers {start} to {end}",
+      "stale": "Out of date"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "needs": "Needs Assessment",
+      "sources": "Sources & Events"
+    },
+    "error": "The analysis could not be loaded.",
+    "empty": {
+      "title": "No analysis yet",
+      "description": "No analysis has been generated for {scope} yet. Country analyses are regenerated weekly."
+    },
+    "noCountry": "Your team has no country assigned, so there is no default analysis scope yet.",
+    "country": "Country",
+    "kpis": {
+      "displaced": "Displaced",
+      "displacedSub": "people currently displaced",
+      "returned": "Returned",
+      "returnedSub": "have returned home. Not counted as displaced.",
+      "inNeed": "In need",
+      "inNeedSub": "people in need",
+      "funding": "Funding",
+      "fundingOf": "of {required}",
+      "fundingSub": "received against the requirement",
+      "received": "Received",
+      "gap": "Gap",
+      "notReported": "Not reported in the current sources",
+      "displacedTotalSub": "people displaced in total, inside {scope} and abroad",
+      "inside": "Inside {scope}",
+      "abroad": "Abroad",
+      "differentDates": "parts may come from different dates",
+      "rangeLabel": "Range across sources",
+      "headline": "Headline",
+      "bySector": "People in need by sector",
+      "sectorOverlap": "One person can be in need in several sectors, so sector figures don't add up to {total}.",
+      "asOf": "As of {date}",
+      "fundingRequiredSub": "required. Funding received is not reported yet.",
+      "sectors": {
+        "food_security": "Food security",
+        "health": "Health",
+        "wash": "WASH",
+        "protection": "Protection",
+        "shelter": "Shelter & NFI",
+        "education": "Education",
+        "nutrition": "Nutrition"
+      }
+    },
+    "map": {
+      "title": "Analysis area",
+      "events": "{count, plural, one {# event} other {# events}} since {date}",
+      "areas": "Where events happened",
+      "areaEvents": "{count, plural, one {# event} other {# events}}",
+      "noEvents": "No events recorded in this area since {date}.",
+      "sample": "Map shows the {count} most recent"
+    },
+    "timeline": {
+      "title": "Events timeline",
+      "today": "Today",
+      "empty": "No events recorded in this period.",
+      "sample": "The {count} most recent events"
+    },
+    "findings": {
+      "hazards": "Hazards",
+      "vulnerabilities": "Vulnerabilities",
+      "vulnerabilitiesTag": "pre-crisis conditions",
+      "displacement": "Displacement",
+      "displacementTag": "key findings",
+      "push": "What is forcing people out",
+      "return": "Return intentions",
+      "count": "{count, plural, one {# finding} other {# findings}}",
+      "showAll": "Show all {count}",
+      "showLess": "Show less",
+      "forecast": "Forecast",
+      "forecastTag": "projections, not observed",
+      "forecastNote": "What sources expect next. Kept apart from the facts above.",
+      "mostLikely": "Most likely",
+      "bestCase": "Best case",
+      "worstCase": "Worst case",
+      "hazardsTitle": "Hazards & Vulnerabilities",
+      "hazardsMeta": "{hazards, plural, one {# hazard} other {# hazards}} · {vulnerabilities, plural, one {# vulnerability} other {# vulnerabilities}}"
+    },
+    "needs": {
+      "severityIntro": "Each sector is graded by the analysis from the sector reporting it cites.",
+      "severityNull": "Not assessed: too little evidence to grade.",
+      "inferred": "Graded from reporting outside this sector. Treat as indicative.",
+      "notAssessed": "Not assessed"
+    },
+    "events": {
+      "title": "Events in this area",
+      "empty": "No events recorded in this area in this period.",
+      "untitled": "Untitled event",
+      "severity": "Severity {value}",
+      "count": "{shown} of {total}"
+    },
+    "sources": {
+      "title": "Sources cited"
+    },
+    "contexts": {
+      "title": "Contexts",
+      "meta": "{categories, plural, one {# category} other {# categories}} · {findings, plural, one {# finding} other {# findings}}",
+      "findings": "{count, plural, one {# finding} other {# findings}}"
+    },
+    "generating": {
+      "title": "Generating the first version",
+      "description": "The pipeline is building this analysis from the knowledge base. This page updates by itself when it is ready.",
+      "overdueTitle": "Not generated yet",
+      "overdueDescription": "The first version has not arrived. It may have failed; request it again with Update now."
+    },
+    "cadence": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "manual": "On request"
+    },
+    "home": {
+      "title": "Analyses",
+      "subtitle": "Current analyses for {country}. Open one, or create your own over specific states or districts.",
+      "new": "New analysis",
+      "countryGroup": "Country",
+      "createdGroup": "Created by your team",
+      "wholeCountry": "Whole country",
+      "updated": "Updated {relative}",
+      "generating": "Generating the first version",
+      "paused": "updates on request",
+      "stale": "Out of date",
+      "noCountryAnalysis": "No analysis generated yet",
+      "createdEmpty": "No created analyses yet. Create one to follow specific states or districts.",
+      "createdEmptyReadOnly": "Your team has not created any analyses yet.",
+      "remove": "Remove",
+      "keep": "Keep",
+      "removeLabel": "Remove {name}",
+      "mapNote": "Highlighted: areas covered by your team's analyses.",
+      "back": "All analyses",
+      "areas": "{count, plural, one {# area} other {# areas}}",
+      "frequencyLabel": "Update frequency of {name}",
+      "frequencyError": "The update frequency could not be changed. Please try again.",
+      "mapHint": "Click a highlighted area to open its analysis.",
+      "mapCard": "{type} · {status}",
+      "notGenerated": "Not generated yet"
+    },
+    "create": {
+      "title": "New analysis in {country}",
+      "districts": "Districts",
+      "loading": "Loading districts",
+      "noMatch": "No district found",
+      "cadence": "Update frequency",
+      "summary": "Covers events and reports since {since}, kept current and updated {cadence}.",
+      "firstRun": "The first version usually takes a few minutes. You can leave this page meanwhile.",
+      "duplicate": "Your team already has an analysis for these districts: {name}.",
+      "openExisting": "Open it",
+      "error": "The analysis could not be created. Please try again.",
+      "cancel": "Cancel",
+      "submit": "Create analysis",
+      "areas": "States or districts",
+      "areasHint": "Search and add up to {max}. The analysis covers them together.",
+      "search": "Search states and districts",
+      "states": "States",
+      "mapHint": "Click a district on the map to add or remove it.",
+      "selected": "Selected ({count}/{max})",
+      "nothingSelected": "Nothing selected yet.",
+      "removeArea": "Remove {name}",
+      "wholeState": "{name} (whole state)",
+      "manualFallback": "This analysis could not be set to update on request, so it updates weekly for now. You can change the frequency in the list.",
+      "existing": "Your team already has this analysis, so it was opened instead."
+    },
+    "report": {
+      "button": "Create report",
+      "eyebrow": "Situation report",
+      "scopeCountry": "Country analysis",
+      "scopeCreated": "Created analysis",
+      "period": "Covers {start} to date",
+      "versionOf": "Analysis version of {date}",
+      "keyDevelopments": "Key developments",
+      "currentStatus": "Current status",
+      "displaced": "Displaced",
+      "displacedSub": "people displaced",
+      "inNeed": "In need",
+      "inNeedSub": "people in need",
+      "funding": "Funding",
+      "fundingSub": "received / required",
+      "notReported": "Not reported in the current sources",
+      "mapCountry": "Outline: country",
+      "mapArea": "Shaded: analysis area",
+      "mapEvents": "Dots: {count, plural, one {# event} other {# events}} since {date}",
+      "contexts": "Context",
+      "hazards": "Hazards",
+      "displacement": "What is forcing people out",
+      "priorityNeeds": "Priority needs",
+      "responseActivities": "Response activities",
+      "noResponse": "No response activities reported in the current sources.",
+      "outlook": "Outlook (most likely scenario)",
+      "sources": "Sources",
+      "provenance": "Provenance",
+      "generated": "Report created {date} by {author} in CLEAR. Numbers in brackets refer to the sources list.",
+      "footer": "CLEAR · {scope}",
+      "page": "Page {n} of {total}",
+      "unknownAuthor": "a CLEAR user",
+      "error": "The report could not be created. Please try again.",
+      "unsupportedLocale": "Reports can't be created in Arabic yet. Switch the language to English, French or Spanish to create one.",
+      "sections": {
+        "keyDevelopments": "Key developments",
+        "currentStatus": "Current status",
+        "map": "Scope map",
+        "contexts": "Context",
+        "hazards": "Hazards",
+        "displacement": "What is forcing people out",
+        "priorityNeeds": "Priority needs",
+        "responseActivities": "Response activities",
+        "outlook": "Outlook",
+        "sources": "Sources"
+      },
+      "builder": {
+        "title": "Create report",
+        "intro": "Drag the sections into the order you want and tick the ones to include.",
+        "dragLabel": "Drag {section}",
+        "includeLabel": "Include {section}",
+        "empty": "Nothing in this analysis for this section",
+        "alwaysIncluded": "The version stamp, author and page numbers are always included.",
+        "cancel": "Cancel",
+        "create": "Download PDF ({count, plural, one {# section} other {# sections}})",
+        "counts": {
+          "keyDevelopments": "Summary and {count, plural, =0 {no key findings} one {# key finding} other {# key findings}}",
+          "map": "Scope with {count, plural, one {# event} other {# events}}",
+          "contexts": "{count, plural, one {# finding} other {# findings}}",
+          "hazards": "{count, plural, one {# hazard} other {# hazards}}",
+          "displacement": "{count, plural, one {# finding} other {# findings}}",
+          "priorityNeeds": "{count, plural, one {# sector} other {# sectors}}",
+          "responseActivities": "{count, plural, one {# sector} other {# sectors}}",
+          "sources": "{count, plural, one {# source} other {# sources}}"
+        },
+        "hints": {
+          "currentStatus": "Displaced, in need and funding",
+          "outlook": "Most likely scenario"
+        }
+      }
+    },
+    "refresh": {
+      "button": "Update now",
+      "requested": "Update requested. The new version usually takes a few minutes and appears here by itself.",
+      "error": "The update could not be requested. Please try again."
+    }
+  },
+  "agent": {
+    "name": "CLEAR Agent",
+    "drawer": {
+      "open": "Open the Agent drawer",
+      "close": "Close the Agent drawer",
+      "launcherTooltip": "Ask the CLEAR Agent",
+      "newThread": "New thread",
+      "openPage": "Open Agent page",
+      "width": "Drawer width",
+      "widthSmall": "Small",
+      "widthMedium": "Medium",
+      "widthLarge": "Large",
+      "history": "Recent conversations",
+      "historyEmpty": "No conversations yet.",
+      "allConversations": "All conversations →"
+    },
+    "page": {
+      "title": "Agent",
+      "subtitle": "Ask the CLEAR Agent",
+      "unavailable": "The CLEAR Agent isn't available for your account.",
+      "historyLabel": "Your Conversations",
+      "untitled": "Untitled thread",
+      "empty": "No threads yet.",
+      "loadMore": "Load more"
+    },
+    "thread": {
+      "inputLabel": "Message the CLEAR Agent",
+      "inputPlaceholder": "Ask anything",
+      "send": "Send",
+      "thinking": "Thinking…",
+      "intro": "Ask about a crisis, a place, recent Alerts or NRC's work. The CLEAR Agent shows which sources it used.",
+      "suggestions": {
+        "general": {
+          "q1": "What are the most severe crises right now?",
+          "q2": "What's new in the last 24 hours?",
+          "q3": "What do NRC's documents say about humanitarian access?"
+        },
+        "event": {
+          "q1": "Summarise this Event",
+          "q2": "What Signals is this Event based on?",
+          "q3": "Are there similar Events nearby?"
+        },
+        "signal": {
+          "q1": "Summarise this Signal",
+          "q2": "Is this Signal part of an Event?",
+          "q3": "How reliable is this source?"
+        },
+        "crisis": {
+          "q1": "Summarise this Crisis",
+          "q2": "What changed in this Crisis this week?",
+          "q3": "What are the main humanitarian needs?"
+        },
+        "map": {
+          "q1": "What's happening in this area?",
+          "q2": "Which Events here are the most severe?",
+          "q3": "What's new here this week?"
+        },
+        "detection": {
+          "q1": "What's new in these filters this week?",
+          "q2": "Which of these Events are the most severe?",
+          "q3": "Summarise the main trends here"
+        }
+      }
+    },
+    "message": {
+      "sources": "Sources from NRC Find ({count})",
+      "showMore": "Show more",
+      "showLess": "Show less",
+      "passages": "{count, plural, one {# passage} other {# passages}}",
+      "download": "Download {name}",
+      "clearEvent": "CLEAR event",
+      "hidePassages": "Hide passages"
+    },
+    "tools": {
+      "nrcFindRunning": "Searching NRC documents…",
+      "nrcFindDone": "Searched NRC documents",
+      "nrcFindUnavailable": "NRC documents unavailable",
+      "running": "Running {tool}…",
+      "done": "Ran {tool}",
+      "unavailable": "{tool} unavailable",
+      "navigateRunning": "Moving you…",
+      "navigateDone": "Moved",
+      "navigateUnavailable": "Couldn't move you there"
+    },
+    "errors": {
+      "budgetSpent": "Your daily Agent budget is spent.",
+      "budgetResets": "It resets at {time}.",
+      "forbiddenThread": "This Thread belongs to another user.",
+      "notConfigured": "The CLEAR Agent isn't configured on this server.",
+      "generic": "The CLEAR Agent couldn't answer. Please try again.",
+      "loadFailed": "This conversation couldn't be loaded.",
+      "retryLoad": "Try again"
+    },
+    "navigation": {
+      "movedTo": "Moved you to {kind}: {label}",
+      "back": "Back",
+      "kinds": {
+        "event": "Event",
+        "signal": "Signal",
+        "crisis": "Crisis",
+        "map": "the Map",
+        "detection": "Detection"
+      },
+      "outOfScope": "{country} isn't in your team's scope, so it isn't shown.",
+      "placeUnavailable": "That place isn't available to you, so it isn't shown."
+    },
+    "context": {
+      "label": "Context",
+      "filters": "{count, plural, one {# filter} other {# filters}}",
+      "kinds": {
+        "event": "Event",
+        "signal": "Signal",
+        "crisis": "Crisis"
+      },
+      "filterKeys": {
+        "locationId": "Location",
+        "country": "Country",
+        "region": "Region",
+        "from": "From",
+        "to": "To",
+        "severityMin": "Minimum severity",
+        "severityMax": "Maximum severity",
+        "eventTypes": "Event types",
+        "sourceNames": "Sources"
+      }
+    }
   }
 }

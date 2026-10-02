@@ -1,188 +1,97 @@
 "use client";
 
-import { useRef, useState } from "react";
-import {
-  Box,
-  Stack,
-  Textarea,
-  Button,
-  Group,
-  Text,
-  Card,
-  Loader,
-  Alert,
-} from "@mantine/core";
-import { IconSend, IconRobot, IconAlertTriangle } from "@tabler/icons-react";
+/**
+ * The Agent page: your past Conversations with the CLEAR Agent beside the
+ * open Thread. It shares the active Thread with the Agent drawer.
+ */
+
+import { useFormatter, useTranslations } from "next-intl";
+import { Alert, Box, Button, Group, Loader, NavLink, ScrollArea, Stack, Text } from "@mantine/core";
+import { IconMessageCircle, IconPlus } from "@tabler/icons-react";
 import { PageHeader } from "~/components/ui";
-
-interface SourceDocument {
-  title?: string;
-  content?: string;
-  source_id?: string | number;
-}
-
-/** One line of the NDJSON stream returned by /api/agent. */
-type StreamLine =
-  | { user_prompt: string; source_documents: SourceDocument[] }
-  | { type: "answer"; content: string };
+import { useAgent } from "~/components/agent/agent-provider";
+import { AgentThread } from "~/components/agent/agent-thread";
+import { api } from "~/trpc/react";
 
 export default function AgentPage() {
-  const [prompt, setPrompt] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [sources, setSources] = useState<SourceDocument[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  async function ask() {
-    const trimmed = prompt.trim();
-    if (!trimmed || loading) return;
-
-    setLoading(true);
-    setError(null);
-    setAnswer("");
-    setSources([]);
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    try {
-      const res = await fetch("/api/agent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: trimmed }),
-        signal: controller.signal,
-      });
-
-      if (!res.ok || !res.body) {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(data?.error ?? `Request failed (${res.status})`);
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      // NDJSON: one JSON object per line.
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let newlineIdx: number;
-        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
-          const line = buffer.slice(0, newlineIdx).trim();
-          buffer = buffer.slice(newlineIdx + 1);
-          if (!line) continue;
-
-          let parsed: StreamLine;
-          try {
-            parsed = JSON.parse(line) as StreamLine;
-          } catch {
-            continue; // skip malformed line
-          }
-
-          if ("type" in parsed && parsed.type === "answer") {
-            setAnswer((prev) => prev + parsed.content);
-          } else if ("source_documents" in parsed) {
-            setSources(parsed.source_documents ?? []);
-          }
-        }
-      }
-    } catch (err) {
-      if ((err as Error).name !== "AbortError") {
-        setError((err as Error).message);
-      }
-    } finally {
-      setLoading(false);
-      abortRef.current = null;
-    }
-  }
+  const t = useTranslations("agent");
+  const format = useFormatter();
+  const { available, chat, threadId, openThread, newThread } = useAgent();
+  const history = api.agent.listConversations.useInfiniteQuery(
+    {},
+    { enabled: available, getNextPageParam: (page) => page.nextCursor },
+  );
+  const conversations = history.data?.pages.flatMap((p) => p.items) ?? [];
 
   return (
-    <>
+    // Exactly the viewport (less the mobile top bar and bottom nav), so the
+    // Thread scrolls inside it and its input box stays on screen. The nav is
+    // 64px with its safe-area inset inside (border-box), so no inset here.
+    <Box h={{ base: "calc(100dvh - 128px)", sm: "100dvh" }} style={{ display: "flex", flexDirection: "column" }}>
       <PageHeader
-        title="Agent"
-        subtitle="Ask the NRC Find knowledge base"
-        breadcrumbs={["CLEAR", "Agent"]}
+        title={t("page.title")}
+        subtitle={t("page.subtitle")}
+        breadcrumbs={["CLEAR", t("page.title")]}
       />
-
-      <Box p={24} style={{ flex: 1, overflowY: "auto" }}>
-        <Stack gap={16} style={{ maxWidth: 820 }}>
-          <Textarea
-            label="Question"
-            placeholder="e.g. What is NRC's approach to cash assistance in emergencies?"
-            autosize
-            minRows={3}
-            maxRows={8}
-            value={prompt}
-            onChange={(e) => setPrompt(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void ask();
-            }}
-            disabled={loading}
-          />
-
-          <Group justify="space-between">
-            <Text size="xs" c="#A3A3A3">
-              Press ⌘/Ctrl + Enter to send
-            </Text>
-            <Button
-              leftSection={loading ? <Loader size={14} color="white" /> : <IconSend size={16} />}
-              onClick={() => void ask()}
-              disabled={loading || !prompt.trim()}
-              color="#E85D3D"
-            >
-              {loading ? "Asking…" : "Ask"}
-            </Button>
-          </Group>
-
-          {error && (
-            <Alert
-              color="red"
-              icon={<IconAlertTriangle size={16} />}
-              title="Something went wrong"
-            >
-              {error}
-            </Alert>
-          )}
-
-          {(answer || loading) && (
-            <Card withBorder radius="md" p={20}>
-              <Group gap={8} mb={12}>
-                <IconRobot size={18} color="#E85D3D" />
-                <Text fw={600} c="#171717">
-                  Answer
-                </Text>
-              </Group>
-              <Text style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }} c="#262626">
-                {answer}
-                {loading && !answer && <Text component="span" c="#A3A3A3">Thinking…</Text>}
-              </Text>
-            </Card>
-          )}
-
-          {sources.length > 0 && (
-            <Stack gap={8}>
-              <Text fw={600} size="sm" c="#525252">
-                Sources ({sources.length})
-              </Text>
-              {sources.map((src, i) => (
-                <Card key={i} withBorder radius="md" p={12} style={{ background: "#FAFAFA" }}>
-                  {src.title && (
-                    <Text fw={600} size="sm" c="#171717" mb={4}>
-                      {src.title}
-                    </Text>
-                  )}
-                  <Text size="xs" c="#525252" lineClamp={4}>
-                    {src.content}
+      {!available ? (
+        <Box p={24}>
+          <Alert color="gray">{t("page.unavailable")}</Alert>
+        </Box>
+      ) : (
+        <Group align="stretch" gap={0} wrap="nowrap" style={{ flex: 1, minHeight: 0 }}>
+          <Box
+            component="nav"
+            aria-label={t("page.historyLabel")}
+            visibleFrom="sm"
+            style={{ width: 280, flexShrink: 0, borderInlineEnd: "1px solid var(--color-border, #E5E5E5)" }}
+          >
+            <Stack gap={8} p={16}>
+              <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={newThread}>
+                {t("drawer.newThread")}
+              </Button>
+              <ScrollArea.Autosize mah="calc(100dvh - 220px)">
+                {history.isLoading && <Loader size="sm" />}
+                {conversations.map((c) => (
+                  <NavLink
+                    key={c.id}
+                    label={c.title || t("page.untitled")}
+                    description={format.dateTime(new Date(c.updatedAt), { dateStyle: "medium", timeStyle: "short" })}
+                    leftSection={<IconMessageCircle size={14} />}
+                    active={c.id === threadId}
+                    onClick={() => openThread(c.id)}
+                  />
+                ))}
+                {history.isSuccess && conversations.length === 0 && (
+                  <Text size="sm" c="dimmed">
+                    {t("page.empty")}
                   </Text>
-                </Card>
-              ))}
+                )}
+                {history.hasNextPage && (
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    loading={history.isFetchingNextPage}
+                    onClick={() => void history.fetchNextPage()}
+                  >
+                    {t("page.loadMore")}
+                  </Button>
+                )}
+              </ScrollArea.Autosize>
             </Stack>
-          )}
-        </Stack>
-      </Box>
-    </>
+          </Box>
+          {/* The Thread fills the height: its turns scroll, its input box stays at the bottom. */}
+          <Box p={24} style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <Box style={{ maxWidth: 820, width: "100%", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+              <Group justify="flex-end" mb={16} hiddenFrom="sm">
+                <Button size="xs" variant="subtle" leftSection={<IconPlus size={14} />} onClick={newThread}>
+                  {t("drawer.newThread")}
+                </Button>
+              </Group>
+              <AgentThread key={chat.id} chat={chat} />
+            </Box>
+          </Box>
+        </Group>
+      )}
+    </Box>
   );
 }

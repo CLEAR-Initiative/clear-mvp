@@ -8,30 +8,60 @@ that proxies to backend services; it owns no domain data of its own.
 
 ### Agent
 
-**Agent**:
-The `/agent` page — a chat surface where a user asks the **NRC Find** knowledge base a
-question and reads a streamed **Answer** with its **Source documents**.
-_Avoid_: "the bot", "assistant" (in CLEAR, "Agent" is the page/feature, not a persona).
+**CLEAR Agent**:
+The one Agent a user chats with in CLEAR. It answers by calling tools on the user's behalf —
+over CLEAR's own data (Signals, Events, Alerts, Crises, situation analyses), CLEAR's knowledge
+base, and **NRC Find** — and shows which sources it drew on.
+_Avoid_: "the bot", "assistant", personas; "data agent", "Mastra agent" (Mastra is the
+framework, not the concept); "Find Agent" (retired — NRC Find is a source, not an Agent).
+
+**Agent drawer**:
+The right-hand slide-out, reachable from anywhere in the app, where the user chats with the
+**CLEAR Agent**.
+_Avoid_: "chat panel", "sidebar" (ambiguous with app navigation).
+
+**Agent page**:
+The full-screen `/agent` view of the same **Threads** as the **Agent drawer** — a list of the
+user's past **Conversations** beside the open **Thread**.
+_Avoid_: "chat history page", "the Agent" (the page is not the **CLEAR Agent**).
+
+**Agent navigation**:
+The **CLEAR Agent** changing what the user is looking at — opening an Event, Signal or
+Crisis, or setting map/detection filters — without changing any data. Always announced in
+the **Thread** and always reversible with **Back** to the exact previous view.
+_Avoid_: "agent actions" (implies data changes), "auto-navigate".
+
+**Agent budget**:
+A user's daily allowance of **CLEAR Agent** usage. Once spent, the CLEAR Agent declines new
+turns until it resets.
+_Avoid_: "quota", "credits", "rate limit" (a rate limit is about bursts, the budget is about spend).
+
+**Current view**:
+What the user is looking at when they send a turn — the page, the Event/Signal/Crisis on
+screen, and the active map or detection filters — expressed as identifiers and filters, never
+as the data itself. Sent to the **CLEAR Agent** with every turn and kept with that turn.
+Shown to the user beside the **Thread**, by name; it changes only when what the user is
+looking at changes — the user never edits it directly.
+_Avoid_: "page context", "screen state".
 
 **NRC Find**:
-NRC's external Retrieval-Augmented-Generation knowledge base, reached via
-`POST /api/v1/rag/answers`. It is **stateless**: each call takes one `prompt` and returns
-one Answer plus Source documents, with no memory of prior calls.
-_Avoid_: "the LLM", "the model" (NRC Find is the retrieval service, not a raw model).
+NRC's self-hosted knowledge base of NRC documents, answered by an open-weight model running
+on NRC infrastructure. Stateless: each question is answered alone, with no memory of prior
+questions. In CLEAR it is one of the sources the **CLEAR Agent** consults, not a separate Agent.
+_Avoid_: "the LLM", "the model" (NRC Find is a knowledge source, not a raw model).
 
 **Answer**:
-The generated response to a single question, streamed token-by-token over NDJSON.
+The **CLEAR Agent**'s response to one turn, streamed as it is written.
 
 **Source document**:
-A knowledge-base passage NRC Find cited for an Answer (title + excerpt). Belongs to the
-one Answer it was returned with.
+A passage from a knowledge base (**NRC Find** or CLEAR's own) that an **Answer** cites.
+Belongs to the one Answer it was cited in.
 _Avoid_: "citation", "reference", "result".
 
 **Thread**:
-The on-screen sequence of question/Answer turns for one conversation. A **UI-only**
-construct — turns are *not* sent back to NRC Find, so each question is answered
-independently (see [ADR-0001](docs/adr/0001-agent-is-a-stateless-rag-thread.md)).
-_Avoid_: "conversation history" (implies the backend remembers — it does not).
+The on-screen view of one **Conversation** (stored in clear-api) with the **CLEAR Agent**.
+Earlier turns are part of what the Agent answers from.
+_Avoid_: "chat" (as the stored record — that is a **Conversation**).
 
 ### Detection hierarchy
 
@@ -257,10 +287,13 @@ no countries at all.
 _Avoid_: calling the user's choice "scope" (scope is the set, not the pick).
 
 **Working country**:
-The one country currently framing Map, Overview, Detection, and Insights. Always exactly
-one member of **Country scope** when scope is non-empty; default = alphabetically first;
-persisted per team in a cookie (`clear-working-country`). Changed only via the Country
-picker on Map / Overview / Detection / Insights — not by Full Map or detail Back.
+The country currently framing Map, Overview, Detection, and Insights, or unset.
+One-country **Country scope** pins to that country. Multi-country scope: a pick is
+one member of the set; **unset / All Countries** shows every assigned country and
+a world camera (not a zoom on the alphabetically first binding). Unscoped = global
+monitoring. Persisted per team in a cookie (`clear-working-country`); clearing the
+picker deletes that team's entry. Changed only via the Country picker on Map /
+Overview / Detection / Insights — not by Full Map or detail Back.
 _Avoid_: "focus country" for the choice (that is the map paint treatment); "selected
 country" without qualifier (ambiguous).
 
@@ -351,11 +384,59 @@ shipping only blocked GeoJSON with no domain/counts report; burying the ingest g
 inside `docs/logie-spike-sudan.md` without `docs/clear-api-logie-ingest.md`; committing
 full SDN GeoJSON dumps into the app tree by default.
 
+### Situation Analysis
+
+**Situation Analysis**:
+The country-level snapshot of current humanitarian conditions for one **Analysis
+window** — summary, **Key figures**, sectors, sources. Pre-computed; the app reads
+it and does not generate it on request.
+_Avoid_: treating it as a live query; calling the yearly window the default voice
+when a monthly window exists.
+
+**Analysis window**:
+The time span a **Situation Analysis** covers. Two kinds: **monthly** and **yearly**.
+The monthly window is the voice of the page (current state). The yearly window is
+the year-in-review sibling, used to fill a **Key figure** the monthly window did
+not resolve — never to replace the monthly narrative, sectors, or sources. The
+yearly we borrow from is the same calendar year as the monthly window we kept;
+if that yearly also lacks the figure, the tile is omitted — we do not reach
+into another year. Last month is only a snapshot fallback when the current-month
+row is absent — not a donor for individual figures.
+_Avoid_: "bucket" in product language; switching the whole snapshot because one
+figure is thin.
+
+**Key figure**:
+A quantitative tile on **Situation Analysis** (displaced, in need, affected,
+funding, returnees). Sourced from a pipeline **datapoint** on the chosen
+**Analysis window**. A figure borrowed from the yearly window carries a
+**period qualifier** on that tile only, worded as “{year} yearly” (the donor
+window’s calendar year). Monthly tiles stay unlabeled. If the page *is* the
+yearly snapshot (no monthly row), nothing was borrowed — no per-tile qualifier.
+**INFORM Severity** is also shown as a tile but is a different source — it is
+not a datapoint and is never filled from the yearly window.
+_Avoid_: "KPI" for the pipeline field (overloaded across Dashboard, Detection,
+and Insights); calling INFORM a datapoint; silent mix of monthly and yearly
+numbers; labeling every tile.
+
+**Datapoint**:
+The pipeline's numeric field behind a **Key figure**. A datapoint is **missing**
+only when there is no point estimate after the usual resolution (including the
+displaced stock / total path). Zero is a figure. Low confidence is still a
+figure. An unresolved datapoint is simply absent — not a dash, not a yearly
+overwrite of a number the monthly window already stood behind.
+_Avoid_: rendering a placeholder dash for a missing datapoint; treating
+confidence as absence; sending **INFORM Severity** to the yearly window.
+
 ## Relationships
 
 - A **Thread** contains many question/**Answer** turns
 - An **Answer** has zero or more **Source documents**
-- Each turn is one independent **NRC Find** call; the **Thread** gives it no prior context
+- The **CLEAR Agent** turns a follow-up into a complete, standalone question before consulting **NRC Find**
+- The **CLEAR Agent** is offered only to approved users (not pending), and never sees more
+  than the user could see in the app
+- **Agent navigation** never changes data and never takes the user somewhere they could not go themselves
+- A **Thread** can be opened in the **Agent page** or the **Agent drawer** and continued in either;
+  **Agent navigation** from the **Agent page** carries the **Thread** into the **Agent drawer**
 - One or more **Signals** compose an **Event**
 - An **Event** may be raised into one or more **Alerts** (non-empty `event.alerts` =
   flagged as an alert)
@@ -383,17 +464,23 @@ full SDN GeoJSON dumps into the app tree by default.
   ingest** (clear-api GeoJSON persist) → Expo **#277** (**Blockages** wire-up). Access IA
   comps are a later ticket if still needed after spike findings.
 - **Country scope** contains zero or more level-0 countries; **Working country** is
-  exactly one of them when scope is non-empty, or null when unscoped. Full Map / Back
-  from a detail page is a visit — it must not write **Working country**. **Focus country**
-  (map paint) visually highlights the **Working country** on the map canvas.
+  one of them, or unset (all assigned countries / world camera) on a multi-country
+  team, or null when unscoped. Full Map / Back from a detail page is a visit — it
+  must not write **Working country**. **Focus country** (map paint) visually highlights
+  the **Working country** on the map canvas when one is set.
+- A **Situation Analysis** belongs to one **Analysis window** (monthly or yearly)
+  for one country. The page prefers the monthly window. A **Key figure** missing
+  on that monthly window is filled from the yearly window of the same country
+  and year; summary, sectors, and sources stay monthly. The same fill applies
+  to every read, including an `asOf` / “What changed” prior. **INFORM Severity**
+  is not filled this way.
 
 ## Example dialogue
 
-> **Dev:** "If the user asks a follow-up like 'tell me more', does the **Agent** send the
-> previous **Answer** so **NRC Find** has context?"
-> **Domain expert:** "No — **NRC Find** is stateless. The **Thread** is just what the user
-> sees; every question is a fresh retrieval. A vague follow-up will retrieve against those
-> words alone."
+> **Dev:** "If the user asks a follow-up like 'and in Lebanon?', does **NRC Find** get the
+> earlier turns?"
+> **Domain expert:** "No — **NRC Find** is still stateless. The **CLEAR Agent** has the whole
+> **Thread**, so it rewrites the follow-up into a complete question before it consults NRC Find."
 
 > **Dev:** "Quick Navigation works but content flashes when it loads — keep a fade-in?"
 > **Domain expert:** "No. Instant swap: skeletons → content. Chrome never blinks; no
@@ -648,7 +735,8 @@ full SDN GeoJSON dumps into the app tree by default.
 - "alert" vs raw feed — resolved: **Alert** is the attention lifecycle object; raw
   observations are **Signals**.
 - "conversation" was used to mean both the visible **Thread** and remembered backend
-  history — resolved: only the UI **Thread** exists; there is no server-side history.
+  history — resolved: the stored record is a **Conversation** (in clear-api); the **Thread** is
+  its on-screen view. Whether the Agent *answers from* earlier turns depends on the **Agent**.
 - Quick Navigation post-load flash — resolved: instant skeleton→content swap; no resolve
   fade-in.
 - "window persistence" / "compare mode" — resolved: the Layers control is **Keep panels
@@ -735,6 +823,29 @@ full SDN GeoJSON dumps into the app tree by default.
   Access IA comps ticket if still needed after findings.
 - Detail→map returns — resolved: remove header **View on Crisis Map**; focused
   **Back** / **Full Map** vs default **Map** tab (#108).
+- Situation Analysis fallback unit — resolved: **per-figure fill**. Keep the
+  monthly **Situation Analysis** for narrative, sectors, and sources. Borrow a
+  yearly **Key figure** only when that datapoint is unresolved on the monthly
+  window. Not a whole-snapshot switch. **INFORM Severity** is out of the fill.
+- Situation Analysis “missing” Key figure — resolved: **no point estimate**
+  after existing resolution. Zero stays. Displaced stock/total is tried before
+  yearly. Low confidence does not trigger fill. INFORM never fills from yearly.
+- Situation Analysis borrowed-figure disclosure — resolved: **period qualifier
+  on the borrowed tile only**. Monthly tiles and the evidence-base footer stay
+  unlabeled / monthly. Not a silent mix; not a period on every tile.
+- Situation Analysis yearly fill year — resolved: **same calendar year as the
+  monthly Analysis window we kept**. If that yearly also lacks the figure,
+  omit. Do not borrow from another year.
+- Situation Analysis fill on historical reads — resolved: **same rule on every
+  `get`**, including `asOf`. Fill both the tiles and the raw figures the diff
+  uses. Each read picks the year from its own monthly window. No second “diff
+  only monthly-native figures” path in this slice.
+- Situation Analysis figure donor — resolved: **yearly only**. Last month stays
+  a snapshot fallback when the current-month row is absent. Do not pick figures
+  from last month once a monthly window is the page.
+- Situation Analysis period qualifier copy — resolved: **“{year} yearly”** on
+  borrowed tiles only (year = donor window). No qualifier when the whole page
+  is already the yearly snapshot.
 
 ## Theming language
 

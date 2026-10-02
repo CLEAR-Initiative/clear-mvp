@@ -54,8 +54,8 @@ export function CollapsibleSection({ title, defaultOpen = false, children, locke
           className={cn(
             "border flex items-center justify-center",
             open
-              ? "border-transparent text-[#171717]"
-              : "border-transparent text-[#737373]",
+              ? "border-transparent text-[var(--color-text-primary)]"
+              : "border-transparent text-[var(--color-text-muted)]",
           )}
           style={{ fontSize: 14 }}
         >

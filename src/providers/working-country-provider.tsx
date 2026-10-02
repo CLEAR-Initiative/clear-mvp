@@ -9,6 +9,7 @@ import {
   readWorkingCountryCookieFromDocument,
   resolveWorkingCountry,
   setWorkingCountryCookie,
+  clearWorkingCountryCookie,
   storedWorkingCountry,
 } from "~/lib/working-country-cookie";
 import type { TeamLocation } from "~/lib/types/teams";
@@ -71,12 +72,13 @@ export function WorkingCountryProvider({ children, initialCookieValue }: Props) 
   const setWorkingCountry = useCallback(
     (locationId: string, name?: string) => {
       if (!activeTeamId) return;
-      if (name === "All Countries") {
+      if (name === "All Countries" || locationId === "" || locationId === "All Countries") {
         setCookieMap((prev) => {
           const next = { ...prev };
           delete next[activeTeamId];
           return next;
         });
+        clearWorkingCountryCookie(activeTeamId);
         return;
       }
       const location = countries.find((c) => c.id === locationId);

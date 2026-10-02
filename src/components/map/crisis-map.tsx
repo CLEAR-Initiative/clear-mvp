@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { geometryBounds, isPaintableBoundaryGeometry } from "~/lib/geo/country-mask";
@@ -32,6 +40,13 @@ import {
 } from "~/lib/map/nrc-office-markers";
 import { BLOCKAGES_STALE_AFTER_DAYS } from "~/lib/map/logie-blockages";
 import {
+  addBlockagesMapLayers,
+  BLOCKAGES_HOVER_LAYER_IDS,
+  getBlockagesAveragePixelLength,
+  removeBlockagesMapLayers,
+  setBlockagesFillProgress,
+} from "~/lib/map/blockages-paint";
+import {
   interpolateSeismicMapCollection,
   prefersReducedMotion,
   SEISMIC_TRANSITION_MS,
@@ -47,16 +62,23 @@ import {
 } from "~/lib/map/topography-terrain";
 import {
   applyPinElevation,
+  clientRectCenterInContainer,
   parseLocationPinRole,
   pinElevationFactor,
   shouldElevatePointPin,
 } from "~/lib/map/pin-elevation";
 import { bridgeMetaToCtrlForPitch } from "~/lib/map/meta-pitch-bridge";
 import { flyToOrientation, countryFitPadding, fitBoundsCameraOptions } from "~/lib/map/marker-detail-camera";
+import {
+  framedCountryAfterFocusChange,
+  shouldSkipCountryFit,
+  worldPickFlyDuration,
+} from "~/lib/map/country-picker-camera";
 import { ensureGlobeProjection } from "~/lib/map/idle-globe-spin";
 import {
   dismissTopographyTiltHint,
   isTopographyTiltHintDismissed,
+  isTopographyTiltHintFlatPitch,
   shouldShowTopographyTiltHint,
 } from "~/lib/map/topography-tilt-hint";
 import {
@@ -103,11 +125,21 @@ export type MapViewCameraSnapshot = {
   bearing: number;
 };
 
+/** Imperative fly target for place/coordinate lookup (preserves live pitch/bearing). */
+export type CrisisMapFlyToArgs = {
+  center: [number, number];
+  zoom?: number;
+  /** west, south, east, north — when set, fitBounds wins over center/zoom. */
+  bbox?: [number, number, number, number];
+  duration?: number;
+};
+
 /** Imperative helpers for overlays that track pins (e.g. spaghetti connectors). */
 export interface CrisisMapApi {
   /**
-   * Project a marker to container pixels. Prefers the live Mapbox Marker
-   * (spiderfy display position) when mounted; otherwise falls back to lng/lat.
+   * Project a marker to container pixels at the pin glyph center (not the
+   * ground tip). Prefers the live Mapbox Marker DOM when mounted; otherwise
+   * falls back to lng/lat `project()`.
    */
   projectMarker: (
     id: number,
@@ -120,6 +152,8 @@ export interface CrisisMapApi {
   getViewCamera: () => MapViewCameraSnapshot | null;
   /** Instant restore (no fly) for map ↔ detail round-trips. */
   restoreViewCamera: (camera: MapViewCameraSnapshot) => void;
+  /** Programmatic fly for place search — does not fight React center/zoom props. */
+  flyTo: (args: CrisisMapFlyToArgs) => void;
 }
 
 export interface MapRegion {
@@ -167,10 +201,21 @@ interface CrisisMapProps {
   focusCountryPCode?: string;
   /** Country name used as a fallback when `pCode` doesn't resolve. */
   focusCountryName?: string;
+  /**
+   * ISO 3166-1 alpha-2 codes to outline when no single focus country is set
+   * (All Countries browse). Lets a multi-country team see its scope on the globe.
+   */
+  scopeCountryIsos?: string[];
+  /**
+   * ISO codes that have no paintable A1 GeoJSON (Sudan seed bboxes). Mapbox
+   * admin-1 lines are shown for these even when other countries already
+   * have OCHA polygons.
+   */
+  mapboxAdmin1Isos?: string[];
   /** Admin boundary polygons to render (A1 states or A2 districts). */
   adminBoundaries?: AdminBoundary[];
   /** Level of admin boundaries being rendered - controls visual styling. */
-  adminBoundaryLevel?: 1 | 2;
+  adminBoundaryLevel?: 0 | 1 | 2;
   /** GeoJSON geometry to fit the map bounds to (e.g. a selected region). */
   fitBoundsGeometry?: unknown;
   /** Our own L0 geometry for the focus country highlight (overrides Mapbox tileset). */
@@ -203,6 +248,13 @@ interface CrisisMapProps {
    * appear unchanged (used when closing a marker detail sheet).
    */
   forceFlyToken?: number;
+  /**
+   * When true, skip DOM marker remounts on zoomend while staying in point
+   * mode — keeps radar/pulse CSS animations from restarting (#582).
+   */
+  preferStableDomMarkers?: boolean;
+  /** User interrupted a programmatic fly (wheel/drag) — parent should stop driving camera props. */
+  onUserCameraInterrupt?: () => void;
   /** Fired when the camera settles (pan/zoom/cluster fitBounds). */
   onCameraChange?: (camera: MapViewCameraSnapshot) => void;
   /**
@@ -278,6 +330,11 @@ interface CrisisMapProps {
   introFromGlobe?: boolean;
   /** Fired when the map fails to load (offline, style error, etc.). */
   onLoadError?: (error: { message: string; isOffline: boolean }) => void;
+  /**
+   * Overlay content inside the map shell (same stacking context as Mapbox
+   * markers). Used by `/map` spaghetti connectors so lines sit under pins.
+   */
+  children?: ReactNode;
 }
 
 export type BaseMapType = "simple" | "topography" | "satellite";
@@ -573,6 +630,8 @@ export function CrisisMap({
   interactive = true,
   focusCountryPCode,
   focusCountryName,
+  scopeCountryIsos,
+  mapboxAdmin1Isos,
   adminBoundaries,
   adminBoundaryLevel,
   fitBoundsGeometry,
@@ -587,6 +646,8 @@ export function CrisisMap({
   flyPitch,
   flyBearing,
   forceFlyToken = 0,
+  preferStableDomMarkers = false,
+  onUserCameraInterrupt,
   onCameraChange,
   onClusterExpand,
   showBoundaries = true,
@@ -605,6 +666,7 @@ export function CrisisMap({
   onMapClick,
   introFromGlobe = false,
   onLoadError,
+  children,
 }: CrisisMapProps) {
   const t = useTranslations("map");
   const locale = useLocale();
@@ -672,12 +734,17 @@ export function CrisisMap({
   const shakemapHoverBoundRef = useRef<Set<string>>(new Set());
   const shakemapPopupRef = useRef<any>(null);
   const [loaded, setLoaded] = useState(false);
+  /** Host inside `.mapboxgl-map` so overlays can sit between canvas and markers. */
+  const [mapOverlayHost, setMapOverlayHost] = useState<HTMLElement | null>(null);
   const [tiltHintDismissed, setTiltHintDismissed] = useState(() =>
     isTopographyTiltHintDismissed(),
   );
+  /** Pitch for tilt-hint gating only — updates when crossing flat ↔ tilted. */
+  const [tiltHintPitch, setTiltHintPitch] = useState(initialPitch);
   const showTiltHint = shouldShowTopographyTiltHint({
     baseMapType,
     dismissed: tiltHintDismissed,
+    pitch: tiltHintPitch,
   });
   const onDismissTiltHint = () => {
     dismissTopographyTiltHint();
@@ -914,15 +981,23 @@ export function CrisisMap({
 
   // Pitch-linked pin stems on every basemap — flat ≤45°, full by ~70°.
   // Imperative DOM only (no remount) so tilt stays smooth.
+  // Also sync tilt-hint pitch (state only when flat↔tilted crosses).
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
     let raf = 0;
     const syncPinElevation = () => {
       raf = 0;
-      const factor = pinElevationFactor(
-        typeof m.getPitch === "function" ? m.getPitch() : 0,
-      );
+      const pitch =
+        typeof m.getPitch === "function" ? m.getPitch() : 0;
+      const factor = pinElevationFactor(pitch);
+      // Hint only needs flat vs tilted — avoid re-renders on every pitch frame.
+      setTiltHintPitch((prev) => {
+        const prevFlat = isTopographyTiltHintFlatPitch(prev);
+        const nextFlat = isTopographyTiltHintFlatPitch(pitch);
+        if (prevFlat === nextFlat) return prev;
+        return pitch;
+      });
       for (const [key, mk] of clusterDomMarkers.current) {
         if (!key.startsWith("p-")) continue;
         try {
@@ -1075,6 +1150,95 @@ export function CrisisMap({
     };
 
     cleanup();
+
+    const scopedIsos = (scopeCountryIsos ?? [])
+      .map((iso) => iso.toUpperCase())
+      .filter(Boolean);
+
+    // All Countries + team scope: outline every assigned country on the globe.
+    // No single-country mask flight — just “these are yours” at world zoom.
+    if (!focusIso && scopedIsos.length > 0 && showBoundaries) {
+      const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+      const firstRoadLayer = styleLayers.find((l) => isRoadLayerId(l.id));
+      const firstAdminLayer = styleLayers.find((l) =>
+        l.id === "admin-1-boundary-bg" || l.id === "admin-0-boundary-bg",
+      );
+      const firstSymbolLayer = styleLayers.find((l) => l.type === "symbol");
+      const fillBeforeId: string | undefined =
+        firstRoadLayer?.id ?? firstAdminLayer?.id ?? firstSymbolLayer?.id;
+      const borderBeforeId: string | undefined = firstSymbolLayer?.id;
+      const overlayOnDark = baseMapType === "satellite" || isDark;
+      const maskColor =
+        baseMapType === "simple" && !isDark ? "#FFFFFF" : "#000000";
+      const maskOpacity =
+        baseMapType === "simple" ? (isDark ? 0.45 : 0.75) : 0.35;
+      const borderColor = overlayOnDark ? "#60A5FA" : "#1D4ED8";
+      const isoIn: unknown = ["in", ["get", "iso_3166_1"], ["literal", scopedIsos]];
+      const isoOut: unknown = ["!", isoIn];
+
+      m.addSource(COUNTRY_SOURCE, {
+        type: "vector",
+        url: "mapbox://mapbox.country-boundaries-v1",
+      });
+      m.addLayer(
+        {
+          id: "focus-mask-fill",
+          type: "fill",
+          source: COUNTRY_SOURCE,
+          "source-layer": "country_boundaries",
+          filter: isoOut as never,
+          paint: { "fill-color": maskColor, "fill-opacity": maskOpacity },
+        },
+        fillBeforeId,
+      );
+      m.addLayer(
+        {
+          id: "focus-border-line",
+          type: "line",
+          source: COUNTRY_SOURCE,
+          "source-layer": "country_boundaries",
+          filter: isoIn as never,
+          paint: { "line-color": borderColor, "line-width": 1.75, "line-opacity": 0.9 },
+        },
+        borderBeforeId,
+      );
+
+      const fallbackIsos = (mapboxAdmin1Isos ?? [])
+        .map((iso) => iso.toUpperCase())
+        .filter(Boolean);
+      if (adminBoundaryLevel === 1 && fallbackIsos.length > 0) {
+        const allLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
+        const isoFilter: unknown =
+          fallbackIsos.length === 1
+            ? ["==", ["get", "iso_3166_1"], fallbackIsos[0]]
+            : ["in", ["get", "iso_3166_1"], ["literal", fallbackIsos]];
+        for (const layer of allLayers) {
+          const id = layer.id.toLowerCase();
+          if (
+            layer.type === "line" &&
+            id.includes("admin") &&
+            (id.includes("-1-") || id.endsWith("-1"))
+          ) {
+            admin1LayerIds.current.push(layer.id);
+            try {
+              m.setFilter(layer.id, [
+                "all",
+                ["==", ["get", "admin_level"], 1],
+                ["==", ["get", "maritime"], "false"],
+                isoFilter,
+              ] as never);
+              m.setLayerZoomRange(layer.id, 0, 24);
+              m.setPaintProperty(layer.id, "line-color", overlayOnDark ? "#94A3B8" : "#475569");
+              m.setPaintProperty(layer.id, "line-width", 1.4);
+              m.setPaintProperty(layer.id, "line-opacity", 0.85);
+              m.setPaintProperty(layer.id, "line-dasharray", [3, 2]);
+              m.setLayoutProperty(layer.id, "visibility", "visible");
+            } catch { /* ignore */ }
+          }
+        }
+      }
+      return cleanup;
+    }
 
     if (!focusIso) return;
 
@@ -1250,6 +1414,16 @@ export function CrisisMap({
         } catch { /* ignore */ }
       }
 
+      // Country labels - improve legibility with solid fill (no hollow outline effect).
+      if (layer.type === "symbol" && id === "country-label") {
+        try {
+          m.setPaintProperty(layer.id, "text-color", isDark ? "#E2E8F0" : "#1F2937");
+          m.setPaintProperty(layer.id, "text-halo-color", isDark ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.9)");
+          m.setPaintProperty(layer.id, "text-halo-width", 2);
+          m.setPaintProperty(layer.id, "text-halo-blur", 0.3);
+        } catch { /* ignore */ }
+      }
+
       // Settlement labels - restrict to focus country only, and relax
       // filterrank so mid-tier cities (Port Sudan, Nyala, etc.) are visible.
       // All settlement labels outside the focus country are hidden; country
@@ -1294,7 +1468,7 @@ export function CrisisMap({
     }
 
     return cleanup;
-  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries, baseMapType]);
+  }, [focusIso, paintableFocusGeometry, loaded, paintableAdminBoundaries, adminBoundaryLevel, isDark, showBoundaries, baseMapType, scopeCountryIsos, mapboxAdmin1Isos]);
 
   // Frame the focus country instantly from static countryConfig.
   // L0 GeoJSON (focusCountryFitBounds) is for highlight paint only — waiting
@@ -1305,7 +1479,15 @@ export function CrisisMap({
   const prevCountryFitNonce = useRef(countryFitNonce);
   const prevFramedCountry = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (!map.current || !loaded || fitBoundsGeometry) return;
+    if (!map.current || !loaded) return;
+    // All Countries must forget the last frame. Leaving this set to "Sudan"
+    // after zooming out made Sudan → All → Sudan skip the next country fit.
+    if (!focusCountryName) {
+      prevFramedCountry.current = framedCountryAfterFocusChange(undefined);
+      prevCountryFitNonce.current = countryFitNonce;
+      return;
+    }
+    if (fitBoundsGeometry) return;
     const nonceBumped = countryFitNonce !== prevCountryFitNonce.current;
     prevCountryFitNonce.current = countryFitNonce;
     if (!fitBoundsOnFocus && !nonceBumped) return;
@@ -1316,8 +1498,16 @@ export function CrisisMap({
     const bounds = cfgBounds ?? focusCountryFitBounds;
     if (!bounds) return;
 
-    const framedKey = focusCountryName ?? `bounds:${bounds.join(",")}`;
-    if (!nonceBumped && prevFramedCountry.current === framedKey) return;
+    const framedKey = focusCountryName;
+    if (
+      shouldSkipCountryFit({
+        prevFramedKey: prevFramedCountry.current,
+        nextFramedKey: framedKey,
+        nonceBumped,
+      })
+    ) {
+      return;
+    }
     prevFramedCountry.current = framedKey;
 
     // Mobile: inset for header + bottom nav so the full country sits in the
@@ -1411,10 +1601,51 @@ export function CrisisMap({
   const prevZoom = useRef(zoom);
   const prevPadding = useRef(flyPaddingBottom);
   const prevForceFly = useRef(forceFlyToken);
+  const userCameraOverrideRef = useRef(false);
+  const onUserCameraInterruptRef = useRef(onUserCameraInterrupt);
+  onUserCameraInterruptRef.current = onUserCameraInterrupt;
+  const preferStableDomMarkersRef = useRef(preferStableDomMarkers);
+  preferStableDomMarkersRef.current = preferStableDomMarkers;
+
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    const m = map.current;
+    const onUserGesture = (e: { originalEvent?: Event }) => {
+      // Programmatic flyTo/fitBounds omit a DOM UIEvent; ignore those.
+      if (!e.originalEvent || !(e.originalEvent instanceof UIEvent)) return;
+      // Sync prev refs so a later prop echo does not re-fly into the live camera.
+      // Do NOT map.stop() here — that cancels the user's drag/zoom mid-gesture.
+      try {
+        const c = m.getCenter();
+        prevCenter.current = [c.lng, c.lat];
+        prevZoom.current = m.getZoom();
+      } catch {
+        /* ignore */
+      }
+      if (!userCameraOverrideRef.current) {
+        userCameraOverrideRef.current = true;
+        onUserCameraInterruptRef.current?.();
+      }
+    };
+    m.on("zoomstart", onUserGesture);
+    m.on("dragstart", onUserGesture);
+    m.on("rotatestart", onUserGesture);
+    m.on("pitchstart", onUserGesture);
+    return () => {
+      m.off("zoomstart", onUserGesture);
+      m.off("dragstart", onUserGesture);
+      m.off("rotatestart", onUserGesture);
+      m.off("pitchstart", onUserGesture);
+    };
+  }, [loaded]);
+
   useEffect(() => {
     if (!map.current || !loaded) return;
     const forced = forceFlyToken !== prevForceFly.current;
     prevForceFly.current = forceFlyToken;
+    if (forced) {
+      userCameraOverrideRef.current = false;
+    }
     // Country fitBounds owns framing whenever a focus country is selected —
     // including while L0 geometry is still loading. Otherwise flyTo races to
     // a wrong fallback center (e.g. Sudan for Venezuela) and fitBounds has to
@@ -1422,6 +1653,7 @@ export function CrisisMap({
     // wins when fitBoundsOnFocus is off; do not let forceFlyToken on country
     // change cancel the padded mobile country fit.
     if (focusCountryName && fitBoundsOnFocus && !fitBoundsGeometry) return;
+    if (userCameraOverrideRef.current && !forced) return;
     const paddingChanged = prevPadding.current !== flyPaddingBottom;
     if (
       !forced &&
@@ -1466,7 +1698,7 @@ export function CrisisMap({
     map.current.flyTo({
       center,
       zoom,
-      duration: flyDuration,
+      duration: focusCountryName ? flyDuration : worldPickFlyDuration(flyDuration),
       pitch,
       bearing,
       padding: flyPaddingBottom > 0
@@ -1868,6 +2100,20 @@ export function CrisisMap({
         clusterDomMarkers.current.size === 0 ||
         mountedMode !== renderMode;
 
+      // Focus/solo sets are small — remounting on every zoomend restarts the
+      // radar pulse CSS. Keep existing point DOM when mode is unchanged.
+      if (
+        needsMount &&
+        rebuildMarkers &&
+        preferStableDomMarkersRef.current &&
+        mountedMode === "point" &&
+        renderMode === "point" &&
+        clusterDomMarkers.current.size > 0
+      ) {
+        setDomMarkerOpacity(markerOp);
+        return;
+      }
+
       if (needsMount) {
         renderMarkersForMode(renderMode);
         setDomMarkerOpacity(markerOp);
@@ -2032,28 +2278,40 @@ export function CrisisMap({
   useEffect(() => {
     if (!map.current || !loaded) return;
     const m = map.current;
-    const SOURCE = "logie-blockages";
-    const LINE_LAYER = "logie-blockages-line";
-    const LINE_LAYER_STALE = "logie-blockages-line-stale";
-    const LINE_HIT = "logie-blockages-line-hit";
-    const POINT_LAYER = "logie-blockages-point";
-    const HOVER_LAYERS = [LINE_HIT, LINE_LAYER, LINE_LAYER_STALE, POINT_LAYER];
+    const HOVER_LAYERS = [...BLOCKAGES_HOVER_LAYER_IDS];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mb = (window as unknown as { mapboxgl?: any }).mapboxgl;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let popup: any = null;
+    // map.remove() nulls the canvas. View details unmounts this map; a hover
+    // or cleanup that still writes cursor then throws and Next shows the
+    // full-page "client-side exception" instead of the event page.
+    const setCursor = (value: string) => {
+      try {
+        const canvas = m.getCanvas?.() as HTMLCanvasElement | undefined;
+        if (canvas) canvas.style.cursor = value;
+      } catch {
+        /* map already removed */
+      }
+    };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onMove = (e: any) => {
-      const feats = m.queryRenderedFeatures(e.point, { layers: HOVER_LAYERS }) as Array<{
-        properties?: Record<string, unknown>;
-      }>;
-      if (!feats.length) {
-        popup?.remove();
-        m.getCanvas().style.cursor = "";
+      let feats: Array<{ properties?: Record<string, unknown> }> = [];
+      try {
+        feats = m.queryRenderedFeatures(e.point, { layers: HOVER_LAYERS }) as Array<{
+          properties?: Record<string, unknown>;
+        }>;
+      } catch {
+        setCursor("");
         return;
       }
-      m.getCanvas().style.cursor = "pointer";
+      if (!feats.length) {
+        popup?.remove();
+        setCursor("");
+        return;
+      }
+      setCursor("pointer");
       const p = feats[0]?.properties ?? {};
       const title = escapeHtml(String(p.label || p.name || "Access constraint"));
       const kind =
@@ -2092,49 +2350,43 @@ export function CrisisMap({
       })();
       const remark =
         typeof p.status_remark === "string" && p.status_remark.trim()
-          ? escapeHtml(p.status_remark.trim().slice(0, 160))
+          ? escapeHtml(p.status_remark.trim().slice(0, 80))
           : null;
       // Colors only — chrome lives on `.mapboxgl-popup-content` (avoids white Mapbox default + nested card).
       const titleColor = isDark ? "#f8fafc" : "#0f172a";
       const secondary = isDark ? "#cbd5e1" : "#334155";
       const muted = isDark ? "#94a3b8" : "#64748b";
       const warn = isDark ? "#fbbf24" : "#b45309";
-      const partner =
-        (typeof p.source_label === "string" && p.source_label.trim()
-          ? p.source_label.trim()
-          : typeof p.source_name === "string" && p.source_name.trim()
-            ? p.source_name.trim()
-            : null);
-      const partnerEsc = partner ? escapeHtml(partner) : null;
-      const reliability =
-        typeof p.source_reliability === "string" && p.source_reliability.trim()
-          ? escapeHtml(p.source_reliability.trim())
-          : null;
+      
+      const ageShort =
+        ageDays === 0
+          ? "today"
+          : ageDays === 1
+            ? "1 day ago"
+            : ageDays != null && !Number.isNaN(ageDays)
+              ? `${ageDays} days ago`
+              : "unknown age";
+      
+      // Slim popup: title, status · age, optional one-line remark
       const html = `
-        <div style="padding:10px 12px;font-family:system-ui,-apple-system,sans-serif;min-width:180px;max-width:280px;color:${titleColor};">
-          <div style="font-weight:700;font-size:13px;color:${titleColor};line-height:1.3;margin-bottom:6px;">${title}</div>
-          <div style="font-size:11px;color:${secondary};margin-bottom:4px;">
+        <div style="padding:8px 10px;font-family:system-ui,-apple-system,sans-serif;min-width:140px;max-width:220px;color:${titleColor};">
+          <div style="font-weight:700;font-size:12px;color:${titleColor};line-height:1.3;margin-bottom:4px;">${title}</div>
+          <div style="font-size:10px;color:${secondary};">
             <span style="font-weight:600;">${kind}</span>
             <span style="opacity:0.55;"> · </span>
             <span>${status}</span>
+            <span style="opacity:0.55;"> · </span>
+            <span style="color:${stale ? warn : muted};font-weight:${stale ? 600 : 400};">${ageShort}${stale ? " (stale)" : ""}</span>
           </div>
-          <div style="font-size:10px;color:${stale ? warn : muted};font-weight:${stale ? 600 : 400};">
-            ${escapeHtml(freshness)}
-          </div>
-          ${stale ? `<div style="font-size:10px;color:${warn};margin-top:4px;line-height:1.35;">Still probable this segment is constrained, but the LogIE status is ${ageDays != null && !Number.isNaN(ageDays) ? ageDays : `${BLOCKAGES_STALE_AFTER_DAYS}+`} days old and may no longer be accurate.</div>` : ""}
-          ${remark && remark !== title ? `<div style="font-size:10px;color:${muted};margin-top:6px;line-height:1.4;">${remark}</div>` : ""}
-          <div style="font-size:10px;color:${muted};margin-top:8px;padding-top:6px;border-top:1px solid ${isDark ? "rgba(148,163,184,0.25)" : "rgba(15,23,42,0.08)"};">
-            Source: LogIE (WFP Logistics Cluster)${partnerEsc ? ` · ${partnerEsc}` : ""}
-            ${reliability ? `<div style="margin-top:2px;">Reporter confidence: ${reliability}</div>` : ""}
-          </div>
+          ${remark && remark !== title ? `<div style="font-size:9px;color:${muted};margin-top:4px;line-height:1.3;">${remark}</div>` : ""}
         </div>
       `;
       if (!popup && mb?.Popup) {
         popup = new mb.Popup({
           closeButton: false,
           closeOnClick: false,
-          offset: 10,
-          maxWidth: "280px",
+          offset: 8,
+          maxWidth: "220px",
           className: isDark
             ? "logie-blockages-popup logie-blockages-popup--dark"
             : "logie-blockages-popup logie-blockages-popup--light",
@@ -2144,22 +2396,22 @@ export function CrisisMap({
     };
     const onLeave = () => {
       popup?.remove();
-      m.getCanvas().style.cursor = "";
+      setCursor("");
     };
 
     const cleanup = () => {
       for (const id of HOVER_LAYERS) {
-        m.off("mousemove", id, onMove);
-        m.off("mouseleave", id, onLeave);
+        try {
+          m.off("mousemove", id, onMove);
+          m.off("mouseleave", id, onLeave);
+        } catch {
+          /* layer never mounted */
+        }
       }
       popup?.remove();
       popup = null;
-      try { if (m.getLayer(LINE_LAYER)) m.removeLayer(LINE_LAYER); } catch { /* ignore */ }
-      try { if (m.getLayer(LINE_LAYER_STALE)) m.removeLayer(LINE_LAYER_STALE); } catch { /* ignore */ }
-      try { if (m.getLayer(LINE_HIT)) m.removeLayer(LINE_HIT); } catch { /* ignore */ }
-      try { if (m.getLayer(POINT_LAYER)) m.removeLayer(POINT_LAYER); } catch { /* ignore */ }
-      try { if (m.getSource(SOURCE)) m.removeSource(SOURCE); } catch { /* ignore */ }
-      m.getCanvas().style.cursor = "";
+      removeBlockagesMapLayers(m);
+      setCursor("");
     };
 
     cleanup();
@@ -2169,138 +2421,146 @@ export function CrisisMap({
     const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
     const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
 
-    try {
-      m.addSource(SOURCE, {
-        type: "geojson",
-        data: blockagesGeoJson as never,
-      });
-
-      // Status severity (road/bridge currstatus_physical). Coerce string props from Mapbox.
-      const lineColor = [
-        "match",
-        ["to-number", ["get", "status_code"]],
-        4, "#B91C1C", // Not Passable
-        3, "#D97706", // Passable with restrictions / Damaged
-        "#DC2626", // fallback
-      ] as never;
-
-      const isLine = [
-        "in",
-        ["geometry-type"],
-        ["literal", ["LineString", "MultiLineString"]],
-      ] as never;
-      // GeoJSON props may arrive as number or string through Mapbox.
-      const isStale = [
-        "any",
-        ["==", ["get", "stale"], 1],
-        ["==", ["get", "stale"], "1"],
-      ] as never;
-      const isFresh = ["!", isStale] as never;
-
-      // Wider invisible hit target so thin roads are easy to hover.
-      m.addLayer(
-        {
-          id: LINE_HIT,
-          type: "line",
-          source: SOURCE,
-          filter: isLine,
-          paint: {
-            "line-color": "#000000",
-            "line-opacity": 0,
-            "line-width": 14,
-          },
-          layout: { "line-cap": "round", "line-join": "round" },
-        },
-        beforeId,
-      );
-
-      m.addLayer(
-        {
-          id: LINE_LAYER,
-          type: "line",
-          source: SOURCE,
-          filter: ["all", isLine, isFresh] as never,
-          paint: {
-            "line-color": lineColor,
-            "line-width": [
-              "interpolate", ["linear"], ["zoom"],
-              4, 1.5,
-              8, 3,
-              12, 5,
-            ],
-            "line-opacity": 0.9,
-          },
-          layout: {
-            "line-cap": "round",
-            "line-join": "round",
-          },
-        },
-        beforeId,
-      );
-
-      // Stale (≥15d): still painted, dashed + lower opacity — do not hide.
-      m.addLayer(
-        {
-          id: LINE_LAYER_STALE,
-          type: "line",
-          source: SOURCE,
-          filter: ["all", isLine, isStale] as never,
-          paint: {
-            "line-color": lineColor,
-            "line-width": [
-              "interpolate", ["linear"], ["zoom"],
-              4, 1.25,
-              8, 2.5,
-              12, 4,
-            ],
-            "line-opacity": 0.45,
-            "line-dasharray": [1.5, 1.5],
-          },
-          layout: {
-            "line-cap": "round",
-            "line-join": "round",
-          },
-        },
-        beforeId,
-      );
-
-      // Bridges (and any Point leftovers) as circles.
-      m.addLayer(
-        {
-          id: POINT_LAYER,
-          type: "circle",
-          source: SOURCE,
-          filter: ["==", ["geometry-type"], "Point"],
-          paint: {
-            "circle-radius": [
-              "interpolate", ["linear"], ["zoom"],
-              4, 3,
-              10, 6,
-            ],
-            "circle-color": lineColor,
-            "circle-opacity": [
-              "case",
-              isStale,
-              0.5,
-              0.95,
-            ],
-            "circle-stroke-width": 1.5,
-            "circle-stroke-color": isDark ? "#0f172a" : "#ffffff",
-          },
-        },
-        beforeId,
-      );
-
-      for (const id of HOVER_LAYERS) {
-        m.on("mousemove", id, onMove);
-        m.on("mouseleave", id, onLeave);
+    let fillRaf: ReturnType<typeof requestAnimationFrame> | null = null;
+    let zoomDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let fadeInTimer: ReturnType<typeof setTimeout> | null = null;
+    let isZooming = false;
+    const abortController = new AbortController();
+    
+    const ZOOM_DEBOUNCE_MS = 2000;
+    const PIXELS_PER_MS = 0.08; // Very slow for constant visual speed at all zooms
+    
+    // Opacity pulse animation: fade slightly (1 → 0.3) then back to full (1)
+    // Corridors stay thick always - only opacity changes
+    const runPulseAnimation = (onComplete?: () => void) => {
+      if (fillRaf) cancelAnimationFrame(fillRaf);
+      
+      const avgPixelLength = getBlockagesAveragePixelLength(m);
+      const zoom = m.getZoom();
+      const zoomMultiplier = zoom > 12 ? Math.pow(2.5, zoom - 12) : 1;
+      const duration = Math.max(800, Math.min(2000, (avgPixelLength / PIXELS_PER_MS) * zoomMultiplier));
+      
+      const startTime = performance.now();
+      const animatePulse = () => {
+        const elapsed = performance.now() - startTime;
+        const t = Math.min(1, elapsed / duration);
+        
+        // Two-phase: fade to 0.3, then back to 1.0
+        let progress;
+        if (t < 0.5) {
+          // First half: 1.0 → 0.3
+          progress = 1.0 - (t * 2 * 0.7);
+        } else {
+          // Second half: 0.3 → 1.0
+          progress = 0.3 + ((t - 0.5) * 2 * 0.7);
+        }
+        
+        setBlockagesFillProgress(m, progress);
+        
+        if (t < 1) {
+          fillRaf = requestAnimationFrame(animatePulse);
+        } else {
+          // Lock at full opacity (1) as permanent default
+          setBlockagesFillProgress(m, 1);
+          fillRaf = null;
+          if (onComplete) onComplete();
+        }
+      };
+      fillRaf = requestAnimationFrame(animatePulse);
+    };
+    
+    const onZoomStart = () => {
+      isZooming = true;
+      if (zoomDebounceTimer) {
+        clearTimeout(zoomDebounceTimer);
+        zoomDebounceTimer = null;
       }
-    } catch {
-      /* style may be mid-swap */
-    }
+    };
+    
+    const onZoomEnd = () => {
+      isZooming = false;
+      if (zoomDebounceTimer) clearTimeout(zoomDebounceTimer);
+      
+      // Wait 2 seconds after zoom stabilizes, then pulse animation
+      zoomDebounceTimer = setTimeout(() => {
+        if (!isZooming) {
+          runPulseAnimation();
+        }
+        zoomDebounceTimer = null;
+      }, ZOOM_DEBOUNCE_MS);
+    };
+    
+    // Load layers asynchronously (bridge icons are loaded from SVGs)
+    (async () => {
+      try {
+        // Pass abort signal for cancellation on unmount
+        await addBlockagesMapLayers(m, {
+          data: blockagesGeoJson,
+          beforeId,
+          signal: abortController.signal,
+        });
 
-    return cleanup;
-  }, [loaded, showBlockages, blockagesGeoJson, isDark]);
+        // Initial: Fade in from invisible (0) to fully visible (1)
+      // Corridors stay thick always - only opacity changes
+      setBlockagesFillProgress(m, 0);
+      
+      fadeInTimer = setTimeout(() => {
+        fadeInTimer = null;
+        if (abortController.signal.aborted) return;
+        const fadeStart = performance.now();
+        const fadeDuration = 800; // Smooth fade-in
+        
+        const fadeIn = () => {
+          if (abortController.signal.aborted) return;
+          const elapsed = performance.now() - fadeStart;
+          const t = Math.min(elapsed / fadeDuration, 1);
+          
+          // Ease-out curve for smoother animation
+          const progress = 1 - Math.pow(1 - t, 3);
+          
+          setBlockagesFillProgress(m, progress);
+          
+          if (t < 1) {
+            fillRaf = requestAnimationFrame(fadeIn);
+          } else {
+            // Lock at full opacity (1) as permanent default
+            setBlockagesFillProgress(m, 1);
+            fillRaf = null;
+          }
+        };
+        fillRaf = requestAnimationFrame(fadeIn);
+      }, 100);
+      
+      // Re-animate with two-phase after zoom stabilizes
+      m.on("zoomstart", onZoomStart);
+      m.on("zoomend", onZoomEnd);
+
+        for (const id of HOVER_LAYERS) {
+          m.on("mousemove", id, onMove);
+          m.on("mouseleave", id, onLeave);
+        }
+      } catch {
+        /* style may be mid-swap */
+      }
+    })();
+
+    return () => {
+      // Cancel any in-flight icon fetches and the fade that was not tracked
+      // by fillRaf (scheduled 100ms later). View details unmounts the map
+      // before that timer fires; touching a removed map is the client exception.
+      abortController.abort();
+      if (fillRaf) cancelAnimationFrame(fillRaf);
+      if (fadeInTimer) clearTimeout(fadeInTimer);
+      if (zoomDebounceTimer) clearTimeout(zoomDebounceTimer);
+      try {
+        m.off("zoomstart", onZoomStart);
+        m.off("zoomend", onZoomEnd);
+      } catch {
+        /* map already removed */
+      }
+      cleanup();
+    };
+  }, [loaded, showBlockages, blockagesGeoJson, isDark, baseMapType]);
 
   // ── Seismic Signals (USGS earthquake epicenters) ────────────────────────
   useEffect(() => {
@@ -2877,12 +3137,13 @@ export function CrisisMap({
     if (features.length === 0) return;
 
     const isA2 = adminBoundaryLevel === 2;
+    const isA0 = adminBoundaryLevel === 0;
     // Contrast against the basemap, not the app theme - satellite imagery
     // is always dark.
     const overlayOnDark = baseMapType === "satellite" || isDark;
     const lineColor = overlayOnDark ? "#60A5FA" : "#1D4ED8";
-    const lineWidth = isA2 ? 1 : 1.5;
-    const lineOpacity = isA2 ? 0.7 : 0.85;
+    const lineWidth = isA2 ? 1 : isA0 ? 2 : 1.5;
+    const lineOpacity = isA2 ? 0.7 : 0.9;
 
     const styleLayers = m.getStyle().layers as Array<{ id: string; type: string }>;
     const beforeId = styleLayers.find((l) => l.type === "symbol")?.id;
@@ -3032,14 +3293,26 @@ export function CrisisMap({
   // resize — Mapbox keeps the old canvas width unless we call resize().
   // Debounce past the nav width transition (200ms) so we don't resize every
   // animation frame (that blanks satellite tiles mid-reflow).
+  // Skip resize if dimensions are unchanged (within 1px) to prevent spurious
+  // camera nudges during chrome motion when the container size is stable.
   useEffect(() => {
     if (!loaded || !mapContainer.current || !map.current) return;
     const el = mapContainer.current;
     let timer = 0;
+    let lastWidth = el.clientWidth;
+    let lastHeight = el.clientHeight;
     const ro = new ResizeObserver(() => {
       if (timer) window.clearTimeout(timer);
       timer = window.setTimeout(() => {
         timer = 0;
+        const currentWidth = el.clientWidth;
+        const currentHeight = el.clientHeight;
+        // Skip resize if dimensions haven't changed (within 1px tolerance)
+        if (Math.abs(currentWidth - lastWidth) <= 1 && Math.abs(currentHeight - lastHeight) <= 1) {
+          return;
+        }
+        lastWidth = currentWidth;
+        lastHeight = currentHeight;
         try {
           map.current?.resize();
           onMapMoveRef.current?.();
@@ -3055,6 +3328,30 @@ export function CrisisMap({
     };
   }, [loaded]);
 
+  // Mount an overlay host inside Mapbox's map container so React overlays
+  // (spaghetti connectors) can stack between the canvas and DOM markers.
+  useEffect(() => {
+    if (!loaded || !map.current) {
+      setMapOverlayHost(null);
+      return;
+    }
+    const container = map.current.getContainer?.() as HTMLElement | undefined;
+    if (!container) {
+      setMapOverlayHost(null);
+      return;
+    }
+    const host = document.createElement("div");
+    host.setAttribute("data-map-overlay-host", "1");
+    host.style.cssText =
+      "position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible;";
+    container.appendChild(host);
+    setMapOverlayHost(host);
+    return () => {
+      host.remove();
+      setMapOverlayHost(null);
+    };
+  }, [loaded]);
+
   // Expose project helpers for overlays (spaghetti connectors on /map).
   useEffect(() => {
     if (!mapApiRef) return;
@@ -3066,11 +3363,20 @@ export function CrisisMap({
       projectMarker: (id, lng, lat) => {
         const m = map.current;
         if (!m) return null;
+        const container = m.getContainer?.() as HTMLElement | undefined;
         const mounted = clusterDomMarkers.current.get(`p-${id}`);
-        if (mounted?.getLngLat) {
-          const ll = mounted.getLngLat() as { lng: number; lat: number };
-          const p = m.project([ll.lng, ll.lat]) as { x: number; y: number };
-          return { x: p.x, y: p.y };
+        // Prefer the live pin head center so bottom-anchored elevated stems
+        // do not attach spaghetti to the ground tip.
+        if (mounted?.getElement && container?.getBoundingClientRect) {
+          const el = mounted.getElement() as HTMLElement;
+          const head =
+            el.querySelector<HTMLElement>(".marker-pin-head") ??
+            el.querySelector<HTMLElement>(".marker-dot") ??
+            el;
+          return clientRectCenterInContainer(
+            head.getBoundingClientRect(),
+            container.getBoundingClientRect(),
+          );
         }
         const display = displayLngLatRef.current.get(id);
         const coords = display ?? ([lng, lat] as [number, number]);
@@ -3099,6 +3405,43 @@ export function CrisisMap({
             zoom: camera.zoom,
             pitch: camera.pitch,
             bearing: camera.bearing,
+          });
+        } catch {
+          /* ignore */
+        }
+      },
+      flyTo: (args) => {
+        const m = map.current;
+        if (!m) return;
+        const duration = args.duration ?? 900;
+        const { pitch, bearing } = flyToOrientation({
+          currentPitch: typeof m.getPitch === "function" ? m.getPitch() : 0,
+          currentBearing: typeof m.getBearing === "function" ? m.getBearing() : 0,
+        });
+        try {
+          if (args.bbox && args.bbox.length === 4) {
+            const [west, south, east, north] = args.bbox;
+            m.fitBounds(
+              [
+                [west, south],
+                [east, north],
+              ],
+              {
+                padding: { top: 72, bottom: 96, left: 48, right: 48 },
+                duration,
+                pitch,
+                bearing,
+                maxZoom: args.zoom ?? 14,
+              },
+            );
+            return;
+          }
+          m.flyTo({
+            center: args.center,
+            zoom: args.zoom ?? 12,
+            duration,
+            pitch,
+            bearing,
           });
         } catch {
           /* ignore */
@@ -3193,7 +3536,9 @@ export function CrisisMap({
         }
         /* Keep GL clear transparent so container basemap color shows if frames drop */
         .mapboxgl-canvas { background: transparent !important; }
-        .mapboxgl-marker { overflow: visible; }
+        /* Canvas under overlays; markers above spaghetti connectors (z-index 1). */
+        .mapboxgl-canvas-container { z-index: 0; }
+        .mapboxgl-marker { overflow: visible; z-index: 2; }
         /* Topography: hide grab hand only while the probe is over terrain.
            Over pitched sky we restore the system cursor so filters/menus
            stay easy to reach. Inline cursor:pointer from markers/blockages
@@ -3228,6 +3573,9 @@ export function CrisisMap({
         }}
       >
         <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
+        {mapOverlayHost && children
+          ? createPortal(children, mapOverlayHost)
+          : null}
         {showTiltHint && (
           <div
             role="status"

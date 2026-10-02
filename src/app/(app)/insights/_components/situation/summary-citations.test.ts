@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { planSentenceSegments, planSummaryParagraphs } from "./summary-citations";
+import { leadSentences, planSentenceSegments, planSummaryParagraphs } from "./summary-citations";
 
 describe("planSentenceSegments", () => {
   const para = "Alpha one. Beta two. Gamma three.";
@@ -66,5 +66,16 @@ describe("planSummaryParagraphs", () => {
   it("does not split decimals into sentences", () => {
     const withDecimal = "Inflation hit 13.8% in June. Costs are USD 12.5 billion now.";
     expect(planSummaryParagraphs(withDecimal, {})).toEqual([withDecimal]);
+  });
+});
+
+describe("leadSentences", () => {
+  it("keeps the first sentences verbatim so citation keys still match", () => {
+    const text = "One is 13.8% up. Two follows! Three ends? Four.";
+    expect(leadSentences(text, 2)).toEqual({ lead: "One is 13.8% up. Two follows!", truncated: true });
+  });
+  it("returns the whole text when it is short enough", () => {
+    expect(leadSentences("Only one sentence.", 2)).toEqual({ lead: "Only one sentence.", truncated: false });
+    expect(leadSentences("One. Two.", 2)).toEqual({ lead: "One. Two.", truncated: false });
   });
 });

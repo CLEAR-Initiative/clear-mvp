@@ -7,9 +7,13 @@ import dynamic from "next/dynamic";
 import { api } from "~/trpc/react";
 import { useTeam } from "~/providers/team-provider";
 import { useLocations } from "~/hooks/use-locations";
-import { useTeamCountry } from "~/hooks/use-team-country";
+import { useLastFocusedCountry } from "~/hooks/use-last-focused-country";
+import { browseMapCamera } from "~/lib/map/country-picker-camera";
+import { ALL_COUNTRIES, resolveSelectedCountry, useTeamCountry } from "~/hooks/use-team-country";
 import { useReportStaleCountryPick } from "~/lib/report-stale-country-pick";
 import { resolveCountryConfig } from "~/lib/constants/country-config";
+import { isoForCountryName } from "~/lib/constants/countries";
+import { scopeIsosMissingPaintableBoundaries } from "~/lib/geo/country-mask";
 import { locationInCountry } from "~/lib/location";
 import {
   alertsToMarkers,
@@ -52,24 +56,41 @@ export default function DashboardPage() {
   const { getLocationId, getCenter, getZoom } = useLocations();
   const isMobile = useMediaQuery("(max-width: 48em)") === true;
 
-  // Frame the map on the working country. Unscoped teams will have null working
-  // country; scoped teams get exactly one (alphabetically first or user's choice).
+  // Frame the map on the working country. Multi-country unset = all assigned
+  // countries and WORLD_VIEW. One binding still pins.
   const {
     countries: teamCountries,
     countryId: workingCountryId,
     countryName: workingCountryName,
     setWorkingCountry,
+    scopeReady,
   } = useTeamCountry();
 
-  const selectedCountry = workingCountryName ?? "";
+  const teamCountryNames = useMemo(() => teamCountries.map((c) => c.name), [teamCountries]);
+  const selectedCountry = resolveSelectedCountry(
+    teamCountryNames,
+    workingCountryName ?? "",
+    scopeReady,
+  );
+  const lastFocusedCountry = useLastFocusedCountry(selectedCountry);
+  const browseCamera = browseMapCamera({
+    selectedCountry,
+    lastFocusedCountry,
+    getCenter,
+    getZoom,
+  });
   useReportStaleCountryPick(
-    teamCountries.map((c) => c.name),
+    teamCountryNames,
     workingCountryName ?? "",
     selectedCountry,
   );
   
   const handleCountryChange = useCallback(
     (value: string) => {
+      if (value === ALL_COUNTRIES) {
+        setWorkingCountry("", ALL_COUNTRIES);
+        return;
+      }
       const location = teamCountries.find((c) => c.name === value);
       if (location) {
         setWorkingCountry(location.id);
@@ -79,12 +100,27 @@ export default function DashboardPage() {
   );
 
   const focusCountryId = workingCountryId;
+  const isGlobalBrowse = selectedCountry === ALL_COUNTRIES || !focusCountryId;
+  const scopedCountryIds = useMemo(() => teamCountries.map((c) => c.id), [teamCountries]);
+  const globalCountryIds = scopedCountryIds.length > 0 ? scopedCountryIds : undefined;
+  const boundariesReady = isGlobalBrowse ? scopeReady : !!focusCountryId;
+  const scopeCountryIsos = useMemo(
+    () =>
+      isGlobalBrowse
+        ? teamCountries
+            .map((c) => isoForCountryName(c.name))
+            .filter((iso): iso is string => !!iso)
+        : [],
+    [isGlobalBrowse, teamCountries],
+  );
   const focusCountryL0Query = api.locations.getById.useQuery(
     { id: focusCountryId! },
     { enabled: !!focusCountryId, staleTime: Infinity, refetchOnWindowFocus: false },
   );
   const focusCountryGeometry = focusCountryL0Query.data?.geometry ?? undefined;
-  const focusCountryPCode = resolveCountryConfig(selectedCountry || undefined)?.pCode;
+  const focusCountryPCode = resolveCountryConfig(
+    selectedCountry && selectedCountry !== ALL_COUNTRIES ? selectedCountry : undefined,
+  )?.pCode;
   const [selectedMarker, setSelectedMarker] = useState<CrisisMarker | null>(null);
   const [detailAnchor, setDetailAnchor] = useState<MarkerScreenPoint | null>(null);
   const [detailChromeActive, setDetailChromeActive] = useState(false);
@@ -112,21 +148,40 @@ export default function DashboardPage() {
   // Mirrors the /map page so the layers panel here behaves identically.
   // Each query is gated on the corresponding panel state to avoid burning
   // bandwidth when the layer is off.
+  const a0Query = api.locations.getAdminBoundaries.useQuery(
+    { level: 0, countryIds: globalCountryIds },
+    { enabled: boundaryLevel === "A0" && isGlobalBrowse && scopeReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
   const a1Query = api.locations.getAdminBoundaries.useQuery(
-    { level: 1, countryId: focusCountryId ?? undefined },
-    { enabled: boundaryLevel === "A1" && !!focusCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    isGlobalBrowse
+      ? { level: 1, countryIds: globalCountryIds }
+      : { level: 1, countryId: focusCountryId ?? undefined },
+    { enabled: boundaryLevel === "A1" && boundariesReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
   );
   const a2Query = api.locations.getAdminBoundaries.useQuery(
-    { level: 2, countryId: focusCountryId ?? undefined },
-    { enabled: boundaryLevel === "A2" && !!focusCountryId, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+    isGlobalBrowse
+      ? { level: 2, countryIds: globalCountryIds }
+      : { level: 2, countryId: focusCountryId ?? undefined },
+    { enabled: boundaryLevel === "A2" && boundariesReady, staleTime: 1000 * 60 * 60, refetchOnWindowFocus: false },
+  );
+  const mapboxAdmin1Isos = useMemo(
+    () =>
+      boundaryLevel === "A1" && isGlobalBrowse && a1Query.isSuccess
+        ? scopeIsosMissingPaintableBoundaries(
+            teamCountries.map((c) => ({ id: c.id, iso: isoForCountryName(c.name) })),
+            a1Query.data ?? [],
+          )
+        : [],
+    [boundaryLevel, isGlobalBrowse, teamCountries, a1Query.isSuccess, a1Query.data],
   );
   const adminBoundaries = useMemo(() => {
+    if (boundaryLevel === "A0" && isGlobalBrowse) return a0Query.data ?? [];
     if (boundaryLevel === "A1") return a1Query.data ?? [];
     if (boundaryLevel === "A2") return a2Query.data ?? [];
     return [];
-  }, [boundaryLevel, a1Query.data, a2Query.data]);
+  }, [boundaryLevel, isGlobalBrowse, a0Query.data, a1Query.data, a2Query.data]);
   const adminBoundaryLevel =
-    boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
+    boundaryLevel === "A0" ? 0 : boundaryLevel === "A1" ? 1 : boundaryLevel === "A2" ? 2 : undefined;
 
   const populationQuery = api.locations.getPopulationBoundaries.useQuery(
     { countryId: focusCountryId ?? undefined },
@@ -185,13 +240,19 @@ export default function DashboardPage() {
       >
         <CrisisMap
           markers={markers}
-          center={getCenter(selectedCountry)}
-          zoom={isMobile ? getZoom(selectedCountry) - 1 : getZoom(selectedCountry)}
+          center={browseCamera.center}
+          zoom={isMobile && selectedCountry !== ALL_COUNTRIES ? browseCamera.zoom - 1 : browseCamera.zoom}
           focusCountryPCode={focusCountryPCode}
-          focusCountryName={selectedCountry || undefined}
+          focusCountryName={
+            selectedCountry && selectedCountry !== ALL_COUNTRIES
+              ? selectedCountry
+              : undefined
+          }
           focusCountryGeometry={focusCountryGeometry}
           adminBoundaries={adminBoundaries}
-          adminBoundaryLevel={adminBoundaryLevel as 1 | 2 | undefined}
+          adminBoundaryLevel={adminBoundaryLevel}
+          scopeCountryIsos={scopeCountryIsos}
+          mapboxAdmin1Isos={mapboxAdmin1Isos}
           populationBoundaries={populationBoundaries}
           className="w-full h-full"
           onMarkerClick={handleMarkerClick}

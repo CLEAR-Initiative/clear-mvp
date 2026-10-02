@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Text, Loader } from "@mantine/core";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useIsDark } from "~/hooks/use-is-dark";
 
 type MapDataView = "alert" | "event" | "signal" | "crisis";
@@ -15,6 +15,16 @@ const LOADING_MESSAGES = [
   "Preparing map markers...",
 ];
 
+/**
+ * Viewport-fixed frost layer. Chrome (filters/layers) can slide underneath
+ * while the spinner stays put; stays below the frost nav (z-40).
+ */
+const PRELOADER_LAYER: CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  zIndex: 35,
+};
+
 interface MapPreloaderProps {
   dataView?: MapDataView;
   /** Rotating status line under the spinner (real overlay on). */
@@ -22,15 +32,14 @@ interface MapPreloaderProps {
 }
 
 /**
- * Shared map preload chrome — centered Loader + theme-aware frosted panel.
+ * Shared map preload chrome — Loader centered on the viewport.
  * Used by the live MapLoadingOverlay, dynamic-import placeholder, and
- * optimistic /map route shell so the spinner never jumps.
+ * optimistic /map route shell so nav/chrome motion never shifts the spinner.
  */
 export function MapPreloader({
   dataView = "alert",
   showMessages = true,
 }: MapPreloaderProps) {
-  const isDark = useIsDark();
   const [messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
@@ -50,16 +59,14 @@ export function MapPreloader({
 
   return (
     <Box
+      className="map-preloader-bg"
       style={{
-        position: "absolute",
-        inset: 0,
-        zIndex: 40,
-        background: isDark ? "rgba(17, 17, 17, 0.85)" : "rgba(250, 250, 250, 0.85)",
+        ...PRELOADER_LAYER,
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
       }}
     >
-      {/* Loader pinned to box center — messages sit below without shifting it. */}
+      {/* Loader pinned to viewport center — messages sit below without shifting it. */}
       <Box
         style={{
           position: "absolute",
@@ -123,14 +130,12 @@ interface MapErrorStateProps {
 
 function MapErrorState({ message, onRetry }: MapErrorStateProps) {
   const isDark = useIsDark();
-  
+
   return (
     <Box
+      className="map-preloader-error-bg"
       style={{
-        position: "absolute",
-        inset: 0,
-        zIndex: 40,
-        background: isDark ? "rgba(17, 17, 17, 0.95)" : "rgba(250, 250, 250, 0.95)",
+        ...PRELOADER_LAYER,
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
         display: "flex",
@@ -155,11 +160,11 @@ function MapErrorState({ message, onRetry }: MapErrorStateProps) {
         <line x1="12" y1="9" x2="12" y2="13" />
         <line x1="12" y1="17" x2="12.01" y2="17" />
       </svg>
-      
+
       <Text size="xl" fw={600} mb="xs" c="var(--color-text-primary)" ta="center">
         Unable to Load Map
       </Text>
-      
+
       <Text
         size="sm"
         c="var(--color-text-secondary)"
@@ -169,7 +174,7 @@ function MapErrorState({ message, onRetry }: MapErrorStateProps) {
       >
         {message}
       </Text>
-      
+
       {onRetry && (
         <button
           onClick={onRetry}
@@ -199,9 +204,9 @@ function MapErrorState({ message, onRetry }: MapErrorStateProps) {
 }
 
 /**
- * Optimistic /map shell. Matches live map page geometry: bleed through app
- * shell gutters on mobile + height 100dvh so the spinner shares the same
- * X/Y as MapLoadingOverlay on the real canvas.
+ * Optimistic /map shell. Full-bleed under the transition veil; MapPreloader
+ * is viewport-fixed so spinner X/Y match the live overlay regardless of
+ * nav width / chrome left offsets settling underneath.
  */
 export function MapOptimisticShell() {
   return (

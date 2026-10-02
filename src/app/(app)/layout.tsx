@@ -1,10 +1,12 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Box, Group } from "@mantine/core";
 import { NavSidebar } from "~/components/nav-sidebar";
 import { NavSidebarFallback } from "~/components/nav-sidebar-fallback";
 import { MobileBottomNav } from "~/components/mobile-bottom-nav";
 import { FeatureFlagsProvider } from "~/components/feature-flags-provider";
+import { AgentProvider, AgentViewBoundary } from "~/components/agent/agent-provider";
+import { AgentDrawer } from "~/components/agent/agent-drawer";
 import { TeamProvider } from "~/providers/team-provider";
 import { WorkingCountryProvider } from "~/providers/working-country-provider";
 import { OnboardingGuard } from "~/components/onboarding-guard";
@@ -16,6 +18,11 @@ import {
 } from "~/components/page-transition";
 import { api, HydrateClient } from "~/trpc/server";
 import { WORKING_COUNTRY_COOKIE } from "~/lib/working-country-cookie";
+import { isMapPath } from "~/lib/is-map-path";
+import {
+  NAV_COLLAPSED_COOKIE,
+  parseNavCollapsedCookie,
+} from "~/lib/nav-collapsed-cookie";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Prefetch auth.me so the client cache is hydrated on first paint
@@ -24,12 +31,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Read working country cookie for SSR hydration
   const cookieStore = await cookies();
   const workingCountryCookie = cookieStore.get(WORKING_COUNTRY_COOKIE)?.value;
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const mapNavOverlay = isMapPath(pathname);
+  const navCollapsed = parseNavCollapsedCookie(
+    cookieStore.get(NAV_COLLAPSED_COOKIE)?.value,
+  );
 
   return (
     <HydrateClient>
       <TeamProvider>
         <WorkingCountryProvider initialCookieValue={workingCountryCookie}>
           <FeatureFlagsProvider>
+          <AgentProvider>
           <ConsoleBufferInit />
           <PageTransitionProvider>
             <Suspense fallback={null}>
@@ -43,8 +56,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                     background: "var(--color-bg-primary)",
                   }}
                 >
-                  <Suspense fallback={<NavSidebarFallback />}>
-                    <NavSidebar />
+                  <Suspense
+                    fallback={
+                      <NavSidebarFallback
+                        overlay={mapNavOverlay}
+                        collapsed={navCollapsed}
+                      />
+                    }
+                  >
+                    <NavSidebar initialCollapsed={navCollapsed} />
                   </Suspense>
                   <Box
                     component="main"
@@ -59,15 +79,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                     pt={{ base: 56, sm: 0 }}
                     pb={{ base: 72, sm: 0 }}
                   >
-                    {children}
+                    <AgentViewBoundary>{children}</AgentViewBoundary>
                     <PageTransitionVeil />
                   </Box>
                 </Group>
                 <MobileBottomNav />
                 <ProductTourHost />
+                <AgentDrawer />
               </OnboardingGuard>
             </Suspense>
           </PageTransitionProvider>
+          </AgentProvider>
         </FeatureFlagsProvider>
       </WorkingCountryProvider>
       </TeamProvider>

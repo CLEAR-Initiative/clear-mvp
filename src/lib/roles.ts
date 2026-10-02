@@ -24,3 +24,23 @@ export function isPlatformAdmin(role: string | null | undefined): boolean {
 export function canWriteCrisisEvents(role: string | null | undefined): boolean {
   return isPlatformAdmin(role) || role === "analyst";
 }
+
+/**
+ * Client twin of clear-api `createAnalysisAutomation` /
+ * `deleteAnalysisAutomation` `requireRole(["admin", "analyst"])`: who may
+ * create or remove an analysis.
+ */
+export function canManageAnalyses(role: string | null | undefined): boolean {
+  return isPlatformAdmin(role) || role === "analyst";
+}
+
+/**
+ * Twin of clear-api `requireContentReader`: only approved global roles may
+ * read platform content. `pending` (awaiting admin approval) and any unknown
+ * role are refused — this is an allowlist, not a `!== "pending"` check.
+ */
+const CONTENT_READER_ROLES: ReadonlySet<string> = new Set(["admin", "analyst", "viewer"]);
+
+export function canReadContent(role: string | null | undefined): boolean {
+  return !!role && CONTENT_READER_ROLES.has(role);
+}

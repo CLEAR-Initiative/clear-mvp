@@ -1222,7 +1222,7 @@ function OrganisationsPanel() {
           teams: [
             {
               teamId: createdTeamId,
-              teamRole: inviteTeamRole as "team_admin" | "field_coordinator" | "team_member",
+              teamRole: inviteTeamRole as "team_admin" | "field_coordinator" | "emergency_response_manager" | "team_member",
             },
           ],
         });

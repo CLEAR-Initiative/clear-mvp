@@ -75,6 +75,7 @@ import { CommentsSection } from "~/components/comments-section";
 import { NeedsAssessmentPanel } from "~/components/crisis-detail/needs-assessment-panel";
 import { AddEventsToCrisisButton } from "~/components/crisis-detail/add-events-to-crisis-modal";
 import { KpiStack } from "~/components/ui/kpi-stack";
+import { useAgentCurrentView } from "~/lib/agent-current-view";
 
 /** Humanitarian need row - parsed from a crisis's free-form `needs` JSON. */
 interface ClusterNeed {
@@ -224,6 +225,12 @@ export function CrisisDetailContent({
   relatedCrises = [],
   referrer = "insights",
 }: CrisisDetailContentProps) {
+  // Tell the CLEAR Agent which crisis is on screen (identifiers only).
+  const agentViewId = crisis?.id;
+  // Its title rides along for the Agent drawer's context row only.
+  useAgentCurrentView(
+    agentViewId ? { entity: { kind: "crisis", id: agentViewId, label: crisis?.title ?? undefined } } : null,
+  );
   const t = useTranslations("crisisDetail");
   const tCommon = useTranslations("common");
   const format = useFormatter();
@@ -1927,9 +1934,9 @@ function EventsTimeline({ events, isAdmin, crisisId, totalEventCount }: { events
 
   const removeEvent = api.crises.removeEvent.useMutation({
     onSuccess: () => {
+      void utils.crises.list.invalidate();
       if (totalEventCount <= 1) {
         // Last event removed - crisis was deleted by the backend
-        void utils.crises.list.invalidate();
         router.push("/insights");
       } else {
         void utils.crises.get.invalidate({ id: crisisId });

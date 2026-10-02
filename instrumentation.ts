@@ -7,6 +7,11 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     await import("./sentry.server.config");
+    // Refuse to start with a CLEAR Agent model that can't run as configured:
+    // unpriced (the daily Agent budget would silently stop counting), or the
+    // scripted test model in production.
+    const { assertClearAgentModelConfigured } = await import("./src/server/agent/pricing");
+    assertClearAgentModelConfigured();
   }
   if (process.env.NEXT_RUNTIME === "edge") {
     await import("./sentry.edge.config");
