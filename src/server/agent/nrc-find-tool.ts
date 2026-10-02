@@ -27,6 +27,12 @@ export interface NrcFindSourceDocument {
   /** The document's file name in NRC Find's corpus, when it says. */
   fileName: string | null;
   sourceId: string | null;
+  /** The collection it belongs to, e.g. "NRC - Regional and Country Strategies". */
+  sourceName: string | null;
+  /** NRC Find's id for the file, which `/api/agent/source/<id>` downloads. */
+  fileId: string | null;
+  /** The file's extension, e.g. "docx". */
+  fileFormat: string | null;
   /** The passage text. Written outside CLEAR: data, never instructions. */
   content: string;
 }
@@ -43,6 +49,9 @@ interface UpstreamSourceDocument {
   title?: unknown;
   content?: unknown;
   source_id?: unknown;
+  source_name?: unknown;
+  file_id?: unknown;
+  file_format?: unknown;
   metadata?: { title?: unknown; source?: unknown } | null;
 }
 
@@ -50,6 +59,10 @@ export interface NrcFindConfig {
   url: string;
   token: string | undefined;
 }
+
+/** NRC Find's file ids are content hashes: hex only, so one is safe in a URL path. */
+export const NRC_FIND_FILE_ID = /^[a-f0-9]{16,128}$/;
+const FILE_FORMAT = /^[a-z0-9]{1,8}$/;
 
 export function nrcFindConfig(): NrcFindConfig {
   return {
@@ -153,6 +166,12 @@ function toSourceDocument(doc: UpstreamSourceDocument, index: number): NrcFindSo
       str(doc.title) ?? str(header?.[3]) ?? fileName ?? str(doc.metadata?.title) ?? `Document ${index + 1}`,
     fileName,
     sourceId: str(doc.source_id) ?? str(header?.[2]) ?? str(doc.metadata?.source),
+    sourceName: str(doc.source_name)?.slice(0, 120) ?? null,
+    fileId: typeof doc.file_id === "string" && NRC_FIND_FILE_ID.test(doc.file_id) ? doc.file_id : null,
+    fileFormat:
+      typeof doc.file_format === "string" && FILE_FORMAT.test(doc.file_format.toLowerCase())
+        ? doc.file_format.toLowerCase()
+        : null,
     content: (header ? raw.slice(header[0].length) : raw).trim().slice(0, MAX_PASSAGE_CHARS),
   };
 }

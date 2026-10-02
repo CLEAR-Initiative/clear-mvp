@@ -3215,9 +3215,13 @@
       }
     },
     "message": {
-      "sources": "Sources ({count})",
+      "sources": "Sources de NRC Find ({count})",
       "showMore": "Afficher plus",
-      "showLess": "Afficher moins"
+      "showLess": "Afficher moins",
+      "passages": "{count, plural, one {# extrait} other {# extraits}}",
+      "download": "Télécharger {name}",
+      "clearEvent": "Événement CLEAR",
+      "hidePassages": "Masquer les extraits"
     },
     "tools": {
       "nrcFindRunning": "Recherche dans les documents du NRC…",
