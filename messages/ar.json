@@ -2596,6 +2596,7 @@
         "teamRoles": {
           "team_member": "عضو فريق",
           "field_coordinator": "منسق ميداني",
+          "emergency_response_manager": "مدير الاستجابة للطوارئ",
           "team_admin": "مدير الفريق"
         },
         "selectAtLeastOneTeam": "اختر فريقاً واحداً على الأقل",

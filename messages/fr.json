@@ -2596,6 +2596,7 @@
         "teamRoles": {
           "team_member": "Membre de l'équipe",
           "field_coordinator": "Coordinateur de terrain",
+          "emergency_response_manager": "Responsable des interventions d'urgence",
           "team_admin": "Administrateur d'équipe"
         },
         "selectAtLeastOneTeam": "Sélectionnez au moins une équipe",

@@ -2596,6 +2596,7 @@
         "teamRoles": {
           "team_member": "Team member",
           "field_coordinator": "Field coordinator",
+          "emergency_response_manager": "Emergency response manager",
           "team_admin": "Team admin"
         },
         "selectAtLeastOneTeam": "Select at least one team",
