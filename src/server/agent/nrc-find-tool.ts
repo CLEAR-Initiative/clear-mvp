@@ -42,6 +42,8 @@ export type NrcFindOutput =
       /** NRC Find's own answer. Written by another model: data, not instructions. */
       answer: string;
       sourceDocuments: NrcFindSourceDocument[];
+      /** Why the answer or some passages were left out, for the model. */
+      note?: string;
     }
   | { error: string };
 
@@ -64,6 +66,23 @@ export interface NrcFindConfig {
 export const NRC_FIND_FILE_ID = /^[a-f0-9]{16,128}$/;
 const FILE_FORMAT = /^[a-z0-9]{1,8}$/;
 
+/**
+ * NRC Find's collection of CLEAR event snapshots (its `clear_api_source_name`):
+ * titles and descriptions copied from production CLEAR by hand, never updated.
+ */
+export const CLEAR_SNAPSHOT_SOURCE = "CLEAR API";
+
+export interface NrcFindOptions {
+  /**
+   * Leave out what NRC Find drew from its CLEAR event snapshots. For an
+   * Agent that reads CLEAR live (the clear_* tools), the snapshots are a
+   * stale second copy. NRC Find's filter can only select one source, never
+   * exclude one, so they are dropped here; and since its own answer was
+   * written from them, that answer is dropped with them.
+   */
+  excludeClearSnapshots?: boolean;
+}
+
 export function nrcFindConfig(): NrcFindConfig {
   return {
     url: process.env.NRC_FIND_API_URL ?? "https://find.app.nrc-dev.no",
@@ -76,6 +95,7 @@ export async function askNrcFind(
   question: string,
   config: NrcFindConfig,
   signal?: AbortSignal,
+  { excludeClearSnapshots = false }: NrcFindOptions = {},
 ): Promise<NrcFindOutput> {
   if (!config.token) return { error: "NRC Find is not configured on this server." };
 
@@ -113,7 +133,20 @@ export async function askNrcFind(
     return { error: "NRC Find's answer was cut off." };
   }
 
-  return { answer, sourceDocuments: documents.map(toSourceDocument) };
+  const sourceDocuments = documents.map(toSourceDocument);
+  if (!excludeClearSnapshots) return { answer, sourceDocuments };
+  const nrcDocuments = sourceDocuments.filter((d) => d.sourceName !== CLEAR_SNAPSHOT_SOURCE);
+  if (nrcDocuments.length === sourceDocuments.length) return { answer, sourceDocuments };
+  return {
+    answer: "",
+    sourceDocuments: nrcDocuments,
+    note:
+      nrcDocuments.length === 0
+        ? "NRC Find matched only its old copies of CLEAR events, no NRC documents. NRC's documents " +
+          "have nothing on this; read CLEAR's events with the clear_* tools instead."
+        : "NRC Find's own answer was left out because it drew on old copies of CLEAR events. " +
+          "Answer from the NRC passages here, and read CLEAR's events with the clear_* tools.",
+  };
 }
 
 async function* ndjsonLines(
@@ -176,7 +209,7 @@ function toSourceDocument(doc: UpstreamSourceDocument, index: number): NrcFindSo
   };
 }
 
-export function createNrcFindTool(config: NrcFindConfig = nrcFindConfig()) {
+export function createNrcFindTool(config: NrcFindConfig = nrcFindConfig(), options: NrcFindOptions = {}) {
   return createTool({
     id: NRC_FIND_TOOL_ID,
     description:
@@ -195,6 +228,6 @@ export function createNrcFindTool(config: NrcFindConfig = nrcFindConfig()) {
     // No outputSchema: errors come back as values, and Mastra would reject
     // an `{ error }` value that doesn't match a success schema.
     execute: async ({ question }, context) =>
-      askNrcFind(question, config, context?.abortSignal),
+      askNrcFind(question, config, context?.abortSignal, options),
   });
 }

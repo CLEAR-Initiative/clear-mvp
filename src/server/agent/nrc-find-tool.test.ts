@@ -98,4 +98,39 @@ describe("askNrcFind", () => {
       error: "NRC Find is not configured on this server.",
     });
   });
+
+  describe("leaving out CLEAR event snapshots", () => {
+    const nrc = { title: "", source_id: 7, source_name: "NRC - Strategies", content: "File name: EPP 2023, Source ID: 7\n\nAccess is limited." };
+    const snapshot = { title: "Drone strikes in al-Obeid", source_id: 9, source_name: "CLEAR API", content: "Strikes hit the city." };
+    const ask = async (docs: unknown[], exclude: boolean) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ndjson([{ user_prompt: "q", source_documents: docs }, { type: "answer", content: "From snapshots." }])),
+      );
+      return askNrcFind("q", config, undefined, { excludeClearSnapshots: exclude });
+    };
+
+    it("keeps everything when not asked to (the Agent without CLEAR data)", async () => {
+      const result = await ask([nrc, snapshot], false);
+      expect(result).toMatchObject({ answer: "From snapshots." });
+      expect("sourceDocuments" in result && result.sourceDocuments).toHaveLength(2);
+    });
+
+    it("drops the snapshots and the answer written from them, keeping NRC's passages", async () => {
+      const result = await ask([nrc, snapshot], true);
+      expect(result).toMatchObject({ answer: "", sourceDocuments: [{ title: "EPP 2023" }] });
+      expect("note" in result && result.note).toContain("old copies of CLEAR events");
+    });
+
+    it("says NRC's documents have nothing when only snapshots matched", async () => {
+      const result = await ask([snapshot, snapshot], true);
+      expect(result).toMatchObject({ answer: "", sourceDocuments: [] });
+      expect("note" in result && result.note).toContain("no NRC documents");
+    });
+
+    it("leaves an answer drawn only from NRC documents as it is", async () => {
+      expect(await ask([nrc], true)).toMatchObject({ answer: "From snapshots.", sourceDocuments: [{ title: "EPP 2023" }] });
+      expect(await ask([nrc], true)).not.toHaveProperty("note");
+    });
+  });
 });
