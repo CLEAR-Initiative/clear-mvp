@@ -64,7 +64,8 @@ export async function createClearAgent({
     instructions: clearAgentInstructions(locale, lib ? { clearData: { contentRule: lib.CLEAR_MCP_CONTENT_RULE } } : {}),
     model: resolveClearAgentModel(),
     tools: {
-      [NRC_FIND_TOOL_ID]: createNrcFindTool(),
+      // With CLEAR read live, NRC Find's stale copies of CLEAR events are left out.
+      [NRC_FIND_TOOL_ID]: createNrcFindTool(undefined, { excludeClearSnapshots: !!clear }),
       ...(clear ? { ...clear.tools, [NAVIGATE_TOOL_ID]: createNavigateTool(clear.run, { activeTeamId }) } : {}),
     },
     memory: new Memory({

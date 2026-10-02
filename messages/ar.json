@@ -3215,9 +3215,13 @@
       }
     },
     "message": {
-      "sources": "المصادر ({count})",
+      "sources": "مصادر من NRC Find ({count})",
       "showMore": "عرض المزيد",
-      "showLess": "عرض أقل"
+      "showLess": "عرض أقل",
+      "passages": "{count, plural, one {مقطع واحد} two {مقطعان} few {# مقاطع} many {# مقطعًا} other {# مقطع}}",
+      "download": "تنزيل {name}",
+      "clearEvent": "حدث CLEAR",
+      "hidePassages": "إخفاء المقاطع"
     },
     "tools": {
       "nrcFindRunning": "جارٍ البحث في وثائق المجلس النرويجي للاجئين…",

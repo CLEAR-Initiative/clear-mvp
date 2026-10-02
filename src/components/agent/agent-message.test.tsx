@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { NextIntlClientProvider } from "next-intl";
 import enMessages from "../../../messages/en.json";
@@ -113,7 +113,7 @@ describe("AgentMessage", () => {
     expect(within(line).getByText("Searching NRC documents…")).toBeInTheDocument();
   });
 
-  it("marks a finished tool done, and shows the Source documents under the Answer", () => {
+  it("marks a finished tool done, and lists the Source documents under the Answer", () => {
     renderMessage(
       answer([
         findCall("output-available", darfurDocs),
@@ -122,11 +122,42 @@ describe("AgentMessage", () => {
     );
     expect(screen.getByText("Searched NRC documents")).toBeInTheDocument();
     const sources = screen.getByTestId("agent-sources");
-    expect(within(sources).getByText("Sources (2)")).toBeInTheDocument();
+    expect(within(sources).getByText("Sources from NRC Find (2)")).toBeInTheDocument();
     expect(within(sources).getByText("Darfur access report")).toBeInTheDocument();
     expect(within(sources).getByText("Protection monitoring")).toBeInTheDocument();
-    expect(within(sources).getByText("pm-2026")).toBeInTheDocument();
+    // Passages stay folded away until asked for.
+    expect(within(sources).queryByText("Roads closed since June.")).toBeNull();
+    fireEvent.click(within(sources).getAllByRole("button", { name: "1 passage" })[0]!);
     expect(within(sources).getByText("Roads closed since June.")).toBeInTheDocument();
+  });
+
+  it("shows one row per document, linked to its download, and tells CLEAR events apart", () => {
+    const fileId = "e29e1fb446e29d6ed894ffc6c07fcd7f";
+    const doc = { title: "South Area EPP 2023", fileName: "South Area EPP 2023", sourceId: "7" };
+    renderMessage(
+      answer([
+        findCall("output-available", {
+          answer: "x",
+          sourceDocuments: [
+            { ...doc, sourceName: "NRC - Strategies", fileId, fileFormat: "docx", content: "First passage." },
+            { ...doc, sourceName: "NRC - Strategies", fileId, fileFormat: "docx", content: "Second passage." },
+            { title: "Clashes in Kadugli", sourceId: "9", sourceName: "CLEAR API", fileId: "abcdef0123456789", content: "x" },
+            { title: "Odd id", sourceId: "1", fileId: "../../admin", content: "y" },
+          ],
+        }),
+      ]),
+    );
+    const rows = screen.getAllByTestId("agent-source");
+    expect(rows).toHaveLength(3);
+    const link = within(rows[0]!).getByRole("link", { name: /South Area EPP 2023/ });
+    expect(link).toHaveAttribute("href", `/api/agent/source/${fileId}`);
+    expect(link).toHaveAttribute("download");
+    expect(within(rows[0]!).getByText("DOCX · NRC - Strategies")).toBeInTheDocument();
+    expect(within(rows[0]!).getByRole("button", { name: "2 passages" })).toBeInTheDocument();
+    expect(rows[1]).toHaveAttribute("data-kind", "clear-event");
+    expect(within(rows[1]!).getByText("CLEAR event")).toBeInTheDocument();
+    expect(within(rows[1]!).queryByRole("link")).toBeNull();
+    expect(within(rows[2]!).queryByRole("link")).toBeNull();
   });
 
   it("shows a tool that failed as unavailable, with no sources", () => {

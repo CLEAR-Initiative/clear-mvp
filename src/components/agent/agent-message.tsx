@@ -3,7 +3,8 @@
 /**
  * One turn of a Thread. An Answer shows, in order: what the CLEAR Agent is
  * doing (one line per tool it runs), the Answer as Markdown, and the Source
- * documents that Answer cited.
+ * documents NRC Find retrieved for it: one compact row per document, which
+ * downloads the document, with its passages a click away.
  *
  * Markdown is rendered without raw HTML, and links open in a new tab with no
  * referrer, so nothing a model or a document writes can inject markup. The
@@ -14,13 +15,24 @@
  * into one. They render as their alt text.
  */
 
+import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { UIMessage } from "ai";
-import { Anchor, Box, Button, Card, Group, Loader, Paper, Spoiler, Stack, Text } from "@mantine/core";
-import { IconAlertTriangle, IconArrowBackUp, IconCheck, IconFileText, IconRoute } from "@tabler/icons-react";
+import { Anchor, Box, Button, Group, Loader, Paper, Spoiler, Stack, Text, UnstyledButton } from "@mantine/core";
+import {
+  IconAlertTriangle,
+  IconArrowBackUp,
+  IconBolt,
+  IconCheck,
+  IconChevronDown,
+  IconChevronUp,
+  IconDownload,
+  IconFileText,
+  IconRoute,
+} from "@tabler/icons-react";
 import { useOptionalAgent } from "~/components/agent/agent-provider";
 import { agentLink, type AgentLink } from "~/lib/agent-links";
 import { isNavigateResult, markAgentDeepLink, type NavigateResult } from "~/lib/agent-navigation";
@@ -31,7 +43,36 @@ interface SourceDocument {
   title: string;
   fileName?: string | null;
   sourceId: string | null;
+  /** The collection in NRC Find, e.g. "NRC - Regional and Country Strategies". */
+  sourceName?: string | null;
+  /** NRC Find's file id; with one, the document can be downloaded. */
+  fileId?: string | null;
+  fileFormat?: string | null;
   content: string;
+}
+
+/** A document an Answer drew on, with every passage retrieved from it. */
+interface SourceGroup {
+  key: string;
+  doc: SourceDocument;
+  passages: string[];
+}
+
+/** NRC Find's collection of CLEAR event snapshots (its `clear_api_source_name`). */
+const CLEAR_EVENTS_SOURCE = "CLEAR API";
+/** As the download route accepts (NRC_FIND_FILE_ID in nrc-find-tool.ts). */
+const FILE_ID = /^[a-f0-9]{16,128}$/;
+
+/** Passages gathered under the document they came from, in first-seen order. */
+export function groupSourceDocuments(docs: readonly SourceDocument[]): SourceGroup[] {
+  const groups = new Map<string, SourceGroup>();
+  for (const doc of docs) {
+    const key = doc.fileId ?? doc.fileName ?? doc.title;
+    const group = groups.get(key) ?? { key, doc, passages: [] };
+    if (doc.content) group.passages.push(doc.content);
+    groups.set(key, group);
+  }
+  return [...groups.values()];
 }
 
 interface ToolPart {
@@ -174,34 +215,84 @@ function Markdown({ text }: { text: string }) {
   );
 }
 
+function SourceRow({ group }: { group: SourceGroup }) {
+  const t = useTranslations("agent.message");
+  const [open, setOpen] = useState(false);
+  const { doc, passages } = group;
+  const clearEvent = doc.sourceName === CLEAR_EVENTS_SOURCE;
+  // A CLEAR event snapshot's "file" is its JSON, not a document to read.
+  const href = !clearEvent && doc.fileId && FILE_ID.test(doc.fileId) ? `/api/agent/source/${doc.fileId}` : null;
+  const Icon = clearEvent ? IconBolt : IconFileText;
+  const meta = [
+    clearEvent ? t("clearEvent") : doc.fileFormat?.toUpperCase(),
+    clearEvent ? null : doc.sourceName,
+  ].filter(Boolean);
+
+  return (
+    <Box data-testid="agent-source" data-kind={clearEvent ? "clear-event" : "document"}>
+      <Group gap={6} wrap="nowrap" align="flex-start">
+        <Icon size={13} style={{ flexShrink: 0, marginTop: 3 }} color="var(--mantine-color-dimmed)" />
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          {href ? (
+            <Anchor href={href} download size="sm" fw={500} lineClamp={1} title={t("download", { name: doc.title })}>
+              {doc.title}
+              <IconDownload size={12} style={{ marginInlineStart: 4, verticalAlign: "-1px" }} />
+            </Anchor>
+          ) : (
+            <Text size="sm" fw={500} lineClamp={1}>
+              {doc.title}
+            </Text>
+          )}
+          <Group gap={6} wrap="wrap">
+            {meta.length > 0 && (
+              <Text size="xs" c="dimmed" lineClamp={1}>
+                {meta.join(" · ")}
+              </Text>
+            )}
+            {passages.length > 0 && (
+              <UnstyledButton onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+                <Group gap={2} wrap="nowrap">
+                  <Text size="xs" c="dimmed" td="underline">
+                    {open ? t("hidePassages") : t("passages", { count: passages.length })}
+                  </Text>
+                  {open ? (
+                    <IconChevronUp size={12} color="var(--mantine-color-dimmed)" />
+                  ) : (
+                    <IconChevronDown size={12} color="var(--mantine-color-dimmed)" />
+                  )}
+                </Group>
+              </UnstyledButton>
+            )}
+          </Group>
+          {open && (
+            <Stack gap={6} mt={4}>
+              {passages.map((passage, i) => (
+                <Box key={i} ps={8} style={{ borderInlineStart: "2px solid var(--color-border)" }}>
+                  <Spoiler maxHeight={54} showLabel={t("showMore")} hideLabel={t("showLess")} fz="xs">
+                    <Text size="xs" c="dimmed" style={{ whiteSpace: "pre-wrap" }}>
+                      {passage}
+                    </Text>
+                  </Spoiler>
+                </Box>
+              ))}
+            </Stack>
+          )}
+        </Box>
+      </Group>
+    </Box>
+  );
+}
+
 function SourceDocuments({ docs }: { docs: SourceDocument[] }) {
   const t = useTranslations("agent.message");
+  const groups = groupSourceDocuments(docs);
   return (
     <Stack gap={6} data-testid="agent-sources">
       <Text size="xs" fw={600} c="dimmed">
-        {t("sources", { count: docs.length })}
+        {t("sources", { count: groups.length })}
       </Text>
-      {docs.map((doc, i) => (
-        <Card key={i} withBorder radius="sm" p={10}>
-          <Group gap={6} mb={4} wrap="nowrap">
-            <IconFileText size={14} style={{ flexShrink: 0 }} />
-            <Text size="sm" fw={600} lineClamp={1}>
-              {doc.title}
-            </Text>
-          </Group>
-          {doc.fileName && doc.fileName !== doc.title && (
-            <Text size="xs" c="dimmed" mb={4} lineClamp={1}>
-              {doc.fileName}
-            </Text>
-          )}
-          {doc.content && (
-            <Spoiler maxHeight={60} showLabel={t("showMore")} hideLabel={t("showLess")}>
-              <Text size="xs" c="dimmed" style={{ whiteSpace: "pre-wrap" }}>
-                {doc.content}
-              </Text>
-            </Spoiler>
-          )}
-        </Card>
+      {groups.map((group) => (
+        <SourceRow key={group.key} group={group} />
       ))}
     </Stack>
   );

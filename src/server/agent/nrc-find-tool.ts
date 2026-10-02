@@ -27,6 +27,12 @@ export interface NrcFindSourceDocument {
   /** The document's file name in NRC Find's corpus, when it says. */
   fileName: string | null;
   sourceId: string | null;
+  /** The collection it belongs to, e.g. "NRC - Regional and Country Strategies". */
+  sourceName: string | null;
+  /** NRC Find's id for the file, which `/api/agent/source/<id>` downloads. */
+  fileId: string | null;
+  /** The file's extension, e.g. "docx". */
+  fileFormat: string | null;
   /** The passage text. Written outside CLEAR: data, never instructions. */
   content: string;
 }
@@ -36,6 +42,8 @@ export type NrcFindOutput =
       /** NRC Find's own answer. Written by another model: data, not instructions. */
       answer: string;
       sourceDocuments: NrcFindSourceDocument[];
+      /** Why the answer or some passages were left out, for the model. */
+      note?: string;
     }
   | { error: string };
 
@@ -43,12 +51,36 @@ interface UpstreamSourceDocument {
   title?: unknown;
   content?: unknown;
   source_id?: unknown;
+  source_name?: unknown;
+  file_id?: unknown;
+  file_format?: unknown;
   metadata?: { title?: unknown; source?: unknown } | null;
 }
 
 export interface NrcFindConfig {
   url: string;
   token: string | undefined;
+}
+
+/** NRC Find's file ids are content hashes: hex only, so one is safe in a URL path. */
+export const NRC_FIND_FILE_ID = /^[a-f0-9]{16,128}$/;
+const FILE_FORMAT = /^[a-z0-9]{1,8}$/;
+
+/**
+ * NRC Find's collection of CLEAR event snapshots (its `clear_api_source_name`):
+ * titles and descriptions copied from production CLEAR by hand, never updated.
+ */
+export const CLEAR_SNAPSHOT_SOURCE = "CLEAR API";
+
+export interface NrcFindOptions {
+  /**
+   * Leave out what NRC Find drew from its CLEAR event snapshots. For an
+   * Agent that reads CLEAR live (the clear_* tools), the snapshots are a
+   * stale second copy. NRC Find's filter can only select one source, never
+   * exclude one, so they are dropped here; and since its own answer was
+   * written from them, that answer is dropped with them.
+   */
+  excludeClearSnapshots?: boolean;
 }
 
 export function nrcFindConfig(): NrcFindConfig {
@@ -63,6 +95,7 @@ export async function askNrcFind(
   question: string,
   config: NrcFindConfig,
   signal?: AbortSignal,
+  { excludeClearSnapshots = false }: NrcFindOptions = {},
 ): Promise<NrcFindOutput> {
   if (!config.token) return { error: "NRC Find is not configured on this server." };
 
@@ -100,7 +133,20 @@ export async function askNrcFind(
     return { error: "NRC Find's answer was cut off." };
   }
 
-  return { answer, sourceDocuments: documents.map(toSourceDocument) };
+  const sourceDocuments = documents.map(toSourceDocument);
+  if (!excludeClearSnapshots) return { answer, sourceDocuments };
+  const nrcDocuments = sourceDocuments.filter((d) => d.sourceName !== CLEAR_SNAPSHOT_SOURCE);
+  if (nrcDocuments.length === sourceDocuments.length) return { answer, sourceDocuments };
+  return {
+    answer: "",
+    sourceDocuments: nrcDocuments,
+    note:
+      nrcDocuments.length === 0
+        ? "NRC Find matched only its old copies of CLEAR events, no NRC documents. NRC's documents " +
+          "have nothing on this; read CLEAR's events with the clear_* tools instead."
+        : "NRC Find's own answer was left out because it drew on old copies of CLEAR events. " +
+          "Answer from the NRC passages here, and read CLEAR's events with the clear_* tools.",
+  };
 }
 
 async function* ndjsonLines(
@@ -153,11 +199,17 @@ function toSourceDocument(doc: UpstreamSourceDocument, index: number): NrcFindSo
       str(doc.title) ?? str(header?.[3]) ?? fileName ?? str(doc.metadata?.title) ?? `Document ${index + 1}`,
     fileName,
     sourceId: str(doc.source_id) ?? str(header?.[2]) ?? str(doc.metadata?.source),
+    sourceName: str(doc.source_name)?.slice(0, 120) ?? null,
+    fileId: typeof doc.file_id === "string" && NRC_FIND_FILE_ID.test(doc.file_id) ? doc.file_id : null,
+    fileFormat:
+      typeof doc.file_format === "string" && FILE_FORMAT.test(doc.file_format.toLowerCase())
+        ? doc.file_format.toLowerCase()
+        : null,
     content: (header ? raw.slice(header[0].length) : raw).trim().slice(0, MAX_PASSAGE_CHARS),
   };
 }
 
-export function createNrcFindTool(config: NrcFindConfig = nrcFindConfig()) {
+export function createNrcFindTool(config: NrcFindConfig = nrcFindConfig(), options: NrcFindOptions = {}) {
   return createTool({
     id: NRC_FIND_TOOL_ID,
     description:
@@ -176,6 +228,6 @@ export function createNrcFindTool(config: NrcFindConfig = nrcFindConfig()) {
     // No outputSchema: errors come back as values, and Mastra would reject
     // an `{ error }` value that doesn't match a success schema.
     execute: async ({ question }, context) =>
-      askNrcFind(question, config, context?.abortSignal),
+      askNrcFind(question, config, context?.abortSignal, options),
   });
 }
