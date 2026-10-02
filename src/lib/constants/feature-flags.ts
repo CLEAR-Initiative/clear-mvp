@@ -124,6 +124,14 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     defaultEnabled: true,
   },
   {
+    key: "crisis_overview",
+    label: "Crisis Overview",
+    description:
+      "Crisis Overview tab in the Insights page (the crises list). UI-only gate; when off the page falls back to the next enabled Insights tab.",
+    tier: 3,
+    defaultEnabled: true,
+  },
+  {
     key: "situation_analysis",
     label: "Situation Analysis",
     description: "Situation Analysis tab in the Insights page",
