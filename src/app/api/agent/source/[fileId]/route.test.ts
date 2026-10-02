@@ -137,7 +137,7 @@ describe("GET /api/agent/source/[fileId]", () => {
 
 describe("fileNameOf", () => {
   it("reads quoted, encoded and bare forms, preferring filename*", async () => {
-    const { fileNameOf } = await import("./route");
+    const { fileNameOf } = await import("~/server/agent/source-file-name");
     expect(fileNameOf('attachment; filename="a.pdf"', FILE_ID)).toBe("a.pdf");
     expect(fileNameOf("attachment; filename*=utf-8''Plan%202024.docx", FILE_ID)).toBe("Plan 2024.docx");
     expect(fileNameOf(`attachment; filename="a.pdf"; filename*=UTF-8''b%C3%A9.pdf`, FILE_ID)).toBe("bé.pdf");
@@ -146,7 +146,7 @@ describe("fileNameOf", () => {
   });
 
   it("never splits a surrogate pair or keeps bidi overrides", async () => {
-    const { fileNameOf } = await import("./route");
+    const { fileNameOf } = await import("~/server/agent/source-file-name");
     const name = fileNameOf(`attachment; filename*=UTF-8''${encodeURIComponent("a".repeat(199) + "😀x")}`, FILE_ID);
     expect(() => encodeURIComponent(name)).not.toThrow();
     expect(fileNameOf(`attachment; filename*=UTF-8''${encodeURIComponent("cod‮fdp.exe")}`, FILE_ID)).toBe("codfdp.exe");
