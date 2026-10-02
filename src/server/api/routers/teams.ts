@@ -346,7 +346,7 @@ export const teamsRouter = createTRPCRouter({
       teamId: z.string(),
       userId: z.string(),
       role: z
-        .enum(["team_admin", "field_coordinator", "team_member"])
+        .enum(["team_admin", "field_coordinator", "emergency_response_manager", "team_member"])
         .optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -373,7 +373,7 @@ export const teamsRouter = createTRPCRouter({
     .input(z.object({
       teamId: z.string(),
       userId: z.string(),
-      role: z.enum(["team_admin", "field_coordinator", "team_member"]),
+      role: z.enum(["team_admin", "field_coordinator", "emergency_response_manager", "team_member"]),
     }))
     .mutation(async ({ ctx, input }) => {
       const data = await graphqlFetch<{ updateTeamMemberRole: TeamMember }>(
