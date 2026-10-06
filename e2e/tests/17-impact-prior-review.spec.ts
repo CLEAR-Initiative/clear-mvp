@@ -36,8 +36,10 @@ test.describe("Impact prior review (case 17)", () => {
     const row = page.getByTestId("inbox-entry").filter({ hasText: IMPACT_PRIORS.inboxEvent });
     const list = page.getByTestId("inbox-list");
     await expect(list).toBeVisible();
-    // Either the item is still waiting, or an earlier attempt already decided it.
-    await expect(row.first().or(list.getByText("Nothing left in this view"))).toBeVisible({ timeout: 20_000 });
+    // Either the item is still waiting, or an earlier attempt already decided
+    // it. Wait for the list to settle, not for it to empty: the other test's
+    // prior may still be waiting in it, in either order.
+    await expect(list.getByText(/entries in this view loaded|Nothing left in this view/)).toBeVisible({ timeout: 20_000 });
     if ((await row.count()) === 0) {
       await gotoEventByTitle(page, IMPACT_PRIORS.inboxEvent);
       await expect(page.getByTestId("enrichment-prior").first()).toHaveAttribute("data-state", "rejected");

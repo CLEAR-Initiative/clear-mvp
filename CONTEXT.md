@@ -78,6 +78,27 @@ An **Event** (or set of Events) raised into the attention lifecycle
 (`draft` | `published` | `archived`) — what analysts act on first.
 _Avoid_: using Alert for any raw Signal; "notification" (product push/tagging is separate).
 
+### Review
+
+**Inbox**:
+The one queue of **Review items** a reader may act on (`/inbox`): hotline threads for
+platform admins (`hotline_inbox`), proposed **ImpactPriors** for deciders — admins and
+analysts (`impact_prior_review`). One access rule (`src/lib/inbox-access.ts`) gates the
+page and its nav entry; clear-api's guards are the enforcement.
+_Avoid_: "hotline inbox" for the whole page — that is one kind of Review item.
+
+**Review item**:
+One thing in the **Inbox** waiting for a person's decision: a hotline thread (Add to
+CLEAR / Archive / Reject) or a proposed **ImpactPrior** (accept / reject with a
+rationale, clear-api ADR-0010). A proposed ImpactPrior is also decidable from its
+**Event** page — two doors, one decision.
+
+**Notification** (in-app):
+A row clear-api writes for one user, shown in the nav's bell; today only **Task**
+outcomes (`notificationType: "task"`), each linking an in-app path. Distinct from an
+**Alert** and from alert-subscription push/email.
+_Avoid_: "notification" for an Alert or for the attention lifecycle.
+
 ### Location trust
 
 **Location challenge**:

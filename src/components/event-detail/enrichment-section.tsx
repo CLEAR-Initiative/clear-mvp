@@ -11,8 +11,6 @@ import { ImpactPriorPane } from "~/components/impact-prior/impact-prior-pane";
 import { canDecideImpactPriors } from "~/lib/roles";
 import type { GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
 
-export { safeHttpUrl } from "~/components/impact-prior/impact-prior-card";
-
 const STATUS_COLOR: Record<GqlTask["status"], string> = {
   PENDING: "gray",
   LEASED: "blue",
