@@ -3348,6 +3348,10 @@
     "rationaleRequired": "Un motif est requis",
     "rationaleTooLong": "Le motif doit faire moins de {max} caractères",
     "reject": "Rejeter",
-    "accept": "Accepter"
+    "accept": "Accepter",
+    "toast": {
+      "accepted": "A priori d'impact accepté",
+      "rejected": "A priori d'impact rejeté"
+    }
   }
 }

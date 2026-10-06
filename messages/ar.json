@@ -3348,6 +3348,10 @@
     "rationaleRequired": "المسوّغ مطلوب",
     "rationaleTooLong": "يجب أن يكون المسوّغ أقل من {max} حرفًا",
     "reject": "رفض",
-    "accept": "قبول"
+    "accept": "قبول",
+    "toast": {
+      "accepted": "قُبل تقدير الأثر المسبق",
+      "rejected": "رُفض تقدير الأثر المسبق"
+    }
   }
 }

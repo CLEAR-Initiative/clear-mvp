@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
 
@@ -16,16 +16,32 @@ vi.mock("next-intl", () => ({
   useFormatter: () => ({ dateTime: () => "10 Aug 2021", relativeTime: () => "2 hours ago" }),
 }));
 
+/** `event_enrichment`; `flags` overrides per key (impact_prior_review). */
 let flagEnabled = true;
+let flags: Record<string, boolean> = {};
 vi.mock("~/components/feature-flags-provider", () => ({
-  useFeatureEnabled: () => flagEnabled,
+  useFeatureEnabled: (key: string) => flags[key] ?? flagEnabled,
 }));
+const showNotification = vi.fn();
+vi.mock("@mantine/notifications", () => ({ notifications: { show: (n: unknown) => showNotification(n) } }));
 
+let role = "viewer";
 let data: { tasks: GqlTask[]; impactPriors: GqlImpactPrior[] } = { tasks: [], impactPriors: [] };
 let queryError: Error | null = null;
 const useQuery = vi.fn((..._args: unknown[]) => ({ data: queryError ? undefined : data, isFetching: false, isError: !!queryError, error: queryError }));
+const decideMutate = vi.fn();
+const invalidate = vi.fn(async () => undefined);
 vi.mock("~/trpc/react", () => ({
-  api: { tasks: { forEvent: { useQuery: (...args: unknown[]) => useQuery(...args) } } },
+  api: {
+    useUtils: () => ({ tasks: { proposedImpactPriors: { invalidate }, forEvent: { invalidate } } }),
+    auth: { me: { useQuery: () => ({ data: { user: { id: "u", role } } }) } },
+    tasks: {
+      forEvent: { useQuery: (...args: unknown[]) => useQuery(...args) },
+      decideImpactPrior: {
+        useMutation: () => ({ mutate: decideMutate, isPending: false, isError: false, error: null, variables: undefined }),
+      },
+    },
+  },
 }));
 
 const { EnrichmentSection } = await import("./enrichment-section");
@@ -90,9 +106,13 @@ describe("EnrichmentSection", () => {
   afterEach(() => {
     cleanup();
     flagEnabled = true;
+    flags = {};
+    role = "viewer";
     data = { tasks: [], impactPriors: [] };
     queryError = null;
     useQuery.mockClear();
+    decideMutate.mockReset();
+    showNotification.mockClear();
   });
 
   it("shows a load error instead of the empty state when the query fails", () => {
@@ -173,5 +193,38 @@ describe("EnrichmentSection", () => {
     };
     expect(opts.refetchInterval({ state: { data } })).toBe(30_000);
     expect(opts.refetchInterval({ state: { data: { tasks: [TASK], impactPriors: [] } } })).toBe(false);
+  });
+
+  describe("as the second door to the decision (V2)", () => {
+    it("mounts the decision pane on a proposed prior for a decider with impact_prior_review on", () => {
+      role = "analyst";
+      flags = { impact_prior_review: true };
+      data = { tasks: [], impactPriors: [PRIOR, { ...PRIOR, id: "ip-0", state: "accepted" }] };
+      decideMutate.mockImplementation((_input, opts) => opts.onSuccess({ ...PRIOR, state: "accepted" }));
+      renderSection();
+      expect(screen.getAllByTestId("enrichment-prior")).toHaveLength(2);
+      // Only the proposed one is decidable.
+      expect(screen.getAllByTestId("impact-prior-decision")).toHaveLength(1);
+      fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "Same basin, same season" } });
+      fireEvent.click(screen.getByTestId("impact-prior-accept"));
+      expect(decideMutate).toHaveBeenCalledWith(
+        { id: "ip-1", decision: "accepted", rationale: "Same basin, same season" },
+        expect.any(Object),
+      );
+      expect(invalidate).toHaveBeenCalledWith({ eventId: "evt-1" });
+      expect(showNotification).toHaveBeenCalledWith({ message: "toast.accepted" });
+    });
+
+    it.each([
+      ["a viewer", "viewer", true],
+      ["an analyst while impact_prior_review is off", "analyst", false],
+    ])("keeps the prior read-only for %s", (_label, who, review) => {
+      role = who;
+      flags = { impact_prior_review: review };
+      data = { tasks: [], impactPriors: [PRIOR] };
+      renderSection();
+      expect(screen.getByTestId("enrichment-prior")).toBeTruthy();
+      expect(screen.queryByTestId("impact-prior-decision")).toBeNull();
+    });
   });
 });

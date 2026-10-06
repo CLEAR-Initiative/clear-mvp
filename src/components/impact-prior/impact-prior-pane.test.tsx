@@ -1,0 +1,136 @@
+import React from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { MantineProvider } from "@mantine/core";
+import type { GqlImpactPrior } from "~/lib/types/graphql";
+
+/**
+ * The shared decision pane (clear-api ADR-0010, V2): the evidence card plus
+ * Accept / Reject with a required rationale, calling tasks.decideImpactPrior
+ * and refetching both doors (the Inbox's Review items and the Event's
+ * enrichment). Only a proposed prior is decidable; the server's answer is
+ * shown as is.
+ */
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, vars?: Record<string, unknown>) =>
+    vars ? `${key}:${JSON.stringify(vars)}` : key,
+  useFormatter: () => ({ dateTime: () => "10 Aug 2021", relativeTime: () => "2 hours ago" }),
+}));
+
+const decideMutate = vi.fn();
+const invalidateProposed = vi.fn(async () => undefined);
+const invalidateForEvent = vi.fn(async () => undefined);
+let mutation: { isPending: boolean; isError: boolean; error: { message: string } | null; variables?: { decision: string } } = {
+  isPending: false,
+  isError: false,
+  error: null,
+};
+vi.mock("~/trpc/react", () => ({
+  api: {
+    useUtils: () => ({
+      tasks: { proposedImpactPriors: { invalidate: invalidateProposed }, forEvent: { invalidate: invalidateForEvent } },
+    }),
+    tasks: { decideImpactPrior: { useMutation: () => ({ mutate: decideMutate, ...mutation }) } },
+  },
+}));
+
+const { ImpactPriorPane } = await import("./impact-prior-pane");
+
+const PRIOR: GqlImpactPrior = {
+  id: "ip-1",
+  eventId: "evt-1",
+  taskId: "task-0",
+  state: "proposed",
+  hazardType: "FL",
+  countryLocationId: "sdn",
+  geographicScope: "district",
+  horizonYears: 10,
+  populationGroup: null,
+  metric: null,
+  lowerBound: null,
+  upperBound: null,
+  numberOfCases: 1,
+  basis: [{ tier: "clear", eventId: "evt-2021", occurredAt: "2021-08-10", scope: "district", quote: "The Nile burst its banks." }],
+  methodVersion: "clear-impact-prior@0.1.0",
+  supersedesId: null,
+  decidedById: null,
+  decidedAt: null,
+  decisionRationale: null,
+  createdAt: "2026-10-06T11:00:00.000Z",
+};
+
+function renderPane(props: Partial<React.ComponentProps<typeof ImpactPriorPane>> = {}) {
+  return render(
+    <MantineProvider>
+      <ImpactPriorPane prior={PRIOR} canDecide {...props} />
+    </MantineProvider>,
+  );
+}
+
+describe("ImpactPriorPane", () => {
+  afterEach(() => {
+    cleanup();
+    decideMutate.mockReset();
+    invalidateProposed.mockClear();
+    invalidateForEvent.mockClear();
+    mutation = { isPending: false, isError: false, error: null };
+  });
+
+  it("accepts with the rationale, refetches both doors and reports the decision", () => {
+    const onDecided = vi.fn();
+    decideMutate.mockImplementation((_input, opts) => opts.onSuccess({ ...PRIOR, state: "accepted" }));
+    renderPane({ onDecided });
+    expect(screen.getByTestId("enrichment-case")).toHaveTextContent("The Nile burst its banks.");
+    fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "Matches the 2021 floods" } });
+    fireEvent.click(screen.getByTestId("impact-prior-accept"));
+    expect(decideMutate).toHaveBeenCalledWith(
+      { id: "ip-1", decision: "accepted", rationale: "Matches the 2021 floods" },
+      expect.any(Object),
+    );
+    expect(invalidateProposed).toHaveBeenCalled();
+    expect(invalidateForEvent).toHaveBeenCalledWith({ eventId: "evt-1" });
+    expect(onDecided).toHaveBeenCalledWith(expect.objectContaining({ state: "accepted" }), "accepted");
+  });
+
+  it("refuses to decide without a rationale, and says so", () => {
+    renderPane();
+    fireEvent.click(screen.getByTestId("impact-prior-accept"));
+    fireEvent.click(screen.getByTestId("impact-prior-reject"));
+    expect(decideMutate).not.toHaveBeenCalled();
+    expect(screen.getByText("rationaleRequired")).toBeInTheDocument();
+  });
+
+  it("refuses an over-long rationale before the round trip", () => {
+    renderPane();
+    fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "x".repeat(4001) } });
+    expect(screen.getByText('rationaleTooLong:{"max":4000}')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("impact-prior-reject"));
+    expect(decideMutate).not.toHaveBeenCalled();
+  });
+
+  it("shows the server's answer when the decision fails", () => {
+    mutation = { isPending: false, isError: true, error: { message: "ImpactPrior is already rejected" } };
+    renderPane();
+    expect(screen.getByTestId("impact-prior-error")).toHaveTextContent("ImpactPrior is already rejected");
+  });
+
+  it("disables both actions while a decision is in flight", () => {
+    mutation = { isPending: true, isError: false, error: null, variables: { decision: "accepted" } };
+    renderPane();
+    expect(screen.getByTestId("impact-prior-accept")).toBeDisabled();
+    expect(screen.getByTestId("impact-prior-reject")).toBeDisabled();
+    fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "late" } });
+    fireEvent.click(screen.getByTestId("impact-prior-reject"));
+    expect(decideMutate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a non-decider", { canDecide: false }],
+    ["an already accepted prior", { prior: { ...PRIOR, state: "accepted" as const } }],
+  ])("is the card alone for %s", (_label, props) => {
+    renderPane(props);
+    expect(screen.getByTestId("enrichment-prior")).toBeInTheDocument();
+    expect(screen.queryByTestId("impact-prior-decision")).not.toBeInTheDocument();
+  });
+});

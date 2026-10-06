@@ -3348,6 +3348,10 @@
     "rationaleRequired": "A rationale is required",
     "rationaleTooLong": "Keep the rationale under {max} characters",
     "reject": "Reject",
-    "accept": "Accept"
+    "accept": "Accept",
+    "toast": {
+      "accepted": "Impact prior accepted",
+      "rejected": "Impact prior rejected"
+    }
   }
 }

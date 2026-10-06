@@ -3348,6 +3348,10 @@
     "rationaleRequired": "Se requiere un motivo",
     "rationaleTooLong": "El motivo debe tener menos de {max} caracteres",
     "reject": "Rechazar",
-    "accept": "Aceptar"
+    "accept": "Aceptar",
+    "toast": {
+      "accepted": "Prior de impacto aceptado",
+      "rejected": "Prior de impacto rechazado"
+    }
   }
 }

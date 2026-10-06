@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button, Group, Stack, Text, Textarea } from "@mantine/core";
-import { IconCircleX } from "@tabler/icons-react";
+import { IconCircleCheck, IconCircleX } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { MAX_RATIONALE_LENGTH } from "~/lib/impact-prior-review";
@@ -20,7 +20,7 @@ export interface ImpactPriorPaneProps {
 
 /**
  * A proposed ImpactPrior with its decision controls (clear-api ADR-0010,
- * V2): the evidence card, a required rationale, and the decision. Mounted
+ * V2): the evidence card, a required rationale, and Accept / Reject. Mounted
  * through two doors — the Inbox's Review item and the Event page's
  * Enrichment section — so the decision is the same wherever it is taken.
  * Only a proposed prior is decidable; the server rejects anything else
@@ -78,6 +78,18 @@ export function ImpactPriorPane({ prior, canDecide, onDecided }: ImpactPriorPane
             size="xs"
           />
           <Group gap={8} wrap="wrap">
+            <Button
+              size="xs"
+              variant="filled"
+              color="green"
+              leftSection={<IconCircleCheck size={14} />}
+              loading={decide.isPending && decide.variables?.decision === "accepted"}
+              disabled={decide.isPending}
+              onClick={() => submit("accepted")}
+              data-testid="impact-prior-accept"
+            >
+              {t("accept")}
+            </Button>
             <Button
               size="xs"
               variant="outline"

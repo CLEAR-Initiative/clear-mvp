@@ -586,6 +586,18 @@ describe("InboxPage impact prior review", () => {
     expect(invalidate).toHaveBeenCalled();
   });
 
+  it("accepts a prior from the Inbox and toasts it", () => {
+    priorsData = [prior("ip-1")];
+    decideMutate.mockImplementation((_input, opts) => opts.onSuccess({ ...prior("ip-1"), state: "accepted" }));
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-filter-all"));
+    fireEvent.click(screen.getAllByTestId("inbox-entry").find((r) => r.getAttribute("data-kind") === "impact_prior")!);
+    fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "Good basis" } });
+    fireEvent.click(screen.getByTestId("impact-prior-accept"));
+    expect(decideMutate).toHaveBeenCalledWith({ id: "ip-1", decision: "accepted", rationale: "Good basis" }, expect.any(Object));
+    expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.priorAccepted");
+  });
+
   it("does not ask for Review items while impact_prior_review is off", () => {
     flags = { impact_prior_review: false };
     priorsData = [prior("ip-1")];

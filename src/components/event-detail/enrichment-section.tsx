@@ -3,10 +3,13 @@
 import { Badge, Box, Card, Group, Stack, Text } from "@mantine/core";
 import { IconSparkles } from "@tabler/icons-react";
 import { useFormatter, useTranslations } from "next-intl";
+import { notifications } from "@mantine/notifications";
 import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { ImpactPriorCard } from "~/components/impact-prior/impact-prior-card";
-import type { GqlTask } from "~/lib/types/graphql";
+import { ImpactPriorPane } from "~/components/impact-prior/impact-prior-pane";
+import { canDecideImpactPriors } from "~/lib/roles";
+import type { GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
 
 export { safeHttpUrl } from "~/components/impact-prior/impact-prior-card";
 
@@ -19,18 +22,25 @@ const STATUS_COLOR: Record<GqlTask["status"], string> = {
 };
 
 /**
- * The Event's enrichment, read-only (clear-api ADR-0010, V1): each Task
- * (kind, status, requester, when, its error when FAILED and the server let
- * us see it) and each ImpactPrior the server returned for this user (state,
- * cases, scope, horizon, and the basis as a list of cited cases). Which
- * states a user sees is clear-api's rule; proposed and rejected rows render
- * only when they arrive. Polls while a Task is open so the result appears
- * without a reload. Behind the `event_enrichment` flag.
+ * The Event's enrichment (clear-api ADR-0010): each Task (kind, status,
+ * requester, when, its error when FAILED and the server let us see it) and
+ * each ImpactPrior the server returned for this user (state, cases, scope,
+ * horizon, and the basis as a list of cited cases). Which states a user
+ * sees is clear-api's rule; proposed and rejected rows render only when
+ * they arrive. Polls while a Task is open so the result appears without a
+ * reload. Behind the `event_enrichment` flag.
+ *
+ * V2: a proposed ImpactPrior is shown to a decider (admin or analyst, with
+ * `impact_prior_review` on) through the same ImpactPriorPane the Inbox
+ * uses — the Event page is the second door to the same decision.
  */
 export function EnrichmentSection({ eventId }: { eventId: string }) {
   const enabled = useFeatureEnabled("event_enrichment");
+  const review = useFeatureEnabled("impact_prior_review");
   const t = useTranslations("eventDetail.enrichment");
-  const format = useFormatter();
+  const tReview = useTranslations("impactPriorReview");
+  const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000, enabled });
+  const canDecide = review && canDecideImpactPriors(authData?.user?.role);
 
   const query = api.tasks.forEvent.useQuery(
     { eventId },
@@ -67,9 +77,20 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
           </Text>
         ) : (
           <Stack gap={12}>
-            {priors.map((prior) => (
-              <ImpactPriorCard key={prior.id} prior={prior} />
-            ))}
+            {priors.map((prior) =>
+              canDecide && prior.state === "proposed" ? (
+                <ImpactPriorPane
+                  key={prior.id}
+                  prior={prior}
+                  canDecide
+                  onDecided={(_decided: GqlImpactPrior, decision) =>
+                    notifications.show({ message: tReview(`toast.${decision}`) })
+                  }
+                />
+              ) : (
+                <ImpactPriorCard key={prior.id} prior={prior} />
+              ),
+            )}
             {tasks.map((task) => (
               <TaskRow key={task.id} task={task} />
             ))}
