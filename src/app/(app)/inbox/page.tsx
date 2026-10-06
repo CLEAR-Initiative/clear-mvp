@@ -7,13 +7,13 @@ import { Box, Loader, Text } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
-import { canDecideImpactPriors, isPlatformAdmin } from "~/lib/roles";
+import { inboxAccess } from "~/lib/inbox-access";
 import { canReviewSource } from "~/lib/ground-review";
 import {
-  INBOX_FILTERS,
   buildImpactPriorEntries,
   buildInboxEntries,
   countByFilter,
+  filtersFor,
   isHotlineEntry,
   loadReadIds,
   moveSelection,
@@ -84,22 +84,25 @@ export default function InboxPage() {
   const t = useTranslations("inbox");
   const utils = api.useUtils();
 
-  const enabled = useFeatureEnabled("hotline_inbox");
+  const hotlineInbox = useFeatureEnabled("hotline_inbox");
   const translation = useFeatureEnabled("hotline_translation");
-  const priorReview = useFeatureEnabled("impact_prior_review");
+  const impactPriorReview = useFeatureEnabled("impact_prior_review");
   const { data: authData, isLoading: authLoading } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const role = authData?.user?.role;
-  const canSee = enabled && isPlatformAdmin(role);
+  // One rule with the nav entry (src/lib/inbox-access.ts): the page shows
+  // for whichever kinds the reader may see, and lists only those.
+  const access = inboxAccess({ role, hotlineInbox, impactPriorReview });
+  const canSee = access.any;
   /** Deciders see proposed ImpactPriors beside the hotline threads. */
-  const canDecide = priorReview && canDecideImpactPriors(role);
+  const canDecide = access.priors;
 
   const inboxQuery = api.ground.hotlineInbox.useQuery(undefined, {
-    enabled: canSee,
+    enabled: access.hotline,
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
   const priorsQuery = api.tasks.proposedImpactPriors.useQuery(undefined, {
-    enabled: canSee && canDecide,
+    enabled: access.priors,
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
@@ -117,7 +120,13 @@ export default function InboxPage() {
     return m;
   }, [inboxQuery.data]);
 
+  const filters = useMemo(() => filtersFor(access), [access.hotline, access.priors]); // eslint-disable-line react-hooks/exhaustive-deps
   const [filter, setFilter] = useState<InboxFilter>("reports");
+  // A reader without the hotline starts on the first filter they have
+  // (priors); a filter that stops applying (flag flipped) falls back too.
+  useEffect(() => {
+    if (!filters.includes(filter)) setFilter(filters[0] ?? "all");
+  }, [filters, filter]);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<InboxSort>("reportsFirst");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -405,7 +414,7 @@ export default function InboxPage() {
           )}
         </div>
         <div className={styles.filters} data-testid="inbox-filters">
-          {INBOX_FILTERS.map((f) => (
+          {filters.map((f) => (
             <button
               type="button"
               key={f}

@@ -7,6 +7,7 @@ import {
   combineTranslations,
   countByFilter,
   entryDescription,
+  filtersFor,
   intakeRef,
   matchesFilter,
   messageFailures,
@@ -343,7 +344,7 @@ describe("visibleEntries / countByFilter", () => {
   });
 
   it("counts per filter", () => {
-    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 1, chatter: 1, all: 3 });
+    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 1, chatter: 1, priors: 0, all: 3 });
   });
 });
 
@@ -458,7 +459,14 @@ describe("impact prior Review items", () => {
     expect(entries[0]!.prior).toBe(entries[0]!.prior);
   });
 
-  it("only matches the Everything filter, counts there, and is searchable by Event title and hazard", () => {
+  it("offers each reader the filters of the kinds they see", () => {
+    expect(filtersFor({ hotline: true, priors: true })).toEqual(["reports", "unclassified", "chatter", "priors", "all"]);
+    expect(filtersFor({ hotline: true, priors: false })).toEqual(["reports", "unclassified", "chatter", "all"]);
+    expect(filtersFor({ hotline: false, priors: true })).toEqual(["priors", "all"]);
+    expect(filtersFor({ hotline: false, priors: false })).toEqual(["all"]);
+  });
+
+  it("matches the priors and Everything filters, counts there, and is searchable by Event title and hazard", () => {
     const hotline = buildInboxEntries({
       sources: [],
       threads: [thread("t1", "Fire in Port Sudan")],
@@ -468,7 +476,10 @@ describe("impact prior Review items", () => {
     expect(matchesFilter(entries[1]!, "reports")).toBe(false);
     expect(matchesFilter(entries[1]!, "unclassified")).toBe(false);
     expect(matchesFilter(entries[1]!, "all")).toBe(true);
-    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 0, chatter: 0, all: 2 });
+    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 0, chatter: 0, priors: 1, all: 2 });
+    expect(matchesFilter(entries[1]!, "priors")).toBe(true);
+    expect(matchesFilter(entries[0]!, "priors")).toBe(false);
+    expect(visibleEntries(entries, "priors", "", "newest").map((e) => e.id)).toEqual(["ip-1"]);
     expect(visibleEntries(entries, "all", "kassala", "newest").map((e) => e.id)).toEqual(["ip-1"]);
     expect(visibleEntries(entries, "all", "FL", "newest").map((e) => e.id)).toEqual(["ip-1"]);
     expect(visibleEntries(entries, "all", "HL-", "newest").map((e) => e.id)).toEqual(["t1"]);

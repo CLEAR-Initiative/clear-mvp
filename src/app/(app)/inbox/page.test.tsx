@@ -62,7 +62,13 @@ vi.mock("~/trpc/react", () => ({
       },
     },
     ground: {
-      hotlineInbox: { useQuery: () => ({ data: inboxData, isFetching: false, error: null }) },
+      hotlineInbox: {
+        useQuery: (_input: unknown, opts: { enabled: boolean }) => ({
+          data: opts.enabled ? inboxData : undefined,
+          isFetching: false,
+          error: null,
+        }),
+      },
       review: { useMutation: () => ({ mutate: reviewMutate, isPending: false }) },
       retryMessage: { useMutation: () => ({ mutateAsync: retryMutateAsync }) },
       requestTranslation: { useMutation: () => ({ mutate: vi.fn(), data: undefined, isError: false }) },
@@ -192,17 +198,47 @@ afterEach(() => {
 const renderPage = () => render(<MantineProvider><InboxPage /></MantineProvider>);
 
 describe("InboxPage access", () => {
-  it("blocks non-admin roles", () => {
-    role = "analyst";
+  it("blocks a viewer", () => {
+    role = "viewer";
     renderPage();
     expect(screen.getByTestId("inbox-no-access")).toBeInTheDocument();
     expect(screen.queryByTestId("inbox-page")).not.toBeInTheDocument();
   });
 
-  it("blocks when the feature flag is off", () => {
+  it("blocks an analyst while impact_prior_review is off: the hotline is admins' only", () => {
+    role = "analyst";
+    flags = { impact_prior_review: false };
+    renderPage();
+    expect(screen.getByTestId("inbox-no-access")).toBeInTheDocument();
+  });
+
+  it("blocks when both flags are off", () => {
     flagEnabled = false;
     renderPage();
     expect(screen.getByTestId("inbox-no-access")).toBeInTheDocument();
+  });
+
+  it("admits an analyst to the Review items only: no hotline fetch, no hotline filters, priors first", () => {
+    role = "analyst";
+    priorsData = [prior("ip-1")];
+    renderPage();
+    expect(screen.getByTestId("inbox-page")).toBeInTheDocument();
+    expect(priorsQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
+    expect(screen.queryByTestId("inbox-filter-reports")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-filter-priors")).toHaveAttribute("data-active", "true");
+    expect(screen.getByTestId("inbox-filter-priors")).toHaveTextContent("1");
+    expect(screen.getByTestId("inbox-filter-all")).toBeInTheDocument();
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(1);
+    expect(screen.getByText('awaiting:{"count":1}')).toBeInTheDocument();
+    // The hotline threads the mock would return are not listed.
+    expect(screen.queryByText("Thread a")).not.toBeInTheDocument();
+  });
+
+  it("keeps an admin on the hotline filters when impact_prior_review is off", () => {
+    flags = { impact_prior_review: false };
+    renderPage();
+    expect(screen.getByTestId("inbox-filter-reports")).toHaveAttribute("data-active", "true");
+    expect(screen.queryByTestId("inbox-filter-priors")).not.toBeInTheDocument();
   });
 });
 
@@ -561,6 +597,7 @@ describe("InboxPage impact prior review", () => {
     expect(priorsQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
     // Not a field report: it is not under the default filter.
     expect(screen.queryByTestId("inbox-kind-pill")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-filter-priors")).toHaveTextContent("1");
     fireEvent.click(screen.getByTestId("inbox-filter-all"));
     expect(screen.getByText('awaiting:{"count":4}')).toBeInTheDocument();
     const row = screen.getAllByTestId("inbox-entry").find((r) => r.getAttribute("data-kind") === "impact_prior")!;

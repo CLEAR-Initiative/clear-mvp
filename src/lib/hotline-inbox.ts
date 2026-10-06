@@ -32,8 +32,15 @@ export interface GroundTranslationState {
   text: string | null;
 }
 
-export const INBOX_FILTERS = ["reports", "unclassified", "chatter", "all"] as const;
+/** The three hotline classifications, the ImpactPrior kind, and everything.
+ * The page shows only the filters whose kind the reader may see. */
+export const INBOX_FILTERS = ["reports", "unclassified", "chatter", "priors", "all"] as const;
 export type InboxFilter = (typeof INBOX_FILTERS)[number];
+
+/** Which filters apply to a reader who sees these kinds; "all" always. */
+export function filtersFor(access: { hotline: boolean; priors: boolean }): InboxFilter[] {
+  return INBOX_FILTERS.filter((f) => (f === "all" ? true : f === "priors" ? access.priors : access.hotline));
+}
 
 export const INBOX_SORTS = ["reportsFirst", "newest"] as const;
 export type InboxSort = (typeof INBOX_SORTS)[number];
@@ -358,9 +365,10 @@ export function entryDescription(entry: HotlineEntry, transcriptLabel: (text: st
     .join("\n\n");
 }
 
-/** The classification filters are the hotline's; a Review item of another
- * kind only matches "all". "unclassified" covers both pending and failed
- * entries: neither has a label yet. The row pill tells them apart. */
+/** The classification filters are the hotline's, "priors" is the
+ * ImpactPrior kind's, "all" is both. "unclassified" covers both pending
+ * and failed entries: neither has a label yet. The row pill tells them
+ * apart. */
 export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
   switch (filter) {
     case "reports":
@@ -369,6 +377,8 @@ export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
       return isHotlineEntry(entry) && entry.classification === "unclassified";
     case "chatter":
       return isHotlineEntry(entry) && entry.classification === "chatter";
+    case "priors":
+      return isImpactPriorEntry(entry);
     case "all":
       return true;
   }
@@ -411,7 +421,7 @@ export function visibleEntries<T extends InboxEntry>(
 }
 
 export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, all: 0 };
+  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, priors: 0, all: 0 };
   for (const e of entries) {
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += 1;
   }

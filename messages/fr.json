@@ -2820,6 +2820,7 @@
       "reports": "Rapports terrain",
       "unclassified": "Non classés",
       "chatter": "Bavardage",
+      "priors": "A priori d'impact",
       "all": "Tout"
     },
     "search": "Rechercher texte, réf. d'admission",
@@ -2917,7 +2918,7 @@
       "priorRejected": "A priori d'impact rejeté",
       "priorAccepted": "A priori d'impact accepté"
     },
-    "noAccess": "La boîte de réception est réservée aux administrateurs pour le moment.",
+    "noAccess": "La boîte de réception est réservée aux administrateurs et aux analystes.",
     "loadError": "Impossible de charger la boîte de réception",
     "translate": {
       "button": "Traduire en {locale}",
