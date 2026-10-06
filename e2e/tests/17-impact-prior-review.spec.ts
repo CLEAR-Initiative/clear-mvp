@@ -15,6 +15,9 @@ import { enableFeatureFlags, gotoEventByTitle } from "../support/helpers";
  *   2. From the Event page: the Enrichment section shows the proposed prior
  *      with the decision controls, and accepting it with a rationale turns
  *      the card to Accepted with the controls gone.
+ *   3. The bell: the seed completed each Task through clear-api, which
+ *      notified the analyst (the requester); each notification is listed
+ *      and opens its Event.
  *
  * Both decisions are terminal (clear-api answers CONFLICT on a second one),
  * so a retry that finds the prior already decided asserts the end state
@@ -37,9 +40,10 @@ test.describe("Impact prior review (case 17)", () => {
     const list = page.getByTestId("inbox-list");
     await expect(list).toBeVisible();
     // Either the item is still waiting, or an earlier attempt already decided
-    // it. Wait for the list to settle, not for it to empty: the other test's
-    // prior may still be waiting in it, in either order.
-    await expect(list.getByText(/entries in this view loaded|Nothing left in this view/)).toBeVisible({ timeout: 20_000 });
+    // it. Wait for the first load to land (the footer stops saying it is
+    // loading), not for the list to empty: the other test's prior may still
+    // be waiting in it, in either order.
+    await expect(page.getByTestId("inbox-list-footer")).toHaveAttribute("data-loading", "false", { timeout: 20_000 });
     if ((await row.count()) === 0) {
       await gotoEventByTitle(page, IMPACT_PRIORS.inboxEvent);
       await expect(page.getByTestId("enrichment-prior").first()).toHaveAttribute("data-state", "rejected");
@@ -71,6 +75,26 @@ test.describe("Impact prior review (case 17)", () => {
     await expect(prior).toHaveAttribute("data-state", "rejected", { timeout: 20_000 });
     await expect(prior).toContainText("another season");
     await expect(page.getByTestId("impact-prior-decision")).toHaveCount(0);
+  });
+
+  test("the requester hears about each proposal in the bell, and a row opens its Event", async ({ page }) => {
+    await page.goto("/inbox", { waitUntil: "domcontentloaded" });
+    // The desktop sidebar's bell (the mobile drawer holds another, hidden).
+    const bell = page.getByTestId("notifications-bell").filter({ visible: true }).first();
+    await expect(bell).toBeVisible({ timeout: 20_000 });
+    await bell.click();
+
+    // One per seeded prior; read or not (a retry may have opened one already).
+    const rows = page
+      .getByTestId("notifications-menu")
+      .getByTestId("notification-row")
+      .filter({ hasText: IMPACT_PRIORS.notification });
+    await expect(rows).toHaveCount(2, { timeout: 20_000 });
+    await expect(rows.first()).toHaveAttribute("href", /^\/event\/[^/]+$/);
+
+    await rows.first().click();
+    await expect(page).toHaveURL(/\/event\/[^/?#]+/, { timeout: 20_000 });
+    await expect(page.getByTestId("enrichment-section")).toBeVisible({ timeout: 20_000 });
   });
 
   test("accepting from the Event page turns the proposed prior into an accepted one", async ({ page }) => {
