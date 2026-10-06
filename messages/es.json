@@ -2920,9 +2920,7 @@
       "viewSignal": "Ver señal",
       "close": "Cerrar",
       "addedNoSignal": "Aprobado, pero no se devolvió ningún id de señal. Compruebe la señal en Detección antes de confiar en ella.",
-      "retried": "En cola para un nuevo intento",
-      "priorRejected": "Prior de impacto rechazado",
-      "priorAccepted": "Prior de impacto aceptado"
+      "retried": "En cola para un nuevo intento"
     },
     "noAccess": "La bandeja de entrada es solo para administradores y analistas.",
     "loadError": "No se pudo cargar la bandeja",
@@ -2958,10 +2956,6 @@
     "priors": {
       "untitledEvent": "Evento sin título",
       "preview": "Prior de impacto propuesto · {count, plural, one {# caso} other {# casos}} · {scope} · {hazard}",
-      "scope": {
-        "district": "distrito",
-        "country": "país"
-      },
       "openEvent": "Abrir el evento",
       "proposedAt": "Propuesto el {date}"
     }

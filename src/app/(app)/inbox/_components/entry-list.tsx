@@ -50,10 +50,11 @@ function HotlineRow({ entry }: { entry: HotlineEntry }) {
  * and when it was proposed. */
 function ImpactPriorRow({ entry }: { entry: ImpactPriorEntry }) {
   const t = useTranslations("inbox");
+  const tScope = useTranslations("eventDetail.enrichment.scope");
   const format = useFormatter();
   const { prior } = entry;
   const scope = prior.geographicScope === "district" || prior.geographicScope === "country"
-    ? t(`priors.scope.${prior.geographicScope}`)
+    ? tScope(prior.geographicScope)
     : prior.geographicScope;
   return (
     <span className={styles.entryBody}>

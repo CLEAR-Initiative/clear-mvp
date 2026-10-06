@@ -2920,9 +2920,7 @@
       "viewSignal": "Voir le signal",
       "close": "Fermer",
       "addedNoSignal": "Approuvé, mais aucun identifiant de signal n'a été renvoyé. Vérifiez le signal dans Détection avant de vous y fier.",
-      "retried": "Remis en file pour une nouvelle tentative",
-      "priorRejected": "A priori d'impact rejeté",
-      "priorAccepted": "A priori d'impact accepté"
+      "retried": "Remis en file pour une nouvelle tentative"
     },
     "noAccess": "La boîte de réception est réservée aux administrateurs et aux analystes.",
     "loadError": "Impossible de charger la boîte de réception",
@@ -2958,10 +2956,6 @@
     "priors": {
       "untitledEvent": "Événement sans titre",
       "preview": "A priori d'impact proposé · {count, plural, one {# cas} other {# cas}} · {scope} · {hazard}",
-      "scope": {
-        "district": "district",
-        "country": "pays"
-      },
       "openEvent": "Ouvrir l'événement",
       "proposedAt": "Proposé le {date}"
     }

@@ -269,7 +269,7 @@ describe("EntryList", () => {
     expect(rows[0]).toHaveAttribute("data-kind", "impact_prior");
     expect(rows[0]).not.toHaveAttribute("data-processing");
     expect(rows[0]).toHaveTextContent("Floods in Kassala");
-    expect(rows[0]).toHaveTextContent('priors.preview:{"count":2,"scope":"priors.scope.district","hazard":"FL"}');
+    expect(rows[0]).toHaveTextContent('priors.preview:{"count":2,"scope":"district","hazard":"FL"}');
     expect(within(rows[0]!).getByTestId("inbox-kind-pill")).toHaveAttribute("data-kind", "impact_prior");
     expect(rows[1]).toHaveTextContent("priors.untitledEvent");
     fireEvent.click(rows[0]!);

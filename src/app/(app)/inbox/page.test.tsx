@@ -657,7 +657,8 @@ describe("InboxPage impact prior review", () => {
       { id: "ip-1", decision: "rejected", rationale: "Wrong country" },
       expect.any(Object),
     );
-    expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.priorRejected");
+    // Exact: the hotline reject toast is `toast.rejected` with a reason.
+    expect(screen.getByTestId("inbox-toast").textContent).toBe("toast.rejected");
     expect(invalidate).toHaveBeenCalled();
   });
 
@@ -670,7 +671,7 @@ describe("InboxPage impact prior review", () => {
     fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "Good basis" } });
     fireEvent.click(screen.getByTestId("impact-prior-accept"));
     expect(decideMutate).toHaveBeenCalledWith({ id: "ip-1", decision: "accepted", rationale: "Good basis" }, expect.any(Object));
-    expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.priorAccepted");
+    expect(screen.getByTestId("inbox-toast").textContent).toBe("toast.accepted");
   });
 
   it("does not ask for Review items while impact_prior_review is off", () => {

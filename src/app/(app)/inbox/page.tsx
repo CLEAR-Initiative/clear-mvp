@@ -84,6 +84,7 @@ function pendingOnly(prev: Record<string, RetryState>): Record<string, RetryStat
 
 export default function InboxPage() {
   const t = useTranslations("inbox");
+  const tReview = useTranslations("impactPriorReview");
   const utils = api.useUtils();
 
   const hotlineInbox = useFeatureEnabled("hotline_inbox");
@@ -314,9 +315,10 @@ export default function InboxPage() {
    */
   const decided = useCallback(
     (entry: ImpactPriorEntry, _prior: unknown, decision: GqlImpactPriorDecision) => {
-      afterAction(entry.id, { message: t(decision === "rejected" ? "toast.priorRejected" : "toast.priorAccepted") });
+      // The same words as the Event page's door (impactPriorReview).
+      afterAction(entry.id, { message: tReview(`toast.${decision}`) });
     },
-    [afterAction, t],
+    [afterAction, tReview],
   );
 
   /**

@@ -2920,9 +2920,7 @@
       "viewSignal": "View signal",
       "close": "Dismiss",
       "addedNoSignal": "Approved, but no signal id came back. Check the signal in Detection before relying on it.",
-      "retried": "Queued for another attempt",
-      "priorRejected": "Impact prior rejected",
-      "priorAccepted": "Impact prior accepted"
+      "retried": "Queued for another attempt"
     },
     "noAccess": "The Inbox is available to admins and analysts only.",
     "loadError": "Could not load the inbox",
@@ -2958,10 +2956,6 @@
     "priors": {
       "untitledEvent": "Untitled event",
       "preview": "Proposed impact prior · {count, plural, one {# case} other {# cases}} · {scope} · {hazard}",
-      "scope": {
-        "district": "district",
-        "country": "country"
-      },
       "openEvent": "Open the event",
       "proposedAt": "Proposed {date}"
     }
