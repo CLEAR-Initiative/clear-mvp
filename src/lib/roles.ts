@@ -44,3 +44,12 @@ const CONTENT_READER_ROLES: ReadonlySet<string> = new Set(["admin", "analyst", "
 export function canReadContent(role: string | null | undefined): boolean {
   return !!role && CONTENT_READER_ROLES.has(role);
 }
+
+/**
+ * Client twin of clear-api `decideImpactPrior` / `impactPriors`
+ * `requireRole(["admin", "analyst"])`: who may decide a proposed
+ * ImpactPrior (an Inbox Review item). The server is the real gate.
+ */
+export function canDecideImpactPriors(role: string | null | undefined): boolean {
+  return isPlatformAdmin(role) || role === "analyst";
+}

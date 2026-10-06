@@ -117,6 +117,67 @@ describe("tasks router", () => {
     await expect(caller().tasks.forEvent({ eventId: "evt-1" })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
+  it("proposedImpactPriors reads the Review items with the Event they are about", async () => {
+    graphqlFetch.mockResolvedValueOnce({ impactPriors: [{ id: "ip-1", state: "proposed", event: { id: "evt-1", title: "Floods" } }] });
+    const result = await caller().tasks.proposedImpactPriors({ limit: 20, offset: 40 });
+    expect(result).toEqual([{ id: "ip-1", state: "proposed", event: { id: "evt-1", title: "Floods" } }]);
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("query ProposedImpactPriors");
+    expect(query).toContain("impactPriors(state: proposed, limit: $limit, offset: $offset)");
+    expect(query).toContain("event { id title types }");
+    expect(vars).toEqual({ limit: 20, offset: 40 });
+
+    graphqlFetch.mockResolvedValueOnce({ impactPriors: [] });
+    await caller().tasks.proposedImpactPriors();
+    expect((graphqlFetch.mock.calls[1] as [string, Record<string, unknown>])[1]).toEqual({ limit: undefined, offset: undefined });
+  });
+
+  it("proposedImpactPriorCount asks for ids only, at clear-api's page maximum", async () => {
+    graphqlFetch.mockResolvedValueOnce({ impactPriors: [{ id: "ip-1" }, { id: "ip-2" }] });
+    expect(await caller().tasks.proposedImpactPriorCount()).toEqual({ count: 2, capped: false });
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("impactPriors(state: proposed, limit: $limit)");
+    expect(query).not.toContain("basis");
+    expect(query).not.toContain("event");
+    expect(vars).toEqual({ limit: 200 });
+
+    graphqlFetch.mockResolvedValueOnce({ impactPriors: Array.from({ length: 200 }, (_, i) => ({ id: `ip-${i}` })) });
+    expect(await caller().tasks.proposedImpactPriorCount()).toEqual({ count: 200, capped: true });
+  });
+
+  it("proposedImpactPriors surfaces clear-api's FORBIDDEN for a non-decider", async () => {
+    graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError("Requires one of: admin, analyst", "FORBIDDEN"));
+    await expect(caller().tasks.proposedImpactPriors()).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("decideImpactPrior sends the decision with a trimmed rationale", async () => {
+    graphqlFetch.mockResolvedValueOnce({ decideImpactPrior: { id: "ip-1", state: "rejected", decisionRationale: "Wrong country" } });
+    const result = await caller().tasks.decideImpactPrior({ id: "ip-1", decision: "rejected", rationale: "  Wrong country  " });
+    expect(result.state).toBe("rejected");
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("mutation DecideImpactPrior");
+    expect(query).toContain("decideImpactPrior(id: $id, decision: $decision, rationale: $rationale)");
+    expect(vars).toEqual({ id: "ip-1", decision: "rejected", rationale: "Wrong country" });
+  });
+
+  it("decideImpactPrior refuses an empty or over-long rationale before the round trip", async () => {
+    await expect(caller().tasks.decideImpactPrior({ id: "ip-1", decision: "rejected", rationale: "   " })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+    await expect(
+      caller().tasks.decideImpactPrior({ id: "ip-1", decision: "accepted", rationale: "x".repeat(4001) }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(graphqlFetch).not.toHaveBeenCalled();
+  });
+
+  it("decideImpactPrior surfaces CONFLICT for a prior that is already decided", async () => {
+    graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError("ImpactPrior is already rejected", "CONFLICT"));
+    await expect(caller().tasks.decideImpactPrior({ id: "ip-1", decision: "accepted", rationale: "ok" })).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "ImpactPrior is already rejected",
+    });
+  });
+
   it("cancel sends the mutation and surfaces CONFLICT for a finished Task", async () => {
     graphqlFetch.mockResolvedValueOnce({ cancelTask: { ...TASK, status: "CANCELLED" } });
     const result = await caller().tasks.cancel({ id: "task-1" });

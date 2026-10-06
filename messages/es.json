@@ -2151,7 +2151,13 @@
     "feedback": "Comentarios",
     "admin": "Admin",
     "settings": "Configuración",
-    "signOut": "Cerrar sesión"
+    "signOut": "Cerrar sesión",
+    "notifications": {
+      "title": "Notificaciones",
+      "unread": "{count, plural, one {# notificación sin leer} other {# notificaciones sin leer}}",
+      "empty": "Nada nuevo",
+      "loadError": "No se pudieron cargar las notificaciones"
+    }
   },
   "noAccess": {
     "title": "En espera de acceso",
@@ -2814,12 +2820,13 @@
     "goToProfile": "Ir al perfil"
   },
   "inbox": {
-    "title": "Bandeja de la línea directa",
+    "title": "Bandeja de entrada",
     "awaiting": "{count, plural, one {# pendiente de revisión} other {# pendientes de revisión}}",
     "filters": {
       "reports": "Reportes de campo",
       "unclassified": "Sin clasificar",
       "chatter": "Charla",
+      "priors": "Priors de impacto",
       "all": "Todo"
     },
     "search": "Buscar texto, ref. de ingreso",
@@ -2915,7 +2922,7 @@
       "addedNoSignal": "Aprobado, pero no se devolvió ningún id de señal. Compruebe la señal en Detección antes de confiar en ella.",
       "retried": "En cola para un nuevo intento"
     },
-    "noAccess": "La bandeja de la línea directa es solo para administradores por ahora.",
+    "noAccess": "La bandeja de entrada es solo para administradores y analistas.",
     "loadError": "No se pudo cargar la bandeja",
     "translate": {
       "button": "Traducir al {locale}",
@@ -2942,6 +2949,15 @@
       "retry": "Reintentar",
       "retrying": "Reintentando…",
       "partial": "De nuevo en cola: {done} de {total} mensajes. {error}"
+    },
+    "kinds": {
+      "impact_prior": "Prior de impacto"
+    },
+    "priors": {
+      "untitledEvent": "Evento sin título",
+      "preview": "Prior de impacto propuesto · {count, plural, one {# caso} other {# casos}} · {scope} · {hazard}",
+      "openEvent": "Abrir el evento",
+      "proposedAt": "Propuesto el {date}"
     }
   },
   "analysis": {
@@ -3324,6 +3340,19 @@
         "eventTypes": "Tipos de evento",
         "sourceNames": "Fuentes"
       }
+    }
+  },
+  "impactPriorReview": {
+    "help": "Solo un prior aceptado cuenta más adelante. Uno rechazado se queda con el evento, reemplazado, con su motivo.",
+    "rationaleLabel": "Motivo",
+    "rationalePlaceholder": "Por qué esta decisión, para el registro de auditoría",
+    "rationaleRequired": "Se requiere un motivo",
+    "rationaleTooLong": "El motivo debe tener menos de {max} caracteres",
+    "reject": "Rechazar",
+    "accept": "Aceptar",
+    "toast": {
+      "accepted": "Prior de impacto aceptado",
+      "rejected": "Prior de impacto rechazado"
     }
   }
 }

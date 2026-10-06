@@ -2,8 +2,8 @@
 
 import type { CSSProperties } from "react";
 import { useTranslations } from "next-intl";
-import { IconAlertTriangle } from "@tabler/icons-react";
-import type { InboxClassification, InboxEntry, InboxFailure } from "~/lib/hotline-inbox";
+import { IconAlertTriangle, IconSparkles } from "@tabler/icons-react";
+import type { HotlineEntry, ImpactPriorEntry, InboxClassification, InboxFailure } from "~/lib/hotline-inbox";
 
 const STYLES: Record<InboxClassification, { bg: string; color: string }> = {
   field_report: { bg: "var(--color-critical-light)", color: "var(--color-critical)" },
@@ -75,10 +75,40 @@ export function InboxFailedPill({ failures }: { failures: readonly InboxFailure[
   );
 }
 
-/** An entry's pills: its classification, plus the failed pill when the
- * pipeline gave up on a message. "Unclassified" is dropped once the entry
- * has failed: the failed pill says why it has no label. */
-export function InboxEntryPills({ entry }: { entry: Pick<InboxEntry, "classification" | "processing" | "failures"> }) {
+/** The Review-item kind pill for a proposed ImpactPrior: what the row is,
+ * since it sits beside hotline threads in the same list. */
+export function InboxImpactPriorPill() {
+  const t = useTranslations("inbox");
+  return (
+    <span
+      data-testid="inbox-kind-pill"
+      data-kind="impact_prior"
+      style={{
+        ...PILL,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "1px 7px",
+        background: "var(--color-info-light)",
+        color: "var(--color-info)",
+      }}
+    >
+      <IconSparkles size={11} aria-hidden />
+      {t("kinds.impact_prior")}
+    </span>
+  );
+}
+
+type PillEntry =
+  | Pick<HotlineEntry, "kind" | "classification" | "processing" | "failures">
+  | Pick<ImpactPriorEntry, "kind">;
+
+/** An entry's pills, per kind. A hotline thread: its classification, plus
+ * the failed pill when the pipeline gave up on a message ("Unclassified"
+ * is dropped once the entry has failed: the failed pill says why it has no
+ * label). An ImpactPrior: its kind. */
+export function InboxEntryPills({ entry }: { entry: PillEntry }) {
+  if (entry.kind === "impact_prior") return <InboxImpactPriorPill />;
   const failed = entry.processing === "failed";
   return (
     <>

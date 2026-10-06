@@ -2,16 +2,23 @@ import type {
   GqlGroundInboxMessage,
   GqlGroundInboxThread,
   GqlHotlineInbox,
+  GqlReviewImpactPrior,
 } from "~/lib/types/graphql";
 
 /**
- * Hotline inbox view model (/inbox).
+ * Inbox view model (/inbox).
  *
- * Pure helpers that turn the hotline staging payload (open threads +
- * staged messages) into standalone, triageable entries. One entry = one
- * unverified thread. The hotline is free text (no guided form yet), so an
- * entry carries the reporter's narrative and attachments only; the intake
- * answers block from the design lands once something produces answers.
+ * Pure helpers that turn what the Inbox lists into standalone, reviewable
+ * entries of two kinds (`InboxEntry.kind`):
+ *
+ *   hotline_thread — one unverified thread from the hotline staging payload
+ *                    (open threads + staged messages). The hotline is free
+ *                    text (no guided form yet), so an entry carries the
+ *                    reporter's narrative and attachments only; the intake
+ *                    answers block from the design lands once something
+ *                    produces answers.
+ *   impact_prior   — one proposed ImpactPrior (clear-api ADR-0010) waiting
+ *                    for an admin or analyst to accept or reject it.
  *
  * PRIVACY: hotline messages carry no sender identity. `senderRef` is a
  * per-conversation HMAC pseudonym minted by clear-api; `intakeRef` below
@@ -25,8 +32,15 @@ export interface GroundTranslationState {
   text: string | null;
 }
 
-export const INBOX_FILTERS = ["reports", "unclassified", "chatter", "all"] as const;
+/** The three hotline classifications, the ImpactPrior kind, and everything.
+ * The page shows only the filters whose kind the reader may see. */
+export const INBOX_FILTERS = ["reports", "unclassified", "chatter", "priors", "all"] as const;
 export type InboxFilter = (typeof INBOX_FILTERS)[number];
+
+/** Which filters apply to a reader who sees these kinds; "all" always. */
+export function filtersFor(access: { hotline: boolean; priors: boolean }): InboxFilter[] {
+  return INBOX_FILTERS.filter((f) => (f === "all" ? true : f === "priors" ? access.priors : access.hotline));
+}
 
 export const INBOX_SORTS = ["reportsFirst", "newest"] as const;
 export type InboxSort = (typeof INBOX_SORTS)[number];
@@ -96,7 +110,23 @@ export interface InboxAttachment {
   transcript?: VoiceTranscript;
 }
 
-export interface InboxEntry {
+/** What an Inbox entry is about; each kind has its own row and pane. */
+export type InboxEntryKind = "hotline_thread" | "impact_prior";
+
+/** What every kind of entry carries: enough to list, select, search and
+ * sort it. */
+interface InboxEntryBase {
+  id: string;
+  kind: InboxEntryKind;
+  title: string;
+  /** Searchable plain text; the row's preview is its first paragraph. */
+  text: string;
+  /** When the entry happened (ISO): sorting and the row's timestamp. */
+  sentAt: string;
+}
+
+export interface HotlineEntry extends InboxEntryBase {
+  kind: "hotline_thread";
   /** Thread id (the review unit). */
   id: string;
   /** Carries the enrichment drafts the Add to CLEAR modal pre-fills from. */
@@ -128,6 +158,44 @@ export interface InboxEntry {
   uncertainty: string | null;
   /** Other open entries from the same pseudonymous reporter. */
   priorEntries: number;
+}
+
+/** A proposed ImpactPrior as a Review item. The id is the ImpactPrior's. */
+export interface ImpactPriorEntry extends InboxEntryBase {
+  kind: "impact_prior";
+  prior: GqlReviewImpactPrior;
+  eventId: string;
+  /** The Event's title; null when the Event has none (the row says so). */
+  eventTitle: string | null;
+}
+
+export type InboxEntry = HotlineEntry | ImpactPriorEntry;
+
+export function isHotlineEntry(entry: InboxEntry): entry is HotlineEntry {
+  return entry.kind === "hotline_thread";
+}
+
+export function isImpactPriorEntry(entry: InboxEntry): entry is ImpactPriorEntry {
+  return entry.kind === "impact_prior";
+}
+
+/**
+ * One Review item per proposed ImpactPrior, as clear-api returned them
+ * (newest first; the sort below re-orders). `title` is the Event's title so
+ * the row reads as "what is this about"; `text` carries the hazard, the
+ * scope and the case count so search finds it.
+ */
+export function buildImpactPriorEntries(priors: GqlReviewImpactPrior[]): ImpactPriorEntry[] {
+  return priors.map((prior) => ({
+    id: prior.id,
+    kind: "impact_prior",
+    prior,
+    eventId: prior.eventId,
+    eventTitle: prior.event?.title ?? null,
+    title: prior.event?.title ?? "",
+    text: [prior.hazardType, prior.geographicScope, `${prior.numberOfCases}`, prior.methodVersion].join(" "),
+    sentAt: prior.createdAt,
+  }));
 }
 
 /** Attachments that are recognisably not audio: images, plus the video and
@@ -226,7 +294,7 @@ function entryClassification(messages: GqlGroundInboxMessage[]): InboxClassifica
 
 /** Join open threads with their messages into standalone entries. Threads
  * without messages (should not happen) are dropped rather than rendered empty. */
-export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
+export function buildInboxEntries(data: GqlHotlineInbox): HotlineEntry[] {
   const byThread = new Map<string, GqlGroundInboxMessage[]>();
   for (const m of data.messages) {
     if (!m.threadId) continue;
@@ -235,7 +303,7 @@ export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
     else byThread.set(m.threadId, [m]);
   }
 
-  const entries: InboxEntry[] = [];
+  const entries: HotlineEntry[] = [];
   for (const thread of data.threads) {
     const messages = byThread.get(thread.id);
     if (!messages || messages.length === 0) continue;
@@ -250,6 +318,7 @@ export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
     const failures = messages.flatMap(messageFailures);
     entries.push({
       id: thread.id,
+      kind: "hotline_thread",
       thread,
       messages,
       senderRef: first.senderRef,
@@ -284,7 +353,7 @@ export function buildInboxEntries(data: GqlHotlineInbox): InboxEntry[] {
  * caller's localized `transcriptLabel` (e.g. "[Machine transcript] …"), so
  * voice-only reports are not promoted with an empty description.
  */
-export function entryDescription(entry: InboxEntry, transcriptLabel: (text: string) => string): string {
+export function entryDescription(entry: HotlineEntry, transcriptLabel: (text: string) => string): string {
   return entry.messages
     .flatMap((m) => {
       const parts = [m.text.trim()];
@@ -296,16 +365,20 @@ export function entryDescription(entry: InboxEntry, transcriptLabel: (text: stri
     .join("\n\n");
 }
 
-/** "unclassified" covers both pending and failed entries: neither has a
- * label yet. The row pill tells them apart. */
+/** The classification filters are the hotline's, "priors" is the
+ * ImpactPrior kind's, "all" is both. "unclassified" covers both pending
+ * and failed entries: neither has a label yet. The row pill tells them
+ * apart. */
 export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
   switch (filter) {
     case "reports":
-      return entry.classification === "field_report";
+      return isHotlineEntry(entry) && entry.classification === "field_report";
     case "unclassified":
-      return entry.classification === "unclassified";
+      return isHotlineEntry(entry) && entry.classification === "unclassified";
     case "chatter":
-      return entry.classification === "chatter";
+      return isHotlineEntry(entry) && entry.classification === "chatter";
+    case "priors":
+      return isImpactPriorEntry(entry);
     case "all":
       return true;
   }
@@ -314,30 +387,33 @@ export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
 export function matchesSearch(entry: InboxEntry, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (q.length === 0) return true;
+  if (entry.title.toLowerCase().includes(q) || entry.text.toLowerCase().includes(q)) return true;
+  if (!isHotlineEntry(entry)) return false;
   return (
-    entry.title.toLowerCase().includes(q) ||
-    entry.text.toLowerCase().includes(q) ||
     entry.transcripts.some((tr) => tr.toLowerCase().includes(q)) ||
     entry.intakeRef.toLowerCase().includes(q)
   );
 }
 
-export function sortEntries(entries: InboxEntry[], sort: InboxSort): InboxEntry[] {
+/** Triage order for "reports first": a Review item waiting for a decision
+ * ranks with the field reports; the hotline's own order follows. */
+function entryRank(entry: InboxEntry): number {
+  return isHotlineEntry(entry) ? CLASSIFICATION_RANK[entry.classification] : 0;
+}
+
+export function sortEntries<T extends InboxEntry>(entries: T[], sort: InboxSort): T[] {
   const byTime = (a: InboxEntry, b: InboxEntry) => Date.parse(b.sentAt) - Date.parse(a.sentAt);
   const sorted = [...entries];
   if (sort === "newest") return sorted.sort(byTime);
-  return sorted.sort(
-    (a, b) =>
-      CLASSIFICATION_RANK[a.classification] - CLASSIFICATION_RANK[b.classification] || byTime(a, b),
-  );
+  return sorted.sort((a, b) => entryRank(a) - entryRank(b) || byTime(a, b));
 }
 
-export function visibleEntries(
-  entries: InboxEntry[],
+export function visibleEntries<T extends InboxEntry>(
+  entries: T[],
   filter: InboxFilter,
   query: string,
   sort: InboxSort,
-): InboxEntry[] {
+): T[] {
   return sortEntries(
     entries.filter((e) => matchesFilter(e, filter) && matchesSearch(e, query)),
     sort,
@@ -345,7 +421,7 @@ export function visibleEntries(
 }
 
 export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, all: 0 };
+  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, priors: 0, all: 0 };
   for (const e of entries) {
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += 1;
   }
@@ -357,7 +433,7 @@ export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number
  * one down, else the previous, else nothing. `visible` is the list BEFORE
  * removal.
  */
-export function nextSelection(visible: InboxEntry[], actedId: string): string | null {
+export function nextSelection(visible: readonly Pick<InboxEntry, "id">[], actedId: string): string | null {
   const i = visible.findIndex((e) => e.id === actedId);
   if (i === -1) return visible[0]?.id ?? null;
   return visible[i + 1]?.id ?? visible[i - 1]?.id ?? null;
@@ -365,7 +441,7 @@ export function nextSelection(visible: InboxEntry[], actedId: string): string | 
 
 /** J/K movement: clamp within the visible list; null selection starts at the top. */
 export function moveSelection(
-  visible: InboxEntry[],
+  visible: readonly Pick<InboxEntry, "id">[],
   selectedId: string | null,
   delta: 1 | -1,
 ): string | null {
@@ -411,7 +487,7 @@ export function textMessages<T extends { text: string }>(messages: T[]): T[] {
  * least one text message isn't already in `locale` by clear-api's intake
  * detection (an unknown language counts as not).
  */
-export function needsTranslation(entry: InboxEntry, locale: string): boolean {
+export function needsTranslation(entry: HotlineEntry, locale: string): boolean {
   return textMessages(entry.messages).some((m) => m.language !== locale);
 }
 

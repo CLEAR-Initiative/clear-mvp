@@ -2151,7 +2151,13 @@
     "feedback": "Feedback",
     "admin": "Admin",
     "settings": "Settings",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "notifications": {
+      "title": "Notifications",
+      "unread": "{count, plural, one {# unread notification} other {# unread notifications}}",
+      "empty": "Nothing new",
+      "loadError": "Notifications could not be loaded"
+    }
   },
   "noAccess": {
     "title": "Waiting for Access",
@@ -2814,12 +2820,13 @@
     "goToProfile": "Go to Profile"
   },
   "inbox": {
-    "title": "Hotline Inbox",
+    "title": "Inbox",
     "awaiting": "{count, plural, one {# awaiting review} other {# awaiting review}}",
     "filters": {
       "reports": "Field reports",
       "unclassified": "Unclassified",
       "chatter": "Chatter",
+      "priors": "Impact priors",
       "all": "Everything"
     },
     "search": "Search text, intake refs",
@@ -2915,7 +2922,7 @@
       "addedNoSignal": "Approved, but no signal id came back. Check the signal in Detection before relying on it.",
       "retried": "Queued for another attempt"
     },
-    "noAccess": "The hotline inbox is available to admins only for now.",
+    "noAccess": "The Inbox is available to admins and analysts only.",
     "loadError": "Could not load the inbox",
     "translate": {
       "button": "Translate to {locale}",
@@ -2942,6 +2949,15 @@
       "retry": "Retry",
       "retrying": "Retrying…",
       "partial": "Queued again: {done} of {total} messages. {error}"
+    },
+    "kinds": {
+      "impact_prior": "Impact prior"
+    },
+    "priors": {
+      "untitledEvent": "Untitled event",
+      "preview": "Proposed impact prior · {count, plural, one {# case} other {# cases}} · {scope} · {hazard}",
+      "openEvent": "Open the event",
+      "proposedAt": "Proposed {date}"
     }
   },
   "analysis": {
@@ -3324,6 +3340,19 @@
         "eventTypes": "Event types",
         "sourceNames": "Sources"
       }
+    }
+  },
+  "impactPriorReview": {
+    "help": "Only an accepted prior counts downstream. A rejected one stays with the Event, superseded, with your reason.",
+    "rationaleLabel": "Rationale",
+    "rationalePlaceholder": "Why this decision, for the audit trail",
+    "rationaleRequired": "A rationale is required",
+    "rationaleTooLong": "Keep the rationale under {max} characters",
+    "reject": "Reject",
+    "accept": "Accept",
+    "toast": {
+      "accepted": "Impact prior accepted",
+      "rejected": "Impact prior rejected"
     }
   }
 }

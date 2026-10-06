@@ -1,10 +1,14 @@
 "use client";
 
-import { Anchor, Badge, Box, Card, Group, Stack, Text } from "@mantine/core";
+import { Badge, Box, Card, Group, Stack, Text } from "@mantine/core";
 import { IconSparkles } from "@tabler/icons-react";
 import { useFormatter, useTranslations } from "next-intl";
+import { notifications } from "@mantine/notifications";
 import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
+import { ImpactPriorCard } from "~/components/impact-prior/impact-prior-card";
+import { ImpactPriorPane } from "~/components/impact-prior/impact-prior-pane";
+import { canReviewImpactPriors } from "~/lib/inbox-access";
 import type { GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
 
 const STATUS_COLOR: Record<GqlTask["status"], string> = {
@@ -15,37 +19,26 @@ const STATUS_COLOR: Record<GqlTask["status"], string> = {
   CANCELLED: "gray",
 };
 
-/** A Worker-supplied URL is rendered as a link only when it is http(s);
- *  anything else (javascript:, data:, garbage) is shown as text. */
-export function safeHttpUrl(value: string | undefined): string | null {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
-const STATE_COLOR: Record<GqlImpactPrior["state"], string> = {
-  proposed: "yellow",
-  accepted: "green",
-  rejected: "red",
-};
-
 /**
- * The Event's enrichment, read-only (clear-api ADR-0010, V1): each Task
- * (kind, status, requester, when, its error when FAILED and the server let
- * us see it) and each ImpactPrior the server returned for this user (state,
- * cases, scope, horizon, and the basis as a list of cited cases). Which
- * states a user sees is clear-api's rule; proposed and rejected rows render
- * only when they arrive. Polls while a Task is open so the result appears
- * without a reload. Behind the `event_enrichment` flag.
+ * The Event's enrichment (clear-api ADR-0010): each Task (kind, status,
+ * requester, when, its error when FAILED and the server let us see it) and
+ * each ImpactPrior the server returned for this user (state, cases, scope,
+ * horizon, and the basis as a list of cited cases). Which states a user
+ * sees is clear-api's rule; proposed and rejected rows render only when
+ * they arrive. Polls while a Task is open so the result appears without a
+ * reload. Behind the `event_enrichment` flag.
+ *
+ * V2: a proposed ImpactPrior is shown to a decider (admin or analyst, with
+ * `impact_prior_review` on) through the same ImpactPriorPane the Inbox
+ * uses — the Event page is the second door to the same decision.
  */
 export function EnrichmentSection({ eventId }: { eventId: string }) {
   const enabled = useFeatureEnabled("event_enrichment");
+  const review = useFeatureEnabled("impact_prior_review");
   const t = useTranslations("eventDetail.enrichment");
-  const format = useFormatter();
+  const tReview = useTranslations("impactPriorReview");
+  const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000, enabled });
+  const canDecide = canReviewImpactPriors({ role: authData?.user?.role, impactPriorReview: review });
 
   const query = api.tasks.forEvent.useQuery(
     { eventId },
@@ -82,9 +75,20 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
           </Text>
         ) : (
           <Stack gap={12}>
-            {priors.map((prior) => (
-              <ImpactPriorRow key={prior.id} prior={prior} />
-            ))}
+            {priors.map((prior) =>
+              canDecide && prior.state === "proposed" ? (
+                <ImpactPriorPane
+                  key={prior.id}
+                  prior={prior}
+                  canDecide
+                  onDecided={(_decided: GqlImpactPrior, decision) =>
+                    notifications.show({ message: tReview(`toast.${decision}`) })
+                  }
+                />
+              ) : (
+                <ImpactPriorCard key={prior.id} prior={prior} />
+              ),
+            )}
             {tasks.map((task) => (
               <TaskRow key={task.id} task={task} />
             ))}
@@ -122,87 +126,6 @@ function TaskRow({ task }: { task: GqlTask }) {
         <Text size="xs" c="var(--color-critical)" data-testid="enrichment-task-error">
           {t("errorLabel")}: {task.lastError}
         </Text>
-      )}
-    </Box>
-  );
-}
-
-function ImpactPriorRow({ prior }: { prior: GqlImpactPrior }) {
-  const t = useTranslations("eventDetail.enrichment");
-  const format = useFormatter();
-  const scope = prior.geographicScope === "district" || prior.geographicScope === "country"
-    ? t(`scope.${prior.geographicScope}`)
-    : prior.geographicScope;
-  return (
-    <Box
-      data-testid="enrichment-prior"
-      data-state={prior.state}
-      p={10}
-      style={{ border: "1px solid var(--color-border)", borderRadius: 8, background: "var(--color-bg-muted)" }}
-    >
-      <Group justify="space-between" gap={6} wrap="nowrap" mb={4}>
-        <Text size="xs" fw={600} c="var(--color-text-primary)">
-          {t("kinds.impactPrior")}
-        </Text>
-        <Badge size="xs" variant="light" color={STATE_COLOR[prior.state] ?? "gray"}>
-          {t(`prior.${prior.state}`)}
-        </Badge>
-      </Group>
-      <Text size="xs" c="var(--color-text-secondary)">
-        {t("cases", { count: prior.numberOfCases })} · {scope} · {t("horizon", { years: prior.horizonYears })}
-      </Text>
-      <Text size="xs" c="var(--color-text-muted)">
-        {t("method", { version: prior.methodVersion })}
-        {prior.supersedesId ? ` · ${t("supersedes")}` : ""}
-        {" · "}
-        {format.relativeTime(new Date(prior.createdAt))}
-      </Text>
-      {prior.state === "rejected" && prior.decisionRationale && (
-        <Text size="xs" c="var(--color-critical)" mt={4}>
-          {prior.decisionRationale}
-        </Text>
-      )}
-      {Array.isArray(prior.basis) && prior.basis.length > 0 && (
-        <Stack gap={6} mt={8}>
-          {prior.basis.map((c, i) => (
-            <Box key={i} data-testid="enrichment-case" pl={8} style={{ borderInlineStart: "2px solid var(--color-border)" }}>
-              <Group gap={6} wrap="nowrap">
-                <Badge size="xs" variant="outline" color="gray">
-                  {c.tier === "clear" || c.tier === "web" ? t(`tier.${c.tier}`) : c.tier}
-                </Badge>
-                <Text size="xs" c="var(--color-text-muted)">
-                  {[
-                    c.occurredAt ? format.dateTime(new Date(c.occurredAt), "short") : null,
-                    c.locationLabel ?? null,
-                    c.scope === "district" || c.scope === "country" ? t(`scope.${c.scope}`) : c.scope,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </Text>
-              </Group>
-              {c.quote && (
-                <Text size="xs" c="var(--color-text-secondary)" lineClamp={3} style={{ fontStyle: "italic" }}>
-                  “{c.quote}”
-                </Text>
-              )}
-              {c.sourceUrl &&
-                (safeHttpUrl(c.sourceUrl) ? (
-                  <Anchor href={safeHttpUrl(c.sourceUrl)!} target="_blank" rel="noopener noreferrer" size="xs">
-                    {t("source")}
-                  </Anchor>
-                ) : (
-                  <Text size="xs" c="var(--color-text-muted)" data-testid="enrichment-unsafe-source">
-                    {t("source")}: {c.sourceUrl}
-                  </Text>
-                ))}
-              {c.eventId && (
-                <Anchor href={`/event/${encodeURIComponent(c.eventId)}`} size="xs">
-                  {t("priorEvent")}
-                </Anchor>
-              )}
-            </Box>
-          ))}
-        </Stack>
       )}
     </Box>
   );

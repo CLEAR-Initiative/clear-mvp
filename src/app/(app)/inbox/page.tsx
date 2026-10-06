@@ -7,32 +7,38 @@ import { Box, Loader, Text } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
-import { isPlatformAdmin } from "~/lib/roles";
+import { inboxAccess } from "~/lib/inbox-access";
 import { canReviewSource } from "~/lib/ground-review";
 import {
-  INBOX_FILTERS,
+  buildImpactPriorEntries,
   buildInboxEntries,
   countByFilter,
+  filtersFor,
+  isHotlineEntry,
   loadReadIds,
   moveSelection,
   nextSelection,
   saveReadIds,
   visibleEntries,
+  type ImpactPriorEntry,
+  type InboxEntry,
   type InboxFailure,
   type InboxFilter,
   type InboxSort,
   type RejectReason,
 } from "~/lib/hotline-inbox";
+import type { GqlImpactPriorDecision } from "~/lib/types/graphql";
 import { EntryList } from "./_components/entry-list";
 import { ReadingPane } from "./_components/reading-pane";
 import { AddToClearModal, type SignalDraft } from "./_components/add-to-clear-modal";
 import styles from "./inbox.module.css";
 
 /**
- * Hotline inbox: ERM triage of WhatsApp hotline submissions.
+ * Inbox: Review items of two kinds, side by side (see InboxEntry.kind).
  *
- * One entry per open (unverified) ground thread from an active hotline
- * source. Actions map 1:1 onto clear-api's ground review state machine:
+ * Hotline threads: ERM triage of WhatsApp hotline submissions. One entry
+ * per open (unverified) ground thread from an active hotline source.
+ * Actions map 1:1 onto clear-api's ground review state machine:
  *   Add to CLEAR -> approve_public, carrying the reviewer's edits (title,
  *                   description, severity, location) as promotion overrides
  *   Archive      -> approve_private
@@ -47,9 +53,17 @@ import styles from "./inbox.module.css";
  *
  * PRIVACY: hotline entries carry no sender identity. Only the per-
  * conversation pseudonym is shown (as an intake ref).
+ *
+ * Proposed ImpactPriors (clear-api ADR-0010, V2): one entry per proposed
+ * ImpactPrior clear-api lets this user decide (admins and analysts). The
+ * decision (accept / reject with a rationale) is taken in the shared
+ * ImpactPriorPane, the same one the Event page mounts; a decided prior
+ * leaves the queue.
  */
 
 const TOAST_MS = 6000;
+/** clear-api's page maximum (its default of 50 would truncate the queue). */
+const PROPOSED_PAGE = { limit: 200 } as const;
 
 interface Toast {
   message: string;
@@ -70,23 +84,41 @@ function pendingOnly(prev: Record<string, RetryState>): Record<string, RetryStat
 
 export default function InboxPage() {
   const t = useTranslations("inbox");
+  const tReview = useTranslations("impactPriorReview");
   const utils = api.useUtils();
 
-  const enabled = useFeatureEnabled("hotline_inbox");
+  const hotlineInbox = useFeatureEnabled("hotline_inbox");
   const translation = useFeatureEnabled("hotline_translation");
+  const impactPriorReview = useFeatureEnabled("impact_prior_review");
   const { data: authData, isLoading: authLoading } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const role = authData?.user?.role;
-  const canSee = enabled && isPlatformAdmin(role);
+  // One rule with the nav entry (src/lib/inbox-access.ts): the page shows
+  // for whichever kinds the reader may see, and lists only those.
+  const access = inboxAccess({ role, hotlineInbox, impactPriorReview });
+  const canSee = access.any;
+  /** Deciders see proposed ImpactPriors beside the hotline threads. */
+  const canDecide = access.priors;
 
   const inboxQuery = api.ground.hotlineInbox.useQuery(undefined, {
-    enabled: canSee,
+    enabled: access.hotline,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+  // The router's maximum: clear-api defaults to 50, which would silently
+  // truncate the queue and the awaiting count. No paging yet; a backlog
+  // past 200 is a problem of its own.
+  const priorsQuery = api.tasks.proposedImpactPriors.useQuery(PROPOSED_PAGE, {
+    enabled: access.priors,
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
 
-  const entries = useMemo(
-    () => (inboxQuery.data ? buildInboxEntries(inboxQuery.data) : []),
-    [inboxQuery.data],
+  const entries = useMemo<InboxEntry[]>(
+    () => [
+      ...(inboxQuery.data ? buildInboxEntries(inboxQuery.data) : []),
+      ...(priorsQuery.data ? buildImpactPriorEntries(priorsQuery.data) : []),
+    ],
+    [inboxQuery.data, priorsQuery.data],
   );
   const sourceById = useMemo(() => {
     const m = new Map<string, string[]>();
@@ -94,7 +126,14 @@ export default function InboxPage() {
     return m;
   }, [inboxQuery.data]);
 
-  const [filter, setFilter] = useState<InboxFilter>("reports");
+  const filters = useMemo(() => filtersFor(access), [access.hotline, access.priors]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [chosenFilter, setFilter] = useState<InboxFilter>("reports");
+  // The filter in force is derived, never synced: the session and the
+  // feature flags land at different times, and a fallback stored while
+  // nothing applied yet would stick. A reader without the hotline starts
+  // on the first filter they have (priors); a choice that stops applying
+  // (flag flipped) falls back the same way.
+  const filter: InboxFilter = filters.includes(chosenFilter) ? chosenFilter : (filters[0] ?? "all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<InboxSort>("reportsFirst");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -161,8 +200,11 @@ export default function InboxPage() {
     }
   }, [visible, selectedId]);
 
+  /** Hotline review rights follow the selected thread's source; a Review
+   * item of another kind has its own gate (canDecide). */
+  const selectedThread = selected && isHotlineEntry(selected) ? selected : null;
   const canReviewSelected =
-    !!selected && canReviewSource(role, sourceById.get(selected.thread.groundSourceId) ?? []);
+    !!selectedThread && canReviewSource(role, sourceById.get(selectedThread.thread.groundSourceId) ?? []);
 
   const review = api.ground.review.useMutation();
   const selectedRetry = selectedId ? retries[selectedId] : undefined;
@@ -202,6 +244,7 @@ export default function InboxPage() {
    * allows it to every admin/analyst.
    */
   const retry = useCallback(async () => {
+    const selected = selectedThread;
     if (!selected || busy || selected.failures.length === 0) return;
     const entryId = selected.id;
     const setRetry = (state: RetryState | null) =>
@@ -236,9 +279,10 @@ export default function InboxPage() {
           ? t("failure.partial", { done: results.length - rejected.length, total: results.length, error: reason })
           : reason,
     });
-  }, [selected, busy, retryMessage, utils, showToast, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedThread, busy, retryMessage, utils, showToast, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const archive = useCallback(() => {
+    const selected = selectedThread;
     if (!selected || busy) return;
     review.mutate(
       { id: selected.id, decision: "approve_private" },
@@ -247,10 +291,11 @@ export default function InboxPage() {
         onError: (err) => setActionError(errorMessage(err)),
       },
     );
-  }, [selected, busy, review, afterAction, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedThread, busy, review, afterAction, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const reject = useCallback(
     (reason: RejectReason) => {
+      const selected = selectedThread;
       if (!selected || busy) return;
       const label = t(`rejectReasons.${reason}.label`);
       review.mutate(
@@ -261,7 +306,19 @@ export default function InboxPage() {
         },
       );
     },
-    [selected, busy, review, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
+    [selectedThread, busy, review, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  /**
+   * A decision on a proposed ImpactPrior was recorded in the shared pane
+   * (which already refetched the Review items): toast and advance.
+   */
+  const decided = useCallback(
+    (entry: ImpactPriorEntry, _prior: unknown, decision: GqlImpactPriorDecision) => {
+      // The same words as the Event page's door (impactPriorReview).
+      afterAction(entry.id, { message: tReview(`toast.${decision}`) });
+    },
+    [afterAction, tReview],
   );
 
   /**
@@ -272,6 +329,7 @@ export default function InboxPage() {
    */
   const confirmAdd = useCallback(
     (draft: SignalDraft) => {
+      const selected = selectedThread;
       if (!selected || busy) return;
       setActionError(null);
       review.mutate(
@@ -297,10 +355,11 @@ export default function InboxPage() {
         },
       );
     },
-    [selected, busy, review, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
+    [selectedThread, busy, review, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  // Keyboard: Escape closes modal > popover; A/E/R act; J/K move.
+  // Keyboard: Escape closes modal > popover; A/E/R act (hotline threads
+  // only: a prior's decision needs a typed rationale); J/K move.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -320,19 +379,19 @@ export default function InboxPage() {
           select(moveSelection(visible, selectedId, -1));
           break;
         case "a":
-          if (canReviewSelected && selected) { setRejectOpen(false); setAddOpen(true); }
+          if (canReviewSelected && selectedThread) { setRejectOpen(false); setAddOpen(true); }
           break;
         case "e":
           if (canReviewSelected) archive();
           break;
         case "r":
-          if (canReviewSelected && selected) setRejectOpen((v) => !v);
+          if (canReviewSelected && selectedThread) setRejectOpen((v) => !v);
           break;
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [addOpen, rejectOpen, visible, selectedId, selected, canReviewSelected, select, archive]);
+  }, [addOpen, rejectOpen, visible, selectedId, selectedThread, canReviewSelected, select, archive]);
 
   if (authLoading) {
     return (
@@ -357,13 +416,13 @@ export default function InboxPage() {
         <div className={styles.headerRow}>
           <span className={styles.title}>{t("title")}</span>
           <span className={styles.awaiting}>{t("awaiting", { count: counts.all })}</span>
-          {inboxQuery.isFetching && <Loader size={12} />}
-          {inboxQuery.error && (
+          {(inboxQuery.isFetching || priorsQuery.isFetching) && <Loader size={12} />}
+          {(inboxQuery.error || priorsQuery.error) && (
             <span className={styles.actionError}>{t("loadError")}</span>
           )}
         </div>
         <div className={styles.filters} data-testid="inbox-filters">
-          {INBOX_FILTERS.map((f) => (
+          {filters.map((f) => (
             <button
               type="button"
               key={f}
@@ -389,11 +448,14 @@ export default function InboxPage() {
           onSearchChange={setSearch}
           onSortToggle={() => setSort((s) => (s === "reportsFirst" ? "newest" : "reportsFirst"))}
           onSelect={select}
+          loading={(access.hotline && inboxQuery.isLoading) || (access.priors && priorsQuery.isLoading)}
         />
         <ReadingPane
           entry={selected}
           translation={translation}
           canReview={canReviewSelected}
+          canDecide={canDecide}
+          onDecided={decided}
           busy={busy}
           error={actionError}
           rejectOpen={rejectOpen}
@@ -408,9 +470,9 @@ export default function InboxPage() {
         />
       </div>
 
-      {addOpen && selected && (
+      {addOpen && selectedThread && (
         <AddToClearModal
-          entry={selected}
+          entry={selectedThread}
           busy={busy}
           error={actionError}
           onCancel={() => {

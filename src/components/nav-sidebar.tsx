@@ -34,6 +34,7 @@ import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
 import { isPlatformAdmin } from "~/lib/roles";
+import { inboxAccess, type InboxAccess } from "~/lib/inbox-access";
 import { isMapNavOverlay, useOptimisticNavSegment } from "~/hooks/use-optimistic-nav-segment";
 import { useSlidingNavIndicator } from "~/hooks/use-sliding-nav-indicator";
 import { SlidingNavIndicator } from "~/components/ui/sliding-nav-indicator";
@@ -47,19 +48,37 @@ import {
 import { NAV_COLLAPSED_W_PX, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
 import { setNavCollapsedCookie } from "~/lib/nav-collapsed-cookie";
 import { NAV_ROUTES, type NavItemKey } from "~/lib/nav-routes";
+import { NotificationsBell } from "~/components/notifications-bell";
+
+interface NavVisibility {
+  isAdmin: boolean;
+  role: string | null | undefined;
+  flags: Record<string, boolean>;
+  /** Computed once per render: the Inbox entry and its badge share it. */
+  inbox: InboxAccess;
+}
 
 interface NavItem {
   labelKey: NavItemKey;
   href: string;
   icon: React.ElementType;
   featureKey?: string;
-  badge?: number;
   disabled?: boolean;
   demo?: boolean;
   /** Hidden entirely for non-admin users */
   adminOnly?: boolean;
   /** Shown but greyed out with "Coming Soon" for non-admin users */
   comingSoonForNonAdmin?: boolean;
+  /** An item whose gate is more than one flag and one role: this decides
+   * instead of `featureKey` / `adminOnly`. */
+  visibleWhen?: (ctx: NavVisibility) => boolean;
+}
+
+/** Whether `item` shows for this reader. */
+function isItemVisible(item: NavItem, ctx: NavVisibility): boolean {
+  if (item.visibleWhen) return item.visibleWhen(ctx);
+  if (item.adminOnly && !ctx.isAdmin) return false;
+  return item.featureKey ? (ctx.flags[item.featureKey] ?? true) : true;
 }
 
 /** Map / Insights hrefs follow in-session focus chips (#582). */
@@ -83,7 +102,14 @@ const navSections: NavSection[] = [
     items: [
       { labelKey: "overview", href: NAV_ROUTES.overview, icon: IconLayoutDashboard, featureKey: "overview" },
       { labelKey: "detection", href: NAV_ROUTES.detection, icon: IconTarget, featureKey: "detection" },
-      { labelKey: "inbox", href: NAV_ROUTES.inbox, icon: IconInbox, featureKey: "hotline_inbox", adminOnly: true },
+      {
+        labelKey: "inbox",
+        href: NAV_ROUTES.inbox,
+        icon: IconInbox,
+        // The same rule as the page gate: hotline threads for admins,
+        // ImpactPrior review for deciders, each behind its flag.
+        visibleWhen: ({ inbox }) => inbox.any,
+      },
       { labelKey: "map", href: NAV_ROUTES.map, icon: IconMapPin, featureKey: "crisis_map" },
       { labelKey: "insights", href: NAV_ROUTES.insights, icon: IconChartPie, featureKey: "insights" },
       { labelKey: "operations", href: NAV_ROUTES.operations, icon: IconUser, featureKey: "operations", adminOnly: true },
@@ -145,8 +171,29 @@ export function NavSidebar({
 
   const router = useRouter();
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
-  const isAdmin = isPlatformAdmin(authData?.user?.role);
+  const role = authData?.user?.role;
+  const isAdmin = isPlatformAdmin(role);
   const { flags } = useFeatureFlags();
+  const reviewAccess = inboxAccess({
+    role,
+    hotlineInbox: flags.hotline_inbox ?? true,
+    impactPriorReview: flags.impact_prior_review ?? true,
+  });
+  const visibility: NavVisibility = { isAdmin, role, flags, inbox: reviewAccess };
+
+  // The Inbox badge: proposed ImpactPriors waiting for this decider. Only
+  // asked for when they may decide; a decision anywhere invalidates it.
+  // Ids only (the nav is on every page); capped at clear-api's page
+  // maximum, shown as "200+" past it.
+  const proposedCount = api.tasks.proposedImpactPriorCount.useQuery(undefined, {
+    enabled: reviewAccess.priors,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
+  const inboxBadge = reviewAccess.priors && proposedCount.data && proposedCount.data.count > 0
+    ? `${proposedCount.data.count}${proposedCount.data.capped ? "+" : ""}`
+    : undefined;
+  const badges: Partial<Record<NavItemKey, string>> = { inbox: inboxBadge };
 
   // Publish overlay width before paint. Keep motion flag out of this cleanup —
   // clearing it on every collapse/expand disabled chrome `left` transitions.
@@ -295,10 +342,7 @@ export function NavSidebar({
           <SlidingNavIndicator box={mobileIndicator} variant="sidebar" />
           {navSections.map((section) => {
             if (section.adminOnly && !isAdmin) return null;
-            const visibleItems = section.items.filter((item) => {
-              if (item.adminOnly && !isAdmin) return false;
-              return item.featureKey ? (flags[item.featureKey] ?? true) : true;
-            });
+            const visibleItems = section.items.filter((item) => isItemVisible(item, visibility));
             if (visibleItems.length === 0) return null;
             return (
               <Box key={section.titleKey} mb={spacingPx[5]}>
@@ -332,6 +376,11 @@ export function NavSidebar({
                       <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{t(`items.${item.labelKey}`)}</Text>
                       {isDisabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("soon")}</Badge>}
                       {!isDisabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("demo")}</Badge>}
+                      {!isDisabled && badges[item.labelKey] && (
+                        <Badge size="xs" variant="filled" color="accent" circle data-testid={`nav-badge-${item.labelKey}`} style={{ fontSize: fontSizesPx["2xs"] }}>
+                          {badges[item.labelKey]}
+                        </Badge>
+                      )}
                     </Box>
                   );
                   return isDisabled ? (
@@ -367,6 +416,8 @@ export function NavSidebar({
             flexShrink: 0,
           }}
         >
+          <NotificationsBell variant="drawer" onNavigate={closeMobile} />
+
           <UnstyledButton
             onClick={() => { closeMobile(); openFeedback(); }}
             style={{
@@ -616,10 +667,7 @@ export function NavSidebar({
           <SlidingNavIndicator box={desktopIndicator} variant="sidebar" />
           {navSections.map((section) => {
             if (section.adminOnly && !isAdmin) return null;
-            const visibleItems = section.items.filter((item) => {
-              if (item.adminOnly && !isAdmin) return false;
-              return item.featureKey ? (flags[item.featureKey] ?? true) : true;
-            });
+            const visibleItems = section.items.filter((item) => isItemVisible(item, visibility));
             if (visibleItems.length === 0) return null;
             return (
               <Box key={section.titleKey} mb={spacingPx[5]}>
@@ -704,6 +752,19 @@ export function NavSidebar({
                         </Badge>
                       )}
 
+                      {!isDisabled && badges[item.labelKey] && (
+                        <Badge
+                          size="xs"
+                          variant="filled"
+                          color="accent"
+                          circle
+                          data-testid={`nav-badge-${item.labelKey}`}
+                          style={{ fontSize: fontSizesPx["2xs"], fontWeight: 600, flexShrink: 0, ...labelStyle }}
+                        >
+                          {badges[item.labelKey]}
+                        </Badge>
+                      )}
+
                     </Box>
                   );
 
@@ -743,6 +804,8 @@ export function NavSidebar({
 
         {/* Bottom actions */}
         <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3], flexShrink: 0 }}>
+          <NotificationsBell variant="sidebar" collapsed={collapsed} />
+
           {/* Feedback */}
           {(() => {
             const inner = (

@@ -2,7 +2,8 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { cookieHeaders, graphqlFetch, GraphQLRequestError } from "~/server/api/graphql";
-import type { GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
+import type { GqlImpactPrior, GqlReviewImpactPrior, GqlTask } from "~/lib/types/graphql";
+import { MAX_RATIONALE_LENGTH } from "~/lib/impact-prior-review";
 
 /**
  * Event enrichment (clear-api ADR-0010): thin proxies over the Task queue's
@@ -69,6 +70,40 @@ export const EVENT_ENRICHMENT_QUERY = `
       ${TASK_FIELDS}
     }
     eventImpactPriors(eventId: $eventId) {
+      ${IMPACT_PRIOR_FIELDS}
+    }
+  }
+`;
+
+/** The Inbox's Review items: proposed ImpactPriors across every Event, with
+ * the Event they are about. clear-api admits deciders only, so the list is
+ * exactly what the signed-in user may decide. */
+export const PROPOSED_IMPACT_PRIORS_QUERY = `
+  query ProposedImpactPriors($limit: Int, $offset: Int) {
+    impactPriors(state: proposed, limit: $limit, offset: $offset) {
+      ${IMPACT_PRIOR_FIELDS}
+      event { id title types }
+    }
+  }
+`;
+
+/** The nav badge's count: ids only, so a count on every page does not pull
+ * each prior's evidence and its Event. clear-api has no count query; this
+ * is capped at its page maximum. */
+export const PROPOSED_IMPACT_PRIOR_IDS_QUERY = `
+  query ProposedImpactPriorIds($limit: Int) {
+    impactPriors(state: proposed, limit: $limit) {
+      id
+    }
+  }
+`;
+
+/** clear-api's page maximum for `impactPriors`. */
+export const PROPOSED_IMPACT_PRIORS_MAX = 200;
+
+export const DECIDE_IMPACT_PRIOR = `
+  mutation DecideImpactPrior($id: String!, $decision: ImpactPriorDecision!, $rationale: String!) {
+    decideImpactPrior(id: $id, decision: $decision, rationale: $rationale) {
       ${IMPACT_PRIOR_FIELDS}
     }
   }
@@ -147,6 +182,67 @@ export const tasksRouter = createTRPCRouter({
           cookieHeaders(ctx),
         );
         return { tasks: data.eventTasks, impactPriors: data.eventImpactPriors };
+      } catch (err) {
+        toTrpcError(err);
+      }
+    }),
+
+  /** Proposed ImpactPriors waiting for a decision, newest first — admins and analysts only. */
+  proposedImpactPriors: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().positive().max(PROPOSED_IMPACT_PRIORS_MAX).optional(),
+          offset: z.number().int().nonnegative().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const data = await graphqlFetch<{ impactPriors: GqlReviewImpactPrior[] }>(
+          PROPOSED_IMPACT_PRIORS_QUERY,
+          { limit: input?.limit, offset: input?.offset },
+          cookieHeaders(ctx),
+        );
+        return data.impactPriors;
+      } catch (err) {
+        toTrpcError(err);
+      }
+    }),
+
+  /** How many proposed ImpactPriors wait for a decision, up to clear-api's
+   * page maximum (`capped` when there may be more) — admins and analysts only. */
+  proposedImpactPriorCount: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const data = await graphqlFetch<{ impactPriors: { id: string }[] }>(
+        PROPOSED_IMPACT_PRIOR_IDS_QUERY,
+        { limit: PROPOSED_IMPACT_PRIORS_MAX },
+        cookieHeaders(ctx),
+      );
+      const count = data.impactPriors.length;
+      return { count, capped: count >= PROPOSED_IMPACT_PRIORS_MAX };
+    } catch (err) {
+      toTrpcError(err);
+    }
+  }),
+
+  /** Accept or reject a proposed ImpactPrior with a rationale — admins and analysts only. */
+  decideImpactPrior: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        decision: z.enum(["accepted", "rejected"]),
+        rationale: z.string().trim().min(1).max(MAX_RATIONALE_LENGTH),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const data = await graphqlFetch<{ decideImpactPrior: GqlImpactPrior }>(
+          DECIDE_IMPACT_PRIOR,
+          { id: input.id, decision: input.decision, rationale: input.rationale },
+          cookieHeaders(ctx),
+        );
+        return data.decideImpactPrior;
       } catch (err) {
         toTrpcError(err);
       }

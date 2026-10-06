@@ -2,7 +2,7 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { GqlHotlineInbox } from "~/lib/types/graphql";
+import type { GqlHotlineInbox, GqlReviewImpactPrior } from "~/lib/types/graphql";
 
 /**
  * Page-level tests for the triage flow: role gate, filter/selection,
@@ -21,16 +21,27 @@ vi.mock("next/link", () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
 }));
 
+/** `hotline_inbox` (the page), with per-key overrides for the others. */
 let flagEnabled = true;
+let flags: Record<string, boolean> = {};
 vi.mock("~/components/feature-flags-provider", () => ({
-  useFeatureEnabled: () => flagEnabled,
+  useFeatureEnabled: (key: string) => flags[key] ?? flagEnabled,
 }));
 
 let role = "admin";
+/** The session query still in flight (the first render of a cold page). */
+let authLoading = false;
 const reviewMutate = vi.fn();
 const retryMutateAsync = vi.fn();
+const decideMutate = vi.fn();
 const invalidate = vi.fn(async () => undefined);
 let inboxData: GqlHotlineInbox;
+let priorsData: GqlReviewImpactPrior[] = [];
+const priorsQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
+  data: opts.enabled ? priorsData : undefined,
+  isFetching: false,
+  error: null,
+}));
 
 vi.mock("~/trpc/react", () => ({
   api: {
@@ -40,10 +51,32 @@ vi.mock("~/trpc/react", () => ({
         threads: { invalidate },
         messages: { invalidate },
       },
+      tasks: {
+        proposedImpactPriors: { invalidate },
+        proposedImpactPriorCount: { invalidate },
+        forEvent: { invalidate },
+      },
     }),
-    auth: { me: { useQuery: () => ({ data: { user: { id: "u", role } }, isLoading: false }) } },
+    auth: {
+      me: {
+        useQuery: () =>
+          authLoading ? { data: undefined, isLoading: true } : { data: { user: { id: "u", role } }, isLoading: false },
+      },
+    },
+    tasks: {
+      proposedImpactPriors: { useQuery: (input: unknown, opts: { enabled: boolean }) => priorsQuery(input, opts) },
+      decideImpactPrior: {
+        useMutation: () => ({ mutate: decideMutate, isPending: false, isError: false, error: null, variables: undefined }),
+      },
+    },
     ground: {
-      hotlineInbox: { useQuery: () => ({ data: inboxData, isFetching: false, error: null }) },
+      hotlineInbox: {
+        useQuery: (_input: unknown, opts: { enabled: boolean }) => ({
+          data: opts.enabled ? inboxData : undefined,
+          isFetching: false,
+          error: null,
+        }),
+      },
       review: { useMutation: () => ({ mutate: reviewMutate, isPending: false }) },
       retryMessage: { useMutation: () => ({ mutateAsync: retryMutateAsync }) },
       requestTranslation: { useMutation: () => ({ mutate: vi.fn(), data: undefined, isError: false }) },
@@ -119,9 +152,39 @@ function message(id: string, threadId: string, classification: string | null, se
   };
 }
 
+function prior(id: string, overrides: Partial<GqlReviewImpactPrior> = {}): GqlReviewImpactPrior {
+  return {
+    id,
+    eventId: "evt-1",
+    event: { id: "evt-1", title: "Floods in Kassala", types: ["FL"] },
+    taskId: "task-1",
+    state: "proposed",
+    hazardType: "FL",
+    countryLocationId: "sdn",
+    geographicScope: "district",
+    horizonYears: 10,
+    populationGroup: null,
+    metric: null,
+    lowerBound: null,
+    upperBound: null,
+    numberOfCases: 2,
+    basis: [{ tier: "clear", eventId: "evt-2021", scope: "district", quote: "The Nile burst its banks." }],
+    methodVersion: "clear-impact-prior@0.1.0",
+    supersedesId: null,
+    decidedById: null,
+    decidedAt: null,
+    decisionRationale: null,
+    createdAt: "2026-09-16T10:00:00Z",
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   flagEnabled = true;
+  flags = {};
   role = "admin";
+  authLoading = false;
+  priorsData = [];
   window.localStorage.clear();
   inboxData = {
     sources: [{ id: "hot1", name: "Hotline", kind: "hotline", reviewerRoles: ["analyst"], privacyDefault: "private", isActive: true }],
@@ -137,23 +200,83 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   retryMutateAsync.mockReset();
+  decideMutate.mockReset();
   invalidate.mockReset();
 });
 
 const renderPage = () => render(<MantineProvider><InboxPage /></MantineProvider>);
 
 describe("InboxPage access", () => {
-  it("blocks non-admin roles", () => {
-    role = "analyst";
+  it("blocks a viewer", () => {
+    role = "viewer";
     renderPage();
     expect(screen.getByTestId("inbox-no-access")).toBeInTheDocument();
     expect(screen.queryByTestId("inbox-page")).not.toBeInTheDocument();
   });
 
-  it("blocks when the feature flag is off", () => {
+  it("blocks an analyst while impact_prior_review is off: the hotline is admins' only", () => {
+    role = "analyst";
+    flags = { impact_prior_review: false };
+    renderPage();
+    expect(screen.getByTestId("inbox-no-access")).toBeInTheDocument();
+  });
+
+  it("blocks when both flags are off", () => {
     flagEnabled = false;
     renderPage();
     expect(screen.getByTestId("inbox-no-access")).toBeInTheDocument();
+  });
+
+  it("admits an analyst to the Review items only: no hotline fetch, no hotline filters, priors first", () => {
+    role = "analyst";
+    priorsData = [prior("ip-1")];
+    renderPage();
+    expect(screen.getByTestId("inbox-page")).toBeInTheDocument();
+    expect(priorsQuery).toHaveBeenCalledWith({ limit: 200 }, expect.objectContaining({ enabled: true }));
+    expect(screen.queryByTestId("inbox-filter-reports")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-filter-priors")).toHaveAttribute("data-active", "true");
+    expect(screen.getByTestId("inbox-filter-priors")).toHaveTextContent("1");
+    expect(screen.getByTestId("inbox-filter-all")).toBeInTheDocument();
+    expect(screen.getAllByTestId("inbox-entry")).toHaveLength(1);
+    expect(screen.getByText('awaiting:{"count":1}')).toBeInTheDocument();
+    // The hotline threads the mock would return are not listed.
+    expect(screen.queryByText("Thread a")).not.toBeInTheDocument();
+  });
+
+  it("lands an analyst on Impact priors even when the page rendered before the session and the flags arrived", () => {
+    role = "analyst";
+    priorsData = [prior("ip-1")];
+    authLoading = true;
+    const view = renderPage();
+    expect(screen.queryByTestId("inbox-page")).not.toBeInTheDocument();
+    // Session in, flags still at their defaults (the new flag off): only Everything applies.
+    authLoading = false;
+    flags = { impact_prior_review: false };
+    view.rerender(<MantineProvider><InboxPage /></MantineProvider>);
+    expect(screen.queryByTestId("inbox-page")).not.toBeInTheDocument();
+    // The server's flags land.
+    flags = {};
+    view.rerender(<MantineProvider><InboxPage /></MantineProvider>);
+    expect(screen.getByTestId("inbox-filter-priors")).toHaveAttribute("data-active", "true");
+    expect(screen.getByTestId("inbox-filter-all")).toHaveAttribute("data-active", "false");
+  });
+
+  it("falls back from a chosen filter that stops applying", () => {
+    priorsData = [prior("ip-1")];
+    const view = renderPage();
+    fireEvent.click(screen.getByTestId("inbox-filter-priors"));
+    expect(screen.getByTestId("inbox-filter-priors")).toHaveAttribute("data-active", "true");
+    flags = { impact_prior_review: false };
+    view.rerender(<MantineProvider><InboxPage /></MantineProvider>);
+    expect(screen.queryByTestId("inbox-filter-priors")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-filter-reports")).toHaveAttribute("data-active", "true");
+  });
+
+  it("keeps an admin on the hotline filters when impact_prior_review is off", () => {
+    flags = { impact_prior_review: false };
+    renderPage();
+    expect(screen.getByTestId("inbox-filter-reports")).toHaveAttribute("data-active", "true");
+    expect(screen.queryByTestId("inbox-filter-priors")).not.toBeInTheDocument();
   });
 });
 
@@ -501,5 +624,62 @@ describe("InboxPage pipeline failures", () => {
       'failure.partial:{"done":1,"total":2,"error":"upstream 503"}',
     );
     expect(screen.queryByTestId("inbox-toast")).not.toBeInTheDocument();
+  });
+});
+
+describe("InboxPage impact prior review", () => {
+  it("lists proposed ImpactPriors beside the threads under Everything and rejects one with a rationale", () => {
+    priorsData = [prior("ip-1")];
+    decideMutate.mockImplementation((_input, opts) => opts.onSuccess({ ...prior("ip-1"), state: "rejected" }));
+    renderPage();
+    expect(priorsQuery).toHaveBeenCalledWith({ limit: 200 }, expect.objectContaining({ enabled: true }));
+    // Not a field report: it is not under the default filter.
+    expect(screen.queryByTestId("inbox-kind-pill")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-filter-priors")).toHaveTextContent("1");
+    fireEvent.click(screen.getByTestId("inbox-filter-all"));
+    expect(screen.getByText('awaiting:{"count":4}')).toBeInTheDocument();
+    const row = screen.getAllByTestId("inbox-entry").find((r) => r.getAttribute("data-kind") === "impact_prior")!;
+    expect(row).toHaveTextContent("Floods in Kassala");
+    expect(within(row).getByTestId("inbox-kind-pill")).toBeInTheDocument();
+
+    fireEvent.click(row);
+    expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "impact_prior");
+    expect(screen.getByRole("link", { name: "priors.openEvent" })).toHaveAttribute("href", "/event/evt-1");
+    expect(screen.getByTestId("enrichment-prior")).toHaveAttribute("data-state", "proposed");
+    // No hotline actions on a prior; no shortcut acts on it either.
+    expect(screen.queryByTestId("inbox-action-bar")).not.toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "e" });
+    expect(reviewMutate).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "  Wrong country  " } });
+    fireEvent.click(screen.getByTestId("impact-prior-reject"));
+    expect(decideMutate).toHaveBeenCalledWith(
+      { id: "ip-1", decision: "rejected", rationale: "Wrong country" },
+      expect.any(Object),
+    );
+    // Exact: the hotline reject toast is `toast.rejected` with a reason.
+    expect(screen.getByTestId("inbox-toast").textContent).toBe("toast.rejected");
+    expect(invalidate).toHaveBeenCalled();
+  });
+
+  it("accepts a prior from the Inbox and toasts it", () => {
+    priorsData = [prior("ip-1")];
+    decideMutate.mockImplementation((_input, opts) => opts.onSuccess({ ...prior("ip-1"), state: "accepted" }));
+    renderPage();
+    fireEvent.click(screen.getByTestId("inbox-filter-all"));
+    fireEvent.click(screen.getAllByTestId("inbox-entry").find((r) => r.getAttribute("data-kind") === "impact_prior")!);
+    fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "Good basis" } });
+    fireEvent.click(screen.getByTestId("impact-prior-accept"));
+    expect(decideMutate).toHaveBeenCalledWith({ id: "ip-1", decision: "accepted", rationale: "Good basis" }, expect.any(Object));
+    expect(screen.getByTestId("inbox-toast").textContent).toBe("toast.accepted");
+  });
+
+  it("does not ask for Review items while impact_prior_review is off", () => {
+    flags = { impact_prior_review: false };
+    priorsData = [prior("ip-1")];
+    renderPage();
+    expect(priorsQuery).toHaveBeenCalledWith({ limit: 200 }, expect.objectContaining({ enabled: false }));
+    fireEvent.click(screen.getByTestId("inbox-filter-all"));
+    expect(screen.queryByTestId("inbox-kind-pill")).not.toBeInTheDocument();
   });
 });

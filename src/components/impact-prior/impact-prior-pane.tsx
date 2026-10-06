@@ -1,0 +1,128 @@
+"use client";
+
+import { useState } from "react";
+import { Button, Group, Stack, Text, Textarea } from "@mantine/core";
+import { IconCircleCheck, IconCircleX } from "@tabler/icons-react";
+import { useTranslations } from "next-intl";
+import { api } from "~/trpc/react";
+import { MAX_RATIONALE_LENGTH } from "~/lib/impact-prior-review";
+import type { GqlImpactPrior, GqlImpactPriorDecision } from "~/lib/types/graphql";
+import { ImpactPriorCard } from "./impact-prior-card";
+
+export interface ImpactPriorPaneProps {
+  prior: GqlImpactPrior;
+  /** Client twin of clear-api's decider gate (admins and analysts); the
+   * server is the real gate. Without it the pane is the card alone. */
+  canDecide: boolean;
+  /** The decision was recorded; the caller advances, toasts, refetches. */
+  onDecided?: (prior: GqlImpactPrior, decision: GqlImpactPriorDecision) => void;
+}
+
+/**
+ * A proposed ImpactPrior with its decision controls (clear-api ADR-0010,
+ * V2): the evidence card, a required rationale, and Accept / Reject. Mounted
+ * through two doors — the Inbox's Review item and the Event page's
+ * Enrichment section — so the decision is the same wherever it is taken.
+ * Only a proposed prior is decidable; the server rejects anything else
+ * with CONFLICT, which is shown as is. Key it by `prior.id` so a drafted
+ * rationale never carries over to another prior.
+ */
+export function ImpactPriorPane({ prior, canDecide, onDecided }: ImpactPriorPaneProps) {
+  const t = useTranslations("impactPriorReview");
+  const utils = api.useUtils();
+  const [rationale, setRationale] = useState("");
+  const [touched, setTouched] = useState(false);
+  // Invalidate at the hook level, not per call: React Query drops the
+  // callbacks given to mutate() when the component has unmounted by the
+  // time the answer lands — and this pane unmounts on any selection
+  // change — whereas these always run. The caller's onDecided (toast,
+  // advance) stays per call: nothing to toast on a pane that is gone.
+  const refetchDoors = () => {
+    void utils.tasks.proposedImpactPriors.invalidate();
+    void utils.tasks.proposedImpactPriorCount.invalidate();
+    void utils.tasks.forEvent.invalidate({ eventId: prior.eventId });
+  };
+  const decide = api.tasks.decideImpactPrior.useMutation({
+    onSuccess: refetchDoors,
+    // CONFLICT: another decider got there first; NOT_FOUND: the prior is
+    // gone. Either way this copy is stale, so refetch rather than leave a
+    // decidable item up until the next poll (the Event page does not poll
+    // once its Tasks are settled).
+    onError: (err) => {
+      if (err.data?.code === "CONFLICT" || err.data?.code === "NOT_FOUND") refetchDoors();
+    },
+  });
+
+  const trimmed = rationale.trim();
+  const missing = trimmed.length === 0;
+  const tooLong = trimmed.length > MAX_RATIONALE_LENGTH;
+  const decidable = canDecide && prior.state === "proposed";
+
+  const submit = (decision: GqlImpactPriorDecision) => {
+    setTouched(true);
+    if (missing || tooLong || decide.isPending) return;
+    decide.mutate(
+      { id: prior.id, decision, rationale: trimmed },
+      { onSuccess: (decided) => onDecided?.(decided, decision) },
+    );
+  };
+
+  return (
+    <Stack gap={12} data-testid="impact-prior-pane" data-state={prior.state}>
+      <ImpactPriorCard prior={prior} />
+      {decidable && (
+        <Stack gap={8} data-testid="impact-prior-decision">
+          <Text size="xs" c="var(--color-text-muted)">
+            {t("help")}
+          </Text>
+          <Textarea
+            label={t("rationaleLabel")}
+            placeholder={t("rationalePlaceholder")}
+            value={rationale}
+            onChange={(e) => setRationale(e.currentTarget.value)}
+            onBlur={() => setTouched(true)}
+            autosize
+            minRows={2}
+            maxRows={6}
+            maxLength={MAX_RATIONALE_LENGTH + 1}
+            disabled={decide.isPending}
+            error={touched && missing ? t("rationaleRequired") : tooLong ? t("rationaleTooLong", { max: MAX_RATIONALE_LENGTH }) : undefined}
+            data-testid="impact-prior-rationale"
+            size="xs"
+          />
+          <Group gap={8} wrap="wrap">
+            <Button
+              size="xs"
+              variant="filled"
+              color="green"
+              leftSection={<IconCircleCheck size={14} />}
+              loading={decide.isPending && decide.variables?.decision === "accepted"}
+              disabled={decide.isPending}
+              onClick={() => submit("accepted")}
+              data-testid="impact-prior-accept"
+            >
+              {t("accept")}
+            </Button>
+            <Button
+              size="xs"
+              variant="outline"
+              color="red"
+              leftSection={<IconCircleX size={14} />}
+              loading={decide.isPending && decide.variables?.decision === "rejected"}
+              disabled={decide.isPending}
+              onClick={() => submit("rejected")}
+              data-testid="impact-prior-reject"
+            >
+              {t("reject")}
+            </Button>
+            {decide.isError && (
+              <Text size="xs" c="var(--color-critical)" role="alert" data-testid="impact-prior-error">
+                {decide.error.message}
+              </Text>
+            )}
+          </Group>
+        </Stack>
+      )}
+    </Stack>
+  );
+}

@@ -2151,7 +2151,13 @@
     "feedback": "Retours",
     "admin": "Admin",
     "settings": "Paramètres",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "notifications": {
+      "title": "Notifications",
+      "unread": "{count, plural, one {# notification non lue} other {# notifications non lues}}",
+      "empty": "Rien de nouveau",
+      "loadError": "Impossible de charger les notifications"
+    }
   },
   "noAccess": {
     "title": "En attente d'accès",
@@ -2814,12 +2820,13 @@
     "goToProfile": "Aller au profil"
   },
   "inbox": {
-    "title": "Boîte de réception de la ligne d'urgence",
+    "title": "Boîte de réception",
     "awaiting": "{count, plural, one {# en attente de revue} other {# en attente de revue}}",
     "filters": {
       "reports": "Rapports terrain",
       "unclassified": "Non classés",
       "chatter": "Bavardage",
+      "priors": "A priori d'impact",
       "all": "Tout"
     },
     "search": "Rechercher texte, réf. d'admission",
@@ -2915,7 +2922,7 @@
       "addedNoSignal": "Approuvé, mais aucun identifiant de signal n'a été renvoyé. Vérifiez le signal dans Détection avant de vous y fier.",
       "retried": "Remis en file pour une nouvelle tentative"
     },
-    "noAccess": "La boîte de réception est réservée aux administrateurs pour le moment.",
+    "noAccess": "La boîte de réception est réservée aux administrateurs et aux analystes.",
     "loadError": "Impossible de charger la boîte de réception",
     "translate": {
       "button": "Traduire en {locale}",
@@ -2942,6 +2949,15 @@
       "retry": "Relancer",
       "retrying": "Relance…",
       "partial": "Remis en file : {done} message(s) sur {total}. {error}"
+    },
+    "kinds": {
+      "impact_prior": "A priori d'impact"
+    },
+    "priors": {
+      "untitledEvent": "Événement sans titre",
+      "preview": "A priori d'impact proposé · {count, plural, one {# cas} other {# cas}} · {scope} · {hazard}",
+      "openEvent": "Ouvrir l'événement",
+      "proposedAt": "Proposé le {date}"
     }
   },
   "analysis": {
@@ -3324,6 +3340,19 @@
         "eventTypes": "Types d'événement",
         "sourceNames": "Sources"
       }
+    }
+  },
+  "impactPriorReview": {
+    "help": "Seul un a priori accepté compte en aval. Un a priori rejeté reste attaché à l'événement, remplacé, avec votre motif.",
+    "rationaleLabel": "Motif",
+    "rationalePlaceholder": "Pourquoi cette décision, pour la piste d'audit",
+    "rationaleRequired": "Un motif est requis",
+    "rationaleTooLong": "Le motif doit faire moins de {max} caractères",
+    "reject": "Rejeter",
+    "accept": "Accepter",
+    "toast": {
+      "accepted": "A priori d'impact accepté",
+      "rejected": "A priori d'impact rejeté"
     }
   }
 }
