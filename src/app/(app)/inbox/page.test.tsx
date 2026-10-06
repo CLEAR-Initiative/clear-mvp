@@ -2,7 +2,7 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { GqlHotlineInbox } from "~/lib/types/graphql";
+import type { GqlHotlineInbox, GqlReviewImpactPrior } from "~/lib/types/graphql";
 
 /**
  * Page-level tests for the triage flow: role gate, filter/selection,
@@ -21,16 +21,25 @@ vi.mock("next/link", () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
 }));
 
+/** `hotline_inbox` (the page), with per-key overrides for the others. */
 let flagEnabled = true;
+let flags: Record<string, boolean> = {};
 vi.mock("~/components/feature-flags-provider", () => ({
-  useFeatureEnabled: () => flagEnabled,
+  useFeatureEnabled: (key: string) => flags[key] ?? flagEnabled,
 }));
 
 let role = "admin";
 const reviewMutate = vi.fn();
 const retryMutateAsync = vi.fn();
+const decideMutate = vi.fn();
 const invalidate = vi.fn(async () => undefined);
 let inboxData: GqlHotlineInbox;
+let priorsData: GqlReviewImpactPrior[] = [];
+const priorsQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
+  data: opts.enabled ? priorsData : undefined,
+  isFetching: false,
+  error: null,
+}));
 
 vi.mock("~/trpc/react", () => ({
   api: {
@@ -40,8 +49,18 @@ vi.mock("~/trpc/react", () => ({
         threads: { invalidate },
         messages: { invalidate },
       },
+      tasks: {
+        proposedImpactPriors: { invalidate },
+        forEvent: { invalidate },
+      },
     }),
     auth: { me: { useQuery: () => ({ data: { user: { id: "u", role } }, isLoading: false }) } },
+    tasks: {
+      proposedImpactPriors: { useQuery: (input: unknown, opts: { enabled: boolean }) => priorsQuery(input, opts) },
+      decideImpactPrior: {
+        useMutation: () => ({ mutate: decideMutate, isPending: false, isError: false, error: null, variables: undefined }),
+      },
+    },
     ground: {
       hotlineInbox: { useQuery: () => ({ data: inboxData, isFetching: false, error: null }) },
       review: { useMutation: () => ({ mutate: reviewMutate, isPending: false }) },
@@ -119,9 +138,38 @@ function message(id: string, threadId: string, classification: string | null, se
   };
 }
 
+function prior(id: string, overrides: Partial<GqlReviewImpactPrior> = {}): GqlReviewImpactPrior {
+  return {
+    id,
+    eventId: "evt-1",
+    event: { id: "evt-1", title: "Floods in Kassala", types: ["FL"] },
+    taskId: "task-1",
+    state: "proposed",
+    hazardType: "FL",
+    countryLocationId: "sdn",
+    geographicScope: "district",
+    horizonYears: 10,
+    populationGroup: null,
+    metric: null,
+    lowerBound: null,
+    upperBound: null,
+    numberOfCases: 2,
+    basis: [{ tier: "clear", eventId: "evt-2021", scope: "district", quote: "The Nile burst its banks." }],
+    methodVersion: "clear-impact-prior@0.1.0",
+    supersedesId: null,
+    decidedById: null,
+    decidedAt: null,
+    decisionRationale: null,
+    createdAt: "2026-09-16T10:00:00Z",
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   flagEnabled = true;
+  flags = {};
   role = "admin";
+  priorsData = [];
   window.localStorage.clear();
   inboxData = {
     sources: [{ id: "hot1", name: "Hotline", kind: "hotline", reviewerRoles: ["analyst"], privacyDefault: "private", isActive: true }],
@@ -137,6 +185,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   retryMutateAsync.mockReset();
+  decideMutate.mockReset();
   invalidate.mockReset();
 });
 
@@ -501,5 +550,48 @@ describe("InboxPage pipeline failures", () => {
       'failure.partial:{"done":1,"total":2,"error":"upstream 503"}',
     );
     expect(screen.queryByTestId("inbox-toast")).not.toBeInTheDocument();
+  });
+});
+
+describe("InboxPage impact prior review", () => {
+  it("lists proposed ImpactPriors beside the threads under Everything and rejects one with a rationale", () => {
+    priorsData = [prior("ip-1")];
+    decideMutate.mockImplementation((_input, opts) => opts.onSuccess({ ...prior("ip-1"), state: "rejected" }));
+    renderPage();
+    expect(priorsQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
+    // Not a field report: it is not under the default filter.
+    expect(screen.queryByTestId("inbox-kind-pill")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("inbox-filter-all"));
+    expect(screen.getByText('awaiting:{"count":4}')).toBeInTheDocument();
+    const row = screen.getAllByTestId("inbox-entry").find((r) => r.getAttribute("data-kind") === "impact_prior")!;
+    expect(row).toHaveTextContent("Floods in Kassala");
+    expect(within(row).getByTestId("inbox-kind-pill")).toBeInTheDocument();
+
+    fireEvent.click(row);
+    expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "impact_prior");
+    expect(screen.getByRole("link", { name: "priors.openEvent" })).toHaveAttribute("href", "/event/evt-1");
+    expect(screen.getByTestId("enrichment-prior")).toHaveAttribute("data-state", "proposed");
+    // No hotline actions on a prior; no shortcut acts on it either.
+    expect(screen.queryByTestId("inbox-action-bar")).not.toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "e" });
+    expect(reviewMutate).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "  Wrong country  " } });
+    fireEvent.click(screen.getByTestId("impact-prior-reject"));
+    expect(decideMutate).toHaveBeenCalledWith(
+      { id: "ip-1", decision: "rejected", rationale: "Wrong country" },
+      expect.any(Object),
+    );
+    expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.priorRejected");
+    expect(invalidate).toHaveBeenCalled();
+  });
+
+  it("does not ask for Review items while impact_prior_review is off", () => {
+    flags = { impact_prior_review: false };
+    priorsData = [prior("ip-1")];
+    renderPage();
+    expect(priorsQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: false }));
+    fireEvent.click(screen.getByTestId("inbox-filter-all"));
+    expect(screen.queryByTestId("inbox-kind-pill")).not.toBeInTheDocument();
   });
 });

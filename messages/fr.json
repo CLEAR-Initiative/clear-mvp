@@ -2913,7 +2913,9 @@
       "viewSignal": "Voir le signal",
       "close": "Fermer",
       "addedNoSignal": "Approuvé, mais aucun identifiant de signal n'a été renvoyé. Vérifiez le signal dans Détection avant de vous y fier.",
-      "retried": "Remis en file pour une nouvelle tentative"
+      "retried": "Remis en file pour une nouvelle tentative",
+      "priorRejected": "A priori d'impact rejeté",
+      "priorAccepted": "A priori d'impact accepté"
     },
     "noAccess": "La boîte de réception est réservée aux administrateurs pour le moment.",
     "loadError": "Impossible de charger la boîte de réception",
@@ -2942,6 +2944,19 @@
       "retry": "Relancer",
       "retrying": "Relance…",
       "partial": "Remis en file : {done} message(s) sur {total}. {error}"
+    },
+    "kinds": {
+      "impact_prior": "A priori d'impact"
+    },
+    "priors": {
+      "untitledEvent": "Événement sans titre",
+      "preview": "A priori d'impact proposé · {count, plural, one {# cas} other {# cas}} · {scope} · {hazard}",
+      "scope": {
+        "district": "district",
+        "country": "pays"
+      },
+      "openEvent": "Ouvrir l'événement",
+      "proposedAt": "Proposé le {date}"
     }
   },
   "analysis": {
@@ -3325,5 +3340,14 @@
         "sourceNames": "Sources"
       }
     }
+  },
+  "impactPriorReview": {
+    "help": "Seul un a priori accepté compte en aval. Un a priori rejeté reste attaché à l'événement, remplacé, avec votre motif.",
+    "rationaleLabel": "Motif",
+    "rationalePlaceholder": "Pourquoi cette décision, pour la piste d'audit",
+    "rationaleRequired": "Un motif est requis",
+    "rationaleTooLong": "Le motif doit faire moins de {max} caractères",
+    "reject": "Rejeter",
+    "accept": "Accepter"
   }
 }

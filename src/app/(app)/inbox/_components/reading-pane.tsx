@@ -13,19 +13,25 @@ import {
   IconRefresh,
   IconShield,
 } from "@tabler/icons-react";
+import Link from "next/link";
 import { api } from "~/trpc/react";
 import {
   REJECT_REASONS,
   TRANSLATION_POLL_LIMIT_MS,
   TRANSLATION_POLL_MS,
   attachmentKey,
+  isImpactPriorEntry,
   needsTranslation,
   shownTranslation,
+  type HotlineEntry,
+  type ImpactPriorEntry,
   type InboxAttachment,
   type InboxEntry,
   type RejectReason,
   type VoiceTranscript,
 } from "~/lib/hotline-inbox";
+import type { GqlImpactPrior, GqlImpactPriorDecision } from "~/lib/types/graphql";
+import { ImpactPriorPane } from "~/components/impact-prior/impact-prior-pane";
 import { InboxEntryPills } from "./classification-pill";
 import { VoiceNote } from "./voice-note";
 import styles from "../inbox.module.css";
@@ -34,7 +40,12 @@ interface ReadingPaneProps {
   entry: InboxEntry | null;
   /** The `hotline_translation` flag: offer on-demand translation. */
   translation: boolean;
+  /** Hotline threads: the reader may review the selected entry's source. */
   canReview: boolean;
+  /** ImpactPriors: the reader is a decider (admin or analyst). */
+  canDecide?: boolean;
+  /** An ImpactPrior was decided from the pane. */
+  onDecided?: (entry: ImpactPriorEntry, prior: GqlImpactPrior, decision: GqlImpactPriorDecision) => void;
   busy: boolean;
   error: string | null;
   rejectOpen: boolean;
@@ -122,7 +133,7 @@ function FailureNotice({
   error,
   onRetry,
 }: {
-  entry: InboxEntry;
+  entry: HotlineEntry;
   retrying: boolean;
   /** Another action on this entry is in flight. */
   disabled: boolean;
@@ -175,7 +186,7 @@ function FailureNotice({
  * translation renders right-to-left whatever the UI locale. Keyed by entry
  * where it is rendered, so nothing carries over from another entry.
  */
-export function TranslationBlock({ entry }: { entry: InboxEntry }) {
+export function TranslationBlock({ entry }: { entry: HotlineEntry }) {
   const t = useTranslations("inbox");
   const locale = useLocale();
   const utils = api.useUtils();
@@ -248,7 +259,76 @@ export function TranslationBlock({ entry }: { entry: InboxEntry }) {
   );
 }
 
-export function ReadingPane({
+/** The reading pane dispatches on the entry's kind: each kind has its own
+ * pane, sharing the frame (header with back button, scrolling body). */
+export function ReadingPane(props: ReadingPaneProps) {
+  const t = useTranslations("inbox");
+  const { entry } = props;
+
+  if (!entry) {
+    return (
+      <section className={styles.pane} data-testid="inbox-pane">
+        <div className={styles.paneEmpty}>{t("pane.select")}</div>
+      </section>
+    );
+  }
+  if (isImpactPriorEntry(entry)) {
+    return (
+      <InboxImpactPriorPane
+        key={entry.id}
+        entry={entry}
+        canDecide={!!props.canDecide}
+        onDecided={(prior, decision) => props.onDecided?.(entry, prior, decision)}
+        onBack={props.onBack}
+      />
+    );
+  }
+  return <HotlinePane {...props} entry={entry} />;
+}
+
+/**
+ * A proposed ImpactPrior as a Review item: the shared decision pane (the
+ * same one the Event page mounts) in the Inbox frame, with a link to the
+ * Event it is about.
+ */
+function InboxImpactPriorPane({
+  entry,
+  canDecide,
+  onDecided,
+  onBack,
+}: {
+  entry: ImpactPriorEntry;
+  canDecide: boolean;
+  onDecided: (prior: GqlImpactPrior, decision: GqlImpactPriorDecision) => void;
+  onBack: () => void;
+}) {
+  const t = useTranslations("inbox");
+  const format = useFormatter();
+  return (
+    <section className={styles.pane} data-testid="inbox-pane" data-kind="impact_prior">
+      <header className={styles.paneHeader}>
+        <div className={styles.paneTitleGroup}>
+          <button type="button" className={styles.backBtn} onClick={onBack} aria-label={t("pane.back")}>
+            <IconArrowLeft size={16} />
+          </button>
+          <span className={styles.paneTitle}>{entry.eventTitle ?? t("priors.untitledEvent")}</span>
+          <InboxEntryPills entry={entry} />
+        </div>
+        <span className={styles.paneRef}>
+          {t("priors.proposedAt", { date: format.dateTime(new Date(entry.sentAt), "short") })}
+        </span>
+      </header>
+      <div className={styles.paneBody}>
+        <Link href={`/event/${encodeURIComponent(entry.eventId)}`} className={styles.translateBtn} data-testid="inbox-prior-event-link">
+          {t("priors.openEvent")}
+        </Link>
+        <ImpactPriorPane prior={entry.prior} canDecide={canDecide} onDecided={onDecided} />
+      </div>
+    </section>
+  );
+}
+
+function HotlinePane({
   entry,
   translation,
   canReview,
@@ -263,17 +343,9 @@ export function ReadingPane({
   retrying,
   retryError,
   onBack,
-}: ReadingPaneProps) {
+}: ReadingPaneProps & { entry: HotlineEntry }) {
   const t = useTranslations("inbox");
   const format = useFormatter();
-
-  if (!entry) {
-    return (
-      <section className={styles.pane} data-testid="inbox-pane">
-        <div className={styles.paneEmpty}>{t("pane.select")}</div>
-      </section>
-    );
-  }
 
   return (
     <section className={styles.pane} data-testid="inbox-pane">

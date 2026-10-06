@@ -202,6 +202,14 @@ export interface GqlImpactPrior {
   createdAt: string;
 }
 
+export type GqlImpactPriorDecision = "accepted" | "rejected";
+
+/** An Inbox Review item: a proposed ImpactPrior with the Event it is about,
+ * as clear-api's `impactPriors(state: proposed)` returns it to deciders. */
+export interface GqlReviewImpactPrior extends GqlImpactPrior {
+  event: { id: string; title: string | null; types: string[] };
+}
+
 /* ─── Comments ─── */
 
 export interface GqlCommentUser {

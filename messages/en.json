@@ -2913,7 +2913,9 @@
       "viewSignal": "View signal",
       "close": "Dismiss",
       "addedNoSignal": "Approved, but no signal id came back. Check the signal in Detection before relying on it.",
-      "retried": "Queued for another attempt"
+      "retried": "Queued for another attempt",
+      "priorRejected": "Impact prior rejected",
+      "priorAccepted": "Impact prior accepted"
     },
     "noAccess": "The hotline inbox is available to admins only for now.",
     "loadError": "Could not load the inbox",
@@ -2942,6 +2944,19 @@
       "retry": "Retry",
       "retrying": "Retrying…",
       "partial": "Queued again: {done} of {total} messages. {error}"
+    },
+    "kinds": {
+      "impact_prior": "Impact prior"
+    },
+    "priors": {
+      "untitledEvent": "Untitled event",
+      "preview": "Proposed impact prior · {count, plural, one {# case} other {# cases}} · {scope} · {hazard}",
+      "scope": {
+        "district": "district",
+        "country": "country"
+      },
+      "openEvent": "Open the event",
+      "proposedAt": "Proposed {date}"
     }
   },
   "analysis": {
@@ -3325,5 +3340,14 @@
         "sourceNames": "Sources"
       }
     }
+  },
+  "impactPriorReview": {
+    "help": "Only an accepted prior counts downstream. A rejected one stays with the Event, superseded, with your reason.",
+    "rationaleLabel": "Rationale",
+    "rationalePlaceholder": "Why this decision, for the audit trail",
+    "rationaleRequired": "A rationale is required",
+    "rationaleTooLong": "Keep the rationale under {max} characters",
+    "reject": "Reject",
+    "accept": "Accept"
   }
 }

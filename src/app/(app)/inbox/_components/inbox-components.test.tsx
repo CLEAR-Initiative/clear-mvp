@@ -1,8 +1,8 @@
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { GroundTranslationState, InboxEntry } from "~/lib/hotline-inbox";
+import type { GroundTranslationState, HotlineEntry, ImpactPriorEntry } from "~/lib/hotline-inbox";
 import { EntryList } from "./entry-list";
 import { ReadingPane, TranslationBlock } from "./reading-pane";
 import { AddToClearModal } from "./add-to-clear-modal";
@@ -33,6 +33,8 @@ const getLocationById = vi.fn((_input: { id: string }, opts: { enabled: boolean 
   data: opts.enabled ? locationById : undefined,
   isFetching: false,
 }));
+const decideMutate = vi.fn();
+const invalidateTasks = vi.fn(async () => undefined);
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => ({
@@ -40,7 +42,16 @@ vi.mock("~/trpc/react", () => ({
         hotlineInbox: { invalidate: vi.fn(async () => undefined) },
         translation: { reset: resetTranslation },
       },
+      tasks: {
+        proposedImpactPriors: { invalidate: invalidateTasks },
+        forEvent: { invalidate: invalidateTasks },
+      },
     }),
+    tasks: {
+      decideImpactPrior: {
+        useMutation: () => ({ mutate: decideMutate, isPending: false, isError: false, error: null, variables: undefined }),
+      },
+    },
     ground: {
       requestTranslation: { useMutation: () => ({ mutate: requestTranslation, ...requested }) },
       translation: {
@@ -73,9 +84,10 @@ vi.mock("~/trpc/react", () => ({
   },
 }));
 
-function entry(overrides: Partial<InboxEntry> = {}): InboxEntry {
+function entry(overrides: Partial<HotlineEntry> = {}): HotlineEntry {
   return {
     id: "t1",
+    kind: "hotline_thread",
     thread: {
       id: "t1",
       groundSourceId: "src",
@@ -116,7 +128,44 @@ function entry(overrides: Partial<InboxEntry> = {}): InboxEntry {
   };
 }
 
-function message(id: string): InboxEntry["messages"][number] {
+function priorEntry(overrides: Partial<ImpactPriorEntry> = {}): ImpactPriorEntry {
+  const prior: ImpactPriorEntry["prior"] = {
+    id: "ip-1",
+    eventId: "evt-1",
+    event: { id: "evt-1", title: "Floods in Kassala", types: ["FL"] },
+    taskId: "task-1",
+    state: "proposed",
+    hazardType: "FL",
+    countryLocationId: "sdn",
+    geographicScope: "district",
+    horizonYears: 10,
+    populationGroup: null,
+    metric: null,
+    lowerBound: null,
+    upperBound: null,
+    numberOfCases: 2,
+    basis: [{ tier: "web", sourceUrl: "https://example.test/floods", scope: "country", quote: "Floods displaced thousands." }],
+    methodVersion: "clear-impact-prior@0.1.0",
+    supersedesId: null,
+    decidedById: null,
+    decidedAt: null,
+    decisionRationale: null,
+    createdAt: "2026-09-16T10:00:00Z",
+  };
+  return {
+    id: "ip-1",
+    kind: "impact_prior",
+    prior,
+    eventId: "evt-1",
+    eventTitle: "Floods in Kassala",
+    title: "Floods in Kassala",
+    text: "FL district 2",
+    sentAt: "2026-09-16T10:00:00Z",
+    ...overrides,
+  };
+}
+
+function message(id: string): HotlineEntry["messages"][number] {
   return {
     id,
     groundSourceId: "src",
@@ -211,6 +260,19 @@ describe("EntryList", () => {
   it("shows the empty footer when nothing is visible", () => {
     wrap(<EntryList {...baseProps} entries={[]} />);
     expect(screen.getByText("list.empty")).toBeInTheDocument();
+  });
+
+  it("renders a proposed ImpactPrior as its own kind of row", () => {
+    wrap(<EntryList {...baseProps} entries={[priorEntry(), priorEntry({ id: "ip-2", eventTitle: null })]} />);
+    const rows = screen.getAllByTestId("inbox-entry");
+    expect(rows[0]).toHaveAttribute("data-kind", "impact_prior");
+    expect(rows[0]).not.toHaveAttribute("data-processing");
+    expect(rows[0]).toHaveTextContent("Floods in Kassala");
+    expect(rows[0]).toHaveTextContent('priors.preview:{"count":2,"scope":"priors.scope.district","hazard":"FL"}');
+    expect(within(rows[0]!).getByTestId("inbox-kind-pill")).toHaveAttribute("data-kind", "impact_prior");
+    expect(rows[1]).toHaveTextContent("priors.untitledEvent");
+    fireEvent.click(rows[0]!);
+    expect(baseProps.onSelect).toHaveBeenCalledWith("ip-1");
   });
 });
 
@@ -334,6 +396,42 @@ describe("ReadingPane", () => {
     expect(screen.getByTestId("inbox-translate")).toBeInTheDocument();
   });
 
+  it("dispatches a proposed ImpactPrior to the decision pane, with its Event link and evidence", () => {
+    const onDecided = vi.fn();
+    wrap(<ReadingPane {...baseProps} entry={priorEntry()} canDecide onDecided={onDecided} />);
+    expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "impact_prior");
+    expect(screen.queryByTestId("inbox-action-bar")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-prior-event-link")).toHaveAttribute("href", "/event/evt-1");
+    expect(screen.getByTestId("enrichment-prior")).toHaveAttribute("data-state", "proposed");
+    expect(screen.getByTestId("enrichment-case")).toHaveTextContent("Floods displaced thousands.");
+    expect(screen.getByRole("link", { name: "source" })).toHaveAttribute("href", "https://example.test/floods");
+
+    // Reject needs a rationale: nothing is sent without one.
+    fireEvent.click(screen.getByTestId("impact-prior-reject"));
+    expect(decideMutate).not.toHaveBeenCalled();
+    expect(screen.getByText("rationaleRequired")).toBeInTheDocument();
+
+    decideMutate.mockImplementationOnce((_input, opts) => opts.onSuccess({ ...priorEntry().prior, state: "rejected" }));
+    fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "Different hazard" } });
+    fireEvent.click(screen.getByTestId("impact-prior-reject"));
+    expect(decideMutate).toHaveBeenCalledWith(
+      { id: "ip-1", decision: "rejected", rationale: "Different hazard" },
+      expect.any(Object),
+    );
+    expect(invalidateTasks).toHaveBeenCalledTimes(2);
+    expect(onDecided).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "ip-1", kind: "impact_prior" }),
+      expect.objectContaining({ state: "rejected" }),
+      "rejected",
+    );
+  });
+
+  it("shows a proposed ImpactPrior without decision controls to a non-decider", () => {
+    wrap(<ReadingPane {...baseProps} entry={priorEntry()} canDecide={false} />);
+    expect(screen.getByTestId("enrichment-prior")).toBeInTheDocument();
+    expect(screen.queryByTestId("impact-prior-decision")).not.toBeInTheDocument();
+  });
+
   it("marks media-only entries as having no text", () => {
     wrap(<ReadingPane {...baseProps} entry={entry({ text: "" })} />);
     expect(screen.getAllByText("pane.noText").length).toBeGreaterThan(0);
@@ -438,7 +536,7 @@ describe("AddToClearModal", () => {
     expect(screen.queryByTestId("inbox-draft-disaster-type")).not.toBeInTheDocument();
   });
 
-  const drafted = (drafts: Partial<InboxEntry["thread"]>) =>
+  const drafted = (drafts: Partial<HotlineEntry["thread"]>) =>
     entry({ thread: { ...entry().thread, ...drafts } });
 
   it("shows a drafted glide code by its taxonomy name, not the raw code", () => {

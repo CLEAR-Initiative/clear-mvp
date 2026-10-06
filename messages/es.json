@@ -2913,7 +2913,9 @@
       "viewSignal": "Ver señal",
       "close": "Cerrar",
       "addedNoSignal": "Aprobado, pero no se devolvió ningún id de señal. Compruebe la señal en Detección antes de confiar en ella.",
-      "retried": "En cola para un nuevo intento"
+      "retried": "En cola para un nuevo intento",
+      "priorRejected": "Prior de impacto rechazado",
+      "priorAccepted": "Prior de impacto aceptado"
     },
     "noAccess": "La bandeja de la línea directa es solo para administradores por ahora.",
     "loadError": "No se pudo cargar la bandeja",
@@ -2942,6 +2944,19 @@
       "retry": "Reintentar",
       "retrying": "Reintentando…",
       "partial": "De nuevo en cola: {done} de {total} mensajes. {error}"
+    },
+    "kinds": {
+      "impact_prior": "Prior de impacto"
+    },
+    "priors": {
+      "untitledEvent": "Evento sin título",
+      "preview": "Prior de impacto propuesto · {count, plural, one {# caso} other {# casos}} · {scope} · {hazard}",
+      "scope": {
+        "district": "distrito",
+        "country": "país"
+      },
+      "openEvent": "Abrir el evento",
+      "proposedAt": "Propuesto el {date}"
     }
   },
   "analysis": {
@@ -3325,5 +3340,14 @@
         "sourceNames": "Fuentes"
       }
     }
+  },
+  "impactPriorReview": {
+    "help": "Solo un prior aceptado cuenta más adelante. Uno rechazado se queda con el evento, reemplazado, con su motivo.",
+    "rationaleLabel": "Motivo",
+    "rationalePlaceholder": "Por qué esta decisión, para el registro de auditoría",
+    "rationaleRequired": "Se requiere un motivo",
+    "rationaleTooLong": "El motivo debe tener menos de {max} caracteres",
+    "reject": "Rechazar",
+    "accept": "Aceptar"
   }
 }
