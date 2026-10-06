@@ -135,6 +135,73 @@ export interface GqlEvent {
   alerts: Array<{ id: string; status: string }>;
 }
 
+/* ─── Tasks and ImpactPriors (clear-api ADR-0010) ─── */
+
+export type GqlTaskStatus = "PENDING" | "LEASED" | "COMPLETED" | "FAILED" | "CANCELLED";
+
+/** One unit of Worker-performed work about an Event (first kind: `event.impact_prior`). */
+export interface GqlTask {
+  id: string;
+  kind: string;
+  subjectType: string;
+  subjectId: string;
+  status: GqlTaskStatus;
+  origin: "user" | "rule" | "api";
+  requesterId: string | null;
+  requester: { id: string; name: string | null } | null;
+  teamId: string | null;
+  attempts: number;
+  maxAttempts: number;
+  /** Requester and platform admins only; null for everyone else. */
+  lastError: string | null;
+  cancelRequestedAt: string | null;
+  /** `produced` | `no_prior_found` for an ImpactPrior Task; null until completed. */
+  outcome: string | null;
+  model: string | null;
+  costUsd: number | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type GqlImpactPriorState = "proposed" | "accepted" | "rejected";
+
+export interface GqlImpactPriorCase {
+  tier: "clear" | "web";
+  eventId?: string;
+  reportId?: string;
+  sourceUrl?: string;
+  quote?: string;
+  occurredAt?: string;
+  locationLabel?: string;
+  scope: "district" | "country";
+  note?: string;
+}
+
+/** What has typically happened before for an Event's hazard and country, proposed by a Worker. */
+export interface GqlImpactPrior {
+  id: string;
+  eventId: string;
+  taskId: string;
+  state: GqlImpactPriorState;
+  hazardType: string;
+  countryLocationId: string;
+  geographicScope: string;
+  horizonYears: number;
+  populationGroup: string | null;
+  metric: string | null;
+  lowerBound: number | null;
+  upperBound: number | null;
+  numberOfCases: number;
+  basis: GqlImpactPriorCase[];
+  methodVersion: string;
+  supersedesId: string | null;
+  decidedById: string | null;
+  decidedAt: string | null;
+  decisionRationale: string | null;
+  createdAt: string;
+}
+
 /* ─── Comments ─── */
 
 export interface GqlCommentUser {

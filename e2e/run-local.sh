@@ -52,16 +52,20 @@ echo "── building + starting db, redis, api, web (first run builds images) �
 "${COMPOSE[@]}" up -d --build --wait db redis api web
 
 echo "── seeding database (prisma/seed.ts) ──"
-"${COMPOSE[@]}" run --rm seed
+# `--build` on each seed run: `up --build` above rebuilds only the four
+# services it names, so without it the seed steps reuse whatever
+# clear-e2e-seed:latest a previous run left behind — a stale clear-api whose
+# source the seed scripts then import against (e.g. an export added since).
+"${COMPOSE[@]}" run --rm --build seed
 
 echo "── seeding ground-intel fixture (e2e/support/ground-seed.ts) ──"
-"${COMPOSE[@]}" run --rm seed-ground
+"${COMPOSE[@]}" run --rm --build seed-ground
 
 echo "── rewriting seeded event types to GLIDE codes (e2e/support/event-types-seed.ts) ──"
-"${COMPOSE[@]}" run --rm seed-event-types
+"${COMPOSE[@]}" run --rm --build seed-event-types
 
 echo "── seeding the CLEAR Agent's clear-api key (e2e/support/agent-key-seed.ts) ──"
-"${COMPOSE[@]}" run --rm seed-agent-key
+"${COMPOSE[@]}" run --rm --build seed-agent-key
 
 echo "── running Playwright smoke suite ──"
 bunx playwright test "$@"
