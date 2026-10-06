@@ -15,6 +15,13 @@ base, and **NRC Find** — and shows which sources it drew on.
 _Avoid_: "the bot", "assistant", personas; "data agent", "Mastra agent" (Mastra is the
 framework, not the concept); "Find Agent" (retired — NRC Find is a source, not an Agent).
 
+**Worker**:
+A background identity that claims and completes Tasks in clear-api — code CLEAR owns, a
+scheduled Claude Code routine, a third-party agent, or a person. Defined in clear-api's
+CONTEXT.md; listed here only to say that the **CLEAR Agent** is never a Worker and a Worker is
+never the CLEAR Agent. What a Worker produces reaches people as a **Review item**.
+_Avoid_: agent, bot, "the enrichment agent"
+
 **Agent drawer**:
 The right-hand slide-out, reachable from anywhere in the app, where the user chats with the
 **CLEAR Agent**.
@@ -123,6 +130,22 @@ _Avoid_: shipping accept/reject in the first Location-trust wedge; conflating wi
 **Location admin**:
 The future reviewer role for locality naming and **Location correction** consideration.
 _Avoid_: reusing platform `admin` as the gazetteer role by default.
+
+### Inbox and review
+
+**Review item**:
+Anything waiting for a named person's decision before it counts: a hotline thread awaiting
+approval, a proposed ImpactPrior written by a **Worker**, a **Location correction** awaiting
+**Consideration**. Each kind keeps its own states and its own reading pane; what they share is
+the waiting, the decision, and the record of who decided, when and why.
+_Avoid_: task (that is the Worker-side unit of work in clear-api), notification, pending item
+
+**Inbox**:
+The one place where **Review items** wait, filtered by kind. Today it holds hotline threads; a
+proposed ImpactPrior is its second kind, a **Location correction** its third when that review
+UI lands. An item decidable from the Inbox is also decidable where it lives (an Event's page for
+an ImpactPrior), the way a **Location challenge** has two doors.
+_Avoid_: hotline inbox (the first kind, not the surface), queue, review page
 
 ### Invited-user onboarding
 
@@ -474,6 +497,11 @@ confidence as absence; sending **INFORM Severity** to the yearly window.
   and year; summary, sectors, and sources stay monthly. The same fill applies
   to every read, including an `asOf` / “What changed” prior. **INFORM Severity**
   is not filled this way.
+- A **Review item** is decided by a named person, never by a **Worker** or the **CLEAR Agent**;
+  the decision records who, when and why. A proposed ImpactPrior becomes accepted or rejected;
+  a rejected one stays visible as superseded, with its reason.
+- The **Inbox** shows every **Review item** the signed-in user may decide; what they may decide
+  is clear-api's rule, not the Inbox's.
 
 ## Example dialogue
 
