@@ -34,7 +34,7 @@ import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
 import { isPlatformAdmin } from "~/lib/roles";
-import { inboxAccess } from "~/lib/inbox-access";
+import { inboxAccess, type InboxAccess } from "~/lib/inbox-access";
 import { isMapNavOverlay, useOptimisticNavSegment } from "~/hooks/use-optimistic-nav-segment";
 import { useSlidingNavIndicator } from "~/hooks/use-sliding-nav-indicator";
 import { SlidingNavIndicator } from "~/components/ui/sliding-nav-indicator";
@@ -54,6 +54,8 @@ interface NavVisibility {
   isAdmin: boolean;
   role: string | null | undefined;
   flags: Record<string, boolean>;
+  /** Computed once per render: the Inbox entry and its badge share it. */
+  inbox: InboxAccess;
 }
 
 interface NavItem {
@@ -106,12 +108,7 @@ const navSections: NavSection[] = [
         icon: IconInbox,
         // The same rule as the page gate: hotline threads for admins,
         // ImpactPrior review for deciders, each behind its flag.
-        visibleWhen: ({ role, flags }) =>
-          inboxAccess({
-            role,
-            hotlineInbox: flags.hotline_inbox ?? true,
-            impactPriorReview: flags.impact_prior_review ?? true,
-          }).any,
+        visibleWhen: ({ inbox }) => inbox.any,
       },
       { labelKey: "map", href: NAV_ROUTES.map, icon: IconMapPin, featureKey: "crisis_map" },
       { labelKey: "insights", href: NAV_ROUTES.insights, icon: IconChartPie, featureKey: "insights" },
@@ -177,15 +174,15 @@ export function NavSidebar({
   const role = authData?.user?.role;
   const isAdmin = isPlatformAdmin(role);
   const { flags } = useFeatureFlags();
-  const visibility: NavVisibility = { isAdmin, role, flags };
-
-  // The Inbox badge: proposed ImpactPriors waiting for this decider. Only
-  // asked for when they may decide; a decision anywhere invalidates it.
   const reviewAccess = inboxAccess({
     role,
     hotlineInbox: flags.hotline_inbox ?? true,
     impactPriorReview: flags.impact_prior_review ?? true,
   });
+  const visibility: NavVisibility = { isAdmin, role, flags, inbox: reviewAccess };
+
+  // The Inbox badge: proposed ImpactPriors waiting for this decider. Only
+  // asked for when they may decide; a decision anywhere invalidates it.
   // Ids only (the nav is on every page); capped at clear-api's page
   // maximum, shown as "200+" past it.
   const proposedCount = api.tasks.proposedImpactPriorCount.useQuery(undefined, {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inboxAccess } from "./inbox-access";
+import { canReviewImpactPriors, inboxAccess } from "./inbox-access";
 
 describe("inboxAccess", () => {
   it.each([
@@ -12,5 +12,18 @@ describe("inboxAccess", () => {
     ["no role", undefined, true, true, { hotline: false, priors: false, any: false }],
   ])("%s", (_label, role, hotlineInbox, impactPriorReview, expected) => {
     expect(inboxAccess({ role, hotlineInbox, impactPriorReview })).toEqual(expected);
+  });
+});
+
+describe("canReviewImpactPriors", () => {
+  it.each([
+    ["admin", true, true],
+    ["analyst", true, true],
+    ["analyst", false, false],
+    ["viewer", true, false],
+    ["pending", true, false],
+    [undefined, true, false],
+  ])("%s with review %s → %s", (role, impactPriorReview, expected) => {
+    expect(canReviewImpactPriors({ role, impactPriorReview })).toBe(expected);
   });
 });

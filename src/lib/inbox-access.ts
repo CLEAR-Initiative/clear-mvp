@@ -17,12 +17,25 @@ export interface InboxAccess {
   any: boolean;
 }
 
+/**
+ * Whether this reader decides proposed ImpactPriors in the UI: a decider
+ * (admin or analyst) with `impact_prior_review` on. The one rule for every
+ * door — the Inbox's Review items, the nav badge, the Event page's
+ * decision controls.
+ */
+export function canReviewImpactPriors(input: {
+  role: string | null | undefined;
+  impactPriorReview: boolean;
+}): boolean {
+  return input.impactPriorReview && canDecideImpactPriors(input.role);
+}
+
 export function inboxAccess(input: {
   role: string | null | undefined;
   hotlineInbox: boolean;
   impactPriorReview: boolean;
 }): InboxAccess {
   const hotline = input.hotlineInbox && isPlatformAdmin(input.role);
-  const priors = input.impactPriorReview && canDecideImpactPriors(input.role);
+  const priors = canReviewImpactPriors(input);
   return { hotline, priors, any: hotline || priors };
 }

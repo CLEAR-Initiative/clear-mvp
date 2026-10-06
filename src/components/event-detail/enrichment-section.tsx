@@ -8,7 +8,7 @@ import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { ImpactPriorCard } from "~/components/impact-prior/impact-prior-card";
 import { ImpactPriorPane } from "~/components/impact-prior/impact-prior-pane";
-import { canDecideImpactPriors } from "~/lib/roles";
+import { canReviewImpactPriors } from "~/lib/inbox-access";
 import type { GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
 
 const STATUS_COLOR: Record<GqlTask["status"], string> = {
@@ -38,7 +38,7 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
   const t = useTranslations("eventDetail.enrichment");
   const tReview = useTranslations("impactPriorReview");
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000, enabled });
-  const canDecide = review && canDecideImpactPriors(authData?.user?.role);
+  const canDecide = canReviewImpactPriors({ role: authData?.user?.role, impactPriorReview: review });
 
   const query = api.tasks.forEvent.useQuery(
     { eventId },
