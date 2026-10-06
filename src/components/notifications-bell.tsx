@@ -7,7 +7,8 @@ import { Badge, Box, Menu, Text, Tooltip, UnstyledButton } from "@mantine/core";
 import { IconBell } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
-import { bellRows, bellUnreadCount, isUnread, safeActionPath } from "~/lib/notifications";
+import { isUnread, safeActionPath } from "~/lib/notifications";
+import { canReadContent } from "~/lib/roles";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import type { GqlNotification } from "~/lib/types/graphql";
 
@@ -24,29 +25,34 @@ interface NotificationsBellProps {
  * The notifications bell (clear-api ADR-0010, V2): the signed-in user's
  * Task outcome notifications ("Impact prior proposed — review it", "…
  * failed"), each opening its Event. Opening one marks it read. Behind the
- * `impact_prior_review` flag with the rest of the Review flow; clear-api
- * writes the rows and sends any email, clear-mvp only shows them.
+ * `impact_prior_review` flag with the rest of the Review flow, and only for
+ * approved roles: clear-api sends Task outcomes to requesters (any team
+ * content writer, so a global viewer too), admins and team analysts, never
+ * to a pending account. clear-api writes the rows and sends any email,
+ * clear-mvp only shows them.
  */
 export function NotificationsBell({ variant, collapsed = false, onNavigate }: NotificationsBellProps) {
-  const enabled = useFeatureEnabled("impact_prior_review");
+  const flagOn = useFeatureEnabled("impact_prior_review");
+  const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000, enabled: flagOn });
+  const enabled = flagOn && canReadContent(authData?.user?.role);
   const t = useTranslations("nav.notifications");
   const format = useFormatter();
   const router = useRouter();
   const utils = api.useUtils();
 
-  const query = api.notifications.list.useQuery(undefined, {
+  const query = api.notifications.bell.useQuery(undefined, {
     enabled,
     staleTime: 60_000,
     refetchInterval: 120_000,
   });
   const markRead = api.notifications.markRead.useMutation({
-    onSuccess: () => void utils.notifications.list.invalidate(),
+    onSuccess: () => void utils.notifications.bell.invalidate(),
   });
 
   if (!enabled) return null;
 
-  const rows = bellRows(query.data ?? []);
-  const unread = bellUnreadCount(query.data ?? []);
+  const rows = query.data?.rows ?? [];
+  const unread = query.data?.unread ?? 0;
   const labelStyle = collapsed ? { opacity: 0, width: 0, overflow: "hidden" as const, whiteSpace: "nowrap" as const } : {};
 
   const open = (n: GqlNotification) => {

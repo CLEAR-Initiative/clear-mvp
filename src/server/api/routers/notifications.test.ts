@@ -54,20 +54,24 @@ describe("notifications router", () => {
     graphqlFetch.mockReset();
   });
 
-  it("list reads the signed-in user's notifications, optionally by status", async () => {
-    graphqlFetch.mockResolvedValueOnce({ notifications: [ROW] });
-    expect(await caller().notifications.list()).toEqual([ROW]);
+  it("bell returns the bell's cut: task rows newest first, capped, with every unread one counted", async () => {
+    const rows = [
+      ...Array.from({ length: 25 }, (_, i) => ({ ...ROW, id: `t-${i}`, createdAt: `2026-10-0${1 + (i % 5)}T10:00:00.000Z` })),
+      { ...ROW, id: "read", status: "READ", createdAt: "2026-10-09T10:00:00.000Z" },
+      { ...ROW, id: "alert", notificationType: "alert", createdAt: "2026-10-09T11:00:00.000Z" },
+    ];
+    graphqlFetch.mockResolvedValueOnce({ notifications: rows });
+    const result = await caller().notifications.bell();
+    expect(result.rows).toHaveLength(20);
+    expect(result.rows[0]!.id).toBe("read");
+    expect(result.rows.some((r) => r.id === "alert")).toBe(false);
+    expect(result.unread).toBe(25);
     const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
-    expect(query).toContain("query Notifications($status: NotificationStatus)");
-    expect(query).toContain("notifications(status: $status)");
+    expect(query).toContain("query Notifications");
     for (const field of ["message", "notificationType", "actionUrl", "actionText", "status", "createdAt"]) {
       expect(query).toContain(field);
     }
-    expect(vars).toEqual({ status: undefined });
-
-    graphqlFetch.mockResolvedValueOnce({ notifications: [] });
-    await caller().notifications.list({ status: "READ" });
-    expect((graphqlFetch.mock.calls[1] as [string, Record<string, unknown>])[1]).toEqual({ status: "READ" });
+    expect(vars).toEqual({});
   });
 
   it("markRead sends the mutation and surfaces NOT_FOUND for another user's row", async () => {

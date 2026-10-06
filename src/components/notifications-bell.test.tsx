@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { GqlNotification } from "~/lib/types/graphql";
+import { bellRows, bellUnreadCount } from "~/lib/notifications";
 
 /**
  * The notifications bell: unread count on the target, Task notifications
@@ -30,17 +31,20 @@ vi.mock("~/components/feature-flags-provider", () => ({
 
 let rows: GqlNotification[] = [];
 let listError = false;
+let role: string | undefined = "analyst";
+/** The router's cut (notifications.bell), applied to the raw rows. */
 const listQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
-  data: opts.enabled && !listError ? rows : undefined,
+  data: opts.enabled && !listError ? { rows: bellRows(rows), unread: bellUnreadCount(rows) } : undefined,
   isError: listError,
 }));
 const markRead = vi.fn();
 const invalidate = vi.fn(async () => undefined);
 vi.mock("~/trpc/react", () => ({
   api: {
-    useUtils: () => ({ notifications: { list: { invalidate } } }),
+    useUtils: () => ({ notifications: { bell: { invalidate } } }),
+    auth: { me: { useQuery: () => ({ data: role ? { user: { role } } : undefined }) } },
     notifications: {
-      list: { useQuery: (input: unknown, opts: { enabled: boolean }) => listQuery(input, opts) },
+      bell: { useQuery: (input: unknown, opts: { enabled: boolean }) => listQuery(input, opts) },
       markRead: { useMutation: () => ({ mutate: markRead }) },
     },
   },
@@ -74,6 +78,7 @@ describe("NotificationsBell", () => {
   afterEach(() => {
     cleanup();
     flagEnabled = true;
+    role = "analyst";
     rows = [];
     listError = false;
     push.mockReset();
@@ -86,6 +91,22 @@ describe("NotificationsBell", () => {
     renderBell();
     expect(screen.queryByTestId("notifications-bell")).not.toBeInTheDocument();
     expect(listQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: false }));
+  });
+
+  it.each([
+    ["a pending account", "pending"],
+    ["a signed-out reader", undefined],
+  ])("renders nothing and does not query for %s", (_label, r) => {
+    role = r;
+    renderBell();
+    expect(screen.queryByTestId("notifications-bell")).not.toBeInTheDocument();
+    expect(listQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: false }));
+  });
+
+  it("shows for a viewer, who may request enrichment as a team writer", () => {
+    role = "viewer";
+    renderBell();
+    expect(screen.getByTestId("notifications-bell")).toBeInTheDocument();
   });
 
   it("shows the unread count and lists task notifications newest first", async () => {
