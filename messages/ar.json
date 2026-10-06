@@ -2151,7 +2151,13 @@
     "feedback": "ملاحظات",
     "admin": "المدير",
     "settings": "الإعدادات",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "notifications": {
+      "title": "الإشعارات",
+      "unread": "{count, plural, one {إشعار واحد غير مقروء} other {# إشعارات غير مقروءة}}",
+      "empty": "لا جديد",
+      "loadError": "تعذّر تحميل الإشعارات"
+    }
   },
   "noAccess": {
     "title": "في انتظار الوصول",

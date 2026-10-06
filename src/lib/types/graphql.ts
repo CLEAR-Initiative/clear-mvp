@@ -210,6 +210,24 @@ export interface GqlReviewImpactPrior extends GqlImpactPrior {
   event: { id: string; title: string | null; types: string[] };
 }
 
+/* ─── Notifications ─── */
+
+export type GqlNotificationStatus = "PENDING" | "DELIVERED" | "FAILED" | "READ";
+
+/** An in-app notification row for the signed-in user (clear-api
+ * `notifications`). Task outcomes arrive as `notificationType: "task"` with
+ * `actionUrl: /event/{id}` (clear-api ADR-0010, V2). */
+export interface GqlNotification {
+  id: string;
+  message: string;
+  notificationType: string;
+  actionUrl: string | null;
+  actionText: string | null;
+  status: GqlNotificationStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /* ─── Comments ─── */
 
 export interface GqlCommentUser {

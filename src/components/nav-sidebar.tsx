@@ -48,6 +48,7 @@ import {
 import { NAV_COLLAPSED_W_PX, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
 import { setNavCollapsedCookie } from "~/lib/nav-collapsed-cookie";
 import { NAV_ROUTES, type NavItemKey } from "~/lib/nav-routes";
+import { NotificationsBell } from "~/components/notifications-bell";
 
 interface NavVisibility {
   isAdmin: boolean;
@@ -415,6 +416,8 @@ export function NavSidebar({
             flexShrink: 0,
           }}
         >
+          <NotificationsBell variant="drawer" onNavigate={closeMobile} />
+
           <UnstyledButton
             onClick={() => { closeMobile(); openFeedback(); }}
             style={{
@@ -801,6 +804,8 @@ export function NavSidebar({
 
         {/* Bottom actions */}
         <Box style={{ borderTop: `1px solid ${colors.border}`, padding: spacingPx[3], flexShrink: 0 }}>
+          <NotificationsBell variant="sidebar" collapsed={collapsed} />
+
           {/* Feedback */}
           {(() => {
             const inner = (

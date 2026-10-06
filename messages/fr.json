@@ -2151,7 +2151,13 @@
     "feedback": "Retours",
     "admin": "Admin",
     "settings": "Paramètres",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "notifications": {
+      "title": "Notifications",
+      "unread": "{count, plural, one {# notification non lue} other {# notifications non lues}}",
+      "empty": "Rien de nouveau",
+      "loadError": "Impossible de charger les notifications"
+    }
   },
   "noAccess": {
     "title": "En attente d'accès",

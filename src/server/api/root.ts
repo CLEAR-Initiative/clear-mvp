@@ -19,6 +19,7 @@ import { locationChallengeRouter } from "~/server/api/routers/locationChallenge"
 import { invitationsRouter } from "~/server/api/routers/invitations";
 import { subscriptionsRouter } from "~/server/api/routers/subscriptions";
 import { tasksRouter } from "~/server/api/routers/tasks";
+import { notificationsRouter } from "~/server/api/routers/notifications";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -43,6 +44,7 @@ export const appRouter = createTRPCRouter({
   featureFlags: featureFlagsRouter,
   subscriptions: subscriptionsRouter,
   tasks: tasksRouter,
+  notifications: notificationsRouter,
 });
 
 export type AppRouter = typeof appRouter;

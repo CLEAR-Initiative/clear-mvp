@@ -2151,7 +2151,13 @@
     "feedback": "Feedback",
     "admin": "Admin",
     "settings": "Settings",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "notifications": {
+      "title": "Notifications",
+      "unread": "{count, plural, one {# unread notification} other {# unread notifications}}",
+      "empty": "Nothing new",
+      "loadError": "Notifications could not be loaded"
+    }
   },
   "noAccess": {
     "title": "Waiting for Access",

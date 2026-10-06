@@ -2151,7 +2151,13 @@
     "feedback": "Comentarios",
     "admin": "Admin",
     "settings": "Configuración",
-    "signOut": "Cerrar sesión"
+    "signOut": "Cerrar sesión",
+    "notifications": {
+      "title": "Notificaciones",
+      "unread": "{count, plural, one {# notificación sin leer} other {# notificaciones sin leer}}",
+      "empty": "Nada nuevo",
+      "loadError": "No se pudieron cargar las notificaciones"
+    }
   },
   "noAccess": {
     "title": "En espera de acceso",
