@@ -7,7 +7,7 @@ import { Badge, Box, Menu, Text, Tooltip, UnstyledButton } from "@mantine/core";
 import { IconBell } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
-import { bellRows, isUnread, safeActionPath, unreadCount } from "~/lib/notifications";
+import { bellRows, bellUnreadCount, isUnread, safeActionPath } from "~/lib/notifications";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import type { GqlNotification } from "~/lib/types/graphql";
 
@@ -46,7 +46,7 @@ export function NotificationsBell({ variant, collapsed = false, onNavigate }: No
   if (!enabled) return null;
 
   const rows = bellRows(query.data ?? []);
-  const unread = unreadCount(rows);
+  const unread = bellUnreadCount(query.data ?? []);
   const labelStyle = collapsed ? { opacity: 0, width: 0, overflow: "hidden" as const, whiteSpace: "nowrap" as const } : {};
 
   const open = (n: GqlNotification) => {
@@ -148,7 +148,7 @@ export function NotificationsBell({ variant, collapsed = false, onNavigate }: No
                 component={Link}
                 href={path}
                 onClick={(e) => {
-                  // A modifier or middle click opens a new tab: let the
+                  // A modifier click opens a new tab or window: let the
                   // link do that, only mark the row read.
                   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
                     if (isUnread(n)) markRead.mutate({ id: n.id });
@@ -156,6 +156,10 @@ export function NotificationsBell({ variant, collapsed = false, onNavigate }: No
                   }
                   e.preventDefault();
                   open(n);
+                }}
+                onAuxClick={(e) => {
+                  // A middle click never reaches onClick (it is an auxclick).
+                  if (e.button === 1 && isUnread(n)) markRead.mutate({ id: n.id });
                 }}
                 data-testid="notification-row"
                 data-unread={unreadRow}

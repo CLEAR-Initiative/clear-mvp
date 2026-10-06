@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BELL_MAX_ROWS, bellRows, safeActionPath, unreadCount } from "./notifications";
+import { BELL_MAX_ROWS, bellRows, bellUnreadCount, safeActionPath, unreadCount } from "./notifications";
 import type { GqlNotificationStatus } from "./types/graphql";
 
 describe("notifications bell helpers", () => {
@@ -29,6 +29,11 @@ describe("notifications bell helpers", () => {
     expect(unreadCount([row("a"), row("b", { status: "DELIVERED" }), row("c", { status: "READ" })])).toBe(2);
   });
 
+  it("counts unread rows of the bell's types past the listing cap", () => {
+    const many = Array.from({ length: BELL_MAX_ROWS + 5 }, (_, i) => row(`n${i}`));
+    expect(bellUnreadCount([...many, row("alert", { notificationType: "alert" })])).toBe(BELL_MAX_ROWS + 5);
+  });
+
   it("links only absolute in-app paths", () => {
     expect(safeActionPath("/event/evt-1")).toBe("/event/evt-1");
     expect(safeActionPath(null)).toBeNull();
@@ -37,5 +42,15 @@ describe("notifications bell helpers", () => {
     expect(safeActionPath("https://evil.example/x")).toBeNull();
     expect(safeActionPath("javascript:alert(1)")).toBeNull();
     expect(safeActionPath("event/evt-1")).toBeNull();
+  });
+
+  it("refuses paths a browser would resolve off-site", () => {
+    // The URL parser strips tab / CR / LF and reads `\` as `/`.
+    expect(safeActionPath("/\t/evil.example/x")).toBeNull();
+    expect(safeActionPath("/\n/evil.example/x")).toBeNull();
+    expect(safeActionPath("/\r/evil.example/x")).toBeNull();
+    expect(safeActionPath("/\\evil.example/x")).toBeNull();
+    expect(safeActionPath("/\\/evil.example/x")).toBeNull();
+    expect(safeActionPath("/event/evt-1?tab=enrichment#priors")).toBe("/event/evt-1?tab=enrichment#priors");
   });
 });
