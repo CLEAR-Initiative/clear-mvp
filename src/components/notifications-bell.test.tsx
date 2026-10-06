@@ -119,6 +119,15 @@ describe("NotificationsBell", () => {
     expect(onNavigate).toHaveBeenCalled();
   });
 
+  it("lets a modifier click open the Event in a new tab, still marking the row read", async () => {
+    rows = [row("n1")];
+    renderBell();
+    fireEvent.click(screen.getByTestId("notifications-bell"));
+    fireEvent.click(await screen.findByTestId("notification-row"), { metaKey: true });
+    expect(markRead).toHaveBeenCalledWith({ id: "n1" });
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it("does not mark an already read notification again", async () => {
     rows = [row("n1", { status: "READ" })];
     renderBell();

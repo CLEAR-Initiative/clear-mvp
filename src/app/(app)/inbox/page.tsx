@@ -62,6 +62,8 @@ import styles from "./inbox.module.css";
  */
 
 const TOAST_MS = 6000;
+/** One input object for the page and the nav badge, so they share a cache entry. */
+const PROPOSED_PAGE = { limit: 200 } as const;
 
 interface Toast {
   message: string;
@@ -101,7 +103,10 @@ export default function InboxPage() {
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
-  const priorsQuery = api.tasks.proposedImpactPriors.useQuery(undefined, {
+  // The router's maximum: clear-api defaults to 50, which would silently
+  // truncate the queue and the awaiting count. No paging yet; a backlog
+  // past 200 is a problem of its own.
+  const priorsQuery = api.tasks.proposedImpactPriors.useQuery(PROPOSED_PAGE, {
     enabled: access.priors,
     staleTime: 30_000,
     refetchInterval: 60_000,

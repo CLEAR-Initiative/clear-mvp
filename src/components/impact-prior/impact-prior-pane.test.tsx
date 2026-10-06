@@ -26,12 +26,22 @@ let mutation: { isPending: boolean; isError: boolean; error: { message: string }
   isError: false,
   error: null,
 };
+/** The options given to useMutation: the hook-level onSuccess that must
+ * survive the pane unmounting. */
+let hookOptions: { onSuccess?: (data: unknown) => void } = {};
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => ({
       tasks: { proposedImpactPriors: { invalidate: invalidateProposed }, forEvent: { invalidate: invalidateForEvent } },
     }),
-    tasks: { decideImpactPrior: { useMutation: () => ({ mutate: decideMutate, ...mutation }) } },
+    tasks: {
+      decideImpactPrior: {
+        useMutation: (opts: typeof hookOptions) => {
+          hookOptions = opts;
+          return { mutate: decideMutate, ...mutation };
+        },
+      },
+    },
   },
 }));
 
@@ -75,9 +85,10 @@ describe("ImpactPriorPane", () => {
     invalidateProposed.mockClear();
     invalidateForEvent.mockClear();
     mutation = { isPending: false, isError: false, error: null };
+    hookOptions = {};
   });
 
-  it("accepts with the rationale, refetches both doors and reports the decision", () => {
+  it("accepts with the rationale and reports the decision", () => {
     const onDecided = vi.fn();
     decideMutate.mockImplementation((_input, opts) => opts.onSuccess({ ...PRIOR, state: "accepted" }));
     renderPane({ onDecided });
@@ -88,9 +99,21 @@ describe("ImpactPriorPane", () => {
       { id: "ip-1", decision: "accepted", rationale: "Matches the 2021 floods" },
       expect.any(Object),
     );
-    expect(invalidateProposed).toHaveBeenCalled();
-    expect(invalidateForEvent).toHaveBeenCalledWith({ eventId: "evt-1" });
     expect(onDecided).toHaveBeenCalledWith(expect.objectContaining({ state: "accepted" }), "accepted");
+  });
+
+  it("refetches both doors from the hook-level callback, which outlives the pane", () => {
+    // mutate() never settles here: the pane is gone (J/K, navigation) by
+    // the time the answer lands, and React Query drops per-call callbacks
+    // then — the invalidation must not live there.
+    const view = renderPane();
+    fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "late answer" } });
+    fireEvent.click(screen.getByTestId("impact-prior-reject"));
+    expect(decideMutate).toHaveBeenCalled();
+    view.unmount();
+    hookOptions.onSuccess?.({ ...PRIOR, state: "rejected" });
+    expect(invalidateProposed).toHaveBeenCalledTimes(1);
+    expect(invalidateForEvent).toHaveBeenCalledWith({ eventId: "evt-1" });
   });
 
   it("refuses to decide without a rationale, and says so", () => {

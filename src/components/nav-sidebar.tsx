@@ -186,7 +186,9 @@ export function NavSidebar({
     hotlineInbox: flags.hotline_inbox ?? true,
     impactPriorReview: flags.impact_prior_review ?? true,
   });
-  const proposedQuery = api.tasks.proposedImpactPriors.useQuery(undefined, {
+  // The same input as the Inbox page's query (one cache entry; the
+  // router's maximum, since clear-api defaults to 50 and would truncate).
+  const proposedQuery = api.tasks.proposedImpactPriors.useQuery({ limit: 200 }, {
     enabled: reviewAccess.priors,
     staleTime: 60_000,
     refetchInterval: 120_000,

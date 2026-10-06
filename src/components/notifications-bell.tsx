@@ -148,6 +148,12 @@ export function NotificationsBell({ variant, collapsed = false, onNavigate }: No
                 component={Link}
                 href={path}
                 onClick={(e) => {
+                  // A modifier or middle click opens a new tab: let the
+                  // link do that, only mark the row read.
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+                    if (isUnread(n)) markRead.mutate({ id: n.id });
+                    return;
+                  }
                   e.preventDefault();
                   open(n);
                 }}

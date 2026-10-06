@@ -32,7 +32,17 @@ export function ImpactPriorPane({ prior, canDecide, onDecided }: ImpactPriorPane
   const utils = api.useUtils();
   const [rationale, setRationale] = useState("");
   const [touched, setTouched] = useState(false);
-  const decide = api.tasks.decideImpactPrior.useMutation();
+  // Invalidate at the hook level, not per call: React Query drops the
+  // callbacks given to mutate() when the component has unmounted by the
+  // time the answer lands — and this pane unmounts on any selection
+  // change — whereas these always run. The caller's onDecided (toast,
+  // advance) stays per call: nothing to toast on a pane that is gone.
+  const decide = api.tasks.decideImpactPrior.useMutation({
+    onSuccess: () => {
+      void utils.tasks.proposedImpactPriors.invalidate();
+      void utils.tasks.forEvent.invalidate({ eventId: prior.eventId });
+    },
+  });
 
   const trimmed = rationale.trim();
   const missing = trimmed.length === 0;
@@ -44,13 +54,7 @@ export function ImpactPriorPane({ prior, canDecide, onDecided }: ImpactPriorPane
     if (missing || tooLong || decide.isPending) return;
     decide.mutate(
       { id: prior.id, decision, rationale: trimmed },
-      {
-        onSuccess: (decided) => {
-          void utils.tasks.proposedImpactPriors.invalidate();
-          void utils.tasks.forEvent.invalidate({ eventId: prior.eventId });
-          onDecided?.(decided, decision);
-        },
-      },
+      { onSuccess: (decided) => onDecided?.(decided, decision) },
     );
   };
 

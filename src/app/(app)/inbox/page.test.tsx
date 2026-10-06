@@ -231,7 +231,7 @@ describe("InboxPage access", () => {
     priorsData = [prior("ip-1")];
     renderPage();
     expect(screen.getByTestId("inbox-page")).toBeInTheDocument();
-    expect(priorsQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
+    expect(priorsQuery).toHaveBeenCalledWith({ limit: 200 }, expect.objectContaining({ enabled: true }));
     expect(screen.queryByTestId("inbox-filter-reports")).not.toBeInTheDocument();
     expect(screen.getByTestId("inbox-filter-priors")).toHaveAttribute("data-active", "true");
     expect(screen.getByTestId("inbox-filter-priors")).toHaveTextContent("1");
@@ -631,7 +631,7 @@ describe("InboxPage impact prior review", () => {
     priorsData = [prior("ip-1")];
     decideMutate.mockImplementation((_input, opts) => opts.onSuccess({ ...prior("ip-1"), state: "rejected" }));
     renderPage();
-    expect(priorsQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
+    expect(priorsQuery).toHaveBeenCalledWith({ limit: 200 }, expect.objectContaining({ enabled: true }));
     // Not a field report: it is not under the default filter.
     expect(screen.queryByTestId("inbox-kind-pill")).not.toBeInTheDocument();
     expect(screen.getByTestId("inbox-filter-priors")).toHaveTextContent("1");
@@ -676,7 +676,7 @@ describe("InboxPage impact prior review", () => {
     flags = { impact_prior_review: false };
     priorsData = [prior("ip-1")];
     renderPage();
-    expect(priorsQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: false }));
+    expect(priorsQuery).toHaveBeenCalledWith({ limit: 200 }, expect.objectContaining({ enabled: false }));
     fireEvent.click(screen.getByTestId("inbox-filter-all"));
     expect(screen.queryByTestId("inbox-kind-pill")).not.toBeInTheDocument();
   });

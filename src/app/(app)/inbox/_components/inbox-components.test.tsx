@@ -418,7 +418,6 @@ describe("ReadingPane", () => {
       { id: "ip-1", decision: "rejected", rationale: "Different hazard" },
       expect.any(Object),
     );
-    expect(invalidateTasks).toHaveBeenCalledTimes(2);
     expect(onDecided).toHaveBeenCalledWith(
       expect.objectContaining({ id: "ip-1", kind: "impact_prior" }),
       expect.objectContaining({ state: "rejected" }),

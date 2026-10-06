@@ -211,7 +211,6 @@ describe("EnrichmentSection", () => {
         { id: "ip-1", decision: "accepted", rationale: "Same basin, same season" },
         expect.any(Object),
       );
-      expect(invalidate).toHaveBeenCalledWith({ eventId: "evt-1" });
       expect(showNotification).toHaveBeenCalledWith({ message: "toast.accepted" });
     });
 
