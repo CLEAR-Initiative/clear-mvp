@@ -26,7 +26,10 @@ test.describe("Request enrichment (case 16)", () => {
     const requestButton = page.getByTestId("request-enrichment");
     const requested = page.getByTestId("enrichment-requested");
 
-    if (await requestButton.isVisible().catch(() => false)) {
+    // The flag and the open-Task query both land asynchronously: wait for
+    // whichever state the page settles in before branching on it.
+    await expect(requestButton.or(requested)).toBeVisible({ timeout: 20_000 });
+    if (await requestButton.isVisible()) {
       await requestButton.click();
       await expect(page.getByTestId("enrichment-confirm")).toBeVisible();
       await page.getByTestId("enrichment-confirm-button").click();

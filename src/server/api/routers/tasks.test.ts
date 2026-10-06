@@ -112,6 +112,11 @@ describe("tasks router", () => {
     expect(vars).toEqual({ eventId: "evt-1" });
   });
 
+  it("forEvent surfaces clear-api's FORBIDDEN as FORBIDDEN, not an internal error", async () => {
+    graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError("Your account is awaiting admin approval", "FORBIDDEN", "PENDING_APPROVAL"));
+    await expect(caller().tasks.forEvent({ eventId: "evt-1" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
   it("cancel sends the mutation and surfaces CONFLICT for a finished Task", async () => {
     graphqlFetch.mockResolvedValueOnce({ cancelTask: { ...TASK, status: "CANCELLED" } });
     const result = await caller().tasks.cancel({ id: "task-1" });

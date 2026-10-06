@@ -47,6 +47,17 @@ export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
 
   if (!enabled) return null;
 
+  // Until we know whether a Task is already open, offer nothing to click:
+  // a request made against an unseen open Task would dedupe server-side,
+  // but the confirm panel would vanish under the user as the query lands.
+  if (!enrichment.isSuccess) {
+    return (
+      <Button variant="light" size="xs" leftSection={<IconSparkles size={13} />} fullWidth loading data-testid="enrichment-loading" style={{ fontSize: 12 }}>
+        {t("request")}
+      </Button>
+    );
+  }
+
   // The server's verdict on the last attempt, which outranks the client-side mirror.
   const errorCode = request.error?.data?.code;
   const capReached = errorCode === "TOO_MANY_REQUESTS";

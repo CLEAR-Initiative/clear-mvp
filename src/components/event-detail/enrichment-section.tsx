@@ -15,6 +15,18 @@ const STATUS_COLOR: Record<GqlTask["status"], string> = {
   CANCELLED: "gray",
 };
 
+/** A Worker-supplied URL is rendered as a link only when it is http(s);
+ *  anything else (javascript:, data:, garbage) is shown as text. */
+export function safeHttpUrl(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 const STATE_COLOR: Record<GqlImpactPrior["state"], string> = {
   proposed: "yellow",
   accepted: "green",
@@ -60,7 +72,11 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
         </Group>
       </Box>
       <Box p={16}>
-        {tasks.length === 0 && priors.length === 0 ? (
+        {query.isError ? (
+          <Text size="xs" c="var(--color-critical)" data-testid="enrichment-load-error">
+            {t("loadFailed")}
+          </Text>
+        ) : tasks.length === 0 && priors.length === 0 ? (
           <Text size="xs" c="var(--color-text-muted)">
             {t("empty")}
           </Text>
@@ -169,14 +185,19 @@ function ImpactPriorRow({ prior }: { prior: GqlImpactPrior }) {
                   “{c.quote}”
                 </Text>
               )}
-              {c.sourceUrl && (
-                <Anchor href={c.sourceUrl} target="_blank" rel="noopener noreferrer" size="xs">
-                  {t("source")}
-                </Anchor>
-              )}
+              {c.sourceUrl &&
+                (safeHttpUrl(c.sourceUrl) ? (
+                  <Anchor href={safeHttpUrl(c.sourceUrl)!} target="_blank" rel="noopener noreferrer" size="xs">
+                    {t("source")}
+                  </Anchor>
+                ) : (
+                  <Text size="xs" c="var(--color-text-muted)" data-testid="enrichment-unsafe-source">
+                    {t("source")}: {c.sourceUrl}
+                  </Text>
+                ))}
               {c.eventId && (
-                <Anchor href={`/event/${c.eventId}`} size="xs">
-                  {t("kinds.impactPrior")} → {c.eventId}
+                <Anchor href={`/event/${encodeURIComponent(c.eventId)}`} size="xs">
+                  {t("priorEvent")}
                 </Anchor>
               )}
             </Box>

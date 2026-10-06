@@ -28,6 +28,7 @@ vi.mock("~/providers/team-provider", () => ({
 
 let me: { id: string; role: string } = { id: "u", role: "analyst" };
 let tasks: GqlTask[] = [];
+let tasksLoaded = true;
 const requestMutate = vi.fn();
 const cancelMutate = vi.fn();
 let requestError: { data?: { code?: string }; message?: string } | null = null;
@@ -38,7 +39,7 @@ vi.mock("~/trpc/react", () => ({
     useUtils: () => ({ tasks: { forEvent: { invalidate } } }),
     auth: { me: { useQuery: () => ({ data: { user: me } }) } },
     tasks: {
-      forEvent: { useQuery: () => ({ data: { tasks, impactPriors: [] } }) },
+      forEvent: { useQuery: () => (tasksLoaded ? { data: { tasks, impactPriors: [] }, isSuccess: true } : { data: undefined, isSuccess: false }) },
       requestEnrichment: {
         useMutation: () => ({ mutate: requestMutate, isPending: false, isError: !!requestError, error: requestError }),
       },
@@ -86,6 +87,7 @@ describe("RequestEnrichmentButton", () => {
     teams = [];
     me = { id: "u", role: "analyst" };
     tasks = [];
+    tasksLoaded = true;
     requestError = null;
     requestMutate.mockClear();
     cancelMutate.mockClear();
@@ -94,6 +96,13 @@ describe("RequestEnrichmentButton", () => {
   it("renders nothing while the flag is off", () => {
     flagEnabled = false;
     renderButton();
+    expect(screen.queryByTestId("request-enrichment")).toBeNull();
+  });
+
+  it("offers nothing to click until the open-Task query has answered", () => {
+    tasksLoaded = false;
+    renderButton();
+    expect(screen.getByTestId("enrichment-loading")).toBeTruthy();
     expect(screen.queryByTestId("request-enrichment")).toBeNull();
   });
 

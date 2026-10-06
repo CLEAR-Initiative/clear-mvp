@@ -140,12 +140,16 @@ export const tasksRouter = createTRPCRouter({
   forEvent: protectedProcedure
     .input(z.object({ eventId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const data = await graphqlFetch<{ eventTasks: GqlTask[]; eventImpactPriors: GqlImpactPrior[] }>(
-        EVENT_ENRICHMENT_QUERY,
-        { eventId: input.eventId },
-        cookieHeaders(ctx),
-      );
-      return { tasks: data.eventTasks, impactPriors: data.eventImpactPriors };
+      try {
+        const data = await graphqlFetch<{ eventTasks: GqlTask[]; eventImpactPriors: GqlImpactPrior[] }>(
+          EVENT_ENRICHMENT_QUERY,
+          { eventId: input.eventId },
+          cookieHeaders(ctx),
+        );
+        return { tasks: data.eventTasks, impactPriors: data.eventImpactPriors };
+      } catch (err) {
+        toTrpcError(err);
+      }
     }),
 
   /** Cancel a Task — the requester or a platform admin. */

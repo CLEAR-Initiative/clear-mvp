@@ -1936,7 +1936,9 @@
       },
       "method": "Méthode {version}",
       "supersedes": "Remplace un antécédent précédent",
-      "source": "Source"
+      "source": "Source",
+      "loadFailed": "L'enrichissement n'a pas pu être chargé.",
+      "priorEvent": "Ouvrir l'événement antérieur"
     }
   },
   "knowledge": {

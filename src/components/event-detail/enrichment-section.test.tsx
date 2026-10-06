@@ -22,7 +22,8 @@ vi.mock("~/components/feature-flags-provider", () => ({
 }));
 
 let data: { tasks: GqlTask[]; impactPriors: GqlImpactPrior[] } = { tasks: [], impactPriors: [] };
-const useQuery = vi.fn((..._args: unknown[]) => ({ data, isFetching: false, error: null }));
+let queryError: Error | null = null;
+const useQuery = vi.fn((..._args: unknown[]) => ({ data: queryError ? undefined : data, isFetching: false, isError: !!queryError, error: queryError }));
 vi.mock("~/trpc/react", () => ({
   api: { tasks: { forEvent: { useQuery: (...args: unknown[]) => useQuery(...args) } } },
 }));
@@ -90,7 +91,33 @@ describe("EnrichmentSection", () => {
     cleanup();
     flagEnabled = true;
     data = { tasks: [], impactPriors: [] };
+    queryError = null;
     useQuery.mockClear();
+  });
+
+  it("shows a load error instead of the empty state when the query fails", () => {
+    queryError = new Error("FORBIDDEN");
+    renderSection();
+    expect(screen.getByTestId("enrichment-load-error")).toBeTruthy();
+    expect(screen.queryByText("empty")).toBeNull();
+  });
+
+  it("links only http(s) sources and encodes the prior Event id", () => {
+    data = {
+      tasks: [],
+      impactPriors: [{
+        ...PRIOR,
+        basis: [
+          { tier: "web", sourceUrl: "javascript:alert(1)", scope: "country", quote: "x" },
+          { tier: "clear", eventId: "evt/../admin?x", scope: "country", quote: "y" },
+        ],
+      }],
+    };
+    renderSection();
+    expect(screen.getByTestId("enrichment-unsafe-source").textContent).toContain("javascript:alert(1)");
+    expect(screen.queryByRole("link", { name: "source" })).toBeNull();
+    const priorLink = screen.getByText("priorEvent") as HTMLAnchorElement;
+    expect(priorLink.getAttribute("href")).toBe(`/event/${encodeURIComponent("evt/../admin?x")}`);
   });
 
   it("renders nothing while the event_enrichment flag is off, and does not query", () => {
@@ -134,6 +161,7 @@ describe("EnrichmentSection", () => {
     expect(screen.getByText("“The Nile burst its banks.”")).toBeTruthy();
     const source = screen.getByText("source") as HTMLAnchorElement;
     expect(source.getAttribute("href")).toBe("https://example.test/floods-2019");
+    expect((screen.getByText("priorEvent") as HTMLAnchorElement).getAttribute("href")).toBe("/event/evt-2021");
     expect(screen.getByText("outcome.produced")).toBeTruthy();
   });
 

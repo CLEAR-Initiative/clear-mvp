@@ -1936,7 +1936,9 @@
       },
       "method": "Method {version}",
       "supersedes": "Supersedes an earlier prior",
-      "source": "Source"
+      "source": "Source",
+      "loadFailed": "Enrichment could not be loaded.",
+      "priorEvent": "Open the prior event"
     }
   },
   "knowledge": {

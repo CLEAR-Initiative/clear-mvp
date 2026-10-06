@@ -1936,7 +1936,9 @@
       },
       "method": "الطريقة {version}",
       "supersedes": "يحل محل سابقة أقدم",
-      "source": "المصدر"
+      "source": "المصدر",
+      "loadFailed": "تعذر تحميل الإثراء.",
+      "priorEvent": "فتح الحدث السابق"
     }
   },
   "knowledge": {
