@@ -15,6 +15,10 @@ interface EntryListProps {
   onSearchChange: (value: string) => void;
   onSortToggle: () => void;
   onSelect: (id: string) => void;
+  /** The first load of a kind the reader sees has not landed yet: say so
+   * rather than "Nothing left in this view", which would claim an empty
+   * queue that may not be. */
+  loading?: boolean;
 }
 
 function HotlineRow({ entry }: { entry: HotlineEntry }) {
@@ -81,9 +85,10 @@ export function EntryList({
   onSearchChange,
   onSortToggle,
   onSelect,
+  loading = false,
 }: EntryListProps) {
   const t = useTranslations("inbox");
-  const format = useFormatter();
+  const tStates = useTranslations("common.states");
 
   return (
     <section className={styles.list} data-testid="inbox-list">
@@ -123,8 +128,8 @@ export function EntryList({
             </button>
           );
         })}
-        <div className={styles.listFooter}>
-          {entries.length > 0 ? t("list.allLoaded", { count: entries.length }) : t("list.empty")}
+        <div className={styles.listFooter} data-testid="inbox-list-footer" data-loading={loading}>
+          {loading ? tStates("loading") : entries.length > 0 ? t("list.allLoaded", { count: entries.length }) : t("list.empty")}
         </div>
       </div>
     </section>

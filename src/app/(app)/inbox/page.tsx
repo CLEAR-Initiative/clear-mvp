@@ -448,6 +448,7 @@ export default function InboxPage() {
           onSearchChange={setSearch}
           onSortToggle={() => setSort((s) => (s === "reportsFirst" ? "newest" : "reportsFirst"))}
           onSelect={select}
+          loading={(access.hotline && inboxQuery.isLoading) || (access.priors && priorsQuery.isLoading)}
         />
         <ReadingPane
           entry={selected}

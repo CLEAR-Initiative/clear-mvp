@@ -263,6 +263,13 @@ describe("EntryList", () => {
     expect(screen.getByText("list.empty")).toBeInTheDocument();
   });
 
+  it("says it is loading, not empty, before the first load lands", () => {
+    wrap(<EntryList {...baseProps} entries={[]} loading />);
+    expect(screen.queryByText("list.empty")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-list-footer")).toHaveAttribute("data-loading", "true");
+    expect(screen.getByTestId("inbox-list-footer")).toHaveTextContent("loading");
+  });
+
   it("renders a proposed ImpactPrior as its own kind of row", () => {
     wrap(<EntryList {...baseProps} entries={[priorEntry(), priorEntry({ id: "ip-2", eventTitle: null })]} />);
     const rows = screen.getAllByTestId("inbox-entry");
