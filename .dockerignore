@@ -13,6 +13,11 @@ tsconfig.tsbuildinfo
 .vscode
 .idea
 
+# Agent worktrees and local scratch — each carries its own node_modules
+# (gigabytes) and must never enter the build context
+.claude
+.local
+
 # OS + crash files
 .DS_Store
 *.log
