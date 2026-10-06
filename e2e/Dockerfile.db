@@ -12,13 +12,13 @@
 # Built on the official, MULTI-ARCH `postgres` image (arm64 for local Apple-Silicon
 # dev, amd64 for CI) rather than `postgis/postgis` (whose tags are amd64-only). The
 # official image already has the PGDG apt repo configured, so both extensions are a
-# single apt install away. Keep the PG major version (16) in sync with the package
+# single apt install away. Keep the PG major version (18) in sync with the package
 # names below if the base tag is bumped.
-FROM postgres:16-bookworm
+FROM postgres:18-bookworm
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      postgresql-16-postgis-3 \
-      postgresql-16-postgis-3-scripts \
-      postgresql-16-pgvector \
+      postgresql-18-postgis-3 \
+      postgresql-18-postgis-3-scripts \
+      postgresql-18-pgvector \
  && rm -rf /var/lib/apt/lists/*
