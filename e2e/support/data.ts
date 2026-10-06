@@ -49,3 +49,17 @@ export const SEEDED_EVENTS = {
   darfurConflict: "North Darfur Conflict Escalation",
   foodSecurity: "North Darfur Food Security Emergency",
 } as const;
+
+/**
+ * Proposed ImpactPrior fixture — mirrors e2e/support/impact-prior-seed.ts:
+ * one proposed prior on each of these two seeded events, requested by the
+ * analyst. If the seed script changes, update these in lockstep.
+ */
+export const IMPACT_PRIORS = {
+  /** Decided from the Inbox (rejected) in the review spec. */
+  inboxEvent: SEEDED_EVENTS.foodSecurity,
+  /** Decided from the Event page (accepted) in the review spec. */
+  eventPageEvent: SEEDED_EVENTS.khartoumFlood,
+  /** The cited case's source, a non-resolving test URL. */
+  sourceUrl: "https://example.test/e2e-prior-case",
+} as const;

@@ -2820,7 +2820,7 @@
     "goToProfile": "Aller au profil"
   },
   "inbox": {
-    "title": "Boîte de réception de la ligne d'urgence",
+    "title": "Boîte de réception",
     "awaiting": "{count, plural, one {# en attente de revue} other {# en attente de revue}}",
     "filters": {
       "reports": "Rapports terrain",

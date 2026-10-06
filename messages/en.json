@@ -2820,7 +2820,7 @@
     "goToProfile": "Go to Profile"
   },
   "inbox": {
-    "title": "Hotline Inbox",
+    "title": "Inbox",
     "awaiting": "{count, plural, one {# awaiting review} other {# awaiting review}}",
     "filters": {
       "reports": "Field reports",

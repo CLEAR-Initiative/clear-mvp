@@ -29,6 +29,8 @@ vi.mock("~/components/feature-flags-provider", () => ({
 }));
 
 let role = "admin";
+/** The session query still in flight (the first render of a cold page). */
+let authLoading = false;
 const reviewMutate = vi.fn();
 const retryMutateAsync = vi.fn();
 const decideMutate = vi.fn();
@@ -54,7 +56,12 @@ vi.mock("~/trpc/react", () => ({
         forEvent: { invalidate },
       },
     }),
-    auth: { me: { useQuery: () => ({ data: { user: { id: "u", role } }, isLoading: false }) } },
+    auth: {
+      me: {
+        useQuery: () =>
+          authLoading ? { data: undefined, isLoading: true } : { data: { user: { id: "u", role } }, isLoading: false },
+      },
+    },
     tasks: {
       proposedImpactPriors: { useQuery: (input: unknown, opts: { enabled: boolean }) => priorsQuery(input, opts) },
       decideImpactPrior: {
@@ -175,6 +182,7 @@ beforeEach(() => {
   flagEnabled = true;
   flags = {};
   role = "admin";
+  authLoading = false;
   priorsData = [];
   window.localStorage.clear();
   inboxData = {
@@ -232,6 +240,35 @@ describe("InboxPage access", () => {
     expect(screen.getByText('awaiting:{"count":1}')).toBeInTheDocument();
     // The hotline threads the mock would return are not listed.
     expect(screen.queryByText("Thread a")).not.toBeInTheDocument();
+  });
+
+  it("lands an analyst on Impact priors even when the page rendered before the session and the flags arrived", () => {
+    role = "analyst";
+    priorsData = [prior("ip-1")];
+    authLoading = true;
+    const view = renderPage();
+    expect(screen.queryByTestId("inbox-page")).not.toBeInTheDocument();
+    // Session in, flags still at their defaults (the new flag off): only Everything applies.
+    authLoading = false;
+    flags = { impact_prior_review: false };
+    view.rerender(<MantineProvider><InboxPage /></MantineProvider>);
+    expect(screen.queryByTestId("inbox-page")).not.toBeInTheDocument();
+    // The server's flags land.
+    flags = {};
+    view.rerender(<MantineProvider><InboxPage /></MantineProvider>);
+    expect(screen.getByTestId("inbox-filter-priors")).toHaveAttribute("data-active", "true");
+    expect(screen.getByTestId("inbox-filter-all")).toHaveAttribute("data-active", "false");
+  });
+
+  it("falls back from a chosen filter that stops applying", () => {
+    priorsData = [prior("ip-1")];
+    const view = renderPage();
+    fireEvent.click(screen.getByTestId("inbox-filter-priors"));
+    expect(screen.getByTestId("inbox-filter-priors")).toHaveAttribute("data-active", "true");
+    flags = { impact_prior_review: false };
+    view.rerender(<MantineProvider><InboxPage /></MantineProvider>);
+    expect(screen.queryByTestId("inbox-filter-priors")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-filter-reports")).toHaveAttribute("data-active", "true");
   });
 
   it("keeps an admin on the hotline filters when impact_prior_review is off", () => {

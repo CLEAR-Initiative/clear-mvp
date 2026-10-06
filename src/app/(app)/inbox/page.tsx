@@ -121,12 +121,13 @@ export default function InboxPage() {
   }, [inboxQuery.data]);
 
   const filters = useMemo(() => filtersFor(access), [access.hotline, access.priors]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [filter, setFilter] = useState<InboxFilter>("reports");
-  // A reader without the hotline starts on the first filter they have
-  // (priors); a filter that stops applying (flag flipped) falls back too.
-  useEffect(() => {
-    if (!filters.includes(filter)) setFilter(filters[0] ?? "all");
-  }, [filters, filter]);
+  const [chosenFilter, setFilter] = useState<InboxFilter>("reports");
+  // The filter in force is derived, never synced: the session and the
+  // feature flags land at different times, and a fallback stored while
+  // nothing applied yet would stick. A reader without the hotline starts
+  // on the first filter they have (priors); a choice that stops applying
+  // (flag flipped) falls back the same way.
+  const filter: InboxFilter = filters.includes(chosenFilter) ? chosenFilter : (filters[0] ?? "all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<InboxSort>("reportsFirst");
   const [selectedId, setSelectedId] = useState<string | null>(null);
