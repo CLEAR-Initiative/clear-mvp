@@ -33,7 +33,7 @@ const decideMutate = vi.fn();
 const invalidate = vi.fn(async () => undefined);
 vi.mock("~/trpc/react", () => ({
   api: {
-    useUtils: () => ({ tasks: { proposedImpactPriors: { invalidate }, forEvent: { invalidate } } }),
+    useUtils: () => ({ tasks: { proposedImpactPriors: { invalidate }, proposedImpactPriorCount: { invalidate }, forEvent: { invalidate } } }),
     auth: { me: { useQuery: () => ({ data: { user: { id: "u", role } } }) } },
     tasks: {
       forEvent: { useQuery: (...args: unknown[]) => useQuery(...args) },

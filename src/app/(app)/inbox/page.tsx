@@ -62,7 +62,7 @@ import styles from "./inbox.module.css";
  */
 
 const TOAST_MS = 6000;
-/** One input object for the page and the nav badge, so they share a cache entry. */
+/** clear-api's page maximum (its default of 50 would truncate the queue). */
 const PROPOSED_PAGE = { limit: 200 } as const;
 
 interface Toast {

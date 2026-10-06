@@ -186,16 +186,17 @@ export function NavSidebar({
     hotlineInbox: flags.hotline_inbox ?? true,
     impactPriorReview: flags.impact_prior_review ?? true,
   });
-  // The same input as the Inbox page's query (one cache entry; the
-  // router's maximum, since clear-api defaults to 50 and would truncate).
-  const proposedQuery = api.tasks.proposedImpactPriors.useQuery({ limit: 200 }, {
+  // Ids only (the nav is on every page); capped at clear-api's page
+  // maximum, shown as "200+" past it.
+  const proposedCount = api.tasks.proposedImpactPriorCount.useQuery(undefined, {
     enabled: reviewAccess.priors,
     staleTime: 60_000,
     refetchInterval: 120_000,
   });
-  const badges: Partial<Record<NavItemKey, number>> = {
-    inbox: reviewAccess.priors ? (proposedQuery.data?.length ?? 0) : 0,
-  };
+  const inboxBadge = reviewAccess.priors && proposedCount.data && proposedCount.data.count > 0
+    ? `${proposedCount.data.count}${proposedCount.data.capped ? "+" : ""}`
+    : undefined;
+  const badges: Partial<Record<NavItemKey, string>> = { inbox: inboxBadge };
 
   // Publish overlay width before paint. Keep motion flag out of this cleanup —
   // clearing it on every collapse/expand disabled chrome `left` transitions.
@@ -378,7 +379,7 @@ export function NavSidebar({
                       <Text fw={isActive ? 600 : 500} style={{ fontSize: fontSizesPx.lg, flex: 1 }}>{t(`items.${item.labelKey}`)}</Text>
                       {isDisabled && <Badge size="xs" variant="light" color="gray" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("soon")}</Badge>}
                       {!isDisabled && item.demo && <Badge size="xs" variant="light" color="accent" style={{ fontSize: fontSizesPx["2xs"] }}>{tBadges("demo")}</Badge>}
-                      {!isDisabled && (badges[item.labelKey] ?? 0) > 0 && (
+                      {!isDisabled && badges[item.labelKey] && (
                         <Badge size="xs" variant="filled" color="accent" circle data-testid={`nav-badge-${item.labelKey}`} style={{ fontSize: fontSizesPx["2xs"] }}>
                           {badges[item.labelKey]}
                         </Badge>
@@ -754,7 +755,7 @@ export function NavSidebar({
                         </Badge>
                       )}
 
-                      {!isDisabled && (badges[item.labelKey] ?? 0) > 0 && (
+                      {!isDisabled && badges[item.labelKey] && (
                         <Badge
                           size="xs"
                           variant="filled"

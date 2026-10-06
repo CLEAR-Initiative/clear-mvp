@@ -87,6 +87,20 @@ export const PROPOSED_IMPACT_PRIORS_QUERY = `
   }
 `;
 
+/** The nav badge's count: ids only, so a count on every page does not pull
+ * each prior's evidence and its Event. clear-api has no count query; this
+ * is capped at its page maximum. */
+export const PROPOSED_IMPACT_PRIOR_IDS_QUERY = `
+  query ProposedImpactPriorIds($limit: Int) {
+    impactPriors(state: proposed, limit: $limit) {
+      id
+    }
+  }
+`;
+
+/** clear-api's page maximum for `impactPriors`. */
+export const PROPOSED_IMPACT_PRIORS_MAX = 200;
+
 export const DECIDE_IMPACT_PRIOR = `
   mutation DecideImpactPrior($id: String!, $decision: ImpactPriorDecision!, $rationale: String!) {
     decideImpactPrior(id: $id, decision: $decision, rationale: $rationale) {
@@ -178,7 +192,7 @@ export const tasksRouter = createTRPCRouter({
     .input(
       z
         .object({
-          limit: z.number().int().positive().max(200).optional(),
+          limit: z.number().int().positive().max(PROPOSED_IMPACT_PRIORS_MAX).optional(),
           offset: z.number().int().nonnegative().optional(),
         })
         .optional(),
@@ -195,6 +209,22 @@ export const tasksRouter = createTRPCRouter({
         toTrpcError(err);
       }
     }),
+
+  /** How many proposed ImpactPriors wait for a decision, up to clear-api's
+   * page maximum (`capped` when there may be more) — admins and analysts only. */
+  proposedImpactPriorCount: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const data = await graphqlFetch<{ impactPriors: { id: string }[] }>(
+        PROPOSED_IMPACT_PRIOR_IDS_QUERY,
+        { limit: PROPOSED_IMPACT_PRIORS_MAX },
+        cookieHeaders(ctx),
+      );
+      const count = data.impactPriors.length;
+      return { count, capped: count >= PROPOSED_IMPACT_PRIORS_MAX };
+    } catch (err) {
+      toTrpcError(err);
+    }
+  }),
 
   /** Accept or reject a proposed ImpactPrior with a rationale — admins and analysts only. */
   decideImpactPrior: protectedProcedure

@@ -37,10 +37,19 @@ export function ImpactPriorPane({ prior, canDecide, onDecided }: ImpactPriorPane
   // time the answer lands — and this pane unmounts on any selection
   // change — whereas these always run. The caller's onDecided (toast,
   // advance) stays per call: nothing to toast on a pane that is gone.
+  const refetchDoors = () => {
+    void utils.tasks.proposedImpactPriors.invalidate();
+    void utils.tasks.proposedImpactPriorCount.invalidate();
+    void utils.tasks.forEvent.invalidate({ eventId: prior.eventId });
+  };
   const decide = api.tasks.decideImpactPrior.useMutation({
-    onSuccess: () => {
-      void utils.tasks.proposedImpactPriors.invalidate();
-      void utils.tasks.forEvent.invalidate({ eventId: prior.eventId });
+    onSuccess: refetchDoors,
+    // CONFLICT: another decider got there first; NOT_FOUND: the prior is
+    // gone. Either way this copy is stale, so refetch rather than leave a
+    // decidable item up until the next poll (the Event page does not poll
+    // once its Tasks are settled).
+    onError: (err) => {
+      if (err.data?.code === "CONFLICT" || err.data?.code === "NOT_FOUND") refetchDoors();
     },
   });
 

@@ -132,6 +132,19 @@ describe("tasks router", () => {
     expect((graphqlFetch.mock.calls[1] as [string, Record<string, unknown>])[1]).toEqual({ limit: undefined, offset: undefined });
   });
 
+  it("proposedImpactPriorCount asks for ids only, at clear-api's page maximum", async () => {
+    graphqlFetch.mockResolvedValueOnce({ impactPriors: [{ id: "ip-1" }, { id: "ip-2" }] });
+    expect(await caller().tasks.proposedImpactPriorCount()).toEqual({ count: 2, capped: false });
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("impactPriors(state: proposed, limit: $limit)");
+    expect(query).not.toContain("basis");
+    expect(query).not.toContain("event");
+    expect(vars).toEqual({ limit: 200 });
+
+    graphqlFetch.mockResolvedValueOnce({ impactPriors: Array.from({ length: 200 }, (_, i) => ({ id: `ip-${i}` })) });
+    expect(await caller().tasks.proposedImpactPriorCount()).toEqual({ count: 200, capped: true });
+  });
+
   it("proposedImpactPriors surfaces clear-api's FORBIDDEN for a non-decider", async () => {
     graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError("Requires one of: admin, analyst", "FORBIDDEN"));
     await expect(caller().tasks.proposedImpactPriors()).rejects.toMatchObject({ code: "FORBIDDEN" });

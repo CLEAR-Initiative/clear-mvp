@@ -21,6 +21,7 @@ vi.mock("next-intl", () => ({
 const decideMutate = vi.fn();
 const invalidateProposed = vi.fn(async () => undefined);
 const invalidateForEvent = vi.fn(async () => undefined);
+const invalidateCount = vi.fn(async () => undefined);
 let mutation: { isPending: boolean; isError: boolean; error: { message: string } | null; variables?: { decision: string } } = {
   isPending: false,
   isError: false,
@@ -28,11 +29,18 @@ let mutation: { isPending: boolean; isError: boolean; error: { message: string }
 };
 /** The options given to useMutation: the hook-level onSuccess that must
  * survive the pane unmounting. */
-let hookOptions: { onSuccess?: (data: unknown) => void } = {};
+let hookOptions: {
+  onSuccess?: (data: unknown) => void;
+  onError?: (err: { data?: { code?: string } | null }) => void;
+} = {};
 vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => ({
-      tasks: { proposedImpactPriors: { invalidate: invalidateProposed }, forEvent: { invalidate: invalidateForEvent } },
+      tasks: {
+        proposedImpactPriors: { invalidate: invalidateProposed },
+        proposedImpactPriorCount: { invalidate: invalidateCount },
+        forEvent: { invalidate: invalidateForEvent },
+      },
     }),
     tasks: {
       decideImpactPrior: {
@@ -84,6 +92,7 @@ describe("ImpactPriorPane", () => {
     decideMutate.mockReset();
     invalidateProposed.mockClear();
     invalidateForEvent.mockClear();
+    invalidateCount.mockClear();
     mutation = { isPending: false, isError: false, error: null };
     hookOptions = {};
   });
@@ -113,7 +122,22 @@ describe("ImpactPriorPane", () => {
     view.unmount();
     hookOptions.onSuccess?.({ ...PRIOR, state: "rejected" });
     expect(invalidateProposed).toHaveBeenCalledTimes(1);
+    expect(invalidateCount).toHaveBeenCalledTimes(1);
     expect(invalidateForEvent).toHaveBeenCalledWith({ eventId: "evt-1" });
+  });
+
+  it.each(["CONFLICT", "NOT_FOUND"])("refetches both doors when the decision fails with %s (stale copy)", (code) => {
+    renderPane();
+    hookOptions.onError?.({ data: { code } });
+    expect(invalidateProposed).toHaveBeenCalledTimes(1);
+    expect(invalidateForEvent).toHaveBeenCalledWith({ eventId: "evt-1" });
+  });
+
+  it("keeps the item for other failures, so the decider can retry", () => {
+    renderPane();
+    hookOptions.onError?.({ data: { code: "INTERNAL_SERVER_ERROR" } });
+    expect(invalidateProposed).not.toHaveBeenCalled();
+    expect(invalidateForEvent).not.toHaveBeenCalled();
   });
 
   it("refuses to decide without a rationale, and says so", () => {
