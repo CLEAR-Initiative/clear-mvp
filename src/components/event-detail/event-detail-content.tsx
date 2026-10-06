@@ -55,6 +55,7 @@ import { CommentsSection } from "~/components/comments-section";
 import { FeedbackSection } from "~/components/feedback-section";
 import { AddToCrisisButton } from "~/components/event-detail/add-to-crisis-button";
 import { RequestEnrichmentButton } from "~/components/event-detail/request-enrichment-button";
+import { EnrichmentSection } from "~/components/event-detail/enrichment-section";
 import { severityColors } from "~/lib/constants/severity";
 import { KpiStack } from "~/components/ui/kpi-stack";
 import { SkeletonSlot } from "~/components/ui/skeleton-slot";
@@ -994,6 +995,8 @@ export function EventDetailContent({
                 </Box>
               </Card>
               </SkeletonSlot>
+
+              <EnrichmentSection eventId={event.id} />
 
               <SkeletonSlot pending={showPending} skeleton={<SystemDataCardSkeleton />}>
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>

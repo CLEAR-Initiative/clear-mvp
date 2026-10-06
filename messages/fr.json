@@ -1901,7 +1901,42 @@
       "noPermission": "Seuls les administrateurs, les analystes et les coordinateurs d'équipe peuvent demander un enrichissement",
       "capReached": "Vous avez atteint la limite de demandes d'enrichissement pour aujourd'hui",
       "cancel": "Annuler la demande",
-      "cancelled": "Demande annulée"
+      "cancelled": "Demande annulée",
+      "empty": "Aucun enrichissement demandé pour l'instant.",
+      "kinds": {
+        "impactPrior": "Antécédent d'impact"
+      },
+      "status": {
+        "PENDING": "En attente",
+        "LEASED": "En cours",
+        "COMPLETED": "Terminé",
+        "FAILED": "Échoué",
+        "CANCELLED": "Annulé"
+      },
+      "outcome": {
+        "produced": "Antécédent proposé",
+        "no_prior_found": "Aucun antécédent"
+      },
+      "requestedBy": "Demandé par {name}",
+      "errorLabel": "Erreur",
+      "prior": {
+        "proposed": "Proposé",
+        "accepted": "Accepté",
+        "rejected": "Rejeté"
+      },
+      "cases": "{count, plural, one {# cas} other {# cas}}",
+      "scope": {
+        "district": "district",
+        "country": "pays"
+      },
+      "horizon": "Horizon de {years} ans",
+      "tier": {
+        "clear": "CLEAR",
+        "web": "Web"
+      },
+      "method": "Méthode {version}",
+      "supersedes": "Remplace un antécédent précédent",
+      "source": "Source"
     }
   },
   "knowledge": {

@@ -1901,7 +1901,42 @@
       "noPermission": "Only admins, analysts and team coordinators can request enrichment",
       "capReached": "You have reached today's limit for enrichment requests",
       "cancel": "Cancel request",
-      "cancelled": "Request cancelled"
+      "cancelled": "Request cancelled",
+      "empty": "No enrichment requested yet.",
+      "kinds": {
+        "impactPrior": "Impact prior"
+      },
+      "status": {
+        "PENDING": "Pending",
+        "LEASED": "In progress",
+        "COMPLETED": "Completed",
+        "FAILED": "Failed",
+        "CANCELLED": "Cancelled"
+      },
+      "outcome": {
+        "produced": "Prior proposed",
+        "no_prior_found": "No prior found"
+      },
+      "requestedBy": "Requested by {name}",
+      "errorLabel": "Error",
+      "prior": {
+        "proposed": "Proposed",
+        "accepted": "Accepted",
+        "rejected": "Rejected"
+      },
+      "cases": "{count, plural, one {# case} other {# cases}}",
+      "scope": {
+        "district": "district",
+        "country": "country"
+      },
+      "horizon": "{years}-year horizon",
+      "tier": {
+        "clear": "CLEAR",
+        "web": "Web"
+      },
+      "method": "Method {version}",
+      "supersedes": "Supersedes an earlier prior",
+      "source": "Source"
     }
   },
   "knowledge": {
