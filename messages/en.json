@@ -1891,6 +1891,17 @@
       "namePlaceholder": "e.g. Khartoum flooding, August 2026",
       "confirmCreate": "Create crisis",
       "cancel": "Cancel"
+    },
+    "enrichment": {
+      "title": "Enrichment",
+      "request": "Request enrichment",
+      "confirmPrompt": "Ask a Worker what has typically happened before for this hazard here? It can take a few minutes.",
+      "requested": "Enrichment requested",
+      "failed": "Request failed. Try again.",
+      "noPermission": "Only admins, analysts and team coordinators can request enrichment",
+      "capReached": "You have reached today's limit for enrichment requests",
+      "cancel": "Cancel request",
+      "cancelled": "Request cancelled"
     }
   },
   "knowledge": {

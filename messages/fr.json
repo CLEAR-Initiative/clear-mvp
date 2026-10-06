@@ -1891,6 +1891,17 @@
       "previous": "Événement précédent",
       "next": "Événement suivant",
       "position": "Événement {current} sur {total}"
+    },
+    "enrichment": {
+      "title": "Enrichissement",
+      "request": "Demander un enrichissement",
+      "confirmPrompt": "Demander à un Worker ce qui s'est généralement passé auparavant pour cet aléa ici ? Cela peut prendre quelques minutes.",
+      "requested": "Enrichissement demandé",
+      "failed": "La demande a échoué. Veuillez réessayer.",
+      "noPermission": "Seuls les administrateurs, les analystes et les coordinateurs d'équipe peuvent demander un enrichissement",
+      "capReached": "Vous avez atteint la limite de demandes d'enrichissement pour aujourd'hui",
+      "cancel": "Annuler la demande",
+      "cancelled": "Demande annulée"
     }
   },
   "knowledge": {

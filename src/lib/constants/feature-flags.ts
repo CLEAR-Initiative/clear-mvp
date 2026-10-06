@@ -147,6 +147,14 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     defaultEnabled: false,
   },
   {
+    key: "event_enrichment",
+    label: "Event enrichment",
+    description:
+      "The Request enrichment action on the Event page and its Enrichment section: a user with escalate rights asks clear-api for an ImpactPrior (what has typically happened before for this hazard and country), produced by a Task Worker and shown beside the Event (clear-api ADR-0010). UI-only gate; clear-api's requestEventEnrichment guard and daily cap are the enforcement.",
+    tier: 4,
+    defaultEnabled: false,
+  },
+  {
     key: "agent_clear_data",
     label: "CLEAR Agent: CLEAR data and navigation",
     description:

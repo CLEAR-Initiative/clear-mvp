@@ -1891,6 +1891,17 @@
       "namePlaceholder": "p. ej. Inundaciones en Jartum, agosto 2026",
       "confirmCreate": "Crear crisis",
       "cancel": "Cancelar"
+    },
+    "enrichment": {
+      "title": "Enriquecimiento",
+      "request": "Solicitar enriquecimiento",
+      "confirmPrompt": "¿Pedir a un Worker qué ha ocurrido normalmente antes con esta amenaza aquí? Puede tardar unos minutos.",
+      "requested": "Enriquecimiento solicitado",
+      "failed": "La solicitud falló. Inténtelo de nuevo.",
+      "noPermission": "Solo admins, analistas y coordinadores de equipo pueden solicitar enriquecimiento",
+      "capReached": "Ha alcanzado el límite de solicitudes de enriquecimiento de hoy",
+      "cancel": "Cancelar solicitud",
+      "cancelled": "Solicitud cancelada"
     }
   },
   "knowledge": {
