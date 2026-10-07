@@ -9,6 +9,7 @@ import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { ImpactPriorCard } from "~/components/impact-prior/impact-prior-card";
 import { ImpactPriorPane } from "~/components/impact-prior/impact-prior-pane";
 import { canReviewImpactPriors } from "~/lib/inbox-access";
+import { groupBySourceKind, isImpactPriorKind, sourceLabel } from "~/lib/impact-prior-source";
 import type { GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
 
 const STATUS_COLOR: Record<GqlTask["status"], string> = {
@@ -31,6 +32,11 @@ const STATUS_COLOR: Record<GqlTask["status"], string> = {
  * V2: a proposed ImpactPrior is shown to a decider (admin or analyst, with
  * `impact_prior_review` on) through the same ImpactPriorPane the Inbox
  * uses — the Event page is the second door to the same decision.
+ *
+ * V3: several Workers propose on one Event (one Task per source kind), so
+ * the proposals are grouped by source — CLEAR data, the web, anything else
+ * by its raw kind — each group newest first, and every Task row names its
+ * source and, when known, the Worker that held it.
  */
 export function EnrichmentSection({ eventId }: { eventId: string }) {
   const enabled = useFeatureEnabled("event_enrichment");
@@ -75,20 +81,27 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
           </Text>
         ) : (
           <Stack gap={12}>
-            {priors.map((prior) =>
-              canDecide && prior.state === "proposed" ? (
-                <ImpactPriorPane
-                  key={prior.id}
-                  prior={prior}
-                  canDecide
-                  onDecided={(_decided: GqlImpactPrior, decision) =>
-                    notifications.show({ message: tReview(`toast.${decision}`) })
-                  }
-                />
-              ) : (
-                <ImpactPriorCard key={prior.id} prior={prior} />
-              ),
-            )}
+            {groupBySourceKind(priors).map((group) => (
+              <Stack key={group.kind} gap={8} data-testid="enrichment-group" data-source-kind={group.kind}>
+                <Text size="xs" fw={600} c="var(--color-text-secondary)" data-testid="enrichment-group-title">
+                  {t("group", { source: sourceLabel(group.kind, t), count: group.rows.length })}
+                </Text>
+                {group.rows.map((prior) =>
+                  canDecide && prior.state === "proposed" ? (
+                    <ImpactPriorPane
+                      key={prior.id}
+                      prior={prior}
+                      canDecide
+                      onDecided={(_decided: GqlImpactPrior, decision) =>
+                        notifications.show({ message: tReview(`toast.${decision}`) })
+                      }
+                    />
+                  ) : (
+                    <ImpactPriorCard key={prior.id} prior={prior} />
+                  ),
+                )}
+              </Stack>
+            ))}
             {tasks.map((task) => (
               <TaskRow key={task.id} task={task} />
             ))}
@@ -102,9 +115,11 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
 function TaskRow({ task }: { task: GqlTask }) {
   const t = useTranslations("eventDetail.enrichment");
   const format = useFormatter();
-  const kind = task.kind === "event.impact_prior" ? t("kinds.impactPrior") : task.kind;
+  // One row per kind: "Impact prior · CLEAR data", "Impact prior · Web", or
+  // the raw kind for anything outside the family.
+  const kind = isImpactPriorKind(task.kind) ? `${t("kinds.impactPrior")} · ${sourceLabel(task.kind, t)}` : task.kind;
   return (
-    <Box data-testid="enrichment-task" data-status={task.status}>
+    <Box data-testid="enrichment-task" data-status={task.status} data-kind={task.kind}>
       <Group justify="space-between" gap={6} wrap="nowrap">
         <Text size="xs" fw={600} c="var(--color-text-primary)" style={{ minWidth: 0 }} truncate>
           {kind}
@@ -115,6 +130,7 @@ function TaskRow({ task }: { task: GqlTask }) {
       </Group>
       <Text size="xs" c="var(--color-text-muted)">
         {task.requester?.name ? t("requestedBy", { name: task.requester.name }) + " · " : ""}
+        {task.leaseOwner?.name ? t("worker", { name: task.leaseOwner.name }) + " · " : ""}
         {format.relativeTime(new Date(task.createdAt))}
       </Text>
       {task.status === "COMPLETED" && task.outcome && (

@@ -13,7 +13,7 @@ import type { GqlTask } from "~/lib/types/graphql";
  */
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
+  useTranslations: () => (key: string, vars?: Record<string, unknown>) => (vars ? `${key}:${JSON.stringify(vars)}` : key),
 }));
 
 let flagEnabled = true;
@@ -43,7 +43,7 @@ vi.mock("~/trpc/react", () => ({
       requestEnrichment: {
         useMutation: () => ({ mutate: requestMutate, isPending: false, isError: !!requestError, error: requestError }),
       },
-      cancel: { useMutation: () => ({ mutate: cancelMutate, isPending: false }) },
+      cancel: { useMutation: () => ({ mutateAsync: cancelMutate, isPending: false }) },
     },
   },
 }));
@@ -52,13 +52,15 @@ const { RequestEnrichmentButton } = await import("./request-enrichment-button");
 
 const OPEN: GqlTask = {
   id: "task-1",
-  kind: "event.impact_prior",
+  kind: "event.impact_prior.clear",
+  requestId: "req-1",
   subjectType: "event",
   subjectId: "evt-1",
   status: "PENDING",
   origin: "user",
   requesterId: "u",
   requester: { id: "u", name: "Ana" },
+  leaseOwner: null,
   teamId: null,
   attempts: 0,
   maxAttempts: 3,
@@ -90,7 +92,8 @@ describe("RequestEnrichmentButton", () => {
     tasksLoaded = true;
     requestError = null;
     requestMutate.mockClear();
-    cancelMutate.mockClear();
+    cancelMutate.mockReset();
+    invalidate.mockClear();
   });
 
   it("renders nothing while the flag is off", () => {
@@ -149,6 +152,72 @@ describe("RequestEnrichmentButton", () => {
     const cancel = screen.getByTestId("enrichment-cancel") as HTMLButtonElement;
     expect(cancel.disabled).toBe(true);
     expect(cancel.textContent).toContain("cancelled");
+  });
+
+  describe("one Task per source kind (V3)", () => {
+    const WEB: GqlTask = { ...OPEN, id: "task-2", kind: "event.impact_prior.web", status: "LEASED" };
+
+    it("shows the requested state with each kind's status while any Task is open", () => {
+      tasks = [OPEN, WEB];
+      renderButton();
+      expect(screen.getByTestId("enrichment-requested")).toBeTruthy();
+      const lines = Array.from(screen.getByTestId("enrichment-open-kinds").children);
+      expect(lines.map((l) => l.getAttribute("data-kind"))).toEqual(["event.impact_prior.clear", "event.impact_prior.web"]);
+      expect(lines.map((l) => l.textContent)).toEqual([
+        'kindStatus:{"source":"sourceKind.clear","status":"status.PENDING"}',
+        'kindStatus:{"source":"sourceKind.web","status":"status.LEASED"}',
+      ]);
+    });
+
+    it("cancel cancels every open Task the user may cancel, not just the first", () => {
+      tasks = [OPEN, WEB];
+      renderButton();
+      fireEvent.click(screen.getByTestId("enrichment-cancel"));
+      expect(cancelMutate).toHaveBeenCalledTimes(2);
+      expect(cancelMutate).toHaveBeenCalledWith({ id: "task-1" });
+      expect(cancelMutate).toHaveBeenCalledWith({ id: "task-2" });
+    });
+
+    it("skips Tasks whose cancel is already requested, and reads cancelled only once all are", () => {
+      tasks = [OPEN, { ...WEB, cancelRequestedAt: "2026-10-06T10:05:00.000Z" }];
+      renderButton();
+      const cancel = screen.getByTestId("enrichment-cancel") as HTMLButtonElement;
+      expect(cancel.disabled).toBe(false);
+      expect(cancel.textContent).toContain("cancel");
+      expect(cancel.textContent).not.toContain("cancelled");
+      fireEvent.click(cancel);
+      expect(cancelMutate).toHaveBeenCalledTimes(1);
+      expect(cancelMutate).toHaveBeenCalledWith({ id: "task-1" });
+    });
+
+    it("says so when some cancellations fail, and refetches either way", async () => {
+      tasks = [OPEN, WEB];
+      cancelMutate.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error("CONFLICT"));
+      renderButton();
+      fireEvent.click(screen.getByTestId("enrichment-cancel"));
+      expect(await screen.findByTestId("enrichment-cancel-error")).toHaveTextContent("cancelFailed");
+      expect(invalidate).toHaveBeenCalled();
+    });
+
+    it("an admin may cancel every open Task; another analyst none of them", () => {
+      tasks = [OPEN, { ...WEB, requesterId: "someone-else" }];
+      me = { id: "admin-1", role: "admin" };
+      renderButton();
+      fireEvent.click(screen.getByTestId("enrichment-cancel"));
+      expect(cancelMutate).toHaveBeenCalledTimes(2);
+      cleanup();
+      cancelMutate.mockClear();
+      me = { id: "other", role: "analyst" };
+      renderButton();
+      expect(screen.queryByTestId("enrichment-cancel")).toBeNull();
+    });
+  });
+
+  it("ignores open Tasks of another enrichment kind — not this button's to show or cancel", () => {
+    tasks = [{ ...OPEN, kind: "event.something_else" }];
+    renderButton();
+    expect(screen.queryByTestId("enrichment-requested")).toBeNull();
+    expect(screen.getByTestId("request-enrichment")).toBeTruthy();
   });
 
   it("renders the daily cap as a disabled button with the cap message", () => {

@@ -10,9 +10,15 @@
  * GraphQL, as the real ones would:
  *
  *   1. the seeded analyst requests enrichment on each target Event
- *      (`requestEventEnrichment`),
- *   2. a `worker` identity claims those Tasks (`claimTasks`) and completes
- *      each with a one-case ImpactPrior proposal (`completeTask`).
+ *      (`requestEventEnrichment`), which fans out into one Task per source
+ *      kind — `.clear` (CLEAR data) and `.web` (the web) by default,
+ *   2. a `worker` identity claims each kind's Tasks (`claimTasks` matches
+ *      kinds exactly) and completes each with a one-case ImpactPrior
+ *      proposal (`completeTask`), whose basis tier matches the kind.
+ *
+ * So every target Event ends with two proposed ImpactPriors side by side,
+ * one per source kind (V3, clear-api #727) — what the review spec decides
+ * on and what the source labels are checked against.
  *
  * clear-api then writes the `proposed` ImpactPrior and fans out the Task
  * outcome notification ("Impact prior proposed — review it") to the
@@ -35,8 +41,10 @@ import { prisma } from "./src/lib/prisma.js";
 import { hashKey } from "./src/utils/api-key.js";
 
 const API_URL = process.env.CLEAR_API_GRAPHQL_URL ?? "http://api:4000/graphql";
-const KIND = "event.impact_prior";
-const METHOD_VERSION = "e2e-impact-prior-seed@2";
+/** The source kinds clear-api fans a request out into (its TASK_IMPACT_PRIOR_KINDS default). */
+const KINDS = ["event.impact_prior.clear", "event.impact_prior.web"] as const;
+const KIND_FAMILY = "event.impact_prior";
+const METHOD_VERSION = "e2e-impact-prior-seed@3";
 const HORIZON_YEARS = 10;
 
 /** Test-only keys, valid nowhere but this throwaway stack. */
@@ -126,10 +134,21 @@ async function main() {
     targets.push({ title, fixture, eventId: event.id, hazardType, countryLocationId: await countryFor(primaryId) });
   }
   const eventIds = targets.map((t) => t.eventId);
+  // The CLEAR-data case cites an earlier CLEAR Event, never the Event under
+  // review (that would be circular evidence): the oldest other seeded Event.
+  const priorCase = await prisma.events.findFirst({
+    where: { id: { notIn: eventIds } },
+    // Events have no createdAt; the first Signal's time is when one began.
+    orderBy: { firstSignalCreatedAt: "asc" },
+    select: { id: true },
+  });
+  if (!priorCase) throw new Error("no other seeded Event to cite as a CLEAR-data prior case — did clear-api's seed change?");
 
   // ── Reset (idempotent re-runs): priors reference Tasks, so they go first ──
   const removedPriors = await prisma.impactPrior.deleteMany({ where: { eventId: { in: eventIds } } });
-  const removedTasks = await prisma.task.deleteMany({ where: { kind: KIND, subjectType: "event", subjectId: { in: eventIds } } });
+  const removedTasks = await prisma.task.deleteMany({
+    where: { kind: { startsWith: KIND_FAMILY }, subjectType: "event", subjectId: { in: eventIds } },
+  });
   const removedNotes = await prisma.notifications.deleteMany({
     where: { notificationType: "task", actionUrl: { in: eventIds.map((id) => `/event/${id}`) } },
   });
@@ -137,43 +156,55 @@ async function main() {
     `[impact-prior-seed] reset ${removedPriors.count} priors, ${removedTasks.count} tasks, ${removedNotes.count} notifications`,
   );
 
-  // ── 1. The analyst requests enrichment on each Event ──
-  const taskToTarget = new Map<string, (typeof targets)[number]>();
+  // ── 1. The analyst requests enrichment on each Event: one Task per kind ──
+  const taskToTarget = new Map<string, { target: (typeof targets)[number]; kind: string }>();
   for (const target of targets) {
-    const { requestEventEnrichment: task } = await gql<{ requestEventEnrichment: { id: string; status: string } }>(
+    const { requestEventEnrichment: tasks } = await gql<{ requestEventEnrichment: { id: string; kind: string; status: string }[] }>(
       REQUESTER.key,
       `mutation Request($eventId: String!, $horizonYears: Int) {
-        requestEventEnrichment(eventId: $eventId, horizonYears: $horizonYears) { id status }
+        requestEventEnrichment(eventId: $eventId, horizonYears: $horizonYears) { id kind status }
       }`,
       { eventId: target.eventId, horizonYears: HORIZON_YEARS },
     );
-    if (task.status !== "PENDING") throw new Error(`Task ${task.id} for "${target.title}" is ${task.status}, not PENDING`);
-    taskToTarget.set(task.id, target);
+    const kinds = tasks.map((task) => task.kind).sort();
+    if (kinds.join(",") !== [...KINDS].sort().join(",")) {
+      throw new Error(`"${target.title}" fanned out into [${kinds.join(", ")}], expected [${KINDS.join(", ")}] — did clear-api's TASK_IMPACT_PRIOR_KINDS change?`);
+    }
+    for (const task of tasks) {
+      if (task.status !== "PENDING") throw new Error(`Task ${task.id} (${task.kind}) for "${target.title}" is ${task.status}, not PENDING`);
+      taskToTarget.set(task.id, { target, kind: task.kind });
+    }
   }
 
-  // ── 2. The worker claims them and completes each with a proposal ──
-  // claimTasks leases the oldest claimable Tasks of the kind, so on a kept-up
-  // stack it can hand back another spec's leftover; give those up again
-  // (failTask returns them to PENDING) and keep claiming until ours are held.
+  // ── 2. The worker claims each kind and completes each Task with a proposal ──
+  // claimTasks matches kinds exactly and leases the oldest claimable Tasks,
+  // so on a kept-up stack it can hand back another spec's leftover; give
+  // those up again (failTask returns them to PENDING) and keep claiming
+  // until ours are held.
   const leases = new Map<string, string>();
-  for (let round = 0; round < 10 && leases.size < taskToTarget.size; round++) {
-    const { claimTasks } = await gql<{ claimTasks: { id: string; leaseToken: string }[] }>(
-      WORKER.key,
-      `mutation Claim($kind: String!, $limit: Int) { claimTasks(kind: $kind, limit: $limit) { id leaseToken } }`,
-      { kind: KIND, limit: 10 },
-    );
-    if (claimTasks.length === 0) break;
-    for (const claimed of claimTasks) {
-      if (taskToTarget.has(claimed.id)) {
-        leases.set(claimed.id, claimed.leaseToken);
-      } else {
-        await gql(
-          WORKER.key,
-          `mutation Release($id: String!, $leaseToken: String!, $error: String!) {
-            failTask(id: $id, leaseToken: $leaseToken, error: $error) { id }
-          }`,
-          { id: claimed.id, leaseToken: claimed.leaseToken, error: "e2e seed: not a fixture Task, released" },
-        );
+  for (const kind of KINDS) {
+    const wanted = [...taskToTarget.entries()].filter(([, v]) => v.kind === kind).length;
+    let held = 0;
+    for (let round = 0; round < 10 && held < wanted; round++) {
+      const { claimTasks } = await gql<{ claimTasks: { id: string; leaseToken: string }[] }>(
+        WORKER.key,
+        `mutation Claim($kind: String!, $limit: Int) { claimTasks(kind: $kind, limit: $limit) { id leaseToken } }`,
+        { kind, limit: 10 },
+      );
+      if (claimTasks.length === 0) break;
+      for (const claimed of claimTasks) {
+        if (taskToTarget.has(claimed.id)) {
+          leases.set(claimed.id, claimed.leaseToken);
+          held++;
+        } else {
+          await gql(
+            WORKER.key,
+            `mutation Release($id: String!, $leaseToken: String!, $error: String!) {
+              failTask(id: $id, leaseToken: $leaseToken, error: $error) { id }
+            }`,
+            { id: claimed.id, leaseToken: claimed.leaseToken, error: "e2e seed: not a fixture Task, released" },
+          );
+        }
       }
     }
   }
@@ -182,7 +213,10 @@ async function main() {
   }
 
   for (const [taskId, leaseToken] of leases) {
-    const target = taskToTarget.get(taskId)!;
+    const { target, kind } = taskToTarget.get(taskId)!;
+    // The basis tier matches the source: the CLEAR drain cites an earlier
+    // CLEAR Event, the web Worker a URL.
+    const tier = kind.endsWith(".clear") ? "clear" : "web";
     const { completeTask } = await gql<{ completeTask: { id: string; status: string; outcome: string | null } }>(
       WORKER.key,
       `mutation Complete($id: String!, $leaseToken: String!, $result: JSON!, $impactPrior: ImpactPriorInput) {
@@ -199,33 +233,42 @@ async function main() {
           horizonYears: HORIZON_YEARS,
           numberOfCases: 1,
           basis: [
-            {
-              tier: "web",
-              sourceUrl: "https://example.test/e2e-prior-case",
-              quote: target.fixture.quote,
-              occurredAt: target.fixture.occurredAt,
-              locationLabel: target.fixture.locationLabel,
-              scope: "country",
-            },
+            tier === "web"
+              ? {
+                  tier,
+                  sourceUrl: "https://example.test/e2e-prior-case",
+                  quote: target.fixture.quote,
+                  occurredAt: target.fixture.occurredAt,
+                  locationLabel: target.fixture.locationLabel,
+                  scope: "country",
+                }
+              : {
+                  tier,
+                  eventId: priorCase.id,
+                  quote: target.fixture.quote,
+                  occurredAt: target.fixture.occurredAt,
+                  locationLabel: target.fixture.locationLabel,
+                  scope: "country",
+                },
           ],
-          methodVersion: METHOD_VERSION,
+          methodVersion: `${METHOD_VERSION}-${tier}`,
         },
       },
     );
     if (completeTask.status !== "COMPLETED" || completeTask.outcome !== "produced") {
       throw new Error(`Task ${taskId} ended ${completeTask.status} / ${completeTask.outcome}, not COMPLETED / produced`);
     }
-    console.log(`[impact-prior-seed] ${target.title} → proposed ImpactPrior via Task ${taskId} (hazard ${target.hazardType})`);
+    console.log(`[impact-prior-seed] ${target.title} → proposed ImpactPrior (${kind}) via Task ${taskId} (hazard ${target.hazardType})`);
   }
 
   // The fan-out is fire-and-forget after completeTask answers; wait for the
-  // requester's rows so the spec never races it.
+  // requester's rows (one per completed Task) so the spec never races it.
   const expectedUrls = eventIds.map((id) => `/event/${id}`);
   for (let i = 0; i < 50; i++) {
     const count = await prisma.notifications.count({
       where: { userId: requester.id, notificationType: "task", actionUrl: { in: expectedUrls } },
     });
-    if (count >= expectedUrls.length) {
+    if (count >= leases.size) {
       console.log(`[impact-prior-seed] ${count} Task notifications fanned out to ${REQUESTER.email}`);
       return;
     }

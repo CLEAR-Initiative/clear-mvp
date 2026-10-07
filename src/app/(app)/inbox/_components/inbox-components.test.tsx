@@ -135,6 +135,7 @@ function priorEntry(overrides: Partial<ImpactPriorEntry> = {}): ImpactPriorEntry
     eventId: "evt-1",
     event: { id: "evt-1", title: "Floods in Kassala", types: ["FL"] },
     taskId: "task-1",
+    sourceKind: "event.impact_prior.clear",
     state: "proposed",
     hazardType: "FL",
     countryLocationId: "sdn",
@@ -276,7 +277,8 @@ describe("EntryList", () => {
     expect(rows[0]).toHaveAttribute("data-kind", "impact_prior");
     expect(rows[0]).not.toHaveAttribute("data-processing");
     expect(rows[0]).toHaveTextContent("Floods in Kassala");
-    expect(rows[0]).toHaveTextContent('priors.preview:{"count":2,"scope":"district","hazard":"FL"}');
+    // The source comes first after the kind: several Workers propose on one Event.
+    expect(rows[0]).toHaveTextContent('priors.preview:{"source":"sourceKind.clear","count":2,"scope":"scope.district","hazard":"FL"}');
     expect(within(rows[0]!).getByTestId("inbox-kind-pill")).toHaveAttribute("data-kind", "impact_prior");
     expect(rows[1]).toHaveTextContent("priors.untitledEvent");
     fireEvent.click(rows[0]!);

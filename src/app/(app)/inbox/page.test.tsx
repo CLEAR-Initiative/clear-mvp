@@ -158,6 +158,7 @@ function prior(id: string, overrides: Partial<GqlReviewImpactPrior> = {}): GqlRe
     eventId: "evt-1",
     event: { id: "evt-1", title: "Floods in Kassala", types: ["FL"] },
     taskId: "task-1",
+    sourceKind: "event.impact_prior.clear",
     state: "proposed",
     hazardType: "FL",
     countryLocationId: "sdn",

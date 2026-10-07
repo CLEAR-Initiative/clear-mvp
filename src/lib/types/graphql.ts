@@ -142,13 +142,18 @@ export type GqlTaskStatus = "PENDING" | "LEASED" | "COMPLETED" | "FAILED" | "CAN
 /** One unit of Worker-performed work about an Event (first kind: `event.impact_prior`). */
 export interface GqlTask {
   id: string;
+  /** `event.impact_prior.clear`, `event.impact_prior.web`, … — a Worker claims by exact kind. */
   kind: string;
+  /** Shared by the Tasks one request fanned out into (one per source kind). */
+  requestId: string;
   subjectType: string;
   subjectId: string;
   status: GqlTaskStatus;
   origin: "user" | "rule" | "api";
   requesterId: string | null;
   requester: { id: string; name: string | null } | null;
+  /** The Worker (a service user) holding or last holding the lease — who did the work. */
+  leaseOwner: { id: string; name: string | null } | null;
   teamId: string | null;
   attempts: number;
   maxAttempts: number;
@@ -183,6 +188,12 @@ export interface GqlImpactPrior {
   id: string;
   eventId: string;
   taskId: string;
+  /** The kind of the Task that produced it (`event.impact_prior.clear` for
+   * CLEAR data, `event.impact_prior.web` for the web, …); proposals from
+   * different sources sit side by side and supersede within a kind only. */
+  sourceKind: string;
+  /** The producing Task's Worker, when the client asked for it. */
+  task?: { leaseOwner: { id: string; name: string | null } | null } | null;
   state: GqlImpactPriorState;
   hazardType: string;
   countryLocationId: string;

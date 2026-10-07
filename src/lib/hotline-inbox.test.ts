@@ -429,6 +429,7 @@ describe("impact prior Review items", () => {
       eventId: "evt-1",
       event: { id: "evt-1", title: "Floods in Kassala", types: ["FL"] },
       taskId: "task-1",
+      sourceKind: "event.impact_prior.clear",
       state: "proposed",
       hazardType: "FL",
       countryLocationId: "sdn",
@@ -482,6 +483,9 @@ describe("impact prior Review items", () => {
     expect(visibleEntries(entries, "priors", "", "newest").map((e) => e.id)).toEqual(["ip-1"]);
     expect(visibleEntries(entries, "all", "kassala", "newest").map((e) => e.id)).toEqual(["ip-1"]);
     expect(visibleEntries(entries, "all", "FL", "newest").map((e) => e.id)).toEqual(["ip-1"]);
+    // The source word is searchable; the family prefix every prior shares is not indexed.
+    expect(entries[1]!.text).toMatch(/ clear$/);
+    expect(entries[1]!.text).not.toContain("event.impact_prior");
     expect(visibleEntries(entries, "all", "HL-", "newest").map((e) => e.id)).toEqual(["t1"]);
   });
 

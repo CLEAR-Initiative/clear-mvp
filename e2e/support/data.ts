@@ -62,8 +62,16 @@ export const IMPACT_PRIORS = {
   inboxEvent: SEEDED_EVENTS.foodSecurity,
   /** Decided from the Event page (accepted) in the review spec. */
   eventPageEvent: SEEDED_EVENTS.khartoumFlood,
-  /** The cited case's source, a non-resolving test URL. */
+  /** The web-sourced case's source, a non-resolving test URL. */
   sourceUrl: "https://example.test/e2e-prior-case",
-  /** clear-api's in-app message for a produced prior (task-notifications.ts). */
-  notification: "Impact prior proposed — review it",
+  /** The common tail of clear-api's in-app message for a produced prior
+   * (task-notifications.ts): "Impact prior from CLEAR data proposed — review it",
+   * "Impact prior from the web proposed — review it". */
+  notification: "proposed — review it",
+  /** The source kinds the seed completes, one proposal each per Event, and
+   * their English labels (messages/en.json `eventDetail.enrichment.sourceKind`). */
+  sources: {
+    clear: { kind: "event.impact_prior.clear", label: "CLEAR data" },
+    web: { kind: "event.impact_prior.web", label: "Web" },
+  },
 } as const;

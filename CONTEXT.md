@@ -91,7 +91,17 @@ _Avoid_: "hotline inbox" for the whole page — that is one kind of Review item.
 One thing in the **Inbox** waiting for a person's decision: a hotline thread (Add to
 CLEAR / Archive / Reject) or a proposed **ImpactPrior** (accept / reject with a
 rationale, clear-api ADR-0010). A proposed ImpactPrior is also decidable from its
-**Event** page — two doors, one decision.
+**Event** page — two doors, one decision. Several Workers propose on one Event, so every
+ImpactPrior Review item is labelled with its **Source kind** and decided on its own.
+
+**Source kind**:
+Which Worker kind produced an **ImpactPrior**: `event.impact_prior.clear` (the Dagster
+drain over CLEAR's own data, shown as "CLEAR data"), `event.impact_prior.web` (the Claude
+routine over the web, shown as "Web"), or the raw kind for anything else. clear-api stamps
+it from the Task; the Event page groups proposals by it, the Inbox row names it, and the
+Worker's own name (the Task's lease owner) is shown when known. Supersession stays within a
+source kind, so proposals from different sources sit side by side.
+_Avoid_: tier (that is one piece of evidence's origin inside a proposal), worker type, provider
 
 **Notification** (in-app):
 A row clear-api writes for one user, shown in the nav's bell; today only **Task**
