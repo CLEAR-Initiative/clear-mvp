@@ -56,10 +56,10 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
 
   return (
     <Card p={0} style={{ border: "1px solid var(--color-border)" }} data-testid="enrichment-section">
-      <Box px={16} py={10} className="border-b border-[var(--color-border)]">
+      <Box px={16} py={12} className="border-b border-[var(--color-border)]">
         <Group gap={6}>
           <IconSparkles size={14} color="var(--color-text-secondary)" />
-          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 13 }}>
+          <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
             {t("title")}
           </Text>
         </Group>
