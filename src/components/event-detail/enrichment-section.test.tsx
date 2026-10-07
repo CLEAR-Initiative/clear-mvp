@@ -206,7 +206,7 @@ describe("EnrichmentSection", () => {
       const titles = screen.getAllByTestId("enrichment-group-title").map((t) => t.textContent);
       expect(titles[0]).toBe('group:{"source":"sourceKind.clear","count":1}');
       expect(titles[1]).toBe('group:{"source":"sourceKind.web","count":1}');
-      expect(titles[2]).toBe('group:{"source":"event.impact_prior","count":1}');
+      expect(titles[2]).toBe('group:{"source":"sourceKind.legacy","count":1}');
       // Each card carries its source, so the Inbox's shared card reads the same way.
       const priors = screen.getAllByTestId("enrichment-prior");
       expect(priors.map((p) => p.getAttribute("data-source-kind"))).toEqual([
@@ -217,7 +217,7 @@ describe("EnrichmentSection", () => {
       expect(screen.getAllByTestId("enrichment-prior-source").map((b) => b.textContent)).toEqual([
         "sourceKind.clear",
         "sourceKind.web",
-        "event.impact_prior",
+        "sourceKind.legacy",
       ]);
     });
 

@@ -8,19 +8,29 @@
  * family. clear-api stamps the Task's kind on the proposal as `sourceKind`,
  * so a decider can see who said what and proposals from different sources
  * sit side by side (supersession stays within a kind). The bare
- * `event.impact_prior` is the pre-fan-out kind; it and anything unknown are
- * shown by their raw kind rather than guessed at.
+ * `event.impact_prior` is the pre-fan-out kind, produced by whichever Worker
+ * held it, so it reads "source not recorded"; anything unknown is shown by its
+ * raw kind rather than guessed at.
  */
 
 export const IMPACT_PRIOR_FAMILY = "event.impact_prior";
 
-export type ImpactPriorSource = { key: "clear" | "web" } | { key: "other"; kind: string };
+export type ImpactPriorSource = { key: "clear" | "web" | "legacy" } | { key: "other"; kind: string };
 
-/** The source a kind names: `clear`, `web`, or `other` with the raw kind. */
+/** The source a kind names: `clear`, `web`, `legacy` for the bare
+ *  pre-fan-out kind, or `other` with the raw kind. */
 export function impactPriorSource(kind: string): ImpactPriorSource {
+  if (kind === IMPACT_PRIOR_FAMILY) return { key: "legacy" };
   const suffix = kind.startsWith(`${IMPACT_PRIOR_FAMILY}.`) ? kind.slice(IMPACT_PRIOR_FAMILY.length + 1) : "";
   if (suffix === "clear" || suffix === "web") return { key: suffix };
   return { key: "other", kind };
+}
+
+/** What a search should match for a kind: the source word (`clear`, `web`),
+ *  never the family prefix every prior shares. Empty for the bare kind. */
+export function sourceSearchTerm(kind: string): string {
+  const source = impactPriorSource(kind);
+  return source.key === "other" ? source.kind : source.key === "legacy" ? "" : source.key;
 }
 
 /** The bare kind or a per-source kind under it. */
@@ -30,7 +40,7 @@ export function isImpactPriorKind(kind: string): boolean {
 
 /** The `eventDetail.enrichment` translator, as far as this module needs it
  *  (next-intl's typed translator is assignable to it). */
-export type SourceTranslator = (key: "sourceKind.clear" | "sourceKind.web") => string;
+export type SourceTranslator = (key: "sourceKind.clear" | "sourceKind.web" | "sourceKind.legacy") => string;
 
 /** The label a person reads: the translated source for the known ones, the
  *  raw kind otherwise. */
@@ -39,7 +49,7 @@ export function sourceLabel(kind: string, t: SourceTranslator): string {
   return source.key === "other" ? source.kind : t(`sourceKind.${source.key}`);
 }
 
-const SOURCE_RANK: Record<ImpactPriorSource["key"], number> = { clear: 0, web: 1, other: 2 };
+const SOURCE_RANK: Record<ImpactPriorSource["key"], number> = { clear: 0, web: 1, legacy: 2, other: 3 };
 
 /** Known sources first in a fixed order, then the rest by kind, so the
  *  Event page reads the same way whatever arrived first. */

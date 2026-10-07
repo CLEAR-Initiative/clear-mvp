@@ -44,8 +44,10 @@ test.describe("Impact prior review (case 17)", () => {
     // Only Review items are listed for an analyst: one row per proposal, the
     // Event title plus the source label tells them apart.
     const eventRows = page.getByTestId("inbox-entry").filter({ hasText: IMPACT_PRIORS.inboxEvent });
-    const clearRow = eventRows.filter({ hasText: CLEAR.label });
-    const webRow = eventRows.filter({ hasText: WEB.label });
+    // Located by the row's source kind, not its text, so other text that
+    // happens to contain "web" can never match.
+    const clearRow = eventRows.and(page.locator(`[data-source-kind="${CLEAR.kind}"]`));
+    const webRow = eventRows.and(page.locator(`[data-source-kind="${WEB.kind}"]`));
     await expect(page.getByTestId("inbox-list")).toBeVisible();
     await expect(page.getByTestId("inbox-list-footer")).toHaveAttribute("data-loading", "false", { timeout: 20_000 });
     if ((await clearRow.count()) === 0) {
@@ -59,6 +61,7 @@ test.describe("Impact prior review (case 17)", () => {
     // The nav badge counts what is waiting.
     await expect(page.getByTestId("nav-badge-inbox").first()).toBeVisible();
 
+    await expect(clearRow.first()).toContainText(CLEAR.label);
     await clearRow.first().click();
     const pane = page.getByTestId("inbox-pane");
     await expect(pane).toHaveAttribute("data-kind", "impact_prior");

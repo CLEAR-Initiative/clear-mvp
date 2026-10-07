@@ -1,3 +1,4 @@
+import { sourceSearchTerm } from "./impact-prior-source";
 import type {
   GqlGroundInboxMessage,
   GqlGroundInboxThread,
@@ -193,7 +194,7 @@ export function buildImpactPriorEntries(priors: GqlReviewImpactPrior[]): ImpactP
     eventId: prior.eventId,
     eventTitle: prior.event?.title ?? null,
     title: prior.event?.title ?? "",
-    text: [prior.hazardType, prior.geographicScope, `${prior.numberOfCases}`, prior.methodVersion, prior.sourceKind].join(" "),
+    text: [prior.hazardType, prior.geographicScope, `${prior.numberOfCases}`, prior.methodVersion, sourceSearchTerm(prior.sourceKind)].join(" "),
     sentAt: prior.createdAt,
   }));
 }

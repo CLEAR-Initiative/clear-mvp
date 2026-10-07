@@ -1944,7 +1944,8 @@
       "kindStatus": "{source} · {status}",
       "sourceKind": {
         "clear": "بيانات CLEAR",
-        "web": "الويب"
+        "web": "الويب",
+        "legacy": "المصدر غير مسجل"
       },
       "cancelFailed": "تعذر إلغاء بعض الطلبات. حاول مرة أخرى."
     }

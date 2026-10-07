@@ -1944,7 +1944,8 @@
       "kindStatus": "{source} · {status}",
       "sourceKind": {
         "clear": "CLEAR data",
-        "web": "Web"
+        "web": "Web",
+        "legacy": "Source not recorded"
       },
       "cancelFailed": "Some requests could not be cancelled. Try again."
     }

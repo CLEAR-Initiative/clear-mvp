@@ -8,7 +8,7 @@ import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { useOptionalTeam } from "~/providers/team-provider";
 import { canWriteCrisisEvents, isPlatformAdmin } from "~/lib/roles";
-import { sourceLabel } from "~/lib/impact-prior-source";
+import { isImpactPriorKind, sourceLabel } from "~/lib/impact-prior-source";
 
 /**
  * "Request enrichment" in the Event page's Actions card (clear-api ADR-0010):
@@ -42,7 +42,11 @@ export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
   const canRequest = canWriteCrisisEvents(me?.role) || hasTeam;
 
   const enrichment = api.tasks.forEvent.useQuery({ eventId }, { enabled, staleTime: 15_000 });
-  const openTasks = (enrichment.data?.tasks ?? []).filter((task) => task.status === "PENDING" || task.status === "LEASED");
+  // This button requests the ImpactPrior family; another kind of enrichment
+  // on the Event is not this button's to show as requested or to cancel.
+  const openTasks = (enrichment.data?.tasks ?? []).filter(
+    (task) => isImpactPriorKind(task.kind) && (task.status === "PENDING" || task.status === "LEASED"),
+  );
 
   const invalidate = () => utils.tasks.forEvent.invalidate({ eventId });
   const request = api.tasks.requestEnrichment.useMutation({

@@ -13,7 +13,7 @@ import type { GqlTask } from "~/lib/types/graphql";
  */
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
+  useTranslations: () => (key: string, vars?: Record<string, unknown>) => (vars ? `${key}:${JSON.stringify(vars)}` : key),
 }));
 
 let flagEnabled = true;
@@ -163,7 +163,10 @@ describe("RequestEnrichmentButton", () => {
       expect(screen.getByTestId("enrichment-requested")).toBeTruthy();
       const lines = Array.from(screen.getByTestId("enrichment-open-kinds").children);
       expect(lines.map((l) => l.getAttribute("data-kind"))).toEqual(["event.impact_prior.clear", "event.impact_prior.web"]);
-      expect(lines.map((l) => l.textContent)).toEqual(["kindStatus", "kindStatus"]);
+      expect(lines.map((l) => l.textContent)).toEqual([
+        'kindStatus:{"source":"sourceKind.clear","status":"status.PENDING"}',
+        'kindStatus:{"source":"sourceKind.web","status":"status.LEASED"}',
+      ]);
     });
 
     it("cancel cancels every open Task the user may cancel, not just the first", () => {
@@ -208,6 +211,13 @@ describe("RequestEnrichmentButton", () => {
       renderButton();
       expect(screen.queryByTestId("enrichment-cancel")).toBeNull();
     });
+  });
+
+  it("ignores open Tasks of another enrichment kind — not this button's to show or cancel", () => {
+    tasks = [{ ...OPEN, kind: "event.something_else" }];
+    renderButton();
+    expect(screen.queryByTestId("enrichment-requested")).toBeNull();
+    expect(screen.getByTestId("request-enrichment")).toBeTruthy();
   });
 
   it("renders the daily cap as a disabled button with the cap message", () => {

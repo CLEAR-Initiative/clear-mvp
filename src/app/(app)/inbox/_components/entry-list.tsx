@@ -122,6 +122,7 @@ export function EntryList({
               className={styles.entry}
               data-testid="inbox-entry"
               data-kind={entry.kind}
+              data-source-kind={isHotlineEntry(entry) ? undefined : entry.prior.sourceKind}
               data-selected={entry.id === selectedId}
               data-unread={unread}
               data-processing={isHotlineEntry(entry) ? entry.processing : undefined}
