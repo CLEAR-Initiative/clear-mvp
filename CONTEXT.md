@@ -94,6 +94,14 @@ rationale, clear-api ADR-0010). A proposed ImpactPrior is also decidable from it
 **Event** page — two doors, one decision. Several Workers propose on one Event, so every
 ImpactPrior Review item is labelled with its **Source kind** and decided on its own.
 
+**My requests**:
+The Inbox's view of the Tasks the signed-in user requested (clear-api `myTasks`), under
+their own filter: kind and source, status, error, outcome, and the proposal a Task
+produced, read-only, with Cancel while a Task is open. Status, not a **Review item**: never
+in "Everything", the awaiting count or the nav badge, and visible only to its requester.
+Any content reader with `event_enrichment` on reaches the Inbox for it.
+_Avoid_: "my tasks" in product copy (a Task is the system's unit; the person made a request)
+
 **Source kind**:
 Which Worker kind produced an **ImpactPrior**: `event.impact_prior.clear` (the Dagster
 drain over CLEAR's own data, shown as "CLEAR data"), `event.impact_prior.web` (the Claude
