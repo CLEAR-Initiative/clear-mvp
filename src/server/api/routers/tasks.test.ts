@@ -26,13 +26,15 @@ function caller() {
 
 const TASK = {
   id: "task-1",
-  kind: "event.impact_prior",
+  kind: "event.impact_prior.clear",
+  requestId: "req-1",
   subjectType: "event",
   subjectId: "evt-1",
   status: "PENDING",
   origin: "user",
   requesterId: "u",
   requester: { id: "u", name: "Ana" },
+  leaseOwner: null,
   teamId: "team-1",
   attempts: 0,
   maxAttempts: 3,
@@ -67,19 +69,22 @@ describe("tasks router", () => {
     graphqlFetch.mockReset();
   });
 
-  it("requestEnrichment sends the mutation with the Event and the active team as the hint", async () => {
-    graphqlFetch.mockResolvedValueOnce({ requestEventEnrichment: TASK });
+  it("requestEnrichment sends the mutation with the Event and the active team as the hint, and returns one Task per kind", async () => {
+    const WEB = { ...TASK, id: "task-2", kind: "event.impact_prior.web" };
+    graphqlFetch.mockResolvedValueOnce({ requestEventEnrichment: [TASK, WEB] });
     const result = await caller().tasks.requestEnrichment({ eventId: "evt-1", teamId: "team-1" });
-    expect(result).toEqual(TASK);
+    expect(result).toEqual([TASK, WEB]);
     const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
     expect(query).toContain("mutation RequestEventEnrichment");
     expect(query).toContain("requestEventEnrichment(eventId: $eventId, teamId: $teamId, horizonYears: $horizonYears)");
     expect(query).toContain("lastError");
+    expect(query).toContain("requestId");
+    expect(query).toContain("leaseOwner { id name }");
     expect(vars).toEqual({ eventId: "evt-1", teamId: "team-1", horizonYears: undefined });
   });
 
   it("requestEnrichment omits the team hint when there is none", async () => {
-    graphqlFetch.mockResolvedValueOnce({ requestEventEnrichment: TASK });
+    graphqlFetch.mockResolvedValueOnce({ requestEventEnrichment: [TASK] });
     await caller().tasks.requestEnrichment({ eventId: "evt-1" });
     const [, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
     expect(vars).toEqual({ eventId: "evt-1", teamId: undefined, horizonYears: undefined });
@@ -106,9 +111,11 @@ describe("tasks router", () => {
     const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
     expect(query).toContain("eventTasks(eventId: $eventId)");
     expect(query).toContain("eventImpactPriors(eventId: $eventId)");
-    for (const field of ["basis", "numberOfCases", "geographicScope", "state", "supersedesId"]) {
+    for (const field of ["basis", "numberOfCases", "geographicScope", "state", "supersedesId", "sourceKind"]) {
       expect(query).toContain(field);
     }
+    // The producing Worker's name rides along with each proposal.
+    expect(query).toContain("task { leaseOwner { id name } }");
     expect(vars).toEqual({ eventId: "evt-1" });
   });
 

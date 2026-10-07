@@ -59,6 +59,7 @@ const PRIOR: GqlImpactPrior = {
   id: "ip-1",
   eventId: "evt-1",
   taskId: "task-0",
+  sourceKind: "event.impact_prior.clear",
   state: "proposed",
   hazardType: "FL",
   countryLocationId: "sdn",

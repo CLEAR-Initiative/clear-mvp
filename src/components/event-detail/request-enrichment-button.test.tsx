@@ -52,13 +52,15 @@ const { RequestEnrichmentButton } = await import("./request-enrichment-button");
 
 const OPEN: GqlTask = {
   id: "task-1",
-  kind: "event.impact_prior",
+  kind: "event.impact_prior.clear",
+  requestId: "req-1",
   subjectType: "event",
   subjectId: "evt-1",
   status: "PENDING",
   origin: "user",
   requesterId: "u",
   requester: { id: "u", name: "Ana" },
+  leaseOwner: null,
   teamId: null,
   attempts: 0,
   maxAttempts: 3,
@@ -149,6 +151,53 @@ describe("RequestEnrichmentButton", () => {
     const cancel = screen.getByTestId("enrichment-cancel") as HTMLButtonElement;
     expect(cancel.disabled).toBe(true);
     expect(cancel.textContent).toContain("cancelled");
+  });
+
+  describe("one Task per source kind (V3)", () => {
+    const WEB: GqlTask = { ...OPEN, id: "task-2", kind: "event.impact_prior.web", status: "LEASED" };
+
+    it("shows the requested state with each kind's status while any Task is open", () => {
+      tasks = [OPEN, WEB];
+      renderButton();
+      expect(screen.getByTestId("enrichment-requested")).toBeTruthy();
+      const lines = Array.from(screen.getByTestId("enrichment-open-kinds").children);
+      expect(lines.map((l) => l.getAttribute("data-kind"))).toEqual(["event.impact_prior.clear", "event.impact_prior.web"]);
+      expect(lines.map((l) => l.textContent)).toEqual(["kindStatus", "kindStatus"]);
+    });
+
+    it("cancel cancels every open Task the user may cancel, not just the first", () => {
+      tasks = [OPEN, WEB];
+      renderButton();
+      fireEvent.click(screen.getByTestId("enrichment-cancel"));
+      expect(cancelMutate).toHaveBeenCalledTimes(2);
+      expect(cancelMutate).toHaveBeenCalledWith({ id: "task-1" });
+      expect(cancelMutate).toHaveBeenCalledWith({ id: "task-2" });
+    });
+
+    it("skips Tasks whose cancel is already requested, and reads cancelled only once all are", () => {
+      tasks = [OPEN, { ...WEB, cancelRequestedAt: "2026-10-06T10:05:00.000Z" }];
+      renderButton();
+      const cancel = screen.getByTestId("enrichment-cancel") as HTMLButtonElement;
+      expect(cancel.disabled).toBe(false);
+      expect(cancel.textContent).toContain("cancel");
+      expect(cancel.textContent).not.toContain("cancelled");
+      fireEvent.click(cancel);
+      expect(cancelMutate).toHaveBeenCalledTimes(1);
+      expect(cancelMutate).toHaveBeenCalledWith({ id: "task-1" });
+    });
+
+    it("an admin may cancel every open Task; another analyst none of them", () => {
+      tasks = [OPEN, { ...WEB, requesterId: "someone-else" }];
+      me = { id: "admin-1", role: "admin" };
+      renderButton();
+      fireEvent.click(screen.getByTestId("enrichment-cancel"));
+      expect(cancelMutate).toHaveBeenCalledTimes(2);
+      cleanup();
+      cancelMutate.mockClear();
+      me = { id: "other", role: "analyst" };
+      renderButton();
+      expect(screen.queryByTestId("enrichment-cancel")).toBeNull();
+    });
   });
 
   it("renders the daily cap as a disabled button with the cap message", () => {

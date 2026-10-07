@@ -48,13 +48,15 @@ const { EnrichmentSection } = await import("./enrichment-section");
 
 const TASK: GqlTask = {
   id: "task-1",
-  kind: "event.impact_prior",
+  kind: "event.impact_prior.clear",
+  requestId: "req-1",
   subjectType: "event",
   subjectId: "evt-1",
   status: "FAILED",
   origin: "user",
   requesterId: "u",
   requester: { id: "u", name: "Ana" },
+  leaseOwner: null,
   teamId: null,
   attempts: 3,
   maxAttempts: 3,
@@ -72,6 +74,7 @@ const PRIOR: GqlImpactPrior = {
   id: "ip-1",
   eventId: "evt-1",
   taskId: "task-0",
+  sourceKind: "event.impact_prior.clear",
   state: "proposed",
   hazardType: "FL",
   countryLocationId: "sdn",
@@ -158,7 +161,9 @@ describe("EnrichmentSection", () => {
     renderSection();
     const row = screen.getByTestId("enrichment-task");
     expect(row.getAttribute("data-status")).toBe("FAILED");
-    expect(screen.getByText("kinds.impactPrior")).toBeTruthy();
+    expect(row.getAttribute("data-kind")).toBe("event.impact_prior.clear");
+    // One row per kind: the family name and the source it came from.
+    expect(screen.getByText("kinds.impactPrior · sourceKind.clear")).toBeTruthy();
     expect(screen.getByText("status.FAILED")).toBeTruthy();
     expect(screen.getByText(/requestedBy:.*Ana/)).toBeTruthy();
     expect(screen.getByTestId("enrichment-task-error").textContent).toContain("model timed out");
@@ -183,6 +188,55 @@ describe("EnrichmentSection", () => {
     expect(source.getAttribute("href")).toBe("https://example.test/floods-2019");
     expect((screen.getByText("priorEvent") as HTMLAnchorElement).getAttribute("href")).toBe("/event/evt-2021");
     expect(screen.getByText("outcome.produced")).toBeTruthy();
+  });
+
+  describe("several Workers propose on one Event (V3)", () => {
+    const WEB_PRIOR: GqlImpactPrior = { ...PRIOR, id: "ip-web", taskId: "task-web", sourceKind: "event.impact_prior.web" };
+
+    it("groups proposals by source — CLEAR data first, then the web, then anything else by its raw kind", () => {
+      const LEGACY: GqlImpactPrior = { ...PRIOR, id: "ip-old", sourceKind: "event.impact_prior" };
+      data = { tasks: [], impactPriors: [WEB_PRIOR, LEGACY, PRIOR] };
+      renderSection();
+      const groups = screen.getAllByTestId("enrichment-group");
+      expect(groups.map((g) => g.getAttribute("data-source-kind"))).toEqual([
+        "event.impact_prior.clear",
+        "event.impact_prior.web",
+        "event.impact_prior",
+      ]);
+      const titles = screen.getAllByTestId("enrichment-group-title").map((t) => t.textContent);
+      expect(titles[0]).toBe('group:{"source":"sourceKind.clear","count":1}');
+      expect(titles[1]).toBe('group:{"source":"sourceKind.web","count":1}');
+      expect(titles[2]).toBe('group:{"source":"event.impact_prior","count":1}');
+      // Each card carries its source, so the Inbox's shared card reads the same way.
+      const priors = screen.getAllByTestId("enrichment-prior");
+      expect(priors.map((p) => p.getAttribute("data-source-kind"))).toEqual([
+        "event.impact_prior.clear",
+        "event.impact_prior.web",
+        "event.impact_prior",
+      ]);
+      expect(screen.getAllByTestId("enrichment-prior-source").map((b) => b.textContent)).toEqual([
+        "sourceKind.clear",
+        "sourceKind.web",
+        "event.impact_prior",
+      ]);
+    });
+
+    it("decides each source's proposal on its own: two proposed priors, two decision panes", () => {
+      role = "analyst";
+      flags = { impact_prior_review: true };
+      data = { tasks: [], impactPriors: [WEB_PRIOR, PRIOR] };
+      renderSection();
+      expect(screen.getAllByTestId("impact-prior-decision")).toHaveLength(2);
+    });
+
+    it("names the Worker that held a Task, and the one that produced a proposal, when the server returned them", () => {
+      data = {
+        tasks: [{ ...TASK, status: "COMPLETED", lastError: null, outcome: "produced", leaseOwner: { id: "w", name: "CLEAR Worker (Dagster)" } }],
+        impactPriors: [{ ...PRIOR, task: { leaseOwner: { id: "w", name: "CLEAR Worker (Dagster)" } } }],
+      };
+      renderSection();
+      expect(screen.getAllByText(/worker:\{"name":"CLEAR Worker \(Dagster\)"\}/)).toHaveLength(2);
+    });
   });
 
   it("polls while a Task is open", () => {
