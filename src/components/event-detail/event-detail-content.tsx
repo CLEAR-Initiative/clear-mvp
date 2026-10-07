@@ -780,7 +780,7 @@ export function EventDetailContent({
             skeleton={<RelatedEventsCardSkeleton />}
           >
           {/* Related Events */}
-          <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
+          <Card p={0} mb={20} style={{ border: "1px solid var(--color-border)" }}>
             <Box px={16} py={12} className="border-b border-[var(--color-border)]">
               <Group justify="space-between">
                 <Text fw={600} c="var(--color-text-primary)" style={{ fontSize: 14 }}>
@@ -861,6 +861,10 @@ export function EventDetailContent({
             </Box>
           </Card>
           </SkeletonSlot>
+
+          {/* Enrichment results - requested from the Actions card in the sidebar,
+              shown here where the cited cases have room to breathe. */}
+          {!isCompact && <EnrichmentSection eventId={event.id} />}
         </Box>
 
         {/* Right sidebar - full-width under main column on phone */}
@@ -995,8 +999,6 @@ export function EventDetailContent({
                 </Box>
               </Card>
               </SkeletonSlot>
-
-              <EnrichmentSection eventId={event.id} />
 
               <SkeletonSlot pending={showPending} skeleton={<SystemDataCardSkeleton />}>
               <Card p={0} style={{ border: "1px solid var(--color-border)" }}>
