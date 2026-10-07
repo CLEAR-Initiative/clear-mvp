@@ -14,12 +14,14 @@ import { MAX_RATIONALE_LENGTH } from "~/lib/impact-prior-review";
 const TASK_FIELDS = `
   id
   kind
+  requestId
   subjectType
   subjectId
   status
   origin
   requesterId
   requester { id name }
+  leaseOwner { id name }
   teamId
   attempts
   maxAttempts
@@ -37,6 +39,8 @@ const IMPACT_PRIOR_FIELDS = `
   id
   eventId
   taskId
+  sourceKind
+  task { leaseOwner { id name } }
   state
   hazardType
   countryLocationId
@@ -144,7 +148,8 @@ export function toTrpcError(err: unknown): never {
 }
 
 export const tasksRouter = createTRPCRouter({
-  /** Request enrichment on an Event, or get back the Task already open for it. */
+  /** Request enrichment on an Event: one Task per source kind (clear-api fans
+   * out; a kind with an open Task hands that one back), in configured order. */
   requestEnrichment: protectedProcedure
     .input(
       z.object({
@@ -156,7 +161,7 @@ export const tasksRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        const data = await graphqlFetch<{ requestEventEnrichment: GqlTask }>(
+        const data = await graphqlFetch<{ requestEventEnrichment: GqlTask[] }>(
           REQUEST_EVENT_ENRICHMENT,
           {
             eventId: input.eventId,

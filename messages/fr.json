@@ -1938,7 +1938,14 @@
       "supersedes": "Remplace un antécédent précédent",
       "source": "Source",
       "loadFailed": "L'enrichissement n'a pas pu être chargé.",
-      "priorEvent": "Ouvrir l'événement antérieur"
+      "priorEvent": "Ouvrir l'événement antérieur",
+      "worker": "Worker : {name}",
+      "group": "{source} · {count, plural, one {# proposition} other {# propositions}}",
+      "kindStatus": "{source} · {status}",
+      "sourceKind": {
+        "clear": "Données CLEAR",
+        "web": "Web"
+      }
     }
   },
   "knowledge": {
@@ -2955,7 +2962,7 @@
     },
     "priors": {
       "untitledEvent": "Événement sans titre",
-      "preview": "A priori d'impact proposé · {count, plural, one {# cas} other {# cas}} · {scope} · {hazard}",
+      "preview": "A priori d'impact proposé · {source} · {count, plural, one {# cas} other {# cas}} · {scope} · {hazard}",
       "openEvent": "Ouvrir l'événement",
       "proposedAt": "Proposé le {date}"
     }

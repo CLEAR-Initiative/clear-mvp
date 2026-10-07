@@ -3,6 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { IconPaperclip, IconSearch } from "@tabler/icons-react";
 import { isHotlineEntry, type HotlineEntry, type ImpactPriorEntry, type InboxEntry, type InboxSort } from "~/lib/hotline-inbox";
+import { sourceLabel } from "~/lib/impact-prior-source";
 import { InboxEntryPills } from "./classification-pill";
 import styles from "../inbox.module.css";
 
@@ -54,12 +55,15 @@ function HotlineRow({ entry }: { entry: HotlineEntry }) {
  * and when it was proposed. */
 function ImpactPriorRow({ entry }: { entry: ImpactPriorEntry }) {
   const t = useTranslations("inbox");
-  const tScope = useTranslations("eventDetail.enrichment.scope");
+  const tEnrichment = useTranslations("eventDetail.enrichment");
   const format = useFormatter();
   const { prior } = entry;
   const scope = prior.geographicScope === "district" || prior.geographicScope === "country"
-    ? tScope(prior.geographicScope)
+    ? tEnrichment(`scope.${prior.geographicScope}`)
     : prior.geographicScope;
+  // Which Worker kind proposed it: several propose on one Event, so the
+  // row says whose proposal this is before the decider opens it.
+  const source = sourceLabel(prior.sourceKind, tEnrichment);
   return (
     <span className={styles.entryBody}>
       <span className={styles.entryLine1}>
@@ -67,7 +71,7 @@ function ImpactPriorRow({ entry }: { entry: ImpactPriorEntry }) {
         <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
       </span>
       <span className={styles.entryPreview}>
-        {t("priors.preview", { count: prior.numberOfCases, scope, hazard: prior.hazardType })}
+        {t("priors.preview", { source, count: prior.numberOfCases, scope, hazard: prior.hazardType })}
       </span>
       <span className={styles.entryMeta}>
         <InboxEntryPills entry={entry} />

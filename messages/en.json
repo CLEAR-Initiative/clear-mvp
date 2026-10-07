@@ -1938,7 +1938,14 @@
       "supersedes": "Supersedes an earlier prior",
       "source": "Source",
       "loadFailed": "Enrichment could not be loaded.",
-      "priorEvent": "Open the prior event"
+      "priorEvent": "Open the prior event",
+      "worker": "Worker: {name}",
+      "group": "{source} · {count, plural, one {# proposal} other {# proposals}}",
+      "kindStatus": "{source} · {status}",
+      "sourceKind": {
+        "clear": "CLEAR data",
+        "web": "Web"
+      }
     }
   },
   "knowledge": {
@@ -2955,7 +2962,7 @@
     },
     "priors": {
       "untitledEvent": "Untitled event",
-      "preview": "Proposed impact prior · {count, plural, one {# case} other {# cases}} · {scope} · {hazard}",
+      "preview": "Proposed impact prior · {source} · {count, plural, one {# case} other {# cases}} · {scope} · {hazard}",
       "openEvent": "Open the event",
       "proposedAt": "Proposed {date}"
     }

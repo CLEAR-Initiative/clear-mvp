@@ -8,6 +8,7 @@ import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { useOptionalTeam } from "~/providers/team-provider";
 import { canWriteCrisisEvents, isPlatformAdmin } from "~/lib/roles";
+import { sourceLabel } from "~/lib/impact-prior-source";
 
 /**
  * "Request enrichment" in the Event page's Actions card (clear-api ADR-0010):
@@ -17,8 +18,10 @@ import { canWriteCrisisEvents, isPlatformAdmin } from "~/lib/roles";
  * real gate, and its answer wins: FORBIDDEN disables the action with the
  * same tooltip "Turn into alert" uses, TOO_MANY_REQUESTS (the per-requester
  * daily cap) disables it with the cap message. Behind the `event_enrichment`
- * flag. An open (PENDING / LEASED) Task collapses the action into a
- * "requested" state, which the requester or a platform admin can cancel.
+ * flag. Any open (PENDING / LEASED) Task collapses the action into a
+ * "requested" state listing each source kind's status (a request fans out
+ * into one Task per Worker kind), which the requester or a platform admin
+ * can cancel — every open Task at once, so the Event is free again.
  */
 export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
   const enabled = useFeatureEnabled("event_enrichment");
@@ -34,7 +37,7 @@ export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
   const canRequest = canWriteCrisisEvents(me?.role) || hasTeam;
 
   const enrichment = api.tasks.forEvent.useQuery({ eventId }, { enabled, staleTime: 15_000 });
-  const openTask = enrichment.data?.tasks.find((task) => task.status === "PENDING" || task.status === "LEASED");
+  const openTasks = (enrichment.data?.tasks ?? []).filter((task) => task.status === "PENDING" || task.status === "LEASED");
 
   const invalidate = () => utils.tasks.forEvent.invalidate({ eventId });
   const request = api.tasks.requestEnrichment.useMutation({
@@ -63,9 +66,13 @@ export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
   const capReached = errorCode === "TOO_MANY_REQUESTS";
   const forbidden = errorCode === "FORBIDDEN";
 
-  if (openTask) {
-    const canCancel = !!me && (openTask.requesterId === me.id || isPlatformAdmin(me.role));
-    const cancelRequested = openTask.cancelRequestedAt !== null;
+  if (openTasks.length > 0) {
+    // The Tasks this user may cancel: their own requests, or all of them for a platform admin.
+    const cancellable = me
+      ? openTasks.filter((task) => task.requesterId === me.id || isPlatformAdmin(me.role))
+      : [];
+    const pendingCancel = cancellable.filter((task) => task.cancelRequestedAt === null);
+    const cancelRequested = cancellable.length > 0 && pendingCancel.length === 0;
     return (
       <Stack gap={4}>
         <Button
@@ -79,14 +86,23 @@ export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
         >
           {t("requested")}
         </Button>
-        {canCancel && (
+        <Stack gap={0} data-testid="enrichment-open-kinds">
+          {openTasks.map((task) => (
+            <Text key={task.id} size="xs" c="var(--color-text-muted)" style={{ textAlign: "center" }} data-kind={task.kind}>
+              {t("kindStatus", { source: sourceLabel(task.kind, t), status: t(`status.${task.status}`) })}
+            </Text>
+          ))}
+        </Stack>
+        {cancellable.length > 0 && (
           <Button
             variant="subtle"
             color="gray"
             size="compact-xs"
             leftSection={cancel.isPending ? <Loader size={10} /> : <IconX size={11} />}
             disabled={cancel.isPending || cancelRequested}
-            onClick={() => cancel.mutate({ id: openTask.id })}
+            onClick={() => {
+              for (const task of pendingCancel) cancel.mutate({ id: task.id });
+            }}
             data-testid="enrichment-cancel"
             style={{ fontSize: 11 }}
           >

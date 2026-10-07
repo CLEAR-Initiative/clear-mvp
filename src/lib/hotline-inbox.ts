@@ -193,7 +193,7 @@ export function buildImpactPriorEntries(priors: GqlReviewImpactPrior[]): ImpactP
     eventId: prior.eventId,
     eventTitle: prior.event?.title ?? null,
     title: prior.event?.title ?? "",
-    text: [prior.hazardType, prior.geographicScope, `${prior.numberOfCases}`, prior.methodVersion].join(" "),
+    text: [prior.hazardType, prior.geographicScope, `${prior.numberOfCases}`, prior.methodVersion, prior.sourceKind].join(" "),
     sentAt: prior.createdAt,
   }));
 }

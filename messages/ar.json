@@ -1938,7 +1938,14 @@
       "supersedes": "يحل محل سابقة أقدم",
       "source": "المصدر",
       "loadFailed": "تعذر تحميل الإثراء.",
-      "priorEvent": "فتح الحدث السابق"
+      "priorEvent": "فتح الحدث السابق",
+      "worker": "العامل: {name}",
+      "group": "{source} · {count, plural, one {مقترح واحد} other {# مقترحات}}",
+      "kindStatus": "{source} · {status}",
+      "sourceKind": {
+        "clear": "بيانات CLEAR",
+        "web": "الويب"
+      }
     }
   },
   "knowledge": {
@@ -2955,7 +2962,7 @@
     },
     "priors": {
       "untitledEvent": "حدث بلا عنوان",
-      "preview": "تقدير أثر مسبق مقترح · {count, plural, one {حالة واحدة} other {# حالات}} · {scope} · {hazard}",
+      "preview": "تقدير أثر مسبق مقترح · {source} · {count, plural, one {حالة واحدة} other {# حالات}} · {scope} · {hazard}",
       "openEvent": "فتح الحدث",
       "proposedAt": "اقتُرح في {date}"
     }
