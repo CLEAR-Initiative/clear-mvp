@@ -154,8 +154,11 @@ export const REVIEW_COUNT_QUERY = `
 
 /** clear-api's page maximum for `impactPriors` and `caseProposals`. */
 export const PROPOSED_IMPACT_PRIORS_MAX = 200;
-/** How many proposed web cases the Inbox reads at most (ten pages). */
+/** How many proposed web cases the Inbox reads at most. */
 export const CASE_PROPOSALS_READ_MAX = 2000;
+/** How far each page read advances: a page less an overlap of 50, so up to
+ * 50 decisions taken elsewhere mid-read never skip a waiting case. */
+export const CASE_PAGE_STRIDE = PROPOSED_IMPACT_PRIORS_MAX - 50;
 
 export const DECIDE_IMPACT_PRIOR = `
   mutation DecideImpactPrior($id: String!, $decision: ImpactPriorDecision!, $rationale: String!) {
@@ -354,12 +357,15 @@ export const tasksRouter = createTRPCRouter({
         const all: GqlReviewCaseProposal[] = [];
         const seen = new Set<string>();
         let offset = input?.offset ?? 0;
-        while (all.length < CASE_PROPOSALS_READ_MAX) {
+        for (let read = 0; read < CASE_PROPOSALS_READ_MAX / CASE_PAGE_STRIDE && all.length < CASE_PROPOSALS_READ_MAX; read++) {
           const rows = await page(PROPOSED_IMPACT_PRIORS_MAX, offset);
-          // A case decided between two pages shifts the next one; never list it twice.
           for (const row of rows) if (!seen.has(row.id)) (seen.add(row.id), all.push(row));
           if (rows.length < PROPOSED_IMPACT_PRIORS_MAX) break;
-          offset += rows.length;
+          // Pages overlap: a case decided elsewhere between two reads shifts
+          // the list up, and a full-stride step would skip the case that
+          // moved into its place. The overlap re-reads it; `seen` lists
+          // each case once.
+          offset += CASE_PAGE_STRIDE;
         }
         return all;
       } catch (err) {
