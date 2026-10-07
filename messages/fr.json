@@ -1915,7 +1915,8 @@
       },
       "outcome": {
         "produced": "Antécédent proposé",
-        "no_prior_found": "Aucun antécédent"
+        "no_prior_found": "Aucun antécédent",
+        "no_new_cases": "Aucun nouveau cas"
       },
       "requestedBy": "Demandé par {name}",
       "errorLabel": "Erreur",
@@ -3403,5 +3404,15 @@
       "people_reached": "Personnes atteintes",
       "households_affected": "Ménages touchés"
     }
+  },
+  "computedPrior": {
+    "title": "D'après l'historique de CLEAR",
+    "figurePeople": "{value} personnes",
+    "figureUnit": "{value} {unit}",
+    "range": "(fourchette {low}–{high})",
+    "fromEvents": "{count, plural, one {d'après # événement passé} other {d'après # événements passés}}",
+    "lowConfidence": "Faible confiance",
+    "pastEvent": "Événement passé {n}",
+    "moreEvents": "+{count} de plus"
   }
 }

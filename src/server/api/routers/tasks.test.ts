@@ -248,6 +248,20 @@ describe("tasks router", () => {
     ]);
   });
 
+  it("computedPriors reads the Event's computed ImpactPriors, empty when the Event is not visible", async () => {
+    graphqlFetch.mockResolvedValueOnce({ event: { id: "evt-1", computedImpactPriors: [{ metric: "people_affected", unit: null }] } });
+    expect(await caller().tasks.computedPriors({ eventId: "evt-1" })).toEqual([{ metric: "people_affected", unit: null }]);
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("computedImpactPriors(horizonYears: $horizonYears)");
+    for (const field of ["centralValue", "lowerBound", "upperBound", "numberOfCases", "lowConfidence", "eventIds", "unit"]) {
+      expect(query).toContain(field);
+    }
+    expect(vars).toEqual({ eventId: "evt-1", horizonYears: undefined });
+
+    graphqlFetch.mockResolvedValueOnce({ event: null });
+    expect(await caller().tasks.computedPriors({ eventId: "evt-x" })).toEqual([]);
+  });
+
   it("decideCaseProposal rejects with a trimmed rationale and accepts without one", async () => {
     graphqlFetch.mockResolvedValueOnce({ decideCaseProposal: { id: "cp-1", state: "rejected" } });
     await caller().tasks.decideCaseProposal({ id: "cp-1", decision: "rejected", rationale: "  Another country  " });

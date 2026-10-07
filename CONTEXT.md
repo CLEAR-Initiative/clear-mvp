@@ -103,6 +103,13 @@ rejects, one by one (a rationale is required to reject). The Inbox groups the pr
 under the Event they were found for; a decided one turns to its decision in place, and an
 accepted one links to the Event it now sits on (the matched one or a new historical Event).
 The web's whole-prior proposal is never a Review item.
+
+**Computed ImpactPrior** (clear-api `Event.computedImpactPriors`):
+What has typically happened before for an Event's hazard in its country, computed on read
+from CLEAR's accepted history (the median figure and its range per metric, population group
+and unit), with the number of past Events it rests on shown beside the figure and a "low
+confidence" marker below three. Read-only on the Event page's Enrichment section: nothing to
+decide. Accepting a **Web case** adds to the history it is computed from.
 _Avoid_: "web prior" for the decision unit; "evidence" alone (a CLEAR-data prior has evidence too)
 
 **My requests**:

@@ -4,6 +4,7 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { cookieHeaders, graphqlFetch, GraphQLRequestError } from "~/server/api/graphql";
 import type {
   GqlCaseProposal,
+  GqlComputedImpactPrior,
   GqlImpactPrior,
   GqlReviewCaseProposal,
   GqlReviewImpactPrior,
@@ -109,6 +110,33 @@ export const EVENT_ENRICHMENT_QUERY = `
     }
     eventCaseProposals(eventId: $eventId) {
       ${CASE_PROPOSAL_FIELDS}
+    }
+  }
+`;
+
+/** The Event's ImpactPriors computed from CLEAR's accepted history (V4).
+ * Its own document, so a failure here never hides the rest of the
+ * Enrichment section. */
+export const COMPUTED_IMPACT_PRIORS_QUERY = `
+  query ComputedImpactPriors($eventId: String!, $horizonYears: Int) {
+    event(id: $eventId) {
+      id
+      computedImpactPriors(horizonYears: $horizonYears) {
+        hazardType
+        countryLocationId
+        horizonYears
+        metric
+        populationGroup
+        unit
+        centralValue
+        lowerBound
+        upperBound
+        numberOfCases
+        lowConfidence
+        eventIds
+        estimateIds
+        methodVersion
+      }
     }
   }
 `;
@@ -302,6 +330,23 @@ export const tasksRouter = createTRPCRouter({
           eventCaseProposals: GqlCaseProposal[];
         }>(EVENT_ENRICHMENT_QUERY, { eventId: input.eventId }, cookieHeaders(ctx));
         return { tasks: data.eventTasks, impactPriors: data.eventImpactPriors, caseProposals: data.eventCaseProposals };
+      } catch (err) {
+        toTrpcError(err);
+      }
+    }),
+
+  /** The Event's computed ImpactPriors (V4), read-only, most evidence
+   * first; empty when the reader cannot see the Event. */
+  computedPriors: protectedProcedure
+    .input(z.object({ eventId: z.string(), horizonYears: z.number().int().min(1).max(50).optional() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const data = await graphqlFetch<{ event: { id: string; computedImpactPriors: GqlComputedImpactPrior[] } | null }>(
+          COMPUTED_IMPACT_PRIORS_QUERY,
+          { eventId: input.eventId, horizonYears: input.horizonYears },
+          cookieHeaders(ctx),
+        );
+        return data.event?.computedImpactPriors ?? [];
       } catch (err) {
         toTrpcError(err);
       }

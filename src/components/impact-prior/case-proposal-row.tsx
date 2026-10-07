@@ -55,6 +55,9 @@ export function CaseProposalRow({ proposal, canDecide, onDecided, onStale }: Cas
     void utils.tasks.proposedCaseProposals.invalidate();
     void utils.tasks.reviewCount.invalidate();
     void utils.tasks.forEvent.invalidate({ eventId: proposal.eventId });
+    // An accepted case's figures become history, which the computed priors
+    // are read from.
+    void utils.tasks.computedPriors.invalidate();
   };
   const decide = api.tasks.decideCaseProposal.useMutation({
     onSuccess: refetchDoors,

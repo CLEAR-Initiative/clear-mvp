@@ -9,6 +9,7 @@ import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { ImpactPriorCard } from "~/components/impact-prior/impact-prior-card";
 import { ImpactPriorPane } from "~/components/impact-prior/impact-prior-pane";
 import { CaseProposalRow } from "~/components/impact-prior/case-proposal-row";
+import { ComputedPriors } from "~/components/impact-prior/computed-priors";
 import { canReviewImpactPriors } from "~/lib/inbox-access";
 import { groupBySourceKind, isCaseReviewedKind, isImpactPriorKind, sourceLabel } from "~/lib/impact-prior-source";
 import type { GqlCaseProposalDecision, GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
@@ -43,7 +44,8 @@ const STATUS_COLOR: Record<GqlTask["status"], string> = {
  * listed under their own heading, each with its own Accept / Reject for a
  * decider (the same row the Inbox mounts); its whole-prior proposals are
  * never decidable here — a still-proposed one is left out (its cases are
- * the decision), a decided one stays as read-only history.
+ * the decision), a decided one stays as read-only history. Above it all,
+ * the ImpactPriors computed from CLEAR's accepted history, read-only.
  */
 export function EnrichmentSection({ eventId }: { eventId: string }) {
   const enabled = useFeatureEnabled("event_enrichment");
@@ -83,6 +85,8 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
         </Group>
       </Box>
       <Box p={16}>
+        {/* What history says, computed on read (V4): independent of any request. */}
+        <ComputedPriors eventId={eventId} enabled={enabled} />
         {query.isError ? (
           <Text size="xs" c="var(--color-critical)" data-testid="enrichment-load-error">
             {t("loadFailed")}
@@ -167,7 +171,9 @@ export function TaskRow({ task }: { task: GqlTask }) {
       </Text>
       {task.status === "COMPLETED" && task.outcome && (
         <Text size="xs" c="var(--color-text-secondary)">
-          {task.outcome === "produced" || task.outcome === "no_prior_found" ? t(`outcome.${task.outcome}`) : task.outcome}
+          {task.outcome === "produced" || task.outcome === "no_prior_found" || task.outcome === "no_new_cases"
+            ? t(`outcome.${task.outcome}`)
+            : task.outcome}
         </Text>
       )}
       {task.status === "FAILED" && task.lastError && (

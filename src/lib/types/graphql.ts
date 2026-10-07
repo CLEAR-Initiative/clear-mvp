@@ -273,6 +273,31 @@ export interface GqlReviewCaseProposal extends GqlCaseProposal {
   event: { id: string; title: string | null; types: string[] };
 }
 
+/** What has typically happened before, computed on read from CLEAR's
+ * accepted history (clear-api V4, `Event.computedImpactPriors`): one per
+ * hazard × metric × population group × unit with any history. Nothing to
+ * review. */
+export interface GqlComputedImpactPrior {
+  hazardType: string;
+  countryLocationId: string;
+  horizonYears: number;
+  metric: string;
+  populationGroup: string | null;
+  /** Lower-cased; null when the figures state none (people). */
+  unit: string | null;
+  /** The median of the historical figures. */
+  centralValue: number;
+  lowerBound: number;
+  upperBound: number;
+  /** How many historical Events it rests on. */
+  numberOfCases: number;
+  /** Below three cases: a starting point, not a basis. */
+  lowConfidence: boolean;
+  eventIds: string[];
+  estimateIds: string[];
+  methodVersion: string;
+}
+
 /* ─── Notifications ─── */
 
 export type GqlNotificationStatus = "PENDING" | "DELIVERED" | "FAILED" | "READ";

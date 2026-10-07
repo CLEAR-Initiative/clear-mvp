@@ -98,6 +98,7 @@ vi.mock("~/trpc/react", () => ({
         proposedCaseProposals: { invalidate },
         reviewCount: { invalidate },
         forEvent: { invalidate, fetch: forEventFetch },
+        computedPriors: { invalidate },
         myTasks: { invalidate },
       },
     }),

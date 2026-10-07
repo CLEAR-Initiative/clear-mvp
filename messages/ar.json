@@ -1915,7 +1915,8 @@
       },
       "outcome": {
         "produced": "تم اقتراح سابقة",
-        "no_prior_found": "لم يُعثر على سابقة"
+        "no_prior_found": "لم يُعثر على سابقة",
+        "no_new_cases": "لا حالات جديدة"
       },
       "requestedBy": "طلبه {name}",
       "errorLabel": "خطأ",
@@ -3403,5 +3404,15 @@
       "people_reached": "الأشخاص الذين تم الوصول إليهم",
       "households_affected": "الأسر المتأثرة"
     }
+  },
+  "computedPrior": {
+    "title": "من سجل CLEAR",
+    "figurePeople": "{value} شخص",
+    "figureUnit": "{value} {unit}",
+    "range": "(النطاق {low}–{high})",
+    "fromEvents": "{count, plural, one {من حدث سابق واحد} two {من حدثين سابقين} few {من # أحداث سابقة} many {من # حدثًا سابقًا} other {من # حدث سابق}}",
+    "lowConfidence": "ثقة منخفضة",
+    "pastEvent": "حدث سابق {n}",
+    "moreEvents": "+{count} أخرى"
   }
 }

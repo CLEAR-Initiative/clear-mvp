@@ -2,7 +2,7 @@ import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { GqlCaseProposal, GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
+import type { GqlCaseProposal, GqlComputedImpactPrior, GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
 
 /**
  * The read-only Enrichment section (clear-api ADR-0010, V1): hidden behind the
@@ -31,6 +31,8 @@ let queryError: Error | null = null;
 const useQuery = vi.fn((..._args: unknown[]) => ({ data: queryError ? undefined : data, isFetching: false, isError: !!queryError, error: queryError }));
 const decideMutate = vi.fn();
 const decideCaseMutate = vi.fn();
+let computed: GqlComputedImpactPrior[] = [];
+const computedQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({ data: opts.enabled ? computed : undefined }));
 const invalidate = vi.fn(async () => undefined);
 vi.mock("~/trpc/react", () => ({
   api: {
@@ -40,11 +42,13 @@ vi.mock("~/trpc/react", () => ({
         proposedCaseProposals: { invalidate },
         reviewCount: { invalidate },
         forEvent: { invalidate },
+        computedPriors: { invalidate },
       },
     }),
     auth: { me: { useQuery: () => ({ data: { user: { id: "u", role } } }) } },
     tasks: {
       forEvent: { useQuery: (...args: unknown[]) => useQuery(...args) },
+      computedPriors: { useQuery: (input: unknown, opts: { enabled: boolean }) => computedQuery(input, opts) },
       decideImpactPrior: {
         useMutation: () => ({ mutate: decideMutate, isPending: false, isError: false, error: null, variables: undefined }),
       },
@@ -151,6 +155,8 @@ describe("EnrichmentSection", () => {
     decideMutate.mockReset();
     decideCaseMutate.mockReset();
     showNotification.mockClear();
+    computed = [];
+    computedQuery.mockClear();
   });
 
   it("shows a load error instead of the empty state when the query fails", () => {
@@ -353,6 +359,80 @@ describe("EnrichmentSection", () => {
       expect(screen.queryByTestId("case-proposal-decision")).toBeNull();
       // Cases alone are not "nothing requested".
       expect(screen.queryByText("empty")).toBeNull();
+    });
+  });
+
+  describe("ImpactPriors computed from CLEAR's history (V4)", () => {
+    const COMPUTED: GqlComputedImpactPrior = {
+      hazardType: "fl",
+      countryLocationId: "sdn",
+      horizonYears: 10,
+      metric: "people_displaced_new",
+      populationGroup: null,
+      unit: null,
+      centralValue: 12000,
+      lowerBound: 3000,
+      upperBound: 40000,
+      numberOfCases: 4,
+      lowConfidence: false,
+      eventIds: ["evt-a", "evt-b", "evt-c", "evt-d"],
+      estimateIds: ["e1", "e2", "e3", "e4"],
+      methodVersion: "computed-prior@1",
+    };
+
+    it("shows each prior read-only: figure as people with its range, the case count beside it, and the past Events", () => {
+      computed = [COMPUTED];
+      renderSection();
+      expect(computedQuery).toHaveBeenCalledWith({ eventId: "evt-1" }, expect.objectContaining({ enabled: true }));
+      const row = screen.getByTestId("computed-prior");
+      expect(row).toHaveTextContent("metric.people_displaced_new");
+      expect(screen.getByTestId("computed-prior-figure")).toHaveTextContent('figurePeople:{"value":"12,000"}');
+      expect(screen.getByTestId("computed-prior-figure")).toHaveTextContent('range:{"low":"3,000","high":"40,000"}');
+      expect(screen.getByTestId("computed-prior-cases")).toHaveTextContent('fromEvents:{"count":4}');
+      expect(screen.getAllByTestId("computed-prior-event").map((a) => a.getAttribute("href"))).toEqual([
+        "/event/evt-a",
+        "/event/evt-b",
+        "/event/evt-c",
+        "/event/evt-d",
+      ]);
+      expect(screen.queryByTestId("computed-prior-low-confidence")).toBeNull();
+      // Nothing to decide on a computed prior.
+      expect(screen.queryByTestId("impact-prior-decision")).toBeNull();
+    });
+
+    it("names the unit when there is one, the population group, and marks too few cases as low confidence", () => {
+      computed = [
+        {
+          ...COMPUTED,
+          metric: "households_affected",
+          unit: "households",
+          populationGroup: "IDPs",
+          numberOfCases: 2,
+          lowConfidence: true,
+          lowerBound: 500,
+          upperBound: 500,
+          centralValue: 500,
+          eventIds: Array.from({ length: 12 }, (_, i) => `evt-${i}`),
+        },
+      ];
+      renderSection();
+      expect(screen.getByTestId("computed-prior")).toHaveTextContent("metric.households_affected · IDPs");
+      expect(screen.getByTestId("computed-prior-figure")).toHaveTextContent('figureUnit:{"value":"500","unit":"households"}');
+      // One value is not a range.
+      expect(screen.getByTestId("computed-prior-figure")).not.toHaveTextContent("range");
+      expect(screen.getByTestId("computed-prior-low-confidence")).toHaveTextContent("lowConfidence");
+      expect(screen.getAllByTestId("computed-prior-event")).toHaveLength(10);
+      expect(screen.getByText('moreEvents:{"count":2}')).toBeTruthy();
+    });
+
+    it("shows nothing for history when there is none, and does not ask while the flag is off", () => {
+      renderSection();
+      expect(screen.queryByTestId("computed-priors")).toBeNull();
+      cleanup();
+      computedQuery.mockClear();
+      flagEnabled = false;
+      renderSection();
+      expect(computedQuery).not.toHaveBeenCalled();
     });
   });
 });
