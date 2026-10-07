@@ -229,6 +229,23 @@ describe("tasks router", () => {
     expect(vars).toEqual({ limit: 200, offset: undefined });
   });
 
+  it("proposedCaseProposals with no limit reads every page, each case once", async () => {
+    const page = (from: number, n: number) => Array.from({ length: n }, (_, i) => ({ id: `cp-${from + i}` }));
+    graphqlFetch
+      .mockResolvedValueOnce({ caseProposals: page(0, 200) })
+      // A case decided meanwhile shifted the page: cp-199 comes back again.
+      .mockResolvedValueOnce({ caseProposals: [...page(199, 200)] })
+      .mockResolvedValueOnce({ caseProposals: page(399, 5) });
+    const result = await caller().tasks.proposedCaseProposals();
+    expect(result).toHaveLength(404);
+    expect(new Set(result.map((c) => c.id)).size).toBe(404);
+    expect(graphqlFetch.mock.calls.map((c) => (c as [string, Record<string, unknown>])[1])).toEqual([
+      { limit: 200, offset: 0 },
+      { limit: 200, offset: 200 },
+      { limit: 200, offset: 400 },
+    ]);
+  });
+
   it("decideCaseProposal rejects with a trimmed rationale and accepts without one", async () => {
     graphqlFetch.mockResolvedValueOnce({ decideCaseProposal: { id: "cp-1", state: "rejected" } });
     await caller().tasks.decideCaseProposal({ id: "cp-1", decision: "rejected", rationale: "  Another country  " });

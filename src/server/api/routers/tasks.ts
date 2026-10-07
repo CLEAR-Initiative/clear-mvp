@@ -154,6 +154,8 @@ export const REVIEW_COUNT_QUERY = `
 
 /** clear-api's page maximum for `impactPriors` and `caseProposals`. */
 export const PROPOSED_IMPACT_PRIORS_MAX = 200;
+/** How many proposed web cases the Inbox reads at most (ten pages). */
+export const CASE_PROPOSALS_READ_MAX = 2000;
 
 export const DECIDE_IMPACT_PRIOR = `
   mutation DecideImpactPrior($id: String!, $decision: ImpactPriorDecision!, $rationale: String!) {
@@ -324,7 +326,10 @@ export const tasksRouter = createTRPCRouter({
     }),
 
   /** Proposed web cases waiting for a decision, newest first, with their
-   * Event — admins and analysts only (V4). */
+   * Event — admins and analysts only (V4). With no `limit`, every one, read
+   * page by page (one completion can propose dozens, so a single page of
+   * clear-api's maximum would leave older cases unreachable), up to
+   * CASE_PROPOSALS_READ_MAX. */
   proposedCaseProposals: protectedProcedure
     .input(
       z
@@ -336,12 +341,27 @@ export const tasksRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       try {
-        const data = await graphqlFetch<{ caseProposals: GqlReviewCaseProposal[] }>(
-          PROPOSED_CASE_PROPOSALS_QUERY,
-          { limit: input?.limit, offset: input?.offset },
-          cookieHeaders(ctx),
-        );
-        return data.caseProposals;
+        const headers = cookieHeaders(ctx);
+        const page = async (limit: number | undefined, offset: number | undefined) =>
+          (
+            await graphqlFetch<{ caseProposals: GqlReviewCaseProposal[] }>(
+              PROPOSED_CASE_PROPOSALS_QUERY,
+              { limit, offset },
+              headers,
+            )
+          ).caseProposals;
+        if (input?.limit !== undefined) return await page(input.limit, input.offset);
+        const all: GqlReviewCaseProposal[] = [];
+        const seen = new Set<string>();
+        let offset = input?.offset ?? 0;
+        while (all.length < CASE_PROPOSALS_READ_MAX) {
+          const rows = await page(PROPOSED_IMPACT_PRIORS_MAX, offset);
+          // A case decided between two pages shifts the next one; never list it twice.
+          for (const row of rows) if (!seen.has(row.id)) (seen.add(row.id), all.push(row));
+          if (rows.length < PROPOSED_IMPACT_PRIORS_MAX) break;
+          offset += rows.length;
+        }
+        return all;
       } catch (err) {
         toTrpcError(err);
       }

@@ -134,7 +134,10 @@ export default function InboxPage() {
     refetchInterval: 60_000,
   });
 
-  const casesQuery = api.tasks.proposedCaseProposals.useQuery(PROPOSED_PAGE, {
+  // Every proposed case, page by page (the router reads clear-api's pages
+  // until they run out): one enrichment can propose dozens, so one page of
+  // 200 would leave older cases with no row to decide them from.
+  const casesQuery = api.tasks.proposedCaseProposals.useQuery(undefined, {
     enabled: access.priors,
     staleTime: 30_000,
     refetchInterval: 60_000,

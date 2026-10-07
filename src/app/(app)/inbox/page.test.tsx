@@ -957,7 +957,7 @@ describe("InboxPage web cases", () => {
     ];
     priorsData = [prior("ip-1")];
     renderPage();
-    expect(casesQuery).toHaveBeenCalledWith({ limit: 200 }, expect.objectContaining({ enabled: true }));
+    expect(casesQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
     // Three cases and one CLEAR-data prior wait: four decisions.
     expect(screen.getByTestId("inbox-filter-priors")).toHaveTextContent("4");
     expect(screen.getByText('awaiting:{"count":4}')).toBeInTheDocument();
