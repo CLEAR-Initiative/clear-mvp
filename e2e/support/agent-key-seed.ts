@@ -21,7 +21,7 @@ import { prisma } from "./src/lib/prisma.js";
 import { hashKey } from "./src/utils/api-key.js";
 import { AGENT_ROLE } from "./src/utils/request-auth.js";
 
-const EMAIL = "agent@clear.dev";
+const EMAIL = "agent@clearinitiative.io";
 
 async function main() {
   const key = process.env.CLEAR_AGENT_API_KEY;

@@ -4,19 +4,19 @@
  */
 
 export const ANALYST = {
-  email: "analyst@clear.dev",
+  email: "analyst@clearinitiative.io",
   password: "password123",
 } as const;
 
 /** Seeded platform admin (clear-api ADMIN_EMAIL / ADMIN_PASSWORD in the e2e stack). */
 export const ADMIN = {
-  email: "admin@clear.dev",
+  email: "admin@clearinitiative.io",
   password: "password123",
 } as const;
 
 /** Seeded viewer — must NOT see the private ground-intel staging tier. */
 export const VIEWER = {
-  email: "viewer@clear.dev",
+  email: "viewer@clearinitiative.io",
   password: "password123",
 } as const;
 
