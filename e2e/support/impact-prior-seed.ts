@@ -40,8 +40,8 @@ const METHOD_VERSION = "e2e-impact-prior-seed@2";
 const HORIZON_YEARS = 10;
 
 /** Test-only keys, valid nowhere but this throwaway stack. */
-const REQUESTER = { email: "analyst@clear.dev", key: "sk_live_e2e_requester_0123456789abcdef", keyName: "e2e-requester" };
-const WORKER = { email: "worker@clear.dev", key: "sk_live_e2e_worker_0123456789abcdef", keyName: "e2e-worker" };
+const REQUESTER = { email: "analyst@clearinitiative.io", key: "sk_live_e2e_requester_0123456789abcdef", keyName: "e2e-requester" };
+const WORKER = { email: "worker@clearinitiative.io", key: "sk_live_e2e_worker_0123456789abcdef", keyName: "e2e-worker" };
 
 /** Event title → the synthetic case the basis cites. */
 const FIXTURES: Record<string, { quote: string; occurredAt: string; locationLabel: string }> = {

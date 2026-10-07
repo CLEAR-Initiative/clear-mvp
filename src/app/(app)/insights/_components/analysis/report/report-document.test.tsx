@@ -60,7 +60,7 @@ describe("ReportDocument", () => {
     expect(map?.dots).toHaveLength(1);
     const kpis = { inside: 414252, abroad: null, displacedTotal: 414252, returned: null, inNeed: { value: 200000, low: null, high: null, newestAt: null }, fundingReceived: 1.1e9, fundingRequired: 4.2e9 };
     const buf = await renderToBuffer(
-      <ReportDocument sections={[...REPORT_SECTIONS]} data={data} kpis={kpis} map={map} labels={labels} scopeName="Bara, North Kordofan, Sudan" generatedLabel="Report created 29 Sep 2026 by admin@clear.dev" />,
+      <ReportDocument sections={[...REPORT_SECTIONS]} data={data} kpis={kpis} map={map} labels={labels} scopeName="Bara, North Kordofan, Sudan" generatedLabel="Report created 29 Sep 2026 by admin@clearinitiative.io" />,
     );
     expect(buf.subarray(0, 5).toString()).toBe("%PDF-");
   }, 30_000);
