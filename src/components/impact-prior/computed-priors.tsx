@@ -41,7 +41,9 @@ export function ComputedPriorRow({ prior }: { prior: GqlComputedImpactPrior }) {
   const tCases = useTranslations("caseReview");
   const tEnrichment = useTranslations("eventDetail.enrichment");
   const format = useFormatter();
-  const num = (n: number) => format.number(n, { maximumFractionDigits: 0 });
+  // A median of an even count can fall between two figures (1.5): keep one
+  // decimal rather than round it into a figure no source gave.
+  const num = (n: number) => format.number(n, { maximumFractionDigits: 1 });
   const metric = isCaseMetric(prior.metric) ? tCases(`metric.${prior.metric}`) : prior.metric;
   const figure = prior.unit
     ? t("figureUnit", { value: num(prior.centralValue), unit: prior.unit })

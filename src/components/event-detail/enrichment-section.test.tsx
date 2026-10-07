@@ -13,7 +13,7 @@ import type { GqlCaseProposal, GqlComputedImpactPrior, GqlImpactPrior, GqlTask }
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, vars?: Record<string, unknown>) =>
     vars ? `${key}:${JSON.stringify(vars)}` : key,
-  useFormatter: () => ({ dateTime: () => "10 Aug 2021", relativeTime: () => "2 hours ago", number: (n: number) => n.toLocaleString("en") }),
+  useFormatter: () => ({ dateTime: () => "10 Aug 2021", relativeTime: () => "2 hours ago", number: (n: number, o?: Intl.NumberFormatOptions) => n.toLocaleString("en", o) }),
 }));
 
 /** `event_enrichment`; `flags` overrides per key (impact_prior_review). */
@@ -389,6 +389,14 @@ describe("EnrichmentSection", () => {
       expect(screen.getByTestId("computed-prior-figure")).toHaveTextContent('figurePeople:{"value":"12,000"}');
       expect(screen.getByTestId("computed-prior-figure")).toHaveTextContent('range:{"low":"3,000","high":"40,000"}');
       expect(screen.getByTestId("computed-prior-cases")).toHaveTextContent('fromEvents:{"count":4}');
+      cleanup();
+      // A median between two figures keeps its half.
+      computed = [{ ...COMPUTED, centralValue: 1.5, lowerBound: 1, upperBound: 2 }];
+      renderSection();
+      expect(screen.getByTestId("computed-prior-figure")).toHaveTextContent('figurePeople:{"value":"1.5"}');
+      cleanup();
+      computed = [COMPUTED];
+      renderSection();
       expect(screen.getAllByTestId("computed-prior-event").map((a) => a.getAttribute("href"))).toEqual([
         "/event/evt-a",
         "/event/evt-b",
