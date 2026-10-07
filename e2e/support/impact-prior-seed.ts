@@ -138,7 +138,8 @@ async function main() {
   // review (that would be circular evidence): the oldest other seeded Event.
   const priorCase = await prisma.events.findFirst({
     where: { id: { notIn: eventIds } },
-    orderBy: { createdAt: "asc" },
+    // Events have no createdAt; the first Signal's time is when one began.
+    orderBy: { firstSignalCreatedAt: "asc" },
     select: { id: true },
   });
   if (!priorCase) throw new Error("no other seeded Event to cite as a CLEAR-data prior case — did clear-api's seed change?");
