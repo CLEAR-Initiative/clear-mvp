@@ -159,6 +159,8 @@ export const CASE_PROPOSALS_READ_MAX = 2000;
 /** How far each page read advances: a page less an overlap of 50, so up to
  * 50 decisions taken elsewhere mid-read never skip a waiting case. */
 export const CASE_PAGE_STRIDE = PROPOSED_IMPACT_PRIORS_MAX - 50;
+/** A safety bound on page reads, well past what CASE_PROPOSALS_READ_MAX needs. */
+const CASE_PAGE_READS_MAX = 2 * Math.ceil(CASE_PROPOSALS_READ_MAX / CASE_PAGE_STRIDE);
 
 export const DECIDE_IMPACT_PRIOR = `
   mutation DecideImpactPrior($id: String!, $decision: ImpactPriorDecision!, $rationale: String!) {
@@ -357,7 +359,10 @@ export const tasksRouter = createTRPCRouter({
         const all: GqlReviewCaseProposal[] = [];
         const seen = new Set<string>();
         let offset = input?.offset ?? 0;
-        for (let read = 0; read < CASE_PROPOSALS_READ_MAX / CASE_PAGE_STRIDE && all.length < CASE_PROPOSALS_READ_MAX; read++) {
+        // Stop at the cap of unique cases, not at a count of reads: cases
+        // proposed mid-read make pages repeat, and must not cut the list
+        // short. The read count only bounds a list that never settles.
+        for (let read = 0; read < CASE_PAGE_READS_MAX && all.length < CASE_PROPOSALS_READ_MAX; read++) {
           const rows = await page(PROPOSED_IMPACT_PRIORS_MAX, offset);
           for (const row of rows) if (!seen.has(row.id)) (seen.add(row.id), all.push(row));
           if (rows.length < PROPOSED_IMPACT_PRIORS_MAX) break;
