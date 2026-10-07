@@ -119,6 +119,42 @@ describe("tasks router", () => {
     expect(vars).toEqual({ eventId: "evt-1" });
   });
 
+  it("myTasks reads the caller's Tasks, then each Event's title in one aliased document", async () => {
+    const WEB = { ...TASK, id: "task-2", kind: "event.impact_prior.web" };
+    const OTHER = { ...TASK, id: "task-3", subjectId: "evt-2" };
+    graphqlFetch
+      .mockResolvedValueOnce({ myTasks: [TASK, WEB, OTHER] })
+      .mockResolvedValueOnce({ e0: { id: "evt-1", title: "Floods in Kassala" }, e1: null });
+    const result = await caller().tasks.myTasks();
+    expect(result).toEqual({ tasks: [TASK, WEB, OTHER], eventTitles: { "evt-1": "Floods in Kassala", "evt-2": null } });
+
+    const [query, vars] = graphqlFetch.mock.calls[0] as [string, Record<string, unknown>];
+    expect(query).toContain("query MyTasks");
+    expect(query).toContain("myTasks(status: $status, limit: $limit)");
+    // No requester argument exists: clear-api scopes it to the caller.
+    expect(query).not.toContain("requesterId:");
+    expect(vars).toEqual({ status: undefined, limit: 100 });
+
+    // One Event read per distinct Event, aliased, as variables (never interpolated ids).
+    const [eventsQuery, eventVars] = graphqlFetch.mock.calls[1] as [string, Record<string, unknown>];
+    expect(eventsQuery).toContain("query MyTaskEvents($e0: String!, $e1: String!)");
+    expect(eventsQuery).toContain("e0: event(id: $e0) { id title }");
+    expect(eventsQuery).toContain("e1: event(id: $e1) { id title }");
+    expect(eventVars).toEqual({ e0: "evt-1", e1: "evt-2" });
+  });
+
+  it("myTasks makes no Event read when there are no Tasks, and passes a status filter", async () => {
+    graphqlFetch.mockResolvedValueOnce({ myTasks: [] });
+    expect(await caller().tasks.myTasks({ status: "FAILED" })).toEqual({ tasks: [], eventTitles: {} });
+    expect(graphqlFetch).toHaveBeenCalledTimes(1);
+    expect((graphqlFetch.mock.calls[0] as [string, Record<string, unknown>])[1]).toEqual({ status: "FAILED", limit: 100 });
+  });
+
+  it("myTasks surfaces clear-api's FORBIDDEN (the worker role) as FORBIDDEN", async () => {
+    graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError("The worker role may only call the Task mutations", "FORBIDDEN"));
+    await expect(caller().tasks.myTasks()).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
   it("forEvent surfaces clear-api's FORBIDDEN as FORBIDDEN, not an internal error", async () => {
     graphqlFetch.mockRejectedValueOnce(new GraphQLRequestError("Your account is awaiting admin approval", "FORBIDDEN", "PENDING_APPROVAL"));
     await expect(caller().tasks.forEvent({ eventId: "evt-1" })).rejects.toMatchObject({ code: "FORBIDDEN" });

@@ -12,6 +12,7 @@ import { canReviewSource } from "~/lib/ground-review";
 import {
   buildImpactPriorEntries,
   buildInboxEntries,
+  buildTaskEntries,
   countByFilter,
   filtersFor,
   isHotlineEntry,
@@ -59,6 +60,10 @@ import styles from "./inbox.module.css";
  * decision (accept / reject with a rationale) is taken in the shared
  * ImpactPriorPane, the same one the Event page mounts; a decided prior
  * leaves the queue.
+ *
+ * My requests (clear-api `myTasks`): the Tasks the reader asked for, under
+ * their own filter, read-only with Cancel. Status, not Review items: they
+ * are never in "Everything", the awaiting count or the nav badge.
  */
 
 const TOAST_MS = 6000;
@@ -90,11 +95,12 @@ export default function InboxPage() {
   const hotlineInbox = useFeatureEnabled("hotline_inbox");
   const translation = useFeatureEnabled("hotline_translation");
   const impactPriorReview = useFeatureEnabled("impact_prior_review");
+  const eventEnrichment = useFeatureEnabled("event_enrichment");
   const { data: authData, isLoading: authLoading } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const role = authData?.user?.role;
   // One rule with the nav entry (src/lib/inbox-access.ts): the page shows
   // for whichever kinds the reader may see, and lists only those.
-  const access = inboxAccess({ role, hotlineInbox, impactPriorReview });
+  const access = inboxAccess({ role, hotlineInbox, impactPriorReview, eventEnrichment });
   const canSee = access.any;
   /** Deciders see proposed ImpactPriors beside the hotline threads. */
   const canDecide = access.priors;
@@ -113,12 +119,22 @@ export default function InboxPage() {
     refetchInterval: 60_000,
   });
 
+  // The reader's own requests: polled faster while one is still open, so a
+  // request made a moment ago settles here without a reload.
+  const myTasksQuery = api.tasks.myTasks.useQuery(undefined, {
+    enabled: access.requests,
+    staleTime: 15_000,
+    refetchInterval: (q) =>
+      q.state.data?.tasks.some((task) => task.status === "PENDING" || task.status === "LEASED") ? 30_000 : 120_000,
+  });
+
   const entries = useMemo<InboxEntry[]>(
     () => [
       ...(inboxQuery.data ? buildInboxEntries(inboxQuery.data) : []),
       ...(priorsQuery.data ? buildImpactPriorEntries(priorsQuery.data) : []),
+      ...(myTasksQuery.data ? buildTaskEntries(myTasksQuery.data.tasks, myTasksQuery.data.eventTitles) : []),
     ],
-    [inboxQuery.data, priorsQuery.data],
+    [inboxQuery.data, priorsQuery.data, myTasksQuery.data],
   );
   const sourceById = useMemo(() => {
     const m = new Map<string, string[]>();
@@ -126,7 +142,7 @@ export default function InboxPage() {
     return m;
   }, [inboxQuery.data]);
 
-  const filters = useMemo(() => filtersFor(access), [access.hotline, access.priors]); // eslint-disable-line react-hooks/exhaustive-deps
+  const filters = useMemo(() => filtersFor(access), [access.hotline, access.priors, access.requests]); // eslint-disable-line react-hooks/exhaustive-deps
   const [chosenFilter, setFilter] = useState<InboxFilter>("reports");
   // The filter in force is derived, never synced: the session and the
   // feature flags land at different times, and a fallback stored while
@@ -416,8 +432,8 @@ export default function InboxPage() {
         <div className={styles.headerRow}>
           <span className={styles.title}>{t("title")}</span>
           <span className={styles.awaiting}>{t("awaiting", { count: counts.all })}</span>
-          {(inboxQuery.isFetching || priorsQuery.isFetching) && <Loader size={12} />}
-          {(inboxQuery.error || priorsQuery.error) && (
+          {(inboxQuery.isFetching || priorsQuery.isFetching || myTasksQuery.isFetching) && <Loader size={12} />}
+          {(inboxQuery.error || priorsQuery.error || myTasksQuery.error) && (
             <span className={styles.actionError}>{t("loadError")}</span>
           )}
         </div>
@@ -448,7 +464,11 @@ export default function InboxPage() {
           onSearchChange={setSearch}
           onSortToggle={() => setSort((s) => (s === "reportsFirst" ? "newest" : "reportsFirst"))}
           onSelect={select}
-          loading={(access.hotline && inboxQuery.isLoading) || (access.priors && priorsQuery.isLoading)}
+          loading={
+            (access.hotline && inboxQuery.isLoading) ||
+            (access.priors && priorsQuery.isLoading) ||
+            (access.requests && myTasksQuery.isLoading)
+          }
         />
         <ReadingPane
           entry={selected}

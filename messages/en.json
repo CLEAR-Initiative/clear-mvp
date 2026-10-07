@@ -2836,6 +2836,7 @@
       "unclassified": "Unclassified",
       "chatter": "Chatter",
       "priors": "Impact priors",
+      "requests": "My requests",
       "all": "Everything"
     },
     "search": "Search text, intake refs",
@@ -2960,13 +2961,19 @@
       "partial": "Queued again: {done} of {total} messages. {error}"
     },
     "kinds": {
-      "impact_prior": "Impact prior"
+      "impact_prior": "Impact prior",
+      "task": "My request"
     },
     "priors": {
       "untitledEvent": "Untitled event",
       "preview": "Proposed impact prior · {source} · {count, plural, one {# case} other {# cases}} · {scope} · {hazard}",
       "openEvent": "Open the event",
       "proposedAt": "Proposed {date}"
+    },
+    "requests": {
+      "requestedAt": "Requested {date}",
+      "awaitingReview": "Proposed, awaiting review",
+      "cancelFailed": "This request could not be cancelled. Try again."
     }
   },
   "analysis": {

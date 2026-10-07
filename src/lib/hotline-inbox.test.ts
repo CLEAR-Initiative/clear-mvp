@@ -4,11 +4,13 @@ import {
   attachmentKind,
   buildImpactPriorEntries,
   buildInboxEntries,
+  buildTaskEntries,
   combineTranslations,
   countByFilter,
   entryDescription,
   filtersFor,
   intakeRef,
+  isReviewItem,
   matchesFilter,
   messageFailures,
   moveSelection,
@@ -23,6 +25,7 @@ import type {
   GqlGroundInboxThread,
   GqlHotlineInbox,
   GqlReviewImpactPrior,
+  GqlTask,
 } from "./types/graphql";
 
 function thread(id: string, title: string | null = null): GqlGroundInboxThread {
@@ -344,7 +347,7 @@ describe("visibleEntries / countByFilter", () => {
   });
 
   it("counts per filter", () => {
-    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 1, chatter: 1, priors: 0, all: 3 });
+    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 1, chatter: 1, priors: 0, requests: 0, all: 3 });
   });
 });
 
@@ -477,7 +480,7 @@ describe("impact prior Review items", () => {
     expect(matchesFilter(entries[1]!, "reports")).toBe(false);
     expect(matchesFilter(entries[1]!, "unclassified")).toBe(false);
     expect(matchesFilter(entries[1]!, "all")).toBe(true);
-    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 0, chatter: 0, priors: 1, all: 2 });
+    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 0, chatter: 0, priors: 1, requests: 0, all: 2 });
     expect(matchesFilter(entries[1]!, "priors")).toBe(true);
     expect(matchesFilter(entries[0]!, "priors")).toBe(false);
     expect(visibleEntries(entries, "priors", "", "newest").map((e) => e.id)).toEqual(["ip-1"]);
@@ -505,3 +508,45 @@ describe("impact prior Review items", () => {
     expect(moveSelection(entries, "ip-1", -1)).toBe("noise");
   });
 });
+
+describe("My requests (task entries)", () => {
+  function task(id: string, overrides: Partial<GqlTask> = {}): GqlTask {
+    return {
+      id, kind: "event.impact_prior.web", requestId: "req-1", subjectType: "event", subjectId: "evt-1",
+      status: "FAILED", origin: "user", requesterId: "u", requester: null, leaseOwner: null, teamId: null,
+      attempts: 3, maxAttempts: 3, lastError: "model timed out", cancelRequestedAt: null, outcome: null,
+      model: null, costUsd: null, completedAt: null,
+      createdAt: "2026-10-07T09:00:00Z", updatedAt: "2026-10-07T09:00:00Z", ...overrides,
+    };
+  }
+
+  it("builds one entry per Task, titled after its Event, searchable by source and status", () => {
+    const entries = buildTaskEntries(
+      [task("t-1"), task("t-2", { subjectId: "evt-hidden", status: "COMPLETED", outcome: "produced", kind: "event.impact_prior.clear" })],
+      { "evt-1": "Floods in Kassala", "evt-hidden": null },
+    );
+    expect(entries.map((e) => [e.id, e.kind, e.eventId, e.eventTitle, e.title, e.sentAt])).toEqual([
+      ["t-1", "task", "evt-1", "Floods in Kassala", "Floods in Kassala", "2026-10-07T09:00:00Z"],
+      ["t-2", "task", "evt-hidden", null, "", "2026-10-07T09:00:00Z"],
+    ]);
+    expect(visibleEntries(entries, "requests", "failed", "newest").map((e) => e.id)).toEqual(["t-1"]);
+    expect(visibleEntries(entries, "requests", "web", "newest").map((e) => e.id)).toEqual(["t-1"]);
+    expect(visibleEntries(entries, "requests", "produced", "newest").map((e) => e.id)).toEqual(["t-2"]);
+  });
+
+  it("are not Review items: only under My requests, never in Everything or its count", () => {
+    const entries = buildTaskEntries([task("t-1")], { "evt-1": "Floods" });
+    expect(isReviewItem(entries[0]!)).toBe(false);
+    expect(matchesFilter(entries[0]!, "requests")).toBe(true);
+    expect(matchesFilter(entries[0]!, "all")).toBe(false);
+    expect(matchesFilter(entries[0]!, "priors")).toBe(false);
+    expect(countByFilter(entries)).toEqual({ reports: 0, unclassified: 0, chatter: 0, priors: 0, requests: 1, all: 0 });
+  });
+
+  it("offers the My requests filter only to a reader who may see their requests", () => {
+    expect(filtersFor({ hotline: false, priors: false, requests: true })).toEqual(["requests", "all"]);
+    expect(filtersFor({ hotline: false, priors: true, requests: true })).toEqual(["priors", "requests", "all"]);
+    expect(filtersFor({ hotline: true, priors: true, requests: false })).toEqual(["reports", "unclassified", "chatter", "priors", "all"]);
+  });
+});
+

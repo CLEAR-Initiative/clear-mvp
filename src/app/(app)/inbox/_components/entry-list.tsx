@@ -2,7 +2,15 @@
 
 import { useFormatter, useTranslations } from "next-intl";
 import { IconPaperclip, IconSearch } from "@tabler/icons-react";
-import { isHotlineEntry, type HotlineEntry, type ImpactPriorEntry, type InboxEntry, type InboxSort } from "~/lib/hotline-inbox";
+import {
+  isHotlineEntry,
+  isImpactPriorEntry,
+  type HotlineEntry,
+  type ImpactPriorEntry,
+  type InboxEntry,
+  type InboxSort,
+  type TaskEntry,
+} from "~/lib/hotline-inbox";
 import { sourceLabel } from "~/lib/impact-prior-source";
 import { InboxEntryPills } from "./classification-pill";
 import styles from "../inbox.module.css";
@@ -80,6 +88,28 @@ function ImpactPriorRow({ entry }: { entry: ImpactPriorEntry }) {
   );
 }
 
+/** One of the reader's own requests: the Event, which source, and where it stands. */
+function TaskRow({ entry }: { entry: TaskEntry }) {
+  const t = useTranslations("inbox");
+  const tEnrichment = useTranslations("eventDetail.enrichment");
+  const format = useFormatter();
+  const { task } = entry;
+  return (
+    <span className={styles.entryBody}>
+      <span className={styles.entryLine1}>
+        <span className={styles.entryTitle}>{entry.eventTitle ?? t("priors.untitledEvent")}</span>
+        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
+      </span>
+      <span className={styles.entryPreview}>
+        {tEnrichment("kindStatus", { source: sourceLabel(task.kind, tEnrichment), status: tEnrichment(`status.${task.status}`) })}
+      </span>
+      <span className={styles.entryMeta}>
+        <InboxEntryPills entry={entry} />
+      </span>
+    </span>
+  );
+}
+
 export function EntryList({
   entries,
   selectedId,
@@ -122,14 +152,23 @@ export function EntryList({
               className={styles.entry}
               data-testid="inbox-entry"
               data-kind={entry.kind}
-              data-source-kind={isHotlineEntry(entry) ? undefined : entry.prior.sourceKind}
+              data-source-kind={
+                isImpactPriorEntry(entry) ? entry.prior.sourceKind : isHotlineEntry(entry) ? undefined : entry.task.kind
+              }
+              data-status={isHotlineEntry(entry) || isImpactPriorEntry(entry) ? undefined : entry.task.status}
               data-selected={entry.id === selectedId}
               data-unread={unread}
               data-processing={isHotlineEntry(entry) ? entry.processing : undefined}
               onClick={() => onSelect(entry.id)}
             >
               <span className={styles.gutter}>{unread && <span className={styles.unreadDot} />}</span>
-              {isHotlineEntry(entry) ? <HotlineRow entry={entry} /> : <ImpactPriorRow entry={entry} />}
+              {isHotlineEntry(entry) ? (
+                <HotlineRow entry={entry} />
+              ) : isImpactPriorEntry(entry) ? (
+                <ImpactPriorRow entry={entry} />
+              ) : (
+                <TaskRow entry={entry} />
+              )}
             </button>
           );
         })}

@@ -178,6 +178,7 @@ export function NavSidebar({
     role,
     hotlineInbox: flags.hotline_inbox ?? true,
     impactPriorReview: flags.impact_prior_review ?? true,
+    eventEnrichment: flags.event_enrichment ?? true,
   });
   const visibility: NavVisibility = { isAdmin, role, flags, inbox: reviewAccess };
 

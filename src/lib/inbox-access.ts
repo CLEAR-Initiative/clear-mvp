@@ -1,4 +1,4 @@
-import { canDecideImpactPriors, isPlatformAdmin } from "~/lib/roles";
+import { canDecideImpactPriors, canReadContent, isPlatformAdmin } from "~/lib/roles";
 
 /**
  * Who sees the Inbox, and which of its Review-item kinds (one rule for the
@@ -7,12 +7,17 @@ import { canDecideImpactPriors, isPlatformAdmin } from "~/lib/roles";
  *   hotline threads  — platform admins, with `hotline_inbox` on
  *   impact priors    — deciders (admins and analysts), with
  *                      `impact_prior_review` on
+ *   my requests      — any content reader (admin, analyst, viewer), with
+ *                      `event_enrichment` on: the Tasks they asked for. Not
+ *                      a Review item; it only widens who reaches the page.
  *
- * UI-only: clear-api's ground and impactPriors guards are the enforcement.
+ * UI-only: clear-api's ground, impactPriors and myTasks guards are the
+ * enforcement (myTasks is scoped to the caller there).
  */
 export interface InboxAccess {
   hotline: boolean;
   priors: boolean;
+  requests: boolean;
   /** Any kind at all: the page and the nav entry show. */
   any: boolean;
 }
@@ -34,8 +39,10 @@ export function inboxAccess(input: {
   role: string | null | undefined;
   hotlineInbox: boolean;
   impactPriorReview: boolean;
+  eventEnrichment: boolean;
 }): InboxAccess {
   const hotline = input.hotlineInbox && isPlatformAdmin(input.role);
   const priors = canReviewImpactPriors(input);
-  return { hotline, priors, any: hotline || priors };
+  const requests = input.eventEnrichment && canReadContent(input.role);
+  return { hotline, priors, requests, any: hotline || priors || requests };
 }

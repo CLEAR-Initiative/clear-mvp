@@ -2836,6 +2836,7 @@
       "unclassified": "Sin clasificar",
       "chatter": "Charla",
       "priors": "Priors de impacto",
+      "requests": "Mis solicitudes",
       "all": "Todo"
     },
     "search": "Buscar texto, ref. de ingreso",
@@ -2960,13 +2961,19 @@
       "partial": "De nuevo en cola: {done} de {total} mensajes. {error}"
     },
     "kinds": {
-      "impact_prior": "Prior de impacto"
+      "impact_prior": "Prior de impacto",
+      "task": "Mi solicitud"
     },
     "priors": {
       "untitledEvent": "Evento sin título",
       "preview": "Prior de impacto propuesto · {source} · {count, plural, one {# caso} other {# casos}} · {scope} · {hazard}",
       "openEvent": "Abrir el evento",
       "proposedAt": "Propuesto el {date}"
+    },
+    "requests": {
+      "requestedAt": "Solicitado el {date}",
+      "awaitingReview": "Propuesto, pendiente de revisión",
+      "cancelFailed": "Esta solicitud no se pudo cancelar. Inténtalo de nuevo."
     }
   },
   "analysis": {

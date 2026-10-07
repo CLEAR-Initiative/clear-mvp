@@ -2836,6 +2836,7 @@
       "unclassified": "غير مصنّف",
       "chatter": "دردشة",
       "priors": "تقديرات الأثر المسبقة",
+      "requests": "طلباتي",
       "all": "الكل"
     },
     "search": "بحث في النص ومراجع الاستقبال",
@@ -2960,13 +2961,19 @@
       "partial": "أُعيد إلى قائمة الانتظار: {done} من أصل {total} رسائل. {error}"
     },
     "kinds": {
-      "impact_prior": "تقدير أثر مسبق"
+      "impact_prior": "تقدير أثر مسبق",
+      "task": "طلبي"
     },
     "priors": {
       "untitledEvent": "حدث بلا عنوان",
       "preview": "تقدير أثر مسبق مقترح · {source} · {count, plural, one {حالة واحدة} other {# حالات}} · {scope} · {hazard}",
       "openEvent": "فتح الحدث",
       "proposedAt": "اقتُرح في {date}"
+    },
+    "requests": {
+      "requestedAt": "طُلب في {date}",
+      "awaitingReview": "مقترح، بانتظار المراجعة",
+      "cancelFailed": "تعذر إلغاء هذا الطلب. حاول مرة أخرى."
     }
   },
   "analysis": {

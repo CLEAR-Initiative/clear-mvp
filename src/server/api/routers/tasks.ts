@@ -113,6 +113,28 @@ export const DECIDE_IMPACT_PRIOR = `
   }
 `;
 
+/** "My requests": the caller's own Tasks, newest first (clear-api scopes it
+ * to the caller; there is no way to ask for anyone else's). */
+export const MY_TASKS_QUERY = `
+  query MyTasks($status: TaskStatus, $limit: Int) {
+    myTasks(status: $status, limit: $limit) {
+      ${TASK_FIELDS}
+    }
+  }
+`;
+
+/** clear-api's page maximum for `myTasks`; requests beyond it are old news. */
+export const MY_TASKS_MAX = 100;
+
+/** One document reading the title of each Event the Tasks are about, aliased
+ * `e0`, `e1`, … — a Task names its subject by id only. An Event the caller
+ * may not see comes back null and the row says so. */
+export function eventTitlesQuery(count: number): string {
+  const vars = Array.from({ length: count }, (_, i) => `$e${i}: String!`).join(", ");
+  const fields = Array.from({ length: count }, (_, i) => `e${i}: event(id: $e${i}) { id title }`).join("\n    ");
+  return `query MyTaskEvents(${vars}) {\n    ${fields}\n  }`;
+}
+
 export const CANCEL_TASK = `
   mutation CancelTask($id: String!) {
     cancelTask(id: $id) {
@@ -248,6 +270,43 @@ export const tasksRouter = createTRPCRouter({
           cookieHeaders(ctx),
         );
         return data.decideImpactPrior;
+      } catch (err) {
+        toTrpcError(err);
+      }
+    }),
+
+  /** "My requests": the caller's own Tasks, newest first, with the title of
+   * each Event they are about. */
+  myTasks: protectedProcedure
+    .input(
+      z
+        .object({
+          status: z.enum(["PENDING", "LEASED", "COMPLETED", "FAILED", "CANCELLED"]).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const headers = cookieHeaders(ctx);
+        const { myTasks } = await graphqlFetch<{ myTasks: GqlTask[] }>(
+          MY_TASKS_QUERY,
+          { status: input?.status, limit: MY_TASKS_MAX },
+          headers,
+        );
+        const eventIds = [...new Set(myTasks.filter((task) => task.subjectType === "event").map((task) => task.subjectId))];
+        const eventTitles: Record<string, string | null> = {};
+        if (eventIds.length > 0) {
+          const vars = Object.fromEntries(eventIds.map((id, i) => [`e${i}`, id]));
+          const events = await graphqlFetch<Record<string, { id: string; title: string | null } | null>>(
+            eventTitlesQuery(eventIds.length),
+            vars,
+            headers,
+          );
+          eventIds.forEach((id, i) => {
+            eventTitles[id] = events[`e${i}`]?.title ?? null;
+          });
+        }
+        return { tasks: myTasks, eventTitles };
       } catch (err) {
         toTrpcError(err);
       }

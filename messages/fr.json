@@ -2836,6 +2836,7 @@
       "unclassified": "Non classés",
       "chatter": "Bavardage",
       "priors": "A priori d'impact",
+      "requests": "Mes demandes",
       "all": "Tout"
     },
     "search": "Rechercher texte, réf. d'admission",
@@ -2960,13 +2961,19 @@
       "partial": "Remis en file : {done} message(s) sur {total}. {error}"
     },
     "kinds": {
-      "impact_prior": "A priori d'impact"
+      "impact_prior": "A priori d'impact",
+      "task": "Ma demande"
     },
     "priors": {
       "untitledEvent": "Événement sans titre",
       "preview": "A priori d'impact proposé · {source} · {count, plural, one {# cas} other {# cas}} · {scope} · {hazard}",
       "openEvent": "Ouvrir l'événement",
       "proposedAt": "Proposé le {date}"
+    },
+    "requests": {
+      "requestedAt": "Demandé le {date}",
+      "awaitingReview": "Proposé, en attente d'examen",
+      "cancelFailed": "Cette demande n'a pas pu être annulée. Réessayez."
     }
   },
   "analysis": {

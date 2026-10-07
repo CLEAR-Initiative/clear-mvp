@@ -4,6 +4,7 @@ import type {
   GqlGroundInboxThread,
   GqlHotlineInbox,
   GqlReviewImpactPrior,
+  GqlTask,
 } from "~/lib/types/graphql";
 
 /**
@@ -20,6 +21,10 @@ import type {
  *                    produces answers.
  *   impact_prior   — one proposed ImpactPrior (clear-api ADR-0010) waiting
  *                    for an admin or analyst to accept or reject it.
+ *   task           — one enrichment Task the reader requested ("My
+ *                    requests"): its status, never a decision. Not a Review
+ *                    item, so it is listed only under its own filter and
+ *                    never counts toward "awaiting" or the nav badge.
  *
  * PRIVACY: hotline messages carry no sender identity. `senderRef` is a
  * per-conversation HMAC pseudonym minted by clear-api; `intakeRef` below
@@ -33,14 +38,17 @@ export interface GroundTranslationState {
   text: string | null;
 }
 
-/** The three hotline classifications, the ImpactPrior kind, and everything.
+/** The three hotline classifications, the ImpactPrior kind, the reader's
+ * own requests, and everything (every Review item — not the requests).
  * The page shows only the filters whose kind the reader may see. */
-export const INBOX_FILTERS = ["reports", "unclassified", "chatter", "priors", "all"] as const;
+export const INBOX_FILTERS = ["reports", "unclassified", "chatter", "priors", "requests", "all"] as const;
 export type InboxFilter = (typeof INBOX_FILTERS)[number];
 
 /** Which filters apply to a reader who sees these kinds; "all" always. */
-export function filtersFor(access: { hotline: boolean; priors: boolean }): InboxFilter[] {
-  return INBOX_FILTERS.filter((f) => (f === "all" ? true : f === "priors" ? access.priors : access.hotline));
+export function filtersFor(access: { hotline: boolean; priors: boolean; requests?: boolean }): InboxFilter[] {
+  return INBOX_FILTERS.filter((f) =>
+    f === "all" ? true : f === "priors" ? access.priors : f === "requests" ? !!access.requests : access.hotline,
+  );
 }
 
 export const INBOX_SORTS = ["reportsFirst", "newest"] as const;
@@ -112,7 +120,7 @@ export interface InboxAttachment {
 }
 
 /** What an Inbox entry is about; each kind has its own row and pane. */
-export type InboxEntryKind = "hotline_thread" | "impact_prior";
+export type InboxEntryKind = "hotline_thread" | "impact_prior" | "task";
 
 /** What every kind of entry carries: enough to list, select, search and
  * sort it. */
@@ -170,7 +178,16 @@ export interface ImpactPriorEntry extends InboxEntryBase {
   eventTitle: string | null;
 }
 
-export type InboxEntry = HotlineEntry | ImpactPriorEntry;
+/** One enrichment Task the reader requested. The id is the Task's. */
+export interface TaskEntry extends InboxEntryBase {
+  kind: "task";
+  task: GqlTask;
+  eventId: string;
+  /** The Event's title; null when it has none or the reader cannot see it. */
+  eventTitle: string | null;
+}
+
+export type InboxEntry = HotlineEntry | ImpactPriorEntry | TaskEntry;
 
 export function isHotlineEntry(entry: InboxEntry): entry is HotlineEntry {
   return entry.kind === "hotline_thread";
@@ -178,6 +195,39 @@ export function isHotlineEntry(entry: InboxEntry): entry is HotlineEntry {
 
 export function isImpactPriorEntry(entry: InboxEntry): entry is ImpactPriorEntry {
   return entry.kind === "impact_prior";
+}
+
+export function isTaskEntry(entry: InboxEntry): entry is TaskEntry {
+  return entry.kind === "task";
+}
+
+/** A Review item: something waiting for this reader's decision. The
+ * reader's own requests are not — they are status, not work. */
+export function isReviewItem(entry: InboxEntry): boolean {
+  return !isTaskEntry(entry);
+}
+
+/**
+ * One entry per Task the reader requested (clear-api `myTasks`, newest
+ * first). `eventTitles` maps an Event id to its title as the reader may
+ * see it; the row titles itself after the Event. `text` carries the
+ * source word, the status and the outcome so search finds "failed" or
+ * "web".
+ */
+export function buildTaskEntries(tasks: GqlTask[], eventTitles: Record<string, string | null>): TaskEntry[] {
+  return tasks.map((task) => {
+    const eventTitle = eventTitles[task.subjectId] ?? null;
+    return {
+      id: task.id,
+      kind: "task",
+      task,
+      eventId: task.subjectId,
+      eventTitle,
+      title: eventTitle ?? "",
+      text: [sourceSearchTerm(task.kind), task.status, task.outcome ?? ""].join(" "),
+      sentAt: task.createdAt,
+    };
+  });
 }
 
 /**
@@ -367,9 +417,10 @@ export function entryDescription(entry: HotlineEntry, transcriptLabel: (text: st
 }
 
 /** The classification filters are the hotline's, "priors" is the
- * ImpactPrior kind's, "all" is both. "unclassified" covers both pending
- * and failed entries: neither has a label yet. The row pill tells them
- * apart. */
+ * ImpactPrior kind's, "requests" the reader's own Tasks, "all" every
+ * Review item (so the reader's requests never inflate "awaiting").
+ * "unclassified" covers both pending and failed entries: neither has a
+ * label yet. The row pill tells them apart. */
 export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
   switch (filter) {
     case "reports":
@@ -380,8 +431,10 @@ export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
       return isHotlineEntry(entry) && entry.classification === "chatter";
     case "priors":
       return isImpactPriorEntry(entry);
+    case "requests":
+      return isTaskEntry(entry);
     case "all":
-      return true;
+      return isReviewItem(entry);
   }
 }
 
@@ -422,7 +475,7 @@ export function visibleEntries<T extends InboxEntry>(
 }
 
 export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, priors: 0, all: 0 };
+  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, priors: 0, requests: 0, all: 0 };
   for (const e of entries) {
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += 1;
   }
