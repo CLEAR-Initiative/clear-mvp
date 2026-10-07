@@ -43,7 +43,7 @@ vi.mock("~/trpc/react", () => ({
       requestEnrichment: {
         useMutation: () => ({ mutate: requestMutate, isPending: false, isError: !!requestError, error: requestError }),
       },
-      cancel: { useMutation: () => ({ mutate: cancelMutate, isPending: false }) },
+      cancel: { useMutation: () => ({ mutateAsync: cancelMutate, isPending: false }) },
     },
   },
 }));
@@ -92,7 +92,8 @@ describe("RequestEnrichmentButton", () => {
     tasksLoaded = true;
     requestError = null;
     requestMutate.mockClear();
-    cancelMutate.mockClear();
+    cancelMutate.mockReset();
+    invalidate.mockClear();
   });
 
   it("renders nothing while the flag is off", () => {
@@ -184,6 +185,15 @@ describe("RequestEnrichmentButton", () => {
       fireEvent.click(cancel);
       expect(cancelMutate).toHaveBeenCalledTimes(1);
       expect(cancelMutate).toHaveBeenCalledWith({ id: "task-1" });
+    });
+
+    it("says so when some cancellations fail, and refetches either way", async () => {
+      tasks = [OPEN, WEB];
+      cancelMutate.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error("CONFLICT"));
+      renderButton();
+      fireEvent.click(screen.getByTestId("enrichment-cancel"));
+      expect(await screen.findByTestId("enrichment-cancel-error")).toHaveTextContent("cancelFailed");
+      expect(invalidate).toHaveBeenCalled();
     });
 
     it("an admin may cancel every open Task; another analyst none of them", () => {

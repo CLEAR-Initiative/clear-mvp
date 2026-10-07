@@ -1945,7 +1945,8 @@
       "sourceKind": {
         "clear": "Données CLEAR",
         "web": "Web"
-      }
+      },
+      "cancelFailed": "Certaines demandes n'ont pas pu être annulées. Réessayez."
     }
   },
   "knowledge": {

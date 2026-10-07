@@ -134,6 +134,14 @@ async function main() {
     targets.push({ title, fixture, eventId: event.id, hazardType, countryLocationId: await countryFor(primaryId) });
   }
   const eventIds = targets.map((t) => t.eventId);
+  // The CLEAR-data case cites an earlier CLEAR Event, never the Event under
+  // review (that would be circular evidence): the oldest other seeded Event.
+  const priorCase = await prisma.events.findFirst({
+    where: { id: { notIn: eventIds } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  if (!priorCase) throw new Error("no other seeded Event to cite as a CLEAR-data prior case — did clear-api's seed change?");
 
   // ── Reset (idempotent re-runs): priors reference Tasks, so they go first ──
   const removedPriors = await prisma.impactPrior.deleteMany({ where: { eventId: { in: eventIds } } });
@@ -235,7 +243,7 @@ async function main() {
                 }
               : {
                   tier,
-                  eventId: target.eventId,
+                  eventId: priorCase.id,
                   quote: target.fixture.quote,
                   occurredAt: target.fixture.occurredAt,
                   locationLabel: target.fixture.locationLabel,

@@ -1945,7 +1945,8 @@
       "sourceKind": {
         "clear": "بيانات CLEAR",
         "web": "الويب"
-      }
+      },
+      "cancelFailed": "تعذر إلغاء بعض الطلبات. حاول مرة أخرى."
     }
   },
   "knowledge": {

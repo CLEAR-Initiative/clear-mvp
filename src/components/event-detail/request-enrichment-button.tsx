@@ -28,6 +28,11 @@ export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
   const t = useTranslations("eventDetail.enrichment");
   const tCommon = useTranslations("common");
   const [confirming, setConfirming] = useState(false);
+  // Cancelling fans out like the request did: one call per open Task. Track
+  // the batch here rather than through the mutation's own state, which only
+  // reflects the last call.
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelFailed, setCancelFailed] = useState(false);
   const utils = api.useUtils();
 
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
@@ -46,7 +51,17 @@ export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
       void invalidate();
     },
   });
-  const cancel = api.tasks.cancel.useMutation({ onSuccess: () => void invalidate() });
+  const cancel = api.tasks.cancel.useMutation();
+  const cancelAll = async (ids: string[]) => {
+    setCancelling(true);
+    setCancelFailed(false);
+    const results = await Promise.allSettled(ids.map((id) => cancel.mutateAsync({ id })));
+    // Some may have landed and some not: refetch either way so the list shows
+    // what is really still open, and say so when any call failed.
+    setCancelFailed(results.some((r) => r.status === "rejected"));
+    setCancelling(false);
+    void invalidate();
+  };
 
   if (!enabled) return null;
 
@@ -98,16 +113,19 @@ export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
             variant="subtle"
             color="gray"
             size="compact-xs"
-            leftSection={cancel.isPending ? <Loader size={10} /> : <IconX size={11} />}
-            disabled={cancel.isPending || cancelRequested}
-            onClick={() => {
-              for (const task of pendingCancel) cancel.mutate({ id: task.id });
-            }}
+            leftSection={cancelling ? <Loader size={10} /> : <IconX size={11} />}
+            disabled={cancelling || cancelRequested}
+            onClick={() => void cancelAll(pendingCancel.map((task) => task.id))}
             data-testid="enrichment-cancel"
             style={{ fontSize: 11 }}
           >
             {cancelRequested ? t("cancelled") : t("cancel")}
           </Button>
+        )}
+        {cancelFailed && (
+          <Text size="xs" c="var(--color-critical)" style={{ textAlign: "center" }} data-testid="enrichment-cancel-error">
+            {t("cancelFailed")}
+          </Text>
         )}
       </Stack>
     );

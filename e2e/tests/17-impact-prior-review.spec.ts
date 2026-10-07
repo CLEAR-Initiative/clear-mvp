@@ -66,9 +66,13 @@ test.describe("Impact prior review (case 17)", () => {
     await expect(prior).toHaveAttribute("data-state", "proposed");
     await expect(prior).toHaveAttribute("data-source-kind", CLEAR.kind);
     await expect(prior.getByTestId("enrichment-prior-source")).toHaveText(CLEAR.label);
-    // A CLEAR-data case cites an earlier CLEAR Event, not a URL.
-    await expect(pane.getByRole("link", { name: "Open the prior event" })).toHaveAttribute("href", /^\/event\//);
-    await expect(pane.getByRole("link", { name: "Open the event" })).toHaveAttribute("href", /^\/event\//);
+    // A CLEAR-data case cites an earlier CLEAR Event, not a URL — and not
+    // the Event under review.
+    const priorEventLink = pane.getByRole("link", { name: "Open the prior event" });
+    const eventLink = pane.getByRole("link", { name: "Open the event" });
+    await expect(priorEventLink).toHaveAttribute("href", /^\/event\//);
+    await expect(eventLink).toHaveAttribute("href", /^\/event\//);
+    expect(await priorEventLink.getAttribute("href")).not.toBe(await eventLink.getAttribute("href"));
 
     // A decision needs a rationale: Reject alone sends nothing.
     await pane.getByTestId("impact-prior-reject").click();
