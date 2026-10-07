@@ -215,7 +215,9 @@ export function isReviewItem(entry: InboxEntry): boolean {
  * "web".
  */
 export function buildTaskEntries(tasks: GqlTask[], eventTitles: Record<string, string | null>): TaskEntry[] {
-  return tasks.map((task) => {
+  // Every kind today is about an Event; a Task about anything else has no
+  // Event page to link to, so it is not listed here.
+  return tasks.filter((task) => task.subjectType === "event").map((task) => {
     const eventTitle = eventTitles[task.subjectId] ?? null;
     return {
       id: task.id,

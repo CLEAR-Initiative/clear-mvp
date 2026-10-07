@@ -298,10 +298,9 @@ export function ReadingPane(props: ReadingPaneProps) {
  * a decision. The Task's line (kind and source, status, Worker, outcome,
  * error), Cancel while it is PENDING or LEASED, and — once its Worker
  * proposed something — that proposal as the reader may see it (read-only
- * card; the decision stays with the deciders' Review item). A proposal the
- * reader cannot see (rejected, for a requester who is not a decider) reads
- * as proposed, awaiting review: the requester learns of decisions through
- * the Event page and their notifications.
+ * card; the decision stays with the deciders' Review item). "Awaiting
+ * review" only while it is proposed; a proposal the reader may not see (a
+ * rejected one, for a requester who is not a decider) points to the Event.
  */
 function InboxTaskPane({ entry, onBack }: { entry: TaskEntry; onBack: () => void }) {
   const t = useTranslations("inbox");
@@ -314,6 +313,10 @@ function InboxTaskPane({ entry, onBack }: { entry: TaskEntry; onBack: () => void
   // reader may see it; only asked for once there is one to show.
   const enrichment = api.tasks.forEvent.useQuery({ eventId: entry.eventId }, { enabled: produced, staleTime: 30_000 });
   const prior = enrichment.data?.impactPriors.find((p) => p.taskId === task.id) ?? null;
+  // Once loaded and the proposal is not among what the reader may see (a
+  // rejected one is visible to deciders only), say so neutrally rather than
+  // claim it is still awaiting review.
+  const priorHidden = produced && enrichment.isSuccess && !prior;
   const open = task.status === "PENDING" || task.status === "LEASED";
   const cancelRequested = task.cancelRequestedAt !== null;
   const cancel = api.tasks.cancel.useMutation({
@@ -342,9 +345,14 @@ function InboxTaskPane({ entry, onBack }: { entry: TaskEntry; onBack: () => void
           {t("priors.openEvent")}
         </Link>
         <TaskRow task={task} />
-        {produced && (!prior || prior.state === "proposed") && (
+        {prior?.state === "proposed" && (
           <p className={styles.sectionLabel} data-testid="inbox-task-awaiting-review">
             {t("requests.awaitingReview")}
+          </p>
+        )}
+        {priorHidden && (
+          <p className={styles.sectionLabel} data-testid="inbox-task-proposal-hidden">
+            {t("requests.producedSeeEvent")}
           </p>
         )}
         {prior && <ImpactPriorCard prior={prior} />}
@@ -355,7 +363,9 @@ function InboxTaskPane({ entry, onBack }: { entry: TaskEntry; onBack: () => void
             <button
               type="button"
               className={styles.btn}
-              disabled={cancel.isPending || cancelRequested}
+              // Disabled after success too: the list refetch that shows the
+              // Task as CANCELLED may land a moment later.
+              disabled={cancel.isPending || cancel.isSuccess || cancelRequested}
               onClick={() => cancel.mutate({ id: task.id })}
               data-testid="inbox-task-cancel"
             >

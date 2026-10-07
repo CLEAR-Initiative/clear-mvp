@@ -534,6 +534,10 @@ describe("My requests (task entries)", () => {
     expect(visibleEntries(entries, "requests", "produced", "newest").map((e) => e.id)).toEqual(["t-2"]);
   });
 
+  it("lists only Tasks about an Event (a row links to its Event page)", () => {
+    expect(buildTaskEntries([task("t-1"), task("t-x", { subjectType: "crisis" })], {}).map((e) => e.id)).toEqual(["t-1"]);
+  });
+
   it("are not Review items: only under My requests, never in Everything or its count", () => {
     const entries = buildTaskEntries([task("t-1")], { "evt-1": "Floods" });
     expect(isReviewItem(entries[0]!)).toBe(false);

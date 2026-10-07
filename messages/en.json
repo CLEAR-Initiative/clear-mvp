@@ -2973,7 +2973,8 @@
     "requests": {
       "requestedAt": "Requested {date}",
       "awaitingReview": "Proposed, awaiting review",
-      "cancelFailed": "This request could not be cancelled. Try again."
+      "cancelFailed": "This request could not be cancelled. Try again.",
+      "producedSeeEvent": "Proposal produced — see the Event"
     }
   },
   "analysis": {

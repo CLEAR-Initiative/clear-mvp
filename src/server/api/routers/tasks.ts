@@ -123,7 +123,8 @@ export const MY_TASKS_QUERY = `
   }
 `;
 
-/** clear-api's page maximum for `myTasks`; requests beyond it are old news. */
+/** How many of the caller's most recent requests My requests lists (clear-api
+ * allows up to 200); older ones are history the Event pages still show. */
 export const MY_TASKS_MAX = 100;
 
 /** One document reading the title of each Event the Tasks are about, aliased
@@ -296,15 +297,22 @@ export const tasksRouter = createTRPCRouter({
         const eventIds = [...new Set(myTasks.filter((task) => task.subjectType === "event").map((task) => task.subjectId))];
         const eventTitles: Record<string, string | null> = {};
         if (eventIds.length > 0) {
-          const vars = Object.fromEntries(eventIds.map((id, i) => [`e${i}`, id]));
-          const events = await graphqlFetch<Record<string, { id: string; title: string | null } | null>>(
-            eventTitlesQuery(eventIds.length),
-            vars,
-            headers,
-          );
-          eventIds.forEach((id, i) => {
-            eventTitles[id] = events[`e${i}`]?.title ?? null;
-          });
+          // Titles are decoration: if their read fails, the requests still
+          // list (each reads as an untitled Event) rather than the whole
+          // Inbox failing on a transient error in the second round trip.
+          try {
+            const vars = Object.fromEntries(eventIds.map((id, i) => [`e${i}`, id]));
+            const events = await graphqlFetch<Record<string, { id: string; title: string | null } | null>>(
+              eventTitlesQuery(eventIds.length),
+              vars,
+              headers,
+            );
+            eventIds.forEach((id, i) => {
+              eventTitles[id] = events[`e${i}`]?.title ?? null;
+            });
+          } catch (err) {
+            console.error(`[tasks.myTasks] could not read the titles of ${eventIds.length} Event(s):`, err);
+          }
         }
         return { tasks: myTasks, eventTitles };
       } catch (err) {

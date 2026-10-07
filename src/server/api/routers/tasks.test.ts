@@ -143,6 +143,15 @@ describe("tasks router", () => {
     expect(eventVars).toEqual({ e0: "evt-1", e1: "evt-2" });
   });
 
+  it("myTasks still lists the requests, untitled, when the title read fails", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    graphqlFetch
+      .mockResolvedValueOnce({ myTasks: [TASK] })
+      .mockRejectedValueOnce(new GraphQLRequestError("database timeout", "INTERNAL_SERVER_ERROR"));
+    expect(await caller().tasks.myTasks()).toEqual({ tasks: [TASK], eventTitles: {} });
+    expect(consoleError).toHaveBeenCalled();
+  });
+
   it("myTasks makes no Event read when there are no Tasks, and passes a status filter", async () => {
     graphqlFetch.mockResolvedValueOnce({ myTasks: [] });
     expect(await caller().tasks.myTasks({ status: "FAILED" })).toEqual({ tasks: [], eventTitles: {} });

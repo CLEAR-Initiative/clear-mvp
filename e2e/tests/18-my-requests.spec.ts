@@ -68,8 +68,8 @@ test.describe("My requests (case 18)", () => {
       // Status only: no decision controls on a request.
       await expect(pane.getByTestId("impact-prior-decision")).toHaveCount(0);
       await pane.getByTestId("inbox-task-cancel").click();
-      // A PENDING Task ends at once; a LEASED one when its Worker next checks in.
-      await expect(pane).toHaveAttribute("data-status", /CANCELLED|LEASED/, { timeout: 20_000 });
+      // No Worker runs in the stack, so the Task is PENDING and ends at once.
+      await expect(pane).toHaveAttribute("data-status", "CANCELLED", { timeout: 20_000 });
     }
     for (const kind of KINDS) {
       await expect(

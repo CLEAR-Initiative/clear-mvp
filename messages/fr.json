@@ -2973,7 +2973,8 @@
     "requests": {
       "requestedAt": "Demandé le {date}",
       "awaitingReview": "Proposé, en attente d'examen",
-      "cancelFailed": "Cette demande n'a pas pu être annulée. Réessayez."
+      "cancelFailed": "Cette demande n'a pas pu être annulée. Réessayez.",
+      "producedSeeEvent": "Proposition produite — voir l'événement"
     }
   },
   "analysis": {

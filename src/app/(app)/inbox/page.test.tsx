@@ -54,6 +54,7 @@ const myTasksQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
 /** The Event's enrichment, as the Task pane reads it for a produced proposal. */
 let forEventPriors: GqlImpactPrior[] = [];
 const cancelMutate = vi.fn();
+let cancelSucceeded = false;
 
 vi.mock("~/trpc/react", () => ({
   api: {
@@ -82,9 +83,10 @@ vi.mock("~/trpc/react", () => ({
       forEvent: {
         useQuery: (_input: unknown, opts: { enabled: boolean }) => ({
           data: opts.enabled ? { tasks: [], impactPriors: forEventPriors } : undefined,
+          isSuccess: opts.enabled,
         }),
       },
-      cancel: { useMutation: () => ({ mutate: cancelMutate, isPending: false, isError: false }) },
+      cancel: { useMutation: () => ({ mutate: cancelMutate, isPending: false, isError: false, isSuccess: cancelSucceeded }) },
       decideImpactPrior: {
         useMutation: () => ({ mutate: decideMutate, isPending: false, isError: false, error: null, variables: undefined }),
       },
@@ -209,6 +211,7 @@ beforeEach(() => {
   myTasksData = { tasks: [], eventTitles: {} };
   forEventPriors = [];
   cancelMutate.mockReset();
+  cancelSucceeded = false;
   myTasksQuery.mockClear();
   window.localStorage.clear();
   inboxData = {
@@ -816,6 +819,29 @@ describe("InboxPage My requests", () => {
     renderPage();
     expect(screen.queryByTestId("inbox-task-awaiting-review")).not.toBeInTheDocument();
     expect(screen.getByTestId("enrichment-prior")).toHaveAttribute("data-state", "accepted");
+  });
+
+  it("points to the Event, rather than claim it awaits review, when the proposal is not the reader's to see", () => {
+    role = "viewer";
+    flags = { event_enrichment: true };
+    myTasksData = {
+      tasks: [myTask("t-1", { status: "COMPLETED", outcome: "produced" })],
+      eventTitles: { "evt-1": "Floods in Kassala" },
+    };
+    // Rejected priors are visible to deciders only: nothing comes back for this viewer.
+    forEventPriors = [];
+    renderPage();
+    expect(screen.queryByTestId("inbox-task-awaiting-review")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-task-proposal-hidden")).toHaveTextContent("requests.producedSeeEvent");
+  });
+
+  it("keeps Cancel disabled once it succeeded, until the refetch shows the Task cancelled", () => {
+    role = "viewer";
+    flags = { event_enrichment: true };
+    myTasksData = { tasks: [myTask("t-1")], eventTitles: { "evt-1": "Floods in Kassala" } };
+    cancelSucceeded = true;
+    renderPage();
+    expect(screen.getByTestId("inbox-task-cancel")).toBeDisabled();
   });
 
   it("does not ask for requests while event_enrichment is off", () => {

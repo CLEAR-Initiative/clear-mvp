@@ -2973,7 +2973,8 @@
     "requests": {
       "requestedAt": "طُلب في {date}",
       "awaitingReview": "مقترح، بانتظار المراجعة",
-      "cancelFailed": "تعذر إلغاء هذا الطلب. حاول مرة أخرى."
+      "cancelFailed": "تعذر إلغاء هذا الطلب. حاول مرة أخرى.",
+      "producedSeeEvent": "تم تقديم مقترح — راجع الحدث"
     }
   },
   "analysis": {

@@ -48,7 +48,9 @@ export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
     (task) => isImpactPriorKind(task.kind) && (task.status === "PENDING" || task.status === "LEASED"),
   );
 
-  const invalidate = () => utils.tasks.forEvent.invalidate({ eventId });
+  // Both doors: the Event's enrichment and the Inbox's My requests.
+  const invalidate = () =>
+    Promise.all([utils.tasks.forEvent.invalidate({ eventId }), utils.tasks.myTasks.invalidate()]);
   const request = api.tasks.requestEnrichment.useMutation({
     onSuccess: () => {
       setConfirming(false);

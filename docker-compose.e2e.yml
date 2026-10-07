@@ -67,6 +67,10 @@ services:
       ADMIN_PASSWORD: password123
       NODE_ENV: production
       PORT: "4000"
+      # The per-requester daily cap (default 20) counts every request, even a
+      # cancelled one; specs 16-18 request as the analyst on every run, so a
+      # stack kept up between runs would otherwise hit it.
+      TASK_REQUEST_DAILY_CAP: "1000"
     depends_on:
       db:
         condition: service_healthy
