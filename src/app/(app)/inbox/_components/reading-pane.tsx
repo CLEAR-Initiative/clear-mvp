@@ -21,6 +21,7 @@ import {
   TRANSLATION_POLL_MS,
   attachmentKey,
   isImpactPriorEntry,
+  isTaskEntry,
   needsTranslation,
   shownTranslation,
   type HotlineEntry,
@@ -28,10 +29,13 @@ import {
   type InboxAttachment,
   type InboxEntry,
   type RejectReason,
+  type TaskEntry,
   type VoiceTranscript,
 } from "~/lib/hotline-inbox";
 import type { GqlImpactPrior, GqlImpactPriorDecision } from "~/lib/types/graphql";
 import { ImpactPriorPane } from "~/components/impact-prior/impact-prior-pane";
+import { ImpactPriorCard } from "~/components/impact-prior/impact-prior-card";
+import { TaskRow } from "~/components/event-detail/enrichment-section";
 import { InboxEntryPills } from "./classification-pill";
 import { VoiceNote } from "./voice-note";
 import styles from "../inbox.module.css";
@@ -272,6 +276,9 @@ export function ReadingPane(props: ReadingPaneProps) {
       </section>
     );
   }
+  if (isTaskEntry(entry)) {
+    return <InboxTaskPane key={entry.id} entry={entry} onBack={props.onBack} />;
+  }
   if (isImpactPriorEntry(entry)) {
     return (
       <InboxImpactPriorPane
@@ -284,6 +291,87 @@ export function ReadingPane(props: ReadingPaneProps) {
     );
   }
   return <HotlinePane {...props} entry={entry} />;
+}
+
+/**
+ * One of the reader's own requests ("My requests"): read-only status, never
+ * a decision. The Task's line (kind and source, status, Worker, outcome,
+ * error), Cancel while it is PENDING or LEASED, and — once its Worker
+ * proposed something — that proposal as the reader may see it (read-only
+ * card; the decision stays with the deciders' Review item). A proposal the
+ * reader cannot see (rejected, for a requester who is not a decider) reads
+ * as proposed, awaiting review: the requester learns of decisions through
+ * the Event page and their notifications.
+ */
+function InboxTaskPane({ entry, onBack }: { entry: TaskEntry; onBack: () => void }) {
+  const t = useTranslations("inbox");
+  const tEnrichment = useTranslations("eventDetail.enrichment");
+  const format = useFormatter();
+  const utils = api.useUtils();
+  const { task } = entry;
+  const produced = task.status === "COMPLETED" && task.outcome === "produced";
+  // The Event's enrichment carries the proposal this Task produced, if the
+  // reader may see it; only asked for once there is one to show.
+  const enrichment = api.tasks.forEvent.useQuery({ eventId: entry.eventId }, { enabled: produced, staleTime: 30_000 });
+  const prior = enrichment.data?.impactPriors.find((p) => p.taskId === task.id) ?? null;
+  const open = task.status === "PENDING" || task.status === "LEASED";
+  const cancelRequested = task.cancelRequestedAt !== null;
+  const cancel = api.tasks.cancel.useMutation({
+    onSettled: () => {
+      void utils.tasks.myTasks.invalidate();
+      void utils.tasks.forEvent.invalidate({ eventId: entry.eventId });
+    },
+  });
+
+  return (
+    <section className={styles.pane} data-testid="inbox-pane" data-kind="task" data-status={task.status}>
+      <header className={styles.paneHeader}>
+        <div className={styles.paneTitleGroup}>
+          <button type="button" className={styles.backBtn} onClick={onBack} aria-label={t("pane.back")}>
+            <IconArrowLeft size={16} />
+          </button>
+          <span className={styles.paneTitle}>{entry.eventTitle ?? t("priors.untitledEvent")}</span>
+          <InboxEntryPills entry={entry} />
+        </div>
+        <span className={styles.paneRef}>
+          {t("requests.requestedAt", { date: format.dateTime(new Date(entry.sentAt), "short") })}
+        </span>
+      </header>
+      <div className={styles.paneBody}>
+        <Link href={`/event/${encodeURIComponent(entry.eventId)}`} className={styles.translateBtn} data-testid="inbox-task-event-link">
+          {t("priors.openEvent")}
+        </Link>
+        <TaskRow task={task} />
+        {produced && (!prior || prior.state === "proposed") && (
+          <p className={styles.sectionLabel} data-testid="inbox-task-awaiting-review">
+            {t("requests.awaitingReview")}
+          </p>
+        )}
+        {prior && <ImpactPriorCard prior={prior} />}
+      </div>
+      {open && (
+        <footer className={styles.actionBar} data-testid="inbox-task-actions">
+          <div className={styles.actionGroup}>
+            <button
+              type="button"
+              className={styles.btn}
+              disabled={cancel.isPending || cancelRequested}
+              onClick={() => cancel.mutate({ id: task.id })}
+              data-testid="inbox-task-cancel"
+            >
+              <IconCircleX size={15} />
+              {cancelRequested ? tEnrichment("cancelled") : tEnrichment("cancel")}
+            </button>
+          </div>
+          {cancel.isError && (
+            <span className={styles.actionError} role="alert" data-testid="inbox-task-cancel-error">
+              {t("requests.cancelFailed")}
+            </span>
+          )}
+        </footer>
+      )}
+    </section>
+  );
 }
 
 /**

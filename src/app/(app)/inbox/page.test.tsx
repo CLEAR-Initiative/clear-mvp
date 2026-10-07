@@ -2,7 +2,7 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { GqlHotlineInbox, GqlReviewImpactPrior } from "~/lib/types/graphql";
+import type { GqlHotlineInbox, GqlImpactPrior, GqlReviewImpactPrior, GqlTask } from "~/lib/types/graphql";
 
 /**
  * Page-level tests for the triage flow: role gate, filter/selection,
@@ -21,11 +21,13 @@ vi.mock("next/link", () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
 }));
 
-/** `hotline_inbox` (the page), with per-key overrides for the others. */
+/** `hotline_inbox` (the page), with per-key overrides for the others.
+ * `event_enrichment` (My requests) is off unless a test turns it on, so the
+ * Review-item cases see the page they always did. */
 let flagEnabled = true;
 let flags: Record<string, boolean> = {};
 vi.mock("~/components/feature-flags-provider", () => ({
-  useFeatureEnabled: (key: string) => flags[key] ?? flagEnabled,
+  useFeatureEnabled: (key: string) => flags[key] ?? (key === "event_enrichment" ? false : flagEnabled),
 }));
 
 let role = "admin";
@@ -42,6 +44,16 @@ const priorsQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
   isFetching: false,
   error: null,
 }));
+let myTasksData: { tasks: GqlTask[]; eventTitles: Record<string, string | null> } = { tasks: [], eventTitles: {} };
+const myTasksQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
+  data: opts.enabled ? myTasksData : undefined,
+  isFetching: false,
+  isLoading: false,
+  error: null,
+}));
+/** The Event's enrichment, as the Task pane reads it for a produced proposal. */
+let forEventPriors: GqlImpactPrior[] = [];
+const cancelMutate = vi.fn();
 
 vi.mock("~/trpc/react", () => ({
   api: {
@@ -55,6 +67,7 @@ vi.mock("~/trpc/react", () => ({
         proposedImpactPriors: { invalidate },
         proposedImpactPriorCount: { invalidate },
         forEvent: { invalidate },
+        myTasks: { invalidate },
       },
     }),
     auth: {
@@ -65,6 +78,13 @@ vi.mock("~/trpc/react", () => ({
     },
     tasks: {
       proposedImpactPriors: { useQuery: (input: unknown, opts: { enabled: boolean }) => priorsQuery(input, opts) },
+      myTasks: { useQuery: (input: unknown, opts: { enabled: boolean }) => myTasksQuery(input, opts) },
+      forEvent: {
+        useQuery: (_input: unknown, opts: { enabled: boolean }) => ({
+          data: opts.enabled ? { tasks: [], impactPriors: forEventPriors } : undefined,
+        }),
+      },
+      cancel: { useMutation: () => ({ mutate: cancelMutate, isPending: false, isError: false }) },
       decideImpactPrior: {
         useMutation: () => ({ mutate: decideMutate, isPending: false, isError: false, error: null, variables: undefined }),
       },
@@ -186,6 +206,10 @@ beforeEach(() => {
   role = "admin";
   authLoading = false;
   priorsData = [];
+  myTasksData = { tasks: [], eventTitles: {} };
+  forEventPriors = [];
+  cancelMutate.mockReset();
+  myTasksQuery.mockClear();
   window.localStorage.clear();
   inboxData = {
     sources: [{ id: "hot1", name: "Hotline", kind: "hotline", reviewerRoles: ["analyst"], privacyDefault: "private", isActive: true }],
@@ -682,5 +706,122 @@ describe("InboxPage impact prior review", () => {
     expect(priorsQuery).toHaveBeenCalledWith({ limit: 200 }, expect.objectContaining({ enabled: false }));
     fireEvent.click(screen.getByTestId("inbox-filter-all"));
     expect(screen.queryByTestId("inbox-kind-pill")).not.toBeInTheDocument();
+  });
+});
+
+function myTask(id: string, overrides: Partial<GqlTask> = {}): GqlTask {
+  return {
+    id,
+    kind: "event.impact_prior.clear",
+    requestId: "req-1",
+    subjectType: "event",
+    subjectId: "evt-1",
+    status: "PENDING",
+    origin: "user",
+    requesterId: "u",
+    requester: { id: "u", name: "Ana" },
+    leaseOwner: null,
+    teamId: null,
+    attempts: 0,
+    maxAttempts: 3,
+    lastError: null,
+    cancelRequestedAt: null,
+    outcome: null,
+    model: null,
+    costUsd: null,
+    completedAt: null,
+    createdAt: "2026-10-07T09:00:00Z",
+    updatedAt: "2026-10-07T09:00:00Z",
+    ...overrides,
+  };
+}
+
+describe("InboxPage My requests", () => {
+  it("admits a viewer with event_enrichment on, straight to their requests", () => {
+    role = "viewer";
+    flags = { event_enrichment: true };
+    myTasksData = {
+      tasks: [myTask("t-clear"), myTask("t-web", { kind: "event.impact_prior.web", status: "LEASED" })],
+      eventTitles: { "evt-1": "Floods in Kassala" },
+    };
+    renderPage();
+    expect(screen.getByTestId("inbox-page")).toBeInTheDocument();
+    expect(myTasksQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
+    // No hotline, no Review items for a viewer: My requests and Everything only, on My requests.
+    expect(screen.getByTestId("inbox-filter-requests")).toHaveAttribute("data-active", "true");
+    expect(screen.queryByTestId("inbox-filter-priors")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-filter-reports")).not.toBeInTheDocument();
+    const rows = screen.getAllByTestId("inbox-entry");
+    expect(rows.map((r) => [r.getAttribute("data-kind"), r.getAttribute("data-source-kind"), r.getAttribute("data-status")])).toEqual([
+      ["task", "event.impact_prior.clear", "PENDING"],
+      ["task", "event.impact_prior.web", "LEASED"],
+    ]);
+    expect(rows[0]).toHaveTextContent("Floods in Kassala");
+    expect(within(rows[0]!).getByTestId("inbox-kind-pill")).toHaveAttribute("data-kind", "task");
+    // Requests are not Review items: nothing is awaiting, Everything is empty.
+    expect(screen.getByText('awaiting:{"count":0}')).toBeInTheDocument();
+    expect(screen.getByTestId("inbox-filter-all")).toHaveTextContent("0");
+  });
+
+  it("keeps requests out of Everything and the awaiting count for a decider, under their own filter", () => {
+    role = "analyst";
+    flags = { impact_prior_review: true, event_enrichment: true };
+    priorsData = [prior("ip-1")];
+    myTasksData = { tasks: [myTask("t-1")], eventTitles: { "evt-1": "Floods in Kassala" } };
+    renderPage();
+    // A decider still lands on their Review items.
+    expect(screen.getByTestId("inbox-filter-priors")).toHaveAttribute("data-active", "true");
+    expect(screen.getByTestId("inbox-filter-requests")).toHaveTextContent("1");
+    expect(screen.getByText('awaiting:{"count":1}')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("inbox-filter-all"));
+    expect(screen.getAllByTestId("inbox-entry").map((r) => r.getAttribute("data-kind"))).toEqual(["impact_prior"]);
+    fireEvent.click(screen.getByTestId("inbox-filter-requests"));
+    expect(screen.getAllByTestId("inbox-entry").map((r) => r.getAttribute("data-kind"))).toEqual(["task"]);
+  });
+
+  it("shows an open request read-only with Cancel, and cancels that Task", () => {
+    role = "viewer";
+    flags = { event_enrichment: true };
+    myTasksData = { tasks: [myTask("t-1")], eventTitles: { "evt-1": "Floods in Kassala" } };
+    renderPage();
+    const pane = screen.getByTestId("inbox-pane");
+    expect(pane).toHaveAttribute("data-kind", "task");
+    expect(pane).toHaveAttribute("data-status", "PENDING");
+    expect(within(pane).getByTestId("enrichment-task")).toHaveAttribute("data-kind", "event.impact_prior.clear");
+    expect(within(pane).getByRole("link", { name: "priors.openEvent" })).toHaveAttribute("href", "/event/evt-1");
+    // No decision controls and no hotline actions on a request.
+    expect(screen.queryByTestId("impact-prior-decision")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-action-bar")).not.toBeInTheDocument();
+    fireEvent.click(within(pane).getByTestId("inbox-task-cancel"));
+    expect(cancelMutate).toHaveBeenCalledWith({ id: "t-1" });
+  });
+
+  it("offers no Cancel once a request is done, and says a proposal is awaiting review until it is decided", () => {
+    role = "viewer";
+    flags = { event_enrichment: true };
+    myTasksData = {
+      tasks: [myTask("t-1", { status: "COMPLETED", outcome: "produced", completedAt: "2026-10-07T09:10:00Z" })],
+      eventTitles: { "evt-1": "Floods in Kassala" },
+    };
+    // The requester may see their own proposal while it is proposed.
+    forEventPriors = [{ ...prior("ip-1"), taskId: "t-1", state: "proposed" }];
+    const { unmount } = renderPage();
+    expect(screen.queryByTestId("inbox-task-cancel")).not.toBeInTheDocument();
+    expect(screen.getByTestId("inbox-task-awaiting-review")).toBeInTheDocument();
+    expect(screen.getByTestId("enrichment-prior")).toHaveAttribute("data-state", "proposed");
+    unmount();
+
+    // Once accepted, the card says so and the "awaiting" line is gone.
+    forEventPriors = [{ ...prior("ip-1"), taskId: "t-1", state: "accepted" }];
+    renderPage();
+    expect(screen.queryByTestId("inbox-task-awaiting-review")).not.toBeInTheDocument();
+    expect(screen.getByTestId("enrichment-prior")).toHaveAttribute("data-state", "accepted");
+  });
+
+  it("does not ask for requests while event_enrichment is off", () => {
+    role = "admin";
+    renderPage();
+    expect(myTasksQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: false }));
+    expect(screen.queryByTestId("inbox-filter-requests")).not.toBeInTheDocument();
   });
 });

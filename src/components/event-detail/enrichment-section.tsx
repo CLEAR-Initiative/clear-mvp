@@ -112,7 +112,10 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
   );
 }
 
-function TaskRow({ task }: { task: GqlTask }) {
+/** One Task's status line — kind and source, status, requester, Worker,
+ * outcome, and its error when the server let us see it. Shared with the
+ * Inbox's "My requests" pane. */
+export function TaskRow({ task }: { task: GqlTask }) {
   const t = useTranslations("eventDetail.enrichment");
   const format = useFormatter();
   // One row per kind: "Impact prior · CLEAR data", "Impact prior · Web", or
