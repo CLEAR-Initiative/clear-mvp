@@ -2,7 +2,13 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { cookieHeaders, graphqlFetch, GraphQLRequestError } from "~/server/api/graphql";
-import type { GqlImpactPrior, GqlReviewImpactPrior, GqlTask } from "~/lib/types/graphql";
+import type {
+  GqlCaseProposal,
+  GqlImpactPrior,
+  GqlReviewCaseProposal,
+  GqlReviewImpactPrior,
+  GqlTask,
+} from "~/lib/types/graphql";
 import { MAX_RATIONALE_LENGTH } from "~/lib/impact-prior-review";
 
 /**
@@ -60,6 +66,31 @@ const IMPACT_PRIOR_FIELDS = `
   createdAt
 `;
 
+/** A web case (clear-api V4): what a decider reads before deciding it, and
+ * what accepting it wrote into CLEAR. */
+const CASE_PROPOSAL_FIELDS = `
+  id
+  eventId
+  taskId
+  state
+  sourceUrl
+  quote
+  occurredAt
+  locationLabel
+  locationId
+  hazardType
+  geographicScope
+  figures
+  matchedEventId
+  methodVersion
+  decidedById
+  decidedAt
+  decisionRationale
+  resultSignalId
+  resultEventId
+  createdAt
+`;
+
 export const REQUEST_EVENT_ENRICHMENT = `
   mutation RequestEventEnrichment($eventId: String!, $teamId: String, $horizonYears: Int) {
     requestEventEnrichment(eventId: $eventId, teamId: $teamId, horizonYears: $horizonYears) {
@@ -76,6 +107,9 @@ export const EVENT_ENRICHMENT_QUERY = `
     eventImpactPriors(eventId: $eventId) {
       ${IMPACT_PRIOR_FIELDS}
     }
+    eventCaseProposals(eventId: $eventId) {
+      ${CASE_PROPOSAL_FIELDS}
+    }
   }
 `;
 
@@ -91,24 +125,48 @@ export const PROPOSED_IMPACT_PRIORS_QUERY = `
   }
 `;
 
-/** The nav badge's count: ids only, so a count on every page does not pull
- * each prior's evidence and its Event. clear-api has no count query; this
- * is capped at its page maximum. */
-export const PROPOSED_IMPACT_PRIOR_IDS_QUERY = `
-  query ProposedImpactPriorIds($limit: Int) {
+/** The Inbox's per-case Review items (V4): proposed web cases across every
+ * Event, with the Event whose enrichment produced each. Deciders only, like
+ * `impactPriors`. */
+export const PROPOSED_CASE_PROPOSALS_QUERY = `
+  query ProposedCaseProposals($limit: Int, $offset: Int) {
+    caseProposals(state: proposed, limit: $limit, offset: $offset) {
+      ${CASE_PROPOSAL_FIELDS}
+      event { id title types }
+    }
+  }
+`;
+
+/** The nav badge's count: what waits for a decision — whole priors (CLEAR
+ * data) and web cases, one each. Ids only, so a count on every page does
+ * not pull the evidence. clear-api has no count query; each list is capped
+ * at its page maximum. */
+export const REVIEW_COUNT_QUERY = `
+  query ReviewCount($limit: Int) {
     impactPriors(state: proposed, limit: $limit) {
+      id
+    }
+    caseProposals(state: proposed, limit: $limit) {
       id
     }
   }
 `;
 
-/** clear-api's page maximum for `impactPriors`. */
+/** clear-api's page maximum for `impactPriors` and `caseProposals`. */
 export const PROPOSED_IMPACT_PRIORS_MAX = 200;
 
 export const DECIDE_IMPACT_PRIOR = `
   mutation DecideImpactPrior($id: String!, $decision: ImpactPriorDecision!, $rationale: String!) {
     decideImpactPrior(id: $id, decision: $decision, rationale: $rationale) {
       ${IMPACT_PRIOR_FIELDS}
+    }
+  }
+`;
+
+export const DECIDE_CASE_PROPOSAL = `
+  mutation DecideCaseProposal($id: String!, $decision: CaseProposalDecision!, $rationale: String) {
+    decideCaseProposal(id: $id, decision: $decision, rationale: $rationale) {
+      ${CASE_PROPOSAL_FIELDS}
     }
   }
 `;
@@ -123,9 +181,36 @@ export const MY_TASKS_QUERY = `
   }
 `;
 
+/** Unfiltered My requests: the newest requests, plus every open one however
+ * old (so a still-pending request never drops off the list with its
+ * Cancel), in one round trip. */
+export const MY_TASKS_WITH_OPEN_QUERY = `
+  query MyTasksWithOpen($limit: Int, $openLimit: Int) {
+    recent: myTasks(limit: $limit) {
+      ${TASK_FIELDS}
+    }
+    pending: myTasks(status: PENDING, limit: $openLimit) {
+      ${TASK_FIELDS}
+    }
+    leased: myTasks(status: LEASED, limit: $openLimit) {
+      ${TASK_FIELDS}
+    }
+  }
+`;
+
 /** How many of the caller's most recent requests My requests lists (clear-api
- * allows up to 200); older ones are history the Event pages still show. */
+ * allows up to 200); older finished ones are history the Event pages still
+ * show. Open ones are always listed, up to clear-api's maximum. */
 export const MY_TASKS_MAX = 100;
+export const MY_OPEN_TASKS_MAX = 200;
+
+/** Tasks from several lists, each once, newest first. The sort is stable,
+ * so ties keep clear-api's own order (the first list's first). */
+export function mergeTasks(...lists: GqlTask[][]): GqlTask[] {
+  const byId = new Map<string, GqlTask>();
+  for (const list of lists) for (const task of list) if (!byId.has(task.id)) byId.set(task.id, task);
+  return [...byId.values()].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+}
 
 /** One document reading the title of each Event the Tasks are about, aliased
  * `e0`, `e1`, … — a Task names its subject by id only. An Event the caller
@@ -199,17 +284,17 @@ export const tasksRouter = createTRPCRouter({
       }
     }),
 
-  /** The Event's enrichment Tasks and ImpactPriors, as clear-api lets this user see them. */
+  /** The Event's enrichment Tasks, ImpactPriors and web cases, as clear-api lets this user see them. */
   forEvent: protectedProcedure
     .input(z.object({ eventId: z.string() }))
     .query(async ({ ctx, input }) => {
       try {
-        const data = await graphqlFetch<{ eventTasks: GqlTask[]; eventImpactPriors: GqlImpactPrior[] }>(
-          EVENT_ENRICHMENT_QUERY,
-          { eventId: input.eventId },
-          cookieHeaders(ctx),
-        );
-        return { tasks: data.eventTasks, impactPriors: data.eventImpactPriors };
+        const data = await graphqlFetch<{
+          eventTasks: GqlTask[];
+          eventImpactPriors: GqlImpactPrior[];
+          eventCaseProposals: GqlCaseProposal[];
+        }>(EVENT_ENRICHMENT_QUERY, { eventId: input.eventId }, cookieHeaders(ctx));
+        return { tasks: data.eventTasks, impactPriors: data.eventImpactPriors, caseProposals: data.eventCaseProposals };
       } catch (err) {
         toTrpcError(err);
       }
@@ -238,17 +323,43 @@ export const tasksRouter = createTRPCRouter({
       }
     }),
 
-  /** How many proposed ImpactPriors wait for a decision, up to clear-api's
-   * page maximum (`capped` when there may be more) — admins and analysts only. */
-  proposedImpactPriorCount: protectedProcedure.query(async ({ ctx }) => {
+  /** Proposed web cases waiting for a decision, newest first, with their
+   * Event — admins and analysts only (V4). */
+  proposedCaseProposals: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().positive().max(PROPOSED_IMPACT_PRIORS_MAX).optional(),
+          offset: z.number().int().nonnegative().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const data = await graphqlFetch<{ caseProposals: GqlReviewCaseProposal[] }>(
+          PROPOSED_CASE_PROPOSALS_QUERY,
+          { limit: input?.limit, offset: input?.offset },
+          cookieHeaders(ctx),
+        );
+        return data.caseProposals;
+      } catch (err) {
+        toTrpcError(err);
+      }
+    }),
+
+  /** How many decisions wait: proposed ImpactPriors plus proposed web cases,
+   * each list up to clear-api's page maximum (`capped` when either may hold
+   * more) — admins and analysts only. */
+  reviewCount: protectedProcedure.query(async ({ ctx }) => {
     try {
-      const data = await graphqlFetch<{ impactPriors: { id: string }[] }>(
-        PROPOSED_IMPACT_PRIOR_IDS_QUERY,
+      const data = await graphqlFetch<{ impactPriors: { id: string }[]; caseProposals: { id: string }[] }>(
+        REVIEW_COUNT_QUERY,
         { limit: PROPOSED_IMPACT_PRIORS_MAX },
         cookieHeaders(ctx),
       );
-      const count = data.impactPriors.length;
-      return { count, capped: count >= PROPOSED_IMPACT_PRIORS_MAX };
+      const priors = data.impactPriors.length;
+      const cases = data.caseProposals.length;
+      return { count: priors + cases, capped: priors >= PROPOSED_IMPACT_PRIORS_MAX || cases >= PROPOSED_IMPACT_PRIORS_MAX };
     } catch (err) {
       toTrpcError(err);
     }
@@ -276,8 +387,38 @@ export const tasksRouter = createTRPCRouter({
       }
     }),
 
+  /** Accept or reject one web case (V4) — admins and analysts only. The
+   * rationale is required to reject and optional to accept. CONFLICT when
+   * another decider got there first. */
+  decideCaseProposal: protectedProcedure
+    .input(
+      z
+        .object({
+          id: z.string(),
+          decision: z.enum(["accepted", "rejected"]),
+          rationale: z.string().trim().max(MAX_RATIONALE_LENGTH).optional(),
+        })
+        .refine((v) => v.decision !== "rejected" || (v.rationale ?? "").length > 0, {
+          message: "A rationale is required to reject a case",
+          path: ["rationale"],
+        }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const data = await graphqlFetch<{ decideCaseProposal: GqlCaseProposal }>(
+          DECIDE_CASE_PROPOSAL,
+          { id: input.id, decision: input.decision, rationale: input.rationale || undefined },
+          cookieHeaders(ctx),
+        );
+        return data.decideCaseProposal;
+      } catch (err) {
+        toTrpcError(err);
+      }
+    }),
+
   /** "My requests": the caller's own Tasks, newest first, with the title of
-   * each Event they are about. */
+   * each Event they are about. Unfiltered, every open request is listed
+   * however old; finished ones only among the newest MY_TASKS_MAX. */
   myTasks: protectedProcedure
     .input(
       z
@@ -289,11 +430,21 @@ export const tasksRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const headers = cookieHeaders(ctx);
-        const { myTasks } = await graphqlFetch<{ myTasks: GqlTask[] }>(
-          MY_TASKS_QUERY,
-          { status: input?.status, limit: MY_TASKS_MAX },
-          headers,
-        );
+        let myTasks: GqlTask[];
+        if (input?.status) {
+          ({ myTasks } = await graphqlFetch<{ myTasks: GqlTask[] }>(
+            MY_TASKS_QUERY,
+            { status: input.status, limit: MY_TASKS_MAX },
+            headers,
+          ));
+        } else {
+          const lists = await graphqlFetch<{ recent: GqlTask[]; pending: GqlTask[]; leased: GqlTask[] }>(
+            MY_TASKS_WITH_OPEN_QUERY,
+            { limit: MY_TASKS_MAX, openLimit: MY_OPEN_TASKS_MAX },
+            headers,
+          );
+          myTasks = mergeTasks(lists.recent, lists.pending, lists.leased);
+        }
         const eventIds = [...new Set(myTasks.filter((task) => task.subjectType === "event").map((task) => task.subjectId))];
         const eventTitles: Record<string, string | null> = {};
         if (eventIds.length > 0) {

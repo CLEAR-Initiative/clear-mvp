@@ -158,7 +158,7 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     key: "impact_prior_review",
     label: "Impact prior review",
     description:
-      "Review items in the Inbox: proposed ImpactPriors (from Event enrichment, clear-api ADR-0010) listed beside hotline threads for admins and analysts to accept or reject with a rationale, and the same decision controls in the Event page's Enrichment section. UI-only gate; clear-api's decideImpactPrior guard is the enforcement.",
+      "Review items in the Inbox: proposed ImpactPriors (from Event enrichment, clear-api ADR-0010) and the web Worker's cases (one Accept / Reject each, grouped under their Event) listed beside hotline threads for admins and analysts to decide, and the same decision controls in the Event page's Enrichment section. UI-only gate; clear-api's decideImpactPrior and decideCaseProposal guards are the enforcement.",
     tier: 4,
     defaultEnabled: false,
   },

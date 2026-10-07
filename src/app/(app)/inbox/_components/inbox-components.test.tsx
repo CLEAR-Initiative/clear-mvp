@@ -44,7 +44,7 @@ vi.mock("~/trpc/react", () => ({
       },
       tasks: {
         proposedImpactPriors: { invalidate: invalidateTasks },
-        proposedImpactPriorCount: { invalidate: invalidateTasks },
+        reviewCount: { invalidate: invalidateTasks },
         forEvent: { invalidate: invalidateTasks },
       },
     }),

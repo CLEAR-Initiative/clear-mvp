@@ -3,15 +3,17 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { IconPaperclip, IconSearch } from "@tabler/icons-react";
 import {
+  isCaseGroupEntry,
   isHotlineEntry,
   isImpactPriorEntry,
+  type CaseGroupEntry,
   type HotlineEntry,
   type ImpactPriorEntry,
   type InboxEntry,
   type InboxSort,
   type TaskEntry,
 } from "~/lib/hotline-inbox";
-import { sourceLabel } from "~/lib/impact-prior-source";
+import { IMPACT_PRIOR_FAMILY, sourceLabel } from "~/lib/impact-prior-source";
 import { InboxEntryPills } from "./classification-pill";
 import styles from "../inbox.module.css";
 
@@ -29,6 +31,9 @@ interface EntryListProps {
    * queue that may not be. */
   loading?: boolean;
 }
+
+/** Web cases come from the web Worker's kind. */
+const WEB_KIND = `${IMPACT_PRIOR_FAMILY}.web`;
 
 function HotlineRow({ entry }: { entry: HotlineEntry }) {
   const t = useTranslations("inbox");
@@ -80,6 +85,28 @@ function ImpactPriorRow({ entry }: { entry: ImpactPriorEntry }) {
       </span>
       <span className={styles.entryPreview}>
         {t("priors.preview", { source, count: prior.numberOfCases, scope, hazard: prior.hazardType })}
+      </span>
+      <span className={styles.entryMeta}>
+        <InboxEntryPills entry={entry} />
+      </span>
+    </span>
+  );
+}
+
+/** An Event's web cases: the Event, how many cases wait, and when the
+ * newest was proposed. */
+function CaseGroupRow({ entry }: { entry: CaseGroupEntry }) {
+  const t = useTranslations("inbox");
+  const format = useFormatter();
+  const hazards = [...new Set(entry.cases.map((c) => c.hazardType))].join(", ");
+  return (
+    <span className={styles.entryBody}>
+      <span className={styles.entryLine1}>
+        <span className={styles.entryTitle}>{entry.eventTitle ?? t("priors.untitledEvent")}</span>
+        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
+      </span>
+      <span className={styles.entryPreview}>
+        {t("cases.preview", { count: entry.undecided, hazard: hazards })}
       </span>
       <span className={styles.entryMeta}>
         <InboxEntryPills entry={entry} />
@@ -153,9 +180,16 @@ export function EntryList({
               data-testid="inbox-entry"
               data-kind={entry.kind}
               data-source-kind={
-                isImpactPriorEntry(entry) ? entry.prior.sourceKind : isHotlineEntry(entry) ? undefined : entry.task.kind
+                isImpactPriorEntry(entry)
+                  ? entry.prior.sourceKind
+                  : isCaseGroupEntry(entry)
+                    ? WEB_KIND
+                    : isHotlineEntry(entry)
+                      ? undefined
+                      : entry.task.kind
               }
-              data-status={isHotlineEntry(entry) || isImpactPriorEntry(entry) ? undefined : entry.task.status}
+              data-status={entry.kind === "task" ? entry.task.status : undefined}
+              data-undecided={isCaseGroupEntry(entry) ? entry.undecided : undefined}
               data-selected={entry.id === selectedId}
               data-unread={unread}
               data-processing={isHotlineEntry(entry) ? entry.processing : undefined}
@@ -166,6 +200,8 @@ export function EntryList({
                 <HotlineRow entry={entry} />
               ) : isImpactPriorEntry(entry) ? (
                 <ImpactPriorRow entry={entry} />
+              ) : isCaseGroupEntry(entry) ? (
+                <CaseGroupRow entry={entry} />
               ) : (
                 <TaskRow entry={entry} />
               )}

@@ -2962,7 +2962,8 @@
     },
     "kinds": {
       "impact_prior": "Prior de impacto",
-      "task": "Mi solicitud"
+      "task": "Mi solicitud",
+      "cases": "Casos web"
     },
     "priors": {
       "untitledEvent": "Evento sin título",
@@ -2974,7 +2975,11 @@
       "requestedAt": "Solicitado el {date}",
       "awaitingReview": "Propuesto, pendiente de revisión",
       "cancelFailed": "Esta solicitud no se pudo cancelar. Inténtalo de nuevo.",
-      "producedSeeEvent": "Propuesta generada — ver el evento"
+      "producedSeeEvent": "Propuesta generada — ver el evento",
+      "proposalLoadFailed": "No se pudo cargar la propuesta. Abra el evento para verla."
+    },
+    "cases": {
+      "preview": "{count, plural, =0 {Todos los casos decididos} one {# caso web por revisar} other {# casos web por revisar}} · {hazard}"
     }
   },
   "analysis": {
@@ -3370,6 +3375,33 @@
     "toast": {
       "accepted": "Prior de impacto aceptado",
       "rejected": "Prior de impacto rechazado"
+    }
+  },
+  "caseReview": {
+    "group": "Casos web · {count, plural, one {# caso} other {# casos}}",
+    "matchesEvent": "Coincide con un evento de CLEAR",
+    "resultEvent": "Abrir el evento resultante",
+    "accept": "Aceptar",
+    "reject": "Rechazar",
+    "confirmReject": "Rechazar caso",
+    "cancel": "Cancelar",
+    "rationaleLabel": "¿Por qué rechazar este caso?",
+    "rationalePlaceholder": "Su motivo, para el registro de auditoría",
+    "rationaleRequired": "Se requiere un motivo para rechazar",
+    "rationaleTooLong": "El motivo debe tener menos de {max} caracteres",
+    "conflict": "Otra persona decidió este caso primero.",
+    "toast": {
+      "accepted": "Caso aceptado",
+      "rejected": "Caso rechazado"
+    },
+    "metric": {
+      "people_affected": "Personas afectadas",
+      "people_displaced_new": "Nuevos desplazados",
+      "people_displaced_cumulative": "Desplazados (acumulado)",
+      "people_in_need": "Personas con necesidades",
+      "people_targeted": "Personas destinatarias",
+      "people_reached": "Personas alcanzadas",
+      "households_affected": "Hogares afectados"
     }
   }
 }

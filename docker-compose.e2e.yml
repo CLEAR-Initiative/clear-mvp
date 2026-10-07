@@ -163,10 +163,11 @@ services:
         condition: service_healthy
     restart: "no"
 
-  # One-shot: a proposed ImpactPrior on two seeded events, produced through
-  # clear-api's Worker protocol over GraphQL — the seeded analyst requests
-  # enrichment, a `worker` identity claims and completes each Task — so
-  # clear-api writes the prior and fans out the Task notifications itself
+  # One-shot: on two seeded events, a proposed ImpactPrior from CLEAR data and
+  # two proposed web cases, produced through clear-api's Worker protocol over
+  # GraphQL — the seeded analyst requests enrichment, a `worker` identity
+  # claims and completes each Task — so clear-api writes the proposals and
+  # fans out the Task notifications itself
   # (no Worker runs in this stack). Used by the impact-prior review spec
   # (case 17). Same image and bind-mount pattern as `seed-ground`. Runs after
   # `seed-event-types` (the hazard is the Event's GLIDE code).

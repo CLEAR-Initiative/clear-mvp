@@ -221,6 +221,58 @@ export interface GqlReviewImpactPrior extends GqlImpactPrior {
   event: { id: string; title: string | null; types: string[] };
 }
 
+export type GqlCaseProposalState = "proposed" | "accepted" | "rejected";
+
+/** One figure a case's source gives, on one of the Domain Ontology's seven
+ * metric types (`people_affected`, `people_displaced_new`, …). */
+export interface GqlCaseFigure {
+  metric: string;
+  value: number;
+  lowerBound?: number | null;
+  upperBound?: number | null;
+  unit?: string | null;
+  populationGroup?: string | null;
+}
+
+/** One historical case a web Worker found while enriching an Event
+ * (clear-api V4): the unit a decider accepts or rejects, one by one. */
+export interface GqlCaseProposal {
+  id: string;
+  /** The Event whose enrichment request produced the case. */
+  eventId: string;
+  taskId: string;
+  state: GqlCaseProposalState;
+  sourceUrl: string;
+  /** The source's own words, verbatim. */
+  quote: string;
+  /** When the incident happened (valid time). */
+  occurredAt: string;
+  locationLabel: string;
+  locationId: string | null;
+  hazardType: string;
+  geographicScope: string;
+  figures: GqlCaseFigure[];
+  /** The CLEAR Event this case describes, when CLEAR already holds it. */
+  matchedEventId: string | null;
+  methodVersion: string;
+  decidedById: string | null;
+  decidedAt: string | null;
+  decisionRationale: string | null;
+  /** What accepting wrote into CLEAR: the Signal, and the Event it sits on
+   * (the matched one or a new historical Event). */
+  resultSignalId: string | null;
+  resultEventId: string | null;
+  createdAt: string;
+}
+
+export type GqlCaseProposalDecision = "accepted" | "rejected";
+
+/** An Inbox Review item: a proposed case with the Event whose enrichment
+ * produced it, as clear-api's `caseProposals(state: proposed)` returns it. */
+export interface GqlReviewCaseProposal extends GqlCaseProposal {
+  event: { id: string; title: string | null; types: string[] };
+}
+
 /* ─── Notifications ─── */
 
 export type GqlNotificationStatus = "PENDING" | "DELIVERED" | "FAILED" | "READ";

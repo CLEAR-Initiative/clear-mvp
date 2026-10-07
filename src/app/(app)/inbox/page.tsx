@@ -10,6 +10,7 @@ import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { inboxAccess } from "~/lib/inbox-access";
 import { canReviewSource } from "~/lib/ground-review";
 import {
+  buildCaseGroupEntries,
   buildImpactPriorEntries,
   buildInboxEntries,
   buildTaskEntries,
@@ -21,6 +22,7 @@ import {
   nextSelection,
   saveReadIds,
   visibleEntries,
+  withDecision,
   type ImpactPriorEntry,
   type InboxEntry,
   type InboxFailure,
@@ -28,7 +30,12 @@ import {
   type InboxSort,
   type RejectReason,
 } from "~/lib/hotline-inbox";
-import type { GqlImpactPriorDecision } from "~/lib/types/graphql";
+import type {
+  GqlCaseProposal,
+  GqlCaseProposalDecision,
+  GqlImpactPriorDecision,
+  GqlReviewCaseProposal,
+} from "~/lib/types/graphql";
 import { EntryList } from "./_components/entry-list";
 import { ReadingPane } from "./_components/reading-pane";
 import { AddToClearModal, type SignalDraft } from "./_components/add-to-clear-modal";
@@ -59,7 +66,14 @@ import styles from "./inbox.module.css";
  * ImpactPrior clear-api lets this user decide (admins and analysts). The
  * decision (accept / reject with a rationale) is taken in the shared
  * ImpactPriorPane, the same one the Event page mounts; a decided prior
- * leaves the queue.
+ * leaves the queue. Only the CLEAR-data source's: clear-api decides the
+ * web's evidence case by case.
+ *
+ * Web cases (clear-api V4, CaseProposal): the proposed cases grouped under
+ * the Event whose enrichment produced them, one Review item per Event,
+ * each case with its own Accept / Reject (the same row the Event page
+ * mounts). A decided case turns to its decision in place and stays in its
+ * group until the Inbox is reloaded; the counts are the undecided cases.
  *
  * My requests (clear-api `myTasks`): the Tasks the reader asked for, under
  * their own filter, read-only with Cancel. Status, not Review items: they
@@ -90,6 +104,7 @@ function pendingOnly(prev: Record<string, RetryState>): Record<string, RetryStat
 export default function InboxPage() {
   const t = useTranslations("inbox");
   const tReview = useTranslations("impactPriorReview");
+  const tCases = useTranslations("caseReview");
   const utils = api.useUtils();
 
   const hotlineInbox = useFeatureEnabled("hotline_inbox");
@@ -119,6 +134,17 @@ export default function InboxPage() {
     refetchInterval: 60_000,
   });
 
+  const casesQuery = api.tasks.proposedCaseProposals.useQuery(PROPOSED_PAGE, {
+    enabled: access.priors,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+  /** Cases decided in this session, as their decision (or, after a
+   * CONFLICT, the Event's own copy) returned them: they keep their row,
+   * now showing the decision, after the proposed list stops returning
+   * them. */
+  const [decidedCases, setDecidedCases] = useState<Record<string, GqlReviewCaseProposal>>({});
+
   // The reader's own requests: polled faster while one is still open, so a
   // request made a moment ago settles here without a reload.
   const myTasksQuery = api.tasks.myTasks.useQuery(undefined, {
@@ -132,9 +158,10 @@ export default function InboxPage() {
     () => [
       ...(inboxQuery.data ? buildInboxEntries(inboxQuery.data) : []),
       ...(priorsQuery.data ? buildImpactPriorEntries(priorsQuery.data) : []),
+      ...(casesQuery.data ? buildCaseGroupEntries(casesQuery.data, decidedCases) : []),
       ...(myTasksQuery.data ? buildTaskEntries(myTasksQuery.data.tasks, myTasksQuery.data.eventTitles) : []),
     ],
-    [inboxQuery.data, priorsQuery.data, myTasksQuery.data],
+    [inboxQuery.data, priorsQuery.data, casesQuery.data, decidedCases, myTasksQuery.data],
   );
   const sourceById = useMemo(() => {
     const m = new Map<string, string[]>();
@@ -337,6 +364,31 @@ export default function InboxPage() {
     [afterAction, tReview],
   );
 
+  /** A case was decided from its row: it keeps its place, now decided, and
+   * the selection stays on its Event (its siblings may still wait). */
+  const caseDecided = useCallback(
+    (proposal: GqlReviewCaseProposal, decided: GqlCaseProposal, decision: GqlCaseProposalDecision) => {
+      setDecidedCases((prev) => ({ ...prev, [proposal.id]: withDecision(proposal, decided) }));
+      showToast({ message: tCases(`toast.${decision}`) });
+    },
+    [showToast, tCases],
+  );
+
+  /** Another decider got to a case first (CONFLICT): read the Event's copy
+   * so the row shows what was decided, rather than stay decidable. */
+  const caseStale = useCallback(
+    (proposal: GqlReviewCaseProposal) => {
+      void utils.tasks.forEvent
+        .fetch({ eventId: proposal.eventId }, { staleTime: 0 })
+        .then((data) => {
+          const current = data?.caseProposals.find((c) => c.id === proposal.id);
+          if (current) setDecidedCases((prev) => ({ ...prev, [proposal.id]: withDecision(proposal, current) }));
+        })
+        .catch(() => undefined);
+    },
+    [utils],
+  );
+
   /**
    * Promotion is one atomic mutation: approve_public creates the signal
    * with the reviewer's edits applied (clear-api#625 overrides). If it
@@ -432,8 +484,10 @@ export default function InboxPage() {
         <div className={styles.headerRow}>
           <span className={styles.title}>{t("title")}</span>
           <span className={styles.awaiting}>{t("awaiting", { count: counts.all })}</span>
-          {(inboxQuery.isFetching || priorsQuery.isFetching || myTasksQuery.isFetching) && <Loader size={12} />}
-          {(inboxQuery.error || priorsQuery.error || myTasksQuery.error) && (
+          {(inboxQuery.isFetching || priorsQuery.isFetching || casesQuery.isFetching || myTasksQuery.isFetching) && (
+            <Loader size={12} />
+          )}
+          {(inboxQuery.error || priorsQuery.error || casesQuery.error || myTasksQuery.error) && (
             <span className={styles.actionError}>{t("loadError")}</span>
           )}
         </div>
@@ -466,7 +520,7 @@ export default function InboxPage() {
           onSelect={select}
           loading={
             (access.hotline && inboxQuery.isLoading) ||
-            (access.priors && priorsQuery.isLoading) ||
+            (access.priors && (priorsQuery.isLoading || casesQuery.isLoading)) ||
             (access.requests && myTasksQuery.isLoading)
           }
         />
@@ -476,6 +530,8 @@ export default function InboxPage() {
           canReview={canReviewSelected}
           canDecide={canDecide}
           onDecided={decided}
+          onCaseDecided={caseDecided}
+          onCaseStale={caseStale}
           busy={busy}
           error={actionError}
           rejectOpen={rejectOpen}

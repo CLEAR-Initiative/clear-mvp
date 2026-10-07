@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   attachmentKey,
   attachmentKind,
+  buildCaseGroupEntries,
   buildImpactPriorEntries,
   buildInboxEntries,
   buildTaskEntries,
@@ -19,11 +20,13 @@ import {
   TRANSLATION_POLL_LIMIT_MS,
   nextSelection,
   visibleEntries,
+  withDecision,
 } from "./hotline-inbox";
 import type {
   GqlGroundInboxMessage,
   GqlGroundInboxThread,
   GqlHotlineInbox,
+  GqlReviewCaseProposal,
   GqlReviewImpactPrior,
   GqlTask,
 } from "./types/graphql";
@@ -554,3 +557,62 @@ describe("My requests (task entries)", () => {
   });
 });
 
+
+describe("web case groups (V4)", () => {
+  const webCase = (id: string, eventId: string, createdAt: string, extra: Partial<GqlReviewCaseProposal> = {}): GqlReviewCaseProposal => ({
+    id,
+    eventId,
+    event: { id: eventId, title: `Event ${eventId}`, types: ["fl"] },
+    taskId: "t",
+    state: "proposed",
+    sourceUrl: `https://example.test/${id}`,
+    quote: `Quote ${id}`,
+    occurredAt: "2019-08-10T00:00:00Z",
+    locationLabel: "Khartoum",
+    locationId: null,
+    hazardType: "fl",
+    geographicScope: "country",
+    figures: [],
+    matchedEventId: null,
+    methodVersion: "m",
+    decidedById: null,
+    decidedAt: null,
+    decisionRationale: null,
+    resultSignalId: null,
+    resultEventId: null,
+    createdAt,
+    ...extra,
+  });
+
+  it("groups cases under their Event, newest first, and finds them by place, quote and source word", () => {
+    const entries = buildCaseGroupEntries([
+      webCase("c3", "e2", "2026-10-03T00:00:00Z"),
+      webCase("c2", "e1", "2026-10-02T00:00:00Z"),
+      webCase("c1", "e1", "2026-10-01T00:00:00Z"),
+    ]);
+    expect(entries.map((e) => [e.id, e.cases.map((c) => c.id), e.undecided, e.sentAt])).toEqual([
+      ["cases:e2", ["c3"], 1, "2026-10-03T00:00:00Z"],
+      ["cases:e1", ["c2", "c1"], 2, "2026-10-02T00:00:00Z"],
+    ]);
+    expect(entries[1]!.title).toBe("Event e1");
+    expect(matchesFilter(entries[0]!, "priors")).toBe(true);
+    expect(visibleEntries(entries, "all", "quote c1", "newest").map((e) => e.id)).toEqual(["cases:e1"]);
+    expect(visibleEntries(entries, "all", "web", "newest")).toHaveLength(2);
+  });
+
+  it("keeps a case decided this session in its group, decided, and counts only the undecided", () => {
+    const c1 = webCase("c1", "e1", "2026-10-01T00:00:00Z");
+    const c2 = webCase("c2", "e1", "2026-10-02T00:00:00Z");
+    const decided = { c1: withDecision(c1, { ...c1, state: "accepted", resultEventId: "h", event: undefined } as never) };
+    // The list still returns c1 (not refetched yet), then stops returning it.
+    for (const proposed of [[c2, c1], [c2]]) {
+      const [group] = buildCaseGroupEntries(proposed, decided);
+      expect(group!.cases.map((c) => [c.id, c.state])).toEqual([
+        ["c2", "proposed"],
+        ["c1", "accepted"],
+      ]);
+      expect(group!.cases[1]!.event.title).toBe("Event e1");
+      expect(countByFilter([group!]).all).toBe(1);
+    }
+  });
+});

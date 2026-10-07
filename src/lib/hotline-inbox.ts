@@ -1,8 +1,10 @@
 import { sourceSearchTerm } from "./impact-prior-source";
 import type {
+  GqlCaseProposal,
   GqlGroundInboxMessage,
   GqlGroundInboxThread,
   GqlHotlineInbox,
+  GqlReviewCaseProposal,
   GqlReviewImpactPrior,
   GqlTask,
 } from "~/lib/types/graphql";
@@ -20,7 +22,13 @@ import type {
  *                    answers block from the design lands once something
  *                    produces answers.
  *   impact_prior   — one proposed ImpactPrior (clear-api ADR-0010) waiting
- *                    for an admin or analyst to accept or reject it.
+ *                    for an admin or analyst to accept or reject it. Only
+ *                    the CLEAR-data source's: the web's is decided case by
+ *                    case (below).
+ *   cases          — the proposed web cases (clear-api V4, CaseProposal)
+ *                    of one Event, grouped under it; each case has its own
+ *                    Accept / Reject. It counts as one Review item per
+ *                    undecided case, not one per group.
  *   task           — one enrichment Task the reader requested ("My
  *                    requests"): its status, never a decision. Not a Review
  *                    item, so it is listed only under its own filter and
@@ -120,7 +128,7 @@ export interface InboxAttachment {
 }
 
 /** What an Inbox entry is about; each kind has its own row and pane. */
-export type InboxEntryKind = "hotline_thread" | "impact_prior" | "task";
+export type InboxEntryKind = "hotline_thread" | "impact_prior" | "cases" | "task";
 
 /** What every kind of entry carries: enough to list, select, search and
  * sort it. */
@@ -178,6 +186,20 @@ export interface ImpactPriorEntry extends InboxEntryBase {
   eventTitle: string | null;
 }
 
+/** The web cases one Event's enrichment produced, as one Review item per
+ * undecided case under the Event. The id is `cases:<eventId>`. */
+export interface CaseGroupEntry extends InboxEntryBase {
+  kind: "cases";
+  eventId: string;
+  /** The Event's title; null when it has none (the row says so). */
+  eventTitle: string | null;
+  /** Newest first: the proposed ones, and any decided in this session
+   * (they stay, showing their decision, until the Inbox is reloaded). */
+  cases: GqlReviewCaseProposal[];
+  /** How many are still undecided: what the group counts for. */
+  undecided: number;
+}
+
 /** One enrichment Task the reader requested. The id is the Task's. */
 export interface TaskEntry extends InboxEntryBase {
   kind: "task";
@@ -187,7 +209,7 @@ export interface TaskEntry extends InboxEntryBase {
   eventTitle: string | null;
 }
 
-export type InboxEntry = HotlineEntry | ImpactPriorEntry | TaskEntry;
+export type InboxEntry = HotlineEntry | ImpactPriorEntry | CaseGroupEntry | TaskEntry;
 
 export function isHotlineEntry(entry: InboxEntry): entry is HotlineEntry {
   return entry.kind === "hotline_thread";
@@ -195,6 +217,10 @@ export function isHotlineEntry(entry: InboxEntry): entry is HotlineEntry {
 
 export function isImpactPriorEntry(entry: InboxEntry): entry is ImpactPriorEntry {
   return entry.kind === "impact_prior";
+}
+
+export function isCaseGroupEntry(entry: InboxEntry): entry is CaseGroupEntry {
+  return entry.kind === "cases";
 }
 
 export function isTaskEntry(entry: InboxEntry): entry is TaskEntry {
@@ -249,6 +275,66 @@ export function buildImpactPriorEntries(priors: GqlReviewImpactPrior[]): ImpactP
     text: [prior.hazardType, prior.geographicScope, `${prior.numberOfCases}`, prior.methodVersion, sourceSearchTerm(prior.sourceKind)].join(" "),
     sentAt: prior.createdAt,
   }));
+}
+
+/** The id of an Event's case group. */
+export function caseGroupId(eventId: string): string {
+  return `cases:${eventId}`;
+}
+
+/**
+ * Web cases grouped under the Event whose enrichment produced them, one
+ * Review item per Event. `proposed` is clear-api's list (newest first);
+ * `decided` holds the cases decided in this session, by id, as their
+ * decision returned them: they replace their proposed copy, and stay in
+ * their group after the list stops returning them, so a row turns to its
+ * decision in place instead of vanishing. `text` carries the source word,
+ * hazard, places and quotes so search finds a case.
+ */
+export function buildCaseGroupEntries(
+  proposed: GqlReviewCaseProposal[],
+  decided: Record<string, GqlReviewCaseProposal> = {},
+): CaseGroupEntry[] {
+  const seen = new Set<string>();
+  const all: GqlReviewCaseProposal[] = [];
+  for (const c of proposed) {
+    seen.add(c.id);
+    all.push(decided[c.id] ?? c);
+  }
+  for (const c of Object.values(decided)) if (!seen.has(c.id)) all.push(c);
+  all.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+
+  const byEvent = new Map<string, GqlReviewCaseProposal[]>();
+  for (const c of all) {
+    const list = byEvent.get(c.eventId);
+    if (list) list.push(c);
+    else byEvent.set(c.eventId, [c]);
+  }
+  return [...byEvent.entries()].map(([eventId, cases]) => {
+    const eventTitle = cases.find((c) => c.event?.title)?.event.title ?? null;
+    return {
+      id: caseGroupId(eventId),
+      kind: "cases",
+      eventId,
+      eventTitle,
+      cases,
+      undecided: cases.filter((c) => c.state === "proposed").length,
+      title: eventTitle ?? "",
+      text: [
+        "web",
+        ...new Set(cases.map((c) => c.hazardType)),
+        ...new Set(cases.map((c) => c.locationLabel)),
+        ...cases.map((c) => c.quote),
+      ].join(" "),
+      sentAt: cases[0]!.createdAt,
+    };
+  });
+}
+
+/** A decided case as the group keeps it: the decision's answer over the
+ * proposed copy (which carries the Event the answer does not). */
+export function withDecision(proposal: GqlReviewCaseProposal, decided: GqlCaseProposal): GqlReviewCaseProposal {
+  return { ...proposal, ...decided, event: proposal.event };
 }
 
 /** Attachments that are recognisably not audio: images, plus the video and
@@ -432,7 +518,7 @@ export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
     case "chatter":
       return isHotlineEntry(entry) && entry.classification === "chatter";
     case "priors":
-      return isImpactPriorEntry(entry);
+      return isImpactPriorEntry(entry) || isCaseGroupEntry(entry);
     case "requests":
       return isTaskEntry(entry);
     case "all":
@@ -476,10 +562,16 @@ export function visibleEntries<T extends InboxEntry>(
   );
 }
 
+/** What an entry adds to a count: a case group, its undecided cases (so the
+ * Inbox counts decisions waiting, not Events); anything else, one. */
+export function entryWeight(entry: InboxEntry): number {
+  return isCaseGroupEntry(entry) ? entry.undecided : 1;
+}
+
 export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number> {
   const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, priors: 0, requests: 0, all: 0 };
   for (const e of entries) {
-    for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += 1;
+    for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += entryWeight(e);
   }
   return counts;
 }

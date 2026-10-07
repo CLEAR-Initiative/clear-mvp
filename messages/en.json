@@ -2962,7 +2962,8 @@
     },
     "kinds": {
       "impact_prior": "Impact prior",
-      "task": "My request"
+      "task": "My request",
+      "cases": "Web cases"
     },
     "priors": {
       "untitledEvent": "Untitled event",
@@ -2974,7 +2975,11 @@
       "requestedAt": "Requested {date}",
       "awaitingReview": "Proposed, awaiting review",
       "cancelFailed": "This request could not be cancelled. Try again.",
-      "producedSeeEvent": "Proposal produced — see the Event"
+      "producedSeeEvent": "Proposal produced — see the Event",
+      "proposalLoadFailed": "The proposal could not be loaded. Open the Event to see it."
+    },
+    "cases": {
+      "preview": "{count, plural, =0 {All cases decided} one {# web case to review} other {# web cases to review}} · {hazard}"
     }
   },
   "analysis": {
@@ -3370,6 +3375,33 @@
     "toast": {
       "accepted": "Impact prior accepted",
       "rejected": "Impact prior rejected"
+    }
+  },
+  "caseReview": {
+    "group": "Web cases · {count, plural, one {# case} other {# cases}}",
+    "matchesEvent": "Matches CLEAR Event",
+    "resultEvent": "Open the resulting Event",
+    "accept": "Accept",
+    "reject": "Reject",
+    "confirmReject": "Reject case",
+    "cancel": "Cancel",
+    "rationaleLabel": "Why reject this case?",
+    "rationalePlaceholder": "Your reason, for the audit trail",
+    "rationaleRequired": "A rationale is required to reject",
+    "rationaleTooLong": "Keep the rationale under {max} characters",
+    "conflict": "Another decider got to this case first.",
+    "toast": {
+      "accepted": "Case accepted",
+      "rejected": "Case rejected"
+    },
+    "metric": {
+      "people_affected": "People affected",
+      "people_displaced_new": "Newly displaced",
+      "people_displaced_cumulative": "Displaced (cumulative)",
+      "people_in_need": "People in need",
+      "people_targeted": "People targeted",
+      "people_reached": "People reached",
+      "households_affected": "Households affected"
     }
   }
 }

@@ -3,8 +3,8 @@
 // against clear-api's source tree. It is never imported by the clear-mvp app
 // or its tests, so clear-mvp's tsc must not try to resolve clear-api's modules.
 /**
- * Proposed ImpactPrior fixture for the review spec (case 17, clear-api
- * ADR-0010 V2), produced through clear-api's own Worker protocol.
+ * Enrichment fixture for the review spec (case 17, clear-api ADR-0010 V2–V4),
+ * produced through clear-api's own Worker protocol.
  *
  * No Worker runs in the hermetic stack, so this script plays both parts over
  * GraphQL, as the real ones would:
@@ -13,26 +13,30 @@
  *      (`requestEventEnrichment`), which fans out into one Task per source
  *      kind — `.clear` (CLEAR data) and `.web` (the web) by default,
  *   2. a `worker` identity claims each kind's Tasks (`claimTasks` matches
- *      kinds exactly) and completes each with a one-case ImpactPrior
- *      proposal (`completeTask`), whose basis tier matches the kind.
+ *      kinds exactly) and completes each (`completeTask`): the `.clear` Task
+ *      with a one-case ImpactPrior citing an earlier CLEAR Event, the `.web`
+ *      Task with two cases (V4, `cases`), each its own CaseProposal.
  *
- * So every target Event ends with two proposed ImpactPriors side by side,
- * one per source kind (V3, clear-api #727) — what the review spec decides
- * on and what the source labels are checked against.
+ * So every target Event ends with a proposed ImpactPrior from CLEAR data and
+ * two proposed web cases beside it — what the review spec decides on, the
+ * prior as a whole and the cases one by one.
  *
- * clear-api then writes the `proposed` ImpactPrior and fans out the Task
- * outcome notification ("Impact prior proposed — review it") to the
- * requester and the platform admins, so the spec exercises the bell too, and
- * clear-api validates the proposal (hazard among the Event's types, country
- * the level-0 ancestor of its location) exactly as it would a real Worker's.
+ * clear-api then writes the `proposed` rows and fans out the Task outcome
+ * notification ("… proposed — review it", "…: cases proposed — review
+ * them") to the requester and the platform admins, so the spec exercises the
+ * bell too, and clear-api validates each proposal (hazard among the Event's
+ * types, country the level-0 ancestor of its location, a case's date within
+ * the horizon) exactly as it would a real Worker's.
  * Two Events, one per door the spec decides through (the Inbox, the Event
  * page). Run after `seed-event-types`: the hazard is the Event's GLIDE code.
  *
  * Prisma is used only for what the API has no door for: the two test-only
  * API keys (as `seed-agent-key` does), reading each Event's id, types and
  * country, and the reset that makes re-runs idempotent — the fixture
- * Events' Tasks, ImpactPriors and Task notifications are deleted first, so
- * re-running against a kept-up stack starts both priors at `proposed`.
+ * Events' Tasks, ImpactPriors, CaseProposals and Task notifications are
+ * deleted first, so re-running against a kept-up stack starts everything at
+ * `proposed`. (What accepting a case wrote — a Signal, maybe a historical
+ * Event — stays; it is CLEAR history now and no spec counts it.)
  *
  * Titles mirror SEEDED_EVENTS / IMPACT_PRIORS in e2e/support/data.ts.
  */
@@ -44,24 +48,66 @@ const API_URL = process.env.CLEAR_API_GRAPHQL_URL ?? "http://api:4000/graphql";
 /** The source kinds clear-api fans a request out into (its TASK_IMPACT_PRIOR_KINDS default). */
 const KINDS = ["event.impact_prior.clear", "event.impact_prior.web"] as const;
 const KIND_FAMILY = "event.impact_prior";
-const METHOD_VERSION = "e2e-impact-prior-seed@3";
+const METHOD_VERSION = "e2e-impact-prior-seed@4";
 const HORIZON_YEARS = 10;
 
 /** Test-only keys, valid nowhere but this throwaway stack. */
 const REQUESTER = { email: "analyst@clearinitiative.io", key: "sk_live_e2e_requester_0123456789abcdef", keyName: "e2e-requester" };
 const WORKER = { email: "worker@clearinitiative.io", key: "sk_live_e2e_worker_0123456789abcdef", keyName: "e2e-worker" };
 
-/** Event title → the synthetic case the basis cites. */
-const FIXTURES: Record<string, { quote: string; occurredAt: string; locationLabel: string }> = {
+interface Fixture {
+  /** The CLEAR-data prior's one case. */
+  quote: string;
+  occurredAt: string;
+  locationLabel: string;
+  /** The web Worker's two cases; URLs mirror IMPACT_PRIORS.webCases. The
+   * first gives a figure, the second none. */
+  webCases: [WebCase, WebCase];
+}
+interface WebCase {
+  sourceUrl: string;
+  quote: string;
+  occurredAt: string;
+  figures?: { metric: string; value: number; lowerBound?: number; upperBound?: number }[];
+}
+
+/** Event title → the synthetic cases. */
+const FIXTURES: Record<string, Fixture> = {
   "North Darfur Food Security Emergency": {
     quote: "Synthetic prior case: acute food insecurity reported across North Darfur localities.",
     occurredAt: "2024-06-01T00:00:00Z",
     locationLabel: "North Darfur",
+    webCases: [
+      {
+        sourceUrl: "https://example.test/e2e-case/north-darfur-food-1",
+        quote: "Synthetic web case: some 240,000 people faced emergency food insecurity in North Darfur.",
+        occurredAt: "2024-07-01T00:00:00Z",
+        figures: [{ metric: "people_affected", value: 240000, lowerBound: 200000, upperBound: 260000 }],
+      },
+      {
+        sourceUrl: "https://example.test/e2e-case/north-darfur-food-2",
+        quote: "Synthetic web case: markets in El Fasher closed as staple prices doubled.",
+        occurredAt: "2023-11-15T00:00:00Z",
+      },
+    ],
   },
   "Khartoum Flood Emergency": {
     quote: "Synthetic prior case: seasonal Nile flooding displaced households in Khartoum State.",
     occurredAt: "2022-08-15T00:00:00Z",
     locationLabel: "Khartoum",
+    webCases: [
+      {
+        sourceUrl: "https://example.test/e2e-case/khartoum-flood-1",
+        quote: "Synthetic web case: Nile floods damaged 12,000 homes across Khartoum State.",
+        occurredAt: "2020-09-05T00:00:00Z",
+        figures: [{ metric: "households_affected", value: 12000 }],
+      },
+      {
+        sourceUrl: "https://example.test/e2e-case/khartoum-flood-2",
+        quote: "Synthetic web case: flash floods cut roads south of Khartoum.",
+        occurredAt: "2021-08-20T00:00:00Z",
+      },
+    ],
   },
 };
 
@@ -144,7 +190,8 @@ async function main() {
   });
   if (!priorCase) throw new Error("no other seeded Event to cite as a CLEAR-data prior case — did clear-api's seed change?");
 
-  // ── Reset (idempotent re-runs): priors reference Tasks, so they go first ──
+  // ── Reset (idempotent re-runs): priors and cases reference Tasks, so they go first ──
+  const removedCases = await prisma.caseProposal.deleteMany({ where: { eventId: { in: eventIds } } });
   const removedPriors = await prisma.impactPrior.deleteMany({ where: { eventId: { in: eventIds } } });
   const removedTasks = await prisma.task.deleteMany({
     where: { kind: { startsWith: KIND_FAMILY }, subjectType: "event", subjectId: { in: eventIds } },
@@ -153,7 +200,7 @@ async function main() {
     where: { notificationType: "task", actionUrl: { in: eventIds.map((id) => `/event/${id}`) } },
   });
   console.log(
-    `[impact-prior-seed] reset ${removedPriors.count} priors, ${removedTasks.count} tasks, ${removedNotes.count} notifications`,
+    `[impact-prior-seed] reset ${removedCases.count} cases, ${removedPriors.count} priors, ${removedTasks.count} tasks, ${removedNotes.count} notifications`,
   );
 
   // ── 1. The analyst requests enrichment on each Event: one Task per kind ──
@@ -214,52 +261,71 @@ async function main() {
 
   for (const [taskId, leaseToken] of leases) {
     const { target, kind } = taskToTarget.get(taskId)!;
-    // The basis tier matches the source: the CLEAR drain cites an earlier
-    // CLEAR Event, the web Worker a URL.
-    const tier = kind.endsWith(".clear") ? "clear" : "web";
-    const { completeTask } = await gql<{ completeTask: { id: string; status: string; outcome: string | null } }>(
-      WORKER.key,
-      `mutation Complete($id: String!, $leaseToken: String!, $result: JSON!, $impactPrior: ImpactPriorInput) {
-        completeTask(id: $id, leaseToken: $leaseToken, result: $result, impactPrior: $impactPrior) { id status outcome }
-      }`,
-      {
-        id: taskId,
-        leaseToken,
-        result: { e2eFixture: true, cases: 1 },
-        impactPrior: {
-          hazardType: target.hazardType,
-          countryLocationId: target.countryLocationId,
-          geographicScope: "country",
-          horizonYears: HORIZON_YEARS,
-          numberOfCases: 1,
-          basis: [
-            tier === "web"
-              ? {
-                  tier,
-                  sourceUrl: "https://example.test/e2e-prior-case",
-                  quote: target.fixture.quote,
-                  occurredAt: target.fixture.occurredAt,
-                  locationLabel: target.fixture.locationLabel,
-                  scope: "country",
-                }
-              : {
-                  tier,
+    const web = kind.endsWith(".web");
+    // The CLEAR drain proposes a whole prior citing an earlier CLEAR Event;
+    // the web Worker proposes cases, one CaseProposal each (V4).
+    const { completeTask } = web
+      ? await gql<{ completeTask: { id: string; status: string; outcome: string | null } }>(
+          WORKER.key,
+          `mutation CompleteWeb($id: String!, $leaseToken: String!, $result: JSON!, $cases: [CaseProposalInput!], $methodVersion: String) {
+            completeTask(id: $id, leaseToken: $leaseToken, result: $result, cases: $cases, methodVersion: $methodVersion) { id status outcome }
+          }`,
+          {
+            id: taskId,
+            leaseToken,
+            result: { e2eFixture: true, cases: target.fixture.webCases.length },
+            cases: target.fixture.webCases.map((c) => ({
+              sourceUrl: c.sourceUrl,
+              quote: c.quote,
+              occurredAt: c.occurredAt,
+              locationLabel: target.fixture.locationLabel,
+              hazardType: target.hazardType,
+              geographicScope: "country",
+              figures: c.figures ?? [],
+            })),
+            methodVersion: `${METHOD_VERSION}-web`,
+          },
+        )
+      : await gql<{ completeTask: { id: string; status: string; outcome: string | null } }>(
+          WORKER.key,
+          `mutation Complete($id: String!, $leaseToken: String!, $result: JSON!, $impactPrior: ImpactPriorInput) {
+            completeTask(id: $id, leaseToken: $leaseToken, result: $result, impactPrior: $impactPrior) { id status outcome }
+          }`,
+          {
+            id: taskId,
+            leaseToken,
+            result: { e2eFixture: true, cases: 1 },
+            impactPrior: {
+              hazardType: target.hazardType,
+              countryLocationId: target.countryLocationId,
+              geographicScope: "country",
+              horizonYears: HORIZON_YEARS,
+              numberOfCases: 1,
+              basis: [
+                {
+                  tier: "clear",
                   eventId: priorCase.id,
                   quote: target.fixture.quote,
                   occurredAt: target.fixture.occurredAt,
                   locationLabel: target.fixture.locationLabel,
                   scope: "country",
                 },
-          ],
-          methodVersion: `${METHOD_VERSION}-${tier}`,
-        },
-      },
-    );
+              ],
+              methodVersion: `${METHOD_VERSION}-clear`,
+            },
+          },
+        );
     if (completeTask.status !== "COMPLETED" || completeTask.outcome !== "produced") {
       throw new Error(`Task ${taskId} ended ${completeTask.status} / ${completeTask.outcome}, not COMPLETED / produced`);
     }
-    console.log(`[impact-prior-seed] ${target.title} → proposed ImpactPrior (${kind}) via Task ${taskId} (hazard ${target.hazardType})`);
+    console.log(
+      `[impact-prior-seed] ${target.title} → ${web ? `${target.fixture.webCases.length} proposed web cases` : "proposed ImpactPrior"} (${kind}) via Task ${taskId} (hazard ${target.hazardType})`,
+    );
   }
+
+  const cases = await prisma.caseProposal.count({ where: { eventId: { in: eventIds }, state: "proposed" } });
+  const expectedCases = targets.reduce((n, t) => n + t.fixture.webCases.length, 0);
+  if (cases !== expectedCases) throw new Error(`expected ${expectedCases} proposed web cases, found ${cases}`);
 
   // The fan-out is fire-and-forget after completeTask answers; wait for the
   // requester's rows (one per completed Task) so the spec never races it.
