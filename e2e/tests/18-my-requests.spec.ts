@@ -50,7 +50,7 @@ test.describe("My requests (case 18)", () => {
     await expect(page.getByTestId("inbox-filter-requests")).toHaveAttribute("data-active", "true");
     for (const kind of KINDS) await expect(openRequest(page, kind)).toHaveCount(1, { timeout: 20_000 });
     await expect(openRequest(page, KINDS[0]).first()).toContainText("CLEAR data");
-    await expect(openRequest(page, KINDS[1]).first()).toContainText("Web");
+    await expect(openRequest(page, KINDS[1]).first()).toContainText("Web search");
 
     // ── Not Review items: nothing of it under Everything ──
     await page.getByTestId("inbox-filter-all").click();

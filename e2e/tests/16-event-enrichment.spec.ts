@@ -43,7 +43,8 @@ test.describe("Request enrichment (case 16)", () => {
     const task = section.getByTestId("enrichment-task").first();
     await expect(task).toBeVisible();
     await expect(task).toHaveAttribute("data-status", "PENDING");
-    await expect(task).toContainText("Impact prior");
+    // "Web search" for the web Worker's Task, "Impact prior · …" for any other source.
+    await expect(task).toContainText(/Web search|Impact prior/);
     await expect(task).toContainText("Pending");
 
     // The requester may cancel; a PENDING Task ends at once and the action returns.

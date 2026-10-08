@@ -1948,7 +1948,8 @@
         "web": "Web",
         "legacy": "Source non précisée"
       },
-      "cancelFailed": "Certaines demandes n'ont pas pu être annulées. Réessayez."
+      "cancelFailed": "Certaines demandes n'ont pas pu être annulées. Réessayez.",
+      "webSearch": "Recherche web"
     }
   },
   "knowledge": {
@@ -2836,7 +2837,7 @@
       "reports": "Rapports terrain",
       "unclassified": "Non classés",
       "chatter": "Bavardage",
-      "priors": "A priori d'impact",
+      "priors": "Signaux proposés",
       "requests": "Mes demandes",
       "all": "Tout"
     },
@@ -2962,13 +2963,13 @@
       "partial": "Remis en file : {done} message(s) sur {total}. {error}"
     },
     "kinds": {
-      "impact_prior": "A priori d'impact",
+      "impact_prior": "Signal proposé",
       "task": "Ma demande",
       "cases": "Cas web"
     },
     "priors": {
       "untitledEvent": "Événement sans titre",
-      "preview": "A priori d'impact proposé · {source} · {count, plural, one {# cas} other {# cas}} · {scope} · {hazard}",
+      "preview": "{source} · {count, plural, one {# cas} other {# cas}} · {scope} · {hazard}",
       "openEvent": "Ouvrir l'événement",
       "proposedAt": "Proposé le {date}"
     },

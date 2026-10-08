@@ -1948,7 +1948,8 @@
         "web": "Web",
         "legacy": "Source not recorded"
       },
-      "cancelFailed": "Some requests could not be cancelled. Try again."
+      "cancelFailed": "Some requests could not be cancelled. Try again.",
+      "webSearch": "Web search"
     }
   },
   "knowledge": {
@@ -2836,7 +2837,7 @@
       "reports": "Field reports",
       "unclassified": "Unclassified",
       "chatter": "Chatter",
-      "priors": "Impact priors",
+      "priors": "Proposed signals",
       "requests": "My requests",
       "all": "Everything"
     },
@@ -2962,13 +2963,13 @@
       "partial": "Queued again: {done} of {total} messages. {error}"
     },
     "kinds": {
-      "impact_prior": "Impact prior",
+      "impact_prior": "Proposed signal",
       "task": "My request",
       "cases": "Web cases"
     },
     "priors": {
       "untitledEvent": "Untitled event",
-      "preview": "Proposed impact prior · {source} · {count, plural, one {# case} other {# cases}} · {scope} · {hazard}",
+      "preview": "{source} · {count, plural, one {# case} other {# cases}} · {scope} · {hazard}",
       "openEvent": "Open the event",
       "proposedAt": "Proposed {date}"
     },

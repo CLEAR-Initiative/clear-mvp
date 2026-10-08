@@ -8,7 +8,7 @@ import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { useOptionalTeam } from "~/providers/team-provider";
 import { canWriteCrisisEvents, isPlatformAdmin } from "~/lib/roles";
-import { isImpactPriorKind, sourceLabel } from "~/lib/impact-prior-source";
+import { isImpactPriorKind, requestSourceLabel } from "~/lib/impact-prior-source";
 
 /**
  * "Request enrichment" in the Event page's Actions card (clear-api ADR-0010):
@@ -110,7 +110,7 @@ export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
         <Stack gap={0} data-testid="enrichment-open-kinds">
           {openTasks.map((task) => (
             <Text key={task.id} size="xs" c="var(--color-text-muted)" style={{ textAlign: "center" }} data-kind={task.kind}>
-              {t("kindStatus", { source: sourceLabel(task.kind, t), status: t(`status.${task.status}`) })}
+              {t("kindStatus", { source: requestSourceLabel(task.kind, t), status: t(`status.${task.status}`) })}
             </Text>
           ))}
         </Stack>

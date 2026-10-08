@@ -16,13 +16,13 @@ import { enableFeatureFlags, gotoEventByTitle } from "../support/helpers";
  *      accepting the other links the Event it now sits on, and both rows
  *      turn to their decision in place. No whole-prior Review item exists
  *      for the web; the CLEAR-data prior is still one, undecided. The Event
- *      page shows the same cases, decided.
+ *      page shows the same cases, decided, and no whole prior.
  *   2. The bell: the seed completed each Task through clear-api, which
  *      notified the analyst (the requester) once per Worker; each
  *      notification opens its Event.
  *   3. From the Event page: the Enrichment section lists the same cases with
- *      the same actions; accepting one leaves its sibling and the CLEAR-data
- *      prior decidable.
+ *      the same actions; accepting one leaves its sibling decidable. Whole
+ *      priors are decided from the Inbox only.
  *
  * Decisions are terminal (clear-api answers CONFLICT on a second one), so a
  * retry that finds a case already decided asserts the end state instead.
@@ -38,7 +38,6 @@ const caseRow = (page: Page, scope: Locator, sourceUrl: string): Locator =>
   scope
     .getByTestId("case-proposal")
     .filter({ has: page.locator(`[data-testid="case-proposal-source"][href="${sourceUrl}"]`) });
-const priorOf = (scope: Locator, kind: string) => scope.locator(`[data-testid="enrichment-prior"][data-source-kind="${kind}"]`);
 
 /** Reject a case with a rationale, unless an earlier attempt decided it. */
 async function rejectCase(row: Locator, rationale: string) {
@@ -63,7 +62,7 @@ test.describe("Enrichment review (case 17)", () => {
     const [rejectUrl, acceptUrl] = IMPACT_PRIORS.webCases[IMPACT_PRIORS.inboxEvent]!;
     await page.goto("/inbox", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("inbox-page")).toBeVisible({ timeout: 20_000 });
-    // An analyst sees no hotline filters: Impact priors is the first one, and active.
+    // An analyst sees no hotline filters: Proposed signals is the first one, and active.
     await expect(page.getByTestId("inbox-filter-priors")).toHaveAttribute("data-active", "true");
     await expect(page.getByTestId("inbox-filter-reports")).toHaveCount(0);
     await expect(page.getByTestId("inbox-list-footer")).toHaveAttribute("data-loading", "false", { timeout: 20_000 });
@@ -107,16 +106,15 @@ test.describe("Enrichment review (case 17)", () => {
       await expect(casesRow).toHaveAttribute("data-undecided", "0");
     }
 
-    // The Event page shows the same cases with their decisions, and the
-    // CLEAR-data prior still waiting for its own.
+    // The Event page shows the same cases with their decisions, and no
+    // whole prior: the prior is computed from accepted cases (V4).
     await gotoEventByTitle(page, IMPACT_PRIORS.inboxEvent);
     const section = page.getByTestId("enrichment-section");
     await expect(caseRow(page, section, rejectUrl)).toHaveAttribute("data-state", "rejected", { timeout: 20_000 });
     await expect(caseRow(page, section, rejectUrl)).toContainText("another season");
     await expect(caseRow(page, section, acceptUrl)).toHaveAttribute("data-state", "accepted");
     await expect(caseRow(page, section, acceptUrl).getByTestId("case-proposal-result-event")).toHaveAttribute("href", /^\/event\//);
-    await expect(priorOf(section, CLEAR.kind)).toHaveAttribute("data-state", "proposed");
-    await expect(priorOf(section, WEB.kind)).toHaveCount(0);
+    await expect(section.getByTestId("enrichment-prior")).toHaveCount(0);
   });
 
   test("the requester hears from each Worker in the bell, and a row opens its Event", async ({ page }) => {
@@ -142,7 +140,7 @@ test.describe("Enrichment review (case 17)", () => {
     await expect(page.getByTestId("enrichment-section")).toBeVisible({ timeout: 20_000 });
   });
 
-  test("from the Event page, accepting one web case leaves its sibling and the CLEAR-data prior decidable", async ({ page }) => {
+  test("from the Event page, accepting one web case leaves its sibling decidable", async ({ page }) => {
     const [acceptUrl, siblingUrl] = IMPACT_PRIORS.webCases[IMPACT_PRIORS.eventPageEvent]!;
     await gotoEventByTitle(page, IMPACT_PRIORS.eventPageEvent);
     const section = page.getByTestId("enrichment-section");
@@ -160,12 +158,10 @@ test.describe("Enrichment review (case 17)", () => {
     await expect(accepted.getByTestId("case-proposal-decision")).toHaveCount(0);
     await expect(accepted.getByTestId("case-proposal-result-event")).toHaveAttribute("href", /^\/event\/[^/]+$/);
 
-    // Nothing marks the Event done: the sibling case and the CLEAR-data
-    // prior each still wait for their own decision.
+    // Nothing marks the Event done: the sibling case still waits for its
+    // own decision. No whole prior is offered here.
     await expect(sibling).toHaveAttribute("data-state", "proposed");
     await expect(sibling.getByTestId("case-proposal-decision")).toHaveCount(1);
-    const clearPrior = priorOf(section, CLEAR.kind);
-    await expect(clearPrior).toHaveAttribute("data-state", "proposed");
-    await expect(section.getByTestId("impact-prior-decision")).toHaveCount(1);
+    await expect(section.getByTestId("impact-prior-decision")).toHaveCount(0);
   });
 });

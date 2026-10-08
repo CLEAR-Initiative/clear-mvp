@@ -49,35 +49,20 @@ export function sourceLabel(kind: string, t: SourceTranslator): string {
   return source.key === "other" ? source.kind : t(`sourceKind.${source.key}`);
 }
 
-const SOURCE_RANK: Record<ImpactPriorSource["key"], number> = { clear: 0, web: 1, legacy: 2, other: 3 };
+/** The translator keys a request's label needs, beyond the source's. */
+export type RequestTranslator = SourceTranslator &
+  ((key: "kinds.impactPrior" | "webSearch") => string);
 
-/** Known sources first in a fixed order, then the rest by kind, so the
- *  Event page reads the same way whatever arrived first. */
-export function compareSourceKinds(a: string, b: string): number {
-  const ra = SOURCE_RANK[impactPriorSource(a).key];
-  const rb = SOURCE_RANK[impactPriorSource(b).key];
-  return ra !== rb ? ra - rb : a.localeCompare(b);
+/** What a request reads as beside its status: "Web search" for the web
+ *  Worker's (it searches; its cases are decided one by one), the source
+ *  label otherwise. */
+export function requestSourceLabel(kind: string, t: RequestTranslator): string {
+  return impactPriorSource(kind).key === "web" ? t("webSearch") : sourceLabel(kind, t);
 }
 
-/** Proposals grouped by source kind, groups in display order, each group's
- *  rows in the order they arrived (clear-api sends newest first). */
-export function groupBySourceKind<T extends { sourceKind: string }>(rows: T[]): { kind: string; rows: T[] }[] {
-  const byKind = new Map<string, T[]>();
-  for (const row of rows) {
-    const list = byKind.get(row.sourceKind);
-    if (list) list.push(row);
-    else byKind.set(row.sourceKind, [row]);
-  }
-  return [...byKind.entries()]
-    .sort(([a], [b]) => compareSourceKinds(a, b))
-    .map(([kind, list]) => ({ kind, rows: list }));
-}
-
-/** The kinds whose evidence is decided case by case (clear-api V4): the
- *  web, and the bare pre-fan-out kind (whichever Worker held it). Their
- *  ImpactPriors are history, never a decision: clear-api's Review list
- *  leaves them out and their cases arrive as CaseProposals. */
-export function isCaseReviewedKind(kind: string): boolean {
-  const source = impactPriorSource(kind).key;
-  return source === "web" || source === "legacy";
+/** A request's own line: "Web search", "Impact prior · CLEAR data", or the
+ *  raw kind for anything outside the family. */
+export function requestLabel(kind: string, t: RequestTranslator): string {
+  if (impactPriorSource(kind).key === "web") return t("webSearch");
+  return isImpactPriorKind(kind) ? `${t("kinds.impactPrior")} · ${sourceLabel(kind, t)}` : kind;
 }

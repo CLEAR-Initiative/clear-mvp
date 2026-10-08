@@ -90,10 +90,14 @@ _Avoid_: "hotline inbox" for the whole page — that is one kind of Review item.
 **Review item**:
 One thing in the **Inbox** waiting for a person's decision: a hotline thread (Add to
 CLEAR / Archive / Reject), a proposed **ImpactPrior** from CLEAR data (accept / reject
-with a rationale, clear-api ADR-0010), or a proposed **Web case**. Each is also decidable
-from its **Event** page — two doors, one decision. Several Workers propose on one Event,
-so every ImpactPrior Review item is labelled with its **Source kind** and decided on its
-own. The Inbox counts decisions waiting: one per thread, prior, or undecided Web case.
+with a rationale, clear-api ADR-0010), or a proposed **Web case**. A Web case is also
+decidable from its **Event** page — two doors, one decision; a whole ImpactPrior is
+decided from the Inbox only (the Event page shows the **Computed ImpactPrior** instead).
+Several Workers propose on one Event, so every ImpactPrior Review item is labelled with
+its **Source kind** and decided on its own. The Inbox counts decisions waiting: one per
+thread, prior, or undecided Web case. In product copy the Inbox calls proposed
+ImpactPriors and Web cases "Proposed signals" (filter) and a whole prior "Proposed signal"
+(tag); a web request reads "Web search".
 
 **Web case** (clear-api `CaseProposal`):
 One historical case the web Worker found while enriching an **Event**: when and where, the

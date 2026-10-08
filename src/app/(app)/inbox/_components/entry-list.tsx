@@ -13,7 +13,8 @@ import {
   type InboxSort,
   type TaskEntry,
 } from "~/lib/hotline-inbox";
-import { IMPACT_PRIOR_FAMILY, sourceLabel } from "~/lib/impact-prior-source";
+import { IMPACT_PRIOR_FAMILY, requestSourceLabel, sourceLabel } from "~/lib/impact-prior-source";
+import { getHazardName } from "~/lib/disaster-types";
 import { InboxEntryPills } from "./classification-pill";
 import styles from "../inbox.module.css";
 
@@ -84,7 +85,7 @@ function ImpactPriorRow({ entry }: { entry: ImpactPriorEntry }) {
         <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
       </span>
       <span className={styles.entryPreview}>
-        {t("priors.preview", { source, count: prior.numberOfCases, scope, hazard: prior.hazardType })}
+        {t("priors.preview", { source, count: prior.numberOfCases, scope, hazard: getHazardName(prior.hazardType) })}
       </span>
       <span className={styles.entryMeta}>
         <InboxEntryPills entry={entry} />
@@ -98,7 +99,7 @@ function ImpactPriorRow({ entry }: { entry: ImpactPriorEntry }) {
 function CaseGroupRow({ entry }: { entry: CaseGroupEntry }) {
   const t = useTranslations("inbox");
   const format = useFormatter();
-  const hazards = [...new Set(entry.cases.map((c) => c.hazardType))].join(", ");
+  const hazards = [...new Set(entry.cases.map((c) => getHazardName(c.hazardType)))].join(", ");
   return (
     <span className={styles.entryBody}>
       <span className={styles.entryLine1}>
@@ -128,7 +129,7 @@ function TaskRow({ entry }: { entry: TaskEntry }) {
         <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
       </span>
       <span className={styles.entryPreview}>
-        {tEnrichment("kindStatus", { source: sourceLabel(task.kind, tEnrichment), status: tEnrichment(`status.${task.status}`) })}
+        {tEnrichment("kindStatus", { source: requestSourceLabel(task.kind, tEnrichment), status: tEnrichment(`status.${task.status}`) })}
       </span>
       <span className={styles.entryMeta}>
         <InboxEntryPills entry={entry} />
