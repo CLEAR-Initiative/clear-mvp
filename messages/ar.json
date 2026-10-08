@@ -2965,7 +2965,7 @@
     "kinds": {
       "impact_prior": "إشارة مقترحة",
       "task": "طلبي",
-      "cases": "حالات من الويب"
+      "cases": "الإشارات المقترحة"
     },
     "priors": {
       "untitledEvent": "حدث بلا عنوان",

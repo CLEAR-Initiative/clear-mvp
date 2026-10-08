@@ -96,8 +96,9 @@ decided from the Inbox only (the Event page shows the **Computed ImpactPrior** i
 Several Workers propose on one Event, so every ImpactPrior Review item is labelled with
 its **Source kind** and decided on its own. The Inbox counts decisions waiting: one per
 thread, prior, or undecided Web case. In product copy the Inbox calls proposed
-ImpactPriors and Web cases "Proposed signals" (filter) and a whole prior "Proposed signal"
-(tag); a web request reads "Web search".
+ImpactPriors and Web cases "Proposed signals" (filter), tags a whole prior "Proposed
+signal" and an Event's group of Web cases "Proposed signals"; a web request reads "Web
+search".
 
 **Web case** (clear-api `CaseProposal`):
 One historical case the web Worker found while enriching an **Event**: when and where, the

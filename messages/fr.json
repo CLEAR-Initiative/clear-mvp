@@ -2965,7 +2965,7 @@
     "kinds": {
       "impact_prior": "Signal proposé",
       "task": "Ma demande",
-      "cases": "Cas web"
+      "cases": "Signaux proposés"
     },
     "priors": {
       "untitledEvent": "Événement sans titre",
