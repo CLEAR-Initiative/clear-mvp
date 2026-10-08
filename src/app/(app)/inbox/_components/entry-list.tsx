@@ -5,15 +5,13 @@ import { IconPaperclip, IconSearch } from "@tabler/icons-react";
 import {
   isCaseGroupEntry,
   isHotlineEntry,
-  isImpactPriorEntry,
   type CaseGroupEntry,
   type HotlineEntry,
-  type ImpactPriorEntry,
   type InboxEntry,
   type InboxSort,
   type TaskEntry,
 } from "~/lib/hotline-inbox";
-import { IMPACT_PRIOR_FAMILY, requestSourceLabel, sourceLabel } from "~/lib/impact-prior-source";
+import { WEB_SEARCH_KIND, requestLabel } from "~/lib/impact-prior-source";
 import { getHazardName } from "~/lib/disaster-types";
 import { InboxEntryPills } from "./classification-pill";
 import styles from "../inbox.module.css";
@@ -32,9 +30,6 @@ interface EntryListProps {
    * queue that may not be. */
   loading?: boolean;
 }
-
-/** Web cases come from the web Worker's kind. */
-const WEB_KIND = `${IMPACT_PRIOR_FAMILY}.web`;
 
 function HotlineRow({ entry }: { entry: HotlineEntry }) {
   const t = useTranslations("inbox");
@@ -65,36 +60,7 @@ function HotlineRow({ entry }: { entry: HotlineEntry }) {
   );
 }
 
-/** A proposed ImpactPrior's row: the Event it is about, what was found,
- * and when it was proposed. */
-function ImpactPriorRow({ entry }: { entry: ImpactPriorEntry }) {
-  const t = useTranslations("inbox");
-  const tEnrichment = useTranslations("eventDetail.enrichment");
-  const format = useFormatter();
-  const { prior } = entry;
-  const scope = prior.geographicScope === "district" || prior.geographicScope === "country"
-    ? tEnrichment(`scope.${prior.geographicScope}`)
-    : prior.geographicScope;
-  // Which Worker kind proposed it: several propose on one Event, so the
-  // row says whose proposal this is before the decider opens it.
-  const source = sourceLabel(prior.sourceKind, tEnrichment);
-  return (
-    <span className={styles.entryBody}>
-      <span className={styles.entryLine1}>
-        <span className={styles.entryTitle}>{entry.eventTitle ?? t("priors.untitledEvent")}</span>
-        <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
-      </span>
-      <span className={styles.entryPreview}>
-        {t("priors.preview", { source, count: prior.numberOfCases, scope, hazard: getHazardName(prior.hazardType) })}
-      </span>
-      <span className={styles.entryMeta}>
-        <InboxEntryPills entry={entry} />
-      </span>
-    </span>
-  );
-}
-
-/** An Event's web cases: the Event, how many cases wait, and when the
+/** An Event's proposed signals (web cases): the Event, how many cases wait, and when the
  * newest was proposed. */
 function CaseGroupRow({ entry }: { entry: CaseGroupEntry }) {
   const t = useTranslations("inbox");
@@ -103,7 +69,7 @@ function CaseGroupRow({ entry }: { entry: CaseGroupEntry }) {
   return (
     <span className={styles.entryBody}>
       <span className={styles.entryLine1}>
-        <span className={styles.entryTitle}>{entry.eventTitle ?? t("priors.untitledEvent")}</span>
+        <span className={styles.entryTitle}>{entry.eventTitle ?? t("event.untitled")}</span>
         <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
       </span>
       <span className={styles.entryPreview}>
@@ -125,11 +91,11 @@ function TaskRow({ entry }: { entry: TaskEntry }) {
   return (
     <span className={styles.entryBody}>
       <span className={styles.entryLine1}>
-        <span className={styles.entryTitle}>{entry.eventTitle ?? t("priors.untitledEvent")}</span>
+        <span className={styles.entryTitle}>{entry.eventTitle ?? t("event.untitled")}</span>
         <span className={styles.entryTime}>{format.relativeTime(new Date(entry.sentAt))}</span>
       </span>
       <span className={styles.entryPreview}>
-        {tEnrichment("kindStatus", { source: requestSourceLabel(task.kind, tEnrichment), status: tEnrichment(`status.${task.status}`) })}
+        {tEnrichment("kindStatus", { source: requestLabel(task.kind, tEnrichment), status: tEnrichment(`status.${task.status}`) })}
       </span>
       <span className={styles.entryMeta}>
         <InboxEntryPills entry={entry} />
@@ -181,13 +147,8 @@ export function EntryList({
               data-testid="inbox-entry"
               data-kind={entry.kind}
               data-source-kind={
-                isImpactPriorEntry(entry)
-                  ? entry.prior.sourceKind
-                  : isCaseGroupEntry(entry)
-                    ? WEB_KIND
-                    : isHotlineEntry(entry)
-                      ? undefined
-                      : entry.task.kind
+                // Proposed signals come from the web Worker's kind.
+                isCaseGroupEntry(entry) ? WEB_SEARCH_KIND : isHotlineEntry(entry) ? undefined : entry.task.kind
               }
               data-status={entry.kind === "task" ? entry.task.status : undefined}
               data-undecided={isCaseGroupEntry(entry) ? entry.undecided : undefined}
@@ -199,8 +160,6 @@ export function EntryList({
               <span className={styles.gutter}>{unread && <span className={styles.unreadDot} />}</span>
               {isHotlineEntry(entry) ? (
                 <HotlineRow entry={entry} />
-              ) : isImpactPriorEntry(entry) ? (
-                <ImpactPriorRow entry={entry} />
               ) : isCaseGroupEntry(entry) ? (
                 <CaseGroupRow entry={entry} />
               ) : (

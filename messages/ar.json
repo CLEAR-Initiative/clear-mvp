@@ -1925,29 +1925,19 @@
         "accepted": "مقبول",
         "rejected": "مرفوض"
       },
-      "cases": "{count, plural, one {حالة واحدة} other {# حالات}}",
       "scope": {
         "district": "المحلية",
         "country": "البلد"
       },
       "horizon": "أفق {years} سنوات",
       "tier": {
-        "clear": "CLEAR",
         "web": "الويب"
       },
       "method": "الطريقة {version}",
-      "supersedes": "يحل محل سابقة أقدم",
       "source": "المصدر",
       "loadFailed": "تعذر تحميل الإثراء.",
-      "priorEvent": "فتح الحدث السابق",
       "worker": "العامل: {name}",
-      "group": "{source} · {count, plural, one {مقترح واحد} other {# مقترحات}}",
       "kindStatus": "{source} · {status}",
-      "sourceKind": {
-        "clear": "بيانات CLEAR",
-        "web": "الويب",
-        "legacy": "المصدر غير مسجل"
-      },
       "cancelFailed": "تعذر إلغاء بعض الطلبات. حاول مرة أخرى.",
       "webSearch": "بحث على الويب"
     }
@@ -2837,7 +2827,7 @@
       "reports": "تقارير ميدانية",
       "unclassified": "غير مصنّف",
       "chatter": "دردشة",
-      "priors": "الإشارات المقترحة",
+      "proposals": "الإشارات المقترحة",
       "requests": "طلباتي",
       "all": "الكل"
     },
@@ -2963,14 +2953,12 @@
       "partial": "أُعيد إلى قائمة الانتظار: {done} من أصل {total} رسائل. {error}"
     },
     "kinds": {
-      "impact_prior": "إشارة مقترحة",
       "task": "طلبي",
       "cases": "الإشارات المقترحة"
     },
-    "priors": {
-      "untitledEvent": "حدث بلا عنوان",
-      "preview": "{source} · {count, plural, one {حالة واحدة} other {# حالات}} · {scope} · {hazard}",
-      "openEvent": "فتح الحدث",
+    "event": {
+      "untitled": "حدث بلا عنوان",
+      "open": "فتح الحدث",
       "proposedAt": "اقتُرح في {date}"
     },
     "requests": {
@@ -3364,19 +3352,6 @@
         "eventTypes": "أنواع الأحداث",
         "sourceNames": "المصادر"
       }
-    }
-  },
-  "impactPriorReview": {
-    "help": "لا يُحتسب لاحقًا إلا التقدير المقبول. يبقى التقدير المرفوض مع الحدث، مستبدَلًا، مع سببك.",
-    "rationaleLabel": "المسوّغ",
-    "rationalePlaceholder": "سبب هذا القرار، لسجل التدقيق",
-    "rationaleRequired": "المسوّغ مطلوب",
-    "rationaleTooLong": "يجب أن يكون المسوّغ أقل من {max} حرفًا",
-    "reject": "رفض",
-    "accept": "قبول",
-    "toast": {
-      "accepted": "قُبل تقدير الأثر المسبق",
-      "rejected": "رُفض تقدير الأثر المسبق"
     }
   },
   "caseReview": {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { caseFigures, figureText, isCaseMetric } from "./case-proposals";
+import { caseFigures, figureText, isCaseMetric, safeHttpUrl } from "./case-proposals";
 
 describe("case figures", () => {
   const num = (n: number) => n.toLocaleString("en");
@@ -22,5 +22,16 @@ describe("case figures", () => {
   it("knows the ontology's seven metric types", () => {
     expect(isCaseMetric("households_affected")).toBe(true);
     expect(isCaseMetric("deaths")).toBe(false);
+  });
+});
+
+describe("safeHttpUrl", () => {
+  it("passes http(s) URLs and refuses anything else", () => {
+    expect(safeHttpUrl("https://example.test/floods-2019")).toBe("https://example.test/floods-2019");
+    expect(safeHttpUrl("http://example.test/a")).toBe("http://example.test/a");
+    expect(safeHttpUrl("javascript:alert(1)")).toBeNull();
+    expect(safeHttpUrl("data:text/html,x")).toBeNull();
+    expect(safeHttpUrl("not a url")).toBeNull();
+    expect(safeHttpUrl(undefined)).toBeNull();
   });
 });

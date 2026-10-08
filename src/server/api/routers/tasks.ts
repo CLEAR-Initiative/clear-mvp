@@ -2,15 +2,8 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { cookieHeaders, graphqlFetch, GraphQLRequestError } from "~/server/api/graphql";
-import type {
-  GqlCaseProposal,
-  GqlComputedImpactPrior,
-  GqlImpactPrior,
-  GqlReviewCaseProposal,
-  GqlReviewImpactPrior,
-  GqlTask,
-} from "~/lib/types/graphql";
-import { MAX_RATIONALE_LENGTH } from "~/lib/impact-prior-review";
+import type { GqlCaseProposal, GqlComputedImpactPrior, GqlReviewCaseProposal, GqlTask } from "~/lib/types/graphql";
+import { MAX_RATIONALE_LENGTH } from "~/lib/case-proposals";
 
 /**
  * Event enrichment (clear-api ADR-0010): thin proxies over the Task queue's
@@ -42,33 +35,8 @@ const TASK_FIELDS = `
   updatedAt
 `;
 
-const IMPACT_PRIOR_FIELDS = `
-  id
-  eventId
-  taskId
-  sourceKind
-  task { leaseOwner { id name } }
-  state
-  hazardType
-  countryLocationId
-  geographicScope
-  horizonYears
-  populationGroup
-  metric
-  lowerBound
-  upperBound
-  numberOfCases
-  basis
-  methodVersion
-  supersedesId
-  decidedById
-  decidedAt
-  decisionRationale
-  createdAt
-`;
-
-/** A web case (clear-api V4): what a decider reads before deciding it, and
- * what accepting it wrote into CLEAR. */
+/** A web case (clear-api V4, a "proposed signal" in the UI): what a decider
+ * reads before deciding it, and what accepting it wrote into CLEAR. */
 const CASE_PROPOSAL_FIELDS = `
   id
   eventId
@@ -105,9 +73,6 @@ export const EVENT_ENRICHMENT_QUERY = `
     eventTasks(eventId: $eventId) {
       ${TASK_FIELDS}
     }
-    eventImpactPriors(eventId: $eventId) {
-      ${IMPACT_PRIOR_FIELDS}
-    }
     eventCaseProposals(eventId: $eventId) {
       ${CASE_PROPOSAL_FIELDS}
     }
@@ -141,21 +106,9 @@ export const COMPUTED_IMPACT_PRIORS_QUERY = `
   }
 `;
 
-/** The Inbox's Review items: proposed ImpactPriors across every Event, with
- * the Event they are about. clear-api admits deciders only, so the list is
- * exactly what the signed-in user may decide. */
-export const PROPOSED_IMPACT_PRIORS_QUERY = `
-  query ProposedImpactPriors($limit: Int, $offset: Int) {
-    impactPriors(state: proposed, limit: $limit, offset: $offset) {
-      ${IMPACT_PRIOR_FIELDS}
-      event { id title types }
-    }
-  }
-`;
-
-/** The Inbox's per-case Review items (V4): proposed web cases across every
- * Event, with the Event whose enrichment produced each. Deciders only, like
- * `impactPriors`. */
+/** The Inbox's Review items (V4): proposed web cases across every Event,
+ * with the Event whose enrichment produced each. clear-api admits deciders
+ * only, so the list is exactly what the signed-in user may decide. */
 export const PROPOSED_CASE_PROPOSALS_QUERY = `
   query ProposedCaseProposals($limit: Int, $offset: Int) {
     caseProposals(state: proposed, limit: $limit, offset: $offset) {
@@ -165,38 +118,26 @@ export const PROPOSED_CASE_PROPOSALS_QUERY = `
   }
 `;
 
-/** The nav badge's count: what waits for a decision — whole priors (CLEAR
- * data) and web cases, one each. Ids only, so a count on every page does
- * not pull the evidence. clear-api has no count query; each list is capped
- * at its page maximum. */
+/** The nav badge's count: the proposed web cases waiting for a decision.
+ * Ids only, so a count on every page does not pull the evidence. clear-api
+ * has no count query; the list is capped at its page maximum. */
 export const REVIEW_COUNT_QUERY = `
   query ReviewCount($limit: Int) {
-    impactPriors(state: proposed, limit: $limit) {
-      id
-    }
     caseProposals(state: proposed, limit: $limit) {
       id
     }
   }
 `;
 
-/** clear-api's page maximum for `impactPriors` and `caseProposals`. */
-export const PROPOSED_IMPACT_PRIORS_MAX = 200;
+/** clear-api's page maximum for `caseProposals`. */
+export const CASE_PROPOSALS_PAGE_MAX = 200;
 /** How many proposed web cases the Inbox reads at most. */
 export const CASE_PROPOSALS_READ_MAX = 2000;
 /** How far each page read advances: a page less an overlap of 50, so up to
  * 50 decisions taken elsewhere mid-read never skip a waiting case. */
-export const CASE_PAGE_STRIDE = PROPOSED_IMPACT_PRIORS_MAX - 50;
+export const CASE_PAGE_STRIDE = CASE_PROPOSALS_PAGE_MAX - 50;
 /** A safety bound on page reads, well past what CASE_PROPOSALS_READ_MAX needs. */
 const CASE_PAGE_READS_MAX = 2 * Math.ceil(CASE_PROPOSALS_READ_MAX / CASE_PAGE_STRIDE);
-
-export const DECIDE_IMPACT_PRIOR = `
-  mutation DecideImpactPrior($id: String!, $decision: ImpactPriorDecision!, $rationale: String!) {
-    decideImpactPrior(id: $id, decision: $decision, rationale: $rationale) {
-      ${IMPACT_PRIOR_FIELDS}
-    }
-  }
-`;
 
 export const DECIDE_CASE_PROPOSAL = `
   mutation DecideCaseProposal($id: String!, $decision: CaseProposalDecision!, $rationale: String) {
@@ -319,17 +260,16 @@ export const tasksRouter = createTRPCRouter({
       }
     }),
 
-  /** The Event's enrichment Tasks, ImpactPriors and web cases, as clear-api lets this user see them. */
+  /** The Event's enrichment Tasks and web cases, as clear-api lets this user see them. */
   forEvent: protectedProcedure
     .input(z.object({ eventId: z.string() }))
     .query(async ({ ctx, input }) => {
       try {
         const data = await graphqlFetch<{
           eventTasks: GqlTask[];
-          eventImpactPriors: GqlImpactPrior[];
           eventCaseProposals: GqlCaseProposal[];
         }>(EVENT_ENRICHMENT_QUERY, { eventId: input.eventId }, cookieHeaders(ctx));
-        return { tasks: data.eventTasks, impactPriors: data.eventImpactPriors, caseProposals: data.eventCaseProposals };
+        return { tasks: data.eventTasks, caseProposals: data.eventCaseProposals };
       } catch (err) {
         toTrpcError(err);
       }
@@ -352,29 +292,6 @@ export const tasksRouter = createTRPCRouter({
       }
     }),
 
-  /** Proposed ImpactPriors waiting for a decision, newest first — admins and analysts only. */
-  proposedImpactPriors: protectedProcedure
-    .input(
-      z
-        .object({
-          limit: z.number().int().positive().max(PROPOSED_IMPACT_PRIORS_MAX).optional(),
-          offset: z.number().int().nonnegative().optional(),
-        })
-        .optional(),
-    )
-    .query(async ({ ctx, input }) => {
-      try {
-        const data = await graphqlFetch<{ impactPriors: GqlReviewImpactPrior[] }>(
-          PROPOSED_IMPACT_PRIORS_QUERY,
-          { limit: input?.limit, offset: input?.offset },
-          cookieHeaders(ctx),
-        );
-        return data.impactPriors;
-      } catch (err) {
-        toTrpcError(err);
-      }
-    }),
-
   /** Proposed web cases waiting for a decision, newest first, with their
    * Event — admins and analysts only (V4). With no `limit`, every one, read
    * page by page (one completion can propose dozens, so a single page of
@@ -384,7 +301,7 @@ export const tasksRouter = createTRPCRouter({
     .input(
       z
         .object({
-          limit: z.number().int().positive().max(PROPOSED_IMPACT_PRIORS_MAX).optional(),
+          limit: z.number().int().positive().max(CASE_PROPOSALS_PAGE_MAX).optional(),
           offset: z.number().int().nonnegative().optional(),
         })
         .optional(),
@@ -408,9 +325,9 @@ export const tasksRouter = createTRPCRouter({
         // proposed mid-read make pages repeat, and must not cut the list
         // short. The read count only bounds a list that never settles.
         for (let read = 0; read < CASE_PAGE_READS_MAX && all.length < CASE_PROPOSALS_READ_MAX; read++) {
-          const rows = await page(PROPOSED_IMPACT_PRIORS_MAX, offset);
+          const rows = await page(CASE_PROPOSALS_PAGE_MAX, offset);
           for (const row of rows) if (!seen.has(row.id)) (seen.add(row.id), all.push(row));
-          if (rows.length < PROPOSED_IMPACT_PRIORS_MAX) break;
+          if (rows.length < CASE_PROPOSALS_PAGE_MAX) break;
           // Pages overlap: a case decided elsewhere between two reads shifts
           // the list up, and a full-stride step would skip the case that
           // moved into its place. The overlap re-reads it; `seen` lists
@@ -423,45 +340,22 @@ export const tasksRouter = createTRPCRouter({
       }
     }),
 
-  /** How many decisions wait: proposed ImpactPriors plus proposed web cases,
-   * each list up to clear-api's page maximum (`capped` when either may hold
-   * more) — admins and analysts only. */
+  /** How many decisions wait: the proposed web cases, up to clear-api's
+   * page maximum (`capped` when there may be more) — admins and analysts
+   * only. */
   reviewCount: protectedProcedure.query(async ({ ctx }) => {
     try {
-      const data = await graphqlFetch<{ impactPriors: { id: string }[]; caseProposals: { id: string }[] }>(
+      const data = await graphqlFetch<{ caseProposals: { id: string }[] }>(
         REVIEW_COUNT_QUERY,
-        { limit: PROPOSED_IMPACT_PRIORS_MAX },
+        { limit: CASE_PROPOSALS_PAGE_MAX },
         cookieHeaders(ctx),
       );
-      const priors = data.impactPriors.length;
       const cases = data.caseProposals.length;
-      return { count: priors + cases, capped: priors >= PROPOSED_IMPACT_PRIORS_MAX || cases >= PROPOSED_IMPACT_PRIORS_MAX };
+      return { count: cases, capped: cases >= CASE_PROPOSALS_PAGE_MAX };
     } catch (err) {
       toTrpcError(err);
     }
   }),
-
-  /** Accept or reject a proposed ImpactPrior with a rationale — admins and analysts only. */
-  decideImpactPrior: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-        decision: z.enum(["accepted", "rejected"]),
-        rationale: z.string().trim().min(1).max(MAX_RATIONALE_LENGTH),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const data = await graphqlFetch<{ decideImpactPrior: GqlImpactPrior }>(
-          DECIDE_IMPACT_PRIOR,
-          { id: input.id, decision: input.decision, rationale: input.rationale },
-          cookieHeaders(ctx),
-        );
-        return data.decideImpactPrior;
-      } catch (err) {
-        toTrpcError(err);
-      }
-    }),
 
   /** Accept or reject one web case (V4) — admins and analysts only. The
    * rationale is required to reject and optional to accept. CONFLICT when

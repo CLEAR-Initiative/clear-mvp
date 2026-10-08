@@ -46,10 +46,10 @@ export function canReadContent(role: string | null | undefined): boolean {
 }
 
 /**
- * Client twin of clear-api `decideImpactPrior` / `impactPriors`
- * `requireRole(["admin", "analyst"])`: who may decide a proposed
- * ImpactPrior (an Inbox Review item). The server is the real gate.
+ * Client twin of clear-api `decideCaseProposal` / `caseProposals`
+ * `requireRole(["admin", "analyst"])`: who may decide a proposed signal
+ * (a web case, clear-api CaseProposal). The server is the real gate.
  */
-export function canDecideImpactPriors(role: string | null | undefined): boolean {
+export function canDecideCaseProposals(role: string | null | undefined): boolean {
   return isPlatformAdmin(role) || role === "analyst";
 }

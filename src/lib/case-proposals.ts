@@ -8,6 +8,21 @@ import type { GqlCaseFigure, GqlCaseProposal } from "~/lib/types/graphql";
  * is the gate.
  */
 
+/** clear-api's cap on a decision rationale. */
+export const MAX_RATIONALE_LENGTH = 4000;
+
+/** A Worker-supplied URL is rendered as a link only when it is http(s);
+ *  anything else (javascript:, data:, garbage) is shown as text. */
+export function safeHttpUrl(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The Domain Ontology's seven metric types; anything else is shown raw. */
 export const CASE_METRICS = [
   "people_affected",

@@ -150,15 +150,15 @@ export const FEATURE_FLAGS: FeatureFlagDefinition[] = [
     key: "event_enrichment",
     label: "Event enrichment",
     description:
-      "The Request enrichment action on the Event page and its Enrichment section: a user with escalate rights asks clear-api for an ImpactPrior (what has typically happened before for this hazard and country), produced by a Task Worker and shown beside the Event (clear-api ADR-0010). UI-only gate; clear-api's requestEventEnrichment guard and daily cap are the enforcement.",
+      "The Request enrichment action on the Event page and its Enrichment section: a user with escalate rights asks clear-api's Task Workers to look for past cases like this Event (today a web search, whose cases come back as proposed signals), and the section shows the ImpactPrior computed from CLEAR's accepted history (what has typically happened before for this hazard and country, clear-api ADR-0010). UI-only gate; clear-api's requestEventEnrichment guard and daily cap are the enforcement.",
     tier: 4,
     defaultEnabled: false,
   },
   {
     key: "impact_prior_review",
-    label: "Impact prior review",
+    label: "Proposed signal review",
     description:
-      "Review items in the Inbox: proposed ImpactPriors (from Event enrichment, clear-api ADR-0010) and the web Worker's cases (one Accept / Reject each, grouped under their Event) listed beside hotline threads for admins and analysts to decide, and the same decision controls in the Event page's Enrichment section. UI-only gate; clear-api's decideImpactPrior and decideCaseProposal guards are the enforcement.",
+      "Review items in the Inbox: the proposed signals an Event enrichment's web search found (clear-api CaseProposals, ADR-0010; one Accept / Reject each, grouped under their Event) listed beside hotline threads for admins and analysts to decide, the same decision controls in the Event page's Enrichment section, the Inbox badge and the notifications bell. The key keeps its old name so stored flag values carry over. UI-only gate; clear-api's caseProposals and decideCaseProposal guards are the enforcement.",
     tier: 4,
     defaultEnabled: false,
   },

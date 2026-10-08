@@ -3,7 +3,6 @@ import {
   attachmentKey,
   attachmentKind,
   buildCaseGroupEntries,
-  buildImpactPriorEntries,
   buildInboxEntries,
   buildTaskEntries,
   combineTranslations,
@@ -27,7 +26,6 @@ import type {
   GqlGroundInboxThread,
   GqlHotlineInbox,
   GqlReviewCaseProposal,
-  GqlReviewImpactPrior,
   GqlTask,
 } from "./types/graphql";
 
@@ -350,7 +348,7 @@ describe("visibleEntries / countByFilter", () => {
   });
 
   it("counts per filter", () => {
-    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 1, chatter: 1, priors: 0, requests: 0, all: 3 });
+    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 1, chatter: 1, proposals: 0, requests: 0, all: 3 });
   });
 });
 
@@ -428,90 +426,6 @@ describe("translation helpers", () => {
   });
 });
 
-describe("impact prior Review items", () => {
-  function prior(id: string, overrides: Partial<GqlReviewImpactPrior> = {}): GqlReviewImpactPrior {
-    return {
-      id,
-      eventId: "evt-1",
-      event: { id: "evt-1", title: "Floods in Kassala", types: ["FL"] },
-      taskId: "task-1",
-      sourceKind: "event.impact_prior.clear",
-      state: "proposed",
-      hazardType: "FL",
-      countryLocationId: "sdn",
-      geographicScope: "district",
-      horizonYears: 10,
-      populationGroup: null,
-      metric: null,
-      lowerBound: null,
-      upperBound: null,
-      numberOfCases: 2,
-      basis: [],
-      methodVersion: "clear-impact-prior@0.1.0",
-      supersedesId: null,
-      decidedById: null,
-      decidedAt: null,
-      decisionRationale: null,
-      createdAt: "2026-09-16T10:00:00Z",
-      ...overrides,
-    };
-  }
-
-  it("builds one entry per proposed ImpactPrior, titled after its Event", () => {
-    const entries = buildImpactPriorEntries([prior("ip-1"), prior("ip-2", { event: { id: "evt-2", title: null, types: [] } })]);
-    expect(entries.map((e) => [e.id, e.kind, e.eventId, e.eventTitle, e.title, e.sentAt])).toEqual([
-      ["ip-1", "impact_prior", "evt-1", "Floods in Kassala", "Floods in Kassala", "2026-09-16T10:00:00Z"],
-      ["ip-2", "impact_prior", "evt-1", null, "", "2026-09-16T10:00:00Z"],
-    ]);
-    expect(entries[0]!.prior).toBe(entries[0]!.prior);
-  });
-
-  it("offers each reader the filters of the kinds they see", () => {
-    expect(filtersFor({ hotline: true, priors: true })).toEqual(["reports", "unclassified", "chatter", "priors", "all"]);
-    expect(filtersFor({ hotline: true, priors: false })).toEqual(["reports", "unclassified", "chatter", "all"]);
-    expect(filtersFor({ hotline: false, priors: true })).toEqual(["priors", "all"]);
-    expect(filtersFor({ hotline: false, priors: false })).toEqual(["all"]);
-  });
-
-  it("matches the priors and Everything filters, counts there, and is searchable by Event title and hazard", () => {
-    const hotline = buildInboxEntries({
-      sources: [],
-      threads: [thread("t1", "Fire in Port Sudan")],
-      messages: [message("m1", "t1", { classification: "field_report", sentAt: "2026-09-15T10:00:00Z" })],
-    });
-    const entries = [...hotline, ...buildImpactPriorEntries([prior("ip-1")])];
-    expect(matchesFilter(entries[1]!, "reports")).toBe(false);
-    expect(matchesFilter(entries[1]!, "unclassified")).toBe(false);
-    expect(matchesFilter(entries[1]!, "all")).toBe(true);
-    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 0, chatter: 0, priors: 1, requests: 0, all: 2 });
-    expect(matchesFilter(entries[1]!, "priors")).toBe(true);
-    expect(matchesFilter(entries[0]!, "priors")).toBe(false);
-    expect(visibleEntries(entries, "priors", "", "newest").map((e) => e.id)).toEqual(["ip-1"]);
-    expect(visibleEntries(entries, "all", "kassala", "newest").map((e) => e.id)).toEqual(["ip-1"]);
-    expect(visibleEntries(entries, "all", "FL", "newest").map((e) => e.id)).toEqual(["ip-1"]);
-    // The source word is searchable; the family prefix every prior shares is not indexed.
-    expect(entries[1]!.text).toMatch(/ clear$/);
-    expect(entries[1]!.text).not.toContain("event.impact_prior");
-    expect(visibleEntries(entries, "all", "HL-", "newest").map((e) => e.id)).toEqual(["t1"]);
-  });
-
-  it("ranks a waiting prior with the field reports under reports-first, newest within the rank", () => {
-    const hotline = buildInboxEntries({
-      sources: [],
-      threads: [thread("report"), thread("noise")],
-      messages: [
-        message("m1", "report", { classification: "field_report", sentAt: "2026-09-17T10:00:00Z" }),
-        message("m2", "noise", { classification: "chatter", sentAt: "2026-09-18T10:00:00Z" }),
-      ],
-    });
-    const entries = [...hotline, ...buildImpactPriorEntries([prior("ip-1")])];
-    expect(visibleEntries(entries, "all", "", "reportsFirst").map((e) => e.id)).toEqual(["report", "ip-1", "noise"]);
-    expect(visibleEntries(entries, "all", "", "newest").map((e) => e.id)).toEqual(["noise", "report", "ip-1"]);
-    expect(nextSelection(entries, "ip-1")).toBe("noise");
-    expect(moveSelection(entries, "ip-1", -1)).toBe("noise");
-  });
-});
-
 describe("My requests (task entries)", () => {
   function task(id: string, overrides: Partial<GqlTask> = {}): GqlTask {
     return {
@@ -546,14 +460,14 @@ describe("My requests (task entries)", () => {
     expect(isReviewItem(entries[0]!)).toBe(false);
     expect(matchesFilter(entries[0]!, "requests")).toBe(true);
     expect(matchesFilter(entries[0]!, "all")).toBe(false);
-    expect(matchesFilter(entries[0]!, "priors")).toBe(false);
-    expect(countByFilter(entries)).toEqual({ reports: 0, unclassified: 0, chatter: 0, priors: 0, requests: 1, all: 0 });
+    expect(matchesFilter(entries[0]!, "proposals")).toBe(false);
+    expect(countByFilter(entries)).toEqual({ reports: 0, unclassified: 0, chatter: 0, proposals: 0, requests: 1, all: 0 });
   });
 
   it("offers the My requests filter only to a reader who may see their requests", () => {
-    expect(filtersFor({ hotline: false, priors: false, requests: true })).toEqual(["requests", "all"]);
-    expect(filtersFor({ hotline: false, priors: true, requests: true })).toEqual(["priors", "requests", "all"]);
-    expect(filtersFor({ hotline: true, priors: true, requests: false })).toEqual(["reports", "unclassified", "chatter", "priors", "all"]);
+    expect(filtersFor({ hotline: false, proposals: false, requests: true })).toEqual(["requests", "all"]);
+    expect(filtersFor({ hotline: false, proposals: true, requests: true })).toEqual(["proposals", "requests", "all"]);
+    expect(filtersFor({ hotline: true, proposals: true, requests: false })).toEqual(["reports", "unclassified", "chatter", "proposals", "all"]);
   });
 });
 
@@ -595,7 +509,7 @@ describe("web case groups (V4)", () => {
       ["cases:e1", ["c2", "c1"], 2, "2026-10-02T00:00:00Z"],
     ]);
     expect(entries[1]!.title).toBe("Event e1");
-    expect(matchesFilter(entries[0]!, "priors")).toBe(true);
+    expect(matchesFilter(entries[0]!, "proposals")).toBe(true);
     expect(visibleEntries(entries, "all", "quote c1", "newest").map((e) => e.id)).toEqual(["cases:e1"]);
     expect(visibleEntries(entries, "all", "web", "newest")).toHaveLength(2);
   });
@@ -614,5 +528,43 @@ describe("web case groups (V4)", () => {
       expect(group!.cases[1]!.event.title).toBe("Event e1");
       expect(countByFilter([group!]).all).toBe(1);
     }
+  });
+
+  it("offers each reader the filters of the kinds they see", () => {
+    expect(filtersFor({ hotline: true, proposals: true })).toEqual(["reports", "unclassified", "chatter", "proposals", "all"]);
+    expect(filtersFor({ hotline: true, proposals: false })).toEqual(["reports", "unclassified", "chatter", "all"]);
+    expect(filtersFor({ hotline: false, proposals: true })).toEqual(["proposals", "all"]);
+    expect(filtersFor({ hotline: false, proposals: false })).toEqual(["all"]);
+  });
+
+  it("matches Proposed signals and Everything beside hotline threads, counting each undecided case", () => {
+    const hotline = buildInboxEntries({
+      sources: [],
+      threads: [thread("t1", "Fire in Port Sudan")],
+      messages: [message("m1", "t1", { classification: "field_report", sentAt: "2026-09-15T10:00:00Z" })],
+    });
+    const entries = [
+      ...hotline,
+      ...buildCaseGroupEntries([webCase("c2", "e1", "2026-10-02T00:00:00Z"), webCase("c1", "e1", "2026-10-01T00:00:00Z")]),
+    ];
+    expect(matchesFilter(entries[1]!, "reports")).toBe(false);
+    expect(matchesFilter(entries[1]!, "all")).toBe(true);
+    expect(matchesFilter(entries[0]!, "proposals")).toBe(false);
+    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 0, chatter: 0, proposals: 2, requests: 0, all: 3 });
+    expect(visibleEntries(entries, "proposals", "", "newest").map((e) => e.id)).toEqual(["cases:e1"]);
+  });
+
+  it("ranks a waiting group with the field reports under reports-first, newest within the rank", () => {
+    const hotline = buildInboxEntries({
+      sources: [],
+      threads: [thread("report"), thread("noise")],
+      messages: [
+        message("m1", "report", { classification: "field_report", sentAt: "2026-09-17T10:00:00Z" }),
+        message("m2", "noise", { classification: "chatter", sentAt: "2026-09-18T10:00:00Z" }),
+      ],
+    });
+    const entries = [...hotline, ...buildCaseGroupEntries([webCase("c1", "e1", "2026-09-16T10:00:00Z")])];
+    expect(visibleEntries(entries, "all", "", "reportsFirst").map((e) => e.id)).toEqual(["report", "cases:e1", "noise"]);
+    expect(visibleEntries(entries, "all", "", "newest").map((e) => e.id)).toEqual(["noise", "report", "cases:e1"]);
   });
 });

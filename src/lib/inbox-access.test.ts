@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { canReviewImpactPriors, inboxAccess } from "./inbox-access";
+import { canReviewCaseProposals, inboxAccess } from "./inbox-access";
 
 describe("inboxAccess", () => {
   it.each([
-    ["admin with both flags", "admin", true, true, { hotline: true, priors: true, requests: false, any: true }],
-    ["admin, review off", "admin", true, false, { hotline: true, priors: false, requests: false, any: true }],
-    ["admin, hotline off", "admin", false, true, { hotline: false, priors: true, requests: false, any: true }],
-    ["analyst with both flags", "analyst", true, true, { hotline: false, priors: true, requests: false, any: true }],
-    ["analyst, review off", "analyst", true, false, { hotline: false, priors: false, requests: false, any: false }],
-    ["viewer with both flags", "viewer", true, true, { hotline: false, priors: false, requests: false, any: false }],
-    ["no role", undefined, true, true, { hotline: false, priors: false, requests: false, any: false }],
+    ["admin with both flags", "admin", true, true, { hotline: true, proposals: true, requests: false, any: true }],
+    ["admin, review off", "admin", true, false, { hotline: true, proposals: false, requests: false, any: true }],
+    ["admin, hotline off", "admin", false, true, { hotline: false, proposals: true, requests: false, any: true }],
+    ["analyst with both flags", "analyst", true, true, { hotline: false, proposals: true, requests: false, any: true }],
+    ["analyst, review off", "analyst", true, false, { hotline: false, proposals: false, requests: false, any: false }],
+    ["viewer with both flags", "viewer", true, true, { hotline: false, proposals: false, requests: false, any: false }],
+    ["no role", undefined, true, true, { hotline: false, proposals: false, requests: false, any: false }],
   ])("%s (event_enrichment off)", (_label, role, hotlineInbox, impactPriorReview, expected) => {
     expect(inboxAccess({ role, hotlineInbox, impactPriorReview, eventEnrichment: false })).toEqual(expected);
   });
@@ -35,7 +35,7 @@ describe("inboxAccess", () => {
   });
 });
 
-describe("canReviewImpactPriors", () => {
+describe("canReviewCaseProposals", () => {
   it.each([
     ["admin", true, true],
     ["analyst", true, true],
@@ -44,6 +44,6 @@ describe("canReviewImpactPriors", () => {
     ["pending", true, false],
     [undefined, true, false],
   ])("%s with review %s → %s", (role, impactPriorReview, expected) => {
-    expect(canReviewImpactPriors({ role, impactPriorReview })).toBe(expected);
+    expect(canReviewCaseProposals({ role, impactPriorReview })).toBe(expected);
   });
 });

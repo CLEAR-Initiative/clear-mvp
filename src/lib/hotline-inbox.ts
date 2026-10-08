@@ -6,7 +6,6 @@ import type {
   GqlGroundInboxThread,
   GqlHotlineInbox,
   GqlReviewCaseProposal,
-  GqlReviewImpactPrior,
   GqlTask,
 } from "~/lib/types/graphql";
 
@@ -14,7 +13,7 @@ import type {
  * Inbox view model (/inbox).
  *
  * Pure helpers that turn what the Inbox lists into standalone, reviewable
- * entries of two kinds (`InboxEntry.kind`):
+ * entries of three kinds (`InboxEntry.kind`):
  *
  *   hotline_thread — one unverified thread from the hotline staging payload
  *                    (open threads + staged messages). The hotline is free
@@ -22,12 +21,9 @@ import type {
  *                    reporter's narrative and attachments only; the intake
  *                    answers block from the design lands once something
  *                    produces answers.
- *   impact_prior   — one proposed ImpactPrior (clear-api ADR-0010) waiting
- *                    for an admin or analyst to accept or reject it. Only
- *                    the CLEAR-data source's: the web's is decided case by
- *                    case (below).
- *   cases          — the proposed web cases (clear-api V4, CaseProposal)
- *                    of one Event, grouped under it; each case has its own
+ *   cases          — the proposed web cases (clear-api V4, CaseProposal;
+ *                    "proposed signals" in product copy) of one Event,
+ *                    grouped under it; each case has its own
  *                    Accept / Reject. It counts as one Review item per
  *                    undecided case, not one per group.
  *   task           — one enrichment Task the reader requested ("My
@@ -47,16 +43,17 @@ export interface GroundTranslationState {
   text: string | null;
 }
 
-/** The three hotline classifications, the ImpactPrior kind, the reader's
- * own requests, and everything (every Review item — not the requests).
- * The page shows only the filters whose kind the reader may see. */
-export const INBOX_FILTERS = ["reports", "unclassified", "chatter", "priors", "requests", "all"] as const;
+/** The three hotline classifications, the proposed signals (web cases),
+ * the reader's own requests, and everything (every Review item — not the
+ * requests). The page shows only the filters whose kind the reader may
+ * see. */
+export const INBOX_FILTERS = ["reports", "unclassified", "chatter", "proposals", "requests", "all"] as const;
 export type InboxFilter = (typeof INBOX_FILTERS)[number];
 
 /** Which filters apply to a reader who sees these kinds; "all" always. */
-export function filtersFor(access: { hotline: boolean; priors: boolean; requests?: boolean }): InboxFilter[] {
+export function filtersFor(access: { hotline: boolean; proposals: boolean; requests?: boolean }): InboxFilter[] {
   return INBOX_FILTERS.filter((f) =>
-    f === "all" ? true : f === "priors" ? access.priors : f === "requests" ? !!access.requests : access.hotline,
+    f === "all" ? true : f === "proposals" ? access.proposals : f === "requests" ? !!access.requests : access.hotline,
   );
 }
 
@@ -129,7 +126,7 @@ export interface InboxAttachment {
 }
 
 /** What an Inbox entry is about; each kind has its own row and pane. */
-export type InboxEntryKind = "hotline_thread" | "impact_prior" | "cases" | "task";
+export type InboxEntryKind = "hotline_thread" | "cases" | "task";
 
 /** What every kind of entry carries: enough to list, select, search and
  * sort it. */
@@ -178,15 +175,6 @@ export interface HotlineEntry extends InboxEntryBase {
   priorEntries: number;
 }
 
-/** A proposed ImpactPrior as a Review item. The id is the ImpactPrior's. */
-export interface ImpactPriorEntry extends InboxEntryBase {
-  kind: "impact_prior";
-  prior: GqlReviewImpactPrior;
-  eventId: string;
-  /** The Event's title; null when the Event has none (the row says so). */
-  eventTitle: string | null;
-}
-
 /** The web cases one Event's enrichment produced, as one Review item per
  * undecided case under the Event. The id is `cases:<eventId>`. */
 export interface CaseGroupEntry extends InboxEntryBase {
@@ -210,14 +198,10 @@ export interface TaskEntry extends InboxEntryBase {
   eventTitle: string | null;
 }
 
-export type InboxEntry = HotlineEntry | ImpactPriorEntry | CaseGroupEntry | TaskEntry;
+export type InboxEntry = HotlineEntry | CaseGroupEntry | TaskEntry;
 
 export function isHotlineEntry(entry: InboxEntry): entry is HotlineEntry {
   return entry.kind === "hotline_thread";
-}
-
-export function isImpactPriorEntry(entry: InboxEntry): entry is ImpactPriorEntry {
-  return entry.kind === "impact_prior";
 }
 
 export function isCaseGroupEntry(entry: InboxEntry): entry is CaseGroupEntry {
@@ -257,25 +241,6 @@ export function buildTaskEntries(tasks: GqlTask[], eventTitles: Record<string, s
       sentAt: task.createdAt,
     };
   });
-}
-
-/**
- * One Review item per proposed ImpactPrior, as clear-api returned them
- * (newest first; the sort below re-orders). `title` is the Event's title so
- * the row reads as "what is this about"; `text` carries the hazard, the
- * scope and the case count so search finds it.
- */
-export function buildImpactPriorEntries(priors: GqlReviewImpactPrior[]): ImpactPriorEntry[] {
-  return priors.map((prior) => ({
-    id: prior.id,
-    kind: "impact_prior",
-    prior,
-    eventId: prior.eventId,
-    eventTitle: prior.event?.title ?? null,
-    title: prior.event?.title ?? "",
-    text: [prior.hazardType, getHazardName(prior.hazardType), prior.geographicScope, `${prior.numberOfCases}`, prior.methodVersion, sourceSearchTerm(prior.sourceKind)].join(" "),
-    sentAt: prior.createdAt,
-  }));
 }
 
 /** The id of an Event's case group. */
@@ -505,8 +470,8 @@ export function entryDescription(entry: HotlineEntry, transcriptLabel: (text: st
     .join("\n\n");
 }
 
-/** The classification filters are the hotline's, "priors" is the
- * ImpactPrior kind's, "requests" the reader's own Tasks, "all" every
+/** The classification filters are the hotline's, "proposals" the web
+ * cases' (proposed signals), "requests" the reader's own Tasks, "all" every
  * Review item (so the reader's requests never inflate "awaiting").
  * "unclassified" covers both pending and failed entries: neither has a
  * label yet. The row pill tells them apart. */
@@ -518,8 +483,8 @@ export function matchesFilter(entry: InboxEntry, filter: InboxFilter): boolean {
       return isHotlineEntry(entry) && entry.classification === "unclassified";
     case "chatter":
       return isHotlineEntry(entry) && entry.classification === "chatter";
-    case "priors":
-      return isImpactPriorEntry(entry) || isCaseGroupEntry(entry);
+    case "proposals":
+      return isCaseGroupEntry(entry);
     case "requests":
       return isTaskEntry(entry);
     case "all":
@@ -570,7 +535,7 @@ export function entryWeight(entry: InboxEntry): number {
 }
 
 export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number> {
-  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, priors: 0, requests: 0, all: 0 };
+  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, proposals: 0, requests: 0, all: 0 };
   for (const e of entries) {
     for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += entryWeight(e);
   }

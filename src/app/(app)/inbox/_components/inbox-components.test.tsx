@@ -2,7 +2,7 @@ import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { GroundTranslationState, HotlineEntry, ImpactPriorEntry } from "~/lib/hotline-inbox";
+import type { CaseGroupEntry, GroundTranslationState, HotlineEntry } from "~/lib/hotline-inbox";
 import { EntryList } from "./entry-list";
 import { ReadingPane, TranslationBlock } from "./reading-pane";
 import { AddToClearModal } from "./add-to-clear-modal";
@@ -43,13 +43,14 @@ vi.mock("~/trpc/react", () => ({
         translation: { reset: resetTranslation },
       },
       tasks: {
-        proposedImpactPriors: { invalidate: invalidateTasks },
+        proposedCaseProposals: { invalidate: invalidateTasks },
         reviewCount: { invalidate: invalidateTasks },
         forEvent: { invalidate: invalidateTasks },
+        computedPriors: { invalidate: invalidateTasks },
       },
     }),
     tasks: {
-      decideImpactPrior: {
+      decideCaseProposal: {
         useMutation: () => ({ mutate: decideMutate, isPending: false, isError: false, error: null, variables: undefined }),
       },
     },
@@ -129,39 +130,39 @@ function entry(overrides: Partial<HotlineEntry> = {}): HotlineEntry {
   };
 }
 
-function priorEntry(overrides: Partial<ImpactPriorEntry> = {}): ImpactPriorEntry {
-  const prior: ImpactPriorEntry["prior"] = {
-    id: "ip-1",
+function caseGroupEntry(overrides: Partial<CaseGroupEntry> = {}): CaseGroupEntry {
+  const proposal: CaseGroupEntry["cases"][number] = {
+    id: "cp-1",
     eventId: "evt-1",
-    event: { id: "evt-1", title: "Floods in Kassala", types: ["FL"] },
+    event: { id: "evt-1", title: "Floods in Kassala", types: ["fl"] },
     taskId: "task-1",
-    sourceKind: "event.impact_prior.clear",
     state: "proposed",
-    hazardType: "FL",
-    countryLocationId: "sdn",
-    geographicScope: "district",
-    horizonYears: 10,
-    populationGroup: null,
-    metric: null,
-    lowerBound: null,
-    upperBound: null,
-    numberOfCases: 2,
-    basis: [{ tier: "web", sourceUrl: "https://example.test/floods", scope: "country", quote: "Floods displaced thousands." }],
-    methodVersion: "clear-impact-prior@0.1.0",
-    supersedesId: null,
+    sourceUrl: "https://example.test/floods",
+    quote: "Floods displaced thousands.",
+    occurredAt: "2019-08-10T00:00:00Z",
+    locationLabel: "Kassala",
+    locationId: null,
+    hazardType: "fl",
+    geographicScope: "country",
+    figures: [],
+    matchedEventId: null,
+    methodVersion: "web-cases@1",
     decidedById: null,
     decidedAt: null,
     decisionRationale: null,
+    resultSignalId: null,
+    resultEventId: null,
     createdAt: "2026-09-16T10:00:00Z",
   };
   return {
-    id: "ip-1",
-    kind: "impact_prior",
-    prior,
+    id: "cases:evt-1",
+    kind: "cases",
     eventId: "evt-1",
     eventTitle: "Floods in Kassala",
+    cases: [proposal],
+    undecided: 1,
     title: "Floods in Kassala",
-    text: "FL district 2",
+    text: "web fl Flood Kassala",
     sentAt: "2026-09-16T10:00:00Z",
     ...overrides,
   };
@@ -271,18 +272,19 @@ describe("EntryList", () => {
     expect(screen.getByTestId("inbox-list-footer")).toHaveTextContent("loading");
   });
 
-  it("renders a proposed ImpactPrior as its own kind of row", () => {
-    wrap(<EntryList {...baseProps} entries={[priorEntry(), priorEntry({ id: "ip-2", eventTitle: null })]} />);
+  it("renders an Event's proposed signals as their own kind of row", () => {
+    wrap(<EntryList {...baseProps} entries={[caseGroupEntry(), caseGroupEntry({ id: "cases:evt-2", eventId: "evt-2", eventTitle: null })]} />);
     const rows = screen.getAllByTestId("inbox-entry");
-    expect(rows[0]).toHaveAttribute("data-kind", "impact_prior");
+    expect(rows[0]).toHaveAttribute("data-kind", "cases");
+    expect(rows[0]).toHaveAttribute("data-source-kind", "event.impact_prior.web");
+    expect(rows[0]).toHaveAttribute("data-undecided", "1");
     expect(rows[0]).not.toHaveAttribute("data-processing");
     expect(rows[0]).toHaveTextContent("Floods in Kassala");
-    // The source comes first after the kind: several Workers propose on one Event.
-    expect(rows[0]).toHaveTextContent('priors.preview:{"source":"sourceKind.clear","count":2,"scope":"scope.district","hazard":"Flood"}');
-    expect(within(rows[0]!).getByTestId("inbox-kind-pill")).toHaveAttribute("data-kind", "impact_prior");
-    expect(rows[1]).toHaveTextContent("priors.untitledEvent");
+    expect(rows[0]).toHaveTextContent('cases.preview:{"count":1,"hazard":"Flood"}');
+    expect(within(rows[0]!).getByTestId("inbox-kind-pill")).toHaveAttribute("data-kind", "cases");
+    expect(rows[1]).toHaveTextContent("event.untitled");
     fireEvent.click(rows[0]!);
-    expect(baseProps.onSelect).toHaveBeenCalledWith("ip-1");
+    expect(baseProps.onSelect).toHaveBeenCalledWith("cases:evt-1");
   });
 });
 
@@ -406,39 +408,30 @@ describe("ReadingPane", () => {
     expect(screen.getByTestId("inbox-translate")).toBeInTheDocument();
   });
 
-  it("dispatches a proposed ImpactPrior to the decision pane, with its Event link and evidence", () => {
-    const onDecided = vi.fn();
-    wrap(<ReadingPane {...baseProps} entry={priorEntry()} canDecide onDecided={onDecided} />);
-    expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "impact_prior");
+  it("dispatches an Event's proposed signals to their pane, each case decided on its own row", () => {
+    const onCaseDecided = vi.fn();
+    const entry = caseGroupEntry();
+    wrap(<ReadingPane {...baseProps} entry={entry} canDecide onCaseDecided={onCaseDecided} />);
+    expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "cases");
     expect(screen.queryByTestId("inbox-action-bar")).not.toBeInTheDocument();
-    expect(screen.getByTestId("inbox-prior-event-link")).toHaveAttribute("href", "/event/evt-1");
-    expect(screen.getByTestId("enrichment-prior")).toHaveAttribute("data-state", "proposed");
-    expect(screen.getByTestId("enrichment-case")).toHaveTextContent("Floods displaced thousands.");
-    expect(screen.getByRole("link", { name: "source" })).toHaveAttribute("href", "https://example.test/floods");
+    expect(screen.getByTestId("inbox-cases-event-link")).toHaveAttribute("href", "/event/evt-1");
+    expect(screen.getByTestId("case-proposal")).toHaveAttribute("data-state", "proposed");
+    expect(screen.getByTestId("case-proposal-source")).toHaveAttribute("href", "https://example.test/floods");
 
-    // Reject needs a rationale: nothing is sent without one.
-    fireEvent.click(screen.getByTestId("impact-prior-reject"));
-    expect(decideMutate).not.toHaveBeenCalled();
-    expect(screen.getByText("rationaleRequired")).toBeInTheDocument();
-
-    decideMutate.mockImplementationOnce((_input, opts) => opts.onSuccess({ ...priorEntry().prior, state: "rejected" }));
-    fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "Different hazard" } });
-    fireEvent.click(screen.getByTestId("impact-prior-reject"));
-    expect(decideMutate).toHaveBeenCalledWith(
-      { id: "ip-1", decision: "rejected", rationale: "Different hazard" },
-      expect.any(Object),
-    );
-    expect(onDecided).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "ip-1", kind: "impact_prior" }),
-      expect.objectContaining({ state: "rejected" }),
-      "rejected",
+    decideMutate.mockImplementationOnce((_input, opts) => opts.onSuccess({ ...entry.cases[0]!, state: "accepted" }));
+    fireEvent.click(screen.getByTestId("case-proposal-accept"));
+    expect(decideMutate).toHaveBeenCalledWith({ id: "cp-1", decision: "accepted", rationale: undefined }, expect.any(Object));
+    expect(onCaseDecided).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "cp-1" }),
+      expect.objectContaining({ state: "accepted" }),
+      "accepted",
     );
   });
 
-  it("shows a proposed ImpactPrior without decision controls to a non-decider", () => {
-    wrap(<ReadingPane {...baseProps} entry={priorEntry()} canDecide={false} />);
-    expect(screen.getByTestId("enrichment-prior")).toBeInTheDocument();
-    expect(screen.queryByTestId("impact-prior-decision")).not.toBeInTheDocument();
+  it("shows proposed signals without decision controls to a non-decider", () => {
+    wrap(<ReadingPane {...baseProps} entry={caseGroupEntry()} canDecide={false} />);
+    expect(screen.getByTestId("case-proposal")).toBeInTheDocument();
+    expect(screen.queryByTestId("case-proposal-decision")).not.toBeInTheDocument();
   });
 
   it("marks media-only entries as having no text", () => {

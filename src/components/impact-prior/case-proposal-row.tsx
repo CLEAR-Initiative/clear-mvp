@@ -5,10 +5,8 @@ import { Anchor, Badge, Box, Button, Group, Stack, Text, Textarea } from "@manti
 import { IconCircleCheck, IconCircleX } from "@tabler/icons-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
-import { MAX_RATIONALE_LENGTH } from "~/lib/impact-prior-review";
-import { caseFigures, figureText, isCaseMetric } from "~/lib/case-proposals";
+import { MAX_RATIONALE_LENGTH, caseFigures, figureText, isCaseMetric, safeHttpUrl } from "~/lib/case-proposals";
 import type { GqlCaseProposal, GqlCaseProposalDecision } from "~/lib/types/graphql";
-import { safeHttpUrl } from "./impact-prior-card";
 
 const STATE_COLOR: Record<GqlCaseProposal["state"], string> = {
   proposed: "yellow",
@@ -37,7 +35,6 @@ export interface CaseProposalRowProps {
  * place, and once accepted links to the Event the case now sits on.
  * Mounted through both doors — the Inbox's case group and the Event page's
  * Enrichment section — so the decision is the same wherever it is taken.
- * Styled as the impact-prior card it replaces for the web.
  */
 export function CaseProposalRow({ proposal, canDecide, onDecided, onStale }: CaseProposalRowProps) {
   const t = useTranslations("caseReview");

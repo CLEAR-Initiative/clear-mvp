@@ -1925,29 +1925,19 @@
         "accepted": "Aceptado",
         "rejected": "Rechazado"
       },
-      "cases": "{count, plural, one {# caso} other {# casos}}",
       "scope": {
         "district": "distrito",
         "country": "país"
       },
       "horizon": "Horizonte de {years} años",
       "tier": {
-        "clear": "CLEAR",
         "web": "Web"
       },
       "method": "Método {version}",
-      "supersedes": "Reemplaza un precedente anterior",
       "source": "Fuente",
       "loadFailed": "No se pudo cargar el enriquecimiento.",
-      "priorEvent": "Abrir el evento anterior",
       "worker": "Worker: {name}",
-      "group": "{source} · {count, plural, one {# propuesta} other {# propuestas}}",
       "kindStatus": "{source} · {status}",
-      "sourceKind": {
-        "clear": "Datos de CLEAR",
-        "web": "Web",
-        "legacy": "Fuente no registrada"
-      },
       "cancelFailed": "Algunas solicitudes no se pudieron cancelar. Inténtalo de nuevo.",
       "webSearch": "Búsqueda web"
     }
@@ -2837,7 +2827,7 @@
       "reports": "Reportes de campo",
       "unclassified": "Sin clasificar",
       "chatter": "Charla",
-      "priors": "Señales propuestas",
+      "proposals": "Señales propuestas",
       "requests": "Mis solicitudes",
       "all": "Todo"
     },
@@ -2963,14 +2953,12 @@
       "partial": "De nuevo en cola: {done} de {total} mensajes. {error}"
     },
     "kinds": {
-      "impact_prior": "Señal propuesta",
       "task": "Mi solicitud",
       "cases": "Señales propuestas"
     },
-    "priors": {
-      "untitledEvent": "Evento sin título",
-      "preview": "{source} · {count, plural, one {# caso} other {# casos}} · {scope} · {hazard}",
-      "openEvent": "Abrir el evento",
+    "event": {
+      "untitled": "Evento sin título",
+      "open": "Abrir el evento",
       "proposedAt": "Propuesto el {date}"
     },
     "requests": {
@@ -3364,19 +3352,6 @@
         "eventTypes": "Tipos de evento",
         "sourceNames": "Fuentes"
       }
-    }
-  },
-  "impactPriorReview": {
-    "help": "Solo un prior aceptado cuenta más adelante. Uno rechazado se queda con el evento, reemplazado, con su motivo.",
-    "rationaleLabel": "Motivo",
-    "rationalePlaceholder": "Por qué esta decisión, para el registro de auditoría",
-    "rationaleRequired": "Se requiere un motivo",
-    "rationaleTooLong": "El motivo debe tener menos de {max} caracteres",
-    "reject": "Rechazar",
-    "accept": "Aceptar",
-    "toast": {
-      "accepted": "Prior de impacto aceptado",
-      "rejected": "Prior de impacto rechazado"
     }
   },
   "caseReview": {

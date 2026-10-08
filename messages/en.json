@@ -1925,29 +1925,19 @@
         "accepted": "Accepted",
         "rejected": "Rejected"
       },
-      "cases": "{count, plural, one {# case} other {# cases}}",
       "scope": {
         "district": "district",
         "country": "country"
       },
       "horizon": "{years}-year horizon",
       "tier": {
-        "clear": "CLEAR",
         "web": "Web"
       },
       "method": "Method {version}",
-      "supersedes": "Supersedes an earlier prior",
       "source": "Source",
       "loadFailed": "Enrichment could not be loaded.",
-      "priorEvent": "Open the prior event",
       "worker": "Worker: {name}",
-      "group": "{source} · {count, plural, one {# proposal} other {# proposals}}",
       "kindStatus": "{source} · {status}",
-      "sourceKind": {
-        "clear": "CLEAR data",
-        "web": "Web",
-        "legacy": "Source not recorded"
-      },
       "cancelFailed": "Some requests could not be cancelled. Try again.",
       "webSearch": "Web search"
     }
@@ -2837,7 +2827,7 @@
       "reports": "Field reports",
       "unclassified": "Unclassified",
       "chatter": "Chatter",
-      "priors": "Proposed signals",
+      "proposals": "Proposed signals",
       "requests": "My requests",
       "all": "Everything"
     },
@@ -2963,14 +2953,12 @@
       "partial": "Queued again: {done} of {total} messages. {error}"
     },
     "kinds": {
-      "impact_prior": "Proposed signal",
       "task": "My request",
       "cases": "Proposed signals"
     },
-    "priors": {
-      "untitledEvent": "Untitled event",
-      "preview": "{source} · {count, plural, one {# case} other {# cases}} · {scope} · {hazard}",
-      "openEvent": "Open the event",
+    "event": {
+      "untitled": "Untitled event",
+      "open": "Open the event",
       "proposedAt": "Proposed {date}"
     },
     "requests": {
@@ -3364,19 +3352,6 @@
         "eventTypes": "Event types",
         "sourceNames": "Sources"
       }
-    }
-  },
-  "impactPriorReview": {
-    "help": "Only an accepted prior counts downstream. A rejected one stays with the Event, superseded, with your reason.",
-    "rationaleLabel": "Rationale",
-    "rationalePlaceholder": "Why this decision, for the audit trail",
-    "rationaleRequired": "A rationale is required",
-    "rationaleTooLong": "Keep the rationale under {max} characters",
-    "reject": "Reject",
-    "accept": "Accept",
-    "toast": {
-      "accepted": "Impact prior accepted",
-      "rejected": "Impact prior rejected"
     }
   },
   "caseReview": {

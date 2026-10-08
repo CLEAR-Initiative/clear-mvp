@@ -23,9 +23,10 @@ interface NotificationsBellProps {
 
 /**
  * The notifications bell (clear-api ADR-0010, V2): the signed-in user's
- * Task outcome notifications ("Impact prior proposed — review it", "…
- * failed"), each opening its Event. Opening one marks it read. Behind the
- * `impact_prior_review` flag with the rest of the Review flow, and only for
+ * Task outcome notifications ("Web search: 3 proposed signals to review",
+ * "Web search failed", …), each opening its Event. Opening one marks it
+ * read. Behind the `impact_prior_review` flag with the rest of the Review
+ * flow, and only for
  * approved roles: clear-api sends Task outcomes to requesters (any team
  * content writer, so a global viewer too), admins and team analysts, never
  * to a pending account. clear-api writes the rows and sends any email,

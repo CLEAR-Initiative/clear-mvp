@@ -39,7 +39,7 @@ vi.mock("~/trpc/react", () => ({
     useUtils: () => ({ tasks: { forEvent: { invalidate }, myTasks: { invalidate } } }),
     auth: { me: { useQuery: () => ({ data: { user: me } }) } },
     tasks: {
-      forEvent: { useQuery: () => (tasksLoaded ? { data: { tasks, impactPriors: [] }, isSuccess: true } : { data: undefined, isSuccess: false }) },
+      forEvent: { useQuery: () => (tasksLoaded ? { data: { tasks, caseProposals: [] }, isSuccess: true } : { data: undefined, isSuccess: false }) },
       requestEnrichment: {
         useMutation: () => ({ mutate: requestMutate, isPending: false, isError: !!requestError, error: requestError }),
       },
@@ -164,7 +164,7 @@ describe("RequestEnrichmentButton", () => {
       const lines = Array.from(screen.getByTestId("enrichment-open-kinds").children);
       expect(lines.map((l) => l.getAttribute("data-kind"))).toEqual(["event.impact_prior.clear", "event.impact_prior.web"]);
       expect(lines.map((l) => l.textContent)).toEqual([
-        'kindStatus:{"source":"sourceKind.clear","status":"status.PENDING"}',
+        'kindStatus:{"source":"kinds.impactPrior","status":"status.PENDING"}',
         'kindStatus:{"source":"webSearch","status":"status.LEASED"}',
       ]);
     });
