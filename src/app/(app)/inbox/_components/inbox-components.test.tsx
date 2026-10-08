@@ -278,7 +278,7 @@ describe("EntryList", () => {
     expect(rows[0]).not.toHaveAttribute("data-processing");
     expect(rows[0]).toHaveTextContent("Floods in Kassala");
     // The source comes first after the kind: several Workers propose on one Event.
-    expect(rows[0]).toHaveTextContent('priors.preview:{"source":"sourceKind.clear","count":2,"scope":"scope.district","hazard":"FL"}');
+    expect(rows[0]).toHaveTextContent('priors.preview:{"source":"sourceKind.clear","count":2,"scope":"scope.district","hazard":"Flood"}');
     expect(within(rows[0]!).getByTestId("inbox-kind-pill")).toHaveAttribute("data-kind", "impact_prior");
     expect(rows[1]).toHaveTextContent("priors.untitledEvent");
     fireEvent.click(rows[0]!);

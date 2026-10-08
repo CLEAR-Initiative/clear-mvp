@@ -4,6 +4,7 @@ import { Anchor, Badge, Box, Group, Stack, Text } from "@mantine/core";
 import { useFormatter, useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
 import { isCaseMetric } from "~/lib/case-proposals";
+import { getHazardName } from "~/lib/disaster-types";
 import type { GqlComputedImpactPrior } from "~/lib/types/graphql";
 
 /** Past Events linked per prior before the rest are summarised as "+N more". */
@@ -84,7 +85,7 @@ export function ComputedPriorRow({ prior }: { prior: GqlComputedImpactPrior }) {
         </Text>
       </Text>
       <Text size="xs" c="var(--color-text-muted)">
-        {prior.hazardType} · {tEnrichment("horizon", { years: prior.horizonYears })} · {tEnrichment("method", { version: prior.methodVersion })}
+        {getHazardName(prior.hazardType)} · {tEnrichment("horizon", { years: prior.horizonYears })} · {tEnrichment("method", { version: prior.methodVersion })}
       </Text>
       {shown.length > 0 && (
         <Group gap={8} mt={4} wrap="wrap" data-testid="computed-prior-events">

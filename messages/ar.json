@@ -1948,7 +1948,8 @@
         "web": "الويب",
         "legacy": "المصدر غير مسجل"
       },
-      "cancelFailed": "تعذر إلغاء بعض الطلبات. حاول مرة أخرى."
+      "cancelFailed": "تعذر إلغاء بعض الطلبات. حاول مرة أخرى.",
+      "webSearch": "بحث على الويب"
     }
   },
   "knowledge": {
@@ -2836,7 +2837,7 @@
       "reports": "تقارير ميدانية",
       "unclassified": "غير مصنّف",
       "chatter": "دردشة",
-      "priors": "تقديرات الأثر المسبقة",
+      "priors": "الإشارات المقترحة",
       "requests": "طلباتي",
       "all": "الكل"
     },
@@ -2962,13 +2963,13 @@
       "partial": "أُعيد إلى قائمة الانتظار: {done} من أصل {total} رسائل. {error}"
     },
     "kinds": {
-      "impact_prior": "تقدير أثر مسبق",
+      "impact_prior": "إشارة مقترحة",
       "task": "طلبي",
-      "cases": "حالات من الويب"
+      "cases": "الإشارات المقترحة"
     },
     "priors": {
       "untitledEvent": "حدث بلا عنوان",
-      "preview": "تقدير أثر مسبق مقترح · {source} · {count, plural, one {حالة واحدة} other {# حالات}} · {scope} · {hazard}",
+      "preview": "{source} · {count, plural, one {حالة واحدة} other {# حالات}} · {scope} · {hazard}",
       "openEvent": "فتح الحدث",
       "proposedAt": "اقتُرح في {date}"
     },
@@ -2980,7 +2981,7 @@
       "proposalLoadFailed": "تعذر تحميل المقترح. افتح الحدث لرؤيته."
     },
     "cases": {
-      "preview": "{count, plural, =0 {تم البت في كل الحالات} one {حالة ويب واحدة للمراجعة} two {حالتا ويب للمراجعة} few {# حالات ويب للمراجعة} many {# حالة ويب للمراجعة} other {# حالة ويب للمراجعة}} · {hazard}"
+      "preview": "{count, plural, =0 {تم البت في كل الإشارات المقترحة} one {إشارة مقترحة واحدة للمراجعة} two {إشارتان مقترحتان للمراجعة} few {# إشارات مقترحة للمراجعة} many {# إشارة مقترحة للمراجعة} other {# إشارة مقترحة للمراجعة}} · {hazard}"
     }
   },
   "analysis": {
@@ -3379,7 +3380,7 @@
     }
   },
   "caseReview": {
-    "group": "حالات من الويب · {count, plural, one {حالة واحدة} two {حالتان} few {# حالات} many {# حالة} other {# حالة}}",
+    "group": "{count, plural, one {إشارة مقترحة واحدة} two {إشارتان مقترحتان} few {# إشارات مقترحة} many {# إشارة مقترحة} other {# إشارة مقترحة}}",
     "matchesEvent": "يطابق حدثًا في CLEAR",
     "resultEvent": "افتح الحدث الناتج",
     "accept": "قبول",

@@ -1,3 +1,4 @@
+import { getHazardName } from "./disaster-types";
 import { sourceSearchTerm } from "./impact-prior-source";
 import type {
   GqlCaseProposal,
@@ -272,7 +273,7 @@ export function buildImpactPriorEntries(priors: GqlReviewImpactPrior[]): ImpactP
     eventId: prior.eventId,
     eventTitle: prior.event?.title ?? null,
     title: prior.event?.title ?? "",
-    text: [prior.hazardType, prior.geographicScope, `${prior.numberOfCases}`, prior.methodVersion, sourceSearchTerm(prior.sourceKind)].join(" "),
+    text: [prior.hazardType, getHazardName(prior.hazardType), prior.geographicScope, `${prior.numberOfCases}`, prior.methodVersion, sourceSearchTerm(prior.sourceKind)].join(" "),
     sentAt: prior.createdAt,
   }));
 }
@@ -322,7 +323,7 @@ export function buildCaseGroupEntries(
       title: eventTitle ?? "",
       text: [
         "web",
-        ...new Set(cases.map((c) => c.hazardType)),
+        ...new Set(cases.flatMap((c) => [c.hazardType, getHazardName(c.hazardType)])),
         ...new Set(cases.map((c) => c.locationLabel)),
         ...cases.map((c) => c.quote),
       ].join(" "),

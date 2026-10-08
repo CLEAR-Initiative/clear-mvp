@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareSourceKinds, groupBySourceKind, impactPriorSource, isImpactPriorKind, sourceLabel, sourceSearchTerm } from "./impact-prior-source";
+import { impactPriorSource, isImpactPriorKind, requestLabel, requestSourceLabel, sourceLabel, sourceSearchTerm } from "./impact-prior-source";
 
 const t = (key: string) => key;
 
@@ -31,23 +31,11 @@ describe("impact prior sources", () => {
     expect(isImpactPriorKind("event.impact_prior_x")).toBe(false);
   });
 
-  it("groups proposals by source, CLEAR first, then web, then the rest by kind, keeping arrival order inside a group", () => {
-    const rows = [
-      { id: "w1", sourceKind: "event.impact_prior.web" },
-      { id: "o1", sourceKind: "event.impact_prior.satellite" },
-      { id: "c1", sourceKind: "event.impact_prior.clear" },
-      { id: "b1", sourceKind: "event.impact_prior" },
-      { id: "c2", sourceKind: "event.impact_prior.clear" },
-    ];
-    expect(groupBySourceKind(rows).map((g) => [g.kind, g.rows.map((r) => r.id)])).toEqual([
-      ["event.impact_prior.clear", ["c1", "c2"]],
-      ["event.impact_prior.web", ["w1"]],
-      ["event.impact_prior", ["b1"]],
-      ["event.impact_prior.satellite", ["o1"]],
-    ]);
-    expect(["event.impact_prior.web", "event.impact_prior.clear"].sort(compareSourceKinds)).toEqual([
-      "event.impact_prior.clear",
-      "event.impact_prior.web",
-    ]);
+  it("calls the web Worker's request a web search, and names the rest by source", () => {
+    expect(requestLabel("event.impact_prior.web", t)).toBe("webSearch");
+    expect(requestLabel("event.impact_prior.clear", t)).toBe("kinds.impactPrior · sourceKind.clear");
+    expect(requestLabel("event.other", t)).toBe("event.other");
+    expect(requestSourceLabel("event.impact_prior.web", t)).toBe("webSearch");
+    expect(requestSourceLabel("event.impact_prior.clear", t)).toBe("sourceKind.clear");
   });
 });

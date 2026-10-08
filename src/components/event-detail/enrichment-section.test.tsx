@@ -5,9 +5,10 @@ import { MantineProvider } from "@mantine/core";
 import type { GqlCaseProposal, GqlComputedImpactPrior, GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
 
 /**
- * The read-only Enrichment section (clear-api ADR-0010, V1): hidden behind the
- * flag, the empty state, a Task row with its status and (when the server let
- * us see it) its error, and a proposed ImpactPrior with its cited cases.
+ * The Enrichment section (clear-api ADR-0010): hidden behind the flag, the
+ * empty state, a Task row with its status and (when the server let us see
+ * it) its error, the web cases each with its own decision, and the priors
+ * computed from history. Whole-prior proposals are not shown (V4).
  */
 
 vi.mock("next-intl", () => ({
@@ -166,24 +167,6 @@ describe("EnrichmentSection", () => {
     expect(screen.queryByText("empty")).toBeNull();
   });
 
-  it("links only http(s) sources and encodes the prior Event id", () => {
-    data = {
-      tasks: [],
-      impactPriors: [{
-        ...PRIOR,
-        basis: [
-          { tier: "web", sourceUrl: "javascript:alert(1)", scope: "country", quote: "x" },
-          { tier: "clear", eventId: "evt/../admin?x", scope: "country", quote: "y" },
-        ],
-      }],
-    };
-    renderSection();
-    expect(screen.getByTestId("enrichment-unsafe-source").textContent).toContain("javascript:alert(1)");
-    expect(screen.queryByRole("link", { name: "source" })).toBeNull();
-    const priorLink = screen.getByText("priorEvent") as HTMLAnchorElement;
-    expect(priorLink.getAttribute("href")).toBe(`/event/${encodeURIComponent("evt/../admin?x")}`);
-  });
-
   it("renders nothing while the event_enrichment flag is off, and does not query", () => {
     flagEnabled = false;
     renderSection();
@@ -216,83 +199,41 @@ describe("EnrichmentSection", () => {
     expect(screen.queryByTestId("enrichment-task-error")).toBeNull();
   });
 
-  it("renders a proposed ImpactPrior with its state, counts and cited cases", () => {
-    data = { tasks: [{ ...TASK, status: "COMPLETED", lastError: null, outcome: "produced" }], impactPriors: [PRIOR] };
+  it("calls the web Worker's request a web search", () => {
+    data = { tasks: [{ ...TASK, kind: "event.impact_prior.web", lastError: null }], impactPriors: [] };
     renderSection();
-    const prior = screen.getByTestId("enrichment-prior");
-    expect(prior.getAttribute("data-state")).toBe("proposed");
-    expect(screen.getByText("prior.proposed")).toBeTruthy();
-    expect(screen.getByText(/cases:\{"count":2\}/)).toBeTruthy();
-    expect(screen.getAllByTestId("enrichment-case")).toHaveLength(2);
-    expect(screen.getByText("“The Nile burst its banks.”")).toBeTruthy();
-    const source = screen.getByText("source") as HTMLAnchorElement;
-    expect(source.getAttribute("href")).toBe("https://example.test/floods-2019");
-    expect((screen.getByText("priorEvent") as HTMLAnchorElement).getAttribute("href")).toBe("/event/evt-2021");
+    expect(screen.getByText("webSearch")).toBeTruthy();
+  });
+
+  it("names the Worker that held a Task when the server returned it", () => {
+    data = {
+      tasks: [{ ...TASK, status: "COMPLETED", lastError: null, outcome: "produced", leaseOwner: { id: "w", name: "CLEAR Worker (Dagster)" } }],
+      impactPriors: [],
+    };
+    renderSection();
+    expect(screen.getByText(/worker:\{"name":"CLEAR Worker \(Dagster\)"\}/)).toBeTruthy();
     expect(screen.getByText("outcome.produced")).toBeTruthy();
   });
 
-  describe("several Workers propose on one Event (V3)", () => {
-    const WEB_PRIOR: GqlImpactPrior = { ...PRIOR, id: "ip-web", taskId: "task-web", sourceKind: "event.impact_prior.web" };
+  it("shows no whole-prior proposals (V4), not even a proposed one to a decider: the prior is computed, the cases decide", () => {
+    role = "analyst";
+    flags = { impact_prior_review: true };
+    data = {
+      tasks: [],
+      impactPriors: [PRIOR, { ...PRIOR, id: "ip-web", sourceKind: "event.impact_prior.web", state: "accepted" }],
+      caseProposals: [CASE],
+    };
+    renderSection();
+    expect(screen.queryByTestId("enrichment-prior")).toBeNull();
+    expect(screen.queryByTestId("enrichment-group")).toBeNull();
+    expect(screen.queryByTestId("impact-prior-decision")).toBeNull();
+    expect(screen.getAllByTestId("case-proposal-decision")).toHaveLength(1);
+  });
 
-    it("groups proposals by source — CLEAR data first, then the web, then anything else by its raw kind", () => {
-      // Decided web and bare-kind priors are history (V4): still shown.
-      const LEGACY: GqlImpactPrior = { ...PRIOR, id: "ip-old", sourceKind: "event.impact_prior", state: "accepted" };
-      data = { tasks: [], impactPriors: [{ ...WEB_PRIOR, state: "accepted" }, LEGACY, PRIOR] };
-      renderSection();
-      const groups = screen.getAllByTestId("enrichment-group");
-      expect(groups.map((g) => g.getAttribute("data-source-kind"))).toEqual([
-        "event.impact_prior.clear",
-        "event.impact_prior.web",
-        "event.impact_prior",
-      ]);
-      const titles = screen.getAllByTestId("enrichment-group-title").map((t) => t.textContent);
-      expect(titles[0]).toBe('group:{"source":"sourceKind.clear","count":1}');
-      expect(titles[1]).toBe('group:{"source":"sourceKind.web","count":1}');
-      expect(titles[2]).toBe('group:{"source":"sourceKind.legacy","count":1}');
-      // Each card carries its source, so the Inbox's shared card reads the same way.
-      const priors = screen.getAllByTestId("enrichment-prior");
-      expect(priors.map((p) => p.getAttribute("data-source-kind"))).toEqual([
-        "event.impact_prior.clear",
-        "event.impact_prior.web",
-        "event.impact_prior",
-      ]);
-      expect(screen.getAllByTestId("enrichment-prior-source").map((b) => b.textContent)).toEqual([
-        "sourceKind.clear",
-        "sourceKind.web",
-        "sourceKind.legacy",
-      ]);
-    });
-
-    it("never offers a whole-prior decision for the web (V4): a proposed web prior is left out, its cases decide", () => {
-      role = "analyst";
-      flags = { impact_prior_review: true };
-      data = { tasks: [], impactPriors: [WEB_PRIOR, PRIOR], caseProposals: [CASE] };
-      renderSection();
-      // Only the CLEAR-data prior is a whole-prior decision.
-      expect(screen.getAllByTestId("enrichment-prior").map((p) => p.getAttribute("data-source-kind"))).toEqual([
-        "event.impact_prior.clear",
-      ]);
-      expect(screen.getAllByTestId("impact-prior-decision")).toHaveLength(1);
-      expect(screen.getAllByTestId("case-proposal-decision")).toHaveLength(1);
-    });
-
-    it("keeps a decided web prior read-only, even for a decider", () => {
-      role = "analyst";
-      flags = { impact_prior_review: true };
-      data = { tasks: [], impactPriors: [{ ...WEB_PRIOR, state: "rejected", decisionRationale: "Old basis" }] };
-      renderSection();
-      expect(screen.getByTestId("enrichment-prior")).toHaveAttribute("data-state", "rejected");
-      expect(screen.queryByTestId("impact-prior-decision")).toBeNull();
-    });
-
-    it("names the Worker that held a Task, and the one that produced a proposal, when the server returned them", () => {
-      data = {
-        tasks: [{ ...TASK, status: "COMPLETED", lastError: null, outcome: "produced", leaseOwner: { id: "w", name: "CLEAR Worker (Dagster)" } }],
-        impactPriors: [{ ...PRIOR, task: { leaseOwner: { id: "w", name: "CLEAR Worker (Dagster)" } } }],
-      };
-      renderSection();
-      expect(screen.getAllByText(/worker:\{"name":"CLEAR Worker \(Dagster\)"\}/)).toHaveLength(2);
-    });
+  it("shows the empty state when only whole priors came back", () => {
+    data = { tasks: [], impactPriors: [PRIOR] };
+    renderSection();
+    expect(screen.getByText("empty")).toBeTruthy();
   });
 
   it("polls while a Task is open", () => {
@@ -303,38 +244,6 @@ describe("EnrichmentSection", () => {
     };
     expect(opts.refetchInterval({ state: { data } })).toBe(30_000);
     expect(opts.refetchInterval({ state: { data: { tasks: [TASK], impactPriors: [] } } })).toBe(false);
-  });
-
-  describe("as the second door to the decision (V2)", () => {
-    it("mounts the decision pane on a proposed prior for a decider with impact_prior_review on", () => {
-      role = "analyst";
-      flags = { impact_prior_review: true };
-      data = { tasks: [], impactPriors: [PRIOR, { ...PRIOR, id: "ip-0", state: "accepted" }] };
-      decideMutate.mockImplementation((_input, opts) => opts.onSuccess({ ...PRIOR, state: "accepted" }));
-      renderSection();
-      expect(screen.getAllByTestId("enrichment-prior")).toHaveLength(2);
-      // Only the proposed one is decidable.
-      expect(screen.getAllByTestId("impact-prior-decision")).toHaveLength(1);
-      fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "Same basin, same season" } });
-      fireEvent.click(screen.getByTestId("impact-prior-accept"));
-      expect(decideMutate).toHaveBeenCalledWith(
-        { id: "ip-1", decision: "accepted", rationale: "Same basin, same season" },
-        expect.any(Object),
-      );
-      expect(showNotification).toHaveBeenCalledWith({ message: "toast.accepted" });
-    });
-
-    it.each([
-      ["a viewer", "viewer", true],
-      ["an analyst while impact_prior_review is off", "analyst", false],
-    ])("keeps the prior read-only for %s", (_label, who, review) => {
-      role = who;
-      flags = { impact_prior_review: review };
-      data = { tasks: [], impactPriors: [PRIOR] };
-      renderSection();
-      expect(screen.getByTestId("enrichment-prior")).toBeTruthy();
-      expect(screen.queryByTestId("impact-prior-decision")).toBeNull();
-    });
   });
 
   describe("web cases, one decision each (V4)", () => {

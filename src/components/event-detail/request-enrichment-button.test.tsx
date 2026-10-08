@@ -165,7 +165,7 @@ describe("RequestEnrichmentButton", () => {
       expect(lines.map((l) => l.getAttribute("data-kind"))).toEqual(["event.impact_prior.clear", "event.impact_prior.web"]);
       expect(lines.map((l) => l.textContent)).toEqual([
         'kindStatus:{"source":"sourceKind.clear","status":"status.PENDING"}',
-        'kindStatus:{"source":"sourceKind.web","status":"status.LEASED"}',
+        'kindStatus:{"source":"webSearch","status":"status.LEASED"}',
       ]);
     });
 

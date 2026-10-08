@@ -163,36 +163,6 @@ services:
         condition: service_healthy
     restart: "no"
 
-  # One-shot: on two seeded events, a proposed ImpactPrior from CLEAR data and
-  # two proposed web cases, produced through clear-api's Worker protocol over
-  # GraphQL — the seeded analyst requests enrichment, a `worker` identity
-  # claims and completes each Task — so clear-api writes the proposals and
-  # fans out the Task notifications itself
-  # (no Worker runs in this stack). Used by the impact-prior review spec
-  # (case 17). Same image and bind-mount pattern as `seed-ground`. Runs after
-  # `seed-event-types` (the hazard is the Event's GLIDE code).
-  seed-impact-prior:
-    build:
-      context: ../clear-api
-      target: build
-    image: clear-e2e-seed:latest
-    command: ["bun", "/app/e2e-impact-prior-seed.ts"]
-    volumes:
-      - ./e2e/support/impact-prior-seed.ts:/app/e2e-impact-prior-seed.ts:ro
-    environment:
-      DATABASE_URL: postgres://clear:clear@db:5432/clear
-      CLEAR_API_GRAPHQL_URL: http://api:4000/graphql
-      BETTER_AUTH_SECRET: E2E_SMOKE_BETTER_AUTH_SECRET_0123456789abcdef
-      BETTER_AUTH_URL: http://localhost:4000
-      CELERY_BROKER_URL: redis://redis:6379/0
-      ADMIN_EMAIL: admin@clearinitiative.io
-      ADMIN_PASSWORD: password123
-      NODE_ENV: production
-    depends_on:
-      api:
-        condition: service_healthy
-    restart: "no"
-
   # One-shot: the CLEAR Agent's clear-api key (the `agent` service user and
   # a fixed, test-only key), which clear-api requires on every Conversation
   # write (clear-api#182). The web service gets the same CLEAR_AGENT_API_KEY.

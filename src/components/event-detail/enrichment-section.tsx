@@ -6,13 +6,11 @@ import { useFormatter, useTranslations } from "next-intl";
 import { notifications } from "@mantine/notifications";
 import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
-import { ImpactPriorCard } from "~/components/impact-prior/impact-prior-card";
-import { ImpactPriorPane } from "~/components/impact-prior/impact-prior-pane";
 import { CaseProposalRow } from "~/components/impact-prior/case-proposal-row";
 import { ComputedPriors } from "~/components/impact-prior/computed-priors";
 import { canReviewImpactPriors } from "~/lib/inbox-access";
-import { groupBySourceKind, isCaseReviewedKind, isImpactPriorKind, sourceLabel } from "~/lib/impact-prior-source";
-import type { GqlCaseProposalDecision, GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
+import { requestLabel } from "~/lib/impact-prior-source";
+import type { GqlCaseProposalDecision, GqlTask } from "~/lib/types/graphql";
 
 const STATUS_COLOR: Record<GqlTask["status"], string> = {
   PENDING: "gray",
@@ -23,35 +21,23 @@ const STATUS_COLOR: Record<GqlTask["status"], string> = {
 };
 
 /**
- * The Event's enrichment (clear-api ADR-0010): each Task (kind, status,
- * requester, when, its error when FAILED and the server let us see it) and
- * each ImpactPrior the server returned for this user (state, cases, scope,
- * horizon, and the basis as a list of cited cases). Which states a user
- * sees is clear-api's rule; proposed and rejected rows render only when
- * they arrive. Polls while a Task is open so the result appears without a
- * reload. Behind the `event_enrichment` flag.
+ * The Event's enrichment (clear-api ADR-0010): the ImpactPriors computed
+ * from CLEAR's accepted history (read-only), the web cases its requests
+ * found, and each Task (kind and source, status, requester, Worker, when,
+ * its error when FAILED and the server let us see it). Polls while a Task
+ * is open so the result appears without a reload. Behind the
+ * `event_enrichment` flag.
  *
- * V2: a proposed ImpactPrior is shown to a decider (admin or analyst, with
- * `impact_prior_review` on) through the same ImpactPriorPane the Inbox
- * uses — the Event page is the second door to the same decision.
- *
- * V3: several Workers propose on one Event (one Task per source kind), so
- * the proposals are grouped by source — CLEAR data, the web, anything else
- * by its raw kind — each group newest first, and every Task row names its
- * source and, when known, the Worker that held it.
- *
- * V4: the web Worker's evidence is decided case by case. Its cases are
- * listed under their own heading, each with its own Accept / Reject for a
- * decider (the same row the Inbox mounts); its whole-prior proposals are
- * never decidable here — a still-proposed one is left out (its cases are
- * the decision), a decided one stays as read-only history. Above it all,
- * the ImpactPriors computed from CLEAR's accepted history, read-only.
+ * V4: evidence is decided case by case. The cases are listed under their
+ * own heading, each with its own Accept / Reject for a decider (the same
+ * row the Inbox mounts). Whole-prior proposals (V1–V3) are not shown here:
+ * the prior is computed from accepted cases, and a still-proposed whole
+ * prior keeps its Review item in the Inbox.
  */
 export function EnrichmentSection({ eventId }: { eventId: string }) {
   const enabled = useFeatureEnabled("event_enrichment");
   const review = useFeatureEnabled("impact_prior_review");
   const t = useTranslations("eventDetail.enrichment");
-  const tReview = useTranslations("impactPriorReview");
   const tCases = useTranslations("caseReview");
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000, enabled });
   const canDecide = canReviewImpactPriors({ role: authData?.user?.role, impactPriorReview: review });
@@ -68,10 +54,6 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
 
   if (!enabled) return null;
   const tasks = query.data?.tasks ?? [];
-  // Web (and bare-kind) priors are history: their cases are the decision.
-  const priors = (query.data?.impactPriors ?? []).filter(
-    (prior) => !(isCaseReviewedKind(prior.sourceKind) && prior.state === "proposed"),
-  );
   const cases = query.data?.caseProposals ?? [];
 
   return (
@@ -91,33 +73,12 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
           <Text size="xs" c="var(--color-critical)" data-testid="enrichment-load-error">
             {t("loadFailed")}
           </Text>
-        ) : tasks.length === 0 && priors.length === 0 && cases.length === 0 ? (
+        ) : tasks.length === 0 && cases.length === 0 ? (
           <Text size="xs" c="var(--color-text-muted)">
             {t("empty")}
           </Text>
         ) : (
           <Stack gap={12}>
-            {groupBySourceKind(priors).map((group) => (
-              <Stack key={group.kind} gap={8} data-testid="enrichment-group" data-source-kind={group.kind}>
-                <Text size="xs" fw={600} c="var(--color-text-secondary)" data-testid="enrichment-group-title">
-                  {t("group", { source: sourceLabel(group.kind, t), count: group.rows.length })}
-                </Text>
-                {group.rows.map((prior) =>
-                  canDecide && prior.state === "proposed" && !isCaseReviewedKind(prior.sourceKind) ? (
-                    <ImpactPriorPane
-                      key={prior.id}
-                      prior={prior}
-                      canDecide
-                      onDecided={(_decided: GqlImpactPrior, decision) =>
-                        notifications.show({ message: tReview(`toast.${decision}`) })
-                      }
-                    />
-                  ) : (
-                    <ImpactPriorCard key={prior.id} prior={prior} />
-                  ),
-                )}
-              </Stack>
-            ))}
             {cases.length > 0 && (
               <Stack gap={8} data-testid="enrichment-cases">
                 <Text size="xs" fw={600} c="var(--color-text-secondary)" data-testid="enrichment-cases-title">
@@ -151,9 +112,7 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
 export function TaskRow({ task }: { task: GqlTask }) {
   const t = useTranslations("eventDetail.enrichment");
   const format = useFormatter();
-  // One row per kind: "Impact prior · CLEAR data", "Impact prior · Web", or
-  // the raw kind for anything outside the family.
-  const kind = isImpactPriorKind(task.kind) ? `${t("kinds.impactPrior")} · ${sourceLabel(task.kind, t)}` : task.kind;
+  const kind = requestLabel(task.kind, t);
   return (
     <Box data-testid="enrichment-task" data-status={task.status} data-kind={task.kind}>
       <Group justify="space-between" gap={6} wrap="nowrap">
