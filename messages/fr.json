@@ -2981,7 +2981,7 @@
       "proposalLoadFailed": "La proposition n'a pas pu être chargée. Ouvrez l'événement pour la voir."
     },
     "cases": {
-      "preview": "{count, plural, =0 {Tous les cas décidés} one {# cas web à examiner} other {# cas web à examiner}} · {hazard}"
+      "preview": "{count, plural, =0 {Tous les signaux proposés décidés} one {# signal proposé à examiner} other {# signaux proposés à examiner}} · {hazard}"
     }
   },
   "analysis": {
@@ -3380,7 +3380,7 @@
     }
   },
   "caseReview": {
-    "group": "Cas web · {count, plural, one {# cas} other {# cas}}",
+    "group": "{count, plural, one {# signal proposé} other {# signaux proposés}}",
     "matchesEvent": "Correspond à un événement CLEAR",
     "resultEvent": "Ouvrir l'événement résultant",
     "accept": "Accepter",

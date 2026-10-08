@@ -2981,7 +2981,7 @@
       "proposalLoadFailed": "No se pudo cargar la propuesta. Abra el evento para verla."
     },
     "cases": {
-      "preview": "{count, plural, =0 {Todos los casos decididos} one {# caso web por revisar} other {# casos web por revisar}} · {hazard}"
+      "preview": "{count, plural, =0 {Todas las señales propuestas decididas} one {# señal propuesta por revisar} other {# señales propuestas por revisar}} · {hazard}"
     }
   },
   "analysis": {
@@ -3380,7 +3380,7 @@
     }
   },
   "caseReview": {
-    "group": "Casos web · {count, plural, one {# caso} other {# casos}}",
+    "group": "{count, plural, one {# señal propuesta} other {# señales propuestas}}",
     "matchesEvent": "Coincide con un evento de CLEAR",
     "resultEvent": "Abrir el evento resultante",
     "accept": "Aceptar",

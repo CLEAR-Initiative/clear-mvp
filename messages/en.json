@@ -2981,7 +2981,7 @@
       "proposalLoadFailed": "The proposal could not be loaded. Open the Event to see it."
     },
     "cases": {
-      "preview": "{count, plural, =0 {All cases decided} one {# web case to review} other {# web cases to review}} · {hazard}"
+      "preview": "{count, plural, =0 {All proposed signals decided} one {# proposed signal to review} other {# proposed signals to review}} · {hazard}"
     }
   },
   "analysis": {
@@ -3380,7 +3380,7 @@
     }
   },
   "caseReview": {
-    "group": "Web cases · {count, plural, one {# case} other {# cases}}",
+    "group": "{count, plural, one {# proposed signal} other {# proposed signals}}",
     "matchesEvent": "Matches CLEAR Event",
     "resultEvent": "Open the resulting Event",
     "accept": "Accept",

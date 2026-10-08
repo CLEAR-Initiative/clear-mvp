@@ -77,7 +77,7 @@ test.describe("Enrichment review (case 17)", () => {
     if ((await casesRow.count()) > 0) {
       // The nav badge counts what is waiting.
       await expect(page.getByTestId("nav-badge-inbox").first()).toBeVisible();
-      await expect(casesRow).toContainText("web case");
+      await expect(casesRow).toContainText("proposed signal");
       await casesRow.click();
       const pane = page.getByTestId("inbox-pane");
       await expect(pane).toHaveAttribute("data-kind", "cases");
