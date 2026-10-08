@@ -67,8 +67,5 @@ echo "── rewriting seeded event types to GLIDE codes (e2e/support/event-type
 echo "── seeding the CLEAR Agent's clear-api key (e2e/support/agent-key-seed.ts) ──"
 "${COMPOSE[@]}" run --rm --build seed-agent-key
 
-echo "── seeding proposed ImpactPriors and web cases (e2e/support/impact-prior-seed.ts) ──"
-"${COMPOSE[@]}" run --rm --build seed-impact-prior
-
 echo "── running Playwright smoke suite ──"
 bunx playwright test "$@"
