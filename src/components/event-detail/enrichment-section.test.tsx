@@ -2,13 +2,13 @@ import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { GqlCaseProposal, GqlComputedImpactPrior, GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
+import type { GqlCaseProposal, GqlComputedImpactPrior, GqlTask } from "~/lib/types/graphql";
 
 /**
  * The Enrichment section (clear-api ADR-0010): hidden behind the flag, the
  * empty state, a Task row with its status and (when the server let us see
- * it) its error, the web cases each with its own decision, and the priors
- * computed from history. Whole-prior proposals are not shown (V4).
+ * it) its error, the web cases ("proposed signals") each with its own
+ * decision, and the priors computed from history.
  */
 
 vi.mock("next-intl", () => ({
@@ -27,10 +27,9 @@ const showNotification = vi.fn();
 vi.mock("@mantine/notifications", () => ({ notifications: { show: (n: unknown) => showNotification(n) } }));
 
 let role = "viewer";
-let data: { tasks: GqlTask[]; impactPriors: GqlImpactPrior[]; caseProposals?: GqlCaseProposal[] } = { tasks: [], impactPriors: [] };
+let data: { tasks: GqlTask[]; caseProposals?: GqlCaseProposal[] } = { tasks: [] };
 let queryError: Error | null = null;
 const useQuery = vi.fn((..._args: unknown[]) => ({ data: queryError ? undefined : data, isFetching: false, isError: !!queryError, error: queryError }));
-const decideMutate = vi.fn();
 const decideCaseMutate = vi.fn();
 let computed: GqlComputedImpactPrior[] = [];
 const computedQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({ data: opts.enabled ? computed : undefined }));
@@ -39,7 +38,6 @@ vi.mock("~/trpc/react", () => ({
   api: {
     useUtils: () => ({
       tasks: {
-        proposedImpactPriors: { invalidate },
         proposedCaseProposals: { invalidate },
         reviewCount: { invalidate },
         forEvent: { invalidate },
@@ -50,9 +48,6 @@ vi.mock("~/trpc/react", () => ({
     tasks: {
       forEvent: { useQuery: (...args: unknown[]) => useQuery(...args) },
       computedPriors: { useQuery: (input: unknown, opts: { enabled: boolean }) => computedQuery(input, opts) },
-      decideImpactPrior: {
-        useMutation: () => ({ mutate: decideMutate, isPending: false, isError: false, error: null, variables: undefined }),
-      },
       decideCaseProposal: {
         useMutation: () => ({ mutate: decideCaseMutate, isPending: false, isError: false, error: null, variables: undefined }),
       },
@@ -64,7 +59,7 @@ const { EnrichmentSection } = await import("./enrichment-section");
 
 const TASK: GqlTask = {
   id: "task-1",
-  kind: "event.impact_prior.clear",
+  kind: "event.impact_prior.web",
   requestId: "req-1",
   subjectType: "event",
   subjectId: "evt-1",
@@ -84,33 +79,6 @@ const TASK: GqlTask = {
   completedAt: null,
   createdAt: "2026-10-06T10:00:00.000Z",
   updatedAt: "2026-10-06T10:00:00.000Z",
-};
-
-const PRIOR: GqlImpactPrior = {
-  id: "ip-1",
-  eventId: "evt-1",
-  taskId: "task-0",
-  sourceKind: "event.impact_prior.clear",
-  state: "proposed",
-  hazardType: "FL",
-  countryLocationId: "sdn",
-  geographicScope: "district",
-  horizonYears: 10,
-  populationGroup: null,
-  metric: null,
-  lowerBound: null,
-  upperBound: null,
-  numberOfCases: 2,
-  basis: [
-    { tier: "clear", eventId: "evt-2021", occurredAt: "2021-08-10", scope: "district", quote: "The Nile burst its banks." },
-    { tier: "web", sourceUrl: "https://example.test/floods-2019", scope: "country", quote: "Floods displaced thousands." },
-  ],
-  methodVersion: "clear-impact-prior@0.1.0",
-  supersedesId: null,
-  decidedById: null,
-  decidedAt: null,
-  decisionRationale: null,
-  createdAt: "2026-10-06T11:00:00.000Z",
 };
 
 const CASE: GqlCaseProposal = {
@@ -150,10 +118,9 @@ describe("EnrichmentSection", () => {
     flagEnabled = true;
     flags = {};
     role = "viewer";
-    data = { tasks: [], impactPriors: [] };
+    data = { tasks: [] };
     queryError = null;
     useQuery.mockClear();
-    decideMutate.mockReset();
     decideCaseMutate.mockReset();
     showNotification.mockClear();
     computed = [];
@@ -181,76 +148,59 @@ describe("EnrichmentSection", () => {
   });
 
   it("lists a Task with its kind, status, requester and the error the server returned", () => {
-    data = { tasks: [TASK], impactPriors: [] };
+    data = { tasks: [TASK] };
     renderSection();
     const row = screen.getByTestId("enrichment-task");
     expect(row.getAttribute("data-status")).toBe("FAILED");
-    expect(row.getAttribute("data-kind")).toBe("event.impact_prior.clear");
-    // One row per kind: the family name and the source it came from.
-    expect(screen.getByText("kinds.impactPrior · sourceKind.clear")).toBeTruthy();
+    expect(row.getAttribute("data-kind")).toBe("event.impact_prior.web");
+    expect(screen.getByText("webSearch")).toBeTruthy();
     expect(screen.getByText("status.FAILED")).toBeTruthy();
     expect(screen.getByText(/requestedBy:.*Ana/)).toBeTruthy();
     expect(screen.getByTestId("enrichment-task-error").textContent).toContain("model timed out");
   });
 
   it("omits the error line when the server redacted it", () => {
-    data = { tasks: [{ ...TASK, lastError: null }], impactPriors: [] };
+    data = { tasks: [{ ...TASK, lastError: null }] };
     renderSection();
     expect(screen.queryByTestId("enrichment-task-error")).toBeNull();
   });
 
-  it("calls the web Worker's request a web search", () => {
-    data = { tasks: [{ ...TASK, kind: "event.impact_prior.web", lastError: null }], impactPriors: [] };
+  it("still lists a retired kind from the Event's history, under the generic label", () => {
+    data = {
+      tasks: [
+        { ...TASK, id: "task-clear", kind: "event.impact_prior.clear", status: "COMPLETED", lastError: null, outcome: "produced" },
+        { ...TASK, id: "task-bare", kind: "event.impact_prior", status: "COMPLETED", lastError: null, outcome: "no_prior_found" },
+      ],
+    };
     renderSection();
-    expect(screen.getByText("webSearch")).toBeTruthy();
+    expect(screen.getAllByTestId("enrichment-task")).toHaveLength(2);
+    expect(screen.getAllByText("kinds.impactPrior")).toHaveLength(2);
   });
 
   it("names the Worker that held a Task when the server returned it", () => {
     data = {
       tasks: [{ ...TASK, status: "COMPLETED", lastError: null, outcome: "produced", leaseOwner: { id: "w", name: "CLEAR Worker (Dagster)" } }],
-      impactPriors: [],
     };
     renderSection();
     expect(screen.getByText(/worker:\{"name":"CLEAR Worker \(Dagster\)"\}/)).toBeTruthy();
     expect(screen.getByText("outcome.produced")).toBeTruthy();
   });
 
-  it("shows no whole-prior proposals (V4), not even a proposed one to a decider: the prior is computed, the cases decide", () => {
-    role = "analyst";
-    flags = { impact_prior_review: true };
-    data = {
-      tasks: [],
-      impactPriors: [PRIOR, { ...PRIOR, id: "ip-web", sourceKind: "event.impact_prior.web", state: "accepted" }],
-      caseProposals: [CASE],
-    };
-    renderSection();
-    expect(screen.queryByTestId("enrichment-prior")).toBeNull();
-    expect(screen.queryByTestId("enrichment-group")).toBeNull();
-    expect(screen.queryByTestId("impact-prior-decision")).toBeNull();
-    expect(screen.getAllByTestId("case-proposal-decision")).toHaveLength(1);
-  });
-
-  it("shows the empty state when only whole priors came back", () => {
-    data = { tasks: [], impactPriors: [PRIOR] };
-    renderSection();
-    expect(screen.getByText("empty")).toBeTruthy();
-  });
-
   it("polls while a Task is open", () => {
-    data = { tasks: [{ ...TASK, status: "LEASED", lastError: null }], impactPriors: [] };
+    data = { tasks: [{ ...TASK, status: "LEASED", lastError: null }] };
     renderSection();
     const opts = useQuery.mock.calls[0]![1] as unknown as {
       refetchInterval: (q: { state: { data: typeof data } }) => number | false;
     };
     expect(opts.refetchInterval({ state: { data } })).toBe(30_000);
-    expect(opts.refetchInterval({ state: { data: { tasks: [TASK], impactPriors: [] } } })).toBe(false);
+    expect(opts.refetchInterval({ state: { data: { tasks: [TASK] } } })).toBe(false);
   });
 
   describe("web cases, one decision each (V4)", () => {
     it("lists the Event's cases with their figures and source, each with its own Accept / Reject for a decider", () => {
       role = "analyst";
       flags = { impact_prior_review: true };
-      data = { tasks: [], impactPriors: [], caseProposals: [CASE, { ...CASE, id: "cp-2", sourceUrl: "https://example.test/2" }] };
+      data = { tasks: [], caseProposals: [CASE, { ...CASE, id: "cp-2", sourceUrl: "https://example.test/2" }] };
       decideCaseMutate.mockImplementation((_input, opts) => opts.onSuccess({ ...CASE, state: "accepted", resultEventId: "evt-h" }));
       renderSection();
       expect(screen.getByTestId("enrichment-cases-title")).toHaveTextContent('group:{"count":2}');
@@ -262,7 +212,7 @@ describe("EnrichmentSection", () => {
     });
 
     it("shows the cases read-only to a viewer", () => {
-      data = { tasks: [], impactPriors: [], caseProposals: [CASE] };
+      data = { tasks: [], caseProposals: [CASE] };
       renderSection();
       expect(screen.getByTestId("case-proposal")).toHaveAttribute("data-state", "proposed");
       expect(screen.queryByTestId("case-proposal-decision")).toBeNull();
@@ -314,7 +264,7 @@ describe("EnrichmentSection", () => {
       ]);
       expect(screen.queryByTestId("computed-prior-low-confidence")).toBeNull();
       // Nothing to decide on a computed prior.
-      expect(screen.queryByTestId("impact-prior-decision")).toBeNull();
+      expect(screen.queryByTestId("case-proposal-decision")).toBeNull();
     });
 
     it("names the unit when there is one, the population group, and marks too few cases as low confidence", () => {

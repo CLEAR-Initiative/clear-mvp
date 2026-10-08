@@ -11,7 +11,6 @@ import { inboxAccess } from "~/lib/inbox-access";
 import { canReviewSource } from "~/lib/ground-review";
 import {
   buildCaseGroupEntries,
-  buildImpactPriorEntries,
   buildInboxEntries,
   buildTaskEntries,
   countByFilter,
@@ -23,19 +22,13 @@ import {
   saveReadIds,
   visibleEntries,
   withDecision,
-  type ImpactPriorEntry,
   type InboxEntry,
   type InboxFailure,
   type InboxFilter,
   type InboxSort,
   type RejectReason,
 } from "~/lib/hotline-inbox";
-import type {
-  GqlCaseProposal,
-  GqlCaseProposalDecision,
-  GqlImpactPriorDecision,
-  GqlReviewCaseProposal,
-} from "~/lib/types/graphql";
+import type { GqlCaseProposal, GqlCaseProposalDecision, GqlReviewCaseProposal } from "~/lib/types/graphql";
 import { EntryList } from "./_components/entry-list";
 import { ReadingPane } from "./_components/reading-pane";
 import { AddToClearModal, type SignalDraft } from "./_components/add-to-clear-modal";
@@ -62,15 +55,9 @@ import styles from "./inbox.module.css";
  * PRIVACY: hotline entries carry no sender identity. Only the per-
  * conversation pseudonym is shown (as an intake ref).
  *
- * Proposed ImpactPriors (clear-api ADR-0010, V2): one entry per proposed
- * ImpactPrior clear-api lets this user decide (admins and analysts). The
- * decision (accept / reject with a rationale) is taken in the shared
- * ImpactPriorPane, the same one the Event page mounts; a decided prior
- * leaves the queue. Only the CLEAR-data source's: clear-api decides the
- * web's evidence case by case.
- *
- * Web cases (clear-api V4, CaseProposal): the proposed cases grouped under
- * the Event whose enrichment produced them, one Review item per Event,
+ * Proposed signals (clear-api V4 web cases, CaseProposal): the proposed
+ * cases grouped under the Event whose enrichment produced them, one Review
+ * item per Event, for the deciders (admins and analysts),
  * each case with its own Accept / Reject (the same row the Event page
  * mounts). A decided case turns to its decision in place and stays in its
  * group until the Inbox is reloaded; the counts are the undecided cases.
@@ -81,8 +68,6 @@ import styles from "./inbox.module.css";
  */
 
 const TOAST_MS = 6000;
-/** clear-api's page maximum (its default of 50 would truncate the queue). */
-const PROPOSED_PAGE = { limit: 200 } as const;
 
 interface Toast {
   message: string;
@@ -103,7 +88,6 @@ function pendingOnly(prev: Record<string, RetryState>): Record<string, RetryStat
 
 export default function InboxPage() {
   const t = useTranslations("inbox");
-  const tReview = useTranslations("impactPriorReview");
   const tCases = useTranslations("caseReview");
   const utils = api.useUtils();
 
@@ -117,28 +101,19 @@ export default function InboxPage() {
   // for whichever kinds the reader may see, and lists only those.
   const access = inboxAccess({ role, hotlineInbox, impactPriorReview, eventEnrichment });
   const canSee = access.any;
-  /** Deciders see proposed ImpactPriors beside the hotline threads. */
-  const canDecide = access.priors;
+  /** Deciders see the proposed signals beside the hotline threads. */
+  const canDecide = access.proposals;
 
   const inboxQuery = api.ground.hotlineInbox.useQuery(undefined, {
     enabled: access.hotline,
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
-  // The router's maximum: clear-api defaults to 50, which would silently
-  // truncate the queue and the awaiting count. No paging yet; a backlog
-  // past 200 is a problem of its own.
-  const priorsQuery = api.tasks.proposedImpactPriors.useQuery(PROPOSED_PAGE, {
-    enabled: access.priors,
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-  });
-
   // Every proposed case, page by page (the router reads clear-api's pages
   // until they run out): one enrichment can propose dozens, so one page of
   // 200 would leave older cases with no row to decide them from.
   const casesQuery = api.tasks.proposedCaseProposals.useQuery(undefined, {
-    enabled: access.priors,
+    enabled: access.proposals,
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
@@ -160,11 +135,10 @@ export default function InboxPage() {
   const entries = useMemo<InboxEntry[]>(
     () => [
       ...(inboxQuery.data ? buildInboxEntries(inboxQuery.data) : []),
-      ...(priorsQuery.data ? buildImpactPriorEntries(priorsQuery.data) : []),
       ...(casesQuery.data ? buildCaseGroupEntries(casesQuery.data, decidedCases) : []),
       ...(myTasksQuery.data ? buildTaskEntries(myTasksQuery.data.tasks, myTasksQuery.data.eventTitles) : []),
     ],
-    [inboxQuery.data, priorsQuery.data, casesQuery.data, decidedCases, myTasksQuery.data],
+    [inboxQuery.data, casesQuery.data, decidedCases, myTasksQuery.data],
   );
   const sourceById = useMemo(() => {
     const m = new Map<string, string[]>();
@@ -172,12 +146,12 @@ export default function InboxPage() {
     return m;
   }, [inboxQuery.data]);
 
-  const filters = useMemo(() => filtersFor(access), [access.hotline, access.priors, access.requests]); // eslint-disable-line react-hooks/exhaustive-deps
+  const filters = useMemo(() => filtersFor(access), [access.hotline, access.proposals, access.requests]); // eslint-disable-line react-hooks/exhaustive-deps
   const [chosenFilter, setFilter] = useState<InboxFilter>("reports");
   // The filter in force is derived, never synced: the session and the
   // feature flags land at different times, and a fallback stored while
   // nothing applied yet would stick. A reader without the hotline starts
-  // on the first filter they have (priors); a choice that stops applying
+  // on the first filter they have (proposals); a choice that stops applying
   // (flag flipped) falls back the same way.
   const filter: InboxFilter = filters.includes(chosenFilter) ? chosenFilter : (filters[0] ?? "all");
   const [search, setSearch] = useState("");
@@ -355,18 +329,6 @@ export default function InboxPage() {
     [selectedThread, busy, review, afterAction, t], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  /**
-   * A decision on a proposed ImpactPrior was recorded in the shared pane
-   * (which already refetched the Review items): toast and advance.
-   */
-  const decided = useCallback(
-    (entry: ImpactPriorEntry, _prior: unknown, decision: GqlImpactPriorDecision) => {
-      // The same words as the Event page's door (impactPriorReview).
-      afterAction(entry.id, { message: tReview(`toast.${decision}`) });
-    },
-    [afterAction, tReview],
-  );
-
   /** A case was decided from its row: it keeps its place, now decided, and
    * the selection stays on its Event (its siblings may still wait). */
   const caseDecided = useCallback(
@@ -430,7 +392,7 @@ export default function InboxPage() {
   );
 
   // Keyboard: Escape closes modal > popover; A/E/R act (hotline threads
-  // only: a prior's decision needs a typed rationale); J/K move.
+  // only: a case is decided on its own row); J/K move.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -487,10 +449,10 @@ export default function InboxPage() {
         <div className={styles.headerRow}>
           <span className={styles.title}>{t("title")}</span>
           <span className={styles.awaiting}>{t("awaiting", { count: counts.all })}</span>
-          {(inboxQuery.isFetching || priorsQuery.isFetching || casesQuery.isFetching || myTasksQuery.isFetching) && (
+          {(inboxQuery.isFetching || casesQuery.isFetching || myTasksQuery.isFetching) && (
             <Loader size={12} />
           )}
-          {(inboxQuery.error || priorsQuery.error || casesQuery.error || myTasksQuery.error) && (
+          {(inboxQuery.error || casesQuery.error || myTasksQuery.error) && (
             <span className={styles.actionError}>{t("loadError")}</span>
           )}
         </div>
@@ -523,7 +485,7 @@ export default function InboxPage() {
           onSelect={select}
           loading={
             (access.hotline && inboxQuery.isLoading) ||
-            (access.priors && (priorsQuery.isLoading || casesQuery.isLoading)) ||
+            (access.proposals && casesQuery.isLoading) ||
             (access.requests && myTasksQuery.isLoading)
           }
         />
@@ -532,7 +494,6 @@ export default function InboxPage() {
           translation={translation}
           canReview={canReviewSelected}
           canDecide={canDecide}
-          onDecided={decided}
           onCaseDecided={caseDecided}
           onCaseStale={caseStale}
           busy={busy}

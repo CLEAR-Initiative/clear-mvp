@@ -21,28 +21,18 @@ import {
   TRANSLATION_POLL_MS,
   attachmentKey,
   isCaseGroupEntry,
-  isImpactPriorEntry,
   isTaskEntry,
   needsTranslation,
   shownTranslation,
   type CaseGroupEntry,
   type HotlineEntry,
-  type ImpactPriorEntry,
   type InboxAttachment,
   type InboxEntry,
   type RejectReason,
   type TaskEntry,
   type VoiceTranscript,
 } from "~/lib/hotline-inbox";
-import type {
-  GqlCaseProposal,
-  GqlCaseProposalDecision,
-  GqlImpactPrior,
-  GqlImpactPriorDecision,
-  GqlReviewCaseProposal,
-} from "~/lib/types/graphql";
-import { ImpactPriorPane } from "~/components/impact-prior/impact-prior-pane";
-import { ImpactPriorCard } from "~/components/impact-prior/impact-prior-card";
+import type { GqlCaseProposal, GqlCaseProposalDecision, GqlReviewCaseProposal } from "~/lib/types/graphql";
 import { CaseProposalRow } from "~/components/impact-prior/case-proposal-row";
 import { TaskRow } from "~/components/event-detail/enrichment-section";
 import { InboxEntryPills } from "./classification-pill";
@@ -55,10 +45,8 @@ interface ReadingPaneProps {
   translation: boolean;
   /** Hotline threads: the reader may review the selected entry's source. */
   canReview: boolean;
-  /** ImpactPriors: the reader is a decider (admin or analyst). */
+  /** Proposed signals: the reader is a decider (admin or analyst). */
   canDecide?: boolean;
-  /** An ImpactPrior was decided from the pane. */
-  onDecided?: (entry: ImpactPriorEntry, prior: GqlImpactPrior, decision: GqlImpactPriorDecision) => void;
   /** A web case was decided from its row. */
   onCaseDecided?: (proposal: GqlReviewCaseProposal, decided: GqlCaseProposal, decision: GqlCaseProposalDecision) => void;
   /** clear-api answered CONFLICT / NOT_FOUND on a case: the copy is stale. */
@@ -304,17 +292,6 @@ export function ReadingPane(props: ReadingPaneProps) {
       />
     );
   }
-  if (isImpactPriorEntry(entry)) {
-    return (
-      <InboxImpactPriorPane
-        key={entry.id}
-        entry={entry}
-        canDecide={!!props.canDecide}
-        onDecided={(prior, decision) => props.onDecided?.(entry, prior, decision)}
-        onBack={props.onBack}
-      />
-    );
-  }
   return <HotlinePane {...props} entry={entry} />;
 }
 
@@ -322,13 +299,12 @@ export function ReadingPane(props: ReadingPaneProps) {
  * One of the reader's own requests ("My requests"): read-only status, never
  * a decision. The Task's line (kind and source, status, Worker, outcome,
  * error), Cancel while it is PENDING or LEASED, and — once its Worker
- * proposed something — that proposal as the reader may see it, read-only
- * (the decision stays with the deciders' Review items): the whole prior for
- * the CLEAR-data source, the cases for the web (V4). "Awaiting review"
- * while any of it is proposed, and polled meanwhile so a decision taken
- * elsewhere shows here; a proposal the reader may not see (a rejected one,
- * for a requester who is not a decider) points to the Event; a failed read
- * says so.
+ * proposed something — the proposed signals (web cases) as the reader may
+ * see them, read-only (the decision stays with the deciders' Review items).
+ * "Awaiting review" while any of them is proposed, and polled meanwhile so
+ * a decision taken elsewhere shows here; cases the reader may not see (a
+ * rejected one, for a requester who is not a decider) point to the Event;
+ * a failed read says so.
  */
 function InboxTaskPane({ entry, onBack }: { entry: TaskEntry; onBack: () => void }) {
   const t = useTranslations("inbox");
@@ -346,19 +322,15 @@ function InboxTaskPane({ entry, onBack }: { entry: TaskEntry; onBack: () => void
       enabled: produced,
       staleTime: 30_000,
       refetchInterval: (q) =>
-        q.state.data?.impactPriors.some((p) => p.taskId === task.id && p.state === "proposed") ||
-        q.state.data?.caseProposals.some((c) => c.taskId === task.id && c.state === "proposed")
-          ? 60_000
-          : false,
+        q.state.data?.caseProposals.some((c) => c.taskId === task.id && c.state === "proposed") ? 60_000 : false,
     },
   );
-  const prior = enrichment.data?.impactPriors.find((p) => p.taskId === task.id) ?? null;
   const cases = enrichment.data?.caseProposals.filter((c) => c.taskId === task.id) ?? [];
-  const awaiting = prior?.state === "proposed" || cases.some((c) => c.state === "proposed");
+  const awaiting = cases.some((c) => c.state === "proposed");
   // Once loaded and nothing it produced is among what the reader may see (a
   // rejected one is visible to deciders only), say so neutrally rather than
   // claim it is still awaiting review.
-  const proposalHidden = produced && enrichment.isSuccess && !prior && cases.length === 0;
+  const proposalHidden = produced && enrichment.isSuccess && cases.length === 0;
   const open = task.status === "PENDING" || task.status === "LEASED";
   const cancelRequested = task.cancelRequestedAt !== null;
   const cancel = api.tasks.cancel.useMutation({
@@ -375,7 +347,7 @@ function InboxTaskPane({ entry, onBack }: { entry: TaskEntry; onBack: () => void
           <button type="button" className={styles.backBtn} onClick={onBack} aria-label={t("pane.back")}>
             <IconArrowLeft size={16} />
           </button>
-          <span className={styles.paneTitle}>{entry.eventTitle ?? t("priors.untitledEvent")}</span>
+          <span className={styles.paneTitle}>{entry.eventTitle ?? t("event.untitled")}</span>
           <InboxEntryPills entry={entry} />
         </div>
         <span className={styles.paneRef}>
@@ -384,7 +356,7 @@ function InboxTaskPane({ entry, onBack }: { entry: TaskEntry; onBack: () => void
       </header>
       <div className={styles.paneBody}>
         <Link href={`/event/${encodeURIComponent(entry.eventId)}`} className={styles.translateBtn} data-testid="inbox-task-event-link">
-          {t("priors.openEvent")}
+          {t("event.open")}
         </Link>
         <TaskRow task={task} />
         {awaiting && (
@@ -402,7 +374,6 @@ function InboxTaskPane({ entry, onBack }: { entry: TaskEntry; onBack: () => void
             {t("requests.proposalLoadFailed")}
           </p>
         )}
-        {prior && <ImpactPriorCard prior={prior} />}
         {cases.map((proposal) => (
           <CaseProposalRow key={proposal.id} proposal={proposal} canDecide={false} />
         ))}
@@ -435,7 +406,7 @@ function InboxTaskPane({ entry, onBack }: { entry: TaskEntry; onBack: () => void
 }
 
 /**
- * An Event's web cases as a Review item (V4): each case with its own
+ * An Event's proposed signals (web cases, V4) as a Review item: each case with its own
  * Accept / Reject (the row the Event page mounts too), under the Event they
  * were found for, with a link to it. A decided case turns to its decision
  * in place; the group stays until the Inbox is reloaded.
@@ -463,16 +434,16 @@ function InboxCaseGroupPane({
           <button type="button" className={styles.backBtn} onClick={onBack} aria-label={t("pane.back")}>
             <IconArrowLeft size={16} />
           </button>
-          <span className={styles.paneTitle}>{entry.eventTitle ?? t("priors.untitledEvent")}</span>
+          <span className={styles.paneTitle}>{entry.eventTitle ?? t("event.untitled")}</span>
           <InboxEntryPills entry={entry} />
         </div>
         <span className={styles.paneRef}>
-          {t("priors.proposedAt", { date: format.dateTime(new Date(entry.sentAt), "short") })}
+          {t("event.proposedAt", { date: format.dateTime(new Date(entry.sentAt), "short") })}
         </span>
       </header>
       <div className={styles.paneBody}>
         <Link href={`/event/${encodeURIComponent(entry.eventId)}`} className={styles.translateBtn} data-testid="inbox-cases-event-link">
-          {t("priors.openEvent")}
+          {t("event.open")}
         </Link>
         <p className={styles.sectionLabel} data-testid="inbox-cases-title">
           {tCases("group", { count: entry.cases.length })}
@@ -486,48 +457,6 @@ function InboxCaseGroupPane({
             onStale={() => onCaseStale?.(proposal)}
           />
         ))}
-      </div>
-    </section>
-  );
-}
-
-/**
- * A proposed ImpactPrior as a Review item: the shared decision pane (the
- * same one the Event page mounts) in the Inbox frame, with a link to the
- * Event it is about.
- */
-function InboxImpactPriorPane({
-  entry,
-  canDecide,
-  onDecided,
-  onBack,
-}: {
-  entry: ImpactPriorEntry;
-  canDecide: boolean;
-  onDecided: (prior: GqlImpactPrior, decision: GqlImpactPriorDecision) => void;
-  onBack: () => void;
-}) {
-  const t = useTranslations("inbox");
-  const format = useFormatter();
-  return (
-    <section className={styles.pane} data-testid="inbox-pane" data-kind="impact_prior">
-      <header className={styles.paneHeader}>
-        <div className={styles.paneTitleGroup}>
-          <button type="button" className={styles.backBtn} onClick={onBack} aria-label={t("pane.back")}>
-            <IconArrowLeft size={16} />
-          </button>
-          <span className={styles.paneTitle}>{entry.eventTitle ?? t("priors.untitledEvent")}</span>
-          <InboxEntryPills entry={entry} />
-        </div>
-        <span className={styles.paneRef}>
-          {t("priors.proposedAt", { date: format.dateTime(new Date(entry.sentAt), "short") })}
-        </span>
-      </header>
-      <div className={styles.paneBody}>
-        <Link href={`/event/${encodeURIComponent(entry.eventId)}`} className={styles.translateBtn} data-testid="inbox-prior-event-link">
-          {t("priors.openEvent")}
-        </Link>
-        <ImpactPriorPane prior={entry.prior} canDecide={canDecide} onDecided={onDecided} />
       </div>
     </section>
   );

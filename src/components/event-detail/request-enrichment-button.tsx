@@ -8,11 +8,13 @@ import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { useOptionalTeam } from "~/providers/team-provider";
 import { canWriteCrisisEvents, isPlatformAdmin } from "~/lib/roles";
-import { isImpactPriorKind, requestSourceLabel } from "~/lib/impact-prior-source";
+import { isImpactPriorKind, requestLabel } from "~/lib/impact-prior-source";
 
 /**
  * "Request enrichment" in the Event page's Actions card (clear-api ADR-0010):
- * asks a Task Worker for an ImpactPrior on this Event. Mirrors clear-api's
+ * asks the enrichment Workers to look for past cases like this Event (today
+ * the web Worker's "Web search", whose cases come back as proposed signals
+ * to decide). Mirrors clear-api's
  * `requestEventEnrichment` gate — admin or analyst anywhere, a team content
  * writer with the active team passed as the hint — but the server is the
  * real gate, and its answer wins: FORBIDDEN disables the action with the
@@ -42,8 +44,10 @@ export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
   const canRequest = canWriteCrisisEvents(me?.role) || hasTeam;
 
   const enrichment = api.tasks.forEvent.useQuery({ eventId }, { enabled, staleTime: 15_000 });
-  // This button requests the ImpactPrior family; another kind of enrichment
-  // on the Event is not this button's to show as requested or to cancel.
+  // This button requests the `event.impact_prior` family of Task kinds;
+  // another kind of enrichment on the Event is not this button's to show as
+  // requested or to cancel. Tasks only: whether anything was proposed is
+  // the Enrichment section's to show.
   const openTasks = (enrichment.data?.tasks ?? []).filter(
     (task) => isImpactPriorKind(task.kind) && (task.status === "PENDING" || task.status === "LEASED"),
   );
@@ -110,7 +114,7 @@ export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
         <Stack gap={0} data-testid="enrichment-open-kinds">
           {openTasks.map((task) => (
             <Text key={task.id} size="xs" c="var(--color-text-muted)" style={{ textAlign: "center" }} data-kind={task.kind}>
-              {t("kindStatus", { source: requestSourceLabel(task.kind, t), status: t(`status.${task.status}`) })}
+              {t("kindStatus", { source: requestLabel(task.kind, t), status: t(`status.${task.status}`) })}
             </Text>
           ))}
         </Stack>

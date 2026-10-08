@@ -1925,29 +1925,19 @@
         "accepted": "Accepté",
         "rejected": "Rejeté"
       },
-      "cases": "{count, plural, one {# cas} other {# cas}}",
       "scope": {
         "district": "district",
         "country": "pays"
       },
       "horizon": "Horizon de {years} ans",
       "tier": {
-        "clear": "CLEAR",
         "web": "Web"
       },
       "method": "Méthode {version}",
-      "supersedes": "Remplace un antécédent précédent",
       "source": "Source",
       "loadFailed": "L'enrichissement n'a pas pu être chargé.",
-      "priorEvent": "Ouvrir l'événement antérieur",
       "worker": "Worker : {name}",
-      "group": "{source} · {count, plural, one {# proposition} other {# propositions}}",
       "kindStatus": "{source} · {status}",
-      "sourceKind": {
-        "clear": "Données CLEAR",
-        "web": "Web",
-        "legacy": "Source non précisée"
-      },
       "cancelFailed": "Certaines demandes n'ont pas pu être annulées. Réessayez.",
       "webSearch": "Recherche web"
     }
@@ -2837,7 +2827,7 @@
       "reports": "Rapports terrain",
       "unclassified": "Non classés",
       "chatter": "Bavardage",
-      "priors": "Signaux proposés",
+      "proposals": "Signaux proposés",
       "requests": "Mes demandes",
       "all": "Tout"
     },
@@ -2963,14 +2953,12 @@
       "partial": "Remis en file : {done} message(s) sur {total}. {error}"
     },
     "kinds": {
-      "impact_prior": "Signal proposé",
       "task": "Ma demande",
       "cases": "Signaux proposés"
     },
-    "priors": {
-      "untitledEvent": "Événement sans titre",
-      "preview": "{source} · {count, plural, one {# cas} other {# cas}} · {scope} · {hazard}",
-      "openEvent": "Ouvrir l'événement",
+    "event": {
+      "untitled": "Événement sans titre",
+      "open": "Ouvrir l'événement",
       "proposedAt": "Proposé le {date}"
     },
     "requests": {
@@ -3364,19 +3352,6 @@
         "eventTypes": "Types d'événement",
         "sourceNames": "Sources"
       }
-    }
-  },
-  "impactPriorReview": {
-    "help": "Seul un a priori accepté compte en aval. Un a priori rejeté reste attaché à l'événement, remplacé, avec votre motif.",
-    "rationaleLabel": "Motif",
-    "rationalePlaceholder": "Pourquoi cette décision, pour la piste d'audit",
-    "rationaleRequired": "Un motif est requis",
-    "rationaleTooLong": "Le motif doit faire moins de {max} caractères",
-    "reject": "Rejeter",
-    "accept": "Accepter",
-    "toast": {
-      "accepted": "A priori d'impact accepté",
-      "rejected": "A priori d'impact rejeté"
     }
   },
   "caseReview": {

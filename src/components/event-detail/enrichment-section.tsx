@@ -8,7 +8,7 @@ import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { CaseProposalRow } from "~/components/impact-prior/case-proposal-row";
 import { ComputedPriors } from "~/components/impact-prior/computed-priors";
-import { canReviewImpactPriors } from "~/lib/inbox-access";
+import { canReviewCaseProposals } from "~/lib/inbox-access";
 import { requestLabel } from "~/lib/impact-prior-source";
 import type { GqlCaseProposalDecision, GqlTask } from "~/lib/types/graphql";
 
@@ -28,11 +28,10 @@ const STATUS_COLOR: Record<GqlTask["status"], string> = {
  * is open so the result appears without a reload. Behind the
  * `event_enrichment` flag.
  *
- * V4: evidence is decided case by case. The cases are listed under their
- * own heading, each with its own Accept / Reject for a decider (the same
- * row the Inbox mounts). Whole-prior proposals (V1–V3) are not shown here:
- * the prior is computed from accepted cases, and a still-proposed whole
- * prior keeps its Review item in the Inbox.
+ * V4: evidence is decided case by case. The cases ("proposed signals") are
+ * listed under their own heading, each with its own Accept / Reject for a
+ * decider (the same row the Inbox mounts). The prior itself is computed
+ * from accepted history; nothing proposes a whole one.
  */
 export function EnrichmentSection({ eventId }: { eventId: string }) {
   const enabled = useFeatureEnabled("event_enrichment");
@@ -40,7 +39,7 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
   const t = useTranslations("eventDetail.enrichment");
   const tCases = useTranslations("caseReview");
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000, enabled });
-  const canDecide = canReviewImpactPriors({ role: authData?.user?.role, impactPriorReview: review });
+  const canDecide = canReviewCaseProposals({ role: authData?.user?.role, impactPriorReview: review });
 
   const query = api.tasks.forEvent.useQuery(
     { eventId },

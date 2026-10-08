@@ -2,14 +2,7 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type {
-  GqlCaseProposal,
-  GqlHotlineInbox,
-  GqlImpactPrior,
-  GqlReviewCaseProposal,
-  GqlReviewImpactPrior,
-  GqlTask,
-} from "~/lib/types/graphql";
+import type { GqlCaseProposal, GqlHotlineInbox, GqlReviewCaseProposal, GqlTask } from "~/lib/types/graphql";
 
 /**
  * Page-level tests for the triage flow: role gate, filter/selection,
@@ -42,15 +35,8 @@ let role = "admin";
 let authLoading = false;
 const reviewMutate = vi.fn();
 const retryMutateAsync = vi.fn();
-const decideMutate = vi.fn();
 const invalidate = vi.fn(async () => undefined);
 let inboxData: GqlHotlineInbox;
-let priorsData: GqlReviewImpactPrior[] = [];
-const priorsQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
-  data: opts.enabled ? priorsData : undefined,
-  isFetching: false,
-  error: null,
-}));
 let myTasksData: { tasks: GqlTask[]; eventTitles: Record<string, string | null> } = { tasks: [], eventTitles: {} };
 const myTasksQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
   data: opts.enabled ? myTasksData : undefined,
@@ -73,15 +59,14 @@ let caseMutation: { isPending: boolean; isError: boolean; error: { message: stri
   error: null,
 };
 /** The Event's enrichment, as the Task pane reads it for a produced proposal. */
-let forEventPriors: GqlImpactPrior[] = [];
 let forEventCases: GqlCaseProposal[] = [];
 let forEventError = false;
 const forEventQuery = vi.fn((_input: unknown, opts: { enabled: boolean }) => ({
-  data: opts.enabled && !forEventError ? { tasks: [], impactPriors: forEventPriors, caseProposals: forEventCases } : undefined,
+  data: opts.enabled && !forEventError ? { tasks: [], caseProposals: forEventCases } : undefined,
   isSuccess: opts.enabled && !forEventError,
   isError: opts.enabled && forEventError,
 }));
-const forEventFetch = vi.fn(async () => ({ tasks: [], impactPriors: forEventPriors, caseProposals: forEventCases }));
+const forEventFetch = vi.fn(async () => ({ tasks: [], caseProposals: forEventCases }));
 const cancelMutate = vi.fn();
 let cancelSucceeded = false;
 
@@ -94,7 +79,6 @@ vi.mock("~/trpc/react", () => ({
         messages: { invalidate },
       },
       tasks: {
-        proposedImpactPriors: { invalidate },
         proposedCaseProposals: { invalidate },
         reviewCount: { invalidate },
         forEvent: { invalidate, fetch: forEventFetch },
@@ -109,7 +93,6 @@ vi.mock("~/trpc/react", () => ({
       },
     },
     tasks: {
-      proposedImpactPriors: { useQuery: (input: unknown, opts: { enabled: boolean }) => priorsQuery(input, opts) },
       myTasks: { useQuery: (input: unknown, opts: { enabled: boolean }) => myTasksQuery(input, opts) },
       proposedCaseProposals: { useQuery: (input: unknown, opts: { enabled: boolean }) => casesQuery(input, opts) },
       forEvent: { useQuery: (input: unknown, opts: { enabled: boolean }) => forEventQuery(input, opts) },
@@ -117,9 +100,6 @@ vi.mock("~/trpc/react", () => ({
         useMutation: () => ({ mutate: decideCaseMutate, ...caseMutation, data: undefined, variables: undefined }),
       },
       cancel: { useMutation: () => ({ mutate: cancelMutate, isPending: false, isError: false, isSuccess: cancelSucceeded }) },
-      decideImpactPrior: {
-        useMutation: () => ({ mutate: decideMutate, isPending: false, isError: false, error: null, variables: undefined }),
-      },
     },
     ground: {
       hotlineInbox: {
@@ -204,34 +184,6 @@ function message(id: string, threadId: string, classification: string | null, se
   };
 }
 
-function prior(id: string, overrides: Partial<GqlReviewImpactPrior> = {}): GqlReviewImpactPrior {
-  return {
-    id,
-    eventId: "evt-1",
-    event: { id: "evt-1", title: "Floods in Kassala", types: ["FL"] },
-    taskId: "task-1",
-    sourceKind: "event.impact_prior.clear",
-    state: "proposed",
-    hazardType: "FL",
-    countryLocationId: "sdn",
-    geographicScope: "district",
-    horizonYears: 10,
-    populationGroup: null,
-    metric: null,
-    lowerBound: null,
-    upperBound: null,
-    numberOfCases: 2,
-    basis: [{ tier: "clear", eventId: "evt-2021", scope: "district", quote: "The Nile burst its banks." }],
-    methodVersion: "clear-impact-prior@0.1.0",
-    supersedesId: null,
-    decidedById: null,
-    decidedAt: null,
-    decisionRationale: null,
-    createdAt: "2026-09-16T10:00:00Z",
-    ...overrides,
-  };
-}
-
 function webCase(id: string, overrides: Partial<GqlReviewCaseProposal> = {}): GqlReviewCaseProposal {
   return {
     id,
@@ -264,9 +216,7 @@ beforeEach(() => {
   flags = {};
   role = "admin";
   authLoading = false;
-  priorsData = [];
   myTasksData = { tasks: [], eventTitles: {} };
-  forEventPriors = [];
   forEventCases = [];
   forEventError = false;
   casesData = [];
@@ -289,7 +239,6 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   retryMutateAsync.mockReset();
-  decideMutate.mockReset();
   decideCaseMutate.mockReset();
   invalidate.mockReset();
 });
@@ -317,15 +266,15 @@ describe("InboxPage access", () => {
     expect(screen.getByTestId("inbox-no-access")).toBeInTheDocument();
   });
 
-  it("admits an analyst to the Review items only: no hotline fetch, no hotline filters, priors first", () => {
+  it("admits an analyst to the Review items only: no hotline fetch, no hotline filters, proposed signals first", () => {
     role = "analyst";
-    priorsData = [prior("ip-1")];
+    casesData = [webCase("cp-1")];
     renderPage();
     expect(screen.getByTestId("inbox-page")).toBeInTheDocument();
-    expect(priorsQuery).toHaveBeenCalledWith({ limit: 200 }, expect.objectContaining({ enabled: true }));
+    expect(casesQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
     expect(screen.queryByTestId("inbox-filter-reports")).not.toBeInTheDocument();
-    expect(screen.getByTestId("inbox-filter-priors")).toHaveAttribute("data-active", "true");
-    expect(screen.getByTestId("inbox-filter-priors")).toHaveTextContent("1");
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveAttribute("data-active", "true");
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveTextContent("1");
     expect(screen.getByTestId("inbox-filter-all")).toBeInTheDocument();
     expect(screen.getAllByTestId("inbox-entry")).toHaveLength(1);
     expect(screen.getByText('awaiting:{"count":1}')).toBeInTheDocument();
@@ -333,9 +282,9 @@ describe("InboxPage access", () => {
     expect(screen.queryByText("Thread a")).not.toBeInTheDocument();
   });
 
-  it("lands an analyst on Impact priors even when the page rendered before the session and the flags arrived", () => {
+  it("lands an analyst on Proposed signals even when the page rendered before the session and the flags arrived", () => {
     role = "analyst";
-    priorsData = [prior("ip-1")];
+    casesData = [webCase("cp-1")];
     authLoading = true;
     const view = renderPage();
     expect(screen.queryByTestId("inbox-page")).not.toBeInTheDocument();
@@ -347,18 +296,18 @@ describe("InboxPage access", () => {
     // The server's flags land.
     flags = {};
     view.rerender(<MantineProvider><InboxPage /></MantineProvider>);
-    expect(screen.getByTestId("inbox-filter-priors")).toHaveAttribute("data-active", "true");
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveAttribute("data-active", "true");
     expect(screen.getByTestId("inbox-filter-all")).toHaveAttribute("data-active", "false");
   });
 
   it("falls back from a chosen filter that stops applying", () => {
-    priorsData = [prior("ip-1")];
+    casesData = [webCase("cp-1")];
     const view = renderPage();
-    fireEvent.click(screen.getByTestId("inbox-filter-priors"));
-    expect(screen.getByTestId("inbox-filter-priors")).toHaveAttribute("data-active", "true");
+    fireEvent.click(screen.getByTestId("inbox-filter-proposals"));
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveAttribute("data-active", "true");
     flags = { impact_prior_review: false };
     view.rerender(<MantineProvider><InboxPage /></MantineProvider>);
-    expect(screen.queryByTestId("inbox-filter-priors")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-filter-proposals")).not.toBeInTheDocument();
     expect(screen.getByTestId("inbox-filter-reports")).toHaveAttribute("data-active", "true");
   });
 
@@ -366,7 +315,7 @@ describe("InboxPage access", () => {
     flags = { impact_prior_review: false };
     renderPage();
     expect(screen.getByTestId("inbox-filter-reports")).toHaveAttribute("data-active", "true");
-    expect(screen.queryByTestId("inbox-filter-priors")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-filter-proposals")).not.toBeInTheDocument();
   });
 });
 
@@ -717,58 +666,35 @@ describe("InboxPage pipeline failures", () => {
   });
 });
 
-describe("InboxPage impact prior review", () => {
-  it("lists proposed ImpactPriors beside the threads under Everything and rejects one with a rationale", () => {
-    priorsData = [prior("ip-1")];
-    decideMutate.mockImplementation((_input, opts) => opts.onSuccess({ ...prior("ip-1"), state: "rejected" }));
+describe("InboxPage proposed signals beside the hotline", () => {
+  it("lists an Event's proposed signals beside the threads under Everything; no hotline action or shortcut acts on them", () => {
+    casesData = [webCase("cp-1")];
     renderPage();
-    expect(priorsQuery).toHaveBeenCalledWith({ limit: 200 }, expect.objectContaining({ enabled: true }));
+    expect(casesQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
     // Not a field report: it is not under the default filter.
     expect(screen.queryByTestId("inbox-kind-pill")).not.toBeInTheDocument();
-    expect(screen.getByTestId("inbox-filter-priors")).toHaveTextContent("1");
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveTextContent("1");
     fireEvent.click(screen.getByTestId("inbox-filter-all"));
     expect(screen.getByText('awaiting:{"count":4}')).toBeInTheDocument();
-    const row = screen.getAllByTestId("inbox-entry").find((r) => r.getAttribute("data-kind") === "impact_prior")!;
+    const row = screen.getAllByTestId("inbox-entry").find((r) => r.getAttribute("data-kind") === "cases")!;
     expect(row).toHaveTextContent("Floods in Kassala");
     expect(within(row).getByTestId("inbox-kind-pill")).toBeInTheDocument();
+    // No whole-prior Review item exists any more.
+    expect(screen.getAllByTestId("inbox-entry").map((r) => r.getAttribute("data-kind"))).not.toContain("impact_prior");
 
     fireEvent.click(row);
-    expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "impact_prior");
-    expect(screen.getByRole("link", { name: "priors.openEvent" })).toHaveAttribute("href", "/event/evt-1");
-    expect(screen.getByTestId("enrichment-prior")).toHaveAttribute("data-state", "proposed");
-    // No hotline actions on a prior; no shortcut acts on it either.
+    expect(screen.getByTestId("inbox-pane")).toHaveAttribute("data-kind", "cases");
+    expect(screen.getByRole("link", { name: "event.open" })).toHaveAttribute("href", "/event/evt-1");
     expect(screen.queryByTestId("inbox-action-bar")).not.toBeInTheDocument();
     fireEvent.keyDown(window, { key: "e" });
     expect(reviewMutate).not.toHaveBeenCalled();
-
-    fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "  Wrong country  " } });
-    fireEvent.click(screen.getByTestId("impact-prior-reject"));
-    expect(decideMutate).toHaveBeenCalledWith(
-      { id: "ip-1", decision: "rejected", rationale: "Wrong country" },
-      expect.any(Object),
-    );
-    // Exact: the hotline reject toast is `toast.rejected` with a reason.
-    expect(screen.getByTestId("inbox-toast").textContent).toBe("toast.rejected");
-    expect(invalidate).toHaveBeenCalled();
-  });
-
-  it("accepts a prior from the Inbox and toasts it", () => {
-    priorsData = [prior("ip-1")];
-    decideMutate.mockImplementation((_input, opts) => opts.onSuccess({ ...prior("ip-1"), state: "accepted" }));
-    renderPage();
-    fireEvent.click(screen.getByTestId("inbox-filter-all"));
-    fireEvent.click(screen.getAllByTestId("inbox-entry").find((r) => r.getAttribute("data-kind") === "impact_prior")!);
-    fireEvent.change(screen.getByTestId("impact-prior-rationale"), { target: { value: "Good basis" } });
-    fireEvent.click(screen.getByTestId("impact-prior-accept"));
-    expect(decideMutate).toHaveBeenCalledWith({ id: "ip-1", decision: "accepted", rationale: "Good basis" }, expect.any(Object));
-    expect(screen.getByTestId("inbox-toast").textContent).toBe("toast.accepted");
   });
 
   it("does not ask for Review items while impact_prior_review is off", () => {
     flags = { impact_prior_review: false };
-    priorsData = [prior("ip-1")];
+    casesData = [webCase("cp-1")];
     renderPage();
-    expect(priorsQuery).toHaveBeenCalledWith({ limit: 200 }, expect.objectContaining({ enabled: false }));
+    expect(casesQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: false }));
     fireEvent.click(screen.getByTestId("inbox-filter-all"));
     expect(screen.queryByTestId("inbox-kind-pill")).not.toBeInTheDocument();
   });
@@ -777,7 +703,7 @@ describe("InboxPage impact prior review", () => {
 function myTask(id: string, overrides: Partial<GqlTask> = {}): GqlTask {
   return {
     id,
-    kind: "event.impact_prior.clear",
+    kind: "event.impact_prior.web",
     requestId: "req-1",
     subjectType: "event",
     subjectId: "evt-1",
@@ -806,7 +732,8 @@ describe("InboxPage My requests", () => {
     role = "viewer";
     flags = { event_enrichment: true };
     myTasksData = {
-      tasks: [myTask("t-clear"), myTask("t-web", { kind: "event.impact_prior.web", status: "LEASED" })],
+      // An older kind from before the web search still lists beside it.
+      tasks: [myTask("t-clear", { kind: "event.impact_prior.clear" }), myTask("t-web", { status: "LEASED" })],
       eventTitles: { "evt-1": "Floods in Kassala" },
     };
     renderPage();
@@ -814,7 +741,7 @@ describe("InboxPage My requests", () => {
     expect(myTasksQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
     // No hotline, no Review items for a viewer: My requests and Everything only, on My requests.
     expect(screen.getByTestId("inbox-filter-requests")).toHaveAttribute("data-active", "true");
-    expect(screen.queryByTestId("inbox-filter-priors")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-filter-proposals")).not.toBeInTheDocument();
     expect(screen.queryByTestId("inbox-filter-reports")).not.toBeInTheDocument();
     const rows = screen.getAllByTestId("inbox-entry");
     expect(rows.map((r) => [r.getAttribute("data-kind"), r.getAttribute("data-source-kind"), r.getAttribute("data-status")])).toEqual([
@@ -831,15 +758,15 @@ describe("InboxPage My requests", () => {
   it("keeps requests out of Everything and the awaiting count for a decider, under their own filter", () => {
     role = "analyst";
     flags = { impact_prior_review: true, event_enrichment: true };
-    priorsData = [prior("ip-1")];
+    casesData = [webCase("cp-1")];
     myTasksData = { tasks: [myTask("t-1")], eventTitles: { "evt-1": "Floods in Kassala" } };
     renderPage();
     // A decider still lands on their Review items.
-    expect(screen.getByTestId("inbox-filter-priors")).toHaveAttribute("data-active", "true");
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveAttribute("data-active", "true");
     expect(screen.getByTestId("inbox-filter-requests")).toHaveTextContent("1");
     expect(screen.getByText('awaiting:{"count":1}')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("inbox-filter-all"));
-    expect(screen.getAllByTestId("inbox-entry").map((r) => r.getAttribute("data-kind"))).toEqual(["impact_prior"]);
+    expect(screen.getAllByTestId("inbox-entry").map((r) => r.getAttribute("data-kind"))).toEqual(["cases"]);
     fireEvent.click(screen.getByTestId("inbox-filter-requests"));
     expect(screen.getAllByTestId("inbox-entry").map((r) => r.getAttribute("data-kind"))).toEqual(["task"]);
   });
@@ -852,10 +779,10 @@ describe("InboxPage My requests", () => {
     const pane = screen.getByTestId("inbox-pane");
     expect(pane).toHaveAttribute("data-kind", "task");
     expect(pane).toHaveAttribute("data-status", "PENDING");
-    expect(within(pane).getByTestId("enrichment-task")).toHaveAttribute("data-kind", "event.impact_prior.clear");
-    expect(within(pane).getByRole("link", { name: "priors.openEvent" })).toHaveAttribute("href", "/event/evt-1");
+    expect(within(pane).getByTestId("enrichment-task")).toHaveAttribute("data-kind", "event.impact_prior.web");
+    expect(within(pane).getByRole("link", { name: "event.open" })).toHaveAttribute("href", "/event/evt-1");
     // No decision controls and no hotline actions on a request.
-    expect(screen.queryByTestId("impact-prior-decision")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("case-proposal-decision")).not.toBeInTheDocument();
     expect(screen.queryByTestId("inbox-action-bar")).not.toBeInTheDocument();
     fireEvent.click(within(pane).getByTestId("inbox-task-cancel"));
     expect(cancelMutate).toHaveBeenCalledWith({ id: "t-1" });
@@ -868,19 +795,19 @@ describe("InboxPage My requests", () => {
       tasks: [myTask("t-1", { status: "COMPLETED", outcome: "produced", completedAt: "2026-10-07T09:10:00Z" })],
       eventTitles: { "evt-1": "Floods in Kassala" },
     };
-    // The requester may see their own proposal while it is proposed.
-    forEventPriors = [{ ...prior("ip-1"), taskId: "t-1", state: "proposed" }];
+    // The requester may see their own proposed signals while they are proposed.
+    forEventCases = [webCase("cp-1", { taskId: "t-1" })];
     const { unmount } = renderPage();
     expect(screen.queryByTestId("inbox-task-cancel")).not.toBeInTheDocument();
     expect(screen.getByTestId("inbox-task-awaiting-review")).toBeInTheDocument();
-    expect(screen.getByTestId("enrichment-prior")).toHaveAttribute("data-state", "proposed");
+    expect(screen.getByTestId("case-proposal")).toHaveAttribute("data-state", "proposed");
     unmount();
 
-    // Once accepted, the card says so and the "awaiting" line is gone.
-    forEventPriors = [{ ...prior("ip-1"), taskId: "t-1", state: "accepted" }];
+    // Once accepted, the row says so and the "awaiting" line is gone.
+    forEventCases = [webCase("cp-1", { taskId: "t-1", state: "accepted" })];
     renderPage();
     expect(screen.queryByTestId("inbox-task-awaiting-review")).not.toBeInTheDocument();
-    expect(screen.getByTestId("enrichment-prior")).toHaveAttribute("data-state", "accepted");
+    expect(screen.getByTestId("case-proposal")).toHaveAttribute("data-state", "accepted");
   });
 
   it("points to the Event, rather than claim it awaits review, when the proposal is not the reader's to see", () => {
@@ -890,8 +817,8 @@ describe("InboxPage My requests", () => {
       tasks: [myTask("t-1", { status: "COMPLETED", outcome: "produced" })],
       eventTitles: { "evt-1": "Floods in Kassala" },
     };
-    // Rejected priors are visible to deciders only: nothing comes back for this viewer.
-    forEventPriors = [];
+    // Rejected cases are visible to deciders only: nothing comes back for this viewer.
+    forEventCases = [];
     renderPage();
     expect(screen.queryByTestId("inbox-task-awaiting-review")).not.toBeInTheDocument();
     expect(screen.getByTestId("inbox-task-proposal-hidden")).toHaveTextContent("requests.producedSeeEvent");
@@ -924,9 +851,9 @@ describe("InboxPage My requests", () => {
     const opts = forEventQuery.mock.calls.at(-1)![1] as unknown as {
       refetchInterval: (q: { state: { data: unknown } }) => number | false;
     };
-    expect(opts.refetchInterval({ state: { data: { impactPriors: [], caseProposals: forEventCases } } })).toBe(60_000);
+    expect(opts.refetchInterval({ state: { data: { caseProposals: forEventCases } } })).toBe(60_000);
     expect(
-      opts.refetchInterval({ state: { data: { impactPriors: [], caseProposals: [{ ...forEventCases[0], state: "accepted" }] } } }),
+      opts.refetchInterval({ state: { data: { caseProposals: [{ ...forEventCases[0], state: "accepted" }] } } }),
     ).toBe(false);
     view.unmount();
 
@@ -956,12 +883,11 @@ describe("InboxPage web cases", () => {
       webCase("cp-2", { createdAt: "2026-09-16T09:00:00Z" }),
       webCase("cp-3", { eventId: "evt-2", event: { id: "evt-2", title: "Drought in Kordofan", types: ["DR"] }, createdAt: "2026-09-17T10:00:00Z" }),
     ];
-    priorsData = [prior("ip-1")];
     renderPage();
     expect(casesQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
-    // Three cases and one CLEAR-data prior wait: four decisions.
-    expect(screen.getByTestId("inbox-filter-priors")).toHaveTextContent("4");
-    expect(screen.getByText('awaiting:{"count":4}')).toBeInTheDocument();
+    // Three cases wait: three decisions.
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveTextContent("3");
+    expect(screen.getByText('awaiting:{"count":3}')).toBeInTheDocument();
     const groups = screen.getAllByTestId("inbox-entry").filter((r) => r.getAttribute("data-kind") === "cases");
     expect(groups.map((g) => [g.textContent?.includes("Drought in Kordofan"), g.getAttribute("data-undecided")])).toEqual([
       [true, "1"],
@@ -973,7 +899,7 @@ describe("InboxPage web cases", () => {
     fireEvent.click(groups[1]!);
     const pane = screen.getByTestId("inbox-pane");
     expect(pane).toHaveAttribute("data-kind", "cases");
-    expect(within(pane).getByRole("link", { name: "priors.openEvent" })).toHaveAttribute("href", "/event/evt-1");
+    expect(within(pane).getByRole("link", { name: "event.open" })).toHaveAttribute("href", "/event/evt-1");
     expect(within(pane).getAllByTestId("case-proposal").map((c) => c.getAttribute("data-case-id"))).toEqual(["cp-1", "cp-2"]);
     expect(within(pane).getAllByTestId("case-proposal-accept")).toHaveLength(2);
   });

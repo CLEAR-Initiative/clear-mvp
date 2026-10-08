@@ -107,7 +107,8 @@ const navSections: NavSection[] = [
         href: NAV_ROUTES.inbox,
         icon: IconInbox,
         // The same rule as the page gate: hotline threads for admins,
-        // ImpactPrior review for deciders, each behind its flag.
+        // proposed signals for deciders, My requests for content readers,
+        // each behind its flag.
         visibleWhen: ({ inbox }) => inbox.any,
       },
       { labelKey: "map", href: NAV_ROUTES.map, icon: IconMapPin, featureKey: "crisis_map" },
@@ -182,17 +183,17 @@ export function NavSidebar({
   });
   const visibility: NavVisibility = { isAdmin, role, flags, inbox: reviewAccess };
 
-  // The Inbox badge: decisions waiting for this decider — proposed
-  // ImpactPriors and undecided web cases, one each. Only asked for when
+  // The Inbox badge: decisions waiting for this decider — the undecided
+  // proposed signals (web cases), one each. Only asked for when
   // they may decide; a decision anywhere invalidates it. Ids only (the nav
   // is on every page); capped at clear-api's page maximum, shown as "200+"
   // past it.
   const proposedCount = api.tasks.reviewCount.useQuery(undefined, {
-    enabled: reviewAccess.priors,
+    enabled: reviewAccess.proposals,
     staleTime: 60_000,
     refetchInterval: 120_000,
   });
-  const inboxBadge = reviewAccess.priors && proposedCount.data && proposedCount.data.count > 0
+  const inboxBadge = reviewAccess.proposals && proposedCount.data && proposedCount.data.count > 0
     ? `${proposedCount.data.count}${proposedCount.data.capped ? "+" : ""}`
     : undefined;
   const badges: Partial<Record<NavItemKey, string>> = { inbox: inboxBadge };
