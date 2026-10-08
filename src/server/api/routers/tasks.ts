@@ -4,6 +4,7 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { cookieHeaders, graphqlFetch, GraphQLRequestError } from "~/server/api/graphql";
 import type { GqlCaseProposal, GqlComputedImpactPrior, GqlReviewCaseProposal, GqlTask } from "~/lib/types/graphql";
 import { MAX_RATIONALE_LENGTH } from "~/lib/case-proposals";
+import { isRetiredKind } from "~/lib/impact-prior-source";
 
 /**
  * Event enrichment (clear-api ADR-0010): thin proxies over the Task queue's
@@ -269,7 +270,8 @@ export const tasksRouter = createTRPCRouter({
           eventTasks: GqlTask[];
           eventCaseProposals: GqlCaseProposal[];
         }>(EVENT_ENRICHMENT_QUERY, { eventId: input.eventId }, cookieHeaders(ctx));
-        return { tasks: data.eventTasks, caseProposals: data.eventCaseProposals };
+        // Retired whole-prior Tasks led to a prior that is no longer shown.
+        return { tasks: data.eventTasks.filter((task) => !isRetiredKind(task.kind)), caseProposals: data.eventCaseProposals };
       } catch (err) {
         toTrpcError(err);
       }
@@ -415,6 +417,7 @@ export const tasksRouter = createTRPCRouter({
           );
           myTasks = mergeTasks(lists.recent, lists.pending, lists.leased);
         }
+        myTasks = myTasks.filter((task) => !isRetiredKind(task.kind));
         const eventIds = [...new Set(myTasks.filter((task) => task.subjectType === "event").map((task) => task.subjectId))];
         const eventTitles: Record<string, string | null> = {};
         if (eventIds.length > 0) {

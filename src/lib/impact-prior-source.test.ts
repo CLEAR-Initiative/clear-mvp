@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isImpactPriorKind, requestLabel, sourceSearchTerm } from "./impact-prior-source";
+import { isImpactPriorKind, isRetiredKind, requestLabel, sourceSearchTerm } from "./impact-prior-source";
 
 const t = (key: string) => key;
 
@@ -8,6 +8,13 @@ describe("enrichment Task kinds", () => {
     expect(isImpactPriorKind("event.impact_prior")).toBe(true);
     expect(isImpactPriorKind("event.impact_prior.web")).toBe(true);
     expect(isImpactPriorKind("event.impact_prior_x")).toBe(false);
+  });
+
+  it("retires the whole-prior kinds only", () => {
+    expect(isRetiredKind("event.impact_prior")).toBe(true);
+    expect(isRetiredKind("event.impact_prior.clear")).toBe(true);
+    expect(isRetiredKind("event.impact_prior.web")).toBe(false);
+    expect(isRetiredKind("event.other")).toBe(false);
   });
 
   it("searches by the source word, never the shared family prefix", () => {

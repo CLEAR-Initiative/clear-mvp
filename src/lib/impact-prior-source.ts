@@ -9,16 +9,24 @@
  * ImpactPrior itself is computed from CLEAR's accepted history, never
  * proposed.
  *
- * Older kinds (the bare `event.impact_prior`, the retired
- * `event.impact_prior.clear`) can still sit in an Event's Task history:
- * they read as a generic "Impact prior" request, never as a source of
- * their own.
+ * The retired kinds (the bare `event.impact_prior` and
+ * `event.impact_prior.clear`) proposed a whole ImpactPrior. clear-api no
+ * longer claims them and cancelled their open Tasks; their output is no
+ * longer shown, so their Tasks are hidden too (`isRetiredKind`) rather than
+ * listed as requests that lead nowhere.
  */
 
 export const IMPACT_PRIOR_FAMILY = "event.impact_prior";
 
 /** The web Worker's kind: its requests read "Web search". */
 export const WEB_SEARCH_KIND = `${IMPACT_PRIOR_FAMILY}.web`;
+
+/** Kinds that proposed a whole ImpactPrior (clear-api's `RETIRED_KINDS`). */
+export const RETIRED_KINDS: readonly string[] = [IMPACT_PRIOR_FAMILY, `${IMPACT_PRIOR_FAMILY}.clear`];
+
+export function isRetiredKind(kind: string): boolean {
+  return RETIRED_KINDS.includes(kind);
+}
 
 /** The bare kind or a per-source kind under it. */
 export function isImpactPriorKind(kind: string): boolean {

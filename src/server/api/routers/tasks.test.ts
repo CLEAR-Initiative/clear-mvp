@@ -26,7 +26,7 @@ function caller() {
 
 const TASK = {
   id: "task-1",
-  kind: "event.impact_prior.clear",
+  kind: "event.impact_prior.web",
   requestId: "req-1",
   subjectType: "event",
   subjectId: "evt-1",
@@ -116,6 +116,18 @@ describe("tasks router", () => {
       expect(query).toContain(field);
     }
     expect(vars).toEqual({ eventId: "evt-1" });
+  });
+
+  it("hides Tasks of the retired whole-prior kinds, on the Event and in My requests", async () => {
+    const BARE = { ...TASK, id: "task-bare", kind: "event.impact_prior", outcome: "produced" };
+    const CLEAR = { ...TASK, id: "task-clear", kind: "event.impact_prior.clear" };
+    graphqlFetch.mockResolvedValueOnce({ eventTasks: [BARE, TASK, CLEAR], eventCaseProposals: [] });
+    expect((await caller().tasks.forEvent({ eventId: "evt-1" })).tasks).toEqual([TASK]);
+
+    graphqlFetch
+      .mockResolvedValueOnce({ recent: [BARE, TASK], pending: [], leased: [CLEAR] })
+      .mockResolvedValueOnce({ e0: { id: "evt-1", title: "Floods" } });
+    expect((await caller().tasks.myTasks()).tasks).toEqual([TASK]);
   });
 
   it("never asks clear-api for the retired whole-prior fields (clear-api is removing them)", async () => {
