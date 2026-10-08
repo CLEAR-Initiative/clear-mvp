@@ -2,13 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   attachmentKey,
   attachmentKind,
+  buildCaseGroupEntries,
   buildImpactPriorEntries,
   buildInboxEntries,
+  buildTaskEntries,
   combineTranslations,
   countByFilter,
   entryDescription,
   filtersFor,
   intakeRef,
+  isReviewItem,
   matchesFilter,
   messageFailures,
   moveSelection,
@@ -17,12 +20,15 @@ import {
   TRANSLATION_POLL_LIMIT_MS,
   nextSelection,
   visibleEntries,
+  withDecision,
 } from "./hotline-inbox";
 import type {
   GqlGroundInboxMessage,
   GqlGroundInboxThread,
   GqlHotlineInbox,
+  GqlReviewCaseProposal,
   GqlReviewImpactPrior,
+  GqlTask,
 } from "./types/graphql";
 
 function thread(id: string, title: string | null = null): GqlGroundInboxThread {
@@ -344,7 +350,7 @@ describe("visibleEntries / countByFilter", () => {
   });
 
   it("counts per filter", () => {
-    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 1, chatter: 1, priors: 0, all: 3 });
+    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 1, chatter: 1, priors: 0, requests: 0, all: 3 });
   });
 });
 
@@ -477,7 +483,7 @@ describe("impact prior Review items", () => {
     expect(matchesFilter(entries[1]!, "reports")).toBe(false);
     expect(matchesFilter(entries[1]!, "unclassified")).toBe(false);
     expect(matchesFilter(entries[1]!, "all")).toBe(true);
-    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 0, chatter: 0, priors: 1, all: 2 });
+    expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 0, chatter: 0, priors: 1, requests: 0, all: 2 });
     expect(matchesFilter(entries[1]!, "priors")).toBe(true);
     expect(matchesFilter(entries[0]!, "priors")).toBe(false);
     expect(visibleEntries(entries, "priors", "", "newest").map((e) => e.id)).toEqual(["ip-1"]);
@@ -503,5 +509,110 @@ describe("impact prior Review items", () => {
     expect(visibleEntries(entries, "all", "", "newest").map((e) => e.id)).toEqual(["noise", "report", "ip-1"]);
     expect(nextSelection(entries, "ip-1")).toBe("noise");
     expect(moveSelection(entries, "ip-1", -1)).toBe("noise");
+  });
+});
+
+describe("My requests (task entries)", () => {
+  function task(id: string, overrides: Partial<GqlTask> = {}): GqlTask {
+    return {
+      id, kind: "event.impact_prior.web", requestId: "req-1", subjectType: "event", subjectId: "evt-1",
+      status: "FAILED", origin: "user", requesterId: "u", requester: null, leaseOwner: null, teamId: null,
+      attempts: 3, maxAttempts: 3, lastError: "model timed out", cancelRequestedAt: null, outcome: null,
+      model: null, costUsd: null, completedAt: null,
+      createdAt: "2026-10-07T09:00:00Z", updatedAt: "2026-10-07T09:00:00Z", ...overrides,
+    };
+  }
+
+  it("builds one entry per Task, titled after its Event, searchable by source and status", () => {
+    const entries = buildTaskEntries(
+      [task("t-1"), task("t-2", { subjectId: "evt-hidden", status: "COMPLETED", outcome: "produced", kind: "event.impact_prior.clear" })],
+      { "evt-1": "Floods in Kassala", "evt-hidden": null },
+    );
+    expect(entries.map((e) => [e.id, e.kind, e.eventId, e.eventTitle, e.title, e.sentAt])).toEqual([
+      ["t-1", "task", "evt-1", "Floods in Kassala", "Floods in Kassala", "2026-10-07T09:00:00Z"],
+      ["t-2", "task", "evt-hidden", null, "", "2026-10-07T09:00:00Z"],
+    ]);
+    expect(visibleEntries(entries, "requests", "failed", "newest").map((e) => e.id)).toEqual(["t-1"]);
+    expect(visibleEntries(entries, "requests", "web", "newest").map((e) => e.id)).toEqual(["t-1"]);
+    expect(visibleEntries(entries, "requests", "produced", "newest").map((e) => e.id)).toEqual(["t-2"]);
+  });
+
+  it("lists only Tasks about an Event (a row links to its Event page)", () => {
+    expect(buildTaskEntries([task("t-1"), task("t-x", { subjectType: "crisis" })], {}).map((e) => e.id)).toEqual(["t-1"]);
+  });
+
+  it("are not Review items: only under My requests, never in Everything or its count", () => {
+    const entries = buildTaskEntries([task("t-1")], { "evt-1": "Floods" });
+    expect(isReviewItem(entries[0]!)).toBe(false);
+    expect(matchesFilter(entries[0]!, "requests")).toBe(true);
+    expect(matchesFilter(entries[0]!, "all")).toBe(false);
+    expect(matchesFilter(entries[0]!, "priors")).toBe(false);
+    expect(countByFilter(entries)).toEqual({ reports: 0, unclassified: 0, chatter: 0, priors: 0, requests: 1, all: 0 });
+  });
+
+  it("offers the My requests filter only to a reader who may see their requests", () => {
+    expect(filtersFor({ hotline: false, priors: false, requests: true })).toEqual(["requests", "all"]);
+    expect(filtersFor({ hotline: false, priors: true, requests: true })).toEqual(["priors", "requests", "all"]);
+    expect(filtersFor({ hotline: true, priors: true, requests: false })).toEqual(["reports", "unclassified", "chatter", "priors", "all"]);
+  });
+});
+
+
+describe("web case groups (V4)", () => {
+  const webCase = (id: string, eventId: string, createdAt: string, extra: Partial<GqlReviewCaseProposal> = {}): GqlReviewCaseProposal => ({
+    id,
+    eventId,
+    event: { id: eventId, title: `Event ${eventId}`, types: ["fl"] },
+    taskId: "t",
+    state: "proposed",
+    sourceUrl: `https://example.test/${id}`,
+    quote: `Quote ${id}`,
+    occurredAt: "2019-08-10T00:00:00Z",
+    locationLabel: "Khartoum",
+    locationId: null,
+    hazardType: "fl",
+    geographicScope: "country",
+    figures: [],
+    matchedEventId: null,
+    methodVersion: "m",
+    decidedById: null,
+    decidedAt: null,
+    decisionRationale: null,
+    resultSignalId: null,
+    resultEventId: null,
+    createdAt,
+    ...extra,
+  });
+
+  it("groups cases under their Event, newest first, and finds them by place, quote and source word", () => {
+    const entries = buildCaseGroupEntries([
+      webCase("c3", "e2", "2026-10-03T00:00:00Z"),
+      webCase("c2", "e1", "2026-10-02T00:00:00Z"),
+      webCase("c1", "e1", "2026-10-01T00:00:00Z"),
+    ]);
+    expect(entries.map((e) => [e.id, e.cases.map((c) => c.id), e.undecided, e.sentAt])).toEqual([
+      ["cases:e2", ["c3"], 1, "2026-10-03T00:00:00Z"],
+      ["cases:e1", ["c2", "c1"], 2, "2026-10-02T00:00:00Z"],
+    ]);
+    expect(entries[1]!.title).toBe("Event e1");
+    expect(matchesFilter(entries[0]!, "priors")).toBe(true);
+    expect(visibleEntries(entries, "all", "quote c1", "newest").map((e) => e.id)).toEqual(["cases:e1"]);
+    expect(visibleEntries(entries, "all", "web", "newest")).toHaveLength(2);
+  });
+
+  it("keeps a case decided this session in its group, decided, and counts only the undecided", () => {
+    const c1 = webCase("c1", "e1", "2026-10-01T00:00:00Z");
+    const c2 = webCase("c2", "e1", "2026-10-02T00:00:00Z");
+    const decided = { c1: withDecision(c1, { ...c1, state: "accepted", resultEventId: "h", event: undefined } as never) };
+    // The list still returns c1 (not refetched yet), then stops returning it.
+    for (const proposed of [[c2, c1], [c2]]) {
+      const [group] = buildCaseGroupEntries(proposed, decided);
+      expect(group!.cases.map((c) => [c.id, c.state])).toEqual([
+        ["c2", "proposed"],
+        ["c1", "accepted"],
+      ]);
+      expect(group!.cases[1]!.event.title).toBe("Event e1");
+      expect(countByFilter([group!]).all).toBe(1);
+    }
   });
 });

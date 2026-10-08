@@ -51,27 +51,38 @@ export const SEEDED_EVENTS = {
 } as const;
 
 /**
- * Proposed ImpactPrior fixture — mirrors e2e/support/impact-prior-seed.ts:
- * one proposed prior on each of these two seeded events, requested by the
- * analyst through clear-api's Worker protocol, so the analyst also holds a
- * Task notification ("Impact prior proposed — review it") for each. If the
- * seed script changes, update these in lockstep.
+ * Enrichment fixture — mirrors e2e/support/impact-prior-seed.ts. On each of
+ * these two seeded events the analyst requested enrichment through clear-api's
+ * Worker protocol, so each holds a proposed ImpactPrior from CLEAR data and two
+ * proposed web cases (clear-api V4 CaseProposals, decided one by one), and the
+ * analyst holds one Task notification per source for each. If the seed script
+ * changes, update these in lockstep.
  */
 export const IMPACT_PRIORS = {
-  /** Decided from the Inbox (rejected) in the review spec. */
+  /** Decided from the Inbox in the review spec (one case rejected, one accepted). */
   inboxEvent: SEEDED_EVENTS.foodSecurity,
-  /** Decided from the Event page (accepted) in the review spec. */
+  /** Decided from the Event page (one case accepted) in the review spec. */
   eventPageEvent: SEEDED_EVENTS.khartoumFlood,
-  /** The web-sourced case's source, a non-resolving test URL. */
-  sourceUrl: "https://example.test/e2e-prior-case",
-  /** The common tail of clear-api's in-app message for a produced prior
+  /** The common tail of clear-api's in-app messages for a produced proposal
    * (task-notifications.ts): "Impact prior from CLEAR data proposed — review it",
-   * "Impact prior from the web proposed — review it". */
-  notification: "proposed — review it",
-  /** The source kinds the seed completes, one proposal each per Event, and
-   * their English labels (messages/en.json `eventDetail.enrichment.sourceKind`). */
+   * "Impact prior from the web: cases proposed — review them". */
+  notification: "proposed — review",
+  /** The source kinds the seed completes per Event, and their English labels
+   * (messages/en.json `eventDetail.enrichment.sourceKind`). */
   sources: {
     clear: { kind: "event.impact_prior.clear", label: "CLEAR data" },
     web: { kind: "event.impact_prior.web", label: "Web" },
   },
+  /** The two web cases per Event: non-resolving test URLs, by Event title.
+   * The first carries a figure (People affected), the second none. */
+  webCases: {
+    [SEEDED_EVENTS.foodSecurity]: [
+      "https://example.test/e2e-case/north-darfur-food-1",
+      "https://example.test/e2e-case/north-darfur-food-2",
+    ],
+    [SEEDED_EVENTS.khartoumFlood]: [
+      "https://example.test/e2e-case/khartoum-flood-1",
+      "https://example.test/e2e-case/khartoum-flood-2",
+    ],
+  } as Record<string, readonly [string, string]>,
 } as const;

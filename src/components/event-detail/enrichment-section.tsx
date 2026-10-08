@@ -8,9 +8,11 @@ import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { ImpactPriorCard } from "~/components/impact-prior/impact-prior-card";
 import { ImpactPriorPane } from "~/components/impact-prior/impact-prior-pane";
+import { CaseProposalRow } from "~/components/impact-prior/case-proposal-row";
+import { ComputedPriors } from "~/components/impact-prior/computed-priors";
 import { canReviewImpactPriors } from "~/lib/inbox-access";
-import { groupBySourceKind, isImpactPriorKind, sourceLabel } from "~/lib/impact-prior-source";
-import type { GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
+import { groupBySourceKind, isCaseReviewedKind, isImpactPriorKind, sourceLabel } from "~/lib/impact-prior-source";
+import type { GqlCaseProposalDecision, GqlImpactPrior, GqlTask } from "~/lib/types/graphql";
 
 const STATUS_COLOR: Record<GqlTask["status"], string> = {
   PENDING: "gray",
@@ -37,12 +39,20 @@ const STATUS_COLOR: Record<GqlTask["status"], string> = {
  * the proposals are grouped by source — CLEAR data, the web, anything else
  * by its raw kind — each group newest first, and every Task row names its
  * source and, when known, the Worker that held it.
+ *
+ * V4: the web Worker's evidence is decided case by case. Its cases are
+ * listed under their own heading, each with its own Accept / Reject for a
+ * decider (the same row the Inbox mounts); its whole-prior proposals are
+ * never decidable here — a still-proposed one is left out (its cases are
+ * the decision), a decided one stays as read-only history. Above it all,
+ * the ImpactPriors computed from CLEAR's accepted history, read-only.
  */
 export function EnrichmentSection({ eventId }: { eventId: string }) {
   const enabled = useFeatureEnabled("event_enrichment");
   const review = useFeatureEnabled("impact_prior_review");
   const t = useTranslations("eventDetail.enrichment");
   const tReview = useTranslations("impactPriorReview");
+  const tCases = useTranslations("caseReview");
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000, enabled });
   const canDecide = canReviewImpactPriors({ role: authData?.user?.role, impactPriorReview: review });
 
@@ -58,7 +68,11 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
 
   if (!enabled) return null;
   const tasks = query.data?.tasks ?? [];
-  const priors = query.data?.impactPriors ?? [];
+  // Web (and bare-kind) priors are history: their cases are the decision.
+  const priors = (query.data?.impactPriors ?? []).filter(
+    (prior) => !(isCaseReviewedKind(prior.sourceKind) && prior.state === "proposed"),
+  );
+  const cases = query.data?.caseProposals ?? [];
 
   return (
     <Card p={0} style={{ border: "1px solid var(--color-border)" }} data-testid="enrichment-section">
@@ -71,11 +85,13 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
         </Group>
       </Box>
       <Box p={16}>
+        {/* What history says, computed on read (V4): independent of any request. */}
+        <ComputedPriors eventId={eventId} enabled={enabled} />
         {query.isError ? (
           <Text size="xs" c="var(--color-critical)" data-testid="enrichment-load-error">
             {t("loadFailed")}
           </Text>
-        ) : tasks.length === 0 && priors.length === 0 ? (
+        ) : tasks.length === 0 && priors.length === 0 && cases.length === 0 ? (
           <Text size="xs" c="var(--color-text-muted)">
             {t("empty")}
           </Text>
@@ -87,7 +103,7 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
                   {t("group", { source: sourceLabel(group.kind, t), count: group.rows.length })}
                 </Text>
                 {group.rows.map((prior) =>
-                  canDecide && prior.state === "proposed" ? (
+                  canDecide && prior.state === "proposed" && !isCaseReviewedKind(prior.sourceKind) ? (
                     <ImpactPriorPane
                       key={prior.id}
                       prior={prior}
@@ -102,6 +118,23 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
                 )}
               </Stack>
             ))}
+            {cases.length > 0 && (
+              <Stack gap={8} data-testid="enrichment-cases">
+                <Text size="xs" fw={600} c="var(--color-text-secondary)" data-testid="enrichment-cases-title">
+                  {tCases("group", { count: cases.length })}
+                </Text>
+                {cases.map((proposal) => (
+                  <CaseProposalRow
+                    key={proposal.id}
+                    proposal={proposal}
+                    canDecide={canDecide}
+                    onDecided={(_decided, decision: GqlCaseProposalDecision) =>
+                      notifications.show({ message: tCases(`toast.${decision}`) })
+                    }
+                  />
+                ))}
+              </Stack>
+            )}
             {tasks.map((task) => (
               <TaskRow key={task.id} task={task} />
             ))}
@@ -112,7 +145,10 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
   );
 }
 
-function TaskRow({ task }: { task: GqlTask }) {
+/** One Task's status line — kind and source, status, requester, Worker,
+ * outcome, and its error when the server let us see it. Shared with the
+ * Inbox's "My requests" pane. */
+export function TaskRow({ task }: { task: GqlTask }) {
   const t = useTranslations("eventDetail.enrichment");
   const format = useFormatter();
   // One row per kind: "Impact prior · CLEAR data", "Impact prior · Web", or
@@ -135,7 +171,9 @@ function TaskRow({ task }: { task: GqlTask }) {
       </Text>
       {task.status === "COMPLETED" && task.outcome && (
         <Text size="xs" c="var(--color-text-secondary)">
-          {task.outcome === "produced" || task.outcome === "no_prior_found" ? t(`outcome.${task.outcome}`) : task.outcome}
+          {task.outcome === "produced" || task.outcome === "no_prior_found" || task.outcome === "no_new_cases"
+            ? t(`outcome.${task.outcome}`)
+            : task.outcome}
         </Text>
       )}
       {task.status === "FAILED" && task.lastError && (

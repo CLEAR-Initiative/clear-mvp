@@ -36,7 +36,7 @@ const invalidate = vi.fn(async () => undefined);
 
 vi.mock("~/trpc/react", () => ({
   api: {
-    useUtils: () => ({ tasks: { forEvent: { invalidate } } }),
+    useUtils: () => ({ tasks: { forEvent: { invalidate }, myTasks: { invalidate } } }),
     auth: { me: { useQuery: () => ({ data: { user: me } }) } },
     tasks: {
       forEvent: { useQuery: () => (tasksLoaded ? { data: { tasks, impactPriors: [] }, isSuccess: true } : { data: undefined, isSuccess: false }) },
@@ -196,7 +196,9 @@ describe("RequestEnrichmentButton", () => {
       renderButton();
       fireEvent.click(screen.getByTestId("enrichment-cancel"));
       expect(await screen.findByTestId("enrichment-cancel-error")).toHaveTextContent("cancelFailed");
-      expect(invalidate).toHaveBeenCalled();
+      // Both doors refresh: the Event's enrichment and the Inbox's My requests.
+      expect(invalidate).toHaveBeenCalledWith({ eventId: "evt-1" });
+      expect(invalidate).toHaveBeenCalledWith();
     });
 
     it("an admin may cancel every open Task; another analyst none of them", () => {

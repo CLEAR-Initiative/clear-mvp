@@ -178,14 +178,16 @@ export function NavSidebar({
     role,
     hotlineInbox: flags.hotline_inbox ?? true,
     impactPriorReview: flags.impact_prior_review ?? true,
+    eventEnrichment: flags.event_enrichment ?? true,
   });
   const visibility: NavVisibility = { isAdmin, role, flags, inbox: reviewAccess };
 
-  // The Inbox badge: proposed ImpactPriors waiting for this decider. Only
-  // asked for when they may decide; a decision anywhere invalidates it.
-  // Ids only (the nav is on every page); capped at clear-api's page
-  // maximum, shown as "200+" past it.
-  const proposedCount = api.tasks.proposedImpactPriorCount.useQuery(undefined, {
+  // The Inbox badge: decisions waiting for this decider — proposed
+  // ImpactPriors and undecided web cases, one each. Only asked for when
+  // they may decide; a decision anywhere invalidates it. Ids only (the nav
+  // is on every page); capped at clear-api's page maximum, shown as "200+"
+  // past it.
+  const proposedCount = api.tasks.reviewCount.useQuery(undefined, {
     enabled: reviewAccess.priors,
     staleTime: 60_000,
     refetchInterval: 120_000,

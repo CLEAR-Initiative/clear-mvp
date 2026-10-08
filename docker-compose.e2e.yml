@@ -67,6 +67,10 @@ services:
       ADMIN_PASSWORD: password123
       NODE_ENV: production
       PORT: "4000"
+      # The per-requester daily cap (default 20) counts every request, even a
+      # cancelled one; specs 16-18 request as the analyst on every run, so a
+      # stack kept up between runs would otherwise hit it.
+      TASK_REQUEST_DAILY_CAP: "1000"
     depends_on:
       db:
         condition: service_healthy
@@ -159,10 +163,11 @@ services:
         condition: service_healthy
     restart: "no"
 
-  # One-shot: a proposed ImpactPrior on two seeded events, produced through
-  # clear-api's Worker protocol over GraphQL — the seeded analyst requests
-  # enrichment, a `worker` identity claims and completes each Task — so
-  # clear-api writes the prior and fans out the Task notifications itself
+  # One-shot: on two seeded events, a proposed ImpactPrior from CLEAR data and
+  # two proposed web cases, produced through clear-api's Worker protocol over
+  # GraphQL — the seeded analyst requests enrichment, a `worker` identity
+  # claims and completes each Task — so clear-api writes the proposals and
+  # fans out the Task notifications itself
   # (no Worker runs in this stack). Used by the impact-prior review spec
   # (case 17). Same image and bind-mount pattern as `seed-ground`. Runs after
   # `seed-event-types` (the hazard is the Event's GLIDE code).

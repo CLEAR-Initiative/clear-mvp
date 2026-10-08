@@ -39,7 +39,7 @@ export function ImpactPriorPane({ prior, canDecide, onDecided }: ImpactPriorPane
   // advance) stays per call: nothing to toast on a pane that is gone.
   const refetchDoors = () => {
     void utils.tasks.proposedImpactPriors.invalidate();
-    void utils.tasks.proposedImpactPriorCount.invalidate();
+    void utils.tasks.reviewCount.invalidate();
     void utils.tasks.forEvent.invalidate({ eventId: prior.eventId });
   };
   const decide = api.tasks.decideImpactPrior.useMutation({

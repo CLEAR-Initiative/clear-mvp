@@ -89,10 +89,36 @@ _Avoid_: "hotline inbox" for the whole page — that is one kind of Review item.
 
 **Review item**:
 One thing in the **Inbox** waiting for a person's decision: a hotline thread (Add to
-CLEAR / Archive / Reject) or a proposed **ImpactPrior** (accept / reject with a
-rationale, clear-api ADR-0010). A proposed ImpactPrior is also decidable from its
-**Event** page — two doors, one decision. Several Workers propose on one Event, so every
-ImpactPrior Review item is labelled with its **Source kind** and decided on its own.
+CLEAR / Archive / Reject), a proposed **ImpactPrior** from CLEAR data (accept / reject
+with a rationale, clear-api ADR-0010), or a proposed **Web case**. Each is also decidable
+from its **Event** page — two doors, one decision. Several Workers propose on one Event,
+so every ImpactPrior Review item is labelled with its **Source kind** and decided on its
+own. The Inbox counts decisions waiting: one per thread, prior, or undecided Web case.
+
+**Web case** (clear-api `CaseProposal`):
+One historical case the web Worker found while enriching an **Event**: when and where, the
+source's words and link, the figures it gives (on the ontology's seven metric types), and
+the CLEAR Event it matches when CLEAR already holds one. The unit a decider accepts or
+rejects, one by one (a rationale is required to reject). The Inbox groups the proposed ones
+under the Event they were found for; a decided one turns to its decision in place, and an
+accepted one links to the Event it now sits on (the matched one or a new historical Event).
+The web's whole-prior proposal is never a Review item.
+
+**Computed ImpactPrior** (clear-api `Event.computedImpactPriors`):
+What has typically happened before for an Event's hazard in its country, computed on read
+from CLEAR's accepted history (the median figure and its range per metric, population group
+and unit), with the number of past Events it rests on shown beside the figure and a "low
+confidence" marker below three. Read-only on the Event page's Enrichment section: nothing to
+decide. Accepting a **Web case** adds to the history it is computed from.
+_Avoid_: "web prior" for the decision unit; "evidence" alone (a CLEAR-data prior has evidence too)
+
+**My requests**:
+The Inbox's view of the Tasks the signed-in user requested (clear-api `myTasks`), under
+their own filter: kind and source, status, error, outcome, and the proposal a Task
+produced, read-only, with Cancel while a Task is open. Status, not a **Review item**: never
+in "Everything", the awaiting count or the nav badge, and visible only to its requester.
+Any content reader with `event_enrichment` on reaches the Inbox for it.
+_Avoid_: "my tasks" in product copy (a Task is the system's unit; the person made a request)
 
 **Source kind**:
 Which Worker kind produced an **ImpactPrior**: `event.impact_prior.clear` (the Dagster

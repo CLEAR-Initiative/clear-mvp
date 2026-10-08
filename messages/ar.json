@@ -1915,7 +1915,8 @@
       },
       "outcome": {
         "produced": "تم اقتراح سابقة",
-        "no_prior_found": "لم يُعثر على سابقة"
+        "no_prior_found": "لم يُعثر على سابقة",
+        "no_new_cases": "لا حالات جديدة"
       },
       "requestedBy": "طلبه {name}",
       "errorLabel": "خطأ",
@@ -2836,6 +2837,7 @@
       "unclassified": "غير مصنّف",
       "chatter": "دردشة",
       "priors": "تقديرات الأثر المسبقة",
+      "requests": "طلباتي",
       "all": "الكل"
     },
     "search": "بحث في النص ومراجع الاستقبال",
@@ -2960,13 +2962,25 @@
       "partial": "أُعيد إلى قائمة الانتظار: {done} من أصل {total} رسائل. {error}"
     },
     "kinds": {
-      "impact_prior": "تقدير أثر مسبق"
+      "impact_prior": "تقدير أثر مسبق",
+      "task": "طلبي",
+      "cases": "حالات من الويب"
     },
     "priors": {
       "untitledEvent": "حدث بلا عنوان",
       "preview": "تقدير أثر مسبق مقترح · {source} · {count, plural, one {حالة واحدة} other {# حالات}} · {scope} · {hazard}",
       "openEvent": "فتح الحدث",
       "proposedAt": "اقتُرح في {date}"
+    },
+    "requests": {
+      "requestedAt": "طُلب في {date}",
+      "awaitingReview": "مقترح، بانتظار المراجعة",
+      "cancelFailed": "تعذر إلغاء هذا الطلب. حاول مرة أخرى.",
+      "producedSeeEvent": "تم تقديم مقترح — راجع الحدث",
+      "proposalLoadFailed": "تعذر تحميل المقترح. افتح الحدث لرؤيته."
+    },
+    "cases": {
+      "preview": "{count, plural, =0 {تم البت في كل الحالات} one {حالة ويب واحدة للمراجعة} two {حالتا ويب للمراجعة} few {# حالات ويب للمراجعة} many {# حالة ويب للمراجعة} other {# حالة ويب للمراجعة}} · {hazard}"
     }
   },
   "analysis": {
@@ -3363,5 +3377,42 @@
       "accepted": "قُبل تقدير الأثر المسبق",
       "rejected": "رُفض تقدير الأثر المسبق"
     }
+  },
+  "caseReview": {
+    "group": "حالات من الويب · {count, plural, one {حالة واحدة} two {حالتان} few {# حالات} many {# حالة} other {# حالة}}",
+    "matchesEvent": "يطابق حدثًا في CLEAR",
+    "resultEvent": "افتح الحدث الناتج",
+    "accept": "قبول",
+    "reject": "رفض",
+    "confirmReject": "رفض الحالة",
+    "cancel": "إلغاء",
+    "rationaleLabel": "لماذا ترفض هذه الحالة؟",
+    "rationalePlaceholder": "السبب، لسجل التدقيق",
+    "rationaleRequired": "يلزم ذكر سبب للرفض",
+    "rationaleTooLong": "يجب ألا يتجاوز السبب {max} حرف",
+    "conflict": "سبقك شخص آخر إلى البت في هذه الحالة.",
+    "toast": {
+      "accepted": "تم قبول الحالة",
+      "rejected": "تم رفض الحالة"
+    },
+    "metric": {
+      "people_affected": "الأشخاص المتأثرون",
+      "people_displaced_new": "النازحون حديثًا",
+      "people_displaced_cumulative": "النازحون (تراكمي)",
+      "people_in_need": "الأشخاص المحتاجون",
+      "people_targeted": "الأشخاص المستهدفون",
+      "people_reached": "الأشخاص الذين تم الوصول إليهم",
+      "households_affected": "الأسر المتأثرة"
+    }
+  },
+  "computedPrior": {
+    "title": "من سجل CLEAR",
+    "figurePeople": "{value} شخص",
+    "figureUnit": "{value} {unit}",
+    "range": "(النطاق {low}–{high})",
+    "fromEvents": "{count, plural, one {من حدث سابق واحد} two {من حدثين سابقين} few {من # أحداث سابقة} many {من # حدثًا سابقًا} other {من # حدث سابق}}",
+    "lowConfidence": "ثقة منخفضة",
+    "pastEvent": "حدث سابق {n}",
+    "moreEvents": "+{count} أخرى"
   }
 }

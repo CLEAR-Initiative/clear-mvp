@@ -1915,7 +1915,8 @@
       },
       "outcome": {
         "produced": "Antécédent proposé",
-        "no_prior_found": "Aucun antécédent"
+        "no_prior_found": "Aucun antécédent",
+        "no_new_cases": "Aucun nouveau cas"
       },
       "requestedBy": "Demandé par {name}",
       "errorLabel": "Erreur",
@@ -2836,6 +2837,7 @@
       "unclassified": "Non classés",
       "chatter": "Bavardage",
       "priors": "A priori d'impact",
+      "requests": "Mes demandes",
       "all": "Tout"
     },
     "search": "Rechercher texte, réf. d'admission",
@@ -2960,13 +2962,25 @@
       "partial": "Remis en file : {done} message(s) sur {total}. {error}"
     },
     "kinds": {
-      "impact_prior": "A priori d'impact"
+      "impact_prior": "A priori d'impact",
+      "task": "Ma demande",
+      "cases": "Cas web"
     },
     "priors": {
       "untitledEvent": "Événement sans titre",
       "preview": "A priori d'impact proposé · {source} · {count, plural, one {# cas} other {# cas}} · {scope} · {hazard}",
       "openEvent": "Ouvrir l'événement",
       "proposedAt": "Proposé le {date}"
+    },
+    "requests": {
+      "requestedAt": "Demandé le {date}",
+      "awaitingReview": "Proposé, en attente d'examen",
+      "cancelFailed": "Cette demande n'a pas pu être annulée. Réessayez.",
+      "producedSeeEvent": "Proposition produite — voir l'événement",
+      "proposalLoadFailed": "La proposition n'a pas pu être chargée. Ouvrez l'événement pour la voir."
+    },
+    "cases": {
+      "preview": "{count, plural, =0 {Tous les cas décidés} one {# cas web à examiner} other {# cas web à examiner}} · {hazard}"
     }
   },
   "analysis": {
@@ -3363,5 +3377,42 @@
       "accepted": "A priori d'impact accepté",
       "rejected": "A priori d'impact rejeté"
     }
+  },
+  "caseReview": {
+    "group": "Cas web · {count, plural, one {# cas} other {# cas}}",
+    "matchesEvent": "Correspond à un événement CLEAR",
+    "resultEvent": "Ouvrir l'événement résultant",
+    "accept": "Accepter",
+    "reject": "Rejeter",
+    "confirmReject": "Rejeter le cas",
+    "cancel": "Annuler",
+    "rationaleLabel": "Pourquoi rejeter ce cas ?",
+    "rationalePlaceholder": "Votre motif, pour la piste d'audit",
+    "rationaleRequired": "Un motif est requis pour rejeter",
+    "rationaleTooLong": "Le motif doit faire moins de {max} caractères",
+    "conflict": "Un autre décideur a traité ce cas en premier.",
+    "toast": {
+      "accepted": "Cas accepté",
+      "rejected": "Cas rejeté"
+    },
+    "metric": {
+      "people_affected": "Personnes touchées",
+      "people_displaced_new": "Nouvellement déplacées",
+      "people_displaced_cumulative": "Déplacées (cumul)",
+      "people_in_need": "Personnes dans le besoin",
+      "people_targeted": "Personnes ciblées",
+      "people_reached": "Personnes atteintes",
+      "households_affected": "Ménages touchés"
+    }
+  },
+  "computedPrior": {
+    "title": "D'après l'historique de CLEAR",
+    "figurePeople": "{value} personnes",
+    "figureUnit": "{value} {unit}",
+    "range": "(fourchette {low}–{high})",
+    "fromEvents": "{count, plural, one {d'après # événement passé} other {d'après # événements passés}}",
+    "lowConfidence": "Faible confiance",
+    "pastEvent": "Événement passé {n}",
+    "moreEvents": "+{count} de plus"
   }
 }

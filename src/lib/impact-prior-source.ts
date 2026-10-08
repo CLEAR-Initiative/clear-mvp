@@ -72,3 +72,12 @@ export function groupBySourceKind<T extends { sourceKind: string }>(rows: T[]): 
     .sort(([a], [b]) => compareSourceKinds(a, b))
     .map(([kind, list]) => ({ kind, rows: list }));
 }
+
+/** The kinds whose evidence is decided case by case (clear-api V4): the
+ *  web, and the bare pre-fan-out kind (whichever Worker held it). Their
+ *  ImpactPriors are history, never a decision: clear-api's Review list
+ *  leaves them out and their cases arrive as CaseProposals. */
+export function isCaseReviewedKind(kind: string): boolean {
+  const source = impactPriorSource(kind).key;
+  return source === "web" || source === "legacy";
+}
