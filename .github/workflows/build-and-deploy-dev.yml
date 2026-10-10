@@ -51,6 +51,9 @@ jobs:
           registry-token: ${{ secrets.GITHUB_TOKEN }}
           mapbox-token: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
           sentry-dsn: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          # Final-stage-only cache export: the builder-stage upload was ~1-2 min
+          # of the 3.85-min image build and is invalidated by every merge anyway.
+          cache-mode: min
 
   deploy:
     name: Deploy to ${{ github.ref_name }}

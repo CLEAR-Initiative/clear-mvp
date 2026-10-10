@@ -20,6 +20,13 @@ inputs:
   sentry-dsn:
     description: Public Sentry DSN inlined in the client bundle
     required: true
+  cache-mode:
+    description: >-
+      buildx GHA cache export mode. `max` exports every intermediate layer
+      (including the builder stage: node_modules + .next, ~1-2 min of upload
+      that is invalidated by any src/ change). `min` exports only the final
+      stage and rebuilds the deps layer (~20 s) instead.
+    default: max
 
 outputs:
   image:
@@ -60,4 +67,4 @@ runs:
           NEXT_PUBLIC_SENTRY_DSN=${{ inputs.sentry-dsn }}
           NEXT_PUBLIC_SENTRY_ENV=${{ inputs.environment }}
         cache-from: type=gha,scope=${{ inputs.environment }}
-        cache-to: type=gha,mode=max,scope=${{ inputs.environment }}
+        cache-to: type=gha,mode=${{ inputs.cache-mode }},scope=${{ inputs.environment }}
