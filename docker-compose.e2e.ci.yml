@@ -11,11 +11,16 @@
 #   - db / api: mode=max (every intermediate layer). db never changes, so a
 #     full hit skips its ~30 s apt install; api's export runs in parallel with
 #     the web build and is not on the critical path today.
-#   - web / seed: mode=min (final stage only). With mode=max the whole
-#     `builder` stage (node_modules + .next, ~150 s of upload) was exported on
-#     EVERY PR, because `COPY . .` invalidates it whenever src/ changes, so the
+#   - web: mode=min (final stage only). With mode=max the whole `builder`
+#     stage (node_modules + .next, ~150 s of upload) was exported on EVERY
+#     PR, because `COPY . .` invalidates it whenever src/ changes, so the
 #     upload was pure cost on the serial tail of the job. The trade: the
 #     `deps` layer (bun install, ~20 s) is rebuilt per PR instead of cache-hit.
+#   - seed: mode=min as well, but note it builds clear-api's `build` target
+#     from the sibling clear-api checkout (dev), not this repo's image, so
+#     changes here never invalidate it. Its intermediate stages are simply
+#     no longer uploaded; rebuild cost on a clear-api change is set by
+#     clear-api's Dockerfile.
 #     Measured 2026-10-10 (PR #272): web export 157 s -> 11 s; api's 82 s
 #     export still finishes before the web build does, so api stays max.
 
