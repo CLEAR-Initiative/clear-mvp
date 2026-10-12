@@ -57,4 +57,10 @@ describe("canReviewSource", () => {
     expect(canReviewSource(undefined, reviewerRoles)).toBe(false);
     expect(canReviewSource("", reviewerRoles)).toBe(false);
   });
+
+  it("lets an ERM triage any source regardless of its reviewerRoles", () => {
+    // An ERM carries the global `viewer` role, which is not on the policy.
+    expect(canReviewSource("viewer", ["admin", "analyst"], true)).toBe(true);
+    expect(canReviewSource("viewer", [], true)).toBe(true);
+  });
 });

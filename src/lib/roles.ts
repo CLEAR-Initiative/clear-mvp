@@ -53,3 +53,24 @@ export function canReadContent(role: string | null | undefined): boolean {
 export function canDecideCaseProposals(role: string | null | undefined): boolean {
   return isPlatformAdmin(role) || role === "analyst";
 }
+
+/**
+ * The team role that triages the hotline inbox. A TEAM role (a value of
+ * `teamMemberships[].role`), NOT a global role — mirrors clear-api's
+ * `EMERGENCY_RESPONSE_MANAGER`. An ERM carries the global `viewer` role plus
+ * this membership.
+ */
+export const EMERGENCY_RESPONSE_MANAGER = "emergency_response_manager";
+
+/**
+ * Whether the user is an `emergency_response_manager` on any team — the role
+ * that unlocks the hotline inbox (Phase 1). The server (clear-api's
+ * `requireGroundInboxAccess`) is the real gate; this only decides which UI to
+ * show. Phase 2 will scope an ERM to the hotline numbers their team
+ * subscribes to.
+ */
+export function isEmergencyResponseManager(
+  teamMemberships: { role: string }[] | null | undefined,
+): boolean {
+  return !!teamMemberships?.some((m) => m.role === EMERGENCY_RESPONSE_MANAGER);
+}

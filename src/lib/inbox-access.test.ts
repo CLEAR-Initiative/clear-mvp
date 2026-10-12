@@ -14,6 +14,42 @@ describe("inboxAccess", () => {
     expect(inboxAccess({ role, hotlineInbox, impactPriorReview, eventEnrichment: false })).toEqual(expected);
   });
 
+  describe("ERM: an emergency_response_manager (global viewer) reaches the hotline", () => {
+    it("gets the hotline when the flag is on", () => {
+      const access = inboxAccess({
+        role: "viewer",
+        isErm: true,
+        hotlineInbox: true,
+        impactPriorReview: false,
+        eventEnrichment: false,
+      });
+      expect(access).toEqual({ hotline: true, proposals: false, requests: false, any: true });
+    });
+
+    it("gets nothing when the hotline flag is off", () => {
+      const access = inboxAccess({
+        role: "viewer",
+        isErm: true,
+        hotlineInbox: false,
+        impactPriorReview: false,
+        eventEnrichment: false,
+      });
+      expect(access.hotline).toBe(false);
+      expect(access.any).toBe(false);
+    });
+
+    it("does not grant the hotline to a plain viewer who is not an ERM", () => {
+      const access = inboxAccess({
+        role: "viewer",
+        isErm: false,
+        hotlineInbox: true,
+        impactPriorReview: false,
+        eventEnrichment: false,
+      });
+      expect(access.hotline).toBe(false);
+    });
+  });
+
   describe("My requests: any content reader with event_enrichment on", () => {
     it.each([
       ["admin", "admin", true],
