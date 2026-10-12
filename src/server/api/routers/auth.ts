@@ -97,6 +97,22 @@ const GET_USER_DETAILS = `
   }
 `;
 
+// Better Auth's `get-session` only returns the user's own columns + the
+// additionalFields (role, isActive, defaultTeamId, language) — NOT the
+// teamMembers relation. We fetch team memberships separately so the client
+// can tell whether the signed-in user is an emergency_response_manager (the
+// inbox nav + gating read `me.teamMemberships[].role`).
+const ME_TEAM_MEMBERSHIPS = `
+  query MeTeamMemberships {
+    me {
+      teamMemberships {
+        id
+        role
+      }
+    }
+  }
+`;
+
 export const authRouter = createTRPCRouter({
   me: publicProcedure.query(async ({ ctx }) => {
     try {
@@ -131,7 +147,21 @@ export const authRouter = createTRPCRouter({
       const data = parsed.data;
       if (!data.session || !data.user)
         return { authenticated: false, user: null };
-      return { authenticated: true, user: data.user };
+
+      // get-session doesn't carry the teamMembers relation, so an ERM's
+      // membership is invisible to the client without this. Non-fatal: if the
+      // lookup fails the user simply isn't treated as an ERM this cycle.
+      let teamMemberships = data.user.teamMemberships;
+      try {
+        const tm = await graphqlFetch<{
+          me: { teamMemberships: { id: string; role: string }[] } | null;
+        }>(ME_TEAM_MEMBERSHIPS, undefined, { Cookie: cookie });
+        teamMemberships = tm.me?.teamMemberships ?? [];
+      } catch (err) {
+        console.error("Failed to load team memberships for me:", err);
+      }
+
+      return { authenticated: true, user: { ...data.user, teamMemberships } };
     } catch (err) {
       console.error("Auth session check failed:", err);
       return { authenticated: false, user: null };
