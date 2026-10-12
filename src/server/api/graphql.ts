@@ -35,11 +35,13 @@ export async function graphqlFetch<T>(
   query: string,
   variables?: Record<string, unknown>,
   headers?: Record<string, string>,
+  signal?: AbortSignal,
 ): Promise<T> {
   const res = await fetch(GRAPHQL_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify({ query, variables }),
+    signal,
   });
 
   const json = (await res.json()) as GraphQLResponse<T>;
