@@ -8,6 +8,7 @@ import { IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useFeatureEnabled } from "~/components/feature-flags-provider";
 import { inboxAccess } from "~/lib/inbox-access";
+import { isEmergencyResponseManager } from "~/lib/roles";
 import { canReviewSource } from "~/lib/ground-review";
 import {
   buildCaseGroupEntries,
@@ -97,9 +98,12 @@ export default function InboxPage() {
   const eventEnrichment = useFeatureEnabled("event_enrichment");
   const { data: authData, isLoading: authLoading } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const role = authData?.user?.role;
+  // An emergency_response_manager (global viewer + ERM team membership) reaches
+  // the hotline inbox even though their global role is only viewer.
+  const isErm = isEmergencyResponseManager(authData?.user?.teamMemberships);
   // One rule with the nav entry (src/lib/inbox-access.ts): the page shows
   // for whichever kinds the reader may see, and lists only those.
-  const access = inboxAccess({ role, hotlineInbox, impactPriorReview, eventEnrichment });
+  const access = inboxAccess({ role, isErm, hotlineInbox, impactPriorReview, eventEnrichment });
   const canSee = access.any;
   /** Deciders see the proposed signals beside the hotline threads. */
   const canDecide = access.proposals;
@@ -224,7 +228,7 @@ export default function InboxPage() {
    * item of another kind has its own gate (canDecide). */
   const selectedThread = selected && isHotlineEntry(selected) ? selected : null;
   const canReviewSelected =
-    !!selectedThread && canReviewSource(role, sourceById.get(selectedThread.thread.groundSourceId) ?? []);
+    !!selectedThread && canReviewSource(role, sourceById.get(selectedThread.thread.groundSourceId) ?? [], isErm);
 
   const review = api.ground.review.useMutation();
   const selectedRetry = selectedId ? retries[selectedId] : undefined;

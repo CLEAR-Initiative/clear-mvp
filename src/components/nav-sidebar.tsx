@@ -33,7 +33,7 @@ import { NrcLogoMark } from "~/components/ui/nrc-logo-mark";
 import { colors, fontSizesPx, spacingPx } from "~/lib/tokens";
 import { api } from "~/trpc/react";
 import { useFeatureFlags } from "~/components/feature-flags-provider";
-import { isPlatformAdmin } from "~/lib/roles";
+import { isEmergencyResponseManager, isPlatformAdmin } from "~/lib/roles";
 import { inboxAccess, type InboxAccess } from "~/lib/inbox-access";
 import { isMapNavOverlay, useOptimisticNavSegment } from "~/hooks/use-optimistic-nav-segment";
 import { useSlidingNavIndicator } from "~/hooks/use-sliding-nav-indicator";
@@ -174,9 +174,11 @@ export function NavSidebar({
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const role = authData?.user?.role;
   const isAdmin = isPlatformAdmin(role);
+  const isErm = isEmergencyResponseManager(authData?.user?.teamMemberships);
   const { flags } = useFeatureFlags();
   const reviewAccess = inboxAccess({
     role,
+    isErm,
     hotlineInbox: flags.hotline_inbox ?? true,
     impactPriorReview: flags.impact_prior_review ?? true,
     eventEnrichment: flags.event_enrichment ?? true,

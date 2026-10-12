@@ -4,7 +4,9 @@ import { canDecideCaseProposals, canReadContent, isPlatformAdmin } from "~/lib/r
  * Who sees the Inbox, and which of its Review-item kinds (one rule for the
  * page gate and the nav entry, so the door and the room agree):
  *
- *   hotline threads  — platform admins, with `hotline_inbox` on
+ *   hotline threads  — platform admins and emergency_response_managers,
+ *                      with `hotline_inbox` on (Phase 2 scopes an ERM to the
+ *                      numbers their team subscribes to)
  *   proposed signals — deciders (admins and analysts), with
  *                      `impact_prior_review` on: the web Worker's cases
  *                      (clear-api CaseProposals), decided one by one
@@ -38,11 +40,13 @@ export function canReviewCaseProposals(input: {
 
 export function inboxAccess(input: {
   role: string | null | undefined;
+  /** True when the caller is an emergency_response_manager on any team. */
+  isErm?: boolean;
   hotlineInbox: boolean;
   impactPriorReview: boolean;
   eventEnrichment: boolean;
 }): InboxAccess {
-  const hotline = input.hotlineInbox && isPlatformAdmin(input.role);
+  const hotline = input.hotlineInbox && (isPlatformAdmin(input.role) || !!input.isErm);
   const proposals = canReviewCaseProposals(input);
   const requests = input.eventEnrichment && canReadContent(input.role);
   return { hotline, proposals, requests, any: hotline || proposals || requests };
