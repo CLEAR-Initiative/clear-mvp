@@ -14,7 +14,7 @@ describe("inboxAccess", () => {
     expect(inboxAccess({ role, hotlineInbox, impactPriorReview, eventEnrichment: false })).toEqual(expected);
   });
 
-  describe("ERM: an emergency_response_manager (global viewer) reaches the hotline", () => {
+  describe("ERM: an emergency_response_manager (global viewer) sees the whole inbox", () => {
     it("gets the hotline when the flag is on", () => {
       const access = inboxAccess({
         role: "viewer",
@@ -24,6 +24,17 @@ describe("inboxAccess", () => {
         eventEnrichment: false,
       });
       expect(access).toEqual({ hotline: true, proposals: false, requests: false, any: true });
+    });
+
+    it("also decides proposed signals when impact_prior_review is on (Phase 1: whole inbox)", () => {
+      const access = inboxAccess({
+        role: "viewer",
+        isErm: true,
+        hotlineInbox: true,
+        impactPriorReview: true,
+        eventEnrichment: false,
+      });
+      expect(access).toEqual({ hotline: true, proposals: true, requests: false, any: true });
     });
 
     it("gets nothing when the hotline flag is off", () => {
@@ -81,5 +92,10 @@ describe("canReviewCaseProposals", () => {
     [undefined, true, false],
   ])("%s with review %s → %s", (role, impactPriorReview, expected) => {
     expect(canReviewCaseProposals({ role, impactPriorReview })).toBe(expected);
+  });
+
+  it("admits an ERM (global viewer) when impact_prior_review is on, and not when off", () => {
+    expect(canReviewCaseProposals({ role: "viewer", isErm: true, impactPriorReview: true })).toBe(true);
+    expect(canReviewCaseProposals({ role: "viewer", isErm: true, impactPriorReview: false })).toBe(false);
   });
 });
