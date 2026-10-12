@@ -149,16 +149,23 @@ export const authRouter = createTRPCRouter({
         return { authenticated: false, user: null };
 
       // get-session doesn't carry the teamMembers relation, so an ERM's
-      // membership is invisible to the client without this. Non-fatal: if the
-      // lookup fails the user simply isn't treated as an ERM this cycle.
+      // membership is invisible to the client without this. Bounded by its own
+      // timeout — the session timer above is already cleared, and a stalled
+      // lookup must never hold back the confirmed user (that would strand even
+      // admins on the inbox loading screen). Non-fatal: on timeout or error
+      // the user just isn't treated as an ERM this cycle.
       let teamMemberships = data.user.teamMemberships;
+      const tmController = new AbortController();
+      const tmTimer = setTimeout(() => tmController.abort(), SESSION_TIMEOUT_MS);
       try {
         const tm = await graphqlFetch<{
           me: { teamMemberships: { id: string; role: string }[] } | null;
-        }>(ME_TEAM_MEMBERSHIPS, undefined, { Cookie: cookie });
+        }>(ME_TEAM_MEMBERSHIPS, undefined, { Cookie: cookie }, tmController.signal);
         teamMemberships = tm.me?.teamMemberships ?? [];
       } catch (err) {
         console.error("Failed to load team memberships for me:", err);
+      } finally {
+        clearTimeout(tmTimer);
       }
 
       return { authenticated: true, user: { ...data.user, teamMemberships } };
