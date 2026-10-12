@@ -7,9 +7,10 @@ import { canDecideCaseProposals, canReadContent, isPlatformAdmin } from "~/lib/r
  *   hotline threads  — platform admins and emergency_response_managers,
  *                      with `hotline_inbox` on (Phase 2 scopes an ERM to the
  *                      numbers their team subscribes to)
- *   proposed signals — deciders (admins and analysts), with
- *                      `impact_prior_review` on: the web Worker's cases
- *                      (clear-api CaseProposals), decided one by one
+ *   proposed signals — deciders (admins and analysts) and ERMs (who see the
+ *                      whole inbox in Phase 1), with `impact_prior_review`
+ *                      on: the web Worker's cases (clear-api CaseProposals),
+ *                      decided one by one
  *   my requests      — any content reader (admin, analyst, viewer), with
  *                      `event_enrichment` on: the Tasks they asked for. Not
  *                      a Review item; it only widens who reaches the page.
@@ -27,15 +28,19 @@ export interface InboxAccess {
 
 /**
  * Whether this reader decides proposed signals in the UI: a decider (admin
- * or analyst) with `impact_prior_review` on. The one rule for every door —
- * the Inbox's Review items, the nav badge, the Event page's decision
- * controls.
+ * or analyst) — or, with `isErm`, an emergency_response_manager — with
+ * `impact_prior_review` on. The one rule for every door: the Inbox's Review
+ * items, the nav badge, the Event page's decision controls. Callers that
+ * don't thread `isErm` (e.g. the Event page's enrichment section) keep it
+ * admin/analyst-only; the Inbox passes `isErm` so an ERM decides there too
+ * (Phase 1 — they see the whole inbox until number-scoping exists).
  */
 export function canReviewCaseProposals(input: {
   role: string | null | undefined;
+  isErm?: boolean;
   impactPriorReview: boolean;
 }): boolean {
-  return input.impactPriorReview && canDecideCaseProposals(input.role);
+  return input.impactPriorReview && (canDecideCaseProposals(input.role) || !!input.isErm);
 }
 
 export function inboxAccess(input: {
