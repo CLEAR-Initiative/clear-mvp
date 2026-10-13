@@ -216,9 +216,25 @@ export default function InboxPage() {
   const serverProposals = reviewCount.data?.count;
   useEffect(() => {
     if (!readReady || !access.proposals || casesQuery.isLoading || casesQuery.isError) return;
+    if (casesQuery.isFetching || reviewCount.isFetching || reviewCount.isError) return;
     if (serverProposals == null) return;
+    // The list and the server total refresh on their own. Publishing an
+    // unread count against a total that does not yet include the same
+    // cases counts an arrival twice once the total catches up.
+    if (counts.proposals !== serverProposals) return;
     publishInboxUnread(unreadCounts.proposals, serverProposals);
-  }, [readReady, access.proposals, casesQuery.isLoading, casesQuery.isError, unreadCounts.proposals, serverProposals]);
+  }, [
+    readReady,
+    access.proposals,
+    casesQuery.isLoading,
+    casesQuery.isError,
+    casesQuery.isFetching,
+    reviewCount.isFetching,
+    reviewCount.isError,
+    counts.proposals,
+    unreadCounts.proposals,
+    serverProposals,
+  ]);
   const visible = useMemo(() => visibleEntries(entries, filter, search, sort), [entries, filter, search, sort]);
   const selected = useMemo(() => entries.find((e) => e.id === selectedId) ?? null, [entries, selectedId]);
 
