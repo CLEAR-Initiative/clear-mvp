@@ -188,15 +188,15 @@ export function NavSidebar({
 
   // The Inbox badge: proposed signals this decider has not opened yet.
   // Until the Inbox has measured that, it is the server queue (ids only;
-  // capped at clear-api's page maximum, shown as "200+"). Opening or
-  // reviewing a row publishes the unread number, which replaces the queue
-  // so the badge does not wait for the next poll.
+  // capped at clear-api's page maximum, shown as "200+"). After that, the
+  // measurement follows later polls: new proposals and other reviewers'
+  // decisions move the badge by the change in the server total.
   const proposedCount = api.tasks.reviewCount.useQuery(undefined, {
     enabled: reviewAccess.proposals,
     staleTime: 60_000,
     refetchInterval: 120_000,
   });
-  const liveUnread = useInboxUnread();
+  const liveUnread = useInboxUnread(proposedCount.data?.count);
   const inboxCount = liveUnread ?? proposedCount.data?.count;
   const inboxBadge = reviewAccess.proposals && inboxCount != null && inboxCount > 0
     ? `${inboxCount}${liveUnread == null && proposedCount.data?.capped ? "+" : ""}`

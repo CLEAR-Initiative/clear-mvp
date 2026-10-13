@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import { noteProposalDecided, publishInboxUnread, resetInboxUnreadForTests, useInboxUnread } from "./inbox-badge";
+import {
+  inboxBadgeCount,
+  noteProposalDecided,
+  publishInboxUnread,
+  resetInboxUnreadForTests,
+  useInboxUnread,
+} from "./inbox-badge";
 
 describe("inbox unread badge", () => {
   afterEach(() => {
@@ -9,21 +15,35 @@ describe("inbox unread badge", () => {
   });
 
   it("publishes the unread count to the nav and keeps it after the Inbox unmounts", () => {
-    const { result, unmount } = renderHook(() => useInboxUnread());
+    const { result, unmount } = renderHook(() => useInboxUnread(4));
     expect(result.current).toBeNull();
-    act(() => publishInboxUnread(4));
+    act(() => publishInboxUnread(4, 4));
     expect(result.current).toBe(4);
     unmount();
-    const again = renderHook(() => useInboxUnread());
+    const again = renderHook(() => useInboxUnread(4));
     expect(again.result.current).toBe(4);
   });
 
+  it("moves with the server total after the reader has left the Inbox", () => {
+    act(() => publishInboxUnread(2, 5));
+    expect(inboxBadgeCount(5)).toBe(2);
+    expect(inboxBadgeCount(6)).toBe(3);
+    expect(inboxBadgeCount(4)).toBe(1);
+  });
+
   it("drops one undecided proposed signal decided from the Event page, and skips a group already opened", () => {
-    act(() => publishInboxUnread(3));
+    act(() => publishInboxUnread(3, 5));
     act(() => noteProposalDecided(false));
-    const { result } = renderHook(() => useInboxUnread());
-    expect(result.current).toBe(2);
+    expect(inboxBadgeCount(5)).toBe(2);
     act(() => noteProposalDecided(true));
-    expect(result.current).toBe(2);
+    expect(inboxBadgeCount(5)).toBe(2);
+  });
+
+  it("does not drop a decision twice when the server total catches up", () => {
+    act(() => publishInboxUnread(3, 5));
+    act(() => noteProposalDecided(false));
+    expect(inboxBadgeCount(4)).toBe(2);
+    act(() => noteProposalDecided(true));
+    expect(inboxBadgeCount(3)).toBe(2);
   });
 });

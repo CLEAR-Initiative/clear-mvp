@@ -125,6 +125,13 @@ export default function InboxPage() {
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
+  // Same query the nav badge polls. Publishing the unread count against
+  // this total lets the badge follow proposals that arrive after the
+  // reader leaves the Inbox.
+  const reviewCount = api.tasks.reviewCount.useQuery(undefined, {
+    enabled: access.proposals,
+    staleTime: 60_000,
+  });
   /** Cases decided in this session, as their decision (or, after a
    * CONFLICT, the Event's own copy) returned them: they keep their row,
    * now showing the decision, after the proposed list stops returning
@@ -193,10 +200,12 @@ export default function InboxPage() {
   // Wait until the stored read set and the proposal list have landed.
   // Publishing earlier would flash the full queue, then hide a badge the
   // server still has while the list is in flight.
+  const serverProposals = reviewCount.data?.count;
   useEffect(() => {
     if (!readReady || !access.proposals || casesQuery.isLoading || casesQuery.isError) return;
-    publishInboxUnread(unreadCounts.proposals);
-  }, [readReady, access.proposals, casesQuery.isLoading, casesQuery.isError, unreadCounts.proposals]);
+    if (serverProposals == null) return;
+    publishInboxUnread(unreadCounts.proposals, serverProposals);
+  }, [readReady, access.proposals, casesQuery.isLoading, casesQuery.isError, unreadCounts.proposals, serverProposals]);
   const visible = useMemo(() => visibleEntries(entries, filter, search, sort), [entries, filter, search, sort]);
   const selected = useMemo(() => entries.find((e) => e.id === selectedId) ?? null, [entries, selectedId]);
 
