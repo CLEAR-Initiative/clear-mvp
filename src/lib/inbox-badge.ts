@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 /**
  * Unread proposed signals, published by the Inbox once it knows which rows
@@ -49,6 +49,25 @@ export function noteProposalDecided(alreadyOpened: boolean) {
   emit();
 }
 
+/**
+ * A server total has caught up with decisions already taken out of the
+ * unread count. Move the baseline forward by those decisions so a proposal
+ * that arrives afterwards still increases the badge. Extra drops (another
+ * reviewer) stay in the difference.
+ */
+export function settleInboxUnread(serverCount: number) {
+  if (measurement == null || measurement.suppress === 0) return;
+  const drift = serverCount - measurement.baseline;
+  if (drift >= 0) return;
+  const absorbed = Math.min(measurement.suppress, -drift);
+  measurement = {
+    unread: measurement.unread,
+    baseline: measurement.baseline - absorbed,
+    suppress: measurement.suppress - absorbed,
+  };
+  emit();
+}
+
 /** Badge number for a server total. Null until the Inbox has measured. */
 export function inboxBadgeCount(serverCount: number | undefined): number | null {
   if (measurement == null) return null;
@@ -75,12 +94,9 @@ function getSnapshot(): Measurement | null {
 }
 
 export function useInboxUnread(serverCount: number | undefined): number | null {
-  const current = useSyncExternalStore(subscribe, getSnapshot, () => null);
-  if (current == null) return null;
-  if (serverCount == null) return current.unread;
-  let drift = serverCount - current.baseline;
-  if (drift < 0 && current.suppress > 0) {
-    drift += Math.min(current.suppress, -drift);
-  }
-  return Math.max(0, current.unread + drift);
+  useSyncExternalStore(subscribe, getSnapshot, () => null);
+  useEffect(() => {
+    if (serverCount != null) settleInboxUnread(serverCount);
+  }, [serverCount]);
+  return inboxBadgeCount(serverCount);
 }

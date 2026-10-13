@@ -5,6 +5,7 @@ import {
   noteProposalDecided,
   publishInboxUnread,
   resetInboxUnreadForTests,
+  settleInboxUnread,
   useInboxUnread,
 } from "./inbox-badge";
 
@@ -45,5 +46,13 @@ describe("inbox unread badge", () => {
     expect(inboxBadgeCount(4)).toBe(2);
     act(() => noteProposalDecided(true));
     expect(inboxBadgeCount(3)).toBe(2);
+  });
+
+  it("counts a proposal that arrives after a decision has landed in the server total", () => {
+    act(() => publishInboxUnread(2, 5));
+    act(() => noteProposalDecided(true));
+    expect(inboxBadgeCount(4)).toBe(2);
+    act(() => settleInboxUnread(4));
+    expect(inboxBadgeCount(5)).toBe(3);
   });
 });
