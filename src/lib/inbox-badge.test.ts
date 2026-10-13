@@ -3,6 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import {
   inboxBadgeCount,
   noteProposalDecided,
+  proposalQueueMatchesServer,
   publishInboxUnread,
   resetInboxUnreadForTests,
   settleInboxUnread,
@@ -46,6 +47,13 @@ describe("inbox unread badge", () => {
     expect(inboxBadgeCount(4)).toBe(2);
     act(() => noteProposalDecided(true));
     expect(inboxBadgeCount(3)).toBe(2);
+  });
+
+  it("treats a queue past the server cap as the same snapshot, and a short list as stale", () => {
+    expect(proposalQueueMatchesServer(200, 200, true)).toBe(true);
+    expect(proposalQueueMatchesServer(240, 200, true)).toBe(true);
+    expect(proposalQueueMatchesServer(6, 5, false)).toBe(false);
+    expect(proposalQueueMatchesServer(5, 6, false)).toBe(false);
   });
 
   it("counts a proposal that arrives after a decision has landed in the server total", () => {

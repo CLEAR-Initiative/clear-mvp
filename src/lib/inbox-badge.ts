@@ -21,6 +21,22 @@ function emit() {
   for (const listener of listeners) listener();
 }
 
+/**
+ * The Inbox list and the capped review total refresh on their own. They
+ * are the same queue when the counts match, or when the server total is
+ * stuck at its page cap and the list — which reads every page — is larger.
+ * A shorter list against an uncapped total is a stale snapshot, and
+ * publishing it would count the same arrival again once the total catches up.
+ */
+export function proposalQueueMatchesServer(
+  listCount: number,
+  serverCount: number,
+  serverCapped: boolean,
+): boolean {
+  if (listCount === serverCount) return true;
+  return serverCapped && listCount > serverCount;
+}
+
 export function publishInboxUnread(count: number, serverCount: number) {
   if (
     measurement?.unread === count &&

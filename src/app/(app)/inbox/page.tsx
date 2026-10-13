@@ -32,7 +32,7 @@ import {
   type RejectReason,
 } from "~/lib/hotline-inbox";
 import type { GqlCaseProposal, GqlCaseProposalDecision, GqlReviewCaseProposal } from "~/lib/types/graphql";
-import { publishInboxUnread } from "~/lib/inbox-badge";
+import { proposalQueueMatchesServer, publishInboxUnread } from "~/lib/inbox-badge";
 import { EntryList } from "./_components/entry-list";
 import { ReadingPane } from "./_components/reading-pane";
 import { AddToClearModal, type SignalDraft } from "./_components/add-to-clear-modal";
@@ -214,14 +214,12 @@ export default function InboxPage() {
   // Publishing earlier would flash the full queue, then hide a badge the
   // server still has while the list is in flight.
   const serverProposals = reviewCount.data?.count;
+  const serverCapped = reviewCount.data?.capped === true;
   useEffect(() => {
     if (!readReady || !access.proposals || casesQuery.isLoading || casesQuery.isError) return;
     if (casesQuery.isFetching || reviewCount.isFetching || reviewCount.isError) return;
     if (serverProposals == null) return;
-    // The list and the server total refresh on their own. Publishing an
-    // unread count against a total that does not yet include the same
-    // cases counts an arrival twice once the total catches up.
-    if (counts.proposals !== serverProposals) return;
+    if (!proposalQueueMatchesServer(counts.proposals, serverProposals, serverCapped)) return;
     publishInboxUnread(unreadCounts.proposals, serverProposals);
   }, [
     readReady,
@@ -234,6 +232,7 @@ export default function InboxPage() {
     counts.proposals,
     unreadCounts.proposals,
     serverProposals,
+    serverCapped,
   ]);
   const visible = useMemo(() => visibleEntries(entries, filter, search, sort), [entries, filter, search, sort]);
   const selected = useMemo(() => entries.find((e) => e.id === selectedId) ?? null, [entries, selectedId]);
