@@ -127,6 +127,21 @@ describe("NotificationsBell", () => {
     expect(items[0]).toHaveAttribute("data-unread", "true");
     expect(items[0]).toHaveAttribute("href", "/event/evt-1");
     expect(items[1]).toHaveAttribute("data-unread", "false");
+    const menu = screen.getByTestId("notifications-menu");
+    expect(menu).toHaveStyle({ overflowY: "auto", overscrollBehavior: "contain" });
+  });
+
+  it("keeps the page still while the menu is open and lets the menu scroll", async () => {
+    rows = [row("n1")];
+    renderBell();
+    fireEvent.click(screen.getByTestId("notifications-bell"));
+    await screen.findByTestId("notifications-menu");
+    const pageWheel = new WheelEvent("wheel", { cancelable: true, bubbles: true });
+    document.body.dispatchEvent(pageWheel);
+    expect(pageWheel.defaultPrevented).toBe(true);
+    const menuWheel = new WheelEvent("wheel", { cancelable: true, bubbles: true });
+    screen.getByTestId("notifications-menu").dispatchEvent(menuWheel);
+    expect(menuWheel.defaultPrevented).toBe(false);
   });
 
   it("opening an unread notification marks it read and goes to its Event", async () => {

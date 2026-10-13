@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BELL_MAX_ROWS, bellRows, bellUnreadCount, safeActionPath, unreadCount } from "./notifications";
+import { BELL_MAX_ROWS, bellRows, bellUnreadCount, markBellRead, safeActionPath, unreadCount } from "./notifications";
 import type { GqlNotificationStatus } from "./types/graphql";
 
 describe("notifications bell helpers", () => {
@@ -27,6 +27,19 @@ describe("notifications bell helpers", () => {
 
   it("counts everything not yet READ as unread", () => {
     expect(unreadCount([row("a"), row("b", { status: "DELIVERED" }), row("c", { status: "READ" })])).toBe(2);
+  });
+
+  it("drops an opened row out of the bell immediately, including past the cap", () => {
+    const data = {
+      rows: [row("n1"), row("n2", { status: "READ" as const })],
+      unread: BELL_MAX_ROWS + 5,
+    };
+    expect(markBellRead(data, "n1")).toEqual({
+      rows: [{ ...data.rows[0], status: "READ" }, data.rows[1]],
+      unread: BELL_MAX_ROWS + 4,
+    });
+    expect(markBellRead(data, "n2")).toBe(data);
+    expect(markBellRead(undefined, "n1")).toBeUndefined();
   });
 
   it("counts unread rows of the bell's types past the listing cap", () => {

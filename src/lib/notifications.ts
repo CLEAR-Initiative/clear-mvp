@@ -37,6 +37,27 @@ export function bellUnreadCount(rows: readonly Pick<GqlNotification, "notificati
   return unreadCount(rows.filter(isBellType));
 }
 
+export interface BellPayload<T> {
+  rows: T[];
+  unread: number;
+}
+
+/** Drop one opened row out of the bell immediately. The unread total counts
+ * rows past the listing cap, so it falls by one even when this row is only
+ * one of them. Already-read rows leave the payload untouched. */
+export function markBellRead<T extends Pick<GqlNotification, "id" | "status">>(
+  data: BellPayload<T> | undefined,
+  id: string,
+): BellPayload<T> | undefined {
+  if (!data) return data;
+  const row = data.rows.find((n) => n.id === id);
+  if (!row || !isUnread(row)) return data;
+  return {
+    rows: data.rows.map((n) => (n.id === id ? { ...n, status: "READ" } : n)),
+    unread: Math.max(0, data.unread - 1),
+  };
+}
+
 /**
  * A notification's link, only when it is an in-app path: clear-api writes
  * `/event/{id}`, but the column is free text, so anything that is not an
