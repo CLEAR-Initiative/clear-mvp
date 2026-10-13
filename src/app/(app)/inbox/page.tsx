@@ -21,6 +21,7 @@ import {
   loadReadIds,
   moveSelection,
   nextSelection,
+  readMarks,
   saveReadIds,
   visibleEntries,
   withDecision,
@@ -36,6 +37,18 @@ import { EntryList } from "./_components/entry-list";
 import { ReadingPane } from "./_components/reading-pane";
 import { AddToClearModal, type SignalDraft } from "./_components/add-to-clear-modal";
 import styles from "./inbox.module.css";
+
+/** Opening a row records its id, and for a case group each undecided case,
+ * so a proposal that arrives later on that Event counts as unread. */
+function rememberOpened(prev: Set<string>, id: string, entries: readonly InboxEntry[]): Set<string> {
+  const entry = entries.find((e) => e.id === id);
+  const marks = entry ? readMarks(entry) : [id];
+  if (marks.every((mark) => prev.has(mark))) return prev;
+  const next = new Set(prev);
+  for (const mark of marks) next.add(mark);
+  saveReadIds(next);
+  return next;
+}
 
 /**
  * Inbox: Review items of two kinds, side by side (see InboxEntry.kind).
@@ -225,14 +238,9 @@ export default function InboxPage() {
     setToast(null);
     if (id) {
       setMobilePane(true);
-      setReadIds((prev) => {
-        if (prev.has(id)) return prev;
-        const next = new Set(prev).add(id);
-        saveReadIds(next);
-        return next;
-      });
+      setReadIds((prev) => rememberOpened(prev, id, entries));
     }
-  }, []);
+  }, [entries]);
 
   // Selection follows the visible list: nothing selected picks the top,
   // a selection that scrolled out of the filter is dropped.
@@ -244,12 +252,7 @@ export default function InboxPage() {
     if (!selectedId || !visible.some((e) => e.id === selectedId)) {
       const first = visible[0]!.id;
       setSelectedId(first);
-      setReadIds((prev) => {
-        if (prev.has(first)) return prev;
-        const next = new Set(prev).add(first);
-        saveReadIds(next);
-        return next;
-      });
+      setReadIds((prev) => rememberOpened(prev, first, visible));
     }
   }, [visible, selectedId]);
 

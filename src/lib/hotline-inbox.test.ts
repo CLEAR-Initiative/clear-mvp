@@ -6,8 +6,11 @@ import {
   buildInboxEntries,
   buildTaskEntries,
   combineTranslations,
+  caseGroupSeenMark,
   countByFilter,
   countUnreadByFilter,
+  proposalUnreadAlreadyExcluded,
+  readMarks,
   entryDescription,
   filtersFor,
   intakeRef,
@@ -565,6 +568,23 @@ describe("web case groups (V4)", () => {
     expect(matchesFilter(entries[0]!, "proposals")).toBe(false);
     expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 0, chatter: 0, proposals: 2, requests: 0, all: 3 });
     expect(visibleEntries(entries, "proposals", "", "newest").map((e) => e.id)).toEqual(["cases:e1"]);
+  });
+
+  it("counts a proposal that arrives after the reader opened the Event", () => {
+    const opened = buildCaseGroupEntries([webCase("c1", "e1", "2026-10-01T00:00:00Z")]);
+    const marks = readMarks(opened[0]!);
+    expect(marks).toEqual(["cases:e1", caseGroupSeenMark("e1"), "c1"]);
+    expect(countUnreadByFilter(opened, new Set(marks)).proposals).toBe(0);
+    expect(proposalUnreadAlreadyExcluded("e1", "c1", new Set(marks))).toBe(true);
+
+    const later = buildCaseGroupEntries([
+      webCase("c2", "e1", "2026-10-02T00:00:00Z"),
+      webCase("c1", "e1", "2026-10-01T00:00:00Z"),
+    ]);
+    expect(countUnreadByFilter(later, new Set(marks)).proposals).toBe(1);
+    expect(proposalUnreadAlreadyExcluded("e1", "c2", new Set(marks))).toBe(false);
+    // A group opened before per-case marks existed stays fully read.
+    expect(countUnreadByFilter(later, new Set(["cases:e1"])).proposals).toBe(0);
   });
 
   it("ranks a waiting group with the field reports under reports-first, newest within the rank", () => {

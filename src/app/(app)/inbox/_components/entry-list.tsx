@@ -5,6 +5,7 @@ import { IconPaperclip, IconSearch } from "@tabler/icons-react";
 import {
   isCaseGroupEntry,
   isHotlineEntry,
+  isUnreadEntry,
   type CaseGroupEntry,
   type HotlineEntry,
   type InboxEntry,
@@ -138,7 +139,7 @@ export function EntryList({
 
       <div className={styles.rows}>
         {entries.map((entry) => {
-          const unread = !readIds.has(entry.id);
+          const unread = isUnreadEntry(entry, readIds);
           return (
             <button
               type="button"
