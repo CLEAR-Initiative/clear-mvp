@@ -58,6 +58,9 @@ echo "── seeding database (prisma/seed.ts) ──"
 # source the seed scripts then import against (e.g. an export added since).
 "${COMPOSE[@]}" run --rm --build seed
 
+echo "── seeding role personas (e2e/support/roles-seed.ts) ──"
+"${COMPOSE[@]}" run --rm --build seed-roles
+
 echo "── seeding ground-intel fixture (e2e/support/ground-seed.ts) ──"
 "${COMPOSE[@]}" run --rm --build seed-ground
 

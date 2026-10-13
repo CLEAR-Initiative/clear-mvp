@@ -20,6 +20,24 @@ export const VIEWER = {
   password: "password123",
 } as const;
 
+/**
+ * Role personas for the role-access matrix spec (case 20), seeded by
+ * e2e/support/roles-seed.ts. Keep in lockstep with that script.
+ *
+ * ERM = emr.user from clear-api's seed (global viewer) once roles-seed assigns
+ * it the `emergency_response_manager` team membership; it keeps its own strong
+ * password from the main seed. The rest share `password123`.
+ */
+export const ERM = {
+  email: "emr.user@clearinitiative.io",
+  password: "Emr#09bc64391b2c5cd30802a3f7372907a2",
+} as const;
+export const PENDING = { email: "e2e-pending@clearinitiative.io", password: "password123" } as const;
+export const TEAM_ADMIN = { email: "e2e-team-admin@clearinitiative.io", password: "password123" } as const;
+export const ORG_ADMIN = { email: "e2e-org-admin@clearinitiative.io", password: "password123" } as const;
+export const FIELD_COORDINATOR = { email: "e2e-field-coordinator@clearinitiative.io", password: "password123" } as const;
+export const TEAM_MEMBER = { email: "e2e-team-member@clearinitiative.io", password: "password123" } as const;
+
 export const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
 /**
