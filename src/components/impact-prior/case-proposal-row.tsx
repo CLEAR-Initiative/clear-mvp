@@ -5,6 +5,8 @@ import { Anchor, Badge, Box, Button, Group, Stack, Text, Textarea } from "@manti
 import { IconCircleCheck, IconCircleX } from "@tabler/icons-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { api } from "~/trpc/react";
+import { noteProposalDecided } from "~/lib/inbox-badge";
+import { caseGroupId, loadReadIds } from "~/lib/hotline-inbox";
 import { MAX_RATIONALE_LENGTH, caseFigures, figureText, isCaseMetric, safeHttpUrl } from "~/lib/case-proposals";
 import type { GqlCaseProposal, GqlCaseProposalDecision } from "~/lib/types/graphql";
 
@@ -85,6 +87,7 @@ export function CaseProposalRow({ proposal, canDecide, onDecided, onStale }: Cas
         onSuccess: (decided) => {
           setRejecting(false);
           onDecided?.(decided, decision);
+          noteProposalDecided(loadReadIds().has(caseGroupId(proposal.eventId)));
         },
         onError: (err) => {
           if (err.data?.code === "CONFLICT" || err.data?.code === "NOT_FOUND") onStale?.(proposal);

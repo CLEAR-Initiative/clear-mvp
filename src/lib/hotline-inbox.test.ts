@@ -7,6 +7,7 @@ import {
   buildTaskEntries,
   combineTranslations,
   countByFilter,
+  countUnreadByFilter,
   entryDescription,
   filtersFor,
   intakeRef,
@@ -349,6 +350,18 @@ describe("visibleEntries / countByFilter", () => {
 
   it("counts per filter", () => {
     expect(countByFilter(entries)).toEqual({ reports: 1, unclassified: 1, chatter: 1, proposals: 0, requests: 0, all: 3 });
+  });
+
+  it("drops an opened Review item from the filter number and keeps the queue count", () => {
+    expect(countUnreadByFilter(entries, new Set(["t1"]))).toEqual({
+      reports: 0,
+      unclassified: 1,
+      chatter: 1,
+      proposals: 0,
+      requests: 0,
+      all: 2,
+    });
+    expect(countByFilter(entries).all).toBe(3);
   });
 });
 

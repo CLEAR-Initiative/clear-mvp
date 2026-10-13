@@ -47,6 +47,7 @@ import {
 } from "~/lib/map-focus-session";
 import { NAV_COLLAPSED_W_PX, NAV_EXPANDED_W_PX } from "~/lib/is-map-path";
 import { setNavCollapsedCookie } from "~/lib/nav-collapsed-cookie";
+import { useInboxUnread } from "~/lib/inbox-badge";
 import { NAV_ROUTES, type NavItemKey } from "~/lib/nav-routes";
 import { NotificationsBell } from "~/components/notifications-bell";
 
@@ -185,18 +186,20 @@ export function NavSidebar({
   });
   const visibility: NavVisibility = { isAdmin, role, flags, inbox: reviewAccess };
 
-  // The Inbox badge: decisions waiting for this decider — the undecided
-  // proposed signals (web cases), one each. Only asked for when
-  // they may decide; a decision anywhere invalidates it. Ids only (the nav
-  // is on every page); capped at clear-api's page maximum, shown as "200+"
-  // past it.
+  // The Inbox badge: proposed signals this decider has not opened yet.
+  // Until the Inbox has measured that, it is the server queue (ids only;
+  // capped at clear-api's page maximum, shown as "200+"). Opening or
+  // reviewing a row publishes the unread number, which replaces the queue
+  // so the badge does not wait for the next poll.
   const proposedCount = api.tasks.reviewCount.useQuery(undefined, {
     enabled: reviewAccess.proposals,
     staleTime: 60_000,
     refetchInterval: 120_000,
   });
-  const inboxBadge = reviewAccess.proposals && proposedCount.data && proposedCount.data.count > 0
-    ? `${proposedCount.data.count}${proposedCount.data.capped ? "+" : ""}`
+  const liveUnread = useInboxUnread();
+  const inboxCount = liveUnread ?? proposedCount.data?.count;
+  const inboxBadge = reviewAccess.proposals && inboxCount != null && inboxCount > 0
+    ? `${inboxCount}${liveUnread == null && proposedCount.data?.capped ? "+" : ""}`
     : undefined;
   const badges: Partial<Record<NavItemKey, string>> = { inbox: inboxBadge };
 

@@ -543,6 +543,22 @@ export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number
 }
 
 /**
+ * The small number on each Inbox filter: Review items the reader has not
+ * opened yet. Opening a row drops it; a decision drops it too, because the
+ * row has left the queue. My requests are status, not unread work, so they
+ * keep counting. The "awaiting review" line stays on `countByFilter` — work
+ * still waiting after it has been opened.
+ */
+export function countUnreadByFilter(entries: InboxEntry[], readIds: ReadonlySet<string>): Record<InboxFilter, number> {
+  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, proposals: 0, requests: 0, all: 0 };
+  for (const e of entries) {
+    const weight = isReviewItem(e) && readIds.has(e.id) ? 0 : entryWeight(e);
+    for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += weight;
+  }
+  return counts;
+}
+
+/**
  * Which entry to select after `actedId` leaves the visible list: the next
  * one down, else the previous, else nothing. `visible` is the list BEFORE
  * removal.
