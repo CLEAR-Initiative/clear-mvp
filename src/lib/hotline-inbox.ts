@@ -543,6 +543,73 @@ export function countByFilter(entries: InboxEntry[]): Record<InboxFilter, number
 }
 
 /**
+ * The small number on each Inbox filter: Review items the reader has not
+ * opened yet. Opening a row drops it; a decision drops it too, because the
+ * row has left the queue. My requests are status, not unread work, so they
+ * keep counting. The "awaiting review" line stays on `countByFilter` — work
+ * still waiting after it has been opened.
+ */
+export function countUnreadByFilter(entries: InboxEntry[], readIds: ReadonlySet<string>): Record<InboxFilter, number> {
+  const counts: Record<InboxFilter, number> = { reports: 0, unclassified: 0, chatter: 0, proposals: 0, requests: 0, all: 0 };
+  for (const e of entries) {
+    const weight = unreadWeight(e, readIds);
+    for (const f of INBOX_FILTERS) if (matchesFilter(e, f)) counts[f] += weight;
+  }
+  return counts;
+}
+
+/** Mark written the first time a case group is opened under per-case read
+ * tracking. Older browsers stored only the group id; those groups stay
+ * fully read until opened again. */
+export function caseGroupSeenMark(eventId: string): string {
+  return `cases:${eventId}:seen`;
+}
+
+/** Undecided cases in a group the reader has not opened. A group opened
+ * before per-case marks existed counts as fully read. A case proposed
+ * after the reader opened the group does not. */
+export function caseGroupUnread(entry: CaseGroupEntry, readIds: ReadonlySet<string>): number {
+  const proposed = entry.cases.filter((c) => c.state === "proposed");
+  if (readIds.has(caseGroupSeenMark(entry.eventId))) {
+    return proposed.filter((c) => !readIds.has(c.id)).length;
+  }
+  if (readIds.has(entry.id)) return 0;
+  return proposed.length;
+}
+
+function unreadWeight(entry: InboxEntry, readIds: ReadonlySet<string>): number {
+  if (!isReviewItem(entry)) return entryWeight(entry);
+  if (isCaseGroupEntry(entry)) return caseGroupUnread(entry, readIds);
+  return readIds.has(entry.id) ? 0 : entryWeight(entry);
+}
+
+/** The row's unread dot. My requests are not a queue, but opening one
+ * still clears its dot; a case group stays unread while any of its
+ * undecided cases arrived after the reader opened it. */
+export function isUnreadEntry(entry: InboxEntry, readIds: ReadonlySet<string>): boolean {
+  if (isCaseGroupEntry(entry)) return caseGroupUnread(entry, readIds) > 0;
+  return !readIds.has(entry.id);
+}
+
+/** Ids stored when the reader opens a row. A case group also records each
+ * undecided case, so a later proposal on that Event counts again. */
+export function readMarks(entry: InboxEntry): string[] {
+  if (!isCaseGroupEntry(entry)) return [entry.id];
+  return [
+    entry.id,
+    caseGroupSeenMark(entry.eventId),
+    ...entry.cases.filter((c) => c.state === "proposed").map((c) => c.id),
+  ];
+}
+
+/** Whether deciding this case would subtract a proposal the unread count
+ * has already left out. */
+export function proposalUnreadAlreadyExcluded(eventId: string, caseId: string, readIds: ReadonlySet<string>): boolean {
+  if (readIds.has(caseGroupSeenMark(eventId))) return readIds.has(caseId);
+  return readIds.has(caseGroupId(eventId));
+}
+
+/**
  * Which entry to select after `actedId` leaves the visible list: the next
  * one down, else the previous, else nothing. `visible` is the list BEFORE
  * removal.

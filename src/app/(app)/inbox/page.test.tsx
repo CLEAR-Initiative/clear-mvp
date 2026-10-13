@@ -95,6 +95,11 @@ vi.mock("~/trpc/react", () => ({
     tasks: {
       myTasks: { useQuery: (input: unknown, opts: { enabled: boolean }) => myTasksQuery(input, opts) },
       proposedCaseProposals: { useQuery: (input: unknown, opts: { enabled: boolean }) => casesQuery(input, opts) },
+      reviewCount: {
+        useQuery: (_input: unknown, opts: { enabled: boolean }) => ({
+          data: opts.enabled ? { count: 0, capped: false } : undefined,
+        }),
+      },
       forEvent: { useQuery: (input: unknown, opts: { enabled: boolean }) => forEventQuery(input, opts) },
       decideCaseProposal: {
         useMutation: () => ({ mutate: decideCaseMutate, ...caseMutation, data: undefined, variables: undefined }),
@@ -274,7 +279,8 @@ describe("InboxPage access", () => {
     expect(casesQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
     expect(screen.queryByTestId("inbox-filter-reports")).not.toBeInTheDocument();
     expect(screen.getByTestId("inbox-filter-proposals")).toHaveAttribute("data-active", "true");
-    expect(screen.getByTestId("inbox-filter-proposals")).toHaveTextContent("1");
+    // Opened on arrival: the filter number is unread, the awaiting line is the queue.
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveTextContent("0");
     expect(screen.getByTestId("inbox-filter-all")).toBeInTheDocument();
     expect(screen.getAllByTestId("inbox-entry")).toHaveLength(1);
     expect(screen.getByText('awaiting:{"count":1}')).toBeInTheDocument();
@@ -349,8 +355,20 @@ describe("InboxPage triage", () => {
     );
     expect(screen.getByTestId("inbox-toast")).toHaveTextContent("toast.archived");
     expect(invalidate).toHaveBeenCalled();
-    // Selection moved to the next visible entry.
-    expect(screen.getAllByTestId("inbox-entry")[1]).toHaveAttribute("data-selected", "true");
+    // The reviewed row leaves immediately; selection moves to the next one.
+    const rows = screen.getAllByTestId("inbox-entry");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveAttribute("data-selected", "true");
+    expect(screen.getByText('awaiting:{"count":2}')).toBeInTheDocument();
+  });
+
+  it("drops the filter number when a row is opened, and keeps it in the queue until it is reviewed", () => {
+    renderPage();
+    expect(screen.getByTestId("inbox-filter-reports")).toHaveTextContent("1");
+    expect(screen.getByText('awaiting:{"count":3}')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByTestId("inbox-entry")[1]!);
+    expect(screen.getByTestId("inbox-filter-reports")).toHaveTextContent("0");
+    expect(screen.getByText('awaiting:{"count":3}')).toBeInTheDocument();
   });
 
   it("rejects with the structured reason, not a note", () => {
@@ -507,7 +525,8 @@ describe("InboxPage pipeline failures", () => {
   it("keeps queued and failed entries under Unclassified but pills them differently", () => {
     const rows = openUnclassified();
     expect(rows).toHaveLength(3);
-    expect(screen.getByTestId("inbox-filter-unclassified")).toHaveTextContent("3");
+    // The filter opens the first row, so the unread number is the other two.
+    expect(screen.getByTestId("inbox-filter-unclassified")).toHaveTextContent("2");
 
     const queued = rowFor("Thread c");
     expect(queued).toHaveAttribute("data-processing", "pending");
@@ -885,8 +904,9 @@ describe("InboxPage web cases", () => {
     ];
     renderPage();
     expect(casesQuery).toHaveBeenCalledWith(undefined, expect.objectContaining({ enabled: true }));
-    // Three cases wait: three decisions.
-    expect(screen.getByTestId("inbox-filter-proposals")).toHaveTextContent("3");
+    // Three cases wait. The newest group is opened on arrival, so the filter
+    // number is the other group's two undecided cases.
+    expect(screen.getByTestId("inbox-filter-proposals")).toHaveTextContent("2");
     expect(screen.getByText('awaiting:{"count":3}')).toBeInTheDocument();
     const groups = screen.getAllByTestId("inbox-entry").filter((r) => r.getAttribute("data-kind") === "cases");
     expect(groups.map((g) => [g.textContent?.includes("Drought in Kordofan"), g.getAttribute("data-undecided")])).toEqual([

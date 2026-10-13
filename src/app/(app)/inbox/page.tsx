@@ -15,11 +15,13 @@ import {
   buildInboxEntries,
   buildTaskEntries,
   countByFilter,
+  countUnreadByFilter,
   filtersFor,
   isHotlineEntry,
   loadReadIds,
   moveSelection,
   nextSelection,
+  readMarks,
   saveReadIds,
   visibleEntries,
   withDecision,
@@ -30,10 +32,23 @@ import {
   type RejectReason,
 } from "~/lib/hotline-inbox";
 import type { GqlCaseProposal, GqlCaseProposalDecision, GqlReviewCaseProposal } from "~/lib/types/graphql";
+import { proposalQueueMatchesServer, publishInboxUnread } from "~/lib/inbox-badge";
 import { EntryList } from "./_components/entry-list";
 import { ReadingPane } from "./_components/reading-pane";
 import { AddToClearModal, type SignalDraft } from "./_components/add-to-clear-modal";
 import styles from "./inbox.module.css";
+
+/** Opening a row records its id, and for a case group each undecided case,
+ * so a proposal that arrives later on that Event counts as unread. */
+function rememberOpened(prev: Set<string>, id: string, entries: readonly InboxEntry[]): Set<string> {
+  const entry = entries.find((e) => e.id === id);
+  const marks = entry ? readMarks(entry) : [id];
+  if (marks.every((mark) => prev.has(mark))) return prev;
+  const next = new Set(prev);
+  for (const mark of marks) next.add(mark);
+  saveReadIds(next);
+  return next;
+}
 
 /**
  * Inbox: Review items of two kinds, side by side (see InboxEntry.kind).
@@ -61,7 +76,9 @@ import styles from "./inbox.module.css";
  * item per Event, for the deciders (admins and analysts),
  * each case with its own Accept / Reject (the same row the Event page
  * mounts). A decided case turns to its decision in place and stays in its
- * group until the Inbox is reloaded; the counts are the undecided cases.
+ * group until the Inbox is reloaded; the awaiting line is the undecided
+ * cases. The small number on each filter is how many of those rows are
+ * still unopened, so it drops as soon as a row is opened or reviewed.
  *
  * My requests (clear-api `myTasks`): the Tasks the reader asked for, under
  * their own filter, read-only with Cancel. Status, not Review items: they
@@ -121,6 +138,13 @@ export default function InboxPage() {
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
+  // Same query the nav badge polls. Publishing the unread count against
+  // this total lets the badge follow proposals that arrive after the
+  // reader leaves the Inbox.
+  const reviewCount = api.tasks.reviewCount.useQuery(undefined, {
+    enabled: access.proposals,
+    staleTime: 60_000,
+  });
   /** Cases decided in this session, as their decision (or, after a
    * CONFLICT, the Event's own copy) returned them: they keep their row,
    * now showing the decision, after the proposed list stops returning
@@ -136,14 +160,18 @@ export default function InboxPage() {
       q.state.data?.tasks.some((task) => task.status === "PENDING" || task.status === "LEASED") ? 30_000 : 120_000,
   });
 
-  const entries = useMemo<InboxEntry[]>(
-    () => [
+  /** Hotline threads reviewed this visit. They leave the queue before the
+   * refetch returns, so the counts do not sit on the old total. */
+  const [dismissedIds, setDismissedIds] = useState<ReadonlySet<string>>(() => new Set());
+
+  const entries = useMemo<InboxEntry[]>(() => {
+    const built: InboxEntry[] = [
       ...(inboxQuery.data ? buildInboxEntries(inboxQuery.data) : []),
       ...(casesQuery.data ? buildCaseGroupEntries(casesQuery.data, decidedCases) : []),
       ...(myTasksQuery.data ? buildTaskEntries(myTasksQuery.data.tasks, myTasksQuery.data.eventTitles) : []),
-    ],
-    [inboxQuery.data, casesQuery.data, decidedCases, myTasksQuery.data],
-  );
+    ];
+    return dismissedIds.size === 0 ? built : built.filter((entry) => !dismissedIds.has(entry.id));
+  }, [inboxQuery.data, casesQuery.data, decidedCases, myTasksQuery.data, dismissedIds]);
   const sourceById = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const s of inboxQuery.data?.sources ?? []) m.set(s.id, s.reviewerRoles);
@@ -174,9 +202,38 @@ export default function InboxPage() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
-  useEffect(() => setReadIds(loadReadIds()), []);
+  const [readReady, setReadReady] = useState(false);
+  useEffect(() => {
+    setReadIds(loadReadIds());
+    setReadReady(true);
+  }, []);
 
   const counts = useMemo(() => countByFilter(entries), [entries]);
+  const unreadCounts = useMemo(() => countUnreadByFilter(entries, readIds), [entries, readIds]);
+  // Wait until the stored read set and the proposal list have landed.
+  // Publishing earlier would flash the full queue, then hide a badge the
+  // server still has while the list is in flight.
+  const serverProposals = reviewCount.data?.count;
+  const serverCapped = reviewCount.data?.capped === true;
+  useEffect(() => {
+    if (!readReady || !access.proposals || casesQuery.isLoading || casesQuery.isError) return;
+    if (casesQuery.isFetching || reviewCount.isFetching || reviewCount.isError) return;
+    if (serverProposals == null) return;
+    if (!proposalQueueMatchesServer(counts.proposals, serverProposals, serverCapped)) return;
+    publishInboxUnread(unreadCounts.proposals, serverProposals);
+  }, [
+    readReady,
+    access.proposals,
+    casesQuery.isLoading,
+    casesQuery.isError,
+    casesQuery.isFetching,
+    reviewCount.isFetching,
+    reviewCount.isError,
+    counts.proposals,
+    unreadCounts.proposals,
+    serverProposals,
+    serverCapped,
+  ]);
   const visible = useMemo(() => visibleEntries(entries, filter, search, sort), [entries, filter, search, sort]);
   const selected = useMemo(() => entries.find((e) => e.id === selectedId) ?? null, [entries, selectedId]);
 
@@ -196,14 +253,9 @@ export default function InboxPage() {
     setToast(null);
     if (id) {
       setMobilePane(true);
-      setReadIds((prev) => {
-        if (prev.has(id)) return prev;
-        const next = new Set(prev).add(id);
-        saveReadIds(next);
-        return next;
-      });
+      setReadIds((prev) => rememberOpened(prev, id, entries));
     }
-  }, []);
+  }, [entries]);
 
   // Selection follows the visible list: nothing selected picks the top,
   // a selection that scrolled out of the filter is dropped.
@@ -215,12 +267,7 @@ export default function InboxPage() {
     if (!selectedId || !visible.some((e) => e.id === selectedId)) {
       const first = visible[0]!.id;
       setSelectedId(first);
-      setReadIds((prev) => {
-        if (prev.has(first)) return prev;
-        const next = new Set(prev).add(first);
-        saveReadIds(next);
-        return next;
-      });
+      setReadIds((prev) => rememberOpened(prev, first, visible));
     }
   }, [visible, selectedId]);
 
@@ -246,6 +293,12 @@ export default function InboxPage() {
       setActionError(null);
       setRetries(pendingOnly);
       showToast(next);
+      setDismissedIds((prev) => {
+        if (prev.has(actedId)) return prev;
+        const nextIds = new Set(prev);
+        nextIds.add(actedId);
+        return nextIds;
+      });
       void utils.ground.hotlineInbox.invalidate();
       void utils.ground.threads.invalidate();
       void utils.ground.messages.invalidate();
@@ -471,7 +524,7 @@ export default function InboxPage() {
               onClick={() => { setFilter(f); setRejectOpen(false); }}
             >
               {t(`filters.${f}`)}
-              <span className={styles.filterCount}>{counts[f]}</span>
+              <span className={styles.filterCount}>{unreadCounts[f]}</span>
             </button>
           ))}
         </div>
