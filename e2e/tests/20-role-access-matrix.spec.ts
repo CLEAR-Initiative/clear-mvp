@@ -69,47 +69,45 @@ function resolve(page: Page, sel: string) {
   return null;
 }
 
-/** Selectors that render from access alone (no seeded record / interaction). */
-function isLoadTime(sel: string): boolean {
-  return (
-    sel.startsWith("a[") ||
-    /^(tab|nav):/.test(sel) ||
-    /-filter-(reports|proposals)$/.test(sel) ||
-    sel === "inbox-no-access"
-  );
+/**
+ * Selectors whose ABSENCE is a robust deny-side signal: nav links, tabs, and
+ * inbox filter pills that render from access alone (no seeded record). Excludes
+ * `inbox-no-access` on purpose — that's a NEGATIVE marker (shown WHEN access is
+ * denied), so its presence is inverted vs a filter pill and would mislead a
+ * generic absence check.
+ */
+function absenceAssertable(sel: string): boolean {
+  return sel.startsWith("a[") || /^(tab|nav):/.test(sel) || /-filter-(reports|proposals)$/.test(sel);
 }
 
+/**
+ * Only the robust deny-side runs automatically: a control/surface that must be
+ * HIDDEN for this role, or the /admin → /dashboard redirect. Positive ("can do
+ * it") cases and anything needing a record/action stay `test.fixme` — their
+ * selectors are explorer-reported hints that need verifying against the build.
+ */
 function autoRunnable(c: Case, status: string): boolean {
   const spec = STATUS[status];
   if (!spec) return false;
-  const { dynamic } = routeOf(c.route);
-  if (dynamic) return false;
-  if (c.id.startsWith("nav-admin") && spec.kind === "hidden") return true; // redirect check
-  const resolvables = (c.selectors || []).filter((s) => !s.includes("<") && resolveKind(s));
-  if (!resolvables.length) return false;
-  if (spec.kind === "hidden") return true;
-  if (spec.kind === "enabled") return resolvables.some(isLoadTime);
-  return false; // disabled/readonly/action → fixme in the skeleton
-}
-function resolveKind(sel: string): boolean {
-  return /^(a\[|\[|\.|#|tab:|btn:|nav:|role:|text:)/.test(sel) || /^[a-z0-9-]+$/.test(sel);
+  if (routeOf(c.route).dynamic) return false;
+  if (c.id.startsWith("nav-admin") && spec.kind === "hidden") return true; // redirect
+  if (spec.kind === "hidden") return (c.selectors || []).some(absenceAssertable);
+  return false;
 }
 
-async function assertCase(page: Page, c: Case, kind: string) {
+async function assertCase(page: Page, c: Case) {
   const { path } = routeOf(c.route);
-  if (c.id.startsWith("nav-admin") && kind === "hidden") {
+  if (c.id.startsWith("nav-admin")) {
+    // Non-admins are bounced off /admin to /dashboard.
     await page.goto(path, { waitUntil: "domcontentloaded" });
     await page.waitForURL("**/dashboard", { timeout: 20_000 });
     expect(page.url()).toContain("/dashboard");
     return;
   }
   await page.goto(path, { waitUntil: "domcontentloaded" });
-  const locs = (c.selectors || []).map((s) => resolve(page, s)).filter(Boolean);
-  if (kind === "hidden") {
-    for (const loc of locs) await expect(loc!).toHaveCount(0);
-  } else if (kind === "enabled") {
-    const lt = (c.selectors || []).find(isLoadTime);
-    await expect(resolve(page, lt!)!.first()).toBeVisible();
+  // Every nav/tab/filter that must be absent for this role.
+  for (const sel of (c.selectors || []).filter(absenceAssertable)) {
+    await expect(resolve(page, sel)!).toHaveCount(0);
   }
 }
 
@@ -137,7 +135,7 @@ test.describe("Role-access matrix (case 20)", () => {
           test.skip(!ctx, `no credentials configured for persona "${persona}" (set E2E_${persona.toUpperCase()}_EMAIL/_PASSWORD)`);
           const page = await ctx!.newPage();
           try {
-            await assertCase(page, c, spec.kind);
+            await assertCase(page, c);
           } finally {
             await ctx!.close();
           }
