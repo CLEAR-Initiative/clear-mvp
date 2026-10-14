@@ -2141,6 +2141,7 @@
       "inbox": "Bandeja",
       "map": "Mapa",
       "insights": "Hallazgos",
+      "metrics": "Métricas",
       "operations": "Operaciones",
       "cash": "Asistencia en efectivo",
       "knowledge": "Centro de conocimiento",
@@ -3390,5 +3391,25 @@
     "lowConfidence": "Confianza baja",
     "pastEvent": "Evento pasado {n}",
     "moreEvents": "+{count} más"
+  },
+  "metrics": {
+    "page": {
+      "title": "Métricas",
+      "breadcrumb": "Métricas"
+    },
+    "loading": "Cargando métricas…",
+    "error": {
+      "title": "No se pudieron cargar las métricas"
+    },
+    "unavailable": {
+      "title": "La API de métricas aún no está desplegada",
+      "body": "La API de CLEAR de este entorno todavía no ofrece el tiempo de detección. La página se completará en cuanto lo haga."
+    },
+    "tiles": {
+      "counted": {
+        "label": "Eventos medidos",
+        "detail": "de {total, number} eventos del periodo"
+      }
+    }
   }
 }

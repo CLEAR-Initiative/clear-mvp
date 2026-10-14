@@ -2141,6 +2141,7 @@
       "inbox": "Boîte de réception",
       "map": "Carte",
       "insights": "Constats",
+      "metrics": "Indicateurs",
       "operations": "Opérations",
       "cash": "Assistance monétaire",
       "knowledge": "Centre de connaissances",
@@ -3390,5 +3391,25 @@
     "lowConfidence": "Faible confiance",
     "pastEvent": "Événement passé {n}",
     "moreEvents": "+{count} de plus"
+  },
+  "metrics": {
+    "page": {
+      "title": "Indicateurs",
+      "breadcrumb": "Indicateurs"
+    },
+    "loading": "Chargement des indicateurs…",
+    "error": {
+      "title": "Impossible de charger les indicateurs"
+    },
+    "unavailable": {
+      "title": "L'API des indicateurs n'est pas encore déployée",
+      "body": "L'API CLEAR de cet environnement ne fournit pas encore le délai de détection. La page se remplira dès qu'elle le fera."
+    },
+    "tiles": {
+      "counted": {
+        "label": "Événements mesurés",
+        "detail": "sur {total, number} événements de la période"
+      }
+    }
   }
 }

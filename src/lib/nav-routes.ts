@@ -9,6 +9,7 @@ export const NAV_ROUTES = {
   inbox: "/inbox",
   map: "/map",
   insights: "/insights",
+  metrics: "/metrics",
   operations: "/operations",
   cash: "/cash",
   knowledge: "/knowledge",

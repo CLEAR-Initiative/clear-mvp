@@ -2141,6 +2141,7 @@
       "inbox": "Inbox",
       "map": "Map",
       "insights": "Insights",
+      "metrics": "Metrics",
       "operations": "Operations",
       "cash": "Cash Assistance",
       "knowledge": "Knowledge Hub",
@@ -3390,5 +3391,25 @@
     "lowConfidence": "Low confidence",
     "pastEvent": "Past event {n}",
     "moreEvents": "+{count} more"
+  },
+  "metrics": {
+    "page": {
+      "title": "Metrics",
+      "breadcrumb": "Metrics"
+    },
+    "loading": "Loading metrics…",
+    "error": {
+      "title": "Couldn't load the metrics"
+    },
+    "unavailable": {
+      "title": "Metrics API not deployed yet",
+      "body": "This environment's CLEAR API doesn't serve time to detection yet. The page fills in once it does."
+    },
+    "tiles": {
+      "counted": {
+        "label": "Events measured",
+        "detail": "of {total, number} events in range"
+      }
+    }
   }
 }
