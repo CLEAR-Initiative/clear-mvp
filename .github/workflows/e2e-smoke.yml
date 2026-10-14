@@ -104,6 +104,7 @@ jobs:
           docker compose -f docker-compose.e2e.yml -f docker-compose.e2e.ci.yml up -d --build --wait db redis api web || \
             (docker compose -f docker-compose.e2e.yml logs --no-color --tail=200; exit 1)
           docker compose -f docker-compose.e2e.yml -f docker-compose.e2e.ci.yml run --rm seed
+          docker compose -f docker-compose.e2e.yml -f docker-compose.e2e.ci.yml run --rm seed-roles
           docker compose -f docker-compose.e2e.yml -f docker-compose.e2e.ci.yml run --rm seed-ground
           docker compose -f docker-compose.e2e.yml -f docker-compose.e2e.ci.yml run --rm seed-event-types
           docker compose -f docker-compose.e2e.yml -f docker-compose.e2e.ci.yml run --rm seed-agent-key

@@ -189,6 +189,32 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # One-shot: role personas for the role-access matrix spec (case 20) — a team
+  # under the seeded org, the ERM team membership for emr.user, and pending /
+  # team_admin / org_admin / field_coordinator / team_member accounts. Same
+  # image and bind-mount pattern as `seed-ground`. Runs AFTER `seed` (needs the
+  # org + emr.user it creates).
+  seed-roles:
+    build:
+      context: ../clear-api
+      target: build
+    image: clear-e2e-seed:latest
+    command: ["bun", "/app/e2e-roles-seed.ts"]
+    volumes:
+      - ./e2e/support/roles-seed.ts:/app/e2e-roles-seed.ts:ro
+    environment:
+      DATABASE_URL: postgres://clear:clear@db:5432/clear
+      BETTER_AUTH_SECRET: E2E_SMOKE_BETTER_AUTH_SECRET_0123456789abcdef
+      BETTER_AUTH_URL: http://localhost:4000
+      CELERY_BROKER_URL: redis://redis:6379/0
+      ADMIN_EMAIL: admin@clearinitiative.io
+      ADMIN_PASSWORD: password123
+      NODE_ENV: production
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: "no"
+
   # Stand-in for NRC Find (the CLEAR Agent's document tool): a tiny node
   # server answering in NRC Find's NDJSON shape. See e2e/support/nrc-find-stub.mjs.
   nrc-find:
