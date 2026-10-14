@@ -3421,6 +3421,19 @@
       },
       "ofCounted": "{n, number} sur {counted, number} mesurés",
       "ofInRange": "{n, number} sur {total, number} de la période"
+    },
+    "histogram": {
+      "title": "Jours entre le début et le premier signal",
+      "subtitle": "Événements mesurés selon le nombre de jours après leur début où CLEAR a reçu le premier signal",
+      "series": "Événements",
+      "tooltip": "{count, plural, one {# événement} other {# événements}} · {share} des mesurés",
+      "footnote": "Sur {counted, plural, one {# événement mesuré} other {# événements mesurés}}. Les jours sont des jours calendaires entiers : même jour = 0, lendemain = 1.",
+      "buckets": {
+        "sameDay": "Même jour",
+        "nextDay": "Lendemain",
+        "plusDays": "+{days} j",
+        "openEnded": "{days} j et +"
+      }
     }
   }
 }

@@ -1,11 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Alert, Box, Text } from "@mantine/core";
+import { Alert, Box, Stack, Text } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { PageHeader } from "~/components/ui";
 import { api } from "~/trpc/react";
 import { StatTiles } from "./_components/stat-tiles";
+import { TtdHistogram } from "./_components/ttd-histogram";
 
 /**
  * Admin-only platform metrics. Today: time to detection (clear-api
@@ -31,7 +32,10 @@ export default function MetricsPage() {
             {t("unavailable.body")}
           </Alert>
         ) : result?.status === "ok" ? (
-          <StatTiles metrics={result.metrics} />
+          <Stack gap={0}>
+            <StatTiles metrics={result.metrics} />
+            <TtdHistogram metrics={result.metrics} />
+          </Stack>
         ) : (
           <Text size="sm" c="var(--color-text-muted)">
             {t("loading")}

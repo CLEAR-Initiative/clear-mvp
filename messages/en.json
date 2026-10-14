@@ -3421,6 +3421,19 @@
       },
       "ofCounted": "{n, number} of {counted, number} measured",
       "ofInRange": "{n, number} of {total, number} in range"
+    },
+    "histogram": {
+      "title": "Days from onset to first signal",
+      "subtitle": "Measured events by how many days after onset CLEAR received its first signal",
+      "series": "Events",
+      "tooltip": "{count, plural, one {# event} other {# events}} · {share} of measured",
+      "footnote": "Out of {counted, plural, one {# measured event} other {# measured events}}. Days are whole calendar days: same day = 0, next day = 1.",
+      "buckets": {
+        "sameDay": "Same day",
+        "nextDay": "Next day",
+        "plusDays": "+{days}d",
+        "openEnded": "{days}d+"
+      }
     }
   }
 }

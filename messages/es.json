@@ -3421,6 +3421,19 @@
       },
       "ofCounted": "{n, number} de {counted, number} medidos",
       "ofInRange": "{n, number} de {total, number} del periodo"
+    },
+    "histogram": {
+      "title": "Días entre el inicio y la primera señal",
+      "subtitle": "Eventos medidos según cuántos días después del inicio recibió CLEAR su primera señal",
+      "series": "Eventos",
+      "tooltip": "{count, plural, one {# evento} other {# eventos}} · {share} de los medidos",
+      "footnote": "De {counted, plural, one {# evento medido} other {# eventos medidos}}. Los días son días naturales completos: mismo día = 0, día siguiente = 1.",
+      "buckets": {
+        "sameDay": "Mismo día",
+        "nextDay": "Día siguiente",
+        "plusDays": "+{days} d",
+        "openEnded": "{days} d o más"
+      }
     }
   }
 }

@@ -6,6 +6,8 @@ import { NextIntlClientProvider } from "next-intl";
 import enMessages from "../../../../../messages/en.json";
 import { withShares, type GqlDetectionMetrics } from "~/lib/detection-metrics";
 import { StatTiles } from "./stat-tiles";
+import { bucketLabelKey, TtdHistogram } from "./ttd-histogram";
+import { createTranslator } from "next-intl";
 
 afterEach(() => cleanup());
 
@@ -69,5 +71,22 @@ describe("StatTiles", () => {
     wrap(<StatTiles metrics={withShares(EMPTY)} />);
     expect(screen.getAllByText("—")).toHaveLength(3);
     expect(screen.getAllByText("0 of 0 measured")).toHaveLength(2);
+  });
+});
+
+describe("TtdHistogram", () => {
+  it("labels the nine buckets same day, next day, +2d … +7d, 8d+", () => {
+    const t = createTranslator({ locale: "en", messages: enMessages, namespace: "metrics.histogram.buckets" });
+    const labels = withShares(RAW).histogram.map((row) => {
+      const { key, days } = bucketLabelKey(row);
+      return t(key, { days });
+    });
+    expect(labels).toEqual(["Same day", "Next day", "+2d", "+3d", "+4d", "+5d", "+6d", "+7d", "8d+"]);
+  });
+
+  it("renders its card with the measured total", () => {
+    wrap(<TtdHistogram metrics={withShares(RAW)} />);
+    expect(screen.getByText("Days from onset to first signal")).toBeInTheDocument();
+    expect(screen.getByText(/Out of 20 measured events/)).toBeInTheDocument();
   });
 });

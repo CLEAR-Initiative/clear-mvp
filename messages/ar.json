@@ -3421,6 +3421,19 @@
       },
       "ofCounted": "{n, number} من أصل {counted, number} مقيسة",
       "ofInRange": "{n, number} من أصل {total, number} في الفترة"
+    },
+    "histogram": {
+      "title": "الأيام من البدء حتى أول إشارة",
+      "subtitle": "الأحداث المقيسة حسب عدد الأيام بعد البدء التي تلقّى فيها CLEAR أول إشارة",
+      "series": "الأحداث",
+      "tooltip": "{count, plural, zero {لا أحداث} one {حدث واحد} two {حدثان} few {# أحداث} many {# حدثًا} other {# حدث}} · {share} من المقيسة",
+      "footnote": "من أصل {counted, plural, zero {صفر حدث مقيس} one {حدث مقيس واحد} two {حدثين مقيسين} few {# أحداث مقيسة} many {# حدثًا مقيسًا} other {# حدث مقيس}}. الأيام أيام تقويمية كاملة: اليوم نفسه = 0، اليوم التالي = 1.",
+      "buckets": {
+        "sameDay": "اليوم نفسه",
+        "nextDay": "اليوم التالي",
+        "plusDays": "+{days} ي",
+        "openEnded": "{days} ي فأكثر"
+      }
     }
   }
 }
