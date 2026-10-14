@@ -3409,7 +3409,18 @@
       "counted": {
         "label": "Events measured",
         "detail": "of {total, number} events in range"
-      }
+      },
+      "byNextDay": {
+        "label": "Detected by next day"
+      },
+      "sameDay": {
+        "label": "Detected same day"
+      },
+      "withOnset": {
+        "label": "Events with an onset"
+      },
+      "ofCounted": "{n, number} of {counted, number} measured",
+      "ofInRange": "{n, number} of {total, number} in range"
     }
   }
 }

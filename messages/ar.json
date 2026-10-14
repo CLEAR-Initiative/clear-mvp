@@ -3409,7 +3409,18 @@
       "counted": {
         "label": "الأحداث المقيسة",
         "detail": "من أصل {total, number} حدثًا في الفترة"
-      }
+      },
+      "byNextDay": {
+        "label": "رُصدت بحلول اليوم التالي"
+      },
+      "sameDay": {
+        "label": "رُصدت في اليوم نفسه"
+      },
+      "withOnset": {
+        "label": "أحداث لها تاريخ بدء"
+      },
+      "ofCounted": "{n, number} من أصل {counted, number} مقيسة",
+      "ofInRange": "{n, number} من أصل {total, number} في الفترة"
     }
   }
 }

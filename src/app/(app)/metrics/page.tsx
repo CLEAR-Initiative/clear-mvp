@@ -1,10 +1,11 @@
 "use client";
 
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Alert, Box, Text } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
-import { PageHeader, StatsGrid } from "~/components/ui";
+import { PageHeader } from "~/components/ui";
 import { api } from "~/trpc/react";
+import { StatTiles } from "./_components/stat-tiles";
 
 /**
  * Admin-only platform metrics. Today: time to detection (clear-api
@@ -13,7 +14,6 @@ import { api } from "~/trpc/react";
  */
 export default function MetricsPage() {
   const t = useTranslations("metrics");
-  const format = useFormatter();
   const query = api.metrics.detection.useQuery(undefined, { refetchOnWindowFocus: false });
   const result = query.data;
 
@@ -31,18 +31,7 @@ export default function MetricsPage() {
             {t("unavailable.body")}
           </Alert>
         ) : result?.status === "ok" ? (
-          <StatsGrid
-            cols={4}
-            stats={[
-              {
-                label: t("tiles.counted.label"),
-                value: format.number(result.metrics.counted),
-                color: "var(--color-text-primary)",
-                sub: t("tiles.counted.detail", { total: result.metrics.eventsInRange }),
-                subColor: "var(--color-text-muted)",
-              },
-            ]}
-          />
+          <StatTiles metrics={result.metrics} />
         ) : (
           <Text size="sm" c="var(--color-text-muted)">
             {t("loading")}

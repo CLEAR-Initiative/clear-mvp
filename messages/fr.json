@@ -3409,7 +3409,18 @@
       "counted": {
         "label": "Événements mesurés",
         "detail": "sur {total, number} événements de la période"
-      }
+      },
+      "byNextDay": {
+        "label": "Détectés au plus tard le lendemain"
+      },
+      "sameDay": {
+        "label": "Détectés le jour même"
+      },
+      "withOnset": {
+        "label": "Événements avec une date de début"
+      },
+      "ofCounted": "{n, number} sur {counted, number} mesurés",
+      "ofInRange": "{n, number} sur {total, number} de la période"
     }
   }
 }
