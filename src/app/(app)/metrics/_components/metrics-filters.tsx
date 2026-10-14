@@ -10,26 +10,25 @@ export interface MetricsFilterValues {
   from: string;
   /** `YYYY-MM-DD`, or "" for clear-api's default. */
   to: string;
-  /** Country name as `useLocations` lists it, or null for all countries. */
-  country: string | null;
+  /** A country's location id, or null for all countries. */
+  locationId: string | null;
 }
 
-/** The query input for a filter state: whole UTC days, the location by id,
- * and anything left empty omitted so clear-api applies its default. */
-export function metricsQueryInput(
-  values: MetricsFilterValues,
-  locationIdOf: (name: string) => string | null,
-): { from?: string; to?: string; locationId?: string } {
+/** The query input for a filter state: whole UTC days, and anything left
+ * empty omitted so clear-api applies its default. */
+export function metricsQueryInput(values: MetricsFilterValues): { from?: string; to?: string; locationId?: string } {
   const input: { from?: string; to?: string; locationId?: string } = {};
   if (values.from) input.from = `${values.from}T00:00:00.000Z`;
   if (values.to) input.to = `${values.to}T23:59:59.999Z`;
-  const locationId = values.country ? locationIdOf(values.country) : null;
-  if (locationId) input.locationId = locationId;
+  if (values.locationId) input.locationId = values.locationId;
   return input;
 }
 
 /** Date range and country for the metrics. Every country, not the team's:
- * this is a platform-admin page. */
+ * this is a platform-admin page. Only countries from the loaded location
+ * tree are offered, so a pick always has an id to filter by — never
+ * `useLocations`' name-only fallback, which would show global totals
+ * under a country's name. */
 export function MetricsFilters({
   values,
   onChange,
@@ -41,7 +40,10 @@ export function MetricsFilters({
   error: string | null;
 }) {
   const t = useTranslations("metrics.filters");
-  const { countries, isLoading } = useLocations();
+  const { tree, isLoading } = useLocations();
+  const countryOptions = tree
+    .map((country) => ({ value: country.id, label: shortCountryName(country.name) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   return (
     <div>
@@ -69,10 +71,10 @@ export function MetricsFilters({
         <Select
           label={t("country")}
           placeholder={t("allCountries")}
-          data={countries.map((name) => ({ value: name, label: shortCountryName(name) }))}
-          value={values.country}
-          onChange={(country) => onChange({ ...values, country })}
-          disabled={isLoading}
+          data={countryOptions}
+          value={values.locationId}
+          onChange={(locationId) => onChange({ ...values, locationId })}
+          disabled={isLoading || countryOptions.length === 0}
           searchable
           clearable
           size="xs"

@@ -14,7 +14,6 @@ import { WeeklyTrend } from "./_components/weekly-trend";
 import { ExclusionsCard } from "./_components/exclusions-card";
 import { MethodNote } from "./_components/method-note";
 import { MetricsFilters, metricsQueryInput, type MetricsFilterValues } from "./_components/metrics-filters";
-import { useLocations } from "~/hooks/use-locations";
 
 /** An Alert in theme tokens: the semantic colour marks the edge and icon,
  * the text stays in text tokens so it reads in light and dark. */
@@ -41,9 +40,8 @@ export default function MetricsPage() {
   const t = useTranslations("metrics");
   const format = useFormatter();
   const utcDay = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeZone: "UTC" });
-  const { getLocationId } = useLocations();
-  const [filters, setFilters] = useState<MetricsFilterValues>({ from: "", to: "", country: null });
-  const query = api.metrics.detection.useQuery(metricsQueryInput(filters, getLocationId), {
+  const [filters, setFilters] = useState<MetricsFilterValues>({ from: "", to: "", locationId: null });
+  const query = api.metrics.detection.useQuery(metricsQueryInput(filters), {
     refetchOnWindowFocus: false,
     placeholderData: keepPreviousData,
     // A refused range or a non-admin will not change on retry.

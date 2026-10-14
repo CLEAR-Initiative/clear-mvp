@@ -161,14 +161,12 @@ describe("ExclusionsCard", () => {
 });
 
 describe("metricsQueryInput", () => {
-  const ids = (name: string) => (name === "Sudan" ? "loc-sdn" : null);
-
   it("omits what is empty, so clear-api applies its default", () => {
-    expect(metricsQueryInput({ from: "", to: "", country: null }, ids)).toEqual({});
+    expect(metricsQueryInput({ from: "", to: "", locationId: null })).toEqual({});
   });
 
   it("covers whole UTC days and sends the country by id", () => {
-    expect(metricsQueryInput({ from: "2026-01-05", to: "2026-03-29", country: "Sudan" }, ids)).toEqual({
+    expect(metricsQueryInput({ from: "2026-01-05", to: "2026-03-29", locationId: "loc-sdn" })).toEqual({
       from: "2026-01-05T00:00:00.000Z",
       to: "2026-03-29T23:59:59.999Z",
       locationId: "loc-sdn",

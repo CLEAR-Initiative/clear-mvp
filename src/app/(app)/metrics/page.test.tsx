@@ -17,12 +17,15 @@ const useQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: nul
 vi.mock("~/trpc/react", () => ({
   api: { metrics: { detection: { useQuery: (...args: unknown[]) => useQuery(...args) } } },
 }));
+// The location tree as useLocations serves it; empty when locations.tree
+// failed, while `countries` falls back to names with no ids.
+const TREE = [
+  { id: "loc-tcd", name: "Chad", states: [] },
+  { id: "loc-sdn", name: "Sudan", states: [] },
+];
+let tree: Array<{ id: string; name: string; states: never[] }> = TREE;
 vi.mock("~/hooks/use-locations", () => ({
-  useLocations: () => ({
-    countries: ["Chad", "Sudan"],
-    isLoading: false,
-    getLocationId: (name: string) => ({ Chad: "loc-tcd", Sudan: "loc-sdn" })[name] ?? null,
-  }),
+  useLocations: () => ({ countries: ["Chad", "Sudan"], tree, isLoading: false }),
 }));
 vi.mock("recharts", async () => {
   const actual = await vi.importActual<typeof import("recharts")>("recharts");
@@ -38,6 +41,7 @@ const { default: MetricsPage } = await import("./page");
 afterEach(() => {
   cleanup();
   queryState = {};
+  tree = TREE;
   useQuery.mockClear();
 });
 
@@ -134,5 +138,21 @@ describe("MetricsPage", () => {
     renderPage();
     expect(screen.getByRole("alert")).toHaveTextContent("The range can span at most 364 days");
     expect(screen.queryByText("Couldn't load the metrics")).not.toBeInTheDocument();
+  });
+
+  it("filters by the picked country's location id", async () => {
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    renderPage();
+    fireEvent.click(screen.getByRole("textbox", { name: "Country" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Sudan" }));
+    expect(useQuery.mock.calls.at(-1)![0]).toEqual({ locationId: "loc-sdn" });
+  });
+
+  it("offers no country when the location tree did not load, rather than names without ids", () => {
+    tree = [];
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    renderPage();
+    expect(screen.getByRole("textbox", { name: "Country" })).toBeDisabled();
+    expect(useQuery.mock.calls.at(-1)![0]).toEqual({});
   });
 });
