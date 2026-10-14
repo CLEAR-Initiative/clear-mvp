@@ -3434,6 +3434,21 @@
         "plusDays": "+{days}d",
         "openEnded": "{days}d+"
       }
+    },
+    "weekly": {
+      "title": "Weekly trend",
+      "subtitle": "Share of each ISO week's measured events",
+      "legend": "Legend",
+      "series": {
+        "byNextDay": "By next day",
+        "sameDay": "Same day"
+      },
+      "partial": "partial",
+      "tooltip": {
+        "week": "{week} · from {start}",
+        "n": "n = {n, plural, one {# measured event} other {# measured events}}",
+        "partial": "Partial week: still in progress"
+      }
     }
   }
 }

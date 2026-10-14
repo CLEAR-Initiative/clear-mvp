@@ -3434,6 +3434,21 @@
         "plusDays": "+{days} ي",
         "openEnded": "{days} ي فأكثر"
       }
+    },
+    "weekly": {
+      "title": "الاتجاه الأسبوعي",
+      "subtitle": "نسبة الأحداث المقيسة في كل أسبوع ISO",
+      "legend": "مفتاح الرسم",
+      "series": {
+        "byNextDay": "بحلول اليوم التالي",
+        "sameDay": "اليوم نفسه"
+      },
+      "partial": "جزئي",
+      "tooltip": {
+        "week": "{week} · من {start}",
+        "n": "n = {n, plural, zero {لا أحداث مقيسة} one {حدث مقيس واحد} two {حدثان مقيسان} few {# أحداث مقيسة} many {# حدثًا مقيسًا} other {# حدث مقيس}}",
+        "partial": "أسبوع جزئي: لا يزال جاريًا"
+      }
     }
   }
 }

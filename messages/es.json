@@ -3434,6 +3434,21 @@
         "plusDays": "+{days} d",
         "openEnded": "{days} d o más"
       }
+    },
+    "weekly": {
+      "title": "Tendencia semanal",
+      "subtitle": "Proporción de los eventos medidos de cada semana ISO",
+      "legend": "Leyenda",
+      "series": {
+        "byNextDay": "A más tardar al día siguiente",
+        "sameDay": "Mismo día"
+      },
+      "partial": "parcial",
+      "tooltip": {
+        "week": "{week} · desde el {start}",
+        "n": "n = {n, plural, one {# evento medido} other {# eventos medidos}}",
+        "partial": "Semana parcial: aún en curso"
+      }
     }
   }
 }

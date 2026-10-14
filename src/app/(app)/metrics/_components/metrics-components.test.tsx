@@ -1,5 +1,5 @@
 import React from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { NextIntlClientProvider } from "next-intl";
@@ -7,9 +7,20 @@ import enMessages from "../../../../../messages/en.json";
 import { withShares, type GqlDetectionMetrics } from "~/lib/detection-metrics";
 import { StatTiles } from "./stat-tiles";
 import { bucketLabelKey, TtdHistogram } from "./ttd-histogram";
+import { WeeklyTrend } from "./weekly-trend";
 import { createTranslator } from "next-intl";
 
 afterEach(() => cleanup());
+
+// jsdom lays nothing out, so give the charts a fixed size to draw into.
+vi.mock("recharts", async () => {
+  const actual = await vi.importActual<typeof import("recharts")>("recharts");
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: React.ReactElement<{ width?: number; height?: number }> }) =>
+      React.cloneElement(children, { width: 640, height: 240 }),
+  };
+});
 
 function wrap(ui: React.ReactElement) {
   return render(
@@ -84,9 +95,42 @@ describe("TtdHistogram", () => {
     expect(labels).toEqual(["Same day", "Next day", "+2d", "+3d", "+4d", "+5d", "+6d", "+7d", "8d+"]);
   });
 
-  it("renders its card with the measured total", () => {
-    wrap(<TtdHistogram metrics={withShares(RAW)} />);
+  it("draws a bar per bucket, labelled, with the measured total", () => {
+    const { container } = wrap(<TtdHistogram metrics={withShares(RAW)} />);
     expect(screen.getByText("Days from onset to first signal")).toBeInTheDocument();
     expect(screen.getByText(/Out of 20 measured events/)).toBeInTheDocument();
+    for (const label of ["Same day", "Next day", "+2d", "+7d", "8d+"]) {
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    }
+    const fills = [...container.querySelectorAll(".recharts-bar-rectangle path")].map((p) => p.getAttribute("fill"));
+    expect(fills.length).toBeGreaterThan(0);
+    expect(fills.every((f) => f === "var(--color-accent)")).toBe(true);
+  });
+});
+
+describe("WeeklyTrend", () => {
+  it("draws by next day solid and same day dashed, with a legend", () => {
+    const { container } = wrap(<WeeklyTrend metrics={withShares(RAW)} />);
+    expect(screen.getByText("By next day")).toBeInTheDocument();
+    expect(screen.getByText("Same day")).toBeInTheDocument();
+    const curves = [...container.querySelectorAll("path.recharts-line-curve")];
+    expect(curves.map((c) => [c.getAttribute("stroke"), c.getAttribute("stroke-dasharray")])).toEqual([
+      ["var(--color-accent)", null],
+      ["var(--color-info)", "5 4"],
+    ]);
+  });
+
+  it("labels the partial week and draws its marker hollow", () => {
+    const partial = withShares({
+      ...RAW,
+      weekly: [RAW.weekly[0]!, { ...RAW.weekly[1]!, counted: 2, sameDay: 1, byNextDay: 2 }],
+    });
+    const { container } = wrap(<WeeklyTrend metrics={partial} />);
+    // Once in the legend, once under the partial week's tick.
+    expect(screen.getAllByText("partial")).toHaveLength(2);
+    const hollow = [...container.querySelectorAll("circle")].filter(
+      (c) => c.getAttribute("fill") === "var(--color-bg-white)",
+    );
+    expect(hollow).toHaveLength(2);
   });
 });

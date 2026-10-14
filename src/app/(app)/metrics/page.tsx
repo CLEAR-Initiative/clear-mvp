@@ -1,12 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Alert, Box, Stack, Text } from "@mantine/core";
+import { Alert, Box, SimpleGrid, Stack, Text } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { PageHeader } from "~/components/ui";
 import { api } from "~/trpc/react";
 import { StatTiles } from "./_components/stat-tiles";
 import { TtdHistogram } from "./_components/ttd-histogram";
+import { WeeklyTrend } from "./_components/weekly-trend";
 
 /**
  * Admin-only platform metrics. Today: time to detection (clear-api
@@ -34,7 +35,10 @@ export default function MetricsPage() {
         ) : result?.status === "ok" ? (
           <Stack gap={0}>
             <StatTiles metrics={result.metrics} />
-            <TtdHistogram metrics={result.metrics} />
+            <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
+              <TtdHistogram metrics={result.metrics} />
+              <WeeklyTrend metrics={result.metrics} />
+            </SimpleGrid>
           </Stack>
         ) : (
           <Text size="sm" c="var(--color-text-muted)">
