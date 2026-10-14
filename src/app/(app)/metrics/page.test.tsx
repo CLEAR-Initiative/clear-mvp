@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { NextIntlClientProvider } from "next-intl";
 import enMessages from "../../../../messages/en.json";
@@ -8,10 +8,21 @@ import { withShares, type DetectionMetricsResult, type GqlDetectionMetrics } fro
 
 /** The /metrics page's states, with metrics.detection stubbed. */
 
-let queryState: { data?: DetectionMetricsResult; error?: { message: string } | null; isFetching?: boolean } = {};
+let queryState: {
+  data?: DetectionMetricsResult;
+  error?: { message: string; data?: { code: string } } | null;
+  isFetching?: boolean;
+} = {};
 const useQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...queryState }));
 vi.mock("~/trpc/react", () => ({
   api: { metrics: { detection: { useQuery: (...args: unknown[]) => useQuery(...args) } } },
+}));
+vi.mock("~/hooks/use-locations", () => ({
+  useLocations: () => ({
+    countries: ["Chad", "Sudan"],
+    isLoading: false,
+    getLocationId: (name: string) => ({ Chad: "loc-tcd", Sudan: "loc-sdn" })[name] ?? null,
+  }),
 }));
 vi.mock("recharts", async () => {
   const actual = await vi.importActual<typeof import("recharts")>("recharts");
@@ -71,7 +82,7 @@ describe("MetricsPage", () => {
   });
 
   it("shows clear-api's error message", () => {
-    queryState = { error: { message: "Metrics are for platform admins" } };
+    queryState = { error: { message: "Metrics are for platform admins", data: { code: "FORBIDDEN" } } };
     renderPage();
     expect(screen.getByText("Metrics are for platform admins")).toBeInTheDocument();
   });
@@ -103,5 +114,25 @@ describe("MetricsPage", () => {
     expect(screen.getByText("Days from onset to first signal")).toBeInTheDocument();
     expect(screen.getByText("Weekly trend")).toBeInTheDocument();
     expect(screen.getByText("Not measured")).toBeInTheDocument();
+  });
+
+  it("asks clear-api for its default range until a date is picked, then for the picked days", () => {
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    renderPage();
+    expect(useQuery.mock.calls.at(-1)![0]).toEqual({});
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-01-05" } });
+    fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-03-29" } });
+    expect(useQuery.mock.calls.at(-1)![0]).toEqual({
+      from: "2026-01-05T00:00:00.000Z",
+      to: "2026-03-29T23:59:59.999Z",
+    });
+    expect(screen.getByText("Showing Jul 20, 2026 to Oct 14, 2026")).toBeInTheDocument();
+  });
+
+  it("shows clear-api's range error by the dates, not as a page error", () => {
+    queryState = { error: { message: "The range can span at most 364 days", data: { code: "BAD_REQUEST" } } };
+    renderPage();
+    expect(screen.getByRole("alert")).toHaveTextContent("The range can span at most 364 days");
+    expect(screen.queryByText("Couldn't load the metrics")).not.toBeInTheDocument();
   });
 });

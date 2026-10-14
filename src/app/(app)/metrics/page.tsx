@@ -1,6 +1,8 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
+import { keepPreviousData } from "@tanstack/react-query";
 import { Alert, Box, SimpleGrid, Stack, Text } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { PageHeader } from "~/components/ui";
@@ -10,6 +12,10 @@ import { TtdHistogram } from "./_components/ttd-histogram";
 import { WeeklyTrend } from "./_components/weekly-trend";
 import { ExclusionsCard } from "./_components/exclusions-card";
 import { MethodNote } from "./_components/method-note";
+import { MetricsFilters, metricsQueryInput, type MetricsFilterValues } from "./_components/metrics-filters";
+import { useLocations } from "~/hooks/use-locations";
+
+const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED"]);
 
 /**
  * Admin-only platform metrics. Today: time to detection (clear-api
@@ -18,7 +24,19 @@ import { MethodNote } from "./_components/method-note";
  */
 export default function MetricsPage() {
   const t = useTranslations("metrics");
-  const query = api.metrics.detection.useQuery(undefined, { refetchOnWindowFocus: false });
+  const format = useFormatter();
+  const utcDay = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeZone: "UTC" });
+  const { getLocationId } = useLocations();
+  const [filters, setFilters] = useState<MetricsFilterValues>({ from: "", to: "", country: null });
+  const query = api.metrics.detection.useQuery(metricsQueryInput(filters, getLocationId), {
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
+    // A refused range or a non-admin will not change on retry.
+    retry: (count, err) => !NO_RETRY.has(err.data?.code ?? "") && count < 2,
+  });
+  // clear-api refuses an inverted range or one over 364 days with its own
+  // message; show it by the dates rather than as a page error.
+  const rangeError = query.error?.data?.code === "BAD_REQUEST" ? query.error.message : null;
   const result = query.data;
 
   return (
@@ -26,7 +44,10 @@ export default function MetricsPage() {
       <PageHeader title={t("page.title")} breadcrumbs={["CLEAR", t("page.breadcrumb")]} loading={query.isFetching} />
 
       <Box p={{ base: 16, sm: 24 }}>
-        {query.error ? (
+        <Box mb={16}>
+          <MetricsFilters values={filters} onChange={setFilters} error={rangeError} />
+        </Box>
+        {rangeError ? null : query.error ? (
           <Alert color="red" icon={<IconAlertTriangle size={16} />} title={t("error.title")}>
             {query.error.message}
           </Alert>
@@ -36,6 +57,9 @@ export default function MetricsPage() {
           </Alert>
         ) : result?.status === "ok" ? (
           <Stack gap={16}>
+            <Text size="xs" c="var(--color-text-muted)">
+              {t("range", { from: utcDay(result.metrics.from), to: utcDay(result.metrics.to) })}
+            </Text>
             {result.metrics.counted === 0 ? (
               <Alert color="gray" title={t("empty.title")}>
                 {t("empty.body", { inRange: result.metrics.eventsInRange })}

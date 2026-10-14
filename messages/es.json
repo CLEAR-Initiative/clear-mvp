@@ -3485,6 +3485,14 @@
         "wholeDays": "El inicio se registra por día, así que el tiempo de detección se cuenta en días completos: mismo día = 0, día siguiente = 1.",
         "definition": "La definición completa es el ADR-0011 de clear-api, «Time to detection»."
       }
+    },
+    "range": "Del {from} al {to}",
+    "filters": {
+      "from": "Desde",
+      "to": "Hasta",
+      "country": "País",
+      "allCountries": "Todos los países",
+      "hint": "Los días están en UTC. Deje las fechas vacías para las últimas 12 semanas."
     }
   }
 }

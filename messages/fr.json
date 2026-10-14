@@ -3485,6 +3485,14 @@
         "wholeDays": "Le début est enregistré au jour près : le délai se compte donc en jours entiers (même jour = 0, lendemain = 1).",
         "definition": "La définition complète est l'ADR-0011 de clear-api, « Time to detection »."
       }
+    },
+    "range": "Du {from} au {to}",
+    "filters": {
+      "from": "Du",
+      "to": "Au",
+      "country": "Pays",
+      "allCountries": "Tous les pays",
+      "hint": "Les jours sont en UTC. Laissez les dates vides pour les 12 dernières semaines."
     }
   }
 }

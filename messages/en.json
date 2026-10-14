@@ -3485,6 +3485,14 @@
         "wholeDays": "Onset is recorded to the day, so time to detection is counted in whole days: same day = 0, next day = 1.",
         "definition": "The full definition is clear-api's ADR-0011, \"Time to detection\"."
       }
+    },
+    "range": "Showing {from} to {to}",
+    "filters": {
+      "from": "From",
+      "to": "To",
+      "country": "Country",
+      "allCountries": "All countries",
+      "hint": "Days are UTC. Leave the dates empty for the last 12 weeks."
     }
   }
 }

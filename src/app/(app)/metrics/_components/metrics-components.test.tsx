@@ -9,6 +9,7 @@ import { StatTiles } from "./stat-tiles";
 import { bucketLabelKey, TtdHistogram } from "./ttd-histogram";
 import { WeeklyTrend } from "./weekly-trend";
 import { ExclusionsCard } from "./exclusions-card";
+import { metricsQueryInput } from "./metrics-filters";
 import { createTranslator } from "next-intl";
 
 afterEach(() => cleanup());
@@ -154,5 +155,21 @@ describe("ExclusionsCard", () => {
   it("shows a reason it has no words for by its code", () => {
     wrap(<ExclusionsCard metrics={withShares({ ...RAW, exclusions: [{ reason: "SOMETHING_NEW", count: 2 }] })} />);
     expect(screen.getByText("SOMETHING_NEW")).toBeInTheDocument();
+  });
+});
+
+describe("metricsQueryInput", () => {
+  const ids = (name: string) => (name === "Sudan" ? "loc-sdn" : null);
+
+  it("omits what is empty, so clear-api applies its default", () => {
+    expect(metricsQueryInput({ from: "", to: "", country: null }, ids)).toEqual({});
+  });
+
+  it("covers whole UTC days and sends the country by id", () => {
+    expect(metricsQueryInput({ from: "2026-01-05", to: "2026-03-29", country: "Sudan" }, ids)).toEqual({
+      from: "2026-01-05T00:00:00.000Z",
+      to: "2026-03-29T23:59:59.999Z",
+      locationId: "loc-sdn",
+    });
   });
 });
