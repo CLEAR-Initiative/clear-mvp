@@ -19,6 +19,7 @@ export function StatTiles({ metrics }: { metrics: DetectionMetrics }) {
   return (
     <StatsGrid
       cols={4}
+      mobileCols={2}
       mb={0}
       stats={[
         {

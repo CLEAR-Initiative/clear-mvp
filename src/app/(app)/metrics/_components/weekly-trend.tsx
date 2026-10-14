@@ -98,8 +98,11 @@ export function WeeklyTrend({ metrics }: { metrics: DetectionMetrics }) {
               tickLine={false}
               axisLine={{ stroke: GRID_STROKE }}
               minTickGap={8}
-              tick={({ x, y, payload, index }: XAxisTickContentProps) => {
-                const partial = data[index]?.isPartial;
+              // Keep the last (possibly partial) week's tick when thinning.
+              interval="preserveEnd"
+              tick={({ x, y, payload }: XAxisTickContentProps) => {
+                // `index` counts the ticks left after thinning, not weeks.
+                const partial = data.find((week) => week.label === payload.value)?.isPartial;
                 return (
                   <text x={x} y={Number(y) + 12} textAnchor="middle" fill={AXIS_TICK.fill} fontSize={AXIS_TICK.fontSize}>
                     <tspan x={x}>{String(payload.value)}</tspan>

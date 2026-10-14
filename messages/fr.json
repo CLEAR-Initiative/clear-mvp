@@ -3431,8 +3431,8 @@
       "buckets": {
         "sameDay": "Même jour",
         "nextDay": "Lendemain",
-        "plusDays": "+{days} j",
-        "openEnded": "{days} j et +"
+        "plusDays": "+{days} j",
+        "openEnded": "{days} j et +"
       }
     },
     "weekly": {

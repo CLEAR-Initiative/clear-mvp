@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Alert, Box, SimpleGrid, Stack, Text } from "@mantine/core";
-import { IconAlertTriangle } from "@tabler/icons-react";
+import { IconAlertTriangle, IconInfoCircle } from "@tabler/icons-react";
 import { PageHeader } from "~/components/ui";
+import { MetricsBodySkeleton } from "~/components/ui/metrics-page-skeleton";
 import { api } from "~/trpc/react";
 import { StatTiles } from "./_components/stat-tiles";
 import { TtdHistogram } from "./_components/ttd-histogram";
@@ -14,6 +15,20 @@ import { ExclusionsCard } from "./_components/exclusions-card";
 import { MethodNote } from "./_components/method-note";
 import { MetricsFilters, metricsQueryInput, type MetricsFilterValues } from "./_components/metrics-filters";
 import { useLocations } from "~/hooks/use-locations";
+
+/** An Alert in theme tokens: the semantic colour marks the edge and icon,
+ * the text stays in text tokens so it reads in light and dark. */
+function noticeStyles(tone: "critical" | "warning" | "info") {
+  return {
+    root: {
+      background: `var(--color-${tone}-light)`,
+      borderInlineStart: `3px solid var(--color-${tone})`,
+    },
+    icon: { color: `var(--color-${tone})` },
+    title: { color: "var(--color-text-primary)" },
+    message: { color: "var(--color-text-secondary)" },
+  };
+}
 
 const NO_RETRY = new Set(["BAD_REQUEST", "FORBIDDEN", "UNAUTHORIZED"]);
 
@@ -48,11 +63,11 @@ export default function MetricsPage() {
           <MetricsFilters values={filters} onChange={setFilters} error={rangeError} />
         </Box>
         {rangeError ? null : query.error ? (
-          <Alert color="red" icon={<IconAlertTriangle size={16} />} title={t("error.title")}>
+          <Alert styles={noticeStyles("critical")} icon={<IconAlertTriangle size={16} />} title={t("error.title")}>
             {query.error.message}
           </Alert>
         ) : result?.status === "unavailable" ? (
-          <Alert color="yellow" icon={<IconAlertTriangle size={16} />} title={t("unavailable.title")}>
+          <Alert styles={noticeStyles("warning")} icon={<IconAlertTriangle size={16} />} title={t("unavailable.title")}>
             {t("unavailable.body")}
           </Alert>
         ) : result?.status === "ok" ? (
@@ -61,7 +76,7 @@ export default function MetricsPage() {
               {t("range", { from: utcDay(result.metrics.from), to: utcDay(result.metrics.to) })}
             </Text>
             {result.metrics.counted === 0 ? (
-              <Alert color="gray" title={t("empty.title")}>
+              <Alert styles={noticeStyles("info")} icon={<IconInfoCircle size={16} />} title={t("empty.title")}>
                 {t("empty.body", { inRange: result.metrics.eventsInRange })}
               </Alert>
             ) : (
@@ -79,9 +94,9 @@ export default function MetricsPage() {
             </SimpleGrid>
           </Stack>
         ) : (
-          <Text size="sm" c="var(--color-text-muted)">
-            {t("loading")}
-          </Text>
+          <Box aria-busy aria-label={t("loading")}>
+            <MetricsBodySkeleton />
+          </Box>
         )}
       </Box>
     </Box>

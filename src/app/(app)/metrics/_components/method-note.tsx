@@ -14,7 +14,7 @@ export function MethodNote() {
       <Text size="sm" c="var(--color-text-secondary)" mb={8}>
         {t("intro")}
       </Text>
-      <List size="sm" spacing={6} c="var(--color-text-secondary)">
+      <List size="sm" spacing={6} listStyleType="disc" c="var(--color-text-secondary)">
         {items.map((key) => (
           <List.Item key={key}>{t(`points.${key}`)}</List.Item>
         ))}

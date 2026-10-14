@@ -78,6 +78,8 @@ An **Event** (or set of Events) raised into the attention lifecycle
 (`draft` | `published` | `archived`) — what analysts act on first.
 _Avoid_: using Alert for any raw Signal; "notification" (product push/tagging is separate).
 
+**Time to detection** (TTD): defined by clear-api (its `CONTEXT.md` "Time to detection" entry and ADR-0011), shown read-only on the admin `/metrics` page, never recomputed here.
+
 ### Review
 
 **Inbox**:

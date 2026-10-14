@@ -101,9 +101,11 @@ describe("TtdHistogram", () => {
     const { container } = wrap(<TtdHistogram metrics={withShares(RAW)} />);
     expect(screen.getByText("Days from onset to first signal")).toBeInTheDocument();
     expect(screen.getByText(/Out of 20 measured events/)).toBeInTheDocument();
-    for (const label of ["Same day", "Next day", "+2d", "+7d", "8d+"]) {
-      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
-    }
+    // Multi-word labels wrap, one word per line.
+    const ticks = [...container.querySelectorAll(".recharts-xAxis-tick-labels text")].map((text) =>
+      [...text.querySelectorAll("tspan")].map((line) => line.textContent).join(" "),
+    );
+    expect(ticks).toEqual(["Same day", "Next day", "+2d", "+3d", "+4d", "+5d", "+6d", "+7d", "8d+"]);
     const fills = [...container.querySelectorAll(".recharts-bar-rectangle path")].map((p) => p.getAttribute("fill"));
     expect(fills.length).toBeGreaterThan(0);
     expect(fills.every((f) => f === "var(--color-accent)")).toBe(true);
