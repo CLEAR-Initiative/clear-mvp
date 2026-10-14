@@ -1,0 +1,107 @@
+import React from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { MantineProvider } from "@mantine/core";
+import { NextIntlClientProvider } from "next-intl";
+import enMessages from "../../../../messages/en.json";
+import { withShares, type DetectionMetricsResult, type GqlDetectionMetrics } from "~/lib/detection-metrics";
+
+/** The /metrics page's states, with metrics.detection stubbed. */
+
+let queryState: { data?: DetectionMetricsResult; error?: { message: string } | null; isFetching?: boolean } = {};
+const useQuery = vi.fn((..._args: unknown[]) => ({ isFetching: false, error: null, ...queryState }));
+vi.mock("~/trpc/react", () => ({
+  api: { metrics: { detection: { useQuery: (...args: unknown[]) => useQuery(...args) } } },
+}));
+vi.mock("recharts", async () => {
+  const actual = await vi.importActual<typeof import("recharts")>("recharts");
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: React.ReactElement<{ width?: number; height?: number }> }) =>
+      React.cloneElement(children, { width: 640, height: 240 }),
+  };
+});
+
+const { default: MetricsPage } = await import("./page");
+
+afterEach(() => {
+  cleanup();
+  queryState = {};
+  useQuery.mockClear();
+});
+
+function renderPage() {
+  return render(
+    <NextIntlClientProvider locale="en" messages={enMessages}>
+      <MantineProvider>
+        <MetricsPage />
+      </MantineProvider>
+    </NextIntlClientProvider>,
+  );
+}
+
+const HISTOGRAM = [
+  ...Array.from({ length: 8 }, (_, d) => ({ daysAfterOnset: d, isOpenEnded: false, count: 0 })),
+  { daysAfterOnset: 8, isOpenEnded: true, count: 0 },
+];
+const EXCLUSIONS = [
+  { reason: "NO_INGESTED_SIGNAL", count: 2 },
+  { reason: "NO_ONSET", count: 3 },
+  { reason: "DATE_ONLY_FIRST_SIGNAL", count: 0 },
+  { reason: "BEFORE_ONSET", count: 0 },
+];
+const NONE_MEASURED: GqlDetectionMetrics = {
+  from: "2026-07-20T00:00:00.000Z",
+  to: "2026-10-14T12:00:00.000Z",
+  eventsInRange: 5,
+  withOnset: 2,
+  counted: 0,
+  sameDay: 0,
+  byNextDay: 0,
+  histogram: HISTOGRAM,
+  weekly: [],
+  exclusions: EXCLUSIONS,
+};
+
+describe("MetricsPage", () => {
+  it("says the API is not deployed yet when clear-api lacks the field", () => {
+    queryState = { data: { status: "unavailable" } };
+    renderPage();
+    expect(screen.getByText("Metrics API not deployed yet")).toBeInTheDocument();
+  });
+
+  it("shows clear-api's error message", () => {
+    queryState = { error: { message: "Metrics are for platform admins" } };
+    renderPage();
+    expect(screen.getByText("Metrics are for platform admins")).toBeInTheDocument();
+  });
+
+  it("with nothing measured, says so and still lists the exclusions", () => {
+    queryState = { data: { status: "ok", metrics: withShares(NONE_MEASURED) } };
+    renderPage();
+    expect(screen.getByText("No measurable events in this range")).toBeInTheDocument();
+    expect(screen.queryByText("Detected by next day")).not.toBeInTheDocument();
+    expect(screen.getByText("No ingested signal")).toBeInTheDocument();
+    expect(screen.getByText("How this is measured")).toBeInTheDocument();
+  });
+
+  it("with events measured, shows the tiles, both charts and the exclusions", () => {
+    queryState = {
+      data: {
+        status: "ok",
+        metrics: withShares({
+          ...NONE_MEASURED,
+          counted: 4,
+          sameDay: 1,
+          byNextDay: 3,
+          histogram: HISTOGRAM.map((r, i) => ({ ...r, count: i === 0 ? 1 : i === 1 ? 2 : i === 3 ? 1 : 0 })),
+        }),
+      },
+    };
+    renderPage();
+    expect(screen.getByText("Detected by next day")).toBeInTheDocument();
+    expect(screen.getByText("Days from onset to first signal")).toBeInTheDocument();
+    expect(screen.getByText("Weekly trend")).toBeInTheDocument();
+    expect(screen.getByText("Not measured")).toBeInTheDocument();
+  });
+});

@@ -3449,6 +3449,42 @@
         "n": "n = {n, plural, one {# measured event} other {# measured events}}",
         "partial": "Partial week: still in progress"
       }
+    },
+    "empty": {
+      "title": "No measurable events in this range",
+      "body": "{inRange, plural, =0 {There are no events in this range.} one {The one event in this range can't be measured; the reason is below.} other {None of the # events in this range can be measured; the reasons are below.}}"
+    },
+    "exclusions": {
+      "title": "Not measured",
+      "subtitle": "{total, number} of {inRange, number} events in range, by reason",
+      "reasons": {
+        "NO_INGESTED_SIGNAL": {
+          "label": "No ingested signal",
+          "description": "Only history: no signal reached CLEAR through an automatic feed."
+        },
+        "NO_ONSET": {
+          "label": "No onset date",
+          "description": "The event has no recorded onset to measure from."
+        },
+        "DATE_ONLY_FIRST_SIGNAL": {
+          "label": "First signal has no time",
+          "description": "The source gives a date but no time of day."
+        },
+        "BEFORE_ONSET": {
+          "label": "First signal before onset",
+          "description": "The first signal is dated before the onset: a data error."
+        }
+      }
+    },
+    "method": {
+      "title": "How this is measured",
+      "intro": "Time to detection is how soon after an event's real-world onset CLEAR received its first signal for it.",
+      "points": {
+        "counted": "An event is measured only when it has an onset date, its first signal carries a real time of day, and that signal is on or after the onset day.",
+        "excluded": "Every other event in the range is left out, under one of four reasons: no ingested signal, no onset date, a first signal with a date but no time, or a first signal dated before onset (a data error).",
+        "wholeDays": "Onset is recorded to the day, so time to detection is counted in whole days: same day = 0, next day = 1.",
+        "definition": "The full definition is clear-api's ADR-0011, \"Time to detection\"."
+      }
     }
   }
 }

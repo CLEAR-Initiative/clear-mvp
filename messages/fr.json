@@ -3449,6 +3449,42 @@
         "n": "n = {n, plural, one {# événement mesuré} other {# événements mesurés}}",
         "partial": "Semaine partielle : encore en cours"
       }
+    },
+    "empty": {
+      "title": "Aucun événement mesurable sur cette période",
+      "body": "{inRange, plural, =0 {Il n'y a aucun événement sur cette période.} one {Le seul événement de la période ne peut pas être mesuré ; la raison figure ci-dessous.} other {Aucun des # événements de la période ne peut être mesuré ; les raisons figurent ci-dessous.}}"
+    },
+    "exclusions": {
+      "title": "Non mesurés",
+      "subtitle": "{total, number} des {inRange, number} événements de la période, par raison",
+      "reasons": {
+        "NO_INGESTED_SIGNAL": {
+          "label": "Aucun signal ingéré",
+          "description": "Historique uniquement : aucun signal n'est arrivé dans CLEAR par un flux automatique."
+        },
+        "NO_ONSET": {
+          "label": "Pas de date de début",
+          "description": "L'événement n'a pas de date de début à partir de laquelle mesurer."
+        },
+        "DATE_ONLY_FIRST_SIGNAL": {
+          "label": "Premier signal sans heure",
+          "description": "La source donne une date mais pas d'heure."
+        },
+        "BEFORE_ONSET": {
+          "label": "Premier signal avant le début",
+          "description": "Le premier signal est daté d'avant le début : une erreur de données."
+        }
+      }
+    },
+    "method": {
+      "title": "Méthode de mesure",
+      "intro": "Le délai de détection est le temps écoulé entre le début réel d'un événement et la réception par CLEAR de son premier signal.",
+      "points": {
+        "counted": "Un événement n'est mesuré que s'il a une date de début, que son premier signal porte une heure réelle et que ce signal date du jour du début ou après.",
+        "excluded": "Tous les autres événements de la période sont exclus, pour l'une de quatre raisons : aucun signal ingéré, pas de date de début, un premier signal daté sans heure, ou un premier signal daté d'avant le début (une erreur de données).",
+        "wholeDays": "Le début est enregistré au jour près : le délai se compte donc en jours entiers (même jour = 0, lendemain = 1).",
+        "definition": "La définition complète est l'ADR-0011 de clear-api, « Time to detection »."
+      }
     }
   }
 }

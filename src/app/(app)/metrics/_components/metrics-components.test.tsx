@@ -8,6 +8,7 @@ import { withShares, type GqlDetectionMetrics } from "~/lib/detection-metrics";
 import { StatTiles } from "./stat-tiles";
 import { bucketLabelKey, TtdHistogram } from "./ttd-histogram";
 import { WeeklyTrend } from "./weekly-trend";
+import { ExclusionsCard } from "./exclusions-card";
 import { createTranslator } from "next-intl";
 
 afterEach(() => cleanup());
@@ -132,5 +133,26 @@ describe("WeeklyTrend", () => {
       (c) => c.getAttribute("fill") === "var(--color-bg-white)",
     );
     expect(hollow).toHaveLength(2);
+  });
+});
+
+describe("ExclusionsCard", () => {
+  it("lists the four reasons in plain language with their counts", () => {
+    wrap(<ExclusionsCard metrics={withShares(RAW)} />);
+    expect(screen.getByText("20 of 40 events in range, by reason")).toBeInTheDocument();
+    for (const [label, count] of [
+      ["No ingested signal", "6"],
+      ["No onset date", "10"],
+      ["First signal has no time", "3"],
+      ["First signal before onset", "1"],
+    ]) {
+      const row = screen.getByText(label).closest("div")!.parentElement!;
+      expect(row).toHaveTextContent(count!);
+    }
+  });
+
+  it("shows a reason it has no words for by its code", () => {
+    wrap(<ExclusionsCard metrics={withShares({ ...RAW, exclusions: [{ reason: "SOMETHING_NEW", count: 2 }] })} />);
+    expect(screen.getByText("SOMETHING_NEW")).toBeInTheDocument();
   });
 });

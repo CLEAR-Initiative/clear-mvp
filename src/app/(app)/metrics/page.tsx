@@ -8,6 +8,8 @@ import { api } from "~/trpc/react";
 import { StatTiles } from "./_components/stat-tiles";
 import { TtdHistogram } from "./_components/ttd-histogram";
 import { WeeklyTrend } from "./_components/weekly-trend";
+import { ExclusionsCard } from "./_components/exclusions-card";
+import { MethodNote } from "./_components/method-note";
 
 /**
  * Admin-only platform metrics. Today: time to detection (clear-api
@@ -33,11 +35,23 @@ export default function MetricsPage() {
             {t("unavailable.body")}
           </Alert>
         ) : result?.status === "ok" ? (
-          <Stack gap={0}>
-            <StatTiles metrics={result.metrics} />
+          <Stack gap={16}>
+            {result.metrics.counted === 0 ? (
+              <Alert color="gray" title={t("empty.title")}>
+                {t("empty.body", { inRange: result.metrics.eventsInRange })}
+              </Alert>
+            ) : (
+              <>
+                <StatTiles metrics={result.metrics} />
+                <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
+                  <TtdHistogram metrics={result.metrics} />
+                  <WeeklyTrend metrics={result.metrics} />
+                </SimpleGrid>
+              </>
+            )}
             <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={16}>
-              <TtdHistogram metrics={result.metrics} />
-              <WeeklyTrend metrics={result.metrics} />
+              <ExclusionsCard metrics={result.metrics} />
+              <MethodNote />
             </SimpleGrid>
           </Stack>
         ) : (

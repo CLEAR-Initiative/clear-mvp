@@ -19,6 +19,7 @@ export function StatTiles({ metrics }: { metrics: DetectionMetrics }) {
   return (
     <StatsGrid
       cols={4}
+      mb={0}
       stats={[
         {
           label: t("byNextDay.label"),
