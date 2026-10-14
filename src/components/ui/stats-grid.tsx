@@ -11,14 +11,14 @@ export interface StatItem {
 interface StatsGridProps {
   stats: StatItem[];
   cols?: number;
+  /** Columns below `sm`; defaults to up to three. */
+  mobileCols?: number;
   mb?: number;
   /** Optional style override for individual cards */
   cardStyle?: (stat: StatItem, index: number) => React.CSSProperties;
 }
 
-export function StatsGrid({ stats, cols = 4, mb = 24, cardStyle }: StatsGridProps) {
-  const mobileCols = Math.min(stats.length, 3);
-
+export function StatsGrid({ stats, cols = 4, mobileCols = Math.min(stats.length, 3), mb = 24, cardStyle }: StatsGridProps) {
   return (
     <SimpleGrid
       cols={{ base: mobileCols, sm: cols }}

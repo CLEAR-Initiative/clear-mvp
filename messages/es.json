@@ -2141,6 +2141,7 @@
       "inbox": "Bandeja",
       "map": "Mapa",
       "insights": "Hallazgos",
+      "metrics": "Métricas",
       "operations": "Operaciones",
       "cash": "Asistencia en efectivo",
       "knowledge": "Centro de conocimiento",
@@ -3390,5 +3391,108 @@
     "lowConfidence": "Confianza baja",
     "pastEvent": "Evento pasado {n}",
     "moreEvents": "+{count} más"
+  },
+  "metrics": {
+    "page": {
+      "title": "Métricas",
+      "breadcrumb": "Métricas"
+    },
+    "loading": "Cargando métricas…",
+    "error": {
+      "title": "No se pudieron cargar las métricas"
+    },
+    "unavailable": {
+      "title": "La API de métricas aún no está desplegada",
+      "body": "La API de CLEAR de este entorno todavía no ofrece el tiempo de detección. La página se completará en cuanto lo haga."
+    },
+    "tiles": {
+      "counted": {
+        "label": "Eventos medidos",
+        "detail": "de {total, number} eventos del periodo"
+      },
+      "byNextDay": {
+        "label": "Detectados a más tardar al día siguiente"
+      },
+      "sameDay": {
+        "label": "Detectados el mismo día"
+      },
+      "withOnset": {
+        "label": "Eventos con fecha de inicio"
+      },
+      "ofCounted": "{n, number} de {counted, number} medidos",
+      "ofInRange": "{n, number} de {total, number} del periodo"
+    },
+    "histogram": {
+      "title": "Días entre el inicio y la primera señal",
+      "subtitle": "Eventos medidos según cuántos días después del inicio recibió CLEAR su primera señal",
+      "series": "Eventos",
+      "tooltip": "{count, plural, one {# evento} other {# eventos}} · {share} de los medidos",
+      "footnote": "De {counted, plural, one {# evento medido} other {# eventos medidos}}. Los días son días naturales completos: mismo día = 0, día siguiente = 1.",
+      "buckets": {
+        "sameDay": "Mismo día",
+        "nextDay": "Día siguiente",
+        "plusDays": "+{days} d",
+        "openEnded": "{days} d o más"
+      }
+    },
+    "weekly": {
+      "title": "Tendencia semanal",
+      "subtitle": "Proporción de los eventos medidos de cada semana ISO",
+      "legend": "Leyenda",
+      "series": {
+        "byNextDay": "A más tardar al día siguiente",
+        "sameDay": "Mismo día"
+      },
+      "partial": "parcial",
+      "tooltip": {
+        "week": "{week} · desde el {start}",
+        "n": "n = {n, plural, one {# evento medido} other {# eventos medidos}}",
+        "partial": "Semana parcial: aún en curso"
+      }
+    },
+    "empty": {
+      "title": "No hay eventos medibles en este periodo",
+      "body": "{inRange, plural, =0 {No hay eventos en este periodo.} one {El único evento del periodo no se puede medir; el motivo está abajo.} other {Ninguno de los # eventos del periodo se puede medir; los motivos están abajo.}}"
+    },
+    "exclusions": {
+      "title": "No medidos",
+      "subtitle": "{total, number} de {inRange, number} eventos del periodo, por motivo",
+      "reasons": {
+        "NO_INGESTED_SIGNAL": {
+          "label": "Sin señal ingerida",
+          "description": "Solo historial: ninguna señal llegó a CLEAR por una fuente automática."
+        },
+        "NO_ONSET": {
+          "label": "Sin fecha de inicio",
+          "description": "El evento no tiene una fecha de inicio desde la que medir."
+        },
+        "DATE_ONLY_FIRST_SIGNAL": {
+          "label": "Primera señal sin hora",
+          "description": "La fuente da una fecha pero no una hora."
+        },
+        "BEFORE_ONSET": {
+          "label": "Primera señal antes del inicio",
+          "description": "La primera señal tiene fecha anterior al inicio: un error de datos."
+        }
+      }
+    },
+    "method": {
+      "title": "Cómo se mide",
+      "intro": "El tiempo de detección es cuánto tardó CLEAR, desde el inicio real de un evento, en recibir su primera señal.",
+      "points": {
+        "counted": "Un evento solo se mide si tiene fecha de inicio, su primera señal lleva una hora real y esa señal es del día de inicio o posterior.",
+        "excluded": "Los demás eventos del periodo quedan fuera por uno de cuatro motivos: sin señal ingerida, sin fecha de inicio, una primera señal con fecha pero sin hora, o una primera señal con fecha anterior al inicio (un error de datos).",
+        "wholeDays": "El inicio se registra por día, así que el tiempo de detección se cuenta en días completos: mismo día = 0, día siguiente = 1.",
+        "definition": "La definición completa es el ADR-0011 de clear-api, «Time to detection»."
+      }
+    },
+    "range": "Del {from} al {to}",
+    "filters": {
+      "from": "Desde",
+      "to": "Hasta",
+      "country": "País",
+      "allCountries": "Todos los países",
+      "hint": "Los días están en UTC. Deje las fechas vacías para las últimas 12 semanas."
+    }
   }
 }

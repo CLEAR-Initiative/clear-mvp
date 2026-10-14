@@ -2141,6 +2141,7 @@
       "inbox": "Boîte de réception",
       "map": "Carte",
       "insights": "Constats",
+      "metrics": "Indicateurs",
       "operations": "Opérations",
       "cash": "Assistance monétaire",
       "knowledge": "Centre de connaissances",
@@ -3390,5 +3391,108 @@
     "lowConfidence": "Faible confiance",
     "pastEvent": "Événement passé {n}",
     "moreEvents": "+{count} de plus"
+  },
+  "metrics": {
+    "page": {
+      "title": "Indicateurs",
+      "breadcrumb": "Indicateurs"
+    },
+    "loading": "Chargement des indicateurs…",
+    "error": {
+      "title": "Impossible de charger les indicateurs"
+    },
+    "unavailable": {
+      "title": "L'API des indicateurs n'est pas encore déployée",
+      "body": "L'API CLEAR de cet environnement ne fournit pas encore le délai de détection. La page se remplira dès qu'elle le fera."
+    },
+    "tiles": {
+      "counted": {
+        "label": "Événements mesurés",
+        "detail": "sur {total, number} événements de la période"
+      },
+      "byNextDay": {
+        "label": "Détectés au plus tard le lendemain"
+      },
+      "sameDay": {
+        "label": "Détectés le jour même"
+      },
+      "withOnset": {
+        "label": "Événements avec une date de début"
+      },
+      "ofCounted": "{n, number} sur {counted, number} mesurés",
+      "ofInRange": "{n, number} sur {total, number} de la période"
+    },
+    "histogram": {
+      "title": "Jours entre le début et le premier signal",
+      "subtitle": "Événements mesurés selon le nombre de jours après leur début où CLEAR a reçu le premier signal",
+      "series": "Événements",
+      "tooltip": "{count, plural, one {# événement} other {# événements}} · {share} des mesurés",
+      "footnote": "Sur {counted, plural, one {# événement mesuré} other {# événements mesurés}}. Les jours sont des jours calendaires entiers : même jour = 0, lendemain = 1.",
+      "buckets": {
+        "sameDay": "Même jour",
+        "nextDay": "Lendemain",
+        "plusDays": "+{days} j",
+        "openEnded": "{days} j et +"
+      }
+    },
+    "weekly": {
+      "title": "Tendance hebdomadaire",
+      "subtitle": "Part des événements mesurés de chaque semaine ISO",
+      "legend": "Légende",
+      "series": {
+        "byNextDay": "Au plus tard le lendemain",
+        "sameDay": "Même jour"
+      },
+      "partial": "partielle",
+      "tooltip": {
+        "week": "{week} · à partir du {start}",
+        "n": "n = {n, plural, one {# événement mesuré} other {# événements mesurés}}",
+        "partial": "Semaine partielle : encore en cours"
+      }
+    },
+    "empty": {
+      "title": "Aucun événement mesurable sur cette période",
+      "body": "{inRange, plural, =0 {Il n'y a aucun événement sur cette période.} one {Le seul événement de la période ne peut pas être mesuré ; la raison figure ci-dessous.} other {Aucun des # événements de la période ne peut être mesuré ; les raisons figurent ci-dessous.}}"
+    },
+    "exclusions": {
+      "title": "Non mesurés",
+      "subtitle": "{total, number} des {inRange, number} événements de la période, par raison",
+      "reasons": {
+        "NO_INGESTED_SIGNAL": {
+          "label": "Aucun signal ingéré",
+          "description": "Historique uniquement : aucun signal n'est arrivé dans CLEAR par un flux automatique."
+        },
+        "NO_ONSET": {
+          "label": "Pas de date de début",
+          "description": "L'événement n'a pas de date de début à partir de laquelle mesurer."
+        },
+        "DATE_ONLY_FIRST_SIGNAL": {
+          "label": "Premier signal sans heure",
+          "description": "La source donne une date mais pas d'heure."
+        },
+        "BEFORE_ONSET": {
+          "label": "Premier signal avant le début",
+          "description": "Le premier signal est daté d'avant le début : une erreur de données."
+        }
+      }
+    },
+    "method": {
+      "title": "Méthode de mesure",
+      "intro": "Le délai de détection est le temps écoulé entre le début réel d'un événement et la réception par CLEAR de son premier signal.",
+      "points": {
+        "counted": "Un événement n'est mesuré que s'il a une date de début, que son premier signal porte une heure réelle et que ce signal date du jour du début ou après.",
+        "excluded": "Tous les autres événements de la période sont exclus, pour l'une de quatre raisons : aucun signal ingéré, pas de date de début, un premier signal daté sans heure, ou un premier signal daté d'avant le début (une erreur de données).",
+        "wholeDays": "Le début est enregistré au jour près : le délai se compte donc en jours entiers (même jour = 0, lendemain = 1).",
+        "definition": "La définition complète est l'ADR-0011 de clear-api, « Time to detection »."
+      }
+    },
+    "range": "Du {from} au {to}",
+    "filters": {
+      "from": "Du",
+      "to": "Au",
+      "country": "Pays",
+      "allCountries": "Tous les pays",
+      "hint": "Les jours sont en UTC. Laissez les dates vides pour les 12 dernières semaines."
+    }
   }
 }
