@@ -1,4 +1,4 @@
-name: E2E smoke
+name: Check / E2E smoke
 
 # Runs the 15-spec Playwright smoke suite (e2e/tests) against the hermetic
 # docker-compose stack (Postgres+PostGIS+pgvector, Redis, clear-api, clear-mvp)

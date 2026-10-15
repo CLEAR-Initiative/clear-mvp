@@ -1,4 +1,4 @@
-name: Unit tests
+name: Check / Unit tests
 
 # Fast gate on every PR to dev: Vitest unit suite, TypeScript typecheck, and the
 # translation-catalog guard (scripts/check-messages.mjs). Runs alongside the
