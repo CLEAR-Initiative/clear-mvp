@@ -11,6 +11,7 @@ import { WeeklyTrend } from "./weekly-trend";
 import { ExclusionsCard } from "./exclusions-card";
 import { metricsQueryInput } from "./metrics-filters";
 import { createTranslator } from "next-intl";
+import { fireEvent } from "@testing-library/react";
 
 afterEach(() => cleanup());
 
@@ -71,19 +72,41 @@ const EMPTY: GqlDetectionMetrics = {
 };
 
 describe("StatTiles", () => {
-  it("shows each share as a whole percent with its n", () => {
+  it("shows each share as a whole percent with its n, coverage last", () => {
     wrap(<StatTiles metrics={withShares(RAW)} />);
     expect(screen.getByText("Detected by next day")).toBeInTheDocument();
     expect(screen.getAllByText("75%")).toHaveLength(2);
     expect(screen.getByText("25%")).toBeInTheDocument();
     expect(screen.getByText("15 of 20 measured")).toBeInTheDocument();
     expect(screen.getByText("30 of 40 in range")).toBeInTheDocument();
+    expect(screen.getByText("Measured coverage")).toBeInTheDocument();
+    expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(screen.getByText("20 of 40 in range")).toBeInTheDocument();
+    // No previous period, no change line.
+    expect(screen.queryByText(/pts/)).not.toBeInTheDocument();
   });
 
   it("shows a share with no denominator as —", () => {
     wrap(<StatTiles metrics={withShares(EMPTY)} />);
-    expect(screen.getAllByText("—")).toHaveLength(3);
+    expect(screen.getAllByText("—")).toHaveLength(4);
     expect(screen.getAllByText("0 of 0 measured")).toHaveLength(2);
+  });
+
+  it("says how many points each share moved since the previous period, up in green", () => {
+    // By next day 60% (was 75%), same day 25% (unchanged), onset 80% (was 75%), coverage 50% (was 50%).
+    const previous = withShares(RAW);
+    const current = withShares({ ...RAW, byNextDay: 12, withOnset: 32 });
+    wrap(<StatTiles metrics={current} previous={previous} />);
+    const down = screen.getByText("-15 pts");
+    expect(down).toHaveStyle({ color: "var(--color-critical)" });
+    expect(screen.getByText("+5 pts")).toHaveStyle({ color: "var(--color-success)" });
+    expect(screen.getAllByText("0 pts")).toHaveLength(2);
+    expect(screen.getAllByText(/vs 75% before/)).toHaveLength(2);
+  });
+
+  it("says there is no earlier figure when the previous period measured nothing", () => {
+    wrap(<StatTiles metrics={withShares(RAW)} previous={withShares(EMPTY)} />);
+    expect(screen.getAllByText("No earlier figure")).toHaveLength(4);
   });
 });
 
@@ -112,9 +135,11 @@ describe("TtdHistogram", () => {
   });
 });
 
+const SHOW_ALL = "2026-01-01T00:00:00.000Z";
+
 describe("WeeklyTrend", () => {
   it("draws by next day solid and same day dashed, with a legend", () => {
-    const { container } = wrap(<WeeklyTrend metrics={withShares(RAW)} />);
+    const { container } = wrap(<WeeklyTrend metrics={withShares(RAW)} showFrom={SHOW_ALL} defaultMode="weekly" />);
     expect(screen.getByText("By next day")).toBeInTheDocument();
     expect(screen.getByText("Same day")).toBeInTheDocument();
     const curves = [...container.querySelectorAll("path.recharts-line-curve")];
@@ -129,13 +154,60 @@ describe("WeeklyTrend", () => {
       ...RAW,
       weekly: [RAW.weekly[0]!, { ...RAW.weekly[1]!, counted: 2, sameDay: 1, byNextDay: 2 }],
     });
-    const { container } = wrap(<WeeklyTrend metrics={partial} />);
+    const { container } = wrap(<WeeklyTrend metrics={partial} showFrom={SHOW_ALL} defaultMode="weekly" />);
     // Once in the legend, once under the partial week's tick.
     expect(screen.getAllByText("partial")).toHaveLength(2);
     const hollow = [...container.querySelectorAll("circle")].filter(
       (c) => c.getAttribute("fill") === "var(--color-bg-white)",
     );
     expect(hollow).toHaveLength(2);
+  });
+
+  it("adds a dotted coverage line once clear-api reports each week's events in range", () => {
+    const withCoverage = withShares({
+      ...RAW,
+      weekly: RAW.weekly.map((w, i) => ({ ...w, eventsInRange: i === 0 ? 8 : 0 })),
+    });
+    const { container } = wrap(<WeeklyTrend metrics={withCoverage} showFrom={SHOW_ALL} defaultMode="weekly" />);
+    expect(screen.getByText("Measured coverage")).toBeInTheDocument();
+    const curves = [...container.querySelectorAll("path.recharts-line-curve")];
+    expect(curves.map((c) => c.getAttribute("stroke-dasharray"))).toEqual([null, "5 4", "2 3"]);
+    expect(screen.getByText(/Coverage is the share of events in range/)).toBeInTheDocument();
+  });
+
+  it("says coverage needs a newer API when the weeks lack it", () => {
+    wrap(<WeeklyTrend metrics={withShares(RAW)} showFrom={SHOW_ALL} />);
+    expect(screen.queryByText("Measured coverage")).not.toBeInTheDocument();
+    expect(screen.getByText(/A coverage line appears once/)).toBeInTheDocument();
+  });
+
+  it("draws only the weeks from showFrom, and switches between rolling and weekly", () => {
+    const weeks = Array.from({ length: 6 }, (_, i) => ({
+      isoWeek: `2026-W${37 + i}`,
+      weekStart: new Date(Date.UTC(2026, 8, 7 + 7 * i)).toISOString(),
+      eventsInRange: 10,
+      counted: 10,
+      sameDay: i,
+      byNextDay: 10,
+      isPartial: false,
+    }));
+    const metrics = withShares({ ...RAW, weekly: weeks });
+    // Show from W40: W37..W39 are the lead-in for the first rolling window.
+    const { container } = wrap(<WeeklyTrend metrics={metrics} showFrom={weeks[3]!.weekStart} />);
+    const ticks = () => [...container.querySelectorAll(".recharts-xAxis-tick-labels text")].map((t) => t.textContent);
+    expect(ticks()).toEqual(["Sep 28", "Oct 5", "Oct 12"]);
+    expect(screen.getByText("Share of measured events over the 4 weeks to each week")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Weekly"));
+    expect(screen.getByText("Share of each ISO week's measured events")).toBeInTheDocument();
+    expect(ticks()).toEqual(["Sep 28", "Oct 5", "Oct 12"]);
+  });
+
+  it("shows a loading state and an error in the card", () => {
+    wrap(<WeeklyTrend showFrom={SHOW_ALL} loading />);
+    expect(screen.getByLabelText("Loading the trend…")).toBeInTheDocument();
+    cleanup();
+    wrap(<WeeklyTrend showFrom={SHOW_ALL} error="boom" />);
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't load the trend: boom");
   });
 });
 
