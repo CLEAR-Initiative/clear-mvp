@@ -29,7 +29,7 @@ services:
     # Ephemeral storage — no volume, no persistence between runs. Faster and
     # guarantees a clean slate every time.
     tmpfs:
-      - /var/lib/postgresql/data
+      - /var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U clear -d clear"]
       interval: 3s
