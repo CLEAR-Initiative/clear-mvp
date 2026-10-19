@@ -7,11 +7,11 @@ import { canDecideCaseProposals, canReadContent, isPlatformAdmin } from "~/lib/r
  *   hotline threads  — platform admins and emergency_response_managers,
  *                      with `hotline_inbox` on (Phase 2 scopes an ERM to the
  *                      numbers their team subscribes to)
- *   proposed signals — deciders (admins and analysts) and ERMs (who see the
- *                      whole inbox in Phase 1), with `impact_prior_review`
+ *   proposed signals — deciders (admins and team analysts) and ERMs (who see
+ *                      the whole inbox in Phase 1), with `impact_prior_review`
  *                      on: the web Worker's cases (clear-api CaseProposals),
  *                      decided one by one
- *   my requests      — any content reader (admin, analyst, viewer), with
+ *   my requests      — any content reader (admin or member), with
  *                      `event_enrichment` on: the Tasks they asked for. Not
  *                      a Review item; it only widens who reaches the page.
  *
@@ -28,23 +28,30 @@ export interface InboxAccess {
 
 /**
  * Whether this reader decides proposed signals in the UI: a decider (admin
- * or analyst) — or, with `isErm`, an emergency_response_manager — with
+ * or a team analyst) — or, with `isErm`, an emergency_response_manager — with
  * `impact_prior_review` on. The one rule for every door: the Inbox's Review
- * items, the nav badge, the Event page's decision controls. Callers that
- * don't thread `isErm` (e.g. the Event page's enrichment section) keep it
- * admin/analyst-only; the Inbox passes `isErm` so an ERM decides there too
- * (Phase 1 — they see the whole inbox until number-scoping exists).
+ * items, the nav badge, the Event page's decision controls. `analyst` is now a
+ * TEAM role, so pass `teamMemberships`; callers that don't thread `isErm`
+ * (e.g. the Event page's enrichment section) keep it admin/team-analyst-only;
+ * the Inbox passes `isErm` so an ERM decides there too (Phase 1 — they see the
+ * whole inbox until number-scoping exists).
  */
 export function canReviewCaseProposals(input: {
   role: string | null | undefined;
+  teamMemberships?: { role: string }[] | null;
   isErm?: boolean;
   impactPriorReview: boolean;
 }): boolean {
-  return input.impactPriorReview && (canDecideCaseProposals(input.role) || !!input.isErm);
+  return (
+    input.impactPriorReview &&
+    (canDecideCaseProposals(input.role, input.teamMemberships) || !!input.isErm)
+  );
 }
 
 export function inboxAccess(input: {
   role: string | null | undefined;
+  /** The caller's team memberships — a team analyst decides proposed signals. */
+  teamMemberships?: { role: string }[] | null;
   /** True when the caller is an emergency_response_manager on any team. */
   isErm?: boolean;
   hotlineInbox: boolean;

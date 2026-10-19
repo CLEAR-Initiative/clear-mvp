@@ -89,7 +89,7 @@ vi.mock("~/trpc/react", () => ({
     auth: {
       me: {
         useQuery: () =>
-          authLoading ? { data: undefined, isLoading: true } : { data: { user: { id: "u", role } }, isLoading: false },
+          authLoading ? { data: undefined, isLoading: true } : { data: { user: { id: "u", role: role === "viewer" || role === "analyst" ? "member" : role, teamMemberships: role === "analyst" ? [{ role: "analyst" }] : [] } }, isLoading: false },
       },
     },
     tasks: {

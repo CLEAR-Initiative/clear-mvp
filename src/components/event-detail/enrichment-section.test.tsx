@@ -44,7 +44,7 @@ vi.mock("~/trpc/react", () => ({
         computedPriors: { invalidate },
       },
     }),
-    auth: { me: { useQuery: () => ({ data: { user: { id: "u", role } } }) } },
+    auth: { me: { useQuery: () => ({ data: { user: { id: "u", role: role === "admin" ? "admin" : "member", teamMemberships: role === "analyst" ? [{ role: "analyst" }] : [] } } }) } },
     tasks: {
       forEvent: { useQuery: (...args: unknown[]) => useQuery(...args) },
       computedPriors: { useQuery: (input: unknown, opts: { enabled: boolean }) => computedQuery(input, opts) },

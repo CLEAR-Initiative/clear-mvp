@@ -37,7 +37,7 @@ async function main() {
       consentRecordedAt: new Date("2026-04-01T09:00:00Z"),
       consentRecordedBy: "E2E Seed",
       privacyDefault: "private",
-      reviewerRoles: ["admin", "analyst"],
+      reviewerRoles: ["admin"],
       retentionRule: "ephemeral e2e stack",
     },
   });

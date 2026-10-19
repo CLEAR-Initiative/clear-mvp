@@ -383,13 +383,12 @@
       "member": "Membre",
       "orgAdmin": "Admin d'organisation",
       "teamMember": "Membre de l'équipe",
-      "fieldCoordinator": "Coordinateur de terrain",
+      "analyst": "Analyste",
       "teamAdmin": "Administrateur d'équipe"
     },
     "users": {
       "roles": {
-        "viewer": "Lecteur",
-        "analyst": "Analyste",
+        "member": "Membre",
         "admin": "Admin"
       },
       "unauthorized": "Vous devez disposer de privilèges administrateur pour accéder à la gestion des utilisateurs.",
@@ -421,7 +420,7 @@
       "roleUpdatedDetail": "Le rôle est maintenant {role}.",
       "roleUpdateFailed": "Impossible de mettre à jour le rôle",
       "approved": "Utilisateur approuvé",
-      "approvedDetail": "Il a désormais un accès lecteur.",
+      "approvedDetail": "Il a désormais un accès membre.",
       "approveFailed": "Impossible d'approuver l'utilisateur"
     },
     "features": {
@@ -1849,7 +1848,7 @@
       "confirmPrompt": "Faire remonter cet événement en alerte ?",
       "failed": "Échec. Veuillez réessayer.",
       "turnIntoAlert": "Transformer en alerte",
-      "noPermission": "Seuls les administrateurs et les analystes peuvent émettre des alertes"
+      "noPermission": "Seuls les administrateurs et les analystes d'équipe peuvent émettre des alertes"
     },
     "systemData": {
       "title": "Données système",
@@ -1898,7 +1897,7 @@
       "confirmPrompt": "Demander à un Worker ce qui s'est généralement passé auparavant pour cet aléa ici ? Cela peut prendre quelques minutes.",
       "requested": "Enrichissement demandé",
       "failed": "La demande a échoué. Veuillez réessayer.",
-      "noPermission": "Seuls les administrateurs, les analystes et les coordinateurs d'équipe peuvent demander un enrichissement",
+      "noPermission": "Seuls les administrateurs, les analystes d'équipe et les membres d'équipe peuvent demander un enrichissement",
       "capReached": "Vous avez atteint la limite de demandes d'enrichissement pour aujourd'hui",
       "cancel": "Annuler la demande",
       "cancelled": "Demande annulée",
@@ -2651,7 +2650,7 @@
         "noTeams": "Cette organisation n'a aucune équipe. Créez-en une avant d'envoyer des invitations.",
         "teamRoles": {
           "team_member": "Membre de l'équipe",
-          "field_coordinator": "Coordinateur de terrain",
+          "analyst": "Analyste",
           "emergency_response_manager": "Responsable des interventions d'urgence",
           "team_admin": "Administrateur d'équipe"
         },
@@ -2925,7 +2924,7 @@
       "addedNoSignal": "Approuvé, mais aucun identifiant de signal n'a été renvoyé. Vérifiez le signal dans Détection avant de vous y fier.",
       "retried": "Remis en file pour une nouvelle tentative"
     },
-    "noAccess": "La boîte de réception est réservée aux administrateurs et aux analystes.",
+    "noAccess": "La boîte de réception est réservée aux administrateurs et aux analystes d'équipe.",
     "loadError": "Impossible de charger la boîte de réception",
     "translate": {
       "button": "Traduire en {locale}",

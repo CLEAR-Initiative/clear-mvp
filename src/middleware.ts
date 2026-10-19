@@ -176,7 +176,7 @@ async function verifySession(cookieHeader: string): Promise<SessionResult> {
 
       return {
         ok: true,
-        role: data.user.role?.toLowerCase() ?? "viewer",
+        role: data.user.role?.toLowerCase() ?? "member",
         language: data.user.language ?? "en",
       };
     } catch (err) {

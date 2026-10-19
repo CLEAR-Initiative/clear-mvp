@@ -41,7 +41,7 @@ export function RequestEnrichmentButton({ eventId }: { eventId: string }) {
   const team = useOptionalTeam();
   const me = authData?.user;
   const hasTeam = (team?.teams?.length ?? 0) > 0;
-  const canRequest = canWriteCrisisEvents(me?.role) || hasTeam;
+  const canRequest = canWriteCrisisEvents(me?.role, me?.teamMemberships) || hasTeam;
 
   const enrichment = api.tasks.forEvent.useQuery({ eventId }, { enabled, staleTime: 15_000 });
   // This button requests the `event.impact_prior` family of Task kinds;

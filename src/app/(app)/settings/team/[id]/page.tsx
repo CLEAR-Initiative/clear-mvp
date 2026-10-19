@@ -26,7 +26,7 @@ import { isPlatformAdmin } from "~/lib/roles";
 
 const TEAM_ROLE_OPTIONS = [
   "team_admin",
-  "field_coordinator",
+  "analyst",
   "emergency_response_manager",
   "team_member",
 ] as const;

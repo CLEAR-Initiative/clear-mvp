@@ -3,6 +3,12 @@
  * update these in lockstep.
  */
 
+/**
+ * Seeded analyst persona. After the role-taxonomy split `analyst` is a TEAM
+ * role, not a global one: this user's GLOBAL role is now `member`, and it holds
+ * the elevated `analyst` membership on its team (location-scoped server-side).
+ * The account (email/password) is unchanged.
+ */
 export const ANALYST = {
   email: "analyst@clearinitiative.io",
   password: "password123",
@@ -14,7 +20,11 @@ export const ADMIN = {
   password: "password123",
 } as const;
 
-/** Seeded viewer — must NOT see the private ground-intel staging tier. */
+/**
+ * Seeded plain member (global role `member`, formerly `viewer`) with no
+ * elevated team membership — must NOT see the private ground-intel staging
+ * tier. The account email keeps its historical `viewer@…` address.
+ */
 export const VIEWER = {
   email: "viewer@clearinitiative.io",
   password: "password123",

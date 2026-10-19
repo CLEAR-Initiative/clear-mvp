@@ -39,7 +39,11 @@ export function EnrichmentSection({ eventId }: { eventId: string }) {
   const t = useTranslations("eventDetail.enrichment");
   const tCases = useTranslations("caseReview");
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000, enabled });
-  const canDecide = canReviewCaseProposals({ role: authData?.user?.role, impactPriorReview: review });
+  const canDecide = canReviewCaseProposals({
+    role: authData?.user?.role,
+    teamMemberships: authData?.user?.teamMemberships,
+    impactPriorReview: review,
+  });
 
   const query = api.tasks.forEvent.useQuery(
     { eventId },

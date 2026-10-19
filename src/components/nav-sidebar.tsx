@@ -177,10 +177,12 @@ export function NavSidebar({
   const { data: authData } = api.auth.me.useQuery(undefined, { staleTime: 60_000 });
   const role = authData?.user?.role;
   const isAdmin = isPlatformAdmin(role);
-  const isErm = isEmergencyResponseManager(authData?.user?.teamMemberships);
+  const teamMemberships = authData?.user?.teamMemberships;
+  const isErm = isEmergencyResponseManager(teamMemberships);
   const { flags } = useFeatureFlags();
   const reviewAccess = inboxAccess({
     role,
+    teamMemberships,
     isErm,
     hotlineInbox: flags.hotline_inbox ?? true,
     impactPriorReview: flags.impact_prior_review ?? true,
