@@ -22,10 +22,11 @@ export const ADMIN = {
 
 /**
  * Seeded plain member (global role `member`, formerly `viewer`) with no
- * elevated team membership — must NOT see the private ground-intel staging
- * tier. The account email keeps its historical `viewer@…` address.
+ * elevated team membership — the plain reader. Must NOT see the private
+ * ground-intel staging tier, and every content write blocks/disables/hides.
+ * The account email keeps its historical `viewer@…` address.
  */
-export const VIEWER = {
+export const MEMBER = {
   email: "viewer@clearinitiative.io",
   password: "password123",
 } as const;
@@ -34,9 +35,9 @@ export const VIEWER = {
  * Role personas for the role-access matrix spec (case 20), seeded by
  * e2e/support/roles-seed.ts. Keep in lockstep with that script.
  *
- * ERM = emr.user from clear-api's seed (global viewer) once roles-seed assigns
- * it the `emergency_response_manager` team membership; it keeps its own strong
- * password from the main seed. The rest share `password123`.
+ * ERM = emr.user from clear-api's seed (global `member`) once roles-seed
+ * assigns it the `emergency_response_manager` team membership; it keeps its own
+ * strong password from the main seed. The rest share `password123`.
  */
 export const ERM = {
   email: "emr.user@clearinitiative.io",
@@ -45,7 +46,6 @@ export const ERM = {
 export const PENDING = { email: "e2e-pending@clearinitiative.io", password: "password123" } as const;
 export const TEAM_ADMIN = { email: "e2e-team-admin@clearinitiative.io", password: "password123" } as const;
 export const ORG_ADMIN = { email: "e2e-org-admin@clearinitiative.io", password: "password123" } as const;
-export const FIELD_COORDINATOR = { email: "e2e-field-coordinator@clearinitiative.io", password: "password123" } as const;
 export const TEAM_MEMBER = { email: "e2e-team-member@clearinitiative.io", password: "password123" } as const;
 
 export const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3000";

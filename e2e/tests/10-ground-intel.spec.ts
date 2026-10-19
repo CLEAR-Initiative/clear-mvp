@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "../support/test";
-import { GROUND, VIEWER } from "../support/data";
+import { GROUND, MEMBER } from "../support/data";
 
 /**
  * Case 10 — Ground Intel review tab (expo-365).
@@ -95,21 +95,21 @@ test.describe("Ground Intel tab (case 10)", () => {
   });
 });
 
-test.describe("Ground Intel privacy gate (case 10, viewer)", () => {
-  // Fresh unauthenticated context — the viewer must log in for real.
+test.describe("Ground Intel privacy gate (case 10, plain member)", () => {
+  // Fresh unauthenticated context — the member must log in for real.
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test("viewer does not see the Ground Intel tab", async ({ page }) => {
+  test("plain member does not see the Ground Intel tab", async ({ page }) => {
     await page.goto("/auth/login");
-    await page.getByLabel("Email").fill(VIEWER.email);
-    await page.getByLabel("Password").fill(VIEWER.password);
+    await page.getByLabel("Email").fill(MEMBER.email);
+    await page.getByLabel("Password").fill(MEMBER.password);
     await page.getByRole("button", { name: "Sign In" }).click();
     await page.waitForURL("**/dashboard", { timeout: 45_000 });
 
     await page.goto("/detection", { waitUntil: "domcontentloaded" });
     // The regular tabs render…
     await expect(page.getByRole("tab", { name: "Events" })).toBeVisible({ timeout: 20_000 });
-    // …but the private staging tier is not offered to viewers.
+    // …but the private staging tier is not offered to plain members.
     await expect(page.getByRole("tab", { name: "Ground Intel" })).toHaveCount(0);
   });
 });

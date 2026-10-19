@@ -3,20 +3,21 @@
  * (e2e/tests/20-role-access-matrix.spec.ts), driven by
  * e2e/support/role-access/matrix.json.
  *
- * All personas are seeded: admin/analyst/viewer by clear-api's prisma/seed.ts,
- * and ERM/pending/team-role accounts by e2e/support/roles-seed.ts (see
- * e2e/support/data.ts for the constants). Override any persona's credentials
- * via env (`E2E_<PERSONA>_EMAIL` / `_PASSWORD`) when pointing the suite at a
- * non-hermetic environment that seeds different accounts.
+ * All personas are seeded: admin/analyst/member by clear-api's prisma/seed.ts
+ * (analyst is a global `member` there; roles-seed.ts gives it the team `analyst`
+ * membership), and ERM/pending/team-role accounts by e2e/support/roles-seed.ts
+ * (see e2e/support/data.ts for the constants). Override any persona's
+ * credentials via env (`E2E_<PERSONA>_EMAIL` / `_PASSWORD`) when pointing the
+ * suite at a non-hermetic environment that seeds different accounts.
  */
 import {
-  ADMIN, ANALYST, VIEWER,
-  ERM, PENDING, TEAM_ADMIN, ORG_ADMIN, FIELD_COORDINATOR, TEAM_MEMBER,
+  ADMIN, ANALYST, MEMBER,
+  ERM, PENDING, TEAM_ADMIN, ORG_ADMIN, TEAM_MEMBER,
 } from "../data";
 
 export type Persona =
-  | "admin" | "analyst" | "viewer" | "erm" | "pending"
-  | "team_admin" | "org_admin" | "field_coordinator" | "team_member";
+  | "admin" | "analyst" | "member" | "erm" | "pending"
+  | "team_admin" | "org_admin" | "team_member";
 
 export type Creds = { email: string; password: string };
 
@@ -31,12 +32,11 @@ const override = (k: string, seeded: Creds): Creds => {
 export const CREDS: Record<Persona, Creds | undefined> = {
   admin: override("E2E_ADMIN", ADMIN),
   analyst: override("E2E_ANALYST", ANALYST),
-  viewer: override("E2E_VIEWER", VIEWER),
+  member: override("E2E_MEMBER", MEMBER),
   erm: override("E2E_ERM", ERM),
   pending: override("E2E_PENDING", PENDING),
   team_admin: override("E2E_TEAM_ADMIN", TEAM_ADMIN),
   org_admin: override("E2E_ORG_ADMIN", ORG_ADMIN),
-  field_coordinator: override("E2E_FIELD_COORDINATOR", FIELD_COORDINATOR),
   team_member: override("E2E_TEAM_MEMBER", TEAM_MEMBER),
 };
 

@@ -47,9 +47,9 @@ function forceNoTeamSession(value: unknown): unknown {
       if (key === "defaultTeamId") {
         out[key] = null;
       } else if (key === "role" && isSessionUser) {
-        // Analysts/admins may file without a team; pin a non-platform role
-        // so this spec still exercises the dedicated missing-team error.
-        out[key] = "viewer";
+        // Pin a non-platform global role (member) so this spec still exercises
+        // the dedicated missing-team error rather than an admin bypass.
+        out[key] = "member";
       } else {
         out[key] = forceNoTeamSession(nested);
       }
