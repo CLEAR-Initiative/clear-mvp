@@ -44,3 +44,23 @@ export interface TeamLocation {
   parent: { id: string; name: string } | null;
   children: TeamLocation[];
 }
+
+/**
+ * An outbound webhook a team configures so a CLEAR alert fires an HTTP POST to
+ * `targetUrl` (alongside email). Mirrors clear-api's `WebhookSubscription`.
+ *
+ * `secret` is the signing secret shown ONCE on create / rotate responses and
+ * scrubbed (null) everywhere else — never persist or re-display it.
+ */
+export interface WebhookSubscription {
+  id: string;
+  name: string;
+  targetUrl: string;
+  source: string | null;
+  teamId: string;
+  alertTypeFilter: string[];
+  minSeverity: number | null;
+  active: boolean;
+  createdAt: string;
+  secret: string | null;
+}

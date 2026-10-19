@@ -876,7 +876,9 @@
       "edit": "Editar",
       "delete": "Eliminar",
       "confirm": "Confirmar",
-      "retry": "Reintentar"
+      "retry": "Reintentar",
+      "copy": "Copiar",
+      "copied": "Copiado"
     },
     "states": {
       "loading": "Cargando...",
@@ -2689,6 +2691,39 @@
         "title": "Alcance de ubicación",
         "save": "Guardar ubicaciones",
         "none": "Ninguna ubicación seleccionada"
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "description": "Envíe una solicitud HTTP POST a sus sistemas cada vez que se cree una alerta de CLEAR para este equipo.",
+        "none": "No hay webhooks configurados",
+        "toggleActive": "Activar o desactivar este webhook",
+        "rotate": "Rotar secreto",
+        "rotateConfirm": "¿Rotar el secreto de este webhook? El secreto actual dejará de funcionar de inmediato.",
+        "deleteConfirm": "¿Eliminar este webhook? Esta acción no se puede deshacer.",
+        "columns": {
+          "name": "Nombre",
+          "targetUrl": "URL de destino",
+          "filters": "Filtros",
+          "active": "Activo"
+        },
+        "filters": {
+          "all": "Todas las alertas",
+          "minSeverity": "Gravedad mín. {level}"
+        },
+        "secret": {
+          "title": "Secreto de firma",
+          "note": "Guarde este secreto ahora — no se volverá a mostrar. Úselo para verificar la firma de las solicitudes de webhook entrantes."
+        },
+        "add": {
+          "title": "Agregar webhook",
+          "nameLabel": "Nombre",
+          "targetUrlLabel": "URL de destino",
+          "filterLabel": "Filtro por tipo de alerta",
+          "filterPlaceholder": "p. ej. CF, FL (separados por comas)",
+          "minSeverityLabel": "Gravedad mín.",
+          "minSeverityPlaceholder": "Cualquiera",
+          "submit": "Agregar webhook"
+        }
       },
       "danger": {
         "title": "Zona de peligro",

@@ -876,7 +876,9 @@
       "edit": "Modifier",
       "delete": "Supprimer",
       "confirm": "Confirmer",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "copy": "Copier",
+      "copied": "Copié"
     },
     "states": {
       "loading": "Chargement...",
@@ -2689,6 +2691,39 @@
         "title": "Périmètre géographique",
         "save": "Enregistrer les localisations",
         "none": "Aucune localisation sélectionnée"
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "description": "Envoyez une requête HTTP POST à vos systèmes chaque fois qu'une alerte CLEAR est créée pour cette équipe.",
+        "none": "Aucun webhook configuré",
+        "toggleActive": "Activer ou désactiver ce webhook",
+        "rotate": "Renouveler le secret",
+        "rotateConfirm": "Renouveler le secret de ce webhook ? Le secret actuel cessera immédiatement de fonctionner.",
+        "deleteConfirm": "Supprimer ce webhook ? Cette action est irréversible.",
+        "columns": {
+          "name": "Nom",
+          "targetUrl": "URL cible",
+          "filters": "Filtres",
+          "active": "Actif"
+        },
+        "filters": {
+          "all": "Toutes les alertes",
+          "minSeverity": "Gravité min. {level}"
+        },
+        "secret": {
+          "title": "Secret de signature",
+          "note": "Enregistrez ce secret maintenant — il ne sera plus affiché. Utilisez-le pour vérifier la signature des requêtes webhook entrantes."
+        },
+        "add": {
+          "title": "Ajouter un webhook",
+          "nameLabel": "Nom",
+          "targetUrlLabel": "URL cible",
+          "filterLabel": "Filtre par type d'alerte",
+          "filterPlaceholder": "ex. CF, FL (séparés par des virgules)",
+          "minSeverityLabel": "Gravité min.",
+          "minSeverityPlaceholder": "Toutes",
+          "submit": "Ajouter le webhook"
+        }
       },
       "danger": {
         "title": "Zone de danger",
