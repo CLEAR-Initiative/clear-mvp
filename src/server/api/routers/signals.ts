@@ -304,16 +304,19 @@ export const signalsRouter = createTRPCRouter({
     return data.dataSources.filter((s) => MANUAL_SOURCE_NAMES.has(s.name));
   }),
 
-  /** Names of every active data source, sorted — feeds source filter chips
-   *  that must offer sources not yet present in the loaded page of rows. */
-  sourceNames: protectedProcedure.query(async ({ ctx }) => {
+  /** Names of active push-feed sources (type "webhook", e.g. sudan-war-x),
+   *  sorted. Source filter chips otherwise only list sources in the loaded
+   *  rows; push feeds are added so they can be picked before any of their
+   *  signals are on screen. Organisation sources are deliberately left out —
+   *  there are 150+ of them, which makes the chip list unusable. */
+  pushFeedSourceNames: protectedProcedure.query(async ({ ctx }) => {
     const data = await graphqlFetch<{ dataSources: { id: string; name: string; type: string; isActive: boolean }[] }>(
       DATA_SOURCES_QUERY,
       undefined,
       cookieHeaders(ctx),
     );
     return data.dataSources
-      .filter((s) => s.isActive)
+      .filter((s) => s.isActive && s.type === "webhook")
       .map((s) => s.name)
       .sort();
   }),

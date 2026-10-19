@@ -117,7 +117,7 @@ interface HistoryTabProps {
    *  server-side. null = all sources. */
   activeSources: Set<string> | null;
   onActiveSourcesChange: (sources: Set<string> | null) => void;
-  /** Every active data source, so chips exist for sources not yet loaded. */
+  /** Push-feed sources to offer even when none of their rows are loaded. */
   sourceOptions?: string[];
 }
 
@@ -185,10 +185,10 @@ export function HistoryTab({ alerts, events, signals, loading, hasMore, isFetchi
     return [];
   };
 
-  // Derived option lists for the filter chips. Sources merge every active
-  // data source with whatever is loaded (and selected), so a source with
-  // no rows on the current page can still be picked. Types come from the
-  // loaded rows only.
+  // Derived option lists for the filter chips. Sources are whatever is
+  // loaded (and selected), plus push feeds from `sourceOptions` so a feed
+  // with no rows on the current page can still be picked. Types come from
+  // the loaded rows only.
   const allDataSources = useMemo(() => {
     const set = new Set<string>(sourceOptions ?? []);
     for (const row of allRows) for (const s of rowSources(row)) set.add(s);
