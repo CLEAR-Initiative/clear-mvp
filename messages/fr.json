@@ -2723,7 +2723,10 @@
           "minSeverityLabel": "Gravité min.",
           "minSeverityPlaceholder": "Toutes",
           "submit": "Ajouter le webhook"
-        }
+        },
+        "loading": "Chargement des webhooks…",
+        "loadError": "Impossible de charger les webhooks.",
+        "retry": "Réessayer"
       },
       "danger": {
         "title": "Zone de danger",

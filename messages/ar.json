@@ -2723,7 +2723,10 @@
           "minSeverityLabel": "الحد الأدنى للخطورة",
           "minSeverityPlaceholder": "الكل",
           "submit": "إضافة خطاف الويب"
-        }
+        },
+        "loading": "جارٍ تحميل الـ webhooks…",
+        "loadError": "تعذّر تحميل الـ webhooks.",
+        "retry": "إعادة المحاولة"
       },
       "danger": {
         "title": "منطقة الخطر",

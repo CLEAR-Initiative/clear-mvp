@@ -68,14 +68,20 @@ export function WebhooksSection({
   const [targetUrl, setTargetUrl] = useState("");
   const [filterInput, setFilterInput] = useState("");
   const [minSeverity, setMinSeverity] = useState<string | null>(null);
-  // The signing secret from the most recent create / rotate, shown once.
-  const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
+  // The signing secret from the most recent create / rotate, shown once — kept
+  // WITH its webhook name so two creates/rotates can't leave an ambiguous reveal.
+  const [revealedSecret, setRevealedSecret] = useState<{ name: string; secret: string } | null>(
+    null,
+  );
 
   // Hide dead UI from non-admins; clear-api is still the real gate.
   if (!canManage) return null;
 
   const webhooks = listQuery.data ?? [];
   const createError = createWebhook.error;
+  // Surface failures from the non-create actions too, so a failed
+  // enable/disable, delete, or rotate isn't silent.
+  const actionError = updateWebhook.error ?? deleteWebhook.error ?? rotateSecret.error;
 
   function invalidate() {
     void utils.teams.alertWebhooks.list.invalidate({ teamId });
@@ -95,7 +101,7 @@ export function WebhooksSection({
     setTargetUrl("");
     setFilterInput("");
     setMinSeverity(null);
-    if (created.secret) setRevealedSecret(created.secret);
+    if (created.secret) setRevealedSecret({ name: created.name, secret: created.secret });
     invalidate();
   }
 
@@ -113,7 +119,7 @@ export function WebhooksSection({
   async function handleRotate(id: string) {
     if (!confirm(t("rotateConfirm"))) return;
     const rotated = await rotateSecret.mutateAsync({ id });
-    if (rotated.secret) setRevealedSecret(rotated.secret);
+    if (rotated.secret) setRevealedSecret({ name: rotated.name, secret: rotated.secret });
     invalidate();
   }
 
@@ -132,7 +138,7 @@ export function WebhooksSection({
           mb="sm"
           withCloseButton
           onClose={() => setRevealedSecret(null)}
-          title={t("secret.title")}
+          title={`${t("secret.title")} — ${revealedSecret.name}`}
           data-testid="team-webhooks-secret"
         >
           <Text size="sm" mb="xs">
@@ -141,11 +147,11 @@ export function WebhooksSection({
           <Group gap="xs" wrap="nowrap">
             <TextInput
               readOnly
-              value={revealedSecret}
+              value={revealedSecret.secret}
               style={{ flex: 1 }}
               data-testid="team-webhooks-secret-value"
             />
-            <CopyButton value={revealedSecret}>
+            <CopyButton value={revealedSecret.secret}>
               {({ copied, copy }) => (
                 <Button
                   size="xs"
@@ -176,7 +182,33 @@ export function WebhooksSection({
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {webhooks.length === 0 ? (
+          {listQuery.isLoading ? (
+            <Table.Tr>
+              <Table.Td colSpan={5}>
+                <Text size="sm" c="dimmed" data-testid="team-webhooks-loading">
+                  {t("loading")}
+                </Text>
+              </Table.Td>
+            </Table.Tr>
+          ) : listQuery.isError ? (
+            <Table.Tr>
+              <Table.Td colSpan={5}>
+                <Group gap="xs">
+                  <Text size="sm" c="red" data-testid="team-webhooks-load-error">
+                    {t("loadError")}
+                  </Text>
+                  <Button
+                    size="xs"
+                    variant="light"
+                    onClick={() => void listQuery.refetch()}
+                    data-testid="team-webhooks-retry"
+                  >
+                    {t("retry")}
+                  </Button>
+                </Group>
+              </Table.Td>
+            </Table.Tr>
+          ) : webhooks.length === 0 ? (
             <Table.Tr>
               <Table.Td colSpan={5}>
                 <Text size="sm" c="dimmed">
@@ -261,6 +293,12 @@ export function WebhooksSection({
       {createError && (
         <Text size="sm" c="red" mt="xs" data-testid="team-webhooks-error">
           {createError.message}
+        </Text>
+      )}
+
+      {actionError && (
+        <Text size="sm" c="red" mt="xs" data-testid="team-webhooks-action-error">
+          {actionError.message}
         </Text>
       )}
 

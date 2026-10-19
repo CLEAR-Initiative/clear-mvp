@@ -2723,7 +2723,10 @@
           "minSeverityLabel": "Min severity",
           "minSeverityPlaceholder": "Any",
           "submit": "Add webhook"
-        }
+        },
+        "loading": "Loading webhooks…",
+        "loadError": "Couldn’t load webhooks.",
+        "retry": "Retry"
       },
       "danger": {
         "title": "Danger Zone",
