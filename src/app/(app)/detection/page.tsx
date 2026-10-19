@@ -937,7 +937,7 @@ function DetectionPageContent() {
     { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, sourceNames: historySources ? [...historySources] : undefined, orderBy: SIGNAL_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
     { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
   );
-  const historySourceNamesQuery = api.signals.sourceNames.useQuery(undefined, {
+  const historySourceNamesQuery = api.signals.pushFeedSourceNames.useQuery(undefined, {
     enabled: activeTab === "history",
     staleTime: Infinity,
   });
