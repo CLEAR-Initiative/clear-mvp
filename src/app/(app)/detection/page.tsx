@@ -232,6 +232,9 @@ function DetectionPageContent() {
       result.push({ value: `${englishMonths[d.getMonth()]} ${d.getFullYear()}`, label: fmt.format(d) });
     }
     result.push(
+      { value: "Last 1 day",   label: t("filters.last1day") },
+      { value: "Last 2 days",  label: t("filters.last2days") },
+      { value: "Last 3 days",  label: t("filters.last3days") },
       { value: "Last 7 days",  label: t("filters.last7days") },
       { value: "Last 30 days", label: t("filters.last30days") },
       { value: "Last 90 days", label: t("filters.last90days") },
@@ -559,7 +562,7 @@ function DetectionPageContent() {
   // the window to include new events. Fixed-range presets ("Mon YYYY") keep
   // their explicit upper bound - snapshotTime is irrelevant there because
   // the range is in the past and no new events can fall into it.
-  const isRollingPreset = /^Last \d+ days$/i.test(selectedDate);
+  const isRollingPreset = /^Last \d+ days?$/i.test(selectedDate);
   const effectiveTo = isRollingPreset ? snapshotTime : toIso;
 
   const SEV_NUM: Record<string, number> = { low: 2, medium: 3, high: 4, critical: 5 };
@@ -578,6 +581,10 @@ function DetectionPageContent() {
   const [alertsSort, setAlertsSort] = useState<AlertSortOrder>("newest");
   const [signalsSort, setSignalsSort] = useState<SignalSortOrder>("newest");
   const [historySortOrder, setHistorySortOrder] = useState<HistorySortOrder>("newest");
+  // History's source filter lives here (not in HistoryTab) so it can narrow
+  // the paginated signals query server-side — otherwise a source with no
+  // rows on the first page could never be filtered to. null = all sources.
+  const [historySources, setHistorySources] = useState<Set<string> | null>(null);
 
   // Write detection nav context for event/signal page prev/next navigation.
   // Wait until locationId is resolved - writing null would make detail arrow
@@ -927,9 +934,13 @@ function DetectionPageContent() {
     { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
   );
   const historySignalsQuery = api.signals.signalsPage.useQuery(
-    { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, orderBy: SIGNAL_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
+    { teamId: activeTeamId, locationId: selectedLocationId ?? undefined, from: fromIso, to: effectiveTo, severityMin, severityMax, sourceNames: historySources ? [...historySources] : undefined, orderBy: SIGNAL_ORDER_MAP[historySortOrder], limit: HISTORY_PAGE_SIZE, offset: historyOffset, _v: historyVersion },
     { enabled: locationsReady && activeTab === "history", staleTime: Infinity },
   );
+  const historySourceNamesQuery = api.signals.sourceNames.useQuery(undefined, {
+    enabled: activeTab === "history",
+    staleTime: Infinity,
+  });
 
   // ── History accumulation effects ───────────────────────────────────────────
   useEffect(() => {
@@ -980,7 +991,7 @@ function DetectionPageContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...FILTER_DEPS]);
 
-  // Reset history on sort change
+  // Reset history on sort or source-filter change
   useEffect(() => {
     historyAppending.current = false;
     setHistoryOffset(0);
@@ -989,7 +1000,7 @@ function DetectionPageContent() {
     setHistorySignalsItems([]);
     setHistoryVersion((v) => v + 1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [historySortOrder]);
+  }, [historySortOrder, historySources]);
 
   const historyHasMore = historyAlertsHasMore || historyEventsHasMore || historySignalsHasMore;
   const historyTotalCount = historyAlertsTotalCount + historyEventsTotalCount + historySignalsTotalCount;
@@ -1371,6 +1382,9 @@ function DetectionPageContent() {
                 onLoadMore={loadMoreHistory}
                 sortOrder={historySortOrder}
                 onSortChange={setHistorySortOrder}
+                activeSources={historySources}
+                onActiveSourcesChange={setHistorySources}
+                sourceOptions={historySourceNamesQuery.data}
               />
             )}
           </>

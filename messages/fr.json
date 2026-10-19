@@ -1497,6 +1497,9 @@
         "medium": "Moyenne",
         "low": "Faible"
       },
+      "last1day": "Dernières 24 heures",
+      "last2days": "2 derniers jours",
+      "last3days": "3 derniers jours",
       "last7days": "7 derniers jours",
       "last30days": "30 derniers jours",
       "last90days": "90 derniers jours"
@@ -1541,6 +1544,7 @@
       "empty": "Aucun historique disponible.",
       "noMatch": "Aucun élément ne correspond à votre recherche.",
       "loadMore": "Charger plus",
+      "sortByTime": "Trier par date",
       "untitled": "Sans titre",
       "columns": {
         "title": "Titre",
@@ -1549,6 +1553,7 @@
         "severity": "Sévérité",
         "source": "Source",
         "date": "Date",
+        "age": "Ancienneté",
         "location": "Localisation"
       },
       "classes": {
